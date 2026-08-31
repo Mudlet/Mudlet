@@ -4,8 +4,8 @@ describe("Tests StringUtils.lua functions", function()
       local testString = "test"
       assert.equals(testString, string.cut(testString, testString:len()))
       assert.equals(testString, testString:cut(testString:len()))
-      assert.equals(testString, string.cut(testString, testString:len() + 1 ))
-      assert.equals(testString, testString:cut(testString:len() + 1 ))
+      assert.equals(testString, string.cut(testString, testString:len() + 1))
+      assert.equals(testString, testString:cut(testString:len() + 1))
     end)
 
     it("should return a string of length maxLen if it is given a string longer than that", function()
@@ -31,7 +31,7 @@ describe("Tests StringUtils.lua functions", function()
 
     it("should return the string str wrapped in [[]]", function()
       local s = "This is a test"
-      local expected = '[[This is a test]]'
+      local expected = "[[This is a test]]"
       local actual = string.enclose(s)
       assert.equals(expected, actual)
     end)
@@ -45,7 +45,9 @@ describe("Tests StringUtils.lua functions", function()
 
     it("should error if maxlevel is not high enough to properly wrap the string", function()
       local s = "[=[[[This is a test]]]=]"
-      local errfn = function() string.enclose(s,1) end
+      local errfn = function()
+        string.enclose(s, 1)
+      end
       assert.has_error(errfn, "error: maxlevel too low, 1")
     end)
   end)
@@ -118,7 +120,7 @@ describe("Tests StringUtils.lua functions", function()
         "This is",
         "a comma",
         "separated string",
-        "with stuff in it"
+        "with stuff in it",
       }
       local actual = str:split(delimiter)
       assert.same(expected, actual)
@@ -140,12 +142,15 @@ describe("Tests StringUtils.lua functions", function()
       assert.same(expected, actual)
     end)
 
-    it("should return a table with the characters that make up the string if empty string is used for the delimiter", function()
-      local str = "This is a test"
-      local expected = {"T", "h", "i", "s", " ", "i", "s", " ", "a", " ", "t", "e", "s", "t"}
-      local actual = str:split("")
-      assert.same(expected, actual)
-    end)
+    it(
+      "should return a table with the characters that make up the string if empty string is used for the delimiter",
+      function()
+        local str = "This is a test"
+        local expected = { "T", "h", "i", "s", " ", "i", "s", " ", "a", " ", "t", "e", "s", "t" }
+        local actual = str:split("")
+        assert.same(expected, actual)
+      end
+    )
 
     it("should split on a multi-character delimiter", function()
       local str = "alpha::beta::gamma"
@@ -204,7 +209,9 @@ describe("Tests StringUtils.lua functions", function()
 
     it("should error if given something other than a string", function()
       local str = {}
-      local errfn = function() string.title(str) end
+      local errfn = function()
+        string.title(str)
+      end
       assert.has_error(errfn, "string.title: bad argument #1 type (string to title as string expected, got table!)")
     end)
 
@@ -355,13 +362,16 @@ describe("Tests StringUtils.lua functions", function()
     it("should be able to handle two or more interpolations in a single string", function()
       local str = "This is a {test}. Do make sure to check {2+2} your belongings. {getMudletVersion('string')}"
       local test = "complete success"
-      local expected = "This is a complete success. Do make sure to check 4 your belongings. " .. getMudletVersion('string')
+      local expected = "This is a complete success. Do make sure to check 4 your belongings. "
+        .. getMudletVersion("string")
       local actual = f(str)
       assert.equals(expected, actual)
     end)
 
     it("should error when passed in anything but a string", function()
-      assert.has_error(function() f(true) end, "f: bad argument #1 type (str as string expected, got boolean)")
+      assert.has_error(function()
+        f(true)
+      end, "f: bad argument #1 type (str as string expected, got boolean)")
     end)
   end)
 end)

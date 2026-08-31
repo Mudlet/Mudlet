@@ -188,7 +188,9 @@ describe("Console operations on a buffer emptied by deleteLine()", function()
     it("getTextFormat returns without a line to read", function()
       selectCurrentLine(win)
       -- no format to report on an empty buffer, so a nil return is expected
-      assert.has_no.errors(function() getTextFormat(win) end)
+      assert.has_no.errors(function()
+        getTextFormat(win)
+      end)
     end)
   end)
 

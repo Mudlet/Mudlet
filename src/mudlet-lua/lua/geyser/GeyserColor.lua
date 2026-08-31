@@ -6,37 +6,37 @@ Geyser.Color = {}
 
 --- Converts color to 3 hex values as a string, no alpha, css style
 -- @return The color formatted as a hex string, as accepted by html/css
-function Geyser.Color.hex (r, g, b)
+function Geyser.Color.hex(r, g, b)
   return string.format("#%02x%02x%02x", Geyser.Color.parse(r, g, b))
 end
 
 --- Converts color to 4 hex values as a string, with alpha, css style
 -- @return The color formatted as a hex string, as accepted by html/css
-function Geyser.Color.hexa (r, g, b, a)
+function Geyser.Color.hexa(r, g, b, a)
   return string.format("#%02x%02x%02x%02x", Geyser.Color.parse(r, g, b, a))
 end
 
 --- Converts color to 3 hex values as a string, no alpha, hecho style
 -- @return The color formatted as a hex string, as accepted by hecho
-function Geyser.Color.hhex (r, g, b)
+function Geyser.Color.hhex(r, g, b)
   return string.format("|c%02x%02x%02x", Geyser.Color.parse(r, g, b))
 end
 
 --- Converts color to 4 hex values as a string, with alpha, hecho style
 -- @return The color formatted as a hex string, as accepted by hecho
-function Geyser.Color.hhexa (r, g, b, a)
+function Geyser.Color.hhexa(r, g, b, a)
   return string.format("|c%02x%02x%02x%02x", Geyser.Color.parse(r, g, b, a))
 end
 
 --- Converts color to 3 decimal values as a string, no alpha, decho style
 -- @return The color formatted as a decho() style string
-function Geyser.Color.hdec (r, g, b)
+function Geyser.Color.hdec(r, g, b)
   return string.format("<%d,%d,%d>", Geyser.Color.parse(r, g, b))
 end
 
 --- Converts color to 4 decimal values as a string, with alpha, decho style
 -- @return The color formatted as a decho() style string
-function Geyser.Color.hdeca (r, g, b, a)
+function Geyser.Color.hdeca(r, g, b, a)
   return string.format("<%d,%d,%d,%d>", Geyser.Color.parse(r, g, b, a))
 end
 
@@ -102,7 +102,6 @@ function Geyser.Color.parse(red, green, blue, alpha)
         -- third case is a decimal string, of the format "<dd,dd,dd>"
       elseif string.find(red, "^<") then
         next_num = string.gmatch(red, "%d+")
-
       else
         -- fourth case is a named string
         local col = Geyser.Color.find_color_name(red)
@@ -117,12 +116,12 @@ function Geyser.Color.parse(red, green, blue, alpha)
           i = i + 1
           if i <= n then
             return color_table[col][i]
-          else return nil
+          else
+            return nil
           end
         end
       end
     end
-
   else
     -- Otherwise we weren't passed a complete string, but instead discrete
     -- components as either decimal or hex
@@ -139,7 +138,8 @@ function Geyser.Color.parse(red, green, blue, alpha)
         return blue
       elseif i == 4 then
         return alpha
-      else return nil
+      else
+        return nil
       end
     end
   end

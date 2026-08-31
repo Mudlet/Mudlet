@@ -61,7 +61,8 @@ describe("Tests functionality of Geyser.Mapper", function()
 
   describe("Geyser.Mapper:new/new2", function()
     it("registers a mapper that has no addressable widget of its own", function()
-      local mapper = track(Geyser.Mapper:new({name = "gmpNew", x = 10, y = 20, width = 300, height = 200, embedded = false}))
+      local mapper =
+        track(Geyser.Mapper:new({ name = "gmpNew", x = 10, y = 20, width = 300, height = 200, embedded = false }))
       assert.are.equal("mapper", mapper.type)
       assert.are.equal(mapper, Geyser.windowList.gmpNew)
       -- the map lives in a dock widget Mudlet does not name, so the window
@@ -73,12 +74,13 @@ describe("Tests functionality of Geyser.Mapper", function()
     end)
 
     it("opens the map widget", function()
-      track(Geyser.Mapper:new({name = "gmpOpen", x = 10, y = 20, width = 300, height = 200, embedded = false}))
+      track(Geyser.Mapper:new({ name = "gmpOpen", x = 10, y = 20, width = 300, height = 200, embedded = false }))
       assert.is_true(mapWidgetVisible())
     end)
 
     it("resolves its constraints like any other Geyser window", function()
-      local mapper = track(Geyser.Mapper:new({name = "gmpPixels", x = 10, y = 20, width = 300, height = 200, embedded = false}))
+      local mapper =
+        track(Geyser.Mapper:new({ name = "gmpPixels", x = 10, y = 20, width = 300, height = 200, embedded = false }))
       assert.are.equal(10, mapper:get_x())
       assert.are.equal(20, mapper:get_y())
       assert.are.equal(300, mapper:get_width())
@@ -86,8 +88,13 @@ describe("Tests functionality of Geyser.Mapper", function()
     end)
 
     it("resolves percentages against its container", function()
-      local container = track(Geyser.Container:new({name = "gmpBox", x = 100, y = 50, width = 400, height = 200}))
-      local mapper = track(Geyser.Mapper:new({name = "gmpInBox", x = "25%", y = "50%", width = "50%", height = "50%", embedded = false}, container))
+      local container = track(Geyser.Container:new({ name = "gmpBox", x = 100, y = 50, width = 400, height = 200 }))
+      local mapper = track(
+        Geyser.Mapper:new(
+          { name = "gmpInBox", x = "25%", y = "50%", width = "50%", height = "50%", embedded = false },
+          container
+        )
+      )
       assert.are.equal(200, mapper:get_x())
       assert.are.equal(150, mapper:get_y())
       assert.are.equal(200, mapper:get_width())
@@ -95,19 +102,24 @@ describe("Tests functionality of Geyser.Mapper", function()
     end)
 
     it("treats a mapper given a dock position as not embedded", function()
-      local mapper = track(Geyser.Mapper:new({name = "gmpDocked", x = 0, y = 0, width = 200, height = 150, dockPosition = "right"}))
+      local mapper = track(
+        Geyser.Mapper:new({ name = "gmpDocked", x = 0, y = 0, width = 200, height = 150, dockPosition = "right" })
+      )
       assert.is_false(mapper.embedded)
       assert.are.equal("right", mapper.dockPosition)
     end)
 
     it("shortens a floating dock position to f", function()
-      local mapper = track(Geyser.Mapper:new({name = "gmpFloating", x = 0, y = 0, width = 200, height = 150, dockPosition = "floating"}))
+      local mapper = track(
+        Geyser.Mapper:new({ name = "gmpFloating", x = 0, y = 0, width = 200, height = 150, dockPosition = "floating" })
+      )
       assert.is_false(mapper.embedded)
       assert.are.equal("f", mapper.dockPosition)
     end)
 
     it("new2 marks the mapper as using add2", function()
-      local mapper = track(Geyser.Mapper:new2({name = "gmpNew2", x = 0, y = 0, width = 200, height = 150, embedded = false}))
+      local mapper =
+        track(Geyser.Mapper:new2({ name = "gmpNew2", x = 0, y = 0, width = 200, height = 150, embedded = false }))
       assert.is_true(mapper.useAdd2)
       assert.are.equal("mapper", mapper.type)
     end)
@@ -117,7 +129,8 @@ describe("Tests functionality of Geyser.Mapper", function()
     local mapper
 
     before_each(function()
-      mapper = track(Geyser.Mapper:new({name = "gmpMove", x = 10, y = 20, width = 300, height = 200, embedded = false}))
+      mapper =
+        track(Geyser.Mapper:new({ name = "gmpMove", x = 10, y = 20, width = 300, height = 200, embedded = false }))
     end)
 
     it("takes the new constraints and resolves them", function()
@@ -146,7 +159,8 @@ describe("Tests functionality of Geyser.Mapper", function()
 
   describe("Geyser.Mapper:hide/show", function()
     it("closes and reopens the map widget", function()
-      local mapper = track(Geyser.Mapper:new({name = "gmpHide", x = 10, y = 20, width = 300, height = 200, embedded = false}))
+      local mapper =
+        track(Geyser.Mapper:new({ name = "gmpHide", x = 10, y = 20, width = 300, height = 200, embedded = false }))
       assert.is_true(mapWidgetVisible())
       mapper:hide()
       assert.is_true(mapper.hidden)
@@ -157,7 +171,8 @@ describe("Tests functionality of Geyser.Mapper", function()
     end)
 
     it("reports that a closed map widget is already closed", function()
-      local mapper = track(Geyser.Mapper:new({name = "gmpClosed", x = 10, y = 20, width = 300, height = 200, embedded = false}))
+      local mapper =
+        track(Geyser.Mapper:new({ name = "gmpClosed", x = 10, y = 20, width = 300, height = 200, embedded = false }))
       mapper:hide()
       local closed, message = closeMapWidget()
       assert.is_nil(closed)
@@ -167,7 +182,8 @@ describe("Tests functionality of Geyser.Mapper", function()
 
   describe("Geyser.Mapper:setDockPosition", function()
     it("puts a closed map widget back on screen", function()
-      local mapper = track(Geyser.Mapper:new({name = "gmpDockOpen", x = 10, y = 20, width = 300, height = 200, embedded = false}))
+      local mapper =
+        track(Geyser.Mapper:new({ name = "gmpDockOpen", x = 10, y = 20, width = 300, height = 200, embedded = false }))
       mapper:hide()
       assert.is_false(mapWidgetVisible())
       assert.is_true(mapper:setDockPosition("f"))
@@ -175,7 +191,8 @@ describe("Tests functionality of Geyser.Mapper", function()
     end)
 
     it("refuses a dock position that is not one of the five", function()
-      local mapper = track(Geyser.Mapper:new({name = "gmpDockBad", x = 10, y = 20, width = 300, height = 200, embedded = false}))
+      local mapper =
+        track(Geyser.Mapper:new({ name = "gmpDockBad", x = 10, y = 20, width = 300, height = 200, embedded = false }))
       local result, message = mapper:setDockPosition("nonsense")
       assert.is_nil(result)
       assert.is_string(message)
@@ -187,7 +204,9 @@ describe("Tests functionality of Geyser.Mapper", function()
 
   describe("Geyser.Mapper:reposition", function()
     it("leaves the map widget alone when the main window is resized", function()
-      local mapper = track(Geyser.Mapper:new({name = "gmpReposition", x = 10, y = 20, width = 300, height = 200, embedded = false}))
+      local mapper = track(
+        Geyser.Mapper:new({ name = "gmpReposition", x = 10, y = 20, width = 300, height = 200, embedded = false })
+      )
       local mainWidth, mainHeight = getMainWindowSize()
       -- a mapper has no window for moveWindow/resizeWindow to act on, which is
       -- why it overrides reposition to do nothing unless it is embedded. This
@@ -206,7 +225,10 @@ describe("Tests functionality of Geyser.Mapper", function()
     it("remembers the title it was given, and empties it again on reset", function()
       local mapper = track(Geyser.Mapper:new({
         name = "gmpTitle",
-        x = 10, y = 20, width = 300, height = 200,
+        x = 10,
+        y = 20,
+        width = 300,
+        height = 200,
         embedded = false,
         titleText = "My map",
       }))
@@ -221,7 +243,9 @@ describe("Tests functionality of Geyser.Mapper", function()
     end)
 
     it("applies a title that was set while the mapper was hidden", function()
-      local mapper = track(Geyser.Mapper:new({name = "gmpHiddenTitle", x = 10, y = 20, width = 300, height = 200, embedded = false}))
+      local mapper = track(
+        Geyser.Mapper:new({ name = "gmpHiddenTitle", x = 10, y = 20, width = 300, height = 200, embedded = false })
+      )
       mapper:hide()
       -- the map widget is off screen, so setMapWindowTitle has nothing to retitle
       assert.is_nil(mapper:setTitle("Named while hidden"))
@@ -233,7 +257,10 @@ describe("Tests functionality of Geyser.Mapper", function()
     it("applies a reset that was made while the mapper was hidden", function()
       local mapper = track(Geyser.Mapper:new({
         name = "gmpHiddenReset",
-        x = 10, y = 20, width = 300, height = 200,
+        x = 10,
+        y = 20,
+        width = 300,
+        height = 200,
         embedded = false,
         titleText = "Named before hiding",
       }))
@@ -250,7 +277,8 @@ describe("Tests functionality of Geyser.Mapper", function()
     end)
 
     it("does not overwrite a directly set title when a mapper is shown", function()
-      local mapper = track(Geyser.Mapper:new({name = "gmpNoClobber", x = 10, y = 20, width = 300, height = 200, embedded = false}))
+      local mapper =
+        track(Geyser.Mapper:new({ name = "gmpNoClobber", x = 10, y = 20, width = 300, height = 200, embedded = false }))
       mapper:hide()
       openMapWidget()
       assert.is_true(setMapWindowTitle("Set without Geyser"))
@@ -262,14 +290,19 @@ describe("Tests functionality of Geyser.Mapper", function()
     end)
 
     it("starts with an empty title when it was not given one", function()
-      local mapper = track(Geyser.Mapper:new({name = "gmpNoTitle", x = 10, y = 20, width = 300, height = 200, embedded = false}))
+      local mapper =
+        track(Geyser.Mapper:new({ name = "gmpNoTitle", x = 10, y = 20, width = 300, height = 200, embedded = false }))
       assert.are.equal("", mapper.titleText)
     end)
   end)
 
-  pending("Geyser.Mapper:setTitle/resetTitle put the text on the map window's title bar - needs a getMapWindowTitle getter")
+  pending(
+    "Geyser.Mapper:setTitle/resetTitle put the text on the map window's title bar - needs a getMapWindowTitle getter"
+  )
 
-  pending("Geyser.Mapper:setDockPosition docks the map widget against the edge it names - which edge it ended up on is not readable from Lua")
+  pending(
+    "Geyser.Mapper:setDockPosition docks the map widget against the edge it names - which edge it ended up on is not readable from Lua"
+  )
 
   pending("Geyser.Mapper:raise/lower stack the map against the other windows - Mudlet exposes no z-order readback")
 
@@ -278,11 +311,14 @@ describe("Tests functionality of Geyser.Mapper", function()
   -- each refuse when the other one exists), and neither can be destroyed once
   -- made. Creating an embedded mapper here would take the map widget away from
   -- Mapper_spec for the rest of the run.
-  pending("Geyser.Mapper embedded in the main console - an embedded mapper cannot be undone, so it cannot be created inside this suite")
+  pending(
+    "Geyser.Mapper embedded in the main console - an embedded mapper cannot be undone, so it cannot be created inside this suite"
+  )
 
   describe("Geyser.Mapper:type_delete", function()
     it("closes the map widget and unregisters the mapper", function()
-      local mapper = track(Geyser.Mapper:new({name = "gmpDelete", x = 10, y = 20, width = 300, height = 200, embedded = false}))
+      local mapper =
+        track(Geyser.Mapper:new({ name = "gmpDelete", x = 10, y = 20, width = 300, height = 200, embedded = false }))
       assert.is_true(mapWidgetVisible())
       mapper:delete()
       assert.is_nil(Geyser.windowList.gmpDelete)
@@ -290,8 +326,13 @@ describe("Tests functionality of Geyser.Mapper", function()
     end)
 
     it("goes away with the container it was put in", function()
-      local container = track(Geyser.Container:new({name = "gmpOuter", x = 0, y = 0, width = 300, height = 200}))
-      local mapper = track(Geyser.Mapper:new({name = "gmpNested", x = 0, y = 0, width = "100%", height = "100%", embedded = false}, container))
+      local container = track(Geyser.Container:new({ name = "gmpOuter", x = 0, y = 0, width = 300, height = 200 }))
+      local mapper = track(
+        Geyser.Mapper:new(
+          { name = "gmpNested", x = 0, y = 0, width = "100%", height = "100%", embedded = false },
+          container
+        )
+      )
       assert.are.equal(mapper, container.windowList.gmpNested)
       assert.is_true(mapWidgetVisible())
       container:delete()
@@ -305,8 +346,10 @@ describe("Tests functionality of Geyser.Mapper", function()
     -- the same widget: deleting either one closes it under the other. That is
     -- worth pinning down, because it is the trap a second mapper walks into.
     it("closes the one shared map widget even when another mapper still holds it", function()
-      local first = track(Geyser.Mapper:new({name = "gmpShared", x = 10, y = 20, width = 300, height = 200, embedded = false}))
-      local second = track(Geyser.Mapper:new({name = "gmpSharing", x = 0, y = 0, width = 200, height = 150, embedded = false}))
+      local first =
+        track(Geyser.Mapper:new({ name = "gmpShared", x = 10, y = 20, width = 300, height = 200, embedded = false }))
+      local second =
+        track(Geyser.Mapper:new({ name = "gmpSharing", x = 0, y = 0, width = 200, height = 150, embedded = false }))
       assert.is_true(mapWidgetVisible())
       second:delete()
       assert.is_false(mapWidgetVisible())

@@ -1,5 +1,4 @@
 describe("Tests Other.lua functions", function()
-
   describe("Tests the functionality of sendAll", function()
     -- sendAll and the speedwalk family below drive the real send() function.
     -- Offline (the self-test profile is not connected) send() is a no-op on the
@@ -19,11 +18,11 @@ describe("Tests Other.lua functions", function()
       local commands = {
         "get gold from pouch",
         "buy potion",
-        "put gold in pouch"
+        "put gold in pouch",
       }
       sendAll(unpack(commands))
       assert.spy(send).was.called(#commands)
-      for _,command in ipairs(commands) do
+      for _, command in ipairs(commands) do
         assert.spy(send).was.called_with(command, true)
       end
       send:revert()
@@ -88,11 +87,15 @@ describe("Tests Other.lua functions", function()
     end)
 
     it("errors when given no argument", function()
-      assert.has_error(function() sendCmdLine() end)
+      assert.has_error(function()
+        sendCmdLine()
+      end)
     end)
 
     it("errors when the argument is not a string", function()
-      assert.has_error(function() sendCmdLine({}) end)
+      assert.has_error(function()
+        sendCmdLine({})
+      end)
     end)
   end)
 
@@ -248,7 +251,7 @@ describe("Tests Other.lua functions", function()
     end)
 
     it("should return true if a is true and b is false", function()
-      assert.is_true(xor(false,true))
+      assert.is_true(xor(false, true))
     end)
 
     it("should return false if a is true and b is true", function()
@@ -276,7 +279,7 @@ describe("Tests Other.lua functions", function()
       local send = spy.on(_G, "send")
 
       -- Will walk 16 times down, once southeast, once up. All in immediate succession.
-      speedwalk('16d1se1u')
+      speedwalk("16d1se1u")
       assert.spy(send).was.called(18)
       assert.spy(send).was.called_with("d", true)
       assert.spy(send).was.called_with("se", true)
@@ -289,7 +292,7 @@ describe("Tests Other.lua functions", function()
       local send = spy.on(_G, "send")
 
       -- Will walk twice northeast, thrice east, twice north, once east. All in immediate succession.
-      speedwalk('2ne,3e,2n,e')
+      speedwalk("2ne,3e,2n,e")
       assert.spy(send).was.called(8)
       assert.spy(send).was.called_with("ne", true)
       assert.spy(send).was.called_with("e", true)
@@ -360,16 +363,24 @@ describe("Tests Other.lua functions", function()
 
     it("raises sysSpeedwalkStarted when a walk begins", function()
       local started = false
-      local handler = registerAnonymousEventHandler("sysSpeedwalkStarted", function() started = true end)
-      finally(function() killAnonymousEventHandler(handler) end)
+      local handler = registerAnonymousEventHandler("sysSpeedwalkStarted", function()
+        started = true
+      end)
+      finally(function()
+        killAnonymousEventHandler(handler)
+      end)
       speedwalk("2n", false, 1)
       assert.is_true(started)
     end)
 
     it("raises sysSpeedwalkStopped when a running walk is stopped", function()
       local stopped = false
-      local handler = registerAnonymousEventHandler("sysSpeedwalkStopped", function() stopped = true end)
-      finally(function() killAnonymousEventHandler(handler) end)
+      local handler = registerAnonymousEventHandler("sysSpeedwalkStopped", function()
+        stopped = true
+      end)
+      finally(function()
+        killAnonymousEventHandler(handler)
+      end)
       speedwalk("2n1e", false, 1)
       assert.is_true(stopSpeedwalk())
       assert.is_true(stopped)
@@ -377,8 +388,12 @@ describe("Tests Other.lua functions", function()
 
     it("pause then resume raises the paused and resumed events, resuming dispatches the next step", function()
       local paused, resumed = false, false
-      local hPause = registerAnonymousEventHandler("sysSpeedwalkPaused", function() paused = true end)
-      local hResume = registerAnonymousEventHandler("sysSpeedwalkResumed", function() resumed = true end)
+      local hPause = registerAnonymousEventHandler("sysSpeedwalkPaused", function()
+        paused = true
+      end)
+      local hResume = registerAnonymousEventHandler("sysSpeedwalkResumed", function()
+        resumed = true
+      end)
       finally(function()
         killAnonymousEventHandler(hPause)
         killAnonymousEventHandler(hResume)
@@ -390,7 +405,9 @@ describe("Tests Other.lua functions", function()
 
       -- resuming sends the next queued step synchronously before re-scheduling
       local send = spy.on(_G, "send")
-      finally(function() send:revert() end)
+      finally(function()
+        send:revert()
+      end)
       assert.is_true(resumeSpeedwalk())
       assert.is_true(resumed)
       assert.spy(send).was.called(1)
@@ -416,8 +433,8 @@ describe("Tests Other.lua functions", function()
     it("tests the comparisons", function()
       local versionTable = getMudletVersion()
       local currentVersion = { versionTable.major, versionTable.minor, versionTable.revision }
-      local newerVersion = { versionTable.major + 1 , versionTable.minor + 1 , versionTable.revision + 1 }
-      local olderVersion = { versionTable.major - 1 , versionTable.minor - 1 , versionTable.revision - 1 }
+      local newerVersion = { versionTable.major + 1, versionTable.minor + 1, versionTable.revision + 1 }
+      local olderVersion = { versionTable.major - 1, versionTable.minor - 1, versionTable.revision - 1 }
       assert.is_true(mudletOlderThan(unpack(newerVersion)))
       assert.is_false(mudletOlderThan(unpack(olderVersion)))
       assert.is_false(mudletOlderThan(unpack(currentVersion)))
@@ -425,10 +442,9 @@ describe("Tests Other.lua functions", function()
   end)
 
   describe("Tests the functionality of _comp", function()
-
     it("compares two numbers the same as ==", function()
-      assert.is_true(_comp(5,5))
-      assert.is_false(_comp(5,6))
+      assert.is_true(_comp(5, 5))
+      assert.is_false(_comp(5, 6))
     end)
 
     it("compares two strings the same as ==", function()
@@ -438,7 +454,7 @@ describe("Tests Other.lua functions", function()
 
     it("compares booleans the same as ==", function()
       assert.is_true(_comp(false, false))
-      assert.is_false(_comp(true,false))
+      assert.is_false(_comp(true, false))
     end)
 
     it("compares tables holding false like tables holding any other value", function()
@@ -476,17 +492,17 @@ describe("Tests Other.lua functions", function()
       local tableA = {
         "One",
         { "First", "Second" },
-        "Three"
+        "Three",
       }
       local tableB = {
         "One",
         { "First", "Second" },
-        "Three"
+        "Three",
       }
       local tableC = {
         "One",
         { "First", "2nd" },
-        "Three"
+        "Three",
       }
       assert.is_true(_comp(tableA, tableB))
       assert.is_false(_comp(tableB, tableC))
@@ -496,17 +512,17 @@ describe("Tests Other.lua functions", function()
       local tableA = {
         "One",
         { "First", "Second" },
-        "Three"
+        "Three",
       }
       local tableB = {
         "One",
         { "First", "Second" },
-        "Three"
+        "Three",
       }
       local tableC = {
         "One",
         { "First", "2nd" },
-        "Three"
+        "Three",
       }
       assert.are.same(_comp(tableA, tableB), _comp(tableB, tableA))
       assert.are.same(_comp(tableB, tableC), _comp(tableC, tableB))
@@ -529,9 +545,9 @@ describe("Tests Other.lua functions", function()
       _G.multimatches = {
         { "This is the first line" },
         { "some substring" },
-        { "third line" }
+        { "third line" },
       }
-      local ok,err = deleteMultiline(5)
+      local ok, err = deleteMultiline(5)
       assert.is_true(ok)
       assert.is_nil(err)
       assert.spy(s).was.called(3)
@@ -542,7 +558,6 @@ describe("Tests Other.lua functions", function()
       s:revert()
     end)
   end)
-
 
   describe("Tests timeframe", function()
     teardown(function()
@@ -586,8 +601,10 @@ describe("Tests Other.lua functions", function()
 
     local function assertClose(expected, actual, tolerance)
       tolerance = tolerance or 0.5
-      assert.is_true(math.abs(expected - actual) <= tolerance,
-        string.format("expected roughly %s but got %s", tostring(expected), tostring(actual)))
+      assert.is_true(
+        math.abs(expected - actual) <= tolerance,
+        string.format("expected roughly %s but got %s", tostring(expected), tostring(actual))
+      )
     end
 
     teardown(function()
@@ -619,7 +636,9 @@ describe("Tests Other.lua functions", function()
       end)
 
       it("errors on an unsupported first argument type", function()
-        assert.has_error(function() createStopWatch({}) end)
+        assert.has_error(function()
+          createStopWatch({})
+        end)
       end)
 
       it("refuses to create a second stopwatch with an existing name", function()
@@ -659,7 +678,9 @@ describe("Tests Other.lua functions", function()
       end)
 
       it("errors when the first argument is neither number nor string", function()
-        assert.has_error(function() getStopWatchTime({}) end)
+        assert.has_error(function()
+          getStopWatchTime({})
+        end)
       end)
     end)
 
@@ -724,7 +745,7 @@ describe("Tests Other.lua functions", function()
       it("returns a table broken down into days/hours/minutes/seconds", function()
         local id = track(createStopWatch(false))
         -- 1 day, 2 hours, 3 minutes, 4 seconds
-        adjustStopWatch(id, 4 + 3*60 + 2*3600 + 1*86400)
+        adjustStopWatch(id, 4 + 3 * 60 + 2 * 3600 + 1 * 86400)
         local t = getStopWatchBrokenDownTime(id)
         assert.is_table(t)
         assert.equals(1, t.days)
@@ -847,7 +868,7 @@ describe("Tests Other.lua functions", function()
       local original = getConfig("showSentText", true)
       assert.is_string(original)
       originalValues.showSentText = original
-      for _, mode in ipairs({"never", "always", "script"}) do
+      for _, mode in ipairs({ "never", "always", "script" }) do
         assert.is_true(setConfig("showSentText", mode))
         assert.equals(mode, getConfig("showSentText", true))
       end
@@ -915,7 +936,7 @@ describe("Tests Other.lua functions", function()
       -- infinities are here only to pin that they stay refused - the range
       -- check already handles those, and 0 is the value that would really do
       -- damage, blanking every room symbol.
-      for _, value in ipairs({0.49, 2.01, -1, 0, 0/0, 1/0, -1/0}) do
+      for _, value in ipairs({ 0.49, 2.01, -1, 0, 0 / 0, 1 / 0, -1 / 0 }) do
         local ok, err = setConfig("mapSymbolFontScaling", value)
         assert.is_nil(ok, "setConfig accepted out-of-range value: " .. tostring(value))
         assert.is_string(err)
@@ -976,11 +997,11 @@ describe("Tests Other.lua functions", function()
 
     it("round-trips the string enum options", function()
       local enums = {
-        caretShortcut = {"none", "tab", "ctrltab", "f6"},
-        blankLinesBehaviour = {"show", "hide", "replacewithspace"},
-        controlCharacterHandling = {"asis", "oem", "picture"},
-        ambiguousEAsianWidthCharacters = {"narrow", "wide", "auto"},
-        mapperButton = {"scripted", "disabled", "default"},
+        caretShortcut = { "none", "tab", "ctrltab", "f6" },
+        blankLinesBehaviour = { "show", "hide", "replacewithspace" },
+        controlCharacterHandling = { "asis", "oem", "picture" },
+        ambiguousEAsianWidthCharacters = { "narrow", "wide", "auto" },
+        mapperButton = { "scripted", "disabled", "default" },
       }
       local exercised = 0
       for key, values in pairs(enums) do
@@ -1000,7 +1021,9 @@ describe("Tests Other.lua functions", function()
     it("errors on a wrongly typed value for a boolean option", function()
       -- setConfig defers to getVerifiedBool, which raises rather than silently
       -- coercing; the flag is never assigned so there is nothing to restore.
-      assert.has_error(function() setConfig("enableGMCP", "not a boolean") end)
+      assert.has_error(function()
+        setConfig("enableGMCP", "not a boolean")
+      end)
     end)
 
     it("rejects an invalid string for an enum option", function()
@@ -1041,7 +1064,7 @@ describe("Tests Other.lua functions", function()
       snapshot("undoServerWrapWidth")
       assert.is_true(setConfig("undoServerWrapWidth", 42))
       assert.equals(42, getConfig("undoServerWrapWidth"))
-      assert.is_nil((setConfig("undoServerWrapWidth", 10)))  -- below the minimum of 20
+      assert.is_nil((setConfig("undoServerWrapWidth", 10))) -- below the minimum of 20
       assert.is_nil((setConfig("undoServerWrapWidth", 600))) -- above the maximum of 500
       restore("undoServerWrapWidth")
     end)
@@ -1174,12 +1197,14 @@ describe("Tests Other.lua functions", function()
     end)
 
     it("should error if given a non-nil argument that is not a table", function()
-      local errfn = function() phpTable("not a table") end
+      local errfn = function()
+        phpTable("not a table")
+      end
       assert.error_matches(errfn, "table expected")
     end)
   end)
 
-    --[[
+  --[[
     TODO:
       remember()
       loadVars()
@@ -1245,12 +1270,14 @@ describe("Tests the timer API", function()
   local function settle(seconds)
     settleCounter = settleCounter + 1
     local eventName = "w2aTimerSpecSettled" .. settleCounter
-    trackTemp(tempTimer(seconds, function() raiseEvent(eventName) end))
+    trackTemp(tempTimer(seconds, function()
+      raiseEvent(eventName)
+    end))
     waitFor(eventName)
   end
 
   before_each(function()
-    _G.W2aTimerSpec = {fired = 0, order = {}}
+    _G.W2aTimerSpec = { fired = 0, order = {} }
   end)
 
   after_each(function()
@@ -1268,15 +1295,21 @@ describe("Tests the timer API", function()
 
   describe("Tests the functionality of tempTimer", function()
     it("errors when called without a delay", function()
-      assert.has_error(function() tempTimer() end)
+      assert.has_error(function()
+        tempTimer()
+      end)
     end)
 
     it("errors when the delay is not a number", function()
-      assert.has_error(function() tempTimer({}, [[]]) end)
+      assert.has_error(function()
+        tempTimer({}, [[]])
+      end)
     end)
 
     it("errors when the body is neither a string nor a function", function()
-      assert.has_error(function() tempTimer(0.1, {}) end)
+      assert.has_error(function()
+        tempTimer(0.1, {})
+      end)
     end)
 
     it("returns -1 and a message when the code does not compile", function()
@@ -1285,24 +1318,33 @@ describe("Tests the timer API", function()
       local id, message = tempTimer(0.125, "this is ( not lua")
       assert.equals(-1, id)
       assert.is_string(message, "the failure should come with a message")
-      assert.is_truthy(message:find("compile", 1, true),
-        "the failure should say the code could not be compiled, got: " .. tostring(message))
+      assert.is_truthy(
+        message:find("compile", 1, true),
+        "the failure should say the code could not be compiled, got: " .. tostring(message)
+      )
       -- and the reason has to be what Lua said about the code
-      assert.is_truthy(message:find("near", 1, true),
-        "the reason should be the Lua error, got: " .. tostring(message))
-      assert.is_falsy(message:find("0.125", 1, true),
-        "the delay must not be reported as the Lua error, got: " .. tostring(message))
+      assert.is_truthy(message:find("near", 1, true), "the reason should be the Lua error, got: " .. tostring(message))
+      assert.is_falsy(
+        message:find("0.125", 1, true),
+        "the delay must not be reported as the Lua error, got: " .. tostring(message)
+      )
     end)
 
     it("errors for a negative delay", function()
       -- an unguarded negative delay wraps around the 24 hour clock into a timer
       -- that fires almost a day later, so it has to be rejected outright
-      assert.has_error(function() tempTimer(-1, [[]]) end)
-      assert.has_error(function() tempTimer(-1, function() end) end)
+      assert.has_error(function()
+        tempTimer(-1, [[]])
+      end)
+      assert.has_error(function()
+        tempTimer(-1, function() end)
+      end)
     end)
 
     it("errors for a delay of a day or more, which wraps around to zero", function()
-      assert.has_error(function() tempTimer(86400, [[]]) end)
+      assert.has_error(function()
+        tempTimer(86400, [[]])
+      end)
     end)
 
     it("errors for a delay that only rounds up onto the day", function()
@@ -1310,20 +1352,24 @@ describe("Tests the timer API", function()
       -- of under 86400 seconds can still reach 86400000ms and wrap around to no
       -- interval at all: it is the rounded milliseconds that have to be bounded
       local ok, err = pcall(tempTimer, 86399.9999, [[]])
-      assert.is_false(ok,
-        "a delay rounding up to a whole day wraps to a zero interval and must be rejected")
-      assert.is_truthy(tostring(err):find("bad argument #1", 1, true),
-        "the delay should be reported as the offending argument, got: " .. tostring(err))
+      assert.is_false(ok, "a delay rounding up to a whole day wraps to a zero interval and must be rejected")
+      assert.is_truthy(
+        tostring(err):find("bad argument #1", 1, true),
+        "the delay should be reported as the offending argument, got: " .. tostring(err)
+      )
       local id = trackTemp(tempTimer(86399.4, [[]]))
       assert.is_true(id > 0, "a delay under the day once rounded should still be accepted")
       assert.is_true(killTimer(id))
     end)
 
     it("fires a code-string body in the global environment", function()
-      trackTemp(tempTimer(0.05, [[
+      trackTemp(tempTimer(
+        0.05,
+        [[
         _G.W2aTimerSpec.fired = _G.W2aTimerSpec.fired + 1
         raiseEvent("w2aTempTimerFired")
-      ]]))
+      ]]
+      ))
       waitFor("w2aTempTimerFired")
       assert.equals(1, _G.W2aTimerSpec.fired)
     end)
@@ -1338,7 +1384,9 @@ describe("Tests the timer API", function()
     end)
 
     it("fires a zero delay timer", function()
-      trackTemp(tempTimer(0, function() raiseEvent("w2aZeroDelayTimerFired") end))
+      trackTemp(tempTimer(0, function()
+        raiseEvent("w2aZeroDelayTimerFired")
+      end))
       waitFor("w2aZeroDelayTimerFired")
     end)
 
@@ -1352,22 +1400,30 @@ describe("Tests the timer API", function()
     end)
 
     it("errors when the repeating argument is not a boolean", function()
-      assert.has_error(function() tempTimer(0.1, [[]], "w2aNotABoolean") end)
+      assert.has_error(function()
+        tempTimer(0.1, [[]], "w2aNotABoolean")
+      end)
     end)
 
     it("repeats until killed when the repeating argument is true", function()
-      local id = trackTemp(tempTimer(0.02, [[
+      local id = trackTemp(tempTimer(
+        0.02,
+        [[
         _G.W2aTimerSpec.fired = _G.W2aTimerSpec.fired + 1
         raiseEvent("w2aRepeatingTimerFired")
-      ]], true))
+      ]],
+        true
+      ))
       assert.is_true(id > 0)
       -- three separate waits, so each firing has to happen for itself
       waitFor("w2aRepeatingTimerFired")
       waitFor("w2aRepeatingTimerFired")
       waitFor("w2aRepeatingTimerFired")
       assert.is_true(killTimer(id))
-      assert.is_true(_G.W2aTimerSpec.fired >= 3,
-        "a repeating timer should fire more than once, fired " .. tostring(_G.W2aTimerSpec.fired) .. " times")
+      assert.is_true(
+        _G.W2aTimerSpec.fired >= 3,
+        "a repeating timer should fire more than once, fired " .. tostring(_G.W2aTimerSpec.fired) .. " times"
+      )
     end)
 
     it("runs a timer scheduled from inside another timer", function()
@@ -1379,7 +1435,7 @@ describe("Tests the timer API", function()
         end))
       end))
       waitFor("w2aNestedTimerFired")
-      assert.are.same({"outer", "inner"}, _G.W2aTimerSpec.order)
+      assert.are.same({ "outer", "inner" }, _G.W2aTimerSpec.order)
     end)
   end)
 
@@ -1387,7 +1443,9 @@ describe("Tests the timer API", function()
     -- killTimer looks its argument up by name; temporary timers are simply named
     -- after the id it returns, which is why passing that id works.
     it("errors when called without an argument", function()
-      assert.has_error(function() killTimer() end)
+      assert.has_error(function()
+        killTimer()
+      end)
     end)
 
     it("returns false when nothing of that name exists", function()
@@ -1399,15 +1457,13 @@ describe("Tests the timer API", function()
       assert.is_true(permTimer(trackPerm("W2aPermTimerUnkillable"), "", 30, [[]]) > 0)
       assert.equals(before + 1, exists("W2aPermTimerUnkillable", "timer"))
       assert.is_false(killTimer("W2aPermTimerUnkillable"))
-      assert.equals(before + 1, exists("W2aPermTimerUnkillable", "timer"),
-        "a permanent timer survives killTimer")
+      assert.equals(before + 1, exists("W2aPermTimerUnkillable", "timer"), "a permanent timer survives killTimer")
     end)
 
     it("returns false the second time, as the timer is already dead", function()
       local id = trackTemp(tempTimer(10, [[]]))
       assert.is_true(killTimer(id))
-      assert.is_false(killTimer(id),
-        "killing an already killed timer achieves nothing and has to say so")
+      assert.is_false(killTimer(id), "killing an already killed timer achieves nothing and has to say so")
       -- the object itself is only freed by the timer unit's deferred cleanup,
       -- so check the state a user can see straight away instead
       assert.equals(0, isActive(id, "timer"), "a killed timer is no longer active")
@@ -1415,18 +1471,21 @@ describe("Tests the timer API", function()
       assert.is_nil(left, "a killed timer is no longer counting down")
       -- "inactive" rather than "not a valid timerID" pins that the timer is
       -- still present and merely stopped, which is what the second kill saw
-      assert.is_truthy(tostring(message):find("inactive", 1, true),
-        "the killed timer should still be present but stopped, got: " .. tostring(message))
+      assert.is_truthy(
+        tostring(message):find("inactive", 1, true),
+        "the killed timer should still be present but stopped, got: " .. tostring(message)
+      )
     end)
 
     it("returns false for a one-shot timer that has already fired", function()
       -- a fired one-shot temporary timer is queued for the same deferred cleanup
       -- a killed one is, so it is just as dead - which is what the manual has
       -- always said killTimer reports
-      local id = trackTemp(tempTimer(0, function() raiseEvent("w2aOneShotFinished") end))
+      local id = trackTemp(tempTimer(0, function()
+        raiseEvent("w2aOneShotFinished")
+      end))
       waitFor("w2aOneShotFinished")
-      assert.is_false(killTimer(id),
-        "a one-shot timer that has already fired cannot be killed again")
+      assert.is_false(killTimer(id), "a one-shot timer that has already fired cannot be killed again")
     end)
 
     it("stops a pending timer from ever firing and deactivates it", function()
@@ -1446,14 +1505,15 @@ describe("Tests the timer API", function()
     it("stops a repeating timer", function()
       local id = trackTemp(tempTimer(0.02, function()
         _G.W2aTimerSpec.fired = _G.W2aTimerSpec.fired + 1
-        if _G.W2aTimerSpec.fired == 2 then raiseEvent("w2aRepeatingTimerToKill") end
+        if _G.W2aTimerSpec.fired == 2 then
+          raiseEvent("w2aRepeatingTimerToKill")
+        end
       end, true))
       waitFor("w2aRepeatingTimerToKill")
       assert.is_true(killTimer(id))
       local firedWhenKilled = _G.W2aTimerSpec.fired
       settle(0.15)
-      assert.equals(firedWhenKilled, _G.W2aTimerSpec.fired,
-        "a killed repeating timer must not fire again")
+      assert.equals(firedWhenKilled, _G.W2aTimerSpec.fired, "a killed repeating timer must not fire again")
     end)
 
     it("kills a repeating timer from inside its own callback", function()
@@ -1468,20 +1528,22 @@ describe("Tests the timer API", function()
         raiseEvent("w2aSelfKillingTimerFired")
       end, true))
       waitFor("w2aSelfKillingTimerFired")
-      assert.is_true(_G.W2aTimerSpec.killed,
-        "killTimer should report success from inside the timer's own callback")
-      assert.is_false(_G.W2aTimerSpec.killedAgain,
-        "killing the same timer twice from inside its own callback must fail the second time")
+      assert.is_true(_G.W2aTimerSpec.killed, "killTimer should report success from inside the timer's own callback")
+      assert.is_false(
+        _G.W2aTimerSpec.killedAgain,
+        "killing the same timer twice from inside its own callback must fail the second time"
+      )
       local firedWhenKilled = _G.W2aTimerSpec.fired
       settle(0.15)
-      assert.equals(firedWhenKilled, _G.W2aTimerSpec.fired,
-        "a self-killed timer must not fire again")
+      assert.equals(firedWhenKilled, _G.W2aTimerSpec.fired, "a self-killed timer must not fire again")
     end)
   end)
 
   describe("Tests the functionality of remainingTime", function()
     it("errors when given something that is neither a number nor a string", function()
-      assert.has_error(function() remainingTime({}) end)
+      assert.has_error(function()
+        remainingTime({})
+      end)
     end)
 
     it("returns nil and a message for a number that is not a timer id", function()
@@ -1511,16 +1573,20 @@ describe("Tests the timer API", function()
       local id = trackTemp(tempTimer(10, [[]]))
       local left = remainingTime(id)
       assert.is_number(left)
-      assert.is_true(left > 9 and left <= 10,
-        "a 10 second timer should have just under 10 seconds left, got " .. tostring(left))
+      assert.is_true(
+        left > 9 and left <= 10,
+        "a 10 second timer should have just under 10 seconds left, got " .. tostring(left)
+      )
     end)
 
     it("resolves a running temporary timer by its name, which is its id", function()
       local id = trackTemp(tempTimer(10, [[]]))
       local left = remainingTime(tostring(id))
       assert.is_number(left)
-      assert.is_true(left > 9 and left <= 10,
-        "a 10 second timer should have just under 10 seconds left, got " .. tostring(left))
+      assert.is_true(
+        left > 9 and left <= 10,
+        "a 10 second timer should have just under 10 seconds left, got " .. tostring(left)
+      )
     end)
 
     it("resolves a running permanent timer by name", function()
@@ -1528,8 +1594,10 @@ describe("Tests the timer API", function()
       assert.is_true(enableTimer("W2aPermTimerCountdown"))
       local left = remainingTime("W2aPermTimerCountdown")
       assert.is_number(left)
-      assert.is_true(left > 29 and left <= 30,
-        "a 30 second timer should have just under 30 seconds left, got " .. tostring(left))
+      assert.is_true(
+        left > 29 and left <= 30,
+        "a 30 second timer should have just under 30 seconds left, got " .. tostring(left)
+      )
     end)
   end)
 
@@ -1543,12 +1611,16 @@ describe("Tests the timer API", function()
     it("errors when the code does not compile", function()
       local ok, err = pcall(permTimer, trackPerm("W2aPermTimerBadCode"), "", 1, "this is ( not lua")
       assert.is_false(ok, "code that does not parse must not create a timer")
-      assert.is_truthy(tostring(err):find("near", 1, true),
-        "the reason should be the Lua error, not the timer's name, got: " .. tostring(err))
+      assert.is_truthy(
+        tostring(err):find("near", 1, true),
+        "the reason should be the Lua error, not the timer's name, got: " .. tostring(err)
+      )
     end)
 
     it("errors when the interval is missing", function()
-      assert.has_error(function() permTimer("W2aPermTimerNoInterval", "") end)
+      assert.has_error(function()
+        permTimer("W2aPermTimerNoInterval", "")
+      end)
     end)
 
     it("errors for a negative interval, creating nothing", function()
@@ -1556,12 +1628,16 @@ describe("Tests the timer API", function()
       -- second run of the suite against the same profile
       local before = exists("W2aPermTimerNegative", "timer")
       local ok, err = pcall(permTimer, trackPerm("W2aPermTimerNegative"), "", -1, [[]])
-      assert.is_false(ok,
-        "a negative interval must be rejected rather than wrapped around the 24 hour clock")
-      assert.equals(before, exists("W2aPermTimerNegative", "timer"),
-        "a rejected interval must not leave a timer behind")
-      assert.is_truthy(tostring(err):find("bad argument #3", 1, true),
-        "the interval should be reported as the offending argument, got: " .. tostring(err))
+      assert.is_false(ok, "a negative interval must be rejected rather than wrapped around the 24 hour clock")
+      assert.equals(
+        before,
+        exists("W2aPermTimerNegative", "timer"),
+        "a rejected interval must not leave a timer behind"
+      )
+      assert.is_truthy(
+        tostring(err):find("bad argument #3", 1, true),
+        "the interval should be reported as the offending argument, got: " .. tostring(err)
+      )
     end)
 
     it("errors for an interval that only rounds up onto the day, creating nothing", function()
@@ -1569,17 +1645,25 @@ describe("Tests the timer API", function()
       -- seconds is under the day but reaches it once rounded
       local before = exists("W2aPermTimerRounding", "timer")
       local ok, err = pcall(permTimer, trackPerm("W2aPermTimerRounding"), "", 86399.9999, [[]])
-      assert.is_false(ok,
-        "an interval rounding up to a whole day wraps to a zero interval and must be rejected")
-      assert.equals(before, exists("W2aPermTimerRounding", "timer"),
-        "a rejected interval must not leave a timer behind")
-      assert.is_truthy(tostring(err):find("bad argument #3", 1, true),
-        "the interval should be reported as the offending argument, got: " .. tostring(err))
+      assert.is_false(ok, "an interval rounding up to a whole day wraps to a zero interval and must be rejected")
+      assert.equals(
+        before,
+        exists("W2aPermTimerRounding", "timer"),
+        "a rejected interval must not leave a timer behind"
+      )
+      assert.is_truthy(
+        tostring(err):find("bad argument #3", 1, true),
+        "the interval should be reported as the offending argument, got: " .. tostring(err)
+      )
     end)
 
     it("enableTimer and disableTimer error when called without a name", function()
-      assert.has_error(function() enableTimer() end)
-      assert.has_error(function() disableTimer() end)
+      assert.has_error(function()
+        enableTimer()
+      end)
+      assert.has_error(function()
+        disableTimer()
+      end)
     end)
 
     it("reports whether a timer of that name was found", function()
@@ -1592,18 +1676,29 @@ describe("Tests the timer API", function()
 
     it("does not fire while it is disabled", function()
       -- permanent timers start out inactive and must be enabled before they run
-      assert.is_true(permTimer(trackPerm("W2aPermTimerDisabled"), "", 0.05,
-        [[_G.W2aPermTimerFires = (_G.W2aPermTimerFires or 0) + 1]]) > 0)
+      assert.is_true(
+        permTimer(
+          trackPerm("W2aPermTimerDisabled"),
+          "",
+          0.05,
+          [[_G.W2aPermTimerFires = (_G.W2aPermTimerFires or 0) + 1]]
+        ) > 0
+      )
       assert.equals(0, isActive("W2aPermTimerDisabled", "timer"))
       settle(0.15)
       assert.is_nil(_G.W2aPermTimerFires, "a disabled permanent timer must not fire")
     end)
 
     it("fires once enabled", function()
-      assert.is_true(permTimer(trackPerm("W2aPermTimerEnabled"), "", 0.05, [[
+      assert.is_true(permTimer(
+        trackPerm("W2aPermTimerEnabled"),
+        "",
+        0.05,
+        [[
         _G.W2aPermTimerFires = (_G.W2aPermTimerFires or 0) + 1
         raiseEvent("w2aPermTimerFired")
-      ]]) > 0)
+      ]]
+      ) > 0)
       assert.is_true(enableTimer("W2aPermTimerEnabled"))
       waitFor("w2aPermTimerFired")
       disableTimer("W2aPermTimerEnabled")
@@ -1611,17 +1706,21 @@ describe("Tests the timer API", function()
     end)
 
     it("stops firing again once disabled", function()
-      assert.is_true(permTimer(trackPerm("W2aPermTimerStopped"), "", 0.05, [[
+      assert.is_true(permTimer(
+        trackPerm("W2aPermTimerStopped"),
+        "",
+        0.05,
+        [[
         _G.W2aPermTimerFires = (_G.W2aPermTimerFires or 0) + 1
         raiseEvent("w2aPermTimerStoppedFired")
-      ]]) > 0)
+      ]]
+      ) > 0)
       assert.is_true(enableTimer("W2aPermTimerStopped"))
       waitFor("w2aPermTimerStoppedFired")
       assert.is_true(disableTimer("W2aPermTimerStopped"))
       local firedWhenDisabled = _G.W2aPermTimerFires
       settle(0.15)
-      assert.equals(firedWhenDisabled, _G.W2aPermTimerFires,
-        "a disabled permanent timer must not fire again")
+      assert.equals(firedWhenDisabled, _G.W2aPermTimerFires, "a disabled permanent timer must not fire again")
     end)
   end)
 
@@ -1671,8 +1770,7 @@ describe("Tests the timer API", function()
       assert.is_true(permTimer(trackPerm("W2aPermTimerActivity"), "", 30, [[]]) > 0)
       -- enabling and disabling by name acts on every timer of that name
       local named = exists("W2aPermTimerActivity", "timer")
-      assert.equals(0, isActive("W2aPermTimerActivity", "timer"),
-        "a newly created permanent timer is inactive")
+      assert.equals(0, isActive("W2aPermTimerActivity", "timer"), "a newly created permanent timer is inactive")
       assert.is_true(enableTimer("W2aPermTimerActivity"))
       assert.equals(named, isActive("W2aPermTimerActivity", "timer"))
       assert.is_true(disableTimer("W2aPermTimerActivity"))
@@ -1682,21 +1780,24 @@ describe("Tests the timer API", function()
     it("isActive only reports a timer inside a disabled group as active when ancestors are not checked", function()
       -- a permTimer with no interval and no code is a group/folder
       assert.is_true(permTimer(trackPerm("W2aTimerGroup"), "", 0, "") > 0)
-      assert.is_true(permTimer(trackPerm("W2aTimerInGroup"), "W2aTimerGroup", 30,
-        [[_G.W2aPermTimerFires = (_G.W2aPermTimerFires or 0) + 1]]) > 0)
+      assert.is_true(
+        permTimer(
+          trackPerm("W2aTimerInGroup"),
+          "W2aTimerGroup",
+          30,
+          [[_G.W2aPermTimerFires = (_G.W2aPermTimerFires or 0) + 1]]
+        ) > 0
+      )
       local named = exists("W2aTimerInGroup", "timer")
       assert.is_true(enableTimer("W2aTimerInGroup"))
       assert.equals(named, isActive("W2aTimerInGroup", "timer"))
-      assert.equals(0, isActive("W2aTimerInGroup", "timer", true),
-        "the enclosing group is still disabled")
+      assert.equals(0, isActive("W2aTimerInGroup", "timer", true), "the enclosing group is still disabled")
       -- and the flag is not the whole story: a timer whose group is disabled is
       -- not counting down, whatever isActive says without checkAncestors
-      assert.is_nil((remainingTime("W2aTimerInGroup")),
-        "a timer in a disabled group should not be running")
+      assert.is_nil((remainingTime("W2aTimerInGroup")), "a timer in a disabled group should not be running")
       assert.is_true(enableTimer("W2aTimerGroup"))
       assert.equals(named, isActive("W2aTimerInGroup", "timer", true))
-      assert.is_number(remainingTime("W2aTimerInGroup"),
-        "enabling the group should start the timers inside it")
+      assert.is_number(remainingTime("W2aTimerInGroup"), "enabling the group should start the timers inside it")
     end)
   end)
 end)
@@ -1740,7 +1841,9 @@ describe("Tests the script API", function()
 
   describe("Tests the functionality of permScript", function()
     it("errors when the name is missing", function()
-      assert.has_error(function() permScript() end)
+      assert.has_error(function()
+        permScript()
+      end)
     end)
 
     it("errors when the parent group does not exist", function()
@@ -1765,8 +1868,10 @@ describe("Tests the script API", function()
       local ok, err = pcall(makeScript, "W2aScriptRaises", "", [[error("w2a script" .. " boom")]])
       assert.is_false(ok, "a body that raises must not create a script")
       assert.equals(before, exists("W2aScriptRaises", "script"))
-      assert.is_truthy(tostring(err):find("w2a script boom", 1, true),
-        "permScript should report the Lua error, got: " .. tostring(err))
+      assert.is_truthy(
+        tostring(err):find("w2a script boom", 1, true),
+        "permScript should report the Lua error, got: " .. tostring(err)
+      )
     end)
 
     it("reports the type when the body raises something other than a string", function()
@@ -1776,16 +1881,22 @@ describe("Tests the script API", function()
       local ok, err = pcall(makeScript, "W2aScriptObjectError", "", [[error({w2a = true})]])
       assert.is_false(ok, "a body that raises must not create a script")
       assert.equals(before, exists("W2aScriptObjectError", "script"))
-      assert.is_truthy(tostring(err):find("error object is a table", 1, true),
-        "the reason should describe the error object, got: " .. tostring(err))
+      assert.is_truthy(
+        tostring(err):find("error object is a table", 1, true),
+        "the reason should describe the error object, got: " .. tostring(err)
+      )
     end)
 
     it("creates a script whose body runs immediately", function()
       local before = exists("W2aScriptCreated", "script")
-      local id = makeScript("W2aScriptCreated", "", [[
+      local id = makeScript(
+        "W2aScriptCreated",
+        "",
+        [[
         _G.W2aScriptSpec = _G.W2aScriptSpec or {}
         _G.W2aScriptSpec.created = true
-      ]])
+      ]]
+      )
       assert.is_number(id)
       assert.is_true(id > 0)
       assert.is_true(_G.W2aScriptSpec.created, "a script's body runs when it is compiled")
@@ -1795,16 +1906,19 @@ describe("Tests the script API", function()
     it("creates a script inside a group", function()
       -- a permScript with no code is a group/folder
       assert.is_true(makeScript("W2aScriptGroup", "", "") > 0)
-      assert.is_true(makeScript("W2aScriptInGroup", "W2aScriptGroup", [[
+      assert.is_true(makeScript(
+        "W2aScriptInGroup",
+        "W2aScriptGroup",
+        [[
         _G.W2aScriptSpec = _G.W2aScriptSpec or {}
         _G.W2aScriptSpec.inGroup = true
-      ]]) > 0)
+      ]]
+      ) > 0)
       assert.is_true(_G.W2aScriptSpec.inGroup)
       local named = exists("W2aScriptInGroup", "script")
       assert.is_true(enableScript("W2aScriptInGroup"))
       assert.equals(named, isActive("W2aScriptInGroup", "script"))
-      assert.equals(0, isActive("W2aScriptInGroup", "script", true),
-        "the enclosing group is still disabled")
+      assert.equals(0, isActive("W2aScriptInGroup", "script", true), "the enclosing group is still disabled")
       assert.is_true(enableScript("W2aScriptGroup"))
       assert.equals(named, isActive("W2aScriptInGroup", "script", true))
     end)
@@ -1812,7 +1926,9 @@ describe("Tests the script API", function()
 
   describe("Tests the functionality of getScript", function()
     it("errors when called without a name", function()
-      assert.has_error(function() getScript() end)
+      assert.has_error(function()
+        getScript()
+      end)
     end)
 
     it("returns -1 and a message for a script that does not exist", function()
@@ -1862,11 +1978,15 @@ describe("Tests the script API", function()
 
   describe("Tests the functionality of setScript", function()
     it("errors for a script name that does not exist", function()
-      assert.has_error(function() setScript("w2aNoSuchScriptName", [[]]) end)
+      assert.has_error(function()
+        setScript("w2aNoSuchScriptName", [[]])
+      end)
     end)
 
     it("errors for an empty name", function()
-      assert.has_error(function() setScript("", [[]]) end)
+      assert.has_error(function()
+        setScript("", [[]])
+      end)
     end)
 
     it("errors for position zero, as positions start at one", function()
@@ -1878,7 +1998,9 @@ describe("Tests the script API", function()
 
     it("errors when the code is not a string", function()
       local _, position = makeScript("W2aScriptBadNewCode", "", [[local w2aOriginal = 1]])
-      assert.has_error(function() setScript("W2aScriptBadNewCode", {}, position) end)
+      assert.has_error(function()
+        setScript("W2aScriptBadNewCode", {}, position)
+      end)
     end)
 
     it("replaces the code, returns the id and runs the new body", function()
@@ -1897,7 +2019,9 @@ describe("Tests the script API", function()
       -- argument first
       local body = [[local w2aKept = 1]]
       local _, position = makeScript("W2aScriptKeptCode", "", body)
-      assert.has_error(function() setScript("W2aScriptKeptCode", "this is ( not lua", position) end)
+      assert.has_error(function()
+        setScript("W2aScriptKeptCode", "this is ( not lua", position)
+      end)
       assert.equals(body, (getScript("W2aScriptKeptCode", position)))
     end)
 
@@ -1911,8 +2035,10 @@ describe("Tests the script API", function()
       local ok, err = pcall(setScript, "W2aScriptRollback", [[error("w2a setScript" .. " boom")]], position)
       assert.is_false(ok, "a body that raises must not be kept")
       assert.equals(body, (getScript("W2aScriptRollback", position)))
-      assert.is_truthy(tostring(err):find("w2a setScript boom", 1, true),
-        "setScript should report the Lua error, got: " .. tostring(err))
+      assert.is_truthy(
+        tostring(err):find("w2a setScript boom", 1, true),
+        "setScript should report the Lua error, got: " .. tostring(err)
+      )
     end)
 
     it("sets the script at the requested position when several share a name", function()
@@ -1926,20 +2052,24 @@ describe("Tests the script API", function()
 
   describe("Tests the functionality of appendScript", function()
     it("errors when the name is not a string", function()
-      assert.has_error(function() appendScript(42, [[]]) end,
-        "appendScript: bad argument #1 type (script name as string expected, got number!)")
+      assert.has_error(function()
+        appendScript(42, [[]])
+      end, "appendScript: bad argument #1 type (script name as string expected, got number!)")
     end)
 
     it("errors when the code is not a string", function()
-      assert.has_error(function() appendScript("W2aScriptAppended", 42) end,
-        "appendScript: bad argument #2 type (lua code as string expected, got number!)")
+      assert.has_error(function()
+        appendScript("W2aScriptAppended", 42)
+      end, "appendScript: bad argument #2 type (lua code as string expected, got number!)")
     end)
 
     it("errors instead of creating anything when the script does not exist", function()
       -- appendScript does not check getScript's -1 sentinel, so what actually
       -- reports the missing script is the setScript underneath it; either way
       -- nothing may be created
-      assert.has_error(function() appendScript("w2aNoSuchScriptName", [[local w2aNew = 1]]) end)
+      assert.has_error(function()
+        appendScript("w2aNoSuchScriptName", [[local w2aNew = 1]])
+      end)
       assert.equals(0, exists("w2aNoSuchScriptName", "script"))
     end)
 
@@ -1947,8 +2077,7 @@ describe("Tests the script API", function()
       local body = [[local w2aOriginal = 1]]
       local _, position = makeScript("W2aScriptAppended", "", body)
       appendScript("W2aScriptAppended", [[local w2aAppended = 2]], position)
-      assert.equals(body .. "\n" .. [[local w2aAppended = 2]],
-        (getScript("W2aScriptAppended", position)))
+      assert.equals(body .. "\n" .. [[local w2aAppended = 2]], (getScript("W2aScriptAppended", position)))
     end)
 
     it("appends to the first script of that name when no position is given", function()
@@ -1957,24 +2086,31 @@ describe("Tests the script API", function()
       local firstBefore = (getScript("W2aScriptAppendDefault", 1))
       assert.is_string(firstBefore)
       appendScript("W2aScriptAppendDefault", [[local w2aDefaultAppended = 2]])
-      assert.equals(firstBefore .. "\n" .. [[local w2aDefaultAppended = 2]],
-        (getScript("W2aScriptAppendDefault", 1)))
+      assert.equals(firstBefore .. "\n" .. [[local w2aDefaultAppended = 2]], (getScript("W2aScriptAppendDefault", 1)))
     end)
 
     it("runs the appended code", function()
       local _, position = makeScript("W2aScriptAppendRuns", "", [[local w2aOriginal = 1]])
-      appendScript("W2aScriptAppendRuns", [[
+      appendScript(
+        "W2aScriptAppendRuns",
+        [[
         _G.W2aScriptSpec = _G.W2aScriptSpec or {}
         _G.W2aScriptSpec.appended = true
-      ]], position)
+      ]],
+        position
+      )
       assert.is_true(_G.W2aScriptSpec.appended)
     end)
   end)
 
   describe("Tests the functionality of enableScript and disableScript", function()
     it("error when called without a name", function()
-      assert.has_error(function() enableScript() end)
-      assert.has_error(function() disableScript() end)
+      assert.has_error(function()
+        enableScript()
+      end)
+      assert.has_error(function()
+        disableScript()
+      end)
     end)
 
     it("return nil and a message when no script of that name exists", function()
@@ -1992,8 +2128,7 @@ describe("Tests the script API", function()
       assert.is_true(makeScript("W2aScriptToggled", "", [[local w2aOnly = 1]]) > 0)
       -- enabling and disabling by name acts on every script of that name
       local named = exists("W2aScriptToggled", "script")
-      assert.equals(0, isActive("W2aScriptToggled", "script"),
-        "a newly created script is inactive")
+      assert.equals(0, isActive("W2aScriptToggled", "script"), "a newly created script is inactive")
       assert.is_true(enableScript("W2aScriptToggled"))
       assert.equals(named, isActive("W2aScriptToggled", "script"))
       assert.is_true(disableScript("W2aScriptToggled"))
@@ -2032,19 +2167,23 @@ describe("Tests the script API", function()
     end)
 
     it("Should send the head of the walklist and shorten it", function()
-      local list = {"n", "e"}
+      local list = { "n", "e" }
       local send = spy.on(_G, "send")
-      finally(function() send:revert() end)
+      finally(function()
+        send:revert()
+      end)
       speedwalktimer(list, 100, false)
       assert.spy(send).was.called(1)
       assert.spy(send).was.called_with("n", false)
-      assert.are.same({"e"}, list)
+      assert.are.same({ "e" }, list)
     end)
 
     it("Should arm a timer for the rest of the walklist", function()
-      local list = {"n", "e"}
+      local list = { "n", "e" }
       local send = spy.on(_G, "send")
-      finally(function() send:revert() end)
+      finally(function()
+        send:revert()
+      end)
       speedwalktimer(list, 100, false)
       -- pauseSpeedwalk only succeeds while a step timer is armed
       assert.is_true(pauseSpeedwalk())
@@ -2052,14 +2191,20 @@ describe("Tests the script API", function()
 
     it("Should raise sysSpeedwalkFinished on the last step", function()
       local finished = false
-      local handler = registerAnonymousEventHandler("sysSpeedwalkFinished", function() finished = true end)
-      finally(function() killAnonymousEventHandler(handler) end)
+      local handler = registerAnonymousEventHandler("sysSpeedwalkFinished", function()
+        finished = true
+      end)
+      finally(function()
+        killAnonymousEventHandler(handler)
+      end)
       local send = spy.on(_G, "send")
-      finally(function() send:revert() end)
+      finally(function()
+        send:revert()
+      end)
       -- clear any step timer an earlier test armed so the pause check below
       -- can only be answering for this walklist
       pcall(pauseSpeedwalk)
-      local list = {"n"}
+      local list = { "n" }
       speedwalktimer(list, 100, false)
       assert.spy(send).was.called_with("n", false)
       assert.are.same({}, list)
@@ -2077,7 +2222,9 @@ describe("Tests the script API", function()
     end)
 
     it("Should delete the line it runs on", function()
-      local id = tempTrigger("deleteFullMarker", function() deleteFull() end)
+      local id = tempTrigger("deleteFullMarker", function()
+        deleteFull()
+      end)
       feedTriggers("deleteFullMarker line\n")
       killTrigger(id)
       moveCursorEnd()
@@ -2087,8 +2234,12 @@ describe("Tests the script API", function()
 
     it("Should arm a one line trigger that gags a following prompt", function()
       local lineTrigger = spy.on(_G, "tempLineTrigger")
-      finally(function() lineTrigger:revert() end)
-      local id = tempTrigger("deleteFullArmMarker", function() deleteFull() end)
+      finally(function()
+        lineTrigger:revert()
+      end)
+      local id = tempTrigger("deleteFullArmMarker", function()
+        deleteFull()
+      end)
       feedTriggers("deleteFullArmMarker line\n")
       killTrigger(id)
       assert.spy(lineTrigger).was.called(1)
@@ -2160,9 +2311,15 @@ describe("Tests the script API", function()
     end)
 
     it("Should reject arguments of the wrong type", function()
-      assert.has_error(function() loadTranslations(5) end)
-      assert.has_error(function() loadTranslations("AdjustableContainer", 5) end)
-      assert.has_error(function() loadTranslations("AdjustableContainer", "mudlet-lua", 5) end)
+      assert.has_error(function()
+        loadTranslations(5)
+      end)
+      assert.has_error(function()
+        loadTranslations("AdjustableContainer", 5)
+      end)
+      assert.has_error(function()
+        loadTranslations("AdjustableContainer", "mudlet-lua", 5)
+      end)
     end)
   end)
 
@@ -2170,7 +2327,7 @@ describe("Tests the script API", function()
     -- defined in LuaGlobal.lua as an empty default users may override
     it("Should exist and do nothing", function()
       assert.are.equal("function", type(onConnect))
-      assert.are.same({}, {onConnect()})
+      assert.are.same({}, { onConnect() })
     end)
   end)
 end)

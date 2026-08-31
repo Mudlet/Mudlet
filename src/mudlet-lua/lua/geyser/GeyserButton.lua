@@ -4,6 +4,8 @@
 -- @author demonnic
 -- @module Geyser.Button
 
+-- stylua: ignore
+
 --- A clickable button.
 -- @field name The name of the button.
 -- @field height The height of the button in pixels.
@@ -46,12 +48,14 @@ function Geyser.Button:new(cons, container)
   cons = cons or {}
   local consType = type(cons)
   if consType ~= "table" then
-    printError(f"bad argument #1 type (cons as table expects, got {consType})", true, true)
+    printError(f("bad argument #1 type (cons as table expects, got {consType})"), true, true)
   end
   cons.name = cons.name or Geyser.nameGen("button")
   local me = self.parent:new(cons, container)
   setmetatable(me, self)
-  me:setClickCallback(function() me:press() end)
+  me:setClickCallback(function()
+    me:press()
+  end)
   -- an unusable state constraint would otherwise leave the button holding it
   -- and never painted, since setState returns before drawing anything
   if not me:setState(me.state) then
@@ -69,11 +73,11 @@ end
 function Geyser.Button:setState(state)
   local stateType = type(state)
   if stateType ~= "string" then
-    return nil, f"bad argument #1 type (state as string expected, got {stateType})"
+    return nil, f("bad argument #1 type (state as string expected, got {stateType})")
   end
   state = state:lower()
   if state ~= "up" and state ~= "down" then
-    return nil, f"bad argument #1 value (state must be one of 'up' or 'down', got {state})"
+    return nil, f("bad argument #1 value (state must be one of 'up' or 'down', got {state})")
   end
   if state == "down" and not self.twoState then
     return nil, "cannot set a single state button's state to 'down', only 'up'"
@@ -123,7 +127,7 @@ function Geyser.Button:press()
     newState = "up"
   end
   if func then
-    local ok,err = pcall(func)
+    local ok, err = pcall(func)
     if not ok then
       printError(err, true, true)
     end
@@ -138,13 +142,13 @@ end
 function Geyser.Button:setDownCommand(command)
   local commandType = type(command)
   if commandType ~= "string" then
-    printError(f"bad argument #1 type (command as string expected, got {commandType})", true, true)
+    printError(f("bad argument #1 type (command as string expected, got {commandType})"), true, true)
   end
   self.downCommand = command
 end
 
 --- Stores the function to run when clicking the button in its 'down' state. Supercedes downCommand
--- @param downFunction The function to run when the button is clicked in its 'down' state. Should be a lua function or valid lua code as a string. 
+-- @param downFunction The function to run when the button is clicked in its 'down' state. Should be a lua function or valid lua code as a string.
 function Geyser.Button:setDownFunction(downFunction)
   local funcType = type(downFunction)
   if funcType ~= "function" then
@@ -153,10 +157,10 @@ function Geyser.Button:setDownFunction(downFunction)
       if ok then
         downFunction = ok
       else
-        printError(f"Error while compiling Lua code from string for downFunction: {err}", true, true)
+        printError(f("Error while compiling Lua code from string for downFunction: {err}"), true, true)
       end
     else
-      printError(f"bad argument #1 type (downFunction as a string or a function expected, got {funcType})")
+      printError(f("bad argument #1 type (downFunction as a string or a function expected, got {funcType})"))
     end
   end
   self.downFunction = downFunction
@@ -167,7 +171,7 @@ end
 function Geyser.Button:setClickCommand(command)
   local commandType = type(command)
   if commandType ~= "string" then
-    printError(f"bad argument #1 type (command as string expected, got {commandType})", true, true)
+    printError(f("bad argument #1 type (command as string expected, got {commandType})"), true, true)
   end
   self.clickCommand = command
 end
@@ -182,10 +186,10 @@ function Geyser.Button:setClickFunction(clickFunction)
       if ok then
         clickFunction = ok
       else
-        printError(f"Error while compiling codestring for clickFunction: {err}", true, true)
+        printError(f("Error while compiling codestring for clickFunction: {err}"), true, true)
       end
     else
-      printError(f"bad argument #1 type (clickFunction as function or valid Lua string expected, got {funcType})")
+      printError(f("bad argument #1 type (clickFunction as function or valid Lua string expected, got {funcType})"))
     end
   end
   self.clickFunction = clickFunction
@@ -236,7 +240,7 @@ end
 function Geyser.Button:setMsg(msg)
   local msgType = type(msg)
   if msgType ~= "string" then
-    return nil, f"bad argument #1 type (msg as string expected, got {msgType})"
+    return nil, f("bad argument #1 type (msg as string expected, got {msgType})")
   end
   self.msg = msg
   self:setState(self.state)
@@ -247,7 +251,7 @@ end
 function Geyser.Button:setDownMsg(msg)
   local msgType = type(msg)
   if msgType ~= "string" then
-    return nil, f"bad argument #1 type (msg as string expected, got {msgType})"
+    return nil, f("bad argument #1 type (msg as string expected, got {msgType})")
   end
   self.downMsg = msg
   self:setState(self.state)

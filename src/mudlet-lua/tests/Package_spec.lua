@@ -134,7 +134,9 @@ end
 -- live in can sit anywhere, so the characters that would otherwise end the path
 -- early - a space, a fragment, a query, a half-written escape - are encoded.
 local function fileUrl(path)
-  local normalised = path:gsub("\\", "/"):gsub("[%%#%?%s]", function(character) return string.format("%%%02X", character:byte()) end)
+  local normalised = path:gsub("\\", "/"):gsub("[%%#%?%s]", function(character)
+    return string.format("%%%02X", character:byte())
+  end)
   if normalised:sub(1, 1) ~= "/" then
     normalised = "/" .. normalised
   end
@@ -168,7 +170,9 @@ end
 -- the installs below from being postponed - a postponed install is carried out
 -- later, and can put a package back after a spec has taken it away again.
 local function waitForProfileSaveToPass()
-  return waitUntil(function() return installPackage("") == nil end, 5000)
+  return waitUntil(function()
+    return installPackage("") == nil
+  end, 5000)
 end
 
 local function installUntilConfirmed(install, path, isInstalled, what)
@@ -176,7 +180,10 @@ local function installUntilConfirmed(install, path, isInstalled, what)
     if isInstalled() then
       return
     end
-    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running after 5s, so this install would be postponed")
+    assert.is_true(
+      waitForProfileSaveToPass(),
+      "a profile save was still running after 5s, so this install would be postponed"
+    )
     local ok, err = install(path)
     -- a postponed install can still be carried out while the pump below runs
     -- the event loop, so a repeat may legitimately come back "already installed"
@@ -197,7 +204,10 @@ end
 -- about the refusal waits for the save to pass and asks again.
 local function installUntilRefused(install, path)
   for attempt = 1, 3 do
-    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running after 5s, so this install would be postponed")
+    assert.is_true(
+      waitForProfileSaveToPass(),
+      "a profile save was still running after 5s, so this install would be postponed"
+    )
     local ok, err = install(path)
     if ok == nil then
       return err
@@ -228,11 +238,18 @@ local function removeFixturePackage(name)
     if not packageInstalled(name) then
       return
     end
-    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running after 5s, so this uninstall would be refused")
+    assert.is_true(
+      waitForProfileSaveToPass(),
+      "a profile save was still running after 5s, so this uninstall would be refused"
+    )
     -- uninstallPackage() refuses while a profile save is in progress, and the
     -- installs here start one, so keep asking until it takes
-    assert.is_true(waitUntil(function() return uninstallPackage(name) == true end, 5000),
-                   "could not uninstall the fixture package " .. name)
+    assert.is_true(
+      waitUntil(function()
+        return uninstallPackage(name) == true
+      end, 5000),
+      "could not uninstall the fixture package " .. name
+    )
     -- let the profile save that uninstallPackage() queues run now, rather than
     -- during Mudlet's shutdown
     pumpEvents(200)
@@ -241,12 +258,15 @@ local function removeFixturePackage(name)
 end
 
 local function installFixturePackage(name)
-  installUntilConfirmed(installPackage, fixtureDirectory .. "/" .. name .. ".mpackage",
-                        function() return packageInstalled(name) end, "the fixture package " .. name)
+  installUntilConfirmed(installPackage, fixtureDirectory .. "/" .. name .. ".mpackage", function()
+    return packageInstalled(name)
+  end, "the fixture package " .. name)
 end
 
 local function withFixturePackage(name)
-  defer(function() removeFixturePackage(name) end)
+  defer(function()
+    removeFixturePackage(name)
+  end)
   installFixturePackage(name)
 end
 
@@ -255,9 +275,16 @@ local function removeFixtureModule(name)
     if not moduleInstalled(name) then
       break
     end
-    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running after 5s, so this uninstall would be refused")
-    assert.is_true(waitUntil(function() return uninstallModule(name) == true end, 5000),
-                   "could not uninstall the fixture module " .. name)
+    assert.is_true(
+      waitForProfileSaveToPass(),
+      "a profile save was still running after 5s, so this uninstall would be refused"
+    )
+    assert.is_true(
+      waitUntil(function()
+        return uninstallModule(name) == true
+      end, 5000),
+      "could not uninstall the fixture module " .. name
+    )
     pumpEvents(200)
   end
   assert.is_false(moduleInstalled(name), "the fixture module " .. name .. " reinstalled itself")
@@ -272,14 +299,18 @@ local function installFixtureModule(name)
   lfs.mkdir(scratchDirectory)
   local path = scratchDirectory .. "/" .. name .. ".mpackage"
   copyFile(fixtureDirectory .. "/" .. name .. ".mpackage", path)
-  installUntilConfirmed(installModule, path, function() return moduleInstalled(name) end, "the fixture module " .. name)
+  installUntilConfirmed(installModule, path, function()
+    return moduleInstalled(name)
+  end, "the fixture module " .. name)
   return path
 end
 
 -- The clean-up is registered before the install so a fixture that only got
 -- half-way in still leaves nothing behind.
 local function withFixtureModule(name)
-  defer(function() removeFixtureModule(name) end)
+  defer(function()
+    removeFixtureModule(name)
+  end)
   return installFixtureModule(name)
 end
 
@@ -290,7 +321,7 @@ end
 local function collectEvents(eventName)
   local events = {}
   local handler = registerAnonymousEventHandler(eventName, function(_, ...)
-    events[#events + 1] = {...}
+    events[#events + 1] = { ... }
   end)
   return events, handler
 end
@@ -298,7 +329,9 @@ end
 -- The same, for a spec that can register its own clean-up.
 local function collectEventsForSpec(eventName)
   local events, handler = collectEvents(eventName)
-  defer(function() killAnonymousEventHandler(handler) end)
+  defer(function()
+    killAnonymousEventHandler(handler)
+  end)
   return events
 end
 
@@ -307,7 +340,9 @@ describe("Tests the functionality of installPackage", function()
     -- the Lua wrapper that lets installPackage() take a URL indexes its
     -- argument before the C++ side gets to report a "bad argument #1", so the
     -- call fails less clearly than its siblings do
-    assert.has_error(function() installPackage() end)
+    assert.has_error(function()
+      installPackage()
+    end)
   end)
 
   it("returns nil+msg when given an empty path", function()
@@ -316,14 +351,17 @@ describe("Tests the functionality of installPackage", function()
   end)
 
   it("returns nil+msg for a file that is not there", function()
-    local err = installUntilRefused(installPackage, fixtureDirectory .. "/mudlet-spec-there-is-no-such-package.mpackage")
+    local err =
+      installUntilRefused(installPackage, fixtureDirectory .. "/mudlet-spec-there-is-no-such-package.mpackage")
     assert.is_true(contains(err, "could not open file"), tostring(err))
   end)
 
   it("returns nil+msg for a file that is not a zip archive", function()
     -- the failed unpacking still creates the destination folder; drop it so the
     -- profile is left exactly as it was found
-    defer(function() lfs.rmdir(getMudletHomeDir() .. "/mudlet-spec-notazip") end)
+    defer(function()
+      lfs.rmdir(getMudletHomeDir() .. "/mudlet-spec-notazip")
+    end)
 
     local err = installUntilRefused(installPackage, fixtureDirectory .. "/mudlet-spec-notazip.mpackage")
     assert.is_true(contains(err, "could not unzip package"), tostring(err))
@@ -338,10 +376,12 @@ describe("Tests the functionality of installPackage", function()
       local genericHandler, detailedHandler
       installEvents, genericHandler = collectEvents("sysInstall")
       packageEvents, detailedHandler = collectEvents("sysInstallPackage")
-      handlers = {genericHandler, detailedHandler}
+      handlers = { genericHandler, detailedHandler }
       installFixturePackage(minimalPackage)
       -- the install events are raised from a zero-timer once the install is done
-      waitUntil(function() return #packageEvents > 0 end, 2000)
+      waitUntil(function()
+        return #packageEvents > 0
+      end, 2000)
     end)
 
     teardown(function()
@@ -399,9 +439,12 @@ describe("Tests the functionality of installPackage", function()
 
   it("installs a package from a plain XML file", function()
     local path = fixtureDirectory .. "/sources/mudlet-spec-xmlonly/mudlet-spec-xmlonly.xml"
-    defer(function() removeFixturePackage("mudlet-spec-xmlonly") end)
-    installUntilConfirmed(installPackage, path, function() return packageInstalled("mudlet-spec-xmlonly") end,
-                          "the XML fixture package")
+    defer(function()
+      removeFixturePackage("mudlet-spec-xmlonly")
+    end)
+    installUntilConfirmed(installPackage, path, function()
+      return packageInstalled("mudlet-spec-xmlonly")
+    end, "the XML fixture package")
 
     assert.equals(1, exists("mudlet-spec-xmlonly alias", "alias"))
     -- nothing is unpacked for a bare XML: the file stays where it is
@@ -412,7 +455,9 @@ end)
 
 describe("Tests the functionality of uninstallPackage", function()
   it("raises a Lua error when called with no arguments", function()
-    assertArgError(function() uninstallPackage() end, "uninstallPackage: bad argument #1 type")
+    assertArgError(function()
+      uninstallPackage()
+    end, "uninstallPackage: bad argument #1 type")
   end)
 
   -- uninstallPackage() answers nil with no message where uninstallModule()
@@ -462,9 +507,11 @@ describe("Tests the functionality of getPackages", function()
   -- C++ side proves the package is left off the install list; this proves a profile
   -- really does come up without it.
   it("has no mpkg in a test profile, which would upgrade itself mid-run", function()
-    assert.is_false(packageInstalled("mpkg"),
-      "mpkg is installed in this profile. A profile created before this check existed keeps it - " ..
-      "remove it, or let a fresh self-test profile be made.")
+    assert.is_false(
+      packageInstalled("mpkg"),
+      "mpkg is installed in this profile. A profile created before this check existed keeps it - "
+        .. "remove it, or let a fresh self-test profile be made."
+    )
   end)
 end)
 
@@ -478,11 +525,15 @@ describe("Tests the package info accessors", function()
 
   describe("Tests the functionality of getPackageInfo", function()
     it("raises a Lua error when the package name is not a string", function()
-      assertArgError(function() getPackageInfo({}) end, "getPackageInfo: bad argument #1 type")
+      assertArgError(function()
+        getPackageInfo({})
+      end, "getPackageInfo: bad argument #1 type")
     end)
 
     it("raises a Lua error when the requested field is not a string", function()
-      assertArgError(function() getPackageInfo(minimalPackage, {}) end, "getPackageInfo: bad argument #2 type")
+      assertArgError(function()
+        getPackageInfo(minimalPackage, {})
+      end, "getPackageInfo: bad argument #2 type")
     end)
 
     it("returns everything the package's config.lua declared", function()
@@ -511,15 +562,21 @@ describe("Tests the package info accessors", function()
 
   describe("Tests the functionality of setPackageInfo", function()
     it("raises a Lua error when called with no arguments", function()
-      assertArgError(function() setPackageInfo() end, "setPackageInfo: bad argument #1 type")
+      assertArgError(function()
+        setPackageInfo()
+      end, "setPackageInfo: bad argument #1 type")
     end)
 
     it("raises a Lua error when the value is missing", function()
-      assertArgError(function() setPackageInfo(minimalPackage, "version") end, "setPackageInfo: bad argument #3 type")
+      assertArgError(function()
+        setPackageInfo(minimalPackage, "version")
+      end, "setPackageInfo: bad argument #3 type")
     end)
 
     it("round-trips a value through getPackageInfo", function()
-      defer(function() setPackageInfo(minimalPackage, "version", "1.0") end)
+      defer(function()
+        setPackageInfo(minimalPackage, "version", "1.0")
+      end)
 
       assert.is_true(setPackageInfo(minimalPackage, "version", "9.9"))
       assert.equals("9.9", getPackageInfo(minimalPackage, "version"))
@@ -535,7 +592,9 @@ end)
 
 describe("Tests the functionality of installModule", function()
   it("raises a Lua error when called with no arguments", function()
-    assertArgError(function() installModule() end, "installModule: bad argument #1 type")
+    assertArgError(function()
+      installModule()
+    end, "installModule: bad argument #1 type")
   end)
 
   it("returns nil+msg for a file that is not there", function()
@@ -551,9 +610,11 @@ describe("Tests the functionality of installModule", function()
       local genericHandler, detailedHandler
       installEvents, genericHandler = collectEvents("sysInstall")
       moduleEvents, detailedHandler = collectEvents("sysLuaInstallModule")
-      handlers = {genericHandler, detailedHandler}
+      handlers = { genericHandler, detailedHandler }
       modulePath = installFixtureModule(moduleName)
-      waitUntil(function() return #moduleEvents > 0 end, 2000)
+      waitUntil(function()
+        return #moduleEvents > 0
+      end, 2000)
     end)
 
     teardown(function()
@@ -589,7 +650,9 @@ end)
 
 describe("Tests the functionality of uninstallModule", function()
   it("raises a Lua error when called with no arguments", function()
-    assertArgError(function() uninstallModule() end, "uninstallModule: bad argument #1 type")
+    assertArgError(function()
+      uninstallModule()
+    end, "uninstallModule: bad argument #1 type")
   end)
 
   it("returns false for a module that is not installed", function()
@@ -636,7 +699,9 @@ describe("Tests the module accessors", function()
 
   describe("Tests the functionality of getModuleInfo", function()
     it("raises a Lua error when the module name is not a string", function()
-      assertArgError(function() getModuleInfo({}) end, "getModuleInfo: bad argument #1 type")
+      assertArgError(function()
+        getModuleInfo({})
+      end, "getModuleInfo: bad argument #1 type")
     end)
 
     it("returns everything the module's config.lua declared", function()
@@ -661,11 +726,15 @@ describe("Tests the module accessors", function()
 
   describe("Tests the functionality of setModuleInfo", function()
     it("raises a Lua error when the value is missing", function()
-      assertArgError(function() setModuleInfo(moduleName, "version") end, "setModuleInfo: bad argument #3 type")
+      assertArgError(function()
+        setModuleInfo(moduleName, "version")
+      end, "setModuleInfo: bad argument #3 type")
     end)
 
     it("round-trips a value through getModuleInfo", function()
-      defer(function() setModuleInfo(moduleName, "version", "3.1") end)
+      defer(function()
+        setModuleInfo(moduleName, "version", "3.1")
+      end)
 
       assert.is_true(setModuleInfo(moduleName, "version", "8.8"))
       assert.equals("8.8", getModuleInfo(moduleName, "version"))
@@ -701,7 +770,9 @@ describe("Tests the module accessors", function()
 
   describe("Tests the functionality of setModulePriority", function()
     it("raises a Lua error when the priority is missing", function()
-      assertArgError(function() setModulePriority(moduleName) end, "setModulePriority: bad argument #2 type")
+      assertArgError(function()
+        setModulePriority(moduleName)
+      end, "setModulePriority: bad argument #2 type")
     end)
 
     it("returns nil+msg for a module that is not installed", function()
@@ -711,7 +782,7 @@ describe("Tests the module accessors", function()
     end)
 
     it("returns no values and is read back by getModulePriority", function()
-      assert.equals(0, select('#', setModulePriority(moduleName, 7)))
+      assert.equals(0, select("#", setModulePriority(moduleName, 7)))
       assert.equals(7, getModulePriority(moduleName))
       setModulePriority(moduleName, -2)
       assert.equals(-2, getModulePriority(moduleName))
@@ -720,7 +791,9 @@ describe("Tests the module accessors", function()
 
   describe("Tests the functionality of enableModuleSync", function()
     it("raises a Lua error when called with no arguments", function()
-      assertArgError(function() enableModuleSync() end, "enableModuleSync: bad argument #1 type")
+      assertArgError(function()
+        enableModuleSync()
+      end, "enableModuleSync: bad argument #1 type")
     end)
 
     it("returns nil+msg for an empty module name", function()
@@ -738,7 +811,9 @@ describe("Tests the module accessors", function()
     it("turns syncing on for an installed module", function()
       -- leave the module unsynced: a profile save rewrites a synced module's
       -- own .mpackage, and the fixture copy is thrown away when this block ends
-      defer(function() disableModuleSync(moduleName) end)
+      defer(function()
+        disableModuleSync(moduleName)
+      end)
       assert.is_false(getModuleSync(moduleName))
 
       assert.is_true(enableModuleSync(moduleName))
@@ -754,7 +829,9 @@ describe("Tests the module accessors", function()
     end)
 
     it("turns syncing back off", function()
-      defer(function() disableModuleSync(moduleName) end)
+      defer(function()
+        disableModuleSync(moduleName)
+      end)
       assert.is_true(enableModuleSync(moduleName))
 
       assert.is_true(disableModuleSync(moduleName))
@@ -764,7 +841,9 @@ describe("Tests the module accessors", function()
 
   describe("Tests the functionality of getModuleSync", function()
     it("raises a Lua error when called with no arguments", function()
-      assertArgError(function() getModuleSync() end, "getModuleSync: bad argument #1 type")
+      assertArgError(function()
+        getModuleSync()
+      end, "getModuleSync: bad argument #1 type")
     end)
 
     it("returns nil+msg for a module that is not installed", function()
@@ -788,7 +867,9 @@ describe("Tests the module accessors", function()
     it("writes the synced module out again", function()
       -- rewriting this module's own .mpackage is only safe because
       -- installFixtureModule() installed a scratch copy, not the committed one
-      defer(function() disableModuleSync(moduleName) end)
+      defer(function()
+        disableModuleSync(moduleName)
+      end)
       assert.is_true(enableModuleSync(moduleName))
       assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
 
@@ -799,7 +880,12 @@ describe("Tests the module accessors", function()
       assert.is_nil(lfs.attributes(moduleXml), "the module's unpacked XML could not be cleared")
 
       assert.is_true(saveProfile())
-      assert.is_true(waitUntil(function() return lfs.attributes(moduleXml) ~= nil end, 10000), "the profile save never wrote the synced module out")
+      assert.is_true(
+        waitUntil(function()
+          return lfs.attributes(moduleXml) ~= nil
+        end, 10000),
+        "the profile save never wrote the synced module out"
+      )
       assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
 
       -- a file that merely exists could be an empty or half-written one
@@ -814,11 +900,13 @@ end)
 
 describe("Tests the functionality of reloadModule", function()
   it("raises a Lua error when called with no arguments", function()
-    assertArgError(function() reloadModule() end, "reloadModule: bad argument #1 type")
+    assertArgError(function()
+      reloadModule()
+    end, "reloadModule: bad argument #1 type")
   end)
 
   it("returns no values and does nothing for a module that is not installed", function()
-    assert.equals(0, select('#', reloadModule("mudlet-spec-never-installed")))
+    assert.equals(0, select("#", reloadModule("mudlet-spec-never-installed")))
     assert.is_false(moduleInstalled("mudlet-spec-never-installed"))
   end)
 
@@ -833,7 +921,9 @@ describe("Tests the functionality of reloadModule", function()
     it("runs the module's scripts again", function()
       local runsBefore = mudletSpecModuleRuns
 
-      reloadModuleUntil(moduleName, function() return mudletSpecModuleRuns > runsBefore end)
+      reloadModuleUntil(moduleName, function()
+        return mudletSpecModuleRuns > runsBefore
+      end)
 
       assert.is_true(moduleInstalled(moduleName))
       assert.equals(1, exists(moduleName .. " alias", "alias"))
@@ -849,12 +939,16 @@ describe("Tests the functionality of reloadModule", function()
     end)
 
     it("keeps the module's priority and sync setting", function()
-      defer(function() disableModuleSync(moduleName) end)
+      defer(function()
+        disableModuleSync(moduleName)
+      end)
       setModulePriority(moduleName, 4)
       assert.is_true(enableModuleSync(moduleName))
       local runsBefore = mudletSpecModuleRuns
 
-      reloadModuleUntil(moduleName, function() return mudletSpecModuleRuns > runsBefore end)
+      reloadModuleUntil(moduleName, function()
+        return mudletSpecModuleRuns > runsBefore
+      end)
 
       assert.equals(4, getModulePriority(moduleName))
       assert.is_true(getModuleSync(moduleName))
@@ -892,12 +986,15 @@ describe("Tests a package that uninstalls itself", function()
 
     -- the handler's uninstallPackage() declines while the save the install
     -- started is still running, so raise until the package is really gone
-    assert.is_true(waitUntil(function()
-      mudletSpecSelfUninstallRan = nil
-      mudletSpecSelfUninstallSecondRan = nil
-      raiseEvent("mudletSpecSelfUninstall")
-      return not packageInstalled("mudlet-spec-selfuninstall")
-    end, 5000), "the package did not uninstall itself")
+    assert.is_true(
+      waitUntil(function()
+        mudletSpecSelfUninstallRan = nil
+        mudletSpecSelfUninstallSecondRan = nil
+        raiseEvent("mudletSpecSelfUninstall")
+        return not packageInstalled("mudlet-spec-selfuninstall")
+      end, 5000),
+      "the package did not uninstall itself"
+    )
 
     assert.is_true(mudletSpecSelfUninstallRan, "the package's own handler did not run")
     -- the package's second handler for this event is the one the pre-fix code
@@ -930,7 +1027,9 @@ describe("Tests installing a package while the profile is being saved", function
     installFixturePackage(minimalPackage)
 
     assert.is_true(installPackage(fixtureDirectory .. "/mudlet-spec-noconfig.mpackage"))
-    assert.is_true(waitUntil(function() return packageInstalled("mudlet-spec-noconfig") end, 5000))
+    assert.is_true(waitUntil(function()
+      return packageInstalled("mudlet-spec-noconfig")
+    end, 5000))
   end)
 end)
 
@@ -963,7 +1062,9 @@ end)
 
 describe("Tests the functionality of verbosePackageInstall", function()
   it("installs the package and says so on the main console", function()
-    defer(function() removeFixturePackage(minimalPackage) end)
+    defer(function()
+      removeFixturePackage(minimalPackage)
+    end)
     local path = fixtureDirectory .. "/" .. minimalPackage .. ".mpackage"
     -- an install asked for while a save is running is postponed, and would be
     -- announced as a success without anything being installed
@@ -1022,7 +1123,9 @@ describe("Tests the functionality of verboseModuleInstall", function()
   end
 
   it("installs the module and says so on the main console", function()
-    defer(function() removeFixtureModule(moduleName) end)
+    defer(function()
+      removeFixtureModule(moduleName)
+    end)
     local path = stageModule()
     assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
     local mark = getLastLineNumber("main")
@@ -1072,7 +1175,10 @@ describe("Tests the functionality of installPackageFromUrl", function()
     local text = textFrom(mark)
     assert.is_true(containsWrapped(text, "Downloading package from " .. url), text)
     assert.is_true(containsWrapped(text, "installed successfully."), text)
-    assert.is_false(fileExists(getMudletHomeDir() .. "/" .. downloadedName), "the downloaded copy was left in the profile")
+    assert.is_false(
+      fileExists(getMudletHomeDir() .. "/" .. downloadedName),
+      "the downloaded copy was left in the profile"
+    )
   end)
 
   it("names the file, not the whole path, in the announcement", function()
@@ -1089,12 +1195,17 @@ describe("Tests the functionality of installPackageFromUrl", function()
     installPackageFromUrl(downloadedName, fileUrl(fixtureDirectory .. "/" .. downloadedName))
 
     waitForEvent("sysInstallPackage", 10000)
-    assert.is_true(containsWrapped(textFrom(mark), "Package '" .. downloadedName .. "' installed successfully."), textFrom(mark))
+    assert.is_true(
+      containsWrapped(textFrom(mark), "Package '" .. downloadedName .. "' installed successfully."),
+      textFrom(mark)
+    )
   end)
 
   it("reports a download that failed and installs nothing", function()
     local missingName = "mudlet-spec-never-downloadable.mpackage"
-    defer(function() os.remove(getMudletHomeDir() .. "/" .. missingName) end)
+    defer(function()
+      os.remove(getMudletHomeDir() .. "/" .. missingName)
+    end)
     local mark = getLastLineNumber("main")
 
     installPackageFromUrl(missingName, fileUrl(fixtureDirectory .. "/" .. missingName))
@@ -1134,7 +1245,7 @@ describe("Tests the functionality of packageDrop", function()
     -- accepts cannot go unnoticed
     assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
 
-    for _, suffix in ipairs({"xml", "zip", "trigger"}) do
+    for _, suffix in ipairs({ "xml", "zip", "trigger" }) do
       local path = fixtureDirectory .. "/mudlet-spec-there-is-no-such-drop." .. suffix
       local mark = getLastLineNumber("main")
 
@@ -1151,7 +1262,10 @@ describe("Tests the functionality of packageDrop", function()
     assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
     local mark = getLastLineNumber("main")
 
-    assert.equals(0, select('#', packageDrop("sysDropEvent", fixtureDirectory .. "/" .. minimalPackage .. ".mpackage", "exe")))
+    assert.equals(
+      0,
+      select("#", packageDrop("sysDropEvent", fixtureDirectory .. "/" .. minimalPackage .. ".mpackage", "exe"))
+    )
 
     assert.is_false(packageInstalled(minimalPackage))
     -- an install that was attempted says so either way round, so neither
@@ -1175,7 +1289,9 @@ describe("Tests the functionality of packageUrlDrop", function()
   end
 
   it("hands a dropped package URL to the downloader", function()
-    defer(function() os.remove(getMudletHomeDir() .. "/mudlet-spec-dropped.mpackage") end)
+    defer(function()
+      os.remove(getMudletHomeDir() .. "/mudlet-spec-dropped.mpackage")
+    end)
     local mark = getLastLineNumber("main")
 
     packageUrlDrop("sysDropUrlEvent", droppedUrl, "http")
@@ -1191,7 +1307,7 @@ describe("Tests the functionality of packageUrlDrop", function()
     -- spec above proved would otherwise be downloaded
     local mark = getLastLineNumber("main")
 
-    assert.equals(0, select('#', packageUrlDrop("sysDropUrlEvent", droppedUrl, "ftp")))
+    assert.equals(0, select("#", packageUrlDrop("sysDropUrlEvent", droppedUrl, "ftp")))
 
     assert.is_false(announcedADownload(mark))
   end)

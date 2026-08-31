@@ -11,7 +11,6 @@
 -- with the profile and are live on the next run.
 
 describe("tree linkage", function()
-
   local permanentItems
 
   before_each(function()
@@ -30,12 +29,12 @@ describe("tree linkage", function()
   end)
 
   local function track(disable, name)
-    permanentItems[#permanentItems + 1] = {disable = disable, name = name}
+    permanentItems[#permanentItems + 1] = { disable = disable, name = name }
     return name
   end
 
   local function assertCreated(ids, itemType)
-    for _, key in ipairs({"top", "mid", "leaf", "sibling"}) do
+    for _, key in ipairs({ "top", "mid", "leaf", "sibling" }) do
       assert.is_true((ids[key] or 0) > 0, "the " .. key .. " " .. itemType .. " should have been created")
     end
   end
@@ -89,8 +88,8 @@ describe("tree linkage", function()
     local ids = {
       top = permSubstringTrigger(names.top, "", {}, ""),
       mid = permSubstringTrigger(names.mid, names.top, {}, ""),
-      leaf = permSubstringTrigger(names.leaf, names.mid, {"spec_tree_trig_leaf"}, ""),
-      sibling = permSubstringTrigger(names.sibling, names.top, {"spec_tree_trig_sibling"}, ""),
+      leaf = permSubstringTrigger(names.leaf, names.mid, { "spec_tree_trig_leaf" }, ""),
+      sibling = permSubstringTrigger(names.sibling, names.top, { "spec_tree_trig_sibling" }, ""),
     }
     assertCreated(ids, "trigger")
 

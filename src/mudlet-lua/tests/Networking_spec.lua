@@ -40,11 +40,15 @@ describe("Networking send functions honour their disconnected/offline contracts"
 
   describe("sendMSDP", function()
     it("raises a Lua error when called with no arguments", function()
-      assert.has_error(function() sendMSDP() end)
+      assert.has_error(function()
+        sendMSDP()
+      end)
     end)
 
     it("raises a Lua error when a value argument is not a string", function()
-      assert.has_error(function() sendMSDP("HEALTH", {}) end)
+      assert.has_error(function()
+        sendMSDP("HEALTH", {})
+      end)
     end)
 
     it("returns nil and a message while disconnected", function()
@@ -58,16 +62,26 @@ describe("Networking send functions honour their disconnected/offline contracts"
     it("names the offending value's real type when the message is not a string", function()
       -- Regression #9543: the type-name placeholder must be expanded, not printed
       -- as a literal "%1". lua_pushfstring only understands C-style "%s".
-      local ok, err = pcall(function() sendATCP({}) end)
+      local ok, err = pcall(function()
+        sendATCP({})
+      end)
       assert.is_false(ok)
-      assert.is_true(contains(err, "sendATCP: bad argument #1 type (message as string expected, got table!)"), tostring(err))
+      assert.is_true(
+        contains(err, "sendATCP: bad argument #1 type (message as string expected, got table!)"),
+        tostring(err)
+      )
       assert.is_false(contains(err, "%1"), tostring(err))
     end)
 
     it("names the real type when the optional second argument is not a string", function()
-      local ok, err = pcall(function() sendATCP("Char.Login", {}) end)
+      local ok, err = pcall(function()
+        sendATCP("Char.Login", {})
+      end)
       assert.is_false(ok)
-      assert.is_true(contains(err, "sendATCP: bad argument #2 type (what as string is optional, got table!)"), tostring(err))
+      assert.is_true(
+        contains(err, "sendATCP: bad argument #2 type (what as string is optional, got table!)"),
+        tostring(err)
+      )
       assert.is_false(contains(err, "%1"), tostring(err))
     end)
 
@@ -80,7 +94,9 @@ describe("Networking send functions honour their disconnected/offline contracts"
 
   describe("sendTelnetChannel102", function()
     it("raises a Lua error when the payload is not a string", function()
-      assert.has_error(function() sendTelnetChannel102({}) end)
+      assert.has_error(function()
+        sendTelnetChannel102({})
+      end)
     end)
 
     it("returns nil when the payload is not exactly two bytes", function()
@@ -98,7 +114,9 @@ describe("Networking send functions honour their disconnected/offline contracts"
 
   describe("sendSocket", function()
     it("raises a Lua error when the data is not a string", function()
-      assert.has_error(function() sendSocket({}) end)
+      assert.has_error(function()
+        sendSocket({})
+      end)
     end)
 
     it("returns nil and a message when the socket cannot accept the data", function()
@@ -111,7 +129,9 @@ end)
 
 describe("connectToServer validates its arguments without connecting", function()
   it("raises a Lua error when the url is missing", function()
-    assert.has_error(function() connectToServer() end)
+    assert.has_error(function()
+      connectToServer()
+    end)
   end)
 
   it("rejects an out-of-range port and returns nil plus a message", function()
@@ -143,11 +163,15 @@ describe("HTTP and download functions validate arguments before issuing a reques
   -- raised first.
   describe("downloadFile", function()
     it("raises a Lua error when the local filename is missing", function()
-      assertArgError(function() downloadFile() end, "downloadFile: bad argument")
+      assertArgError(function()
+        downloadFile()
+      end, "downloadFile: bad argument")
     end)
 
     it("raises a Lua error when the url is missing", function()
-      assertArgError(function() downloadFile("/tmp/mudlet-contract-test") end, "downloadFile: bad argument")
+      assertArgError(function()
+        downloadFile("/tmp/mudlet-contract-test")
+      end, "downloadFile: bad argument")
     end)
 
     it("returns nil for an invalid url without downloading", function()
@@ -159,7 +183,9 @@ describe("HTTP and download functions validate arguments before issuing a reques
 
   describe("getHTTP", function()
     it("raises a Lua error when the url is missing", function()
-      assertArgError(function() getHTTP() end, "getHTTP: bad argument")
+      assertArgError(function()
+        getHTTP()
+      end, "getHTTP: bad argument")
     end)
 
     it("returns nil for an invalid url without issuing a request", function()
@@ -169,18 +195,23 @@ describe("HTTP and download functions validate arguments before issuing a reques
     end)
 
     it("raises a Lua error when headers is not a table", function()
-      assertArgError(function() getHTTP("http://localhost/", 5) end,
-        "getHTTP: bad argument #2 type (headers as a table expected, got number!)")
+      assertArgError(function()
+        getHTTP("http://localhost/", 5)
+      end, "getHTTP: bad argument #2 type (headers as a table expected, got number!)")
     end)
 
     it("raises a Lua error when a header value is not a string", function()
-      assertArgError(function() getHTTP("http://localhost/", {["X-Test"] = 5}) end, "getHTTP: bad argument")
+      assertArgError(function()
+        getHTTP("http://localhost/", { ["X-Test"] = 5 })
+      end, "getHTTP: bad argument")
     end)
   end)
 
   describe("deleteHTTP", function()
     it("raises a Lua error when the url is missing", function()
-      assertArgError(function() deleteHTTP() end, "deleteHTTP: bad argument")
+      assertArgError(function()
+        deleteHTTP()
+      end, "deleteHTTP: bad argument")
     end)
 
     it("returns nil for an invalid url without issuing a request", function()
@@ -190,22 +221,29 @@ describe("HTTP and download functions validate arguments before issuing a reques
     end)
 
     it("raises a Lua error when headers is not a table", function()
-      assertArgError(function() deleteHTTP("http://localhost/", 5) end,
-        "deleteHTTP: bad argument #2 type (headers as a table expected, got number!)")
+      assertArgError(function()
+        deleteHTTP("http://localhost/", 5)
+      end, "deleteHTTP: bad argument #2 type (headers as a table expected, got number!)")
     end)
 
     it("raises a Lua error when a header value is not a string", function()
-      assertArgError(function() deleteHTTP("http://localhost/", {["X-Test"] = 5}) end, "deleteHTTP: bad argument")
+      assertArgError(function()
+        deleteHTTP("http://localhost/", { ["X-Test"] = 5 })
+      end, "deleteHTTP: bad argument")
     end)
   end)
 
   describe("postHTTP", function()
     it("raises a Lua error when the data argument is missing", function()
-      assertArgError(function() postHTTP() end, "postHTTP: bad argument")
+      assertArgError(function()
+        postHTTP()
+      end, "postHTTP: bad argument")
     end)
 
     it("raises a Lua error when the url is missing", function()
-      assertArgError(function() postHTTP("payload") end, "postHTTP: bad argument")
+      assertArgError(function()
+        postHTTP("payload")
+      end, "postHTTP: bad argument")
     end)
 
     it("returns nil for an invalid url without issuing a request", function()
@@ -215,18 +253,23 @@ describe("HTTP and download functions validate arguments before issuing a reques
     end)
 
     it("raises a Lua error when headers is not a table", function()
-      assertArgError(function() postHTTP("payload", "http://localhost/", 5) end,
-        "postHTTP: bad argument #3 type (headers as a table expected, got number!)")
+      assertArgError(function()
+        postHTTP("payload", "http://localhost/", 5)
+      end, "postHTTP: bad argument #3 type (headers as a table expected, got number!)")
     end)
   end)
 
   describe("putHTTP", function()
     it("raises a Lua error when the data argument is missing", function()
-      assertArgError(function() putHTTP() end, "putHTTP: bad argument")
+      assertArgError(function()
+        putHTTP()
+      end, "putHTTP: bad argument")
     end)
 
     it("raises a Lua error when the url is missing", function()
-      assertArgError(function() putHTTP("payload") end, "putHTTP: bad argument")
+      assertArgError(function()
+        putHTTP("payload")
+      end, "putHTTP: bad argument")
     end)
 
     it("returns nil for an invalid url without issuing a request", function()
@@ -236,8 +279,9 @@ describe("HTTP and download functions validate arguments before issuing a reques
     end)
 
     it("raises a Lua error when headers is not a table", function()
-      assertArgError(function() putHTTP("payload", "http://localhost/", 5) end,
-        "putHTTP: bad argument #3 type (headers as a table expected, got number!)")
+      assertArgError(function()
+        putHTTP("payload", "http://localhost/", 5)
+      end, "putHTTP: bad argument #3 type (headers as a table expected, got number!)")
     end)
   end)
 
@@ -252,24 +296,35 @@ describe("HTTP and download functions validate arguments before issuing a reques
 
   describe("customHTTP", function()
     it("raises a Lua error when the method is missing", function()
-      assertArgError(function() customHTTP() end, "customHTTP: bad argument")
+      assertArgError(function()
+        customHTTP()
+      end, "customHTTP: bad argument")
     end)
 
     it("raises a Lua error when the data argument is missing", function()
-      assertArgError(function() customHTTP("REPORT") end, "customHTTP: bad argument")
+      assertArgError(function()
+        customHTTP("REPORT")
+      end, "customHTTP: bad argument")
     end)
 
     it("raises a Lua error when the url is missing", function()
-      assertArgError(function() customHTTP("REPORT", "payload") end, "customHTTP: bad argument")
+      assertArgError(function()
+        customHTTP("REPORT", "payload")
+      end, "customHTTP: bad argument")
     end)
 
     it("reports the real type of a non-table headers argument", function()
       -- Regression #9544: performHttpRequest must read the type of the offending
       -- slot (pos + 3), not a hardcoded slot 3, so the headers error names the
       -- number that was actually passed rather than the url's type.
-      local ok, err = pcall(function() customHTTP("REPORT", "payload", "http://localhost/", 5) end)
+      local ok, err = pcall(function()
+        customHTTP("REPORT", "payload", "http://localhost/", 5)
+      end)
       assert.is_false(ok)
-      assert.is_true(contains(err, "customHTTP: bad argument #4 type (headers as a table expected, got number!)"), tostring(err))
+      assert.is_true(
+        contains(err, "customHTTP: bad argument #4 type (headers as a table expected, got number!)"),
+        tostring(err)
+      )
     end)
 
     it("reports the real type of a non-string file argument", function()
@@ -277,9 +332,14 @@ describe("HTTP and download functions validate arguments before issuing a reques
       -- so it names the boolean that was passed and not the headers table's type.
       -- A boolean is used rather than a number because lua_isstring also accepts
       -- numbers, so only a genuinely non-string value reaches the type error.
-      local ok, err = pcall(function() customHTTP("REPORT", "payload", "http://localhost/", {}, true) end)
+      local ok, err = pcall(function()
+        customHTTP("REPORT", "payload", "http://localhost/", {}, true)
+      end)
       assert.is_false(ok)
-      assert.is_true(contains(err, "customHTTP: bad argument #5 type (file to send as string location expected, got boolean!)"), tostring(err))
+      assert.is_true(
+        contains(err, "customHTTP: bad argument #5 type (file to send as string location expected, got boolean!)"),
+        tostring(err)
+      )
     end)
   end)
 end)
@@ -315,7 +375,10 @@ describe("Downloads and HTTP verbs against the local fixture server", function()
       return false
     end
     if requireFixture then
-      assert.is_true(false, "MUDLET_TEST_REQUIRE_HTTP_FIXTURE is set but MUDLET_TEST_HTTP_PORT is not - the fixture server did not reach the specs")
+      assert.is_true(
+        false,
+        "MUDLET_TEST_REQUIRE_HTTP_FIXTURE is set but MUDLET_TEST_HTTP_PORT is not - the fixture server did not reach the specs"
+      )
     end
     pending("MUDLET_TEST_HTTP_PORT is not set (fixture HTTP server not running)")
     return true
@@ -367,7 +430,9 @@ describe("Downloads and HTTP verbs against the local fixture server", function()
       end
       local target = getMudletHomeDir() .. "/busted-download-done.txt"
       os.remove(target)
-      finally(function() os.remove(target) end)
+      finally(function()
+        os.remove(target)
+      end)
       local queued, actualUrl = downloadFile(target, fixtureUrl("/fixture.txt"))
       assert.is_true(queued)
       assert.equals(fixtureUrl("/fixture.txt"), actualUrl)
@@ -391,7 +456,7 @@ describe("Downloads and HTTP verbs against the local fixture server", function()
       -- one must account for the whole body.
       local progress = {}
       local handler = registerAnonymousEventHandler("sysDownloadFileProgress", function(_, url, downloaded, total)
-        progress[#progress + 1] = {url = url, downloaded = downloaded, total = total}
+        progress[#progress + 1] = { url = url, downloaded = downloaded, total = total }
       end)
       finally(function()
         killAnonymousEventHandler(handler)
@@ -414,7 +479,9 @@ describe("Downloads and HTTP verbs against the local fixture server", function()
       end
       local target = getMudletHomeDir() .. "/busted-download-missing.txt"
       os.remove(target)
-      finally(function() os.remove(target) end)
+      finally(function()
+        os.remove(target)
+      end)
       assert.is_true(downloadFile(target, fixtureUrl("/no-such-fixture.txt")))
 
       local event, message, localFile, url, response = waitForEvent("sysDownloadError", 2000)
@@ -463,7 +530,7 @@ describe("Downloads and HTTP verbs against the local fixture server", function()
       if noFixtureServer() then
         return
       end
-      assert.is_true(getHTTP(fixtureUrl("/echo"), {["X-Mudlet-Test"] = "get-header"}))
+      assert.is_true(getHTTP(fixtureUrl("/echo"), { ["X-Mudlet-Test"] = "get-header" }))
 
       local event, _, body = waitForEvent("sysGetHttpDone", 2000)
       assert.equals("sysGetHttpDone", event)
@@ -492,7 +559,7 @@ describe("Downloads and HTTP verbs against the local fixture server", function()
       if noFixtureServer() then
         return
       end
-      local queued = postHTTP("posted=payload", fixtureUrl("/echo"), {["X-Mudlet-Test"] = "post-header"})
+      local queued = postHTTP("posted=payload", fixtureUrl("/echo"), { ["X-Mudlet-Test"] = "post-header" })
       assert.is_true(queued)
 
       local event, url, body, response = waitForEvent("sysPostHttpDone", 2000)
@@ -510,7 +577,9 @@ describe("Downloads and HTTP verbs against the local fixture server", function()
       end
       local upload = getMudletHomeDir() .. "/busted-http-upload.txt"
       writeFile(upload, "contents from the uploaded file")
-      finally(function() os.remove(upload) end)
+      finally(function()
+        os.remove(upload)
+      end)
 
       assert.is_true(postHTTP("data that must be ignored", fixtureUrl("/echo"), {}, upload))
 
@@ -526,7 +595,9 @@ describe("Downloads and HTTP verbs against the local fixture server", function()
       end
       local upload = getMudletHomeDir() .. "/busted-http-upload-only.txt"
       writeFile(upload, "file body with no data argument")
-      finally(function() os.remove(upload) end)
+      finally(function()
+        os.remove(upload)
+      end)
 
       assert.is_true(postHTTP(nil, fixtureUrl("/echo"), {}, upload))
 
@@ -555,7 +626,7 @@ describe("Downloads and HTTP verbs against the local fixture server", function()
       if noFixtureServer() then
         return
       end
-      local queued = putHTTP("put=payload", fixtureUrl("/echo"), {["X-Mudlet-Test"] = "put-header"})
+      local queued = putHTTP("put=payload", fixtureUrl("/echo"), { ["X-Mudlet-Test"] = "put-header" })
       assert.is_true(queued)
 
       local event, url, body, response = waitForEvent("sysPutHttpDone", 2000)
@@ -585,7 +656,7 @@ describe("Downloads and HTTP verbs against the local fixture server", function()
       if noFixtureServer() then
         return
       end
-      local queued = deleteHTTP(fixtureUrl("/echo"), {["X-Mudlet-Test"] = "delete-header"})
+      local queued = deleteHTTP(fixtureUrl("/echo"), { ["X-Mudlet-Test"] = "delete-header" })
       assert.is_true(queued)
 
       local event, url, body, response = waitForEvent("sysDeleteHttpDone", 2000)
@@ -614,7 +685,8 @@ describe("Downloads and HTTP verbs against the local fixture server", function()
       if noFixtureServer() then
         return
       end
-      local queued = customHTTP("REPORT", "custom=payload", fixtureUrl("/echo"), {["X-Mudlet-Test"] = "custom-header"})
+      local queued =
+        customHTTP("REPORT", "custom=payload", fixtureUrl("/echo"), { ["X-Mudlet-Test"] = "custom-header" })
       assert.is_true(queued)
 
       local event, url, body, method, response = waitForEvent("sysCustomHttpDone", 2000)
@@ -644,11 +716,15 @@ end)
 
 describe("openUrl validates its argument without launching anything", function()
   it("raises a Lua error when the url is missing", function()
-    assertArgError(function() openUrl() end, "openUrl: bad argument")
+    assertArgError(function()
+      openUrl()
+    end, "openUrl: bad argument")
   end)
 
   it("raises a Lua error when the url is not a string", function()
-    assertArgError(function() openUrl({}) end, "openUrl: bad argument")
+    assertArgError(function()
+      openUrl({})
+    end, "openUrl: bad argument")
   end)
 end)
 
@@ -750,16 +826,22 @@ describe("MMCP chat commands report the absence of a session", function()
   end)
 
   it("chatTo requires a target argument", function()
-    assert.has_error(function() mmcp.chatTo() end)
+    assert.has_error(function()
+      mmcp.chatTo()
+    end)
   end)
 
   it("chatAll requires a message argument", function()
-    assert.has_error(function() mmcp.chatAll() end)
+    assert.has_error(function()
+      mmcp.chatAll()
+    end)
   end)
 
   describe("mmcp.call", function()
     it("raises a Lua error when the host is missing", function()
-      assert.has_error(function() mmcp.call() end)
+      assert.has_error(function()
+        mmcp.call()
+      end)
     end)
 
     it("rejects an out-of-range port without connecting", function()
@@ -843,7 +925,10 @@ describe("MMCP effects against a scripted chat peer", function()
       return false
     end
     if peerRequired then
-      assert.is_true(false, "MUDLET_TEST_REQUIRE_MMCP_PEER is set but " .. reason .. " (MUDLET_TEST_MMCP_DIR=" .. tostring(mmcpDir) .. ")")
+      assert.is_true(
+        false,
+        "MUDLET_TEST_REQUIRE_MMCP_PEER is set but " .. reason .. " (MUDLET_TEST_MMCP_DIR=" .. tostring(mmcpDir) .. ")"
+      )
     end
     pending(reason)
     return true
@@ -923,15 +1008,18 @@ describe("MMCP effects against a scripted chat peer", function()
   end
 
   local function peerSends(code, text)
-    tellPeer({action = "send", code = code, text = text})
+    tellPeer({ action = "send", code = code, text = text })
   end
 
   -- The command channel is JSON, so bytes that are not valid UTF-8 - the 0xff
   -- terminator above all - have to travel as hex.
   local function peerSendsRaw(bytes)
-    tellPeer({action = "send_hex", hex = (bytes:gsub(".", function(char)
-      return string.format("%02x", char:byte())
-    end))})
+    tellPeer({
+      action = "send_hex",
+      hex = (bytes:gsub(".", function(char)
+        return string.format("%02x", char:byte())
+      end)),
+    })
   end
 
   local function peerClient()
@@ -970,7 +1058,9 @@ describe("MMCP effects against a scripted chat peer", function()
       for _, entry in ipairs(stale) do
         mmcp.disconnect(entry.name)
       end
-      waitUntil(function() return mmcp.getClientList() == nil end, 2000)
+      waitUntil(function()
+        return mmcp.getClientList() == nil
+      end, 2000)
     end
     originalChatName = originalChatName or mmcp.chatName()
     -- A fixed name, so the bytes the peer records are predictable.
@@ -993,7 +1083,7 @@ describe("MMCP effects against a scripted chat peer", function()
   local function collectEvents(eventName, action)
     local seen = {}
     local handlerId = registerAnonymousEventHandler(eventName, function(_, ...)
-      seen[#seen + 1] = {...}
+      seen[#seen + 1] = { ... }
     end)
     local ok, err = pcall(action)
     killAnonymousEventHandler(handlerId)
@@ -1015,15 +1105,25 @@ describe("MMCP effects against a scripted chat peer", function()
     if type(flags) ~= "string" then
       return
     end
-    if flags:sub(3, 3) ~= " " then mmcp.setPrivate(PEER_NAME) end
-    if flags:sub(4, 4) ~= " " then mmcp.ignore(PEER_NAME) end
-    if flags:sub(5, 5) ~= " " then mmcp.serve(PEER_NAME) end
-    if flags:sub(7, 7) ~= " " then mmcp.allowSnoop(PEER_NAME) end
+    if flags:sub(3, 3) ~= " " then
+      mmcp.setPrivate(PEER_NAME)
+    end
+    if flags:sub(4, 4) ~= " " then
+      mmcp.ignore(PEER_NAME)
+    end
+    if flags:sub(5, 5) ~= " " then
+      mmcp.serve(PEER_NAME)
+    end
+    if flags:sub(7, 7) ~= " " then
+      mmcp.allowSnoop(PEER_NAME)
+    end
   end)
 
   describe("mmcp.call", function()
     it("completes the MudMaster handshake with the peer", function()
-      if peerUnavailable() then return end
+      if peerUnavailable() then
+        return
+      end
       ensurePeer()
       local decoded = capture()
       assert.is_table(decoded.caller)
@@ -1036,7 +1136,9 @@ describe("MMCP effects against a scripted chat peer", function()
     end)
 
     it("announces itself as Mudlet once the call is accepted", function()
-      if peerUnavailable() then return end
+      if peerUnavailable() then
+        return
+      end
       ensurePeer()
       local sent = waitForPeerEvent(0, function(event)
         return event.type == "command" and event.name == "Version"
@@ -1049,7 +1151,9 @@ describe("MMCP effects against a scripted chat peer", function()
     end)
 
     it("lists the accepted peer with its address, port and version", function()
-      if peerUnavailable() then return end
+      if peerUnavailable() then
+        return
+      end
       local client = ensurePeer()
       assert.equals(1, client.id)
       assert.equals(PEER_NAME, client.name)
@@ -1058,14 +1162,19 @@ describe("MMCP effects against a scripted chat peer", function()
       -- The peer's version arrives just after its acceptance, which is what
       -- releases ensurePeer, so give it its own wait rather than assuming the
       -- two landed in the same read.
-      assert.is_true(waitUntil(function()
-        local entry = peerClient()
-        return entry ~= nil and entry.version == PEER_VERSION
-      end, 2000), tostring(peerClient() and peerClient().version))
+      assert.is_true(
+        waitUntil(function()
+          local entry = peerClient()
+          return entry ~= nil and entry.version == PEER_VERSION
+        end, 2000),
+        tostring(peerClient() and peerClient().version)
+      )
     end)
 
     it("refuses to place a second call to a peer it is already talking to", function()
-      if peerUnavailable() then return end
+      if peerUnavailable() then
+        return
+      end
       ensurePeer()
       local before = capture().connections
       local ok, err = mmcp.call("127.0.0.1", peerPort())
@@ -1076,7 +1185,9 @@ describe("MMCP effects against a scripted chat peer", function()
     end)
 
     it("leaves no client behind when nothing answers the port", function()
-      if peerUnavailable() then return end
+      if peerUnavailable() then
+        return
+      end
       ensurePeer()
       -- Port 1 on loopback refuses rather than listens. The call is placed
       -- (that much is asynchronous), but the client it creates has to be
@@ -1088,12 +1199,16 @@ describe("MMCP effects against a scripted chat peer", function()
     end)
 
     it("leaves no client behind when the peer refuses the call", function()
-      if peerUnavailable() then return end
+      if peerUnavailable() then
+        return
+      end
       if peerClient() then
         mmcp.disconnect(PEER_NAME)
-        waitUntil(function() return peerClient() == nil end, 2000)
+        waitUntil(function()
+          return peerClient() == nil
+        end, 2000)
       end
-      tellPeer({action = "accept", accept = false})
+      tellPeer({ action = "accept", accept = false })
       waitUntil(function()
         local decoded = capture()
         return decoded ~= nil and decoded.accepting == false
@@ -1109,7 +1224,7 @@ describe("MMCP effects against a scripted chat peer", function()
       pump(300)
       assert.is_nil(mmcp.getClientList())
 
-      tellPeer({action = "accept", accept = true})
+      tellPeer({ action = "accept", accept = true })
       waitUntil(function()
         local decoded = capture()
         return decoded ~= nil and decoded.accepting == true
@@ -1119,7 +1234,9 @@ describe("MMCP effects against a scripted chat peer", function()
 
   describe("outgoing chat", function()
     it("chatAll sends the message to the peer and echoes it locally", function()
-      if peerUnavailable() then return end
+      if peerUnavailable() then
+        return
+      end
       ensurePeer()
       local mark = captureSeq()
       local echoes = collectEvents("sysMMCPChatMessage", function()
@@ -1136,7 +1253,9 @@ describe("MMCP effects against a scripted chat peer", function()
     end)
 
     it("chatTo sends a personal message to the named peer", function()
-      if peerUnavailable() then return end
+      if peerUnavailable() then
+        return
+      end
       ensurePeer()
       local mark = captureSeq()
       local echoes = collectEvents("sysMMCPChatMessage", function()
@@ -1153,7 +1272,9 @@ describe("MMCP effects against a scripted chat peer", function()
     end)
 
     it("emoteAll sends an unquoted emote to everyone", function()
-      if peerUnavailable() then return end
+      if peerUnavailable() then
+        return
+      end
       ensurePeer()
       local mark = captureSeq()
       local echoes = collectEvents("sysMMCPChatMessage", function()
@@ -1173,7 +1294,9 @@ describe("MMCP effects against a scripted chat peer", function()
 
   describe("mmcp.setGroup and mmcp.chatGroup", function()
     it("reports an empty group and sends nothing until a peer is assigned", function()
-      if peerUnavailable() then return end
+      if peerUnavailable() then
+        return
+      end
       ensurePeer()
       local mark = captureSeq()
       local ok, err = mmcp.chatGroup("testers", "nobody there")
@@ -1183,7 +1306,9 @@ describe("MMCP effects against a scripted chat peer", function()
     end)
 
     it("reaches the peer once it has been assigned to the group", function()
-      if peerUnavailable() then return end
+      if peerUnavailable() then
+        return
+      end
       ensurePeer()
       assert.is_true(mmcp.setGroup(PEER_NAME, "testers"))
       local mark = captureSeq()
@@ -1196,7 +1321,9 @@ describe("MMCP effects against a scripted chat peer", function()
     end)
 
     it("reads back a group chat of its own making", function()
-      if peerUnavailable() then return end
+      if peerUnavailable() then
+        return
+      end
       ensurePeer()
       assert.is_true(mmcp.setGroup(PEER_NAME, "testers"))
       local mark = captureSeq()
@@ -1217,7 +1344,9 @@ describe("MMCP effects against a scripted chat peer", function()
     end)
 
     it("stops reaching the peer once it is removed from the group", function()
-      if peerUnavailable() then return end
+      if peerUnavailable() then
+        return
+      end
       ensurePeer()
       assert.is_true(mmcp.setGroup(PEER_NAME, "none"))
       local mark = captureSeq()
@@ -1233,13 +1362,17 @@ describe("MMCP effects against a scripted chat peer", function()
     -- Private, Ignored, Served, Firewalled, the snoop state and a trailing
     -- space.
     it("are all clear while nothing has been toggled", function()
-      if peerUnavailable() then return end
+      if peerUnavailable() then
+        return
+      end
       ensurePeer()
       assert.equals("        ", mmcp.getClientFlags(PEER_NAME))
     end)
 
     it("setPrivate toggles the P flag", function()
-      if peerUnavailable() then return end
+      if peerUnavailable() then
+        return
+      end
       ensurePeer()
       assert.is_true(mmcp.setPrivate(PEER_NAME))
       assert.equals("  P     ", mmcp.getClientFlags(PEER_NAME))
@@ -1248,7 +1381,9 @@ describe("MMCP effects against a scripted chat peer", function()
     end)
 
     it("ignore toggles the I flag", function()
-      if peerUnavailable() then return end
+      if peerUnavailable() then
+        return
+      end
       ensurePeer()
       assert.is_true(mmcp.ignore(PEER_NAME))
       assert.equals("   I    ", mmcp.getClientFlags(PEER_NAME))
@@ -1257,7 +1392,9 @@ describe("MMCP effects against a scripted chat peer", function()
     end)
 
     it("serve toggles the S flag and tells the peer both times", function()
-      if peerUnavailable() then return end
+      if peerUnavailable() then
+        return
+      end
       ensurePeer()
       local mark = captureSeq()
       assert.is_true(mmcp.serve(PEER_NAME))
@@ -1275,7 +1412,9 @@ describe("MMCP effects against a scripted chat peer", function()
     end)
 
     it("allowSnoop toggles the n flag and tells the peer both times", function()
-      if peerUnavailable() then return end
+      if peerUnavailable() then
+        return
+      end
       ensurePeer()
       local mark = captureSeq()
       assert.is_true(mmcp.allowSnoop(PEER_NAME))
@@ -1295,7 +1434,9 @@ describe("MMCP effects against a scripted chat peer", function()
 
   describe("incoming chat", function()
     it("raises sysMMCPChatMessage for a chat to everyone", function()
-      if peerUnavailable() then return end
+      if peerUnavailable() then
+        return
+      end
       ensurePeer()
       peerSends(4, PEER_NAME .. " chats to everybody, 'peer speaking'\n")
       local name, from, message = waitForEvent("sysMMCPChatMessage", 2000)
@@ -1305,7 +1446,9 @@ describe("MMCP effects against a scripted chat peer", function()
     end)
 
     it("raises sysMMCPChatMessage for a personal chat", function()
-      if peerUnavailable() then return end
+      if peerUnavailable() then
+        return
+      end
       ensurePeer()
       peerSends(5, PEER_NAME .. " chats to you, 'just between us'\n")
       local _, from, message = waitForEvent("sysMMCPChatMessage", 2000)
@@ -1314,7 +1457,9 @@ describe("MMCP effects against a scripted chat peer", function()
     end)
 
     it("names the group an incoming group chat arrived on", function()
-      if peerUnavailable() then return end
+      if peerUnavailable() then
+        return
+      end
       ensurePeer()
       -- MudMaster's format: a 15 character group field, then the message.
       -- Mudlet's own sender adds a newline after that field, which the
@@ -1327,7 +1472,9 @@ describe("MMCP effects against a scripted chat peer", function()
     end)
 
     it("displays a plain protocol message from the peer", function()
-      if peerUnavailable() then return end
+      if peerUnavailable() then
+        return
+      end
       ensurePeer()
       peerSends(7, "<CHAT> the peer has something to say")
       local _, from, message = waitForEvent("sysMMCPChatMessage", 2000)
@@ -1336,7 +1483,9 @@ describe("MMCP effects against a scripted chat peer", function()
     end)
 
     it("waits for the rest of a command that arrives in two pieces", function()
-      if peerUnavailable() then return end
+      if peerUnavailable() then
+        return
+      end
       ensurePeer()
       -- Commands are only complete at their 0xff terminator, and TCP is free to
       -- deliver one in as many reads as it likes. Mudlet has to hold the first
@@ -1350,13 +1499,21 @@ describe("MMCP effects against a scripted chat peer", function()
     end)
 
     it("handles two commands that arrive in a single write", function()
-      if peerUnavailable() then return end
+      if peerUnavailable() then
+        return
+      end
       ensurePeer()
       -- The parser walks the buffer command by command, so a write carrying
       -- two of them has to produce two messages rather than one or none.
       local received = collectEvents("sysMMCPChatMessage", function()
-        peerSendsRaw(string.char(7) .. "<CHAT> first of two" .. string.char(255)
-                     .. string.char(7) .. "<CHAT> second of two" .. string.char(255))
+        peerSendsRaw(
+          string.char(7)
+            .. "<CHAT> first of two"
+            .. string.char(255)
+            .. string.char(7)
+            .. "<CHAT> second of two"
+            .. string.char(255)
+        )
         pump(500)
       end)
       assert.equals(2, #received)
@@ -1365,13 +1522,21 @@ describe("MMCP effects against a scripted chat peer", function()
     end)
 
     it("skips a command it does not know without losing the next one", function()
-      if peerUnavailable() then return end
+      if peerUnavailable() then
+        return
+      end
       ensurePeer()
       -- An unknown command byte must be skipped up to its terminator; consuming
       -- the wrong number of bytes would swallow whatever followed it.
       local received = collectEvents("sysMMCPChatMessage", function()
-        peerSendsRaw(string.char(99) .. "nonsense" .. string.char(255)
-                     .. string.char(7) .. "<CHAT> after the unknown" .. string.char(255))
+        peerSendsRaw(
+          string.char(99)
+            .. "nonsense"
+            .. string.char(255)
+            .. string.char(7)
+            .. "<CHAT> after the unknown"
+            .. string.char(255)
+        )
         pump(500)
       end)
       assert.equals(1, #received)
@@ -1379,7 +1544,9 @@ describe("MMCP effects against a scripted chat peer", function()
     end)
 
     it("drops chat from an ignored peer and resumes when un-ignored", function()
-      if peerUnavailable() then return end
+      if peerUnavailable() then
+        return
+      end
       ensurePeer()
       assert.is_true(mmcp.ignore(PEER_NAME))
       peerSends(4, PEER_NAME .. " chats to everybody, 'ignored line'\n")
@@ -1408,7 +1575,9 @@ describe("MMCP effects against a scripted chat peer", function()
     end
 
     it("dials an address the peer hands over", function()
-      if peerUnavailable() then return end
+      if peerUnavailable() then
+        return
+      end
       ensurePeer()
       local mark = captureSeq()
       peerSends(3, "127.0.0.1," .. dialPort())
@@ -1420,7 +1589,9 @@ describe("MMCP effects against a scripted chat peer", function()
     end)
 
     it("dials nothing when the list has a host without a port", function()
-      if peerUnavailable() then return end
+      if peerUnavailable() then
+        return
+      end
       ensurePeer()
       local mark = captureSeq()
       -- An odd number of fields is rejected as badly formatted rather than
@@ -1432,7 +1603,9 @@ describe("MMCP effects against a scripted chat peer", function()
 
   describe("mmcp.sendSideChannel", function()
     it("sends channel and message to the peer as one comma separated payload", function()
-      if peerUnavailable() then return end
+      if peerUnavailable() then
+        return
+      end
       ensurePeer()
       local mark = captureSeq()
       assert.is_true(mmcp.sendSideChannel("TestChannel", "payload here"))
@@ -1442,7 +1615,9 @@ describe("MMCP effects against a scripted chat peer", function()
     end)
 
     it("raises sysMMCPSideChannelMessage for incoming side channel data", function()
-      if peerUnavailable() then return end
+      if peerUnavailable() then
+        return
+      end
       ensurePeer()
       peerSends(40, "TestChannel,inbound payload")
       local name, from, channel, message = waitForEvent("sysMMCPSideChannelMessage", 2000)
@@ -1455,7 +1630,9 @@ describe("MMCP effects against a scripted chat peer", function()
 
   describe("mmcp.snoop", function()
     it("asks the peer for a snoop feed", function()
-      if peerUnavailable() then return end
+      if peerUnavailable() then
+        return
+      end
       ensurePeer()
       local mark = captureSeq()
       assert.is_true(mmcp.snoop(PEER_NAME))
@@ -1470,7 +1647,9 @@ describe("MMCP effects against a scripted chat peer", function()
     end)
 
     it("refuses a snoop from a peer that has not been allowed one", function()
-      if peerUnavailable() then return end
+      if peerUnavailable() then
+        return
+      end
       ensurePeer()
       local mark = captureSeq()
       -- An incoming Snoop with the n flag clear: the peer is told no, and never
@@ -1483,7 +1662,9 @@ describe("MMCP effects against a scripted chat peer", function()
     end)
 
     it("starts and stops snooping for a peer that has been allowed one", function()
-      if peerUnavailable() then return end
+      if peerUnavailable() then
+        return
+      end
       ensurePeer()
       local mark = captureSeq()
       assert.is_true(mmcp.allowSnoop(PEER_NAME))
@@ -1509,7 +1690,9 @@ describe("MMCP effects against a scripted chat peer", function()
     end)
 
     it("raises sysMMCPIncomingSnoopMessage for snooped output", function()
-      if peerUnavailable() then return end
+      if peerUnavailable() then
+        return
+      end
       ensurePeer()
       peerSends(31, "You see a snooped line of game output")
       local name, from, message = waitForEvent("sysMMCPIncomingSnoopMessage", 2000)
@@ -1519,7 +1702,9 @@ describe("MMCP effects against a scripted chat peer", function()
     end)
 
     it("keeps the colour of a snooped line", function()
-      if peerUnavailable() then return end
+      if peerUnavailable() then
+        return
+      end
       ensurePeer()
       -- Snoop data is where the other end's colour arrives, and Mudlet tracks
       -- it across lines, so the escape sequences have to survive into the event
@@ -1532,7 +1717,9 @@ describe("MMCP effects against a scripted chat peer", function()
 
   describe("mmcp.ping", function()
     it("sends a timestamped ping the peer can answer", function()
-      if peerUnavailable() then return end
+      if peerUnavailable() then
+        return
+      end
       ensurePeer()
       local mark = captureSeq()
       assert.is_true(mmcp.ping(PEER_NAME))
@@ -1543,7 +1730,9 @@ describe("MMCP effects against a scripted chat peer", function()
     end)
 
     it("answers an incoming ping with the same payload", function()
-      if peerUnavailable() then return end
+      if peerUnavailable() then
+        return
+      end
       ensurePeer()
       local mark = captureSeq()
       peerSends(26, "1234567890123")
@@ -1555,7 +1744,9 @@ describe("MMCP effects against a scripted chat peer", function()
 
   describe("mmcp.chatName", function()
     it("announces a new name to connected peers and reads it back", function()
-      if peerUnavailable() then return end
+      if peerUnavailable() then
+        return
+      end
       ensurePeer()
       local mark = captureSeq()
       assert.is_true(mmcp.chatName("RenamedTester"))
@@ -1572,7 +1763,9 @@ describe("MMCP effects against a scripted chat peer", function()
     end)
 
     it("does not announce a name that has not changed", function()
-      if peerUnavailable() then return end
+      if peerUnavailable() then
+        return
+      end
       ensurePeer()
       assert.is_true(mmcp.chatName(CHAT_NAME))
       local mark = captureSeq()
@@ -1581,7 +1774,9 @@ describe("MMCP effects against a scripted chat peer", function()
     end)
 
     it("does not announce a rejected name", function()
-      if peerUnavailable() then return end
+      if peerUnavailable() then
+        return
+      end
       ensurePeer()
       local mark = captureSeq()
       local ok, err = mmcp.chatName("bad,name")
@@ -1592,7 +1787,9 @@ describe("MMCP effects against a scripted chat peer", function()
     end)
 
     it("follows the peer when it renames itself", function()
-      if peerUnavailable() then return end
+      if peerUnavailable() then
+        return
+      end
       ensurePeer()
       peerSends(1, "RenamedPeer")
       assert.is_true(waitUntil(function()
@@ -1603,13 +1800,17 @@ describe("MMCP effects against a scripted chat peer", function()
       assert.is_true(mmcp.chatTo("RenamedPeer", "hello again"))
 
       peerSends(1, PEER_NAME)
-      assert.is_true(waitUntil(function() return peerClient() ~= nil end, 2000))
+      assert.is_true(waitUntil(function()
+        return peerClient() ~= nil
+      end, 2000))
     end)
   end)
 
   describe("mmcp.displayClientList", function()
     it("prints the connected peer with its address and port", function()
-      if peerUnavailable() then return end
+      if peerUnavailable() then
+        return
+      end
       ensurePeer()
       local printed = collectEvents("sysMMCPChatMessage", function()
         assert.is_true(mmcp.displayClientList())
@@ -1636,7 +1837,10 @@ describe("MMCP effects against a scripted chat peer", function()
       -- Left pending rather than asserted so the gap is not locked in place -
       -- but registering them has to be noticed, hence the failure below.
       if mmcp.accept ~= nil or mmcp.deny ~= nil then
-        assert.is_true(false, "mmcp.accept/mmcp.deny are registered now - replace this spec with real accept and deny coverage")
+        assert.is_true(
+          false,
+          "mmcp.accept/mmcp.deny are registered now - replace this spec with real accept and deny coverage"
+        )
       end
       pending("mmcp.accept/mmcp.deny are not registered in the Lua mmcp table")
     end)
@@ -1644,15 +1848,19 @@ describe("MMCP effects against a scripted chat peer", function()
 
   describe("disconnection", function()
     it("notices when the peer closes the connection", function()
-      if peerUnavailable() then return end
+      if peerUnavailable() then
+        return
+      end
       ensurePeer()
-      tellPeer({action = "close"})
+      tellPeer({ action = "close" })
       assert.equals("sysMMCPPeerUpdateEvent", waitForEvent("sysMMCPPeerUpdateEvent", 2000))
       assert.is_nil(peerClient())
     end)
 
     it("mmcp.disconnect closes the connection from this end", function()
-      if peerUnavailable() then return end
+      if peerUnavailable() then
+        return
+      end
       ensurePeer()
       local mark = captureSeq()
       assert.is_true(mmcp.disconnect(PEER_NAME))
@@ -1663,7 +1871,6 @@ describe("MMCP effects against a scripted chat peer", function()
       end, 2000))
       assert.is_false(capture().connected)
     end)
-
   end)
 
   -- Restores whatever chat name the profile was carrying before these specs
@@ -1682,13 +1889,27 @@ describe("Discord Lua API availability contract", function()
   -- with the same stable reason. On a machine where Discord is live these
   -- pend instead of mutating real presence data.
   local gatedFunctions = {
-    "usingMudletsDiscordID", "getDiscordDetail", "getDiscordLargeIcon",
-    "getDiscordLargeIconText", "getDiscordParty", "getDiscordSmallIcon",
-    "getDiscordSmallIconText", "getDiscordState", "getDiscordTimeStamps",
-    "resetDiscordData", "setDiscordApplicationID", "setDiscordDetail",
-    "setDiscordElapsedStartTime", "setDiscordGame", "setDiscordLargeIcon",
-    "setDiscordLargeIconText", "setDiscordParty", "setDiscordRemainingEndTime",
-    "setDiscordSmallIcon", "setDiscordSmallIconText", "setDiscordState",
+    "usingMudletsDiscordID",
+    "getDiscordDetail",
+    "getDiscordLargeIcon",
+    "getDiscordLargeIconText",
+    "getDiscordParty",
+    "getDiscordSmallIcon",
+    "getDiscordSmallIconText",
+    "getDiscordState",
+    "getDiscordTimeStamps",
+    "resetDiscordData",
+    "setDiscordApplicationID",
+    "setDiscordDetail",
+    "setDiscordElapsedStartTime",
+    "setDiscordGame",
+    "setDiscordLargeIcon",
+    "setDiscordLargeIconText",
+    "setDiscordParty",
+    "setDiscordRemainingEndTime",
+    "setDiscordSmallIcon",
+    "setDiscordSmallIconText",
+    "setDiscordState",
   }
 
   -- Probe with a read-access getter. When it returns nil+message the API is
@@ -1732,7 +1953,9 @@ describe("Discord Lua API availability contract", function()
     -- deterministic offline contract; the success path is left to effect tests
     -- as it mutates profile state.
     it("raises a Lua error when the url argument is not a string", function()
-      assertArgError(function() setDiscordGameUrl({}) end, "setDiscordGameUrl: bad argument")
+      assertArgError(function()
+        setDiscordGameUrl({})
+      end, "setDiscordGameUrl: bad argument")
     end)
   end)
 end)
@@ -1806,8 +2029,12 @@ describe("The IRC configuration functions round-trip through the profile", funct
 
   describe("setIrcNick", function()
     it("raises a Lua error when the nick is missing or not a string", function()
-      assertArgError(function() setIrcNick() end, "setIrcNick: bad argument #1 type (nick as string expected")
-      assertArgError(function() setIrcNick({}) end, "setIrcNick: bad argument #1 type (nick as string expected, got table!)")
+      assertArgError(function()
+        setIrcNick()
+      end, "setIrcNick: bad argument #1 type (nick as string expected")
+      assertArgError(function()
+        setIrcNick({})
+      end, "setIrcNick: bad argument #1 type (nick as string expected, got table!)")
     end)
 
     it("returns nil and a message for an empty nick, leaving the stored one alone", function()
@@ -1832,11 +2059,21 @@ describe("The IRC configuration functions round-trip through the profile", funct
 
   describe("setIrcServer", function()
     it("raises a Lua error when the hostname or an optional argument is wrongly typed", function()
-      assertArgError(function() setIrcServer() end, "setIrcServer: bad argument #1 type (hostname as string expected")
-      assertArgError(function() setIrcServer({}) end, "setIrcServer: bad argument #1 type (hostname as string expected, got table!)")
-      assertArgError(function() setIrcServer("irc.busted.invalid", {}) end, "port number")
-      assertArgError(function() setIrcServer("irc.busted.invalid", 6667, "yes") end, "secure")
-      assertArgError(function() setIrcServer("irc.busted.invalid", 6667, false, {}) end, "server password")
+      assertArgError(function()
+        setIrcServer()
+      end, "setIrcServer: bad argument #1 type (hostname as string expected")
+      assertArgError(function()
+        setIrcServer({})
+      end, "setIrcServer: bad argument #1 type (hostname as string expected, got table!)")
+      assertArgError(function()
+        setIrcServer("irc.busted.invalid", {})
+      end, "port number")
+      assertArgError(function()
+        setIrcServer("irc.busted.invalid", 6667, "yes")
+      end, "secure")
+      assertArgError(function()
+        setIrcServer("irc.busted.invalid", 6667, false, {})
+      end, "server password")
     end)
 
     it("returns nil and a message for an empty hostname or an out-of-range port", function()
@@ -1937,35 +2174,39 @@ describe("The IRC configuration functions round-trip through the profile", funct
 
   describe("setIrcChannels", function()
     it("raises a Lua error when the channels are not a table", function()
-      assertArgError(function() setIrcChannels("#mudlet") end, "setIrcChannels: bad argument #1 type (channels as table expected, got string!)")
-      assertArgError(function() setIrcChannels() end, "setIrcChannels: bad argument #1 type (channels as table expected, got no value!)")
+      assertArgError(function()
+        setIrcChannels("#mudlet")
+      end, "setIrcChannels: bad argument #1 type (channels as table expected, got string!)")
+      assertArgError(function()
+        setIrcChannels()
+      end, "setIrcChannels: bad argument #1 type (channels as table expected, got no value!)")
     end)
 
     it("returns nil and a message when no entry is a usable channel name", function()
       restoreIrcConfiguration()
-      assert.is_true(setIrcChannels({"#busted-kept"}))
+      assert.is_true(setIrcChannels({ "#busted-kept" }))
 
       local ok, err = setIrcChannels({})
       assert.is_nil(ok)
       assert.is_true(contains(err, "no (valid) channel names provided"), tostring(err))
 
       -- a channel name has to start with #, & or +, and only strings are read
-      ok, err = setIrcChannels({"mudlet", 42, ""})
+      ok, err = setIrcChannels({ "mudlet", 42, "" })
       assert.is_nil(ok)
       assert.is_true(contains(err, "no (valid) channel names provided"), tostring(err))
-      assert.same({"#busted-kept"}, getIrcChannels())
+      assert.same({ "#busted-kept" }, getIrcChannels())
     end)
 
     it("stores the channel list where getIrcChannels reads it back", function()
       restoreIrcConfiguration()
-      assert.is_true(setIrcChannels({"#busted-one", "&busted-two", "+busted-three"}))
-      assert.same({"#busted-one", "&busted-two", "+busted-three"}, getIrcChannels())
+      assert.is_true(setIrcChannels({ "#busted-one", "&busted-two", "+busted-three" }))
+      assert.same({ "#busted-one", "&busted-two", "+busted-three" }, getIrcChannels())
     end)
 
     it("keeps the usable channel names out of a mixed list and drops the rest", function()
       restoreIrcConfiguration()
-      assert.is_true(setIrcChannels({"#busted-good", "busted-bad", "&busted-also-good"}))
-      assert.same({"#busted-good", "&busted-also-good"}, getIrcChannels())
+      assert.is_true(setIrcChannels({ "#busted-good", "busted-bad", "&busted-also-good" }))
+      assert.same({ "#busted-good", "&busted-also-good" }, getIrcChannels())
     end)
 
     it("drops a channel name carrying a space or a comma rather than storing two", function()
@@ -1975,16 +2216,16 @@ describe("The IRC configuration functions round-trip through the profile", funct
       -- unusable names above: dropped, and refused outright when nothing is
       -- left.
       restoreIrcConfiguration()
-      assert.is_true(setIrcChannels({"#busted-spaced one", "#busted-plain"}))
-      assert.same({"#busted-plain"}, getIrcChannels())
+      assert.is_true(setIrcChannels({ "#busted-spaced one", "#busted-plain" }))
+      assert.same({ "#busted-plain" }, getIrcChannels())
 
-      assert.is_true(setIrcChannels({"#busted-a,#busted-b", "#busted-tabbed\tname", "#busted-plain-two"}))
-      assert.same({"#busted-plain-two"}, getIrcChannels())
+      assert.is_true(setIrcChannels({ "#busted-a,#busted-b", "#busted-tabbed\tname", "#busted-plain-two" }))
+      assert.same({ "#busted-plain-two" }, getIrcChannels())
 
-      local ok, err = setIrcChannels({"#busted only spaced"})
+      local ok, err = setIrcChannels({ "#busted only spaced" })
       assert.is_nil(ok)
       assert.is_true(contains(err, "no (valid) channel names provided"), tostring(err))
-      assert.same({"#busted-plain-two"}, getIrcChannels())
+      assert.same({ "#busted-plain-two" }, getIrcChannels())
     end)
   end)
 
@@ -2016,20 +2257,30 @@ describe("The IRC configuration functions round-trip through the profile", funct
     -- these calls open no client. A well-formed sendIrc() does create one,
     -- which is why there is no spec here for the delivery path.
     it("raises a Lua error when the target or the message is missing or wrongly typed", function()
-      assertArgError(function() sendIrc() end, "sendIrc: bad argument #1 type (target as string expected")
-      assertArgError(function() sendIrc("#mudlet") end, "sendIrc: bad argument #2 type (message as string expected")
-      assertArgError(function() sendIrc({}, "hello") end, "sendIrc: bad argument #1 type (target as string expected, got table!)")
-      assertArgError(function() sendIrc("#mudlet", {}) end, "sendIrc: bad argument #2 type (message as string expected, got table!)")
+      assertArgError(function()
+        sendIrc()
+      end, "sendIrc: bad argument #1 type (target as string expected")
+      assertArgError(function()
+        sendIrc("#mudlet")
+      end, "sendIrc: bad argument #2 type (message as string expected")
+      assertArgError(function()
+        sendIrc({}, "hello")
+      end, "sendIrc: bad argument #1 type (target as string expected, got table!)")
+      assertArgError(function()
+        sendIrc("#mudlet", {})
+      end, "sendIrc: bad argument #2 type (message as string expected, got table!)")
     end)
   end)
 
   describe("openIRC", function()
     it("opens the IRC client window", function()
-      pending("openIRC creates the profile's IRC dialog and nothing in the Lua API closes it again. "
-        .. "From then on the getters answer out of the copy the dialog read when it was constructed - "
-        .. "a setIrcNick() while it is open is not seen by getIrcNick() until restartIrc() - so the "
-        .. "round trips above would stop working for the rest of the run, and the dialog dials the "
-        .. "configured server and raises a window over the specs that follow")
+      pending(
+        "openIRC creates the profile's IRC dialog and nothing in the Lua API closes it again. "
+          .. "From then on the getters answer out of the copy the dialog read when it was constructed - "
+          .. "a setIrcNick() while it is open is not seen by getIrcNick() until restartIrc() - so the "
+          .. "round trips above would stop working for the rest of the run, and the dialog dials the "
+          .. "configured server and raises a window over the specs that follow"
+      )
     end)
   end)
 end)

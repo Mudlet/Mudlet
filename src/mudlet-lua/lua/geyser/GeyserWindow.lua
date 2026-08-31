@@ -56,13 +56,13 @@ end
 
 --- Get the window's foreground color.
 -- @return The foreground color of this window primitive as a Geyser.Color object.
-function Geyser.Window:getFgColor ()
+function Geyser.Window:getFgColor()
   return getFgColor(self.name)
 end
 
 ---  Get the window's background color
 -- @return The background color of this window primitive as a Geyser.Color object.
-function Geyser.Window:getBgColor ()
+function Geyser.Window:getBgColor()
   return getBgColor(self.name)
 end
 
@@ -71,7 +71,7 @@ end
 -- @param r The red value, or a quoted color name, like "green", or a decho color like "<0,255,0>", or hex color like "#00ff00"
 -- @param g The green value, or nil if using a name.
 -- @param b The blue value, or nil if using a name.
-function Geyser.Window:setBgColor (r, g, b)
+function Geyser.Window:setBgColor(r, g, b)
   setBgColor(self.name, cparse(r, g, b))
 end
 
@@ -80,7 +80,7 @@ end
 -- @param r The red value, or a quoted color name, like "green", or a decho color like "<0,255,0>", or hex color like "#00ff00"
 -- @param g The green value, or nil if using a name.
 -- @param b The blue value, or nil if using a name.
-function Geyser.Window:setFgColor (r, g, b)
+function Geyser.Window:setFgColor(r, g, b)
   setFgColor(self.name, cparse(r, g, b))
 end
 
@@ -90,12 +90,12 @@ end
 -- @param g The green component, or nil if using named colors.
 -- @param b The blue component, or nil if using named colors.
 -- @param a The alpha component. If nil, uses current alpha value.
-function Geyser.Window:setColor (r, g, b, a)
+function Geyser.Window:setColor(r, g, b, a)
   setBackgroundColor(self.name, cparse(r, g, b, a))
 end
 
 --- Pastes text from the clipboard into this window primitive.
-function Geyser.Window:paste ()
+function Geyser.Window:paste()
   paste(self.name)
 end
 
@@ -135,7 +135,7 @@ end
 -- Save a reference to our parent's constructor
 Geyser.Window.parent = Geyser.Container
 
-function Geyser.Window:new (cons, container)
+function Geyser.Window:new(cons, container)
   -- Initiate and set Window specific things
   cons = cons or {}
   cons.type = cons.type or "window"

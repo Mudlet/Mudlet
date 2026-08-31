@@ -6,7 +6,7 @@
 
 --- Represents a (sub)commandLine primitive.
 Geyser.CommandLine = Geyser.Window:new({
-  name = "CommandLineClass"
+  name = "CommandLineClass",
 })
 
 -- Save a reference to our parent constructor
@@ -35,7 +35,6 @@ function Geyser.CommandLine:selectText()
   return selectCmdLineText(self.name)
 end
 
-
 --- returns the text in the commandline
 -- see: https://wiki.mudlet.org/w/Manual:Lua_Functions#getCmdLine
 function Geyser.CommandLine:getText()
@@ -51,7 +50,7 @@ function Geyser.CommandLine:setStyleSheet(css)
 end
 
 --- Sets an action to be used when text is sent in this commandline. When this
--- function is called by the event system, text the commandline sends will be 
+-- function is called by the event system, text the commandline sends will be
 -- appended as the final argument.
 -- @param func the function to use
 -- @param ... parameters to pass to the function
@@ -69,20 +68,20 @@ function Geyser.CommandLine:resetAction()
 end
 
 -- Overridden constructor
-function Geyser.CommandLine:new (cons, container)
+function Geyser.CommandLine:new(cons, container)
   cons = cons or {}
   cons.type = cons.type or "commandLine"
-  
+
   -- Call parent's constructor
   local me = self.parent:new(cons, container)
   me.windowname = me.windowname or me.container.windowname or "main"
-  
+
   -- Set the metatable.
   setmetatable(me, self)
   self.__index = self
-  
+
   createCommandLine(me.windowname, me.name, me:get_x(), me:get_y(), me:get_width(), me:get_height())
-  if me.stylesheet then 
+  if me.stylesheet then
     me:setStyleSheet()
   end
   -- Geyser.Container:new() settles the hidden constraint before there is a widget to hide, so the hide is made good here
@@ -90,7 +89,6 @@ function Geyser.CommandLine:new (cons, container)
     hideWindow(me.name)
   end
 
-  
   return me
 end
 
@@ -100,7 +98,7 @@ function Geyser.CommandLine:type_delete()
 end
 
 --- Overridden constructor to use add2
-function Geyser.CommandLine:new2 (cons, container)
+function Geyser.CommandLine:new2(cons, container)
   cons = cons or {}
   cons.useAdd2 = true
   local me = self:new(cons, container)

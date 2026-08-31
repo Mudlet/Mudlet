@@ -1,7 +1,7 @@
 --- @module Geyser.TextEdit
 
 Geyser.TextEdit = Geyser.Window:new({
-  name = "TextEditClass"
+  name = "TextEditClass",
 })
 
 Geyser.TextEdit.parent = Geyser.Window
@@ -54,7 +54,7 @@ function Geyser.TextEdit:setTabMovesFocus(bool)
   setTextEditTabMovesFocus(self.name, bool)
 end
 
-function Geyser.TextEdit:new (cons, container)
+function Geyser.TextEdit:new(cons, container)
   cons = cons or {}
   cons.type = cons.type or "textEdit"
 

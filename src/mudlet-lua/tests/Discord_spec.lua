@@ -91,7 +91,9 @@ end
 -- discord-rpc's own IO thread and are written by the fixture process, so the
 -- specs can only see them while Mudlet is idle.
 local function pumpEventLoop(milliseconds)
-  tempTimer(milliseconds / 1000, function() raiseEvent("bustedDiscordTick") end)
+  tempTimer(milliseconds / 1000, function()
+    raiseEvent("bustedDiscordTick")
+  end)
   waitForEvent("bustedDiscordTick", milliseconds + 1000)
 end
 
@@ -134,7 +136,10 @@ local function activityFrom(action, accept, timeoutMilliseconds)
   -- Fail here, on the whole payload, rather than leaving the spec's own
   -- assertions to index a field that never arrived and report a nil error.
   if accept and not accept(activity) then
-    assert.is_true(false, "the presence Discord received is not the one expected: " .. tostring(select(2, pcall(yajl.to_string, activity))))
+    assert.is_true(
+      false,
+      "the presence Discord received is not the one expected: " .. tostring(select(2, pcall(yajl.to_string, activity)))
+    )
   end
   return activity
 end
@@ -209,9 +214,15 @@ local connectionLost = false
 -- reset below double as a drain - once that frame has been seen, no frame from
 -- an earlier spec can still be in flight.
 local function emptyPresence(activity)
-  return type(activity.assets) == "table" and activity.assets.large_image == "mudlet" and activity.assets.large_text == nil
-         and activity.assets.small_image == nil and activity.assets.small_text == nil and activity.details == nil
-         and activity.state == nil and activity.party == nil and activity.timestamps == nil
+  return type(activity.assets) == "table"
+    and activity.assets.large_image == "mudlet"
+    and activity.assets.large_text == nil
+    and activity.assets.small_image == nil
+    and activity.assets.small_text == nil
+    and activity.details == nil
+    and activity.state == nil
+    and activity.party == nil
+    and activity.timestamps == nil
 end
 
 -- Clears the presence and waits for the frame that proves it arrived, which is
@@ -282,7 +293,9 @@ describe("Discord presence reaches Discord", function()
     if not readyForDiscord() then
       return
     end
-    local activity = activityFrom(function() setDiscordState("no icon of its own") end)
+    local activity = activityFrom(function()
+      setDiscordState("no icon of its own")
+    end)
     assert.equals("mudlet", activity.assets.large_image)
   end)
 
@@ -294,9 +307,15 @@ describe("Discord presence reaches Discord", function()
     -- prove one shared denial while the API is gated off, this one proves the
     -- same set is reachable once it is not.
     local readers = {
-      "getDiscordDetail", "getDiscordLargeIcon", "getDiscordLargeIconText",
-      "getDiscordParty", "getDiscordSmallIcon", "getDiscordSmallIconText",
-      "getDiscordState", "getDiscordTimeStamps", "usingMudletsDiscordID",
+      "getDiscordDetail",
+      "getDiscordLargeIcon",
+      "getDiscordLargeIconText",
+      "getDiscordParty",
+      "getDiscordSmallIcon",
+      "getDiscordSmallIconText",
+      "getDiscordState",
+      "getDiscordTimeStamps",
+      "usingMudletsDiscordID",
     }
     for _, name in ipairs(readers) do
       assert.is_not_nil(_G[name](), name .. " should be reachable while Discord is available")
@@ -309,8 +328,11 @@ describe("setDiscordDetail", function()
     if not readyForDiscord() then
       return
     end
-    local activity = activityFrom(function() setDiscordDetail("Exploring the fixture") end,
-                                  function(seen) return seen.details == "Exploring the fixture" end)
+    local activity = activityFrom(function()
+      setDiscordDetail("Exploring the fixture")
+    end, function(seen)
+      return seen.details == "Exploring the fixture"
+    end)
     assert.equals("Exploring the fixture", activity.details)
   end)
 
@@ -329,8 +351,11 @@ describe("setDiscordDetail", function()
     -- The placeholder is tr("via Mudlet"), so a localised Mudlet sends a
     -- different string; what matters is that something took the empty text's
     -- place and that it is what the getter reports.
-    local activity = activityFrom(function() setDiscordDetail("") end,
-                                  function(seen) return seen.details ~= nil end)
+    local activity = activityFrom(function()
+      setDiscordDetail("")
+    end, function(seen)
+      return seen.details ~= nil
+    end)
     assert.is_true(#activity.details > 1)
     assert.equals(getDiscordDetail(), activity.details)
   end)
@@ -341,8 +366,11 @@ describe("setDiscordDetail", function()
     end
     -- Waited for, so that the frame count below can only move if the rejected
     -- call produced one of its own.
-    activityFrom(function() setDiscordDetail("still here") end,
-                 function(seen) return seen.details == "still here" end)
+    activityFrom(function()
+      setDiscordDetail("still here")
+    end, function(seen)
+      return seen.details == "still here"
+    end)
     local presenceUpdates = activityFrameCount()
     local ok, message = setDiscordDetail("x")
     assert.is_nil(ok)
@@ -361,8 +389,11 @@ describe("setDiscordDetail", function()
     end
     -- Only what reaches Discord is asserted on here; reading the same text back
     -- is the other half, covered by the percent sequence specs below.
-    local activity = activityFrom(function() setDiscordDetail("Level %d Mage") end,
-                                  function(seen) return seen.details ~= nil end)
+    local activity = activityFrom(function()
+      setDiscordDetail("Level %d Mage")
+    end, function(seen)
+      return seen.details ~= nil
+    end)
     assert.equals("Level %d Mage", activity.details)
   end)
 
@@ -372,7 +403,9 @@ describe("setDiscordDetail", function()
     end
     -- Only reachable with the API available: the availability gate is checked
     -- before any argument is, so Networking_spec.lua cannot get this far.
-    assertArgError(function() setDiscordDetail({}) end, "setDiscordDetail: bad argument #1")
+    assertArgError(function()
+      setDiscordDetail({})
+    end, "setDiscordDetail: bad argument #1")
   end)
 
   it("truncates a detail text that overflows Discord's 128 byte field", function()
@@ -380,8 +413,11 @@ describe("setDiscordDetail", function()
       return
     end
     local overlong = string.rep("a", 200)
-    local activity = activityFrom(function() setDiscordDetail(overlong) end,
-                                  function(seen) return seen.details ~= nil end)
+    local activity = activityFrom(function()
+      setDiscordDetail(overlong)
+    end, function(seen)
+      return seen.details ~= nil
+    end)
     -- The whole documented 128 bytes, not 127: the buffer holding this used to
     -- be exactly 128 bytes and lost its last byte to the null terminator
     -- (#9634).
@@ -403,8 +439,11 @@ describe("setDiscordDetail", function()
     local mark = frameCount()
     -- 65 two-byte characters, 130 bytes: two more than the field holds, so the
     -- cut has to fall inside the 65th character.
-    local activity = activityFrom(function() setDiscordDetail(string.rep("ä", 65)) end,
-                                  function(seen) return seen.details ~= nil end)
+    local activity = activityFrom(function()
+      setDiscordDetail(string.rep("ä", 65))
+    end, function(seen)
+      return seen.details ~= nil
+    end)
     assert.equals(string.rep("ä", 64), activity.details)
     assert.equals(128, #activity.details)
     assert.equals(0, undecodableFramesAfter(mark))
@@ -416,8 +455,11 @@ describe("setDiscordState", function()
     if not readyForDiscord() then
       return
     end
-    local activity = activityFrom(function() setDiscordState("Level 50 Mage") end,
-                                  function(seen) return seen.state == "Level 50 Mage" end)
+    local activity = activityFrom(function()
+      setDiscordState("Level 50 Mage")
+    end, function(seen)
+      return seen.state == "Level 50 Mage"
+    end)
     assert.equals("Level 50 Mage", activity.state)
   end)
 
@@ -435,7 +477,9 @@ describe("setDiscordState", function()
     end
     -- Empty fields are sent as JSON absences, not as "", so Discord hides the
     -- line rather than showing a blank one.
-    local activity = activityFrom(function() setDiscordState("") end)
+    local activity = activityFrom(function()
+      setDiscordState("")
+    end)
     assert.is_nil(activity.state)
   end)
 
@@ -456,8 +500,11 @@ describe("setDiscordGame", function()
     if not readyForDiscord() then
       return
     end
-    local activity = activityFrom(function() setDiscordGame("WoTMUD") end,
-                                  function(seen) return seen.details ~= nil and seen.assets.large_image == "wotmud" end)
+    local activity = activityFrom(function()
+      setDiscordGame("WoTMUD")
+    end, function(seen)
+      return seen.details ~= nil and seen.assets.large_image == "wotmud"
+    end)
     -- The detail text is tr("Playing %1"), so only the interpolated game name
     -- is the same on a localised Mudlet.
     assert.is_true(contains(activity.details, "WoTMUD"))
@@ -471,8 +518,11 @@ describe("setDiscordLargeIcon and setDiscordSmallIcon", function()
       return
     end
     -- Discord asset keys are lower case, so Mudlet folds whatever it is given.
-    local activity = activityFrom(function() setDiscordLargeIcon("Achaea") end,
-                                  function(seen) return seen.assets.large_image ~= "mudlet" end)
+    local activity = activityFrom(function()
+      setDiscordLargeIcon("Achaea")
+    end, function(seen)
+      return seen.assets.large_image ~= "mudlet"
+    end)
     assert.equals("achaea", activity.assets.large_image)
     assert.equals("achaea", getDiscordLargeIcon())
   end)
@@ -481,8 +531,11 @@ describe("setDiscordLargeIcon and setDiscordSmallIcon", function()
     if not readyForDiscord() then
       return
     end
-    local activity = activityFrom(function() setDiscordLargeIconText("Achaea, Dreams of Divine Lands") end,
-                                  function(seen) return seen.assets.large_text ~= nil end)
+    local activity = activityFrom(function()
+      setDiscordLargeIconText("Achaea, Dreams of Divine Lands")
+    end, function(seen)
+      return seen.assets.large_text ~= nil
+    end)
     assert.equals("Achaea, Dreams of Divine Lands", activity.assets.large_text)
     assert.equals("Achaea, Dreams of Divine Lands", getDiscordLargeIconText())
   end)
@@ -491,8 +544,11 @@ describe("setDiscordLargeIcon and setDiscordSmallIcon", function()
     if not readyForDiscord() then
       return
     end
-    local activity = activityFrom(function() setDiscordSmallIcon("Shield") end,
-                                  function(seen) return seen.assets.small_image ~= nil end)
+    local activity = activityFrom(function()
+      setDiscordSmallIcon("Shield")
+    end, function(seen)
+      return seen.assets.small_image ~= nil
+    end)
     assert.equals("shield", activity.assets.small_image)
     assert.equals("shield", getDiscordSmallIcon())
   end)
@@ -505,8 +561,11 @@ describe("setDiscordLargeIcon and setDiscordSmallIcon", function()
     -- but the buffer was 32 bytes including the terminator, so the last
     -- character was cut off and the icon never resolved.
     local key = string.rep("a", 32)
-    local activity = activityFrom(function() setDiscordLargeIcon(key) end,
-                                  function(seen) return seen.assets.large_image ~= "mudlet" end)
+    local activity = activityFrom(function()
+      setDiscordLargeIcon(key)
+    end, function(seen)
+      return seen.assets.large_image ~= "mudlet"
+    end)
     assert.equals(32, #activity.assets.large_image)
     assert.equals(key, activity.assets.large_image)
   end)
@@ -515,8 +574,11 @@ describe("setDiscordLargeIcon and setDiscordSmallIcon", function()
     if not readyForDiscord() then
       return
     end
-    local activity = activityFrom(function() setDiscordSmallIconText("Guardian") end,
-                                  function(seen) return seen.assets.small_text ~= nil end)
+    local activity = activityFrom(function()
+      setDiscordSmallIconText("Guardian")
+    end, function(seen)
+      return seen.assets.small_text ~= nil
+    end)
     assert.equals("Guardian", activity.assets.small_text)
     assert.equals("Guardian", getDiscordSmallIconText())
   end)
@@ -611,8 +673,11 @@ describe("setDiscordElapsedStartTime and setDiscordRemainingEndTime", function()
     if not readyForDiscord() then
       return
     end
-    local activity = activityFrom(function() setDiscordElapsedStartTime(1700000000) end,
-                                  function(seen) return seen.timestamps ~= nil end)
+    local activity = activityFrom(function()
+      setDiscordElapsedStartTime(1700000000)
+    end, function(seen)
+      return seen.timestamps ~= nil
+    end)
     assert.equals(1700000000, activity.timestamps.start)
     assert.is_nil(activity.timestamps["end"])
   end)
@@ -624,8 +689,11 @@ describe("setDiscordElapsedStartTime and setDiscordRemainingEndTime", function()
     -- The two are mutually exclusive: Discord shows either "elapsed" or
     -- "remaining", so setting one has to clear the other.
     assert.is_true(setDiscordElapsedStartTime(1700000000))
-    local activity = activityFrom(function() setDiscordRemainingEndTime(1900000000) end,
-                                  function(seen) return seen.timestamps and seen.timestamps["end"] ~= nil end)
+    local activity = activityFrom(function()
+      setDiscordRemainingEndTime(1900000000)
+    end, function(seen)
+      return seen.timestamps and seen.timestamps["end"] ~= nil
+    end)
     assert.equals(1900000000, activity.timestamps["end"])
     assert.is_nil(activity.timestamps.start)
   end)
@@ -651,9 +719,14 @@ describe("setDiscordElapsedStartTime and setDiscordRemainingEndTime", function()
     end
     -- Waited for, not just called: the spec below asserts on the first frame
     -- that follows, so this one's has to have landed already.
-    activityFrom(function() setDiscordElapsedStartTime(1700000000) end,
-                 function(seen) return seen.timestamps ~= nil end)
-    local activity = activityFrom(function() setDiscordElapsedStartTime(0) end)
+    activityFrom(function()
+      setDiscordElapsedStartTime(1700000000)
+    end, function(seen)
+      return seen.timestamps ~= nil
+    end)
+    local activity = activityFrom(function()
+      setDiscordElapsedStartTime(0)
+    end)
     assert.is_nil(activity.timestamps)
   end)
 
@@ -685,18 +758,24 @@ describe("setDiscordParty", function()
     if not readyForDiscord() then
       return
     end
-    local activity = activityFrom(function() setDiscordParty(2, 5) end,
-                                  function(seen) return seen.party ~= nil end)
-    assert.same({2, 5}, activity.party.size)
+    local activity = activityFrom(function()
+      setDiscordParty(2, 5)
+    end, function(seen)
+      return seen.party ~= nil
+    end)
+    assert.same({ 2, 5 }, activity.party.size)
   end)
 
   it("raises the maximum to the size when only a size is given", function()
     if not readyForDiscord() then
       return
     end
-    local activity = activityFrom(function() setDiscordParty(3) end,
-                                  function(seen) return seen.party ~= nil end)
-    assert.same({3, 3}, activity.party.size)
+    local activity = activityFrom(function()
+      setDiscordParty(3)
+    end, function(seen)
+      return seen.party ~= nil
+    end)
+    assert.same({ 3, 3 }, activity.party.size)
   end)
 
   it("keeps an established maximum when only a smaller size is given", function()
@@ -704,17 +783,26 @@ describe("setDiscordParty", function()
       return
     end
     assert.is_true(setDiscordParty(2, 5))
-    local activity = activityFrom(function() setDiscordParty(1) end,
-                                  function(seen) return seen.party and seen.party.size[1] == 1 end)
-    assert.same({1, 5}, activity.party.size)
+    local activity = activityFrom(function()
+      setDiscordParty(1)
+    end, function(seen)
+      return seen.party and seen.party.size[1] == 1
+    end)
+    assert.same({ 1, 5 }, activity.party.size)
   end)
 
   it("removes the party from the presence when the maximum is zero", function()
     if not readyForDiscord() then
       return
     end
-    activityFrom(function() setDiscordParty(2, 5) end, function(seen) return seen.party ~= nil end)
-    local activity = activityFrom(function() setDiscordParty(0, 0) end)
+    activityFrom(function()
+      setDiscordParty(2, 5)
+    end, function(seen)
+      return seen.party ~= nil
+    end)
+    local activity = activityFrom(function()
+      setDiscordParty(0, 0)
+    end)
     assert.is_nil(activity.party)
   end)
 
@@ -758,7 +846,9 @@ describe("setDiscordParty", function()
     if not readyForDiscord() then
       return
     end
-    assertArgError(function() setDiscordParty("a few") end, "setDiscordParty: bad argument #1")
+    assertArgError(function()
+      setDiscordParty("a few")
+    end, "setDiscordParty: bad argument #1")
   end)
 end)
 
@@ -776,8 +866,11 @@ describe("resetDiscordData", function()
     assert.is_true(setDiscordParty(2, 5))
     assert.is_true(setDiscordElapsedStartTime(1700000000))
 
-    local activity = activityFrom(function() resetDiscordData() end,
-                                  function(seen) return seen.details == nil end)
+    local activity = activityFrom(function()
+      resetDiscordData()
+    end, function(seen)
+      return seen.details == nil
+    end)
     assert.is_nil(activity.details)
     assert.is_nil(activity.state)
     assert.is_nil(activity.party)
@@ -817,7 +910,9 @@ describe("setDiscordApplicationID", function()
     end
     -- Should an assertion below leave the other application in place, the
     -- following spec would open with a reconnect it does not expect.
-    finally(function() setDiscordApplicationID() end)
+    finally(function()
+      setDiscordApplicationID()
+    end)
 
     -- Both directions in one spec on purpose: each switch makes discord-rpc
     -- drop its socket and hand the new ID over in a fresh handshake, which
@@ -839,7 +934,9 @@ describe("setDiscordApplicationID", function()
     if not readyForDiscord() then
       return
     end
-    finally(function() setDiscordApplicationID() end)
+    finally(function()
+      setDiscordApplicationID()
+    end)
 
     local mark = frameCount()
     assert.is_true(setDiscordApplicationID(otherApplicationId))
@@ -871,8 +968,11 @@ describe("an icon key that has to be truncated", function()
     -- broke the frame in the same way (#9634). 16 two-byte characters are 32
     -- bytes, which now fits exactly; a 17th has to go, whole.
     local mark = frameCount()
-    local activity = activityFrom(function() setDiscordLargeIcon(string.rep("é", 17)) end,
-                                  function(seen) return seen.assets.large_image ~= "mudlet" end)
+    local activity = activityFrom(function()
+      setDiscordLargeIcon(string.rep("é", 17))
+    end, function(seen)
+      return seen.assets.large_image ~= "mudlet"
+    end)
     assert.equals(string.rep("é", 16), activity.assets.large_image)
     assert.equals(32, #activity.assets.large_image)
     assert.equals(0, undecodableFramesAfter(mark))

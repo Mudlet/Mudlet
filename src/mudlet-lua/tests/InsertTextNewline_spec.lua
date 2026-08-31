@@ -2,7 +2,6 @@
 -- https://github.com/Mudlet/Mudlet/issues/8945
 -- https://github.com/Mudlet/Mudlet/issues/8824
 describe("Tests insertText and creplaceLine newline regressions", function()
-
   -- https://github.com/Mudlet/Mudlet/issues/8945
   -- insertText with newlines should create new lines, not insert literal \n
   describe("Tests the functionality of insertText", function()
@@ -37,9 +36,13 @@ describe("Tests insertText and creplaceLine newline regressions", function()
       local lineCountAfter = getLineCount(consoleName)
 
       -- inserting text with \n should increase the line count
-      assert.is_true(lineCountAfter > lineCountBefore,
+      assert.is_true(
+        lineCountAfter > lineCountBefore,
         "insertText with \\n should create a new line, but line count went from "
-        .. lineCountBefore .. " to " .. lineCountAfter)
+          .. lineCountBefore
+          .. " to "
+          .. lineCountAfter
+      )
     end)
 
     it("should split content correctly when inserting newline in the middle of a line", function()
@@ -60,10 +63,16 @@ describe("Tests insertText and creplaceLine newline regressions", function()
       local secondLine = getCurrentLine(consoleName)
       deselect(consoleName)
 
-      assert.are.equal("Hello", firstLine,
-        "First line should be 'Hello' after inserting newline, got '" .. tostring(firstLine) .. "'")
-      assert.are.equal("World", secondLine,
-        "Second line should be 'World' after inserting newline, got '" .. tostring(secondLine) .. "'")
+      assert.are.equal(
+        "Hello",
+        firstLine,
+        "First line should be 'Hello' after inserting newline, got '" .. tostring(firstLine) .. "'"
+      )
+      assert.are.equal(
+        "World",
+        secondLine,
+        "Second line should be 'World' after inserting newline, got '" .. tostring(secondLine) .. "'"
+      )
     end)
 
     it("should handle the sample code from issue 8945", function()
@@ -80,9 +89,13 @@ describe("Tests insertText and creplaceLine newline regressions", function()
 
       local lineCountAfter = getLineCount(consoleName)
 
-      assert.is_true(lineCountAfter > lineCountBefore,
+      assert.is_true(
+        lineCountAfter > lineCountBefore,
         "insertText with \\n from issue sample should create a new line, but line count went from "
-        .. lineCountBefore .. " to " .. lineCountAfter)
+          .. lineCountBefore
+          .. " to "
+          .. lineCountAfter
+      )
 
       -- the inserted text should be on its own line, not concatenated with line1
       moveCursor(consoleName, 0, 0)
@@ -90,8 +103,11 @@ describe("Tests insertText and creplaceLine newline regressions", function()
       local firstLine = getCurrentLine(consoleName)
       deselect(consoleName)
 
-      assert.are.equal("------- line inserted at: 0/0 -----", firstLine,
-        "First line should be the inserted text, got '" .. tostring(firstLine) .. "'")
+      assert.are.equal(
+        "------- line inserted at: 0/0 -----",
+        firstLine,
+        "First line should be the inserted text, got '" .. tostring(firstLine) .. "'"
+      )
     end)
 
     -- https://github.com/Mudlet/Mudlet/issues/8945
@@ -107,9 +123,13 @@ describe("Tests insertText and creplaceLine newline regressions", function()
 
       local lineCountAfter = getLineCount(consoleName)
 
-      assert.is_true(lineCountAfter > lineCountBefore,
+      assert.is_true(
+        lineCountAfter > lineCountBefore,
         "cinsertText with \\n should create a new line, but line count went from "
-        .. lineCountBefore .. " to " .. lineCountAfter)
+          .. lineCountBefore
+          .. " to "
+          .. lineCountAfter
+      )
     end)
   end)
 
@@ -182,7 +202,6 @@ describe("Tests insertText and creplaceLine newline regressions", function()
   -- https://github.com/Mudlet/Mudlet/pull/9022#issuecomment-4163011131
   -- Word wrapping should not accumulate line width across newline boundaries
   describe("Tests that echo newlines reset wrap width tracking", function()
-
     it("should not word-wrap trigger echoes when each line is under wrap width", function()
       local triggerId = tempTrigger("TEST_WRAP_XPOS", function()
         -- Each line is ~47 chars, well under the default 80 wrap width.
@@ -202,8 +221,10 @@ describe("Tests insertText and creplaceLine newline regressions", function()
         local line = getCurrentLine()
         deselect()
         if string.find(line, "============= \\/", 1, true) then
-          assert.truthy(string.find(line, "\\/ =============", 1, true),
-            "Line should not be word-wrapped, got '" .. tostring(line) .. "'")
+          assert.truthy(
+            string.find(line, "\\/ =============", 1, true),
+            "Line should not be word-wrapped, got '" .. tostring(line) .. "'"
+          )
           break
         end
       end
@@ -234,8 +255,7 @@ describe("Tests insertText and creplaceLine newline regressions", function()
           break
         end
       end
-      assert.is_false(splitFound,
-        "Found a split line fragment - xPos is accumulating across newlines")
+      assert.is_false(splitFound, "Found a split line fragment - xPos is accumulating across newlines")
     end)
   end)
 
@@ -244,7 +264,6 @@ describe("Tests insertText and creplaceLine newline regressions", function()
   -- These tests use feedTriggers + tempTrigger to get proper trigger context,
   -- since echo/cecho only operate at cursor position within triggers.
   describe("Tests cecho with creplaceLine in trigger context", function()
-
     -- Reproduction from the issue: cecho("\n") then creplaceLine then cecho
     -- should place subsequent cecho text on the replaced line, not a new one
     it("should place cecho text on same line after creplaceLine", function()
@@ -267,8 +286,10 @@ describe("Tests insertText and creplaceLine newline regressions", function()
         local line = getCurrentLine()
         deselect()
         if string.find(line, "REPLACED", 1, true) then
-          assert.truthy(string.find(line, "(cecho)", 1, true),
-            "Line with 'REPLACED' should also contain '(cecho)', got '" .. tostring(line) .. "'")
+          assert.truthy(
+            string.find(line, "(cecho)", 1, true),
+            "Line with 'REPLACED' should also contain '(cecho)', got '" .. tostring(line) .. "'"
+          )
           found = true
           break
         end
@@ -297,8 +318,10 @@ describe("Tests insertText and creplaceLine newline regressions", function()
         local line = getCurrentLine()
         deselect()
         if string.find(line, "REPLACED", 1, true) then
-          assert.falsy(string.find(line, "cecho before", 1, true),
-            "Original echo text should not bleed through after creplaceLine, got '" .. tostring(line) .. "'")
+          assert.falsy(
+            string.find(line, "cecho before", 1, true),
+            "Original echo text should not bleed through after creplaceLine, got '" .. tostring(line) .. "'"
+          )
           break
         end
       end

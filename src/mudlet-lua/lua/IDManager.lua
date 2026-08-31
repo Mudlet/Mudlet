@@ -2,7 +2,7 @@ local IDMgr = {}
 local function makeObject(trigger, func, oneShot)
   local object = {
     trigger = trigger,
-    func    = func,
+    func = func,
     oneShot = oneShot,
   }
   return object
@@ -14,7 +14,7 @@ function IDMgr:register(name, typ, object)
     timers = tempTimer,
     events = registerAnonymousEventHandler,
     triggers = tempTrigger,
-    regexTriggers = tempRegexTrigger
+    regexTriggers = tempRegexTrigger,
   }
   self:stop(name, typ)
   local trigger, func, oneShot = object.trigger, object.func, object.oneShot
@@ -34,7 +34,7 @@ function IDMgr:stop(name, typ)
     timers = killTimer,
     events = killAnonymousEventHandler,
     triggers = killTrigger,
-    regexTriggers = killTrigger
+    regexTriggers = killTrigger,
   }
   local object = self[typ][name]
   if not object then
@@ -57,7 +57,7 @@ end
 
 -- internal function, not documented
 function IDMgr:stopAll(typ)
-  for name,_ in pairs(self[typ]) do
+  for name, _ in pairs(self[typ]) do
     self:stop(name, typ)
   end
   return true
@@ -77,7 +77,7 @@ end
 -- internal function, not documented
 function IDMgr:deleteAll(typ)
   if table.size(self[typ]) > 0 then
-    for name,_ in pairs(self[typ]) do
+    for name, _ in pairs(self[typ]) do
       self:delete(name, typ)
     end
   end
@@ -144,8 +144,12 @@ function IDMgr:stopEvent(name)
 end
 
 function IDMgr:stopTrigger(name)
-  if self:stop(name, "triggers") then return true end
-  if self:stop(name, "regexTriggers") then return true end
+  if self:stop(name, "triggers") then
+    return true
+  end
+  if self:stop(name, "regexTriggers") then
+    return true
+  end
   return false
 end
 
@@ -154,8 +158,12 @@ function IDMgr:resumeTimer(name)
 end
 
 function IDMgr:resumeTrigger(name)
-  if self:resume(name, "triggers") then return true end
-  if self:resume(name, "regexTriggers") then return true end
+  if self:resume(name, "triggers") then
+    return true
+  end
+  if self:resume(name, "regexTriggers") then
+    return true
+  end
   return false
 end
 
@@ -172,8 +180,12 @@ function IDMgr:deleteEvent(name)
 end
 
 function IDMgr:deleteTrigger(name)
-  if self:delete(name, "triggers") then return true end
-  if self:delete(name, "regexTriggers") then return true end
+  if self:delete(name, "triggers") then
+    return true
+  end
+  if self:delete(name, "regexTriggers") then
+    return true
+  end
   return false
 end
 
@@ -225,13 +237,12 @@ function IDMgr:new()
     events = {},
     timers = {},
     triggers = {},
-    regexTriggers = {}
+    regexTriggers = {},
   }
   setmetatable(mgr, self)
   self.__index = self
   return mgr
 end
-
 
 -- Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getNewIDManager
 -- give the user their own IDM to manage if that's what they want
@@ -265,7 +276,11 @@ end
 
 -- internal only, used to format error messages
 local function userErrorMsg(funcName, userType)
-  return string.format("%s: bad argument #1 type (user or package name as string expected, got %s!)", funcName, userType)
+  return string.format(
+    "%s: bad argument #1 type (user or package name as string expected, got %s!)",
+    funcName,
+    userType
+  )
 end
 
 -- internal only, used to format error messages
@@ -311,7 +326,7 @@ function stopNamedEventHandler(user, name)
 end
 
 -- Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resumeNamedEventHandler
-function resumeNamedEventHandler(user,name)
+function resumeNamedEventHandler(user, name)
   local funcName = "resumeNamedEventHandler"
   local userType = type(user)
   if userType ~= "string" then
@@ -326,7 +341,7 @@ function resumeNamedEventHandler(user,name)
 end
 
 -- Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#deleteNamedEventHandler
-function deleteNamedEventHandler(user,name)
+function deleteNamedEventHandler(user, name)
   local funcName = "deleteNamedEventHandler"
   local userType = type(user)
   if userType ~= "string" then
@@ -374,7 +389,7 @@ function deleteAllNamedEventHandlers(user)
 end
 
 -- Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#registerNamedTimer
-function registerNamedTimer(user,name, time, handler, oneShot)
+function registerNamedTimer(user, name, time, handler, oneShot)
   local funcName = "registerNamedTimer"
   local userType = type(user)
   if userType ~= "string" then
@@ -501,7 +516,11 @@ function registerNamedTrigger(user, name, substring, handler, expireAfter)
     printError(nameErrorMsg(funcName, nameType), true, true)
   end
   if type(substring) ~= "string" then
-    printError(funcName .. ": bad argument #3 type (substring as string expected, got " .. type(substring) .. "!)", true, true)
+    printError(
+      funcName .. ": bad argument #3 type (substring as string expected, got " .. type(substring) .. "!)",
+      true,
+      true
+    )
   end
   if type(handler) ~= "function" then
     printError(funcName .. ": bad argument #4 type (function expected, got " .. type(handler) .. "!)", true, true)
@@ -527,7 +546,11 @@ function registerNamedRegexTrigger(user, name, substring, handler, expireAfter)
     printError(nameErrorMsg(funcName, nameType), true, true)
   end
   if type(substring) ~= "string" then
-    printError(funcName .. ": bad argument #3 type (substring as string expected, got " .. type(substring) .. "!)", true, true)
+    printError(
+      funcName .. ": bad argument #3 type (substring as string expected, got " .. type(substring) .. "!)",
+      true,
+      true
+    )
   end
   if type(handler) ~= "function" then
     printError(funcName .. ": bad argument #4 type (function expected, got " .. type(handler) .. "!)", true, true)

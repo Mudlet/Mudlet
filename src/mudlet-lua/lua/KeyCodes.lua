@@ -1,4 +1,6 @@
 mudlet = mudlet or {}
+-- stylua: ignore
+
 mudlet.key = {
   ["Escape"]                   = 0x01000000,
   ["Tab"]                      = 0x01000001,
@@ -318,6 +320,8 @@ mudlet.key = {
   ["Zoom"]                     = 0x01020006,
   ["Cancel"]                   = 0x01020001
 }
+
+-- stylua: ignore
 
 mudlet.keymodifier = {
   ["None"]                     = 0x00000000,

@@ -1,47 +1,45 @@
 describe("Tests the GUI utilities as far as possible without mudlet", function()
-
   describe("Tests the functionality of ansi2decho", function()
-
     it("Should have loaded the function successfully", function()
       assert.truthy(ansi2decho)
     end)
 
     it("Should convert simple single ANSI sequences correctly", function()
       local sequences = {
-        {"\27[0m", "<r>"},
-        {"\27[00m", "<r>"},
-        {"\27[30m", "<0,0,0>"},
-        {"\27[31m", "<128,0,0>"},
-        {"\27[32m", "<0,128,0>"},
-        {"\27[33m", "<128,128,0>"},
-        {"\27[34m", "<0,0,128>"},
-        {"\27[35m", "<128,0,128>"},
-        {"\27[36m", "<0,128,128>"},
-        {"\27[37m", "<192,192,192>"},
-        {"\27[40m", "<:0,0,0>"},
-        {"\27[41m", "<:128,0,0>"},
-        {"\27[42m", "<:0,128,0>"},
-        {"\27[43m", "<:128,128,0>"},
-        {"\27[44m", "<:0,0,128>"},
-        {"\27[45m", "<:128,0,128>"},
-        {"\27[46m", "<:0,128,128>"},
-        {"\27[47m", "<:192,192,192>"},
-        {"\27[90m", "<128,128,128>"},
-        {"\27[91m", "<255,0,0>"},
-        {"\27[92m", "<0,255,0>"},
-        {"\27[93m", "<255,255,0>"},
-        {"\27[94m", "<0,0,255>"},
-        {"\27[95m", "<255,0,255>"},
-        {"\27[96m", "<0,255,255>"},
-        {"\27[97m", "<255,255,255>"},
-        {"\27[100m", "<:128,128,128>"},
-        {"\27[101m", "<:255,0,0>"},
-        {"\27[102m", "<:0,255,0>"},
-        {"\27[103m", "<:255,255,0>"},
-        {"\27[104m", "<:0,0,255>"},
-        {"\27[105m", "<:255,0,255>"},
-        {"\27[106m", "<:0,255,255>"},
-        {"\27[107m", "<:255,255,255>"},
+        { "\27[0m", "<r>" },
+        { "\27[00m", "<r>" },
+        { "\27[30m", "<0,0,0>" },
+        { "\27[31m", "<128,0,0>" },
+        { "\27[32m", "<0,128,0>" },
+        { "\27[33m", "<128,128,0>" },
+        { "\27[34m", "<0,0,128>" },
+        { "\27[35m", "<128,0,128>" },
+        { "\27[36m", "<0,128,128>" },
+        { "\27[37m", "<192,192,192>" },
+        { "\27[40m", "<:0,0,0>" },
+        { "\27[41m", "<:128,0,0>" },
+        { "\27[42m", "<:0,128,0>" },
+        { "\27[43m", "<:128,128,0>" },
+        { "\27[44m", "<:0,0,128>" },
+        { "\27[45m", "<:128,0,128>" },
+        { "\27[46m", "<:0,128,128>" },
+        { "\27[47m", "<:192,192,192>" },
+        { "\27[90m", "<128,128,128>" },
+        { "\27[91m", "<255,0,0>" },
+        { "\27[92m", "<0,255,0>" },
+        { "\27[93m", "<255,255,0>" },
+        { "\27[94m", "<0,0,255>" },
+        { "\27[95m", "<255,0,255>" },
+        { "\27[96m", "<0,255,255>" },
+        { "\27[97m", "<255,255,255>" },
+        { "\27[100m", "<:128,128,128>" },
+        { "\27[101m", "<:255,0,0>" },
+        { "\27[102m", "<:0,255,0>" },
+        { "\27[103m", "<:255,255,0>" },
+        { "\27[104m", "<:0,0,255>" },
+        { "\27[105m", "<:255,0,255>" },
+        { "\27[106m", "<:0,255,255>" },
+        { "\27[107m", "<:255,255,255>" },
       }
       for _, seq in ipairs(sequences) do
         local actualResult = ansi2decho(seq[1])
@@ -53,18 +51,18 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       color_table.ansi_000 = { 0, 0, 1 }
       local expected = "<0,0,1>"
       local actual = ansi2decho("\27[30m", "<0,0,0>")
-      color_table.ansi_000= { 0, 0, 0 }
+      color_table.ansi_000 = { 0, 0, 0 }
       assert.are.same(expected, actual)
     end)
 
     it("Should combine tags correctly", function()
       local sequences = {
-        {"\27[0;30m", "<r><0,0,0>"},
-        {"\27[1;30m", "<128,128,128>"},
-        {"\27[1;40m", "<:0,0,0>"},
-        {"\27[31;42m", "<128,0,0:0,128,0>"},
-        {"\27[30;0m", "<r>"},
-        {"\27[0;1;30;40m", "<r><128,128,128:0,0,0>"},
+        { "\27[0;30m", "<r><0,0,0>" },
+        { "\27[1;30m", "<128,128,128>" },
+        { "\27[1;40m", "<:0,0,0>" },
+        { "\27[31;42m", "<128,0,0:0,128,0>" },
+        { "\27[30;0m", "<r>" },
+        { "\27[0;1;30;40m", "<r><128,128,128:0,0,0>" },
       }
       for _, seq in ipairs(sequences) do
         local actualResult = ansi2decho(seq[1])
@@ -102,20 +100,23 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
 
     it("Should handle bold, before or after colours", function()
       local sequences = {
-        {"\27[31m\27[1m", "<128,0,0><255,0,0>"},
-        {"\27[1m\27[31m", "<255,0,0>"},
+        { "\27[31m\27[1m", "<128,0,0><255,0,0>" },
+        { "\27[1m\27[31m", "<255,0,0>" },
       }
       for _, seq in ipairs(sequences) do
-          local actualResult = ansi2decho(seq[1])
-          assert.are.same(seq[2], actualResult)
+        local actualResult = ansi2decho(seq[1])
+        assert.are.same(seq[2], actualResult)
       end
     end)
 
     it("Should leave normal text and other escape sequences alone", function()
       local sequences = {
-        {"Hello World", "Hello World"},
-        {"[Something in braces]", "[Something in braces]"},
-        {"\27[4z<PROMPT>4876h, 3539m, 22200e, 21648w cexkdb-\27[4z</PROMPT>", "\27[4z<PROMPT>4876h, 3539m, 22200e, 21648w cexkdb-\27[4z</PROMPT>"},
+        { "Hello World", "Hello World" },
+        { "[Something in braces]", "[Something in braces]" },
+        {
+          "\27[4z<PROMPT>4876h, 3539m, 22200e, 21648w cexkdb-\27[4z</PROMPT>",
+          "\27[4z<PROMPT>4876h, 3539m, 22200e, 21648w cexkdb-\27[4z</PROMPT>",
+        },
       }
       for _, seq in ipairs(sequences) do
         local actualResult = ansi2decho(seq[1])
@@ -125,24 +126,24 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
 
     it("Should convert xterm256 codes correctly", function()
       local sequences = {
-        { "\27[38;2;120;134;94m", "<120,134,94>"},
-        { "\27[48;2;85;250;33m", "<:85,250,33>"},
-        { "\27[38;2;120;134;94;48;2;85;250;33m", "<120,134,94:85,250,33>"},
-        { "\27[38;2m", "<0,0,0>"},
-        { "\27[38;2;120m", "<120,0,0>"},
-        { "\27[38;2;120;134m", "<120,134,0>"},
-        { "\27[38;5;4m", "<0,0,128>"},
-        { "\27[48;5;3m", "<:128,128,0>"},
-        { "\27[38;5;4;48;5;3m", "<0,0,128:128,128,0>"},
-        { "\27[38;5;10m", "<0,255,0>"},
-        { "\27[48;5;9m", "<:255,0,0>"},
-        { "\27[38;5;10;48;5;9m", "<0,255,0:255,0,0>"},
-        { "\27[38;5;159m", "<175,255,255>"},
-        { "\27[48;5;106m", "<:135,175,0>"},
-        { "\27[38;5;159;48;5;106m", "<175,255,255:135,175,0>"},
-        { "\27[38;5;240m", "<88,88,88>"},
-        { "\27[48;5;245m", "<:138,138,138>"},
-        { "\27[38;5;240;48;5;245m", "<88,88,88:138,138,138>"},
+        { "\27[38;2;120;134;94m", "<120,134,94>" },
+        { "\27[48;2;85;250;33m", "<:85,250,33>" },
+        { "\27[38;2;120;134;94;48;2;85;250;33m", "<120,134,94:85,250,33>" },
+        { "\27[38;2m", "<0,0,0>" },
+        { "\27[38;2;120m", "<120,0,0>" },
+        { "\27[38;2;120;134m", "<120,134,0>" },
+        { "\27[38;5;4m", "<0,0,128>" },
+        { "\27[48;5;3m", "<:128,128,0>" },
+        { "\27[38;5;4;48;5;3m", "<0,0,128:128,128,0>" },
+        { "\27[38;5;10m", "<0,255,0>" },
+        { "\27[48;5;9m", "<:255,0,0>" },
+        { "\27[38;5;10;48;5;9m", "<0,255,0:255,0,0>" },
+        { "\27[38;5;159m", "<175,255,255>" },
+        { "\27[48;5;106m", "<:135,175,0>" },
+        { "\27[38;5;159;48;5;106m", "<175,255,255:135,175,0>" },
+        { "\27[38;5;240m", "<88,88,88>" },
+        { "\27[48;5;245m", "<:138,138,138>" },
+        { "\27[38;5;240;48;5;245m", "<88,88,88:138,138,138>" },
       }
       for _, seq in ipairs(sequences) do
         local actualResult = ansi2decho(seq[1])
@@ -152,17 +153,28 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
 
     it("Should convert some real life examples correctly", function()
       local sequences = {
-        {"\27[4z<PROMPT>\27[0;32;40m4876h, \27[0;1;33;40m3539m, \27[0;1;31;40m22200e, \27[0;1;32;40m21648w \27[0;37;40mcexkdb-\27[4z</PROMPT>", "\27[4z<PROMPT><r><0,128,0:0,0,0>4876h, <r><255,255,0:0,0,0>3539m, <r><255,0,0:0,0,0>22200e, <r><0,255,0:0,0,0>21648w <r><192,192,192:0,0,0>cexkdb-\27[4z</PROMPT>"},
-        {'\27[0;1;36;40mYou say in a baritone voice, "Test."\27[0;37;40m', '<r><0,255,255:0,0,0>You say in a baritone voice, "Test."<r><192,192,192:0,0,0>'},
-        {'\27[38;5;179;48;5;230mYou say in a baritone voice, "Test."\27[0;37;40m', '<215,175,95:255,255,215>You say in a baritone voice, "Test."<r><192,192,192:0,0,0>'},
-        {'* \27[35m(a338f71)\27[m - \27[33m[Update release.yml]\27[m  \27[1;34m<TheLastDarkthorne>\27[m', '* <128,0,128>(a338f71)<r> - <128,128,0>[Update release.yml]<r>  <0,0,255><TheLastDarkthorne><r>'}
+        {
+          "\27[4z<PROMPT>\27[0;32;40m4876h, \27[0;1;33;40m3539m, \27[0;1;31;40m22200e, \27[0;1;32;40m21648w \27[0;37;40mcexkdb-\27[4z</PROMPT>",
+          "\27[4z<PROMPT><r><0,128,0:0,0,0>4876h, <r><255,255,0:0,0,0>3539m, <r><255,0,0:0,0,0>22200e, <r><0,255,0:0,0,0>21648w <r><192,192,192:0,0,0>cexkdb-\27[4z</PROMPT>",
+        },
+        {
+          '\27[0;1;36;40mYou say in a baritone voice, "Test."\27[0;37;40m',
+          '<r><0,255,255:0,0,0>You say in a baritone voice, "Test."<r><192,192,192:0,0,0>',
+        },
+        {
+          '\27[38;5;179;48;5;230mYou say in a baritone voice, "Test."\27[0;37;40m',
+          '<215,175,95:255,255,215>You say in a baritone voice, "Test."<r><192,192,192:0,0,0>',
+        },
+        {
+          "* \27[35m(a338f71)\27[m - \27[33m[Update release.yml]\27[m  \27[1;34m<TheLastDarkthorne>\27[m",
+          "* <128,0,128>(a338f71)<r> - <128,128,0>[Update release.yml]<r>  <0,0,255><TheLastDarkthorne><r>",
+        },
       }
       for _, seq in ipairs(sequences) do
         local actualResult = ansi2decho(seq[1])
         assert.are.same(seq[2], actualResult)
       end
     end)
-
   end)
 
   describe("Tests the functionality of decho2ansi", function()
@@ -305,12 +317,11 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
   end)
 
   describe("Tests the functionality of setHexFgColor", function()
-
     it("Should convert hex string correctly", function()
       local hexStrings = {
-        {"000000", { r = 0, g = 0, b = 0 }},
-        {"FFFFFF", { r = 255, g = 255, b = 255 }},
-        {"B22222", { r = 178, g = 34, b = 34 }},
+        { "000000", { r = 0, g = 0, b = 0 } },
+        { "FFFFFF", { r = 255, g = 255, b = 255 } },
+        { "B22222", { r = 178, g = 34, b = 34 } },
       }
       local origSetFgColor = _G.setFgColor
       local outputTable
@@ -323,16 +334,14 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       end
       _G.setFgColor = origSetFgColor
     end)
-
   end)
 
   describe("Tests the functionality of setHexBgColor", function()
-
     it("Should convert hex string correctly", function()
       local hexStrings = {
-        {"000000", { r = 0, g = 0, b = 0 }},
-        {"FFFFFF", { r = 255, g = 255, b = 255 }},
-        {"B22222", { r = 178, g = 34, b = 34 }},
+        { "000000", { r = 0, g = 0, b = 0 } },
+        { "FFFFFF", { r = 255, g = 255, b = 255 } },
+        { "B22222", { r = 178, g = 34, b = 34 } },
       }
       local origSetBgColor = _G.setBgColor
       local outputTable
@@ -345,25 +354,24 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       end
       _G.setBgColor = origSetBgColor
     end)
-
   end)
 
   describe("Tests the functionality of closestColor", function()
     it("Should handle a table of {R,G,B} components: closestColor({R,G,B})", function()
       local expected = "ansi_001"
-      local actual = closestColor({127,0,0})
+      local actual = closestColor({ 127, 0, 0 })
       assert.equals(expected, actual)
     end)
 
     it("Should handle separate R,G,B parameters: closestColor(R,G,B)", function()
       local expected = "ansi_001"
-      local actual = closestColor(127,0,0)
+      local actual = closestColor(127, 0, 0)
       assert.equals(expected, actual)
     end)
 
     it("Should handle a decho color string: closestColor('<R,G,B>')", function()
       local expected = "ansi_001"
-      local actual = closestColor({127,0,0})
+      local actual = closestColor({ 127, 0, 0 })
       assert.equals(expected, actual)
     end)
 
@@ -394,21 +402,21 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
 
     it("Should return nil + error if handed garbage: closestColor({'tea', 1, 1})", function()
       local expectedErr = "Could not parse tea,1,1 into RGB coordinates to look for.\n"
-      local actual, actualErr = closestColor({'tea', 1, 1})
+      local actual, actualErr = closestColor({ "tea", 1, 1 })
       assert.is_nil(actual)
       assert.equals(expectedErr, actualErr)
     end)
 
     it("Should return nil + error if handed garbage: closestColor({1, 1})", function()
       local expectedErr = "Could not parse 1,1 into RGB coordinates to look for.\n"
-      local actual, actualErr = closestColor({1, 1})
+      local actual, actualErr = closestColor({ 1, 1 })
       assert.is_nil(actual)
       assert.equals(expectedErr, actualErr)
     end)
 
     it("Should return nil + error if handed garbage: closestColor({500, 0, 1})", function()
       local expectedErr = "Could not parse 500,0,1 into RGB coordinates to look for.\n"
-      local actual, actualErr = closestColor({500, 0, 1})
+      local actual, actualErr = closestColor({ 500, 0, 1 })
       assert.is_nil(actual)
       assert.equals(expectedErr, actualErr)
     end)
@@ -422,7 +430,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
   end)
 
   describe("Tests the functionality of copy2decho", function()
-    it ("Should return an empty string if line == ''", function()
+    it("Should return an empty string if line == ''", function()
       local oldgcl = getCurrentLine
       _G.getCurrentLine = spy.new(function()
         return ""
@@ -437,148 +445,100 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
 
   describe("Tests the functionality of _Echoes.Process", function()
     it("Should parse hex patterns correctly", function()
-      assert.are.same(
-        _Echos.Process('#ff0000Red', 'Hex'),
-        { "", { fg = { 255, 0, 0 } }, "Red" }
-      )
+      assert.are.same(_Echos.Process("#ff0000Red", "Hex"), { "", { fg = { 255, 0, 0 } }, "Red" })
+
+      assert.are.same(_Echos.Process("#rReset", "Hex"), { "", "\27reset", "Reset" })
+
+      assert.are.same(_Echos.Process("#bBold#/b", "Hex"), { "", "\27bold", "Bold", "\27boldoff", "" })
+
+      assert.are.same(_Echos.Process("#iItalics#/i", "Hex"), { "", "\27italics", "Italics", "\27italicsoff", "" })
 
       assert.are.same(
-        _Echos.Process('#rReset', 'Hex'),
-        { "", "\27reset", "Reset" }
-      )
-
-      assert.are.same(
-        _Echos.Process('#bBold#/b', 'Hex'),
-        { "", "\27bold", "Bold", "\27boldoff", "" }
-      )
-
-      assert.are.same(
-        _Echos.Process('#iItalics#/i', 'Hex'),
-        { "", "\27italics", "Italics", "\27italicsoff", "" }
-      )
-
-      assert.are.same(
-        _Echos.Process('#uUnderline#/u', 'Hex'),
+        _Echos.Process("#uUnderline#/u", "Hex"),
         { "", "\27underline", "Underline", "\27underlineoff", "" }
       )
 
       assert.are.same(
-        _Echos.Process('#sStrikethrough#/s', 'Hex'),
+        _Echos.Process("#sStrikethrough#/s", "Hex"),
         { "", "\27strikethrough", "Strikethrough", "\27strikethroughoff", "" }
       )
 
-      assert.are.same(
-        _Echos.Process('#oOverline#/o', 'Hex'),
-        { "", "\27overline", "Overline", "\27overlineoff", "" }
-      )
+      assert.are.same(_Echos.Process("#oOverline#/o", "Hex"), { "", "\27overline", "Overline", "\27overlineoff", "" })
 
-      assert.are.same(
-        _Echos.Process('\\#ff0000Escaped', 'Hex'),
-        { "#ff0000", "Escaped" }
-      )
+      assert.are.same(_Echos.Process("\\#ff0000Escaped", "Hex"), { "#ff0000", "Escaped" })
     end)
 
     it("Should parse decimal patterns correctly", function()
-      assert.are.same(
-        _Echos.Process('<255,0,0>Red', 'Decimal'),
-        { "", { fg = { "255", "0", "0" } }, "Red" }
-      )
+      assert.are.same(_Echos.Process("<255,0,0>Red", "Decimal"), { "", { fg = { "255", "0", "0" } }, "Red" })
+
+      assert.are.same(_Echos.Process("<r>Reset", "Decimal"), { "", "\27reset", "Reset" })
+
+      assert.are.same(_Echos.Process("<b>Bold</b>", "Decimal"), { "", "\27bold", "Bold", "\27boldoff", "" })
+
+      assert.are.same(_Echos.Process("<i>Italics</i>", "Decimal"), { "", "\27italics", "Italics", "\27italicsoff", "" })
 
       assert.are.same(
-        _Echos.Process('<r>Reset', 'Decimal'),
-        { "", "\27reset", "Reset" }
-      )
-
-      assert.are.same(
-        _Echos.Process('<b>Bold</b>', 'Decimal'),
-        { "", "\27bold", "Bold", "\27boldoff", "" }
-      )
-
-      assert.are.same(
-        _Echos.Process('<i>Italics</i>', 'Decimal'),
-        { "", "\27italics", "Italics", "\27italicsoff", "" }
-      )
-
-      assert.are.same(
-        _Echos.Process('<u>Underline</u>', 'Decimal'),
+        _Echos.Process("<u>Underline</u>", "Decimal"),
         { "", "\27underline", "Underline", "\27underlineoff", "" }
       )
 
       assert.are.same(
-        _Echos.Process('<s>Strikethrough</s>', 'Decimal'),
+        _Echos.Process("<s>Strikethrough</s>", "Decimal"),
         { "", "\27strikethrough", "Strikethrough", "\27strikethroughoff", "" }
       )
 
       assert.are.same(
-        _Echos.Process('<o>Overline</o>', 'Decimal'),
+        _Echos.Process("<o>Overline</o>", "Decimal"),
         { "", "\27overline", "Overline", "\27overlineoff", "" }
       )
 
       assert.are.same(
-        _Echos.Process('<:0,0,255>OnBlue', 'Decimal'),
+        _Echos.Process("<:0,0,255>OnBlue", "Decimal"),
         { "", { bg = { "0", "0", "255", 255 } }, "OnBlue" }
       )
 
-      assert.are.same(
-        _Echos.Process('<1234,0,0>NotAColour', 'Decimal'),
-        { "", "<1234,0,0>", "NotAColour" }
-      )
+      assert.are.same(_Echos.Process("<1234,0,0>NotAColour", "Decimal"), { "", "<1234,0,0>", "NotAColour" })
     end)
 
     it("Should parse color patterns correctly", function()
-      assert.are.same(
-        _Echos.Process('<red>Red', 'Color'),
-        { "", { fg = { 255, 0, 0 } }, "Red" }
-      )
+      assert.are.same(_Echos.Process("<red>Red", "Color"), { "", { fg = { 255, 0, 0 } }, "Red" })
+
+      assert.are.same(_Echos.Process("<r>Reset", "Color"), { "", "\27reset", "Reset" })
+
+      assert.are.same(_Echos.Process("<b>Bold</b>", "Color"), { "", "\27bold", "Bold", "\27boldoff", "" })
+
+      assert.are.same(_Echos.Process("<i>Italics</i>", "Color"), { "", "\27italics", "Italics", "\27italicsoff", "" })
 
       assert.are.same(
-        _Echos.Process('<r>Reset', 'Color'),
-        { "", "\27reset", "Reset" }
-      )
-
-      assert.are.same(
-        _Echos.Process('<b>Bold</b>', 'Color'),
-        { "", "\27bold", "Bold", "\27boldoff", "" }
-      )
-
-      assert.are.same(
-        _Echos.Process('<i>Italics</i>', 'Color'),
-        { "", "\27italics", "Italics", "\27italicsoff", "" }
-      )
-
-      assert.are.same(
-        _Echos.Process('<u>Underline</u>', 'Color'),
+        _Echos.Process("<u>Underline</u>", "Color"),
         { "", "\27underline", "Underline", "\27underlineoff", "" }
       )
 
       assert.are.same(
-        _Echos.Process('<s>Strikethrough</s>', 'Color'),
+        _Echos.Process("<s>Strikethrough</s>", "Color"),
         { "", "\27strikethrough", "Strikethrough", "\27strikethroughoff", "" }
       )
 
       assert.are.same(
-        _Echos.Process('<o>Overline</o>', 'Color'),
+        _Echos.Process("<o>Overline</o>", "Color"),
         { "", "\27overline", "Overline", "\27overlineoff", "" }
       )
 
       assert.are.same(
-        _Echos.Process('<red:blue>RedOnBlue', 'Color'),
+        _Echos.Process("<red:blue>RedOnBlue", "Color"),
         { "", { fg = { 255, 0, 0 }, bg = { 0, 0, 255 } }, "RedOnBlue" }
       )
 
-      assert.are.same(
-        _Echos.Process('<:blue>OnBlue', 'Color'),
-        { "", { bg = { 0, 0, 255 } }, "OnBlue" }
-      )
+      assert.are.same(_Echos.Process("<:blue>OnBlue", "Color"), { "", { bg = { 0, 0, 255 } }, "OnBlue" })
     end)
   end)
 
   describe("Tests the functionality of cecho2string", function()
     it("Should be able to handle stripping colors", function()
       local testCases = {
-        {"<red>This is<blue> a simple test", "This is a simple test"},
-        {"<purple>This<reset> is a <more> complicated test", "This is a <more> complicated test"},
-        {"This <ansiBlack>should also be easy", "This should also be easy"}
+        { "<red>This is<blue> a simple test", "This is a simple test" },
+        { "<purple>This<reset> is a <more> complicated test", "This is a <more> complicated test" },
+        { "This <ansiBlack>should also be easy", "This should also be easy" },
       }
       for _, case in ipairs(testCases) do
         local expected = case[2]
@@ -589,11 +549,11 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
 
     it("Should be able to strip formatting codes as well", function()
       local testCases = {
-        {"<b>Bold</b>", "Bold"},
-        {"<u>Underline</u>", "Underline"},
-        {"<i>Italics</i>", "Italics"},
-        {"<s>Strikethrough</s>", "Strikethrough"},
-        {"<o>Overline</o>", "Overline"}
+        { "<b>Bold</b>", "Bold" },
+        { "<u>Underline</u>", "Underline" },
+        { "<i>Italics</i>", "Italics" },
+        { "<s>Strikethrough</s>", "Strikethrough" },
+        { "<o>Overline</o>", "Overline" },
       }
       for _, case in ipairs(testCases) do
         local expected = case[2]
@@ -606,9 +566,9 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
   describe("Tests the functionality of decho2string", function()
     it("Should be able to handle stripping colors", function()
       local testCases = {
-        {"<255,0,0>This is<0,255,0> a simple test", "This is a simple test"},
-        {"<128,128,0>This<r> is a <more> complicated test", "This is a <more> complicated test"},
-        {"This <0,0,0>should also be easy", "This should also be easy"}
+        { "<255,0,0>This is<0,255,0> a simple test", "This is a simple test" },
+        { "<128,128,0>This<r> is a <more> complicated test", "This is a <more> complicated test" },
+        { "This <0,0,0>should also be easy", "This should also be easy" },
       }
       for _, case in ipairs(testCases) do
         local expected = case[2]
@@ -619,11 +579,11 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
 
     it("Should be able to strip formatting codes as well", function()
       local testCases = {
-        {"<b>Bold</b>", "Bold"},
-        {"<u>Underline</u>", "Underline"},
-        {"<i>Italics</i>", "Italics"},
-        {"<s>Strikethrough</s>", "Strikethrough"},
-        {"<o>Overline</o>", "Overline"}
+        { "<b>Bold</b>", "Bold" },
+        { "<u>Underline</u>", "Underline" },
+        { "<i>Italics</i>", "Italics" },
+        { "<s>Strikethrough</s>", "Strikethrough" },
+        { "<o>Overline</o>", "Overline" },
       }
       for _, case in ipairs(testCases) do
         local expected = case[2]
@@ -636,9 +596,9 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
   describe("Tests the functionality of hecho2string", function()
     it("Should be able to handle stripping colors", function()
       local testCases = {
-        {"#ff0000This is#00ff00 a simple test", "This is a simple test"},
-        {"#777700This#r is a #more complicated test", "This is a #more complicated test"},
-        {"This |c000000should also be easy", "This should also be easy"}
+        { "#ff0000This is#00ff00 a simple test", "This is a simple test" },
+        { "#777700This#r is a #more complicated test", "This is a #more complicated test" },
+        { "This |c000000should also be easy", "This should also be easy" },
       }
       for _, case in ipairs(testCases) do
         local expected = case[2]
@@ -649,11 +609,11 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
 
     it("Should be able to strip formatting codes as well", function()
       local testCases = {
-        {"#bBold#/b", "Bold"},
-        {"#uUnderline#/u", "Underline"},
-        {"#iItalics#/i", "Italics"},
-        {"#sStrikethrough#/s", "Strikethrough"},
-        {"#oOverline#/o", "Overline"}
+        { "#bBold#/b", "Bold" },
+        { "#uUnderline#/u", "Underline" },
+        { "#iItalics#/i", "Italics" },
+        { "#sStrikethrough#/s", "Strikethrough" },
+        { "#oOverline#/o", "Overline" },
       }
       for _, case in ipairs(testCases) do
         local expected = case[2]
@@ -664,7 +624,6 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
   end)
 
   describe("Test functionality of buffers", function()
-
     before_each(function()
       createBuffer("mybuffer")
       -- clear the buffer in case it already exists
@@ -679,7 +638,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       selectCurrentLine("mybuffer")
       assert.are.equal("Hello, world!", getSelection("mybuffer"))
     end)
-  
+
     -- https://github.com/Mudlet/Mudlet/issues/6575
     it("selects the last line after moveCursorEnd in a buffer", function()
       echo("mybuffer", "Line 1\nLine 2\nLine 3")
@@ -687,14 +646,13 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       selectCurrentLine("mybuffer")
       assert.are.equal("Line 3", getSelection("mybuffer"))
     end)
-  
+
     it("should append new text to existing text in the buffer", function()
       echo("mybuffer", "Hello")
       echo("mybuffer", ", world!")
       selectCurrentLine("mybuffer")
       assert.are.equal("Hello, world!", getSelection("mybuffer"))
     end)
-  
   end)
 
   describe("Tests the functionality of getHTMLformat", function()
@@ -708,60 +666,68 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         overline = false,
         reverse = false,
         strikeout = false,
-        underline = false
+        underline = false,
       }
     end)
 
     it("Should return a style with no text modifiers but bg/fg colors if none are in the table", function()
-      local expected = '<span style="color: rgb(0, 160, 0);background-color: rgba(0, 0, 0, 0); font-weight: normal; font-style: normal; text-decoration: none;">'
+      local expected =
+        '<span style="color: rgb(0, 160, 0);background-color: rgba(0, 0, 0, 0); font-weight: normal; font-style: normal; text-decoration: none;">'
       local actual = getHTMLformat(fmt)
       assert.equals(expected, actual)
     end)
 
     it("Should return a style with 'font-weight: bold;' if bold is true", function()
-      local expected = '<span style="color: rgb(0, 160, 0);background-color: rgba(0, 0, 0, 0); font-weight: bold; font-style: normal; text-decoration: none;">'
+      local expected =
+        '<span style="color: rgb(0, 160, 0);background-color: rgba(0, 0, 0, 0); font-weight: bold; font-style: normal; text-decoration: none;">'
       fmt.bold = true
       local actual = getHTMLformat(fmt)
       assert.equals(expected, actual)
     end)
 
     it("Should return a style with 'font-style: italic' if italic is true", function()
-      local expected = '<span style="color: rgb(0, 160, 0);background-color: rgba(0, 0, 0, 0); font-weight: normal; font-style: italic; text-decoration: none;">'
+      local expected =
+        '<span style="color: rgb(0, 160, 0);background-color: rgba(0, 0, 0, 0); font-weight: normal; font-style: italic; text-decoration: none;">'
       fmt.italic = true
       local actual = getHTMLformat(fmt)
       assert.equals(expected, actual)
     end)
 
     it("Should return a style with 'text-decoration: underline' if underline is true", function()
-      local expected = '<span style="color: rgb(0, 160, 0);background-color: rgba(0, 0, 0, 0); font-weight: normal; font-style: normal; text-decoration: underline;">'
+      local expected =
+        '<span style="color: rgb(0, 160, 0);background-color: rgba(0, 0, 0, 0); font-weight: normal; font-style: normal; text-decoration: underline;">'
       fmt.underline = true
       local actual = getHTMLformat(fmt)
       assert.equals(expected, actual)
     end)
 
     it("Should return a style with 'text-decoration: overline' if overline is true", function()
-      local expected = '<span style="color: rgb(0, 160, 0);background-color: rgba(0, 0, 0, 0); font-weight: normal; font-style: normal; text-decoration: overline;">'
+      local expected =
+        '<span style="color: rgb(0, 160, 0);background-color: rgba(0, 0, 0, 0); font-weight: normal; font-style: normal; text-decoration: overline;">'
       fmt.overline = true
       local actual = getHTMLformat(fmt)
       assert.equals(expected, actual)
     end)
 
     it("Should return a style with 'text-decoration: line-through' if strikeout is true", function()
-      local expected = '<span style="color: rgb(0, 160, 0);background-color: rgba(0, 0, 0, 0); font-weight: normal; font-style: normal; text-decoration: line-through;">'
+      local expected =
+        '<span style="color: rgb(0, 160, 0);background-color: rgba(0, 0, 0, 0); font-weight: normal; font-style: normal; text-decoration: line-through;">'
       fmt.strikeout = true
       local actual = getHTMLformat(fmt)
       assert.equals(expected, actual)
     end)
 
     it("Should return a style with no text modifiers and bg/fg colors inverted if reverse is true", function()
-      local expected = '<span style="color: rgb(0, 0, 0);background-color: rgba(0, 160, 0, 255); font-weight: normal; font-style: normal; text-decoration: none;">'
+      local expected =
+        '<span style="color: rgb(0, 0, 0);background-color: rgba(0, 160, 0, 255); font-weight: normal; font-style: normal; text-decoration: none;">'
       fmt.reverse = true
       local actual = getHTMLformat(fmt)
       assert.equals(expected, actual)
     end)
 
     it("Should be able to handle all options at once", function()
-      local expected = '<span style="color: rgb(0, 0, 0);background-color: rgba(0, 160, 0, 255); font-weight: bold; font-style: italic; text-decoration: overline underline line-through;">'
+      local expected =
+        '<span style="color: rgb(0, 0, 0);background-color: rgba(0, 160, 0, 255); font-weight: bold; font-style: italic; text-decoration: overline underline line-through;">'
       fmt = {
         background = { 0, 0, 0 },
         bold = true,
@@ -770,14 +736,15 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         overline = true,
         reverse = true,
         strikeout = true,
-        underline = true
+        underline = true,
       }
       local actual = getHTMLformat(fmt)
       assert.equals(expected, actual)
     end)
 
     it("Should use the foreground for the background and invert that if the background is a gradient", function()
-      local expected = '<span style="color: rgb(255, 95, 255);background-color: rgba(0, 160, 0, 255); font-weight: normal; font-style: normal; text-decoration: none;">'
+      local expected =
+        '<span style="color: rgb(255, 95, 255);background-color: rgba(0, 160, 0, 255); font-weight: normal; font-style: normal; text-decoration: none;">'
       fmt.background = "QLinearGradient(doesn't matter will be ignored)"
       fmt.reverse = true
       local actual = getHTMLformat(fmt)
@@ -785,7 +752,8 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
 
     it("Should extract r,g,b from rgba() backgrounds if reverse is true (rgba doesn't work in color)", function()
-      local expected = '<span style="color: rgb(128, 0, 128);background-color: rgba(0, 160, 0, 255); font-weight: normal; font-style: normal; text-decoration: none;">'
+      local expected =
+        '<span style="color: rgb(128, 0, 128);background-color: rgba(0, 160, 0, 255); font-weight: normal; font-style: normal; text-decoration: none;">'
       fmt.background = "rgba(128, 0, 128, 255)"
       fmt.reverse = true
       local actual = getHTMLformat(fmt)
@@ -808,7 +776,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         overline = false,
         reverse = false,
         strikeout = false,
-        underline = false
+        underline = false,
       }
       createLabel(labelName, 0, 0, 0, 0, 0)
       hideWindow(labelName)
@@ -925,18 +893,22 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
   describe("Tests the functionality of replace", function()
     it("Should return nil+msg if nothing is selected to replace", function()
       deselect()
-      local ok,err = replace("]")
+      local ok, err = replace("]")
       assert.is_nil(ok)
       assert.equals("replace: nothing is selected to be replaced. Did selectString return -1?", err)
     end)
   end)
   describe("Tests the functionality of the color echo transformation functions", function()
-    local cechoString = "<reset><ansi_light_red:ansi_010>This <b>is</b> <i>a</i> <:ansi_012><u>test</u> <ansi_010><s>of</s> <o>the</o><reset> echo transformations."
-    local dechoString = "<r><255,0,0:0,255,0>This <b>is</b> <i>a</i> <:0,0,255><u>test</u> <0,255,0><s>of</s> <o>the</o><r> echo transformations."
-    local hechoString = "#r#ff0000,00ff00This #bis#/b #ia#/i #,0000ff#utest#/u #00ff00#sof#/s #othe#/o#r echo transformations."
-    local htmlString = [[<span style="color: rgb(255, 255, 255);background-color: rgba(0, 0, 0, 255); font-weight: normal; font-style: normal; text-decoration: none;"><span style="color: rgb(255, 255, 255);background-color: rgba(0, 0, 0, 255); font-weight: normal; font-style: normal; text-decoration: none;"><span style="color: rgb(255, 0, 0);background-color: rgba(0, 255, 0, 255); font-weight: normal; font-style: normal; text-decoration: none;">This <span style="color: rgb(255, 0, 0);background-color: rgba(0, 255, 0, 255); font-weight: bold; font-style: normal; text-decoration: none;">is<span style="color: rgb(255, 0, 0);background-color: rgba(0, 255, 0, 255); font-weight: normal; font-style: normal; text-decoration: none;"> <span style="color: rgb(255, 0, 0);background-color: rgba(0, 255, 0, 255); font-weight: normal; font-style: italic; text-decoration: none;">a<span style="color: rgb(255, 0, 0);background-color: rgba(0, 255, 0, 255); font-weight: normal; font-style: normal; text-decoration: none;"> <span style="color: rgb(255, 0, 0);background-color: rgba(0, 0, 255, 255); font-weight: normal; font-style: normal; text-decoration: none;"><span style="color: rgb(255, 0, 0);background-color: rgba(0, 0, 255, 255); font-weight: normal; font-style: normal; text-decoration: underline;">test<span style="color: rgb(255, 0, 0);background-color: rgba(0, 0, 255, 255); font-weight: normal; font-style: normal; text-decoration: none;"> <span style="color: rgb(0, 255, 0);background-color: rgba(0, 0, 255, 255); font-weight: normal; font-style: normal; text-decoration: none;"><span style="color: rgb(0, 255, 0);background-color: rgba(0, 0, 255, 255); font-weight: normal; font-style: normal; text-decoration: line-through;">of<span style="color: rgb(0, 255, 0);background-color: rgba(0, 0, 255, 255); font-weight: normal; font-style: normal; text-decoration: none;"> <span style="color: rgb(0, 255, 0);background-color: rgba(0, 0, 255, 255); font-weight: normal; font-style: normal; text-decoration: overline;">the<span style="color: rgb(0, 255, 0);background-color: rgba(0, 0, 255, 255); font-weight: normal; font-style: normal; text-decoration: none;"><span style="color: rgb(255, 255, 255);background-color: rgba(0, 0, 0, 255); font-weight: normal; font-style: normal; text-decoration: none;"> echo transformations.]]
+    local cechoString =
+      "<reset><ansi_light_red:ansi_010>This <b>is</b> <i>a</i> <:ansi_012><u>test</u> <ansi_010><s>of</s> <o>the</o><reset> echo transformations."
+    local dechoString =
+      "<r><255,0,0:0,255,0>This <b>is</b> <i>a</i> <:0,0,255><u>test</u> <0,255,0><s>of</s> <o>the</o><r> echo transformations."
+    local hechoString =
+      "#r#ff0000,00ff00This #bis#/b #ia#/i #,0000ff#utest#/u #00ff00#sof#/s #othe#/o#r echo transformations."
+    local htmlString =
+      [[<span style="color: rgb(255, 255, 255);background-color: rgba(0, 0, 0, 255); font-weight: normal; font-style: normal; text-decoration: none;"><span style="color: rgb(255, 255, 255);background-color: rgba(0, 0, 0, 255); font-weight: normal; font-style: normal; text-decoration: none;"><span style="color: rgb(255, 0, 0);background-color: rgba(0, 255, 0, 255); font-weight: normal; font-style: normal; text-decoration: none;">This <span style="color: rgb(255, 0, 0);background-color: rgba(0, 255, 0, 255); font-weight: bold; font-style: normal; text-decoration: none;">is<span style="color: rgb(255, 0, 0);background-color: rgba(0, 255, 0, 255); font-weight: normal; font-style: normal; text-decoration: none;"> <span style="color: rgb(255, 0, 0);background-color: rgba(0, 255, 0, 255); font-weight: normal; font-style: italic; text-decoration: none;">a<span style="color: rgb(255, 0, 0);background-color: rgba(0, 255, 0, 255); font-weight: normal; font-style: normal; text-decoration: none;"> <span style="color: rgb(255, 0, 0);background-color: rgba(0, 0, 255, 255); font-weight: normal; font-style: normal; text-decoration: none;"><span style="color: rgb(255, 0, 0);background-color: rgba(0, 0, 255, 255); font-weight: normal; font-style: normal; text-decoration: underline;">test<span style="color: rgb(255, 0, 0);background-color: rgba(0, 0, 255, 255); font-weight: normal; font-style: normal; text-decoration: none;"> <span style="color: rgb(0, 255, 0);background-color: rgba(0, 0, 255, 255); font-weight: normal; font-style: normal; text-decoration: none;"><span style="color: rgb(0, 255, 0);background-color: rgba(0, 0, 255, 255); font-weight: normal; font-style: normal; text-decoration: line-through;">of<span style="color: rgb(0, 255, 0);background-color: rgba(0, 0, 255, 255); font-weight: normal; font-style: normal; text-decoration: none;"> <span style="color: rgb(0, 255, 0);background-color: rgba(0, 0, 255, 255); font-weight: normal; font-style: normal; text-decoration: overline;">the<span style="color: rgb(0, 255, 0);background-color: rgba(0, 0, 255, 255); font-weight: normal; font-style: normal; text-decoration: none;"><span style="color: rgb(255, 255, 255);background-color: rgba(0, 0, 0, 255); font-weight: normal; font-style: normal; text-decoration: none;"> echo transformations.]]
     describe("Tests the functionality of cecho2decho", function()
-      it('can successfully convert a cecho string to a decho one', function()
+      it("can successfully convert a cecho string to a decho one", function()
         local expected = dechoString
         local actual = cecho2decho(cechoString)
         assert.equal(expected, actual)
@@ -944,7 +916,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
 
     describe("Tests the functionality of cecho2hecho", function()
-      it('can successfully convert a cecho string to an hecho one', function()
+      it("can successfully convert a cecho string to an hecho one", function()
         local expected = hechoString
         local actual = cecho2hecho(cechoString)
         assert.equal(expected, actual)
@@ -952,7 +924,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
 
     describe("Tests the functionality of cecho2html", function()
-      it('can successfully convert a cecho string to an html one', function()
+      it("can successfully convert a cecho string to an html one", function()
         local expected = htmlString
         local actual = cecho2html(cechoString)
         assert.equal(expected, actual)
@@ -960,7 +932,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
 
     describe("Tests the functionality of decho2cecho", function()
-      it('can successfully convert a decho string to a cecho one', function()
+      it("can successfully convert a decho string to a cecho one", function()
         local expected = cechoString
         local actual = decho2cecho(dechoString)
         assert.equal(expected, actual)
@@ -968,7 +940,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
 
     describe("Tests the functionality of decho2hecho", function()
-      it('can successfully convert a decho string to an hecho one', function()
+      it("can successfully convert a decho string to an hecho one", function()
         local expected = hechoString
         local actual = decho2hecho(dechoString)
         assert.equal(expected, actual)
@@ -976,7 +948,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
 
     describe("Tests the functionality of decho2html", function()
-      it('can successfully convert a decho string to an html one', function()
+      it("can successfully convert a decho string to an html one", function()
         local expected = htmlString
         local actual = decho2html(dechoString)
         assert.equal(expected, actual)
@@ -984,7 +956,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
 
     describe("Tests the functionality of hecho2cecho", function()
-      it('can successfully convert an hecho string to a cecho one', function()
+      it("can successfully convert an hecho string to a cecho one", function()
         local expected = cechoString
         local actual = hecho2cecho(hechoString)
         assert.equal(expected, actual)
@@ -992,7 +964,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
 
     describe("Tests the functionality of hecho2decho", function()
-      it('can successfully convert an hecho string to a decho one', function()
+      it("can successfully convert an hecho string to a decho one", function()
         local expected = dechoString
         local actual = hecho2decho(hechoString)
         assert.equal(expected, actual)
@@ -1000,7 +972,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
 
     describe("Tests the functionality of hecho2html", function()
-      it('can successfully convert an hecho string to an html one', function()
+      it("can successfully convert an hecho string to an html one", function()
         local expected = htmlString
         local actual = hecho2html(hechoString)
         assert.equal(expected, actual)
@@ -1009,7 +981,6 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
   end)
 
   describe("Tests the functionality of selectAll", function()
-
     before_each(function()
       clearWindow()
     end)
@@ -1031,7 +1002,9 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       moveCursorEnd()
       selectCurrentLine()
       local callCount = 0
-      selectAll("zzzzz", function() callCount = callCount + 1 end)
+      selectAll("zzzzz", function()
+        callCount = callCount + 1
+      end)
       assert.equals(0, callCount)
     end)
 
@@ -1040,7 +1013,9 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       moveCursorEnd()
       selectCurrentLine()
       local funcCalls = 0
-      selectAll("hello", function() funcCalls = funcCalls + 1 end)
+      selectAll("hello", function()
+        funcCalls = funcCalls + 1
+      end)
       assert.equals(1, funcCalls)
     end)
 
@@ -1049,13 +1024,14 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       moveCursorEnd()
       selectCurrentLine()
       local funcCalls = 0
-      selectAll("cat", function() funcCalls = funcCalls + 1 end)
+      selectAll("cat", function()
+        funcCalls = funcCalls + 1
+      end)
       assert.equals(3, funcCalls)
     end)
   end)
 
   describe("Tests the functionality of selectAll with window name", function()
-
     it("Should call the function for each match in the window", function()
       local windowName = "selectAllTestBuffer"
       createBuffer(windowName)
@@ -1063,7 +1039,9 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       echo(windowName, "cat dog cat dog cat")
       selectCurrentLine(windowName)
       local funcCalls = 0
-      selectAll(windowName, "cat", function() funcCalls = funcCalls + 1 end)
+      selectAll(windowName, "cat", function()
+        funcCalls = funcCalls + 1
+      end)
       assert.equals(3, funcCalls)
     end)
   end)
@@ -1085,16 +1063,20 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
 
     it("Should error when not given a string", function()
-      assert.has_error(function() PadHexNum(15) end)
+      assert.has_error(function()
+        PadHexNum(15)
+      end)
     end)
 
     it("Should error when the string is not a hex number", function()
       -- the message matters: the old code reached the same outcome by accident,
       -- comparing a nil tonumber() result against a number
-      assert.has_error(function() PadHexNum("zz") end,
-        'PadHexNum: bad argument #1 value (hex number as string expected, got "zz"!)')
-      assert.has_error(function() PadHexNum("") end,
-        'PadHexNum: bad argument #1 value (hex number as string expected, got ""!)')
+      assert.has_error(function()
+        PadHexNum("zz")
+      end, 'PadHexNum: bad argument #1 value (hex number as string expected, got "zz"!)')
+      assert.has_error(function()
+        PadHexNum("")
+      end, 'PadHexNum: bad argument #1 value (hex number as string expected, got ""!)')
     end)
 
     it("Should zero-pad single hex digits above nine as well", function()
@@ -1126,7 +1108,9 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
 
     it("Should error when given no arguments at all", function()
-      assert.has_error(function() RGB2Hex() end)
+      assert.has_error(function()
+        RGB2Hex()
+      end)
     end)
 
     it("Should produce six hex digits for every component below sixteen", function()
@@ -1144,7 +1128,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     -- in 0-255 only: RGB2Hex range-checks nothing, so an out of range component
     -- still produces a longer string. That is a separate defect from the padding
     it("Should return six hex digits for every component value in 0-255", function()
-      for _, component in ipairs({0, 1, 9, 10, 15, 16, 17, 128, 255}) do
+      for _, component in ipairs({ 0, 1, 9, 10, 15, 16, 17, 128, 255 }) do
         local hex = RGB2Hex(component, component, component)
         assert.equals(6, #hex)
         for position = 1, 5, 2 do
@@ -1157,42 +1141,46 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
   describe("Tests the functionality of getRGB", function()
     it("Should return the three components of a named colour", function()
       local r, g, b = getRGB("red")
-      assert.are.same({255, 0, 0}, {r, g, b})
-      assert.are.same(color_table["green"], {getRGB("green")})
+      assert.are.same({ 255, 0, 0 }, { r, g, b })
+      assert.are.same(color_table["green"], { getRGB("green") })
     end)
 
     it("Should honour a colour the user has redefined", function()
       local original = color_table["ansi_000"]
-      color_table["ansi_000"] = {1, 2, 3}
+      color_table["ansi_000"] = { 1, 2, 3 }
       local r, g, b = getRGB("ansi_000")
       color_table["ansi_000"] = original
-      assert.are.same({1, 2, 3}, {r, g, b})
+      assert.are.same({ 1, 2, 3 }, { r, g, b })
     end)
 
     it("Should error when not given a string", function()
-      assert.has_error(function() getRGB(42) end)
+      assert.has_error(function()
+        getRGB(42)
+      end)
     end)
 
     it("Should error for a colour name that does not exist", function()
-      assert.has_error(function() getRGB("definitelyNotAColour") end)
+      assert.has_error(function()
+        getRGB("definitelyNotAColour")
+      end)
     end)
   end)
 
   describe("Tests the functionality of unpack_w_nil", function()
     it("Should return every value up to n, including embedded nils", function()
-      local packed = {1, nil, 3, n = 3}
+      local packed = { 1, nil, 3, n = 3 }
       local a, b, c = unpack_w_nil(packed)
-      assert.are.same({1, nil, 3}, {a, b, c})
+      assert.are.same({ 1, nil, 3 }, { a, b, c })
       assert.is_nil(b)
     end)
 
     it("Should start at the counter it is given", function()
-      local packed = {"a", "b", "c", n = 3}
-      assert.are.same({"b", "c"}, {unpack_w_nil(packed, 2)})
+      local packed = { "a", "b", "c", n = 3 }
+      assert.are.same({ "b", "c" }, { unpack_w_nil(packed, 2) })
     end)
 
     it("Should return a trailing nil rather than stopping short of n", function()
-      local packed = {"only", nil, n = 2}
+      local packed = { "only", nil, n = 2 }
       -- a plain assignment cannot tell "returned nil" from "returned nothing",
       -- so count the results
       assert.equals(2, select("#", unpack_w_nil(packed)))
@@ -1207,7 +1195,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
 
     local function geometry(name)
       local x, y, width, height = getWindowGeometry(name)
-      return {x = x, y = y, width = width, height = height}
+      return { x = x, y = y, width = width, height = height }
     end
 
     before_each(function()
@@ -1215,7 +1203,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
 
     after_each(function()
-      for _, suffixName in ipairs({"_back", "_front", "_text"}) do
+      for _, suffixName in ipairs({ "_back", "_front", "_text" }) do
         pcall(deleteLabel, gaugeName .. suffixName)
       end
       gaugesTable[gaugeName] = nil
@@ -1223,13 +1211,13 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
 
     describe("Tests the functionality of createGauge", function()
       it("Should create the back, front and text labels at the requested geometry", function()
-        for _, suffixName in ipairs({"_back", "_front", "_text"}) do
+        for _, suffixName in ipairs({ "_back", "_front", "_text" }) do
           assert.equals("label", windowType(gaugeName .. suffixName))
         end
-        assert.are.same({x = 30, y = 300, width = 300, height = 20}, geometry(gaugeName .. "_back"))
-        assert.are.same({x = 30, y = 300, width = 300, height = 20}, geometry(gaugeName .. "_text"))
+        assert.are.same({ x = 30, y = 300, width = 300, height = 20 }, geometry(gaugeName .. "_back"))
+        assert.are.same({ x = 30, y = 300, width = 300, height = 20 }, geometry(gaugeName .. "_text"))
         -- a fresh gauge is full, so the front label covers the whole back one
-        assert.are.same({x = 30, y = 300, width = 300, height = 20}, geometry(gaugeName .. "_front"))
+        assert.are.same({ x = 30, y = 300, width = 300, height = 20 }, geometry(gaugeName .. "_front"))
       end)
 
       it("Should record the gauge in gaugesTable and show it", function()
@@ -1246,13 +1234,16 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
 
       it("Should accept a colour name in place of the r, g, b triple", function()
         finally(function()
-          for _, suffixName in ipairs({"_back", "_front", "_text"}) do
+          for _, suffixName in ipairs({ "_back", "_front", "_text" }) do
             pcall(deleteLabel, "colourNameGauge" .. suffixName)
           end
           gaugesTable.colourNameGauge = nil
         end)
         createGauge("colourNameGauge", 100, 10, 0, 0, nil, "green")
-        assert.are.same({0, 255, 0}, {gaugesTable.colourNameGauge.r, gaugesTable.colourNameGauge.g, gaugesTable.colourNameGauge.b})
+        assert.are.same(
+          { 0, 255, 0 },
+          { gaugesTable.colourNameGauge.r, gaugesTable.colourNameGauge.g, gaugesTable.colourNameGauge.b }
+        )
         assert.equals("horizontal", gaugesTable.colourNameGauge.orientation)
       end)
 
@@ -1267,27 +1258,27 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       it("Should shrink the front label to the fraction given, horizontally", function()
         setGauge(gaugeName, 50, 100)
         assert.equals(0.5, gaugesTable[gaugeName].value)
-        assert.are.same({x = 30, y = 300, width = 150, height = 20}, geometry(gaugeName .. "_front"))
+        assert.are.same({ x = 30, y = 300, width = 150, height = 20 }, geometry(gaugeName .. "_front"))
         -- the backdrop keeps its full size
-        assert.are.same({x = 30, y = 300, width = 300, height = 20}, geometry(gaugeName .. "_back"))
+        assert.are.same({ x = 30, y = 300, width = 300, height = 20 }, geometry(gaugeName .. "_back"))
       end)
 
       it("Should grow a vertical gauge upwards from its bottom edge", function()
         gaugesTable[gaugeName].orientation = "vertical"
         setGauge(gaugeName, 1, 4)
-        assert.are.same({x = 30, y = 315, width = 300, height = 5}, geometry(gaugeName .. "_front"))
+        assert.are.same({ x = 30, y = 315, width = 300, height = 5 }, geometry(gaugeName .. "_front"))
       end)
 
       it("Should shrink a goofy gauge towards its right edge", function()
         gaugesTable[gaugeName].orientation = "goofy"
         setGauge(gaugeName, 1, 4)
-        assert.are.same({x = 255, y = 300, width = 75, height = 20}, geometry(gaugeName .. "_front"))
+        assert.are.same({ x = 255, y = 300, width = 75, height = 20 }, geometry(gaugeName .. "_front"))
       end)
 
       it("Should shrink a batty gauge downwards from its top edge", function()
         gaugesTable[gaugeName].orientation = "batty"
         setGauge(gaugeName, 1, 2)
-        assert.are.same({x = 30, y = 300, width = 300, height = 10}, geometry(gaugeName .. "_front"))
+        assert.are.same({ x = 30, y = 300, width = 300, height = 10 }, geometry(gaugeName .. "_front"))
       end)
 
       it("Should update the caption when one is passed", function()
@@ -1302,18 +1293,24 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       end)
 
       it("Should error for an unknown gauge or a non numeric value", function()
-        assert.has_error(function() setGauge("noSuchGauge", 1, 1) end)
-        assert.has_error(function() setGauge(gaugeName, "lots", 1) end)
-        assert.has_error(function() setGauge(gaugeName, 1, "lots") end)
+        assert.has_error(function()
+          setGauge("noSuchGauge", 1, 1)
+        end)
+        assert.has_error(function()
+          setGauge(gaugeName, "lots", 1)
+        end)
+        assert.has_error(function()
+          setGauge(gaugeName, 1, "lots")
+        end)
       end)
     end)
 
     describe("Tests the functionality of moveGauge", function()
       it("Should move every label of the gauge and remember the new position", function()
         moveGauge(gaugeName, 11, 22)
-        assert.are.same({x = 11, y = 22, width = 300, height = 20}, geometry(gaugeName .. "_back"))
-        assert.are.same({x = 11, y = 22, width = 300, height = 20}, geometry(gaugeName .. "_text"))
-        assert.are.same({x = 11, y = 22, width = 300, height = 20}, geometry(gaugeName .. "_front"))
+        assert.are.same({ x = 11, y = 22, width = 300, height = 20 }, geometry(gaugeName .. "_back"))
+        assert.are.same({ x = 11, y = 22, width = 300, height = 20 }, geometry(gaugeName .. "_text"))
+        assert.are.same({ x = 11, y = 22, width = 300, height = 20 }, geometry(gaugeName .. "_front"))
         assert.equals(11, gaugesTable[gaugeName].x)
         assert.equals(22, gaugesTable[gaugeName].y)
       end)
@@ -1321,22 +1318,28 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       it("Should keep the current fill when it moves", function()
         setGauge(gaugeName, 1, 4)
         moveGauge(gaugeName, 5, 6)
-        assert.are.same({x = 5, y = 6, width = 75, height = 20}, geometry(gaugeName .. "_front"))
+        assert.are.same({ x = 5, y = 6, width = 75, height = 20 }, geometry(gaugeName .. "_front"))
       end)
 
       it("Should error for an unknown gauge or non numeric coordinates", function()
-        assert.has_error(function() moveGauge("noSuchGauge", 1, 1) end)
-        assert.has_error(function() moveGauge(gaugeName, "1", 1) end)
-        assert.has_error(function() moveGauge(gaugeName, 1, "1") end)
+        assert.has_error(function()
+          moveGauge("noSuchGauge", 1, 1)
+        end)
+        assert.has_error(function()
+          moveGauge(gaugeName, "1", 1)
+        end)
+        assert.has_error(function()
+          moveGauge(gaugeName, 1, "1")
+        end)
       end)
     end)
 
     describe("Tests the functionality of resizeGauge", function()
       it("Should resize every label of the gauge and remember the new size", function()
         resizeGauge(gaugeName, 120, 40)
-        assert.are.same({x = 30, y = 300, width = 120, height = 40}, geometry(gaugeName .. "_back"))
-        assert.are.same({x = 30, y = 300, width = 120, height = 40}, geometry(gaugeName .. "_text"))
-        assert.are.same({x = 30, y = 300, width = 120, height = 40}, geometry(gaugeName .. "_front"))
+        assert.are.same({ x = 30, y = 300, width = 120, height = 40 }, geometry(gaugeName .. "_back"))
+        assert.are.same({ x = 30, y = 300, width = 120, height = 40 }, geometry(gaugeName .. "_text"))
+        assert.are.same({ x = 30, y = 300, width = 120, height = 40 }, geometry(gaugeName .. "_front"))
         assert.equals(120, gaugesTable[gaugeName].width)
         assert.equals(40, gaugesTable[gaugeName].height)
       end)
@@ -1348,9 +1351,15 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       end)
 
       it("Should error for an unknown gauge or non numeric sizes", function()
-        assert.has_error(function() resizeGauge("noSuchGauge", 1, 1) end)
-        assert.has_error(function() resizeGauge(gaugeName, "1", 1) end)
-        assert.has_error(function() resizeGauge(gaugeName, 1, "1") end)
+        assert.has_error(function()
+          resizeGauge("noSuchGauge", 1, 1)
+        end)
+        assert.has_error(function()
+          resizeGauge(gaugeName, "1", 1)
+        end)
+        assert.has_error(function()
+          resizeGauge(gaugeName, 1, "1")
+        end)
       end)
     end)
 
@@ -1367,8 +1376,12 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       end)
 
       it("Should error for an unknown gauge", function()
-        assert.has_error(function() hideGauge("noSuchGauge") end)
-        assert.has_error(function() showGauge("noSuchGauge") end)
+        assert.has_error(function()
+          hideGauge("noSuchGauge")
+        end)
+        assert.has_error(function()
+          showGauge("noSuchGauge")
+        end)
       end)
     end)
 
@@ -1401,7 +1414,9 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       end)
 
       it("Should error for an unknown gauge", function()
-        assert.has_error(function() setGaugeText("noSuchGauge", "x") end)
+        assert.has_error(function()
+          setGaugeText("noSuchGauge", "x")
+        end)
       end)
     end)
 
@@ -1421,8 +1436,12 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       end)
 
       it("Should error for an unknown gauge or a non string stylesheet", function()
-        assert.has_error(function() setGaugeStyleSheet("noSuchGauge", "a") end)
-        assert.has_error(function() setGaugeStyleSheet(gaugeName, 5) end)
+        assert.has_error(function()
+          setGaugeStyleSheet("noSuchGauge", "a")
+        end)
+        assert.has_error(function()
+          setGaugeStyleSheet(gaugeName, 5)
+        end)
       end)
     end)
 
@@ -1432,7 +1451,9 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       -- reaches; spy.on keeps the real function underneath
       it("Should put the tooltip on the text label and clear it again", function()
         local toolTip = spy.on(_G, "setLabelToolTip")
-        finally(function() toolTip:revert() end)
+        finally(function()
+          toolTip:revert()
+        end)
         setGaugeToolTip(gaugeName, "some hint", 3)
         assert.spy(toolTip).was.called_with(gaugeName .. "_text", "some hint", 3)
         resetGaugeToolTip(gaugeName)
@@ -1441,27 +1462,39 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
 
       it("Should enable and disable clickthrough on all three labels", function()
         local enable = spy.on(_G, "enableClickthrough")
-        finally(function() enable:revert() end)
+        finally(function()
+          enable:revert()
+        end)
         enableGaugeClickthrough(gaugeName)
         assert.spy(enable).was.called(3)
-        for _, suffixName in ipairs({"_back", "_front", "_text"}) do
+        for _, suffixName in ipairs({ "_back", "_front", "_text" }) do
           assert.spy(enable).was.called_with(gaugeName .. suffixName)
         end
 
         local disable = spy.on(_G, "disableClickthrough")
-        finally(function() disable:revert() end)
+        finally(function()
+          disable:revert()
+        end)
         disableGaugeClickthrough(gaugeName)
         assert.spy(disable).was.called(3)
-        for _, suffixName in ipairs({"_back", "_front", "_text"}) do
+        for _, suffixName in ipairs({ "_back", "_front", "_text" }) do
           assert.spy(disable).was.called_with(gaugeName .. suffixName)
         end
       end)
 
       it("Should error for an unknown gauge", function()
-        assert.has_error(function() setGaugeToolTip("noSuchGauge", "hint") end)
-        assert.has_error(function() resetGaugeToolTip("noSuchGauge") end)
-        assert.has_error(function() enableGaugeClickthrough("noSuchGauge") end)
-        assert.has_error(function() disableGaugeClickthrough("noSuchGauge") end)
+        assert.has_error(function()
+          setGaugeToolTip("noSuchGauge", "hint")
+        end)
+        assert.has_error(function()
+          resetGaugeToolTip("noSuchGauge")
+        end)
+        assert.has_error(function()
+          enableGaugeClickthrough("noSuchGauge")
+        end)
+        assert.has_error(function()
+          disableGaugeClickthrough("noSuchGauge")
+        end)
       end)
     end)
 
@@ -1480,20 +1513,24 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         -- getWindowGeometry is parent relative, so it cannot tell a reparent
         -- from a plain move; setWindow is where the reparenting happens
         local setWindowSpy = spy.on(_G, "setWindow")
-        finally(function() setWindowSpy:revert() end)
+        finally(function()
+          setWindowSpy:revert()
+        end)
         setGaugeWindow(userWindow, gaugeName, 7, 8)
         assert.spy(setWindowSpy).was.called(3)
-        for _, suffixName in ipairs({"_back", "_front", "_text"}) do
+        for _, suffixName in ipairs({ "_back", "_front", "_text" }) do
           assert.spy(setWindowSpy).was.called_with(userWindow, gaugeName .. suffixName, 7, 8, true)
         end
         assert.equals(7, gaugesTable[gaugeName].x)
         assert.equals(8, gaugesTable[gaugeName].y)
-        assert.are.same({x = 7, y = 8, width = 300, height = 20}, geometry(gaugeName .. "_back"))
-        assert.are.same({x = 7, y = 8, width = 300, height = 20}, geometry(gaugeName .. "_front"))
+        assert.are.same({ x = 7, y = 8, width = 300, height = 20 }, geometry(gaugeName .. "_back"))
+        assert.are.same({ x = 7, y = 8, width = 300, height = 20 }, geometry(gaugeName .. "_front"))
       end)
 
       it("Should error for an unknown gauge", function()
-        assert.has_error(function() setGaugeWindow(userWindow, "noSuchGauge") end)
+        assert.has_error(function()
+          setGaugeWindow(userWindow, "noSuchGauge")
+        end)
       end)
 
       it("Should keep the gauge hidden when show is passed as false", function()
@@ -1529,27 +1566,31 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       createConsole("main", consoleName, 8, 40, 10, 200, 400)
       local charWidth, charHeight = calcFontSize(8)
       local x, y, width, height = getWindowGeometry(consoleName)
-      assert.are.same({200, 400}, {x, y})
-      assert.are.same({charWidth * 40, charHeight * 10}, {width, height})
+      assert.are.same({ 200, 400 }, { x, y })
+      assert.are.same({ charWidth * 40, charHeight * 10 }, { width, height })
     end)
 
     it("Should start out with a white foreground on a transparent background", function()
       createConsole("main", consoleName, 8, 40, 10, 0, 0)
       echo(consoleName, "default colours\n")
       selectString(consoleName, "default colours", 1)
-      assert.are.same({255, 255, 255}, {getFgColor(consoleName)})
+      assert.are.same({ 255, 255, 255 }, { getFgColor(consoleName) })
     end)
 
     it("Should default the window name to main when it is left out", function()
       createConsole(consoleName, 8, 40, 10, 5, 6)
       assert.equals("miniconsole", windowType(consoleName))
       local x, y = getWindowGeometry(consoleName)
-      assert.are.same({5, 6}, {x, y})
+      assert.are.same({ 5, 6 }, { x, y })
     end)
 
     it("Should error when a size argument is not a number", function()
-      assert.has_error(function() createConsole("main", consoleName, "8", 40, 10, 0, 0) end)
-      assert.has_error(function() createConsole("main", consoleName, 8, 40, 10, 0, "0") end)
+      assert.has_error(function()
+        createConsole("main", consoleName, "8", 40, 10, 0, 0)
+      end)
+      assert.has_error(function()
+        createConsole("main", consoleName, 8, 40, 10, 0, "0")
+      end)
     end)
   end)
 
@@ -1573,35 +1614,45 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       bg(windowName, "blue")
       echo(windowName, "coloured\n")
       selectString(windowName, "coloured", 1)
-      assert.are.same(color_table["blue"], {getBgColor(windowName)})
+      assert.are.same(color_table["blue"], { getBgColor(windowName) })
     end)
 
     it("Should set the foreground colour of a named window from a colour name", function()
       fg(windowName, "red")
       echo(windowName, "coloured\n")
       selectString(windowName, "coloured", 1)
-      assert.are.same(color_table["red"], {getFgColor(windowName)})
+      assert.are.same(color_table["red"], { getFgColor(windowName) })
     end)
 
     it("Should colour the main console when given only a colour name", function()
-      finally(function() resetFormat() end)
+      finally(function()
+        resetFormat()
+      end)
       clearWindow()
       bg("green")
       fg("yellow")
       echo("mainColouredSample\n")
       selectString("mainColouredSample", 1)
-      assert.are.same(color_table["green"], {getBgColor("main")})
-      assert.are.same(color_table["yellow"], {getFgColor("main")})
+      assert.are.same(color_table["green"], { getBgColor("main") })
+      assert.are.same(color_table["yellow"], { getFgColor("main") })
     end)
 
     it("Should error for a colour that does not exist", function()
-      assert.error_matches(function() bg("notAColour") end, "doesn't exist")
-      assert.error_matches(function() fg("notAColour") end, "doesn't exist")
+      assert.error_matches(function()
+        bg("notAColour")
+      end, "doesn't exist")
+      assert.error_matches(function()
+        fg("notAColour")
+      end, "doesn't exist")
     end)
 
     it("Should error when given nothing at all", function()
-      assert.has_error(function() bg() end)
-      assert.has_error(function() fg() end)
+      assert.has_error(function()
+        bg()
+      end)
+      assert.has_error(function()
+        fg()
+      end)
     end)
   end)
 
@@ -1611,7 +1662,9 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       -- it always acts on the main console: prove the forwarding, then that a
       -- gagged line really leaves the buffer
       local deleteLineSpy = spy.on(_G, "deleteLine")
-      finally(function() deleteLineSpy:revert() end)
+      finally(function()
+        deleteLineSpy:revert()
+      end)
       clearWindow()
       echo("keep me\ngag me\n")
       moveCursor(0, 1)
@@ -1656,14 +1709,16 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
 
     it("Should error when the window name is not a string", function()
-      assert.has_error(function() replaceLine(5, "x") end)
+      assert.has_error(function()
+        replaceLine(5, "x")
+      end)
     end)
   end)
 
   describe("Tests the functionality of handleWindowResizeEvent", function()
     it("Should exist as a do nothing default users can override", function()
       assert.equals("function", type(handleWindowResizeEvent))
-      assert.are.same({}, {handleWindowResizeEvent()})
+      assert.are.same({}, { handleWindowResizeEvent() })
     end)
   end)
 
@@ -1735,7 +1790,11 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       showColors(2, "cornflower")
       local shared = lineHolding("cornflower_blue")
       assert.is_truthy(shared, "showColors should have listed the matching colours")
-      assert.are.equal(shared, lineHolding("CornflowerBlue"), "two colours should share a line when asked for 2 columns")
+      assert.are.equal(
+        shared,
+        lineHolding("CornflowerBlue"),
+        "two colours should share a line when asked for 2 columns"
+      )
 
       clearWindow()
       showColors(1, "cornflower")
@@ -1821,9 +1880,9 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       xEcho("Decimal", "echo", windowName, "<255,0,0>AA<0,0,255>BB")
       assert.are.equal("AABB", currentLine())
       selectSection(windowName, 0, 2)
-      assert.are.same({255, 0, 0}, getTextFormat(windowName).foreground)
+      assert.are.same({ 255, 0, 0 }, getTextFormat(windowName).foreground)
       selectSection(windowName, 2, 2)
-      assert.are.same({0, 0, 255}, getTextFormat(windowName).foreground)
+      assert.are.same({ 0, 0, 255 }, getTextFormat(windowName).foreground)
     end)
 
     it("Should refuse anything but a plain echo on a label", function()
@@ -1852,7 +1911,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
 
       clearWindow()
       moveCursor(0, 0)
-      xEcho("Color", "echoPopup", "<red>xEchoBarePopup", {"send('x')"}, {"a hint"})
+      xEcho("Color", "echoPopup", "<red>xEchoBarePopup", { "send('x')" }, { "a hint" })
       selectCurrentLine()
       assert.are.equal("xEchoBarePopup", getSelection())
     end)
@@ -1876,11 +1935,11 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
 
     it("Should insist on commands and hints for the popup variants", function()
-      local ok, err = pcall(xEcho, "Color", "echoPopup", "text", {"send('x')"})
+      local ok, err = pcall(xEcho, "Color", "echoPopup", "text", { "send('x')" })
       assert.is_false(ok)
       assert.is_truthy(err:find("Insufficient arguments, usage: ([window, ] string, {commands}, {hints})", 1, true))
 
-      local improperOk, improperErr = pcall(xEcho, "Color", "echoPopup", "text", {"send('x')"}, {"a hint"}, 5)
+      local improperOk, improperErr = pcall(xEcho, "Color", "echoPopup", "text", { "send('x')" }, { "a hint" }, 5)
       assert.is_false(improperOk)
       assert.is_truthy(improperErr:find("Improper arguments, usage: ([window, ] string, {commands}, {hints})", 1, true))
     end)
@@ -1927,7 +1986,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       moveCursor(windowName, 1, 0)
       dinsertText(windowName, "<0,255,0>X")
       selectSection(windowName, 1, 1)
-      assert.are.same({0, 255, 0}, getTextFormat(windowName).foreground)
+      assert.are.same({ 0, 255, 0 }, getTextFormat(windowName).foreground)
     end)
   end)
 
@@ -1996,8 +2055,8 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
 
     it("Should echo popups with each of the three colour syntaxes", function()
-      local commands = {"send('one')", "send('two')"}
-      local hints = {"first", "second"}
+      local commands = { "send('one')", "send('two')" }
+      local hints = { "first", "second" }
       cechoPopup(windowName, "<red>menu", commands, hints, true)
       assert.equals("menu", currentLine())
 
@@ -2011,8 +2070,8 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
 
     it("Should insert popups with each of the three colour syntaxes", function()
-      local commands = {"send('one')", "send('two')"}
-      local hints = {"first", "second"}
+      local commands = { "send('one')", "send('two')" }
+      local hints = { "first", "second" }
       echo(windowName, "AB\n")
       moveCursor(windowName, 1, 0)
       cinsertPopup(windowName, "<red>C", commands, hints, true)
@@ -2068,20 +2127,26 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       local result = feedAndInspect(dfeedTriggers, "<0,255,0>dfeedMarker", "dfeedMarker")
       assert.equals(1, #seen)
       assert.equals("dfeedMarker", result.line)
-      assert.are.same({0, 255, 0}, result.foreground)
+      assert.are.same({ 0, 255, 0 }, result.foreground)
     end)
 
     it("Should feed hecho coloured text through the trigger engine", function()
       local result = feedAndInspect(hfeedTriggers, "#0000ffhfeedMarker", "hfeedMarker")
       assert.equals(1, #seen)
       assert.equals("hfeedMarker", result.line)
-      assert.are.same({0, 0, 255}, result.foreground)
+      assert.are.same({ 0, 0, 255 }, result.foreground)
     end)
 
     it("Should error when not given a string", function()
-      assert.has_error(function() cfeedTriggers(5) end)
-      assert.has_error(function() dfeedTriggers(5) end)
-      assert.has_error(function() hfeedTriggers(5) end)
+      assert.has_error(function()
+        cfeedTriggers(5)
+      end)
+      assert.has_error(function()
+        dfeedTriggers(5)
+      end)
+      assert.has_error(function()
+        hfeedTriggers(5)
+      end)
     end)
   end)
 
@@ -2130,8 +2195,12 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
 
     it("Should error when the text is not a string", function()
-      assert.has_error(function() prefix(5) end)
-      assert.has_error(function() suffix(5) end)
+      assert.has_error(function()
+        prefix(5)
+      end)
+      assert.has_error(function()
+        suffix(5)
+      end)
     end)
 
     -- A line that has been finished off with a newline is the ordinary trigger
@@ -2351,7 +2420,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       selectString(windowName, "world", 1)
       dreplace(windowName, "<0,255,0>earth")
       selectString(windowName, "earth", 1)
-      assert.are.same({0, 255, 0}, getTextFormat(windowName).foreground)
+      assert.are.same({ 0, 255, 0 }, getTextFormat(windowName).foreground)
     end)
 
     it("Should replace a whole line with dreplaceLine and hreplaceLine", function()
@@ -2362,11 +2431,21 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
 
     it("Should error when the window name is not a string", function()
-      assert.has_error(function() creplace(5, "x") end)
-      assert.has_error(function() dreplace(5, "x") end)
-      assert.has_error(function() hreplace(5, "x") end)
-      assert.has_error(function() dreplaceLine(5, "x") end)
-      assert.has_error(function() hreplaceLine(5, "x") end)
+      assert.has_error(function()
+        creplace(5, "x")
+      end)
+      assert.has_error(function()
+        dreplace(5, "x")
+      end)
+      assert.has_error(function()
+        hreplace(5, "x")
+      end)
+      assert.has_error(function()
+        dreplaceLine(5, "x")
+      end)
+      assert.has_error(function()
+        hreplaceLine(5, "x")
+      end)
     end)
   end)
 
@@ -2378,7 +2457,9 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     -- the next event loop turn so its split screen lower pane can appear. Both
     -- need one turn of the event loop before the new position can be read.
     local function pumpEventLoop()
-      tempTimer(0, function() raiseEvent("guiUtilsScrollPump") end)
+      tempTimer(0, function()
+        raiseEvent("guiUtilsScrollPump")
+      end)
       waitForEvent("guiUtilsScrollPump", 2000)
     end
 
@@ -2483,7 +2564,9 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       assert.is_true(setLabelCursor(labelName, "OpenHand"))
       assert.is_true(setLabelCursor(labelName, mudlet.cursor.OpenHand))
       assert.is_nil(mudlet.cursor.definitelyNotACursor)
-      assert.has_error(function() setLabelCursor(labelName, "definitelyNotACursor") end)
+      assert.has_error(function()
+        setLabelCursor(labelName, "definitelyNotACursor")
+      end)
     end)
 
     it("Should reset the cursor by asking for shape -1", function()
@@ -2498,7 +2581,9 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
 
     it("Should error when resetLabelCursor is not given a string", function()
-      assert.has_error(function() resetLabelCursor(5) end)
+      assert.has_error(function()
+        resetLabelCursor(5)
+      end)
     end)
   end)
 
@@ -2529,35 +2614,38 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       deleteCommandLine(cmdLineName)
     end)
 
-    describe("Tests the functionality of setLabelClickCallback, setLabelDoubleClickCallback, setLabelReleaseCallback, setLabelMoveCallback, setLabelWheelCallback, setLabelOnEnter and setLabelOnLeave", function()
-      for _, setter in ipairs(labelSetters) do
-        it(setter .. " accepts a function, a function name and nil", function()
-          assert.is_true(_G[setter](labelName, function() end))
-          -- a string is compiled into a function calling that name, which does
-          -- not have to exist until the callback runs
-          assert.is_true(_G[setter](labelName, "guiUtilsNoSuchGlobalFunction"))
-          -- nil is accepted rather than refused, which is how these seven clear
-          -- a callback and where they part company with setCmdLineAction below
-          assert.is_true(_G[setter](labelName, nil))
-        end)
+    describe(
+      "Tests the functionality of setLabelClickCallback, setLabelDoubleClickCallback, setLabelReleaseCallback, setLabelMoveCallback, setLabelWheelCallback, setLabelOnEnter and setLabelOnLeave",
+      function()
+        for _, setter in ipairs(labelSetters) do
+          it(setter .. " accepts a function, a function name and nil", function()
+            assert.is_true(_G[setter](labelName, function() end))
+            -- a string is compiled into a function calling that name, which does
+            -- not have to exist until the callback runs
+            assert.is_true(_G[setter](labelName, "guiUtilsNoSuchGlobalFunction"))
+            -- nil is accepted rather than refused, which is how these seven clear
+            -- a callback and where they part company with setCmdLineAction below
+            assert.is_true(_G[setter](labelName, nil))
+          end)
 
-        it(setter .. " refuses a value that is none of those", function()
-          local ok, err = pcall(_G[setter], labelName, 42)
-          assert.is_false(ok)
-          assert.is_truthy(err:find(setter .. ": bad argument #2 type (function expected, got number!)", 1, true))
-        end)
+          it(setter .. " refuses a value that is none of those", function()
+            local ok, err = pcall(_G[setter], labelName, 42)
+            assert.is_false(ok)
+            assert.is_truthy(err:find(setter .. ": bad argument #2 type (function expected, got number!)", 1, true))
+          end)
 
-        it(setter .. " reports a label it cannot find and rejects an empty name", function()
-          local ok, err = _G[setter]("guiUtilsNoSuchLabel", function() end)
-          assert.is_nil(ok)
-          assert.are.equal("label name 'guiUtilsNoSuchLabel' not found", err)
+          it(setter .. " reports a label it cannot find and rejects an empty name", function()
+            local ok, err = _G[setter]("guiUtilsNoSuchLabel", function() end)
+            assert.is_nil(ok)
+            assert.are.equal("label name 'guiUtilsNoSuchLabel' not found", err)
 
-          local emptyOk, emptyErr = _G[setter]("", function() end)
-          assert.is_nil(emptyOk)
-          assert.are.equal("label name cannot be an empty string", emptyErr)
-        end)
+            local emptyOk, emptyErr = _G[setter]("", function() end)
+            assert.is_nil(emptyOk)
+            assert.are.equal("label name cannot be an empty string", emptyErr)
+          end)
+        end
       end
-    end)
+    )
 
     describe("Tests the functionality of setCmdLineAction", function()
       it("Should accept a function", function()
@@ -2629,7 +2717,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
 
     it("Should accept each mode name a console supports", function()
-      for _, name in ipairs({"border", "center", "tile", "style"}) do
+      for _, name in ipairs({ "border", "center", "tile", "style" }) do
         assert.is_true(setBackgroundImage(consoleName, imagePath, name), "mode " .. name .. " should be accepted")
       end
     end)
@@ -2650,7 +2738,9 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
 
     it("Should pass an unknown mode name through so the C++ side rejects it", function()
-      assert.has_error(function() setBackgroundImage(consoleName, imagePath, "notAMode") end)
+      assert.has_error(function()
+        setBackgroundImage(consoleName, imagePath, "notAMode")
+      end)
     end)
   end)
 end)

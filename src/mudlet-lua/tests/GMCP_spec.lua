@@ -96,7 +96,7 @@ describe("tests the functionality of the gmod module", function()
       local user = "testUser"
       local mod = "OogaBoogaFakeModule"
       gmod.enableModule(user, mod)
-      local expected = {testUser = true}
+      local expected = { testUser = true }
       local actual = gmod.isRegisteredModule(mod)
       assert.is_equal("table", type(actual))
       assert.is.same(expected, actual)
@@ -168,20 +168,35 @@ describe("Tests the argument and disconnected contract of sendGMCP", function()
   it("names the offending value's real type when the message is not a string", function()
     -- Regression #9543: the type-name placeholder must be expanded, not printed
     -- as a literal "%1". lua_pushfstring only understands C-style "%s".
-    local ok, err = pcall(function() sendGMCP({}) end)
+    local ok, err = pcall(function()
+      sendGMCP({})
+    end)
     assert.is_false(ok)
-    assert.is_true(contains(err, "sendGMCP: bad argument #1 type (message as string expected, got table!)"), tostring(err))
+    assert.is_true(
+      contains(err, "sendGMCP: bad argument #1 type (message as string expected, got table!)"),
+      tostring(err)
+    )
     assert.is_false(contains(err, "%1"), tostring(err))
 
-    local okBool, errBool = pcall(function() sendGMCP(true) end)
+    local okBool, errBool = pcall(function()
+      sendGMCP(true)
+    end)
     assert.is_false(okBool)
-    assert.is_true(contains(errBool, "sendGMCP: bad argument #1 type (message as string expected, got boolean!)"), tostring(errBool))
+    assert.is_true(
+      contains(errBool, "sendGMCP: bad argument #1 type (message as string expected, got boolean!)"),
+      tostring(errBool)
+    )
   end)
 
   it("names the real type when the optional second argument is not a string", function()
-    local ok, err = pcall(function() sendGMCP("Core.Ping", {}) end)
+    local ok, err = pcall(function()
+      sendGMCP("Core.Ping", {})
+    end)
     assert.is_false(ok)
-    assert.is_true(contains(err, "sendGMCP: bad argument #2 type (what as string is optional, got table!)"), tostring(err))
+    assert.is_true(
+      contains(err, "sendGMCP: bad argument #2 type (what as string is optional, got table!)"),
+      tostring(err)
+    )
     assert.is_false(contains(err, "%1"), tostring(err))
   end)
 
@@ -241,7 +256,9 @@ describe("Tests the functionality of gmod.reenableModules", function()
     end
     gmod.enableModule(user, module)
     local sg = spy.on(_G, "sendGMCP")
-    finally(function() sendGMCP:revert() end)
+    finally(function()
+      sendGMCP:revert()
+    end)
     gmod.reenableModules()
     assert.spy(sg).was_not_called()
   end)
@@ -250,7 +267,9 @@ describe("Tests the functionality of gmod.reenableModules", function()
     gmod.enableModule(user, module)
     gmcp.BustedReenableProbe = {}
     local sg = spy.on(_G, "sendGMCP")
-    finally(function() sendGMCP:revert() end)
+    finally(function()
+      sendGMCP:revert()
+    end)
     gmod.reenableModules()
     assert.spy(sg).was_called_with(match.has_match("Core.Supports.Add .*" .. module .. " 1"))
   end)
@@ -258,7 +277,9 @@ describe("Tests the functionality of gmod.reenableModules", function()
   it("Should send nothing when no module is registered", function()
     gmcp.BustedReenableProbe = {}
     local sg = spy.on(_G, "sendGMCP")
-    finally(function() sendGMCP:revert() end)
+    finally(function()
+      sendGMCP:revert()
+    end)
     -- a module registered by an earlier spec would be re-announced too, so
     -- measure the difference this test's own module makes
     gmod.reenableModules()
@@ -273,34 +294,38 @@ end)
 
 describe("Tests the functionality of __gmcp_merge_gmcp_sub_tables", function()
   it("Should fold the staged table into the named sub table", function()
-    local a = {Char = {name = "old", level = 1}, __needMerge = {name = "new", hp = 50}}
+    local a = { Char = { name = "old", level = 1 }, __needMerge = { name = "new", hp = 50 } }
     __gmcp_merge_gmcp_sub_tables(a, "Char")
-    assert.are.same({name = "new", level = 1, hp = 50}, a.Char)
+    assert.are.same({ name = "new", level = 1, hp = 50 }, a.Char)
   end)
 
   it("Should clear the staging table afterwards", function()
-    local a = {Room = {}, __needMerge = {num = 7}}
+    local a = { Room = {}, __needMerge = { num = 7 } }
     __gmcp_merge_gmcp_sub_tables(a, "Room")
     assert.is_nil(a.__needMerge)
   end)
 
   it("Should leave the sub table alone when nothing is staged", function()
-    local a = {Room = {num = 7}, __needMerge = {}}
+    local a = { Room = { num = 7 }, __needMerge = {} }
     __gmcp_merge_gmcp_sub_tables(a, "Room")
-    assert.are.same({num = 7}, a.Room)
+    assert.are.same({ num = 7 }, a.Room)
     assert.is_nil(a.__needMerge)
   end)
 
   it("Should raise rather than silently drop data when the sub table is missing", function()
     -- the C++ side stages into __needMerge and calls this immediately, so a
     -- module arriving before its sub table exists is a real ordering case
-    assert.has_error(function() __gmcp_merge_gmcp_sub_tables({__needMerge = {a = 1}}, "Char") end)
-    assert.has_error(function() __gmcp_merge_gmcp_sub_tables({Char = {}}, "Char") end)
+    assert.has_error(function()
+      __gmcp_merge_gmcp_sub_tables({ __needMerge = { a = 1 } }, "Char")
+    end)
+    assert.has_error(function()
+      __gmcp_merge_gmcp_sub_tables({ Char = {} }, "Char")
+    end)
   end)
 
   it("Should merge nested tables by replacing them wholesale", function()
-    local a = {Char = {Vitals = {hp = 1}}, __needMerge = {Vitals = {mp = 2}}}
+    local a = { Char = { Vitals = { hp = 1 } }, __needMerge = { Vitals = { mp = 2 } } }
     __gmcp_merge_gmcp_sub_tables(a, "Char")
-    assert.are.same({Vitals = {mp = 2}}, a.Char)
+    assert.are.same({ Vitals = { mp = 2 } }, a.Char)
   end)
 end)

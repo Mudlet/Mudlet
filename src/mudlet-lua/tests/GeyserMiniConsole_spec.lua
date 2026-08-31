@@ -1,6 +1,6 @@
 local function geometry(name)
   local x, y, width, height = getWindowGeometry(name)
-  return {x = x, y = y, width = width, height = height}
+  return { x = x, y = y, width = width, height = height }
 end
 
 describe("Tests functionality of Geyser.MiniConsole", function()
@@ -33,34 +33,38 @@ describe("Tests functionality of Geyser.MiniConsole", function()
 
   describe("Geyser.MiniConsole:new/new2", function()
     it("creates a miniconsole widget at the constrained geometry", function()
-      local console = track(Geyser.MiniConsole:new({name = "gmcNew", x = 30, y = 40, width = 300, height = 150}))
+      local console = track(Geyser.MiniConsole:new({ name = "gmcNew", x = 30, y = 40, width = 300, height = 150 }))
       -- Geyser's own type string is camel cased, Mudlet's windowType is not
       assert.are.equal("miniConsole", console.type)
       assert.are.equal("miniconsole", windowType("gmcNew"))
-      assert.are.same({x = 30, y = 40, width = 300, height = 150}, geometry("gmcNew"))
+      assert.are.same({ x = 30, y = 40, width = 300, height = 150 }, geometry("gmcNew"))
       assert.is_true(windowVisible("gmcNew"))
     end)
 
     it("resolves percentages against its container", function()
-      local container = track(Geyser.Container:new({name = "gmcBox", x = 100, y = 50, width = 400, height = 200}))
-      track(Geyser.MiniConsole:new({name = "gmcInBox", x = "25%", y = "50%", width = "50%", height = "50%"}, container))
-      assert.are.same({x = 200, y = 150, width = 200, height = 100}, geometry("gmcInBox"))
+      local container = track(Geyser.Container:new({ name = "gmcBox", x = 100, y = 50, width = 400, height = 200 }))
+      track(
+        Geyser.MiniConsole:new({ name = "gmcInBox", x = "25%", y = "50%", width = "50%", height = "50%" }, container)
+      )
+      assert.are.same({ x = 200, y = 150, width = 200, height = 100 }, geometry("gmcInBox"))
     end)
 
     it("takes the font size from its container when it is not given one", function()
-      local container = track(Geyser.Container:new({name = "gmcFontBox", x = 0, y = 0, width = 200, height = 100, fontSize = 12}))
-      track(Geyser.MiniConsole:new({name = "gmcInheritsFont"}, container))
+      local container =
+        track(Geyser.Container:new({ name = "gmcFontBox", x = 0, y = 0, width = 200, height = 100, fontSize = 12 }))
+      track(Geyser.MiniConsole:new({ name = "gmcInheritsFont" }, container))
       assert.are.equal(12, getFontSize("gmcInheritsFont"))
     end)
 
     it("new2 marks the console as using add2", function()
-      local console = track(Geyser.MiniConsole:new2({name = "gmcNew2", x = 0, y = 0, width = 100, height = 50}))
+      local console = track(Geyser.MiniConsole:new2({ name = "gmcNew2", x = 0, y = 0, width = 100, height = 50 }))
       assert.is_true(console.useAdd2)
       assert.are.equal("miniconsole", windowType("gmcNew2"))
     end)
 
     it("starts out hidden when the constraints ask for it", function()
-      local console = track(Geyser.MiniConsole:new({name = "gmcHiddenNew", x = 0, y = 0, width = 100, height = 50, hidden = true}))
+      local console =
+        track(Geyser.MiniConsole:new({ name = "gmcHiddenNew", x = 0, y = 0, width = 100, height = 50, hidden = true }))
       assert.is_true(console.hidden)
       assert.is_false(windowVisible("gmcHiddenNew"))
       console:show()
@@ -73,13 +77,13 @@ describe("Tests functionality of Geyser.MiniConsole", function()
     local console
 
     before_each(function()
-      console = track(Geyser.MiniConsole:new({name = "gmcMove", x = 10, y = 20, width = 200, height = 100}))
+      console = track(Geyser.MiniConsole:new({ name = "gmcMove", x = 10, y = 20, width = 200, height = 100 }))
     end)
 
     it("moves and resizes the widget", function()
       console:move(60, 70)
       console:resize(120, 60)
-      assert.are.same({x = 60, y = 70, width = 120, height = 60}, geometry("gmcMove"))
+      assert.are.same({ x = 60, y = 70, width = 120, height = 60 }, geometry("gmcMove"))
     end)
 
     it("hides and shows the widget", function()
@@ -90,23 +94,23 @@ describe("Tests functionality of Geyser.MiniConsole", function()
     end)
 
     it("follows its container when the container moves", function()
-      local container = track(Geyser.Container:new({name = "gmcDragBox", x = 0, y = 0, width = 200, height = 100}))
-      track(Geyser.MiniConsole:new({name = "gmcDragged", x = 0, y = 0, width = "100%", height = "100%"}, container))
+      local container = track(Geyser.Container:new({ name = "gmcDragBox", x = 0, y = 0, width = 200, height = 100 }))
+      track(Geyser.MiniConsole:new({ name = "gmcDragged", x = 0, y = 0, width = "100%", height = "100%" }, container))
       container:move(150, 30)
-      assert.are.same({x = 150, y = 30, width = 200, height = 100}, geometry("gmcDragged"))
+      assert.are.same({ x = 150, y = 30, width = 200, height = 100 }, geometry("gmcDragged"))
     end)
   end)
 
   describe("Geyser.MiniConsole:setWrap/enableAutoWrap/disableAutoWrap/resetAutoWrap", function()
     it("sets the wrap column", function()
-      local console = track(Geyser.MiniConsole:new({name = "gmcWrap", x = 0, y = 0, width = 300, height = 100}))
+      local console = track(Geyser.MiniConsole:new({ name = "gmcWrap", x = 0, y = 0, width = 300, height = 100 }))
       console:setWrap(42)
       assert.are.equal(42, console.wrapAt)
       assert.are.equal(42, getWindowWrap("gmcWrap"))
     end)
 
     it("refuses to set the wrap while auto wrap is on", function()
-      local console = track(Geyser.MiniConsole:new({name = "gmcWrapLocked", x = 0, y = 0, width = 300, height = 100}))
+      local console = track(Geyser.MiniConsole:new({ name = "gmcWrapLocked", x = 0, y = 0, width = 300, height = 100 }))
       console:enableAutoWrap()
       local derivedWrap = getWindowWrap("gmcWrapLocked")
       local result, message = console:setWrap(11)
@@ -116,14 +120,17 @@ describe("Tests functionality of Geyser.MiniConsole", function()
     end)
 
     it("derives the wrap from the width when auto wrap is on", function()
-      local console = track(Geyser.MiniConsole:new({name = "gmcAutoWrap", x = 0, y = 0, width = 300, height = 100, wrapAt = "auto"}))
+      local console = track(
+        Geyser.MiniConsole:new({ name = "gmcAutoWrap", x = 0, y = 0, width = 300, height = 100, wrapAt = "auto" })
+      )
       local charWidth = calcFontSize("gmcAutoWrap")
       assert.is_true(console.autoWrap)
       assert.are.equal(math.floor(300 / charWidth), getWindowWrap("gmcAutoWrap"))
     end)
 
     it("re-derives the wrap when the console is resized", function()
-      local console = track(Geyser.MiniConsole:new({name = "gmcRewrap", x = 0, y = 0, width = 300, height = 100, autoWrap = true}))
+      local console =
+        track(Geyser.MiniConsole:new({ name = "gmcRewrap", x = 0, y = 0, width = 300, height = 100, autoWrap = true }))
       local charWidth = calcFontSize("gmcRewrap")
       assert.are.equal(math.floor(300 / charWidth), getWindowWrap("gmcRewrap"))
       console:resize(150, 100)
@@ -131,7 +138,9 @@ describe("Tests functionality of Geyser.MiniConsole", function()
     end)
 
     it("stops re-deriving the wrap once auto wrap is disabled", function()
-      local console = track(Geyser.MiniConsole:new({name = "gmcNoAutoWrap", x = 0, y = 0, width = 300, height = 100, autoWrap = true}))
+      local console = track(
+        Geyser.MiniConsole:new({ name = "gmcNoAutoWrap", x = 0, y = 0, width = 300, height = 100, autoWrap = true })
+      )
       console:disableAutoWrap()
       console:setWrap(17)
       console:resize(150, 100)
@@ -142,13 +151,15 @@ describe("Tests functionality of Geyser.MiniConsole", function()
     -- a console too narrow for even one character works out as zero columns,
     -- which Mudlet refuses (and which used to hang it, issue #9622)
     it("never derives a wrap of less than one column", function()
-      local console = track(Geyser.MiniConsole:new({name = "gmcTinyAutoWrap", x = 0, y = 0, width = 4, height = 100, autoWrap = true}))
+      local console = track(
+        Geyser.MiniConsole:new({ name = "gmcTinyAutoWrap", x = 0, y = 0, width = 4, height = 100, autoWrap = true })
+      )
       assert.are.equal(1, console.wrapAt)
       assert.are.equal(1, getWindowWrap("gmcTinyAutoWrap"))
     end)
 
     it("passes on a refused wrap width instead of recording it", function()
-      local console = track(Geyser.MiniConsole:new({name = "gmcZeroWrap", x = 0, y = 0, width = 300, height = 100}))
+      local console = track(Geyser.MiniConsole:new({ name = "gmcZeroWrap", x = 0, y = 0, width = 300, height = 100 }))
       console:setWrap(30)
       local result, message = console:setWrap(0)
       assert.is_nil(result)
@@ -160,7 +171,7 @@ describe("Tests functionality of Geyser.MiniConsole", function()
     end)
 
     it("reports that resetAutoWrap has nothing to do when auto wrap is off", function()
-      local console = track(Geyser.MiniConsole:new({name = "gmcResetWrap", x = 0, y = 0, width = 300, height = 100}))
+      local console = track(Geyser.MiniConsole:new({ name = "gmcResetWrap", x = 0, y = 0, width = 300, height = 100 }))
       local result, message = console:resetAutoWrap()
       assert.is_nil(result)
       assert.is_truthy(message:find("Autowrap is not enabled", 1, true))
@@ -169,7 +180,8 @@ describe("Tests functionality of Geyser.MiniConsole", function()
 
   describe("Geyser.MiniConsole:setFontSize/getFont", function()
     it("changes the font size of the console", function()
-      local console = track(Geyser.MiniConsole:new({name = "gmcFont", x = 0, y = 0, width = 300, height = 100, fontSize = 8}))
+      local console =
+        track(Geyser.MiniConsole:new({ name = "gmcFont", x = 0, y = 0, width = 300, height = 100, fontSize = 8 }))
       assert.are.equal(8, getFontSize("gmcFont"))
       console:setFontSize(14)
       assert.are.equal(14, getFontSize("gmcFont"))
@@ -177,7 +189,15 @@ describe("Tests functionality of Geyser.MiniConsole", function()
     end)
 
     it("re-derives an auto wrap from the new font size", function()
-      local console = track(Geyser.MiniConsole:new({name = "gmcFontWrap", x = 0, y = 0, width = 300, height = 100, fontSize = 8, autoWrap = true}))
+      local console = track(Geyser.MiniConsole:new({
+        name = "gmcFontWrap",
+        x = 0,
+        y = 0,
+        width = 300,
+        height = 100,
+        fontSize = 8,
+        autoWrap = true,
+      }))
       local smallWrap = getWindowWrap("gmcFontWrap")
       console:setFontSize(20)
       local bigWrap = getWindowWrap("gmcFontWrap")
@@ -186,7 +206,7 @@ describe("Tests functionality of Geyser.MiniConsole", function()
     end)
 
     it("reads the font family back out of Mudlet", function()
-      local console = track(Geyser.MiniConsole:new({name = "gmcFontFamily", x = 0, y = 0, width = 300, height = 100}))
+      local console = track(Geyser.MiniConsole:new({ name = "gmcFontFamily", x = 0, y = 0, width = 300, height = 100 }))
       local family = getFont("gmcFontFamily")
       assert.are.equal("string", type(family))
       assert.is_true(#family > 0)
@@ -199,7 +219,7 @@ describe("Tests functionality of Geyser.MiniConsole", function()
 
   describe("Geyser.MiniConsole:clear", function()
     it("empties the console", function()
-      local console = track(Geyser.MiniConsole:new({name = "gmcClear", x = 0, y = 0, width = 300, height = 100}))
+      local console = track(Geyser.MiniConsole:new({ name = "gmcClear", x = 0, y = 0, width = 300, height = 100 }))
       console:echo("one\ntwo\n")
       assert.is_true(getLineCount("gmcClear") > 1)
       console:clear()
@@ -209,7 +229,7 @@ describe("Tests functionality of Geyser.MiniConsole", function()
 
   describe("Geyser.MiniConsole:type_delete", function()
     it("deletes the widget with the object", function()
-      local console = track(Geyser.MiniConsole:new({name = "gmcDelete", x = 0, y = 0, width = 100, height = 50}))
+      local console = track(Geyser.MiniConsole:new({ name = "gmcDelete", x = 0, y = 0, width = 100, height = 50 }))
       assert.is_not_nil(getWindowGeometry("gmcDelete"))
       console:delete()
       assert.is_nil(getWindowGeometry("gmcDelete"))
@@ -221,7 +241,7 @@ describe("Tests functionality of Geyser.MiniConsole", function()
     local console
 
     before_each(function()
-      console = track(Geyser.MiniConsole:new({name = "gmcCmd", x = 0, y = 0, width = 300, height = 100}))
+      console = track(Geyser.MiniConsole:new({ name = "gmcCmd", x = 0, y = 0, width = 300, height = 100 }))
       console:enableCommandLine()
     end)
 
@@ -255,7 +275,9 @@ describe("Tests functionality of Geyser.MiniConsole", function()
 
     it("selectCmdLinetext accepts the console's own command line", function()
       console:printCmd("select me")
-      assert.has_no.errors(function() console:selectCmdLinetext() end)
+      assert.has_no.errors(function()
+        console:selectCmdLinetext()
+      end)
       -- selecting must not disturb what is typed
       assert.are.equal("select me", console:getCmdLine())
     end)
@@ -264,7 +286,9 @@ describe("Tests functionality of Geyser.MiniConsole", function()
       -- the command line has no stylesheet getter, so spy on the global to
       -- see what actually reached it; spy.on keeps the real function
       local styleSheet = spy.on(_G, "setCmdLineStyleSheet")
-      finally(function() styleSheet:revert() end)
+      finally(function()
+        styleSheet:revert()
+      end)
       console:setCmdLineStyleSheet("color: red;")
       assert.spy(styleSheet).was.called_with("gmcCmd", "color: red;")
       assert.are.equal("color: red;", console.cmdLineStylesheet)
@@ -276,7 +300,9 @@ describe("Tests functionality of Geyser.MiniConsole", function()
 
     it("disableCommandLine hides the command line without discarding what is typed", function()
       local disable = spy.on(_G, "disableCommandLine")
-      finally(function() disable:revert() end)
+      finally(function()
+        disable:revert()
+      end)
       console:printCmd("still here")
       console:disableCommandLine()
       assert.spy(disable).was.called_with("gmcCmd")
@@ -295,19 +321,23 @@ describe("Tests functionality of Geyser.MiniConsole", function()
 
     it("setCmdAction registers the function with the console's command line", function()
       local action = spy.on(_G, "setCmdLineAction")
-      finally(function() action:revert() end)
+      finally(function()
+        action:revert()
+      end)
       local handler = function() end
 
       console:setCmdAction(handler, "first", 2)
 
       assert.spy(action).was.called_with("gmcCmd", handler, "first", 2)
       assert.are.equal(handler, console.actionFunc)
-      assert.are.same({"first", 2}, console.actionArgs)
+      assert.are.same({ "first", 2 }, console.actionArgs)
     end)
 
     it("setCmdAction replaces the action rather than adding a second one", function()
       local action = spy.on(_G, "setCmdLineAction")
-      finally(function() action:revert() end)
+      finally(function()
+        action:revert()
+      end)
       local first = function() end
       local second = function() end
 
@@ -325,20 +355,28 @@ describe("Tests functionality of Geyser.MiniConsole", function()
     it("setCmdAction takes the name of a function as a string too", function()
       -- setCmdLineAction is wrapped in Lua, and that wrapper compiles a string
       -- into a call of the function it names
-      assert.has_no.errors(function() console:setCmdAction("echo") end)
+      assert.has_no.errors(function()
+        console:setCmdAction("echo")
+      end)
       assert.are.equal("echo", console.actionFunc)
     end)
 
     it("setCmdAction hard-errors on anything it cannot call", function()
-      assert.has_error(function() console:setCmdAction({}) end)
+      assert.has_error(function()
+        console:setCmdAction({})
+      end)
       -- unlike the label callbacks, a command line action cannot be cleared by
       -- registering nil: resetCmdAction is the way to put it back
-      assert.has_error(function() console:setCmdAction(nil) end)
+      assert.has_error(function()
+        console:setCmdAction(nil)
+      end)
     end)
 
     it("resetCmdAction puts the command line back to sending to the game", function()
       local reset = spy.on(_G, "resetCmdLineAction")
-      finally(function() reset:revert() end)
+      finally(function()
+        reset:revert()
+      end)
       console:setCmdAction(function() end, "first")
 
       console:resetCmdAction()
@@ -349,14 +387,16 @@ describe("Tests functionality of Geyser.MiniConsole", function()
     end)
 
     it("resetCmdAction is safe on a command line that never had an action", function()
-      assert.has_no.errors(function() console:resetCmdAction() end)
+      assert.has_no.errors(function()
+        console:resetCmdAction()
+      end)
       assert.is_nil(console.actionFunc)
     end)
   end)
 
   describe("Geyser.MiniConsole:setBufferSize", function()
     it("caps how many lines the console keeps", function()
-      local console = track(Geyser.MiniConsole:new({name = "gmcBuffer", x = 0, y = 0, width = 300, height = 100}))
+      local console = track(Geyser.MiniConsole:new({ name = "gmcBuffer", x = 0, y = 0, width = 300, height = 100 }))
       console:setBufferSize(100, 20)
       for i = 1, 600 do
         console:echo("buffered line " .. i .. "\n")
@@ -379,7 +419,7 @@ describe("Tests functionality of Geyser.MiniConsole", function()
     end
 
     before_each(function()
-      console = track(Geyser.MiniConsole:new({name = "gmcReplace", x = 0, y = 0, width = 400, height = 200}))
+      console = track(Geyser.MiniConsole:new({ name = "gmcReplace", x = 0, y = 0, width = 400, height = 200 }))
       console:setWrap(60)
       console:echo("hello world\n")
       console:moveCursor(0, 0)
@@ -415,13 +455,13 @@ describe("Tests functionality of Geyser.MiniConsole", function()
       console:bg("blue")
       console:echo("coloured\n")
       console:selectString("coloured", 1)
-      assert.are.same(color_table["red"], {getFgColor("gmcReplace")})
-      assert.are.same(color_table["blue"], {getBgColor("gmcReplace")})
+      assert.are.same(color_table["red"], { getFgColor("gmcReplace") })
+      assert.are.same(color_table["blue"], { getBgColor("gmcReplace") })
     end)
 
     it("display renders a table into the console", function()
       console:clear()
-      console:display({alpha = 1})
+      console:display({ alpha = 1 })
       local text = table.concat(getLines("gmcReplace", 0, getLineCount("gmcReplace")), "\n")
       assert.is_truthy(text:find("alpha", 1, true))
     end)
@@ -435,7 +475,9 @@ describe("Tests functionality of Geyser.MiniConsole", function()
       copy()
       console:clear()
       console:appendBuffer()
-      assert.is_truthy(table.concat(getLines("gmcReplace", 0, getLineCount("gmcReplace") + 1), "\n"):find("copy this line", 1, true))
+      assert.is_truthy(
+        table.concat(getLines("gmcReplace", 0, getLineCount("gmcReplace") + 1), "\n"):find("copy this line", 1, true)
+      )
     end)
   end)
 
@@ -443,7 +485,7 @@ describe("Tests functionality of Geyser.MiniConsole", function()
     local console
 
     before_each(function()
-      console = track(Geyser.MiniConsole:new({name = "gmcCursor", x = 0, y = 0, width = 400, height = 200}))
+      console = track(Geyser.MiniConsole:new({ name = "gmcCursor", x = 0, y = 0, width = 400, height = 200 }))
       console:echo("one\ntwo\nthree\nfour\n")
       console:moveCursor(0, 0)
     end)
@@ -474,7 +516,7 @@ describe("Tests functionality of Geyser.MiniConsole", function()
     end
 
     before_each(function()
-      console = track(Geyser.MiniConsole:new({name = "gmcLinks", x = 0, y = 0, width = 400, height = 200}))
+      console = track(Geyser.MiniConsole:new({ name = "gmcLinks", x = 0, y = 0, width = 400, height = 200 }))
       console:setWrap(60)
     end)
 
@@ -507,14 +549,14 @@ describe("Tests functionality of Geyser.MiniConsole", function()
       console:clear()
       console:echo("AB\n")
       console:moveCursor(1, 0)
-      console:insertPopup("D", {"send('one')"}, {"first"}, true)
+      console:insertPopup("D", { "send('one')" }, { "first" }, true)
       console:moveCursor(0, 0)
       assert.are.equal("ADB", currentLine())
     end)
 
     it("inserts decimal and hex popups at the cursor", function()
-      local commands = {"send('one')", "send('two')"}
-      local hints = {"first", "second"}
+      local commands = { "send('one')", "send('two')" }
+      local hints = { "first", "second" }
 
       console:echo("AB\n")
       console:moveCursor(1, 0)
@@ -553,8 +595,8 @@ describe("Tests functionality of Geyser.MiniConsole", function()
     end)
 
     it("echoes and inserts popups in every colour syntax", function()
-      local commands = {"send('one')", "send('two')"}
-      local hints = {"first", "second"}
+      local commands = { "send('one')", "send('two')" }
+      local hints = { "first", "second" }
 
       console:echoPopup("plain popup", commands, hints, true)
       assert.are.equal("plain popup", currentLine())
@@ -583,7 +625,9 @@ describe("Tests functionality of Geyser.MiniConsole", function()
       -- a link's command and hint have no getter, so the observable part is
       -- that the call is routed at this console and leaves the text alone
       local setLinkSpy = spy.on(_G, "setLink")
-      finally(function() setLinkSpy:revert() end)
+      finally(function()
+        setLinkSpy:revert()
+      end)
       console:echo("clickable\n")
       console:moveCursor(0, 0)
       console:selectString("clickable", 1)
@@ -602,7 +646,7 @@ describe("Tests functionality of Geyser.MiniConsole", function()
     local console
 
     before_each(function()
-      console = track(Geyser.MiniConsole:new({name = "gmcGetters", x = 0, y = 0, width = 400, height = 200}))
+      console = track(Geyser.MiniConsole:new({ name = "gmcGetters", x = 0, y = 0, width = 400, height = 200 }))
       console:setWrap(60)
       console:echo("alpha\nbeta\ngamma\n")
     end)
@@ -626,8 +670,8 @@ describe("Tests functionality of Geyser.MiniConsole", function()
     it("hands back a range of lines and the one under the cursor", function()
       -- the range is walked forwards from the first line for as many lines as
       -- the two are apart, so the last line asked for is not included
-      assert.are.same({"alpha", "beta"}, console:getLines(0, 2))
-      assert.are.same({"alpha", "beta", "gamma"}, console:getLines(0, 3))
+      assert.are.same({ "alpha", "beta" }, console:getLines(0, 2))
+      assert.are.same({ "alpha", "beta", "gamma" }, console:getLines(0, 3))
       console:moveCursor(0, 1)
       console:selectCurrentLine()
       assert.are.equal("beta", console:getCurrentLine())
@@ -647,7 +691,7 @@ describe("Tests functionality of Geyser.MiniConsole", function()
       console:moveCursor(0, 0)
       console:selectCurrentLine()
       local format = console:getTextFormat()
-      assert.are.same({255, 0, 0}, format.foreground)
+      assert.are.same({ 255, 0, 0 }, format.foreground)
       assert.is_true(format.bold)
     end)
 
@@ -660,7 +704,7 @@ describe("Tests functionality of Geyser.MiniConsole", function()
     it("reports how many characters fit across it and how many rows down", function()
       local charWidth, charHeight = console:calcFontSize()
       assert.is_true(charWidth > 0 and charHeight > 0)
-      assert.are.same({calcFontSize("gmcGetters")}, {console:calcFontSize()})
+      assert.are.same({ calcFontSize("gmcGetters") }, { console:calcFontSize() })
       -- the counts follow the console's own size, so a narrower console has to
       -- report fewer columns rather than the main window's
       local columns, rows = console:getColumnCount(), console:getRowCount()
@@ -686,7 +730,7 @@ describe("Tests functionality of Geyser.MiniConsole", function()
     end
 
     before_each(function()
-      console = track(Geyser.MiniConsole:new({name = "gmcScroll", x = 0, y = 0, width = 400, height = 200}))
+      console = track(Geyser.MiniConsole:new({ name = "gmcScroll", x = 0, y = 0, width = 400, height = 200 }))
       for index = 1, 60 do
         console:echo("line " .. index .. "\n")
       end
@@ -716,8 +760,10 @@ describe("Tests functionality of Geyser.MiniConsole", function()
       pumpEvents(50)
       local scrolled = console:getScroll()
       assert.is_true(scrolled < atTheEnd, "the console did not scroll back at all")
-      assert.is_true(scrolled > 0 and scrolled <= 50,
-                     "the first scroll landed at " .. scrolled .. ", which is not at or above line 50")
+      assert.is_true(
+        scrolled > 0 and scrolled <= 50,
+        "the first scroll landed at " .. scrolled .. ", which is not at or above line 50"
+      )
     end)
 
     it("scrolls to the line it is given once the split is open", function()
@@ -784,7 +830,7 @@ describe("Tests functionality of Geyser.MiniConsole", function()
 
   describe("Geyser.MiniConsole scroll bars", function()
     it("enableScrollBar and disableScrollBar put the bar on the widget", function()
-      local console = track(Geyser.MiniConsole:new({name = "gmcScrollBar", x = 0, y = 0, width = 300, height = 100}))
+      local console = track(Geyser.MiniConsole:new({ name = "gmcScrollBar", x = 0, y = 0, width = 300, height = 100 }))
       -- a console the constructor was given no scrollBar constraint has one
       -- turned off, which is what makes the enable below observable
       assert.is_false(getScrollBarVisible("gmcScrollBar"))
@@ -800,7 +846,9 @@ describe("Tests functionality of Geyser.MiniConsole", function()
     -- resetAutoWrap keeps 15 pixels clear for it and the text would otherwise
     -- run under it
     it("enableScrollBar takes room off the wrap and disableScrollBar gives it back", function()
-      local console = track(Geyser.MiniConsole:new({name = "gmcScrollBarWrap", x = 0, y = 0, width = 300, height = 100, autoWrap = true}))
+      local console = track(
+        Geyser.MiniConsole:new({ name = "gmcScrollBarWrap", x = 0, y = 0, width = 300, height = 100, autoWrap = true })
+      )
       local charWidth = calcFontSize("gmcScrollBarWrap")
 
       console:enableScrollBar()
@@ -816,8 +864,11 @@ describe("Tests functionality of Geyser.MiniConsole", function()
       -- delegation is what can be checked
       local enable = spy.on(_G, "enableHorizontalScrollBar")
       local disable = spy.on(_G, "disableHorizontalScrollBar")
-      finally(function() enable:revert() disable:revert() end)
-      local console = track(Geyser.MiniConsole:new({name = "gmcHScrollBar", x = 0, y = 0, width = 300, height = 100}))
+      finally(function()
+        enable:revert()
+        disable:revert()
+      end)
+      local console = track(Geyser.MiniConsole:new({ name = "gmcHScrollBar", x = 0, y = 0, width = 300, height = 100 }))
 
       console:enableHorizontalScrollBar()
       assert.is_true(console.horizontalScrollBar)
@@ -829,7 +880,15 @@ describe("Tests functionality of Geyser.MiniConsole", function()
     end)
 
     it("takes the scroll bar constraint it was built with", function()
-      local console = track(Geyser.MiniConsole:new({name = "gmcScrollBarCons", x = 0, y = 0, width = 300, height = 100, scrollBar = true, horizontalScrollBar = true}))
+      local console = track(Geyser.MiniConsole:new({
+        name = "gmcScrollBarCons",
+        x = 0,
+        y = 0,
+        width = 300,
+        height = 100,
+        scrollBar = true,
+        horizontalScrollBar = true,
+      }))
       assert.is_true(console.scrollBar)
       assert.is_true(console.horizontalScrollBar)
       assert.is_true(getScrollBarVisible("gmcScrollBarCons"))
@@ -838,8 +897,14 @@ describe("Tests functionality of Geyser.MiniConsole", function()
 
   describe("Geyser.MiniConsole:reposition", function()
     it("re-derives the auto wrap after the console has been placed again", function()
-      local container = track(Geyser.Container:new({name = "gmcRepositionBox", x = 0, y = 0, width = 300, height = 100}))
-      local console = track(Geyser.MiniConsole:new({name = "gmcReposition", x = 0, y = 0, width = "100%", height = "100%", autoWrap = true}, container))
+      local container =
+        track(Geyser.Container:new({ name = "gmcRepositionBox", x = 0, y = 0, width = 300, height = 100 }))
+      local console = track(
+        Geyser.MiniConsole:new(
+          { name = "gmcReposition", x = 0, y = 0, width = "100%", height = "100%", autoWrap = true },
+          container
+        )
+      )
       local charWidth = calcFontSize("gmcReposition")
       assert.are.equal(math.floor(300 / charWidth), getWindowWrap("gmcReposition"))
 
@@ -851,8 +916,11 @@ describe("Tests functionality of Geyser.MiniConsole", function()
     end)
 
     it("leaves a manually wrapped console's wrap alone", function()
-      local container = track(Geyser.Container:new({name = "gmcNoRewrapBox", x = 0, y = 0, width = 300, height = 100}))
-      local console = track(Geyser.MiniConsole:new({name = "gmcNoRewrap", x = 0, y = 0, width = "100%", height = "100%"}, container))
+      local container =
+        track(Geyser.Container:new({ name = "gmcNoRewrapBox", x = 0, y = 0, width = 300, height = 100 }))
+      local console = track(
+        Geyser.MiniConsole:new({ name = "gmcNoRewrap", x = 0, y = 0, width = "100%", height = "100%" }, container)
+      )
       console:setWrap(23)
       container:resize(150, 100)
       container:reposition()
@@ -865,7 +933,7 @@ describe("Tests functionality of Geyser.MiniConsole", function()
       -- Ubuntu Mono ships with Mudlet, so it is there on every platform, and it
       -- is not the console default, so a family that never reached the widget
       -- still fails this
-      local console = track(Geyser.MiniConsole:new({name = "gmcSetFont", x = 0, y = 0, width = 300, height = 100}))
+      local console = track(Geyser.MiniConsole:new({ name = "gmcSetFont", x = 0, y = 0, width = 300, height = 100 }))
       assert.are_not.equal("Ubuntu Mono", getFont("gmcSetFont"))
       console:setFont("Ubuntu Mono")
       assert.are.equal("Ubuntu Mono", getFont("gmcSetFont"))
@@ -873,7 +941,8 @@ describe("Tests functionality of Geyser.MiniConsole", function()
     end)
 
     it("setFont leaves the family alone when the one asked for is not installed", function()
-      local console = track(Geyser.MiniConsole:new({name = "gmcSetFontMissing", x = 0, y = 0, width = 300, height = 100}))
+      local console =
+        track(Geyser.MiniConsole:new({ name = "gmcSetFontMissing", x = 0, y = 0, width = 300, height = 100 }))
       console:setFont("Ubuntu Mono")
       local ok, err = console:setFont("No Such Font At All")
       assert.is_nil(ok)
@@ -883,7 +952,8 @@ describe("Tests functionality of Geyser.MiniConsole", function()
     end)
 
     it("resetFormat puts the colours and attributes back to the defaults", function()
-      local console = track(Geyser.MiniConsole:new({name = "gmcResetFormat", x = 0, y = 0, width = 300, height = 100}))
+      local console =
+        track(Geyser.MiniConsole:new({ name = "gmcResetFormat", x = 0, y = 0, width = 300, height = 100 }))
       console:setTextFormat(10, 20, 30, 200, 100, 50, true, true, true)
       console:echo("styled\n")
 
@@ -909,7 +979,7 @@ describe("Tests functionality of Geyser.MiniConsole", function()
     local imagePath = ":/icons/mudlet.png"
 
     it("remembers the image it was given and forgets it on reset", function()
-      local console = track(Geyser.MiniConsole:new({name = "gmcBackground", x = 0, y = 0, width = 200, height = 100}))
+      local console = track(Geyser.MiniConsole:new({ name = "gmcBackground", x = 0, y = 0, width = 200, height = 100 }))
       assert.is_true(console:setBackgroundImage(imagePath, 2))
       assert.are.equal(imagePath, console.imgPath)
       assert.is_true(console:resetBackgroundImage())

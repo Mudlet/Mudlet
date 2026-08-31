@@ -1,4 +1,6 @@
 mudlet = mudlet or {}
+-- stylua: ignore
+
 mudlet.cursor = {
   --see https://doc.qt.io/qt-5/qt.html#CursorShape-enum
   ["Reset"]              =  -1,      -- Resets your cursor.

@@ -8,7 +8,8 @@
 Geyser.MiniConsole = Geyser.Window:new({
   name = "MiniConsoleClass",
   scrolling = true,
-  wrapAt = 300, })
+  wrapAt = 300,
+})
 
 --- Override reposition to reset autowrap
 function Geyser.MiniConsole:reposition(skipChildren)
@@ -20,31 +21,31 @@ end
 
 --- Replaces the currently selected text.
 -- @param with The text to use as a replacement.
-function Geyser.MiniConsole:replace (with)
+function Geyser.MiniConsole:replace(with)
   return replace(self.name, with)
 end
 
 --- Replaces the entire line the cursor is on
 -- @param with The text to use as a replacement
-function Geyser.MiniConsole:replaceLine (with)
+function Geyser.MiniConsole:replaceLine(with)
   replaceLine(self.name, with)
 end
 
 --- Replaces the entire line the cursor is on, with color like cecho
 -- @param with The text to use as a replacement
-function Geyser.MiniConsole:creplaceLine (with)
+function Geyser.MiniConsole:creplaceLine(with)
   creplaceLine(self.name, with)
 end
 
 --- Replaces the entire line the cursor is on, with color like decho
 -- @param with The text to use as a replacement
-function Geyser.MiniConsole:dreplaceLine (with)
+function Geyser.MiniConsole:dreplaceLine(with)
   dreplaceLine(self.name, with)
 end
 
 --- Replaces the entire line the cursor is on, with color like hecho
 -- @param with The text to use as a replacement
-function Geyser.MiniConsole:hreplaceLine (with)
+function Geyser.MiniConsole:hreplaceLine(with)
   hreplaceLine(self.name, with)
 end
 
@@ -52,14 +53,14 @@ end
 -- @param linesLimit The number of lines to store - same limitations as Mudlet
 --                   function of the same name.
 -- @param sizeOfBatchDeletion See Mudlet documentation. (I don't know offhand =)
-function Geyser.MiniConsole:setBufferSize (linesLimit, sizeOfBatchDeletion)
+function Geyser.MiniConsole:setBufferSize(linesLimit, sizeOfBatchDeletion)
   setConsoleBufferSize(self.name, linesLimit, sizeOfBatchDeletion)
 end
 
 --- Sets the new font to use - use a monospaced font, non-monospaced fonts aren't supported by Mudlet
 -- and won't give the best results. Returns true if the font changed, nil+error if not.
 -- @param font Font family name to use (see https://doc.qt.io/qt-5/qfont.html#setFamily for details)
-function Geyser.MiniConsole:setFont (font)
+function Geyser.MiniConsole:setFont(font)
   -- only remember a family the miniconsole really took: setFont() refuses one
   -- that is not installed, which Qt would otherwise silently substitute
   local ok, err = setFont(self.name, font)
@@ -79,8 +80,10 @@ end
 --- Sets the point at which text is wrapped in this miniconsole unless autoWrap is on
 -- @param wrapAt The number of characters to start wrapping. Must be 1 or more.
 -- @return true, or nil and an error message if the wrap was not applied.
-function Geyser.MiniConsole:setWrap (wrapAt)
-  if self.autoWrap then return nil, "autoWrap is enabled in this MiniConsole and that overrides manual wrapping" end
+function Geyser.MiniConsole:setWrap(wrapAt)
+  if self.autoWrap then
+    return nil, "autoWrap is enabled in this MiniConsole and that overrides manual wrapping"
+  end
 
   -- only record the new wrap once Mudlet has accepted it, or a refused width
   -- would be re-sent (and refused again) by every later call
@@ -171,7 +174,7 @@ function Geyser.MiniConsole:scrollDown(lines)
 end
 
 --- Scrolls to a specified line. If ommitted will scroll to the end (ends scrolling)
--- @number lineNum the line number to scroll to. Will scroll to the end of the window if ommitted. 
+-- @number lineNum the line number to scroll to. Will scroll to the end of the window if ommitted.
 function Geyser.MiniConsole:scrollTo(lineNum)
   if lineNum then
     return scrollTo(self.name, lineNum)
@@ -409,12 +412,12 @@ end
 
 --- Returns the number of simultaneous rows that this miniconsole can show at once
 function Geyser.MiniConsole:getRowCount()
-    return getRowCount(self.name)
+  return getRowCount(self.name)
 end
 
 --- Returns the number of simultaneous columns (characters) that this miniconsole can show at once on a single row
 function Geyser.MiniConsole:getColumnCount()
-    return getColumnCount(self.name)
+  return getColumnCount(self.name)
 end
 
 --- Turn on auto wrap for the miniconsole
@@ -451,14 +454,14 @@ end
 
 --- The same as Mudlet's base display(), but outputs to the miniconsole instead of the main window.
 function Geyser.MiniConsole:display(...)
-  local arg = {...}
+  local arg = { ... }
   arg.n = table.maxn(arg)
   if arg.n > 1 then
     for i = 1, arg.n do
       self:display(arg[i])
     end
   else
-    self:echo((inspect(arg[1]) or 'nil') .. '\n')
+    self:echo((inspect(arg[1]) or "nil") .. "\n")
   end
 end
 
@@ -595,7 +598,7 @@ end
 Geyser.MiniConsole.parent = Geyser.Window
 
 -- Overridden constructor
-function Geyser.MiniConsole:new (cons, container)
+function Geyser.MiniConsole:new(cons, container)
   -- Initiate and set gauge specific things
   cons = cons or {}
   cons.type = cons.type or "miniConsole"
@@ -610,10 +613,9 @@ function Geyser.MiniConsole:new (cons, container)
   -- Now create the MiniConsole using primitives
   if not string.find(me.name, ".+Class$") then
     me.windowname = me.windowname or me.container.windowname or "main"
-    createMiniConsole(me.windowname,me.name, me:get_x(), me:get_y(),
-    me:get_width(), me:get_height())
+    createMiniConsole(me.windowname, me.name, me:get_x(), me:get_y(), me:get_width(), me:get_height())
 
--- Geyser.Container:new() settles the hidden constraint before there is a widget to hide, so the hide is made good here
+    -- Geyser.Container:new() settles the hidden constraint before there is a widget to hide, so the hide is made good here
     if me.hidden or me.auto_hidden then
       hideWindow(me.name)
     end
@@ -675,7 +677,7 @@ function Geyser.MiniConsole:type_delete()
 end
 
 --- Overridden constructor to use add2
-function Geyser.MiniConsole:new2 (cons, container)
+function Geyser.MiniConsole:new2(cons, container)
   cons = cons or {}
   cons.useAdd2 = true
   local me = self:new(cons, container)

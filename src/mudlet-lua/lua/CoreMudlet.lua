@@ -3,11 +3,8 @@
 --- (file holds LuaDoc for all function implemented with in Mudlet Core)
 ----------------------------------------------------------------------------------
 
-
 -- ensure that those function will not get defined
 if false then
-
-
   --- The <i>channel102 table</i> is used by Aardwolf mud for returning various information about you state. <br/>
   --- Read <i>http://www.aardwolf.com/blog/2008/07/10/telnet-negotiation-control-mud-client-interaction/</i>
   --- page for details.
@@ -34,13 +31,10 @@ if false then
   --- @name channel102
   channel102 = {}
 
-
   --- Clears the user window or a mini console with the name given as argument.
   ---
   --- @param windowName optional
-  function closeUserWindow(windowName)
-  end
-
+  function closeUserWindow(windowName) end
 
   --- The <i>command variable</i> holds initial user command e.g. unchanged by any aliases or triggers.
   --- This is typically used in alias scripts.
@@ -50,7 +44,6 @@ if false then
   --- @class function
   --- @name command
   command = ""
-
 
   --- This function creates a stop watch. It is high resolution time
   --- measurement tool. Stop watches can be started, stopped, reset and asked
@@ -77,16 +70,10 @@ if false then
   --- @see startStopWatch
   --- @see resetStopWatch
   --- @see getStopWatchTime
-  function createStopWatch()
-  end
-
-
+  function createStopWatch() end
 
   --- <b><u>TODO</u></b>  cut - TLuaInterpreter::cut
-  function cut()
-  end
-
-
+  function cut() end
 
   --- Deletes the current Line under the user cursor. Note: This is a high speed gagging tool
   --- and it is very good at this task. It is meant to be used when the line can be omitted
@@ -100,23 +87,14 @@ if false then
   ---
   --- @see wrapLine
   --- @see replace
-  function deleteLine()
-  end
-
-
+  function deleteLine() end
 
   --- Disables/deactivates an alias with the given name. This means that when you type in text that should
   --- match its pattern, it won't match and will be sent to the MUD. If several aliases have this name, they'll all be disabled.
-  function disableAlias(name)
-  end
-
-
+  function disableAlias(name) end
 
   --- Uses trigger name as id or the id returned by tempTrigger() <b><u>TODO tempKey?</b></u>
-  function disableKey(name)
-  end
-
-
+  function disableKey(name) end
 
   --- Disables a timer from running its script when it fires - so the timer
   --- cycles will still be happening, just no action on them. If you'd like to
@@ -127,19 +105,13 @@ if false then
   ---
   --- @see tempTimer
   --- @see killTimer
-  function disableTimer(name)
-  end
-
-
+  function disableTimer(name) end
 
   --- Use trigger name or the id returned by tempTrigger() to identify the
   --- timer that you want to disable.
   ---
   --- @see tempTrigger
-  function disableTrigger(name)
-  end
-
-
+  function disableTrigger(name) end
 
   --- This function appends text at the end of the current line. The current cursor position is ignored.
   --- Use moveCursor() and insertText() if you want to print at a different cursor position. <br/>
@@ -158,10 +130,7 @@ if false then
   ---
   --- @see moveCursor
   --- @see insertText
-  function echo(windowName, text)
-  end
-
-
+  function echo(windowName, text) end
 
   --- Echos a piece of text as a clickable link. <br/>
   ---
@@ -181,10 +150,7 @@ if false then
   ---
   --- @see setLink
   --- @see insertLink
-  function echoLink(windowName, text, command, hint, useCurrentFormat)
-  end
-
-
+  function echoLink(windowName, text, command, hint, useCurrentFormat) end
 
   --- Same as setPopup() except it doesn't require a selection. Method echoPopup creates a link from the given text that it echos.
   ---
@@ -197,38 +163,23 @@ if false then
   ---
   --- @see setPopup
   --- @see insertPopup
-  function echoPopup()
-  end
-
-
+  function echoPopup() end
 
   --- Enables/activates the alias by its name. If several aliases have this name, they'll all be enabled.
-  function enableAlias(name)
-  end
-
-
+  function enableAlias(name) end
 
   --- Enable key or key group "name" (hot keys or action keys).
-  function enableKey(name)
-  end
-
-
+  function enableKey(name) end
 
   --- Enables or activates a timer that was previously disabled. The parameter
   --- "name" expects the timer ID that was returned by tempTimer() on creation
   --- of the timer or the name of the timer in case of a GUI timer
-  function enableTimer(name)
-  end
-
-
+  function enableTimer(name) end
 
   --- Enables a Trigger. see enableTimer() for more details.
   ---
   --- @see enableTimer
-  function enableTrigger(name)
-  end
-
-
+  function enableTrigger(name) end
 
   --- Like send(), but without bypassing alias expansion. This function may lead to <b>infinite recursion</b> if
   --- you are not careful! <br/><br/>
@@ -244,10 +195,7 @@ if false then
   --- the alias expansion.
   ---
   --- @see send
-  function expandAlias(command, print=1)
-  end
-
-
+  function expandAlias(command, print) end
 
   --- This function will have Mudlet parse the given text as if it came from the MUD - one great application
   --- is trigger testing. You can use \n to represent a new line. The function also accept ANSI color codes that
@@ -262,10 +210,7 @@ if false then
   ---   feedTriggers("\nThis is \27[1;32mgreen\27[0;37m, \27[1;31mred\27[0;37m, " ..
   ---      "\27[46mcyan background\27[0;37m,\27[32;47mwhite background and green foreground\27[0;37m.\n")
   ---   </pre>
-  function feedTriggers(text)
-  end
-
-
+  function feedTriggers(text) end
 
   --- Get the RGB values of the first character of the current selection.
   ---
@@ -277,16 +222,10 @@ if false then
   ---   </pre>
   ---
   --- @see getFgColor
-  function getBgColor(windowName)
-  end
-
-
+  function getBgColor(windowName) end
 
   --- Gets the absolute column number of the current user cursor.
-  function getColumnNumber()
-  end
-
-
+  function getColumnNumber() end
 
   --- Returns the content of the current line under the user cursor in the
   --- buffer. The Lua variable line holds the content of getCurrentLine()
@@ -305,10 +244,7 @@ if false then
   ---   </pre>
   ---
   --- @see selectString
-  function getCurrentLine()
-  end
-
-
+  function getCurrentLine() end
 
   --- This function returns the RGB values of the color of the first character of the current selection
   --- on mini console (window) windowName.
@@ -330,39 +266,25 @@ if false then
   ---   </pre>
   ---
   --- @see getBgColor
-  function getFgColor(windowName)
-  end
-
+  function getFgColor(windowName) end
 
   --- Gets the absolute amount of lines in the current console buffer.
   ---
   --- @return number
-  function getLineCount()
-  end
-
-
+  function getLineCount() end
 
   --- Gets the absolute line number of the current user cursor.
-  function getLineNumber()
-  end
-
-
+  function getLineNumber() end
 
   --- Returns a Lua table with the content of the lines on a per line basis. Absolute line numbers are used.
   ---
   --- @return section of the content of the screen text buffer. The form of the return value is: Lua_table[relative_linenumber, content]
-  function getLines(from_line_number, to_line_number)
-  end
-
-
+  function getLines(from_line_number, to_line_number) end
 
   --- Returns the time without stopping stop watch (milliseconds based) in form of 0.058
   --- (= clock ran for 58 milliseconds before it was stopped).
   --- @see createStopWatch
-  function getStopWatchTime(watchID)
-  end
-
-
+  function getStopWatchTime(watchID) end
 
   --- Return time information.
   ---
@@ -415,8 +337,7 @@ if false then
   ---   </pre>
   ---   All other input characters will be ignored. Any sequence of characters that are enclosed in singlequotes will be treated as text and not be
   ---   used as an expression. Two consecutive singlequotes ("''") are replaced by a singlequote in the output.
-  function getTime(returnType, format)
-  end
+  function getTime(returnType, format) end
 
   --- Return seconds since unix epoch with milliseconds
   ---
@@ -424,23 +345,16 @@ if false then
   ---   <pre>
   ---   getEpoch()
   ---   </pre>
-  function getEpoch()
-  end
+  function getEpoch() end
 
   --- This function hides a mini console label. To show it again use showWindow.
   ---
   --- @see showWindow
   --- @see createMiniConsole
-  function hideWindow(name)
-  end
-
-
+  function hideWindow(name) end
 
   --- <b><u>TODO</u></b>  insertHTML - TLuaInterpreter::insertHTML
-  function insertHTML()
-  end
-
-
+  function insertHTML() end
 
   --- Same as echoLink() but inserts the text at the current cursor position, while echoLink inserts at the end
   --- of the current line.
@@ -449,10 +363,7 @@ if false then
   ---
   --- @see echoLink
   --- @see setLink
-  function insertLink(windowName, text, command, hint, useCurrentFormat)
-  end
-
-
+  function insertLink(windowName, text, command, hint, useCurrentFormat) end
 
   --- Same as echoPopup(), but inserts text at the current cursor position.
   ---
@@ -460,10 +371,7 @@ if false then
   ---
   --- @see setPopup
   --- @see echoPopup
-  function insertPopup(windowName, text, commands, hints, useCurrentFormat)
-  end
-
-
+  function insertPopup(windowName, text, commands, hints, useCurrentFormat) end
 
   --- Inserts text at the current cursor position in the main window. If the cursor has not been explicitly
   --- moved this function will always print at the beginning of the line whereas the echo() function will
@@ -472,18 +380,12 @@ if false then
   --- @param windowName optional
   ---
   --- @see echo
-  function insertText(windowName, text)
-  end
-
-
+  function insertText(windowName, text) end
 
   --- This function tests if the first character of the current selection has the background color specified by ansiBgColorCode.
   ---
   --- @see isAnsiFgColor
-  function isAnsiBgColor(ansiBgColorCode)
-  end
-
-
+  function isAnsiBgColor(ansiBgColorCode) end
 
   --- This function tests if the first character of the current selection has the foreground color specified by
   --- ansiFgColorCode. Codes are:
@@ -524,20 +426,14 @@ if false then
   ---   patterns or even color triggers that do not know about the concept of capture groups. Consequently, you can always test
   ---   if the text that has fired the trigger has a certain color and react accordingly. This function is faster than using
   ---   getFgColor() and then handling the color comparison in Lua.
-  function isAnsiFgColor(ansiFgColorCode)
-  end
-
-
+  function isAnsiFgColor(ansiFgColorCode) end
 
   --- Returns true or false depending on if the current line being processed is a prompt. This infallible
   --- feature is available for MUDs that supply GA events (to check if yours is one, look to bottom-right
   --- of the main window - if it doesn't say &lt;No&nbsp;GA&gt;, then it supplies them).
   ---
   --- @return true/false
-  function isPrompt()
-  end
-
-
+  function isPrompt() end
 
   --- Deletes a tempAlias. Use the alias ID returned by tempAlias() as the name parameter.
   --- This function returns true on success and false if the alias has already been killed
@@ -548,10 +444,7 @@ if false then
   --- @see killTrigger
   ---
   --- @return true or false
-  function killAlias(name)
-  end
-
-
+  function killAlias(name) end
 
   --- Deletes a tempTimer. Use the Timer ID returned by tempTimer() as name parameter. ID is a string and not a number.
   --- This function returns true on success and false if the timer id doesn't exist anymore (=timer has already fired)
@@ -562,10 +455,7 @@ if false then
   --- @see killTrigger
   ---
   --- @return true or false
-  function killTimer(id)
-  end
-
-
+  function killTimer(id) end
 
   --- Deletes a tempTrigger according to trigger ID. ID is a string value, not a number.
   --- This function returns true on success and false if the trigger has already been killed
@@ -577,10 +467,7 @@ if false then
   --- @see killTimer
   ---
   --- @return true or false
-  function killTrigger(id)
-  end
-
-
+  function killTrigger(id) end
 
   --- The <i>line variable</> holds the content of the current line as being processed by the trigger engine.
   --- The engine runs all triggers on each line as it arrives from the MUD.
@@ -591,15 +478,10 @@ if false then
   --- @name line
   line = ""
 
-
-
   --- <b><u>TODO</u></b>  loadRawFile - TLuaInterpreter::loadRawFile
   --- in TLuaInterpreter, loadRawFile is established as an alias to
   --- loadReplay. We override the old name to do nothing instead.
-  function loadRawFile()
-  end
-
-
+  function loadRawFile() end
 
   --- The <i>matches table</i> contains captured group. This available only within trigger context.
   --- First item of matches table (matches[1]) holds current line, all other contains capture groups
@@ -635,8 +517,6 @@ if false then
   --- @class function
   --- @name matches
   matches = {}
-
-
 
   --- Moves the user cursor of the window windowName to the absolute point (x,y). This function returns false
   --- if such a move is impossible e.g. the coordinates don't exist. To determine the correct coordinates use
@@ -704,10 +584,7 @@ if false then
   ---   setBgColor("sys", 155,155,0)
   ---   echo("sys", "*** This is the end. ***\n");
   ---   </pre>
-  function moveCursor(windowName, x, y)
-  end
-
-
+  function moveCursor(windowName, x, y) end
 
   --- The <i>multimatches table</i> is being used by Mudlet in the context of multiline triggers that use Perl regular expression.
   --- It holds the table matches[n] as described above for each Perl regular expression based condition of the multiline trigger.
@@ -773,8 +650,6 @@ if false then
   --- @name multimatches
   multimatches = {}
 
-
-
   --- Opens a user dockable console window for user output e.g. statistics, chat etc. If a window of such
   --- a name already exists, nothing happens. You can move these windows, dock them, make them into notebook
   --- tabs or float them.<br/><br/>
@@ -788,25 +663,17 @@ if false then
   ---   </pre>
   ---
   --- @see createMiniConsole
-  function openUserWindow(windowName)
-  end
-
-
+  function openUserWindow(windowName) end
 
   --- Pastes the previously copied text including all format codes like color, font etc. at the current user
   --- cursor position. The copy() and paste() functions can be used to copy formatted text from the main window
   --- to a user window without losing colors e. g. for chat windows, map windows etc.
   ---
   --- @see copy
-  function paste(windowName)
-  end
-
-
+  function paste(windowName) end
 
   --- <b><u>TODO</u></b>  pasteWindow - TLuaInterpreter::pasteWindow
-  function pasteWindow()
-  end
-
+  function pasteWindow() end
 
   --- This function plays a sound file. To make sound work on your operating system you may need to install additional packages: <br/>
   --- Microsoft Windows: The underlying multimedia system is used; only WAVE format sound files are supported. (works out of the box) <br/>
@@ -819,10 +686,7 @@ if false then
   ---       os.execute("aplay /usr/share/sounds/alsa/Front_Center.wav")
   ---   end
   ---   </pre>
-  function playSoundFile(fileName)
-  end
-
-
+  function playSoundFile(fileName) end
 
   --- Raises the event event_name. The event system will call the main
   --- function (the one that is called exactly like the script name) of all
@@ -892,10 +756,7 @@ if false then
   --- <b><i>ATCP events</i></b><br/><br/>
   --- Mudlets ATCP implementation generates events for each message that comes, allowing you to trigger on them easily.
   --- Since ATCP messages vary in name, event names will vary as well. See the atcp section on how to use them.
-  function raiseEvent(eventName, ...)
-  end
-
-
+  function raiseEvent(eventName, ...) end
 
   --- Replaces the currently selected text with the new text. To select text, use selectString() and similar function.
   ---
@@ -913,19 +774,13 @@ if false then
   ---
   --- @see selectString
   --- @see deleteLine
-  function replace(with, keepColor)
-  end
-
-
+  function replace(with, keepColor) end
 
   --- This function resets the time to 0:0:0.0, but does not start the stop watch. You can start it with startStopWatch.
   ---
   --- @see createStopWatch
   --- @see startStopWatch
-  function resetStopWatch(watchID)
-  end
-
-
+  function resetStopWatch(watchID) end
 
   --- Resizes a mini console or label.
   ---
@@ -933,10 +788,7 @@ if false then
   --- @see createLabel
   --- @see handleWindowResizeEvent
   --- @see setBorderTop
-  function resizeWindow(name, width, height)
-  end
-
-
+  function resizeWindow(name, width, height) end
 
   --- Selects the content of the capture group number in your Perl regular expression e.g. "you have (\d+) Euro".
   --- If you want to color the amount of money you have green you do:
@@ -948,26 +800,17 @@ if false then
   ---   </pre>
   ---
   --- @param groupNumber with first group = 1
-  function selectCaptureGroup()
-  end
-
-
+  function selectCaptureGroup() end
 
   --- Selects the content of the current buffer line.
   --- <pre><b><u>TODO</u></b> It this valid? selectCurrentLine("sys")</pre>
-  function selectCurrentLine()
-  end
-
-
+  function selectCurrentLine() end
 
   --- Select text on the line under the current cursor position. Use absolute column number for start of selection
   --- and length of selection The function returns true on success and false if the selection is not possible.
   ---
   --- @param windowName is optional
-  function selectSection(windowName, from, lengthOfString)
-  end
-
-
+  function selectSection(windowName, from, lengthOfString) end
 
   --- Selects a substring from the line where the user cursor is currently positioned. You can move
   --- the user cursor with moveCursor(). When a new line arrives from the MUD, the user cursor is
@@ -996,10 +839,7 @@ if false then
   --- @return returns position in line or -1 on error (text not found in line)
   ---
   --- @see deselect
-  function selectString(text, numberOfMatch)
-  end
-
-
+  function selectString(text, numberOfMatch) end
 
   --- This sends "command" directly to the network layer, skipping the alias matching. The optional
   --- second argument of type boolean (print) determines if the outgoing command is to be echoed on the screen.
@@ -1024,9 +864,7 @@ if false then
   ---
   --- @see expandAlias
   --- @see sendAll
-  function send(command, echoTheValue)
-  end
-
+  function send(command, echoTheValue) end
 
   --- Sets the current text background color in window windowName (or in main windows if you haven't specified that). If you have selected
   --- text prior to this call, the selection will be highlightd otherwise the current text background color will be changed. If you set a
@@ -1050,10 +888,7 @@ if false then
   ---   </pre>
   ---
   --- @see setFgColor
-  function setBgColor(windowName, r, g, b)
-  end
-
-
+  function setBgColor(windowName, r, g, b) end
 
   --- Set the scrollback buffer size to linesLimit and determine how many lines are deleted at once in
   --- case the lines limit is reached. The lower the limit the less memory being used. On machines with
@@ -1061,10 +896,7 @@ if false then
   --- e.g. system notification windows, chat windows etc.. <br/>
   --- Default values are linesLimit = 100000 lines with 10000 lines of batch deletion. <br/>
   --- Minimum buffer size is 100 lines with 10 lines batch deletion.
-  function setConsoleBufferSize(consoleName, linesLimit, sizeOfBatchDeletion)
-  end
-
-
+  function setConsoleBufferSize(consoleName, linesLimit, sizeOfBatchDeletion) end
 
   --- Sets the current text foreground color in the main window. Values are RGB: red, green, blue ranging from 0-255 e.g.
   ---
@@ -1077,64 +909,40 @@ if false then
   --- @param windowName optional
   ---
   --- @setBgColor
-  function setFgColor(windowName, r, g, b)
-  end
-
-
+  function setFgColor(windowName, r, g, b) end
 
   --- <b><u>TODO</u></b>  setLabelStyleSheet - TLuaInterpreter::setLabelStyleSheet
-  function setLabelStyleSheet()
-  end
-
-
+  function setLabelStyleSheet() end
 
   --- Sets the font size of the mini console.
   ---
   --- @see createMiniConsole
   --- @see createLabel
-  function setMiniConsoleFontSize(name, fontSize)
-  end
-
+  function setMiniConsoleFontSize(name, fontSize) end
 
   --- Sets at what position in the line the console or miniconsole will start word wrap.
-  function setWindowWrap(windowName, wrapAt)
-  end
+  function setWindowWrap(windowName, wrapAt) end
 
   --- Gets at what position in the line the console or miniconsole will start word wrap.
-  function getWindowWrap(windownName)
-  end
-
+  function getWindowWrap(windownName) end
 
   --- <b><u>TODO</u></b>  setWindowWrapIndent - TLuaInterpreter::setWindowWrapIndent
-  function setWindowWrapIndent()
-  end
-
+  function setWindowWrapIndent() end
 
   --- <b><u>TODO</u></b>  setWindowWrapHangingIndent - TLuaInterpreter::setWindowWrapHangingIndent
-  function setWindowWrapHangingIndent()
-  end
-
+  function setWindowWrapHangingIndent() end
 
   --- <b><u>TODO</u></b>  spawn - TLuaInterpreter::spawn
-  function spawn()
-  end
-
-
+  function spawn() end
 
   --- Starts the stop watch.
   --- @see createStopWatch
-  function startStopWatch(watchID)
-  end
-
-
+  function startStopWatch(watchID) end
 
   --- Stops the stop watch and returns the elapsed time in milliseconds in form of 0.001.
   --- @see createStopWatch
   --- @return returns time as a number
-  function stopStopWatch()
-  end
-
-
+  function stopStopWatch() end
 
   --- Wait for specified time in milliseconds.
   --- <b>Use tempTimer instead! Don't use this function, because it freezes main thread.</b>
@@ -1168,10 +976,7 @@ if false then
   ---   </pre>
   ---
   --- @see tempTimer
-  function wait(time)
-  end
-
-
+  function wait(time) end
 
   --- Wrap line lineNumber of mini console (window) windowName. This function will interpret \n characters,
   --- apply word wrap and display the new lines on the screen. This function may be necessary if you use
@@ -1188,7 +993,5 @@ if false then
   --- This will effectively have the same result as a call to deleteLine() but the buffer line will not
   --- be entirely removed. Consequently, further calls to echo() etc. sort of functions are possible
   --- without using wrapLine() unnecessarily.
-  function wrapLine()
-  end
-
+  function wrapLine() end
 end

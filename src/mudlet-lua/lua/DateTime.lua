@@ -13,7 +13,7 @@ datetime = {
     ["%p"] = "(?P<ampm>am|pm)",
     ["%S"] = "(?P<second>\\d{2})",
     ["%y"] = "(?P<year_half>\\d{2})",
-    ["%Y"] = "(?P<year_full>\\d{4})"
+    ["%Y"] = "(?P<year_full>\\d{4})",
   },
   _pattern_cache = {},
   _month_names = {
@@ -28,7 +28,7 @@ datetime = {
     ["september"] = 9,
     ["october"] = 10,
     ["november"] = 11,
-    ["december"] = 12
+    ["december"] = 12,
   },
   _abbrev_month_names = {
     ["jan"] = 1,
@@ -42,20 +42,19 @@ datetime = {
     ["sep"] = 9,
     ["oct"] = 10,
     ["nov"] = 11,
-    ["dec"] = 12
-  }
+    ["dec"] = 12,
+  },
 }
 
 -- the timestamp is stored in UTC time, so work out the difference in seconds
 -- from local to UTC time. Credit: https://github.com/stevedonovan/Penlight/blob/master/lua/pl/Date.lua#L85
 function datetime:calculate_UTCdiff(ts)
   local date, time = os.date, os.time
-  local utc = date('!*t', ts)
-  local lcl = date('*t', ts)
+  local utc = date("!*t", ts)
+  local lcl = date("*t", ts)
   lcl.isdst = false
   return os.difftime(time(lcl), time(utc))
 end
-
 
 -- NOT LUADOC
 -- The rex.match function does not return named patterns even if you use named capture
@@ -64,18 +63,15 @@ end
 -- then compiling them.
 function datetime:_get_pattern(format)
   if not datetime._pattern_cache[format] then
-    local fmt = rex.gsub(format, "(%[A-Za-z])",
-    function(m)
+    local fmt = rex.gsub(format, "(%[A-Za-z])", function(m)
       return datetime._directives[m] or m
-    end
-    )
+    end)
 
     datetime._pattern_cache[format] = rex.new(fmt, rex.flags().CASELESS)
   end
 
   return datetime._pattern_cache[format]
 end
-
 
 --- Parses the specified source string, according to the format if given, to return a representation of
 --- the date/time. The default format if not specified is: "^%Y-%m-%d %H:%M:%S$" <br/><br/>
@@ -153,18 +149,27 @@ function datetime:parse(source, format, as_epoch)
   end
 end
 
-
 function shms(seconds, bool)
   seconds = tonumber(seconds)
   assert(type(seconds) == "number", "Assertion failed for function 'shms' - Please supply a valid number.")
 
   local s = seconds
   local ss = string.format("%02d", math.fmod(s, 60))
-  local mm = string.format("%02d", math.fmod((s / 60 ), 60))
+  local mm = string.format("%02d", math.fmod((s / 60), 60))
   local hh = string.format("%02d", (s / (60 * 60)))
 
   if bool then
-    cecho("<green>" .. s .. " <grey>seconds converts to: <green>" .. hh .. "<white>h,<green> " .. mm .. "<white>m <grey>and<green> " .. ss .. "<white>s.")
+    cecho(
+      "<green>"
+        .. s
+        .. " <grey>seconds converts to: <green>"
+        .. hh
+        .. "<white>h,<green> "
+        .. mm
+        .. "<white>m <grey>and<green> "
+        .. ss
+        .. "<white>s."
+    )
   else
     return hh, mm, ss
   end

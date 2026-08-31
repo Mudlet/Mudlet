@@ -5,7 +5,7 @@
 -- @module Geyser.HBox
 
 Geyser.HBox = Geyser.Container:new({
-  name = "HBoxClass"
+  name = "HBoxClass",
 })
 
 -- Internal function: lays the box out, or remembers that it still has to be laid
@@ -21,7 +21,7 @@ local function organizeOrDefer(box)
   end
 end
 
-function Geyser.HBox:add (window, cons)
+function Geyser.HBox:add(window, cons)
   -- VBox/HBox have their own add function therefore passing off add2 should be possible without
   -- overwriting their add functions
   if self.useAdd2 then
@@ -34,7 +34,7 @@ end
 
 -- add2 has to be overridden as well, otherwise children created with new2 reach
 -- Geyser.add2 directly and the box never lays them out
-function Geyser.HBox:add2 (window, cons, passAdd2, exclude)
+function Geyser.HBox:add2(window, cons, passAdd2, exclude)
   Geyser.add2(self, window, cons, passAdd2, exclude)
   organizeOrDefer(self)
 end
@@ -43,7 +43,7 @@ end
 -- keep the geometry that was worked out for the old child count and the box is
 -- left with a hole. Every removal path - delete, changeContainer, adding a
 -- child to another container - comes through here.
-function Geyser.HBox:remove (window)
+function Geyser.HBox:remove(window)
   Geyser.remove(self, window)
   organizeOrDefer(self)
 end
@@ -69,7 +69,7 @@ function Geyser.HBox:organize()
     if window.h_policy == Geyser.Fixed or window.v_policy == Geyser.Fixed then
       self.contains_fixed = true
     end
-    window:move(start_x.."%", "0%")
+    window:move(start_x .. "%", "0%")
     if window.h_policy == Geyser.Dynamic then
       width = window_width * window.h_stretch_factor
       if window.width ~= width .. "%" then
@@ -114,7 +114,7 @@ function Geyser.HBox:new(cons, container)
 end
 
 --- Overridden constructor to use add2
-function Geyser.HBox:new2 (cons, container)
+function Geyser.HBox:new2(cons, container)
   cons = cons or {}
   cons.useAdd2 = true
   local me = self:new(cons, container)

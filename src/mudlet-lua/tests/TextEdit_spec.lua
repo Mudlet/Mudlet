@@ -1,6 +1,5 @@
 -- The Geyser.TextEdit wrapper around these is covered in GeyserTextEdit_spec.lua.
 describe("Tests TextEdit widget functions", function()
-
   describe("Tests createTextEdit and deleteTextEdit", function()
     it("Should create a text edit", function()
       assert.is_true(createTextEdit("main", "testTextEdit", 0, 0, 200, 100))
@@ -185,16 +184,22 @@ describe("Tests TextEdit widget functions", function()
     end)
 
     it("Should show and hide", function()
-      assert.has_no.errors(function() hideWindow(name) end)
+      assert.has_no.errors(function()
+        hideWindow(name)
+      end)
       assert.is_true(showWindow(name))
     end)
 
     it("Should move", function()
-      assert.has_no.errors(function() moveWindow(name, 50, 50) end)
+      assert.has_no.errors(function()
+        moveWindow(name, 50, 50)
+      end)
     end)
 
     it("Should resize", function()
-      assert.has_no.errors(function() resizeWindow(name, 300, 200) end)
+      assert.has_no.errors(function()
+        resizeWindow(name, 300, 200)
+      end)
     end)
   end)
 end)

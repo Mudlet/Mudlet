@@ -1,7 +1,5 @@
 describe("Tests keybind-related functions", function()
-
   describe("Tests the functionality of getKeyCode", function()
-
     setup(function()
       -- tempKey creates temporary keybinds that killKey can actually remove
       -- tempKey(modifier, key code, lua code)
@@ -97,11 +95,9 @@ describe("Tests keybind-related functions", function()
       local expectedMod = mudlet.keymodifier.Control + mudlet.keymodifier.Shift
       assert.equals(expectedMod, modifiers, "Expected Control + Shift modifiers")
     end)
-
   end)
 
   describe("tempKey creation and cleanup", function()
-
     it("creates a key from a modifier, key code and string body", function()
       local id = tempKey(mudlet.keymodifier.Alt, mudlet.key.F5, [[echo("hi")]])
       assert.is_number(id)
@@ -131,13 +127,13 @@ describe("Tests keybind-related functions", function()
 
     it("rejects a non-string, non-function body", function()
       -- a table is not string-coercible (a number would be accepted as code)
-      assert.has_error(function() tempKey(mudlet.key.F8, {}) end)
+      assert.has_error(function()
+        tempKey(mudlet.key.F8, {})
+      end)
     end)
-
   end)
 
   describe("permKey creation and validation", function()
-
     -- permanent keys cannot be removed with killKey, so use unique names and
     -- disable them after each test so they do not leak into other specs
     after_each(function()
@@ -168,11 +164,9 @@ describe("Tests keybind-related functions", function()
         permKey("SpecPermKeyOne", "", mudlet.key.F9, 42)
       end)
     end)
-
   end)
 
   describe("enable, disable, kill, isActive and exists for keys", function()
-
     after_each(function()
       disableKey("SpecPermKeyKill")
       disableKey("SpecPermKeyToggle")
@@ -193,8 +187,7 @@ describe("Tests keybind-related functions", function()
       -- second kill really is being told about a corpse it can find
       assert.are.equal(1, exists(id, "keybind"), "the killed key is still present until cleanup runs")
       assert.are.equal(0, isActive(id, "keybind"), "a killed key is no longer active")
-      assert.is_false(killKey(id),
-        "killing an already killed key achieves nothing and has to say so")
+      assert.is_false(killKey(id), "killing an already killed key achieves nothing and has to say so")
       -- an incoming line runs every unit's deferred cleanup, which is what finally
       -- frees the key; the answer has to be the same after it. A key press cannot be
       -- synthesised headlessly, so there is no in-callback double kill to pin here -
@@ -247,9 +240,17 @@ describe("Tests keybind-related functions", function()
       -- runs accumulate under this name in the saved profile
       assert.is_true(exists("SpecDupKeys", "keybind") >= 2, "at least the two duplicate-named keys exist")
       disableKey("SpecDupKeys")
-      assert.are.equal(0, isActive("SpecDupKeys", "keybind"), "disabling by name must leave zero of the duplicates active")
+      assert.are.equal(
+        0,
+        isActive("SpecDupKeys", "keybind"),
+        "disabling by name must leave zero of the duplicates active"
+      )
       enableKey("SpecDupKeys")
-      assert.are.equal(exists("SpecDupKeys", "keybind"), isActive("SpecDupKeys", "keybind"), "enabling by name must reactivate every duplicate")
+      assert.are.equal(
+        exists("SpecDupKeys", "keybind"),
+        isActive("SpecDupKeys", "keybind"),
+        "enabling by name must reactivate every duplicate"
+      )
     end)
 
     it("freeing a temporary key leaves a same-named permanent one reachable", function()
@@ -262,7 +263,9 @@ describe("Tests keybind-related functions", function()
       -- same-named ones behind: work from a relative baseline
       local before = exists(sharedName, "keybind")
       assert.is_true(permKey(sharedName, "", mudlet.key.F12, [[echo("x")]]) > 0)
-      finally(function() disableKey(sharedName) end)
+      finally(function()
+        disableKey(sharedName)
+      end)
       assert.are.equal(before + 1, exists(sharedName, "keybind"))
 
       assert.is_true(killKey(tempId), "the temporary key is the one that can be killed")
@@ -282,13 +285,13 @@ describe("Tests keybind-related functions", function()
       -- permKey itself takes seed + 1, so the next temporary takes seed + 2
       local sharedName = tostring(seed + 2)
       assert.is_true(permKey(sharedName, "", mudlet.key.F10, [[echo("x")]]) > 0)
-      finally(function() disableKey(sharedName) end)
+      finally(function()
+        disableKey(sharedName)
+      end)
 
       local tempId = tempKey(mudlet.key.F11, [[echo("x")]])
       assert.are.equal(seed + 2, tempId, "ids should still be handed out in sequence")
       assert.is_true(killKey(tempId), "killKey must scan past the permanent key")
     end)
-
   end)
-
 end)

@@ -7,9 +7,8 @@
 --- Represents a mapper primitive.
 -- @field wrapAt Where line wrapping occurs. Default is 300 characters.
 Geyser.Mapper = Geyser.Window:new({
-  name = "MapperClass"
+  name = "MapperClass",
 })
-
 
 -- Save a reference to our parent constructor
 Geyser.Mapper.parent = Geyser.Window
@@ -30,7 +29,7 @@ function Geyser.Mapper:move(x, y)
   if self.hidden or self.auto_hidden then
     return
   end
-  Geyser.Container.move (self, x, y)
+  Geyser.Container.move(self, x, y)
   if not self.embedded then
     moveMapWidget(self:get_x(), self:get_y())
   end
@@ -40,7 +39,7 @@ function Geyser.Mapper:resize(width, height)
   if self.hidden or self.auto_hidden then
     return
   end
-  Geyser.Container.resize (self, width, height)
+  Geyser.Container.resize(self, width, height)
   if not self.embedded then
     resizeMapWidget(self:get_width(), self:get_height())
   end
@@ -74,11 +73,11 @@ end
 
 -- Overridden raise and lower functions
 function Geyser.Mapper:raise()
-	raiseWindow("mapper")
+  raiseWindow("mapper")
 end
 
 function Geyser.Mapper:lower()
-	lowerWindow("mapper")
+  lowerWindow("mapper")
 end
 
 function Geyser.Mapper:setDockPosition(pos)
@@ -104,7 +103,7 @@ function Geyser.Mapper:resetTitle()
 end
 
 -- Overridden constructor
-function Geyser.Mapper:new (cons, container)
+function Geyser.Mapper:new(cons, container)
   cons = cons or {}
   cons.type = cons.type or "mapper"
 
@@ -116,9 +115,9 @@ function Geyser.Mapper:new (cons, container)
   -- Set the metatable.
   setmetatable(me, self)
   self.__index = self
-  
+
   if me.embedded == nil and not me.dockPosition then
-     me.embedded = true 
+    me.embedded = true
   end
 
   -- Now create the Mapper using primitives
@@ -126,15 +125,13 @@ function Geyser.Mapper:new (cons, container)
     me.dockPosition = "f"
   end
   if me.embedded then
-    createMapper(me.windowname, me:get_x(), me:get_y(),
-    me:get_width(), me:get_height())
+    createMapper(me.windowname, me:get_x(), me:get_y(), me:get_width(), me:get_height())
   else
     me.embedded = false
     if me.dockPosition and me.dockPosition ~= "f" then
       openMapWidget(me.dockPosition)
-    elseif me.dockPosition == "f" or cons.x or cons.y or cons.width or cons.height then 
-      openMapWidget(me:get_x(), me:get_y(),
-      me:get_width(), me:get_height())
+    elseif me.dockPosition == "f" or cons.x or cons.y or cons.width or cons.height then
+      openMapWidget(me:get_x(), me:get_y(), me:get_width(), me:get_height())
     else
       openMapWidget()
     end
@@ -145,7 +142,7 @@ function Geyser.Mapper:new (cons, container)
       me:resetTitle()
     end
   end
--- Geyser.Container:new() settles the hidden constraint before there is a widget to hide, so the hide is made good here
+  -- Geyser.Container:new() settles the hidden constraint before there is a widget to hide, so the hide is made good here
   if me.hidden or me.auto_hidden then
     me:hide_impl()
   end
@@ -165,7 +162,7 @@ function Geyser.Mapper:type_delete()
 end
 
 --- Overridden constructor to use add2
-function Geyser.Mapper:new2 (cons, container)
+function Geyser.Mapper:new2(cons, container)
   cons = cons or {}
   cons.useAdd2 = true
   local me = self:new(cons, container)

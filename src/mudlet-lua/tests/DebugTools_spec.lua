@@ -43,13 +43,17 @@ describe("Tests DebugTools.lua functions", function()
     it("should pass msg on to error with additional information", function()
       printError("This is a test")
       assert.spy(s).was_called(1)
-      assert.spy(s).was_called_with(match.has_match("This is a test"), match.has_match("%(.+[\\/]busted[\\/]core.lua:line %d+%)"))
+      assert
+        .spy(s)
+        .was_called_with(match.has_match("This is a test"), match.has_match("%(.+[\\/]busted[\\/]core.lua:line %d+%)"))
     end)
 
     it("should include a stacktrace when called with stackTrace true", function()
       printError("This is a test", true)
       assert.spy(s).was_called(1)
-      assert.spy(s).was_called_with(match.has_match("\nstack traceback:\n"), match.has_match("%(.+[\\/]busted[\\/]core.lua:line %d+%)"))
+      assert
+        .spy(s)
+        .was_called_with(match.has_match("\nstack traceback:\n"), match.has_match("%(.+[\\/]busted[\\/]core.lua:line %d+%)"))
     end)
 
     it("should NOT include a stacktrace when called without stackTrace true", function()
@@ -78,7 +82,6 @@ describe("Tests DebugTools.lua functions", function()
       end
       assert.Not.error_matches(errFunc, "\nstack traceback:\n")
     end)
-
   end)
 
   describe("Tests the functionality of display", function()
@@ -91,7 +94,7 @@ describe("Tests DebugTools.lua functions", function()
     end)
 
     it("Should write an inspected table to the main console", function()
-      display({alpha = 1, beta = "two"})
+      display({ alpha = 1, beta = "two" })
       local text = mainConsoleText()
       assert.is_truthy(text:find("alpha", 1, true))
       assert.is_truthy(text:find("beta", 1, true))
@@ -144,8 +147,8 @@ describe("Tests DebugTools.lua functions", function()
 
     it("Should list every regex and its captures", function()
       _G.multimatches = {
-        {"first whole match", "first capture"},
-        {"second whole match"},
+        { "first whole match", "first capture" },
+        { "second whole match" },
       }
       showMultimatches()
       local text = table.concat(getLines("main", 0, getLastLineNumber("main") + 1), "\n")
