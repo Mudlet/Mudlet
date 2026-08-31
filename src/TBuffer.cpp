@@ -105,12 +105,14 @@ bool endsStringSequence(const char byte)
 }
 
 // A byte the decoder's main loop would turn into exactly one QChar of the same
-// value whatever the session's encoding: 7-bit, so it neither ends the line,
-// introduces an escape sequence, nor begins a multi-byte character in any
-// encoding Mudlet decodes. Runs of these can be copied in one go.
+// value whatever the session's encoding: printable 7-bit, so it neither ends
+// the line, introduces an escape sequence, nor begins a multi-byte character in
+// any encoding Mudlet decodes. Runs of these can be copied in one go. DEL is
+// excluded because EUC-KR alone treats it as an invalid first byte and renders
+// it as the replacement character.
 bool bulkCopyableTextByte(const char byte)
 {
-    return static_cast<unsigned char>(byte) < 0x80 && byte != CHAR_NEW_LINE && byte != CHAR_CARRIAGE_RETURN && byte != CHAR_END_OF_TRANSMISSION && byte != CHAR_ESC;
+    return static_cast<unsigned char>(byte) < 0x7F && byte != CHAR_NEW_LINE && byte != CHAR_CARRIAGE_RETURN && byte != CHAR_END_OF_TRANSMISSION && byte != CHAR_ESC;
 }
 
 // Maximum length for a CSI sequence's parameter string before aborting - a
