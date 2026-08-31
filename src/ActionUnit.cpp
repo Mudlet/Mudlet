@@ -101,9 +101,9 @@ void ActionUnit::doCleanup()
     if (mProcessingDepth > 0) {
         return;
     }
-    // Called once per unit for every line of game text, and there is next to
-    // never anything queued: bail out before the set below is built.
-    if (uninstallList.isEmpty()) {
+    // Called once per unit for every line of game text, and next to never has
+    // anything queued, so skip setting up the flush below.
+    if (!hasPendingDeletes()) {
         return;
     }
     // Flush the deletes uninstall() deferred (#9337). uninstallList is ordered

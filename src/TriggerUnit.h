@@ -120,6 +120,7 @@ public:
     inline static const qsizetype scmMaxSameLineCreationsPerLine = 20000;
 
     QList<TTrigger*> uninstallList;
+    bool hasPendingDeletes() const { return !mCleanupSet.isEmpty() || !uninstallList.isEmpty(); }
 
 private:
     TriggerUnit() = default;

@@ -74,6 +74,7 @@ public:
     std::tuple<QString, int, int, int> assembleReport();
 
     QList<TScript*> uninstallList;
+    bool hasPendingDeletes() const { return !uninstallList.isEmpty(); }
 
 
 private:
