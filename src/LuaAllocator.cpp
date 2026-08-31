@@ -19,6 +19,9 @@
 
 #include "LuaAllocator.h"
 
+#include <QCoreApplication>
+#include <QThread>
+
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
@@ -37,10 +40,30 @@ extern "C" {
 // those was a separate glibc malloc()/free() pair. Lua hands the true old size
 // back on every free and every resize, so blocks need no header of their own
 // and a size class can be recovered from that size alone; that is what lets a
-// Lua-specific allocator beat a general purpose one here.
+// bounded free list per size serve most of that traffic without reaching
+// malloc() at all.
 //
 // Define MUDLET_LUA_ALLOC_PASSTHROUGH to route every request straight at
 // realloc()/free(), which is how a suspected allocator fault gets bisected.
+//
+// A sanitised build defines it for itself. A block held on a free list is
+// still allocated as far as the system is concerned, so a write to a freed Lua
+// object, or a leaked one, would look like ordinary use of a live allocation -
+// a preset built to find those bugs would stop finding them in Lua.
+#if defined(__SANITIZE_ADDRESS__) || defined(__SANITIZE_THREAD__)
+#define MUDLET_LUA_ALLOC_PASSTHROUGH
+#elif defined(__has_feature)
+#if __has_feature(address_sanitizer) || __has_feature(thread_sanitizer) || __has_feature(memory_sanitizer)
+#define MUDLET_LUA_ALLOC_PASSTHROUGH
+#endif
+#endif
+
+// LuaJIT hands its allocator a size class tag in osize rather than the true old
+// size, and its own allocator cannot be replaced on 64-bit at all, so the whole
+// design below rests on this being PUC-Rio Lua 5.1.
+#if !defined(MUDLET_LUA_ALLOC_PASSTHROUGH) && defined(LUAJIT_VERSION)
+#error "LuaAllocator assumes PUC-Rio Lua 5.1: LuaJIT reports a type tag in osize, so blocks would be freed to the wrong size class"
+#endif
 
 #if !defined(MUDLET_LUA_ALLOC_PASSTHROUGH)
 namespace {
@@ -52,9 +75,14 @@ constexpr size_t cGranularity = 16;
 // heaptrack census of the flood benchmark puts over 99% of it under this cap.
 constexpr size_t cLargestClass = 512;
 constexpr size_t cClassCount = cLargestClass / cGranularity;
-// Big enough that the slabs themselves are a rounding error in glibc's call
-// count, small enough to stay under its 128KiB mmap threshold.
-constexpr size_t cSlabBytes = 64 * 1024;
+// A free list exists to hand a block straight back to the next request of its
+// size, so only as many are worth holding as a busy moment actually reuses.
+// Past this the block is returned to malloc() instead, which is what bounds
+// the whole thing: a session whose allocation sizes shift - a phase of long
+// strings after a phase of small tables - would otherwise leave every phase's
+// blocks parked on their own class for good. The cap holds the total under
+// about two megabytes however the sizes move.
+constexpr size_t cMaxPooledPerClass = 256;
 
 // Lua is single threaded here: every lua_State Mudlet creates belongs to a
 // Host, and Host code, timers, triggers and the Lua API all run on the main
@@ -72,37 +100,11 @@ constexpr size_t cSlabBytes = 64 * 1024;
 // shutdown in whatever order Qt tears Mudlet down, and this has to keep working
 // through all of it.
 void* sFreeLists[cClassCount + 1];
-char* sSlabCursor;
-size_t sSlabLeft;
+size_t sPooledCounts[cClassCount + 1];
 
 inline size_t sizeClass(const size_t size)
 {
     return (size + cGranularity - 1) / cGranularity;
-}
-
-// The tail left over when a slab cannot serve the next request is itself an
-// exact multiple of the granularity, so it becomes one more block on the
-// largest class that fits rather than being abandoned.
-void* carve(const size_t bytes)
-{
-    if (sSlabLeft < bytes) {
-        if (sSlabLeft >= cGranularity) {
-            const size_t tailClass = sSlabLeft / cGranularity;
-            *reinterpret_cast<void**>(sSlabCursor) = sFreeLists[tailClass];
-            sFreeLists[tailClass] = sSlabCursor;
-        }
-        auto slab = static_cast<char*>(std::malloc(cSlabBytes));
-        if (!slab) {
-            sSlabLeft = 0;
-            return nullptr;
-        }
-        sSlabCursor = slab;
-        sSlabLeft = cSlabBytes;
-    }
-    char* block = sSlabCursor;
-    sSlabCursor += bytes;
-    sSlabLeft -= bytes;
-    return block;
 }
 
 // Sizes are compared before sizeClass() rather than after, so the rounding it
@@ -113,23 +115,26 @@ inline void* allocate(const size_t nsize)
         return std::malloc(nsize);
     }
     const size_t index = sizeClass(nsize);
-    void* block = sFreeLists[index];
-    if (block) {
+    if (void* block = sFreeLists[index]) {
         sFreeLists[index] = *reinterpret_cast<void**>(block);
+        --sPooledCounts[index];
         return block;
     }
-    return carve(index * cGranularity);
+    // Rounded up to the class, so the block that comes back can serve every
+    // later request of that class and be recognised by its size alone.
+    return std::malloc(index * cGranularity);
 }
 
 inline void release(void* ptr, const size_t osize)
 {
-    if (osize > cLargestClass) {
+    if (osize > cLargestClass || sPooledCounts[sizeClass(osize)] >= cMaxPooledPerClass) {
         std::free(ptr);
         return;
     }
     const size_t index = sizeClass(osize);
     *reinterpret_cast<void**>(ptr) = sFreeLists[index];
     sFreeLists[index] = ptr;
+    ++sPooledCounts[index];
 }
 
 } // namespace
@@ -188,6 +193,8 @@ static void* luaAlloc(void*, void* ptr, [[maybe_unused]] const size_t osize, con
 
 lua_State* mudletNewLuaState()
 {
+    // Unguarded globals above: this has to stay the main thread's alone.
+    Q_ASSERT(!qApp || QThread::currentThread() == qApp->thread());
     lua_State* L = lua_newstate(&luaAlloc, nullptr);
     if (L) {
         lua_atpanic(L, &luaPanic);
