@@ -46,8 +46,6 @@
 class TCaptureNodePool
 {
 public:
-    // Both return a reference to a node now owned by `into`, recycled if the
-    // pool has one and freshly made if it does not
     static std::string& takeCapture(std::list<std::string>& into)
     {
         if (smSpareCaptures.empty()) {
@@ -73,7 +71,7 @@ public:
         // A capture as big as a whole line would otherwise hold its buffer in
         // the pool for the rest of the session
         for (auto it = used.begin(); it != used.end();) {
-            if (it->capacity() > smMaxPooledCapture) {
+            if (it->capacity() > scmMaxPooledCapture) {
                 it = used.erase(it);
             } else {
                 ++it;
@@ -102,9 +100,7 @@ public:
     }
 
 private:
-    // Whatever the pool has no room for is left behind for the list being
-    // emptied to free in the ordinary way
-    static size_t roomFor(const size_t held) { return (held >= smMaxPooledNodes) ? 0 : (smMaxPooledNodes - held); }
+    static size_t roomFor(const size_t held) { return (held >= scmMaxPooledNodes) ? 0 : (scmMaxPooledNodes - held); }
 
     // The pool only ever reaches the most nodes that were in use at once, but
     // one match-all pattern over a hostile line would set that high water mark
@@ -112,8 +108,8 @@ private:
     // nested ones a filter trigger makes and any multiline state still open
     // included, and free the rest. Past the cap the cost is the allocation
     // this pool exists to save, never unbounded memory.
-    static constexpr size_t smMaxPooledNodes = 512;
-    static constexpr std::string::size_type smMaxPooledCapture = 1024;
+    static constexpr size_t scmMaxPooledNodes = 512;
+    static constexpr std::string::size_type scmMaxPooledCapture = 1024;
     inline static std::list<std::string> smSpareCaptures;
     inline static std::list<int> smSparePositions;
 };
