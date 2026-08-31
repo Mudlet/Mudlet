@@ -148,6 +148,7 @@ jobs:
         done
 
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
+        echo "CCACHE_MAXSIZE=300M" >> $GITHUB_ENV
 
         # Use latest available XCode
         echo "DEVELOPER_DIR=$(xcode-select --print-path)" >> $GITHUB_ENV
@@ -242,6 +243,7 @@ jobs:
         sudo update-alternatives --set g++ /usr/bin/g++-${{matrix.gcc_compiler_version}}
 
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
+        echo "CCACHE_MAXSIZE=300M" >> $GITHUB_ENV
 
         # Install lua-yajl early to generate translation statistics
         luarocks --lua-version 5.1 install --local lua-yajl
@@ -402,9 +404,7 @@ jobs:
         SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
     - name: Save sentry-native cache
-      if: >-
-        always() && github.ref_name == 'development'
-        && steps.cache-sentry.outputs.cache-hit != 'true'
+      if: github.ref_name == 'development' && steps.cache-sentry.outputs.cache-hit != 'true'
       uses: actions/cache/save@v6
       with:
         path: |

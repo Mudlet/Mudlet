@@ -72,6 +72,7 @@ jobs:
       shell: msys2 {0}
       env:
         CCACHE_DIR: ${{runner.workspace}}/ccache
+        CCACHE_MAXSIZE: 300M
       run: ccache --zero-stats --show-stats
 
     - name: Get sentry-native commit hash
@@ -91,6 +92,7 @@ jobs:
     - name: (Windows) Build
       shell: msys2 {0}
       env:
+        CCACHE_MAXSIZE: 300M
         GITHUB_REPO_TAG: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
         GITHUB_SCHEDULED_BUILD: ${{ github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' }}
         GITHUB_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
@@ -103,9 +105,7 @@ jobs:
       run: $GITHUB_WORKSPACE/CI/build-mudlet-for-windows.sh
 
     - name: Save sentry-native cache
-      if: >-
-        always() && github.ref_name == 'development'
-        && steps.cache-sentry.outputs.cache-hit != 'true'
+      if: github.ref_name == 'development' && steps.cache-sentry.outputs.cache-hit != 'true'
       uses: actions/cache/save@v6
       with:
         path: |
@@ -117,6 +117,7 @@ jobs:
       shell: msys2 {0}
       env:
         CCACHE_DIR: ${{runner.workspace}}/ccache
+        CCACHE_MAXSIZE: 300M
       run: ccache --show-stats
 
     - name: (Windows) Run QTest
