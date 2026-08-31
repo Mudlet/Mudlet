@@ -108,10 +108,8 @@ jobs:
       id: cache-sentry
       uses: actions/cache@v6
       with:
-        path: |
-          3rdparty/sentry-native/install_without_transport
-          3rdparty/sentry-native/install_with_transport
-        key: sentry-${{ runner.os }}-${{ runner.arch }}-${{ steps.sentry-hash.outputs.SENTRY_HASH }}
+        path: build-sentry
+        key: sentry-${{ matrix.os }}-${{ runner.arch }}-${{ steps.sentry-hash.outputs.SENTRY_HASH }}
 
     - name: (Windows) Build
       shell: msys2 {0}

@@ -3,6 +3,9 @@ if(NOT WITH_SENTRY)
 endif()
 
 set(SENTRY_PATH "${CMAKE_SOURCE_DIR}/3rdparty/sentry-native")
+# Covered by the /build* line in .gitignore.
+set(SENTRY_BUILD_ROOT "${CMAKE_SOURCE_DIR}/build-sentry")
+set(SENTRY_INSTALL "${SENTRY_BUILD_ROOT}/install")
 
 # Check if sentry-native submodule is initialized
 if(NOT EXISTS "${SENTRY_PATH}/CMakeLists.txt")
@@ -15,13 +18,20 @@ if(NOT EXISTS "${SENTRY_PATH}/CMakeLists.txt")
 endif()
 
 message(STATUS "Building with Sentry enabled")
+string(REPLACE ";" "|" SENTRY_PREFIX_PATH "${CMAKE_PREFIX_PATH}")
 set(SENTRY_COMMON_ARGS
     -DCMAKE_BUILD_TYPE=RelWithDebInfo
-    -DCMAKE_C_COMPILER=clang
-    -DCMAKE_CXX_COMPILER=clang++
+    "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
+    "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
+    "-DCMAKE_C_COMPILER_LAUNCHER=${CMAKE_C_COMPILER_LAUNCHER}"
+    "-DCMAKE_CXX_COMPILER_LAUNCHER=${CMAKE_CXX_COMPILER_LAUNCHER}"
+    "-DCMAKE_PREFIX_PATH=${SENTRY_PREFIX_PATH}"
     -DSENTRY_BACKEND=crashpad
     -DSENTRY_BUILD_SHARED_LIBS=OFF
     -DSENTRY_INTEGRATION_QT=ON
+    -DSENTRY_BUILD_TESTS=OFF
+    -DSENTRY_BUILD_EXAMPLES=OFF
+    -DSENTRY_ENABLE_INSTALL=ON
     -G Ninja
 )
 
@@ -37,7 +47,7 @@ if(APPLE)
     elseif("${CMAKE_SYSTEM_PROCESSOR}" MATCHES "x86_64")
         set(ARCH_LIST "x86_64")
     else()
-        set(ARCH_LIST "arm64;x86_64")
+        set(ARCH_LIST "arm64|x86_64")
     endif()
 
     # ExternalProject does not inherit the parent build's cache, so without this
@@ -58,28 +68,19 @@ endif()
 
 include(ExternalProject)
 
-# 1) SENTRY WITHOUT TRANSPORT  → used by MUDLET
 ExternalProject_Add(
-    sentry_without_transport
+    sentry_native
     SOURCE_DIR ${SENTRY_PATH}
+    PREFIX ${SENTRY_BUILD_ROOT}
+    LIST_SEPARATOR |
     CMAKE_ARGS
-        -DCMAKE_INSTALL_PREFIX=${SENTRY_PATH}/install_without_transport
+        -DCMAKE_INSTALL_PREFIX=${SENTRY_INSTALL}
         ${SENTRY_COMMON_ARGS}
         -DSENTRY_TRANSPORT=none
 )
 
 
-# 2) SENTRY WITH TRANSPORT  → used by CrashReporter
-ExternalProject_Add(
-    sentry_with_transport
-    SOURCE_DIR ${SENTRY_PATH}
-    CMAKE_ARGS
-        -DCMAKE_INSTALL_PREFIX=${SENTRY_PATH}/install_with_transport
-        ${SENTRY_COMMON_ARGS}
-)
-
-
-add_dependencies(${LIB_MUDLET_TARGET} sentry_without_transport)
+add_dependencies(${LIB_MUDLET_TARGET} sentry_native)
 
 target_compile_options(${LIB_MUDLET_TARGET} PRIVATE -g)
 
@@ -113,10 +114,10 @@ target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC
 )
 
 target_include_directories(${LIB_MUDLET_TARGET} PRIVATE
-   "${SENTRY_PATH}/install_without_transport/include/"
+   "${SENTRY_INSTALL}/include/"
 )
 target_link_directories(${LIB_MUDLET_TARGET} PUBLIC
-    "${SENTRY_PATH}/install_without_transport/lib/"
+    "${SENTRY_INSTALL}/lib/"
 )
 # The sentry Qt integration needs qInstallMessageHandler from Qt6::Core.
 # CMake de-duplicates Qt6::Core, placing it before sentry in the link order.
@@ -152,7 +153,7 @@ else()
     target_link_libraries(${LIB_MUDLET_TARGET} crashpad_compat unwind)
 endif()
 
-set(SENTRY_BINARIES "${SENTRY_PATH}/install_without_transport/bin")
+set(SENTRY_BINARIES "${SENTRY_INSTALL}/bin")
 set(STAMP_FILE "${CMAKE_CURRENT_BINARY_DIR}/sentry_binaries.stamp")
 
 add_custom_command(OUTPUT ${STAMP_FILE}
@@ -162,7 +163,7 @@ add_custom_command(OUTPUT ${STAMP_FILE}
 )
 
 add_custom_target(copy_sentry ALL DEPENDS ${STAMP_FILE})
-add_dependencies(copy_sentry sentry_without_transport)
+add_dependencies(copy_sentry sentry_native)
 add_dependencies(${EXE_MUDLET_TARGET} copy_sentry)
 
 if(APPLE)
