@@ -36,6 +36,7 @@
 
 #include <cassert>
 #include <cstring>
+#include <list>
 #include <sstream>
 #include <vector>
 
@@ -87,6 +88,113 @@ int indexOfNeedle(const QString& haystack, const QString& needle, const int from
     }
     return -1;
 }
+
+// QColor::operator==() is an exported, out-of-line comparison of a colour spec
+// and five component words, and a colour trigger makes one of those per
+// character of every line it is offered. Outside HSL, whose equality is
+// deliberately approximate, that is exactly a comparison of the front of the
+// object, so do it here where it can be inlined.
+constexpr size_t COLOR_COMPARED_BYTES = sizeof(QColor::Spec) + 5 * sizeof(ushort);
+static_assert(sizeof(QColor) == 16 && COLOR_COMPARED_BYTES == 14, "QColor is no longer a spec word followed by five component words - use QColor::operator==() instead of sameColor()");
+
+inline bool sameColor(const QColor& left, const QColor& right)
+{
+    if (Q_UNLIKELY(left.spec() == QColor::Hsl || right.spec() == QColor::Hsl)) {
+        return left == right;
+    }
+    return std::memcmp(&left, &right, COLOR_COMPARED_BYTES) == 0;
+}
+
+// Every trigger fire builds a list of captures and a list of their positions
+// and throws both away again, which costs a node allocation per element plus a
+// buffer for any capture the small string optimisation cannot hold. The nodes
+// of a finished fire are parked here rather than freed: splice() moves a node
+// between lists without going near the allocator, and assigning a capture into
+// a recycled string reuses the buffer it already has, so a fire that follows
+// one of the same shape allocates nothing at all.
+//
+// The lists are held by the caller rather than by the trigger because a script
+// can feed text back through the pipeline and re-enter matching on the very
+// trigger that is still running; each level of that gets its own lists, and
+// only the emptied nodes are shared.
+class CaptureLists
+{
+public:
+    CaptureLists() = default;
+    CaptureLists(const CaptureLists&) = delete;
+    CaptureLists& operator=(const CaptureLists&) = delete;
+
+    ~CaptureLists()
+    {
+        // A capture as big as a whole line would otherwise hold its buffer in
+        // the pool for the rest of the session
+        for (auto it = mCaptures.begin(); it != mCaptures.end();) {
+            if (it->capacity() > smMaxPooledCapture) {
+                it = mCaptures.erase(it);
+            } else {
+                ++it;
+            }
+        }
+        smSpareCaptures.splice(smSpareCaptures.end(), mCaptures);
+        smSparePositions.splice(smSparePositions.end(), mPositions);
+    }
+
+    // As std::string(const char*) does, this stops the capture at the first NUL
+    void add(const char* capture, const int position)
+    {
+        nextCapture().assign(capture);
+        nextPosition() = position;
+    }
+
+    void add(const char* capture, const size_t length, const int position)
+    {
+        nextCapture().assign(capture, length);
+        nextPosition() = position;
+    }
+
+    void add(const std::string& capture, const int position)
+    {
+        nextCapture().assign(capture);
+        nextPosition() = position;
+    }
+
+    void addEmpty(const int position)
+    {
+        nextCapture().clear();
+        nextPosition() = position;
+    }
+
+    std::list<std::string> mCaptures;
+    std::list<int> mPositions;
+
+private:
+    std::string& nextCapture()
+    {
+        if (smSpareCaptures.empty()) {
+            mCaptures.emplace_back();
+        } else {
+            mCaptures.splice(mCaptures.end(), smSpareCaptures, smSpareCaptures.begin());
+        }
+        return mCaptures.back();
+    }
+
+    int& nextPosition()
+    {
+        if (smSparePositions.empty()) {
+            mPositions.emplace_back();
+        } else {
+            mPositions.splice(mPositions.end(), smSparePositions, smSparePositions.begin());
+        }
+        return mPositions.back();
+    }
+
+    static constexpr std::string::size_type smMaxPooledCapture = 4096;
+    static std::list<std::string> smSpareCaptures;
+    static std::list<int> smSparePositions;
+};
+
+std::list<std::string> CaptureLists::smSpareCaptures;
+std::list<int> CaptureLists::smSparePositions;
 } // namespace
 
 // Some extraordinary numbers outside of the range (0-255) used for ANSI colors:
@@ -359,23 +467,22 @@ void TTrigger::processRegexMatch(const char* haystackC,
 
     int i = 0;
     int numberOfCaptureGroups = 0;
-    std::list<std::string> captureList;
-    std::list<int> posList;
+    CaptureLists lists;
+    std::list<std::string>& captureList = lists.mCaptures;
+    std::list<int>& posList = lists.mPositions;
     QMap<QString, QPair<int, int>> namePositions;
     NameGroupMatches nameGroups;
     for (i = 0; i < rc; i++) {
         const char* substring_start = haystackC + ovector[2 * i];
         const int substring_length = ovector[2 * i + 1] - ovector[2 * i];
         if (substring_length < 1) {
-            captureList.emplace_back();
-            posList.push_back(-1);
+            lists.addEmpty(-1);
             continue;
         }
 
         const int utf16_pos = utf16PositionOf(haystackC, ovector[2 * i]);
         // Built where it is kept: a local to copy from would allocate twice
-        captureList.emplace_back(substring_start, substring_length);
-        posList.push_back(utf16_pos + posOffset);
+        lists.add(substring_start, static_cast<size_t>(substring_length), utf16_pos + posOffset);
         if (TDebug::wants(TDebug::Category::TriggerDetail)) {
             TDebug(Qt::darkCyan, Qt::black, TDebug::Category::TriggerDetail, mName) << "capture group #" << (i + 1) << " = " >> mpHost;
             TDebug(Qt::darkMagenta, Qt::black, TDebug::Category::TriggerDetail, mName) << TDebug::csmContinue << "<" << captureList.back().c_str() << ">\n" >> mpHost;
@@ -439,13 +546,11 @@ void TTrigger::processRegexMatch(const char* haystackC,
             const int substring_length = ovector[2 * i + 1] - ovector[2 * i];
 
             if (substring_length < 1) {
-                captureList.emplace_back();
-                posList.push_back(-1);
+                lists.addEmpty(-1);
                 continue;
             }
             const int utf16_pos = utf16PositionOf(haystackC, ovector[2 * i]);
-            captureList.emplace_back(substring_start, substring_length);
-            posList.push_back(utf16_pos + posOffset);
+            lists.add(substring_start, static_cast<size_t>(substring_length), utf16_pos + posOffset);
             if (TDebug::wants(TDebug::Category::TriggerDetail)) {
                 TDebug(Qt::darkCyan, Qt::black, TDebug::Category::TriggerDetail, mName) << "<regex mode: match all> capture group #" << (i + 1) << " = " >> mpHost;
                 TDebug(Qt::darkMagenta, Qt::black, TDebug::Category::TriggerDetail, mName) << "<" << captureList.back().c_str() << ">\n" >> mpHost;
@@ -554,10 +659,10 @@ const std::string& TTrigger::patternUtf8(const int patternNumber) const
 
 void TTrigger::processBeginOfLine(const QString& needle, int patternNumber, int posOffset, int lineNumber)
 {
-    std::list<std::string> captureList;
-    std::list<int> posList;
-    captureList.emplace_back(patternUtf8(patternNumber));
-    posList.push_back(0 + posOffset);
+    CaptureLists lists;
+    std::list<std::string>& captureList = lists.mCaptures;
+    std::list<int>& posList = lists.mPositions;
+    lists.add(patternUtf8(patternNumber), 0 + posOffset);
     if (TDebug::wants(TDebug::Category::TriggerMatch)) {
         TDebug(Qt::darkCyan, Qt::black, TDebug::Category::TriggerMatch, mName) << "Trigger name=" << mName << "(" << mPatterns.value(patternNumber) << ") matched.\n" >> mpHost;
     }
@@ -683,15 +788,14 @@ bool TTrigger::match_substring(const QString& haystack, const QString& needle, i
 
 void TTrigger::processSubstringMatch(const QString& haystack, const QString& needle, int regexNumber, int posOffset, int where, int lineNumber)
 {
-    std::list<std::string> captureList;
-    std::list<int> posList;
+    CaptureLists lists;
+    std::list<std::string>& captureList = lists.mCaptures;
+    std::list<int>& posList = lists.mPositions;
     const std::string& capture = patternUtf8(regexNumber);
-    captureList.emplace_back(capture);
-    posList.push_back(where + posOffset);
+    lists.add(capture, where + posOffset);
     if (mPerlSlashGOption) {
         while ((where = indexOfNeedle(haystack, needle, where + 1)) != -1) {
-            captureList.emplace_back(capture);
-            posList.push_back(where + posOffset);
+            lists.add(capture, where + posOffset);
         }
     }
     if (TDebug::wants(TDebug::Category::TriggerMatch)) {
@@ -750,8 +854,7 @@ bool TTrigger::match_color_pattern(int line, int patternNumber, int posOffset, i
         return false;
     }
     bool canExecute = false;
-    std::list<std::string> captureList;
-    std::list<int> posList;
+    CaptureLists lists;
     TConsoleModel& consoleModel = mpHost->mainConsoleModel();
     if (line >= static_cast<int>(consoleModel.buffer.buffer.size())) {
         return false;
@@ -800,8 +903,8 @@ bool TTrigger::match_color_pattern(int line, int patternNumber, int posOffset, i
         // Ideally we should base the matching on only the ANSI code but not
         // all parts of the text come from the Server and can be determined to
         // have come from a decoded ANSI code number:
-        if (((ansiFg == scmIgnored) || ((ansiFg == scmDefault) && defaultFg == character.foreground()) || (patternFg == character.foreground()))
-            && ((ansiBg == scmIgnored) || ((ansiBg == scmDefault) && defaultBg == character.background()) || (patternBg == character.background()))) {
+        if (((ansiFg == scmIgnored) || ((ansiFg == scmDefault) && sameColor(defaultFg, character.foreground())) || sameColor(patternFg, character.foreground()))
+            && ((ansiBg == scmIgnored) || ((ansiBg == scmDefault) && sameColor(defaultBg, character.background())) || sameColor(patternBg, character.background()))) {
             if (matchBegin == -1) {
                 matchBegin = pos;
             }
@@ -812,9 +915,10 @@ bool TTrigger::match_color_pattern(int line, int patternNumber, int posOffset, i
 
         if ((!matching) || (matching && (pos + 1 >= end))) {
             if (matchBegin > -1) {
-                const QByteArray got = lineBuffer.mid(matchBegin, matching ? (pos - matchBegin + 1) : (pos - matchBegin)).toUtf8();
-                captureList.emplace_back(got.constData());
-                posList.push_back(matchBegin);
+                // A view of the run, not a copy of it: only the UTF-8 the
+                // capture is made from has to be materialised
+                const QByteArray got = QStringView(lineBuffer).mid(matchBegin, matching ? (pos - matchBegin + 1) : (pos - matchBegin)).toUtf8();
+                lists.add(got.constData(), matchBegin);
                 matchBegin = -1;
                 canExecute = true;
                 matching = false;
@@ -823,7 +927,7 @@ bool TTrigger::match_color_pattern(int line, int patternNumber, int posOffset, i
     }
 
     if (canExecute) {
-        processColorPattern(patternNumber, captureList, posList, line);
+        processColorPattern(patternNumber, lists.mCaptures, lists.mPositions, line);
         return true;
     }
     return false;
@@ -973,10 +1077,10 @@ bool TTrigger::match_exact_match(const QString& haystack, const QString& needle,
 
 void TTrigger::processExactMatch(const QString& needle, int patternNumber, int posOffset, int lineNumber)
 {
-    std::list<std::string> captureList;
-    std::list<int> posList;
-    captureList.emplace_back(patternUtf8(patternNumber));
-    posList.push_back(0 + posOffset);
+    CaptureLists lists;
+    std::list<std::string>& captureList = lists.mCaptures;
+    std::list<int>& posList = lists.mPositions;
+    lists.add(patternUtf8(patternNumber), 0 + posOffset);
     if (TDebug::wants(TDebug::Category::TriggerMatch)) {
         TDebug(Qt::yellow, Qt::black, TDebug::Category::TriggerMatch, mName) << "Trigger name=" << mName << "(" << mPatterns.value(patternNumber) << ") matched.\n" >> mpHost;
     }
