@@ -110,6 +110,10 @@ private:
     // this pool exists to save, never unbounded memory.
     static constexpr size_t scmMaxPooledNodes = 512;
     static constexpr std::string::size_type scmMaxPooledCapture = 1024;
+    // Destroyed at static teardown, by which point Mudlet has taken every Host
+    // down inside the event loop. A TMatchState that outlived these - one owned
+    // by a namespace-scope object in a test binary that links mudlet_core -
+    // would park into destroyed lists.
     inline static std::list<std::string> smSpareCaptures;
     inline static std::list<int> smSparePositions;
 };
@@ -124,23 +128,12 @@ public:
     {
     }
 
-    // Copy constructor - deliberately does not carry over the capture
-    // containers, so a copied state starts with empty captures:
-    TMatchState(const TMatchState& ms)
-    : mNumberOfConditions(ms.mNumberOfConditions)
-    , mNextCondition(ms.mNextCondition)
-    , mLineCount(ms.mLineCount)
-    , mDelta(ms.mDelta)
-    , mSpacer(ms.mSpacer)
-    {
-    }
-
-    // Pair the user-defined copy constructor with an explicit copy assignment
-    // (Rule of Two). Note the two are deliberately asymmetric: unlike the
-    // constructor above, this defaulted assignment copies every member,
-    // capture containers included. That reproduces the previously implicit
-    // assignment exactly, so behaviour is unchanged:
-    TMatchState& operator=(const TMatchState& ms) = default;
+    // Copying is deleted rather than defined now that the destructor hands the
+    // capture containers back to the pool: a copy would take nodes out of
+    // circulation without ever parking them. States are held by unique_ptr and
+    // moved, so nothing copies one.
+    TMatchState(const TMatchState&) = delete;
+    TMatchState& operator=(const TMatchState&) = delete;
 
     // A state is only ever destroyed once nothing reads its captures any more:
     // TTrigger takes a completed one out of its condition map before running

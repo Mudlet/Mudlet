@@ -34,7 +34,6 @@
 #include "mudlet.h"
 #include <QRegularExpression>
 
-#include <cassert>
 #include <cstring>
 #include <list>
 #include <sstream>
@@ -91,18 +90,20 @@ int indexOfNeedle(const QString& haystack, const QString& needle, const int from
 
 // QColor::operator==() is an exported, out-of-line comparison of a colour spec
 // and five component words, and a colour trigger makes one of those per
-// character of every line it is offered. Outside HSL, whose equality is
-// deliberately approximate, that is exactly a comparison of the front of the
-// object, so do it here where it can be inlined.
+// character of every line it is offered. For two RGB colours that is exactly a
+// comparison of the front of the object, so do it here where it can be
+// inlined. HSL and HSV both compare approximately - HSV counts hue 0 and hue
+// 36000 as the same red - so they are left to Qt. Every colour a trigger
+// actually sees is RGB, which makes the fast path the predicted one.
 constexpr size_t COLOR_COMPARED_BYTES = sizeof(QColor::Spec) + 5 * sizeof(ushort);
 static_assert(sizeof(QColor) == 16 && COLOR_COMPARED_BYTES == 14, "QColor is no longer a spec word followed by five component words - use QColor::operator==() instead of sameColor()");
 
 inline bool sameColor(const QColor& left, const QColor& right)
 {
-    if (Q_UNLIKELY(left.spec() == QColor::Hsl || right.spec() == QColor::Hsl)) {
-        return left == right;
+    if (Q_LIKELY(left.spec() == QColor::Rgb && right.spec() == QColor::Rgb)) {
+        return std::memcmp(&left, &right, COLOR_COMPARED_BYTES) == 0;
     }
-    return std::memcmp(&left, &right, COLOR_COMPARED_BYTES) == 0;
+    return left == right;
 }
 
 // Holds the capture list and position list of one fire, taking their nodes
@@ -396,8 +397,15 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
 
 bool TTrigger::match_perl(const char* haystackC, const int haystackCLength, const QString& haystack, int patternNumber, int posOffset, int lineNumber)
 {
-    assert(patternNumber >= 0 && patternNumber < static_cast<int>(mRegexes.size()));
+    if (Q_UNLIKELY(patternNumber < 0 || patternNumber >= static_cast<int>(mRegexes.size()))) {
+        return false;
+    }
 
+    // A reference rather than a copy, which means it stops being valid the
+    // moment setRegexCodeList() clears the vector. Nothing between here and
+    // END: runs Lua - the capture loops all finish before the first execute()
+    // - so that cannot happen mid-call. Moving a script-invoking call above
+    // END:, or reading re or ovector after one, would break that.
     const QSharedPointer<pcre2_code>& re = mRegexes[patternNumber];
 
     if (!re) {
@@ -624,7 +632,7 @@ END: {
 bool TTrigger::match_begin_of_line_substring(const QString& haystack, const QString& needle, int patternNumber, int posOffset, int lineNumber)
 {
     if (haystack.startsWith(needle)) {
-        processBeginOfLine(needle, patternNumber, posOffset, lineNumber);
+        processBeginOfLine(patternNumber, posOffset, lineNumber);
         return true;
     }
     return false;
@@ -641,7 +649,7 @@ const std::string& TTrigger::patternUtf8(const int patternNumber) const
     return mPatternsUtf8[patternNumber];
 }
 
-void TTrigger::processBeginOfLine(const QString& needle, int patternNumber, int posOffset, int lineNumber)
+void TTrigger::processBeginOfLine(int patternNumber, int posOffset, int lineNumber)
 {
     CaptureLists lists;
     std::list<std::string>& captureList = lists.mCaptures;
@@ -1048,13 +1056,13 @@ bool TTrigger::match_exact_match(const QString& haystack, const QString& needle,
     }
 
     if (text == needle) {
-        processExactMatch(needle, patternNumber, posOffset, lineNumber);
+        processExactMatch(patternNumber, posOffset, lineNumber);
         return true;
     }
     return false;
 }
 
-void TTrigger::processExactMatch(const QString& needle, int patternNumber, int posOffset, int lineNumber)
+void TTrigger::processExactMatch(int patternNumber, int posOffset, int lineNumber)
 {
     CaptureLists lists;
     std::list<std::string>& captureList = lists.mCaptures;
