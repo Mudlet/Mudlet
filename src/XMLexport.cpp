@@ -633,9 +633,9 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         host.append_child("mLightMagenta").text().set(pHost->mLightMagenta.name().toUtf8().constData());
         host.append_child("mWhite").text().set(pHost->mWhite.name().toUtf8().constData());
         host.append_child("mLightWhite").text().set(pHost->mLightWhite.name().toUtf8().constData());
-        host.append_child("mDisplayFont").text().set(pHost->getDisplayFont().toString().toUtf8().constData());
+        host.append_child("mDisplayFont").text().set(pHost->getDisplayFontForSaving().toString().toUtf8().constData());
         // We don't use this ourselves any more but still write it out for older versions:
-        host.append_child("mCommandLineFont").text().set(pHost->getDisplayFont().toString().toUtf8().constData());
+        host.append_child("mCommandLineFont").text().set(pHost->getDisplayFontForSaving().toString().toUtf8().constData());
         // There was a mis-spelt duplicate commandSeperator above but it is now gone
         host.append_child("mCommandSeparator").text().set(pHost->mCommandSeparator.toUtf8().constData());
         host.append_child("commandLineMinimumHeight").text().set(QString::number(pHost->commandLineMinimumHeight).toUtf8().constData());
@@ -1087,8 +1087,8 @@ void XMLexport::writeTrigger(TTrigger* pT, pugi::xml_node xmlParent)
         }
     }
 
-    for (auto& it : *pT->mpMyChildrenList) {
-        writeTrigger(it, xmlParent);
+    for (auto* child : *pT->mpMyChildrenList) {
+        writeTrigger(static_cast<TTrigger*>(child), xmlParent);
     }
 }
 
@@ -1140,8 +1140,8 @@ void XMLexport::writeAlias(TAlias* pT, pugi::xml_node xmlParent)
         }
     }
 
-    for (auto& it : *pT->mpMyChildrenList) {
-        writeAlias(it, xmlParent);
+    for (auto* child : *pT->mpMyChildrenList) {
+        writeAlias(static_cast<TAlias*>(child), xmlParent);
     }
 }
 
@@ -1211,8 +1211,8 @@ void XMLexport::writeAction(TAction* pT, pugi::xml_node xmlParent)
         }
     }
 
-    for (auto& it : *pT->mpMyChildrenList) {
-        writeAction(it, xmlParent);
+    for (auto* child : *pT->mpMyChildrenList) {
+        writeAction(static_cast<TAction*>(child), xmlParent);
     }
 }
 
@@ -1267,8 +1267,8 @@ void XMLexport::writeTimer(TTimer* pT, pugi::xml_node xmlParent)
         }
     }
 
-    for (auto& it : *pT->mpMyChildrenList) {
-        writeTimer(it, xmlParent);
+    for (auto* child : *pT->mpMyChildrenList) {
+        writeTimer(static_cast<TTimer*>(child), xmlParent);
     }
 }
 
@@ -1322,8 +1322,8 @@ void XMLexport::writeScript(TScript* pT, pugi::xml_node xmlParent)
         }
     }
 
-    for (auto& it : *pT->mpMyChildrenList) {
-        writeScript(it, xmlParent);
+    for (auto* child : *pT->mpMyChildrenList) {
+        writeScript(static_cast<TScript*>(child), xmlParent);
     }
 }
 
@@ -1376,8 +1376,8 @@ void XMLexport::writeKey(TKey* pT, pugi::xml_node xmlParent)
         }
     }
 
-    for (auto& it : *pT->mpMyChildrenList) {
-        writeKey(it, xmlParent);
+    for (auto* child : *pT->mpMyChildrenList) {
+        writeKey(static_cast<TKey*>(child), xmlParent);
     }
 }
 

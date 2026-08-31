@@ -2775,9 +2775,7 @@ int TLuaInterpreter::lockExit(lua_State* L)
 
     const Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
-    if (pR) {
-        pR->setExitLock(dir, b);
-        host.mpMap->setUnsaved(__func__);
+    if (pR && pR->setExitLock(dir, b)) {
         host.mpMap->updateArea(pR->getArea());
         host.mpMap->mMapGraphNeedsUpdate = true;
     }
@@ -2792,10 +2790,13 @@ int TLuaInterpreter::lockRoom(lua_State* L)
     const Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (pR) {
+        const bool changed = pR->isLocked != b;
         pR->isLocked = b;
-        host.mpMap->setUnsaved(__func__);
-        host.mpMap->updateArea(pR->getArea());
-        host.mpMap->mMapGraphNeedsUpdate = true;
+        if (changed) {
+            host.mpMap->setUnsaved(__func__);
+            host.mpMap->updateArea(pR->getArea());
+            host.mpMap->mMapGraphNeedsUpdate = true;
+        }
         lua_pushboolean(L, true);
     } else {
         lua_pushboolean(L, false);
@@ -2823,14 +2824,17 @@ int TLuaInterpreter::lockSpecialExit(lua_State* L)
     if (!pR) {
         return warnArgumentValue(L, __func__, csmInvalidExitRoomID.arg(fromRoomID));
     }
+    const bool changed = pR->hasSpecialExitLock(dir) != b;
     if (!pR->setSpecialExitLock(dir, b)) {
         return warnArgumentValue(L, __func__, qsl("the special exit name/command %1 does not exist in roomID %2").arg(dir, QString::number(fromRoomID)));
     }
 
     lua_pushboolean(L, true);
-    host.mpMap->setUnsaved(__func__);
-    host.mpMap->updateArea(pR->getArea());
-    host.mpMap->mMapGraphNeedsUpdate = true;
+    if (changed) {
+        host.mpMap->setUnsaved(__func__);
+        host.mpMap->updateArea(pR->getArea());
+        host.mpMap->mMapGraphNeedsUpdate = true;
+    }
     return 1;
 }
 

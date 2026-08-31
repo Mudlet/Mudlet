@@ -607,7 +607,8 @@ void TTrigger::filter(std::string& capture, int& posOffset, int lineNumber)
     // pcre2 takes an explicit subject length: cut it at the first NUL, so perl
     // patterns stop there while the QString-based ones still see the whole capture
     const int captureLength = static_cast<int>(qstrnlen(capture.data(), capture.size()));
-    for (auto& trigger : *mpMyChildrenList) {
+    for (auto* triggerNode : *mpMyChildrenList) {
+        auto* trigger = static_cast<TTrigger*>(triggerNode);
         trigger->match(capture.data(), captureLength, text, lineNumber, posOffset);
     }
 }
@@ -1133,7 +1134,8 @@ bool TTrigger::match(const char* haystackC, const int haystackCLength, const QSt
         // if at least one regex is defined a folder is considered a trigger chain otherwise a structural element
         if (!mFilterTrigger) {
             if (conditionMet || (mPatterns.empty())) {
-                for (auto trigger : *mpMyChildrenList) {
+                for (auto* triggerNode : *mpMyChildrenList) {
+                    auto* trigger = static_cast<TTrigger*>(triggerNode);
                     ret = trigger->match(haystackC, haystackCLength, haystack, line, posOffset);
                     if (ret) {
                         conditionMet = true;
@@ -1147,7 +1149,8 @@ bool TTrigger::match(const char* haystackC, const int haystackCLength, const QSt
             if ((mKeepFiring == mStayOpen) || (mpMyChildrenList->empty())) {
                 execute();
             }
-            for (auto trigger : *mpMyChildrenList) {
+            for (auto* triggerNode : *mpMyChildrenList) {
+                auto* trigger = static_cast<TTrigger*>(triggerNode);
                 ret = trigger->match(haystackC, haystackCLength, haystack, line, posOffset);
                 if (ret) {
                     conditionMet = true;
@@ -1298,7 +1301,8 @@ void TTrigger::compileAll()
         mOK_code = false;
     }
     setRegexCodeList(mPatterns, mPatternKinds);
-    for (auto trigger : *mpMyChildrenList) {
+    for (auto* triggerNode : *mpMyChildrenList) {
+        auto* trigger = static_cast<TTrigger*>(triggerNode);
         trigger->compileAll();
     }
 }
@@ -1314,7 +1318,8 @@ void TTrigger::compile()
             mOK_code = false;
         }
     }
-    for (auto trigger : *mpMyChildrenList) {
+    for (auto* triggerNode : *mpMyChildrenList) {
+        auto* trigger = static_cast<TTrigger*>(triggerNode);
         trigger->compile();
     }
 }
@@ -1479,7 +1484,8 @@ void TTrigger::enableTrigger(const QString& name)
     if (mName == name) {
         setIsActive(true);
     }
-    for (auto trigger : *mpMyChildrenList) {
+    for (auto* triggerNode : *mpMyChildrenList) {
+        auto* trigger = static_cast<TTrigger*>(triggerNode);
         trigger->enableTrigger(name);
     }
 }
@@ -1489,7 +1495,8 @@ void TTrigger::disableTrigger(const QString& name)
     if (mName == name) {
         setIsActive(false);
     }
-    for (auto trigger : *mpMyChildrenList) {
+    for (auto* triggerNode : *mpMyChildrenList) {
+        auto* trigger = static_cast<TTrigger*>(triggerNode);
         trigger->disableTrigger(name);
     }
 }
@@ -1499,7 +1506,8 @@ TTrigger* TTrigger::killTrigger(const QString& name)
     if (mName == name) {
         setIsActive(false);
     }
-    for (auto trigger : *mpMyChildrenList) {
+    for (auto* triggerNode : *mpMyChildrenList) {
+        auto* trigger = static_cast<TTrigger*>(triggerNode);
         trigger->killTrigger(name);
     }
     return nullptr;

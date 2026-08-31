@@ -85,7 +85,8 @@ bool TAlias::match(const QString& haystack)
     if (!isActive()) {
         if (isFolder()) {
             if (shouldBeActive()) {
-                for (auto alias : *mpMyChildrenList) {
+                for (auto* aliasNode : *mpMyChildrenList) {
+                    auto* alias = static_cast<TAlias*>(aliasNode);
                     if (alias->match(haystack)) {
                         matchCondition = true;
                     }
@@ -245,7 +246,8 @@ END: {
 }
 
 MUD_ERROR:
-    for (auto childAlias : *mpMyChildrenList) {
+    for (auto* childAliasNode : *mpMyChildrenList) {
+        auto* childAlias = static_cast<TAlias*>(childAliasNode);
         if (childAlias->match(haystack)) {
             matchCondition = true;
         }
@@ -318,7 +320,8 @@ void TAlias::compileAll()
         mOK_code = false;
     }
     compileRegex(); // Effectively will repost the error if there was a problem in the regex
-    for (auto alias : *mpMyChildrenList) {
+    for (auto* aliasNode : *mpMyChildrenList) {
+        auto* alias = static_cast<TAlias*>(aliasNode);
         alias->compileAll();
     }
 }
@@ -333,7 +336,8 @@ void TAlias::compile()
             mOK_code = false;
         }
     }
-    for (auto alias : *mpMyChildrenList) {
+    for (auto* aliasNode : *mpMyChildrenList) {
+        auto* alias = static_cast<TAlias*>(aliasNode);
         alias->compile();
     }
 }
