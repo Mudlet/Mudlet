@@ -360,6 +360,28 @@ describe("PCRE regex cases with tempRegexTrigger", function()
         killTrigger(id)
     end)
 
+    -- Selecting a numbered group used to hold a reference to capture 1 and
+    -- assign every capture it walked past through that reference, so picking
+    -- any later group overwrote the stored full match. The next selection in
+    -- the same script then took its length from the wrong text.
+    it("selectCaptureGroup by number leaves the other captures alone", function()
+        local later, full
+        local id = tempRegexTrigger("^(\\w+) (\\w+)$", function()
+            selectCaptureGroup(3)
+            later = getSelection()
+            deselect()
+            selectCaptureGroup(1)
+            full = getSelection()
+            deselect()
+        end, 1)
+
+        feedTriggers("\nHello World\n")
+
+        assert.are.equal("World", later)
+        assert.are.equal("Hello World", full)
+        killTrigger(id)
+    end)
+
     -- selectCaptureGroup returns -1 for non-existent named group
     it("selectCaptureGroup returns -1 for non-existent named group", function()
         local result
