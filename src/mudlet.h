@@ -39,6 +39,7 @@
 
 #include "ui_main_window.h"
 #include <QElapsedTimer>
+#include <QHash>
 #include <QKeySequence>
 #include <QMainWindow>
 #include <QMap>
@@ -91,7 +92,9 @@ class dlgTriggerEditor;
 class Host;
 class MudletInstanceCoordinator;
 class ShortcutManager;
+class SpeechRecognizer;
 class TConsole;
+class TDebugFilterBar;
 class TDetachedWindow;
 class TDockWidget;
 class TEvent;
@@ -183,6 +186,7 @@ public:
     inline static QVariantHash smLuaFunctionNames;
     inline static QPointer<TConsole> smpDebugConsole;
     inline static QPointer<QMainWindow> smpDebugArea;
+    inline static QPointer<TDebugFilterBar> smpDebugFilterBar;
     // mirror everything shown in any console to stdout. Helpful for CI environments
     inline static bool smMirrorToStdOut = false;
     // adjust Mudlet settings to match Steam's requirements
@@ -220,6 +224,7 @@ public:
     void doAutoLogin(const QString&, bool offline);
     void enableToolbarButtons();
     void updateMainWindowToolbarState();
+    void updateMapActionAvailability();
     void updateMainWindowTitle();
     void forceClose();
     void armForceClose();
@@ -229,6 +234,16 @@ public:
     const QMap<QByteArray, QString>& getEncodingNamesMap() const { return mEncodingNameMap; }
     HostManager& getHostManager() { return mHostManager; }
     ShortcutsManager* shortcutsManager() const { return mpShortcutsManager.data(); }
+    // Speech-to-text bridge: creates the single shared recognizer on first use
+    // and exposes it to the Lua stt.* API. Recognizer results surface as Lua
+    // events; all routing and UI policy lives in packages consuming them.
+    void initSpeechRecognition();
+    SpeechRecognizer* speechRecognizer() const;
+    // Raise one sysSTT* event on the active profile. Public because the stt.*
+    // bindings refuse before a recognizer exists - with no engine installed
+    // there is no object to emit through, and "refusals speak" has to hold
+    // there too or a consumer cannot tell "no engine" from "nothing said yet".
+    void raiseSpeechEvent(const QString& name, const QString& value);
     const QMap<QString, QPointer<TDetachedWindow>>& getDetachedWindows() const { return mDetachedWindows; }
     QDockWidget* getMainWindowDockWidget(const QString& mapKey) const { return mMainWindowDockWidgetMap.value(mapKey); }
     std::optional<QSize> getImageSize(const QString&);
@@ -308,6 +323,41 @@ public:
     bool showMapAuditErrors() const { return mShowMapAuditErrors; }
     bool invertMapZoom() const { return mInvertMapZoom; }
     bool showTabConnectionIndicators() const { return mShowTabConnectionIndicators; }
+    // Addon toolbar button management
+    // Surfaces a command can be placed on. A client with different chrome maps
+    // these onto whatever it has; one that has only a menu honours Menu alone.
+    enum class CommandSurface { Menu, Toolbar, Both };
+
+    struct CommandRequest
+    {
+        QString name;
+        QString icon;
+        QString tooltip;
+        QString menuPath;
+        QString shortcut;
+        CommandSurface surfaces = CommandSurface::Both;
+    };
+
+    // Why a command could not be placed, so the binding can say which
+    int addAddonCommand(const CommandRequest& request, Host* pHost, QString& error);
+    bool removeAddonCommand(int commandId, Host* pHost);
+    bool setAddonCommandEnabled(int commandId, bool enabled, Host* pHost);
+    bool setAddonCommandChecked(int commandId, bool checked, Host* pHost);
+    bool setAddonCommandIcon(int commandId, const QString& icon, Host* pHost);
+    bool setAddonCommandTooltip(int commandId, const QString& tooltip, Host* pHost);
+    bool setAddonCommandPulse(int commandId, bool enabled, const QString& color1, const QString& color2, int interval, Host* pHost, QString& error);
+    // Every command a profile placed, dropped when it closes or resets
+    void removeAddonCommandsForHost(Host* pHost);
+    // Which add-on commands hold this key, named as the player reads them.
+    // The clash check only runs when a package asks for a key, and Mudlet's
+    // own bindings can appear afterwards - the buffer search is switched on
+    // long after a package has taken F3 - at which point Qt disables both.
+    // A command belonging to another profile is reported without its name:
+    // that is the other package's business and nothing this profile can act
+    // on, the same rule addonShortcutUsable() follows.
+    QStringList addonCommandsUsingShortcut(const QKeySequence& sequence, const Host* pHost) const;
+    void applyToolBarStyleToAddonCommands();
+
     // Brings up the preferences dialog and selects the tab whos objectName is
     // supplied, for the given Host - or the active one if none is given:
     void showOptionsDialog(const QString&, Host* = nullptr);
@@ -401,6 +451,10 @@ public:
     // Value of QCoreApplication::testAttribute(Qt::AA_DontShowIconsInMenus) on
     // startup which the user may leave as is or force on or off:
     bool mShowIconsOnMenuOriginally = true;
+    // Whether Mudlet was the active application at the last state change, so
+    // sysApplicationFocusChangeEvent is raised on a change of that and not on
+    // every transition Qt reports between its inactive states
+    bool mApplicationActive = true;
     // 2 (of 2) needed to work around a (Windows/MacOs specific QStyleFactory)
     // issue:
     QString mTEXT_ON_BG_STYLESHEET;
@@ -443,6 +497,7 @@ public slots:
     void slot_showFullChangelog();
 #endif
     void slot_mapper();
+    void slot_updateShowMapActionText();
     void slot_showMapperDialog(); // Enhanced mapper dialog with per-profile dock widgets
     void slot_moduleManager();
     void slot_mudletDiscord();
@@ -570,6 +625,7 @@ private slots:
 #endif
     void slot_updateShortcuts();
     void slot_windowStateChanged(const Qt::WindowStates);
+    void slot_applicationStateChanged(const Qt::ApplicationState);
     void slot_refreshTabIndicatorsDelayed();
     void slot_telnetConnectionStateChanged();
 
@@ -697,6 +753,9 @@ private:
     QPointer<QToolButton> mpButtonConnect;
     QPointer<QToolButton> mpButtonDiscord;
     QPointer<QToolButton> mpButtonMute;
+    // The single shared speech recognizer (one microphone, one decoder);
+    // created lazily by initSpeechRecognition()
+    QPointer<SpeechRecognizer> mpSpeechRecognizer;
     QPointer<QToolButton> mpButtonPackageManagers;
     QHBoxLayout* mpHBoxLayout_profileContainer = nullptr;
     QPointer<QLabel> mpLabelReplaySpeedDisplay;
@@ -756,6 +815,56 @@ private:
     QList<QAction*> mWindowListActions;
     QAction* mWindowListSeparator = nullptr;
 
+    // Addon command management. One command may stand on both surfaces at once -
+    // a toolbar button and a menu item that are the same thing to the package
+    // that placed it, addressed by one id and raising one event, which is how
+    // Mudlet's own commands already behave.
+    //
+    // closeHost() and a profile reset both drop every command belonging to that
+    // profile before its Host goes, so no entry should outlive its owner - the
+    // QPointers are what keeps a missed path from turning into a dangling read
+    // in the click handlers, which resolve pHost lazily.
+    struct AddonCommand
+    {
+        QPointer<QToolButton> button;
+        QPointer<QAction> toolbarAction;
+        QPointer<QAction> menuAction;
+        QPointer<QTimer> pulseTimer;
+        QPointer<Host> pHost;
+        bool pulseState = false;
+        QString pulseColor1;
+        QString pulseColor2;
+    };
+    QMenu* addonMenuForPath(const QString& menuPath, const Host* pHost, QString& error);
+    bool addonShortcutUsable(const QKeySequence& sequence, const Host* pHost, QString& error) const;
+    static QString addonTooltip(const QString& tooltip);
+    // Qt reads '&' in a QAction's or QToolButton's text as a mnemonic, so a
+    // package's "Fish & Chips" draws without the ampersand and steals Alt+Space.
+    // The clash checks compare labels after doubling, so a path part is put
+    // through this before being matched against what a menu already holds.
+    static QString addonLabel(const QString& name);
+    // The inverse, for a message rather than a surface: a refusal quoting Qt's
+    // mnemonic syntax names a label that appears nowhere on screen.
+    static QString addonPlainLabel(const QString& label);
+    const Host* addonCommandOwning(const QAction* action) const;
+    static void applyAddonIcon(QToolButton* button, QAction* action, const QString& icon);
+    void raiseAddonCommandEvent(int commandId);
+    // Copy the checked state of the surface the user just activated onto the
+    // other one. Qt toggles only the control that was pressed, so without this
+    // a command shows a tick in the menu and none on the toolbar.
+    void mirrorAddonCommandChecked(int commandId, bool checked);
+
+    QMap<int, AddonCommand> mAddonCommands;
+    // One sequence for every command, so an id names one thing or nothing
+    int mNextAddonCommandId = 1;
+    QAction* mpAddonToolbarSeparator = nullptr;
+    QPointer<QMenu> mpAddonsMenu;
+    // Which profile a menuPath submenu was built for. Placement has to be
+    // decided by the profile's own commands alone: sharing one namespace meant
+    // whether a package could place a command depended on which unrelated
+    // profiles happened to be open, and on labels it could neither see nor clear.
+    QHash<QMenu*, const Host*> mAddonSubmenuOwners;
+
     // amount of times the shortcut has been shown help educate new users
     int mScrollbackTutorialsShown = 0;   // Cancel split screen
     int mMuteAllMediaTutorialsShown = 0; // Mute all media
@@ -784,6 +893,11 @@ private:
 
     // Detached windows for profiles
     QMap<QString, QPointer<TDetachedWindow>> mDetachedWindows;
+
+    // The map actions' enabled state before the active profile's
+    // "mapperButton" setConfig mode is applied on top - the last baseline the
+    // toolbar management functions computed
+    bool mMapActionBaselineEnabled = false;
 
     // Dock widget management for main window per-profile widgets
     QMap<QString, QPointer<QDockWidget>> mMainWindowDockWidgetMap;

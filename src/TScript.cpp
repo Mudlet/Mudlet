@@ -86,7 +86,8 @@ void TScript::compileAll(bool saveLoadingError)
         mNeedsToBeCompiled = true;
     }
     compile(saveLoadingError);
-    for (auto script : *mpMyChildrenList) {
+    for (auto* scriptNode : *mpMyChildrenList) {
+        auto* script = static_cast<TScript*>(scriptNode);
         script->compileAll(saveLoadingError);
     }
 }
@@ -103,8 +104,8 @@ void TScript::compile(bool saveLoadingError)
 {
     if (mNeedsToBeCompiled) {
         if (!compileScript(saveLoadingError)) {
-            if (mudlet::smDebugMode) {
-                TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of script:" << mName << "\n" >> mpHost;
+            if (TDebug::wants(TDebug::Category::Error)) {
+                TDebug(Qt::white, Qt::red, TDebug::Category::Error, mName) << "ERROR: Lua compile error. compiling script of script:" << mName << "\n" >> mpHost;
             }
             mOK_code = false;
         }

@@ -102,10 +102,10 @@ public:
     bool callMulti(const QString& function, const QString& mName);
     std::pair<bool, bool> callMultiReturnBool(const QString& function, const QString& mName);
     bool callConditionFunction(std::string& function, const QString& mName);
-    bool call_luafunction(void* pT);
+    bool call_luafunction(void* pT, const QString& itemName = QString());
     void delete_luafunction(void* pT);
     void delete_luafunction(const QString& name);
-    std::pair<bool, bool> callLuaFunctionReturnBool(void* pT);
+    std::pair<bool, bool> callLuaFunctionReturnBool(void* pT, const QString& itemName = QString());
     double condenseMapLoad();
     bool compile(const QString& code, QString& error, const QString& name);
     void setAtcpTable(const QString&, const QString&);
@@ -249,6 +249,34 @@ public:
     static int setIrcServer(lua_State*);
     static int setIrcChannels(lua_State*);
     static int restartIrc(lua_State*);
+    // Speech-to-text (STT) functions
+    static int sttInit(lua_State*);
+    static int sttStart(lua_State*);
+    static int sttStop(lua_State*);
+    static int sttToggle(lua_State*);
+    static int sttIsListening(lua_State*);
+    static int sttIsAvailable(lua_State*);
+    static int sttIsInitialized(lua_State*);
+    static int sttGetInfo(lua_State*);
+    static int sttGetModelPath(lua_State*);
+    static int sttGetLibraryPath(lua_State*);
+    static int sttListModels(lua_State*);
+    static int sttClose(lua_State*);
+    static int sttGetPlatformKey(lua_State*);
+    static int sttReloadLibrary(lua_State*);
+    static int sttUnloadLibrary(lua_State*);
+    static int sttSetSilenceTimeout(lua_State*);
+    static int sttSetSensitivity(lua_State*);
+    static int sttSetVocabulary(lua_State*);
+    // Addon toolbar/menu functions
+    static int addCommand(lua_State*);
+    static int removeCommand(lua_State*);
+    static int enableCommand(lua_State*);
+    static int disableCommand(lua_State*);
+    static int setCommandChecked(lua_State*);
+    static int setCommandIcon(lua_State*);
+    static int setCommandTooltip(lua_State*);
+    static int setCommandPulse(lua_State*);
     static int showUnzipProgress(lua_State*);
     static int setAppStyleSheet(lua_State*);
     static int setProfileStyleSheet(lua_State*);
@@ -797,6 +825,7 @@ public:
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 
     void freeLuaRegistryIndex(int index);
+    int duplicateLuaRegistryIndex(int index);
     void freeAllInLuaRegistry(TEvent);
 
     // Called from Host::raiseEvent(), to unblock a waitForEvent() on that event.
