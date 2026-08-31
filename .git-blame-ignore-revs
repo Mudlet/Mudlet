@@ -3,3 +3,6 @@ da43033a0ce64161be36fe3bc16c1999e863a74f
 
 # 2026-01-19: Clang-format all CPP files
 b6738dd8c2a46e45bb98e1c8fd9d546cd148b4c2
+
+# 2026-08-31: Lua - Format files with StyLua
+faf4b8e8de605ecb7b37f5590baea77a700ec797
