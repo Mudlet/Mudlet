@@ -106,6 +106,7 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
 {
     patterns.replaceInStrings("\n", "");
     mPatterns.clear();
+    mSubstringMatchers.clear();
     mRegexMap.clear();
     mMatchDataMap.clear();
     mPatternKinds.clear();
@@ -152,6 +153,12 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
             mPatternKinds.append(patternKinds.at(i));
 
             const int patternIndex = mPatterns.size() - 1;
+
+            if (patternKinds.at(i) == REGEX_SUBSTRING) {
+                mSubstringMatchers.emplace_back(std::make_unique<QStringMatcher>(patterns.at(i)));
+            } else {
+                mSubstringMatchers.emplace_back(nullptr);
+            }
 
             if (patternKinds.at(i) == REGEX_PERL) {
                 const QByteArray& regexp = patterns.at(i).toUtf8();
@@ -605,7 +612,7 @@ void TTrigger::setExpiryCount(int expiryCount)
 
 bool TTrigger::match_substring(const QString& haystack, const QString& needle, int patternNumber, int posOffset, int lineNumber)
 {
-    const int where = haystack.indexOf(needle);
+    const int where = mSubstringMatchers[patternNumber]->indexIn(haystack);
     if (where != -1) {
         processSubstringMatch(haystack, needle, patternNumber, posOffset, where, lineNumber);
         return true;
@@ -1254,6 +1261,7 @@ bool TTrigger::setupTmpColorTrigger(int ansiFg, int ansiBg)
     // codes are the scmIgnored ones:
     mPatterns << createColorPatternText(ansiFg, ansiBg);
     mPatternKinds << REGEX_COLOR_PATTERN;
+    mSubstringMatchers.emplace_back(nullptr);
     mColorPatternList.emplace_back(std::move(pCT));
     return true;
 }
