@@ -206,11 +206,19 @@ private:
     void processSubstringMatch(const QString& haystack, const QString& needle, int regexNumber, int posOffset, int where, int lineNumber);
     void processColorPattern(int patternNumber, std::list<std::string>& captureList, std::list<int>& posList, int lineNumber);
     void processPromptMatch(int patternNumber);
+    const std::string& patternUtf8(int patternNumber) const;
 
 
     QList<int> mPatternKinds;
-    QMap<int, QSharedPointer<pcre2_code>> mRegexMap;
-    QMap<int, QSharedPointer<pcre2_match_data>> mMatchDataMap;
+    // Indexed by pattern number rather than keyed by it: every line reaches
+    // these for every pattern of every trigger, which is no place for a tree
+    // lookup and a reference count
+    std::vector<QSharedPointer<pcre2_code>> mRegexes;
+    std::vector<QSharedPointer<pcre2_match_data>> mMatchData;
+    std::vector<bool> mRegexJitCompiled;
+    // The pattern text in the form the capture list wants it, converted when
+    // the trigger is compiled instead of on every match
+    std::vector<std::string> mPatternsUtf8;
 
     // Lua code as a string to run
     QString mScript;
