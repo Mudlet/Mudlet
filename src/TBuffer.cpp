@@ -41,6 +41,7 @@
 #include "TEncodingHelper.h"
 #include "SentryWrapper.h"
 
+#include <QDateTime>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -60,6 +61,27 @@
 using namespace std::chrono_literals;
 
 namespace {
+
+// Every line appended to a buffer is stamped with the time it arrived, and
+// QTime::currentTime() consults the timezone database on each call - which on
+// glibc means a stat() of /etc/localtime per line. The stamp has millisecond
+// resolution at best, so a burst of lines arriving within the same millisecond
+// all get the same string: work it out once and hand out copies until either
+// the millisecond or the (translated, so changeable) format moves on.
+QString currentTimeStamp()
+{
+    static qint64 cachedMSecs = 0;
+    static QString cachedFormat;
+    static QString cachedStamp;
+
+    const qint64 msecs = QDateTime::currentMSecsSinceEpoch();
+    if (msecs != cachedMSecs || cachedFormat != mudlet::smTimeStampFormat) {
+        cachedMSecs = msecs;
+        cachedFormat = mudlet::smTimeStampFormat;
+        cachedStamp = QTime::currentTime().toString(mudlet::smTimeStampFormat);
+    }
+    return cachedStamp;
+}
 
 // How much of a string sequence (OSC, DCS, SOS, PM or APC) is held while
 // waiting for its terminator - beyond this the bytes are discarded as they
@@ -1830,7 +1852,7 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
             lineBuffer << QString();
         }
         buffer.push_back(chars);
-        timeBuffer << QTime::currentTime().toString(mudlet::smTimeStampFormat);
+        timeBuffer << currentTimeStamp();
         if (ch == '\xff') {
             promptBuffer.append(true);
         } else {
@@ -1846,7 +1868,7 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
             lineBuffer.back().append(QString());
         }
         buffer.back() = chars;
-        timeBuffer.back() = QTime::currentTime().toString(mudlet::smTimeStampFormat);
+        timeBuffer.back() = currentTimeStamp();
         if (ch == '\xff') {
             promptBuffer.back() = true;
         } else {
@@ -4942,7 +4964,7 @@ void TBuffer::appendFormatted(const QString& text, const std::vector<TChar>& for
         buffer.back().push_back(destChar);
 
         if (firstChar) {
-            timeBuffer.back() = QTime::currentTime().toString(mudlet::smTimeStampFormat);
+            timeBuffer.back() = currentTimeStamp();
             firstChar = false;
         }
     }
@@ -5074,7 +5096,7 @@ void TBuffer::appendLine(const QString& text,
         if (firstChar) {
             // A caller replaying held-back content supplies the time the text
             // actually arrived, rather than the time it is being shown:
-            timeBuffer.back() = timeStampOverride.isEmpty() ? QTime::currentTime().toString(mudlet::smTimeStampFormat) : timeStampOverride;
+            timeBuffer.back() = timeStampOverride.isEmpty() ? currentTimeStamp() : timeStampOverride;
             firstChar = false;
         }
     }
@@ -5084,7 +5106,7 @@ void TBuffer::appendEmptyLine()
 {
     buffer.emplace_back();
     lineBuffer.push_back(QString());
-    timeBuffer << QTime::currentTime().toString(mudlet::smTimeStampFormat);
+    timeBuffer << currentTimeStamp();
     promptBuffer << false;
 }
 
