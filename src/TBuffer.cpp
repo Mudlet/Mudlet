@@ -74,11 +74,15 @@ QString currentTimeStamp()
     static QString cachedFormat;
     static QString cachedStamp;
 
-    const qint64 msecs = QDateTime::currentMSecsSinceEpoch();
-    if (msecs != cachedMSecs || cachedFormat != mudlet::smTimeStampFormat) {
-        cachedMSecs = msecs;
+    if (QDateTime::currentMSecsSinceEpoch() != cachedMSecs || cachedFormat != mudlet::smTimeStampFormat) {
+        // The stamp is filed under the millisecond it was read in rather than
+        // the one the check above read, which can be the one before it if the
+        // clock ticks between the two. Filing it under the earlier one would
+        // stamp the rest of that millisecond's lines a millisecond early.
+        const QDateTime now = QDateTime::currentDateTime();
+        cachedMSecs = now.toMSecsSinceEpoch();
         cachedFormat = mudlet::smTimeStampFormat;
-        cachedStamp = QTime::currentTime().toString(mudlet::smTimeStampFormat);
+        cachedStamp = now.time().toString(mudlet::smTimeStampFormat);
     }
     return cachedStamp;
 }
@@ -1929,6 +1933,9 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
         mPreTriggerPassLineNumber = lineIndex;
         mpHost->runTriggers(lineIndex);
         mSpareTriggerPassLine.swap(mPreTriggerPassLine);
+        if (mSpareTriggerPassLine.capacity() > csmMaxRetainedPassLine) {
+            std::vector<TChar>().swap(mSpareTriggerPassLine);
+        }
         mPreTriggerPassLine.swap(savedPassLine);
         mPreTriggerPassLineNumber = savedPassLineNumber;
     }

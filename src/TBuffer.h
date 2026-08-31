@@ -697,6 +697,11 @@ private:
     // A longer number opening a line is likelier a year or a price ending a
     // wrapped sentence than a list number; only "[...]" is trusted past it:
     static constexpr qsizetype csmMaxListNumberDigits = 3;
+    // Past this the parked trigger-pass snapshot is dropped rather than kept:
+    // one very long line - a game dumping a help file, or a pasted log -
+    // would otherwise park its capacity for the rest of the session, and a
+    // TChar costs a good deal more than a character does:
+    static constexpr size_t csmMaxRetainedPassLine = 8192;
 
     // Timestamp to prevent duplicate OSC 8 documentation injection
     qint64 mLastOSC8DocsInjectionTime = 0;
