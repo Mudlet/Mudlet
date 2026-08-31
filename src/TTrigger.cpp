@@ -125,13 +125,6 @@ public:
         TCaptureNodePool::park(mPositions);
     }
 
-    // As std::string(const char*) does, this stops the capture at the first NUL
-    void add(const char* capture, const int position)
-    {
-        TCaptureNodePool::takeCapture(mCaptures).assign(capture);
-        TCaptureNodePool::takePosition(mPositions) = position;
-    }
-
     void add(const char* capture, const size_t length, const int position)
     {
         TCaptureNodePool::takeCapture(mCaptures).assign(capture, length);
@@ -150,8 +143,41 @@ public:
         TCaptureNodePool::takePosition(mPositions) = position;
     }
 
+    void add(const QStringView capture, const int position)
+    {
+        std::string& target = TCaptureNodePool::takeCapture(mCaptures);
+        if (!assignAscii(target, capture)) {
+            // Encoded exactly as QString::toUtf8() would, so an unpaired
+            // surrogate cannot shift the byte offset the capture reports
+            target.assign(capture.toUtf8().constData());
+        }
+        TCaptureNodePool::takePosition(mPositions) = position;
+    }
+
     std::list<std::string> mCaptures;
     std::list<int> mPositions;
+
+private:
+    // UTF-8 is the identity over ASCII, so an ASCII run can be built straight
+    // into the recycled buffer with no QByteArray in between. Stops at the
+    // first NUL, as std::string(const char*) does, which is the same byte the
+    // long way round would stop at. Answers false with the target clobbered if
+    // the run holds anything above ASCII, leaving the caller to overwrite it.
+    static bool assignAscii(std::string& target, const QStringView capture)
+    {
+        target.clear();
+        for (const QChar character : capture) {
+            const char16_t unit = character.unicode();
+            if (unit >= 0x80) {
+                return false;
+            }
+            if (unit == u'\0') {
+                break;
+            }
+            target.push_back(static_cast<char>(unit));
+        }
+        return true;
+    }
 };
 } // namespace
 
@@ -871,10 +897,7 @@ bool TTrigger::match_color_pattern(int line, int patternNumber, int posOffset, i
 
         if ((!matching) || (matching && (pos + 1 >= end))) {
             if (matchBegin > -1) {
-                // A view of the run, not a copy of it: only the UTF-8 the
-                // capture is made from has to be materialised
-                const QByteArray got = QStringView(lineBuffer).mid(matchBegin, matching ? (pos - matchBegin + 1) : (pos - matchBegin)).toUtf8();
-                lists.add(got.constData(), matchBegin);
+                lists.add(QStringView(lineBuffer).mid(matchBegin, matching ? (pos - matchBegin + 1) : (pos - matchBegin)), matchBegin);
                 matchBegin = -1;
                 canExecute = true;
                 matching = false;
