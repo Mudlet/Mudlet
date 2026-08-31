@@ -105,15 +105,10 @@ inline bool sameColor(const QColor& left, const QColor& right)
     return std::memcmp(&left, &right, COLOR_COMPARED_BYTES) == 0;
 }
 
-// Every trigger fire builds a list of captures and a list of their positions
-// and throws both away again, which costs a node allocation per element plus a
-// buffer for any capture the small string optimisation cannot hold. The nodes
-// of a finished fire are parked here rather than freed: splice() moves a node
-// between lists without going near the allocator, and assigning a capture into
-// a recycled string reuses the buffer it already has, so a fire that follows
-// one of the same shape allocates nothing at all.
+// Holds the capture list and position list of one fire, taking their nodes
+// from TCaptureNodePool and handing them back when the fire is over.
 //
-// The lists are held by the caller rather than by the trigger because a script
+// The lists belong to the caller rather than to the trigger because a script
 // can feed text back through the pipeline and re-enter matching on the very
 // trigger that is still running; each level of that gets its own lists, and
 // only the emptied nodes are shared.
@@ -126,75 +121,38 @@ public:
 
     ~CaptureLists()
     {
-        // A capture as big as a whole line would otherwise hold its buffer in
-        // the pool for the rest of the session
-        for (auto it = mCaptures.begin(); it != mCaptures.end();) {
-            if (it->capacity() > smMaxPooledCapture) {
-                it = mCaptures.erase(it);
-            } else {
-                ++it;
-            }
-        }
-        smSpareCaptures.splice(smSpareCaptures.end(), mCaptures);
-        smSparePositions.splice(smSparePositions.end(), mPositions);
+        TCaptureNodePool::park(mCaptures);
+        TCaptureNodePool::park(mPositions);
     }
 
     // As std::string(const char*) does, this stops the capture at the first NUL
     void add(const char* capture, const int position)
     {
-        nextCapture().assign(capture);
-        nextPosition() = position;
+        TCaptureNodePool::takeCapture(mCaptures).assign(capture);
+        TCaptureNodePool::takePosition(mPositions) = position;
     }
 
     void add(const char* capture, const size_t length, const int position)
     {
-        nextCapture().assign(capture, length);
-        nextPosition() = position;
+        TCaptureNodePool::takeCapture(mCaptures).assign(capture, length);
+        TCaptureNodePool::takePosition(mPositions) = position;
     }
 
     void add(const std::string& capture, const int position)
     {
-        nextCapture().assign(capture);
-        nextPosition() = position;
+        TCaptureNodePool::takeCapture(mCaptures).assign(capture);
+        TCaptureNodePool::takePosition(mPositions) = position;
     }
 
     void addEmpty(const int position)
     {
-        nextCapture().clear();
-        nextPosition() = position;
+        TCaptureNodePool::takeCapture(mCaptures).clear();
+        TCaptureNodePool::takePosition(mPositions) = position;
     }
 
     std::list<std::string> mCaptures;
     std::list<int> mPositions;
-
-private:
-    std::string& nextCapture()
-    {
-        if (smSpareCaptures.empty()) {
-            mCaptures.emplace_back();
-        } else {
-            mCaptures.splice(mCaptures.end(), smSpareCaptures, smSpareCaptures.begin());
-        }
-        return mCaptures.back();
-    }
-
-    int& nextPosition()
-    {
-        if (smSparePositions.empty()) {
-            mPositions.emplace_back();
-        } else {
-            mPositions.splice(mPositions.end(), smSparePositions, smSparePositions.begin());
-        }
-        return mPositions.back();
-    }
-
-    static constexpr std::string::size_type smMaxPooledCapture = 4096;
-    static std::list<std::string> smSpareCaptures;
-    static std::list<int> smSparePositions;
 };
-
-std::list<std::string> CaptureLists::smSpareCaptures;
-std::list<int> CaptureLists::smSparePositions;
 } // namespace
 
 // Some extraordinary numbers outside of the range (0-255) used for ANSI colors:
@@ -716,8 +674,7 @@ void TTrigger::updateMultistates(int regexNumber, std::list<std::string>& captur
         auto pCondition = std::make_unique<TMatchState>(mPatterns.size(), mConditionLineDelta);
         auto* pConditionRaw = pCondition.get();
         mConditionMap[pConditionRaw] = std::move(pCondition);
-        pConditionRaw->multiCaptureList.push_back(captureList);
-        pConditionRaw->multiCapturePosList.push_back(posList);
+        pConditionRaw->addCaptures(captureList, posList);
         if (nameMatches) {
             pConditionRaw->nameCaptures.push_back(*nameMatches);
         } else {
@@ -739,8 +696,7 @@ void TTrigger::updateMultistates(int regexNumber, std::list<std::string>& captur
                             >> mpHost;
                 }
                 matchStatePair.second->conditionMatched();
-                matchStatePair.second->multiCaptureList.push_back(captureList);
-                matchStatePair.second->multiCapturePosList.push_back(posList);
+                matchStatePair.second->addCaptures(captureList, posList);
                 if (nameMatches != nullptr) {
                     matchStatePair.second->nameCaptures.push_back(*nameMatches);
                 } else {
