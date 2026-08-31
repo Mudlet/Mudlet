@@ -1,9 +1,8 @@
 # DUPLICATE WORKFLOW: This file is paired with build-mudlet.yml
-# Changes here likely need to be mirrored there as well, apart from the ccache
-# handling: caches here are scoped to their own pull request ref and keyed per
-# commit, so there is never a key to delete before saving one. The generations
-# an earlier push left behind are retired by cleanup-caches.yml instead, which
-# runs in the base repository and so has a writable token even for a fork.
+# Changes here likely need to be mirrored there as well, apart from the
+# ccache/Lua/xcb-util-cursor/sentry-native handling: only a push to development
+# writes these shared caches, so there are no save steps here at all - a pull
+# request never owns an entry of its own.
 name: 🔨 Build Mudlet - PR
 on:
   pull_request:
@@ -63,6 +62,7 @@ jobs:
             compiler: gcc_64
             gcc_compiler_version: 12
             qt: '6.11.1'
+            ccache_id: ubuntu-gcc-asan
             deploy: 'deploy'
             run_tests: 'true'
             # Enable AddressSanitizer for PTB and testing builds, but not release
@@ -72,12 +72,14 @@ jobs:
             buildname: 'macos (x86_64) / c++, lua tests'
             compiler: clang_64
             qt: '6.11.1'
+            ccache_id: macos-x64
             deploy: 'deploy'
             run_tests: 'true'
           - os: macos-15
             buildname: 'macos (arm64) / c++, lua tests'
             compiler: clang_64
             qt: '6.11.1'
+            ccache_id: macos-arm64
             deploy: 'deploy'
             run_tests: 'true'
 
@@ -103,8 +105,8 @@ jobs:
         cache: false
         modules: qt5compat qtmultimedia qtspeech
 
-    - name: Cache Lua build
-      uses: actions/cache@v6
+    - name: Restore Lua build cache
+      uses: actions/cache/restore@v6
       with:
         path: .lua
         # Not gh-actions-lua's own buildCache: that shares one key across
@@ -250,10 +252,10 @@ jobs:
         echo "LUA_PATH=$LUA_PATH" >> $GITHUB_ENV
         echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
 
-    - name: (Linux) Cache xcb-util-cursor 0.1.5
+    - name: (Linux) Restore xcb-util-cursor 0.1.5 cache
       id: cache-xcb-cursor
       if: runner.os == 'Linux'
-      uses: actions/cache@v6
+      uses: actions/cache/restore@v6
       with:
         path: ${{runner.workspace}}/xcb-util-cursor-stage
         key: xcb-util-cursor-0.1.5-${{matrix.os}}-${{runner.arch}}
@@ -329,12 +331,11 @@ jobs:
          echo "WITH_FONTS=no" >> $GITHUB_ENV
 
     - name: Restore ccache
-      id: restore-ccache
       uses: actions/cache/restore@v6
       with:
         path: ${{runner.workspace}}/ccache
-        key: ccache-${{matrix.os}}-${{runner.arch}}-${{matrix.compiler}}${{matrix.gcc_compiler_version != '' && format('v{0}', matrix.gcc_compiler_version) || ''}}-${{matrix.qt}}-${{ github.sha }}
-        restore-keys: ccache-${{matrix.os}}-${{runner.arch}}-${{matrix.compiler}}${{matrix.gcc_compiler_version != '' && format('v{0}', matrix.gcc_compiler_version) || ''}}-${{matrix.qt}}
+        key: ccache-${{matrix.ccache_id}}-sha-
+        restore-keys: ccache-${{matrix.ccache_id}}-sha-
 
     - name: (Linux) Set build info
       if: runner.os == 'Linux'
@@ -362,9 +363,9 @@ jobs:
       id: sentry-hash
       run: echo "SENTRY_HASH=$(git -C 3rdparty/sentry-native rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
-    - name: Cache sentry-native
+    - name: Restore sentry-native cache
       id: cache-sentry
-      uses: actions/cache@v6
+      uses: actions/cache/restore@v6
       with:
         path: |
           3rdparty/sentry-native/install_without_transport
@@ -391,13 +392,6 @@ jobs:
         NINJA_STATUS: '[%f/%t %o/sec] '
         MUDLET_SANITIZERS: ${{ github.event_name == 'pull_request' && 'address' || '' }}
         SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-
-    - name: Save ccache
-      if: always() && steps.restore-ccache.outputs.cache-hit != 'true'
-      uses: actions/cache/save@v6
-      with:
-        path: ${{runner.workspace}}/ccache
-        key: ${{ steps.restore-ccache.outputs.cache-primary-key }}
 
     - name: check ccache stats post build
       run: ccache --show-stats
