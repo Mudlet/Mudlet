@@ -185,9 +185,20 @@ describe("stt bridge", function()
     -- directory a model belongs in. It used to report a made-up default path
     -- as missing, which named a directory the reader never created and left
     -- the "install a model" message unreachable.
-    it("names where a model belongs when none is installed", function()
+    it("names where a model belongs when none is installed, or succeeds via a model-less backend", function()
       if not stt.available() or #stt.listModels() > 0 then return end
       local ok, err = stt.init()
+
+      -- stt.available() is true here with no model installed and no
+      -- listable models only when a model-less backend - the built-in macOS
+      -- one today - is what made it true. stt.init() must be able to reach
+      -- it with no argument, since it needs nothing installed to begin with.
+      if ok then
+        assert.is_true(ok)
+        assert.are.equal("Apple Speech", stt.getInfo().backend, "only a model-less backend should succeed with nothing installed")
+        return
+      end
+
       assert.is_nil(ok, "init with no model installed should fail")
       assert.is_string(err)
       assert.is_truthy(err:find(stt.getModelPath(), 1, true), "the refusal should name the models directory, got: " .. tostring(err))

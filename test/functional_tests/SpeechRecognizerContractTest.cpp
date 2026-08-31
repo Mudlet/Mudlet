@@ -45,6 +45,7 @@
 #include <QFile>
 #include <QJsonArray>
 #include <QJsonObject>
+#include <QScopeGuard>
 #include <QSettings>
 #include <QSignalSpy>
 #include <QTemporaryDir>
@@ -54,6 +55,7 @@
 #include "SherpaRecognizer.h"
 #include "SpeechRecognizer.h"
 #include "SpeechRecognizerFactory.h"
+#include "TLuaInterpreter.h"
 #include "VoskRecognizer.h"
 #include "mudlet.h"
 
@@ -63,7 +65,18 @@
 
 #include "GroupedTest.h"
 
+#include <memory>
 #include <optional>
+
+extern "C" {
+#if defined(INCLUDE_VERSIONED_LUA_HEADERS)
+#include <lua5.1/lauxlib.h>
+#include <lua5.1/lua.h>
+#else
+#include <lauxlib.h>
+#include <lua.h>
+#endif
+}
 
 namespace {
 
@@ -626,6 +639,187 @@ private slots:
 #else
         QCOMPARE(SpeechRecognizerFactory::backendAvailable(SpeechRecognizerFactory::Backend::Platform), false);
 #endif
+    }
+
+    // gap 1: backendForModelDir() used to be dead code - grep found no caller
+    // outside a test - so stt.init(path) picked an engine by install
+    // preference (Auto) rather than by what the directory actually is. With
+    // nothing installed, create(Auto) and create(<a specific backend>) are
+    // both null, so nullptr alone cannot tell "Auto picked nothing" from "the
+    // right engine was asked for and wasn't there". create() names an
+    // unavailable *specific* backend in a warning but says nothing for Auto's
+    // own empty-list case, and that asymmetry is what makes the warning the
+    // one externally observable proof that backendForModelDir()'s answer is
+    // what actually reached create(), rather than Auto's install-preference
+    // order (which would try sherpa first on a mixed-install machine - the
+    // exact bug this fix closes).
+    void modelDirectorySelectsTheEngineCreateAttempts()
+    {
+        if (VoskRecognizer::libraryAvailable()) {
+            QSKIP("libvosk is installed here, so create(Vosk) would succeed rather than warn");
+        }
+
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString voskDir = qsl("%1/vosk-model-small-en-us-0.15").arg(dir.path());
+        QVERIFY(QDir().mkpath(qsl("%1/am").arg(voskDir)));
+
+        const auto backend = SpeechRecognizerFactory::backendForModelDir(voskDir);
+        QCOMPARE(backend, SpeechRecognizerFactory::Backend::Vosk);
+
+        QTest::ignoreMessage(QtWarningMsg, "SpeechRecognizerFactory: Vosk backend requested but not available");
+        QVERIFY2(!SpeechRecognizerFactory::create(backend, nullptr), "a backend requested by name must still refuse when its library is not installed");
+    }
+
+    // gap 1's other half: stt.init()'s new caller, mudlet::initSpeechRecognition(),
+    // must actually forward the backend it is given rather than falling back
+    // to its old hardcoded Auto. Same warning-message proof as above, this
+    // time through the real call site.
+    void initSpeechRecognitionForwardsAnExplicitBackend()
+    {
+        if (VoskRecognizer::libraryAvailable()) {
+            QSKIP("libvosk is installed here, so create(Vosk) would succeed rather than warn");
+        }
+        QVERIFY2(!mudlet::self()->speechRecognizer(), "an earlier case in this file left a live recognizer behind");
+
+        QTest::ignoreMessage(QtWarningMsg, "SpeechRecognizerFactory: Vosk backend requested but not available");
+        mudlet::self()->initSpeechRecognition(SpeechRecognizerFactory::Backend::Vosk);
+        QVERIFY2(!mudlet::self()->speechRecognizer(), "an unavailable backend must not have been silently swapped for Auto's own choice");
+    }
+
+    // gap 2: stt.init() with no argument must be able to reach the built-in
+    // macOS backend, which needs neither a library nor a model on disk.
+    // *When* to prefer it over a model-based engine is a decision inside
+    // TLuaInterpreter::sttInit() with no entry point below Lua, so it is
+    // proven where CLAUDE.md says a Lua-reachable behaviour belongs: in
+    // STT_spec.lua's "names where a model belongs when none is installed, or
+    // succeeds via a model-less backend" case, not duplicated here. What this
+    // pins is the primitive that decision depends on - that the backend it
+    // selects on macOS actually accepts stt.init() with no model path.
+    void theModelLessBackendInitializesWithNoModelPath()
+    {
+#if defined(Q_OS_MACOS)
+        if (!SpeechRecognizerFactory::backendAvailable(SpeechRecognizerFactory::Backend::Platform)) {
+            QSKIP("no system speech recognizer available for this locale on this machine");
+        }
+
+        std::unique_ptr<SpeechRecognizer> recognizer(SpeechRecognizerFactory::create(SpeechRecognizerFactory::Backend::Platform, nullptr));
+        QVERIFY2(recognizer.get(), "the built-in macOS backend must be creatable directly, even though availableBackends() omits it");
+        QVERIFY2(recognizer->initialize(QString()), "the model-less backend must accept stt.init() with no path at all");
+        QCOMPARE(recognizer->state(), SpeechRecognizer::State::Ready);
+#else
+        // Shape-check on every other platform: there is no model-less backend
+        // to reach yet, so there is nothing more this case can prove here.
+        QCOMPARE(SpeechRecognizerFactory::backendAvailable(SpeechRecognizerFactory::Backend::Platform), false);
+#endif
+    }
+
+    // gap 3: stt.available() and getInfo().available used to answer for Vosk
+    // alone, so a sherpa-only or Apple-only install was told nothing was
+    // there even though speech recognition genuinely works. Called directly
+    // against a bare lua_State - none of these reads touch a Host or a
+    // profile, so building one would add weight without adding coverage.
+    void availabilityIsNotVoskOnly()
+    {
+        lua_State* L = luaL_newstate();
+        QVERIFY(L);
+        auto closeState = qScopeGuard([L]() {
+            lua_close(L);
+        });
+
+        const bool expected = !SpeechRecognizerFactory::availableBackends().isEmpty() || SpeechRecognizerFactory::backendAvailable(SpeechRecognizerFactory::Backend::Platform);
+
+        TLuaInterpreter::sttIsAvailable(L);
+        QCOMPARE(static_cast<bool>(lua_toboolean(L, -1)), expected);
+        lua_pop(L, 1);
+
+        TLuaInterpreter::sttGetInfo(L);
+        QVERIFY(lua_istable(L, -1));
+        lua_getfield(L, -1, "available");
+        QCOMPARE(static_cast<bool>(lua_toboolean(L, -1)), expected);
+        lua_pop(L, 1);
+
+        lua_getfield(L, -1, "searchPaths");
+        QVERIFY2(lua_istable(L, -1), "searchPaths must always be a table, engine installed or not");
+        lua_pop(L, 2); // searchPaths, then the getInfo() table
+    }
+
+    // gap 3: with no model-based engine installed at all, stt.getModelPath()
+    // and stt.getLibraryPath() must still name a real, checkable place - the
+    // same default they always answered before sherpa existed. The branch
+    // that answers with sherpa's own paths once a SherpaRecognizer is
+    // actually loaded needs the real library to exercise and cannot be proven
+    // here - said plainly rather than writing a case that would pass either way.
+    void installPathsDefaultToVoskWithNothingLoaded()
+    {
+        if (VoskRecognizer::libraryAvailable() || SherpaRecognizer::sherpaAvailable()) {
+            QSKIP("a model-based engine is installed here, so the default this case pins does not apply");
+        }
+        QVERIFY2(!mudlet::self()->speechRecognizer(), "a live recognizer would make these answer for it instead of the default");
+
+        lua_State* L = luaL_newstate();
+        QVERIFY(L);
+        auto closeState = qScopeGuard([L]() {
+            lua_close(L);
+        });
+
+        TLuaInterpreter::sttGetModelPath(L);
+        QCOMPARE(QString::fromUtf8(lua_tostring(L, -1)), VoskRecognizer::modelsDirectoryPath());
+        lua_pop(L, 1);
+
+        TLuaInterpreter::sttGetLibraryPath(L);
+        QCOMPARE(QString::fromUtf8(lua_tostring(L, -1)), VoskRecognizer::userLibraryPath());
+        lua_pop(L, 1);
+    }
+
+    // gap 3: stt.listModels() must show what is on disk for every model-based
+    // engine, not only Vosk's directory - a downloaded sherpa model has to
+    // stay visible even with nothing loaded. Unlike the two cases above, this
+    // needs no library at all: getInstalledModels() only reads directory
+    // layouts, so it is provable in full without installing anything.
+    void listModelsSpansEveryModelBasedEngine()
+    {
+        const QString voskModelsDir = VoskRecognizer::modelsDirectoryPath();
+        const QString sherpaModelsDir = SherpaRecognizer::modelsDirectoryPath();
+        const QString voskModel = qsl("contract-test-vosk-model");
+        const QString sherpaModel = qsl("contract-test-sherpa-model");
+
+        QVERIFY(QDir().mkpath(qsl("%1/%2/am").arg(voskModelsDir, voskModel)));
+        QVERIFY(QDir().mkpath(qsl("%1/%2").arg(sherpaModelsDir, sherpaModel)));
+        for (const QString& name : {qsl("encoder.onnx"), qsl("decoder.onnx"), qsl("joiner.onnx"), qsl("tokens.txt")}) {
+            QFile file(qsl("%1/%2/%3").arg(sherpaModelsDir, sherpaModel, name));
+            QVERIFY(file.open(QIODevice::WriteOnly));
+            file.close();
+        }
+        auto cleanup = qScopeGuard([&]() {
+            QDir(qsl("%1/%2").arg(voskModelsDir, voskModel)).removeRecursively();
+            QDir(qsl("%1/%2").arg(sherpaModelsDir, sherpaModel)).removeRecursively();
+        });
+
+        lua_State* L = luaL_newstate();
+        QVERIFY(L);
+        auto closeState = qScopeGuard([L]() {
+            lua_close(L);
+        });
+
+        TLuaInterpreter::sttListModels(L);
+        QVERIFY(lua_istable(L, -1));
+        const int tableIdx = lua_gettop(L);
+
+        QStringList names;
+        for (int i = 1;; ++i) {
+            lua_rawgeti(L, tableIdx, i);
+            if (lua_isnil(L, -1)) {
+                lua_pop(L, 1);
+                break;
+            }
+            lua_getfield(L, -1, "name");
+            names << QString::fromUtf8(lua_tostring(L, -1));
+            lua_pop(L, 2); // name, then the {name,path} table - leaves the array slot behind
+        }
+
+        QVERIFY2(names.contains(voskModel), "a Vosk model on disk was not listed");
+        QVERIFY2(names.contains(sherpaModel), "a sherpa model on disk was not listed - listModels must not be Vosk-only");
     }
 };
 

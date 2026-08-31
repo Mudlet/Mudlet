@@ -30,6 +30,7 @@
 #include "FontManager.h"
 #include "HostManager.h"
 #include "ShortcutsManager.h"
+#include "SpeechRecognizerFactory.h"
 #include "utils.h"
 #include <memory>
 
@@ -237,7 +238,10 @@ public:
     // Speech-to-text bridge: creates the single shared recognizer on first use
     // and exposes it to the Lua stt.* API. Recognizer results surface as Lua
     // events; all routing and UI policy lives in packages consuming them.
-    void initSpeechRecognition();
+    // backend is only consulted for that first creation - once a recognizer
+    // exists it is reused regardless of what a later call asks for, which is
+    // what "one recognizer per client" (docs/stt-api.md) means in practice.
+    void initSpeechRecognition(SpeechRecognizerFactory::Backend backend = SpeechRecognizerFactory::Backend::Auto);
     SpeechRecognizer* speechRecognizer() const;
     // Raise one sysSTT* event on the active profile. Public because the stt.*
     // bindings refuse before a recognizer exists - with no engine installed

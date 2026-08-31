@@ -191,13 +191,13 @@ void mudlet::raiseSpeechEvent(const QString& name, const QString& value)
     pHost->raiseEvent(event);
 }
 
-void mudlet::initSpeechRecognition()
+void mudlet::initSpeechRecognition(SpeechRecognizerFactory::Backend backend)
 {
     if (mpSpeechRecognizer) {
         return;
     }
 
-    mpSpeechRecognizer = SpeechRecognizerFactory::create(SpeechRecognizerFactory::Backend::Auto, this);
+    mpSpeechRecognizer = SpeechRecognizerFactory::create(backend, this);
     if (!mpSpeechRecognizer) {
         return;
     }

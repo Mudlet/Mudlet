@@ -25,6 +25,7 @@
 
 #include "Host.h"
 #include "mudlet.h"
+#include "SherpaRecognizer.h"
 #include "SpeechRecognizer.h"
 #include "SpeechRecognizerFactory.h"
 #include "VoskRecognizer.h"
@@ -102,6 +103,38 @@ static void announceSpeechCapabilities(mudlet* pMudlet)
     }
 }
 
+// Whether any speech engine at all is present and loadable: a model-based
+// one (Vosk, sherpa-onnx), or - since stt.init() can now reach it with no
+// model at all - the built-in macOS backend. availableBackends() deliberately
+// excludes the latter (see its own comment), so it is asked about separately
+// here rather than trusting that list alone.
+static bool speechEngineAvailable()
+{
+    return !SpeechRecognizerFactory::availableBackends().isEmpty() || SpeechRecognizerFactory::backendAvailable(SpeechRecognizerFactory::Backend::Platform);
+}
+
+// Which model-based backend's on-disk install paths answer stt.getModelPath(),
+// stt.getLibraryPath() and getInfo().searchPaths: whichever is actually loaded
+// when it is one of these two, the auto-preferred installed backend otherwise,
+// and Vosk's own paths as the last resort - so these platform-tier reads
+// always name a real, checkable directory, exactly as they did before sherpa
+// or the built-in macOS backend existed. The macOS backend never answers for
+// these: it installs no library and needs no model, so it has no paths of its
+// own to report.
+static SpeechRecognizerFactory::Backend modelBasedBackendForPaths(mudlet* pMudlet)
+{
+    auto* pRecognizer = pMudlet ? pMudlet->speechRecognizer() : nullptr;
+    if (qobject_cast<SherpaRecognizer*>(pRecognizer)) {
+        return SpeechRecognizerFactory::Backend::Sherpa;
+    }
+    if (qobject_cast<VoskRecognizer*>(pRecognizer)) {
+        return SpeechRecognizerFactory::Backend::Vosk;
+    }
+
+    const auto backends = SpeechRecognizerFactory::availableBackends();
+    return backends.isEmpty() ? SpeechRecognizerFactory::Backend::Vosk : backends.first();
+}
+
 // Whether a startListening() request was accepted. The call returns nothing
 // and can refuse - a phrase still being processed, a microphone that will not
 // open, permission denied - so the state afterwards is what says whether
@@ -122,6 +155,13 @@ int TLuaInterpreter::sttInit(lua_State* L)
     const char* funcName = "stt.init";
     QString modelPath;
     bool usedDefaultModel = false;
+    // Set only when no path was given and the backend this call is about to
+    // use needs none - the built-in macOS one today. Skips both the "no
+    // model installed" refusal below and the model-path existence check
+    // further down, since there is no path to check.
+    bool useModelLessBackend = false;
+    SpeechRecognizerFactory::Backend backend = SpeechRecognizerFactory::Backend::Auto;
+
     if (lua_gettop(L) >= 1 && !lua_isnoneornil(L, 1)) {
         modelPath = getVerifiedString(L, funcName, 1, "model path");
         // An empty path is a bad argument, not a model. QDir("") is Qt's
@@ -131,6 +171,12 @@ int TLuaInterpreter::sttInit(lua_State* L)
         if (modelPath.trimmed().isEmpty()) {
             return warnArgumentValue(L, funcName, "the model path is empty - give the folder a model was installed into, or call stt.init() with no argument to use the default");
         }
+        // The model directory says which engine it belongs to, so a package
+        // that only ever installs one engine's models never has to name it
+        // separately. A layout that matches nothing falls back to Auto rather
+        // than a guess - guessing wrong hands a model to the wrong decoder and
+        // fails deep inside the library instead of here.
+        backend = SpeechRecognizerFactory::backendForModelDir(modelPath);
     } else {
         usedDefaultModel = true;
         modelPath = SpeechRecognizerFactory::defaultModelPath();
@@ -141,16 +187,26 @@ int TLuaInterpreter::sttInit(lua_State* L)
             // installed. Telling someone to install what they already have
             // sends them looking in the wrong place.
             if (SpeechRecognizerFactory::availableBackends().isEmpty()) {
-                const QString message =
-                        VoskRecognizer::libraryUnloadedByRequest()
-                                ? qsl("the speech engine library was unloaded on request - call stt.reloadLibrary() before loading a model")
-                                : qsl("the speech engine library is not installed, so no model can be loaded - looked in: %1").arg(VoskRecognizer::librarySearchPaths().join(qsl(", ")));
+                // No model-based engine is installed. A model-less backend -
+                // the built-in macOS one today - still works with nothing to
+                // install, and hiding it here would repeat the mistake
+                // availableBackends() deliberately does not make.
+                if (SpeechRecognizerFactory::backendAvailable(SpeechRecognizerFactory::Backend::Platform)) {
+                    useModelLessBackend = true;
+                    backend = SpeechRecognizerFactory::Backend::Platform;
+                } else {
+                    const QString message =
+                            VoskRecognizer::libraryUnloadedByRequest()
+                                    ? qsl("the speech engine library was unloaded on request - call stt.reloadLibrary() before loading a model")
+                                    : qsl("the speech engine library is not installed, so no model can be loaded - looked in: %1").arg(VoskRecognizer::librarySearchPaths().join(qsl(", ")));
+                    reportSpeechRefusal(message);
+                    return warnArgumentValue(L, funcName, message);
+                }
+            } else {
+                const QString message = qsl("no model path provided and no language model is installed - install one into %1").arg(VoskRecognizer::modelsDirectoryPath());
                 reportSpeechRefusal(message);
                 return warnArgumentValue(L, funcName, message);
             }
-            const QString message = qsl("no model path provided and no language model is installed - install one into %1").arg(VoskRecognizer::modelsDirectoryPath());
-            reportSpeechRefusal(message);
-            return warnArgumentValue(L, funcName, message);
         }
     }
 
@@ -159,13 +215,13 @@ int TLuaInterpreter::sttInit(lua_State* L)
         return warnArgumentValue(L, funcName, "mudlet instance not available");
     }
 
-    if (!QDir(modelPath).exists()) {
+    if (!useModelLessBackend && !QDir(modelPath).exists()) {
         const QString message = qsl("model path does not exist: %1").arg(modelPath);
         reportSpeechRefusal(message);
         return warnArgumentValue(L, funcName, message);
     }
 
-    pMudlet->initSpeechRecognition();
+    pMudlet->initSpeechRecognition(backend);
 
     auto* pRecognizer = pMudlet->speechRecognizer();
     if (!pRecognizer) {
@@ -184,7 +240,7 @@ int TLuaInterpreter::sttInit(lua_State* L)
     // speech working, which is the right call, but a package configured for one
     // language would otherwise be handed a decoder for another with nothing
     // said - init true, no event, and a language key it never asked about.
-    if (usedDefaultModel) {
+    if (usedDefaultModel && !useModelLessBackend) {
         if (const QString missing = VoskRecognizer::missingSelectedModel(); !missing.isEmpty()) {
             reportSpeechRefusal(qsl("the selected speech model %1 is not installed; loaded %2 instead").arg(missing, QDir(modelPath).dirName()));
         }
@@ -336,11 +392,12 @@ int TLuaInterpreter::sttIsListening(lua_State* L)
 }
 
 // stt.available()
-// Check if speech recognition is available (Vosk library loaded).
+// Check if any speech engine - Vosk, sherpa-onnx, or the built-in macOS
+// backend - is present and loadable.
 // Returns true if available, false otherwise.
 int TLuaInterpreter::sttIsAvailable(lua_State* L)
 {
-    lua_pushboolean(L, VoskRecognizer::libraryAvailable());
+    lua_pushboolean(L, speechEngineAvailable());
     return 1;
 }
 
@@ -386,7 +443,7 @@ int TLuaInterpreter::sttGetInfo(lua_State* L)
     lua_settable(L, -3);
 
     lua_pushstring(L, "available");
-    lua_pushboolean(L, VoskRecognizer::libraryAvailable());
+    lua_pushboolean(L, speechEngineAvailable());
     lua_settable(L, -3);
 
     lua_pushstring(L, "initialized");
@@ -462,7 +519,9 @@ int TLuaInterpreter::sttGetInfo(lua_State* L)
     lua_pushstring(L, "searchPaths");
     lua_newtable(L);
     int pathIndex = 1;
-    for (const QString& path : VoskRecognizer::librarySearchPaths()) {
+    const bool searchSherpaPaths = modelBasedBackendForPaths(pMudlet) == SpeechRecognizerFactory::Backend::Sherpa;
+    const QStringList searchPaths = searchSherpaPaths ? SherpaRecognizer::librarySearchPaths() : VoskRecognizer::librarySearchPaths();
+    for (const QString& path : searchPaths) {
         lua_pushinteger(L, pathIndex++);
         lua_pushstring(L, path.toUtf8().constData());
         lua_settable(L, -3);
@@ -473,35 +532,43 @@ int TLuaInterpreter::sttGetInfo(lua_State* L)
 }
 
 // stt.getModelPath()
-// Get the default path where speech models should be stored.
+// Get the default path where speech models should be stored, for whichever
+// model-based engine is actually loaded (falling back to the auto-preferred
+// installed one, then Vosk, when none is loaded yet).
 // Returns the path as a string.
 int TLuaInterpreter::sttGetModelPath(lua_State* L)
 {
-    lua_pushstring(L, VoskRecognizer::modelsDirectoryPath().toUtf8().constData());
+    const bool sherpa = modelBasedBackendForPaths(mudlet::self()) == SpeechRecognizerFactory::Backend::Sherpa;
+    const QString path = sherpa ? SherpaRecognizer::modelsDirectoryPath() : VoskRecognizer::modelsDirectoryPath();
+    lua_pushstring(L, path.toUtf8().constData());
     return 1;
 }
 
 // stt.getLibraryPath()
-// Get the user-writable directory the speech recognition library is installed into.
+// Get the user-writable directory the speech recognition library is
+// installed into, for whichever model-based engine is actually loaded (see
+// stt.getModelPath()).
 // Returns the path as a string.
 int TLuaInterpreter::sttGetLibraryPath(lua_State* L)
 {
-    lua_pushstring(L, VoskRecognizer::userLibraryPath().toUtf8().constData());
+    const bool sherpa = modelBasedBackendForPaths(mudlet::self()) == SpeechRecognizerFactory::Backend::Sherpa;
+    const QString path = sherpa ? SherpaRecognizer::userLibraryPath() : VoskRecognizer::userLibraryPath();
+    lua_pushstring(L, path.toUtf8().constData());
     return 1;
 }
 
 // stt.listModels()
-// List available downloaded language models.
+// List available downloaded language models, across every model-based engine
+// - not only whichever is currently loaded - so a model downloaded for one
+// engine stays visible while another is active, or before any is.
 // Returns a table of model names/paths.
 int TLuaInterpreter::sttListModels(lua_State* L)
 {
-    const QDir modelsDir(VoskRecognizer::modelsDirectoryPath());
-
     lua_newtable(L);
-
-    const QStringList installedModels = VoskRecognizer::getInstalledModels();
     int index = 1;
-    for (const QString& model : installedModels) {
+
+    const QDir voskModelsDir(VoskRecognizer::modelsDirectoryPath());
+    for (const QString& model : VoskRecognizer::getInstalledModels()) {
         lua_pushinteger(L, index++);
         lua_newtable(L);
 
@@ -510,7 +577,23 @@ int TLuaInterpreter::sttListModels(lua_State* L)
         lua_settable(L, -3);
 
         lua_pushstring(L, "path");
-        lua_pushstring(L, modelsDir.filePath(model).toUtf8().constData());
+        lua_pushstring(L, voskModelsDir.filePath(model).toUtf8().constData());
+        lua_settable(L, -3);
+
+        lua_settable(L, -3);
+    }
+
+    const QDir sherpaModelsDir(SherpaRecognizer::modelsDirectoryPath());
+    for (const QString& model : SherpaRecognizer::getInstalledModels()) {
+        lua_pushinteger(L, index++);
+        lua_newtable(L);
+
+        lua_pushstring(L, "name");
+        lua_pushstring(L, model.toUtf8().constData());
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "path");
+        lua_pushstring(L, sherpaModelsDir.filePath(model).toUtf8().constData());
         lua_settable(L, -3);
 
         lua_settable(L, -3);

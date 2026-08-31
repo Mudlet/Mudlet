@@ -28,12 +28,12 @@ Design contract, before the tables:
 
 | Function | Returns | Behaviour |
 | --- | --- | --- |
-| `stt.init([modelPath])` | `true` \| `nil, error` | Load a model and reach `ready`. With no argument, uses the default installed model. The three ways it can have nothing to load are distinguished, because they send the reader to different places: no engine library (naming where it was looked for), no model installed (naming the directory one belongs in), and a path that does not exist. When the configured model is missing and another is loaded in its place, the substitution is reported through `sysSTTError` rather than made quietly — the call still succeeds. |
+| `stt.init([modelPath])` | `true` \| `nil, error` | Load a model and reach `ready`. A `modelPath` chooses its engine by the directory's own layout — a Vosk model and a sherpa-onnx model are never confused, even on a machine with both engines installed — falling back to the install-preference order only when the layout matches neither. With no argument, uses the default installed model; if no model-based engine is installed but a model-less one is (the built-in macOS backend today), that one is used instead, with nothing to install. The three ways it can have nothing to load are distinguished, because they send the reader to different places: no engine library (naming where it was looked for), no model installed (naming the directory one belongs in), and a path that does not exist. When the configured model is missing and another is loaded in its place, the substitution is reported through `sysSTTError` rather than made quietly — the call still succeeds. |
 | `stt.start()` | `true` \| `nil, error` | Begin listening. `true` means the request was accepted, not always that audio is already flowing: a client that must ask permission first reports `starting`, and the outcome arrives as `sysSTTStateChanged`. A request refused outright — no model, a phrase still processing, a microphone that will not open, permission already denied — returns `nil` and an error, with the detail in `sysSTTError`. Starting while already listening, or while `starting`, succeeds without asking twice. |
 | `stt.stop()` | `true` \| `nil, error` | Stop listening and **finalise**: remaining audio is decoded and reported via `sysSTTResult` before the state returns to `ready`. Stopping when nothing is listening succeeds; stopping in `error` returns `nil` and a message, since "stopped" and "was never running because it failed" are different answers. |
 | `stt.toggle()` | `true`=now listening, `false`=stopped \| `nil, error` | Convenience start/stop. |
 | `stt.close()` | `true` | Release the model and native resources; state returns to `uninitialized`. Safe when nothing is initialized. |
-| `stt.available()` | boolean | The engine is present and loadable. False is the normal state on a machine with nothing installed. |
+| `stt.available()` | boolean | Some engine — Vosk, sherpa-onnx, or the built-in macOS backend — is present and loadable. False is the normal state on a machine with nothing installed and no built-in backend for this platform. |
 | `stt.initialized()` | boolean | A model is loaded (`state` is neither `uninitialized` nor `error`). |
 | `stt.listening()` | boolean | The engine is capturing now. Reads the engine, always in step with `getInfo().listening`. |
 | `stt.setSilenceTimeout(msec)` | `true` \| `nil, error` | After `msec` of continuous silence, listening ends exactly as `stt.stop()` would — finalised, never discarded. `0` (the default) keeps listening open-ended. Holds across listening sessions, not across restarts - neither this nor `setSensitivity` is saved. |
@@ -51,9 +51,9 @@ returning `false` with a message, `listModels` returning `{}`.
 
 | Function | Returns | Behaviour |
 | --- | --- | --- |
-| `stt.getModelPath()` | string | Directory models are installed into. |
-| `stt.getLibraryPath()` | string | User-writable directory the engine library is installed into. |
-| `stt.listModels()` | table | Array of `{name, path}` for installed models. Deliberately works without the engine library, so downloaded models stay visible. |
+| `stt.getModelPath()` | string | Directory models are installed into, for whichever model-based engine (Vosk or sherpa-onnx) is actually loaded — falling back to the install-preference order, then Vosk's own directory, before anything is loaded. The built-in macOS backend never answers for this: it has no models directory of its own. |
+| `stt.getLibraryPath()` | string | User-writable directory the engine library is installed into, resolved the same way as `stt.getModelPath()`. |
+| `stt.listModels()` | table | Array of `{name, path}` for installed models, across **every** model-based engine at once — not only whichever is currently loaded. Deliberately works without the engine library, so downloaded models stay visible. |
 | `stt.getPlatformKey()` | string \| `nil` | Platform/architecture key for selecting an engine build (`"macos"`, `"windows-x64"`, `"windows-x86"`, `"linux-x86_64"`, `"linux-aarch64"`); `nil` when no published build exists. |
 | `stt.reloadLibrary()` | boolean \| `false, error` | Re-run engine detection after an install. Refuses while the recognizer is in use or holds live native resources. **Vosk only** — see below. |
 | `stt.unloadLibrary()` | `true` \| `false, error` | Unload the engine so its file can be deleted (Windows cannot delete a mapped module). Same refusal rules. **Vosk only** — see below. |
@@ -71,16 +71,15 @@ anything to act on for it — expect `reloadLibrary()`/`unloadLibrary()` to be
 no-ops with respect to that backend rather than errors naming it specifically,
 since both calls only ever know about the Vosk loader.
 
-**Known limitation: several platform-tier reads are Vosk-specific
-regardless of which engine is actually loaded.** `stt.available()` /
-`getInfo().available`, `stt.getModelPath()`, `stt.getLibraryPath()`,
-`stt.listModels()`, and `getInfo().searchPaths` all currently answer from
-Vosk's own installation paths, not from whichever backend is running. On a
-machine with only sherpa-onnx installed, `stt.available()` reports `false`
-even though speech recognition works once `stt.init()` is called, and
-`stt.listModels()` reports Vosk's (empty) model directory rather than the
-sherpa-onnx models actually on disk. A package should not rely on these
-five to detect or manage a sherpa-onnx-only or Apple-only install.
+`stt.available()` / `getInfo().available`, `stt.getModelPath()`,
+`stt.getLibraryPath()`, and `getInfo().searchPaths` answer for whichever
+model-based engine is actually loaded once one is, and for the
+install-preference order otherwise — `stt.available()` also counts a
+model-less backend, since `stt.init()` can reach one with nothing installed.
+`stt.listModels()` is the one exception: it unions every model-based
+engine's installed models rather than picking one, since a downloaded model
+should stay visible whether or not its engine happens to be the one loaded
+right now.
 
 ## `stt.getInfo()`
 
@@ -97,7 +96,7 @@ five to detect or manage a sherpa-onnx-only or Apple-only install.
 | `sensitivity` | string | `"short"`, `"default"` or `"long"`; how quickly an utterance is judged finished. |
 | `capabilities` | table | See below. **May change when a model is loaded**, or when the engine library is unloaded or reloaded — on some backends biasing is a property of the model rather than of the engine. Re-read after `stt.init()` rather than caching at startup, or follow `sysSTTCapabilitiesChanged`. |
 | `version`, `language` | string | Present once a recognizer instance exists. |
-| `searchPaths` | table | Where the engine library is looked for (platform-tier; may be empty). |
+| `searchPaths` | table | Where the engine library is looked for (platform-tier; may be empty). Names whichever model-based engine is actually loaded, the same way `stt.getModelPath()` does. |
 
 ### `capabilities`
 
