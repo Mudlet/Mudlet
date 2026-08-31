@@ -87,6 +87,9 @@ bool endsStringSequence(const char byte)
 // hostile sequence that never sends a final byte (defense against a server
 // growing mIncompleteSequenceBytes without bound across packets)
 constexpr size_t MAX_CSI_SEQUENCE_LENGTH = 4096;
+// Enough inline room for any SGR parameter string a game actually sends,
+// so the common case is handed over without touching the heap:
+constexpr qsizetype SGR_INLINE_CHARS = 64;
 
 // Helper to interpret JSON values as boolean
 // Accepts both boolean true and numeric non-zero values (servers may send 1 instead of true)
@@ -1107,7 +1110,17 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
 #if defined(DEBUG_SGR_PROCESSING)
                     qDebug().nospace().noquote() << "    Consider the SGR sequence: \"" << localBuffer.substr(localBufferPosition, spanEnd - spanStart).c_str() << "\"";
 #endif
-                    decodeSGR(QString(localBuffer.substr(localBufferPosition, spanEnd - spanStart).c_str()));
+                    {
+                        // The scan above only let bytes from "0123456789;:<=>?"
+                        // through, so each one widens to a single UTF-16 code
+                        // unit and the sequence can be handed over without
+                        // building a QString for it:
+                        QVarLengthArray<char16_t, SGR_INLINE_CHARS> sgrChars(spanEnd - spanStart);
+                        for (size_t i = spanStart; i < spanEnd; ++i) {
+                            sgrChars[i - spanStart] = static_cast<unsigned char>(localBuffer[i]);
+                        }
+                        decodeSGR(QStringView(sgrChars.data(), sgrChars.size()));
+                    }
                     break;
 
                 case static_cast<quint8>('z'):
@@ -2543,7 +2556,7 @@ void TBuffer::decodeSGR48(const SgrParameters& parameters, bool isColonSeparated
     }
 }
 
-void TBuffer::decodeSGR(const QString& sequence)
+void TBuffer::decodeSGR(const QStringView sequence)
 {
     Host* pHost = mpHost;
     if (!pHost) {
@@ -2554,7 +2567,7 @@ void TBuffer::decodeSGR(const QString& sequence)
     const bool haveColorSpaceId = pHost->getHaveColorSpaceId();
 
     SgrParameters parameterStrings;
-    for (const QStringView parameter : QStringView{sequence}.tokenize(u';')) {
+    for (const QStringView parameter : sequence.tokenize(u';')) {
         parameterStrings.append(parameter);
     }
     for (int paraIndex = 0, total = parameterStrings.count(); paraIndex < total; ++paraIndex) {
