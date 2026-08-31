@@ -38,7 +38,7 @@ Design contract, before the tables:
 | `stt.listening()` | boolean | The engine is capturing now. Reads the engine, always in step with `getInfo().listening`. |
 | `stt.setSilenceTimeout(msec)` | `true` \| `nil, error` | After `msec` of continuous silence, listening ends exactly as `stt.stop()` would — finalised, never discarded. `0` (the default) keeps listening open-ended. Holds across listening sessions, not across restarts - neither this nor `setSensitivity` is saved. |
 | `stt.setSensitivity(mode)` | `true` \| `nil, error` | How quickly an utterance is judged finished: `"short"` for commands, `"default"` for balanced use, `"long"` for dictation. Engines map this onto their own end-of-speech detection, so the effect is comparable rather than identical between them; an engine that must rebuild to apply it may pause briefly when a model is already loaded. |
-| `stt.setVocabulary(words)` | boolean \| `nil, error` | Tell the engine which words to expect, so it favours them when a sound could be several things — a game's command verbs, its exits, the names of what is in front of you. Takes an array of words or short phrases; keep it to a shortlist rather than a dictionary, since applying one can make the engine rebuild and pause briefly. `true` means the engine took them. `false` is not an error: it means this backend cannot use vocabulary at all (see capabilities), so correct the results yourself instead. A backend that *can* and failed this time also returns `false`, reporting the fault through `sysSTTError`, so a caller branching only on the boolean still degrades gracefully while the failure stays visible. `nil, error` means there was no engine to offer the words to. |
+| `stt.setVocabulary(words)` | boolean \| `nil, error` | Tell the engine which words to expect, so it favours them when a sound could be several things — a game's command verbs, its exits, the names of what is in front of you. Takes an array of words or short phrases; keep it to a shortlist rather than a dictionary, since applying one can make the engine rebuild and pause briefly. `true` means the engine took them. `false` is not an error: it means this backend cannot use vocabulary at all (see capabilities), so correct the results yourself instead. A backend that *can* and failed this time also returns `false`, reporting the fault through `sysSTTError`, so a caller branching only on the boolean still degrades gracefully while the failure stays visible. `nil, error` means there was no engine to offer the words to. What "took them" actually means differs enough between backends that it is spelled out per engine below the `capabilities` table. |
 | `stt.getInfo()` | table | Everything the engine can say about itself at this moment: what is loaded, what it is capable of, and what it is doing right now. The keys are listed below. Always a table, even with no engine installed: every key below is present except `version` and `language`, which need a recognizer to exist, and every capability reads `false` - so a caller can read it without guarding. |
 
 ## Functions — model and library management (platform-tier)
@@ -55,14 +55,38 @@ returning `false` with a message, `listModels` returning `{}`.
 | `stt.getLibraryPath()` | string | User-writable directory the engine library is installed into. |
 | `stt.listModels()` | table | Array of `{name, path}` for installed models. Deliberately works without the engine library, so downloaded models stay visible. |
 | `stt.getPlatformKey()` | string \| `nil` | Platform/architecture key for selecting an engine build (`"macos"`, `"windows-x64"`, `"windows-x86"`, `"linux-x86_64"`, `"linux-aarch64"`); `nil` when no published build exists. |
-| `stt.reloadLibrary()` | boolean \| `false, error` | Re-run engine detection after an install. Refuses while the recognizer is in use or holds live native resources. |
-| `stt.unloadLibrary()` | `true` \| `false, error` | Unload the engine so its file can be deleted (Windows cannot delete a mapped module). Same refusal rules. |
+| `stt.reloadLibrary()` | boolean \| `false, error` | Re-run engine detection after an install. Refuses while the recognizer is in use or holds live native resources. **Vosk only** — see below. |
+| `stt.unloadLibrary()` | `true` \| `false, error` | Unload the engine so its file can be deleted (Windows cannot delete a mapped module). Same refusal rules. **Vosk only** — see below. |
+
+**Known limitation: `reloadLibrary`/`unloadLibrary` act on Vosk alone.** Desktop
+Mudlet's dynamically-loaded backends are Vosk and sherpa-onnx, but only Vosk's
+loader is wired to these two calls today. With sherpa-onnx loaded, a package
+has no way to unload it or ask for a re-detect after installing a new copy —
+the reason these calls exist at all is that Windows refuses to delete a
+mapped module, and that restriction applies just as much to sherpa-onnx's
+library as to Vosk's. Until the binding layer is made engine-aware, replacing
+an installed sherpa-onnx library on Windows requires quitting Mudlet first.
+The built-in macOS backend loads no library at all, so neither call has
+anything to act on for it — expect `reloadLibrary()`/`unloadLibrary()` to be
+no-ops with respect to that backend rather than errors naming it specifically,
+since both calls only ever know about the Vosk loader.
+
+**Known limitation: several platform-tier reads are Vosk-specific
+regardless of which engine is actually loaded.** `stt.available()` /
+`getInfo().available`, `stt.getModelPath()`, `stt.getLibraryPath()`,
+`stt.listModels()`, and `getInfo().searchPaths` all currently answer from
+Vosk's own installation paths, not from whichever backend is running. On a
+machine with only sherpa-onnx installed, `stt.available()` reports `false`
+even though speech recognition works once `stt.init()` is called, and
+`stt.listModels()` reports Vosk's (empty) model directory rather than the
+sherpa-onnx models actually on disk. A package should not rely on these
+five to detect or manage a sherpa-onnx-only or Apple-only install.
 
 ## `stt.getInfo()`
 
 | Key | Type | Meaning |
 | --- | --- | --- |
-| `backend` | string | Engine name (`"Vosk"`). |
+| `backend` | string | Name of whichever engine is actually loaded (on desktop Mudlet: `"Vosk"`, `"sherpa-onnx"`, or `"Apple Speech"`), not a fixed value. |
 | `available` | boolean | Engine present and loadable. |
 | `initialized` | boolean | Model loaded. |
 | `listening` | boolean | Capturing now. |
@@ -85,7 +109,40 @@ returning `false` with a message, `listModels` returning `{}`.
 | `onDevice` | Audio is processed on this machine and never leaves it. An implementation backed by a remote service MUST report `false`. |
 
 Desktop Mudlet's Vosk backend reports `{biasing = false, grammar = false,
-words = true, onDevice = true}`.
+words = true, onDevice = true}`. Its sherpa-onnx backend reports `{biasing,
+grammar = false, words = false, onDevice = true}`, where `biasing` is `true`
+only once a model whose directory carries a `bpe.vocab` file has loaded —
+swap in a model without one and it drops back to `false`, announced through
+`sysSTTCapabilitiesChanged` the way any other capability change is. The
+built-in macOS backend reports `{biasing = true, grammar = false, words =
+true, onDevice = true}` unconditionally: neither depends on a model, because
+this backend loads none.
+
+### `setVocabulary` in practice
+
+`capabilities.biasing`/`capabilities.grammar` say whether a backend can use
+vocabulary at all; what actually happens when a package calls
+`stt.setVocabulary()` differs enough between desktop Mudlet's three backends
+that a package should not assume one behaves like another:
+
+- **Vosk**: `Unsupported`, always. Vosk has no biasing or grammar-constraint
+  wiring, so the call returns `false` unconditionally and a package must
+  correct results client-side.
+- **sherpa-onnx**: real biasing, but only for a model whose directory carries
+  a `bpe.vocab` file next to its sub-word units — a model without one reports
+  `capabilities.biasing = false` and behaves exactly like Vosk. Applying words
+  to a biasable model rebuilds the decoder from the retained vocabulary, so it
+  cannot happen while listening: offering words mid-utterance is retained but
+  returns `false` — reported through `sysSTTError` as a failure this attempt
+  made, not as "this backend can't", since it can — and takes effect only at
+  the model's next load, whether that is a later `setVocabulary()` call made
+  once back in `ready`, or the next `stt.init()`.
+- **The built-in macOS backend**: real biasing through `contextualStrings`,
+  attached to each recognition request rather than baked into a model. There
+  is nothing to rebuild, so the call always returns `true`. But a request
+  already being decoded keeps the words it was built with, so new vocabulary
+  takes effect on the **next** request — the next utterance while still
+  listening, or the next `stt.start()` — never the utterance in progress.
 
 ## Events
 
