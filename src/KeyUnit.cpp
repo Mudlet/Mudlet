@@ -58,7 +58,8 @@ KeyUnit::~KeyUnit()
         key->mpHost = nullptr;
         // Also set mpHost to null on all children recursively
         std::function<void(TKey*)> nullifyChildren = [&nullifyChildren](TKey* k) {
-            for (auto child : *k->mpMyChildrenList) {
+            for (auto* childNode : *k->mpMyChildrenList) {
+                auto* child = static_cast<TKey*>(childNode);
                 child->mpHost = nullptr;
                 nullifyChildren(child);
             }
@@ -79,8 +80,9 @@ void KeyUnit::resetStats()
 
 void KeyUnit::_uninstall(TKey* pChild, const QString& packageName)
 {
-    std::list<TKey*>* childrenList = pChild->mpMyChildrenList;
-    for (auto key : *childrenList) {
+    std::list<Tree<TKey>*>* childrenList = pChild->mpMyChildrenList;
+    for (auto* keyNode : *childrenList) {
+        auto* key = static_cast<TKey*>(keyNode);
         _uninstall(key, packageName);
         uninstallList.append(key);
     }
@@ -465,8 +467,9 @@ QString KeyUnit::getKeyName(const Qt::Key keyCode, const Qt::KeyboardModifiers m
 
 void KeyUnit::assembleReport(TKey* pItem)
 {
-    std::list<TKey*>* childrenList = pItem->mpMyChildrenList;
-    for (auto pChild : *childrenList) {
+    std::list<Tree<TKey>*>* childrenList = pItem->mpMyChildrenList;
+    for (auto* pChildNode : *childrenList) {
+        auto* pChild = static_cast<TKey*>(pChildNode);
         ++statsItemsTotal;
         if (pChild->isActive()) {
             ++statsActiveItems;

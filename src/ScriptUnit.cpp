@@ -51,7 +51,8 @@ ScriptUnit::~ScriptUnit()
     for (auto script : mScriptRootNodeList) {
         script->mpHost = nullptr;
         std::function<void(TScript*)> nullifyChildren = [&nullifyChildren](TScript* s) {
-            for (auto child : *s->mpMyChildrenList) {
+            for (auto* childNode : *s->mpMyChildrenList) {
+                auto* child = static_cast<TScript*>(childNode);
                 child->mpHost = nullptr;
                 nullifyChildren(child);
             }
@@ -72,8 +73,9 @@ void ScriptUnit::resetStats()
 
 void ScriptUnit::_uninstall(TScript* pChild, const QString& packageName)
 {
-    std::list<TScript*>* childrenList = pChild->mpMyChildrenList;
-    for (auto script : *childrenList) {
+    std::list<Tree<TScript>*>* childrenList = pChild->mpMyChildrenList;
+    for (auto* scriptNode : *childrenList) {
+        auto* script = static_cast<TScript*>(scriptNode);
         _uninstall(script, packageName);
         uninstallList.append(script);
     }
@@ -325,8 +327,9 @@ std::vector<int> ScriptUnit::findItems(const QString& name, const bool exactMatc
 
 void ScriptUnit::assembleReport(TScript* pItem)
 {
-    std::list<TScript*>* childrenList = pItem->mpMyChildrenList;
-    for (auto pChild : *childrenList) {
+    std::list<Tree<TScript>*>* childrenList = pItem->mpMyChildrenList;
+    for (auto* pChildNode : *childrenList) {
+        auto* pChild = static_cast<TScript*>(pChildNode);
         ++statsItemsTotal;
         if (pChild->isActive()) {
             ++statsActiveItems;

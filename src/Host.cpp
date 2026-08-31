@@ -280,8 +280,13 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mPass(pass)
 , mPort(port)
 {
+    // cTelnet is declared ahead of the members reset() clears (mMxpProcessor,
+    // mMSSPTlsPort, mIsRemoteEchoingActive and friends), so it cannot do this from
+    // its own constructor - at that point those members do not exist yet.
+    mTelnet.reset();
+
     TDebug::addHost(this, mHostName);
-    setDisplayFont(QFont(qsl("Bitstream Vera Sans Mono"), 14, QFont::Normal));
+    setDisplayFont(QFont(scmDefaultFontFamily, 14, QFont::Normal));
 
     // The "autolog" sentinel file controls whether logging the game's text as
     // plain text or HTML is immediately resumed on profile loading. Do not
@@ -958,6 +963,12 @@ bool Host::resetProfile_phase1()
 
 void Host::resetProfile_phase2()
 {
+    // The Lua state goes with the reset, taking every id a package was holding
+    // with it, so the commands those ids named have to go too - otherwise a
+    // package that places its command from a script adds another on every
+    // reset and can never remove the ones before.
+    mudlet::self()->removeAddonCommandsForHost(this);
+
     getAliasUnit()->removeAllTempAliases();
     getTimerUnit()->removeAllTempTimers();
     getTriggerUnit()->removeAllTempTriggers();
@@ -1340,11 +1351,20 @@ QString Host::mediaLocationMSP() const
 }
 
 // Completely specifies the font for use in the main console and elsewhere:
-std::pair<bool, QString> Host::setDisplayFont(const QFont& font)
+std::pair<bool, QString> Host::setDisplayFont(const QFont& font, const DisplayFontChange change)
 {
     const QFontMetrics metrics(font);
     if (metrics.averageCharWidth() == 0) {
         return {false, qsl("specified font is invalid (its letters have 0 width)")};
+    }
+
+    // Only an explicit new choice of family retires the stand-in, never a size or
+    // antialiasing tweak. The family cannot decide that for itself: while the
+    // stand-in is up the family on show IS the stand-in, so a user picking that
+    // very family and the preferences re-sending it because only the size or the
+    // antialiasing changed look exactly alike.
+    if (change == DisplayFontChange::UserChoice) {
+        mMissingDisplayFontFamily.clear();
     }
 
     if (mpConsole) {
@@ -1364,12 +1384,30 @@ std::pair<bool, QString> Host::setDisplayFont(const QFont& font)
     return {true, QString()};
 }
 
-// Also completely specifies the font for use in the main console and elsewhere:
 void Host::setDisplayFontFromString(const QString& fontData)
 {
     QFont font;
-    font.fromString(fontData);
-    setDisplayFont(font);
+    // A description fromString() will not read leaves the font as constructed, which
+    // is the application's proportional UI font rather than a record of what the
+    // profile asked for. It rejects one that names no family, so that is covered too.
+    if (!font.fromString(fontData)) {
+        qWarning().nospace().noquote() << "Host::setDisplayFontFromString(...) WARNING - \"" << fontData << "\" is not a font description, so the font in use is kept.";
+        return;
+    }
+
+    // <mDisplayFont> is written only by a profile's own save, and so reaches here
+    // twice: reading that save, before the one-shot check that stands a default in
+    // for a missing font, and again if such a save is installed as a package, which
+    // can be long after it. The second is a choice of family rather than an
+    // adjustment, so it retires the stand-in and becomes what gets saved. A family
+    // that is not installed retires nothing though - the check does not run a second
+    // time, so nothing would notice this one is missing too and the family the
+    // profile asked for would be forgotten in favour of one nobody has.
+    const auto resolved = resolveFontFamily(font.family());
+    const auto change = resolved.available ? DisplayFontChange::UserChoice : DisplayFontChange::Adjustment;
+    if (const auto [applied, error] = setDisplayFont(font, change); !applied) {
+        qWarning().nospace().noquote() << "Host::setDisplayFontFromString(...) WARNING - \"" << fontData << "\" was refused: " << error;
+    }
 }
 
 void Host::setDisplayFontSize(int size)
@@ -1442,6 +1480,72 @@ std::pair<QString, QFont::Weight> Host::parseFontNameAndStyle(const QString& fon
     }
 
     return {fontName, QFont::Normal};
+}
+
+Host::FontFamilyResolution Host::resolveFontFamily(const QString& requested) const
+{
+    const QStringList availableFonts = mudlet::self()->getAvailableFonts();
+    // The family as the font database spells it, not as it was typed: it is what
+    // ends up reported back by getFont() and remembered by the Geyser wrappers.
+    for (const QString& family : availableFonts) {
+        if (family.compare(requested, Qt::CaseInsensitive) == 0) {
+            return {family, QFont::Normal, true};
+        }
+    }
+
+    auto [baseName, weight] = parseFontNameAndStyle(requested);
+    if (baseName != requested) {
+        for (const QString& family : availableFonts) {
+            if (family.compare(baseName, Qt::CaseInsensitive) == 0) {
+                return {family, weight, true};
+            }
+        }
+    }
+
+    return {requested, QFont::Normal, false};
+}
+
+bool Host::substituteMissingDisplayFont()
+{
+    const QFont current = getDisplayFont();
+    const QString requestedFamily = current.family();
+    const auto resolved = resolveFontFamily(requestedFamily);
+
+    if (resolved.available && resolved.family.compare(requestedFamily, Qt::CaseInsensitive) == 0) {
+        return false;
+    }
+
+    QFont font = current;
+    if (resolved.available) {
+        font.setFamily(resolved.family);
+        font.setWeight(resolved.weight);
+        setDisplayFont(font);
+        return true;
+    }
+
+    // Nothing stands in for the bundled default itself: on an installation where
+    // it failed to register there is no better font to move the profile to, and
+    // "missing, using itself instead" would only mislead
+    if (requestedFamily.compare(scmDefaultFontFamily, Qt::CaseInsensitive) == 0) {
+        qWarning().nospace().noquote() << "Host::substituteMissingDisplayFont() WARNING - the bundled default font \"" << scmDefaultFontFamily
+                                       << "\" is not registered, so nothing can stand in for it.";
+        return false;
+    }
+
+    font.setFamily(scmDefaultFontFamily);
+    setDisplayFont(font);
+    // Only this branch remembers anything: a "Family Style" name resolves to a
+    // base family that IS installed, so saving that name is no loss.
+    mMissingDisplayFontFamily = requestedFamily;
+
+    qWarning().nospace().noquote() << "Host::substituteMissingDisplayFont() WARNING - the font \"" << requestedFamily << "\" this profile asks for is not installed, using \"" << scmDefaultFontFamily
+                                   << "\" instead.";
+    //: %1 is the font family the profile asked for, %2 is the font Mudlet ships with and is using instead
+    postMessage(tr("[ WARN ]  - The font \"%1\" that this profile uses is not installed on this computer, so "
+                   "the default \"%2\" is being used instead. Install that font, or pick another one in the "
+                   "preferences, to stop this message.")
+                        .arg(requestedFamily, scmDefaultFontFamily));
+    return true;
 }
 
 // Now returns the total weight of the path
@@ -2385,6 +2489,12 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             }
             _dir = QDir(newpath);
         }
+        // make any fonts in the package available to Mudlet for use - before the
+        // XML below is imported, because the scripts in it run as they are read
+        // in and one of them may well want to use a font the package brought
+        if (thing != enums::PackageModuleType::ModuleSync) {
+            installPackageFonts(packageName);
+        }
         QStringList _filterList;
         _filterList << qsl("*.xml") << qsl("*.trigger");
         const QFileInfoList entries = _dir.entryInfoList(_filterList, QDir::Files);
@@ -2428,6 +2538,9 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         // for a module whose name is already in mInstalledModules on the way in
         // (profile loading, and installModule() over a stale entry, both do that).
         if (!registeredFromArchive) {
+            // the fonts were registered up front for the scripts' sake, and nothing
+            // got installed that could own them - take them back out again
+            mudlet::self()->mFontManager.unloadFonts(getName(), packageName);
             // Only ever remove the folder this install made, and only if it is
             // inside the profile: the package name can come out empty (a file
             // called ".mpackage"), name a folder of the user's ("map"), or be
@@ -2477,11 +2590,6 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     }
     // reorder permanent and temporary triggers: perm first, temp second
     mTriggerUnit.reorderTriggersAfterPackageImport();
-
-    // make any fonts in the package available to Mudlet for use
-    if (thing != enums::PackageModuleType::ModuleSync) {
-        installPackageFonts(packageName);
-    }
 
     // Defer raising install events until the next event loop iteration
     // This ensures all package installation is complete (including variable loading)
@@ -2710,6 +2818,15 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
 
     const QString dest = mudlet::getMudletPath(enums::profilePackagePath, getName(), packageName);
     removeDir(dest, dest);
+
+    // The fonts this package brought went out with it, so a display font that
+    // came from it is now missing and Qt would quietly render some other family
+    // instead. It has to sit past the reinstall above: uninstalling a module
+    // that shares a package's name puts that package and its fonts straight
+    // back, and moving the profile off the font in between would stick, since
+    // nothing moves it back on again. Past removeDir() too, because changing the
+    // font runs the profile's sysSettingChanged handlers.
+    substituteMissingDisplayFont();
 
     // save the profile on the next Qt main loop cycle in order for the asyncronous save mechanism
     // not to try to write to disk a package/module that just got uninstalled and removed from memory
@@ -3741,6 +3858,31 @@ QDockWidget* Host::mapWidget() const
     }
 
     return mpConsole->mpDockableMapWidget;
+}
+
+// Hands TMap::mpMapper back to this profile's own mapper. The map dock and the
+// detached windows borrow it while they show a map of their own, and every one
+// of them gives it back through here. createMapper() records the embedded
+// mapper on the console and puts it in the main frame or a user window, so a
+// profile that has one is never the mpDockableMapWidget case below.
+void Host::restoreOwnMapper()
+{
+    if (!mpMap) {
+        return;
+    }
+
+    if (mpConsole && mpConsole->mpMapper) {
+        mpMap->mpMapper = mpConsole->mpMapper;
+    } else if (mpConsole && mpConsole->mpDockableMapWidget) {
+        auto hostMapWidget = mpConsole->mpDockableMapWidget->widget();
+
+        if (auto hostMapper = qobject_cast<dlgMapper*>(hostMapWidget)) {
+            mpMap->mpMapper = hostMapper;
+        }
+    }
+#if defined(DEBUG_WINDOW_HANDLING)
+    qDebug() << "Host::restoreOwnMapper:" << getName() << "- map is now drawn by" << mpMap->mpMapper.data();
+#endif
 }
 
 std::pair<bool, QString> Host::setMapperTitle(const QString& title)
@@ -4975,6 +5117,25 @@ bool Host::setCommandForegroundColor(const QString& name, int r, int g, int b, i
     return false;
 }
 
+// Returns true when a script has claimed the built-in map buttons for this
+// profile via setConfig("mapperButton", ...): "disabled" swallows the request
+// outright, "scripted" turns it into a sysMapperButtonAction event so the
+// profile's UI package can show or hide its own map window instead.
+bool Host::interceptMapperButton()
+{
+    if (mMapperButtonMode == MapperButtonMode::Disabled) {
+        return true;
+    }
+    if (mMapperButtonMode == MapperButtonMode::Scripted) {
+        TEvent event{};
+        event.mArgumentList.append(QLatin1String("sysMapperButtonAction"));
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        raiseEvent(event);
+        return true;
+    }
+    return false;
+}
+
 // Needed to extract into a separate method from mudlet::slot_mapper() so that
 // we can use it WITHOUT loading a file - at least for the
 // TConsole::importMap(...) case that may need to create a map widget before it
@@ -4990,19 +5151,33 @@ void Host::showHideOrCreateMapper(const bool loadDefaultMap)
     createMapper(loadDefaultMap);
 }
 
+// Whether the profile's mapper currently counts as on screen - the same
+// reading that toggleMapperVisibility() bases its decision on, shared so a
+// menu label saying what the next activation will do cannot disagree with it.
+bool Host::mapperShown() const
+{
+    if (!mpMap || !mpMap->mpMapper) {
+        return false;
+    }
+    if (mpMap->mpMapper->isFloatAndDockable()) {
+        // When in a dock widget, check the parent's visibility, not the child's,
+        // to correctly handle the case where the dock widget was closed via X button.
+        return mpMap->mpMapper->parentWidget()->isVisible();
+    }
+    return mpMap->mpMapper->isVisible();
+}
+
 void Host::toggleMapperVisibility()
 {
     auto pMap = mpMap.data();
+    const bool shown = mapperShown();
     if (pMap->mpMapper->isFloatAndDockable()) {
         // If we are using a floating/dockable widget we must show/hide that
         // only and not the mapper widget (otherwise it messes up {shrinks
         // to a minimal size} the mapper inside the container dock widget). This
         // is the same as the case for a TConsole inside a TDockWidget in
         // (void) TDockWidget::setVisible(bool).
-        // When in a dock widget, check the parent's visibility, not the child's,
-        // to correctly handle the case where the dock widget was closed via X button.
-        const bool isCurrentlyVisible = pMap->mpMapper->parentWidget()->isVisible();
-        if (isCurrentlyVisible) {
+        if (shown) {
             pMap->mpMapper->parentWidget()->setVisible(false);
         } else {
             // When showing, show child first then parent - same pattern as TDockWidget
@@ -5010,8 +5185,7 @@ void Host::toggleMapperVisibility()
             pMap->mpMapper->parentWidget()->setVisible(true);
         }
     } else {
-        const bool visStatus = pMap->mpMapper->isVisible();
-        pMap->mpMapper->setVisible(!visStatus);
+        pMap->mpMapper->setVisible(!shown);
     }
 }
 
@@ -5529,6 +5703,15 @@ QFont Host::getDisplayFont()
     }
 
     return mTempDisplayFont.value();
+}
+
+QFont Host::getDisplayFontForSaving()
+{
+    QFont font = getDisplayFont();
+    if (!mMissingDisplayFontFamily.isEmpty()) {
+        font.setFamily(mMissingDisplayFontFamily);
+    }
+    return font;
 }
 
 QFont Host::getAndClearTempDisplayFont()

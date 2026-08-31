@@ -4131,13 +4131,16 @@ describe("Window and label state", function()
 
   describe("font readback", function()
     local console = name("wlsFontConsole")
+    local fontLabel = name("wlsFontLabel")
 
     setup(function()
       createMiniConsole(console, 10, 10, 300, 150)
+      createLabel(fontLabel, 10, 200, 200, 40, 1)
     end)
 
     teardown(function()
       deleteMiniConsole(console)
+      deleteLabel(fontLabel)
     end)
 
     it("setFontSize round-trips through getFontSize", function()
@@ -4191,15 +4194,59 @@ describe("Window and label state", function()
     end)
 
     it("setFont rejects a font that is not available", function()
+      local original = getFont(console)
       local ok, err = setFont(console, "wlsNoSuchFontFamily")
       assert.is_nil(ok)
       assert.are.equal("font 'wlsNoSuchFontFamily' is not available", err)
+      assert.are.equal(original, getFont(console))
+    end)
+
+    it("setFont on the main console rejects a font that is not available", function()
+      local original = getFont("main")
+      local ok, err = setFont("main", "wlsNoSuchMainFontFamily")
+      assert.is_nil(ok)
+      assert.are.equal("font 'wlsNoSuchMainFontFamily' is not available", err)
+      assert.are.equal(original, getFont("main"))
     end)
 
     it("setFont rejects an empty font name", function()
       local ok, err = setFont(console, "")
       assert.is_nil(ok)
       assert.are.equal("font must not be empty", err)
+    end)
+
+    -- labels are not in the console map, so they used to be the one window kind
+    -- setFont()/getFont() could not see at all
+    it("setFont and getFont reach a label as well as a console", function()
+      assert.is_true(setFont(fontLabel, "Ubuntu Mono"))
+      assert.are.equal("Ubuntu Mono", getFont(fontLabel))
+    end)
+
+    it("setFont takes a \"Family Style\" name on a label", function()
+      assert.is_true(setFont(fontLabel, "Ubuntu Mono Bold"))
+      -- the style becomes the weight, so the family reported is the base one
+      assert.are.equal("Ubuntu Mono", getFont(fontLabel))
+    end)
+
+    it("setFont rejects a font that is not available on a label", function()
+      assert.is_true(setFont(fontLabel, "Ubuntu Mono"))
+      local ok, err = setFont(fontLabel, "wlsNoSuchLabelFontFamily")
+      assert.is_nil(ok)
+      assert.are.equal("font 'wlsNoSuchLabelFontFamily' is not available", err)
+      assert.are.equal("Ubuntu Mono", getFont(fontLabel))
+    end)
+
+    -- nothing stops a label being called "main", so the console has to win the
+    -- name or setFont("main", ...) would silently miss the main console
+    it("setFont targets the main console even when a label is also named main", function()
+      local original = getFont("main")
+      assert.is_true(setFont("main", "Bitstream Vera Sans Mono"))
+      assert.is_true(createLabel("main", 0, 0, 50, 20, 1))
+      assert.is_true(setFont("main", "Ubuntu Mono"))
+      assert.are.equal("Ubuntu Mono", getFont("main"))
+      assert.is_true(deleteLabel("main"))
+      assert.are.equal("Ubuntu Mono", getFont("main"))
+      assert.is_true(setFont("main", original))
     end)
 
     it("getAvailableFonts returns a table keyed by font name", function()
