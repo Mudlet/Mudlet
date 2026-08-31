@@ -460,6 +460,12 @@ void AliasUnit::doCleanup()
         return;
     }
 
+    // Called once per unit for every line of game text, and there is next to
+    // never anything queued: bail out before the containers below are built.
+    if (mCleanupSet.isEmpty() && uninstallList.isEmpty()) {
+        return;
+    }
+
     QSet<TAlias*> deletedAliases;
     QMutableSetIterator<TAlias*> itAlias(mCleanupSet);
     while (itAlias.hasNext()) {

@@ -113,6 +113,12 @@ void ScriptUnit::doCleanup()
         return;
     }
 
+    // Called once per unit for every line of game text, and there is next to
+    // never anything queued: bail out before the set below is built.
+    if (uninstallList.isEmpty()) {
+        return;
+    }
+
     QSet<TScript*> deletedScripts;
     for (auto script : uninstallList) {
         if (!deletedScripts.contains(script)) {
