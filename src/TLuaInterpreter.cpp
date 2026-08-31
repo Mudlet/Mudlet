@@ -31,6 +31,7 @@
 
 #include "EAction.h"
 #include "Host.h"
+#include "LuaAllocator.h"
 #include "TAlias.h"
 #include "TCommandLine.h"
 #include "TConsole.h"
@@ -5354,7 +5355,7 @@ int TLuaInterpreter::check_for_custom_speedwalk()
 // No documentation available in wiki - internal function
 static lua_State* newstate()
 {
-    return luaL_newstate();
+    return mudletNewLuaState();
 }
 
 // No documentation available in wiki - internal function

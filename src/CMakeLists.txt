@@ -98,6 +98,7 @@ set(mudlet_SRCS
     ircmessageformatter.cpp
     KeyUnit.cpp
     LabelInteractionHandler.cpp
+    LuaAllocator.cpp
     LuaInterface.cpp
     LuaLiteral.cpp
     main.cpp
@@ -349,6 +350,7 @@ set(mudlet_HDRS
     ircmessageformatter.h
     KeyUnit.h
     LabelInteractionHandler.h
+    LuaAllocator.h
     LuaInterface.h
     LuaLiteral.h
     MacMicrophonePermission.h
