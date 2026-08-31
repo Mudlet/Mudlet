@@ -575,6 +575,9 @@ private:
     QString mMudLine;
     std::vector<TChar> mMudBuffer;
     std::vector<TChar> mPreTriggerPassLine;
+    // Parked between lines so that the trigger-pass snapshot can reuse an
+    // allocation instead of making a fresh one for each committed line:
+    std::vector<TChar> mSpareTriggerPassLine;
     int mPreTriggerPassLineNumber = -1;
     // A line that ended at the game's own wrap column (Host::mUndoServerWrap)
     // is held here instead of being committed, so its continuation can be

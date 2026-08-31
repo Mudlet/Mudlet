@@ -1831,12 +1831,20 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
         flushPendingServerWrapJoin();
     }
 
+    // Copy out and empty rather than swap, so that both accumulators keep
+    // their allocation for the next line. Swapping leaves them empty, and
+    // grown back from empty they reallocate several times per line - which
+    // costs more than the single copy each of these makes. The copies are also
+    // exactly the size of the line, where the accumulators have grown to fit
+    // the longest line ever seen, so this is what keeps the stored lines from
+    // each holding a worst-case block. Emptying them before the commit rather
+    // than after leaves them usable by any nested pass that the trigger engine
+    // starts from within commitLineData().
     QString line;
-    line.swap(mMudLine);
-    // Copy out and clear rather than swap, so that mMudBuffer keeps its
-    // allocation for the next line. Swapping leaves it empty, and a vector
-    // grown back from empty reallocates several times per line - which costs
-    // more than the single copy this makes.
+    if (!mMudLine.isEmpty()) {
+        line = QString(mMudLine.constData(), mMudLine.size());
+        mMudLine.resize(0);
+    }
     std::vector<TChar> chars(mMudBuffer);
     mMudBuffer.clear();
     commitLineData(std::move(line), std::move(chars), ch);
@@ -1876,7 +1884,7 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
             }
             lineBuffer << QString();
         }
-        buffer.push_back(chars);
+        buffer.push_back(std::move(chars));
         timeBuffer << currentTimeStamp();
         if (ch == '\xff') {
             promptBuffer.append(true);
@@ -1892,7 +1900,7 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
             }
             lineBuffer.back().append(QString());
         }
-        buffer.back() = chars;
+        buffer.back() = std::move(chars);
         timeBuffer.back() = currentTimeStamp();
         if (ch == '\xff') {
             promptBuffer.back() = true;
@@ -1908,12 +1916,18 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
         // after earlier triggers in this pass have recolored the line;
         // save/restore gives nested feedTriggers() passes (which re-enter
         // this function) their own snapshot:
-        std::vector<TChar> savedPassLine = std::move(mPreTriggerPassLine);
+        // The snapshot is taken through a spare member rather than by moving
+        // the committed formats in, so that its allocation stays in
+        // circulation instead of one being made and freed for every line:
+        std::vector<TChar> savedPassLine;
+        savedPassLine.swap(mPreTriggerPassLine);
         const int savedPassLineNumber = mPreTriggerPassLineNumber;
-        mPreTriggerPassLine = std::move(chars);
+        mPreTriggerPassLine.swap(mSpareTriggerPassLine);
+        mPreTriggerPassLine.assign(buffer.back().cbegin(), buffer.back().cend());
         mPreTriggerPassLineNumber = lineIndex;
         mpHost->runTriggers(lineIndex);
-        mPreTriggerPassLine = std::move(savedPassLine);
+        mSpareTriggerPassLine.swap(mPreTriggerPassLine);
+        mPreTriggerPassLine.swap(savedPassLine);
         mPreTriggerPassLineNumber = savedPassLineNumber;
     }
 
@@ -6605,32 +6619,26 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
 
         // Will be one (BMP codepoint) or two (non-BMP codepoints) QChar(s)
         if (isValid) {
-            const QString codePoint = QString(bufferData.substr(pos, utf8SequenceLength).c_str());
-            switch (codePoint.size()) {
-            default:
-                Q_UNREACHABLE(); // This can't happen, unless we got start or length wrong in std::string::substr()
-                qWarning().nospace() << "TBuffer::processUtf8Sequence(...) " << utf8SequenceLength << "-byte UTF-8 sequence accepted, and it encoded to " << codePoint.size()
-                                     << " QChars which does not make sense!!!";
-                isValid = false;
-                isToUseReplacementMark = true;
-                break;
-            case 2:
-                isNonBMPCharacter = true;
-                // Fall-through
-                [[fallthrough]];
-            case 1:
+            // Every way of being malformed - a bad continuation byte, an
+            // overlong form, a surrogate, a codepoint past U+10FFFF, a 5 or 6
+            // byte sequence and the BOM - has already been rejected above, so
+            // the bits can be gathered here rather than paying for a QString
+            // per character:
+            char32_t codePoint = static_cast<quint8>(bufferData.at(pos)) & (utf8SequenceLength == 2 ? 0x1F : (utf8SequenceLength == 3 ? 0x0F : 0x07));
+            for (size_t i = 1; i < utf8SequenceLength; ++i) {
+                codePoint = (codePoint << 6) | (static_cast<quint8>(bufferData.at(pos + i)) & 0x3F);
+            }
+            const bool nonBMP = QChar::requiresSurrogates(codePoint);
 #if defined(DEBUG_UTF8_PROCESSING)
-                qDebug().nospace() << "TBuffer::processUtf8Sequence(...) " << utf8SequenceLength << "-byte UTF-8 sequence accepted, it was " << codePoint.size() << " QChar(s) long [" << codePoint
-                                   << "]";
+            qDebug().nospace() << "TBuffer::processUtf8Sequence(...) " << utf8SequenceLength << "-byte UTF-8 sequence accepted, it was " << (nonBMP ? 2 : 1) << " QChar(s) long [U+" << Qt::hex
+                               << static_cast<quint32>(codePoint) << Qt::dec << "]";
 #endif
-                mMudLine.append(codePoint);
-                break;
-            case 0:
-                qWarning().nospace() << "TBuffer::processUtf8Sequence(...) " << utf8SequenceLength
-                                     << "-byte UTF-8 sequence accepted, but it did not encode to "
-                                        "ANY QChar(s)!!!";
-                isValid = false;
-                isToUseReplacementMark = true;
+            if (nonBMP) {
+                isNonBMPCharacter = true;
+                mMudLine.append(QChar(QChar::highSurrogate(codePoint)));
+                mMudLine.append(QChar(QChar::lowSurrogate(codePoint)));
+            } else {
+                mMudLine.append(QChar(static_cast<char16_t>(codePoint)));
             }
         }
 
