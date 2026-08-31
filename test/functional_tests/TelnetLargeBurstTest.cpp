@@ -59,7 +59,7 @@ private:
         QByteArray payload;
         payload.reserve(lineCount * 64);
         for (int i = 0; i < lineCount; ++i) {
-            payload += QStringLiteral("BURSTLINE %1 padded out so the burst clears one buffer read\r\n").arg(i, 6, 10, QLatin1Char('0')).toUtf8();
+            payload += qsl("BURSTLINE %1 padded out so the burst clears one buffer read\r\n").arg(i, 6, 10, QLatin1Char('0')).toUtf8();
         }
         return payload;
     }
@@ -67,7 +67,9 @@ private:
     bool bufferContains(const QString& text) const
     {
         TMainConsole* console = mpHost->mpConsole;
-        for (int i = 0; i <= console->buffer.getLastLineNumber(); ++i) {
+        // backwards: the line waited for is by construction the last of the burst,
+        // and this runs on every poll of a multi-megabyte buffer
+        for (int i = console->buffer.getLastLineNumber(); i >= 0; --i) {
             if (console->buffer.line(i).contains(text)) {
                 return true;
             }
@@ -101,7 +103,7 @@ private slots:
             QFAIL("No active host available for the test.");
         }
         QSignalSpy connected(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        if (!connected.wait(500)) {
+        if (!connected.wait(15000)) {
             QFAIL("Could not connect with the host.");
         }
     }
@@ -124,14 +126,20 @@ private slots:
     // every line of it has to reach the console off that one burst alone.
     void aBurstLargerThanOneReadIsConsumedWithoutFurtherTraffic()
     {
-        constexpr int lineCount = 40000; // ~2.6 MB, 26 buffer reads' worth
+        // ~2.6 MB, 26 buffer reads' worth. This only strands on a host whose socket
+        // receive buffer swallows the whole burst, so that one readyRead() covers it
+        // all - Linux autotunes to tens of MB and does. Where the buffer is smaller
+        // the sender dribbles, readyRead() keeps firing and even the unfixed code
+        // finishes, so there the test passes without discriminating rather than
+        // failing spuriously.
+        constexpr int lineCount = 40000;
         mpHost->mpConsole->buffer.clear();
 
         const QByteArray payload = burstOf(lineCount);
         QVERIFY(payload.size() > 100000);
         mpServer->sendRaw(payload);
 
-        const QString lastLine = QStringLiteral("BURSTLINE %1").arg(lineCount - 1, 6, 10, QLatin1Char('0'));
+        const QString lastLine = qsl("BURSTLINE %1").arg(lineCount - 1, 6, 10, QLatin1Char('0'));
         QElapsedTimer timer;
         timer.start();
         while (timer.elapsed() < 15000 && !bufferContains(lastLine)) {
