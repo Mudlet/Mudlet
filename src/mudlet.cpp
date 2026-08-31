@@ -1060,7 +1060,6 @@ void mudlet::init()
     auto frame = new QWidget(this);
     setCentralWidget(frame);
     mpTabBar = new TTabBar(frame);
-    mpTabBar->setMaximumHeight(30);
     mpTabBar->setFocusPolicy(Qt::NoFocus);
     mpTabBar->setTabsClosable(true);
     mpTabBar->setAutoHide(true);
@@ -1079,6 +1078,7 @@ void mudlet::init()
     connect(mpTabBar, &QWidget::customContextMenuRequested, this, &mudlet::slot_showTabContextMenu);
     auto layoutTopLevel = new QVBoxLayout(frame);
     layoutTopLevel->setContentsMargins(0, 0, 0, 0);
+    layoutTopLevel->setSpacing(0);
     layoutTopLevel->addWidget(mpTabBar);
     mpWidget_profileContainer = new QWidget(frame);
     const QPalette mainPalette;
@@ -7573,11 +7573,6 @@ void mudlet::setAppearance(const enums::Appearance state, const bool& loading)
         return;
     }
 
-    mDarkMode = false;
-    if (state == enums::Appearance::dark || (state == enums::Appearance::systemSetting && QGuiApplication::styleHints()->colorScheme() == Qt::ColorScheme::Dark)) {
-        mDarkMode = true;
-    }
-
     switch (state) {
     case enums::Appearance::dark:
         QGuiApplication::styleHints()->setColorScheme(Qt::ColorScheme::Dark);
@@ -7588,6 +7583,14 @@ void mudlet::setAppearance(const enums::Appearance state, const bool& loading)
     case enums::Appearance::systemSetting:
         QGuiApplication::styleHints()->setColorScheme(Qt::ColorScheme::Unknown);
         break;
+    }
+
+    // Only read the scheme after the override above has been replaced -
+    // before that, colorScheme() still reports the previous explicit
+    // choice, so systemSetting would inherit it instead of the OS setting.
+    mDarkMode = false;
+    if (state == enums::Appearance::dark || (state == enums::Appearance::systemSetting && QGuiApplication::styleHints()->colorScheme() == Qt::ColorScheme::Dark)) {
+        mDarkMode = true;
     }
 
     if (needsCustomDarkTheme()) {
@@ -7601,6 +7604,21 @@ void mudlet::setAppearance(const enums::Appearance state, const bool& loading)
     } else {
         // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
         qApp->setStyle(new AltFocusMenuBarDisable(mDefaultStyle));
+    }
+
+    if (mpTabBar) {
+        mpTabBar->refreshAfterApplicationStyleChange();
+    }
+    // mDetachedWindows is keyed by profile name, so a window hosting several
+    // profiles appears once per profile - collect the unique windows first.
+    QSet<TDetachedWindow*> uniqueDetachedWindows;
+    for (const auto& pDetachedWindow : std::as_const(mDetachedWindows)) {
+        if (pDetachedWindow) {
+            uniqueDetachedWindows.insert(pDetachedWindow);
+        }
+    }
+    for (TDetachedWindow* pDetachedWindow : uniqueDetachedWindows) {
+        pDetachedWindow->refreshAfterApplicationStyleChange();
     }
 
     getHostManager().changeAllHostColour(getActiveHost());

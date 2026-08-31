@@ -168,7 +168,6 @@ void TDetachedWindow::setupUI()
 
     // Create a tab bar to show the profile names and allow reattachment
     mpTabBar = new TTabBar(centralWidget);
-    mpTabBar->setMaximumHeight(30);
     mpTabBar->setTabsClosable(true);
     mpTabBar->setMovable(true);
 
@@ -3161,6 +3160,13 @@ void TDetachedWindow::refreshTabBar()
 
             mpTabBar->setTabText(i, displayText);
         }
+    }
+}
+
+void TDetachedWindow::refreshAfterApplicationStyleChange()
+{
+    if (mpTabBar) {
+        mpTabBar->refreshAfterApplicationStyleChange();
     }
 }
 
