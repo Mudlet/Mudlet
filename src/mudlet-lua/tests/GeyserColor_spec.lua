@@ -24,15 +24,19 @@ describe("Tests functionality of Geyser.Color", function()
     -- script added its own colour has to notice it
     it("finds a colour added to color_table after the first lookup", function()
       assert.is_false(Geyser.Color.find_color_name("gcsAddedColour"))
-      finally(function() color_table.gcsAddedColour = nil end)
-      color_table.gcsAddedColour = {12, 34, 56}
+      finally(function()
+        color_table.gcsAddedColour = nil
+      end)
+      color_table.gcsAddedColour = { 12, 34, 56 }
       assert.are.equal("gcsAddedColour", Geyser.Color.find_color_name("gcsaddedcolour"))
-      assert.are.same({12, 34, 56, 255}, {Geyser.Color.parse("gcsAddedColour")})
+      assert.are.same({ 12, 34, 56, 255 }, { Geyser.Color.parse("gcsAddedColour") })
     end)
 
     it("stops finding a colour taken back out of color_table", function()
       local restore = color_table.white
-      finally(function() color_table.white = restore end)
+      finally(function()
+        color_table.white = restore
+      end)
       assert.are.equal("white", Geyser.Color.find_color_name("white"))
       color_table.white = nil
       assert.is_false(Geyser.Color.find_color_name("white"))
@@ -45,31 +49,33 @@ describe("Tests functionality of Geyser.Color", function()
 
   describe("Geyser.Color.parse", function()
     it("reads a named colour", function()
-      assert.are.same({255, 255, 255, 255}, {Geyser.Color.parse("white")})
+      assert.are.same({ 255, 255, 255, 255 }, { Geyser.Color.parse("white") })
     end)
 
     it("reads hex, hecho, 0x and decho forms", function()
-      assert.are.same({170, 0, 255, 255}, {Geyser.Color.parse("#AA00FF")})
-      assert.are.same({170, 0, 255, 255}, {Geyser.Color.parse("|cAA00FF")})
-      assert.are.same({170, 0, 255, 255}, {Geyser.Color.parse("0xAA00FF")})
-      assert.are.same({190, 0, 255, 255}, {Geyser.Color.parse("<190,0,255>")})
-      assert.are.same({190, 0, 255, 128}, {Geyser.Color.parse("<190,0,255,128>")})
+      assert.are.same({ 170, 0, 255, 255 }, { Geyser.Color.parse("#AA00FF") })
+      assert.are.same({ 170, 0, 255, 255 }, { Geyser.Color.parse("|cAA00FF") })
+      assert.are.same({ 170, 0, 255, 255 }, { Geyser.Color.parse("0xAA00FF") })
+      assert.are.same({ 190, 0, 255, 255 }, { Geyser.Color.parse("<190,0,255>") })
+      assert.are.same({ 190, 0, 255, 128 }, { Geyser.Color.parse("<190,0,255,128>") })
     end)
 
     it("reads discrete components and a table", function()
-      assert.are.same({1, 2, 3, 255}, {Geyser.Color.parse(1, 2, 3)})
-      assert.are.same({1, 2, 3, 4}, {Geyser.Color.parse(1, 2, 3, 4)})
-      assert.are.same({1, 2, 3, 4}, {Geyser.Color.parse({r = 1, g = 2, b = 3, a = 4})})
+      assert.are.same({ 1, 2, 3, 255 }, { Geyser.Color.parse(1, 2, 3) })
+      assert.are.same({ 1, 2, 3, 4 }, { Geyser.Color.parse(1, 2, 3, 4) })
+      assert.are.same({ 1, 2, 3, 4 }, { Geyser.Color.parse({ r = 1, g = 2, b = 3, a = 4 }) })
     end)
 
     -- only the names are looked up, never the components behind them: Mudlet
     -- rewrites color_table's entries in place when the ANSI palette changes
     it("gives the current value of a colour whose entry changed", function()
       local restore = color_table.white
-      finally(function() color_table.white = restore end)
-      assert.are.same({255, 255, 255, 255}, {Geyser.Color.parse("white")})
-      color_table.white = {1, 2, 3}
-      assert.are.same({1, 2, 3, 255}, {Geyser.Color.parse("white")})
+      finally(function()
+        color_table.white = restore
+      end)
+      assert.are.same({ 255, 255, 255, 255 }, { Geyser.Color.parse("white") })
+      color_table.white = { 1, 2, 3 }
+      assert.are.same({ 1, 2, 3, 255 }, { Geyser.Color.parse("white") })
     end)
 
     it("gives nothing for a colour it cannot read", function()
@@ -129,7 +135,7 @@ describe("Tests functionality of Geyser.Color", function()
 
     before_each(function()
       created = {}
-      console = track(Geyser.MiniConsole:new({name = "gcsColours", x = 0, y = 0, width = 200, height = 100}))
+      console = track(Geyser.MiniConsole:new({ name = "gcsColours", x = 0, y = 0, width = 200, height = 100 }))
     end)
 
     after_each(function()
@@ -153,11 +159,11 @@ describe("Tests functionality of Geyser.Color", function()
       moveCursor("gcsColours", 0, getLineCount("gcsColours") - 1)
       selectCurrentLine("gcsColours")
       local format = getTextFormat("gcsColours")
-      assert.are.same({255, 0, 0}, format.foreground)
-      assert.are.same({0, 0, 255}, format.background)
+      assert.are.same({ 255, 0, 0 }, format.foreground)
+      assert.are.same({ 0, 0, 255 }, format.background)
       -- color is the window's own background rather than the text's
       local red, green, blue = getBackgroundColor("gcsColours")
-      assert.are.same({16, 32, 48}, {red, green, blue})
+      assert.are.same({ 16, 32, 48 }, { red, green, blue })
     end)
 
     it("reads the colours in whatever form they were written", function()
@@ -171,10 +177,10 @@ describe("Tests functionality of Geyser.Color", function()
       moveCursor("gcsColours", 0, getLineCount("gcsColours") - 1)
       selectCurrentLine("gcsColours")
       local format = getTextFormat("gcsColours")
-      assert.are.same({0, 255, 0}, format.foreground)
-      assert.are.same({0, 0, 128}, format.background)
+      assert.are.same({ 0, 255, 0 }, format.foreground)
+      assert.are.same({ 0, 0, 128 }, format.background)
       local red, green, blue = getBackgroundColor("gcsColours")
-      assert.are.same({32, 64, 96}, {red, green, blue})
+      assert.are.same({ 32, 64, 96 }, { red, green, blue })
     end)
   end)
 end)

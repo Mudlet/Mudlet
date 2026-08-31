@@ -1,6 +1,6 @@
 describe("Tests functionality of Geyser.Button", function()
-  describe('Tests the functionality of Geyser.Button:new', function()
-    it('creates a button with certain defaults if called with no constraints', function()
+  describe("Tests the functionality of Geyser.Button:new", function()
+    it("creates a button with certain defaults if called with no constraints", function()
       local gb = Geyser.Button:new()
       assert.equals("table", type(gb))
       assert.equals("50px", gb.height)
@@ -9,7 +9,7 @@ describe("Tests functionality of Geyser.Button", function()
       assert.equals("look", gb.clickCommand)
       assert.equals("look", gb.downCommand)
       assert.equals("blue", gb.downColor)
-      assert.equals("blue",gb.color)
+      assert.equals("blue", gb.color)
       assert.equals("<center>Look</center>", gb.msg)
       assert.equals("<center>Look</center>", gb.downMsg)
       assert.equals("up", gb.state)
@@ -21,7 +21,7 @@ describe("Tests functionality of Geyser.Button", function()
     end)
   end)
 
-  describe('Tests the functionality of Geyser.Button:press', function()
+  describe("Tests the functionality of Geyser.Button:press", function()
     local eaSpy
     local pcSpy
     local gb
@@ -43,13 +43,13 @@ describe("Tests functionality of Geyser.Button", function()
       assert.spy(eaSpy).was.called_with("look")
     end)
 
-    it('does not change the state if twoState is false', function()
+    it("does not change the state if twoState is false", function()
       gb:press()
       assert.is_false(gb.twoState)
       assert.equals("up", gb.state)
     end)
 
-    it('does change the state if twoState is true', function()
+    it("does change the state if twoState is true", function()
       gb:enableTwoState()
       gb:press()
       assert.equals("down", gb.state)
@@ -65,7 +65,7 @@ describe("Tests functionality of Geyser.Button", function()
       assert.spy(eaSpy).was.called_with(gb.downCommand)
     end)
 
-    it('uses pcall with the clickFunction if set', function()
+    it("uses pcall with the clickFunction if set", function()
       local cf = function() end
       gb:setClickFunction(cf)
       gb:press()
@@ -84,7 +84,7 @@ describe("Tests functionality of Geyser.Button", function()
     end)
   end)
 
-  describe('Tests the functionality of Geyser.Button:setState', function()
+  describe("Tests the functionality of Geyser.Button:setState", function()
     local gb
     local echoSpy, styleSheetSpy, colorSpy, toolTipSpy
     before_each(function()
@@ -94,7 +94,7 @@ describe("Tests functionality of Geyser.Button", function()
       toolTipSpy = spy.on(Geyser.Label, "setToolTip")
       gb = Geyser.Button:new({
         name = "testButton",
-        twoState = true
+        twoState = true,
       })
     end)
     after_each(function()
@@ -104,7 +104,7 @@ describe("Tests functionality of Geyser.Button", function()
       Geyser.Label.setToolTip:revert()
     end)
 
-    it('should call echo with the message for the state set', function()
+    it("should call echo with the message for the state set", function()
       gb:setState("up")
       assert.spy(echoSpy).was.called()
       assert.spy(echoSpy).was.called_with(match.is_ref(gb), gb.msg)
@@ -113,7 +113,7 @@ describe("Tests functionality of Geyser.Button", function()
       assert.spy(echoSpy).was.called_with(match.is_ref(gb), gb.downMsg)
     end)
 
-    it('should call setColor with the color for the state being set', function()
+    it("should call setColor with the color for the state being set", function()
       gb:setState("up")
       assert.spy(colorSpy).was.called()
       assert.spy(colorSpy).was.called_with(match.is_ref(gb), gb.color)
@@ -122,7 +122,7 @@ describe("Tests functionality of Geyser.Button", function()
       assert.spy(colorSpy).was.called_with(match.is_ref(gb), gb.downColor)
     end)
 
-    it('should call setStyleSheet instead of setColor if the stylesheet is set', function()
+    it("should call setStyleSheet instead of setColor if the stylesheet is set", function()
       gb.downStyle = [[background-color: blue;]]
       gb.style = [[background-color: black;]]
       gb:setState("up")
@@ -133,7 +133,7 @@ describe("Tests functionality of Geyser.Button", function()
       assert.spy(styleSheetSpy).was.called_with(match.is_ref(gb), gb.downStyle)
     end)
 
-    it('should call setToolTip with the appropriate tool tip for the state being set', function()
+    it("should call setToolTip with the appropriate tool tip for the state being set", function()
       gb:setState("down")
       assert.spy(toolTipSpy).was.called()
       assert.spy(toolTipSpy).was.called_with(match.is_ref(gb), gb.tooltip, gb.toolTipDuration)
@@ -145,12 +145,12 @@ describe("Tests functionality of Geyser.Button", function()
 
   -- The blocks above watch the calls a button makes; these assert what the
   -- widget ends up looking like, through getWindowGeometry and getLabelText.
-  describe('Geyser.Button widget state', function()
+  describe("Geyser.Button widget state", function()
     local created
 
     local function geometry(name)
       local x, y, width, height = getWindowGeometry(name)
-      return {x = x, y = y, width = width, height = height}
+      return { x = x, y = y, width = width, height = height }
     end
 
     local function track(object)
@@ -178,29 +178,32 @@ describe("Tests functionality of Geyser.Button", function()
       created = {}
     end)
 
-    it('creates a label widget at the constrained geometry', function()
-      track(Geyser.Button:new({name = "gbsGeometry", x = 5, y = 6, width = 70, height = 30}))
+    it("creates a label widget at the constrained geometry", function()
+      track(Geyser.Button:new({ name = "gbsGeometry", x = 5, y = 6, width = 70, height = 30 }))
       assert.are.equal("label", windowType("gbsGeometry"))
-      assert.are.same({x = 5, y = 6, width = 70, height = 30}, geometry("gbsGeometry"))
+      assert.are.same({ x = 5, y = 6, width = 70, height = 30 }, geometry("gbsGeometry"))
       assert.is_true(windowVisible("gbsGeometry"))
     end)
 
-    it('falls back to the button default size, not the label one', function()
-      track(Geyser.Button:new({name = "gbsDefaultSize", x = 0, y = 0}))
+    it("falls back to the button default size, not the label one", function()
+      track(Geyser.Button:new({ name = "gbsDefaultSize", x = 0, y = 0 }))
       local actual = geometry("gbsDefaultSize")
       assert.are.equal(50, actual.width)
       assert.are.equal(50, actual.height)
     end)
 
-    it('shows the up message on the label to start with', function()
-      track(Geyser.Button:new({name = "gbsUpMessage", x = 0, y = 0, width = 60, height = 20, msg = "press me"}))
+    it("shows the up message on the label to start with", function()
+      track(Geyser.Button:new({ name = "gbsUpMessage", x = 0, y = 0, width = 60, height = 20, msg = "press me" }))
       assert.is_truthy(getLabelText("gbsUpMessage"):find("press me", 1, true))
     end)
 
-    it('swaps the label text with the state of a two state button', function()
+    it("swaps the label text with the state of a two state button", function()
       local button = track(Geyser.Button:new({
         name = "gbsTwoState",
-        x = 0, y = 0, width = 60, height = 20,
+        x = 0,
+        y = 0,
+        width = 60,
+        height = 20,
         msg = "up text",
         downMsg = "down text",
         twoState = true,
@@ -212,10 +215,13 @@ describe("Tests functionality of Geyser.Button", function()
       assert.is_truthy(getLabelText("gbsTwoState"):find("up text", 1, true))
     end)
 
-    it('refuses to push a single state button down', function()
+    it("refuses to push a single state button down", function()
       local button = track(Geyser.Button:new({
         name = "gbsSingleState",
-        x = 0, y = 0, width = 60, height = 20,
+        x = 0,
+        y = 0,
+        width = 60,
+        height = 20,
         msg = "up text",
         downMsg = "down text",
       }))
@@ -228,13 +234,20 @@ describe("Tests functionality of Geyser.Button", function()
       assert.is_truthy(getLabelText("gbsSingleState"):find("up text", 1, true))
     end)
 
-    it('keeps clicking a refused single state button on its up command', function()
+    it("keeps clicking a refused single state button on its up command", function()
       local clicks, downs = 0, 0
       local button = track(Geyser.Button:new({
         name = "gbsRefusedPress",
-        x = 0, y = 0, width = 60, height = 20,
-        clickFunction = function() clicks = clicks + 1 end,
-        downFunction = function() downs = downs + 1 end,
+        x = 0,
+        y = 0,
+        width = 60,
+        height = 20,
+        clickFunction = function()
+          clicks = clicks + 1
+        end,
+        downFunction = function()
+          downs = downs + 1
+        end,
       }))
       button:setState("down")
       button:press()
@@ -243,10 +256,13 @@ describe("Tests functionality of Geyser.Button", function()
       assert.are.equal("up", button.state)
     end)
 
-    it('reports success for both states of a two state button', function()
+    it("reports success for both states of a two state button", function()
       local button = track(Geyser.Button:new({
         name = "gbsStateResult",
-        x = 0, y = 0, width = 60, height = 20,
+        x = 0,
+        y = 0,
+        width = 60,
+        height = 20,
         twoState = true,
       }))
       -- a legitimate 'down' has to be distinguishable from a refusal
@@ -254,10 +270,13 @@ describe("Tests functionality of Geyser.Button", function()
       assert.is_true(button:setState("up"))
     end)
 
-    it('will not start a single state button in the down state', function()
+    it("will not start a single state button in the down state", function()
       local button = track(Geyser.Button:new({
         name = "gbsDownConstraint",
-        x = 0, y = 0, width = 60, height = 20,
+        x = 0,
+        y = 0,
+        width = 60,
+        height = 20,
         msg = "up text",
         state = "down",
       }))
@@ -265,8 +284,8 @@ describe("Tests functionality of Geyser.Button", function()
       assert.is_truthy(getLabelText("gbsDownConstraint"):find("up text", 1, true))
     end)
 
-    it('rejects a state that is not a string or not a known state', function()
-      local button = track(Geyser.Button:new({name = "gbsBadState", x = 0, y = 0, width = 60, height = 20}))
+    it("rejects a state that is not a string or not a known state", function()
+      local button = track(Geyser.Button:new({ name = "gbsBadState", x = 0, y = 0, width = 60, height = 20 }))
       local result, message = button:setState(7)
       assert.is_nil(result)
       assert.is_truthy(message:find("state as string expected, got number", 1, true))
@@ -276,10 +295,13 @@ describe("Tests functionality of Geyser.Button", function()
       assert.are.equal("up", button.state)
     end)
 
-    it('applies the stylesheet of the state it is put into', function()
+    it("applies the stylesheet of the state it is put into", function()
       local button = track(Geyser.Button:new({
         name = "gbsStyles",
-        x = 0, y = 0, width = 60, height = 20,
+        x = 0,
+        y = 0,
+        width = 60,
+        height = 20,
         twoState = true,
         style = "background-color: black;",
         downStyle = "background-color: blue;",
@@ -290,10 +312,13 @@ describe("Tests functionality of Geyser.Button", function()
       assert.are.equal("background-color: blue;", getLabelStyleSheet("gbsStyles"))
     end)
 
-    it('setMsg and setDownMsg redraw the button in its current state', function()
+    it("setMsg and setDownMsg redraw the button in its current state", function()
       local button = track(Geyser.Button:new({
         name = "gbsMessages",
-        x = 0, y = 0, width = 60, height = 20,
+        x = 0,
+        y = 0,
+        width = 60,
+        height = 20,
         twoState = true,
       }))
       button:setMsg("new up")
@@ -306,16 +331,23 @@ describe("Tests functionality of Geyser.Button", function()
       assert.is_truthy(message:find("msg as string expected, got number", 1, true))
     end)
 
-    it('press walks a two state button through both messages', function()
+    it("press walks a two state button through both messages", function()
       local pressed = 0
       local button = track(Geyser.Button:new({
         name = "gbsPress",
-        x = 0, y = 0, width = 60, height = 20,
+        x = 0,
+        y = 0,
+        width = 60,
+        height = 20,
         msg = "up text",
         downMsg = "down text",
         twoState = true,
-        clickFunction = function() pressed = pressed + 1 end,
-        downFunction = function() pressed = pressed + 1 end,
+        clickFunction = function()
+          pressed = pressed + 1
+        end,
+        downFunction = function()
+          pressed = pressed + 1
+        end,
       }))
       button:press()
       assert.are.equal("down", button.state)
@@ -326,10 +358,13 @@ describe("Tests functionality of Geyser.Button", function()
       assert.are.equal(2, pressed)
     end)
 
-    it('disableTwoState puts the button back up', function()
+    it("disableTwoState puts the button back up", function()
       local button = track(Geyser.Button:new({
         name = "gbsDisableTwoState",
-        x = 0, y = 0, width = 60, height = 20,
+        x = 0,
+        y = 0,
+        width = 60,
+        height = 20,
         msg = "up text",
         downMsg = "down text",
         twoState = true,
@@ -341,26 +376,28 @@ describe("Tests functionality of Geyser.Button", function()
       assert.is_truthy(getLabelText("gbsDisableTwoState"):find("up text", 1, true))
     end)
 
-    it('hides and shows the button widget', function()
-      local button = track(Geyser.Button:new({name = "gbsVisible", x = 0, y = 0, width = 60, height = 20}))
+    it("hides and shows the button widget", function()
+      local button = track(Geyser.Button:new({ name = "gbsVisible", x = 0, y = 0, width = 60, height = 20 }))
       button:hide()
       assert.is_false(windowVisible("gbsVisible"))
       button:show()
       assert.is_true(windowVisible("gbsVisible"))
     end)
 
-    it('deletes its widget', function()
-      local button = track(Geyser.Button:new({name = "gbsDelete", x = 0, y = 0, width = 60, height = 20}))
+    it("deletes its widget", function()
+      local button = track(Geyser.Button:new({ name = "gbsDelete", x = 0, y = 0, width = 60, height = 20 }))
       button:delete()
       assert.is_nil(getWindowGeometry("gbsDelete"))
       assert.is_nil(Geyser.windowList.gbsDelete)
     end)
 
-    describe('Geyser.Button command, function and style setters', function()
+    describe("Geyser.Button command, function and style setters", function()
       local button
 
       before_each(function()
-        button = track(Geyser.Button:new({name = "gbsSetters", x = 0, y = 0, width = 60, height = 20, msg = "up", downMsg = "down"}))
+        button = track(
+          Geyser.Button:new({ name = "gbsSetters", x = 0, y = 0, width = 60, height = 20, msg = "up", downMsg = "down" })
+        )
         button:enableTwoState()
       end)
 
@@ -371,7 +408,9 @@ describe("Tests functionality of Geyser.Button", function()
         assert.are.equal("say down", button.downCommand)
 
         local expand = spy.on(_G, "expandAlias")
-        finally(function() expand:revert() end)
+        finally(function()
+          expand:revert()
+        end)
         button:press()
         assert.spy(expand).was.called_with("say up")
         button:press()
@@ -379,33 +418,39 @@ describe("Tests functionality of Geyser.Button", function()
       end)
 
       it("setClickCommand and setDownCommand reject a non string", function()
-        assert.has_error(function() button:setClickCommand(5) end)
-        assert.has_error(function() button:setDownCommand(5) end)
+        assert.has_error(function()
+          button:setClickCommand(5)
+        end)
+        assert.has_error(function()
+          button:setDownCommand(5)
+        end)
       end)
 
       it("setDownColor and setColor apply the colour used for each state", function()
         -- a label's background colour has no getter, so watch what reaches
         -- setBackgroundColor; spy.on leaves the real call in place
         local backgroundColor = spy.on(_G, "setBackgroundColor")
-        finally(function() backgroundColor:revert() end)
+        finally(function()
+          backgroundColor:revert()
+        end)
 
         local function lastColour()
           local calls = backgroundColor.calls
           local vals = calls[#calls].vals
-          return {vals[1], vals[2], vals[3], vals[4]}
+          return { vals[1], vals[2], vals[3], vals[4] }
         end
 
         button:setColor("green")
         assert.are.equal("green", button.color)
-        assert.are.same({"gbsSetters", 0, 255, 0}, lastColour())
+        assert.are.same({ "gbsSetters", 0, 255, 0 }, lastColour())
 
         button:setDownColor("red")
         assert.are.equal("red", button.downColor)
         button:setState("down")
-        assert.are.same({"gbsSetters", 255, 0, 0}, lastColour())
+        assert.are.same({ "gbsSetters", 255, 0, 0 }, lastColour())
 
         button:setState("up")
-        assert.are.same({"gbsSetters", 0, 255, 0}, lastColour())
+        assert.are.same({ "gbsSetters", 0, 255, 0 }, lastColour())
       end)
 
       it("setStyle and setDownStyle put the right sheet on the widget per state", function()

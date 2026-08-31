@@ -33,7 +33,11 @@ function GeyserReposition(event, w, h, arg)
     if window then
       if event == nil then
         window:reposition()
-      elseif event == "sysUserWindowResizeEvent" and window.type == "userwindow" and arg.."Container" == window.name then
+      elseif
+        event == "sysUserWindowResizeEvent"
+        and window.type == "userwindow"
+        and arg .. "Container" == window.name
+      then
         window:reposition()
       elseif event == "sysWindowResizeEvent" and window.type ~= "userwindow" then
         window:reposition()

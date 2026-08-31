@@ -1,12 +1,14 @@
-local http_request = require "http.request"
-local lunajson = require "lunajson"
+local http_request = require("http.request")
+local lunajson = require("lunajson")
 
 local function trim(s)
   return (s:gsub("^%s*(.-)%s*$", "%1"))
 end
 
 local function magiclines(s)
-  if s:sub(-1)~="\n" then s=s.."\n" end
+  if s:sub(-1) ~= "\n" then
+    s = s .. "\n"
+  end
   return s:gmatch("(.-)\n")
 end
 
@@ -27,7 +29,7 @@ local function scrapeLuaFunctions(htmlbody)
         --print("Name: " .. name)
       end
     elseif state == 1 then
-      usage = string.match(line, '<dl><dt>(.-)</dt>')
+      usage = string.match(line, "<dl><dt>(.-)</dt>")
       if usage then
         state = 0
         --print("Usage: " .. usage)
@@ -57,8 +59,8 @@ end
 
 local headers, stream = assert(http_request.new_from_uri("https://wiki.mudlet.org/w/Manual:Lua_Functions"):go())
 local body = assert(stream:get_body_as_string())
-if headers:get ":status" ~= "200" then
-    error(body)
+if headers:get(":status") ~= "200" then
+  error(body)
 end
 
 local data = scrapeLuaFunctions(body)

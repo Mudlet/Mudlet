@@ -10,7 +10,8 @@ Geyser.StyleSheet = {}
 Geyser.StyleSheet.__index = Geyser.StyleSheet
 
 -- create locals for things we use in loops or recursively (speed optimization)
-local trim, match, gsub, split, update, format = string.trim, string.match, string.gsub, string.split, table.update, string.format
+local trim, match, gsub, split, update, format =
+  string.trim, string.match, string.gsub, string.split, table.update, string.format
 
 --- Creates a new StyleSheet
 -- @param stylesheet the stylesheet to start off with
@@ -24,7 +25,9 @@ function Geyser.StyleSheet:new(stylesheet, parent, target)
   if styleType == "string" then
     local tgt
     styleTable, tgt = self:parseCSS(stylesheet)
-    if not target then target = tgt end
+    if not target then
+      target = tgt
+    end
   elseif styleType == "table" then
     styleTable = table.deepcopy(stylesheet)
   else
@@ -51,10 +54,12 @@ function Geyser.StyleSheet:parseCSS(stylesheet)
   if not stylesheet:find(";") then
     return nil, "no valid lines found in stylesheet. Lines must be terminated by a ;"
   end
-  local target, styles = match(stylesheet,"(%w+)%s*{(.*)}")
-  if styles then stylesheet = styles end
+  local target, styles = match(stylesheet, "(%w+)%s*{(.*)}")
+  if styles then
+    stylesheet = styles
+  end
   stylesheet = gsub(stylesheet, "[\r\n]", "")
-  for _,element in ipairs(split(stylesheet, ";")) do
+  for _, element in ipairs(split(stylesheet, ";")) do
     element = trim(element)
     local property, value = match(element, "^(.-):(.+)$")
     if property and value then
@@ -102,11 +107,11 @@ function Geyser.StyleSheet:setCSS(css)
   end
   local cssType = type(css)
   if cssType ~= "string" then
-    printError(f"Geyser.StyleSheet:setCSS: bad argument #1 type (css as string expected, got {cssType})", true, true)
+    printError(f("Geyser.StyleSheet:setCSS: bad argument #1 type (css as string expected, got {cssType})"), true, true)
   end
   local styleTable, target = self:parseCSS(css)
   if not styleTable then
-    return nil, f"error parsing css: {target}"
+    return nil, f("error parsing css: {target}")
   end
   if target then
     self:setTarget(target)
@@ -133,7 +138,11 @@ function Geyser.StyleSheet:setStyleTable(styleTable)
   styleTable = styleTable or {}
   local styleTableType = type(styleTable)
   if styleTableType ~= "table" then
-    printError(f"Geyser.StyleSheet:setStyleTable: bad argument #1 type (styleTable as table expected, got {styleTableType}!)", true, true)
+    printError(
+      f("Geyser.StyleSheet:setStyleTable: bad argument #1 type (styleTable as table expected, got {styleTableType}!)"),
+      true,
+      true
+    )
   end
   self.styleTable = styleTable
 end
@@ -149,7 +158,11 @@ function Geyser.StyleSheet:setParent(parent)
     self.parent = parent
     return
   end
-  printError(f"Geyser.StyleSheet:setParent: bad argument #1 type (Geyser.StyleSheet expected, got {type(parent)})", true, true)
+  printError(
+    f("Geyser.StyleSheet:setParent: bad argument #1 type (Geyser.StyleSheet expected, got {type(parent)})"),
+    true,
+    true
+  )
 end
 
 --- Allows you to set a target for this stylesheet to effect, such as "QPlainTextEdit" etc.
@@ -161,7 +174,11 @@ function Geyser.StyleSheet:setTarget(target)
   end
   local targetType = type(target)
   if targetType ~= "string" then
-    printError(f"Geyser.StyleSheet:setTarget: bad argument #1 type (optional target as string expected, got {targetType})", true, true)
+    printError(
+      f("Geyser.StyleSheet:setTarget: bad argument #1 type (optional target as string expected, got {targetType})"),
+      true,
+      true
+    )
   end
   self.target = target
 end

@@ -7,9 +7,7 @@
 -- child process behind for the rest of the suite.
 
 describe("spawn", function()
-
   describe("argument checking", function()
-
     it("should reject a call with no process name", function()
       local ok, err = pcall(spawn, function() end)
       assert.is_false(ok)
@@ -44,11 +42,9 @@ describe("spawn", function()
       assert.is_false(ok)
       assert.is_truthy(tostring(err):find("Failed to start process", 1, true))
     end)
-
   end)
 
   describe("start failure", function()
-
     -- the failure message embeds the program name, working directory and PATH,
     -- so it is the largest thing this function ever holds at a raise
     it("should report a binary that does not exist", function()
@@ -64,7 +60,5 @@ describe("spawn", function()
       assert.is_false(ok)
       assert.is_truthy(tostring(err):find("Failed to start process", 1, true))
     end)
-
   end)
-
 end)

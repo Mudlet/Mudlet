@@ -1,16 +1,16 @@
 -- Mudlet Lua packages loader
 
 if package.loaded["rex_pcre2"] then
-  rex = require "rex_pcre2"
+  rex = require("rex_pcre2")
 end
 if package.loaded["lpeg"] then
-  lpeg = require "lpeg"
+  lpeg = require("lpeg")
 end
 if package.loaded["zip"] then
-  zip = require "zip"
+  zip = require("zip")
 end
 if package.loaded["lfs"] then
-  lfs = require "lfs"
+  lfs = require("lfs")
 end
 
 -- TODO this is required by DB.lua, so we might load it all at one place
@@ -20,18 +20,17 @@ json_to_value = yajl.to_value
 gmcp = {}
 mssp = {}
 
-function __gmcp_merge_gmcp_sub_tables( a, key )
-  local _m = a.__needMerge;
+function __gmcp_merge_gmcp_sub_tables(a, key)
+  local _m = a.__needMerge
   for k, v in pairs(_m) do
-    a[key][k] = v;
+    a[key][k] = v
   end
   a.__needMerge = nil
 end
 
-
-function unzip( what, dest )
+function unzip(what, dest)
   -- cecho("\n<blue>unpacking package:<"..what.."< to <"..dest..">\n")
-  local z, err = zip.open( what )
+  local z, err = zip.open(what)
 
   if not z then
     cecho("\nerror unpacking: " .. err)
@@ -40,50 +39,46 @@ function unzip( what, dest )
 
   local createdDirs = {}
   for file in z:files() do
-    local _f, err = z:open( file.filename )
+    local _f, err = z:open(file.filename)
     local _data = _f:read("*a")
     local _path = dest .. file.filename
-    local _dir = string.split( file.filename, '/' )
-    local created = dest;
-    for k, v in ipairs( _dir ) do
+    local _dir = string.split(file.filename, "/")
+    local created = dest
+    for k, v in ipairs(_dir) do
       if k < #_dir then
-        created = created .. '/' .. v;
-        if not table.contains( createdDirs, created ) then
-          table.insert( createdDirs, created );
-          lfs.mkdir( created );
+        created = created .. "/" .. v
+        if not table.contains(createdDirs, created) then
+          table.insert(createdDirs, created)
+          lfs.mkdir(created)
           -- cecho("<red>--> creating dir:" .. created .. "\n");
         end
       elseif file.uncompressed_size == 0 then
-        if not table.contains( createdDirs, created ) then
+        if not table.contains(createdDirs, created) then
           -- cecho("<red>--> creating dir:" .. file.filename .. "\n")
-          table.insert( createdDirs, created );
-          lfs.mkdir( file.filename )
+          table.insert(createdDirs, created)
+          lfs.mkdir(file.filename)
         end
       end
     end
     local _path = dest .. file.filename
     if file.uncompressed_size > 0 then
-      local out = io.open( _path, "wb" )
+      local out = io.open(_path, "wb")
       if out then
         -- cecho("<green>unpacking file:".._path.."\n")
-        out:write( _data )
+        out:write(_data)
         out:close()
       else
         cecho("<red>ERROR: can't write file:" .. _path .. "\n")
       end
     end
-    _f:close();
+    _f:close()
   end
   z:close()
 end
 
+function onConnect() end
 
-
-function onConnect()
-end
-
-function handleWindowResizeEvent()
-end
+function handleWindowResizeEvent() end
 
 local packages = {
   "3rdparty/Inspect.lua",
@@ -131,7 +126,7 @@ local packages = {
 -- method) to report on the determination of what path to use to load the other
 -- Mudlet and Geyser provided Lua files...
 debugLoading = debugLoading or false
-local sep = package.config:sub(1,1)
+local sep = package.config:sub(1, 1)
 
 if debugLoading then
   echo("Path separator is: '" .. sep .. "'\n\n")
@@ -140,23 +135,23 @@ if debugLoading then
   -- directory if nil.
   if luaGlobalPath == nil then
     luaGlobalPath = lfs.currentdir()
-    echo("luaGlobalPath was nil so has been defaulted to: \"" .. luaGlobalPath .. "\".\n\n")
+    echo('luaGlobalPath was nil so has been defaulted to: "' .. luaGlobalPath .. '".\n\n')
   else
-    echo("luaGlobalPath has been preset to: \"" .. luaGlobalPath .. "\".\n\n")
+    echo('luaGlobalPath has been preset to: "' .. luaGlobalPath .. '".\n\n')
   end
   nativeLuaGlobalPath = toNativeSeparators(luaGlobalPath)
-  echo("Directory separator conversion gives: \"" .. nativeLuaGlobalPath .. "\".\n\n")
-  echo("Current directory is: \"" .. lfs.currentdir() .. "\".\n\n")
+  echo('Directory separator conversion gives: "' .. nativeLuaGlobalPath .. '".\n\n')
+  echo('Current directory is: "' .. lfs.currentdir() .. '".\n\n')
 
   local packagePath, status, result = "", false, ""
   for _, packageName in ipairs(packages) do
     packagePath = nativeLuaGlobalPath .. sep .. toNativeSeparators(packageName)
-    echo("Trying to load: \"" .. packagePath .. "\"\n")
+    echo('Trying to load: "' .. packagePath .. '"\n')
     status, result = pcall(dofile, packagePath)
-    if (status == false) then
-        error("Error attempting to load package("..packageName..") file:\n  " .. result .. ".\n\n")
+    if status == false then
+      error("Error attempting to load package(" .. packageName .. ") file:\n  " .. result .. ".\n\n")
     end
-    echo("Loaded: \"" .. packageName .. "\".\n\n")
+    echo('Loaded: "' .. packageName .. '".\n\n')
   end
 else
   -- Set via code in C++ TLuaInterpreter::loadGlobal() but fall back to current

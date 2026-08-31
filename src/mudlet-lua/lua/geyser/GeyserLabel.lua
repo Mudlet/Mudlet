@@ -10,7 +10,8 @@ Geyser.Label = Geyser.Window:new({
   format = "",
   font = "",
   args = "",
-  fillBg = 1, })
+  fillBg = 1,
+})
 Geyser.Label.scrollV = {}
 Geyser.Label.scrollH = {}
 --- Prints a message to the window.  All parameters are optional and if not
@@ -23,7 +24,9 @@ function Geyser.Label:echo(message, color, format)
   self.message = message
   color = color or self.fgColor
   self.fgColor = color
-  if format then self:processFormatString(format) end
+  if format then
+    self:processFormatString(format)
+  end
 
   local ft = self.formatTable
   local fs = ft.fontSize
@@ -55,8 +58,7 @@ function Geyser.Label:echo(message, color, format)
     color = [[ style="color: ]] .. Geyser.Color.hex(self.fgColor) .. [[; ]]
   end
   fs = "font-size: " .. fs .. "pt; "
-  message = [[<div ]] .. alignment .. color .. fs ..
-  [[">]] .. message .. [[</div>]]
+  message = [[<div ]] .. alignment .. color .. fs .. [[">]] .. message .. [[</div>]]
   echo(self.name, message)
   self:autoAdjustSize()
 end
@@ -110,8 +112,7 @@ function Geyser.Label:decho(message)
     fs = tostring(self.fontSize)
   end
   fs = "font-size: " .. fs .. "pt; "
-  htmlContent = [[<div ]] .. alignment .. [[style="]] .. fs ..
-  [[">]] .. htmlContent .. [[</div>]]
+  htmlContent = [[<div ]] .. alignment .. [[style="]] .. fs .. [[">]] .. htmlContent .. [[</div>]]
   echo(self.name, htmlContent)
   self:autoAdjustSize()
 end
@@ -158,8 +159,7 @@ function Geyser.Label:hecho(message)
     fs = tostring(self.fontSize)
   end
   fs = "font-size: " .. fs .. "pt; "
-  htmlContent = [[<div ]] .. alignment .. [[style="]] .. fs ..
-  [[">]] .. htmlContent .. [[</div>]]
+  htmlContent = [[<div ]] .. alignment .. [[style="]] .. fs .. [[">]] .. htmlContent .. [[</div>]]
   echo(self.name, htmlContent)
   self:autoAdjustSize()
 end
@@ -206,8 +206,7 @@ function Geyser.Label:cecho(message)
     fs = tostring(self.fontSize)
   end
   fs = "font-size: " .. fs .. "pt; "
-  htmlContent = [[<div ]] .. alignment .. [[style="]] .. fs ..
-  [[">]] .. htmlContent .. [[</div>]]
+  htmlContent = [[<div ]] .. alignment .. [[style="]] .. fs .. [[">]] .. htmlContent .. [[</div>]]
   echo(self.name, htmlContent)
   self:autoAdjustSize()
 end
@@ -223,7 +222,6 @@ end
 function Geyser.Label:setFormat(format)
   self:echo(nil, nil, format)
 end
-
 
 -- Internal function used for processing format strings.
 function Geyser.Label:processFormatString(format)
@@ -278,7 +276,11 @@ function Geyser.Label:setFont(font)
       -- what the widget was given cannot drift apart
       font = getFont(self.name)
     else
-      debugc("Geyser.Label:setFont(): " .. err .. " - see getAvailableFonts() for valid options. Letting Qt pick the closest match it has")
+      debugc(
+        "Geyser.Label:setFont(): "
+          .. err
+          .. " - see getAvailableFonts() for valid options. Letting Qt pick the closest match it has"
+      )
     end
   end
   self.font = font
@@ -391,16 +393,19 @@ function Geyser.Label:scaleMovie(autoScale)
   return scaleMovie(self.name, autoScale)
 end
 
-
 --- Set whether or not the text in the label should be bold
 -- @param bool True for bold
 function Geyser.Label:setBold(bool)
   if bool then
     self.formatTable.bold = true
-    if not self.format:find("b") then self.format = self.format .. "b" end
+    if not self.format:find("b") then
+      self.format = self.format .. "b"
+    end
   else
     self.formatTable.bold = false
-    if self.format:find("b") then self.format = self.format:gsub("b", "") end
+    if self.format:find("b") then
+      self.format = self.format:gsub("b", "")
+    end
   end
   self:echo()
 end
@@ -410,10 +415,14 @@ end
 function Geyser.Label:setUnderline(bool)
   if bool then
     self.formatTable.underline = true
-    if not self.format:find("u") then self.format = self.format .. "u" end
+    if not self.format:find("u") then
+      self.format = self.format .. "u"
+    end
   else
     self.formatTable.underline = false
-    if self.format:find("u") then self.format = self.format:gsub("u", "") end
+    if self.format:find("u") then
+      self.format = self.format:gsub("u", "")
+    end
   end
   self:echo()
 end
@@ -423,10 +432,14 @@ end
 function Geyser.Label:setItalics(bool)
   if bool then
     self.formatTable.italics = true
-    if not self.format:find("i") then self.format = self.format .. "i" end
+    if not self.format:find("i") then
+      self.format = self.format .. "i"
+    end
   else
     self.formatTable.italics = false
-    if self.format:find("i") then self.format = self.format:gsub("i", "") end
+    if self.format:find("i") then
+      self.format = self.format:gsub("i", "")
+    end
   end
   self:echo()
 end
@@ -436,10 +449,14 @@ end
 function Geyser.Label:setStrikethrough(bool)
   if bool then
     self.formatTable.strikethrough = true
-    if not self.format:find("s") then self.format = self.format .. "s" end
+    if not self.format:find("s") then
+      self.format = self.format .. "s"
+    end
   else
     self.formatTable.strikethrough = false
-    if self.format:find("s") then self.format = self.format:gsub("s", "") end
+    if self.format:find("s") then
+      self.format = self.format:gsub("s", "")
+    end
   end
   self:echo()
 end
@@ -462,20 +479,23 @@ end
 function Geyser.Label:setAlignment(alignment)
   local alignmentType = type(alignment)
   assert(alignmentType == "string", "alignment as string expected, got " .. alignmentType)
-  local acceptedAlignments = {"c", "center", "l", "left", "r", "right", ""}
-  assert(table.contains(acceptedAlignments, alignment), "invalid alignment sent. Valid alignments are 'c', 'center', 'l', 'left', 'r', 'right', or ''")
-  if alignment:find('c') then
-    self.formatTable.alignment = 'center'
+  local acceptedAlignments = { "c", "center", "l", "left", "r", "right", "" }
+  assert(
+    table.contains(acceptedAlignments, alignment),
+    "invalid alignment sent. Valid alignments are 'c', 'center', 'l', 'left', 'r', 'right', or ''"
+  )
+  if alignment:find("c") then
+    self.formatTable.alignment = "center"
     self.format = self.format .. "c"
     self.format = self.format:gsub("l", "")
     self.format = self.format:gsub("r", "")
-  elseif alignment:find('l') then
-    self.formatTable.alignment = 'left'
+  elseif alignment:find("l") then
+    self.formatTable.alignment = "left"
     self.format = self.format:gsub("c", "")
     self.format = self.format .. "l"
     self.format = self.format:gsub("r", "")
-  elseif alignment:find('r') then
-    self.formatTable.alignment = 'right'
+  elseif alignment:find("r") then
+    self.formatTable.alignment = "right"
     self.format = self.format:gsub("c", "")
     self.format = self.format:gsub("l", "")
     self.format = self.format .. "r"
@@ -495,14 +515,14 @@ end
 
 --- Sets a background image for this label.
 -- @param imageFileName The image to use for a background image.
-function Geyser.Label:setBackgroundImage (imageFileName)
+function Geyser.Label:setBackgroundImage(imageFileName)
   setBackgroundImage(self.name, imageFileName)
   self:autoAdjustSize()
 end
 
 --- Sets a tiled background image for this label.
 -- @param imageFileName The image to use for a background image.
-function Geyser.Label:setTiledBackgroundImage (imageFileName)
+function Geyser.Label:setTiledBackgroundImage(imageFileName)
   self:setStyleSheet("background-image: url(" .. imageFileName .. ");")
 end
 
@@ -511,7 +531,7 @@ end
 -- appended as the final argument (see @{mouseClickEvent})
 -- @param func The function to use.
 -- @param ... Parameters to pass to the function. Must be strings or numbers.
-function Geyser.Label:setClickCallback (func, ...)
+function Geyser.Label:setClickCallback(func, ...)
   setLabelClickCallback(self.name, func, ...)
   self.clickCallback = func
   self.clickArgs = { ... }
@@ -522,7 +542,7 @@ end
 -- appended as the final argument (see @{mouseClickEvent})
 -- @param func The function to use.
 -- @param ... Parameters to pass to the function. Must be strings or numbers.
-function Geyser.Label:setDoubleClickCallback (func, ...)
+function Geyser.Label:setDoubleClickCallback(func, ...)
   setLabelDoubleClickCallback(self.name, func, ...)
   self.doubleClickCallback = func
   self.doubleClickArgs = { ... }
@@ -533,7 +553,7 @@ end
 -- appended as the final argument (see @{mouseClickEvent})
 -- @param func The function to use.
 -- @param ... Parameters to pass to the function. Must be strings or numbers.
-function Geyser.Label:setReleaseCallback (func, ...)
+function Geyser.Label:setReleaseCallback(func, ...)
   setLabelReleaseCallback(self.name, func, ...)
   self.releaseCallback = func
   self.releaseArgs = { ... }
@@ -544,7 +564,7 @@ end
 -- appended as the final argument (see @{mouseClickEvent})
 -- @param func The function to use.
 -- @param ... Parameters to pass to the function. Must be strings or numbers.
-function Geyser.Label:setMoveCallback (func, ...)
+function Geyser.Label:setMoveCallback(func, ...)
   setLabelMoveCallback(self.name, func, ...)
   self.moveCallback = func
   self.moveArgs = { ... }
@@ -555,7 +575,7 @@ end
 -- appended as the final argument (see @{mouseWheelEvent})
 -- @param func The function to use.
 -- @param ... Parameters to pass to the function. Must be strings or numbers.
-function Geyser.Label:setWheelCallback (func, ...)
+function Geyser.Label:setWheelCallback(func, ...)
   setLabelWheelCallback(self.name, func, ...)
   self.wheelCallback = func
   self.wheelArgs = { ... }
@@ -564,7 +584,7 @@ end
 --- Sets a callback to be used when the mouse passes over this label.
 -- @param func The function to use.
 -- @param ... Parameters to pass to the function. Must be strings or numbers.
-function Geyser.Label:setOnEnter (func, ...)
+function Geyser.Label:setOnEnter(func, ...)
   setLabelOnEnter(self.name, func, ...)
   self.onEnter = func
   self.onEnterArgs = { ... }
@@ -573,12 +593,11 @@ end
 --- Sets a callback to be used when the mouse leaves this label.
 -- @param func The function to use.
 -- @param ... Parameters to pass to the function. Must be strings or numbers.
-function Geyser.Label:setOnLeave (func, ...)
+function Geyser.Label:setOnLeave(func, ...)
   setLabelOnLeave(self.name, func, ...)
   self.onLeave = func
   self.onLeaveArgs = { ... }
 end
-
 
 --- Sets the style sheet of the label
 -- @param css The style sheet string
@@ -633,7 +652,7 @@ end
 function Geyser.Label:setCursor(cursorShape)
   setLabelCursor(self.name, cursorShape)
   -- Get cursorShape as string
-  for k,v in pairs(mudlet.cursor) do
+  for k, v in pairs(mudlet.cursor) do
     if cursorShape == v then
       cursorShape = k
     end
@@ -715,7 +734,7 @@ function doNestScroll(label)
     scrollDir = -1
   end
   local bothScrolls
-  if (string.sub(label.name, -1, -1) == "V") then
+  if string.sub(label.name, -1, -1) == "V" then
     bothScrolls = Geyser.Label.scrollV[label.nestParent]
   else
     bothScrolls = Geyser.Label.scrollH[label.nestParent]
@@ -803,25 +822,35 @@ function Geyser.Label:displayNest()
   local xOffset, yOffset = 0, 0
   if scrollV or (Geyser.Label.scrollV and Geyser.Label.scrollV[parent]) then
     if not Geyser.Label.scrollV[parent] then
-      Geyser.Label.scrollV[parent] = Geyser.Label:addScrollbars(nestedLabels["V"][1].nestParent, nestedLabels["V"][1].flyDir .. nestedLabels["V"][1].layoutDir)
+      Geyser.Label.scrollV[parent] = Geyser.Label:addScrollbars(
+        nestedLabels["V"][1].nestParent,
+        nestedLabels["V"][1].flyDir .. nestedLabels["V"][1].layoutDir
+      )
       local numLabels = #nestedLabels["V"]
       Geyser.Label.scrollV[parent][1].scroll = 0
       Geyser.Label.scrollV[parent][2].scroll = numLabels + 1
     end
     table.insert(nestedLabels["V"], 1, Geyser.Label.scrollV[parent][1])
     table.insert(nestedLabels["V"], Geyser.Label.scrollV[parent][2])
-    layout["V"] = layout["V"] + Geyser.Label.scrollV[parent][1].get_height() + Geyser.Label.scrollV[parent][2].get_height()
+    layout["V"] = layout["V"]
+      + Geyser.Label.scrollV[parent][1].get_height()
+      + Geyser.Label.scrollV[parent][2].get_height()
   end
   if scrollH or (Geyser.Label.scrollH and Geyser.Label.scrollH[parent]) then
     if not Geyser.Label.scrollH[parent] then
-      Geyser.Label.scrollH[parent] = Geyser.Label:addScrollbars(nestedLabels["H"][1].nestParent, nestedLabels["H"][1].flyDir .. nestedLabels["H"][1].layoutDir)
+      Geyser.Label.scrollH[parent] = Geyser.Label:addScrollbars(
+        nestedLabels["H"][1].nestParent,
+        nestedLabels["H"][1].flyDir .. nestedLabels["H"][1].layoutDir
+      )
       local numLabels = #nestedLabels["H"]
       Geyser.Label.scrollH[parent][1].scroll = 0
       Geyser.Label.scrollH[parent][2].scroll = numLabels + 1
     end
     table.insert(nestedLabels["H"], 1, Geyser.Label.scrollH[parent][1])
     table.insert(nestedLabels["H"], Geyser.Label.scrollH[parent][2])
-    layout["H"] = layout["H"] + Geyser.Label.scrollH[parent][1].get_width() + Geyser.Label.scrollH[parent][2].get_width()
+    layout["H"] = layout["H"]
+      + Geyser.Label.scrollH[parent][1].get_width()
+      + Geyser.Label.scrollH[parent][2].get_width()
   end
   if layout["H"] > maxDim["H"] then
     xOffset = parX
@@ -854,9 +883,8 @@ function Geyser.Label:displayNest()
         v.y = 0
       end
     else
-
       local edge = parY + parH + (number * height)
-      if edge > maxDim["V"]  and v.flyDir == "B" then
+      if edge > maxDim["V"] and v.flyDir == "B" then
         yOffsetT = edge - maxDim["V"]
       else
         yOffsetT = yOffset
@@ -886,7 +914,7 @@ function Geyser.Label:displayNest()
       end
     else
       local edge = parX + parW + (number * width)
-      if edge > maxDim["H"]  and v.flyDir == "R" then
+      if edge > maxDim["H"] and v.flyDir == "R" then
         xOffsetL = edge - maxDim["H"]
       else
         xOffsetL = xOffset
@@ -918,7 +946,9 @@ function doNestShow(label)
     killTimer(Geyser.Label.closeAllTimer)
   end
 
-  Geyser.Label.closeAllTimer = tempTimer(5, function() closeAllLevels(label) end)
+  Geyser.Label.closeAllTimer = tempTimer(5, function()
+    closeAllLevels(label)
+  end)
 
   if label.nestedLabels and #label.nestedLabels > 0 then
     lhidden = label.nestedLabels[1].hidden
@@ -935,9 +965,9 @@ function doNestShow(label)
 end
 
 function closeNeighbourChildren(label)
- for i,v in ipairs(label.nestParent.nestedLabels) do
-  closeNestChildren(v)
- end
+  for i, v in ipairs(label.nestParent.nestedLabels) do
+    closeNestChildren(v)
+  end
 end
 
 --- Internal function when a nested element is moused over
@@ -963,7 +993,6 @@ function doNestEnter(label)
   end
   --echo("entering label"..label.name.."\n")
   --Geyser.display(label)
-
 end
 
 --- Internal function when a nested element is left
@@ -973,14 +1002,16 @@ function doNestLeave(label)
   if Geyser.Label.closeAllTimer then
     killTimer(Geyser.Label.closeAllTimer)
   end
-  Geyser.Label.closeAllTimer = tempTimer(.5, function() closeAllLevels(label) end)
+  Geyser.Label.closeAllTimer = tempTimer(0.5, function()
+    closeAllLevels(label)
+  end)
 end
 
 -- Save a reference to our parent constructor
 Geyser.Label.parent = Geyser.Window
 
 -- Overridden constructor
-function Geyser.Label:new (cons, container)
+function Geyser.Label:new(cons, container)
   -- Initiate and set label specific things
   cons = cons or {}
   cons.type = cons.type or "label"
@@ -998,13 +1029,11 @@ function Geyser.Label:new (cons, container)
   -- workaround for createLabel possibly being overwritten and not understanding the new parent argument
   -- see https://github.com/Mudlet/Mudlet/issues/3393
   if me.windowname == "main" then
-    createLabel(me.name, me:get_x(), me:get_y(),
-      me:get_width(), me:get_height(), me.fillBg)
+    createLabel(me.name, me:get_x(), me:get_y(), me:get_width(), me:get_height(), me.fillBg)
   else
-    createLabel(me.windowname, me.name, me:get_x(), me:get_y(),
-      me:get_width(), me:get_height(), me.fillBg)
+    createLabel(me.windowname, me.name, me:get_x(), me:get_y(), me:get_width(), me:get_height(), me.fillBg)
   end
--- Geyser.Container:new() settles the hidden constraint before there is a widget to hide, so the hide is made good here
+  -- Geyser.Container:new() settles the hidden constraint before there is a widget to hide, so the hide is made good here
   if me.hidden or me.auto_hidden then
     hideWindow(me.name)
   end
@@ -1085,7 +1114,6 @@ function Geyser.Label:new (cons, container)
     end
   end
 
-
   if me.onEnter then
     if type(me.onEnterArgs) == "string" or type(me.onEnterArgs) == "number" then
       me:setOnEnter(me.onEnter, me.onEnterArgs)
@@ -1112,9 +1140,13 @@ function Geyser.Label:new (cons, container)
   end
 
   -- Set clickthrough if included in constructor
-  if cons.clickthrough then me:enableClickthrough() end
+  if cons.clickthrough then
+    me:enableClickthrough()
+  end
 
-  if me.stylesheet then me:setStyleSheet() end
+  if me.stylesheet then
+    me:setStyleSheet()
+  end
   me:autoAdjustSize()
   --print("  New in " .. self.name .. " : " .. me.name)
   return me
@@ -1133,7 +1165,7 @@ function Geyser.Label:type_delete()
 end
 
 --- Overridden constructor to use add2
-function Geyser.Label:new2 (cons, container)
+function Geyser.Label:new2(cons, container)
   cons = cons or {}
   cons.useAdd2 = true
   local me = self:new(cons, container)
@@ -1148,8 +1180,16 @@ function Geyser.Label:addScrollbars(parent, layout)
   flyDir = string.sub(layout, 1, 1)
   layoutDir = string.sub(layout, 2, 2)
 
-  local cons = { name = "forScroll" .. label.name .. layout, x = label:get_x(), y = label:get_y(),
-    width = label:get_width(), layoutDir = layoutDir, flyDir = flyDir, height = label:get_height(), message = "More..." }
+  local cons = {
+    name = "forScroll" .. label.name .. layout,
+    x = label:get_x(),
+    y = label:get_y(),
+    width = label:get_width(),
+    layoutDir = layoutDir,
+    flyDir = flyDir,
+    height = label:get_height(),
+    message = "More...",
+  }
 
   local forward = Geyser.Label:new(cons, label.container)
 
@@ -1247,47 +1287,44 @@ end
 
 -- internal function to add or restyle an element
 local function addElement(self, name, configLabel, myMenu, depth, index, restyle)
-  myMenu.MenuLabels[name] = myMenu.MenuLabels[name] or
-  myMenu:addChild(
-  {
-    index = index,
-    depth = depth,
-    menuName = name,
-    width = configLabel["MenuWidth"..depth] or configLabel["MenuWidth"],
-    height = configLabel["MenuHeight"..depth] or configLabel["MenuHeight"],
-    name = myMenu.name..name,
-    format = configLabel["MenuFormat"..depth] or configLabel["MenuFormat"],
-    font = configLabel["MenuFont"..depth] or configLabel["MenuFont"],
-    fgColor = "nocolor",
-    message = name,
-    color = "red",
-    layoutDir = "RV",
-    flyOut = true,
-    nestable = true,
-  }
-)
--- ensure Labels are on the same parent window
-if self.windowname ~= myMenu.MenuLabels[name].windowname then
-  if self.windowname == "main" then
-    myMenu.MenuLabels[name]:changeContainer(Geyser)
-  else
-    myMenu.MenuLabels[name]:changeContainer(Geyser.parentWindows[self.windowname])
+  myMenu.MenuLabels[name] = myMenu.MenuLabels[name]
+    or myMenu:addChild({
+      index = index,
+      depth = depth,
+      menuName = name,
+      width = configLabel["MenuWidth" .. depth] or configLabel["MenuWidth"],
+      height = configLabel["MenuHeight" .. depth] or configLabel["MenuHeight"],
+      name = myMenu.name .. name,
+      format = configLabel["MenuFormat" .. depth] or configLabel["MenuFormat"],
+      font = configLabel["MenuFont" .. depth] or configLabel["MenuFont"],
+      fgColor = "nocolor",
+      message = name,
+      color = "red",
+      layoutDir = "RV",
+      flyOut = true,
+      nestable = true,
+    })
+  -- ensure Labels are on the same parent window
+  if self.windowname ~= myMenu.MenuLabels[name].windowname then
+    if self.windowname == "main" then
+      myMenu.MenuLabels[name]:changeContainer(Geyser)
+    else
+      myMenu.MenuLabels[name]:changeContainer(Geyser.parentWindows[self.windowname])
+    end
   end
-end
 
-if restyle then
-  myMenu.MenuLabels[name].stylesheet = nil
-end
+  if restyle then
+    myMenu.MenuLabels[name].stylesheet = nil
+  end
 
-local Style = configLabel["Style"..depth] or configLabel["Style"]
-local MenuStyle = myMenu.MenuLabels[name].stylesheet or configLabel["MenuStyle"..depth] or configLabel["MenuStyle"]
-MenuStyle = MenuStyle or configLabel.MenuStyleMode[string.lower(Style)]
-myMenu.MenuLabels[name]:setStyleSheet(MenuStyle)
+  local Style = configLabel["Style" .. depth] or configLabel["Style"]
+  local MenuStyle = myMenu.MenuLabels[name].stylesheet or configLabel["MenuStyle" .. depth] or configLabel["MenuStyle"]
+  MenuStyle = MenuStyle or configLabel.MenuStyleMode[string.lower(Style)]
+  myMenu.MenuLabels[name]:setStyleSheet(MenuStyle)
 end
 
 -- internal function to create the right click Menu Labels
 function Geyser.Label:createMenuItems(restyle, MenuItems, configLabel, myMenu, depth)
-
   depth = depth or 1
   MenuItems = MenuItems or self.MenuItems
   self.MenuItems = MenuItems
@@ -1305,7 +1342,13 @@ function Geyser.Label:createMenuItems(restyle, MenuItems, configLabel, myMenu, d
     end
     --Ignore all children if parent is hidden
     if type(MenuItems[i]) == "table" and not MenuItems[i - 1].ignore then
-      myMenu.MenuLabels[MenuItems[i - 1]]:createMenuItems(restyle, MenuItems[i], configLabel, myMenu.MenuLabels[MenuItems[i - 1]], depth + 1)
+      myMenu.MenuLabels[MenuItems[i - 1]]:createMenuItems(
+        restyle,
+        MenuItems[i],
+        configLabel,
+        myMenu.MenuLabels[MenuItems[i - 1]],
+        depth + 1
+      )
       myMenu.MenuLabels[MenuItems[i - 1]].isParent = true
     end
   end
@@ -1356,7 +1399,7 @@ function Geyser.Label:findMenuElement(name, parent, findParent)
   for i = 1, #menu do
     local item = menu[i]
     if type(item) == "string" then
-      item = parentName and parentName.."."..item or item
+      item = parentName and parentName .. "." .. item or item
       if item == name and not findParent then
         return parent.MenuLabels[menu[i]], menu
       end
@@ -1365,14 +1408,14 @@ function Geyser.Label:findMenuElement(name, parent, findParent)
       end
     end
     if type(item) == "table" then
-      local itemParent = menu[i-1]
+      local itemParent = menu[i - 1]
       local element, menuTable = self:findMenuElement(name, parent.MenuLabels[itemParent], findParent)
       if element then
         return element, menuTable
       end
     end
   end
-  return nil, "findMenuElement: Couldn't find menu element "..name
+  return nil, "findMenuElement: Couldn't find menu element " .. name
 end
 
 --- Sets a action to be used when this label from the right click menu is clicked
@@ -1382,7 +1425,7 @@ end
 function Geyser.Label:setMenuAction(name, ...)
   local menuElement = self:findMenuElement(name)
   if not menuElement then
-    error ("setMenuAction: Couldn't find menu element "..name)
+    error("setMenuAction: Couldn't find menu element " .. name)
   end
   menuElement:setClickCallback(...)
 end
@@ -1392,7 +1435,7 @@ end
 function Geyser.Label:hideMenuLabel(name)
   local menuElement = self:findMenuElement(name)
   if not menuElement then
-    error ("hideMenuLabel: Couldn't find menu element "..name)
+    error("hideMenuLabel: Couldn't find menu element " .. name)
   end
   local nestTable = menuElement.nestParent.nestedLabels
   local index = table.index_of(menuElement.nestParent.nestedLabels, menuElement)
@@ -1413,7 +1456,7 @@ end
 function Geyser.Label:showMenuLabel(name)
   local menuElement = self:findMenuElement(name)
   if not menuElement then
-    error ("showMenuLabel: Couldn't find menu element "..name)
+    error("showMenuLabel: Couldn't find menu element " .. name)
   end
   -- If it's already shown do nothing
   if not menuElement.ignore then
@@ -1433,7 +1476,7 @@ end
 -- @return true, or false plus a message when the item cannot be added
 function Geyser.Label:addMenuLabel(name, parent, index)
   if type(name) ~= "string" then
-    return false, "addMenuLabel: needs the name of the item to add as a string, got "..type(name)
+    return false, "addMenuLabel: needs the name of the item to add as a string, got " .. type(name)
   end
 
   local menuElement, menuParent = self:findMenuElement(parent, self.rightClickMenu, true)
@@ -1444,14 +1487,14 @@ function Geyser.Label:addMenuLabel(name, parent, index)
   -- for a parent that is followed by a submenu table, so a parent declared
   -- without one lands here as well: appending to it has nowhere to go.
   if parent and not menuElement then
-    return false, "addMenuLabel: Couldn't find menu parent "..parent
+    return false, "addMenuLabel: Couldn't find menu parent " .. parent
   end
 
   menuElement = menuElement or self.rightClickMenu
   menuParent = menuParent or self.rightClickMenu.MenuItems
 
   if parent then
-    parent = parent.."."
+    parent = parent .. "."
   else
     parent = ""
   end
@@ -1459,13 +1502,13 @@ function Geyser.Label:addMenuLabel(name, parent, index)
   if not menuElement.MenuLabels[name] then
     menuParent[#menuParent + 1] = name
   elseif menuElement.MenuLabels[name].ignore then
-    self:showMenuLabel(parent..name)
+    self:showMenuLabel(parent .. name)
   end
 
   self:createMenuItems()
 
   if index then
-    self:changeMenuIndex(parent..name, index)
+    self:changeMenuIndex(parent .. name, index)
   end
 
   return true
@@ -1478,7 +1521,7 @@ function Geyser.Label:changeMenuIndex(name, index)
   local menuElement, menuTable = self:findMenuElement(name, self.rightClickMenu)
 
   if not menuElement then
-    error ("changeMenuIndex: Couldn't find menu element "..name)
+    error("changeMenuIndex: Couldn't find menu element " .. name)
   end
 
   local nestTable = menuElement.nestParent.nestedLabels
@@ -1532,12 +1575,14 @@ function Geyser.Label:createRightClickMenu(cons)
   cons.MenuHeight = cons.MenuHeight or 25
   cons.MenuFormat = cons.MenuFormat or "c10"
   cons.MenuStyleMode = {}
-  cons.MenuStyleMode["light"] = [[QLabel::hover{ background-color: rgba(0,150,255,100%); color: white;} QLabel::!hover{color: black; background-color: rgba(240,240,240,100%);} ]]
-  cons.MenuStyleMode["dark"] = [[QLabel::hover{ background-color: #282828;  color: #808080;} QLabel::!hover{color: #707070; background-color:#181818;}]]
+  cons.MenuStyleMode["light"] =
+    [[QLabel::hover{ background-color: rgba(0,150,255,100%); color: white;} QLabel::!hover{color: black; background-color: rgba(240,240,240,100%);} ]]
+  cons.MenuStyleMode["dark"] =
+    [[QLabel::hover{ background-color: #282828;  color: #808080;} QLabel::!hover{color: #707070; background-color:#181818;}]]
 
   cons.Style = cons.Style or "light"
 
-  if not(self.rightClickMenu) then
+  if not self.rightClickMenu then
     self:setClickCallback(self.onRightClick, self)
   end
 

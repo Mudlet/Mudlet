@@ -1,5 +1,4 @@
 describe("Tests MXP handling", function()
-
   setup(function()
     -- these specs carry MXP tags in through feedTriggers, so the processor is
     -- forced on: that is what locks secure mode, which negotiating MXP with a
@@ -108,7 +107,7 @@ describe("Tests MXP handling", function()
 
     -- a custom entity whose value is not Latin1 (#9439)
     it("resolves a custom entity to its non-ASCII value", function()
-      assertLineShown("\27[1z<!ENTITY storm \"Гроза\">The &storm; rages", "The Гроза rages")
+      assertLineShown('\27[1z<!ENTITY storm "Гроза">The &storm; rages', "The Гроза rages")
     end)
 
     -- <HR> is not written out, it is fed back through the parser as a rule of
@@ -209,14 +208,14 @@ describe("Tests MXP handling", function()
     end)
 
     it("puts the redirected text in the frame and not in the main window", function()
-      assert.is_true(feedTriggers(('<DEST %s>MXPDEST1 routed away</DEST>'):format(frame) .. "\n"))
+      assert.is_true(feedTriggers(("<DEST %s>MXPDEST1 routed away</DEST>"):format(frame) .. "\n"))
       local _, routed = frameLineWith("MXPDEST1")
       assert.are.equal("MXPDEST1 routed away", routed, table.concat(frameLines(), "|"))
       assert.is_false(mainRecentlyHolds("MXPDEST1"))
     end)
 
     it("keeps a line break inside the redirect in the frame too", function()
-      assert.is_true(feedTriggers(('<DEST %s>MXPDEST2 first'):format(frame) .. "\nMXPDEST2 second</DEST>\n"))
+      assert.is_true(feedTriggers(("<DEST %s>MXPDEST2 first"):format(frame) .. "\nMXPDEST2 second</DEST>\n"))
       local shown = table.concat(frameLines(), "|")
       local firstIndex, firstLine = frameLineWith("MXPDEST2 first")
       local secondIndex, secondLine = frameLineWith("MXPDEST2 second")
@@ -236,11 +235,15 @@ describe("Tests MXP handling", function()
     it("does not let colour set inside the redirect follow the text back to main", function()
       -- the colour below is never closed by hand, so if the reset under test is
       -- the thing severed the main console would stay red for every later spec
-      finally(function() feedTriggers("\027[0m\n") end)
+      finally(function()
+        feedTriggers("\027[0m\n")
+      end)
       assert.is_true(feedTriggers("MXPDEST3 plain\n"))
       local plainColour = mainColourOf("MXPDEST3 plain")
       assert.is_truthy(plainColour)
-      assert.is_true(feedTriggers(('<DEST %s>'):format(frame) .. "\027[31mMXPDEST4 red in the frame</DEST>MXPDEST4 back in main\n"))
+      assert.is_true(
+        feedTriggers(("<DEST %s>"):format(frame) .. "\027[31mMXPDEST4 red in the frame</DEST>MXPDEST4 back in main\n")
+      )
       assert.is_true(holds(frameLines(), "MXPDEST4 red in the frame"))
       assert.are.same(plainColour, mainColourOf("MXPDEST4 back in main"))
     end)
@@ -248,13 +251,13 @@ describe("Tests MXP handling", function()
     -- EOF on the opening tag empties the frame before the redirected text
     -- lands, so the frame ends up holding only what this redirect wrote
     it("empties the frame when the redirect carries EOF", function()
-      assert.is_true(feedTriggers(('<DEST %s>MXPDEST5 stale</DEST>'):format(frame) .. "\n"))
+      assert.is_true(feedTriggers(("<DEST %s>MXPDEST5 stale</DEST>"):format(frame) .. "\n"))
       -- the state EOF is meant to undo, so a frame that was empty anyway
       -- cannot pass this by accident
       assert.is_true(holds(frameLines(), "MXPDEST5 stale"))
       assert.is_true(feedTriggers("MXPDEST12 anchored in main\n"))
 
-      assert.is_true(feedTriggers(('<DEST %s EOF>MXPDEST6 fresh</DEST>'):format(frame) .. "\n"))
+      assert.is_true(feedTriggers(("<DEST %s EOF>MXPDEST6 fresh</DEST>"):format(frame) .. "\n"))
       local shown = table.concat(frameLines(), "|")
       assert.is_false(holds(frameLines(), "MXPDEST5 stale"), shown)
       assert.is_true(holds(frameLines(), "MXPDEST6 fresh"), shown)
@@ -271,7 +274,7 @@ describe("Tests MXP handling", function()
       assert.is_true(holds(frameLines(), "MXPDEST7 unfinished"))
       assert.is_true(feedTriggers("MXPDEST13 anchored in main\n"))
 
-      assert.is_true(feedTriggers(('<DEST %s EOL>MXPDEST8 after</DEST>'):format(frame) .. "\n"))
+      assert.is_true(feedTriggers(("<DEST %s EOL>MXPDEST8 after</DEST>"):format(frame) .. "\n"))
       local shown = table.concat(frameLines(), "|")
       -- without the clear the redirect continues that line instead, so the
       -- needle survives as the head of a joined-up line
@@ -283,12 +286,12 @@ describe("Tests MXP handling", function()
     -- EOL is the narrower of the two: it must leave the finished lines above
     -- the open one where they are, which is what tells it apart from EOF
     it("keeps the frame's finished lines when the redirect carries EOL", function()
-      assert.is_true(feedTriggers(('<DEST %s>MXPDEST9 kept</DEST>'):format(frame) .. "\n"))
+      assert.is_true(feedTriggers(("<DEST %s>MXPDEST9 kept</DEST>"):format(frame) .. "\n"))
       echo(frame, "MXPDEST10 unfinished")
       assert.is_true(holds(frameLines(), "MXPDEST10 unfinished"))
       assert.is_true(holds(frameLines(), "MXPDEST9 kept"))
 
-      assert.is_true(feedTriggers(('<DEST %s EOL>MXPDEST11 after</DEST>'):format(frame) .. "\n"))
+      assert.is_true(feedTriggers(("<DEST %s EOL>MXPDEST11 after</DEST>"):format(frame) .. "\n"))
       local shown = table.concat(frameLines(), "|")
       assert.is_true(holds(frameLines(), "MXPDEST9 kept"), shown)
       assert.is_false(holds(frameLines(), "MXPDEST10 unfinished"), shown)

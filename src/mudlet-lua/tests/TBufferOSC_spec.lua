@@ -3,7 +3,6 @@
 -- and escape sequences that Mudlet does not act on.
 
 describe("Tests TBuffer OSC sequence handling", function()
-
   -- feedTriggers writes to the main console; fish the line carrying our
   -- unique marker back out of the buffer to see what actually rendered
   local function findRecentLine(needle)
@@ -18,21 +17,20 @@ describe("Tests TBuffer OSC sequence handling", function()
   end
 
   describe("Tests the protection against buffer underflow in OSC sequences", function()
-    
     it("should handle OSC sequences at buffer start without crashing", function()
       -- This test attempts to trigger the OSC sequence handling code path
       -- that was vulnerable to buffer underflow when the sequence appeared
       -- at the very beginning of the buffer (position 0)
-      
+
       -- Create a test buffer for receiving data
       createBuffer("oscTestBuffer")
       clearWindow("oscTestBuffer")
-      
+
       -- OSC sequence: ESC ] 0 ; Title ESC \
       -- In decimal: 27 93 48 59 84 105 116 108 101 27 92
       -- This should not cause a crash even if it appears at the start of data
       local oscSequence = string.char(27) .. "]0;Test Title" .. string.char(27, 92)
-      
+
       -- Test 1: OSC sequence at the very beginning
       -- This should trigger the fixed code path without crashing
       local testSuccess = pcall(function()
@@ -40,48 +38,52 @@ describe("Tests TBuffer OSC sequence handling", function()
         -- The exact mechanism might vary but this should exercise the TBuffer code
         echo("oscTestBuffer", oscSequence)
       end)
-      
+
       -- The important thing is that we don't crash
       assert.is_true(testSuccess, "OSC sequence at buffer start should not crash")
-      
+
       -- Test 2: OSC sequence after some text
       clearWindow("oscTestBuffer")
       local testSuccess2 = pcall(function()
         echo("oscTestBuffer", "Some text" .. oscSequence)
       end)
-      
+
       assert.is_true(testSuccess2, "OSC sequence after text should not crash")
-      
+
       -- Test 3: Incomplete OSC sequence (no terminator)
       clearWindow("oscTestBuffer")
       local incompleteOsc = string.char(27) .. "]0;Test Title"
       local testSuccess3 = pcall(function()
         echo("oscTestBuffer", incompleteOsc)
       end)
-      
+
       assert.is_true(testSuccess3, "Incomplete OSC sequence should not crash")
     end)
-    
+
     it("should handle multiple OSC sequences safely", function()
       createBuffer("oscTestBuffer2")
       clearWindow("oscTestBuffer2")
-      
+
       -- Multiple OSC sequences, including one at the start
-      local multipleOsc = string.char(27) .. "]0;Title1" .. string.char(27, 92) ..
-                         "Some text" ..
-                         string.char(27) .. "]0;Title2" .. string.char(27, 92)
-      
+      local multipleOsc = string.char(27)
+        .. "]0;Title1"
+        .. string.char(27, 92)
+        .. "Some text"
+        .. string.char(27)
+        .. "]0;Title2"
+        .. string.char(27, 92)
+
       local testSuccess = pcall(function()
         echo("oscTestBuffer2", multipleOsc)
       end)
-      
+
       assert.is_true(testSuccess, "Multiple OSC sequences should be handled safely")
     end)
-    
+
     it("should handle edge case escape sequences", function()
       createBuffer("oscTestBuffer3")
       clearWindow("oscTestBuffer3")
-      
+
       -- Edge cases that might trigger the buffer underflow issue
       local edgeCases = {
         -- Just ESC ]
@@ -91,9 +93,9 @@ describe("Tests TBuffer OSC sequence handling", function()
         -- ESC ] 0 ; (incomplete)
         string.char(27, 93, 48, 59),
         -- Empty OSC
-        string.char(27, 93, 27, 92)
+        string.char(27, 93, 27, 92),
       }
-      
+
       for i, edgeCase in ipairs(edgeCases) do
         local testSuccess = pcall(function()
           clearWindow("oscTestBuffer3")
@@ -103,11 +105,9 @@ describe("Tests TBuffer OSC sequence handling", function()
         assert.is_true(testSuccess, "Edge case " .. i .. " should not crash")
       end
     end)
-
   end)
 
   describe("Tests ANSI string sequence handling (DCS, SOS, PM, APC)", function()
-
     it("should swallow an APC sequence terminated by ST", function()
       assert.is_true(feedTriggers("APCST1(\027_secret apc payload\027\\)APCST1\n"))
       assert.equals("APCST1()APCST1", findRecentLine("APCST1"))
@@ -151,11 +151,9 @@ describe("Tests TBuffer OSC sequence handling", function()
       assert.is_true(feedTriggers("STICKY1(\027" .. "7[not-a-csi)STICKY1\n"))
       assert.equals("STICKY1([not-a-csi)STICKY1", findRecentLine("STICKY1"))
     end)
-
   end)
 
   describe("Tests escape sequences that Mudlet does not handle", function()
-
     local previousEncoding
 
     -- these tests are not encoding agnostic: feedTriggers transcodes its UTF-8
@@ -272,7 +270,6 @@ describe("Tests TBuffer OSC sequence handling", function()
       assert.equals("LATIN1(\195\169)LATIN1", findRecentLine("LATIN1"))
       setServerEncoding("UTF-8")
     end)
-
   end)
 
   -- A CSI parameter string may only carry one of '<', '=', '>' or '?' in its
@@ -280,7 +277,6 @@ describe("Tests TBuffer OSC sequence handling", function()
   -- interpret; after that only "0-9:;" are allowed. Getting those two sets the
   -- wrong way round leaves the tail of such a sequence on screen as game text.
   describe("Tests private/reserved CSI sequences", function()
-
     it("should consume a private DEC sequence that hides the cursor", function()
       assert.is_true(feedTriggers("CSIPRIV1(\027[?25l)CSIPRIV1\n"))
       assert.equals("CSIPRIV1()CSIPRIV1", findRecentLine("CSIPRIV1"))
@@ -319,7 +315,6 @@ describe("Tests TBuffer OSC sequence handling", function()
       assert.is_true(feedTriggers("CSISGR2(\027[mplain)CSISGR2\n"))
       assert.equals("CSISGR2(plain)CSISGR2", findRecentLine("CSISGR2"))
     end)
-
   end)
 
   -- A line written through TBuffer::appendLine() that holds the documentation
@@ -453,7 +448,9 @@ describe("Tests TBuffer OSC sequence handling", function()
       setConsoleBufferSize("main", 100, 20)
       local ok, err = pcall(body)
       setConsoleBufferSize("main", wasLines, wasBatch)
-      if not ok then error(err, 0) end
+      if not ok then
+        error(err, 0)
+      end
     end
 
     it("reveals a link that was written concealed once its delay is up", function()
@@ -462,7 +459,8 @@ describe("Tests TBuffer OSC sequence handling", function()
         pending("waiting for the reveal timer needs MUDLET_TEST_MODE")
         return
       end
-      local link = "\027]8;;send:osc8reveal?config={\"visibility\":{\"action\":\"reveal\",\"delay\":250}}\027\\HIDDENWORD\027]8;;\027\\"
+      local link =
+        '\027]8;;send:osc8reveal?config={"visibility":{"action":"reveal","delay":250}}\027\\HIDDENWORD\027]8;;\027\\'
       assert.is_true(feedTriggers("OSCREVEAL1(" .. link .. ")OSCREVEAL1\n"))
       local lineNumber, concealed = lineHolding("OSCREVEAL1")
       assert.is_truthy(lineNumber, "the line carrying the link never reached the buffer")
@@ -479,12 +477,15 @@ describe("Tests TBuffer OSC sequence handling", function()
         return
       end
       withSmallBuffer(function()
-        local link = "\027]8;;send:osc8trim?config={\"visibility\":{\"action\":\"reveal\",\"delay\":250}}\027\\HIDDENWORD\027]8;;\027\\"
+        local link =
+          '\027]8;;send:osc8trim?config={"visibility":{"action":"reveal","delay":250}}\027\\HIDDENWORD\027]8;;\027\\'
         assert.is_true(feedTriggers("OSCTRIM1(" .. link .. ")OSCTRIM1\n"))
         local before = findLine("OSCTRIM1")
         assert.is_truthy(before, "the line carrying the link never reached the buffer")
 
-        for i = 1, 70 do echo("osctrimfiller " .. i .. "\n") end
+        for i = 1, 70 do
+          echo("osctrimfiller " .. i .. "\n")
+        end
         local moved = findLine("OSCTRIM1")
         assert.is_truthy(moved, "the link's line scrolled out entirely, so this test proves nothing")
         assert.is_not.equal(before, moved, "the buffer never trimmed, so this test proves nothing")
@@ -504,15 +505,20 @@ describe("Tests TBuffer OSC sequence handling", function()
         -- broken reveal writes to, and a high one falls outside the trimmed buffer
         -- where performReveal() no-ops instead of corrupting
         clearWindow()
-        for i = 1, 3 do echo("oscgoneseed " .. i .. "\n") end
-        local link = "\027]8;;send:osc8gone?config={\"visibility\":{\"action\":\"reveal\",\"delay\":3000}}\027\\HIDDENWORD\027]8;;\027\\"
+        for i = 1, 3 do
+          echo("oscgoneseed " .. i .. "\n")
+        end
+        local link =
+          '\027]8;;send:osc8gone?config={"visibility":{"action":"reveal","delay":3000}}\027\\HIDDENWORD\027]8;;\027\\'
         assert.is_true(feedTriggers("OSCGONE1(" .. link .. ")OSCGONE1\n"))
         local registeredAt = findLine("OSCGONE1")
         assert.is_truthy(registeredAt and registeredAt < 20, "the link did not land at a low buffer index")
 
         -- fillers must be longer than the link's startColumn + length, or
         -- performReveal() bounds-checks out and the case passes without the fix
-        for i = 1, 260 do echo("oscgonefiller padded out well past the link column " .. i .. "\n") end
+        for i = 1, 260 do
+          echo("oscgonefiller padded out well past the link column " .. i .. "\n")
+        end
         assert.is_nil(findLine("OSCGONE1"), "the link's line survived, so this test proves nothing")
 
         local lastLine = getLastLineNumber("main")
@@ -523,11 +529,13 @@ describe("Tests TBuffer OSC sequence handling", function()
 
         pumpEvents(3500)
         for lineNumber = 0, lastLine do
-          assert.equals(snapshot[lineNumber], getLines("main", lineNumber, lineNumber + 1)[1],
-            "revealing a link whose line was trimmed away rewrote line " .. lineNumber)
+          assert.equals(
+            snapshot[lineNumber],
+            getLines("main", lineNumber, lineNumber + 1)[1],
+            "revealing a link whose line was trimmed away rewrote line " .. lineNumber
+          )
         end
       end)
     end)
   end)
-
 end)

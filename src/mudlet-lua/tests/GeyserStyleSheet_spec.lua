@@ -1,5 +1,4 @@
 describe("Tests functionality of Geyser.StyleSheet", function()
-
   describe("Tests the functionality of Geyser.StyleSheet:parseCSS", function()
     it("Should convert a string stylesheet into a table of properties", function()
       local sheet = [[
@@ -7,7 +6,7 @@ describe("Tests functionality of Geyser.StyleSheet", function()
         color: green;
       ]]
       local expected = {
-        ['background-color'] = "black",
+        ["background-color"] = "black",
         color = "green",
       }
       local actual = Geyser.StyleSheet:parseCSS(sheet)
@@ -24,7 +23,7 @@ describe("Tests functionality of Geyser.StyleSheet", function()
       local styleTable, target = Geyser.StyleSheet:parseCSS(sheet)
       local expectedTarget = "QPlainTextEdit"
       local expectedTable = {
-        ['background-color'] = "black",
+        ["background-color"] = "black",
         color = "green",
       }
       assert.equal(expectedTarget, target)
@@ -84,17 +83,20 @@ describe("Tests functionality of Geyser.StyleSheet", function()
         background-color: black;
         color: green;
       ]])
-      child = Geyser.StyleSheet:new([[
+      child = Geyser.StyleSheet:new(
+        [[
         color: blue;
         font: "Ubuntu Mono";
-      ]], parent)
+      ]],
+        parent
+      )
     end)
 
     it("Should return the combined/inherited stylesheet by default", function()
       local expected = {
-        ['background-color'] = "black",
-        ['color'] = "blue",
-        ['font'] = '"Ubuntu Mono"'
+        ["background-color"] = "black",
+        ["color"] = "blue",
+        ["font"] = '"Ubuntu Mono"',
       }
       local actual = child:getStyleTable()
       assert.are.same(expected, actual)
@@ -103,7 +105,7 @@ describe("Tests functionality of Geyser.StyleSheet", function()
     it("Should return only its own properties if passed false as a parameter", function()
       local expected = {
         color = "blue",
-        font = '"Ubuntu Mono"'
+        font = '"Ubuntu Mono"',
       }
       local actual = child:getStyleTable(false)
       assert.are.same(expected, actual)
@@ -117,17 +119,20 @@ describe("Tests functionality of Geyser.StyleSheet", function()
         background-color: black;
         color: green;
       ]])
-      child = Geyser.StyleSheet:new([[
+      child = Geyser.StyleSheet:new(
+        [[
         color: blue;
         font: "Ubuntu Mono";
-      ]], parent)
+      ]],
+        parent
+      )
     end)
 
     it("Should replace the existing style table", function()
       local expected = {
-        color = "purple"
+        color = "purple",
       }
-      child:setStyleTable({color = "purple"})
+      child:setStyleTable({ color = "purple" })
       local actual = child:getStyleTable(false)
       assert.are.same(expected, actual)
     end)
@@ -147,7 +152,7 @@ describe("Tests functionality of Geyser.StyleSheet", function()
     end)
 
     it("Should not effect the parent", function()
-      child:setStyleTable({color = "purple"})
+      child:setStyleTable({ color = "purple" })
       local expected = "green"
       local actual = parent:getStyleTable().color
       assert.equal(expected, actual)
@@ -174,7 +179,7 @@ describe("Tests functionality of Geyser.StyleSheet", function()
 
     it("Should clear the parent if no parent is passed in", function()
       child:setParent(parent) -- give it something to clear
-      child:setParent()       -- and clear it
+      child:setParent() -- and clear it
       assert.is_nil(child.parent)
     end)
 
@@ -204,7 +209,7 @@ describe("Tests functionality of Geyser.StyleSheet", function()
 
     it("Should clear the target if no target is passed in", function()
       stylesheet:setTarget("QPlainTextEdit") -- set it
-      stylesheet:setTarget()                 -- and clear it
+      stylesheet:setTarget() -- and clear it
       assert.is_nil(stylesheet.target)
     end)
 
@@ -251,7 +256,7 @@ describe("Tests functionality of Geyser.StyleSheet", function()
         color: green;
       ]]
       stylesheet:setCSS(sheet) -- give it something to clear
-      stylesheet:setCSS()      -- and clear it
+      stylesheet:setCSS() -- and clear it
       local expected = {}
       local actual = stylesheet:getStyleTable()
       assert.are.same(expected, actual)
@@ -272,10 +277,13 @@ describe("Tests functionality of Geyser.StyleSheet", function()
         background-color: black;
         color: green;
       ]])
-      child = Geyser.StyleSheet:new([[
+      child = Geyser.StyleSheet:new(
+        [[
         color: blue;
         font: "Ubuntu Mono";
-      ]], parent)
+      ]],
+        parent
+      )
     end)
 
     it("Should assemble the string stylesheet", function()
@@ -310,7 +318,7 @@ describe("Tests functionality of Geyser.StyleSheet", function()
     local label
 
     before_each(function()
-      label = Geyser.Label:new({name = "gssLabel", x = 0, y = 0, width = 100, height = 50})
+      label = Geyser.Label:new({ name = "gssLabel", x = 0, y = 0, width = 100, height = 50 })
     end)
 
     after_each(function()

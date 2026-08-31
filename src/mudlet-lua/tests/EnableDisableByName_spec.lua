@@ -11,7 +11,6 @@
 -- against the same profile from finding a pile of same-named items still live.
 
 describe("enable/disable by name", function()
-
   local permanentItems
 
   before_each(function()
@@ -34,7 +33,7 @@ describe("enable/disable by name", function()
   end)
 
   local function track(disable, name)
-    permanentItems[#permanentItems + 1] = {disable = disable, name = name}
+    permanentItems[#permanentItems + 1] = { disable = disable, name = name }
     return name
   end
 
@@ -49,7 +48,10 @@ describe("enable/disable by name", function()
     enable(dupName)
     enable(soloName)
     assert.is_true(active(ids.first), "the first " .. itemType .. " should be enabled after enabling by name")
-    assert.is_true(active(ids.second), "the second same-named " .. itemType .. " should be enabled after enabling by name")
+    assert.is_true(
+      active(ids.second),
+      "the second same-named " .. itemType .. " should be enabled after enabling by name"
+    )
     assert.is_true(active(ids.control), "the control " .. itemType .. " should be enabled after enabling by name")
 
     disable(dupName)
@@ -85,9 +87,9 @@ describe("enable/disable by name", function()
     local dupName = track(disableTrigger, "Spec Dup Triggers By Name")
     local soloName = track(disableTrigger, "Spec Solo Trigger By Name")
     local ids = {
-      first = permSubstringTrigger(dupName, "", {"spec_dup_trig_1"}, ""),
-      second = permSubstringTrigger(dupName, "", {"spec_dup_trig_2"}, ""),
-      control = permSubstringTrigger(soloName, "", {"spec_dup_trig_3"}, ""),
+      first = permSubstringTrigger(dupName, "", { "spec_dup_trig_1" }, ""),
+      second = permSubstringTrigger(dupName, "", { "spec_dup_trig_2" }, ""),
+      control = permSubstringTrigger(soloName, "", { "spec_dup_trig_3" }, ""),
     }
     assertCreated(ids)
 
@@ -146,19 +148,41 @@ describe("enable/disable by name", function()
     local dupName = track(disableTrigger, "Spec StayOpen Parents")
     local soloName = track(disableTrigger, "Spec Solo StayOpen")
     local fired = {}
-    _G.EnableDisableSpec = {record = function(which) fired[#fired + 1] = which end}
+    _G.EnableDisableSpec = {
+      record = function(which)
+        fired[#fired + 1] = which
+      end,
+    }
 
-    assert.is_true(permSubstringTrigger(dupName, "", {"so_gate_a"}, "") > 0)
-    assert.is_true(permSubstringTrigger(track(disableTrigger, "Spec StayOpen Child A"), dupName, {"so_"},
-                                        [[_G.EnableDisableSpec.record("A")]]) > 0)
+    assert.is_true(permSubstringTrigger(dupName, "", { "so_gate_a" }, "") > 0)
+    assert.is_true(
+      permSubstringTrigger(
+        track(disableTrigger, "Spec StayOpen Child A"),
+        dupName,
+        { "so_" },
+        [[_G.EnableDisableSpec.record("A")]]
+      ) > 0
+    )
     -- the second parent is created after the first child, so the child added
     -- next lands under it rather than under the first parent
-    assert.is_true(permSubstringTrigger(dupName, "", {"so_gate_b"}, "") > 0)
-    assert.is_true(permSubstringTrigger(track(disableTrigger, "Spec StayOpen Child B"), dupName, {"so_"},
-                                        [[_G.EnableDisableSpec.record("B")]]) > 0)
-    assert.is_true(permSubstringTrigger(soloName, "", {"so_gate_c"}, "") > 0)
-    assert.is_true(permSubstringTrigger(track(disableTrigger, "Spec StayOpen Child C"), soloName, {"so_"},
-                                        [[_G.EnableDisableSpec.record("C")]]) > 0)
+    assert.is_true(permSubstringTrigger(dupName, "", { "so_gate_b" }, "") > 0)
+    assert.is_true(
+      permSubstringTrigger(
+        track(disableTrigger, "Spec StayOpen Child B"),
+        dupName,
+        { "so_" },
+        [[_G.EnableDisableSpec.record("B")]]
+      ) > 0
+    )
+    assert.is_true(permSubstringTrigger(soloName, "", { "so_gate_c" }, "") > 0)
+    assert.is_true(
+      permSubstringTrigger(
+        track(disableTrigger, "Spec StayOpen Child C"),
+        soloName,
+        { "so_" },
+        [[_G.EnableDisableSpec.record("C")]]
+      ) > 0
+    )
 
     -- each parent reaches its own child and no other, or the check below would
     -- pass on one parent doing all the work
@@ -178,8 +202,10 @@ describe("enable/disable by name", function()
       feedTriggers("so_payload\n")
     end
 
-    assert.are.equal("A,B,A,B,A,B,A,B,A,B", table.concat(fired, ","),
-      "both same-named parents should stay open for exactly five lines, and the differently-named one not at all")
+    assert.are.equal(
+      "A,B,A,B,A,B,A,B,A,B",
+      table.concat(fired, ","),
+      "both same-named parents should stay open for exactly five lines, and the differently-named one not at all"
+    )
   end)
-
 end)

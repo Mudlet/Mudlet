@@ -19,7 +19,8 @@ Geyser.Gauge = Geyser.Container:new({
   value = 100, -- ranges from 0 to 100
   color = "#808080",
   strict = false,
-  orientation = "horizontal" })
+  orientation = "horizontal",
+})
 
 -- Reads one CSS token as a length in pixels. Qt reads a bare number as pixels
 -- and a negative length is meaningful, so both are taken; a unit that has no
@@ -121,9 +122,11 @@ end
 --         the stylesheet says nothing measurable about, and the text of the
 --         first declaration that held a length with no pixel reading
 local function extractCSSSpacing(css, property)
-  if not css then return 0, 0, 0, 0 end
+  if not css then
+    return 0, 0, 0, 0
+  end
   css = withoutComments(css)
-  local spacing = {top = 0, right = 0, bottom = 0, left = 0}
+  local spacing = { top = 0, right = 0, bottom = 0, left = 0 }
   local border = property == "border"
   local unreadable
 
@@ -155,7 +158,7 @@ local function extractCSSSpacing(css, property)
     spacing.top, spacing.right, spacing.bottom, spacing.left = top, right, bottom, left
   end
 
-  for _, side in ipairs({"top", "right", "bottom", "left"}) do
+  for _, side in ipairs({ "top", "right", "bottom", "left" }) do
     local length
     if border then
       length = read("border-" .. side, borderWidth, false) or read("border-" .. side .. "-width", pixelLength, true)
@@ -212,19 +215,29 @@ local function setFrontConstraints(gauge)
   local orientation = gauge.orientation
 
   if orientation == "horizontal" then
-    front.x = function() return fill.left end
-    front.y = function() return fill.top end
+    front.x = function()
+      return fill.left
+    end
+    front.y = function()
+      return fill.top
+    end
     front.width = function()
       return math.floor((gauge.back.get_width() - fill.left - fill.right) * (fill.value / 100) + 0.5)
     end
-    front.height = function() return math.floor(gauge.back.get_height() - fill.top - fill.bottom + 0.5) end
+    front.height = function()
+      return math.floor(gauge.back.get_height() - fill.top - fill.bottom + 0.5)
+    end
   elseif orientation == "vertical" then
     -- bottom to top, so an emptier gauge starts further down
-    front.x = function() return fill.left end
+    front.x = function()
+      return fill.left
+    end
     front.y = function()
       return fill.top + math.floor((gauge.back.get_height() - fill.top - fill.bottom) * (1 - fill.value / 100) + 0.5)
     end
-    front.width = function() return math.floor(gauge.back.get_width() - fill.left - fill.right + 0.5) end
+    front.width = function()
+      return math.floor(gauge.back.get_width() - fill.left - fill.right + 0.5)
+    end
     front.height = function()
       return math.floor((gauge.back.get_height() - fill.top - fill.bottom) * (fill.value / 100) + 0.5)
     end
@@ -233,15 +246,25 @@ local function setFrontConstraints(gauge)
     front.x = function()
       return fill.left + math.floor((gauge.back.get_width() - fill.left - fill.right) * (1 - fill.value / 100) + 0.5)
     end
-    front.y = function() return fill.top end
+    front.y = function()
+      return fill.top
+    end
     front.width = function()
       return math.floor((gauge.back.get_width() - fill.left - fill.right) * (fill.value / 100) + 0.5)
     end
-    front.height = function() return math.floor(gauge.back.get_height() - fill.top - fill.bottom + 0.5) end
+    front.height = function()
+      return math.floor(gauge.back.get_height() - fill.top - fill.bottom + 0.5)
+    end
   else -- batty (top to bottom), and anything the gauge cannot make sense of
-    front.x = function() return fill.left end
-    front.y = function() return fill.top end
-    front.width = function() return math.floor(gauge.back.get_width() - fill.left - fill.right + 0.5) end
+    front.x = function()
+      return fill.left
+    end
+    front.y = function()
+      return fill.top
+    end
+    front.width = function()
+      return math.floor(gauge.back.get_width() - fill.left - fill.right + 0.5)
+    end
     front.height = function()
       return math.floor((gauge.back.get_height() - fill.top - fill.bottom) * (fill.value / 100) + 0.5)
     end
@@ -262,15 +285,25 @@ end
 -- @param maxValue Maximum numeric value.  Optionally nil, see above.
 -- @param text The text to display on the gauge, it is optional.
 -- @return true, or nil and a message if maxValue has no reading to give
-function Geyser.Gauge:setValue (currentValue, maxValue, text)
-  assert(type(currentValue) == "number", string.format("bad argument #1 type (currentValue as number expected, got %s!)", type(currentValue)))
-  assert(maxValue == nil or type(maxValue) == "number", string.format("bad argument #2 type (optional maxValue as number expected, got %s!)", type(maxValue)))
+function Geyser.Gauge:setValue(currentValue, maxValue, text)
+  assert(
+    type(currentValue) == "number",
+    string.format("bad argument #1 type (currentValue as number expected, got %s!)", type(currentValue))
+  )
+  assert(
+    maxValue == nil or type(maxValue) == "number",
+    string.format("bad argument #2 type (optional maxValue as number expected, got %s!)", type(maxValue))
+  )
   -- A zero, negative or NaN maximum has no sensible reading: dividing by it leaves
   -- the gauge on an infinite or negative value that sticks until the next good
   -- call. Games do report these while a stat is still unknown, so refuse the
   -- reading and leave the gauge as it was rather than aborting the caller.
   if maxValue ~= nil and not (maxValue > 0) then
-    local message = string.format("Geyser.Gauge:setValue: bad argument #2 value (maxValue must be a positive number, got %s!) - gauge '%s' was left as it was", tostring(maxValue), self.name)
+    local message = string.format(
+      "Geyser.Gauge:setValue: bad argument #2 value (maxValue must be a positive number, got %s!) - gauge '%s' was left as it was",
+      tostring(maxValue),
+      self.name
+    )
     -- latched, because a game that reports a bad maximum reports it every prompt
     if not self.warnedBadMaxValue then
       self.warnedBadMaxValue = true
@@ -288,9 +321,11 @@ function Geyser.Gauge:setValue (currentValue, maxValue, text)
   else
     self.value = currentValue
   end
--- prevent the gauge from overflowing its borders if currentValue > maxValue if gauge is set to be strict
-  if self.strict and self.value > 100 then self.value = 100 end
-  
+  -- prevent the gauge from overflowing its borders if currentValue > maxValue if gauge is set to be strict
+  if self.strict and self.value > 100 then
+    self.value = 100
+  end
+
   -- the constructor makes both of these; a gauge that got here without them is
   -- given them rather than made to error
   self.frontFill = self.frontFill or {}
@@ -306,23 +341,36 @@ function Geyser.Gauge:setValue (currentValue, maxValue, text)
   -- runs on every prompt.
   if unreadable and not self.warnedUnreadableCSS then
     self.warnedUnreadableCSS = true
-    debugc(string.format(
-      "Geyser.Gauge: gauge '%s' has a stylesheet spacing Geyser cannot measure in pixels (%s), so it is left out of the fill bar's position - use px or unitless lengths",
-      self.name, unreadable))
+    debugc(
+      string.format(
+        "Geyser.Gauge: gauge '%s' has a stylesheet spacing Geyser cannot measure in pixels (%s), so it is left out of the fill bar's position - use px or unitless lengths",
+        self.name,
+        unreadable
+      )
+    )
   end
 
   local fill = self.frontFill
-  local moved = fill.value ~= self.value or fill.left ~= leftOffset or fill.right ~= rightOffset
-                or fill.top ~= topOffset or fill.bottom ~= bottomOffset
-  fill.value, fill.left, fill.right, fill.top, fill.bottom = self.value, leftOffset, rightOffset, topOffset, bottomOffset
+  local moved = fill.value ~= self.value
+    or fill.left ~= leftOffset
+    or fill.right ~= rightOffset
+    or fill.top ~= topOffset
+    or fill.bottom ~= bottomOffset
+  fill.value, fill.left, fill.right, fill.top, fill.bottom =
+    self.value, leftOffset, rightOffset, topOffset, bottomOffset
 
   -- The constraints read the fill table, so a new value only needs the front
   -- label laid out again, and a gauge sitting on the value it already has -
   -- which the gauges a UI repaints wholesale on every prompt usually are - does
   -- not even need that.
   local front = self.front
-  if fill.orientation ~= self.orientation or front.x ~= fill.x or front.y ~= fill.y
-     or front.width ~= fill.width or front.height ~= fill.height then
+  if
+    fill.orientation ~= self.orientation
+    or front.x ~= fill.x
+    or front.y ~= fill.y
+    or front.width ~= fill.width
+    or front.height ~= fill.height
+  then
     setFrontConstraints(self)
   elseif moved then
     front:reposition()
@@ -339,7 +387,7 @@ end
 -- @param g the green component, or nil if using a named color.
 -- @param b the blue component, or nil if using a named color.
 -- @param text The text to display on the gauge, it is optional.
-function Geyser.Gauge:setColor (r, g, b, text)
+function Geyser.Gauge:setColor(r, g, b, text)
   r, g, b = Geyser.Color.parse(r, g, b)
   self.front:setColor(r, g, b)
   self.back:setColor(r, g, b, 100)
@@ -350,7 +398,7 @@ end
 
 --- Sets the text on the gauge.
 -- @param text The text to set.
-function Geyser.Gauge:setText (text)
+function Geyser.Gauge:setText(text)
   if text then
     self.text:echo(text)
   end
@@ -438,10 +486,10 @@ function Geyser.Gauge:setStyleSheet(css, cssback, cssText)
   self.backCSS = cssback or css
   self.textCSS = cssText
   self.warnedUnreadableCSS = nil
-  
+
   -- Apply back stylesheet normally (this has margins/borders/padding)
   self.back:setStyleSheet(self.backCSS)
-  
+
   -- For the front label, strip ONLY margins (borders and padding are safe and allow styling)
   -- Margins on the front label cause positioning issues, but borders/padding are fine
   -- the trailing semicolon is optional: the last declaration in a stylesheet
@@ -456,12 +504,12 @@ function Geyser.Gauge:setStyleSheet(css, cssback, cssText)
     frontCSSStripped = frontCSSStripped:gsub("%s*%f[%w%-]margin[^;{}%*]*;?", "")
   end
   self.front:setStyleSheet(frontCSSStripped)
-  
+
   -- Apply text stylesheet if provided
   if cssText ~= nil then
     self.text:setStyleSheet(cssText)
   end
-  
+
   -- Recalculate gauge positioning with the new stylesheet
   if self.value then
     self:setValue(self.value)
@@ -470,16 +518,16 @@ end
 
 --- Sets the gauge to no longer intercept mouse events
 function Geyser.Gauge:enableClickthrough()
-    self.front:enableClickthrough()
-    self.back:enableClickthrough()
-    self.text:enableClickthrough()
+  self.front:enableClickthrough()
+  self.back:enableClickthrough()
+  self.text:enableClickthrough()
 end
 
 --- Sets the gauge to once again intercept mouse events
 function Geyser.Gauge:disableClickthrough()
-    self.front:disableClickthrough()
-    self.back:disableClickthrough()
-    self.text:disableClickthrough()
+  self.front:disableClickthrough()
+  self.back:disableClickthrough()
+  self.text:disableClickthrough()
 end
 
 --- Sets the tooltip of the gauge
@@ -498,7 +546,7 @@ end
 Geyser.Gauge.parent = Geyser.Container
 
 -- Overridden constructor
-function Geyser.Gauge:new (cons, container)
+function Geyser.Gauge:new(cons, container)
   -- Initiate and set gauge specific things
   cons = cons or {}
   cons.type = cons.type or "gauge"
@@ -545,8 +593,6 @@ function Geyser.Gauge:new (cons, container)
   text.fillBg = 0
   text.color = Geyser.Color.hexa(0, 0, 0, 0)
 
-
-
   -- Create back first so that the labels are stacked correctly.
   me.back = Geyser.Label:new(back, me)
   me.front = Geyser.Label:new(front, me)
@@ -555,14 +601,22 @@ function Geyser.Gauge:new (cons, container)
   me.formatTable = me.text.formatTable
 
   -- Set whether this gauge is strict about its max value being 100 or not
-  if cons.strict then me.strict = true else me.strict = false end
+  if cons.strict then
+    me.strict = true
+  else
+    me.strict = false
+  end
 
   -- Set clickthrough if included in constructor
-  if cons.clickthrough then me:enableClickthrough() end
+  if cons.clickthrough then
+    me:enableClickthrough()
+  end
 
   -- Echo text to the text label if 'message' constraint is set
-  if cons.message then me:echo(me.message) end
-  
+  if cons.message then
+    me:echo(me.message)
+  end
+
   --print("  New in " .. self.name .. " : " .. me.name)
   return me
 end
@@ -577,7 +631,7 @@ function Geyser.Gauge:type_delete()
 end
 
 -- Overridden constructor to use add2
-function Geyser.Gauge:new2 (cons, container)
+function Geyser.Gauge:new2(cons, container)
   cons = cons or {}
   cons.useAdd2 = true
   local me = self:new(cons, container)

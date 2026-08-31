@@ -24,7 +24,8 @@ Geyser.get_width = function()
   return getMainWindowSize()
 end
 Geyser.get_height = function()
-  local w, h = getMainWindowSize() return h
+  local w, h = getMainWindowSize()
+  return h
 end
 Geyser.name = "Geyser Root Window"
 Geyser.__index = Geyser
@@ -53,7 +54,7 @@ end
 -- this is the basis for the 2 add functions
 -- @param window the window to add this container
 -- @param cons table of Geyser window options such as name, width, and height
-function Geyser:base_add (window, cons)
+function Geyser:base_add(window, cons)
   cons = cons or window -- 'cons' is optional
 
   -- Stop other container from controlling this window
@@ -65,7 +66,7 @@ function Geyser:base_add (window, cons)
   window.container = self
   -- Don't allow duplication of same name in container
   if not self.windowList[window.name] then
-    self.windows[#self.windows+1] = window.name
+    self.windows[#self.windows + 1] = window.name
   end
   self.windowList[window.name] = window
 
@@ -81,7 +82,7 @@ end
 -- itself is hidden, in which case it joins the container's hidden children
 -- @param window The window to add this container
 -- @param cons table of Geyser window options such as name, width, and height
-function Geyser:add (window, cons)
+function Geyser:add(window, cons)
   self:base_add(window, cons)
   if self.hidden or self.auto_hidden then
     window:hide(true)
@@ -90,15 +91,15 @@ function Geyser:add (window, cons)
   end
 end
 
---- Add a window to the list that this container manages. 
--- This add function prevents an element to be shown if it was hidden and hides an element if the 
+--- Add a window to the list that this container manages.
+-- This add function prevents an element to be shown if it was hidden and hides an element if the
 -- container is hidden already
 -- used by Adjustable.Container and changeContainer but can be used by any container using the new2 constructor
 -- @param window The window to add this container
 -- @param cons table of Geyser window options such as name, width, and height
 -- @param passAdd2 manages the inheritance of this add function. If set to true this add function will be inherited by all children.
 -- @param exclude manages types which have to be excluded from overwriting their add function as they have their own
-function Geyser:add2 (window, cons, passAdd2, exclude)
+function Geyser:add2(window, cons, passAdd2, exclude)
   cons = cons or window -- 'cons' is optional
   -- if the element doesn't want to use add2 use add instead
   if window.useAdd2 == false then
@@ -106,7 +107,7 @@ function Geyser:add2 (window, cons, passAdd2, exclude)
     return
   end
   -- don't overwrite these elements add function as they already use their own add
-  exclude = exclude or {"hbox", "VBox", "adjustablecontainer"}
+  exclude = exclude or { "hbox", "VBox", "adjustablecontainer" }
 
   if passAdd2 ~= false then
     passAdd2 = passAdd2 or self.useAdd2 or window.useAdd2 or false
@@ -116,12 +117,12 @@ function Geyser:add2 (window, cons, passAdd2, exclude)
   -- check all hidden values and hide if they are set
   if hidden then
     window:hide()
-   end
+  end
   if auto_hidden or self.hidden or self.auto_hidden then
     window:hide(true)
   end
   -- if the hidden values are not set or false then show the window
-  if not(window.hidden or window.auto_hidden) then
+  if not (window.hidden or window.auto_hidden) then
     window:show()
   end
   if passAdd2 then
@@ -136,14 +137,14 @@ end
 --- Removes a window from the list that it manages
 -- @param window The window to remove from this container's
 -- windowList
-function Geyser:remove (window)
+function Geyser:remove(window)
   self.windowList[window.name] = nil
   local index = table.index_of(self.windows, window.name) or 0
   table.remove(self.windows, index)
 end
 
 local function changeNestContainer(windowname, label)
-  for k,v in ipairs(label.nestedLabels) do
+  for k, v in ipairs(label.nestedLabels) do
     if windowname ~= "main" then
       v:changeContainer(Geyser.parentWindows[windowname])
     else
@@ -181,7 +182,6 @@ local function setMyWindow(self, windowname)
   end
 end
 
-
 --- Removes all containers windows from the parent they are in and puts them in a new one
 -- This is only used internally
 -- @param self
@@ -189,7 +189,7 @@ end
 local function setContainerWindow(self, windowname)
   self.windowname = windowname
   --Iterate through windows has a given order and prevents problems with z-coordinate
-  for k,v in ipairs(self.windows) do
+  for k, v in ipairs(self.windows) do
     setMyWindow(self.windowList[v], windowname)
     setContainerWindow(self.windowList[v], windowname)
   end
@@ -197,7 +197,7 @@ end
 
 --- Change the container a window should be in
 -- @param container The new container the window will be set in
-function Geyser:changeContainer (container)
+function Geyser:changeContainer(container)
   --Change container to Geyser if "main" is given
   if type(container) == "string" and container:lower() == "main" then
     container = Geyser
@@ -208,7 +208,7 @@ function Geyser:changeContainer (container)
   end
   --Nothing to change
   if self.container == container then
-    return nil, "nothing to change. "..self.name.." is already in this container"
+    return nil, "nothing to change. " .. self.name .. " is already in this container"
   end
   --If there is no windowname then windowname is "main"
   local windowname = container.windowname

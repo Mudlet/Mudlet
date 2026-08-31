@@ -3,7 +3,7 @@
 -- @module Geyser.Util
 
 --- Generate a window name unique to this session.
-function Geyser.nameGen (type)
+function Geyser.nameGen(type)
   local index = Geyser.i
   local t = type or "window"
   Geyser.i = Geyser.i + 1
@@ -30,7 +30,7 @@ end
 
 --- Non-recursive display of an item, because the normal 'display' was
 -- causing Mudlet to hang. Not sure why.
-function Geyser.display (table)
+function Geyser.display(table)
   echo("------ " .. type(table) .. " ------\n")
   if type(table) == "table" then
     for k, v in pairs(table) do
@@ -42,7 +42,7 @@ function Geyser.display (table)
 end
 
 --- Clone a table, for good fun and profit.
-function Geyser.copyTable (table)
+function Geyser.copyTable(table)
   local copy = {}
   if table then
     for k, v in pairs(table) do

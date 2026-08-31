@@ -2,7 +2,6 @@
 -- only injects while the profile is offline - see the tests README.
 
 describe("Tests SGR default colour handling", function()
-
   local mark
 
   local function feed(data)
@@ -110,8 +109,10 @@ describe("Tests SGR default colour handling", function()
   -- reset with SGR 39, followed by a bold and underlined section header on the
   -- next line
   it("renders a real game's compatibility screen header in the default colour", function()
-    feed("\27[0m\27[1m      16 colors\27[22m: [\27[31m-\27[39m]                 \r\n"
-      .. "\27[4m\27[1mColor Capabilities                  \27[22m\27[24m\r\n")
+    feed(
+      "\27[0m\27[1m      16 colors\27[22m: [\27[31m-\27[39m]                 \r\n"
+        .. "\27[4m\27[1mColor Capabilities                  \27[22m\27[24m\r\n"
+    )
     selectMarker("Color Capabilities")
     assert.is_false(isAnsiFgColor(3), "the section header came back as bright red")
     assert.is_true(isAnsiFgColor(0))
@@ -122,7 +123,6 @@ describe("Tests SGR default colour handling", function()
 end)
 
 describe("Tests telnet subnegotiation handling", function()
-
   it("drops an oversized subnegotiation until IAC SE and resumes after it", function()
     -- MAX_TELNET_SUBNEGOTIATION_LENGTH in ctelnet.cpp is 5MB; send more than
     -- that inside the subnegotiation, with no IAC SE, then a marker that (only
@@ -131,8 +131,9 @@ describe("Tests telnet subnegotiation handling", function()
     local payload = string.rep("A", 5 * 1024 * 1024 + 1024)
     local mark = getLastLineNumber("main")
     -- 0x2d is not an option Mudlet handles, so nothing downstream acts on it
-    local ok, msg = feedTelnet("<T_IAC><T_SB>" .. string.char(0x2d) .. payload
-      .. "SUBNEG_LEAK_MARKER<T_IAC><T_SE>SUBNEG_RECOVERED\r\n")
+    local ok, msg = feedTelnet(
+      "<T_IAC><T_SB>" .. string.char(0x2d) .. payload .. "SUBNEG_LEAK_MARKER<T_IAC><T_SE>SUBNEG_RECOVERED\r\n"
+    )
     assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
 
     -- everything the feed produced, joined: a leaked payload is one unbroken run
@@ -140,8 +141,14 @@ describe("Tests telnet subnegotiation handling", function()
     -- inside the marker
     local displayed = table.concat(getLines("main", mark, getLastLineNumber("main") + 1))
 
-    assert.is_truthy(displayed:find("SUBNEG_RECOVERED", 1, true), "ordinary text after an oversized subnegotiation was not displayed - recovery failed")
-    assert.is_nil(displayed:find("SUBNEG_LEAK_MARKER", 1, true), "subnegotiation payload past the size cap leaked into the display instead of being dropped until IAC SE")
+    assert.is_truthy(
+      displayed:find("SUBNEG_RECOVERED", 1, true),
+      "ordinary text after an oversized subnegotiation was not displayed - recovery failed"
+    )
+    assert.is_nil(
+      displayed:find("SUBNEG_LEAK_MARKER", 1, true),
+      "subnegotiation payload past the size cap leaked into the display instead of being dropped until IAC SE"
+    )
   end)
 end)
 
@@ -160,12 +167,12 @@ describe("Tests MSDP subnegotiation handling", function()
 
   it("keeps a value carrying a control code, as the byte the game sent", function()
     local cases = {
-      {"MSDPCTLBEL", "a<BELL>b", 7},
-      {"MSDPCTLTAB", "a<HTAB>b", 9},
-      {"MSDPCTLLF", "a<LF>b", 10},
-      {"MSDPCTLVT", "a<VTAB>b", 11},
-      {"MSDPCTLCR", "a<CR>b", 13},
-      {"MSDPCTLESC", "a<ESC>b", 27},
+      { "MSDPCTLBEL", "a<BELL>b", 7 },
+      { "MSDPCTLTAB", "a<HTAB>b", 9 },
+      { "MSDPCTLLF", "a<LF>b", 10 },
+      { "MSDPCTLVT", "a<VTAB>b", 11 },
+      { "MSDPCTLCR", "a<CR>b", 13 },
+      { "MSDPCTLESC", "a<ESC>b", 27 },
     }
     for _, case in ipairs(cases) do
       local name, payload, byte = case[1], case[2], case[3]
@@ -188,11 +195,25 @@ describe("Tests MSDP subnegotiation handling", function()
   it("keeps the rest of a table when one value carries a control code", function()
     -- the case that bites in play: a room description with a newline in it used
     -- to take the room's name and exits down with it
-    feedMsdp(VAR .. "MSDPROOM" .. VAL .. TABLE_OPEN
-             .. VAR .. "NAME" .. VAL .. "The Hall"
-             .. VAR .. "DESC" .. VAL .. "line one<LF>line two"
-             .. VAR .. "EXITS" .. VAL .. "north"
-             .. TABLE_CLOSE)
+    feedMsdp(
+      VAR
+        .. "MSDPROOM"
+        .. VAL
+        .. TABLE_OPEN
+        .. VAR
+        .. "NAME"
+        .. VAL
+        .. "The Hall"
+        .. VAR
+        .. "DESC"
+        .. VAL
+        .. "line one<LF>line two"
+        .. VAR
+        .. "EXITS"
+        .. VAL
+        .. "north"
+        .. TABLE_CLOSE
+    )
 
     assert.is_table(msdp.MSDPROOM, "the whole table went missing, not only the value holding the newline")
     assert.equals("The Hall", msdp.MSDPROOM.NAME)
@@ -200,48 +221,66 @@ describe("Tests MSDP subnegotiation handling", function()
     assert.equals("line one\nline two", msdp.MSDPROOM.DESC)
   end)
 
-    -- The specification restricts a name to [A-Za-z_][A-Za-z0-9_]*, so none of the
-    -- names below is one a conforming server can send. They are here because the
-    -- prefix strip sized itself from the raw name while the JSON carried the escaped
-    -- one, so a name that grew when escaped left part of its own prefix behind and
-    -- took the variable down with it.
-    it("keeps a variable whose name carries a control code", function()
-      for _, case in ipairs({{"MSDPNTAB", 9}, {"MSDPNCR", 13}, {"MSDPNBEL", 7}}) do
-        local name = case[1] .. string.char(case[2]) .. "X"
-        feedMsdp(VAR .. name .. VAL .. "value")
-        assert.equals("value", msdp[name], (name:gsub("%c", "?")) .. " went missing, so the strip and the escaped name disagree")
-      end
-    end)
+  -- The specification restricts a name to [A-Za-z_][A-Za-z0-9_]*, so none of the
+  -- names below is one a conforming server can send. They are here because the
+  -- prefix strip sized itself from the raw name while the JSON carried the escaped
+  -- one, so a name that grew when escaped left part of its own prefix behind and
+  -- took the variable down with it.
+  it("keeps a variable whose name carries a control code", function()
+    for _, case in ipairs({ { "MSDPNTAB", 9 }, { "MSDPNCR", 13 }, { "MSDPNBEL", 7 } }) do
+      local name = case[1] .. string.char(case[2]) .. "X"
+      feedMsdp(VAR .. name .. VAL .. "value")
+      assert.equals(
+        "value",
+        msdp[name],
+        (name:gsub("%c", "?")) .. " went missing, so the strip and the escaped name disagree"
+      )
+    end
+  end)
 
-    it("keeps a variable whose name carries a backslash", function()
-      -- two bytes longer once escaped, and the key is the byte the game sent rather
-      -- than the escape the JSON needed
-      feedMsdp(VAR .. "MSDPNSLASHX" .. "\\Y" .. VAL .. "value")
-      assert.equals("value", msdp["MSDPNSLASHX\\Y"])
-    end)
+  it("keeps a variable whose name carries a backslash", function()
+    -- two bytes longer once escaped, and the key is the byte the game sent rather
+    -- than the escape the JSON needed
+    feedMsdp(VAR .. "MSDPNSLASHX" .. "\\Y" .. VAL .. "value")
+    assert.equals("value", msdp["MSDPNSLASHX\\Y"])
+  end)
 
-    it("keeps a non-ASCII value as the bytes the game sent", function()
-      -- char is signed on some targets, so every byte >= 0x80 reads as below 0x20 at
-      -- the escape test and arrives as \u00xx mojibake without the cast there
-      -- decimal escapes: Lua 5.1 has no \x form, and "\xC3" there is a literal
-      -- x, C, 3 - which would make this spec pass on ASCII and prove nothing
-      feedMsdp(VAR .. "MSDPUTF8" .. VAL .. "caf\195\169")
-      assert.equals("caf\195\169", msdp.MSDPUTF8)
-    end)
+  it("keeps a non-ASCII value as the bytes the game sent", function()
+    -- char is signed on some targets, so every byte >= 0x80 reads as below 0x20 at
+    -- the escape test and arrives as \u00xx mojibake without the cast there
+    -- decimal escapes: Lua 5.1 has no \x form, and "\xC3" there is a literal
+    -- x, C, 3 - which would make this spec pass on ASCII and prove nothing
+    feedMsdp(VAR .. "MSDPUTF8" .. VAL .. "caf\195\169")
+    assert.equals("caf\195\169", msdp.MSDPUTF8)
+  end)
 
-    it("keeps every variable of a batched update, as a string", function()
-      -- a server answering REPORT sends many at once. Flushing one variable threw
-      -- away the opening quote of the next name, so a numeric value came back a
-      -- number and a non-numeric one went missing entirely.
-      feedMsdp(VAR .. "MSDPB1" .. VAL .. "1200"
-               .. VAR .. "MSDPB2" .. VAL .. "1500"
-               .. VAR .. "MSDPB3" .. VAL .. "Market Square"
-               .. VAR .. "MSDPB4" .. VAL .. "a rat")
-      assert.equals("1200", msdp.MSDPB1)
-      assert.equals("1500", msdp.MSDPB2, "a numeric value mid-batch came back as a " .. type(msdp.MSDPB2))
-      assert.equals("Market Square", msdp.MSDPB3, "a non-numeric value mid-batch went missing")
-      assert.equals("a rat", msdp.MSDPB4)
-    end)
+  it("keeps every variable of a batched update, as a string", function()
+    -- a server answering REPORT sends many at once. Flushing one variable threw
+    -- away the opening quote of the next name, so a numeric value came back a
+    -- number and a non-numeric one went missing entirely.
+    feedMsdp(
+      VAR
+        .. "MSDPB1"
+        .. VAL
+        .. "1200"
+        .. VAR
+        .. "MSDPB2"
+        .. VAL
+        .. "1500"
+        .. VAR
+        .. "MSDPB3"
+        .. VAL
+        .. "Market Square"
+        .. VAR
+        .. "MSDPB4"
+        .. VAL
+        .. "a rat"
+    )
+    assert.equals("1200", msdp.MSDPB1)
+    assert.equals("1500", msdp.MSDPB2, "a numeric value mid-batch came back as a " .. type(msdp.MSDPB2))
+    assert.equals("Market Square", msdp.MSDPB3, "a non-numeric value mid-batch went missing")
+    assert.equals("a rat", msdp.MSDPB4)
+  end)
 end)
 
 describe("Tests addSupportedTelnetOption", function()
@@ -261,14 +300,20 @@ describe("Tests addSupportedTelnetOption", function()
   end)
 
   it("raises a Lua error when the option is missing or not a number", function()
-    assert.has_error(function() addSupportedTelnetOption() end)
-    assert.has_error(function() addSupportedTelnetOption("mssp") end)
+    assert.has_error(function()
+      addSupportedTelnetOption()
+    end)
+    assert.has_error(function()
+      addSupportedTelnetOption("mssp")
+    end)
   end)
 
   it("raises a Lua error for a number too large to be an option", function()
     -- there is no range check on the option itself, so the refusal that does
     -- exist is getVerifiedInt's, and it is the only one worth holding
-    local ok, err = pcall(function() addSupportedTelnetOption(2 ^ 40) end)
+    local ok, err = pcall(function()
+      addSupportedTelnetOption(2 ^ 40)
+    end)
     assert.is_false(ok)
     assert.is_truthy(tostring(err):find("integer over/under-flow", 1, true), tostring(err))
   end)

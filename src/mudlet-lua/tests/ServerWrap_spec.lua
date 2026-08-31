@@ -4,7 +4,6 @@
 -- see the tests README.
 
 describe("Tests undoing the game's own line wrapping", function()
-
   -- 70 characters, inside the join band for a wrap column of 80. That leaves 10
   -- columns free, so the fit check alone will not part it from a continuation
   -- opening with more than one character - unlike the lines built by
@@ -93,8 +92,11 @@ describe("Tests undoing the game's own line wrapping", function()
 
   local function verifyHeldLines(lines)
     for _, line in ipairs(lines) do
-      assert.are.equal(heldLineLength, #line,
-        "test line is " .. #line .. " characters, not the " .. heldLineLength .. " that put it inside the join band")
+      assert.are.equal(
+        heldLineLength,
+        #line,
+        "test line is " .. #line .. " characters, not the " .. heldLineLength .. " that put it inside the join band"
+      )
     end
   end
 
@@ -104,8 +106,10 @@ describe("Tests undoing the game's own line wrapping", function()
   local function verifyInJoinBand(lines, width)
     local floor = width - 15
     for _, line in ipairs(lines) do
-      assert.is_true(#line >= floor and #line <= width,
-        "test line is " .. #line .. " characters, outside the join band of " .. floor .. " to " .. width)
+      assert.is_true(
+        #line >= floor and #line <= width,
+        "test line is " .. #line .. " characters, outside the join band of " .. floor .. " to " .. width
+      )
     end
   end
 
@@ -154,14 +158,20 @@ describe("Tests undoing the game's own line wrapping", function()
   it("joins a wrapped line onto its continuation", function()
     feedAndSettle(segment1 .. "\r\n" .. segment2 .. "\r\n")
 
-    assert.is_true(bufferHasLine(segment1 .. " " .. segment2), "wrapped segment and its continuation were not joined into one logical line")
+    assert.is_true(
+      bufferHasLine(segment1 .. " " .. segment2),
+      "wrapped segment and its continuation were not joined into one logical line"
+    )
   end)
 
   it("does not swallow a prompt into the full-width line above it", function()
     -- the prompt is terminated by IAC GA rather than a newline
     feedAndSettle(segment1 .. "\r\nHP:100> <T_IAC><T_GA>")
 
-    assert.is_true(bufferHasLine(segment1), "full-width final line was not committed on its own when followed by a prompt")
+    assert.is_true(
+      bufferHasLine(segment1),
+      "full-width final line was not committed on its own when followed by a prompt"
+    )
     assert.is_true(bufferHasLine("HP:100> "), "prompt was not committed on its own")
   end)
 
@@ -188,7 +198,9 @@ describe("Tests undoing the game's own line wrapping", function()
     -- last pair may be joined
     local divider = string.rep("-", 70)
     local indented = "   [1] Enter the game"
-    feedAndSettle(divider .. "\r\n" .. segment1 .. "\r\n" .. indented .. "\r\n" .. segment1 .. "\r\n" .. segment2 .. "\r\n")
+    feedAndSettle(
+      divider .. "\r\n" .. segment1 .. "\r\n" .. indented .. "\r\n" .. segment1 .. "\r\n" .. segment2 .. "\r\n"
+    )
 
     assert.is_true(bufferHasLine(divider), "full-width divider was not committed on its own")
     assert.is_true(bufferHasLine(indented), "indented line was joined although it cannot be a wrap continuation")
@@ -201,10 +213,16 @@ describe("Tests undoing the game's own line wrapping", function()
     -- the wrapped line or at the start of the continuation. Either way the
     -- rejoined line carries exactly one space:
     feedAndSettle(segment1 .. " \r\nbeta trailing.\r\n")
-    assert.is_true(bufferHasLine(segment1 .. " beta trailing."), "trailing-space wrap style was not joined into one line")
+    assert.is_true(
+      bufferHasLine(segment1 .. " beta trailing."),
+      "trailing-space wrap style was not joined into one line"
+    )
 
     feedAndSettle(segment1 .. "\r\n gamma leading.\r\n")
-    assert.is_true(bufferHasLine(segment1 .. " gamma leading."), "leading-space wrap style was not joined into one line")
+    assert.is_true(
+      bufferHasLine(segment1 .. " gamma leading."),
+      "leading-space wrap style was not joined into one line"
+    )
   end)
 
   it("leaves a padded line alone", function()
@@ -224,15 +242,24 @@ describe("Tests undoing the game's own line wrapping", function()
     -- ending in ".  " is padding:
     local sentenceGap = string.rep("x", 62) .. " alpha.  "
     feedAndSettle(sentenceGap .. "\r\n" .. segment2 .. "\r\n")
-    assert.is_true(bufferHasLine(sentenceGap .. segment2), "line ending in a sentence gap was mistaken for padding and not joined")
+    assert.is_true(
+      bufferHasLine(sentenceGap .. segment2),
+      "line ending in a sentence gap was mistaken for padding and not joined"
+    )
 
     feedAndSettle(segment1 .. "\r\nbeta done.  \r\n")
-    assert.is_true(bufferHasLine(segment1 .. " beta done.  "), "continuation ending in a sentence gap was not joined onto the held line")
+    assert.is_true(
+      bufferHasLine(segment1 .. " beta done.  "),
+      "continuation ending in a sentence gap was not joined onto the held line"
+    )
 
     -- three or more trailing spaces are still padding, sentence or not
     local sentencePadded = string.rep("x", 62) .. " alpha." .. string.rep(" ", 5)
     feedAndSettle(sentencePadded .. "\r\n" .. segment2 .. "\r\n")
-    assert.is_true(bufferHasLine(sentencePadded), "sentence-final line padded with several spaces was not committed on its own")
+    assert.is_true(
+      bufferHasLine(sentencePadded),
+      "sentence-final line padded with several spaces was not committed on its own"
+    )
   end)
 
   it("leaves list entries alone", function()
@@ -242,7 +269,7 @@ describe("Tests undoing the game's own line wrapping", function()
     local entry2 = heldLine("(3) Viking Default: what you get if you do not customise")
     local entry3 = heldLine("1. Viking Specializations lists the class specialisations")
     local entry4 = " [1366] Vikings: a barbaric fighter class."
-    verifyHeldLines({entry1, entry2, entry3})
+    verifyHeldLines({ entry1, entry2, entry3 })
     feedAndSettle(entry1 .. "\r\n" .. entry2 .. "\r\n" .. entry3 .. "\r\n" .. entry4 .. "\r\n")
 
     assert.is_true(bufferHasLine(entry1), "bracketed list entry was joined onto the entry below it")
@@ -255,10 +282,13 @@ describe("Tests undoing the game's own line wrapping", function()
     -- the marker is looked for on the continuation only, so an entry too long
     -- for one line still wraps like any other prose
     local entry = heldLine("[1364] Viking Default: if you chose not to customise your")
-    verifyHeldLines({entry})
+    verifyHeldLines({ entry })
     feedAndSettle(entry .. "\r\nviking this is what is included.\r\n")
 
-    assert.is_true(bufferHasLine(entry .. " viking this is what is included."), "a wrapped list entry was no longer joined back together")
+    assert.is_true(
+      bufferHasLine(entry .. " viking this is what is included."),
+      "a wrapped list entry was no longer joined back together"
+    )
   end)
 
   it("does not mistake prose for a list", function()
@@ -268,19 +298,31 @@ describe("Tests undoing the game's own line wrapping", function()
     local aside = heldLine("You gain a large amount of experience for your daring")
     local price = heldLine("The merchant paid for the whole shipment in advance, all")
     local reference = heldLine("More detail about the viking class can be found over")
-    verifyHeldLines({dash, aside, price, reference})
+    verifyHeldLines({ dash, aside, price, reference })
 
     feedAndSettle(dash .. "\r\n- weapons, armour and rope - at a very fair price.\r\n")
-    assert.is_true(bufferHasLine(dash .. " - weapons, armour and rope - at a very fair price."), "a spaced dash opening a continuation was mistaken for a bullet")
+    assert.is_true(
+      bufferHasLine(dash .. " - weapons, armour and rope - at a very fair price."),
+      "a spaced dash opening a continuation was mistaken for a bullet"
+    )
 
     feedAndSettle(aside .. "\r\n(2500) and the whole town cheers for you.\r\n")
-    assert.is_true(bufferHasLine(aside .. " (2500) and the whole town cheers for you."), "a parenthesised number too long to be a label was mistaken for one")
+    assert.is_true(
+      bufferHasLine(aside .. " (2500) and the whole town cheers for you."),
+      "a parenthesised number too long to be a label was mistaken for one"
+    )
 
     feedAndSettle(price .. "\r\n1364. gold was a fair price for it.\r\n")
-    assert.is_true(bufferHasLine(price .. " 1364. gold was a fair price for it."), "a number too long to be a list label was mistaken for one")
+    assert.is_true(
+      bufferHasLine(price .. " 1364. gold was a fair price for it."),
+      "a number too long to be a list label was mistaken for one"
+    )
 
     feedAndSettle(reference .. "\r\n(see help vikings) for the full list.\r\n")
-    assert.is_true(bufferHasLine(reference .. " (see help vikings) for the full list."), "a parenthesised phrase carrying no number was mistaken for a list marker")
+    assert.is_true(
+      bufferHasLine(reference .. " (see help vikings) for the full list."),
+      "a parenthesised phrase carrying no number was mistaken for a list marker"
+    )
   end)
 
   it("does not join two complete sentences", function()
@@ -294,12 +336,18 @@ describe("Tests undoing the game's own line wrapping", function()
     -- on is refused a hold outright, leaving the fit check untried:
     local verdict = "Der Logiker haelt mindestens fuenf Mal so viel aus, wie ein Hund! "
     local armour = "Die Ruestung des Logikers ist besser als Deine."
-    verifyInJoinBand({verdict}, 78)
+    verifyInJoinBand({ verdict }, 78)
     feedAndSettle(verdict .. "\r\n" .. armour .. "\r\n")
 
     assert.is_true(bufferHasLine(verdict), "sentence with room to spare left on it was not committed on its own")
-    assert.is_true(bufferHasLine(armour), "sentence following one that had room for its first word was not committed on its own")
-    assert.is_false(bufferHasLine(verdict .. armour), "two whole sentences the game sent separately were joined into one line")
+    assert.is_true(
+      bufferHasLine(armour),
+      "sentence following one that had room for its first word was not committed on its own"
+    )
+    assert.is_false(
+      bufferHasLine(verdict .. armour),
+      "two whole sentences the game sent separately were joined into one line"
+    )
   end)
 
   it("still joins hand-wrapped prose", function()
@@ -309,20 +357,30 @@ describe("Tests undoing the game's own line wrapping", function()
     -- word can look like one that would have fitted: "sich" would have ended 5
     -- columns clear of the column, and only csmServerWrapFitTolerance keeps that
     -- paragraph joined:
-    local hall = {"Der grosse Raum mit seiner niedrigen Decke und den grob geschnittenen",
-                  "Querbalken hat Platz fuer sehr viele Personen. Knarrende Dielen erzaehlen",
-                  "ueber Heldentaten laengst vergessener Abenteurer, beruehmter als mancher",
-                  "Weise unserer Zeit."}
-    local visitors = {"Abenteurer, aber auch andere Bewohner dieser Welt kommen hierher, um",
-                      "sich zu informieren, ihre Erfahrungen auszutauschen oder sich in den",
-                      "verschiedensten Wissenschaften zu verbessern."}
-    verifyInJoinBand({hall[1], hall[2], hall[3], visitors[1], visitors[2]}, 78)
+    local hall = {
+      "Der grosse Raum mit seiner niedrigen Decke und den grob geschnittenen",
+      "Querbalken hat Platz fuer sehr viele Personen. Knarrende Dielen erzaehlen",
+      "ueber Heldentaten laengst vergessener Abenteurer, beruehmter als mancher",
+      "Weise unserer Zeit.",
+    }
+    local visitors = {
+      "Abenteurer, aber auch andere Bewohner dieser Welt kommen hierher, um",
+      "sich zu informieren, ihre Erfahrungen auszutauschen oder sich in den",
+      "verschiedensten Wissenschaften zu verbessern.",
+    }
+    verifyInJoinBand({ hall[1], hall[2], hall[3], visitors[1], visitors[2] }, 78)
 
     feedAndSettle(table.concat(hall, "\r\n") .. "\r\n")
-    assert.is_true(bufferHasLine(table.concat(hall, " ")), "a hand-wrapped paragraph was no longer joined back into one line")
+    assert.is_true(
+      bufferHasLine(table.concat(hall, " ")),
+      "a hand-wrapped paragraph was no longer joined back into one line"
+    )
 
     feedAndSettle(table.concat(visitors, "\r\n") .. "\r\n")
-    assert.is_true(bufferHasLine(table.concat(visitors, " ")), "a paragraph broken well short of the wrap column was no longer joined")
+    assert.is_true(
+      bufferHasLine(table.concat(visitors, " ")),
+      "a paragraph broken well short of the wrap column was no longer joined"
+    )
   end)
 
   it("turns the join on where the continuation's first word would have ended", function()
@@ -334,14 +392,23 @@ describe("Tests undoing the game's own line wrapping", function()
     local roomToSpare = string.rep("x", 60) .. " alpha"
     local noRoom = string.rep("x", 61) .. " alpha"
     local continuation = "one more word."
-    verifyInJoinBand({roomToSpare, noRoom}, 78)
+    verifyInJoinBand({ roomToSpare, noRoom }, 78)
 
     feedAndSettle(roomToSpare .. "\r\n" .. continuation .. "\r\n")
-    assert.is_true(bufferHasLine(roomToSpare), "a line the continuation's first word would have fitted on was not committed on its own")
-    assert.is_false(bufferHasLine(roomToSpare .. " " .. continuation), "a line with room to spare for the continuation's first word was joined anyway")
+    assert.is_true(
+      bufferHasLine(roomToSpare),
+      "a line the continuation's first word would have fitted on was not committed on its own"
+    )
+    assert.is_false(
+      bufferHasLine(roomToSpare .. " " .. continuation),
+      "a line with room to spare for the continuation's first word was joined anyway"
+    )
 
     feedAndSettle(noRoom .. "\r\n" .. continuation .. "\r\n")
-    assert.is_true(bufferHasLine(noRoom .. " " .. continuation), "a line one character too long for the continuation's first word was not joined")
+    assert.is_true(
+      bufferHasLine(noRoom .. " " .. continuation),
+      "a line one character too long for the continuation's first word was not joined"
+    )
   end)
 
   it("counts kept break spaces towards the fit", function()
@@ -353,13 +420,19 @@ describe("Tests undoing the game's own line wrapping", function()
     local sentenceGap = string.rep("x", 59) .. " alpha.  "
     local spacedBothSides = string.rep("x", 60) .. " alpha "
     local continuation = "one more word."
-    verifyInJoinBand({sentenceGap, spacedBothSides}, 78)
+    verifyInJoinBand({ sentenceGap, spacedBothSides }, 78)
 
     feedAndSettle(sentenceGap .. "\r\n" .. continuation .. "\r\n")
-    assert.is_true(bufferHasLine(sentenceGap .. continuation), "the two spaces a game leaves after a sentence were not counted towards where the next word would have gone")
+    assert.is_true(
+      bufferHasLine(sentenceGap .. continuation),
+      "the two spaces a game leaves after a sentence were not counted towards where the next word would have gone"
+    )
 
     feedAndSettle(spacedBothSides .. "\r\n " .. continuation .. "\r\n")
-    assert.is_true(bufferHasLine(spacedBothSides .. " " .. continuation), "a break space kept on both lines was not counted towards where the next word would have gone")
+    assert.is_true(
+      bufferHasLine(spacedBothSides .. " " .. continuation),
+      "a break space kept on both lines was not counted towards where the next word would have gone"
+    )
   end)
 
   it("measures a joined paragraph by the game line it ends on", function()
@@ -375,12 +448,18 @@ describe("Tests undoing the game's own line wrapping", function()
     local opening = "Dieser Logiker mustert Dich abschaetzend und schnaubt dann veraechtlich"
     local verdict = "Der Logiker haelt mindestens fuenf Mal so viel aus, wie ein Hund! "
     local armour = "Die Ruestung des Logikers ist besser als Deine."
-    verifyInJoinBand({opening, verdict}, 78)
+    verifyInJoinBand({ opening, verdict }, 78)
     feedAndSettle(opening .. "\r\n" .. verdict .. "\r\n" .. armour .. "\r\n")
 
-    assert.is_true(bufferHasLine(opening .. " " .. verdict), "the wrapped opening was not joined onto the line that continues it")
+    assert.is_true(
+      bufferHasLine(opening .. " " .. verdict),
+      "the wrapped opening was not joined onto the line that continues it"
+    )
     assert.is_true(bufferHasLine(armour), "a whole sentence after a joined paragraph was not committed on its own")
-    assert.is_false(bufferHasLine(opening .. " " .. verdict .. armour), "a whole sentence was glued onto a paragraph its first word would have fitted the last line of")
+    assert.is_false(
+      bufferHasLine(opening .. " " .. verdict .. armour),
+      "a whole sentence was glued onto a paragraph its first word would have fitted the last line of"
+    )
   end)
 
   -- The cases below carry MorgenGrauen's output verbatim, as a player reported
@@ -393,9 +472,11 @@ describe("Tests undoing the game's own line wrapping", function()
     -- the description's last line ends a sentence right at the wrap column, and
     -- the exits line that follows is a line of its own - joining it on broke the
     -- reporter's trigger anchored to the start of it:
-    local description = {"Du befindest Dich auf einem Trampelpfad, der sich in Ost-West-Richtung durch",
-                         "den Wald schlaengelt. Im Westen fuehrt er auf eine Kreuzung, nach Osten",
-                         "scheint es tiefer in den Wald zu gehen. Im Sueden siehst Du eine Lichtung."}
+    local description = {
+      "Du befindest Dich auf einem Trampelpfad, der sich in Ost-West-Richtung durch",
+      "den Wald schlaengelt. Im Westen fuehrt er auf eine Kreuzung, nach Osten",
+      "scheint es tiefer in den Wald zu gehen. Im Sueden siehst Du eine Lichtung.",
+    }
     local exits = "Es gibt drei sichtbare Ausgaenge: osten, westen und sueden."
     local object = "Das Haus von Bambel."
     -- including the sentence-final line, so that its refusal is what leaves the
@@ -403,7 +484,10 @@ describe("Tests undoing the game's own line wrapping", function()
     verifyInJoinBand(description, 78)
     feedAndSettle(table.concat(description, "\r\n") .. "\r\n" .. exits .. "\r\n" .. object .. "\r\n")
 
-    assert.is_true(bufferHasLine(table.concat(description, " ")), "the wrapped room description was not joined back into one line")
+    assert.is_true(
+      bufferHasLine(table.concat(description, " ")),
+      "the wrapped room description was not joined back into one line"
+    )
     assert.is_true(bufferHasLine(exits), "the exits line was joined onto the room description")
     assert.is_true(bufferHasLine(object), "the object line was not committed on its own")
   end)
@@ -414,23 +498,42 @@ describe("Tests undoing the game's own line wrapping", function()
     -- and the object below it was joined onto it. The description ends a
     -- sentence at the column too, so it is committed in the two halves the game
     -- broke at a sentence boundary rather than as one paragraph:
-    local description = {"Auf den lichten Aesten der Eichen und Birken sitzen viele grosse und kleine",
-                         "Voegel. Sie singen ihre Lieder und scheinen sich ueber Dich zu amuesieren.",
-                         "Scheinbar wollen sie Dir etwas mitteilen. Im Sueden hoerst Du ein sanftes",
-                         "Plaetschern. Direkt vor Dir befindet sich ein Findlingsstein."}
+    local description = {
+      "Auf den lichten Aesten der Eichen und Birken sitzen viele grosse und kleine",
+      "Voegel. Sie singen ihre Lieder und scheinen sich ueber Dich zu amuesieren.",
+      "Scheinbar wollen sie Dir etwas mitteilen. Im Sueden hoerst Du ein sanftes",
+      "Plaetschern. Direkt vor Dir befindet sich ein Findlingsstein.",
+    }
     local ground = "Nach Sueden hin wird das Gelaende felsiger."
     local exits = "Es gibt vier sichtbare Ausgaenge: westen, sueden, suedosten und nordwesten."
     local house = "Das Haus von Flinx."
     local beam = "Ein Lichtstrahl."
-    verifyInJoinBand({description[1], description[2], description[3], exits}, 78)
-    feedAndSettle(table.concat(description, "\r\n") .. "\r\n" .. ground .. "\r\n" .. exits .. "\r\n" .. house .. "\r\n" .. beam .. "\r\n")
+    verifyInJoinBand({ description[1], description[2], description[3], exits }, 78)
+    feedAndSettle(
+      table.concat(description, "\r\n")
+        .. "\r\n"
+        .. ground
+        .. "\r\n"
+        .. exits
+        .. "\r\n"
+        .. house
+        .. "\r\n"
+        .. beam
+        .. "\r\n"
+    )
 
     assert.is_true(bufferHasLine(exits), "the exits line was held and the object below it joined onto it")
     assert.is_false(bufferHasLine(exits .. " " .. house), "the object line was joined onto the exits line")
     assert.is_true(bufferHasLine(house), "the object line was not committed on its own")
     assert.is_true(bufferHasLine(beam), "the second object line was not committed on its own")
-    assert.is_true(bufferHasLine(description[1] .. " " .. description[2]), "the first two description lines were not joined")
-    assert.is_true(bufferHasLine(description[3] .. " " .. description[4]), "the last two description lines were not joined")
+    assert.is_true(
+      bufferHasLine(description[1] .. " " .. description[2]),
+      "the first two description lines were not joined"
+    )
+    assert.is_true(
+      bufferHasLine(description[3] .. " " .. description[4]),
+      "the last two description lines were not joined"
+    )
     assert.is_true(bufferHasLine(ground), "the line below the description was not committed on its own")
   end)
 
@@ -444,7 +547,7 @@ describe("Tests undoing the game's own line wrapping", function()
     configure("undoServerWrapWidth", 77)
     local exits = "Es gibt vier sichtbare Ausgaenge: oben, norden, westen und sueden."
     local board = "Ein Partybrett."
-    verifyInJoinBand({exits}, 77)
+    verifyInJoinBand({ exits }, 77)
     feedAndSettle(exits .. "\r\n" .. board .. "\r\n")
 
     assert.is_true(bufferHasLine(exits), "the exits line was not committed on its own")
@@ -458,31 +561,56 @@ describe("Tests undoing the game's own line wrapping", function()
     -- Those lines end mid-sentence at the wrap column, so nothing but the
     -- repeated prefix tells them from wrapped prose - joining them embedded the
     -- prefix mid-paragraph and swallowed the room description that followed:
-    local tell = {"Anne teilt Dir mit: Willkommen in Moron, Gast7.",
-                  "Anne teilt Dir mit: In dieser Stadt lauern viele Gefahren auf Dich. Wenn Du",
-                  "Anne teilt Dir mit: Dich hier nicht auskennst, solltest Du sehr vorsichtig",
-                  "Anne teilt Dir mit: sein. Am besten ist es, wenn Du mich zuerst besuchst. Ich",
-                  "Anne teilt Dir mit: halte mich in der Bibliothek im Sueden von Moron auf."}
-    local description = {"Du bist bis zu den ersten Haeusern der Stadt vorgedrungen. Rechts und links",
-                         "neben Dir befinden sich die Ueberreste von mehreren steinernen Saeulen, die",
-                         "moeglicherweise einmal ein Tor gebildet haben. Doch jetzt sind hier nur noch",
-                         "Truemmer zu finden... Aber obwohl hier nur Ruinen stehen, wirst Du einfach das",
-                         "Gefuehl nicht los, dass diese Stadt doch nicht so unbewohnt ist, wie sie bis",
-                         "jetzt aussieht. Die Strasse fuehrt noch ein Stueck nach Westen in die Stadt",
-                         "hinein, wo sie dann nach Sueden abknickt."}
+    local tell = {
+      "Anne teilt Dir mit: Willkommen in Moron, Gast7.",
+      "Anne teilt Dir mit: In dieser Stadt lauern viele Gefahren auf Dich. Wenn Du",
+      "Anne teilt Dir mit: Dich hier nicht auskennst, solltest Du sehr vorsichtig",
+      "Anne teilt Dir mit: sein. Am besten ist es, wenn Du mich zuerst besuchst. Ich",
+      "Anne teilt Dir mit: halte mich in der Bibliothek im Sueden von Moron auf.",
+    }
+    local description = {
+      "Du bist bis zu den ersten Haeusern der Stadt vorgedrungen. Rechts und links",
+      "neben Dir befinden sich die Ueberreste von mehreren steinernen Saeulen, die",
+      "moeglicherweise einmal ein Tor gebildet haben. Doch jetzt sind hier nur noch",
+      "Truemmer zu finden... Aber obwohl hier nur Ruinen stehen, wirst Du einfach das",
+      "Gefuehl nicht los, dass diese Stadt doch nicht so unbewohnt ist, wie sie bis",
+      "jetzt aussieht. Die Strasse fuehrt noch ein Stueck nach Westen in die Stadt",
+      "hinein, wo sie dann nach Sueden abknickt.",
+    }
     local exits = "Es gibt zwei sichtbare Ausgaenge: osten und westen."
     -- every line the game could have held; the tell's first is short enough that
     -- it never was a candidate
-    verifyInJoinBand({tell[2], tell[3], tell[4], tell[5],
-                      description[1], description[2], description[3], description[4], description[5], description[6]}, 78)
-    feedAndSettle(table.concat(tell, "\r\n") .. "\r\n" .. table.concat(description, "\r\n") .. "\r\n" .. exits .. "\r\n")
+    verifyInJoinBand({
+      tell[2],
+      tell[3],
+      tell[4],
+      tell[5],
+      description[1],
+      description[2],
+      description[3],
+      description[4],
+      description[5],
+      description[6],
+    }, 78)
+    feedAndSettle(
+      table.concat(tell, "\r\n") .. "\r\n" .. table.concat(description, "\r\n") .. "\r\n" .. exits .. "\r\n"
+    )
 
     for index, line in ipairs(tell) do
-      assert.is_true(bufferHasLine(line), "line " .. index .. " of the tell was not committed exactly as the game sent it")
+      assert.is_true(
+        bufferHasLine(line),
+        "line " .. index .. " of the tell was not committed exactly as the game sent it"
+      )
     end
-    assert.are.equal(#tell, bufferLinesContaining("Anne teilt Dir mit:"),
-      "the tell's prefix ended up on a different number of lines than the game sent it on")
-    assert.is_true(bufferHasLine(table.concat(description, " ")), "the room description below the tell was not joined into one line of its own")
+    assert.are.equal(
+      #tell,
+      bufferLinesContaining("Anne teilt Dir mit:"),
+      "the tell's prefix ended up on a different number of lines than the game sent it on"
+    )
+    assert.is_true(
+      bufferHasLine(table.concat(description, " ")),
+      "the room description below the tell was not joined into one line of its own"
+    )
     assert.is_true(bufferHasLine(exits), "the exits line was not committed on its own")
   end)
 
@@ -494,13 +622,19 @@ describe("Tests undoing the game's own line wrapping", function()
     local oneSpace = string.rep("x", 62) .. " alpha. "
     local twoSpaces = string.rep("x", 61) .. " alpha.  "
     local continuation = "one more word."
-    verifyInJoinBand({oneSpace, twoSpaces}, 78)
+    verifyInJoinBand({ oneSpace, twoSpaces }, 78)
 
     feedAndSettle(oneSpace .. "\r\n" .. continuation .. "\r\n")
-    assert.is_true(bufferHasLine(oneSpace .. continuation), "a sentence whose break space the game kept was not joined onto its continuation")
+    assert.is_true(
+      bufferHasLine(oneSpace .. continuation),
+      "a sentence whose break space the game kept was not joined onto its continuation"
+    )
 
     feedAndSettle(twoSpaces .. "\r\n" .. continuation .. "\r\n")
-    assert.is_true(bufferHasLine(twoSpaces .. continuation), "a sentence followed by the wide gap such a game leaves was not joined onto its continuation")
+    assert.is_true(
+      bufferHasLine(twoSpaces .. continuation),
+      "a sentence followed by the wide gap such a game leaves was not joined onto its continuation"
+    )
   end)
 
   it("joins a continuation that opens with the same single word", function()
@@ -510,10 +644,13 @@ describe("Tests undoing the game's own line wrapping", function()
     -- article, and those lines are wrapped like any other:
     local held = "Du bist bis zu den ersten Haeusern der Stadt vorgedrungen, hinter denen"
     local continuation = "Du weitere Gebaeude vermutest."
-    verifyInJoinBand({held}, 78)
+    verifyInJoinBand({ held }, 78)
     feedAndSettle(held .. "\r\n" .. continuation .. "\r\n")
 
-    assert.is_true(bufferHasLine(held .. " " .. continuation), "a continuation sharing one opening word with the line above was mistaken for a re-prefixed message")
+    assert.is_true(
+      bufferHasLine(held .. " " .. continuation),
+      "a continuation sharing one opening word with the line above was mistaken for a re-prefixed message"
+    )
   end)
 
   it("flushes a continuation that opens with the same two words", function()
@@ -525,12 +662,15 @@ describe("Tests undoing the game's own line wrapping", function()
     -- that can part the two:
     local held = "Anne sagt: Ich habe Dir etwas Wichtiges zu erzaehlen, mein lieber Gast"
     local continuation = "Anne sagt: Hoere gut zu, denn es ist wichtig."
-    verifyInJoinBand({held}, 78)
+    verifyInJoinBand({ held }, 78)
     feedAndSettle(held .. "\r\n" .. continuation .. "\r\n")
 
     assert.is_true(bufferHasLine(held), "the first line of a re-prefixed message was not committed on its own")
     assert.is_true(bufferHasLine(continuation), "the second line of a re-prefixed message was not committed on its own")
-    assert.is_false(bufferHasLine(held .. " " .. continuation), "two lines the game re-prefixed with the same two words were joined into one")
+    assert.is_false(
+      bufferHasLine(held .. " " .. continuation),
+      "two lines the game re-prefixed with the same two words were joined into one"
+    )
   end)
 
   it("joins the leading-space wrap style over a repeated first word", function()
@@ -543,11 +683,14 @@ describe("Tests undoing the game's own line wrapping", function()
     local first = "Vor Dir liegt ein weiter Platz, auf dem sich zahlreiche Haendler und"
     local second = " der Laerm der vielen Stimmen dringt von allen Seiten auf Dich ein, und"
     local third = " der Duft von Gewuerzen liegt in der Luft."
-    verifyInJoinBand({first, second}, 78)
+    verifyInJoinBand({ first, second }, 78)
     feedAndSettle(first .. "\r\n" .. second .. "\r\n" .. third .. "\r\n")
 
     -- the continuations carry the break space themselves, so the join adds none
-    assert.is_true(bufferHasLine(first .. second .. third), "a paragraph wrapped in the leading-space style was parted where its lines repeat one word")
+    assert.is_true(
+      bufferHasLine(first .. second .. third),
+      "a paragraph wrapped in the leading-space style was parted where its lines repeat one word"
+    )
   end)
 
   it("compares a continuation against the game line it follows, not the paragraph", function()
@@ -560,10 +703,13 @@ describe("Tests undoing the game's own line wrapping", function()
     local first = "Du siehst hier einen breiten Weg, der sich nach Norden hin zwischen"
     local second = "hohen Felsen hindurchzieht, und was Du dort in der weiten Ferne erkennst:"
     local third = "Du siehst nur Staub und Steine."
-    verifyInJoinBand({first, second}, 78)
+    verifyInJoinBand({ first, second }, 78)
     feedAndSettle(first .. "\r\n" .. second .. "\r\n" .. third .. "\r\n")
 
-    assert.is_true(bufferHasLine(first .. " " .. second .. " " .. third), "a continuation was compared against the opening of the paragraph rather than of the game line above it")
+    assert.is_true(
+      bufferHasLine(first .. " " .. second .. " " .. third),
+      "a continuation was compared against the opening of the paragraph rather than of the game line above it"
+    )
   end)
 
   it("holds a segment ending mid-sentence and refuses one ending on any sentence mark", function()
@@ -573,19 +719,28 @@ describe("Tests undoing the game's own line wrapping", function()
     -- sentence, not every mark a wrapped line may end on:
     local clause = "Er blickt Dich freundlich an, nickt Dir kurz zu und laechelt dabei,"
     local rest = "waehrend er Dir die Hand reicht."
-    verifyInJoinBand({clause}, 78)
+    verifyInJoinBand({ clause }, 78)
     feedAndSettle(clause .. "\r\n" .. rest .. "\r\n")
-    assert.is_true(bufferHasLine(clause .. " " .. rest), "a line wrapped on a comma was refused a hold as though it had ended a sentence")
+    assert.is_true(
+      bufferHasLine(clause .. " " .. rest),
+      "a line wrapped on a comma was refused a hold as though it had ended a sentence"
+    )
 
     -- and a sentence finished with something other than a full stop is refused
     -- just the same; "Der" would not have fitted on it, so nothing else parts
     -- these two
     local exclaimed = "Was fuer ein wunderschoener Tag, denk Dir nur, was noch alles kommt!"
     local follower = "Der Tag beginnt gut."
-    verifyInJoinBand({exclaimed}, 78)
+    verifyInJoinBand({ exclaimed }, 78)
     feedAndSettle(exclaimed .. "\r\n" .. follower .. "\r\n")
     assert.is_true(bufferHasLine(exclaimed), "a line ending on an exclamation mark was not committed on its own")
-    assert.is_true(bufferHasLine(follower), "the line after one ending on an exclamation mark was not committed on its own")
-    assert.is_false(bufferHasLine(exclaimed .. " " .. follower), "a line the game ended on an exclamation mark had the next line joined onto it")
+    assert.is_true(
+      bufferHasLine(follower),
+      "the line after one ending on an exclamation mark was not committed on its own"
+    )
+    assert.is_false(
+      bufferHasLine(exclaimed .. " " .. follower),
+      "a line the game ended on an exclamation mark had the next line joined onto it"
+    )
   end)
 end)

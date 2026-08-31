@@ -9,21 +9,22 @@
 -- UserWindows use also all the functions of MiniConsole as they contain one
 Geyser.UserWindow = Geyser.MiniConsole:new({
   name = "UserWindowClass",
-  color = "black"})
+  color = "black",
+})
 
 --Set Constraints and use main Window (Geyser) as reference
 function Geyser.UserWindow:set_uwconstr()
-  Geyser.set_constraints(self,self,Geyser)
+  Geyser.set_constraints(self, self, Geyser)
 end
 --- Moves the UserWindow:
 -- is set to floating state if this function is used
 --@param x x-coordinate
 --@param y y-coordinate
-function Geyser.UserWindow:move(x,y)
+function Geyser.UserWindow:move(x, y)
   self.x = x or self.x
   self.y = y or self.y
   self:set_uwconstr()
-  moveWindow(self.name,self.get_x(),self.get_y())
+  moveWindow(self.name, self.get_x(), self.get_y())
   self:resetWindow()
 end
 
@@ -31,11 +32,11 @@ end
 -- only works if your UserWindow is in floating state
 --@param width userwindow widh
 --@param height userwindow height
-function Geyser.UserWindow:resize(width,height)
+function Geyser.UserWindow:resize(width, height)
   self.width = width or self.width
   self.height = height or self.height
   self:set_uwconstr()
-  resizeWindow(self.name,self.get_width(),self.get_height())
+  resizeWindow(self.name, self.get_width(), self.get_height())
   self:resetWindow()
 end
 
@@ -122,9 +123,12 @@ function Geyser.UserWindow:type_delete()
   else
     -- anything else put in the root container by hand is still using it, so it
     -- has to stay - but it measures a user window that is about to be gone
-    debugc(string.format(
-      "Geyser.UserWindow: the root container of '%s' still holds other objects, so it is being left in place - it will report the main window's size from now on, because the user window it measured has been deleted",
-      self.name))
+    debugc(
+      string.format(
+        "Geyser.UserWindow: the root container of '%s' still holds other objects, so it is being left in place - it will report the main window's size from now on, because the user window it measured has been deleted",
+        self.name
+      )
+    )
   end
 end
 
@@ -173,7 +177,7 @@ function Geyser.UserWindow:new(cons)
 
   -- Set any defined colors
   Geyser.Color.applyColors(me)
-  
+
   if cons.fontSize then
     me:setFontSize(cons.fontSize)
   else
@@ -193,7 +197,7 @@ function Geyser.UserWindow:new(cons)
   elseif cons.wrapAt then
     me:setWrap(cons.wrapAt)
   end
-  
+
   --Resizing not possible if docked
   --Docking position not choosable if restoreLayout don't move/resize at start
   if me.docked == false and me.restoreLayout == false then
@@ -207,9 +211,11 @@ function Geyser.UserWindow:new(cons)
   else
     me:resetTitle()
   end
-  
+
   me:resetWindow()
-  if me.stylesheet then me:setStyleSheet() end
+  if me.stylesheet then
+    me:setStyleSheet()
+  end
 
   -- Geyser.Container:new() settles the hidden constraint before there is a widget to hide, so the hide is made good here
   if me.hidden or me.auto_hidden then
@@ -223,7 +229,7 @@ function Geyser.UserWindow:new(cons)
 end
 
 --- Overridden constructor to use add2
-function Geyser.UserWindow:new2 (cons)
+function Geyser.UserWindow:new2(cons)
   cons = cons or {}
   cons.useAdd2 = true
   local me = self:new(cons)

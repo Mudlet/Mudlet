@@ -30,15 +30,21 @@ describe("Media playback functions validate their parameters", function()
   -- is started: each returns before the media engine is touched.
   describe("playSoundFile", function()
     it("raises a Lua error when called with no arguments", function()
-      assertArgError(function() playSoundFile() end, "playSoundFile: need at least one argument")
+      assertArgError(function()
+        playSoundFile()
+      end, "playSoundFile: need at least one argument")
     end)
 
     it("raises a Lua error when the table form has no name", function()
-      assert.has_error(function() playSoundFile({}) end)
+      assert.has_error(function()
+        playSoundFile({})
+      end)
     end)
 
     it("raises a Lua error for a negative fadein in the table form", function()
-      assert.has_error(function() playSoundFile({name = "x.wav", fadein = -1}) end)
+      assert.has_error(function()
+        playSoundFile({ name = "x.wav", fadein = -1 })
+      end)
     end)
 
     it("returns nil when the ordered form supplies no filename", function()
@@ -50,21 +56,29 @@ describe("Media playback functions validate their parameters", function()
 
   describe("playMusicFile", function()
     it("raises a Lua error when called with no arguments", function()
-      assertArgError(function() playMusicFile() end, "playMusicFile: need at least one argument")
+      assertArgError(function()
+        playMusicFile()
+      end, "playMusicFile: need at least one argument")
     end)
 
     it("raises a Lua error when the table form has no name", function()
-      assert.has_error(function() playMusicFile({}) end)
+      assert.has_error(function()
+        playMusicFile({})
+      end)
     end)
 
     it("raises a Lua error for a negative fadeout in the table form", function()
-      assert.has_error(function() playMusicFile({name = "x.mp3", fadeout = -5}) end)
+      assert.has_error(function()
+        playMusicFile({ name = "x.mp3", fadeout = -5 })
+      end)
     end)
 
     it("raises a clean, non-doubled error when continue is not a boolean", function()
       -- Regression #9547 (same defect class): the field publicName must not carry
       -- "must be boolean", which errorArgumentType would then double.
-      local ok, err = pcall(function() playMusicFile({name = "x.mp3", continue = "yes"}) end)
+      local ok, err = pcall(function()
+        playMusicFile({ name = "x.mp3", continue = "yes" })
+      end)
       assert.is_false(ok)
       assert.is_true(contains(err, "value for continue as boolean expected, got string!"), tostring(err))
       assert.is_false(contains(err, "must be boolean"), tostring(err))
@@ -75,21 +89,27 @@ describe("Media playback functions validate their parameters", function()
     -- playVideoFileAsTableArgument shared the identical doubled-message defect on
     -- its continue/stream/close boolean fields (#9547 defect class).
     it("raises a clean, non-doubled error when continue is not a boolean", function()
-      local ok, err = pcall(function() playVideoFile({name = "x.mp4", continue = "yes"}) end)
+      local ok, err = pcall(function()
+        playVideoFile({ name = "x.mp4", continue = "yes" })
+      end)
       assert.is_false(ok)
       assert.is_true(contains(err, "value for continue as boolean expected, got string!"), tostring(err))
       assert.is_false(contains(err, "must be boolean"), tostring(err))
     end)
 
     it("raises a clean, non-doubled error when stream is not a boolean", function()
-      local ok, err = pcall(function() playVideoFile({name = "x.mp4", stream = "yes"}) end)
+      local ok, err = pcall(function()
+        playVideoFile({ name = "x.mp4", stream = "yes" })
+      end)
       assert.is_false(ok)
       assert.is_true(contains(err, "value for stream as boolean expected, got string!"), tostring(err))
       assert.is_false(contains(err, "must be boolean"), tostring(err))
     end)
 
     it("raises a clean, non-doubled error when close is not a boolean", function()
-      local ok, err = pcall(function() playVideoFile({name = "x.mp4", close = "yes"}) end)
+      local ok, err = pcall(function()
+        playVideoFile({ name = "x.mp4", close = "yes" })
+      end)
       assert.is_false(ok)
       assert.is_true(contains(err, "value for close as boolean expected, got string!"), tostring(err))
       assert.is_false(contains(err, "must be boolean"), tostring(err))
@@ -100,7 +120,9 @@ describe("Media playback functions validate their parameters", function()
     it("raises a clean, non-doubled error when priority is not an integer", function()
       -- Regression #9547 (same defect class): "value for priority must be integer"
       -- doubled into "must be integer as number expected".
-      local ok, err = pcall(function() getPlayingSounds({priority = "high"}) end)
+      local ok, err = pcall(function()
+        getPlayingSounds({ priority = "high" })
+      end)
       assert.is_false(ok)
       assert.is_true(contains(err, "value for priority as number expected, got string!"), tostring(err))
       assert.is_false(contains(err, "must be integer"), tostring(err))
@@ -109,13 +131,17 @@ describe("Media playback functions validate their parameters", function()
 
   describe("pauseSounds", function()
     it("raises a Lua error when the single argument is not a table", function()
-      assertArgError(function() pauseSounds(5) end, "pauseSounds: needs to be a table")
+      assertArgError(function()
+        pauseSounds(5)
+      end, "pauseSounds: needs to be a table")
     end)
   end)
 
   describe("pauseMusic", function()
     it("raises a Lua error when the single argument is not a table", function()
-      assertArgError(function() pauseMusic("all") end, "pauseMusic: needs to be a table")
+      assertArgError(function()
+        pauseMusic("all")
+      end, "pauseMusic: needs to be a table")
     end)
   end)
 
@@ -126,13 +152,17 @@ describe("Media playback functions validate their parameters", function()
     end)
 
     it("raises a Lua error for a negative fadeout in the table form", function()
-      assert.has_error(function() stopSounds({fadeout = -1}) end)
+      assert.has_error(function()
+        stopSounds({ fadeout = -1 })
+      end)
     end)
 
     it("raises a clean, non-doubled error when priority is not an integer", function()
       -- Regression #9547 (same defect class, adjacent field in this very parser):
       -- "value for priority must be integer" doubled the type constraint.
-      local ok, err = pcall(function() stopSounds({priority = "high"}) end)
+      local ok, err = pcall(function()
+        stopSounds({ priority = "high" })
+      end)
       assert.is_false(ok)
       assert.is_true(contains(err, "value for priority as number expected, got string!"), tostring(err))
       assert.is_false(contains(err, "must be integer"), tostring(err))
@@ -143,7 +173,9 @@ describe("Media playback functions validate their parameters", function()
       -- publicName previously carried "must be boolean" while the type validator
       -- also appended "as boolean expected"). It is reported like the sibling
       -- table-field validations in this parser (fadeout, name, key).
-      local ok, err = pcall(function() stopSounds({fadeaway = "yes"}) end)
+      local ok, err = pcall(function()
+        stopSounds({ fadeaway = "yes" })
+      end)
       assert.is_false(ok)
       assert.is_true(contains(err, "value for fadeaway as boolean expected, got string!"), tostring(err))
       assert.is_false(contains(err, "must be boolean"), tostring(err))
@@ -154,7 +186,9 @@ describe("Media playback functions validate their parameters", function()
   -- doubled-"boolean" fadeaway defect fixed for stopSounds (#9547).
   describe("stopMusic", function()
     it("raises a clean, non-doubled error when fadeaway is not a boolean", function()
-      local ok, err = pcall(function() stopMusic({fadeaway = "yes"}) end)
+      local ok, err = pcall(function()
+        stopMusic({ fadeaway = "yes" })
+      end)
       assert.is_false(ok)
       assert.is_true(contains(err, "value for fadeaway as boolean expected, got string!"), tostring(err))
       assert.is_false(contains(err, "must be boolean"), tostring(err))
@@ -163,7 +197,9 @@ describe("Media playback functions validate their parameters", function()
 
   describe("stopVideos", function()
     it("raises a clean, non-doubled error when fadeaway is not a boolean", function()
-      local ok, err = pcall(function() stopVideos({fadeaway = "yes"}) end)
+      local ok, err = pcall(function()
+        stopVideos({ fadeaway = "yes" })
+      end)
       assert.is_false(ok)
       assert.is_true(contains(err, "value for fadeaway as boolean expected, got string!"), tostring(err))
       assert.is_false(contains(err, "must be boolean"), tostring(err))
@@ -178,14 +214,22 @@ describe("Media load functions validate their parameters", function()
   -- here names a file that exists, so no preload gets as far as the media
   -- engine.
   it("each raises a Lua error when called with no arguments", function()
-    assertArgError(function() loadMusicFile() end, "loadMusicFile: need at least one argument")
-    assertArgError(function() loadSoundFile() end, "loadSoundFile: need at least one argument")
-    assertArgError(function() loadVideoFile() end, "loadVideoFile: need at least one argument")
+    assertArgError(function()
+      loadMusicFile()
+    end, "loadMusicFile: need at least one argument")
+    assertArgError(function()
+      loadSoundFile()
+    end, "loadSoundFile: need at least one argument")
+    assertArgError(function()
+      loadVideoFile()
+    end, "loadVideoFile: need at least one argument")
   end)
 
   it("loadVideoFile raises a Lua error when its argument is not a table", function()
     -- the video calls take the table form only
-    assertArgError(function() loadVideoFile("busted-media-absent.mkv") end, "loadVideoFile: needs to be a table")
+    assertArgError(function()
+      loadVideoFile("busted-media-absent.mkv")
+    end, "loadVideoFile: needs to be a table")
   end)
 
   it("the ordered form returns nil when it is given no file name", function()
@@ -200,18 +244,30 @@ describe("Media load functions validate their parameters", function()
 
   it("the table form raises a Lua error naming the load that was called", function()
     -- the three share one table parser, so each has to name its own caller
-    assertArgError(function() loadSoundFile({}) end, "loadSoundFile: missing name")
-    assertArgError(function() loadMusicFile({}) end, "loadMusicFile: missing name")
-    assertArgError(function() loadVideoFile({}) end, "loadVideoFile: missing name")
+    assertArgError(function()
+      loadSoundFile({})
+    end, "loadSoundFile: missing name")
+    assertArgError(function()
+      loadMusicFile({})
+    end, "loadMusicFile: missing name")
+    assertArgError(function()
+      loadVideoFile({})
+    end, "loadVideoFile: missing name")
   end)
 
   it("the ordered form raises a Lua error when the url is not a string", function()
-    assertArgError(function() loadSoundFile("busted-media-absent.wav", {}) end, "url as string expected, got table!")
+    assertArgError(function()
+      loadSoundFile("busted-media-absent.wav", {})
+    end, "url as string expected, got table!")
   end)
 
   it("the table form raises a Lua error for a wrongly typed name or url", function()
-    assertArgError(function() loadMusicFile({name = {}}) end, "value for name as string expected, got table!")
-    assertArgError(function() loadMusicFile({name = "busted-media-absent.mp3", url = {}}) end, "value for url as string expected, got table!")
+    assertArgError(function()
+      loadMusicFile({ name = {} })
+    end, "value for name as string expected, got table!")
+    assertArgError(function()
+      loadMusicFile({ name = "busted-media-absent.mp3", url = {} })
+    end, "value for url as string expected, got table!")
   end)
 end)
 
@@ -220,49 +276,95 @@ describe("Media query and stop functions validate their parameters", function()
   -- and nothing else; the sound and music queries and stops take either form.
   -- pauseSounds and pauseMusic have this same refusal checked above
   local tableOnly = {
-    "getPlayingVideos", "getPausedSounds", "getPausedMusic", "getPausedVideos",
-    "pauseVideos", "stopVideos",
+    "getPlayingVideos",
+    "getPausedSounds",
+    "getPausedMusic",
+    "getPausedVideos",
+    "pauseVideos",
+    "stopVideos",
   }
 
   for _, fnName in ipairs(tableOnly) do
     it(fnName .. " raises a Lua error when its argument is not a table", function()
-      assertArgError(function() _G[fnName](5) end, fnName .. ": needs to be a table")
+      assertArgError(function()
+        _G[fnName](5)
+      end, fnName .. ": needs to be a table")
     end)
   end
 
   it("the ordered query forms raise a Lua error for a wrongly typed filter", function()
-    assertArgError(function() getPlayingSounds("busted-media-absent.wav", {}) end, "key as string expected, got table!")
-    assertArgError(function() getPlayingSounds("busted-media-absent.wav", "k", {}) end, "tag as string expected, got table!")
-    assertArgError(function() getPlayingSounds("busted-media-absent.wav", "k", "t", "loud") end, "priority as number expected, got string!")
-    assertArgError(function() getPlayingMusic("busted-media-absent.mp3", {}) end, "key as string expected, got table!")
+    assertArgError(function()
+      getPlayingSounds("busted-media-absent.wav", {})
+    end, "key as string expected, got table!")
+    assertArgError(function()
+      getPlayingSounds("busted-media-absent.wav", "k", {})
+    end, "tag as string expected, got table!")
+    assertArgError(function()
+      getPlayingSounds("busted-media-absent.wav", "k", "t", "loud")
+    end, "priority as number expected, got string!")
+    assertArgError(function()
+      getPlayingMusic("busted-media-absent.mp3", {})
+    end, "key as string expected, got table!")
   end)
 
   it("the table query forms raise a Lua error for a wrongly typed filter", function()
-    assertArgError(function() getPlayingMusic({name = {}}) end, "value for name as string expected, got table!")
-    assertArgError(function() getPausedSounds({key = {}}) end, "value for key as string expected, got table!")
-    assertArgError(function() getPausedMusic({tag = {}}) end, "value for tag as string expected, got table!")
-    assertArgError(function() getPausedVideos({name = {}}) end, "value for name as string expected, got table!")
-    assertArgError(function() getPlayingVideos({key = {}}) end, "value for key as string expected, got table!")
+    assertArgError(function()
+      getPlayingMusic({ name = {} })
+    end, "value for name as string expected, got table!")
+    assertArgError(function()
+      getPausedSounds({ key = {} })
+    end, "value for key as string expected, got table!")
+    assertArgError(function()
+      getPausedMusic({ tag = {} })
+    end, "value for tag as string expected, got table!")
+    assertArgError(function()
+      getPausedVideos({ name = {} })
+    end, "value for name as string expected, got table!")
+    assertArgError(function()
+      getPlayingVideos({ key = {} })
+    end, "value for key as string expected, got table!")
   end)
 
   it("the ordered stop forms raise a Lua error for a wrongly typed argument", function()
-    assertArgError(function() stopSounds("busted-media-absent.wav", "k", "t", "loud") end, "priority as number expected, got string!")
-    assertArgError(function() stopSounds("busted-media-absent.wav", "k", "t", 10, "yes") end, "fadeaway as boolean expected, got string!")
-    assertArgError(function() stopMusic("busted-media-absent.mp3", "k", "t", "yes") end, "fadeaway as boolean expected, got string!")
-    assertArgError(function() stopMusic("busted-media-absent.mp3", "k", "t", true, -1) end, "bad argument range for fadeout")
+    assertArgError(function()
+      stopSounds("busted-media-absent.wav", "k", "t", "loud")
+    end, "priority as number expected, got string!")
+    assertArgError(function()
+      stopSounds("busted-media-absent.wav", "k", "t", 10, "yes")
+    end, "fadeaway as boolean expected, got string!")
+    assertArgError(function()
+      stopMusic("busted-media-absent.mp3", "k", "t", "yes")
+    end, "fadeaway as boolean expected, got string!")
+    assertArgError(function()
+      stopMusic("busted-media-absent.mp3", "k", "t", true, -1)
+    end, "bad argument range for fadeout")
   end)
 
   it("the table pause and stop forms raise a Lua error for a wrongly typed filter", function()
-    assertArgError(function() pauseSounds({name = {}}) end, "value for name as string expected, got table!")
-    assertArgError(function() pauseMusic({key = {}}) end, "value for key as string expected, got table!")
-    assertArgError(function() pauseVideos({tag = {}}) end, "value for tag as string expected, got table!")
-    assertArgError(function() stopVideos({name = {}}) end, "value for name as string expected, got table!")
+    assertArgError(function()
+      pauseSounds({ name = {} })
+    end, "value for name as string expected, got table!")
+    assertArgError(function()
+      pauseMusic({ key = {} })
+    end, "value for key as string expected, got table!")
+    assertArgError(function()
+      pauseVideos({ tag = {} })
+    end, "value for tag as string expected, got table!")
+    assertArgError(function()
+      stopVideos({ name = {} })
+    end, "value for name as string expected, got table!")
   end)
 
   it("the ordered play forms raise a Lua error for a wrongly typed argument", function()
-    assertArgError(function() playMusicFile("busted-media-absent.mp3", {}) end, "volume as number expected, got table!")
-    assertArgError(function() playMusicFile("busted-media-absent.mp3", 50, 0, 0, 0, 1, {}) end, "key as string expected, got table!")
-    assertArgError(function() playSoundFile("busted-media-absent.wav", 50, 0, 0, 0, 1, "k", {}) end, "tag as string expected, got table!")
+    assertArgError(function()
+      playMusicFile("busted-media-absent.mp3", {})
+    end, "volume as number expected, got table!")
+    assertArgError(function()
+      playMusicFile("busted-media-absent.mp3", 50, 0, 0, 0, 1, {})
+    end, "key as string expected, got table!")
+    assertArgError(function()
+      playSoundFile("busted-media-absent.wav", 50, 0, 0, 0, 1, "k", {})
+    end, "tag as string expected, got table!")
   end)
 
   it("a numeric key in a table argument does not stop the rest of it being read", function()
@@ -270,20 +372,30 @@ describe("Media query and stop functions validate their parameters", function()
     -- step of the iteration that follows then refuses the key it is handed, so
     -- every table parser reads its keys from a copy. Lua walks a table's array
     -- part first, which puts the numeric key ahead of the named ones here.
-    assert.is_true(playSoundFile({[1] = "junk", name = "busted-media-absent.wav"}))
-    assert.is_true(stopSounds({[1] = "junk", key = "busted-media-no-such-key"}))
-    assert.is_table(getPlayingMusic({[1] = "junk", name = "busted-media-absent.mp3"}))
-    assert.is_table(getPausedVideos({[1] = "junk", key = "busted-media-no-such-key"}))
+    assert.is_true(playSoundFile({ [1] = "junk", name = "busted-media-absent.wav" }))
+    assert.is_true(stopSounds({ [1] = "junk", key = "busted-media-no-such-key" }))
+    assert.is_table(getPlayingMusic({ [1] = "junk", name = "busted-media-absent.mp3" }))
+    assert.is_table(getPausedVideos({ [1] = "junk", key = "busted-media-no-such-key" }))
   end)
 
   it("the ordered play forms refuse a negative fade, start or finish and name the call", function()
     -- #9785: the music parser's four range messages all named playSoundFile
     -- name[,volume][,fadein][,fadeout][,start][,loops][,key][,tag][,continue][,url][,finish]
-    assertArgError(function() playMusicFile("busted-media-absent.mp3", 50, -1) end, "playMusicFile: bad argument range for fadein")
-    assertArgError(function() playMusicFile("busted-media-absent.mp3", 50, 0, -1) end, "playMusicFile: bad argument range for fadeout")
-    assertArgError(function() playMusicFile("busted-media-absent.mp3", 50, 0, 0, -1) end, "playMusicFile: bad argument range for start")
-    assertArgError(function() playMusicFile("busted-media-absent.mp3", 50, 0, 0, 0, 1, "k", "t", false, nil, -1) end, "playMusicFile: bad argument range for finish")
-    assertArgError(function() playSoundFile("busted-media-absent.wav", 50, 0, -1) end, "playSoundFile: bad argument range for fadeout")
+    assertArgError(function()
+      playMusicFile("busted-media-absent.mp3", 50, -1)
+    end, "playMusicFile: bad argument range for fadein")
+    assertArgError(function()
+      playMusicFile("busted-media-absent.mp3", 50, 0, -1)
+    end, "playMusicFile: bad argument range for fadeout")
+    assertArgError(function()
+      playMusicFile("busted-media-absent.mp3", 50, 0, 0, -1)
+    end, "playMusicFile: bad argument range for start")
+    assertArgError(function()
+      playMusicFile("busted-media-absent.mp3", 50, 0, 0, 0, 1, "k", "t", false, nil, -1)
+    end, "playMusicFile: bad argument range for finish")
+    assertArgError(function()
+      playSoundFile("busted-media-absent.wav", 50, 0, -1)
+    end, "playSoundFile: bad argument range for fadeout")
   end)
 
   it("every query returns an empty table while nothing is playing", function()
@@ -293,12 +405,19 @@ describe("Media query and stop functions validate their parameters", function()
     assert.is_true(stopMusic())
     assert.is_true(stopVideos())
 
-    for _, query in ipairs({getPlayingSounds, getPlayingMusic, getPlayingVideos, getPausedSounds, getPausedMusic, getPausedVideos}) do
+    for _, query in ipairs({
+      getPlayingSounds,
+      getPlayingMusic,
+      getPlayingVideos,
+      getPausedSounds,
+      getPausedMusic,
+      getPausedVideos,
+    }) do
       local result = query()
       assert.is_table(result)
       assert.equals(0, #result)
       -- and the same with a filter that matches nothing
-      assert.same({}, query({key = "busted-media-no-such-key"}))
+      assert.same({}, query({ key = "busted-media-no-such-key" }))
     end
   end)
 end)
@@ -340,8 +459,14 @@ describe("Media playback effects with a generated sound file", function()
     local sampleRate = 8000
     -- 128 is silence for unsigned 8 bit samples
     local samples = string.rep(string.char(128), math.floor(sampleRate * milliseconds / 1000))
-    local format = "fmt " .. littleEndian(16, 4) .. littleEndian(1, 2) .. littleEndian(1, 2)
-      .. littleEndian(sampleRate, 4) .. littleEndian(sampleRate, 4) .. littleEndian(1, 2) .. littleEndian(8, 2)
+    local format = "fmt "
+      .. littleEndian(16, 4)
+      .. littleEndian(1, 2)
+      .. littleEndian(1, 2)
+      .. littleEndian(sampleRate, 4)
+      .. littleEndian(sampleRate, 4)
+      .. littleEndian(1, 2)
+      .. littleEndian(8, 2)
     local data = "data" .. littleEndian(#samples, 4) .. samples
     local body = "WAVE" .. format .. data
     return "RIFF" .. littleEndian(#body, 4) .. body
@@ -381,7 +506,13 @@ describe("Media playback effects with a generated sound file", function()
     local stash = getMudletHomeDir() .. "/busted-media-stash"
     local preserved = {}
     for entry in lfs.dir(mediaDirectory) do
-      if entry ~= "." and entry ~= ".." and entry ~= soundFile and entry ~= longSoundFile and entry ~= otherLongSoundFile then
+      if
+        entry ~= "."
+        and entry ~= ".."
+        and entry ~= soundFile
+        and entry ~= longSoundFile
+        and entry ~= otherLongSoundFile
+      then
         preserved[#preserved + 1] = entry
       end
     end
@@ -407,9 +538,11 @@ describe("Media playback effects with a generated sound file", function()
   -- armed; a handler sees those as well as the asynchronous ones.
   local function collect(eventName, into)
     local handler = registerAnonymousEventHandler(eventName, function(_, file, path, mediaType, key, tag)
-      into[#into + 1] = {file = file, path = path, mediaType = mediaType, key = key, tag = tag}
+      into[#into + 1] = { file = file, path = path, mediaType = mediaType, key = key, tag = tag }
     end)
-    onCleanup(function() killAnonymousEventHandler(handler) end)
+    onCleanup(function()
+      killAnonymousEventHandler(handler)
+    end)
   end
 
   -- Waits until collected holds count entries. A media event can be raised
@@ -442,7 +575,7 @@ describe("Media playback effects with a generated sound file", function()
   local function mediaPlaybackUnavailable()
     if playbackObserved == nil then
       writeSoundFiles()
-      playSoundFile({name = soundFile, key = "busted-media-canary"})
+      playSoundFile({ name = soundFile, key = "busted-media-canary" })
       playbackObserved = waitForEvent("sysMediaStarted", 5000) ~= nil
       stopSounds()
       if not playbackObserved then
@@ -478,7 +611,10 @@ describe("Media playback effects with a generated sound file", function()
       return false
     end
     if requireFixture then
-      assert.is_true(false, "MUDLET_TEST_REQUIRE_HTTP_FIXTURE is set but MUDLET_TEST_HTTP_PORT is not - the fixture server was not started")
+      assert.is_true(
+        false,
+        "MUDLET_TEST_REQUIRE_HTTP_FIXTURE is set but MUDLET_TEST_HTTP_PORT is not - the fixture server was not started"
+      )
     end
     pending("no local HTTP fixture server (set MUDLET_TEST_HTTP_PORT)")
     return true
@@ -535,7 +671,9 @@ describe("Media playback effects with a generated sound file", function()
       assert.equals("label", windowType(videoLabel))
       videoLabelReady = true
     end
-    onCleanup(function() hideWindow(videoLabel) end)
+    onCleanup(function()
+      hideWindow(videoLabel)
+    end)
   end
 
   after_each(function()
@@ -557,7 +695,7 @@ describe("Media playback effects with a generated sound file", function()
       return
     end
     writeSoundFiles()
-    assert.is_true(playSoundFile({name = soundFile, key = "busted-key", tag = "busted-tag"}))
+    assert.is_true(playSoundFile({ name = soundFile, key = "busted-key", tag = "busted-tag" }))
 
     local event, file, path, mediaType, key, tag = waitForEvent("sysMediaStarted", 5000)
     assert.equals("sysMediaStarted", event)
@@ -596,7 +734,7 @@ describe("Media playback effects with a generated sound file", function()
       return
     end
     writeSoundFiles()
-    assert.is_true(playSoundFile({name = longSoundFile, key = "busted-listed", tag = "busted-listed-tag"}))
+    assert.is_true(playSoundFile({ name = longSoundFile, key = "busted-listed", tag = "busted-listed-tag" }))
     assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
 
     local playing = getPlayingSounds()
@@ -615,7 +753,7 @@ describe("Media playback effects with a generated sound file", function()
     collect("sysMediaFinished", finished)
 
     writeSoundFiles()
-    assert.is_true(playSoundFile({name = longSoundFile, key = "busted-stopped"}))
+    assert.is_true(playSoundFile({ name = longSoundFile, key = "busted-stopped" }))
     assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
     assert.equals(1, #getPlayingSounds())
 
@@ -638,7 +776,7 @@ describe("Media playback effects with a generated sound file", function()
     collect("sysMediaPaused", paused)
 
     writeSoundFiles()
-    assert.is_true(playSoundFile({name = longSoundFile, key = "busted-paused"}))
+    assert.is_true(playSoundFile({ name = longSoundFile, key = "busted-paused" }))
     assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
 
     assert.is_true(pauseSounds())
@@ -656,7 +794,7 @@ describe("Media playback effects with a generated sound file", function()
 
     -- playing the same file again resumes the paused player rather than
     -- starting a second one
-    playSoundFile({name = longSoundFile, key = "busted-paused"})
+    playSoundFile({ name = longSoundFile, key = "busted-paused" })
     assert.equals(1, #getPlayingSounds())
     assert.equals(0, #getPausedSounds())
   end)
@@ -670,12 +808,12 @@ describe("Media playback effects with a generated sound file", function()
     collect("sysMediaStarted", started)
 
     writeSoundFiles()
-    assert.is_true(playSoundFile({name = longSoundFile, key = "busted-parked", tag = "busted-parked-tag"}))
+    assert.is_true(playSoundFile({ name = longSoundFile, key = "busted-parked", tag = "busted-parked-tag" }))
     waitForCount("sysMediaStarted", started, 1)
     assert.is_true(pauseSounds())
     assert.equals(1, #getPausedSounds())
 
-    assert.is_true(playSoundFile({name = otherLongSoundFile, key = "busted-replacement"}))
+    assert.is_true(playSoundFile({ name = otherLongSoundFile, key = "busted-replacement" }))
 
     assert.equals(1, #finished)
     assert.equals(longSoundFile, finished[1].file)
@@ -700,12 +838,14 @@ describe("Media playback effects with a generated sound file", function()
     collect("sysMediaStarted", started)
 
     writeSoundFiles()
-    assert.is_true(playMusicFile({name = longSoundFile, key = "busted-music-parked", tag = "busted-music-parked-tag"}))
+    assert.is_true(
+      playMusicFile({ name = longSoundFile, key = "busted-music-parked", tag = "busted-music-parked-tag" })
+    )
     waitForCount("sysMediaStarted", started, 1)
     assert.is_true(pauseMusic())
     assert.equals(1, #getPausedMusic())
 
-    assert.is_true(playMusicFile({name = otherLongSoundFile, key = "busted-music-new"}))
+    assert.is_true(playMusicFile({ name = otherLongSoundFile, key = "busted-music-new" }))
 
     assert.equals(1, #finished)
     assert.equals(longSoundFile, finished[1].file)
@@ -729,19 +869,19 @@ describe("Media playback effects with a generated sound file", function()
 
     writeSoundFiles()
     -- first, because a priority of its own would stop every sound that has none
-    assert.is_true(playSoundFile({name = otherLongSoundFile, key = "busted-priority-loud", priority = 90}))
+    assert.is_true(playSoundFile({ name = otherLongSoundFile, key = "busted-priority-loud", priority = 90 }))
     waitForCount("sysMediaStarted", started, 1)
-    assert.is_true(playSoundFile({name = longSoundFile, key = "busted-priority-parked"}))
+    assert.is_true(playSoundFile({ name = longSoundFile, key = "busted-priority-parked" }))
     waitForCount("sysMediaStarted", started, 2)
-    assert.is_true(pauseSounds({key = "busted-priority-parked"}))
+    assert.is_true(pauseSounds({ key = "busted-priority-parked" }))
     assert.equals(1, #getPausedSounds())
     assert.equals(1, #getPlayingSounds())
 
     -- refused, since the sound already playing is louder - and a paused player
     -- is what a request is handed before anything else in the pool
-    assert.is_true(playSoundFile({name = soundFile, key = "busted-priority-refused", priority = 10}))
+    assert.is_true(playSoundFile({ name = soundFile, key = "busted-priority-refused", priority = 10 }))
 
-    assert.equals(0, #getPlayingSounds({key = "busted-priority-refused"}))
+    assert.equals(0, #getPlayingSounds({ key = "busted-priority-refused" }))
     assert.equals(0, #finished)
     local paused = getPausedSounds()
     assert.equals(1, #paused)
@@ -758,7 +898,7 @@ describe("Media playback effects with a generated sound file", function()
     collect("sysMediaStarted", started)
 
     writeSoundFiles()
-    assert.is_true(playSoundFile({name = soundFile, key = "busted-looped", tag = "busted-looped-tag", loops = 2}))
+    assert.is_true(playSoundFile({ name = soundFile, key = "busted-looped", tag = "busted-looped-tag", loops = 2 }))
     waitForCount("sysMediaFinished", finished, 2)
 
     assert.equals(2, #started)
@@ -782,8 +922,8 @@ describe("Media playback effects with a generated sound file", function()
     -- is what puts the re-entrant call in reach of the one being set up below.
     local warmed = {}
     collect("sysMediaStarted", warmed)
-    for index, key in ipairs({"busted-warm-one", "busted-warm-two", "busted-warm-three"}) do
-      assert.is_true(playSoundFile({name = longSoundFile, key = key}))
+    for index, key in ipairs({ "busted-warm-one", "busted-warm-two", "busted-warm-three" }) do
+      assert.is_true(playSoundFile({ name = longSoundFile, key = key }))
       waitForCount("sysMediaStarted", warmed, index)
     end
     assert.equals(3, #getPlayingSounds())
@@ -792,20 +932,22 @@ describe("Media playback effects with a generated sound file", function()
     local reentered = 0
     local handler = registerAnonymousEventHandler("sysMediaFinished", function()
       reentered = reentered + 1
-      playSoundFile({name = otherLongSoundFile, key = "busted-handler-sound"})
+      playSoundFile({ name = otherLongSoundFile, key = "busted-handler-sound" })
     end)
-    onCleanup(function() killAnonymousEventHandler(handler) end)
+    onCleanup(function()
+      killAnonymousEventHandler(handler)
+    end)
 
-    assert.is_true(playSoundFile({name = longSoundFile, key = "busted-quiet", priority = 10}))
+    assert.is_true(playSoundFile({ name = longSoundFile, key = "busted-quiet", priority = 10 }))
     -- stops the sound above while it is still loading, which raises
     -- sysMediaFinished into the handler from inside this very call
-    assert.is_true(playSoundFile({name = longSoundFile, key = "busted-loud", priority = 90, loops = 3}))
+    assert.is_true(playSoundFile({ name = longSoundFile, key = "busted-loud", priority = 90, loops = 3 }))
 
     assert.is_true(reentered > 0, "the priority stop raised no sysMediaFinished, so nothing re-entered")
-    local loud = getPlayingSounds({key = "busted-loud"})
+    local loud = getPlayingSounds({ key = "busted-loud" })
     assert.equals(1, #loud)
     assert.equals(longSoundFile, loud[1].name)
-    assert.is_true(#getPlayingSounds({key = "busted-handler-sound"}) > 0)
+    assert.is_true(#getPlayingSounds({ key = "busted-handler-sound" }) > 0)
   end)
 
   it("the key filter picks out which sound is listed and stopped", function()
@@ -813,17 +955,17 @@ describe("Media playback effects with a generated sound file", function()
       return
     end
     writeSoundFiles()
-    assert.is_true(playSoundFile({name = longSoundFile, key = "busted-filter"}))
+    assert.is_true(playSoundFile({ name = longSoundFile, key = "busted-filter" }))
     assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
 
-    assert.equals(1, #getPlayingSounds({key = "busted-filter"}))
-    assert.equals(0, #getPlayingSounds({key = "busted-other-key"}))
+    assert.equals(1, #getPlayingSounds({ key = "busted-filter" }))
+    assert.equals(0, #getPlayingSounds({ key = "busted-other-key" }))
 
     -- a stop aimed at another key leaves this sound alone
-    assert.is_true(stopSounds({key = "busted-other-key"}))
+    assert.is_true(stopSounds({ key = "busted-other-key" }))
     assert.equals(1, #getPlayingSounds())
 
-    assert.is_true(stopSounds({key = "busted-filter"}))
+    assert.is_true(stopSounds({ key = "busted-filter" }))
     assert.equals(0, #getPlayingSounds())
   end)
 
@@ -832,7 +974,7 @@ describe("Media playback effects with a generated sound file", function()
       return
     end
     writeSoundFiles()
-    assert.is_true(playMusicFile({name = longSoundFile, key = "busted-music"}))
+    assert.is_true(playMusicFile({ name = longSoundFile, key = "busted-music" }))
 
     local event, file, _, mediaType, key = waitForEvent("sysMediaStarted", 5000)
     assert.equals("sysMediaStarted", event)
@@ -856,7 +998,7 @@ describe("Media playback effects with a generated sound file", function()
       return
     end
     writeSoundFiles()
-    assert.is_true(playMusicFile({name = longSoundFile, key = "busted-music-paused"}))
+    assert.is_true(playMusicFile({ name = longSoundFile, key = "busted-music-paused" }))
     assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
 
     assert.is_true(pauseMusic())
@@ -864,7 +1006,7 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(1, #getPausedMusic())
     assert.equals(longSoundFile, getPausedMusic()[1].name)
 
-    playMusicFile({name = longSoundFile, key = "busted-music-paused"})
+    playMusicFile({ name = longSoundFile, key = "busted-music-paused" })
     assert.equals(1, #getPlayingMusic())
     assert.equals(0, #getPausedMusic())
   end)
@@ -887,7 +1029,7 @@ describe("Media playback effects with a generated sound file", function()
     preserveMediaDirectory()
     local soundPath = mediaDirectory .. "/" .. soundFile
     assert.is_not_nil(lfs.attributes(soundPath, "mode"))
-    assert.is_true(playSoundFile({name = longSoundFile, key = "busted-purged"}))
+    assert.is_true(playSoundFile({ name = longSoundFile, key = "busted-purged" }))
     assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
 
     assert.is_true(purgeMediaCache())
@@ -933,12 +1075,14 @@ describe("Media playback effects with a generated sound file", function()
   it("a media url that is not http(s) reports a download error", function()
     local errors = {}
     local handler = registerAnonymousEventHandler("sysDownloadError", function(_, message, path)
-      errors[#errors + 1] = {message = message, path = path}
+      errors[#errors + 1] = { message = message, path = path }
     end)
-    onCleanup(function() killAnonymousEventHandler(handler) end)
+    onCleanup(function()
+      killAnonymousEventHandler(handler)
+    end)
 
     -- a file the media directory does not have, so the url is the only way to get it
-    assert.is_true(playSoundFile({name = "busted-media-absent-scheme.wav", url = "ftp://example.invalid/sounds"}))
+    assert.is_true(playSoundFile({ name = "busted-media-absent-scheme.wav", url = "ftp://example.invalid/sounds" }))
     waitForCount("sysDownloadError", errors, 1)
     assert.equals(1, #errors)
     assert.is_true(contains(errors[1].message, "http"), tostring(errors[1].message))
@@ -955,11 +1099,13 @@ describe("Media playback effects with a generated sound file", function()
     -- may well have one of its own already
     preserveMediaDirectory()
     os.remove(downloaded)
-    onCleanup(function() os.remove(downloaded) end)
+    onCleanup(function()
+      os.remove(downloaded)
+    end)
 
     local done = {}
     collect("sysDownloadDone", done)
-    assert.is_true(loadSoundFile({name = fixtureFile, url = fixtureUrl()}))
+    assert.is_true(loadSoundFile({ name = fixtureFile, url = fixtureUrl() }))
     waitForCount("sysDownloadDone", done, 1)
 
     assert.equals(1, #done)
@@ -977,7 +1123,9 @@ describe("Media playback effects with a generated sound file", function()
     -- may well have one of its own already
     preserveMediaDirectory()
     os.remove(downloaded)
-    onCleanup(function() os.remove(downloaded) end)
+    onCleanup(function()
+      os.remove(downloaded)
+    end)
 
     local done = {}
     collect("sysDownloadDone", done)
@@ -1002,11 +1150,13 @@ describe("Media playback effects with a generated sound file", function()
     local downloaded = mediaDirectory .. "/" .. downloadName
     lfs.mkdir(mediaDirectory)
     os.remove(downloaded)
-    onCleanup(function() os.remove(downloaded) end)
+    onCleanup(function()
+      os.remove(downloaded)
+    end)
 
     local done = {}
     collect("sysDownloadDone", done)
-    assert.is_true(loadSoundFile({name = downloadName, url = fixtureUrl() .. "/media"}))
+    assert.is_true(loadSoundFile({ name = downloadName, url = fixtureUrl() .. "/media" }))
     waitForCount("sysDownloadDone", done, 1)
     assert.equals(1, #done)
 
@@ -1034,14 +1184,14 @@ describe("Media playback effects with a generated sound file", function()
     collect("sysMediaPaused", paused)
 
     writeSoundFiles()
-    assert.is_true(playMusicFile({name = longSoundFile, key = "busted-load-typed"}))
+    assert.is_true(playMusicFile({ name = longSoundFile, key = "busted-load-typed" }))
     assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
     assert.is_true(pauseMusic())
     waitForCount("sysMediaPaused", paused, 1)
     assert.equals(1, #getPausedMusic())
 
     -- both parsers stamp the type, and each has its own copy of that line
-    assert.is_true(loadSoundFile({name = longSoundFile}))
+    assert.is_true(loadSoundFile({ name = longSoundFile }))
     assert.is_true(loadSoundFile(longSoundFile))
     assert.equals(1, #getPausedMusic())
     assert.equals(0, #getPlayingMusic())
@@ -1062,9 +1212,13 @@ describe("Media playback effects with a generated sound file", function()
     local downloaded = mediaDirectory .. "/" .. downloadName
     lfs.mkdir(mediaDirectory)
     os.remove(downloaded)
-    onCleanup(function() os.remove(downloaded) end)
+    onCleanup(function()
+      os.remove(downloaded)
+    end)
 
-    assert.is_true(playSoundFile({name = downloadName, url = fixtureUrl() .. "/media", volume = 60, key = "busted-media-played"}))
+    assert.is_true(
+      playSoundFile({ name = downloadName, url = fixtureUrl() .. "/media", volume = 60, key = "busted-media-played" })
+    )
     assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 10000)))
 
     local playing = getPlayingSounds()
@@ -1078,11 +1232,13 @@ describe("Media playback effects with a generated sound file", function()
     -- without a server to answer it.
     local errors = {}
     local handler = registerAnonymousEventHandler("sysDownloadError", function(_, message, path)
-      errors[#errors + 1] = {message = message, path = path}
+      errors[#errors + 1] = { message = message, path = path }
     end)
-    onCleanup(function() killAnonymousEventHandler(handler) end)
+    onCleanup(function()
+      killAnonymousEventHandler(handler)
+    end)
 
-    assert.is_true(loadVideoFile({name = "busted-media-absent-load.mkv", url = "ftp://example.invalid/videos"}))
+    assert.is_true(loadVideoFile({ name = "busted-media-absent-load.mkv", url = "ftp://example.invalid/videos" }))
     waitForCount("sysDownloadError", errors, 1)
 
     -- picked out by name rather than by position: the collector sees every
@@ -1119,7 +1275,7 @@ describe("Media playback effects with a generated sound file", function()
       return
     end
     writeSoundFiles()
-    assert.is_true(playMusicFile({name = longSoundFile, key = "busted-music-filter"}))
+    assert.is_true(playMusicFile({ name = longSoundFile, key = "busted-music-filter" }))
     assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
 
     -- name[,key][,tag] as ordered arguments
@@ -1128,8 +1284,8 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(0, #getPlayingMusic(longSoundFile, "busted-music-elsewhere"))
     assert.equals(0, #getPlayingMusic(otherLongSoundFile))
     -- and the same filters as a table
-    assert.equals(1, #getPlayingMusic({name = longSoundFile}))
-    assert.equals(0, #getPlayingMusic({key = "busted-music-elsewhere"}))
+    assert.equals(1, #getPlayingMusic({ name = longSoundFile }))
+    assert.equals(0, #getPlayingMusic({ key = "busted-music-elsewhere" }))
   end)
 
   it("getPlayingSounds filters by name, key and tag in the ordered argument form", function()
@@ -1137,7 +1293,7 @@ describe("Media playback effects with a generated sound file", function()
       return
     end
     writeSoundFiles()
-    assert.is_true(playSoundFile({name = longSoundFile, key = "busted-ordered-key", tag = "busted-ordered-tag"}))
+    assert.is_true(playSoundFile({ name = longSoundFile, key = "busted-ordered-key", tag = "busted-ordered-tag" }))
     assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
 
     -- name[,key][,tag][,priority]
@@ -1155,9 +1311,9 @@ describe("Media playback effects with a generated sound file", function()
     collect("sysMediaStarted", started)
 
     writeSoundFiles()
-    assert.is_true(playSoundFile({name = longSoundFile, key = "busted-stop-named"}))
+    assert.is_true(playSoundFile({ name = longSoundFile, key = "busted-stop-named" }))
     waitForCount("sysMediaStarted", started, 1)
-    assert.is_true(playSoundFile({name = otherLongSoundFile, key = "busted-stop-spared"}))
+    assert.is_true(playSoundFile({ name = otherLongSoundFile, key = "busted-stop-spared" }))
     waitForCount("sysMediaStarted", started, 2)
     assert.equals(2, #getPlayingSounds())
 
@@ -1176,9 +1332,9 @@ describe("Media playback effects with a generated sound file", function()
     collect("sysMediaStarted", started)
 
     writeSoundFiles()
-    assert.is_true(playMusicFile({name = longSoundFile, key = "busted-music-stop-named"}))
+    assert.is_true(playMusicFile({ name = longSoundFile, key = "busted-music-stop-named" }))
     waitForCount("sysMediaStarted", started, 1)
-    assert.is_true(playMusicFile({name = otherLongSoundFile, key = "busted-music-stop-spared"}))
+    assert.is_true(playMusicFile({ name = otherLongSoundFile, key = "busted-music-stop-spared" }))
     waitForCount("sysMediaStarted", started, 2)
     assert.equals(2, #getPlayingMusic())
 
@@ -1200,17 +1356,17 @@ describe("Media playback effects with a generated sound file", function()
     collect("sysMediaStarted", started)
 
     writeSoundFiles()
-    assert.is_true(playMusicFile({name = longSoundFile, key = "busted-music-table-stopped"}))
+    assert.is_true(playMusicFile({ name = longSoundFile, key = "busted-music-table-stopped" }))
     waitForCount("sysMediaStarted", started, 1)
-    assert.is_true(playMusicFile({name = otherLongSoundFile, key = "busted-music-table-spared"}))
+    assert.is_true(playMusicFile({ name = otherLongSoundFile, key = "busted-music-table-spared" }))
     waitForCount("sysMediaStarted", started, 2)
     assert.equals(2, #getPlayingMusic())
 
     -- a key that matches nothing stops nothing
-    assert.is_true(stopMusic({key = "busted-music-table-absent"}))
+    assert.is_true(stopMusic({ key = "busted-music-table-absent" }))
     assert.equals(2, #getPlayingMusic())
 
-    assert.is_true(stopMusic({key = "busted-music-table-stopped"}))
+    assert.is_true(stopMusic({ key = "busted-music-table-stopped" }))
     local music = getPlayingMusic()
     assert.equals(1, #music)
     assert.equals(otherLongSoundFile, music[1].name)
@@ -1225,18 +1381,18 @@ describe("Media playback effects with a generated sound file", function()
     collect("sysMediaStarted", started)
 
     writeSoundFiles()
-    assert.is_true(playMusicFile({name = longSoundFile, key = "busted-music-parked-key"}))
+    assert.is_true(playMusicFile({ name = longSoundFile, key = "busted-music-parked-key" }))
     waitForCount("sysMediaStarted", started, 1)
-    assert.is_true(playMusicFile({name = otherLongSoundFile, key = "busted-music-playing-key"}))
+    assert.is_true(playMusicFile({ name = otherLongSoundFile, key = "busted-music-playing-key" }))
     waitForCount("sysMediaStarted", started, 2)
 
-    assert.is_true(pauseMusic({key = "busted-music-parked-key"}))
+    assert.is_true(pauseMusic({ key = "busted-music-parked-key" }))
     assert.equals(1, #getPlayingMusic())
     local paused = getPausedMusic()
     assert.equals(1, #paused)
     assert.equals(longSoundFile, paused[1].name)
-    assert.equals(1, #getPausedMusic({key = "busted-music-parked-key"}))
-    assert.equals(0, #getPausedMusic({key = "busted-music-playing-key"}))
+    assert.equals(1, #getPausedMusic({ key = "busted-music-parked-key" }))
+    assert.equals(0, #getPausedMusic({ key = "busted-music-playing-key" }))
   end)
 
   it("getPausedSounds takes the same key filter as the sound that was paused", function()
@@ -1247,13 +1403,13 @@ describe("Media playback effects with a generated sound file", function()
     collect("sysMediaStarted", started)
 
     writeSoundFiles()
-    assert.is_true(playSoundFile({name = longSoundFile, key = "busted-sound-parked-key"}))
+    assert.is_true(playSoundFile({ name = longSoundFile, key = "busted-sound-parked-key" }))
     waitForCount("sysMediaStarted", started, 1)
-    assert.is_true(pauseSounds({key = "busted-sound-parked-key"}))
+    assert.is_true(pauseSounds({ key = "busted-sound-parked-key" }))
 
-    assert.equals(1, #getPausedSounds({key = "busted-sound-parked-key"}))
-    assert.equals(0, #getPausedSounds({key = "busted-sound-never-played"}))
-    assert.equals(0, #getPausedSounds({name = otherLongSoundFile}))
+    assert.equals(1, #getPausedSounds({ key = "busted-sound-parked-key" }))
+    assert.equals(0, #getPausedSounds({ key = "busted-sound-never-played" }))
+    assert.equals(0, #getPausedSounds({ name = otherLongSoundFile }))
   end)
 
   it("playVideoFile plays into the label its key names and the video family reports it", function()
@@ -1268,7 +1424,7 @@ describe("Media playback effects with a generated sound file", function()
     writeSoundFiles()
     assert.equals(0, #getPlayingVideos())
 
-    assert.is_true(playVideoFile({name = longSoundFile, key = videoLabel, tag = "busted-video-tag"}))
+    assert.is_true(playVideoFile({ name = longSoundFile, key = videoLabel, tag = "busted-video-tag" }))
     local event, file, _, mediaType, key, tag = waitForEvent("sysMediaStarted", 5000)
     assert.equals("sysMediaStarted", event)
     assert.equals(longSoundFile, file)
@@ -1283,18 +1439,18 @@ describe("Media playback effects with a generated sound file", function()
     -- videos are tracked apart from sounds and music
     assert.equals(0, #getPlayingSounds())
     assert.equals(0, #getPlayingMusic())
-    assert.equals(1, #getPlayingVideos({key = videoLabel}))
-    assert.equals(0, #getPlayingVideos({key = "busted-video-other-key"}))
+    assert.equals(1, #getPlayingVideos({ key = videoLabel }))
+    assert.equals(0, #getPlayingVideos({ key = "busted-video-other-key" }))
 
     assert.is_true(pauseVideos())
     assert.equals(0, #getPlayingVideos())
     local paused = getPausedVideos()
     assert.equals(1, #paused)
     assert.equals(longSoundFile, paused[1].name)
-    assert.equals(1, #getPausedVideos({name = longSoundFile}))
+    assert.equals(1, #getPausedVideos({ name = longSoundFile }))
 
     -- resumed by playing the same file again, like sounds and music are
-    assert.is_true(playVideoFile({name = longSoundFile, key = videoLabel}))
+    assert.is_true(playVideoFile({ name = longSoundFile, key = videoLabel }))
     assert.equals(1, #getPlayingVideos())
     assert.equals(0, #getPausedVideos())
 
@@ -1312,28 +1468,28 @@ describe("Media playback effects with a generated sound file", function()
     -- never enters the parser. Neither filter had a covering assertion.
     withVideoLabel()
     writeSoundFiles()
-    assert.is_true(playVideoFile({name = longSoundFile, key = videoLabel}))
+    assert.is_true(playVideoFile({ name = longSoundFile, key = videoLabel }))
     assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
     assert.equals(1, #getPlayingVideos())
 
     -- a filter naming another key leaves the video playing
-    assert.is_true(pauseVideos({key = "busted-video-table-absent"}))
+    assert.is_true(pauseVideos({ key = "busted-video-table-absent" }))
     assert.equals(1, #getPlayingVideos())
     assert.equals(0, #getPausedVideos())
 
-    assert.is_true(pauseVideos({key = videoLabel}))
+    assert.is_true(pauseVideos({ key = videoLabel }))
     assert.equals(0, #getPlayingVideos())
     assert.equals(1, #getPausedVideos())
 
     -- resumed by playing the same file again, so the stop below has something
     -- left to stop
-    assert.is_true(playVideoFile({name = longSoundFile, key = videoLabel}))
+    assert.is_true(playVideoFile({ name = longSoundFile, key = videoLabel }))
     assert.equals(1, #getPlayingVideos())
 
-    assert.is_true(stopVideos({key = "busted-video-table-absent"}))
+    assert.is_true(stopVideos({ key = "busted-video-table-absent" }))
     assert.equals(1, #getPlayingVideos())
 
-    assert.is_true(stopVideos({key = videoLabel}))
+    assert.is_true(stopVideos({ key = videoLabel }))
     assert.equals(0, #getPlayingVideos())
   end)
 
@@ -1353,10 +1509,13 @@ describe("Media playback effects with a generated sound file", function()
     local finished = {}
     collect("sysMediaFinished", finished)
 
-    assert.is_true(playVideoFile({name = longSoundFile, key = videoLabel, tag = "busted-video-close", close = true}))
+    assert.is_true(playVideoFile({ name = longSoundFile, key = videoLabel, tag = "busted-video-close", close = true }))
     assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
     assert.equals(1, #getPlayingVideos())
-    assert.is_true(windowVisible(videoLabel), "the label was off screen while the video played, so hiding it again could not be observed")
+    assert.is_true(
+      windowVisible(videoLabel),
+      "the label was off screen while the video played, so hiding it again could not be observed"
+    )
 
     assert.is_true(stopVideos())
     assert.equals(0, #getPlayingVideos())
@@ -1391,7 +1550,10 @@ describe("Media playback effects with a generated sound file", function()
       end
       pumpEvents(100)
     end
-    assert.is_true(hidden, "a stopped video left its label on screen: TMedia::signal_hideVideoOutput no longer reaches TMainConsole::hideVideoOutput")
+    assert.is_true(
+      hidden,
+      "a stopped video left its label on screen: TMedia::signal_hideVideoOutput no longer reaches TMainConsole::hideVideoOutput"
+    )
   end)
 
   it("a video that never asked to close leaves its label on screen", function()
@@ -1403,7 +1565,7 @@ describe("Media playback effects with a generated sound file", function()
     withVideoLabel()
     writeSoundFiles()
 
-    assert.is_true(playVideoFile({name = longSoundFile, key = videoLabel}))
+    assert.is_true(playVideoFile({ name = longSoundFile, key = videoLabel }))
     assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
     assert.is_true(windowVisible(videoLabel))
 
@@ -1415,7 +1577,10 @@ describe("Media playback effects with a generated sound file", function()
     -- pins the same case against the release actually having happened, which is
     -- not observable from here.
     pumpEvents(1000)
-    assert.is_true(windowVisible(videoLabel), "a video that never asked to close still took its label off screen when it stopped")
+    assert.is_true(
+      windowVisible(videoLabel),
+      "a video that never asked to close still took its label off screen when it stopped"
+    )
   end)
 
   it("the closing caption of a stop is printed a turn after the call, not inside it", function()
@@ -1432,7 +1597,9 @@ describe("Media playback effects with a generated sound file", function()
     -- it reachable at all.
     local captionKey = "busted-caption-deferred"
     local wasCaptioned = getConfig("enableClosedCaption")
-    onCleanup(function() setConfig("enableClosedCaption", wasCaptioned) end)
+    onCleanup(function()
+      setConfig("enableClosedCaption", wasCaptioned)
+    end)
     assert.is_true(setConfig("enableClosedCaption", true))
 
     -- Counted by key, not by line delta: the window between mark and the last
@@ -1461,7 +1628,7 @@ describe("Media playback effects with a generated sound file", function()
     collect("sysMediaFinished", finished)
 
     writeSoundFiles()
-    assert.is_true(playSoundFile({name = longSoundFile, key = captionKey}))
+    assert.is_true(playSoundFile({ name = longSoundFile, key = captionKey }))
     assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
     -- the opening caption is printed by the same handler that raised the event
     -- waited for above, so let that turn run out before counting
@@ -1488,7 +1655,7 @@ describe("Media playback effects with a generated sound file", function()
     -- The request is understood, so it reports success; the widget lookup then
     -- turns up nothing and the playback never starts. Nothing but the video
     -- list says so, which is why this is worth holding to.
-    assert.is_true(playVideoFile({name = longSoundFile, key = "busted-media-no-such-widget"}))
+    assert.is_true(playVideoFile({ name = longSoundFile, key = "busted-media-no-such-widget" }))
     assert.equals(0, #getPlayingVideos())
     assert.equals(0, #getPausedVideos())
   end)
@@ -1516,13 +1683,16 @@ describe("Media playback effects with a generated sound file", function()
   -- and the stops that follow the drain. A refused injection is the spec body's
   -- problem, not the undo's.
   local function stopGmcpMediaAfterwards()
-    onCleanup(function() feedTelnet("<T_IAC><T_SB><O_GMCP>Client.Media.Stop {}<T_IAC><T_SE>") end)
+    onCleanup(function()
+      feedTelnet("<T_IAC><T_SB><O_GMCP>Client.Media.Stop {}<T_IAC><T_SE>")
+    end)
   end
 
   -- The profile's "accept media from the game" preference gates parseGMCP() and
   -- has no getConfig key to read it back with, so a profile that has it turned
   -- off would fail the specs below with nothing but a bare timeout to go on.
-  local gmcpRefused = "no sysMediaStarted for a Client.Media message - is the profile set to accept media from the game?"
+  local gmcpRefused =
+    "no sysMediaStarted for a Client.Media message - is the profile set to accept media from the game?"
 
   it("a Client.Media.Play message plays the file it names and reports it", function()
     if mediaPlaybackUnavailable() then
@@ -1531,7 +1701,9 @@ describe("Media playback effects with a generated sound file", function()
     writeSoundFiles()
     stopGmcpMediaAfterwards()
 
-    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-play", "tag": "busted-gmcp-tag"}')
+    feedGmcp(
+      'Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-play", "tag": "busted-gmcp-tag"}'
+    )
 
     local event, file, _, mediaType, key, tag = waitForEvent("sysMediaStarted", 5000)
     assert.equals("sysMediaStarted", event, gmcpRefused)
@@ -1647,7 +1819,9 @@ describe("Media playback effects with a generated sound file", function()
     local downloaded = mediaDirectory .. "/" .. downloadName
     lfs.mkdir(mediaDirectory)
     os.remove(downloaded)
-    onCleanup(function() os.remove(downloaded) end)
+    onCleanup(function()
+      os.remove(downloaded)
+    end)
     stopGmcpMediaAfterwards()
 
     local done, started = {}, {}
@@ -1675,538 +1849,566 @@ describe("receiveMSP reports MSP is not enabled while offline", function()
 end)
 
 describe("Tests the text-to-speech Lua API", function()
-    describe("Tests the text-to-speech family", function()
-      -- Mudlet can be compiled without TTS at all, in which case Other.lua
-      -- installs no-op shims that return nil instead of the real functions.
-      -- ttsGetQueue() returning a table is the cheapest proof that the real
-      -- ones are in place.
-      local function ttsSupported()
-        return type(ttsGetQueue()) == "table"
+  describe("Tests the text-to-speech family", function()
+    -- Mudlet can be compiled without TTS at all, in which case Other.lua
+    -- installs no-op shims that return nil instead of the real functions.
+    -- ttsGetQueue() returning a table is the cheapest proof that the real
+    -- ones are in place.
+    local function ttsSupported()
+      return type(ttsGetQueue()) == "table"
+    end
+
+    -- Returns true when the caller should stop because this build has no TTS
+    -- functions to test.
+    local function ttsUnsupported()
+      if ttsSupported() then
+        return false
       end
+      pending("Mudlet was compiled without TTS support")
+      return true
+    end
 
-      -- Returns true when the caller should stop because this build has no TTS
-      -- functions to test.
-      local function ttsUnsupported()
-        if ttsSupported() then
-          return false
-        end
-        pending("Mudlet was compiled without TTS support")
-        return true
+    -- ttsBuild() selects Qt's deterministic mock engine under
+    -- MUDLET_TEST_MODE, so the effect specs below never drive a developer's
+    -- real speech engine and nothing is ever spoken out loud. Where the mock
+    -- plugin is absent Qt leaves the engine with no voices, and those specs
+    -- skip so a local run still passes; CI sets MUDLET_TEST_REQUIRE_TTS_MOCK
+    -- to turn that skip into a failure, so a broken mock selection cannot
+    -- hide behind a green skip.
+    local testMode = os.getenv("MUDLET_TEST_MODE")
+    local requireMock = os.getenv("MUDLET_TEST_REQUIRE_TTS_MOCK")
+
+    local function mockEngineReady()
+      return testMode and ttsSupported() and #ttsGetVoices() > 0
+    end
+
+    local function noMockEngine()
+      if mockEngineReady() then
+        return false
       end
-
-      -- ttsBuild() selects Qt's deterministic mock engine under
-      -- MUDLET_TEST_MODE, so the effect specs below never drive a developer's
-      -- real speech engine and nothing is ever spoken out loud. Where the mock
-      -- plugin is absent Qt leaves the engine with no voices, and those specs
-      -- skip so a local run still passes; CI sets MUDLET_TEST_REQUIRE_TTS_MOCK
-      -- to turn that skip into a failure, so a broken mock selection cannot
-      -- hide behind a green skip.
-      local testMode = os.getenv("MUDLET_TEST_MODE")
-      local requireMock = os.getenv("MUDLET_TEST_REQUIRE_TTS_MOCK")
-
-      local function mockEngineReady()
-        return testMode and ttsSupported() and #ttsGetVoices() > 0
+      if requireMock then
+        assert.is_true(
+          false,
+          "MUDLET_TEST_REQUIRE_TTS_MOCK is set but the mock TTS engine has no voices - it was not selected"
+        )
       end
+      pending("mock TTS engine unavailable (run with MUDLET_TEST_MODE and Qt's mock plugin)")
+      return true
+    end
 
-      local function noMockEngine()
-        if mockEngineReady() then
-          return false
-        end
-        if requireMock then
-          assert.is_true(false, "MUDLET_TEST_REQUIRE_TTS_MOCK is set but the mock TTS engine has no voices - it was not selected")
-        end
-        pending("mock TTS engine unavailable (run with MUDLET_TEST_MODE and Qt's mock plugin)")
-        return true
+    -- Switching voice needs a second voice to switch to. Gated like
+    -- noMockEngine() so a mock engine that stopped offering two voices cannot
+    -- quietly turn the voice-switching specs green by pending them.
+    local function tooFewVoices()
+      if #ttsGetVoices() >= 2 then
+        return false
       end
-
-      -- Switching voice needs a second voice to switch to. Gated like
-      -- noMockEngine() so a mock engine that stopped offering two voices cannot
-      -- quietly turn the voice-switching specs green by pending them.
-      local function tooFewVoices()
-        if #ttsGetVoices() >= 2 then
-          return false
-        end
-        if requireMock then
-          assert.is_true(false, "MUDLET_TEST_REQUIRE_TTS_MOCK is set but the mock TTS engine offers fewer than two voices")
-        end
-        pending("the mock engine offers only one voice in this environment")
-        return true
+      if requireMock then
+        assert.is_true(
+          false,
+          "MUDLET_TEST_REQUIRE_TTS_MOCK is set but the mock TTS engine offers fewer than two voices"
+        )
       end
+      pending("the mock engine offers only one voice in this environment")
+      return true
+    end
 
-      -- Undone at the end of the current spec, for the same reason the media
-      -- specs above keep a list: busted's finally() holds one function, not a
-      -- list, and these specs have several things to put back.
-      local cleanups = {}
+    -- Undone at the end of the current spec, for the same reason the media
+    -- specs above keep a list: busted's finally() holds one function, not a
+    -- list, and these specs have several things to put back.
+    local cleanups = {}
 
-      local function onCleanup(undo)
-        cleanups[#cleanups + 1] = undo
-      end
+    local function onCleanup(undo)
+      cleanups[#cleanups + 1] = undo
+    end
 
-      -- Collects every occurrence of an event for the duration of one spec.
-      -- The mock engine changes state inside the ttsSpeak()/ttsSkip() call
-      -- itself, so the matching event is raised before a waitForEvent() could
-      -- be armed; a handler sees those as well as the asynchronous ones.
-      local function collect(eventName, into)
-        local handler = registerAnonymousEventHandler(eventName, function(_, first)
-          into[#into + 1] = first == nil and true or first
-        end)
-        onCleanup(function() killAnonymousEventHandler(handler) end)
-      end
-
-      -- The mock engine speaks in real time at roughly a tenth of a second per
-      -- word, so every utterance in these specs is deliberately short.
-      after_each(function()
-        if ttsSupported() then
-          -- clear first: skipping while the queue still holds a line starts
-          -- speaking that line, which would run on into the next spec
-          ttsClearQueue()
-          ttsSkip()
-        end
-        for index = #cleanups, 1, -1 do
-          cleanups[index]()
-        end
-        cleanups = {}
+    -- Collects every occurrence of an event for the duration of one spec.
+    -- The mock engine changes state inside the ttsSpeak()/ttsSkip() call
+    -- itself, so the matching event is raised before a waitForEvent() could
+    -- be armed; a handler sees those as well as the asynchronous ones.
+    local function collect(eventName, into)
+      local handler = registerAnonymousEventHandler(eventName, function(_, first)
+        into[#into + 1] = first == nil and true or first
       end)
-
-      it("ttsSpeak rejects whitespace-only text", function()
-        if ttsUnsupported() then
-          return
-        end
-        local ok, err = ttsSpeak("   ")
-        assert.is_nil(ok)
-        assert.is_true(err:find("skipped empty text to speak (TTS)", 1, true) ~= nil)
+      onCleanup(function()
+        killAnonymousEventHandler(handler)
       end)
+    end
 
-      it("ttsQueue rejects whitespace-only text", function()
-        if ttsUnsupported() then
-          return
-        end
-        local ok, err = ttsQueue("\t \n")
-        assert.is_nil(ok)
-        assert.is_true(err:find("skipped empty text to speak (TTS)", 1, true) ~= nil)
-      end)
-
-      it("ttsSpeak and ttsQueue raise a Lua error for a non-string argument", function()
-        if ttsUnsupported() then
-          return
-        end
-        assert.has_error(function() ttsSpeak({}) end)
-        assert.has_error(function() ttsQueue({}) end)
-      end)
-
-      it("the rate, pitch and volume setters raise a Lua error for a non-number", function()
-        if ttsUnsupported() then
-          return
-        end
-        assert.has_error(function() ttsSetRate("fast") end)
-        assert.has_error(function() ttsSetPitch({}) end)
-        assert.has_error(function() ttsSetVolume(false) end)
-      end)
-
-      it("ttsGetQueue returns a table and false for out-of-range indexes", function()
-        if ttsUnsupported() then
-          return
-        end
+    -- The mock engine speaks in real time at roughly a tenth of a second per
+    -- word, so every utterance in these specs is deliberately short.
+    after_each(function()
+      if ttsSupported() then
+        -- clear first: skipping while the queue still holds a line starts
+        -- speaking that line, which would run on into the next spec
         ttsClearQueue()
-        assert.is_table(ttsGetQueue())
-        -- Regression #9471: on an empty queue index 1 is exactly one past the
-        -- end (index == size), which used to pass the bounds check and read
-        -- out of range.
-        assert.is_false(ttsGetQueue(1))
-        assert.is_false(ttsGetQueue(0))
-      end)
-
-      it("ttsClearQueue reports an out-of-range index instead of removing anything", function()
-        if ttsUnsupported() then
-          return
-        end
-        ttsClearQueue()
-        local ok, err = ttsClearQueue(3)
-        assert.is_nil(ok)
-        assert.equals("index 3 out of bounds for queue size 0", err)
-      end)
-
-      it("ttsGetState reports one of the documented states", function()
-        if ttsUnsupported() then
-          return
-        end
-        -- ttsUnknownState is deliberately not accepted: it is the fallback the
-        -- state switch prints for a state it does not know about, so allowing
-        -- it here would make this assertion impossible to fail.
-        local states = {
-          ttsSpeechReady = true, ttsSpeechPaused = true,
-          ttsSpeechStarted = true, ttsSpeechError = true,
-        }
-        assert.is_true(states[ttsGetState()] == true, ttsGetState())
-      end)
-
-      it("ttsGetRate, ttsGetPitch and ttsGetVolume return numbers", function()
-        if ttsUnsupported() then
-          return
-        end
-        assert.is_number(ttsGetRate())
-        assert.is_number(ttsGetPitch())
-        assert.is_number(ttsGetVolume())
-      end)
-
-      it("the voice setters return false for a voice that does not exist", function()
-        if ttsUnsupported() then
-          return
-        end
-        assert.is_false(ttsSetVoiceByIndex(0))
-        assert.is_false(ttsSetVoiceByIndex(9999))
-        assert.is_false(ttsSetVoiceByName("no such voice is installed"))
-      end)
-
-      it("the voice setters raise a Lua error for a wrongly typed argument", function()
-        if ttsUnsupported() then
-          return
-        end
-        assert.has_error(function() ttsSetVoiceByIndex("first") end)
-        assert.has_error(function() ttsSetVoiceByName({}) end)
-      end)
-
-      it("ttsGetVoices lists the mock engine's voices and ttsGetCurrentVoice names one of them", function()
-        if noMockEngine() then
-          return
-        end
-        local voices = ttsGetVoices()
-        assert.is_true(#voices > 0)
-        local current = ttsGetCurrentVoice()
-        assert.is_string(current)
-        assert.is_true(table.contains(voices, current), current)
-        for _, name in ipairs(voices) do
-          assert.is_string(name)
-        end
-      end)
-
-      it("ttsSpeak speaks the text and reports it until the engine goes ready again", function()
-        if noMockEngine() then
-          return
-        end
-        local started, ready = {}, {}
-        collect("ttsSpeechStarted", started)
-        collect("ttsSpeechReady", ready)
-
-        ttsSpeak("Mudlet spec one")
-        assert.equals("ttsSpeechStarted", ttsGetState())
-        assert.equals("Mudlet spec one", ttsGetCurrentLine())
-        -- the first utterance of a session used to report an empty text here,
-        -- see the ttsSpeechStarted spec below
-        assert.same({"Mudlet spec one"}, started)
-
-        assert.equals("ttsSpeechReady", (waitForEvent("ttsSpeechReady", 5000)))
-        assert.equals("ttsSpeechReady", ttsGetState())
-        assert.equals(1, #ready)
-        -- with nothing being spoken the line is no longer reported
-        local line, err = ttsGetCurrentLine()
-        assert.is_nil(line)
-        assert.is_true(err:find("not speaking any text", 1, true) ~= nil)
-      end)
-
-      it("ttsSpeak drops angle brackets from the text it speaks", function()
-        if noMockEngine() then
-          return
-        end
-        -- discussion: https://github.com/Mudlet/Mudlet/issues/4689
-        ttsSpeak("<b>bold</b>")
-        assert.equals("bbold/b", ttsGetCurrentLine())
-      end)
-
-      it("ttsPause holds the utterance and ttsResume runs it to the end", function()
-        if noMockEngine() then
-          return
-        end
-        local paused = {}
-        collect("ttsSpeechPaused", paused)
-
-        ttsSpeak("pause this line")
-        assert.equals("ttsSpeechStarted", ttsGetState())
-        ttsPause()
-        -- the engine reports the pause asynchronously
-        assert.equals("ttsSpeechPaused", (waitForEvent("ttsSpeechPaused", 5000)))
-        assert.equals("ttsSpeechPaused", ttsGetState())
-        assert.equals(1, #paused)
-        -- the paused utterance is still the current one
-        assert.equals("pause this line", ttsGetCurrentLine())
-
-        ttsResume()
-        assert.equals("ttsSpeechStarted", ttsGetState())
-        assert.equals("ttsSpeechReady", (waitForEvent("ttsSpeechReady", 5000)))
-        assert.equals("ttsSpeechReady", ttsGetState())
-      end)
-
-      it("ttsSkip ends the current utterance immediately", function()
-        if noMockEngine() then
-          return
-        end
-        local ready = {}
-        collect("ttsSpeechReady", ready)
-
-        ttsSpeak("a long enough sentence that it cannot possibly finish on its own by now")
-        assert.equals("ttsSpeechStarted", ttsGetState())
         ttsSkip()
-        -- the utterance would take over a second to speak, so a ready state
-        -- straight after the call can only be the skip taking effect
-        assert.equals("ttsSpeechReady", ttsGetState())
-        assert.equals(1, #ready)
+      end
+      for index = #cleanups, 1, -1 do
+        cleanups[index]()
+      end
+      cleanups = {}
+    end)
+
+    it("ttsSpeak rejects whitespace-only text", function()
+      if ttsUnsupported() then
+        return
+      end
+      local ok, err = ttsSpeak("   ")
+      assert.is_nil(ok)
+      assert.is_true(err:find("skipped empty text to speak (TTS)", 1, true) ~= nil)
+    end)
+
+    it("ttsQueue rejects whitespace-only text", function()
+      if ttsUnsupported() then
+        return
+      end
+      local ok, err = ttsQueue("\t \n")
+      assert.is_nil(ok)
+      assert.is_true(err:find("skipped empty text to speak (TTS)", 1, true) ~= nil)
+    end)
+
+    it("ttsSpeak and ttsQueue raise a Lua error for a non-string argument", function()
+      if ttsUnsupported() then
+        return
+      end
+      assert.has_error(function()
+        ttsSpeak({})
       end)
-
-      it("ttsQueue holds lines while the engine is busy and ttsGetQueue reads them back", function()
-        if noMockEngine() then
-          return
-        end
-        local queued = {}
-        collect("ttsSpeechQueued", queued)
-
-        ttsClearQueue()
-        ttsSpeak("occupying the engine with a line that takes a while to speak")
-        ttsQueue("queued one")
-        ttsQueue("queued two")
-        assert.equals(2, #ttsGetQueue())
-        assert.equals("queued one", ttsGetQueue(1))
-        assert.equals("queued two", ttsGetQueue(2))
-        assert.equals(2, #queued)
-        assert.equals("queued one", queued[1])
-        assert.equals("queued two", queued[2])
-
-        -- an explicit index inserts rather than appends
-        ttsQueue("queued zero", 1)
-        assert.same({"queued zero", "queued one", "queued two"}, ttsGetQueue())
-
-        ttsClearQueue(1)
-        assert.same({"queued one", "queued two"}, ttsGetQueue())
-        ttsClearQueue()
-        assert.equals(0, #ttsGetQueue())
-      end)
-
-      it("ttsQueue speaks straight away when the engine is idle", function()
-        if noMockEngine() then
-          return
-        end
-        ttsClearQueue()
-        assert.equals("ttsSpeechReady", ttsGetState())
-
-        ttsQueue("queued while idle")
-        -- nothing is waiting, so the line is taken back off the queue and
-        -- spoken instead of being held
-        assert.equals(0, #ttsGetQueue())
-        assert.equals("ttsSpeechStarted", ttsGetState())
-        assert.equals("queued while idle", ttsGetCurrentLine())
-      end)
-
-      it("ttsQueue drops angle brackets like ttsSpeak does", function()
-        if noMockEngine() then
-          return
-        end
-        ttsClearQueue()
-        ttsSpeak("occupying the engine with a line that takes a while to speak")
-        ttsQueue("<i>queued</i>")
-        assert.same({"iqueued/i"}, ttsGetQueue())
-      end)
-
-      it("ttsQueue clamps an index outside the queue instead of failing", function()
-        if noMockEngine() then
-          return
-        end
-        ttsClearQueue()
-        ttsSpeak("occupying the engine with a line that takes a while to speak")
-        ttsQueue("middle")
-        ttsQueue("beyond the end", 99)
-        ttsQueue("before the start", -5)
-        assert.same({"before the start", "middle", "beyond the end"}, ttsGetQueue())
-      end)
-
-      it("ttsSkip moves on to the next queued line", function()
-        if noMockEngine() then
-          return
-        end
-        ttsClearQueue()
-        ttsSpeak("occupying the engine with a line that takes a while to speak")
-        ttsQueue("the line after the skip")
-        assert.equals(1, #ttsGetQueue())
-
-        ttsSkip()
-        assert.equals(0, #ttsGetQueue())
-        assert.equals("the line after the skip", ttsGetCurrentLine())
-      end)
-
-      it("a queued line starts speaking when the current one ends", function()
-        if noMockEngine() then
-          return
-        end
-        ttsClearQueue()
-        ttsSpeak("first line")
-        ttsQueue("second line")
-        assert.equals(1, #ttsGetQueue())
-
-        assert.equals("ttsSpeechReady", (waitForEvent("ttsSpeechReady", 5000)))
-        -- the queue is drained by the state change that ended the first line
-        assert.equals(0, #ttsGetQueue())
-        assert.equals("second line", ttsGetCurrentLine())
-      end)
-
-      it("ttsSetRate, ttsSetPitch and ttsSetVolume are read back and clamped", function()
-        if noMockEngine() then
-          return
-        end
-        local rates, pitches, volumes = {}, {}, {}
-        collect("ttsRateChanged", rates)
-        collect("ttsPitchChanged", pitches)
-        collect("ttsVolumeChanged", volumes)
-        local rate, pitch, volume = ttsGetRate(), ttsGetPitch(), ttsGetVolume()
-        onCleanup(function()
-          ttsSetRate(rate)
-          ttsSetPitch(pitch)
-          ttsSetVolume(volume)
-        end)
-
-        ttsSetRate(0.5)
-        assert.equals(0.5, ttsGetRate())
-        ttsSetRate(5)
-        assert.equals(1, ttsGetRate())
-        ttsSetRate(-5)
-        assert.equals(-1, ttsGetRate())
-        assert.same({0.5, 1, -1}, rates)
-
-        ttsSetPitch(0.25)
-        assert.equals(0.25, ttsGetPitch())
-        ttsSetPitch(9)
-        assert.equals(1, ttsGetPitch())
-        ttsSetPitch(-9)
-        assert.equals(-1, ttsGetPitch())
-        assert.same({0.25, 1, -1}, pitches)
-
-        ttsSetVolume(0.3)
-        assert.equals(0.3, ttsGetVolume())
-        ttsSetVolume(9)
-        assert.equals(1, ttsGetVolume())
-        -- volume clamps to zero rather than to -1
-        ttsSetVolume(-9)
-        assert.equals(0, ttsGetVolume())
-        assert.same({0.3, 1, 0}, volumes)
-      end)
-
-      it("the voice setters switch voice and report it back", function()
-        if noMockEngine() or tooFewVoices() then
-          return
-        end
-        local voices = ttsGetVoices()
-        local changes = {}
-        local originalVoice = ttsGetCurrentVoice()
-        collect("ttsVoiceChanged", changes)
-        onCleanup(function() ttsSetVoiceByName(originalVoice) end)
-
-        assert.is_true(ttsSetVoiceByName(voices[2]))
-        assert.equals(voices[2], ttsGetCurrentVoice())
-        assert.is_true(ttsSetVoiceByIndex(1))
-        assert.equals(voices[1], ttsGetCurrentVoice())
-        assert.same({voices[2], voices[1]}, changes)
-      end)
-
-      it("ttsSpeechStarted carries the text that just started being spoken", function()
-        if noMockEngine() then
-          return
-        end
-        -- Regression #9591: the text used to be recorded after say() returned,
-        -- and the engine changes state inside say(), so the event carried the
-        -- previous utterance. The handler has to be armed up front because the
-        -- event is raised before ttsSpeak() returns.
-        local started = {}
-        collect("ttsSpeechStarted", started)
-
-        ttsClearQueue()
-        ttsSpeak("first spoken line")
-        assert.same({"first spoken line"}, started)
-
-        ttsSkip()
-        ttsSpeak("second spoken line")
-        assert.same({"first spoken line", "second spoken line"}, started)
-      end)
-
-      it("announces an utterance spoken over one that is still running", function()
-        if noMockEngine() then
-          return
-        end
-        -- #9659: the events are raised off the engine's state edges, and an
-        -- engine that is already speaking has no edge to report when it is
-        -- handed something else - so a script tracking what is being spoken was
-        -- never told the text had changed, while ttsGetCurrentLine() moved on
-        -- underneath it. No ttsSkip() here: the interruption is the point.
-        local started = {}
-        collect("ttsSpeechStarted", started)
-
-        ttsClearQueue()
-        ttsSpeak("the utterance being spoken over")
-        ttsSpeak("the utterance spoken over it")
-        assert.same({"the utterance being spoken over", "the utterance spoken over it"}, started)
-        assert.equals("the utterance spoken over it", ttsGetCurrentLine())
-      end)
-
-      it("ttsSpeechStarted carries the queued line the drain started speaking", function()
-        if noMockEngine() then
-          return
-        end
-        -- Regression #9591 again: the queue drain in ttsStateChanged() had the
-        -- same say()-before-record ordering as ttsSpeak(), so the event named
-        -- the utterance the skip had just ended rather than the queued one that
-        -- replaced it. ttsGetCurrentLine() reads correctly either way, so only
-        -- the event's own argument can catch this.
-        local started = {}
-        collect("ttsSpeechStarted", started)
-
-        ttsClearQueue()
-        ttsSpeak("the line that gets skipped")
-        ttsQueue("line taken off the queue")
-        ttsSkip()
-        assert.same({"the line that gets skipped", "line taken off the queue"}, started)
-      end)
-
-      it("speaking over a busy engine leaves the direct utterance current", function()
-        if noMockEngine() then
-          return
-        end
-        -- The utterance a script asks for outright has to survive the queue:
-        -- an engine reporting Ready for the utterance say() interrupted used to
-        -- be read as an idle engine, which drained the queued line straight
-        -- over the requested one (#9659). The mock engine reports no such Ready,
-        -- so what this spec can hold onto is the state ttsSpeak() leaves behind
-        -- - the guard itself is exercised by TtsInterruptingSpeakTest, which
-        -- delivers that Ready the way a real engine does.
-        local started = {}
-        collect("ttsSpeechStarted", started)
-
-        ttsClearQueue()
-        ttsSpeak("the busy utterance")
-        ttsQueue("still queued")
-        ttsSpeak("the direct utterance")
-        assert.equals(1, #ttsGetQueue())
-        assert.equals("the direct utterance", ttsGetCurrentLine())
-        -- ...and the queued line was not what got announced:
-        assert.same({"the busy utterance", "the direct utterance"}, started)
-      end)
-
-      it("ttsSetVoiceByName reports success for a voice it switched to", function()
-        if noMockEngine() then
-          return
-        end
-        local voices = ttsGetVoices()
-        if #voices < 2 then
-          pending("the mock engine offers only one voice in this environment")
-          return
-        end
-        -- Regression #9590: dispatching ttsVoiceChanged used to wipe this
-        -- lua_State's whole stack, taking the already-pushed result with it and
-        -- handing the caller stack garbage. A handler must be listening for the
-        -- event to reach Lua at all, which is what collect() arranges here.
-        local changes = {}
-        collect("ttsVoiceChanged", changes)
-        local originalVoice = ttsGetCurrentVoice()
-        onCleanup(function() ttsSetVoiceByName(originalVoice) end)
-
-        assert.is_true(ttsSetVoiceByName(voices[2]))
-        assert.equals(voices[2], ttsGetCurrentVoice())
-        assert.same({voices[2]}, changes)
+      assert.has_error(function()
+        ttsQueue({})
       end)
     end)
+
+    it("the rate, pitch and volume setters raise a Lua error for a non-number", function()
+      if ttsUnsupported() then
+        return
+      end
+      assert.has_error(function()
+        ttsSetRate("fast")
+      end)
+      assert.has_error(function()
+        ttsSetPitch({})
+      end)
+      assert.has_error(function()
+        ttsSetVolume(false)
+      end)
+    end)
+
+    it("ttsGetQueue returns a table and false for out-of-range indexes", function()
+      if ttsUnsupported() then
+        return
+      end
+      ttsClearQueue()
+      assert.is_table(ttsGetQueue())
+      -- Regression #9471: on an empty queue index 1 is exactly one past the
+      -- end (index == size), which used to pass the bounds check and read
+      -- out of range.
+      assert.is_false(ttsGetQueue(1))
+      assert.is_false(ttsGetQueue(0))
+    end)
+
+    it("ttsClearQueue reports an out-of-range index instead of removing anything", function()
+      if ttsUnsupported() then
+        return
+      end
+      ttsClearQueue()
+      local ok, err = ttsClearQueue(3)
+      assert.is_nil(ok)
+      assert.equals("index 3 out of bounds for queue size 0", err)
+    end)
+
+    it("ttsGetState reports one of the documented states", function()
+      if ttsUnsupported() then
+        return
+      end
+      -- ttsUnknownState is deliberately not accepted: it is the fallback the
+      -- state switch prints for a state it does not know about, so allowing
+      -- it here would make this assertion impossible to fail.
+      local states = {
+        ttsSpeechReady = true,
+        ttsSpeechPaused = true,
+        ttsSpeechStarted = true,
+        ttsSpeechError = true,
+      }
+      assert.is_true(states[ttsGetState()] == true, ttsGetState())
+    end)
+
+    it("ttsGetRate, ttsGetPitch and ttsGetVolume return numbers", function()
+      if ttsUnsupported() then
+        return
+      end
+      assert.is_number(ttsGetRate())
+      assert.is_number(ttsGetPitch())
+      assert.is_number(ttsGetVolume())
+    end)
+
+    it("the voice setters return false for a voice that does not exist", function()
+      if ttsUnsupported() then
+        return
+      end
+      assert.is_false(ttsSetVoiceByIndex(0))
+      assert.is_false(ttsSetVoiceByIndex(9999))
+      assert.is_false(ttsSetVoiceByName("no such voice is installed"))
+    end)
+
+    it("the voice setters raise a Lua error for a wrongly typed argument", function()
+      if ttsUnsupported() then
+        return
+      end
+      assert.has_error(function()
+        ttsSetVoiceByIndex("first")
+      end)
+      assert.has_error(function()
+        ttsSetVoiceByName({})
+      end)
+    end)
+
+    it("ttsGetVoices lists the mock engine's voices and ttsGetCurrentVoice names one of them", function()
+      if noMockEngine() then
+        return
+      end
+      local voices = ttsGetVoices()
+      assert.is_true(#voices > 0)
+      local current = ttsGetCurrentVoice()
+      assert.is_string(current)
+      assert.is_true(table.contains(voices, current), current)
+      for _, name in ipairs(voices) do
+        assert.is_string(name)
+      end
+    end)
+
+    it("ttsSpeak speaks the text and reports it until the engine goes ready again", function()
+      if noMockEngine() then
+        return
+      end
+      local started, ready = {}, {}
+      collect("ttsSpeechStarted", started)
+      collect("ttsSpeechReady", ready)
+
+      ttsSpeak("Mudlet spec one")
+      assert.equals("ttsSpeechStarted", ttsGetState())
+      assert.equals("Mudlet spec one", ttsGetCurrentLine())
+      -- the first utterance of a session used to report an empty text here,
+      -- see the ttsSpeechStarted spec below
+      assert.same({ "Mudlet spec one" }, started)
+
+      assert.equals("ttsSpeechReady", (waitForEvent("ttsSpeechReady", 5000)))
+      assert.equals("ttsSpeechReady", ttsGetState())
+      assert.equals(1, #ready)
+      -- with nothing being spoken the line is no longer reported
+      local line, err = ttsGetCurrentLine()
+      assert.is_nil(line)
+      assert.is_true(err:find("not speaking any text", 1, true) ~= nil)
+    end)
+
+    it("ttsSpeak drops angle brackets from the text it speaks", function()
+      if noMockEngine() then
+        return
+      end
+      -- discussion: https://github.com/Mudlet/Mudlet/issues/4689
+      ttsSpeak("<b>bold</b>")
+      assert.equals("bbold/b", ttsGetCurrentLine())
+    end)
+
+    it("ttsPause holds the utterance and ttsResume runs it to the end", function()
+      if noMockEngine() then
+        return
+      end
+      local paused = {}
+      collect("ttsSpeechPaused", paused)
+
+      ttsSpeak("pause this line")
+      assert.equals("ttsSpeechStarted", ttsGetState())
+      ttsPause()
+      -- the engine reports the pause asynchronously
+      assert.equals("ttsSpeechPaused", (waitForEvent("ttsSpeechPaused", 5000)))
+      assert.equals("ttsSpeechPaused", ttsGetState())
+      assert.equals(1, #paused)
+      -- the paused utterance is still the current one
+      assert.equals("pause this line", ttsGetCurrentLine())
+
+      ttsResume()
+      assert.equals("ttsSpeechStarted", ttsGetState())
+      assert.equals("ttsSpeechReady", (waitForEvent("ttsSpeechReady", 5000)))
+      assert.equals("ttsSpeechReady", ttsGetState())
+    end)
+
+    it("ttsSkip ends the current utterance immediately", function()
+      if noMockEngine() then
+        return
+      end
+      local ready = {}
+      collect("ttsSpeechReady", ready)
+
+      ttsSpeak("a long enough sentence that it cannot possibly finish on its own by now")
+      assert.equals("ttsSpeechStarted", ttsGetState())
+      ttsSkip()
+      -- the utterance would take over a second to speak, so a ready state
+      -- straight after the call can only be the skip taking effect
+      assert.equals("ttsSpeechReady", ttsGetState())
+      assert.equals(1, #ready)
+    end)
+
+    it("ttsQueue holds lines while the engine is busy and ttsGetQueue reads them back", function()
+      if noMockEngine() then
+        return
+      end
+      local queued = {}
+      collect("ttsSpeechQueued", queued)
+
+      ttsClearQueue()
+      ttsSpeak("occupying the engine with a line that takes a while to speak")
+      ttsQueue("queued one")
+      ttsQueue("queued two")
+      assert.equals(2, #ttsGetQueue())
+      assert.equals("queued one", ttsGetQueue(1))
+      assert.equals("queued two", ttsGetQueue(2))
+      assert.equals(2, #queued)
+      assert.equals("queued one", queued[1])
+      assert.equals("queued two", queued[2])
+
+      -- an explicit index inserts rather than appends
+      ttsQueue("queued zero", 1)
+      assert.same({ "queued zero", "queued one", "queued two" }, ttsGetQueue())
+
+      ttsClearQueue(1)
+      assert.same({ "queued one", "queued two" }, ttsGetQueue())
+      ttsClearQueue()
+      assert.equals(0, #ttsGetQueue())
+    end)
+
+    it("ttsQueue speaks straight away when the engine is idle", function()
+      if noMockEngine() then
+        return
+      end
+      ttsClearQueue()
+      assert.equals("ttsSpeechReady", ttsGetState())
+
+      ttsQueue("queued while idle")
+      -- nothing is waiting, so the line is taken back off the queue and
+      -- spoken instead of being held
+      assert.equals(0, #ttsGetQueue())
+      assert.equals("ttsSpeechStarted", ttsGetState())
+      assert.equals("queued while idle", ttsGetCurrentLine())
+    end)
+
+    it("ttsQueue drops angle brackets like ttsSpeak does", function()
+      if noMockEngine() then
+        return
+      end
+      ttsClearQueue()
+      ttsSpeak("occupying the engine with a line that takes a while to speak")
+      ttsQueue("<i>queued</i>")
+      assert.same({ "iqueued/i" }, ttsGetQueue())
+    end)
+
+    it("ttsQueue clamps an index outside the queue instead of failing", function()
+      if noMockEngine() then
+        return
+      end
+      ttsClearQueue()
+      ttsSpeak("occupying the engine with a line that takes a while to speak")
+      ttsQueue("middle")
+      ttsQueue("beyond the end", 99)
+      ttsQueue("before the start", -5)
+      assert.same({ "before the start", "middle", "beyond the end" }, ttsGetQueue())
+    end)
+
+    it("ttsSkip moves on to the next queued line", function()
+      if noMockEngine() then
+        return
+      end
+      ttsClearQueue()
+      ttsSpeak("occupying the engine with a line that takes a while to speak")
+      ttsQueue("the line after the skip")
+      assert.equals(1, #ttsGetQueue())
+
+      ttsSkip()
+      assert.equals(0, #ttsGetQueue())
+      assert.equals("the line after the skip", ttsGetCurrentLine())
+    end)
+
+    it("a queued line starts speaking when the current one ends", function()
+      if noMockEngine() then
+        return
+      end
+      ttsClearQueue()
+      ttsSpeak("first line")
+      ttsQueue("second line")
+      assert.equals(1, #ttsGetQueue())
+
+      assert.equals("ttsSpeechReady", (waitForEvent("ttsSpeechReady", 5000)))
+      -- the queue is drained by the state change that ended the first line
+      assert.equals(0, #ttsGetQueue())
+      assert.equals("second line", ttsGetCurrentLine())
+    end)
+
+    it("ttsSetRate, ttsSetPitch and ttsSetVolume are read back and clamped", function()
+      if noMockEngine() then
+        return
+      end
+      local rates, pitches, volumes = {}, {}, {}
+      collect("ttsRateChanged", rates)
+      collect("ttsPitchChanged", pitches)
+      collect("ttsVolumeChanged", volumes)
+      local rate, pitch, volume = ttsGetRate(), ttsGetPitch(), ttsGetVolume()
+      onCleanup(function()
+        ttsSetRate(rate)
+        ttsSetPitch(pitch)
+        ttsSetVolume(volume)
+      end)
+
+      ttsSetRate(0.5)
+      assert.equals(0.5, ttsGetRate())
+      ttsSetRate(5)
+      assert.equals(1, ttsGetRate())
+      ttsSetRate(-5)
+      assert.equals(-1, ttsGetRate())
+      assert.same({ 0.5, 1, -1 }, rates)
+
+      ttsSetPitch(0.25)
+      assert.equals(0.25, ttsGetPitch())
+      ttsSetPitch(9)
+      assert.equals(1, ttsGetPitch())
+      ttsSetPitch(-9)
+      assert.equals(-1, ttsGetPitch())
+      assert.same({ 0.25, 1, -1 }, pitches)
+
+      ttsSetVolume(0.3)
+      assert.equals(0.3, ttsGetVolume())
+      ttsSetVolume(9)
+      assert.equals(1, ttsGetVolume())
+      -- volume clamps to zero rather than to -1
+      ttsSetVolume(-9)
+      assert.equals(0, ttsGetVolume())
+      assert.same({ 0.3, 1, 0 }, volumes)
+    end)
+
+    it("the voice setters switch voice and report it back", function()
+      if noMockEngine() or tooFewVoices() then
+        return
+      end
+      local voices = ttsGetVoices()
+      local changes = {}
+      local originalVoice = ttsGetCurrentVoice()
+      collect("ttsVoiceChanged", changes)
+      onCleanup(function()
+        ttsSetVoiceByName(originalVoice)
+      end)
+
+      assert.is_true(ttsSetVoiceByName(voices[2]))
+      assert.equals(voices[2], ttsGetCurrentVoice())
+      assert.is_true(ttsSetVoiceByIndex(1))
+      assert.equals(voices[1], ttsGetCurrentVoice())
+      assert.same({ voices[2], voices[1] }, changes)
+    end)
+
+    it("ttsSpeechStarted carries the text that just started being spoken", function()
+      if noMockEngine() then
+        return
+      end
+      -- Regression #9591: the text used to be recorded after say() returned,
+      -- and the engine changes state inside say(), so the event carried the
+      -- previous utterance. The handler has to be armed up front because the
+      -- event is raised before ttsSpeak() returns.
+      local started = {}
+      collect("ttsSpeechStarted", started)
+
+      ttsClearQueue()
+      ttsSpeak("first spoken line")
+      assert.same({ "first spoken line" }, started)
+
+      ttsSkip()
+      ttsSpeak("second spoken line")
+      assert.same({ "first spoken line", "second spoken line" }, started)
+    end)
+
+    it("announces an utterance spoken over one that is still running", function()
+      if noMockEngine() then
+        return
+      end
+      -- #9659: the events are raised off the engine's state edges, and an
+      -- engine that is already speaking has no edge to report when it is
+      -- handed something else - so a script tracking what is being spoken was
+      -- never told the text had changed, while ttsGetCurrentLine() moved on
+      -- underneath it. No ttsSkip() here: the interruption is the point.
+      local started = {}
+      collect("ttsSpeechStarted", started)
+
+      ttsClearQueue()
+      ttsSpeak("the utterance being spoken over")
+      ttsSpeak("the utterance spoken over it")
+      assert.same({ "the utterance being spoken over", "the utterance spoken over it" }, started)
+      assert.equals("the utterance spoken over it", ttsGetCurrentLine())
+    end)
+
+    it("ttsSpeechStarted carries the queued line the drain started speaking", function()
+      if noMockEngine() then
+        return
+      end
+      -- Regression #9591 again: the queue drain in ttsStateChanged() had the
+      -- same say()-before-record ordering as ttsSpeak(), so the event named
+      -- the utterance the skip had just ended rather than the queued one that
+      -- replaced it. ttsGetCurrentLine() reads correctly either way, so only
+      -- the event's own argument can catch this.
+      local started = {}
+      collect("ttsSpeechStarted", started)
+
+      ttsClearQueue()
+      ttsSpeak("the line that gets skipped")
+      ttsQueue("line taken off the queue")
+      ttsSkip()
+      assert.same({ "the line that gets skipped", "line taken off the queue" }, started)
+    end)
+
+    it("speaking over a busy engine leaves the direct utterance current", function()
+      if noMockEngine() then
+        return
+      end
+      -- The utterance a script asks for outright has to survive the queue:
+      -- an engine reporting Ready for the utterance say() interrupted used to
+      -- be read as an idle engine, which drained the queued line straight
+      -- over the requested one (#9659). The mock engine reports no such Ready,
+      -- so what this spec can hold onto is the state ttsSpeak() leaves behind
+      -- - the guard itself is exercised by TtsInterruptingSpeakTest, which
+      -- delivers that Ready the way a real engine does.
+      local started = {}
+      collect("ttsSpeechStarted", started)
+
+      ttsClearQueue()
+      ttsSpeak("the busy utterance")
+      ttsQueue("still queued")
+      ttsSpeak("the direct utterance")
+      assert.equals(1, #ttsGetQueue())
+      assert.equals("the direct utterance", ttsGetCurrentLine())
+      -- ...and the queued line was not what got announced:
+      assert.same({ "the busy utterance", "the direct utterance" }, started)
+    end)
+
+    it("ttsSetVoiceByName reports success for a voice it switched to", function()
+      if noMockEngine() then
+        return
+      end
+      local voices = ttsGetVoices()
+      if #voices < 2 then
+        pending("the mock engine offers only one voice in this environment")
+        return
+      end
+      -- Regression #9590: dispatching ttsVoiceChanged used to wipe this
+      -- lua_State's whole stack, taking the already-pushed result with it and
+      -- handing the caller stack garbage. A handler must be listening for the
+      -- event to reach Lua at all, which is what collect() arranges here.
+      local changes = {}
+      collect("ttsVoiceChanged", changes)
+      local originalVoice = ttsGetCurrentVoice()
+      onCleanup(function()
+        ttsSetVoiceByName(originalVoice)
+      end)
+
+      assert.is_true(ttsSetVoiceByName(voices[2]))
+      assert.equals(voices[2], ttsGetCurrentVoice())
+      assert.same({ voices[2] }, changes)
+    end)
   end)
+end)

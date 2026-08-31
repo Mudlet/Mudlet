@@ -48,373 +48,373 @@
 -- Mudet MUD Client (https://www.mudlet.org) and uses a couple of Lua functions provided by that application
 -- that are NOT present in a normal Lua interpreter environment.
 
-local test_data_integrity = false  -- set to true if you are unsure about correctness of human-unreadable parts of this file
+local test_data_integrity = false -- set to true if you are unsure about correctness of human-unreadable parts of this file
 
 local function modify_lua_functions(all_compressed_mappings)
+  local function convert_from_utf8(...) -- for all OS except Windows
+    return ...
+  end
 
-   local function convert_from_utf8(...)   -- for all OS except Windows
-      return ...
-   end
+  local char, byte, floor, table_insert, table_concat = string.char, string.byte, math.floor, table.insert, table.concat
 
-   local char, byte, floor, table_insert, table_concat = string.char, string.byte, math.floor, table.insert, table.concat
+  local function decompress_mapping(compressed_mapping)
+    local width, offset, base, CS1, CS2, get_next_char = 1.0, 0.0, 0.0, 7 ^ 18, 5 ^ 22, compressed_mapping:gmatch("%S")
+    local mapping, trees, unicode, ansi, prev_delta_unicode, prev_delta_ansi = {}, {}, 0x7F, 0x7F
 
-   local function decompress_mapping(compressed_mapping)
-
-      local width, offset, base, CS1, CS2, get_next_char = 1.0, 0.0, 0.0, 7^18, 5^22, compressed_mapping:gmatch"%S"
-      local mapping, trees, unicode, ansi, prev_delta_unicode, prev_delta_ansi = {}, {}, 0x7F, 0x7F
-
-      local function decompress_selection(qty, tree)
-         while width <= 94^7 do
-            width, offset, base = width * 94.0, offset * 94.0 + byte(get_next_char()) - 33.0, (base - floor((base + width - 1) / 94^7) * 94^7) * 94.0
-         end
-         if qty then
-            local big_qty = width % qty
-            local small_unit = (width - big_qty) / qty
-            local big_unit = small_unit + 1.0
-            local offset_small = big_qty * big_unit
-            local from, offset_from, left, right
-            if offset < offset_small then
-               width = big_unit
-               offset_from = offset - offset % big_unit
-               from = offset_from / big_unit
+    local function decompress_selection(qty, tree)
+      while width <= 94 ^ 7 do
+        width, offset, base =
+          width * 94.0,
+          offset * 94.0 + byte(get_next_char()) - 33.0,
+          (base - floor((base + width - 1) / 94 ^ 7) * 94 ^ 7) * 94.0
+      end
+      if qty then
+        local big_qty = width % qty
+        local small_unit = (width - big_qty) / qty
+        local big_unit = small_unit + 1.0
+        local offset_small = big_qty * big_unit
+        local from, offset_from, left, right
+        if offset < offset_small then
+          width = big_unit
+          offset_from = offset - offset % big_unit
+          from = offset_from / big_unit
+        else
+          width = small_unit
+          offset_from = offset - (offset - offset_small) % small_unit
+          from = big_qty + (offset_from - offset_small) / small_unit
+        end
+        local len, leaf = 1.0, from
+        if tree then
+          leaf, left, right = 4, 0, qty
+          repeat
+            local middle = tree[leaf]
+            if from < middle then
+              right = middle
             else
-               width = small_unit
-               offset_from = offset - (offset - offset_small) % small_unit
-               from = big_qty + (offset_from - offset_small) / small_unit
+              left, leaf = middle, leaf + 1
             end
-            local len, leaf = 1.0, from
-            if tree then
-               leaf, left, right = 4, 0, qty
-               repeat
-                  local middle = tree[leaf]
-                  if from < middle then
-                     right = middle
-                  else
-                     left, leaf = middle, leaf + 1
-                  end
-                  leaf = tree[leaf + 1]
-               until leaf < 0
-               from, len = left, right - left
-               offset_from = left < big_qty and left * big_unit or offset_small + (left - big_qty) * small_unit
-               width = (right < big_qty and right * big_unit or offset_small + (right - big_qty) * small_unit) - offset_from
-            end
-            base, offset = base + offset_from, offset - offset_from
-            CS1, CS2 = (CS1 % 93471801.0) * (CS2 % 93471811.0) + qty, (CS1 % 93471821.0) * (CS2 % 93471831.0) - from * 773.0 - len * 7789.0
-            return leaf
-         end
-         assert((CS1 - CS2) % width == offset)
+            leaf = tree[leaf + 1]
+          until leaf < 0
+          from, len = left, right - left
+          offset_from = left < big_qty and left * big_unit or offset_small + (left - big_qty) * small_unit
+          width = (right < big_qty and right * big_unit or offset_small + (right - big_qty) * small_unit) - offset_from
+        end
+        base, offset = base + offset_from, offset - offset_from
+        CS1, CS2 =
+          (CS1 % 93471801.0) * (CS2 % 93471811.0) + qty,
+          (CS1 % 93471821.0) * (CS2 % 93471831.0) - from * 773.0 - len * 7789.0
+        return leaf
+      end
+      assert((CS1 - CS2) % width == offset)
+    end
+
+    local function get_delta(tree_idx)
+      local tree = trees[tree_idx]
+      local val = tree[3]
+      if val == 0.0 then
+        local leaf = decompress_selection(tree[1], tree)
+        local max_exp_cnt = tree[2]
+        val = leaf % max_exp_cnt
+        leaf = (leaf - val) / max_exp_cnt + 2.0
+        val = 2.0 ^ val
+        val = val + decompress_selection(val)
+        if leaf ~= 0.0 then
+          return leaf * val
+        end
+      end
+      tree[3] = val - 1.0
+    end
+
+    for tree_idx = 1, 2 do
+      local total_freq = decompress_selection(2 ^ 15)
+      local max_exp_cnt = decompress_selection(17)
+      local tree, qty_for_leaf_info = { total_freq, max_exp_cnt, 0.0 }, 3 * max_exp_cnt
+
+      local function build_subtree(left, right, idx)
+        local middle, subtree = left + 1
+        middle = decompress_selection(right - middle) + middle
+        tree[idx], idx = middle, idx + 3
+        for next_idx = idx - 2, idx - 1 do
+          if decompress_selection(2) == 1 then
+            subtree, idx = idx, build_subtree(left, middle, idx)
+          else
+            subtree = decompress_selection(qty_for_leaf_info) - qty_for_leaf_info
+          end
+          tree[next_idx], left, middle = subtree, middle, right
+        end
+        return idx
       end
 
-      local function get_delta(tree_idx)
-         local tree = trees[tree_idx]
-         local val = tree[3]
-         if val == 0.0 then
-            local leaf = decompress_selection(tree[1], tree)
-            local max_exp_cnt = tree[2]
-            val = leaf % max_exp_cnt
-            leaf = (leaf - val) / max_exp_cnt + 2.0
-            val = 2.0^val
-            val = val + decompress_selection(val)
-            if leaf ~= 0.0 then
-               return leaf * val
-            end
-         end
-         tree[3] = val - 1.0
+      build_subtree(0, total_freq, 4)
+      trees[tree_idx] = tree
+    end
+    while true do
+      local delta = get_delta(1)
+      if not delta then
+        delta = prev_delta_unicode
+      elseif delta == prev_delta_unicode then
+        decompress_selection()
+        return mapping
       end
+      unicode, prev_delta_unicode, delta = unicode + delta, delta, get_delta(2) or prev_delta_ansi
+      ansi, prev_delta_ansi = ansi + delta, delta
+      mapping[unicode] = ansi
+    end
+  end
 
-      for tree_idx = 1, 2 do
-         local total_freq = decompress_selection(2^15)
-         local max_exp_cnt = decompress_selection(17)
-         local tree, qty_for_leaf_info = {total_freq, max_exp_cnt, 0.0}, 3 * max_exp_cnt
+  if test_data_integrity then
+    print("-------------------------------------------------")
+    print("Testing data integrity of all compressed mappings")
+    for codepage, compressed_mapping in pairs(all_compressed_mappings) do
+      print(codepage, pcall(decompress_mapping, compressed_mapping) and "OK" or "FAILED")
+    end
+    print("-------------------------------------------------")
+  end
 
-         local function build_subtree(left, right, idx)
-            local middle, subtree = left + 1
-            middle = decompress_selection(right - middle) + middle
-            tree[idx], idx = middle, idx + 3
-            for next_idx = idx - 2, idx - 1 do
-               if decompress_selection(2) == 1 then
-                  subtree, idx = idx, build_subtree(left, middle, idx)
-               else
-                  subtree = decompress_selection(qty_for_leaf_info) - qty_for_leaf_info
-               end
-               tree[next_idx], left, middle = subtree, middle, right
-            end
-            return idx
-         end
-
-         build_subtree(0, total_freq, 4)
-         trees[tree_idx] = tree
-      end
-      while true do
-         local delta = get_delta(1)
-         if not delta then
-            delta = prev_delta_unicode
-         elseif delta == prev_delta_unicode then
-            decompress_selection()
-            return mapping
-         end
-         unicode, prev_delta_unicode, delta = unicode + delta, delta, get_delta(2) or prev_delta_ansi
-         ansi, prev_delta_ansi = ansi + delta, delta
-         mapping[unicode] = ansi
-      end
-   end
-
-   if test_data_integrity then
-      print"-------------------------------------------------"
-      print"Testing data integrity of all compressed mappings"
-      for codepage, compressed_mapping in pairs(all_compressed_mappings) do
-         print(codepage, pcall(decompress_mapping, compressed_mapping) and "OK" or "FAILED")
-      end
-      print"-------------------------------------------------"
-   end
-
-   --[[
+  --[[
    The next couple of lines diverge from upstream as they use functions
    that we provide ourselves that avoid the need to:
    * probe the environment for the OS
    * spawn an external OS command to extract a value from the Windows Registry
    --]]
-   if getOS() == "windows" then
+  if getOS() == "windows" then
+    local codepage = getWindowsCodepage()
+    -- print("Your codepage is "..codepage)
+    local compressed_mapping = all_compressed_mappings[codepage]
+    if compressed_mapping then
+      local map_unicode_to_ansi = decompress_mapping(compressed_mapping)
 
-      local codepage = getWindowsCodepage()
-      -- print("Your codepage is "..codepage)
-      local compressed_mapping = all_compressed_mappings[codepage]
-      if compressed_mapping then
-         local map_unicode_to_ansi = decompress_mapping(compressed_mapping)
-
-         local function utf8_to_unicode(utf8str, pos)
-            -- pos = starting byte position inside input string (default 1)
-            -- returns code, number of bytes in this utf8 char
-            pos = pos or 1
-            local code, size = byte(utf8str, pos), 1
-            if code >= 0xC0 and code < 0xFE then
-               local mask = 64
-               code = code - 128
-               repeat
-                  local next_byte = byte(utf8str, pos + size) or 0
-                  if next_byte >= 0x80 and next_byte < 0xC0 then
-                     code, size = (code - mask - 2) * 64 + next_byte, size + 1
-                  else
-                     code, size = byte(utf8str, pos), 1
-                  end
-                  mask = mask * 32
-               until code < mask
-            end
-            return code, size
-         end
-
-         function convert_from_utf8(utf8str)
-            local pos, result_ansi = 1, {}
-            while pos <= #utf8str do
-               local code, size = utf8_to_unicode(utf8str, pos)
-               pos = pos + size
-               code = code < 128 and code or map_unicode_to_ansi[code] or byte"?"
-               if code > 255 then
-                  table_insert(result_ansi, char(floor(code / 256)))
-               end
-               table_insert(result_ansi, char(code % 256))
-            end
-            return table_concat(result_ansi)
-         end
-
-         local orig_os_rename = os.rename
-
-         function os.rename(old, new)
-            return orig_os_rename(convert_from_utf8(old), convert_from_utf8(new))
-         end
-
-         local orig_os_remove = os.remove
-
-         function os.remove(filename)
-            return orig_os_remove(convert_from_utf8(filename))
-         end
-
-         local orig_os_execute = os.execute
-
-         function os.execute(command)
-            if command then
-               command = convert_from_utf8(command)
-            end
-            return orig_os_execute(command)
-         end
-
-         local orig_io_open = io.open
-
-         function io.open(filename, ...)
-            return orig_io_open(convert_from_utf8(filename), ...)
-         end
-
-         local orig_io_popen = io.popen
-
-         function io.popen(prog, ...)
-            return orig_io_popen(convert_from_utf8(prog), ...)
-         end
-
-         local orig_io_lines = io.lines
-
-         function io.lines(filename, ...)
-            if filename then
-               filename = convert_from_utf8(filename)
-               return orig_io_lines(filename, ...)
+      local function utf8_to_unicode(utf8str, pos)
+        -- pos = starting byte position inside input string (default 1)
+        -- returns code, number of bytes in this utf8 char
+        pos = pos or 1
+        local code, size = byte(utf8str, pos), 1
+        if code >= 0xC0 and code < 0xFE then
+          local mask = 64
+          code = code - 128
+          repeat
+            local next_byte = byte(utf8str, pos + size) or 0
+            if next_byte >= 0x80 and next_byte < 0xC0 then
+              code, size = (code - mask - 2) * 64 + next_byte, size + 1
             else
-               return orig_io_lines()
+              code, size = byte(utf8str, pos), 1
             end
-         end
-
-         local orig_dofile = dofile
-
-         function dofile(filename)
-            if filename then
-               filename = convert_from_utf8(filename)
-            end
-            return orig_dofile(filename)
-         end
-
-         local orig_loadfile = loadfile
-
-         function loadfile(filename, ...)
-            if filename then
-               filename = convert_from_utf8(filename)
-            end
-            return orig_loadfile(filename, ...)
-         end
-
-         local orig_require = require
-
-         function require(modname)
-            modname = convert_from_utf8(modname)
-            return orig_require(modname)
-         end
-
-         local orig_io_input = io.input
-
-         function io.input(file)
-            if type(file) == "string" then
-               file = convert_from_utf8(file)
-            end
-            return orig_io_input(file)
-         end
-
-         local orig_io_output = io.output
-
-         function io.output(file)
-            if type(file) == "string" then
-               file = convert_from_utf8(file)
-            end
-            return orig_io_output(file)
-         end
-
-         local orig_lfs_attributes = lfs.attributes
-
-         function lfs.attributes(file, optional)
-            file = convert_from_utf8(file)
-            return orig_lfs_attributes(file, optional)
-         end
-
-         local orig_lfs_chdir = lfs.chdir
-
-         function lfs.chdir(path)
-            path = convert_from_utf8(path)
-            return orig_lfs_chdir(path)
-         end
-
-         local orig_lfs_lock_dir = lfs.lock_dir
-
-         function lfs.lock_dir(path, seconds_stale)
-            path = convert_from_utf8(path)
-            return orig_lfs_lock_dir(path, seconds_stale)
-         end
-
-         local orig_lfs_dir = lfs.dir
-
-         function lfs.dir(path)
-            path = convert_from_utf8(path)
-            return orig_lfs_dir(path)
-         end
-
-         local orig_lfs_mkdir = lfs.mkdir
-
-         function lfs.mkdir(dirname)
-            dirname = convert_from_utf8(dirname)
-            return orig_lfs_mkdir(dirname)
-         end
-
-         local orig_lfs_rmdir = lfs.rmdir
-
-         function lfs.rmdir(dirname)
-            dirname = convert_from_utf8(dirname)
-            return orig_lfs_rmdir(dirname)
-         end
-
-         local orig_lfs_symlinkattributes = lfs.symlinkattributes
-
-         function lfs.symlinkattributes(filepath, aname)
-            filepath = convert_from_utf8(filepath)
-            return orig_lfs_symlinkattributes(filepath, aname)
-         end
-
-         local orig_lfs_touch = lfs.touch
-
-         function lfs.touch(filepath, atime, mtime)
-            filepath = convert_from_utf8(filepath)
-            return orig_lfs_touch(filepath, atime, mtime)
-         end
-      else
-         -- print("Mapping for codepage "..codepage.." not found")
+            mask = mask * 32
+          until code < mask
+        end
+        return code, size
       end
 
-   end
+      function convert_from_utf8(utf8str)
+        local pos, result_ansi = 1, {}
+        while pos <= #utf8str do
+          local code, size = utf8_to_unicode(utf8str, pos)
+          pos = pos + size
+          code = code < 128 and code or map_unicode_to_ansi[code] or byte("?")
+          if code > 255 then
+            table_insert(result_ansi, char(floor(code / 256)))
+          end
+          table_insert(result_ansi, char(code % 256))
+        end
+        return table_concat(result_ansi)
+      end
 
-   return convert_from_utf8
+      local orig_os_rename = os.rename
 
+      function os.rename(old, new)
+        return orig_os_rename(convert_from_utf8(old), convert_from_utf8(new))
+      end
+
+      local orig_os_remove = os.remove
+
+      function os.remove(filename)
+        return orig_os_remove(convert_from_utf8(filename))
+      end
+
+      local orig_os_execute = os.execute
+
+      function os.execute(command)
+        if command then
+          command = convert_from_utf8(command)
+        end
+        return orig_os_execute(command)
+      end
+
+      local orig_io_open = io.open
+
+      function io.open(filename, ...)
+        return orig_io_open(convert_from_utf8(filename), ...)
+      end
+
+      local orig_io_popen = io.popen
+
+      function io.popen(prog, ...)
+        return orig_io_popen(convert_from_utf8(prog), ...)
+      end
+
+      local orig_io_lines = io.lines
+
+      function io.lines(filename, ...)
+        if filename then
+          filename = convert_from_utf8(filename)
+          return orig_io_lines(filename, ...)
+        else
+          return orig_io_lines()
+        end
+      end
+
+      local orig_dofile = dofile
+
+      function dofile(filename)
+        if filename then
+          filename = convert_from_utf8(filename)
+        end
+        return orig_dofile(filename)
+      end
+
+      local orig_loadfile = loadfile
+
+      function loadfile(filename, ...)
+        if filename then
+          filename = convert_from_utf8(filename)
+        end
+        return orig_loadfile(filename, ...)
+      end
+
+      local orig_require = require
+
+      function require(modname)
+        modname = convert_from_utf8(modname)
+        return orig_require(modname)
+      end
+
+      local orig_io_input = io.input
+
+      function io.input(file)
+        if type(file) == "string" then
+          file = convert_from_utf8(file)
+        end
+        return orig_io_input(file)
+      end
+
+      local orig_io_output = io.output
+
+      function io.output(file)
+        if type(file) == "string" then
+          file = convert_from_utf8(file)
+        end
+        return orig_io_output(file)
+      end
+
+      local orig_lfs_attributes = lfs.attributes
+
+      function lfs.attributes(file, optional)
+        file = convert_from_utf8(file)
+        return orig_lfs_attributes(file, optional)
+      end
+
+      local orig_lfs_chdir = lfs.chdir
+
+      function lfs.chdir(path)
+        path = convert_from_utf8(path)
+        return orig_lfs_chdir(path)
+      end
+
+      local orig_lfs_lock_dir = lfs.lock_dir
+
+      function lfs.lock_dir(path, seconds_stale)
+        path = convert_from_utf8(path)
+        return orig_lfs_lock_dir(path, seconds_stale)
+      end
+
+      local orig_lfs_dir = lfs.dir
+
+      function lfs.dir(path)
+        path = convert_from_utf8(path)
+        return orig_lfs_dir(path)
+      end
+
+      local orig_lfs_mkdir = lfs.mkdir
+
+      function lfs.mkdir(dirname)
+        dirname = convert_from_utf8(dirname)
+        return orig_lfs_mkdir(dirname)
+      end
+
+      local orig_lfs_rmdir = lfs.rmdir
+
+      function lfs.rmdir(dirname)
+        dirname = convert_from_utf8(dirname)
+        return orig_lfs_rmdir(dirname)
+      end
+
+      local orig_lfs_symlinkattributes = lfs.symlinkattributes
+
+      function lfs.symlinkattributes(filepath, aname)
+        filepath = convert_from_utf8(filepath)
+        return orig_lfs_symlinkattributes(filepath, aname)
+      end
+
+      local orig_lfs_touch = lfs.touch
+
+      function lfs.touch(filepath, atime, mtime)
+        filepath = convert_from_utf8(filepath)
+        return orig_lfs_touch(filepath, atime, mtime)
+      end
+    else
+      -- print("Mapping for codepage "..codepage.." not found")
+    end
+  end
+
+  return convert_from_utf8
 end
 
-return modify_lua_functions{
+return modify_lua_functions({
 
-   -- Unicode to Windows ANSI codepage mappings (compressed and protected by a checksum)
+  -- Unicode to Windows ANSI codepage mappings (compressed and protected by a checksum)
 
-   ["874"]  =  -- Thai, 97 codepoints above U+007F
-      [[!%l+$"""WN^9=&$pqF'oheO#;0l#"hs)mI[=e!ufwkDB#OwLnJ|IRIUz8Q(MMM]],
+  -- Thai, 97 codepoints above U+007F
+  ["874"] = [[!%l+$"""WN^9=&$pqF'oheO#;0l#"hs)mI[=e!ufwkDB#OwLnJ|IRIUz8Q(MMM]],
 
-   ["1250"] =  -- Central European, 123 codepoints above U+007F
-      [[!<2#?v"1(ro;xh/tL_3hC^i;e~PjO"p<I\aTT};]Rb~M7/]&jRjfwuE%AJ)@XfBQy&\jy[V5:]!RtH]m>Yd8m?6LpsUA\V=x'VcMO<Wz+EOO
+  -- Central European, 123 codepoints above U+007F
+  ["1250"] = [[!<2#?v"1(ro;xh/tL_3hC^i;e~PjO"p<I\aTT};]Rb~M7/]&jRjfwuE%AJ)@XfBQy&\jy[V5:]!RtH]m>Yd8m?6LpsUA\V=x'VcMO<Wz+EOO
       0m7U`u|$Y5x?Vk*6+qJ@/0Lie77_b}OEuwv$Qj/w`+J>M*<g2qxD3qEyC&*{VGI'UddQ`GQ)L=lj<{S;Jm),f3yzcQOuxacHSZ{X'XIWzDz!?E
       =U0f]],
 
-   ["1251"] =  -- Cyrillic, 127 codepoints above U+007F
-      [[!-[;_8kMai7j]xB$^n)#7ngrX}_b%{<Cdot;P?2J&00&^wX|;]@N*fjq#ioX'v.&gG@ur~3yi8t1;xn40{G#NX?7+hGC{$D"4#oJ//~kflzs
+  -- Cyrillic, 127 codepoints above U+007F
+  ["1251"] = [[!-[;_8kMai7j]xB$^n)#7ngrX}_b%{<Cdot;P?2J&00&^wX|;]@N*fjq#ioX'v.&gG@ur~3yi8t1;xn40{G#NX?7+hGC{$D"4#oJ//~kflzs
       "_\z9qP#}1o|@{t`2NrM%t{MW?X9d6o:MqHl6+z]],
 
-   ["1252"] =  -- Western, 123 codepoints above U+007F
-      [[!)W$<c~\OdA5TJ%/J/{:yoE]K[d,c<Mv+gp_[_UuB52c;H&{leFk%Kd8%cHnvLrB[>|:)t.}QH*)]AD|LqjsB+JCdKmbRIjO,]],
+  -- Western, 123 codepoints above U+007F
+  ["1252"] = [[!)W$<c~\OdA5TJ%/J/{:yoE]K[d,c<Mv+gp_[_UuB52c;H&{leFk%Kd8%cHnvLrB[>|:)t.}QH*)]AD|LqjsB+JCdKmbRIjO,]],
 
-   ["1253"] =  -- Greek, 111 codepoints above U+007F
-      [[!./yDCq;#WAuC\C1R{=[n'FpSuc!"R\EZ|4&J?A3-z?*TI?ufbhFq1J!x@Sjff\!G{o^dDXl|8NLZ!$d'8$f^=hh_DPm!<>>bCgV(>erUWhX
+  -- Greek, 111 codepoints above U+007F
+  ["1253"] = [[!./yDCq;#WAuC\C1R{=[n'FpSuc!"R\EZ|4&J?A3-z?*TI?ufbhFq1J!x@Sjff\!G{o^dDXl|8NLZ!$d'8$f^=hh_DPm!<>>bCgV(>erUWhX
       ?R+-JP@4ju:Yw#*C]],
 
-   ["1254"] =  -- Turkish, 121 codepoints above U+007F
-      [[!-(R[SPKY>cgcK5cCs4vk%MuL`yFx^Bl#/!l#M@#yoe|Jx+pxZuvh%r>O</n_gb>hDjmG]j#lA{]2"R-Z@(6Wy:Q~%;327b&fRSkF#BM/d+%
+  -- Turkish, 121 codepoints above U+007F
+  ["1254"] = [[!-(R[SPKY>cgcK5cCs4vk%MuL`yFx^Bl#/!l#M@#yoe|Jx+pxZuvh%r>O</n_gb>hDjmG]j#lA{]2"R-Z@(6Wy:Q~%;327b&fRSkF#BM/d+%
       iWmSx4E*\F_z=s>QeJBqC^]],
 
-   ["1255"] =  -- Hebrew, 105 codepoints above U+007F
-      [[!.b\.H?S\21+7efm'`w&MW_Jg,mRbB;{X@T\3::DC#7<m_cAE!:%C%c7/,./u[8w*h-iwpz03QY,ay%]MI*D]W&]UG^3(=20a7$zG[Ng7MLt
+  -- Hebrew, 105 codepoints above U+007F
+  ["1255"] = [[!.b\.H?S\21+7efm'`w&MW_Jg,mRbB;{X@T\3::DC#7<m_cAE!:%C%c7/,./u[8w*h-iwpz03QY,ay%]MI*D]W&]UG^3(=20a7$zG[Ng7MLt
       sXIne(V37A?OO%|Hn13wMh-?^jNzhW`,-]],
 
-   ["1256"] =  -- Arabic, 128 codepoints above U+007F
-      [[!3n8GE$.to/ka%Nx`uOpcib>|9KU-N72!1J4c2NAUE3a,HlOE=M`@rsa||Nh_!og]:dILz9KNlF~vigNH*a0KxwjjfR*]?tO87(a3-RQex^V
+  -- Arabic, 128 codepoints above U+007F
+  ["1256"] = [[!3n8GE$.to/ka%Nx`uOpcib>|9KU-N72!1J4c2NAUE3a,HlOE=M`@rsa||Nh_!og]:dILz9KNlF~vigNH*a0KxwjjfR*]?tO87(a3-RQex^V
       Ww&SY{:AqE|s%}@U8%rKcr0,NCjR:N&L'YyGu<us'sN*1pl=gAXOwSJ[v?f;imBhDu_)d$F8T?%S[]],
 
-   ["1257"] =  -- Baltic, 116 codepoints above U+007F
-      [[!:<_.XQ[;n35s%I?g9)b/7DiGwIR)zy&=6?/3)6iO%rSnC_6yjl'8#zeN0vcW_yX/2*J93+EJVrW,^Rhe,h7wWl"}neF2~F[PyD;BcrG*5=J
+  -- Baltic, 116 codepoints above U+007F
+  ["1257"] = [[!:<_.XQ[;n35s%I?g9)b/7DiGwIR)zy&=6?/3)6iO%rSnC_6yjl'8#zeN0vcW_yX/2*J93+EJVrW,^Rhe,h7wWl"}neF2~F[PyD;BcrG*5=J
       fh<x!FJ?qSw9Xp!;WB3T<J^x?#Ie`xufezR'\I(eED]3d&)VJL$/+$Zf;W^I>L[3D5F<_IcGpn=oX"JR1%arS|FX|dia4]BeF>d5p`EV+:;*I<
       x^Voq{"f]],
 
-   ["1258"] =  -- Vietnamese, 119 codepoints above U+007F
-      [[!3n8C{%C0}&p3gE0~|&RVm9Wr&^ln1}'$gV{bml1oByN*bb:Bm^E;~B3-WjF6Qubq^`Y*6\0^w!DKpK<\7lHVELmSXN{2~B"0C"<1CYN2{$a
+  -- Vietnamese, 119 codepoints above U+007F
+  ["1258"] = [[!3n8C{%C0}&p3gE0~|&RVm9Wr&^ln1}'$gV{bml1oByN*bb:Bm^E;~B3-WjF6Qubq^`Y*6\0^w!DKpK<\7lHVELmSXN{2~B"0C"<1CYN2{$a
       5M?>|7%~qm{pXphwm3$}iyXjBYwtGqxp(f[!g^Ee9H.}1~0H-k-dzNDh1L]],
 
-   ["932"]  =  -- Japanese, 7389 codepoints above U+007F
-      [=[3+=&7~sLTy"n^PnVG*Gx&j>4Lxml%}fe|7_}nbsu1ImFj_eqZ%/jkS#qT2PD9?]Kq'fK>~C.Ymj<?gN+{6t]jtMgZWZpx>#VyzuhHQ=Nhul
+  -- Japanese, 7389 codepoints above U+007F
+  ["932"] = [=[3+=&7~sLTy"n^PnVG*Gx&j>4Lxml%}fe|7_}nbsu1ImFj_eqZ%/jkS#qT2PD9?]Kq'fK>~C.Ymj<?gN+{6t]jtMgZWZpx>#VyzuhHQ=Nhul
       Hy,C`=^\&<RNc+r6<7~Qs'4MWS2^LR("L)f[0.7IbTe"^eDW|4~[6)P)i'4r-4*>X/rOoEsP.$yExlmU5m>WtY\^7]hCArb1#1H|Q=55V]zc$>
       G%s4WZYuUUFkq^wO(681x$$#J.`laeSd9~!}7Ip/*o#|[SO50hAWAwh`u*NwSng#rD{-.WtePD%lVgYW*`SGn.CZIG}@D+OO>YB"luuc-*J-$P
       Pj*S_Yc$'~c|,^<P;Wz+h_Ryy%d,*bw?+2Yi\'eEtdT6_nqT,(\4uh?E;Po^_crRRd6*qb4M|GG^u.w'rx/Cv82C"Bclo{B5.VT;9_(,o`%TT'
@@ -570,8 +570,8 @@ return modify_lua_functions{
       2b~i(GK2a1"MDHxmb\]}=:K@NhW!USgEL<t=B.ZIz#!3H.Ss,j/L8q@!:4<Szm,&X^?UHlA###.Vz>~55^RJSxe~'LIB2,^Z=(:L-<dZt=%2c4
       rrlfRll2LI=b]Rkrm}-&"n%i'!K+]WaMYm*=Oei<bNeb^(VvkhH~{BcMYa*uWILR'h?5nFKa/rR6jFy"eZSZl{H%p]SErhus\u9.0Y+4Upe]=],
 
-   ["949"]  =  -- Korean, 17048 codepoints above U+007F
-      [=[.?P*"%JdJY.\dApak>>jkl@@vlOMP(2HYtDqZ=CE{6w89$-QMAmM=yjyuext/9^>o"(n}rRN0XD|eH}+M7fc^f"gV;sYA&4"-]gYHf.oIGZ
+  -- Korean, 17048 codepoints above U+007F
+  ["949"] = [=[.?P*"%JdJY.\dApak>>jkl@@vlOMP(2HYtDqZ=CE{6w89$-QMAmM=yjyuext/9^>o"(n}rRN0XD|eH}+M7fc^f"gV;sYA&4"-]gYHf.oIGZ
       Ul+Wt?Do^tX+C)iSAsjU!$"crF~S_MV?9_/Z(@(=yGrY@yD_^/;}dmp_wYx%J%"_kCV/S;NwC+IzI7*0aGuv~qs\La%eI'y4;mNlkMGNkQR?:W
       x?K\z,V((+O(ZYm/xGGqik;L0k|3iWs@"|8?@j%MG{BK1Dk3pXHVnN^0[?X#Kqp~fd3wA,R;gvz}>XB{Q{Jo&>)#]'Cf&&T{TQ"H=|h^auS6>"
       :10_$.BeUI/7TzvDJwI{:2~z8IO3}T_n:ORStD8!M-kk^gD\I86G37`j5,+B*,vS~$6XF">A8o7)'pj5%3x?nwf3knRx1\HZR`_7DB3Rzj[Q|S
@@ -795,8 +795,8 @@ return modify_lua_functions{
       lmDs^Q5+89^{"y*)Y$Ta|1C@'x~k;Lg|8p7g*T}1ks6yt.{]>/^~uDi*Xh)MreE+;w9s~"3IJG`cN!=c*|^cY%@'jzWc&qmTCr_T6N>'P}*VMc
       VkQsXY^)UsoA?K_Wj{DVFXQ&80/w}U$kO?lH3@Khu3(n-O+R7hDQKlE?]=],
 
-   ["936"]  =  -- Simplified Chinese, 21792 codepoints above U+007F
-      [=[!cq%Lf7]BuTvd\U$`xY;Ze%;A&P\kuvz~3R?dWHc6_}0*g^iH5?2RM4s9j-8~\oon,AgsbSH_mPJl-8Y@4D@,'P#{#~/"O[/w[;cmtOz:%p
+  -- Simplified Chinese, 21792 codepoints above U+007F
+  ["936"] = [=[!cq%Lf7]BuTvd\U$`xY;Ze%;A&P\kuvz~3R?dWHc6_}0*g^iH5?2RM4s9j-8~\oon,AgsbSH_mPJl-8Y@4D@,'P#{#~/"O[/w[;cmtOz:%p
       -*4YA##^(FdQJ9Ur:ynHFL+NEb4\AF`Tlf<+\4RsHBy0KA-^3-J}(H5b!rj=rl2v8$yhK'rHo4v2;ByE2I)LZ1Ke`#AF<GmW0U-},5@0i&A\8`
       y'178n}$>R``)Mx{l-T`8@*BYs!PI?W_a3GYF"xe!rXhMXRGT4NIPg#j=}?>0/>WW%AK,,\B%Jib^Osm%WV0<0>(fDRt"CJ*;`6''sZm{x$-;f
       T(4!":9:$8=n9GSg5obD/o&Jcthrr`T)3(.ng?l}0*3h+i?N[V.UgqD!sWdHI],E=r+W?&G(HmBvXW}C{f{yG2=:G[#`es5**|umb`O+jLMuzI
@@ -1053,8 +1053,8 @@ return modify_lua_functions{
       Zm!e%@8Lb^}:u8`"mYEN@63{k5<<g1$9iPva:7+W2A)!&gz?/)WZt1@!>XZ$Tqx|9_*v)m=^Uo)#/jhKVsOl.etgJeZuqZ,cf@EWf&gh-B}*=p
       rY4st-[QX!\zm3i9lbCx{m/)Z:1~+;nk*K8&';pKk,3]uM=JeV<lx8!nZ8S6\8|yza8)sj!RBj[)5!tK]=],
 
-   ["950"]  =  -- Traditional Chinese, 13493 codepoints above U+007F
-      [=[83_O$Pic'CxRvF+;*M|!,mpBB[ewt(*+kIL]oI'*:[WMNP9+4i'J{0,}XWh[:~fla'zX|}}c00F{qc4j$!4C}NF)OkYGR342Us#NGA~1}}t
+  -- Traditional Chinese, 13493 codepoints above U+007F
+  ["950"] = [=[83_O$Pic'CxRvF+;*M|!,mpBB[ewt(*+kIL]oI'*:[WMNP9+4i'J{0,}XWh[:~fla'zX|}}c00F{qc4j$!4C}NF)OkYGR342Us#NGA~1}}t
       k7Vc[:&|@;9sgWDS_;#utgGo*>Pgh8[k/#?P-sW4T\1k0uwF7~Ldx,!k#Yjn"y~`%|O~?E2,B`6i.A_SB1XXnc8*DN12l{rOG\)R6\3HIo"ZyC
       &I\1-r_7Ayq?jFmUZlUATH~*UTm}+^<)uyj4Iz|yW\!Wgpx:g'N%45=xQ)sORou8b2dyZE/$=DFxz&+Kr%?mpASH,r&/62b/ArR9?>fucu>xn*
       Lc!!C!@otWDub_N<QG4'yD5/*2I&\y[9\zt>=t:!qr-H2>apBP|+S6c4v,?am\P:+DuU"31UsY6]nq$s>aP*UY8uUSa"o$8+Dvv/Ax5(S`~g6.
@@ -1304,8 +1304,7 @@ return modify_lua_functions{
       6bp3;AKIm81"gzfa}PPQAnfA=P-Gn}}8L}HZjjM3&g'/kMDhP"c\=UU>m{Pok#$^.T.~,J_KBl]ezTJiOE%Ng(~bV*ht1'Kz/`Fbb[8nZ%$u|#
       _G4:j_A`4IxJ*FT5N+09qyBbfNHH$9Xeep@8m]C:TplW~qq4a-I]me+wI+_'y=MGs*+^8138Nky<K8Zh+;Y#O4SpO5s(qrZx2hy&*ZMsGAav$l
       ZXcFgkq"'Fy1Y&1(9JUd}Ocsef`q@Mqhp9qF,L&bZ%{fJM?;=gO;]2C,fTC!8N)06E3>|]=],
-
-}
+})
 
 --[[
 

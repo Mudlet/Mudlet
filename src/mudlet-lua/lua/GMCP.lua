@@ -14,7 +14,8 @@ end
 function registerUser(user)
   if registeredUsers[user] then
     return "user exists"
-  else registeredUsers[user] = true
+  else
+    registeredUsers[user] = true
   end
 
   return "user registered"
@@ -71,9 +72,10 @@ function enableModule(user, module)
     for _, mod in pairs(module:split("%.")) do
       if not addString then
         addString = mod
-      else addString = string.format("%s.%s", addString, mod)
+      else
+        addString = string.format("%s.%s", addString, mod)
       end
-      ttlString = string.format("%s\"%s 1\",", ttlString, addString)
+      ttlString = string.format('%s"%s 1",', ttlString, addString)
     end
     ttlString = string.format("[%s]", ttlString:gsub("(.+),", "%1"))
     sendGMCP(string.format([[Core.Supports.Add %s ]], ttlString))
@@ -83,7 +85,6 @@ function enableModule(user, module)
   -- Add the user to the module's user list.
   addUser(user, module)
 end
-
 
 -- Send the module list again on reconnect, so activated modules stay enabled during
 --   a session unless explicitly disabled
@@ -148,7 +149,9 @@ function printModules(user)
     local doComma = false
     for j, _ in pairs(v) do
       if not doComma then
-        doComma = true else cecho("<white>, ")
+        doComma = true
+      else
+        cecho("<white>, ")
       end
       cecho(string.format("<cyan>%s", j))
     end

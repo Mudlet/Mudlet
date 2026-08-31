@@ -5,7 +5,7 @@
 -- @module Geyser.VBox
 
 Geyser.VBox = Geyser.Container:new({
-  name = "VBoxClass"
+  name = "VBoxClass",
 })
 
 -- Internal function: lays the box out, or remembers that it still has to be laid
@@ -21,7 +21,7 @@ local function organizeOrDefer(box)
   end
 end
 
-function Geyser.VBox:add (window, cons)
+function Geyser.VBox:add(window, cons)
   -- VBox/HBox have their own add function therefore passing off add2 should be possible without
   -- overwriting their add functions
   if self.useAdd2 then
@@ -35,7 +35,7 @@ end
 
 -- add2 has to be overridden as well, otherwise children created with new2 reach
 -- Geyser.add2 directly and the box never lays them out
-function Geyser.VBox:add2 (window, cons, passAdd2, exclude)
+function Geyser.VBox:add2(window, cons, passAdd2, exclude)
   Geyser.add2(self, window, cons, passAdd2, exclude)
   organizeOrDefer(self)
 end
@@ -44,7 +44,7 @@ end
 -- keep the geometry that was worked out for the old child count and the box is
 -- left with a hole. Every removal path - delete, changeContainer, adding a
 -- child to another container - comes through here.
-function Geyser.VBox:remove (window)
+function Geyser.VBox:remove(window)
   Geyser.remove(self, window)
   organizeOrDefer(self)
 end
@@ -59,13 +59,13 @@ function Geyser.VBox:organize()
   self_height = self_height <= 0 and #self.windows or self_height
   self_width = self_width <= 0 and 0.9 or self_width
   calculated_height = calculated_height <= 0 and 1 or calculated_height
-  
+
   local window_height = (calculated_height / self_height) * 100
   local start_y = 0
   self.contains_fixed = false
   for _, window_name in ipairs(self.windows) do
     local window = self.windowList[window_name]
-    window:move("0%", start_y.."%")
+    window:move("0%", start_y .. "%")
     local width = (window:get_width() / self_width) * 100
     local height = (window:get_height() / self_height) * 100
     if window.h_policy == Geyser.Fixed or window.v_policy == Geyser.Fixed then
@@ -114,7 +114,7 @@ function Geyser.VBox:new(cons, container)
 end
 
 --- Overridden constructor to use add2
-function Geyser.VBox:new2 (cons, container)
+function Geyser.VBox:new2(cons, container)
   cons = cons or {}
   cons.useAdd2 = true
   local me = self:new(cons, container)

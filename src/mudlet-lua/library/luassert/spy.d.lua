@@ -87,14 +87,14 @@ function spy_assert.called_less_than(times) end
 function spy_assert.returned_with(...) end
 
 spy_assert.was = {
-	called = spy_assert.called,
-	called_with = spy_assert.called_with,
-	not_called_with = spy_assert.not_called_with,
-	called_at_least = spy_assert.called_at_least,
-	called_at_most = spy_assert.called_at_most,
-	called_more_than = spy_assert.called_more_than,
-	called_less_than = spy_assert.called_less_than,
-	returned_with = spy_assert.returned_with,
+  called = spy_assert.called,
+  called_with = spy_assert.called_with,
+  not_called_with = spy_assert.not_called_with,
+  called_at_least = spy_assert.called_at_least,
+  called_at_most = spy_assert.called_at_most,
+  called_more_than = spy_assert.called_more_than,
+  called_less_than = spy_assert.called_less_than,
+  returned_with = spy_assert.returned_with,
 }
 
 --#endregion

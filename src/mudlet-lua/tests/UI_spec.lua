@@ -25,11 +25,10 @@ local function registryGrowthOver(refuseOnce)
 end
 
 describe("Tests UI functions", function()
-
   describe("Test the functionality of copy2decho", function()
     setup(function()
       -- create Mudlet miniconsole top-left
-      createMiniConsole("testconsole", 0,0,800,100)
+      createMiniConsole("testconsole", 0, 0, 800, 100)
       setMiniConsoleFontSize("testconsole", 10)
       setBackgroundColor("testconsole", unpack(color_table.DarkSlateGray))
       setWindowWrap("testconsole", 100)
@@ -45,7 +44,8 @@ describe("Tests UI functions", function()
     end)
 
     it("Should copy colored English text", function()
-      local testdecho = "<50,50,0:0,255,0>test<r><192,192,192:0,0,0> <r><255,0,0:0,0,0>red <r><0,255,0:0,0,0>green<r><0,0,255:0,0,0>blue<r>"
+      local testdecho =
+        "<50,50,0:0,255,0>test<r><192,192,192:0,0,0> <r><255,0,0:0,0,0>red <r><0,255,0:0,0,0>green<r><0,0,255:0,0,0>blue<r>"
       decho("testconsole", testdecho)
 
       assert.are.equal(testdecho, copy2decho("testconsole"))
@@ -60,7 +60,8 @@ describe("Tests UI functions", function()
     -- end)
 
     it("Should copy colored Chinese text", function()
-      local testdecho = "<50,50,0:0,255,0>测试<r><192,192,192:0,0,0> <r><255,0,0:0,0,0>红色<r><0,255,0:0,0,0>绿色<r><0,0,255:0,0,0>蓝色<r>"
+      local testdecho =
+        "<50,50,0:0,255,0>测试<r><192,192,192:0,0,0> <r><255,0,0:0,0,0>红色<r><0,255,0:0,0,0>绿色<r><0,0,255:0,0,0>蓝色<r>"
       decho("testconsole", testdecho)
 
       assert.are.equal(testdecho, copy2decho("testconsole"))
@@ -78,7 +79,7 @@ describe("Tests UI functions", function()
   describe("Test the functionality of copy2html", function()
     setup(function()
       -- create Mudlet miniconsole top-left
-      createMiniConsole("testconsole", 0,0,800,100)
+      createMiniConsole("testconsole", 0, 0, 800, 100)
       setMiniConsoleFontSize("testconsole", 10)
       setBackgroundColor("testconsole", unpack(color_table.DarkSlateGray))
       setWindowWrap("testconsole", 100)
@@ -90,16 +91,20 @@ describe("Tests UI functions", function()
     end)
 
     it("Should copy colored English text", function()
-      local testdecho = "<50,50,0:0,255,0>test<r><192,192,192:0,0,0> <r><255,0,0:0,0,0>red <r><0,255,0:0,0,0>green<r><0,0,255:0,0,0>blue<r>"
-      local outputhtml = [[<span style='color: rgb(50,50,0);background: rgb(0,255,0);'>test</span><span style='color: rgb(192,192,192);background: rgb(0,0,0);'> </span><span style='color: rgb(255,0,0);background: rgb(0,0,0);'>red </span><span style='color: rgb(0,255,0);background: rgb(0,0,0);'>green</span><span style='color: rgb(0,0,255);background: rgb(0,0,0);'>blue</span>]]
+      local testdecho =
+        "<50,50,0:0,255,0>test<r><192,192,192:0,0,0> <r><255,0,0:0,0,0>red <r><0,255,0:0,0,0>green<r><0,0,255:0,0,0>blue<r>"
+      local outputhtml =
+        [[<span style='color: rgb(50,50,0);background: rgb(0,255,0);'>test</span><span style='color: rgb(192,192,192);background: rgb(0,0,0);'> </span><span style='color: rgb(255,0,0);background: rgb(0,0,0);'>red </span><span style='color: rgb(0,255,0);background: rgb(0,0,0);'>green</span><span style='color: rgb(0,0,255);background: rgb(0,0,0);'>blue</span>]]
       decho("testconsole", testdecho)
 
       assert.are.equal(outputhtml, copy2html("testconsole"))
     end)
 
     it("Should copy colored Chinese text", function()
-      local testdecho = "<50,50,0:0,255,0>测试<r><192,192,192:0,0,0> <r><255,0,0:0,0,0>红色<r><0,255,0:0,0,0>绿色<r><0,0,255:0,0,0>蓝色<r>"
-      local outputhtml = [[<span style='color: rgb(50,50,0);background: rgb(0,255,0);'>测试</span><span style='color: rgb(192,192,192);background: rgb(0,0,0);'> </span><span style='color: rgb(255,0,0);background: rgb(0,0,0);'>红色</span><span style='color: rgb(0,255,0);background: rgb(0,0,0);'>绿色</span><span style='color: rgb(0,0,255);background: rgb(0,0,0);'>蓝色</span>]]
+      local testdecho =
+        "<50,50,0:0,255,0>测试<r><192,192,192:0,0,0> <r><255,0,0:0,0,0>红色<r><0,255,0:0,0,0>绿色<r><0,0,255:0,0,0>蓝色<r>"
+      local outputhtml =
+        [[<span style='color: rgb(50,50,0);background: rgb(0,255,0);'>测试</span><span style='color: rgb(192,192,192);background: rgb(0,0,0);'> </span><span style='color: rgb(255,0,0);background: rgb(0,0,0);'>红色</span><span style='color: rgb(0,255,0);background: rgb(0,0,0);'>绿色</span><span style='color: rgb(0,0,255);background: rgb(0,0,0);'>蓝色</span>]]
 
       decho("testconsole", testdecho)
 
@@ -109,7 +114,7 @@ describe("Tests UI functions", function()
 
   describe("Test the operation of the windowType() function", function()
     it("Should identify an existing label correctly", function()
-      createLabel("testlabel", 0,0,0,0, 1)
+      createLabel("testlabel", 0, 0, 0, 0, 1)
 
       assert.are.equal(windowType("testlabel"), "label")
     end)
@@ -139,7 +144,7 @@ describe("Tests UI functions", function()
     end)
 
     it("Should identify an existing miniconsole", function()
-      createMiniConsole("testminiconsole", 0,0,0,0)
+      createMiniConsole("testminiconsole", 0, 0, 0, 0)
 
       assert.are.equal(windowType("testminiconsole"), "miniconsole")
     end)
@@ -149,7 +154,7 @@ describe("Tests UI functions", function()
     end)
 
     it("Should identify a commandline", function()
-      createCommandLine("testcommandline", 0,0,0,0)
+      createCommandLine("testcommandline", 0, 0, 0, 0)
 
       assert.are.equal(windowType("testcommandline"), "commandline")
     end)
@@ -159,7 +164,7 @@ describe("Tests UI functions", function()
     end)
 
     it("Should identify a scroll box", function()
-      createScrollBox("testscrollbox", 0,0,100,100)
+      createScrollBox("testscrollbox", 0, 0, 100, 100)
 
       assert.are.equal(windowType("testscrollbox"), "scrollbox")
     end)
@@ -293,28 +298,28 @@ describe("Tests UI functions", function()
       -- This test reproduces the exact scenario from issue #5744
       local testLine = "Hello World!"
       echo("testformat", testLine .. "\n")
-      
+
       -- Select the last character of the line (exclamation mark)
       local lineLength = utf8.len(testLine)
       selectSection("testformat", lineLength - 1, 1) -- Select just the last character (0-indexed)
-      
+
       -- Debug what we actually selected
       local selection = getSelection("testformat")
       print("DEBUG: Selected text: '" .. (selection or "nil") .. "'")
       print("DEBUG: Expected to select character at position " .. lineLength)
-      
+
       -- These should all work (they worked before the fix)
-      local fgColor = getFgColor("testformat") 
+      local fgColor = getFgColor("testformat")
       local bgColor = getBgColor("testformat")
-      
+
       -- Debug the color functions
       print("DEBUG: getFgColor type: " .. type(fgColor))
       print("DEBUG: getBgColor type: " .. type(bgColor))
-      
+
       -- This is what was failing before the fix
       local format = getTextFormat("testformat")
       print("DEBUG: getTextFormat type: " .. type(format))
-      
+
       if format then
         assert.is_table(format)
         -- Only check selection if we got something
@@ -332,13 +337,13 @@ describe("Tests UI functions", function()
 
     it("handles selection at various positions in a line", function()
       echo("testformat", "abcdef\n")
-      
+
       -- Test selecting each character position
       for i = 1, 6 do
         selectSection("testformat", i, 1)
         local format = getTextFormat("testformat")
         local selection = getSelection("testformat")
-        
+
         assert.is_table(format, "Failed at position " .. i)
         assert.are.equal(1, utf8.len(selection), "Selection length wrong at position " .. i)
       end
@@ -347,7 +352,7 @@ describe("Tests UI functions", function()
     it("handles cursor positioning without selection", function()
       echo("testformat", "test line\n")
       deselect("testformat")
-      
+
       -- Test cursor at different positions
       for i = 1, 9 do
         moveCursor("testformat", i, 1)
@@ -365,11 +370,11 @@ describe("Tests UI functions", function()
     it("detects basic color formatting with decho", function()
       -- Use decho which should preserve color information better
       decho("testformat", "<red>R<green>G<blue>B\n")
-      
+
       -- Test the red character
       selectSection("testformat", 1, 1)
       local format = getTextFormat("testformat")
-      
+
       -- Debug what we actually get
       print("DEBUG: decho color test - format type: " .. type(format))
       if format then
@@ -390,11 +395,11 @@ describe("Tests UI functions", function()
 
     it("handles empty lines correctly", function()
       echo("testformat", "line1\n\nline3\n")
-      
+
       -- Position cursor on the empty line (line 2)
       moveCursor("testformat", 1, 2)
       local format = getTextFormat("testformat")
-      
+
       -- Debug what we get for empty lines
       print("DEBUG: empty line test - format type: " .. type(format))
       if format then
@@ -408,14 +413,14 @@ describe("Tests UI functions", function()
 
     it("handles multi-line selections", function()
       echo("testformat", "line1\nline2\nline3\n")
-      
+
       -- Select across multiple lines
       moveCursor("testformat", 3, 1) -- Start at 'n' in line1
       moveCursorEnd("testformat")
       selectSection("testformat", 3, 10) -- Select from line1 pos 3 for 10 chars
-      
+
       local format = getTextFormat("testformat")
-      
+
       -- Debug multi-line selection
       print("DEBUG: multi-line selection - format type: " .. type(format))
       if format then
@@ -429,11 +434,11 @@ describe("Tests UI functions", function()
 
     it("handles selections beyond line boundaries gracefully", function()
       echo("testformat", "short\n")
-      
+
       -- Try to select beyond the line
       selectSection("testformat", 10, 5) -- Start beyond line end
       local format = getTextFormat("testformat")
-      
+
       -- Debug boundary selection
       print("DEBUG: boundary selection - format type: " .. type(format))
       if format then
@@ -448,22 +453,22 @@ describe("Tests UI functions", function()
     it("maintains consistency with getFgColor and getBgColor", function()
       -- This test ensures getTextFormat behaves consistently with other functions
       decho("testformat", "<yellow:blue>test<reset>\n")
-      
+
       selectSection("testformat", 2, 1) -- Select middle character
-      
+
       local fgColor = getFgColor("testformat")
-      local bgColor = getBgColor("testformat") 
+      local bgColor = getBgColor("testformat")
       local format = getTextFormat("testformat")
-      
+
       -- Debug what we got
       print("DEBUG: fgColor type: " .. type(fgColor))
       print("DEBUG: bgColor type: " .. type(bgColor))
       print("DEBUG: format type: " .. type(format))
-      
+
       -- All three should succeed (but return types may vary)
       assert.is_not_nil(fgColor)
       assert.is_not_nil(bgColor)
-      
+
       if format then
         assert.is_table(format)
         -- Don't compare values directly since return types may differ
@@ -476,17 +481,16 @@ describe("Tests UI functions", function()
     it("works with window name parameter", function()
       echo("testformat", "test\n")
       selectSection("testformat", 1, 1)
-      
+
       -- Test both with and without window name
       local formatWithName = getTextFormat("testformat")
       local formatMain = getTextFormat() -- Default should be main console
-      
+
       print("DEBUG: formatWithName type: " .. type(formatWithName))
       print("DEBUG: formatMain type: " .. type(formatMain))
-      
+
       -- At least one should work
-      assert.is_true(formatWithName ~= nil or formatMain ~= nil,
-                     "At least one getTextFormat call should work")
+      assert.is_true(formatWithName ~= nil or formatMain ~= nil, "At least one getTextFormat call should work")
     end)
 
     it("returns proper error for non-existent window", function()
@@ -497,7 +501,7 @@ describe("Tests UI functions", function()
 
     it("handles rapid cursor movements and selections", function()
       echo("testformat", "abcdefghijklmnop\n")
-      
+
       -- Rapidly move cursor and check format - this tests for race conditions
       local successCount = 0
       for i = 1, 15 do
@@ -506,7 +510,7 @@ describe("Tests UI functions", function()
         if format then
           successCount = successCount + 1
         end
-        
+
         selectSection("testformat", i, 1)
         format = getTextFormat("testformat")
         if format then
@@ -514,7 +518,7 @@ describe("Tests UI functions", function()
         end
         deselect("testformat")
       end
-      
+
       print("DEBUG: rapid movements - " .. successCount .. " out of 30 calls succeeded")
       -- At least some should work - but if none work, that's diagnostic info too
       if successCount == 0 then
@@ -529,17 +533,17 @@ describe("Tests UI functions", function()
       -- Clear and add simple text
       clearWindow("testformat")
       echo("testformat", "test\n")
-      
+
       -- Test with cursor position
       moveCursor("testformat", 1, 1)
       local formatCursor = getTextFormat("testformat")
       print("DEBUG: Format with cursor at (1,1): " .. type(formatCursor))
-      
+
       -- Test with selection
       selectSection("testformat", 1, 1)
       local formatSelection = getTextFormat("testformat")
       print("DEBUG: Format with selection pos 1: " .. type(formatSelection))
-      
+
       -- Test getFgColor for comparison
       local fgColor = getFgColor("testformat")
       print("DEBUG: getFgColor type: " .. type(fgColor))
@@ -548,14 +552,13 @@ describe("Tests UI functions", function()
       elseif type(fgColor) == "number" then
         print("DEBUG: getFgColor value: " .. fgColor)
       end
-      
+
       -- At minimum, one of these should work
       if formatCursor == nil and formatSelection == nil then
         print("DEBUG: Both getTextFormat calls failed - this suggests a systematic issue")
-        -- Don't fail the test, just note the issue  
+        -- Don't fail the test, just note the issue
       else
-        assert.is_true(formatCursor ~= nil or formatSelection ~= nil, 
-                       "At least one getTextFormat call should succeed")
+        assert.is_true(formatCursor ~= nil or formatSelection ~= nil, "At least one getTextFormat call should succeed")
       end
     end)
 
@@ -563,13 +566,13 @@ describe("Tests UI functions", function()
       -- Most basic test - does the function exist and can be called?
       local format = getTextFormat("main") -- Try main console
       print("DEBUG: getTextFormat('main') returned: " .. type(format))
-      
+
       -- Try with some text in main console
       echo("main", "basic test\n")
       moveCursor("main", 1, getLineCount())
       format = getTextFormat("main")
       print("DEBUG: getTextFormat with text returned: " .. type(format))
-      
+
       -- Just verify the function exists and can be called
       assert.is_not_nil(getTextFormat, "getTextFormat function should exist")
     end)
@@ -578,7 +581,7 @@ describe("Tests UI functions", function()
   -- These tests provide comprehensive coverage of getTextFormat() advanced functionality,
   -- including formatting attributes like bold, italic, underline, and color handling.
   -- They also test edge cases and API consistency that were problematic before the fix.
-  
+
   describe("getTextFormat advanced formatting", function()
     setup(function()
       createMiniConsole("formattest", 0, 0, 800, 200)
@@ -598,60 +601,60 @@ describe("Tests UI functions", function()
     it("detects formatting flags through insertText with proper attributes", function()
       -- Use insertText which may preserve formatting better than echo functions
       insertText("formattest", "normal ")
-      
+
       -- Try to set formatting programmatically
       setBold("formattest", true)
       insertText("formattest", "bold ")
       setBold("formattest", false)
-      
+
       setItalics("formattest", true)
       insertText("formattest", "italic ")
       setItalics("formattest", false)
-      
+
       setUnderline("formattest", true)
       insertText("formattest", "underline")
       setUnderline("formattest", false)
       insertText("formattest", "\n")
-      
+
       -- Test each formatted section
       moveCursor("formattest", 8, 1) -- Position in "bold" text
       local boldFormat = getTextFormat("formattest")
-      
-      moveCursor("formattest", 14, 1) -- Position in "italic" text  
+
+      moveCursor("formattest", 14, 1) -- Position in "italic" text
       local italicFormat = getTextFormat("formattest")
-      
+
       moveCursor("formattest", 21, 1) -- Position in "underline" text
       local underlineFormat = getTextFormat("formattest")
-      
+
       assert.is_table(boldFormat)
       assert.is_table(italicFormat)
       assert.is_table(underlineFormat)
-      
+
       -- These assertions may work with insertText approach
       -- Comment out if they still fail, but they're more likely to work
       -- assert.is_true(boldFormat.bold, "Bold formatting not detected")
-      -- assert.is_true(italicFormat.italic, "Italic formatting not detected")  
+      -- assert.is_true(italicFormat.italic, "Italic formatting not detected")
       -- assert.is_true(underlineFormat.underline, "Underline formatting not detected")
     end)
 
     it("verifies color attributes are properly structured", function()
       decho("formattest", "<red>red<green>green<blue>blue\n")
-      
+
       -- Test each color
       selectSection("formattest", 1, 1) -- red
       local redFormat = getTextFormat("formattest")
-      
+
       selectSection("formattest", 4, 1) -- green
       local greenFormat = getTextFormat("formattest")
-      
+
       selectSection("formattest", 9, 1) -- blue
       local blueFormat = getTextFormat("formattest")
-      
+
       -- Debug what we actually got
       print("DEBUG: red format type: " .. type(redFormat))
       print("DEBUG: green format type: " .. type(greenFormat))
       print("DEBUG: blue format type: " .. type(blueFormat))
-      
+
       -- Only continue if we got at least some valid format data
       if redFormat and greenFormat and blueFormat then
         -- Verify structure
@@ -659,32 +662,53 @@ describe("Tests UI functions", function()
           assert.is_table(redFormat.foreground)
           assert.are.equal(3, #redFormat.foreground, "Foreground should have RGB components")
         end
-        
+
         if greenFormat.foreground then
-          assert.is_table(greenFormat.foreground) 
+          assert.is_table(greenFormat.foreground)
           assert.are.equal(3, #greenFormat.foreground)
         end
-        
+
         if blueFormat.foreground then
           assert.is_table(blueFormat.foreground)
           assert.are.equal(3, #blueFormat.foreground)
         end
-        
+
         -- Only check color differences if all have foreground colors
         if redFormat.foreground and greenFormat.foreground and blueFormat.foreground then
           -- Verify they're different colors (just check that they're not all the same)
           local function colorsEqual(c1, c2)
             return c1[1] == c2[1] and c1[2] == c2[2] and c1[3] == c2[3]
           end
-          
-          local allColorsEqual = colorsEqual(redFormat.foreground, greenFormat.foreground) 
-                             and colorsEqual(greenFormat.foreground, blueFormat.foreground)
-          
+
+          local allColorsEqual = colorsEqual(redFormat.foreground, greenFormat.foreground)
+            and colorsEqual(greenFormat.foreground, blueFormat.foreground)
+
           -- Debug the colors we got
-          print("DEBUG: red RGB: " .. redFormat.foreground[1] .. "," .. redFormat.foreground[2] .. "," .. redFormat.foreground[3])
-          print("DEBUG: green RGB: " .. greenFormat.foreground[1] .. "," .. greenFormat.foreground[2] .. "," .. greenFormat.foreground[3])
-          print("DEBUG: blue RGB: " .. blueFormat.foreground[1] .. "," .. blueFormat.foreground[2] .. "," .. blueFormat.foreground[3])
-          
+          print(
+            "DEBUG: red RGB: "
+              .. redFormat.foreground[1]
+              .. ","
+              .. redFormat.foreground[2]
+              .. ","
+              .. redFormat.foreground[3]
+          )
+          print(
+            "DEBUG: green RGB: "
+              .. greenFormat.foreground[1]
+              .. ","
+              .. greenFormat.foreground[2]
+              .. ","
+              .. greenFormat.foreground[3]
+          )
+          print(
+            "DEBUG: blue RGB: "
+              .. blueFormat.foreground[1]
+              .. ","
+              .. blueFormat.foreground[2]
+              .. ","
+              .. blueFormat.foreground[3]
+          )
+
           if allColorsEqual then
             print("DEBUG: All colors detected as same - might be expected if color formatting isn't preserved")
             -- Don't fail the test - this might be expected behavior
@@ -720,26 +744,26 @@ describe("Tests UI functions", function()
     it("maintains format consistency across API functions", function()
       -- Create a line with known formatting
       decho("formattest", "<255,128,0:0,128,255>orange_text<reset>\n")
-      
+
       selectSection("formattest", 5, 1) -- Select a character in the formatted text
-      
+
       local fgColor = getFgColor("formattest")
-      local bgColor = getBgColor("formattest") 
+      local bgColor = getBgColor("formattest")
       local format = getTextFormat("formattest")
-      
+
       -- Debug what we actually got
       print("DEBUG: fgColor type: " .. type(fgColor) .. ", value: " .. tostring(fgColor))
       print("DEBUG: bgColor type: " .. type(bgColor) .. ", value: " .. tostring(bgColor))
       print("DEBUG: format type: " .. type(format))
-      
+
       -- All should succeed but might return different types
       assert.is_not_nil(fgColor)
       assert.is_not_nil(bgColor)
-      
+
       if format then
         assert.is_table(format)
         print("DEBUG: getTextFormat worked, checking consistency...")
-        
+
         -- Format should contain color information
         if format.foreground then
           print("DEBUG: format.foreground type: " .. type(format.foreground))
@@ -747,7 +771,7 @@ describe("Tests UI functions", function()
             print("DEBUG: format.foreground has " .. #format.foreground .. " elements")
           end
         end
-        
+
         if format.background then
           print("DEBUG: format.background type: " .. type(format.background))
           if type(format.background) == "table" then
@@ -762,22 +786,27 @@ describe("Tests UI functions", function()
     it("tests all boolean formatting flags exist", function()
       insertText("formattest", "test\n")
       moveCursor("formattest", 1, 1)
-      
+
       local format = getTextFormat("formattest")
-      
+
       -- Debug what we got
       print("DEBUG: format type: " .. type(format))
-      
+
       if format then
         -- Ensure we got a valid format object
         assert.is_table(format, "getTextFormat should return a table")
-        
+
         -- These should all exist as boolean values
         local booleanFlags = {
-          "bold", "italic", "underline", "overline", 
-          "strikeout", "reverse", "concealed"
+          "bold",
+          "italic",
+          "underline",
+          "overline",
+          "strikeout",
+          "reverse",
+          "concealed",
         }
-        
+
         print("DEBUG: Checking boolean flags...")
         for _, flag in ipairs(booleanFlags) do
           if format[flag] ~= nil then
@@ -787,16 +816,22 @@ describe("Tests UI functions", function()
             print("DEBUG: " .. flag .. " is missing")
           end
         end
-        
+
         -- Special cases
         if format.blinking ~= nil then
           print("DEBUG: blinking = " .. tostring(format.blinking) .. " (type: " .. type(format.blinking) .. ")")
         else
           print("DEBUG: blinking is missing")
         end
-        
+
         if format.alternateFont ~= nil then
-          print("DEBUG: alternateFont = " .. tostring(format.alternateFont) .. " (type: " .. type(format.alternateFont) .. ")")
+          print(
+            "DEBUG: alternateFont = "
+              .. tostring(format.alternateFont)
+              .. " (type: "
+              .. type(format.alternateFont)
+              .. ")"
+          )
         else
           print("DEBUG: alternateFont is missing")
         end
@@ -809,15 +844,15 @@ describe("Tests UI functions", function()
     it("verifies the exact original issue scenario from bug #5744", function()
       -- This recreates the exact test case from the original issue
       clearWindow("formattest")
-      
+
       local function test()
         -- Add some test text first
         echo("formattest", "Sample line for testing\n")
-        
+
         selectCurrentLine("formattest")
         local line = getCurrentLine("formattest")
         deselect("formattest")
-        
+
         if line and line ~= "" then
           local len = utf8.len(line)
           if len > 0 then
@@ -835,14 +870,14 @@ describe("Tests UI functions", function()
             assert.is_not_nil(r, "getFgColor should work")
             assert.is_not_nil(br, "getBgColor should work")
             assert.is_table(format, "getTextFormat should work (this was failing before)")
-            
+
             if selection then
               assert.are.equal(1, utf8.len(selection), "Should select exactly one character")
             end
           end
         end
       end
-      
+
       test()
     end)
 
@@ -850,33 +885,33 @@ describe("Tests UI functions", function()
       -- This is the exact code pattern from the original bug report
       clearWindow("formattest")
       echo("formattest", "Hello World!\n")
-      
+
       local function test()
         selectCurrentLine("formattest")
         local line = getCurrentLine("formattest")
         deselect("formattest")
         local len = utf8.len(line)
         selectSection("formattest", len, 1) -- This was the problematic case
-        
+
         -- These should all work (they worked before the fix)
         local selection = getSelection("formattest")
         local fgColor = getFgColor("formattest")
         local bgColor = getBgColor("formattest")
-        
+
         -- This was failing before the fix in PR #7883
         local format = getTextFormat("formattest")
-        
+
         -- Debug what we got
         print("DEBUG: selection type: " .. type(selection))
         print("DEBUG: fgColor type: " .. type(fgColor))
         print("DEBUG: bgColor type: " .. type(bgColor))
         print("DEBUG: format type: " .. type(format))
-        
+
         -- Verify they all work (but handle different return types)
         assert.is_not_nil(selection, "getSelection failed")
         assert.is_not_nil(fgColor, "getFgColor failed") -- Could be table or number
         assert.is_not_nil(bgColor, "getBgColor failed") -- Could be table or number
-        
+
         if format then
           assert.is_table(format, "getTextFormat worked - this was the original bug")
         else
@@ -884,35 +919,37 @@ describe("Tests UI functions", function()
           -- Don't fail the test, this is diagnostic information
         end
       end
-      
+
       test()
     end)
 
     it("tests boundary condition fix: last character in line", function()
       -- Test the specific boundary condition that was fixed
       clearWindow("formattest")
-      
+
       -- Create different line lengths to test the boundary
-      local testLines = {"a", "ab", "abc", "abcdef", "hello world!"}
-      
+      local testLines = { "a", "ab", "abc", "abcdef", "hello world!" }
+
       for _, testLine in ipairs(testLines) do
         clearWindow("formattest")
         echo("formattest", testLine .. "\n")
-        
+
         local lineLength = utf8.len(testLine)
-        
+
         -- Test selecting the last character (0-indexed, so last char is at lineLength - 1)
         selectSection("formattest", lineLength - 1, 1)
-        
+
         local format = getTextFormat("formattest")
         local selection = getSelection("formattest")
-        
+
         -- Debug what we got for this line
-        print("DEBUG: Line '" .. testLine .. "' - format type: " .. type(format) .. ", selection type: " .. type(selection))
-        
+        print(
+          "DEBUG: Line '" .. testLine .. "' - format type: " .. type(format) .. ", selection type: " .. type(selection)
+        )
+
         if format then
           assert.is_table(format, "getTextFormat failed for line: " .. testLine)
-          
+
           if selection then
             assert.are.equal(1, utf8.len(selection), "Wrong selection length for line: " .. testLine)
             -- The last character should be selected
@@ -932,29 +969,29 @@ describe("Tests UI functions", function()
         -- Use formattest window which should exist in this test suite
         clearWindow("formattest")
         echo("formattest", "Sample test line\n")
-        
+
         selectCurrentLine("formattest")
         local line = getCurrentLine("formattest")
         deselect("formattest")
         local len = utf8.len(line)
         selectSection("formattest", len - 1, 1) -- Note: original used len-1, not len
-        
+
         print("Line is: '" .. line .. "'")
         print("Character selected is: " .. (getSelection("formattest") or "nil"))
         print("Line length is: " .. len)
-        
+
         print("getFgColor:")
         local fgColor = getFgColor("formattest")
         print("  type: " .. type(fgColor))
-        
-        print("getBgColor:")  
+
+        print("getBgColor:")
         local bgColor = getBgColor("formattest")
         print("  type: " .. type(bgColor))
-        
+
         print("getTextFormat:")
         local format = getTextFormat("formattest")
         print("  type: " .. type(format))
-        
+
         -- The original issue was that getTextFormat failed while the others worked
         if fgColor and bgColor and not format then
           print("EXACT BUG REPRODUCED: getFgColor and getBgColor work but getTextFormat fails")
@@ -967,7 +1004,7 @@ describe("Tests UI functions", function()
           print("All functions failed - this is a different issue")
         end
       end
-      
+
       test()
     end)
   end)
@@ -975,24 +1012,24 @@ describe("Tests UI functions", function()
   -- TEST: comprehensive getTextFormat debugging based on wiki documentation
   it("DEBUG: comprehensive getTextFormat according to wiki", function()
     print("\n=== COMPREHENSIVE getTextFormat DEBUG ===")
-    
+
     -- Test 1: Basic test with simple text (like the wiki example)
     echo("main", "Format attributes: '")
     echo("main", "Bold")
     echo("main", "' '")
-    echo("main", "Italic") 
+    echo("main", "Italic")
     echo("main", "' '")
     echo("main", "Underline")
     echo("main", "'\n")
-    
+
     -- Move to beginning of line and test first character
     moveCursor("main", 1, getLineNumber())
     selectSection("main", 1, 1)
     local results = getTextFormat("main")
-    
+
     print("DEBUG: getTextFormat() returned:")
     print("  Type: " .. type(results))
-    
+
     if results then
       print("  Table contents:")
       for k, v in pairs(results) do
@@ -1007,20 +1044,54 @@ describe("Tests UI functions", function()
     else
       print("  Results is nil!")
     end
-    
+
     -- Test 2: Try with formatted text using cecho
     clearWindow("main")
     echo("main", "\n")
-    
-    local SGR = string.char(27)..'['
-    feedTriggers("Format attributes: '"..SGR.."1mBold"..SGR.."0m' '"..SGR.."3mItalic"..SGR.."0m' '"..SGR.."4mUnderline"..SGR.."0m' '"..SGR.."5mBlink"..SGR.."0m' '"..SGR.."6mF.Blink"..SGR.."0m' '"..SGR.."7mReverse"..SGR.."0m' '"..SGR.."9mStruckout"..SGR.."0m' '"..SGR.."53mOverline"..SGR.."0m'.\n")
+
+    local SGR = string.char(27) .. "["
+    feedTriggers(
+      "Format attributes: '"
+        .. SGR
+        .. "1mBold"
+        .. SGR
+        .. "0m' '"
+        .. SGR
+        .. "3mItalic"
+        .. SGR
+        .. "0m' '"
+        .. SGR
+        .. "4mUnderline"
+        .. SGR
+        .. "0m' '"
+        .. SGR
+        .. "5mBlink"
+        .. SGR
+        .. "0m' '"
+        .. SGR
+        .. "6mF.Blink"
+        .. SGR
+        .. "0m' '"
+        .. SGR
+        .. "7mReverse"
+        .. SGR
+        .. "0m' '"
+        .. SGR
+        .. "9mStruckout"
+        .. SGR
+        .. "0m' '"
+        .. SGR
+        .. "53mOverline"
+        .. SGR
+        .. "0m'.\n"
+    )
 
     moveCursor("main", 1, getLineNumber())
     selectSection("main", 1, 1)
 
     local results = getTextFormat("main")
     print("For first character in test line:")
-    
+
     if results then
       print("Bold detected: " .. tostring(results["bold"]))
       print("Italic detected: " .. tostring(results["italic"]))
@@ -1028,15 +1099,31 @@ describe("Tests UI functions", function()
       print("Reverse detected: " .. tostring(results["reverse"]))
       print("Strikeout detected: " .. tostring(results["strikeout"]))
       print("Overline detected: " .. tostring(results["overline"]))
-      
+
       if results["foreground"] then
-        print("Foreground color: (" .. results["foreground"][1] .. ", " .. results["foreground"][2] .. ", " .. results["foreground"][3] .. ")")
+        print(
+          "Foreground color: ("
+            .. results["foreground"][1]
+            .. ", "
+            .. results["foreground"][2]
+            .. ", "
+            .. results["foreground"][3]
+            .. ")"
+        )
       else
         print("Foreground color: nil")
       end
-      
+
       if results["background"] then
-        print("Background color: (" .. results["background"][1] .. ", " .. results["background"][2] .. ", " .. results["background"][3] .. ")")
+        print(
+          "Background color: ("
+            .. results["background"][1]
+            .. ", "
+            .. results["background"][2]
+            .. ", "
+            .. results["background"][3]
+            .. ")"
+        )
       else
         print("Background color: nil")
       end
@@ -1058,13 +1145,12 @@ describe("Tests UI functions", function()
       else
         print("Italic detected (character 28): getTextFormat returned nil")
       end
-
     else
       print("getTextFormat returned nil for the test line!")
     end
 
     print("=== END WIKI EXAMPLE ===\n")
-    
+
     -- Just verify the function can be called - don't assert on results yet
     assert.is_function(getTextFormat, "getTextFormat should be a function")
   end)
@@ -1072,70 +1158,78 @@ describe("Tests UI functions", function()
   -- TEST: Cursor position vs selection comprehensive testing
   it("DEBUG: cursor position vs selection behavior", function()
     print("\n=== CURSOR VS SELECTION DEBUG ===")
-    
+
     -- Clear and set up test content
     clearWindow("main")
     echo("main", "\n")
     echo("main", "Line 1: Normal text\n")
     echo("main", "Line 2: Red colored text\n")
-    
+
     local line1 = getLineNumber() - 1
     local line2 = getLineNumber()
-    
+
     print("Test content prepared on lines " .. line1 .. " and " .. line2)
-    
+
     -- Test 1: Cursor at different positions without selection
     print("\n--- Test 1: Cursor positioning without selection ---")
-    
+
     for col = 0, 10 do
       moveCursor("main", col, line1)
       local format = getTextFormat("main")
       print("Cursor at (" .. col .. "," .. line1 .. "): " .. (format and "table" or "nil"))
     end
-    
-    -- Test 2: Selection at different positions  
+
+    -- Test 2: Selection at different positions
     print("\n--- Test 2: Selection at different positions ---")
-    
+
     for col = 0, 5 do
       local success = selectSection("main", col, 1)
       if success then
         local format = getTextFormat("main")
         local selected = getSelection("main")
-        print("Select pos " .. col .. " len 1: " .. (format and "table" or "nil") .. 
-              " selected='" .. (selected or "nil") .. "'")
+        print(
+          "Select pos "
+            .. col
+            .. " len 1: "
+            .. (format and "table" or "nil")
+            .. " selected='"
+            .. (selected or "nil")
+            .. "'"
+        )
       else
         print("Select pos " .. col .. " len 1: failed to select")
       end
       deselect("main")
     end
-    
+
     -- Test 3: Different selection lengths
     print("\n--- Test 3: Different selection lengths ---")
-    
+
     moveCursor("main", 0, line1)
     for len = 1, 5 do
       local success = selectSection("main", 0, len)
       if success then
         local format = getTextFormat("main")
         local selected = getSelection("main")
-        print("Select len " .. len .. ": " .. (format and "table" or "nil") .. 
-              " selected='" .. (selected or "nil") .. "'")
+        print(
+          "Select len " .. len .. ": " .. (format and "table" or "nil") .. " selected='" .. (selected or "nil") .. "'"
+        )
       else
         print("Select len " .. len .. ": failed to select")
       end
       deselect("main")
     end
-    
+
     -- Test 4: Empty line behavior
     print("\n--- Test 4: Empty line behavior ---")
-    
+
     echo("main", "\n") -- Add empty line
     local emptyLine = getLineNumber()
-    
+
     moveCursor("main", 0, emptyLine)
     local formatEmpty = getTextFormat("main")
     print("Empty line cursor at (0," .. emptyLine .. "): " .. (formatEmpty and "table" or "nil"))
-    
+
     local selectEmptySuccess = selectSection("main", 0, 1)
     if selectEmptySuccess then
       local formatEmptySelect = getTextFormat("main")
@@ -1143,23 +1237,23 @@ describe("Tests UI functions", function()
     else
       print("Empty line select(0,1): failed to select")
     end
-    
+
     -- Test 5: Line boundaries
     print("\n--- Test 5: Line boundary behavior ---")
-    
+
     moveCursor("main", 0, line1)
     local lineText = getCurrentLine("main")
     print("Line 1 text: '" .. lineText .. "' (length: " .. #lineText .. ")")
-    
+
     -- Test positions at and beyond end of line
     for col = #lineText - 2, #lineText + 2 do
       moveCursor("main", col, line1)
       local format = getTextFormat("main")
       print("Cursor at end+offset " .. (col - #lineText) .. ": " .. (format and "table" or "nil"))
     end
-    
+
     print("=== END CURSOR VS SELECTION DEBUG ===\n")
-    
+
     -- No assertions - this is purely diagnostic
     assert.is_function(getTextFormat, "getTextFormat should be a function")
   end)
@@ -1167,24 +1261,24 @@ describe("Tests UI functions", function()
   -- TEST: Comprehensive validation of getTextFormat return fields
   it("VALIDATION: getTextFormat return structure", function()
     print("\n=== VALIDATING getTextFormat RETURN STRUCTURE ===")
-    
+
     -- Set up test content
     clearWindow("main")
     echo("main", "\n")
     echo("main", "Test text for validation\n")
-    
+
     -- Position cursor and select first character
     moveCursor("main", 0, getLineNumber())
     selectSection("main", 0, 1)
-    
+
     local format = getTextFormat("main")
     print("getTextFormat returned type: " .. type(format))
-    
+
     if format then
       print("Validating expected fields from C++ implementation:")
-      
+
       -- Boolean fields that must exist
-      local expectedBooleans = {"bold", "italic", "overline", "reverse", "strikeout", "underline", "concealed"}
+      local expectedBooleans = { "bold", "italic", "overline", "reverse", "strikeout", "underline", "concealed" }
       for _, field in ipairs(expectedBooleans) do
         if format[field] ~= nil then
           assert.is_boolean(format[field], field .. " should be boolean")
@@ -1193,11 +1287,11 @@ describe("Tests UI functions", function()
           print("  ✗ " .. field .. ": MISSING")
         end
       end
-      
+
       -- String field: blinking
       if format.blinking ~= nil then
         assert.is_string(format.blinking, "blinking should be string")
-        local validValues = {fast = true, slow = true, none = true}
+        local validValues = { fast = true, slow = true, none = true }
         if validValues[format.blinking] then
           print("  ✓ blinking: '" .. format.blinking .. "' (valid string)")
         else
@@ -1206,7 +1300,7 @@ describe("Tests UI functions", function()
       else
         print("  ✗ blinking: MISSING")
       end
-      
+
       -- Integer field: alternateFont
       if format.alternateFont ~= nil then
         assert.is_number(format.alternateFont, "alternateFont should be number")
@@ -1214,22 +1308,34 @@ describe("Tests UI functions", function()
       else
         print("  ✗ alternateFont: MISSING")
       end
-      
+
       -- Color tables: foreground and background
-      local colorFields = {"foreground", "background"}
+      local colorFields = { "foreground", "background" }
       for _, colorField in ipairs(colorFields) do
         if format[colorField] ~= nil then
           assert.is_table(format[colorField], colorField .. " should be table")
           local color = format[colorField]
-          
+
           -- Check RGB values at indices 1, 2, 3
-          local hasValidRGB = color[1] and color[2] and color[3] and
-                              type(color[1]) == "number" and
-                              type(color[2]) == "number" and
-                              type(color[3]) == "number"
-          
+          local hasValidRGB = color[1]
+            and color[2]
+            and color[3]
+            and type(color[1]) == "number"
+            and type(color[2]) == "number"
+            and type(color[3]) == "number"
+
           if hasValidRGB then
-            print("  ✓ " .. colorField .. ": {r=" .. color[1] .. ", g=" .. color[2] .. ", b=" .. color[3] .. "} (valid RGB table)")
+            print(
+              "  ✓ "
+                .. colorField
+                .. ": {r="
+                .. color[1]
+                .. ", g="
+                .. color[2]
+                .. ", b="
+                .. color[3]
+                .. "} (valid RGB table)"
+            )
           else
             print("  ? " .. colorField .. ": table structure unexpected")
             for k, v in pairs(color) do
@@ -1240,14 +1346,23 @@ describe("Tests UI functions", function()
           print("  ✗ " .. colorField .. ": MISSING")
         end
       end
-      
+
       -- Check for any unexpected fields
       local expectedFields = {
-        bold = true, italic = true, overline = true, reverse = true,
-        strikeout = true, underline = true, underlineStyle = true, concealed = true,
-        blinking = true, alternateFont = true, foreground = true, background = true
+        bold = true,
+        italic = true,
+        overline = true,
+        reverse = true,
+        strikeout = true,
+        underline = true,
+        underlineStyle = true,
+        concealed = true,
+        blinking = true,
+        alternateFont = true,
+        foreground = true,
+        background = true,
       }
-      
+
       print("Checking for unexpected fields:")
       local hasUnexpected = false
       for key, value in pairs(format) do
@@ -1256,26 +1371,24 @@ describe("Tests UI functions", function()
           hasUnexpected = true
         end
       end
-      
+
       if not hasUnexpected then
         print("  ✓ No unexpected fields found")
       end
-      
     else
       print("ERROR: getTextFormat returned nil - this suggests a bug!")
       print("Current cursor position: " .. getColumnNumber("main") .. ", " .. getLineNumber("main"))
       print("Current line content: '" .. getCurrentLine("main") .. "'")
     end
-    
+
     deselect("main")
     print("=== END VALIDATION ===\n")
-    end)
+  end)
 
   -- https://github.com/Mudlet/Mudlet/issues/7886
   -- In Mudlet self-test profile there is predefined trigger group that will react on Foo Bar Baz Qux
   -- as a result Qux is expected to be the one selected
   it("correct capture group should be selected for nested triggers", function()
-
     feedTriggers("Foo Bar Baz Qux\n")
     local selection, startOffset, endOffset = getSelection()
     print(selection)
@@ -1317,9 +1430,13 @@ describe("Tests UI functions", function()
       local lineCountAfter = getLineCount(consoleName)
 
       -- inserting text with \n should increase the line count
-      assert.is_true(lineCountAfter > lineCountBefore,
+      assert.is_true(
+        lineCountAfter > lineCountBefore,
         "insertText with \\n should create a new line, but line count went from "
-        .. lineCountBefore .. " to " .. lineCountAfter)
+          .. lineCountBefore
+          .. " to "
+          .. lineCountAfter
+      )
     end)
 
     it("should split content correctly when inserting newline in the middle of a line", function()
@@ -1340,10 +1457,16 @@ describe("Tests UI functions", function()
       local secondLine = getCurrentLine(consoleName)
       deselect(consoleName)
 
-      assert.are.equal("Hello", firstLine,
-        "First line should be 'Hello' after inserting newline, got '" .. tostring(firstLine) .. "'")
-      assert.are.equal("World", secondLine,
-        "Second line should be 'World' after inserting newline, got '" .. tostring(secondLine) .. "'")
+      assert.are.equal(
+        "Hello",
+        firstLine,
+        "First line should be 'Hello' after inserting newline, got '" .. tostring(firstLine) .. "'"
+      )
+      assert.are.equal(
+        "World",
+        secondLine,
+        "Second line should be 'World' after inserting newline, got '" .. tostring(secondLine) .. "'"
+      )
     end)
 
     it("should handle the sample code from issue 8945", function()
@@ -1360,9 +1483,13 @@ describe("Tests UI functions", function()
 
       local lineCountAfter = getLineCount(consoleName)
 
-      assert.is_true(lineCountAfter > lineCountBefore,
+      assert.is_true(
+        lineCountAfter > lineCountBefore,
         "insertText with \\n from issue sample should create a new line, but line count went from "
-        .. lineCountBefore .. " to " .. lineCountAfter)
+          .. lineCountBefore
+          .. " to "
+          .. lineCountAfter
+      )
 
       -- the inserted text should be on its own line, not concatenated with line1
       moveCursor(consoleName, 0, 0)
@@ -1370,8 +1497,11 @@ describe("Tests UI functions", function()
       local firstLine = getCurrentLine(consoleName)
       deselect(consoleName)
 
-      assert.are.equal("------- line inserted at: 0/0 -----", firstLine,
-        "First line should be the inserted text, got '" .. tostring(firstLine) .. "'")
+      assert.are.equal(
+        "------- line inserted at: 0/0 -----",
+        firstLine,
+        "First line should be the inserted text, got '" .. tostring(firstLine) .. "'"
+      )
     end)
 
     -- https://github.com/Mudlet/Mudlet/issues/8945
@@ -1387,9 +1517,13 @@ describe("Tests UI functions", function()
 
       local lineCountAfter = getLineCount(consoleName)
 
-      assert.is_true(lineCountAfter > lineCountBefore,
+      assert.is_true(
+        lineCountAfter > lineCountBefore,
         "cinsertText with \\n should create a new line, but line count went from "
-        .. lineCountBefore .. " to " .. lineCountAfter)
+          .. lineCountBefore
+          .. " to "
+          .. lineCountAfter
+      )
     end)
   end)
 
@@ -1398,7 +1532,6 @@ describe("Tests UI functions", function()
   -- These tests use feedTriggers + tempTrigger to get proper trigger context,
   -- since echo/cecho only operate at cursor position within triggers.
   describe("Tests cecho with creplaceLine in trigger context", function()
-
     -- Reproduction from the issue: cecho("\n") then creplaceLine then cecho
     -- should place subsequent cecho text on the replaced line, not a new one
     it("should place cecho text on same line after creplaceLine", function()
@@ -1421,8 +1554,10 @@ describe("Tests UI functions", function()
         local line = getCurrentLine()
         deselect()
         if string.find(line, "REPLACED", 1, true) then
-          assert.truthy(string.find(line, "(cecho)", 1, true),
-            "Line with 'REPLACED' should also contain '(cecho)', got '" .. tostring(line) .. "'")
+          assert.truthy(
+            string.find(line, "(cecho)", 1, true),
+            "Line with 'REPLACED' should also contain '(cecho)', got '" .. tostring(line) .. "'"
+          )
           found = true
           break
         end
@@ -1451,8 +1586,10 @@ describe("Tests UI functions", function()
         local line = getCurrentLine()
         deselect()
         if string.find(line, "REPLACED", 1, true) then
-          assert.falsy(string.find(line, "cecho before", 1, true),
-            "Original echo text should not bleed through after creplaceLine, got '" .. tostring(line) .. "'")
+          assert.falsy(
+            string.find(line, "cecho before", 1, true),
+            "Original echo text should not bleed through after creplaceLine, got '" .. tostring(line) .. "'"
+          )
           break
         end
       end
@@ -1715,93 +1852,127 @@ describe("Tests UI functions", function()
 
       local screens = {
         -- ROM 2.4 act_info.c do_score, verbatim format
-        { name = "a ROM 2.4 score sentence",
+        {
+          name = "a ROM 2.4 score sentence",
           line = "You have 100/100 hit, 100/100 mana, 100/100 movement.",
-          expect = { hp = { 100, 100 }, mp = { 100, 100 }, mv = { 100, 100 } } },
+          expect = { hp = { 100, 100 }, mp = { 100, 100 }, mv = { 100, 100 } },
+        },
         -- Merc 2.1 appends practices to the same sentence
-        { name = "a Merc 2.1 score sentence",
+        {
+          name = "a Merc 2.1 score sentence",
           line = "You have 100/100 hit, 90/90 mana, 80/100 movement, 12 practices.",
-          expect = { hp = { 100, 100 }, mp = { 90, 90 }, mv = { 80, 100 } } },
+          expect = { hp = { 100, 100 }, mp = { 90, 90 }, mv = { 80, 100 } },
+        },
         -- DikuMUD/CircleMUD/tbaMUD write current(max)
-        { name = "a Diku/Circle/tbaMUD score sentence",
+        {
+          name = "a Diku/Circle/tbaMUD score sentence",
           line = "You have 20(20) hit, 100(100) mana and 82(82) movement points.",
-          expect = { hp = { 20, 20 }, mp = { 100, 100 }, mv = { 82, 82 } } },
+          expect = { hp = { 20, 20 }, mp = { 100, 100 }, mv = { 82, 82 } },
+        },
         -- SMAUG 1.4a dashboard rows: "current of max" behind unrelated cells
-        { name = "a SMAUG hitpoints row",
+        {
+          name = "a SMAUG hitpoints row",
           line = "PRACT: 005         Hitpoints: 90    of    90   Pager: ( )  24    AutoExit(X)",
-          expect = { hp = { 90, 90 } } },
-        { name = "a SMAUG mana row",
+          expect = { hp = { 90, 90 } },
+        },
+        {
+          name = "a SMAUG mana row",
           line = "XP   : 123456        Mana: 75    of    90   MKills:  00012    AutoLoot (X)",
-          expect = { mp = { 75, 90 } } },
-        { name = "a SMAUG move row (comma-grouped gold in front)",
+          expect = { mp = { 75, 90 } },
+        },
+        {
+          name = "a SMAUG move row (comma-grouped gold in front)",
           line = "GOLD : 1,234,567    Move: 80    of    90   Mdeaths: 00000    AutoSac ( )",
-          expect = { mv = { 80, 90 } } },
+          expect = { mv = { 80, 90 } },
+        },
         -- SWRFUSS puts three "of" pairs on one line
-        { name = "a SWR-style of-separated line",
+        {
+          name = "a SWR-style of-separated line",
           line = "Hit Points: 100 of 100     Move: 90 of 100     Force: 100 of 100",
-          expect = { hp = { 100, 100 }, mv = { 90, 100 } } },
+          expect = { hp = { 100, 100 }, mv = { 90, 100 } },
+        },
         -- Achaea's bordered vitals block (mana above max is real overheal)
-        { name = "an Achaea health row",
+        {
+          name = "an Achaea health row",
           line = "| Health  : 2594/2594   Willpower: 13730/13730 Strength : 12 Intelligence: 13 |",
-          expect = { hp = { 2594, 2594 } } },
-        { name = "an Achaea mana/endurance row",
+          expect = { hp = { 2594, 2594 } },
+        },
+        {
+          name = "an Achaea mana/endurance row",
           line = "| Mana    : 3671/2966   Endurance: 11600/11870 Dexterity: 12 Constitution: 11 |",
-          expect = { mp = { 3671, 2966 }, mv = { 11600, 11870 } } },
+          expect = { mp = { 3671, 2966 }, mv = { 11600, 11870 } },
+        },
         -- Aetolia's cells sit behind interior pipes after a non-vital cell
-        { name = "an Aetolia bordered row",
+        {
+          name = "an Aetolia bordered row",
           line = "| Race:   Undead Atavian    | Health:  4252/4252  | Endurance: 19950/19950   |",
-          expect = { hp = { 4252, 4252 }, mv = { 19950, 19950 } } },
+          expect = { hp = { 4252, 4252 }, mv = { 19950, 19950 } },
+        },
         -- Aardwolf brackets its values inside a full grid
-        { name = "an Aardwolf hit row",
+        {
+          name = "an Aardwolf hit row",
           line = "| Hit    : [  168/168  ] | Hitroll  : [   27 ] | Weight :    40 of 135    |",
-          expect = { hp = { 168, 168 } } },
-        { name = "an Aardwolf mana row",
+          expect = { hp = { 168, 168 } },
+        },
+        {
+          name = "an Aardwolf mana row",
           line = "| Mana   : [  160/160  ] | Damroll  : [   14 ] | Items  :    23 of 105    |",
-          expect = { mp = { 160, 160 } } },
-        { name = "an Aardwolf moves row",
+          expect = { mp = { 160, 160 } },
+        },
+        {
+          name = "an Aardwolf moves row",
           line = "| Moves  : [  564/564  ] | Wimpy    : [   18 ] | Pos    : Standing        |",
-          expect = { mv = { 564, 564 } } },
+          expect = { mv = { 564, 564 } },
+        },
         -- Discworld brief: current(max), no space before the paren
-        { name = "a Discworld brief score line",
+        {
+          name = "a Discworld brief score line",
           line = "Hp: 2331(2331)  Gp: 433(459)  Xp: 1143225  Burden: 21%",
-          expect = { hp = { 2331, 2331 } } },
+          expect = { hp = { 2331, 2331 } },
+        },
         -- Discworld verbose: current (max) with a space
-        { name = "a Discworld verbose score sentence",
+        {
+          name = "a Discworld verbose score sentence",
           line = "You have 1110 (1110) hit points, 167 (167) guild points, 2 (684) quest points, "
             .. "7 (1063) achievement points and 81 (81) social points.",
-          expect = { hp = { 1110, 1110 } } },
+          expect = { hp = { 1110, 1110 } },
+        },
         -- LPMud 2.4.5 writes current, label, then the max
-        { name = "an LPMud 2.4.5 score sentence",
+        {
+          name = "an LPMud 2.4.5 score sentence",
           line = "You have 123 experience points, 45 gold coins, 50 hit points(50).",
-          expect = { hp = { 50, 50 } } },
+          expect = { hp = { 50, 50 } },
+        },
         -- AFKMud's first row opens with a "Label: number" cell
-        { name = "an AFKMud hitpoints row",
+        {
+          name = "an AFKMud hitpoints row",
           line = "Level: 5              HitPoints:  100/  100      Pager    ( )",
-          expect = { hp = { 100, 100 } } },
-        { name = "an IRE-style aligned score table",
+          expect = { hp = { 100, 100 } },
+        },
+        {
+          name = "an IRE-style aligned score table",
           line = "Health:   3600/3600     Mana:     3400/3400",
-          expect = { hp = { 3600, 3600 }, mp = { 3400, 3400 } } },
-        { name = "a bordered row whose first cell is not a vital",
+          expect = { hp = { 3600, 3600 }, mp = { 3400, 3400 } },
+        },
+        {
+          name = "a bordered row whose first cell is not a vital",
           line = "| Level: 201  Hit Points: 500/500  Moves: 1000/1000 |",
-          expect = { hp = { 500, 500 }, mv = { 1000, 1000 } } },
-        { name = "thousands separators",
+          expect = { hp = { 500, 500 }, mv = { 1000, 1000 } },
+        },
+        {
+          name = "thousands separators",
           line = "Hit Points: 12,345/23,456",
-          expect = { hp = { 12345, 23456 } } },
-        { name = "a spell points row",
-          line = "Spell Points: 90/95",
-          expect = { mp = { 90, 95 } } },
-        { name = "a magic row",
-          line = "Magic: 90/95",
-          expect = { mp = { 90, 95 } } },
-        { name = "a movement row",
-          line = "Movement: 80/100",
-          expect = { mv = { 80, 100 } } },
-        { name = "a stamina row",
-          line = "Stamina: 80/100",
-          expect = { mv = { 80, 100 } } },
-        { name = "an experience row",
+          expect = { hp = { 12345, 23456 } },
+        },
+        { name = "a spell points row", line = "Spell Points: 90/95", expect = { mp = { 90, 95 } } },
+        { name = "a magic row", line = "Magic: 90/95", expect = { mp = { 90, 95 } } },
+        { name = "a movement row", line = "Movement: 80/100", expect = { mv = { 80, 100 } } },
+        { name = "a stamina row", line = "Stamina: 80/100", expect = { mv = { 80, 100 } } },
+        {
+          name = "an experience row",
           line = "Experience: 1000/5000",
-          expect = { xp = { 1000, 5000 } } },
+          expect = { xp = { 1000, 5000 } },
+        },
       }
 
       for _, screen in ipairs(screens) do
@@ -1883,8 +2054,10 @@ describe("Tests UI functions", function()
       for _, line in ipairs(prose) do
         it("should not trust on first sight: " .. line, function()
           for _, hit in ipairs(BaseUI.parseVitalsLine(line)) do
-            assert.is_true(hit.gated == true or hit.windowed == true,
-              string.format("first-sight %s (%s) reading from prose", hit.stat, hit.kind))
+            assert.is_true(
+              hit.gated == true or hit.windowed == true,
+              string.format("first-sight %s (%s) reading from prose", hit.stat, hit.kind)
+            )
           end
         end)
       end
@@ -1941,11 +2114,15 @@ describe("Tests UI functions", function()
 
       for _, line in ipairs(readableLines) do
         it("lets through: " .. line, function()
-          assert.is_true(#BaseUI.parseVitalsLine(line) > 0,
-            "sample line no longer produces any reading - fix the sample, not the prefilter")
+          assert.is_true(
+            #BaseUI.parseVitalsLine(line) > 0,
+            "sample line no longer produces any reading - fix the sample, not the prefilter"
+          )
           -- rex.find: rex.match returns false for an unset capture group
-          assert.is_not_nil(rex.find(line, BaseUI.vitalsPrefilter),
-            "prefilter drops a line the vitals shapes read: the gauges would never appear")
+          assert.is_not_nil(
+            rex.find(line, BaseUI.vitalsPrefilter),
+            "prefilter drops a line the vitals shapes read: the gauges would never appear"
+          )
         end)
       end
 
@@ -2190,33 +2367,33 @@ describe("Tests UI functions", function()
       selectSection(win, 0, 1)
       local format = getTextFormat(win)
       assert.is_table(format)
-      assert.are.same({255, 20, 30}, format.foreground)
-      assert.are.same({40, 50, 60}, format.background)
+      assert.are.same({ 255, 20, 30 }, format.foreground)
+      assert.are.same({ 40, 50, 60 }, format.background)
     end)
 
     it("decho reports distinct colours for adjacent runs", function()
       decho(win, "<255,0,0:0,0,0>R<0,255,0:0,0,0>G<0,0,255:0,0,0>B\n")
       moveCursor(win, 0, 0)
       selectSection(win, 0, 1)
-      assert.are.same({255, 0, 0}, getTextFormat(win).foreground)
+      assert.are.same({ 255, 0, 0 }, getTextFormat(win).foreground)
       selectSection(win, 1, 1)
-      assert.are.same({0, 255, 0}, getTextFormat(win).foreground)
+      assert.are.same({ 0, 255, 0 }, getTextFormat(win).foreground)
       selectSection(win, 2, 1)
-      assert.are.same({0, 0, 255}, getTextFormat(win).foreground)
+      assert.are.same({ 0, 0, 255 }, getTextFormat(win).foreground)
     end)
 
     it("cecho <red> resolves to pure red", function()
       cecho(win, "<red>R\n")
       moveCursor(win, 0, 0)
       selectSection(win, 0, 1)
-      assert.are.same({255, 0, 0}, getTextFormat(win).foreground)
+      assert.are.same({ 255, 0, 0 }, getTextFormat(win).foreground)
     end)
 
     it("hecho #ff0000 resolves to pure red", function()
       hecho(win, "#ff0000H\n")
       moveCursor(win, 0, 0)
       selectSection(win, 0, 1)
-      assert.are.same({255, 0, 0}, getTextFormat(win).foreground)
+      assert.are.same({ 255, 0, 0 }, getTextFormat(win).foreground)
     end)
 
     it("getFgColor and getBgColor agree with getTextFormat", function()
@@ -2226,8 +2403,8 @@ describe("Tests UI functions", function()
       local format = getTextFormat(win)
       local fr, fg, fb = getFgColor(win)
       local br, bg, bb = getBgColor(win)
-      assert.are.same({fr, fg, fb}, format.foreground)
-      assert.are.same({br, bg, bb}, format.background)
+      assert.are.same({ fr, fg, fb }, format.foreground)
+      assert.are.same({ br, bg, bb }, format.background)
     end)
   end)
 
@@ -2253,12 +2430,12 @@ describe("Tests UI functions", function()
 
     -- each attribute maps a setter to the getTextFormat key it should toggle
     local attributes = {
-      {key = "bold", setter = setBold},
-      {key = "italic", setter = setItalics},
-      {key = "underline", setter = setUnderline},
-      {key = "overline", setter = setOverline},
-      {key = "reverse", setter = setReverse},
-      {key = "strikeout", setter = setStrikeOut},
+      { key = "bold", setter = setBold },
+      { key = "italic", setter = setItalics },
+      { key = "underline", setter = setUnderline },
+      { key = "overline", setter = setOverline },
+      { key = "reverse", setter = setReverse },
+      { key = "strikeout", setter = setStrikeOut },
     }
 
     for _, attribute in ipairs(attributes) do
@@ -2330,13 +2507,18 @@ describe("Tests UI functions", function()
     end
 
     local rows = {
-      {what = "4:0 leaves the text without an underline", sequence = "\27[4:0m", underline = false, expected = "none"},
-      {what = "4:1 is a single underline", sequence = "\27[4:1m", underline = true, expected = "solid"},
+      {
+        what = "4:0 leaves the text without an underline",
+        sequence = "\27[4:0m",
+        underline = false,
+        expected = "none",
+      },
+      { what = "4:1 is a single underline", sequence = "\27[4:1m", underline = true, expected = "solid" },
       -- Mudlet has no double underline of its own, so 4:2 renders as a single one
-      {what = "4:2 falls back to a single underline", sequence = "\27[4:2m", underline = true, expected = "solid"},
-      {what = "4:3 is a curly underline", sequence = "\27[4:3m", underline = true, expected = "wavy"},
-      {what = "4:4 is a dotted underline", sequence = "\27[4:4m", underline = true, expected = "dotted"},
-      {what = "4:5 is a dashed underline", sequence = "\27[4:5m", underline = true, expected = "dashed"},
+      { what = "4:2 falls back to a single underline", sequence = "\27[4:2m", underline = true, expected = "solid" },
+      { what = "4:3 is a curly underline", sequence = "\27[4:3m", underline = true, expected = "wavy" },
+      { what = "4:4 is a dotted underline", sequence = "\27[4:4m", underline = true, expected = "dotted" },
+      { what = "4:5 is a dashed underline", sequence = "\27[4:5m", underline = true, expected = "dashed" },
     }
 
     for _, row in ipairs(rows) do
@@ -2350,10 +2532,30 @@ describe("Tests UI functions", function()
     -- Applying a style over a curly underline has to clear the sibling flags,
     -- otherwise the old style carries over into the new one
     local transitions = {
-      {what = "4:0 after a curly underline turns the underline off", sequence = "\27[4:0m", underline = false, expected = "none"},
-      {what = "4:4 after a curly underline replaces it with a dotted one", sequence = "\27[4:4m", underline = true, expected = "dotted"},
-      {what = "4:5 after a curly underline replaces it with a dashed one", sequence = "\27[4:5m", underline = true, expected = "dashed"},
-      {what = "an out-of-range 4:6 after a curly underline turns the underline off", sequence = "\27[4:6m", underline = false, expected = "none"},
+      {
+        what = "4:0 after a curly underline turns the underline off",
+        sequence = "\27[4:0m",
+        underline = false,
+        expected = "none",
+      },
+      {
+        what = "4:4 after a curly underline replaces it with a dotted one",
+        sequence = "\27[4:4m",
+        underline = true,
+        expected = "dotted",
+      },
+      {
+        what = "4:5 after a curly underline replaces it with a dashed one",
+        sequence = "\27[4:5m",
+        underline = true,
+        expected = "dashed",
+      },
+      {
+        what = "an out-of-range 4:6 after a curly underline turns the underline off",
+        sequence = "\27[4:6m",
+        underline = false,
+        expected = "none",
+      },
     }
 
     for _, row in ipairs(transitions) do
@@ -2379,9 +2581,9 @@ describe("Tests UI functions", function()
     -- The plain SGR 4 is the solid underline, so it has to replace whatever
     -- style came before it instead of leaving that style in place
     local plainOverStyle = {
-      {style = "curly", sequence = "\27[4:3m"},
-      {style = "dotted", sequence = "\27[4:4m"},
-      {style = "dashed", sequence = "\27[4:5m"},
+      { style = "curly", sequence = "\27[4:3m" },
+      { style = "dotted", sequence = "\27[4:4m" },
+      { style = "dashed", sequence = "\27[4:5m" },
     }
 
     for _, row in ipairs(plainOverStyle) do
@@ -2397,21 +2599,24 @@ describe("Tests UI functions", function()
     -- adds a plain underline to the cell without touching the parser's own
     -- style flags, which a style left behind by the clearing sequence would
     -- then win over
-    local solidLink = "\27]8;;https://example.com/?config={\"style\":{\"underline\":true}}\27\\"
+    local solidLink = '\27]8;;https://example.com/?config={"style":{"underline":true}}\27\\'
 
-    for _, clearingSequence in ipairs({"\27[4:0m", "\27[4:6m"}) do
-      it("reports that a curly underline cleared by " .. clearingSequence:sub(3, -2) .. " does not come back", function()
-        local format = formatAfter("\27[4:3m" .. clearingSequence .. solidLink, "\27]8;;\27\\")
-        assert.is_true(format.underline)
-        assert.are.equal("solid", format.underlineStyle)
-      end)
+    for _, clearingSequence in ipairs({ "\27[4:0m", "\27[4:6m" }) do
+      it(
+        "reports that a curly underline cleared by " .. clearingSequence:sub(3, -2) .. " does not come back",
+        function()
+          local format = formatAfter("\27[4:3m" .. clearingSequence .. solidLink, "\27]8;;\27\\")
+          assert.is_true(format.underline)
+          assert.are.equal("solid", format.underlineStyle)
+        end
+      )
     end
 
     -- A styled OSC 8 hyperlink adds its underline to the one SGR already put on
     -- the cell without clearing it, so both flags are set at once and only the
     -- painter's precedence decides which one is drawn
     it("reports the style that wins on screen when a hyperlink adds a second one", function()
-      local link = "\27]8;;https://example.com/?config={\"style\":{\"underline\":\"wavy\"}}\27\\"
+      local link = '\27]8;;https://example.com/?config={"style":{"underline":"wavy"}}\27\\'
       local format = formatAfter(link .. "\27[4:4m", "\27]8;;\27\\")
       assert.is_true(format.underline)
       assert.are.equal("wavy", format.underlineStyle)
@@ -2469,7 +2674,7 @@ describe("Tests UI functions", function()
     end)
 
     it("echoPopup writes its visible text and returns true", function()
-      assert.is_true(echoPopup(win, "popupmenu", {[[echo("1")]]}, {"one"}))
+      assert.is_true(echoPopup(win, "popupmenu", { [[echo("1")]] }, { "one" }))
       moveCursor(win, 0, 0)
       selectCurrentLine(win)
       assert.are.equal("popupmenu", getCurrentLine(win))
@@ -2477,21 +2682,21 @@ describe("Tests UI functions", function()
 
     it("insertPopup inserts its visible text and returns true", function()
       moveCursor(win, 0, 0)
-      assert.is_true(insertPopup(win, "inspopup", {[[echo("1")]]}, {"one"}))
+      assert.is_true(insertPopup(win, "inspopup", { [[echo("1")]] }, { "one" }))
       moveCursor(win, 0, 0)
       selectCurrentLine(win)
       assert.are.equal("inspopup", getCurrentLine(win))
     end)
 
     it("echoPopup rejects mismatched command and hint tables", function()
-      local ok, err = echoPopup(win, "menu", {[[echo("1")]], [[echo("2")]]}, {"one"})
+      local ok, err = echoPopup(win, "menu", { [[echo("1")]], [[echo("2")]] }, { "one" })
       assert.is_nil(ok)
       assert.is_string(err)
       assert.is_truthy(err:find("do not match up", 1, true))
     end)
 
     it("insertPopup rejects mismatched command and hint tables", function()
-      local ok, err = insertPopup(win, "menu", {[[echo("1")]], [[echo("2")]]}, {"one"})
+      local ok, err = insertPopup(win, "menu", { [[echo("1")]], [[echo("2")]] }, { "one" })
       assert.is_nil(ok)
       assert.is_string(err)
       assert.is_truthy(err:find("do not match up", 1, true))
@@ -2499,8 +2704,8 @@ describe("Tests UI functions", function()
 
     it("a rejected echoPopup or insertPopup lets go of the functions it read", function()
       local grewBy = registryGrowthOver(function()
-        echoPopup(win, "menu", {function() end, function() end}, {"one"})
-        insertPopup(win, "menu", {function() end, function() end}, {"one"})
+        echoPopup(win, "menu", { function() end, function() end }, { "one" })
+        insertPopup(win, "menu", { function() end, function() end }, { "one" })
       end)
       assert.are.equal(0, grewBy, ("the registry grew by %d over 40 refused calls"):format(grewBy))
     end)
@@ -2508,8 +2713,8 @@ describe("Tests UI functions", function()
     it("a popup naming no window lets go of the functions it read", function()
       local absent = "uiReadbackNoSuchWindow"
       local grewBy = registryGrowthOver(function()
-        echoPopup(absent, "menu", {function() end}, {"one"})
-        insertPopup(absent, "menu", {function() end}, {"one"})
+        echoPopup(absent, "menu", { function() end }, { "one" })
+        insertPopup(absent, "menu", { function() end }, { "one" })
       end)
       assert.are.equal(0, grewBy, ("the registry grew by %d over 40 refused calls"):format(grewBy))
     end)
@@ -2566,7 +2771,7 @@ describe("Tests UI functions", function()
       -- getBackgroundColor() answers the console's own background and there is
       -- no Lua reader for the profile's, but setBackgroundColor() writes both,
       -- so this is the restore available
-      savedBg = {getBackgroundColor()}
+      savedBg = { getBackgroundColor() }
       savedWrap = getWindowWrap("main")
       setWindowWrap("main", 500)
     end)
@@ -2584,10 +2789,24 @@ describe("Tests UI functions", function()
       setBackgroundColor(255, 255, 255)
       local light = echoLinkAndReadItsFormat("a link against a light background")
 
-      assert.are_not.same(dark.foreground, light.foreground, "the link colour did not follow the console background at all")
-      assert.are.same({0, 0, 255}, light.foreground, "a light background did not keep the darker blue that reads best on it")
-      assert.is_true(contrastRatio(dark.foreground, dark.background) > 4.5, "the link does not contrast enough with a dark console background")
-      assert.is_true(contrastRatio(light.foreground, light.background) > 4.5, "the link does not contrast enough with a light console background")
+      assert.are_not.same(
+        dark.foreground,
+        light.foreground,
+        "the link colour did not follow the console background at all"
+      )
+      assert.are.same(
+        { 0, 0, 255 },
+        light.foreground,
+        "a light background did not keep the darker blue that reads best on it"
+      )
+      assert.is_true(
+        contrastRatio(dark.foreground, dark.background) > 4.5,
+        "the link does not contrast enough with a dark console background"
+      )
+      assert.is_true(
+        contrastRatio(light.foreground, light.background) > 4.5,
+        "the link does not contrast enough with a light console background"
+      )
     end)
   end)
 
@@ -2697,8 +2916,12 @@ describe("Tests UI functions", function()
       moveCursor(0, target)
       local terminated, err
       if budget then
-        local runner = coroutine.create(function() replaceAll(word, what) end)
-        debug.sethook(runner, function() error("replaceAll did not terminate", 0) end, "", budget)
+        local runner = coroutine.create(function()
+          replaceAll(word, what)
+        end)
+        debug.sethook(runner, function()
+          error("replaceAll did not terminate", 0)
+        end, "", budget)
         terminated, err = coroutine.resume(runner)
       else
         terminated, err = pcall(replaceAll, word, what)
@@ -2925,7 +3148,7 @@ describe("Tests UI functions", function()
       createMiniConsole(name, 0, 0, 100, 100)
       assert.is_true(setBackgroundColor(name, 10, 20, 30, 255))
       local r, g, b, a = getBackgroundColor(name)
-      assert.are.same({10, 20, 30, 255}, {r, g, b, a})
+      assert.are.same({ 10, 20, 30, 255 }, { r, g, b, a })
     end)
 
     it("setBackgroundColor rejects an out of range component", function()
@@ -2972,20 +3195,90 @@ describe("Tests UI functions", function()
   -- Each is called with otherwise-valid arguments so the lookup is what fails.
   describe("unknown-window contracts", function()
     local badWindowCalls = {
-      {name = "getLineCount", call = function() return getLineCount("uiReadbackNoWin") end},
-      {name = "getWindowWrap", call = function() return getWindowWrap("uiReadbackNoWin") end},
-      {name = "getColumnNumber", call = function() return getColumnNumber("uiReadbackNoWin") end},
-      {name = "getLineNumber", call = function() return getLineNumber("uiReadbackNoWin") end},
-      {name = "moveCursor", call = function() return moveCursor("uiReadbackNoWin", 0, 0) end},
-      {name = "moveCursorEnd", call = function() return moveCursorEnd("uiReadbackNoWin") end},
-      {name = "insertText", call = function() return insertText("uiReadbackNoWin", "x") end},
-      {name = "deleteLine", call = function() return deleteLine("uiReadbackNoWin") end},
-      {name = "setWindowWrap", call = function() return setWindowWrap("uiReadbackNoWin", 5) end},
-      {name = "setBold", call = function() return setBold("uiReadbackNoWin", true) end},
-      {name = "resetFormat", call = function() return resetFormat("uiReadbackNoWin") end},
-      {name = "setLink", call = function() return setLink("uiReadbackNoWin", [[echo("x")]], "tip") end},
-      {name = "copy", call = function() return copy("uiReadbackNoWin") end},
-      {name = "appendBuffer", call = function() return appendBuffer("uiReadbackNoWin") end},
+      {
+        name = "getLineCount",
+        call = function()
+          return getLineCount("uiReadbackNoWin")
+        end,
+      },
+      {
+        name = "getWindowWrap",
+        call = function()
+          return getWindowWrap("uiReadbackNoWin")
+        end,
+      },
+      {
+        name = "getColumnNumber",
+        call = function()
+          return getColumnNumber("uiReadbackNoWin")
+        end,
+      },
+      {
+        name = "getLineNumber",
+        call = function()
+          return getLineNumber("uiReadbackNoWin")
+        end,
+      },
+      {
+        name = "moveCursor",
+        call = function()
+          return moveCursor("uiReadbackNoWin", 0, 0)
+        end,
+      },
+      {
+        name = "moveCursorEnd",
+        call = function()
+          return moveCursorEnd("uiReadbackNoWin")
+        end,
+      },
+      {
+        name = "insertText",
+        call = function()
+          return insertText("uiReadbackNoWin", "x")
+        end,
+      },
+      {
+        name = "deleteLine",
+        call = function()
+          return deleteLine("uiReadbackNoWin")
+        end,
+      },
+      {
+        name = "setWindowWrap",
+        call = function()
+          return setWindowWrap("uiReadbackNoWin", 5)
+        end,
+      },
+      {
+        name = "setBold",
+        call = function()
+          return setBold("uiReadbackNoWin", true)
+        end,
+      },
+      {
+        name = "resetFormat",
+        call = function()
+          return resetFormat("uiReadbackNoWin")
+        end,
+      },
+      {
+        name = "setLink",
+        call = function()
+          return setLink("uiReadbackNoWin", [[echo("x")]], "tip")
+        end,
+      },
+      {
+        name = "copy",
+        call = function()
+          return copy("uiReadbackNoWin")
+        end,
+      },
+      {
+        name = "appendBuffer",
+        call = function()
+          return appendBuffer("uiReadbackNoWin")
+        end,
+      },
     }
 
     for _, entry in ipairs(badWindowCalls) do
@@ -3039,7 +3332,7 @@ describe("Tests UI functions", function()
       -- copy carries formatting, not just text
       moveCursor(dst, 0, 0)
       selectSection(dst, 0, 1)
-      assert.are.same({255, 0, 0}, getTextFormat(dst).foreground)
+      assert.are.same({ 255, 0, 0 }, getTextFormat(dst).foreground)
     end)
 
     -- copy() and appendBuffer() carry the line's per-character formatting
@@ -3055,17 +3348,17 @@ describe("Tests UI functions", function()
       assert.are.equal("redgreenblue", lines[1])
       moveCursor(dst, 0, 0)
       selectSection(dst, 0, 1)
-      assert.are.same({255, 0, 0}, getTextFormat(dst).foreground)
+      assert.are.same({ 255, 0, 0 }, getTextFormat(dst).foreground)
       selectSection(dst, 3, 1)
-      assert.are.same({0, 255, 0}, getTextFormat(dst).foreground)
+      assert.are.same({ 0, 255, 0 }, getTextFormat(dst).foreground)
       selectSection(dst, 8, 1)
-      assert.are.same({0, 0, 255}, getTextFormat(dst).foreground)
+      assert.are.same({ 0, 0, 255 }, getTextFormat(dst).foreground)
       -- the last character before each colour change, where an off-by-one in
       -- the carried formatting shows
       selectSection(dst, 2, 1)
-      assert.are.same({255, 0, 0}, getTextFormat(dst).foreground)
+      assert.are.same({ 255, 0, 0 }, getTextFormat(dst).foreground)
       selectSection(dst, 7, 1)
-      assert.are.same({0, 255, 0}, getTextFormat(dst).foreground)
+      assert.are.same({ 0, 255, 0 }, getTextFormat(dst).foreground)
     end)
 
     -- "!osc8-docs" in text being echoed or received is an easter egg: it prints
@@ -3101,9 +3394,9 @@ describe("Tests UI functions", function()
       assert.are.equal("artgre", lines[1])
       moveCursor(dst, 0, 0)
       selectSection(dst, 2, 1)
-      assert.are.same({255, 0, 0}, getTextFormat(dst).foreground)
+      assert.are.same({ 255, 0, 0 }, getTextFormat(dst).foreground)
       selectSection(dst, 3, 1)
-      assert.are.same({0, 255, 0}, getTextFormat(dst).foreground)
+      assert.are.same({ 0, 255, 0 }, getTextFormat(dst).foreground)
     end)
 
     -- appendFormatted() finishes with the same wrapLine() call the echo path
@@ -3293,10 +3586,10 @@ describe("Tests UI functions", function()
       assert.are.equal("xxredgrnxxx", lines[1])
       moveCursor(dst, 0, 0)
       selectSection(dst, 2, 1)
-      assert.are.same({255, 0, 0}, getTextFormat(dst).foreground)
+      assert.are.same({ 255, 0, 0 }, getTextFormat(dst).foreground)
       moveCursor(dst, 0, 0)
       selectSection(dst, 5, 1)
-      assert.are.same({0, 255, 0}, getTextFormat(dst).foreground)
+      assert.are.same({ 0, 255, 0 }, getTextFormat(dst).foreground)
     end)
   end)
 end)
@@ -3334,7 +3627,7 @@ describe("Window state getters", function()
     resizeWindow(labelName, 100, 50)
     moveWindow(consoleName, 30, 40)
     resizeWindow(consoleName, 300, 150)
-    for _, name in ipairs({labelName, consoleName, scrollBoxName, cmdLineName, textEditName, userWindowName}) do
+    for _, name in ipairs({ labelName, consoleName, scrollBoxName, cmdLineName, textEditName, userWindowName }) do
       showWindow(name)
     end
   end)
@@ -3423,7 +3716,7 @@ describe("Window state getters", function()
 
     it("returns the main window's geometry under both of its names", function()
       local width, height = getMainWindowSize()
-      for _, name in ipairs({"main", ""}) do
+      for _, name in ipairs({ "main", "" }) do
         local x, y, w, h = getWindowGeometry(name)
         assert.are.equal(0, x)
         assert.are.equal(0, y)
@@ -3433,7 +3726,9 @@ describe("Window state getters", function()
     end)
 
     it("errors when called without a window name", function()
-      assert.has_error(function() getWindowGeometry() end)
+      assert.has_error(function()
+        getWindowGeometry()
+      end)
     end)
   end)
 
@@ -3502,7 +3797,9 @@ describe("Window state getters", function()
     end)
 
     it("errors when called without a window name", function()
-      assert.has_error(function() windowVisible() end)
+      assert.has_error(function()
+        windowVisible()
+      end)
     end)
   end)
 
@@ -3533,7 +3830,9 @@ describe("Window state getters", function()
     end)
 
     it("errors when called without a label name", function()
-      assert.has_error(function() getLabelText() end)
+      assert.has_error(function()
+        getLabelText()
+      end)
     end)
   end)
 end)
@@ -3599,15 +3898,15 @@ describe("Window and label state", function()
 
     it("a label created in a user window is positioned inside that window", function()
       -- the coordinates are relative to the parent, not to the main window
-      assert.are.same({5, 6, 40, 20}, {getWindowGeometry(childLabel)})
+      assert.are.same({ 5, 6, 40, 20 }, { getWindowGeometry(childLabel) })
     end)
 
     it("a miniconsole created in a user window is positioned inside that window", function()
-      assert.are.same({7, 8, 200, 100}, {getWindowGeometry(childConsole)})
+      assert.are.same({ 7, 8, 200, 100 }, { getWindowGeometry(childConsole) })
     end)
 
     it("a label created in a scroll box is positioned inside that scroll box", function()
-      assert.are.same({4, 5, 30, 20}, {getWindowGeometry(scrollBoxLabel)})
+      assert.are.same({ 4, 5, 30, 20 }, { getWindowGeometry(scrollBoxLabel) })
     end)
 
     it("every created element is visible and reports its own type", function()
@@ -3646,8 +3945,8 @@ describe("Window and label state", function()
       assert.are.equal(("label '%s' already exists"):format(childLabel), childErr)
       -- unlike createMiniConsole/createScrollBox a refused createLabel must leave
       -- the existing labels alone rather than moving and resizing them
-      assert.are.same({11, 22, 133, 44}, {getWindowGeometry(label)})
-      assert.are.same({5, 6, 40, 20}, {getWindowGeometry(childLabel)})
+      assert.are.same({ 11, 22, 133, 44 }, { getWindowGeometry(label) })
+      assert.are.same({ 5, 6, 40, 20 }, { getWindowGeometry(childLabel) })
     end)
 
     it("createLabel on a name taken by a miniconsole returns false and a message", function()
@@ -3669,21 +3968,21 @@ describe("Window and label state", function()
 
     it("createMiniConsole on an existing name moves and resizes it instead", function()
       local ok, err = createMiniConsole(console, 40, 50, 260, 130)
-      local geometry = {getWindowGeometry(console)}
+      local geometry = { getWindowGeometry(console) }
       -- put it back before asserting so a failure here cannot cascade
       createMiniConsole(console, 12, 23, 300, 150)
       assert.is_false(ok)
       assert.are.equal(("miniconsole '%s' already exists, moving/resizing '%s'"):format(console, console), err)
-      assert.are.same({40, 50, 260, 130}, geometry)
+      assert.are.same({ 40, 50, 260, 130 }, geometry)
     end)
 
     it("createScrollBox on an existing name moves and resizes it instead", function()
       local ok, err = createScrollBox(scrollBox, 41, 51, 261, 131)
-      local geometry = {getWindowGeometry(scrollBox)}
+      local geometry = { getWindowGeometry(scrollBox) }
       createScrollBox(scrollBox, 13, 24, 120, 90)
       assert.is_false(ok)
       assert.are.equal(("scrollBox '%s' already exists, moving/resizing '%s'"):format(scrollBox, scrollBox), err)
-      assert.are.same({41, 51, 261, 131}, geometry)
+      assert.are.same({ 41, 51, 261, 131 }, geometry)
     end)
 
     it("createCommandLine hard-errors without a name", function()
@@ -3731,38 +4030,38 @@ describe("Window and label state", function()
     it("moveWindow relocates a miniconsole", function()
       moveWindow(console, 21, 31)
       local x, y = getWindowGeometry(console)
-      assert.are.same({21, 31}, {x, y})
+      assert.are.same({ 21, 31 }, { x, y })
     end)
 
     it("moveWindow relocates a scroll box", function()
       moveWindow(scrollBox, 33, 44)
       local x, y = getWindowGeometry(scrollBox)
-      assert.are.same({33, 44}, {x, y})
+      assert.are.same({ 33, 44 }, { x, y })
     end)
 
     it("moveWindow relocates a text edit", function()
       moveWindow(textEdit, 77, 88)
       local x, y = getWindowGeometry(textEdit)
-      assert.are.same({77, 88}, {x, y})
+      assert.are.same({ 77, 88 }, { x, y })
     end)
 
     it("resizeWindow resizes a command line", function()
       resizeWindow(cmdLine, 180, 40)
       local _, _, w, h = getWindowGeometry(cmdLine)
-      assert.are.same({180, 40}, {w, h})
+      assert.are.same({ 180, 40 }, { w, h })
     end)
 
     it("resizeWindow resizes a label", function()
       resizeWindow(label, 210, 95)
       local _, _, w, h = getWindowGeometry(label)
-      assert.are.same({210, 95}, {w, h})
+      assert.are.same({ 210, 95 }, { w, h })
     end)
 
     it("moveWindow truncates fractional coordinates", function()
       -- the coordinates are read as doubles and cast to int, so .9 is dropped
       moveWindow(label, 70.9, 80.9)
       local x, y = getWindowGeometry(label)
-      assert.are.same({70, 80}, {x, y})
+      assert.are.same({ 70, 80 }, { x, y })
     end)
 
     it("moveWindow and resizeWindow return no values for an unknown window", function()
@@ -3979,13 +4278,28 @@ describe("Window and label state", function()
 
     it("setBackgroundColor and getBackgroundColor work on a label", function()
       assert.is_true(setBackgroundColor(label, 5, 6, 7, 255))
-      assert.are.same({5, 6, 7, 255}, {getBackgroundColor(label)})
+      assert.are.same({ 5, 6, 7, 255 }, { getBackgroundColor(label) })
     end)
 
     local linkStyleCalls = {
-      {name = "setLinkStyle", call = function(target) return setLinkStyle(target, "red", "blue", true) end},
-      {name = "resetLinkStyle", call = function(target) return resetLinkStyle(target) end},
-      {name = "clearVisitedLinks", call = function(target) return clearVisitedLinks(target) end},
+      {
+        name = "setLinkStyle",
+        call = function(target)
+          return setLinkStyle(target, "red", "blue", true)
+        end,
+      },
+      {
+        name = "resetLinkStyle",
+        call = function(target)
+          return resetLinkStyle(target)
+        end,
+      },
+      {
+        name = "clearVisitedLinks",
+        call = function(target)
+          return clearVisitedLinks(target)
+        end,
+      },
     }
 
     for _, entry in ipairs(linkStyleCalls) do
@@ -4021,21 +4335,21 @@ describe("Window and label state", function()
       local target = label("wlsBgKeep", 1)
       setBackgroundColor(target, 10, 20, 30, 255)
       setLabelStyleSheet(target, "qproperty-alignment: 'AlignHCenter';")
-      assert.are.same({10, 20, 30, 255}, {getBackgroundColor(target)})
+      assert.are.same({ 10, 20, 30, 255 }, { getBackgroundColor(target) })
     end)
 
     it("keeps a fully transparent background transparent across a stylesheet", function()
       local target = label("wlsBgTransparent", 1)
       setBackgroundColor(target, 0, 0, 0, 0)
       setLabelStyleSheet(target, "padding: 2px;")
-      assert.are.same({0, 0, 0, 0}, {getBackgroundColor(target)})
+      assert.are.same({ 0, 0, 0, 0 }, { getBackgroundColor(target) })
     end)
 
     it("lets a background in the stylesheet be overridden afterwards", function()
       local target = label("wlsBgOverride", 1)
       setLabelStyleSheet(target, "background-color: rgb(1, 2, 3);")
       setBackgroundColor(target, 40, 50, 60, 255)
-      assert.are.same({40, 50, 60, 255}, {getBackgroundColor(target)})
+      assert.are.same({ 40, 50, 60, 255 }, { getBackgroundColor(target) })
       assert.are.equal("background-color: rgba(40, 50, 60, 255);", getLabelStyleSheet(target))
     end)
 
@@ -4043,7 +4357,7 @@ describe("Window and label state", function()
       local target = label("wlsBgFromStyleSheet", 1)
       setBackgroundColor(target, 40, 50, 60, 255)
       setLabelStyleSheet(target, "background-color: rgb(11, 22, 33);")
-      assert.are.same({40, 50, 60, 255}, {getBackgroundColor(target)})
+      assert.are.same({ 40, 50, 60, 255 }, { getBackgroundColor(target) })
     end)
 
     it("survives resetLinkStyle", function()
@@ -4051,26 +4365,29 @@ describe("Window and label state", function()
       setBackgroundColor(target, 10, 20, 30, 255)
       setLinkStyle(target, "red", "blue", true)
       resetLinkStyle(target)
-      assert.are.same({10, 20, 30, 255}, {getBackgroundColor(target)})
+      assert.are.same({ 10, 20, 30, 255 }, { getBackgroundColor(target) })
     end)
 
     it("leaves selection-background-color alone", function()
       local target = label("wlsBgSelection", 1)
       setLabelStyleSheet(target, "selection-background-color: rgb(1, 2, 3);")
       setBackgroundColor(target, 70, 80, 90, 255)
-      assert.are.equal("selection-background-color: rgb(1, 2, 3);\nbackground-color: rgba(70, 80, 90, 255);", getLabelStyleSheet(target))
+      assert.are.equal(
+        "selection-background-color: rgb(1, 2, 3);\nbackground-color: rgba(70, 80, 90, 255);",
+        getLabelStyleSheet(target)
+      )
     end)
 
     -- fillBg = 0 reads like "start transparent" and does not do that: honouring it
     -- would turn every such label in an installed script transparent
     it("starts a label asked not to fill its background on the same grey", function()
       local target = label("wlsBgNoFill", 0)
-      assert.are.same({32, 32, 32, 255}, {getBackgroundColor(target)})
+      assert.are.same({ 32, 32, 32, 255 }, { getBackgroundColor(target) })
     end)
 
     it("starts a label that fills its background on the default grey", function()
       local target = label("wlsBgFill", 1)
-      assert.are.same({32, 32, 32, 255}, {getBackgroundColor(target)})
+      assert.are.same({ 32, 32, 32, 255 }, { getBackgroundColor(target) })
     end)
   end)
 
@@ -4101,7 +4418,9 @@ describe("Window and label state", function()
     it("setLabelClickCallback hard-errors on a value that is neither function, string nor nil", function()
       local ok, err = pcall(setLabelClickCallback, label, 42)
       assert.is_false(ok)
-      assert.is_truthy(err:find("setLabelClickCallback: bad argument #2 type (function expected, got number!)", 1, true))
+      assert.is_truthy(
+        err:find("setLabelClickCallback: bad argument #2 type (function expected, got number!)", 1, true)
+      )
     end)
 
     it("setLabelClickCallback rejects an empty label name", function()
@@ -4222,7 +4541,7 @@ describe("Window and label state", function()
       assert.are.equal("Ubuntu Mono", getFont(fontLabel))
     end)
 
-    it("setFont takes a \"Family Style\" name on a label", function()
+    it('setFont takes a "Family Style" name on a label', function()
       assert.is_true(setFont(fontLabel, "Ubuntu Mono Bold"))
       -- the style becomes the weight, so the family reported is the base one
       assert.are.equal("Ubuntu Mono", getFont(fontLabel))
@@ -4359,7 +4678,7 @@ describe("Window and label state", function()
 
     setup(function()
       originalSizes = getBorderSizes()
-      originalColor = {getBorderColor()}
+      originalColor = { getBorderColor() }
     end)
 
     teardown(function()
@@ -4376,33 +4695,33 @@ describe("Window and label state", function()
       assert.are.equal(10, getBorderRight())
       assert.are.equal(8, getBorderBottom())
       assert.are.equal(9, getBorderLeft())
-      assert.are.same({top = 7, right = 10, bottom = 8, left = 9}, getBorderSizes())
+      assert.are.same({ top = 7, right = 10, bottom = 8, left = 9 }, getBorderSizes())
     end)
 
     it("setBorderSizes with one argument sets all four borders", function()
       setBorderSizes(3)
-      assert.are.same({top = 3, right = 3, bottom = 3, left = 3}, getBorderSizes())
+      assert.are.same({ top = 3, right = 3, bottom = 3, left = 3 }, getBorderSizes())
     end)
 
     it("setBorderSizes with two arguments takes height then width", function()
       setBorderSizes(4, 5)
-      assert.are.same({top = 4, right = 5, bottom = 4, left = 5}, getBorderSizes())
+      assert.are.same({ top = 4, right = 5, bottom = 4, left = 5 }, getBorderSizes())
     end)
 
     it("setBorderSizes with three arguments takes top, width, bottom", function()
       setBorderSizes(1, 2, 3)
-      assert.are.same({top = 1, right = 2, bottom = 3, left = 2}, getBorderSizes())
+      assert.are.same({ top = 1, right = 2, bottom = 3, left = 2 }, getBorderSizes())
     end)
 
     it("setBorderSizes with four arguments takes top, right, bottom, left", function()
       setBorderSizes(1, 2, 3, 4)
-      assert.are.same({top = 1, right = 2, bottom = 3, left = 4}, getBorderSizes())
+      assert.are.same({ top = 1, right = 2, bottom = 3, left = 4 }, getBorderSizes())
     end)
 
     it("setBorderSizes with no arguments leaves the borders alone", function()
       setBorderSizes(6, 6, 6, 6)
       setBorderSizes()
-      assert.are.same({top = 6, right = 6, bottom = 6, left = 6}, getBorderSizes())
+      assert.are.same({ top = 6, right = 6, bottom = 6, left = 6 }, getBorderSizes())
     end)
 
     it("setBorderTop hard-errors on a non-number", function()
@@ -4413,7 +4732,7 @@ describe("Window and label state", function()
 
     it("setBorderColor round-trips through getBorderColor", function()
       setBorderColor(11, 22, 33)
-      assert.are.same({11, 22, 33}, {getBorderColor()})
+      assert.are.same({ 11, 22, 33 }, { getBorderColor() })
     end)
   end)
 
@@ -4498,15 +4817,60 @@ describe("Window and label state", function()
     end)
 
     local unknownWindowCalls = {
-      {name = "scrollingActive", call = function(target) return scrollingActive(target) end},
-      {name = "getScroll", call = function(target) return getScroll(target) end},
-      {name = "scrollTo", call = function(target) return scrollTo(target, 1) end},
-      {name = "disableScrollBar", call = function(target) return disableScrollBar(target) end},
-      {name = "enableScrollBar", call = function(target) return enableScrollBar(target) end},
-      {name = "disableHorizontalScrollBar", call = function(target) return disableHorizontalScrollBar(target) end},
-      {name = "enableHorizontalScrollBar", call = function(target) return enableHorizontalScrollBar(target) end},
-      {name = "enableScrolling", call = function(target) return enableScrolling(target) end},
-      {name = "disableScrolling", call = function(target) return disableScrolling(target) end},
+      {
+        name = "scrollingActive",
+        call = function(target)
+          return scrollingActive(target)
+        end,
+      },
+      {
+        name = "getScroll",
+        call = function(target)
+          return getScroll(target)
+        end,
+      },
+      {
+        name = "scrollTo",
+        call = function(target)
+          return scrollTo(target, 1)
+        end,
+      },
+      {
+        name = "disableScrollBar",
+        call = function(target)
+          return disableScrollBar(target)
+        end,
+      },
+      {
+        name = "enableScrollBar",
+        call = function(target)
+          return enableScrollBar(target)
+        end,
+      },
+      {
+        name = "disableHorizontalScrollBar",
+        call = function(target)
+          return disableHorizontalScrollBar(target)
+        end,
+      },
+      {
+        name = "enableHorizontalScrollBar",
+        call = function(target)
+          return enableHorizontalScrollBar(target)
+        end,
+      },
+      {
+        name = "enableScrolling",
+        call = function(target)
+          return enableScrolling(target)
+        end,
+      },
+      {
+        name = "disableScrolling",
+        call = function(target)
+          return disableScrolling(target)
+        end,
+      },
     }
 
     for _, entry in ipairs(unknownWindowCalls) do
@@ -4626,7 +4990,10 @@ describe("Window and label state", function()
       removeCommandLineMenuEvent(menuLabel)
       local ok, err = removeCommandLineMenuEvent(menuLabel)
       assert.is_false(ok)
-      assert.are.equal(("removeCommandLineMenuEvent: cannot remove '%s', menu item does not exist"):format(menuLabel), err)
+      assert.are.equal(
+        ("removeCommandLineMenuEvent: cannot remove '%s', menu item does not exist"):format(menuLabel),
+        err
+      )
     end)
 
     it("a menu event can be added to a named command line", function()
@@ -4690,8 +5057,8 @@ describe("Window and label state", function()
       moveCursor(console, 0, 0)
       selectSection(console, 0, 3)
       local format = getTextFormat(console)
-      assert.are.same({250, 251, 252}, format.foreground)
-      assert.are.same({1, 2, 3}, format.background)
+      assert.are.same({ 250, 251, 252 }, format.foreground)
+      assert.are.same({ 1, 2, 3 }, format.background)
       assert.is_true(format.bold)
       assert.is_true(format.italic)
       assert.is_false(format.underline)
@@ -4702,7 +5069,7 @@ describe("Window and label state", function()
       echo(console, "clamped\n")
       moveCursor(console, 0, 0)
       selectSection(console, 0, 3)
-      assert.are.same({255, 0, 0}, getTextFormat(console).foreground)
+      assert.are.same({ 255, 0, 0 }, getTextFormat(console).foreground)
     end)
 
     it("sets the optional strikeout, overline and reverse attributes", function()
@@ -4854,7 +5221,7 @@ describe("Window and label state", function()
     it("moves an element into a user window at the given position", function()
       assert.is_true(setWindow(userWindow, label, 3, 4, true))
       local x, y, w, h = getWindowGeometry(label)
-      assert.are.same({3, 4, 100, 50}, {x, y, w, h})
+      assert.are.same({ 3, 4, 100, 50 }, { x, y, w, h })
       assert.is_true(windowVisible(label))
     end)
 
@@ -4862,7 +5229,7 @@ describe("Window and label state", function()
       setWindow(userWindow, label, 3, 4, true)
       assert.is_true(setWindow("main", label, 60, 70, true))
       local x, y = getWindowGeometry(label)
-      assert.are.same({60, 70}, {x, y})
+      assert.are.same({ 60, 70 }, { x, y })
     end)
 
     -- Qt hides a widget when it is reparented, and setWindow only calls show()
@@ -4875,7 +5242,7 @@ describe("Window and label state", function()
     it("defaults to the origin and to showing the element", function()
       assert.is_true(setWindow(userWindow, label))
       local x, y = getWindowGeometry(label)
-      assert.are.same({0, 0}, {x, y})
+      assert.are.same({ 0, 0 }, { x, y })
       assert.is_true(windowVisible(label))
     end)
 
@@ -4957,7 +5324,7 @@ describe("Window and label state", function()
       copy(source)
       pasteWindow(target)
       assert.are.equal(1, getLineCount(target))
-      assert.are.same({"pasted line"}, getLines(target, 0, 1))
+      assert.are.same({ "pasted line" }, getLines(target, 0, 1))
     end)
 
     it("pasteWindow hard-errors on a non-string window name", function()
@@ -5061,7 +5428,9 @@ describe("Widget state getters", function()
     end)
 
     it("errors when called without a name", function()
-      assert.has_error(function() getUserWindowTitle() end)
+      assert.has_error(function()
+        getUserWindowTitle()
+      end)
     end)
   end)
 
@@ -5103,7 +5472,9 @@ describe("Widget state getters", function()
     end)
 
     it("errors when called without a name", function()
-      assert.has_error(function() getUserWindowStyleSheet() end)
+      assert.has_error(function()
+        getUserWindowStyleSheet()
+      end)
     end)
   end)
 
@@ -5191,7 +5562,9 @@ describe("Widget state getters", function()
     end)
 
     it("errors when called without a label name", function()
-      assert.has_error(function() getLabelToolTip() end)
+      assert.has_error(function()
+        getLabelToolTip()
+      end)
     end)
   end)
 
@@ -5310,10 +5683,10 @@ describe("Widget state getters", function()
       -- does not depend on a window manager honouring a move
       resizeMapWidget(640, 480)
       local _, _, w, h = getMapWidgetGeometry()
-      assert.are.same({640, 480}, {w, h})
+      assert.are.same({ 640, 480 }, { w, h })
       resizeMapWidget(560, 440)
       local _, _, w2, h2 = getMapWidgetGeometry()
-      assert.are.same({560, 440}, {w2, h2})
+      assert.are.same({ 560, 440 }, { w2, h2 })
     end)
 
     it("getMapWidgetGeometry reflects moveMapWidget", function()
@@ -5324,8 +5697,8 @@ describe("Widget state getters", function()
       local x2, y2, w, h = getMapWidgetGeometry()
       -- a window manager can add a constant frame offset to where a floating
       -- dock lands, so the movement is asserted rather than the position
-      assert.are.same({180, 220}, {x2 - x1, y2 - y1})
-      assert.are.same({600, 460}, {w, h})
+      assert.are.same({ 180, 220 }, { x2 - x1, y2 - y1 })
+      assert.are.same({ 600, 460 }, { w, h })
     end)
 
     it("getMapWidgetGeometry returns exactly four values", function()
@@ -5474,16 +5847,31 @@ describe("Label movies", function()
   -- an array rather than a keyed table so the specs are always generated in
   -- the same order
   local movieFunctions = {
-    {"setMovie", function(labelName) return setMovie(labelName, giffile) end},
-    {"startMovie", startMovie},
-    {"pauseMovie", pauseMovie},
-    {"scaleMovie", scaleMovie},
-    {"setMovieSpeed", function(labelName) return setMovieSpeed(labelName, 100) end},
-    {"setMovieFrame", function(labelName) return setMovieFrame(labelName, 0) end},
+    {
+      "setMovie",
+      function(labelName)
+        return setMovie(labelName, giffile)
+      end,
+    },
+    { "startMovie", startMovie },
+    { "pauseMovie", pauseMovie },
+    { "scaleMovie", scaleMovie },
+    {
+      "setMovieSpeed",
+      function(labelName)
+        return setMovieSpeed(labelName, 100)
+      end,
+    },
+    {
+      "setMovieFrame",
+      function(labelName)
+        return setMovieFrame(labelName, 0)
+      end,
+    },
   }
   -- setMovie reports a missing label itself, the rest go through the shared
   -- label lookup, so the two say it differently
-  local ownsItsLabelLookup = {setMovie = true}
+  local ownsItsLabelLookup = { setMovie = true }
 
   local function gifStats()
     local gifs = getProfileStats().gifs
@@ -5557,7 +5945,9 @@ describe("Label movies", function()
     end)
 
     it("checking that the movie the label kept is the one that works", function()
-      pending("a label driving a movie with no frames in it answers every movie getter the same way as one that works - LabelMovieRefusalTest reads the QMovie itself")
+      pending(
+        "a label driving a movie with no frames in it answers every movie getter the same way as one that works - LabelMovieRefusalTest reads the QMovie itself"
+      )
     end)
 
     it("a refused movie leaves the label without a movie to drive", function()
@@ -5732,16 +6122,16 @@ describe("Console buffer size", function()
 
   it("setConsoleBufferSize round-trips through getConsoleBufferSize", function()
     assert.is_true(setConsoleBufferSize(console, 5000, 500))
-    assert.are.same({5000, 500}, {getConsoleBufferSize(console)})
+    assert.are.same({ 5000, 500 }, { getConsoleBufferSize(console) })
     assert.is_true(setConsoleBufferSize(console, 1000, 100))
-    assert.are.same({1000, 100}, {getConsoleBufferSize(console)})
+    assert.are.same({ 1000, 100 }, { getConsoleBufferSize(console) })
   end)
 
   it("setConsoleBufferSize round-trips on the main console too", function()
     assert.is_true(setConsoleBufferSize(2500, 250))
-    assert.are.same({2500, 250}, {getConsoleBufferSize()})
+    assert.are.same({ 2500, 250 }, { getConsoleBufferSize() })
     assert.is_true(setConsoleBufferSize(mainLinesLimit, mainBatchSize))
-    assert.are.same({mainLinesLimit, mainBatchSize}, {getConsoleBufferSize()})
+    assert.are.same({ mainLinesLimit, mainBatchSize }, { getConsoleBufferSize() })
   end)
 
   it("a lines limit under the hundred line floor is raised to it", function()
@@ -5752,15 +6142,15 @@ describe("Console buffer size", function()
 
   it("a batch deletion size that is not smaller than the limit is cut to a tenth", function()
     assert.is_true(setConsoleBufferSize(console, 1000, 1000))
-    assert.are.same({1000, 100}, {getConsoleBufferSize(console)})
+    assert.are.same({ 1000, 100 }, { getConsoleBufferSize(console) })
   end)
 
   it("a batch deletion size of none at all is raised to one line", function()
     clearWindow(console)
     assert.is_true(setConsoleBufferSize(console, 100, 0))
-    assert.are.same({100, 1}, {getConsoleBufferSize(console)})
+    assert.are.same({ 100, 1 }, { getConsoleBufferSize(console) })
     assert.is_true(setConsoleBufferSize(console, 100, -5))
-    assert.are.same({100, 1}, {getConsoleBufferSize(console)})
+    assert.are.same({ 100, 1 }, { getConsoleBufferSize(console) })
     for lineNumber = 1, 400 do
       echo(console, ("buffer line %d\n"):format(lineNumber))
     end
@@ -5800,9 +6190,11 @@ describe("Console buffer size", function()
     assert.is_true(setConsoleBufferSize(console, 100, 10))
     local seen = {}
     local handlerId = registerAnonymousEventHandler("sysBufferShrinkEvent", function(_, windowName, removedLines)
-      seen[#seen + 1] = {window = windowName, removed = removedLines}
+      seen[#seen + 1] = { window = windowName, removed = removedLines }
     end)
-    finally(function() killAnonymousEventHandler(handlerId) end)
+    finally(function()
+      killAnonymousEventHandler(handlerId)
+    end)
     for lineNumber = 1, 200 do
       echo(console, ("shrink line %d\n"):format(lineNumber))
     end
@@ -5841,7 +6233,9 @@ describe("Console buffer size", function()
         trimmed = trimmed + removedLines
       end
     end)
-    finally(function() killAnonymousEventHandler(handlerId) end)
+    finally(function()
+      killAnonymousEventHandler(handlerId)
+    end)
     for lineNumber = 1, 35 do
       echo(console, ("filler line %d\n"):format(lineNumber))
     end
@@ -5930,8 +6324,10 @@ describe("Main window size and saved layout", function()
       return false
     end
     if resizeRequired then
-      assert.is_true(resizable,
-        "MUDLET_TEST_REQUIRE_WINDOW_RESIZE is set, but this display did not honour a resize request")
+      assert.is_true(
+        resizable,
+        "MUDLET_TEST_REQUIRE_WINDOW_RESIZE is set, but this display did not honour a resize request"
+      )
       return true
     end
     if not resizable then
@@ -6047,8 +6443,15 @@ describe("Main window size and saved layout", function()
     -- the console holds fewer than half the columns it did, so the width it
     -- reports has to have more than halved with them; merely falling would also
     -- be true of a size that only got part of the way down
-    assert.is_true(narrowWidth * 2 < wideWidth,
-      ("getMainWindowSize reported %d, down from %d, while the console went from %d to %d columns"):format(narrowWidth, wideWidth, wideColumns, narrowColumns))
+    assert.is_true(
+      narrowWidth * 2 < wideWidth,
+      ("getMainWindowSize reported %d, down from %d, while the console went from %d to %d columns"):format(
+        narrowWidth,
+        wideWidth,
+        wideColumns,
+        narrowColumns
+      )
+    )
   end)
 
   it("the main window can be put back the size it was", function()
@@ -6058,7 +6461,7 @@ describe("Main window size and saved layout", function()
     setMainWindowSize(640, 480)
     pumpEvents(200)
     assert.is_true(restoreMainWindowSize(), "the window could not be put back")
-    assert.are.same({originalWidth, originalHeight}, {getMainWindowSize()})
+    assert.are.same({ originalWidth, originalHeight }, { getMainWindowSize() })
   end)
 
   describe("saveWindowLayout and loadWindowLayout", function()
@@ -6141,9 +6544,11 @@ describe("Application and profile style sheets", function()
   local function collectStyleSheetEvents()
     local events = {}
     local handler = registerAnonymousEventHandler("sysAppStyleSheetChange", function(_, ...)
-      events[#events + 1] = {...}
+      events[#events + 1] = { ... }
     end)
-    finally(function() killAnonymousEventHandler(handler) end)
+    finally(function()
+      killAnonymousEventHandler(handler)
+    end)
     return events
   end
 
@@ -6222,29 +6627,26 @@ end)
 -- a profile save, and the uninstall is refused until that save has drained,
 -- which only happens when the event loop runs.
 if not os.getenv("MUDLET_TEST_MODE") then
-
-describe("Toolbar buttons", function()
-  it("needs test mode", function()
-    pending("the button specs install a package for a push-down button, which needs pumpEvents()")
+  describe("Toolbar buttons", function()
+    it("needs test mode", function()
+      pending("the button specs install a package for a push-down button, which needs pumpEvents()")
+    end)
   end)
-end)
-
 else
+  describe("Toolbar buttons", function()
+    local suffix = ("-%d-%d"):format(os.time(), math.random(100000))
+    local packageName = "mudlet-spec-buttons" .. suffix
+    local toolbar = "buttonSpecToolbar" .. suffix
+    local pushDownButton = "buttonSpecPushDown" .. suffix
+    local plainButton = "buttonSpecPlain" .. suffix
+    local floatingToolbar = "buttonSpecFloating" .. suffix
+    local floatingButton = "buttonSpecFloatingButton" .. suffix
+    local packageFile = specFilePath(packageName .. ".xml")
 
-describe("Toolbar buttons", function()
-  local suffix = ("-%d-%d"):format(os.time(), math.random(100000))
-  local packageName = "mudlet-spec-buttons" .. suffix
-  local toolbar = "buttonSpecToolbar" .. suffix
-  local pushDownButton = "buttonSpecPushDown" .. suffix
-  local plainButton = "buttonSpecPlain" .. suffix
-  local floatingToolbar = "buttonSpecFloating" .. suffix
-  local floatingButton = "buttonSpecFloatingButton" .. suffix
-  local packageFile = specFilePath(packageName .. ".xml")
-
-  -- location 0 is a button bar in the profile's window, location 4 the floating
-  -- setting that showToolBar() and hideToolBar() do not move
-  local function actionXml(name, pushButton, isFolder, location)
-    return ([[<Action isActive="yes" isFolder="%s" isPushButton="%s" isFlatButton="no" useCustomLayout="no">
+    -- location 0 is a button bar in the profile's window, location 4 the floating
+    -- setting that showToolBar() and hideToolBar() do not move
+    local function actionXml(name, pushButton, isFolder, location)
+      return ([[<Action isActive="yes" isFolder="%s" isPushButton="%s" isFlatButton="no" useCustomLayout="no">
       <name>%s</name>
       <script></script>
       <css></css>
@@ -6262,287 +6664,305 @@ describe("Toolbar buttons", function()
       <posX>0</posX>
       <posY>0</posY>
     ]]):format(isFolder, pushButton, name, location or 0)
-  end
+    end
 
-  local function packageXml()
-    return table.concat({
-      [[<?xml version="1.0" encoding="UTF-8"?>]],
-      [[<!DOCTYPE MudletPackage>]],
-      [[<MudletPackage version="1.001">]],
-      [[<ActionPackage>]],
-      actionXml(toolbar, "no", "yes"),
-      actionXml(pushDownButton, "yes", "no"), "</Action>",
-      actionXml(plainButton, "no", "no"), "</Action>",
-      "</Action>",
-      actionXml(floatingToolbar, "no", "yes", 4),
-      actionXml(floatingButton, "no", "no"), "</Action>",
-      "</Action>",
-      [[</ActionPackage>]],
-      [[</MudletPackage>]],
-    }, "\n")
-  end
+    local function packageXml()
+      return table.concat({
+        [[<?xml version="1.0" encoding="UTF-8"?>]],
+        [[<!DOCTYPE MudletPackage>]],
+        [[<MudletPackage version="1.001">]],
+        [[<ActionPackage>]],
+        actionXml(toolbar, "no", "yes"),
+        actionXml(pushDownButton, "yes", "no"),
+        "</Action>",
+        actionXml(plainButton, "no", "no"),
+        "</Action>",
+        "</Action>",
+        actionXml(floatingToolbar, "no", "yes", 4),
+        actionXml(floatingButton, "no", "no"),
+        "</Action>",
+        "</Action>",
+        [[</ActionPackage>]],
+        [[</MudletPackage>]],
+      }, "\n")
+    end
 
-  local function waitUntil(condition, timeoutMilliseconds)
-    local waited = 0
-    while waited < timeoutMilliseconds do
-      if condition() then
-        return true
+    local function waitUntil(condition, timeoutMilliseconds)
+      local waited = 0
+      while waited < timeoutMilliseconds do
+        if condition() then
+          return true
+        end
+        pumpEvents(50)
+        waited = waited + 50
       end
-      pumpEvents(50)
-      waited = waited + 50
+      return condition() and true or false
     end
-    return condition() and true or false
-  end
 
-  local function packageIsInstalled()
-    for _, name in ipairs(getPackages()) do
-      if name == packageName then
-        return true
+    local function packageIsInstalled()
+      for _, name in ipairs(getPackages()) do
+        if name == packageName then
+          return true
+        end
       end
-    end
-    return false
-  end
-
-  -- Installing and uninstalling each start a profile save, and Lua cannot ask
-  -- whether one is running - but installPackage() gives it away: while a save is
-  -- in flight it postpones whatever it was asked to do and answers true, even
-  -- for the empty path it would otherwise refuse outright.
-  local function waitForProfileSaveToPass()
-    return waitUntil(function() return installPackage("") == nil end, 5000)
-  end
-
-  setup(function()
-    writeSpecFile(packageFile, packageXml())
-    assert.is_true(waitForProfileSaveToPass(), "a profile save was already running, so this install would be postponed")
-    assert.is_true(installPackage(packageFile), "could not install " .. packageFile)
-    assert.is_true(waitUntil(packageIsInstalled, 5000), packageName .. " did not turn up in getPackages()")
-  end)
-
-  teardown(function()
-    -- asking whether the package is here rather than whether setup thought it
-    -- arrived: installPackage() postpones itself behind a running profile save,
-    -- so it can still land after setup gave up waiting, and then nothing else
-    -- would ever take it out of the reused profile again
-    if packageIsInstalled() then
-      -- uninstalling is refused while the save the install started is still
-      -- draining, and that only finishes when the event loop runs
-      assert.is_true(waitUntil(function() return uninstallPackage(packageName) == true end, 5000),
-        packageName .. " could not be uninstalled")
-      assert.is_true(waitUntil(function() return not packageIsInstalled() end, 5000),
-        packageName .. " was still installed after being uninstalled")
-    end
-    -- The save uninstallPackage() asks for is queued, not started there and
-    -- then, so it has to be given the event loop before anything can see it
-    -- running - ask too early and the wait below passes while the save is still
-    -- only pending. It has to finish here rather than during Mudlet's shutdown,
-    -- which gives up waiting after a thousand iterations and tears down around
-    -- the writer that is still going (a segfault on the quicker runners).
-    pumpEvents(300)
-    assert.is_true(waitForProfileSaveToPass(), "the profile save the uninstall queued never finished")
-    pumpEvents(100)
-    assert.is_true(waitForProfileSaveToPass(), "another profile save was queued behind the first")
-    os.remove(packageFile)
-  end)
-
-  describe("setButtonState and getButtonState", function()
-    after_each(function()
-      setButtonState(pushDownButton, false)
-    end)
-
-    it("round-trips a button state by name", function()
-      assert.is_false(getButtonState(pushDownButton))
-      assert.is_true(setButtonState(pushDownButton, true))
-      assert.is_true(getButtonState(pushDownButton))
-      assert.is_true(setButtonState(pushDownButton, false))
-      assert.is_false(getButtonState(pushDownButton))
-    end)
-
-    it("setButtonState answers false when the state was already what was asked for", function()
-      assert.is_true(setButtonState(pushDownButton, true))
-      assert.is_false(setButtonState(pushDownButton, true))
-      -- and the state it reported no change to is still the one that was asked for
-      assert.is_true(getButtonState(pushDownButton))
-    end)
-
-    it("both refuse an item ID that is no button", function()
-      local getOk, getErr = getButtonState(999999)
-      assert.is_nil(getOk)
-      assert.are.equal("no button item with ID 999999 found", getErr)
-      local setOk, setErr = setButtonState(999999, true)
-      assert.is_nil(setOk)
-      assert.are.equal("no button item with ID 999999 found", setErr)
-    end)
-
-    it("getButtonState with no arguments answers the console's own button state", function()
-      -- with no arguments this answers TConsole::mButtonState, which is 1 or 2
-      -- rather than the boolean the named form answers, and which only a real
-      -- click on a push-down button writes - setButtonState never touches it
-      local before = getButtonState()
-      assert.is_true(before == 1 or before == 2, "state was " .. tostring(before))
-      setButtonState(pushDownButton, true)
-      assert.are.equal(before, getButtonState())
-    end)
-
-    it("both refuse a button that is not a push-down one", function()
-      local getOk, getErr = getButtonState(plainButton)
-      assert.is_nil(getOk)
-      assert.are.equal(("item with name '%s' is not a push-down button"):format(plainButton), getErr)
-      local setOk, setErr = setButtonState(plainButton, true)
-      assert.is_nil(setOk)
-      assert.are.equal(("item with name '%s' is not a push-down button"):format(plainButton), setErr)
-    end)
-
-    it("both refuse a name that is no button at all", function()
-      local unknown = "buttonSpecNoSuchButton" .. suffix
-      local getOk, getErr = getButtonState(unknown)
-      assert.is_nil(getOk)
-      assert.are.equal(("no button item with name '%s' found"):format(unknown), getErr)
-      local setOk, setErr = setButtonState(unknown, true)
-      assert.is_nil(setOk)
-      assert.are.equal(("no button item with name '%s' found"):format(unknown), setErr)
-    end)
-
-    it("both refuse an empty button name", function()
-      local getOk, getErr = getButtonState("")
-      assert.is_nil(getOk)
-      assert.are.equal("item name must not be an empty string", getErr)
-      local setOk, setErr = setButtonState("", true)
-      assert.is_nil(setOk)
-      assert.are.equal("item name must not be an empty string", setErr)
-    end)
-
-    it("both refuse a negative item ID", function()
-      local getOk, getErr = getButtonState(-1)
-      assert.is_nil(getOk)
-      assert.is_truthy(tostring(getErr):find("must be equal or greater than zero", 1, true))
-      local setOk, setErr = setButtonState(-1, true)
-      assert.is_nil(setOk)
-      assert.is_truthy(tostring(setErr):find("must be equal or greater than zero", 1, true))
-    end)
-
-    it("setButtonState hard-errors when the state is not a boolean", function()
-      local ok, err = pcall(setButtonState, pushDownButton, "down")
-      assert.is_false(ok)
-      assert.is_truthy(tostring(err):find("setButtonState: bad argument #2 type", 1, true))
-    end)
-
-    it("both hard-error when the button is given as neither a name nor an ID", function()
-      local getOk, getErr = pcall(getButtonState, {})
-      assert.is_false(getOk)
-      assert.is_truthy(tostring(getErr):find("getButtonState: bad argument #1 type", 1, true))
-      local setOk, setErr = pcall(setButtonState, {}, true)
-      assert.is_false(setOk)
-      assert.is_truthy(tostring(setErr):find("setButtonState: bad argument #1 type", 1, true))
-    end)
-  end)
-
-  describe("setButtonStyleSheet", function()
-    it("returns true for an existing button", function()
-      assert.is_true(setButtonStyleSheet(pushDownButton, "QPushButton { color: rgb(3,2,1); }"))
-      assert.is_true(setButtonStyleSheet(plainButton, ""))
-    end)
-
-    it("styles a button that is not a push-down one too", function()
-      assert.is_true(setButtonStyleSheet(plainButton, "QPushButton { color: rgb(9,9,9); }"))
-    end)
-
-    it("returns nil and a message naming a button that is not there", function()
-      local unknown = "buttonSpecNoSuchButton" .. suffix
-      local ok, err = setButtonStyleSheet(unknown, "")
-      assert.is_nil(ok)
-      assert.are.equal(("no button named '%s' found"):format(unknown), err)
-    end)
-
-    it("hard-errors on a non-string name", function()
-      local ok, err = pcall(setButtonStyleSheet, {}, "")
-      assert.is_false(ok)
-      assert.is_truthy(tostring(err):find("setButtonStyleSheet: bad argument #1 type", 1, true))
-    end)
-
-    it("hard-errors on a non-string style sheet", function()
-      local ok, err = pcall(setButtonStyleSheet, pushDownButton, {})
-      assert.is_false(ok)
-      assert.is_truthy(tostring(err):find("setButtonStyleSheet: bad argument #2 type", 1, true))
-    end)
-
-    it("verifying what the button style sheet actually paints", function()
-      pending("there is no getButtonStyleSheet, and the effect is only visible in a screenshot")
-    end)
-  end)
-
-  describe("showToolBar and hideToolBar", function()
-    -- both flip the active flag of the toolbar's own action, which isActive()
-    -- reads back; whether the bar is on screen is not readable from Lua
-    local function toolbarActive()
-      return isActive(toolbar, "button")
+      return false
     end
 
-    after_each(function()
-      showToolBar(toolbar)
+    -- Installing and uninstalling each start a profile save, and Lua cannot ask
+    -- whether one is running - but installPackage() gives it away: while a save is
+    -- in flight it postpones whatever it was asked to do and answers true, even
+    -- for the empty path it would otherwise refuse outright.
+    local function waitForProfileSaveToPass()
+      return waitUntil(function()
+        return installPackage("") == nil
+      end, 5000)
+    end
+
+    setup(function()
+      writeSpecFile(packageFile, packageXml())
+      assert.is_true(
+        waitForProfileSaveToPass(),
+        "a profile save was already running, so this install would be postponed"
+      )
+      assert.is_true(installPackage(packageFile), "could not install " .. packageFile)
+      assert.is_true(waitUntil(packageIsInstalled, 5000), packageName .. " did not turn up in getPackages()")
     end)
 
-    it("hideToolBar deactivates the toolbar and showToolBar activates it again", function()
-      assert.are.equal(1, toolbarActive())
-      assert.is_true(hideToolBar(toolbar))
-      assert.are.equal(0, toolbarActive())
-      assert.is_true(showToolBar(toolbar))
-      assert.are.equal(1, toolbarActive())
+    teardown(function()
+      -- asking whether the package is here rather than whether setup thought it
+      -- arrived: installPackage() postpones itself behind a running profile save,
+      -- so it can still land after setup gave up waiting, and then nothing else
+      -- would ever take it out of the reused profile again
+      if packageIsInstalled() then
+        -- uninstalling is refused while the save the install started is still
+        -- draining, and that only finishes when the event loop runs
+        assert.is_true(
+          waitUntil(function()
+            return uninstallPackage(packageName) == true
+          end, 5000),
+          packageName .. " could not be uninstalled"
+        )
+        assert.is_true(
+          waitUntil(function()
+            return not packageIsInstalled()
+          end, 5000),
+          packageName .. " was still installed after being uninstalled"
+        )
+      end
+      -- The save uninstallPackage() asks for is queued, not started there and
+      -- then, so it has to be given the event loop before anything can see it
+      -- running - ask too early and the wait below passes while the save is still
+      -- only pending. It has to finish here rather than during Mudlet's shutdown,
+      -- which gives up waiting after a thousand iterations and tears down around
+      -- the writer that is still going (a segfault on the quicker runners).
+      pumpEvents(300)
+      assert.is_true(waitForProfileSaveToPass(), "the profile save the uninstall queued never finished")
+      pumpEvents(100)
+      assert.is_true(waitForProfileSaveToPass(), "another profile save was queued behind the first")
+      os.remove(packageFile)
     end)
 
-    it("hiding and showing repeatedly ends up where it started", function()
-      hideToolBar(toolbar)
-      showToolBar(toolbar)
-      hideToolBar(toolbar)
-      showToolBar(toolbar)
-      assert.are.equal(1, toolbarActive())
-      assert.is_true(setButtonStyleSheet(pushDownButton, ""))
+    describe("setButtonState and getButtonState", function()
+      after_each(function()
+        setButtonState(pushDownButton, false)
+      end)
+
+      it("round-trips a button state by name", function()
+        assert.is_false(getButtonState(pushDownButton))
+        assert.is_true(setButtonState(pushDownButton, true))
+        assert.is_true(getButtonState(pushDownButton))
+        assert.is_true(setButtonState(pushDownButton, false))
+        assert.is_false(getButtonState(pushDownButton))
+      end)
+
+      it("setButtonState answers false when the state was already what was asked for", function()
+        assert.is_true(setButtonState(pushDownButton, true))
+        assert.is_false(setButtonState(pushDownButton, true))
+        -- and the state it reported no change to is still the one that was asked for
+        assert.is_true(getButtonState(pushDownButton))
+      end)
+
+      it("both refuse an item ID that is no button", function()
+        local getOk, getErr = getButtonState(999999)
+        assert.is_nil(getOk)
+        assert.are.equal("no button item with ID 999999 found", getErr)
+        local setOk, setErr = setButtonState(999999, true)
+        assert.is_nil(setOk)
+        assert.are.equal("no button item with ID 999999 found", setErr)
+      end)
+
+      it("getButtonState with no arguments answers the console's own button state", function()
+        -- with no arguments this answers TConsole::mButtonState, which is 1 or 2
+        -- rather than the boolean the named form answers, and which only a real
+        -- click on a push-down button writes - setButtonState never touches it
+        local before = getButtonState()
+        assert.is_true(before == 1 or before == 2, "state was " .. tostring(before))
+        setButtonState(pushDownButton, true)
+        assert.are.equal(before, getButtonState())
+      end)
+
+      it("both refuse a button that is not a push-down one", function()
+        local getOk, getErr = getButtonState(plainButton)
+        assert.is_nil(getOk)
+        assert.are.equal(("item with name '%s' is not a push-down button"):format(plainButton), getErr)
+        local setOk, setErr = setButtonState(plainButton, true)
+        assert.is_nil(setOk)
+        assert.are.equal(("item with name '%s' is not a push-down button"):format(plainButton), setErr)
+      end)
+
+      it("both refuse a name that is no button at all", function()
+        local unknown = "buttonSpecNoSuchButton" .. suffix
+        local getOk, getErr = getButtonState(unknown)
+        assert.is_nil(getOk)
+        assert.are.equal(("no button item with name '%s' found"):format(unknown), getErr)
+        local setOk, setErr = setButtonState(unknown, true)
+        assert.is_nil(setOk)
+        assert.are.equal(("no button item with name '%s' found"):format(unknown), setErr)
+      end)
+
+      it("both refuse an empty button name", function()
+        local getOk, getErr = getButtonState("")
+        assert.is_nil(getOk)
+        assert.are.equal("item name must not be an empty string", getErr)
+        local setOk, setErr = setButtonState("", true)
+        assert.is_nil(setOk)
+        assert.are.equal("item name must not be an empty string", setErr)
+      end)
+
+      it("both refuse a negative item ID", function()
+        local getOk, getErr = getButtonState(-1)
+        assert.is_nil(getOk)
+        assert.is_truthy(tostring(getErr):find("must be equal or greater than zero", 1, true))
+        local setOk, setErr = setButtonState(-1, true)
+        assert.is_nil(setOk)
+        assert.is_truthy(tostring(setErr):find("must be equal or greater than zero", 1, true))
+      end)
+
+      it("setButtonState hard-errors when the state is not a boolean", function()
+        local ok, err = pcall(setButtonState, pushDownButton, "down")
+        assert.is_false(ok)
+        assert.is_truthy(tostring(err):find("setButtonState: bad argument #2 type", 1, true))
+      end)
+
+      it("both hard-error when the button is given as neither a name nor an ID", function()
+        local getOk, getErr = pcall(getButtonState, {})
+        assert.is_false(getOk)
+        assert.is_truthy(tostring(getErr):find("getButtonState: bad argument #1 type", 1, true))
+        local setOk, setErr = pcall(setButtonState, {}, true)
+        assert.is_false(setOk)
+        assert.is_truthy(tostring(setErr):find("setButtonState: bad argument #1 type", 1, true))
+      end)
     end)
 
-    it("a name that is no toolbar is refused", function()
-      local absent = "toolbarNoSuchBar" .. suffix
-      local hideOk, hideErr = hideToolBar(absent)
-      assert.is_nil(hideOk)
-      assert.are.equal(("toolbar '%s' not found"):format(absent), hideErr)
-      local showOk, showErr = showToolBar(absent)
-      assert.is_nil(showOk)
-      assert.are.equal(("toolbar '%s' not found"):format(absent), showErr)
+    describe("setButtonStyleSheet", function()
+      it("returns true for an existing button", function()
+        assert.is_true(setButtonStyleSheet(pushDownButton, "QPushButton { color: rgb(3,2,1); }"))
+        assert.is_true(setButtonStyleSheet(plainButton, ""))
+      end)
+
+      it("styles a button that is not a push-down one too", function()
+        assert.is_true(setButtonStyleSheet(plainButton, "QPushButton { color: rgb(9,9,9); }"))
+      end)
+
+      it("returns nil and a message naming a button that is not there", function()
+        local unknown = "buttonSpecNoSuchButton" .. suffix
+        local ok, err = setButtonStyleSheet(unknown, "")
+        assert.is_nil(ok)
+        assert.are.equal(("no button named '%s' found"):format(unknown), err)
+      end)
+
+      it("hard-errors on a non-string name", function()
+        local ok, err = pcall(setButtonStyleSheet, {}, "")
+        assert.is_false(ok)
+        assert.is_truthy(tostring(err):find("setButtonStyleSheet: bad argument #1 type", 1, true))
+      end)
+
+      it("hard-errors on a non-string style sheet", function()
+        local ok, err = pcall(setButtonStyleSheet, pushDownButton, {})
+        assert.is_false(ok)
+        assert.is_truthy(tostring(err):find("setButtonStyleSheet: bad argument #2 type", 1, true))
+      end)
+
+      it("verifying what the button style sheet actually paints", function()
+        pending("there is no getButtonStyleSheet, and the effect is only visible in a screenshot")
+      end)
     end)
 
-    it("a floating toolbar is refused by name rather than reported missing", function()
-      local hideOk, hideErr = hideToolBar(floatingToolbar)
-      assert.is_nil(hideOk)
-      assert.are.equal(("toolbar '%s' is set to float, which showToolBar() and hideToolBar() do not move"):format(floatingToolbar), hideErr)
-      assert.are.equal(1, isActive(floatingToolbar, "button"))
-    end)
+    describe("showToolBar and hideToolBar", function()
+      -- both flip the active flag of the toolbar's own action, which isActive()
+      -- reads back; whether the bar is on screen is not readable from Lua
+      local function toolbarActive()
+        return isActive(toolbar, "button")
+      end
 
-    it("a packaged toolbar answers to its own name, leaving the package alone", function()
-      assert.is_true(hideToolBar(toolbar))
-      assert.are.equal(0, isActive(toolbar, "button"))
-      assert.are.equal(1, isActive(packageName, "button"))
-    end)
+      after_each(function()
+        showToolBar(toolbar)
+      end)
 
-    it("the name of the package a toolbar came in still moves it", function()
-      assert.is_true(hideToolBar(packageName))
-      assert.are.equal(0, toolbarActive())
-      assert.is_true(showToolBar(packageName))
-      assert.are.equal(1, toolbarActive())
-    end)
+      it("hideToolBar deactivates the toolbar and showToolBar activates it again", function()
+        assert.are.equal(1, toolbarActive())
+        assert.is_true(hideToolBar(toolbar))
+        assert.are.equal(0, toolbarActive())
+        assert.is_true(showToolBar(toolbar))
+        assert.are.equal(1, toolbarActive())
+      end)
 
-    it("both hard-error on a non-string toolbar name", function()
-      local hideOk, hideErr = pcall(hideToolBar, {})
-      assert.is_false(hideOk)
-      assert.is_truthy(tostring(hideErr):find("bad argument #1", 1, true))
-      local showOk, showErr = pcall(showToolBar, {})
-      assert.is_false(showOk)
-      assert.is_truthy(tostring(showErr):find("bad argument #1", 1, true))
-    end)
+      it("hiding and showing repeatedly ends up where it started", function()
+        hideToolBar(toolbar)
+        showToolBar(toolbar)
+        hideToolBar(toolbar)
+        showToolBar(toolbar)
+        assert.are.equal(1, toolbarActive())
+        assert.is_true(setButtonStyleSheet(pushDownButton, ""))
+      end)
 
-    it("verifying that the toolbar is really on screen", function()
-      pending("toolbar visibility is not readable from Lua - needs a functional test")
+      it("a name that is no toolbar is refused", function()
+        local absent = "toolbarNoSuchBar" .. suffix
+        local hideOk, hideErr = hideToolBar(absent)
+        assert.is_nil(hideOk)
+        assert.are.equal(("toolbar '%s' not found"):format(absent), hideErr)
+        local showOk, showErr = showToolBar(absent)
+        assert.is_nil(showOk)
+        assert.are.equal(("toolbar '%s' not found"):format(absent), showErr)
+      end)
+
+      it("a floating toolbar is refused by name rather than reported missing", function()
+        local hideOk, hideErr = hideToolBar(floatingToolbar)
+        assert.is_nil(hideOk)
+        assert.are.equal(
+          ("toolbar '%s' is set to float, which showToolBar() and hideToolBar() do not move"):format(floatingToolbar),
+          hideErr
+        )
+        assert.are.equal(1, isActive(floatingToolbar, "button"))
+      end)
+
+      it("a packaged toolbar answers to its own name, leaving the package alone", function()
+        assert.is_true(hideToolBar(toolbar))
+        assert.are.equal(0, isActive(toolbar, "button"))
+        assert.are.equal(1, isActive(packageName, "button"))
+      end)
+
+      it("the name of the package a toolbar came in still moves it", function()
+        assert.is_true(hideToolBar(packageName))
+        assert.are.equal(0, toolbarActive())
+        assert.is_true(showToolBar(packageName))
+        assert.are.equal(1, toolbarActive())
+      end)
+
+      it("both hard-error on a non-string toolbar name", function()
+        local hideOk, hideErr = pcall(hideToolBar, {})
+        assert.is_false(hideOk)
+        assert.is_truthy(tostring(hideErr):find("bad argument #1", 1, true))
+        local showOk, showErr = pcall(showToolBar, {})
+        assert.is_false(showOk)
+        assert.is_truthy(tostring(showErr):find("bad argument #1", 1, true))
+      end)
+
+      it("verifying that the toolbar is really on screen", function()
+        pending("toolbar visibility is not readable from Lua - needs a functional test")
+      end)
     end)
   end)
-end)
-
 end
 
 describe("Command line actions and suggestions", function()
@@ -6606,13 +7026,17 @@ describe("Command line actions and suggestions", function()
     it("hard-errors when the action is neither a function nor a string", function()
       local ok, err = pcall(setCmdLineAction, cmdLine, {})
       assert.is_false(ok)
-      assert.is_truthy(tostring(err):find("setCmdLineAction: bad argument #2 type (function expected, got table!)", 1, true))
+      assert.is_truthy(
+        tostring(err):find("setCmdLineAction: bad argument #2 type (function expected, got table!)", 1, true)
+      )
     end)
 
     it("hard-errors when no action is given at all", function()
       local ok, err = pcall(setCmdLineAction, cmdLine)
       assert.is_false(ok)
-      assert.is_truthy(tostring(err):find("setCmdLineAction: bad argument #2 type (function expected, got nil!)", 1, true))
+      assert.is_truthy(
+        tostring(err):find("setCmdLineAction: bad argument #2 type (function expected, got nil!)", 1, true)
+      )
     end)
 
     it("the action actually running on a typed command", function()
@@ -6707,61 +7131,65 @@ describe("setPopup", function()
   end)
 
   it("returns true for matching command and hint tables", function()
-    assert.is_true(setPopup(console, {"one", "two"}, {"first", "second"}))
+    assert.is_true(setPopup(console, { "one", "two" }, { "first", "second" }))
   end)
 
   it("accepts one extra hint for the popup's own title", function()
-    assert.is_true(setPopup(console, {"one", "two"}, {"title", "first", "second"}))
+    assert.is_true(setPopup(console, { "one", "two" }, { "title", "first", "second" }))
   end)
 
   it("accepts functions in place of command strings", function()
-    assert.is_true(setPopup(console, {function() end, function() end}, {"first", "second"}))
+    assert.is_true(setPopup(console, { function() end, function() end }, { "first", "second" }))
   end)
 
   it("returns nil and a message when there are too few hints", function()
-    local ok, err = setPopup(console, {"one", "two"}, {"only one"})
+    local ok, err = setPopup(console, { "one", "two" }, { "only one" })
     assert.is_nil(ok)
     assert.is_truthy(tostring(err):find("command table and hint table sizes do not match up", 1, true))
   end)
 
   it("returns nil and a message when there are too many hints", function()
-    local ok, err = setPopup(console, {"one"}, {"first", "second", "third"})
+    local ok, err = setPopup(console, { "one" }, { "first", "second", "third" })
     assert.is_nil(ok)
     assert.is_truthy(tostring(err):find("command table and hint table sizes do not match up", 1, true))
   end)
 
   it("hard-errors when the commands are not a table", function()
-    local ok, err = pcall(setPopup, console, "one", {"first"})
+    local ok, err = pcall(setPopup, console, "one", { "first" })
     assert.is_false(ok)
     assert.is_truthy(tostring(err):find("setPopup: bad argument", 1, true))
   end)
 
   it("hard-errors when the hints are not a table", function()
-    local ok, err = pcall(setPopup, console, {"one"}, "first")
+    local ok, err = pcall(setPopup, console, { "one" }, "first")
     assert.is_false(ok)
     assert.is_truthy(tostring(err):find("setPopup: bad argument", 1, true))
   end)
 
   it("returns nil and a message naming a window that is not there", function()
-    local ok, err = setPopup(unknown, {"one"}, {"first"})
+    local ok, err = setPopup(unknown, { "one" }, { "first" })
     assert.is_nil(ok)
     assert.are.equal(('window "%s" not found'):format(unknown), err)
   end)
 
   it("a refused call lets go of the functions it read", function()
     local mismatchGrowth = registryGrowthOver(function()
-      setPopup(console, {function() end, function() end}, {"only one hint"})
+      setPopup(console, { function() end, function() end }, { "only one hint" })
     end)
-    assert.are.equal(0, mismatchGrowth, ("the registry grew by %d over 20 size-mismatched calls"):format(mismatchGrowth))
+    assert.are.equal(
+      0,
+      mismatchGrowth,
+      ("the registry grew by %d over 20 size-mismatched calls"):format(mismatchGrowth)
+    )
 
     local unknownGrowth = registryGrowthOver(function()
-      setPopup(unknown, {function() end}, {"first"})
+      setPopup(unknown, { function() end }, { "first" })
     end)
     assert.are.equal(0, unknownGrowth, ("the registry grew by %d over 20 calls naming no window"):format(unknownGrowth))
   end)
 
   it("names the window before it counts the tables", function()
-    local ok, err = setPopup(unknown, {"one", "two"}, {"only one"})
+    local ok, err = setPopup(unknown, { "one", "two" }, { "only one" })
     assert.is_nil(ok)
     assert.are.equal(('window "%s" not found'):format(unknown), err)
   end)
@@ -6819,7 +7247,9 @@ describe("Labels inside a user window", function()
 
   it("the main window is still a parent name it takes", function()
     local mainLabel = "labelBackInTheMainWindow" .. suffix
-    finally(function() deleteLabel(mainLabel) end)
+    finally(function()
+      deleteLabel(mainLabel)
+    end)
     assert.is_true(createLabel("main", mainLabel, 0, 0, 20, 10, 1))
   end)
 
@@ -6831,7 +7261,7 @@ describe("Labels inside a user window", function()
   it("resizeWindow and moveWindow work on it just as in the main window", function()
     resizeWindow(label, 200, 60)
     moveWindow(label, 15, 25)
-    assert.are.same({15, 25, 200, 60}, {getWindowGeometry(label)})
+    assert.are.same({ 15, 25, 200, 60 }, { getWindowGeometry(label) })
   end)
 
   it("hideWindow and showWindow work on it", function()
@@ -6855,7 +7285,9 @@ describe("Labels inside a user window", function()
 
   it("takes the optional clickthrough flag", function()
     local clickthrough = "labelClickthrough" .. suffix
-    finally(function() deleteLabel(clickthrough) end)
+    finally(function()
+      deleteLabel(clickthrough)
+    end)
     assert.is_true(createLabel(userWindow, clickthrough, 0, 30, 20, 10, 1, 1))
   end)
 

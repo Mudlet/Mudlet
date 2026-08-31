@@ -7,7 +7,7 @@ mudlet.supports = {
   coroutines = true,
   mmcp = true,
   namedPatterns = true,
-  osVersion = true
+  osVersion = true,
 }
 
 -- enforce uniform locale so scripts don't get
@@ -15,7 +15,7 @@ mudlet.supports = {
 os.setlocale("C")
 
 -- Extending default libraries makes Babelfish happy.
-setmetatable( _G, {
+setmetatable(_G, {
   ["__call"] = function(func, ...)
     if type(func) == "function" then
       return func(...)
@@ -29,8 +29,6 @@ setmetatable( _G, {
     end
   end,
 })
-
-
 
 --- Mudlet's support for ATCP. This is primarily available on IRE-based MUDs, but Mudlet's implementation is generic enough
 --- such that any it should work on others. <br/><br/>
@@ -75,15 +73,11 @@ setmetatable( _G, {
 --- @name atcp
 atcp = {}
 
-
-
 --- <b><u>TODO</u></b> Table walklist.
 ---
 --- @class function
 --- @name walklist
 walklist = {}
-
-
 
 --- <b><u>TODO</u></b> Variable walkdelay.
 ---
@@ -91,14 +85,11 @@ walklist = {}
 --- @name walkdelay
 walkdelay = 0
 
-
-
 --- <b><u>TODO</u></b> Table SavedVariables.
 ---
 --- @class function
 --- @name SavedVariables
 SavedVariables = {}
-
 
 --- Sends a list of commands to the MUD. You can use this to send some things at once instead of having
 --- to use multiple send() commands one after another.  Optionally you can delay the sends using a number.
@@ -133,14 +124,16 @@ function sendAll(...)
   local args = { ... }
   local echo = true
 
-  if type(args[#args]) == 'boolean' then
+  if type(args[#args]) == "boolean" then
     echo = table.remove(args, #args)
   end
-  if type(args[1]) == 'number' then
+  if type(args[1]) == "number" then
     time = table.remove(args, 1)
     for i, v in ipairs(args) do
-      if type(v) == 'string' then
-        tempTimer(time*i, function() send(v, echo) end, false)
+      if type(v) == "string" then
+        tempTimer(time * i, function()
+          send(v, echo)
+        end, false)
       end
     end
     return
@@ -149,7 +142,6 @@ function sendAll(...)
     send(v, echo)
   end
 end
-
 
 --- Table of functions used by permGroup to create the appropriate group, based on itemtype.
 --- Each perm* binding raises a Lua error on failure (for example a missing parent)
@@ -170,7 +162,7 @@ local group_creation_functions = {
   end,
   script = function(name, parent)
     return permScript(name, parent, "", "")
-  end
+  end,
 }
 
 --- Creates a group of a given type that will persist through sessions.
@@ -212,9 +204,15 @@ end
 --- @param luaCode
 function appendScript(name, luaCode, pos)
   pos = pos or 1
-  assert(type(name) == "string", "appendScript: bad argument #1 type (script name as string expected, got "..type(name).."!)")
-  assert(type(luaCode) == "string", "appendScript: bad argument #2 type (lua code as string expected, got "..type(luaCode).."!)")
-  return setScript(name, getScript(name, pos).."\n"..luaCode, pos)
+  assert(
+    type(name) == "string",
+    "appendScript: bad argument #1 type (script name as string expected, got " .. type(name) .. "!)"
+  )
+  assert(
+    type(luaCode) == "string",
+    "appendScript: bad argument #2 type (lua code as string expected, got " .. type(luaCode) .. "!)"
+  )
+  return setScript(name, getScript(name, pos) .. "\n" .. luaCode, pos)
 end
 
 --- Checks to see if a given file or folder exists. If it exists, it'll return the Lua true boolean value, otherwise false.
@@ -239,8 +237,6 @@ function io.exists(item)
   return lfs.attributes(item) and true or false
 end
 
-
-
 --- Implementation of boolean exclusive or.
 ---
 --- @usage All following will return false.
@@ -251,13 +247,12 @@ end
 ---
 --- @return true or false
 function xor(a, b)
-  if (a and (not b)) or (b and (not a)) then
+  if (a and not b) or (b and not a) then
     return true
   else
     return false
   end
 end
-
 
 --- This function flags a variable to be saved by Mudlet's variable persistence system.
 --- Variables are automatically unpacked into the global namespace when the profile is loaded.
@@ -273,8 +268,6 @@ function remember(varName)
   _saveTable[varName] = _G[varName]
 end
 
-
-
 --- This function should be primarily used by Mudlet. It loads saved settings in from the Mudlet home directory
 --- and unpacks them into the global namespace.
 ---
@@ -288,15 +281,13 @@ function loadVars()
   end
   local l_SettingsFile = getMudletHomeDir() .. _sep .. "SavedVariables.lua"
   local lt_VariableHolder = {}
-  if (io.exists(l_SettingsFile)) then
+  if io.exists(l_SettingsFile) then
     table.load(l_SettingsFile, lt_VariableHolder)
     for k, v in pairs(lt_VariableHolder) do
       _G[k] = v
     end
   end
 end
-
-
 
 --- This function should primarily be used by Mudlet. It saves the contents of _saveTable into a file for persistence.
 ---
@@ -314,8 +305,6 @@ function saveVars()
   end
   table.save(l_SettingsFile, _saveTable)
 end
-
-
 
 --- The below functions (table.save, table.load) can be used to save individual Lua tables to disc and load
 --- them again at a later time e.g. make a database, collect statistical information etc.
@@ -338,57 +327,71 @@ end
 ---   </pre>
 ---
 --- @see table.load
-function table.save( sfile, t )
+function table.save(sfile, t)
   assert(type(sfile) == "string", "table.save requires a file path to save to")
   local tables = {}
-  table.insert( tables, t )
+  table.insert(tables, t)
   local lookup = { [t] = 1 }
-  local file, msg = io.open( sfile, "w" )
-  if not file then return nil, msg end
-  file:write( "return {" )
-  for i, v in ipairs( tables ) do
-    table.pickle( v, file, tables, lookup )
+  local file, msg = io.open(sfile, "w")
+  if not file then
+    return nil, msg
   end
-  file:write( "}" )
+  file:write("return {")
+  for i, v in ipairs(tables) do
+    table.pickle(v, file, tables, lookup)
+  end
+  file:write("}")
   file:close()
 end
 
-
-
 --- <b><u>TODO</u></b> table.pickle( t, file, tables, lookup )
-function table.pickle( t, file, tables, lookup )
-  file:write( "{" )
-  for i, v in pairs( t ) do
+function table.pickle(t, file, tables, lookup)
+  file:write("{")
+  for i, v in pairs(t) do
     -- escape functions
-    if type( v ) ~= "function" and type( v ) ~= "userdata" and (i ~= "string" and i ~= "xpcall" and i ~= "package" and i ~= "os" and i ~= "io" and i ~= "math" and i ~= "debug" and i ~= "coroutine" and i ~= "_G" and i ~= "_VERSION" and i ~= "table") then
+    if
+      type(v) ~= "function"
+      and type(v) ~= "userdata"
+      and (
+        i ~= "string"
+        and i ~= "xpcall"
+        and i ~= "package"
+        and i ~= "os"
+        and i ~= "io"
+        and i ~= "math"
+        and i ~= "debug"
+        and i ~= "coroutine"
+        and i ~= "_G"
+        and i ~= "_VERSION"
+        and i ~= "table"
+      )
+    then
       -- handle index
-      if type( i ) == "table" then
+      if type(i) == "table" then
         if not lookup[i] then
-          table.insert( tables, i )
-          lookup[i] = table.maxn( tables )
+          table.insert(tables, i)
+          lookup[i] = table.maxn(tables)
         end
-        file:write( "[{" .. lookup[i] .. "}] = " )
+        file:write("[{" .. lookup[i] .. "}] = ")
       else
-        local index = ( type( i ) == "string" and "[ " .. string.enclose( i, 50 ) .. " ]" ) or string.format( "[%d]", i )
-        file:write( index .. " = " )
+        local index = (type(i) == "string" and "[ " .. string.enclose(i, 50) .. " ]") or string.format("[%d]", i)
+        file:write(index .. " = ")
       end
       -- handle value
-      if type( v ) == "table" then
+      if type(v) == "table" then
         if not lookup[v] then
-          table.insert( tables, v )
-          lookup[v] = table.maxn( tables )
+          table.insert(tables, v)
+          lookup[v] = table.maxn(tables)
         end
-        file:write( "{" .. lookup[v] .. "}," )
+        file:write("{" .. lookup[v] .. "},")
       else
-        local value = ( type( v ) == "string" and string.enclose( v, 50 ) ) or tostring( v )
-        file:write( value .. "," )
+        local value = (type(v) == "string" and string.enclose(v, 50)) or tostring(v)
+        file:write(value .. ",")
       end
     end
   end
-  file:write( "},\n" )
+  file:write("},\n")
 end
-
-
 
 --- Restores a Lua table from a data file that has been saved with table.save().
 ---
@@ -402,50 +405,46 @@ end
 ---   </pre>
 ---
 --- @see table.save
-function table.load( sfile, loadinto )
+function table.load(sfile, loadinto)
   assert(type(sfile) == "string", "table.load requires a file path to load")
-  local tables = dofile( sfile )
+  local tables = dofile(sfile)
   if tables then
     if loadinto ~= nil and type(loadinto) == "table" then
-      table.unpickle( tables[1], tables, loadinto )
+      table.unpickle(tables[1], tables, loadinto)
     else
-      table.unpickle( tables[1], tables, _G )
+      table.unpickle(tables[1], tables, _G)
     end
   end
 end
 
-
-
 --- <b><u>TODO</u></b> table.unpickle( t, tables, tcopy, pickled )
-function table.unpickle( t, tables, tcopy, pickled )
+function table.unpickle(t, tables, tcopy, pickled)
   pickled = pickled or {}
   pickled[t] = tcopy
-  for i, v in pairs( t ) do
+  for i, v in pairs(t) do
     local i2 = i
-    if type( i ) == "table" then
-      local pointer = tables[ i[1] ]
+    if type(i) == "table" then
+      local pointer = tables[i[1]]
       if pickled[pointer] then
         i2 = pickled[pointer]
       else
         i2 = {}
-        table.unpickle( pointer, tables, i2, pickled )
+        table.unpickle(pointer, tables, i2, pickled)
       end
     end
     local v2 = v
-    if type( v ) == "table" then
-      local pointer = tables[ v[1] ]
+    if type(v) == "table" then
+      local pointer = tables[v[1]]
       if pickled[pointer] then
         v2 = pickled[pointer]
       else
         v2 = {}
-        table.unpickle( pointer, tables, v2, pickled )
+        table.unpickle(pointer, tables, v2, pickled)
       end
     end
     tcopy[i2] = v2
   end
 end
-
-
 
 --- local functions used for pausing/resuming a speedwalk
 local speedwalkTimerID
@@ -464,8 +463,6 @@ function stopSpeedwalk()
   return nil, "stopSpeedwalk(): no active speedwalk found"
 end
 
-
-
 --- pauses a running speedwalk, but leaves the walklist intact in case you want to resume
 function pauseSpeedwalk()
   if speedwalkTimerID then
@@ -476,8 +473,6 @@ function pauseSpeedwalk()
   end
   return nil, "pauseSpeedwalk(): no active speedwalk found"
 end
-
-
 
 --- Resumes a paused speedwalk
 function resumeSpeedwalk()
@@ -492,7 +487,6 @@ function resumeSpeedwalk()
   return true
 end
 
-
 --- <b><u>TODO</u></b> speedwalktimer()
 function speedwalktimer(walklist, walkdelay, show)
   send(walklist[1], show)
@@ -506,19 +500,19 @@ function speedwalktimer(walklist, walkdelay, show)
   end
 end
 
-
-
 --- <b><u>TODO</u></b> speedwalk(dirString, backwards, delay, optional show)
 function speedwalk(dirString, backwards, delay, show)
   dirString = dirString:lower()
   local walkdelay = delay
-  if show ~= false then show = true end
+  if show ~= false then
+    show = true
+  end
   speedwalkShow = show
   speedwalkDelay = delay
   local walklist = {}
-  local long_dir = {north = 'n', south = 's', east = 'e', west = 'w', up = 'u', down = 'd'}
-  for k,v in pairs(long_dir) do
-    dirString = dirString:gsub(k,v)
+  local long_dir = { north = "n", south = "s", east = "e", west = "w", up = "u", down = "d" }
+  for k, v in pairs(long_dir) do
+    dirString = dirString:gsub(k, v)
   end
   local reversedir = {
     n = "s",
@@ -532,7 +526,7 @@ function speedwalk(dirString, backwards, delay, show)
     u = "d",
     d = "u",
     ni = "out",
-    tuo = "in"
+    tuo = "in",
   }
   raiseEvent("sysSpeedwalkStarted")
   if not backwards then
@@ -564,14 +558,12 @@ function speedwalk(dirString, backwards, delay, show)
   end
 end
 
-
-
 --- <b><u>TODO</u></b> _comp(a, b)
 function _comp(a, b)
   if type(a) ~= type(b) then
     return false
   end
-  if type(a) == 'table' then
+  if type(a) == "table" then
     local a_size = 0
     for k, v in pairs(a) do
       a_size = a_size + 1
@@ -597,7 +589,6 @@ end
 --- extremely useful. But documenting it as _comp is inconsistent with the rest
 --- of the API
 compare = _comp
-
 
 --- <b><u>TODO</u></b> phpTable(...) - abuse to: http://richard.warburton.it
 function phpTable(...)
@@ -643,8 +634,6 @@ function phpTable(...)
   end
   return newTable
 end
-
-
 
 --- <b><u>TODO</u></b> getColorWildcard(color)
 function getColorWildcard(color)
@@ -697,7 +686,7 @@ do
     d = 10,
     down = 10,
     ["in"] = 11,
-    out = 12
+    out = 12,
   }
 
   function lockExit(from, direction, status)
@@ -723,7 +712,7 @@ if not _TEST then
   function print(...)
     local t, echo, tostring = { ... }, echo, tostring
     for i = 1, #t do
-      echo((tostring(t[i]) or '?') .. "    ")
+      echo((tostring(t[i]) or "?") .. "    ")
     end
     echo("\n")
   end
@@ -759,9 +748,18 @@ function mudletOlderThan(inputmajor, inputminor, inputpatch)
   local mudletmajor, mudletminor, mudletpatch = getMudletVersion("table")
   local type, sformat = type, string.format
 
-  assert(type(inputmajor) == "number", sformat("bad argument #1 type (major version as number expected, got %s!)", type(inputmajor)))
-  assert(inputminor == nil or type(inputminor) == "number", sformat("bad argument #2 type (optional minor version as number expected, got %s!)", type(inputminor)))
-  assert(inputpatch == nil or type(inputpatch) == "number", sformat("bad argument #3 type (optional patch version as number expected, got %s!)", type(inputpatch)))
+  assert(
+    type(inputmajor) == "number",
+    sformat("bad argument #1 type (major version as number expected, got %s!)", type(inputmajor))
+  )
+  assert(
+    inputminor == nil or type(inputminor) == "number",
+    sformat("bad argument #2 type (optional minor version as number expected, got %s!)", type(inputminor))
+  )
+  assert(
+    inputpatch == nil or type(inputpatch) == "number",
+    sformat("bad argument #3 type (optional patch version as number expected, got %s!)", type(inputpatch))
+  )
 
   if mudletmajor < inputmajor then
     return true
@@ -773,7 +771,7 @@ function mudletOlderThan(inputmajor, inputminor, inputpatch)
     elseif mudletminor > inputminor then
       return false
     elseif inputpatch and (mudletpatch < inputpatch) then
-        return true
+      return true
     end
   end
   return false
@@ -853,19 +851,19 @@ do
   function registerAnonymousEventHandler(event, func, isOneShot)
     if type(event) ~= "string" then
       error(
-      string.format(
-      "registerAnonymousEventHandler: bad argument #1 type (event name as string expected, got %s!)",
-      type(event)
-      )
+        string.format(
+          "registerAnonymousEventHandler: bad argument #1 type (event name as string expected, got %s!)",
+          type(event)
+        )
       )
     end
 
     if type(func) ~= "function" and type(func) ~= "string" then
       error(
-      string.format(
-      "registerAnonymousEventHandler: bad argument #2 type (function as string or function type expected, got %s!)",
-      type(func)
-      )
+        string.format(
+          "registerAnonymousEventHandler: bad argument #2 type (function as string or function type expected, got %s!)",
+          type(func)
+        )
       )
     end
 
@@ -884,7 +882,6 @@ do
           end
         end
       end
-
     end
 
     local eventHandlerId
@@ -909,7 +906,7 @@ do
     highestHandlerId = highestHandlerId + 1
     handlerIdsToHandlers[highestHandlerId] = {
       event = event,
-      index = newId
+      index = newId,
     }
     -- do not remove the line below as it must be part of the closure for one shot event handlers.
     eventHandlerId = highestHandlerId
@@ -919,10 +916,10 @@ do
   function killAnonymousEventHandler(id)
     if type(id) ~= "number" then
       error(
-      string.format(
-      "killAnonymousEventHandler: bad argument #1 type (handler ID as number expected, got %s!)",
-      type(id)
-      )
+        string.format(
+          "killAnonymousEventHandler: bad argument #1 type (handler ID as number expected, got %s!)",
+          type(id)
+        )
       )
     end
 
@@ -944,13 +941,17 @@ do
     if handlers[event] then
       for _, func in pairs(handlers[event]) do
         local success, error = pcall(func, event, ...)
-        if not success then showHandlerError(event, error) end
+        if not success then
+          showHandlerError(event, error)
+        end
       end
     end
     if handlers["*"] then
       for _, func in pairs(handlers["*"]) do
         local success, error = pcall(func, event, ...)
-        if not success then showHandlerError(event, error) end
+        if not success then
+          showHandlerError(event, error)
+        end
       end
     end
   end
@@ -961,19 +962,28 @@ local timeframetable = {}
 function timeframe(vname, true_time, nil_time, ...)
   local format = string.format
 
-  assert(type(vname) == "string" or type(vname) == "function", format("timeframe: bad argument #1 type (vname as a string or function expected, got %s!", type(vname)))
-  assert(type(true_time) == "number" or type(true_time) == "table", format("timeframe: bad argument #2 type (true time as a number or table expected, got %s!)", type(true_time)))
-  assert(type(nil_time) == "nil" or type(nil_time) == "number" or type(nil_time) == "table", format("timeframe: bad argument #3 type (nil time as a number or table expected, got %s!)", type(nil_time)))
+  assert(
+    type(vname) == "string" or type(vname) == "function",
+    format("timeframe: bad argument #1 type (vname as a string or function expected, got %s!", type(vname))
+  )
+  assert(
+    type(true_time) == "number" or type(true_time) == "table",
+    format("timeframe: bad argument #2 type (true time as a number or table expected, got %s!)", type(true_time))
+  )
+  assert(
+    type(nil_time) == "nil" or type(nil_time) == "number" or type(nil_time) == "table",
+    format("timeframe: bad argument #3 type (nil time as a number or table expected, got %s!)", type(nil_time))
+  )
 
   -- aggregate timerlist data
   local timerlist = {
-    {0, nil},
-    (type(true_time) == "number" and {true_time, true}) or (type(true_time) == "table" and true_time),
-    ...
+    { 0, nil },
+    (type(true_time) == "number" and { true_time, true }) or (type(true_time) == "table" and true_time),
+    ...,
   }
   table.insert(
     timerlist,
-    (type(nil_time) == "number" and {nil_time, nil}) or (type(nil_time) == "table" and nil_time) or nil
+    (type(nil_time) == "number" and { nil_time, nil }) or (type(nil_time) == "table" and nil_time) or nil
   )
 
   -- reinitialise timeframe for vname
@@ -986,21 +996,42 @@ function timeframe(vname, true_time, nil_time, ...)
   local maxtime = 0
   local vcount = 1
   for step, data in ipairs(timerlist) do
-    assert(type(data) == "table", format("timeframe: bad argument #%d type (timerlist data as a table expected, got %s!", step, type(data)))
+    assert(
+      type(data) == "table",
+      format("timeframe: bad argument #%d type (timerlist data as a table expected, got %s!", step, type(data))
+    )
     local time, value = data[1], data[2]
-    assert(type(time) == "number", format("timeframe: bad argument #%d type (timerlist data table argument #1 as a number expected, got %s!", step, type(time)))
+    assert(
+      type(time) == "number",
+      format(
+        "timeframe: bad argument #%d type (timerlist data table argument #1 as a number expected, got %s!",
+        step,
+        type(time)
+      )
+    )
 
     maxtime = (time > maxtime) and time or maxtime
 
     local fun
     if vtype == "function" then
       fun = function()
-        local s,m = pcall(vname, value)
-        if not s then error(m) end
+        local s, m = pcall(vname, value)
+        if not s then
+          error(m)
+        end
       end
     else
-      assert(type(value) == "string" or type(value) == "number" or type(value) == "boolean" or type(value) == "nil", format("timeframe: bad argument #%d type (timerlist data argument #2 expects a string, number or boolean value; got %s!", step, type(value)))
-      fun = assert(loadstring(format("%s = %s", vname, type(value) == "string" and ("'" .. value .. "'") or tostring(value))))
+      assert(
+        type(value) == "string" or type(value) == "number" or type(value) == "boolean" or type(value) == "nil",
+        format(
+          "timeframe: bad argument #%d type (timerlist data argument #2 expects a string, number or boolean value; got %s!",
+          step,
+          type(value)
+        )
+      )
+      fun = assert(
+        loadstring(format("%s = %s", vname, type(value) == "string" and ("'" .. value .. "'") or tostring(value)))
+      )
     end
 
     if time <= 0 then
@@ -1023,7 +1054,8 @@ end
 function killtimeframe(vname)
   if timeframetable[vname] then
     for _, timerId in ipairs(timeframetable[vname]) do
-      killTimer(timerId); _G["Timer" .. timerId] = nil
+      killTimer(timerId)
+      _G["Timer" .. timerId] = nil
     end
     timeframetable[vname] = nil
   end
@@ -1031,17 +1063,20 @@ end
 
 function translateTable(data, language)
   language = language or mudlet.translations.interfacelanguage
-  assert(type(data) == "table", string.format("translateTable: bad argument #1 type (input as table expected, got %s!)", type(data)))
+  assert(
+    type(data) == "table",
+    string.format("translateTable: bad argument #1 type (input as table expected, got %s!)", type(data))
+  )
 
   local t, translations = {}, mudlet.translations[language]
 
   if not translations then
-    return nil, language.." doesn't have any translations for it"
+    return nil, language .. " doesn't have any translations for it"
   end
 
   for i = 1, #data do
     local key = data[i]
-    t[#t+1] = translations[key] or key
+    t[#t + 1] = translations[key] or key
   end
 
   return t
@@ -1051,9 +1086,9 @@ end
 local function getTranslationTable(inputTable, packageName)
   local outputTable = {}
   for k, v in pairs(inputTable) do
-      if k:match("^"..packageName.."%.") then
-          outputTable[k:gsub("^.*%.", "")] = inputTable[k]
-      end
+    if k:match("^" .. packageName .. "%.") then
+      outputTable[k:gsub("^.*%.", "")] = inputTable[k]
+    end
   end
   return outputTable
 end
@@ -1080,24 +1115,42 @@ function loadTranslations(packageName, fileName, languageCode, folder)
   -- get the right folder
   folder = folder or io.exists("../translations/lua") and "../translations/lua/"
   folder = folder or io.exists("../../translations/lua") and "../../translations/lua/"
-  folder = folder or io.exists(luaGlobalPath.."/../../translations/lua") and luaGlobalPath.."/../../translations/lua/"
-  folder = folder or io.exists(luaGlobalPath.."/../../../translations/lua") and luaGlobalPath.."/../../../translations/lua/"
-  folder = folder or luaGlobalPath.."/translations/"
+  folder = folder
+    or io.exists(luaGlobalPath .. "/../../translations/lua") and luaGlobalPath .. "/../../translations/lua/"
+  folder = folder
+    or io.exists(luaGlobalPath .. "/../../../translations/lua") and luaGlobalPath .. "/../../../translations/lua/"
+  folder = folder or luaGlobalPath .. "/translations/"
 
-  assert(type(packageName) == "string", string.format("loadTranslations: bad argument #1 type (packageName as string expected, got %s)", type(packageName)))
-  assert(type(fileName) == "string", string.format("loadTranslations: bad argument #2 type (fileName as string expected, got %s)", type(fileName)))
-  assert(type(languageCode) == "string", string.format("loadTranslations: bad argument #3 type (languageCode as string expected, got %s)", type(languageCode)))
-  assert(type(folder) == "string", string.format("loadTranslations: bad argument #4 type (folder path as string expected, got %s)", type(folder)))
+  assert(
+    type(packageName) == "string",
+    string.format("loadTranslations: bad argument #1 type (packageName as string expected, got %s)", type(packageName))
+  )
+  assert(
+    type(fileName) == "string",
+    string.format("loadTranslations: bad argument #2 type (fileName as string expected, got %s)", type(fileName))
+  )
+  assert(
+    type(languageCode) == "string",
+    string.format(
+      "loadTranslations: bad argument #3 type (languageCode as string expected, got %s)",
+      type(languageCode)
+    )
+  )
+  assert(
+    type(folder) == "string",
+    string.format("loadTranslations: bad argument #4 type (folder path as string expected, got %s)", type(folder))
+  )
 
-  local langFile = io.exists(folder.."translated/"..fileName.."_"..languageCode..".json") and folder.."translated/"..fileName.."_"..languageCode..".json"
-  local defaultFile = io.exists(folder..fileName..".json") and folder..fileName..".json"
+  local langFile = io.exists(folder .. "translated/" .. fileName .. "_" .. languageCode .. ".json")
+    and folder .. "translated/" .. fileName .. "_" .. languageCode .. ".json"
+  local defaultFile = io.exists(folder .. fileName .. ".json") and folder .. fileName .. ".json"
   if not defaultFile and not langFile then
-    return nil, "unable to find '"..fileName..".json' in '"..folder.."'"
+    return nil, "unable to find '" .. fileName .. ".json' in '" .. folder .. "'"
   end
   local translation = {}
   if langFile then
-      translation = readJsonFile(langFile)
-      translation = getTranslationTable(translation, packageName)
+    translation = readJsonFile(langFile)
+    translation = getTranslationTable(translation, packageName)
   end
   if defaultFile then
     local defaultTranslation = readJsonFile(defaultFile)
@@ -1110,12 +1163,12 @@ function loadTranslations(packageName, fileName, languageCode, folder)
     end
   end
   if table.is_empty(translation) then
-      return nil, "couldn't find translations for '"..packageName.."'"
+    return nil, "couldn't find translations for '" .. packageName .. "'"
   end
   return translation
 end
 
-local acceptableSuffix = {"xml", "mpackage", "zip", "trigger"}
+local acceptableSuffix = { "xml", "mpackage", "zip", "trigger" }
 
 function verbosePackageInstall(fileName)
   local ok, err = installPackage(fileName)
@@ -1130,13 +1183,13 @@ function verbosePackageInstall(fileName)
     local successText = mudlet.Locale.packageInstallSuccess.message
     successText = string.format(successText, packageName)
     local okPrefix = mudlet.Locale.prefixOk.message
-    decho('<0,160,0>' .. okPrefix .. '<190,100,50>' .. successText .. '\n')
+    decho("<0,160,0>" .. okPrefix .. "<190,100,50>" .. successText .. "\n")
     -- Light Green and Orange-ish; see cTelnet::postMessage for color comparison
   else
     local failureText = mudlet.Locale.packageInstallFail.message
     failureText = string.format(failureText, packageName, err)
     local warnPrefix = mudlet.Locale.prefixWarn.message
-    decho('<0,150,190>' .. warnPrefix .. '<190,150,0>' .. failureText .. '\n')
+    decho("<0,150,190>" .. warnPrefix .. "<190,150,0>" .. failureText .. "\n")
     -- Cyan and Orange; see cTelnet::postMessage for color comparison
   end
 end
@@ -1150,13 +1203,13 @@ function verboseModuleInstall(fileName)
     local successText = mudlet.Locale.moduleInstallSuccess.message
     successText = string.format(successText, moduleName)
     local okPrefix = mudlet.Locale.prefixOk.message
-    decho('<0,160,0>' .. okPrefix .. '<190,100,50>' .. successText .. '\n')
+    decho("<0,160,0>" .. okPrefix .. "<190,100,50>" .. successText .. "\n")
     -- Light Green and Orange-ish; see cTelnet::postMessage for color comparison
   else
     local failureText = mudlet.Locale.moduleInstallFail.message
     failureText = string.format(failureText, moduleName, err)
     local warnPrefix = mudlet.Locale.prefixWarn.message
-    decho('<0,150,190>' .. warnPrefix .. '<190,150,0>' .. failureText .. '\n')
+    decho("<0,150,190>" .. warnPrefix .. "<190,150,0>" .. failureText .. "\n")
     -- Cyan and Orange; see cTelnet::postMessage for color comparison
   end
 end
@@ -1182,7 +1235,9 @@ function installPackageFromUrl(file, url)
   local destination = string.format("%s/%s", getMudletHomeDir(), file)
 
   registerAnonymousEventHandler("sysDownloadDone", function(_, saveTo)
-    if saveTo ~= destination then return end
+    if saveTo ~= destination then
+      return
+    end
     verbosePackageInstall(destination)
     os.remove(destination)
   end, true)
@@ -1190,15 +1245,17 @@ function installPackageFromUrl(file, url)
   mudlet.Locale = mudlet.Locale or loadTranslations("Mudlet")
 
   registerAnonymousEventHandler("sysDownloadError", function(_, errorFound, saveTo)
-    if saveTo ~= destination then return end
+    if saveTo ~= destination then
+      return
+    end
     local warnPrefix = mudlet.Locale.prefixWarn.message
-    decho('<0,150,190>' .. warnPrefix .. '<190,150,0>' .. errorFound .. '\n')
+    decho("<0,150,190>" .. warnPrefix .. "<190,150,0>" .. errorFound .. "\n")
   end, true)
 
   downloadFile(destination, url)
   local infoMessage = mudlet.Locale.packageDownloading.message
   local infoPrefix = mudlet.Locale.prefixInfo.message
-    decho('<0,150,190>' ..infoPrefix .. '<190,100,50>' .. string.format(infoMessage, url) .. '\n')
+  decho("<0,150,190>" .. infoPrefix .. "<190,100,50>" .. string.format(infoMessage, url) .. "\n")
 end
 
 --- Installs packages which are dropped on MainConsole or UserWindow
@@ -1222,7 +1279,7 @@ registerAnonymousEventHandler("sysDropEvent", "packageDrop")
 -- @param url package url to download from
 -- @param schema url schema
 function packageUrlDrop(event, url, schema)
-  local acceptedSchemas = {"http", "https"}
+  local acceptedSchemas = { "http", "https" }
   if not table.contains(acceptedSchemas, schema) then
     return
   end
@@ -1235,40 +1292,59 @@ registerAnonymousEventHandler("sysDropUrlEvent", "packageUrlDrop")
 -- This is to prevent scripts erroring if they've been written with TTS capabilities
 -- then loaded into a Mudlet without them.
 if not ttsSpeak then --check if ttsSpeak is defined, if not then Mudlet lacks TTS capabilities.
-  local funcs = {"ttsClearQueue", "ttsGetCurrentLine", "ttsGetCurrentVoice", "ttsGetQueue", "ttsGetState", "ttsGetVoices", "ttsPause", "ttsQueue", "ttsResume", "ttsSpeak", "ttsSetPitch", "ttsSetRate", "ttsSetVolume", "ttsSetVoiceByIndex", "ttsSetVoiceByName", "ttsSkip"}
-  for _,fn in ipairs(funcs) do
-    _G[fn] = function() debugc(string.format("%s: Mudlet was compiled without TTS capabilities", fn)) end
+  local funcs = {
+    "ttsClearQueue",
+    "ttsGetCurrentLine",
+    "ttsGetCurrentVoice",
+    "ttsGetQueue",
+    "ttsGetState",
+    "ttsGetVoices",
+    "ttsPause",
+    "ttsQueue",
+    "ttsResume",
+    "ttsSpeak",
+    "ttsSetPitch",
+    "ttsSetRate",
+    "ttsSetVolume",
+    "ttsSetVoiceByIndex",
+    "ttsSetVoiceByName",
+    "ttsSkip",
+  }
+  for _, fn in ipairs(funcs) do
+    _G[fn] = function()
+      debugc(string.format("%s: Mudlet was compiled without TTS capabilities", fn))
+    end
   end
 end
 
 local oldsetConfig = setConfig
 function setConfig(...)
-  local args = {...}
+  local args = { ... }
 
   if type(args[1]) ~= "table" then
     return oldsetConfig(...)
   end
 
-  for k,v in pairs(args[1]) do
+  for k, v in pairs(args[1]) do
     oldsetConfig(k, v)
   end
 end
 
 local oldgetConfig = getConfig
 function getConfig(...)
-  local args = {...}
+  local args = { ... }
   local result = {}
 
   if #args == 0 then
     -- Please sort this list alphabetically (case insensitive) as it helps to follow changes:
     -- This list contains all configuration options that are available in both getConfig and setConfig
     -- NOTE: Some options like "showMapInfo", "hideMapInfo" are setConfig-only write operations
-    -- Some options like "logDirectory", "specialForceMXPProcessorOn" are getConfig-only read operations  
+    -- Some options like "logDirectory", "specialForceMXPProcessorOn" are getConfig-only read operations
     local list = {
       "advertiseScreenReader",
       "ambiguousEAsianWidthCharacters",
       "announceIncomingText",
-      "askTlsAvailable", 
+      "askTlsAvailable",
       "autoClearInputLine",
       "blankLinesBehaviour",
       "caretShortcut",
@@ -1280,7 +1356,7 @@ function getConfig(...)
       "enableClosedCaption",
       "enableGMCP",
       "enableMNES",
-      "enableMSDP", 
+      "enableMSDP",
       "enableMSP",
       "enableMSSP",
       "enableMTTS",
@@ -1290,7 +1366,7 @@ function getConfig(...)
       "fixUnnecessaryLinebreaks",
       "forceNewEnvironNegotiationOff",
       "inputLineStrictUnixEndings",
-      "logDirectory",                    -- read-only in getConfig
+      "logDirectory", -- read-only in getConfig
       "logInHTML",
       "mapExitSize",
       "mapInfoColor",
@@ -1308,7 +1384,7 @@ function getConfig(...)
       "promptForMXPProcessorOn",
       "promptForVersionInTTYPE",
       "show3dMapView",
-      "showRoomIdsOnMap", 
+      "showRoomIdsOnMap",
       "showSentText",
       "showTabConnectionIndicators",
       "showUpperLowerLevels",
@@ -1316,19 +1392,19 @@ function getConfig(...)
       "specialForceCompressionOff",
       "specialForceGAOff",
       "specialForceMxpNegotiationOff",
-      "specialForceMXPProcessorOn",      -- read-only in getConfig
+      "specialForceMXPProcessorOn", -- read-only in getConfig
       "undoServerWrap",
       "undoServerWrapWidth",
       "versionInTTYPE",
     }
-    for _,v in ipairs(list) do
+    for _, v in ipairs(list) do
       result[v] = oldgetConfig(v)
     end
     return result
   end
 
   if type(args[1]) == "table" then
-    for _,v in pairs(args[1]) do
+    for _, v in pairs(args[1]) do
       result[v] = oldgetConfig(v)
     end
     return result
