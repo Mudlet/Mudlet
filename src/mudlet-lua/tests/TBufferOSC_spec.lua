@@ -382,6 +382,21 @@ describe("Tests TBuffer OSC sequence handling", function()
       assert.equals("CSINOFIN3)", findRecentLine("CSINOFIN3"))
     end)
 
+    -- Consuming a reserved byte puts it in front of the SGR decoder, so a
+    -- parameter it has made unreadable must change nothing rather than be
+    -- read as far as it parses or fall back to colour zero.
+    it("should apply nothing from a parameter a reserved byte has broken", function()
+      assert.is_true(feedTriggers("CSIBAD1(\027[0;37mplain\027[1<2mafter)CSIBAD1\n"))
+      assert.equals("CSIBAD1(plainafter)CSIBAD1", findRecentLine("CSIBAD1"))
+      assert.are.same(foregroundOf("CSIBAD1", "plain"), foregroundOf("CSIBAD1", "after"))
+    end)
+
+    it("should apply nothing from a colour index a reserved byte has broken", function()
+      assert.is_true(feedTriggers("CSIBAD2(\027[0;37mplain\027[38;5;1<2mafter)CSIBAD2\n"))
+      assert.equals("CSIBAD2(plainafter)CSIBAD2", findRecentLine("CSIBAD2"))
+      assert.are.same(foregroundOf("CSIBAD2", "plain"), foregroundOf("CSIBAD2", "after"))
+    end)
+
   end)
 
   -- A line written through TBuffer::appendLine() that holds the documentation

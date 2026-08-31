@@ -2238,17 +2238,19 @@ void TBuffer::decodeSGR38(const QStringList& parameters, bool isColonSeparated)
         if (parameters.count() > 2) {
             bool isOk = false;
             tag = parameters.at(2).toInt(&isOk);
-#if defined(DEBUG_SGR_PROCESSING)
             if (!isOk) {
+#if defined(DEBUG_SGR_PROCESSING)
                 if (isColonSeparated) {
                     qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) ERROR - failed to parse color index parameter element (the third part) in a SGR...;38:5:" << parameters.at(2)
-                                                 << ":...;...m sequence treating it as a zero!";
+                                                 << ":...;...m sequence, leaving the colour as it was!";
                 } else {
                     qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) ERROR - failed to parse color index parameter string (the third part) in a SGR...;38;5;" << parameters.at(2)
-                                                 << ";...m sequence treating it as a zero!";
+                                                 << ";...m sequence, leaving the colour as it was!";
                 }
-            }
 #endif
+                // An index we cannot read is not a request for colour zero:
+                return;
+            }
         } else {
             // Missing last parameter - so it is treated as a zero
 #if defined(DEBUG_SGR_PROCESSING)
@@ -2396,17 +2398,19 @@ void TBuffer::decodeSGR48(const QStringList& parameters, bool isColonSeparated)
         if (parameters.count() > 2) {
             bool isOk = false;
             tag = parameters.at(2).toInt(&isOk);
-#if defined(DEBUG_SGR_PROCESSING)
             if (!isOk) {
+#if defined(DEBUG_SGR_PROCESSING)
                 if (isColonSeparated) {
                     qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) ERROR - failed to parse color index parameter element (the third part) in a SGR...;48:5:" << parameters.at(2)
-                                                 << ":...;...m sequence treating it as a zero!";
+                                                 << ":...;...m sequence, leaving the colour as it was!";
                 } else {
                     qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) ERROR - failed to parse color index parameter string (the third part) in a SGR...;48;5;" << parameters.at(2)
-                                                 << ";...m sequence treating it as a zero!";
+                                                 << ";...m sequence, leaving the colour as it was!";
                 }
-            }
 #endif
+                // An index we cannot read is not a request for colour zero:
+                return;
+            }
         } else {
             // Missing last parameter - so it is treated as a zero
 #if defined(DEBUG_SGR_PROCESSING)
