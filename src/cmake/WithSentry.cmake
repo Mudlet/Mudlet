@@ -3,7 +3,6 @@ if(NOT WITH_SENTRY)
 endif()
 
 set(SENTRY_PATH "${CMAKE_SOURCE_DIR}/3rdparty/sentry-native")
-# Covered by the /build* line in .gitignore.
 set(SENTRY_BUILD_ROOT "${CMAKE_SOURCE_DIR}/build-sentry")
 set(SENTRY_INSTALL "${SENTRY_BUILD_ROOT}/install")
 
