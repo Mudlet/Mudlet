@@ -78,11 +78,11 @@ without forcing each other to rebuild. The `/build*` entry in `.gitignore` cover
 
 Reach for `<platform>-release` when the *speed and size* of the binary are what is being measured:
 performance work, benchmarking, or reproducing something a player reports that a Debug build may
-not show. It sets `CMAKE_BUILD_TYPE=Release` and clears `USE_SANITIZER`, which is what CI passes
-on a `Mudlet-*` tag - `.github/workflows/build-mudlet.yml`, and `CI/build-mudlet-for-windows.sh`
-on Windows, where there is no sanitizer to clear. A Debug build is several times
-the size - 251MB against 43MB on Linux - and materially slower to run, so timings taken on one say
-little about the shipped client.
+not show. It sets `CMAKE_BUILD_TYPE=Release` and clears `USE_SANITIZER`, which is what
+`.github/workflows/build-mudlet.yml` passes on a `Mudlet-*` tag.
+`CI/build-mudlet-for-windows.sh` builds Release on every Windows run and has no sanitizer to
+clear. A Debug build is unoptimised and roughly six times the size - 263MB against 43MB on
+Linux - so timings taken on one say little about the shipped client.
 
 It is not a substitute for the CI release job. The preset stops at compiler flags: it leaves out
 the packaging, signing, Sentry DSN and `MUDLET_VERSION_BUILD` wiring, so the binary still reports
