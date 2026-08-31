@@ -1419,8 +1419,16 @@ bool TTrigger::setupTmpColorTrigger(int ansiFg, int ansiBg)
 
     // createColorPatternText(...) now returns an empty string if BOTH color
     // codes are the scmIgnored ones:
-    mPatterns << createColorPatternText(ansiFg, ansiBg);
+    const QString patternText = createColorPatternText(ansiFg, ansiBg);
+    mPatterns << patternText;
     mPatternKinds << REGEX_COLOR_PATTERN;
+    // Everything setRegexCodeList() fills is indexed by pattern number, so a
+    // pattern added here has to extend all of it - even though a colour
+    // pattern is matched out of mColorPatternList and compiles no regex.
+    mPatternsUtf8.emplace_back(patternText.toUtf8().constData());
+    mRegexes.emplace_back();
+    mMatchData.emplace_back();
+    mRegexJitCompiled.push_back(false);
     mColorPatternList.emplace_back(std::move(pCT));
     return true;
 }
