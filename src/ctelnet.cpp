@@ -5403,19 +5403,31 @@ void cTelnet::slot_socketReadyToBeRead()
         finishNetworkLatencyMeasurement();
     }
 
+    readPendingSocketData();
+}
+
+// Reads one BUFFER_SIZE chunk, and comes back through the event loop for
+// whatever is left. readyRead() is only emitted when fresh bytes reach the
+// socket, so a burst's remainder past one read would sit unseen until the
+// server happened to send again - a game that pushes 100 KB in one go and then
+// waits for input stops part-way through it. The leftovers are deliberately
+// drained from here rather than from slot_socketReadyToBeRead(): they were
+// already buffered before any command a trigger has since sent, so treating
+// them as that command's reply would report a latency of nearly nothing.
+void cTelnet::readPendingSocketData()
+{
+    if (!mpHost || mpHost->isClosingDown() || !mpSocket || mDeferredReconnect) {
+        return;
+    }
+
     // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (2 of 7) - investigate switching from using `char[]` to `std::array<char>`
     char in_buffer[BUFFER_SIZE + 10];
 
     int amount = mpSocket->read(in_buffer, BUFFER_SIZE);
     processSocketData(in_buffer, amount);
 
-    // readyRead() is only emitted when fresh bytes reach the socket, so whatever a
-    // burst leaves over past this one BUFFER_SIZE read would sit unseen until the
-    // server happened to send again - a game that pushes 100 KB in one go and then
-    // waits for input stops part-way through it. Come back for the rest through the
-    // event loop rather than looping here, so the socket keeps to one read per turn.
     if (mpSocket && mpSocket->bytesAvailable() > 0) {
-        QMetaObject::invokeMethod(this, &cTelnet::slot_socketReadyToBeRead, Qt::QueuedConnection);
+        QMetaObject::invokeMethod(this, &cTelnet::readPendingSocketData, Qt::QueuedConnection);
     }
 }
 

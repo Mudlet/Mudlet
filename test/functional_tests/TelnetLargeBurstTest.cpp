@@ -36,6 +36,7 @@
 #include "ProfileTestHelper.h"
 #include "MudletInstanceCoordinator.h"
 #include "TMainConsole.h"
+#include "TLuaInterpreter.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "mudlet.h"
@@ -152,6 +153,62 @@ private slots:
                                 "readyRead() only fires on fresh bytes.")
                                     .arg(mpHost->mpConsole->buffer.getLastLineNumber())
                                     .arg(lineCount)));
+    }
+
+    // A latency reading is the wall time between a write and the next read. The
+    // leftovers of a burst are not a reply to anything: they were already in the
+    // socket before a trigger fired mid-burst and sent a command, so timing that
+    // command against them reports a round trip of nearly nothing.
+    void drainingABurstDoesNotPublishALatencyReading()
+    {
+        // Writes are only timed once the game has shown a Go-Ahead.
+        mpServer->sendRaw(QByteArray("Welcome.\r\n\xff\xf9", 12));
+        QElapsedTimer settle;
+        settle.start();
+        while (settle.elapsed() < 5000 && !mpHost->mTelnet.mGA_Driver) {
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+        }
+        QVERIFY2(mpHost->mTelnet.mGA_Driver, "the Go-Ahead did not put the connection into GA-driven mode, so no write gets timed");
+
+        // Settle any measurement the connection setup left running, so the burst
+        // below starts with none outstanding: reading the socket ends whichever
+        // one is in flight, and that has to happen here rather than mid-test.
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("send('sync')")));
+        mpServer->sendRaw(QByteArray("SYNCMARK\r\n"));
+        settle.restart();
+        while (settle.elapsed() < 5000 && !bufferContains(qsl("SYNCMARK"))) {
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+        }
+        QVERIFY2(bufferContains(qsl("SYNCMARK")), "the sync marker never arrived");
+
+        // Two buffer reads' worth and no more: the stub flushes synchronously, so
+        // a payload this size is wholly in the socket before the event loop next
+        // runs, and the second read can only come from the queued drain. A burst
+        // past what the socket buffers hold would dribble out over later flushes,
+        // and those later arrivals are genuine readyRead()s that may legitimately
+        // end a measurement - which would say nothing about the drain.
+        constexpr int lineCount = 2400;
+        mpHost->mpConsole->buffer.clear();
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("tempTrigger('BURSTLINE 000000', function() send('probe') end)")));
+
+        // Nothing answers 'probe', so a reading that appears at all is a wrong one.
+        constexpr double sentinel = 0.5;
+        mpHost->mTelnet.networkLatencyTime = sentinel;
+
+        mpServer->sendRaw(burstOf(lineCount));
+        const QString lastLine = qsl("BURSTLINE %1").arg(lineCount - 1, 6, 10, QLatin1Char('0'));
+        QElapsedTimer timer;
+        timer.start();
+        while (timer.elapsed() < 15000 && !bufferContains(lastLine)) {
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+        }
+        QVERIFY2(bufferContains(lastLine), "the burst stopped part-way, so the drain under test never ran");
+
+        QVERIFY2(qFuzzyCompare(mpHost->mTelnet.networkLatencyTime, sentinel),
+                 qPrintable(qsl("the drain of the burst's remainder was taken for the reply to the command the trigger sent: "
+                                "latency went from %1s to %2s off bytes that were buffered before that command was written.")
+                                    .arg(sentinel)
+                                    .arg(mpHost->mTelnet.networkLatencyTime)));
     }
 };
 
