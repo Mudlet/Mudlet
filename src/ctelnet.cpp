@@ -5257,9 +5257,7 @@ bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
             mIsReplayRunFromLua = true;
         }
         replayStream.setDevice(&replayFile);
-        if (QVersionNumber::fromString(QString(qVersion())) >= QVersionNumber(5, 13, 0)) {
-            replayStream.setVersion(mudlet::scmQDataStreamFormat_5_12);
-        }
+        replayStream.setVersion(QDataStream::Qt_5_12);
         loadingReplay = true;
         if (mudlet::self()->replayStart()) {
             auto [ok, modifiedFormat] = testReadReplayFile();

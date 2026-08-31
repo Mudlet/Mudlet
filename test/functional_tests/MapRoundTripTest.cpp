@@ -255,9 +255,7 @@ private:
             return false;
         }
         QDataStream out(&file);
-        if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            out.setVersion(mudlet::scmQDataStreamFormat_5_12);
-        }
+        out.setVersion(QDataStream::Qt_5_12);
         if (!pMap->serialize(out, saveVersion)) {
             return false;
         }
