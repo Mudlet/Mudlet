@@ -1080,7 +1080,10 @@ private:
     QString mLine;
     // Storage runTriggers() lends out for the line it hands the trigger system,
     // kept between lines for its capacity alone - it holds nothing meaningful
-    // outside that call.
+    // outside that call. Past this length the capacity is dropped instead of
+    // kept, so one outsized line cannot hold its allocation for the rest of the
+    // session; no game line comes close to it.
+    static constexpr qsizetype scmMaxRetainedHaystack = 8192;
     QString mTriggerHaystack;
     QString mLogin;
     QString mPass;

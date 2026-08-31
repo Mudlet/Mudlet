@@ -137,7 +137,7 @@ void TriggerUnit::addTriggerRootNode(TTrigger* pT, int parentPosition, int child
     if (!pT->getID()) {
         pT->setID(getNewID());
     }
-    mpRootNodeSnapshot.reset();
+    mRootNodeSnapshotStale = true;
     if ((parentPosition == -1) || (childPosition >= static_cast<int>(mTriggerRootNodeList.size()))) {
         mTriggerRootNodeList.push_back(pT);
     } else {
@@ -171,7 +171,7 @@ void TriggerUnit::reParentTrigger(int childID, int oldParentID, int newParentID,
     if (pOldParent) {
         pOldParent->popChild(pChild);
     } else {
-        mpRootNodeSnapshot.reset();
+        mRootNodeSnapshotStale = true;
         mTriggerRootNodeList.remove(pChild);
     }
 
@@ -211,7 +211,7 @@ void TriggerUnit::removeTriggerRootNode(TTrigger* pT)
     // so a collision needs no coincidence)
     mLookupTable.remove(pT->getName(), pT);
     mTriggerMap.remove(pT->getID());
-    mpRootNodeSnapshot.reset();
+    mRootNodeSnapshotStale = true;
     mTriggerRootNodeList.remove(pT);
 }
 
@@ -327,7 +327,7 @@ void TriggerUnit::reorderTriggersAfterPackageImport()
             tempList.push_back(trigger);
         }
     }
-    mpRootNodeSnapshot.reset();
+    mRootNodeSnapshotStale = true;
     for (auto& trigger : tempList) {
         mTriggerRootNodeList.remove(trigger);
     }
@@ -415,6 +415,9 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     // its own, so it cannot resize the one an outer pass is still matching.
     QByteArray utf8Data = std::move(mUtf8Scratch);
     const auto utf8Guard = qScopeGuard([this, &utf8Data] {
+        if (utf8Data.capacity() > scmMaxRetainedUtf8Scratch) {
+            utf8Data = QByteArray();
+        }
         mUtf8Scratch = std::move(utf8Data);
     });
     // Stateless so that an unpaired surrogate at the end of the line is reported
@@ -465,8 +468,17 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     // same hazard for the same reason — see Mudlet issue #4297.
     // Pinned for the length of this pass rather than copied: a mutation
     // replaces the shared snapshot instead of editing the pinned one.
-    if (!mpRootNodeSnapshot) {
-        mpRootNodeSnapshot = std::make_shared<const std::vector<TTrigger*>>(mTriggerRootNodeList.cbegin(), mTriggerRootNodeList.cend());
+    if (mRootNodeSnapshotStale) {
+        // Refilling the vector an earlier pass built keeps a profile whose
+        // triggers churn - a one-shot tempTrigger() invalidates the snapshot
+        // every time it fires - down to no allocation per line as well. Only a
+        // snapshot an outer pass has pinned has to be left alone and replaced.
+        if (mpRootNodeSnapshot.use_count() == 1) {
+            mpRootNodeSnapshot->assign(mTriggerRootNodeList.cbegin(), mTriggerRootNodeList.cend());
+        } else {
+            mpRootNodeSnapshot = std::make_shared<std::vector<TTrigger*>>(mTriggerRootNodeList.cbegin(), mTriggerRootNodeList.cend());
+        }
+        mRootNodeSnapshotStale = false;
     }
     const auto pinnedNodeList = mpRootNodeSnapshot;
     // Triggers registered by a script during this pass (tempTrigger() & Co.)

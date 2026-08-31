@@ -2100,6 +2100,9 @@ void Host::runTriggers(int line)
     // cannot resize the one an outer pass is matching on.
     QString haystack = std::move(mTriggerHaystack);
     const auto haystackGuard = qScopeGuard([this, &haystack] {
+        if (haystack.capacity() > scmMaxRetainedHaystack) {
+            haystack = QString();
+        }
         mTriggerHaystack = std::move(haystack);
     });
     haystack.resize(0);
