@@ -32,6 +32,7 @@ endif()
 
 # Windows, consoles and the text they draw
 set(WINDOW_GROUP_TEST_SOURCES
+    AddonControlsTest.cpp
     ConsoleModelExtractionTest.cpp
     CopyAsImageTest.cpp
     DebugConsoleFilterTest.cpp
@@ -132,6 +133,7 @@ set(MAP_GROUP_TEST_SOURCES
     MapLevelOfDetailTest.cpp
     MapOffscreenCustomLineTest.cpp
     MapFileStatsTest.cpp
+    MapLockNoOpTest.cpp
     MapperButtonConfigTest.cpp
     MapProgressDialogSeamTest.cpp
     MapRoomGeometryTest.cpp
