@@ -1,0 +1,51 @@
+name: Format lua files with StyLua
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * fri'
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Run StyLua formatter
+      uses: JohnnyMorganz/stylua-action@v4
+      with:
+        # Pin to a specific version to avoid unexpected formatting changes
+        version: '2.5.2'
+        args: src/mudlet-lua CI/update-autocompletion.lua
+
+    - name: Create pull request
+      id: cpr
+      uses: peter-evans/create-pull-request@v8.1.0
+      with:
+        add-paths: src/mudlet-lua/
+        branch: stylua-auto-format
+        commit-message: "(autocommit) Apply StyLua formatting changes"
+        title: "Infrastructure: Format lua files with StyLua"
+        body: |
+          #### Brief overview of PR changes/additions
+          An automated PR to style Mudlet's lua files.
+          #### Motivation for adding to Mudlet
+          So mudlet's lua files have a consistent format.
+        author: mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>
+
+    - name: Update .git-blame-ignore-revs
+      if: ${{ steps.cpr.outputs.pull-request-number }}
+      run: |
+        printf "\n" >> .git-blame-ignore-revs
+        printf "# ${{ github.event.created_at }}: Lua - Format files with StyLua\n" >> .git-blame-ignore-revs
+        printf "${{ steps.cpr.outputs.pull-request-head-sha }}\n" >> .git-blame-ignore-revs
+
+    - name: Commit changes to .git-blame-ignore-revs
+      if: ${{ steps.cpr.outputs.pull-request-number }}
+      uses: stefanzweifel/git-auto-commit-action@v7.1.0
+      with:
+        commit_message: "(autocommit) Add ${{ steps.cpr.outputs.pull-request-head-sha }} to .git-blame-ignore-revs"
+        branch: ${{ steps.cpr.outputs.pull-request-branch }}
+        commit_user_name: 'mudlet-machine-account'
+        commit_user_email: 'mudlet-machine-account@users.noreply.github.com'
+        commit_author: 'mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>'
+        file_pattern: .git-blame-ignore-revs
