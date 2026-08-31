@@ -5408,6 +5408,16 @@ void cTelnet::slot_socketReadyToBeRead()
 
     int amount = mpSocket->read(in_buffer, BUFFER_SIZE);
     processSocketData(in_buffer, amount);
+
+    // readyRead() is only emitted when fresh bytes reach the socket, so whatever
+    // a burst left over past this one BUFFER_SIZE read would sit unseen until the
+    // server happened to send again - a game that pushes 100 KB in one go then
+    // waits for input appears to freeze part-way through it. Come back for the
+    // rest through the event loop rather than looping here, so painting and
+    // timers still get a turn between chunks.
+    if (mpSocket && mpSocket->bytesAvailable() > 0) {
+        QMetaObject::invokeMethod(this, &cTelnet::slot_socketReadyToBeRead, Qt::QueuedConnection);
+    }
 }
 
 void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopbackTesting)
