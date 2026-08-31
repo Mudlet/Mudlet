@@ -104,6 +104,15 @@ bool endsStringSequence(const char byte)
     return byte != CHAR_CARRIAGE_RETURN && CHAR_IS_COMMIT_CHAR(byte);
 }
 
+// A byte the decoder's main loop would turn into exactly one QChar of the same
+// value whatever the session's encoding: 7-bit, so it neither ends the line,
+// introduces an escape sequence, nor begins a multi-byte character in any
+// encoding Mudlet decodes. Runs of these can be copied in one go.
+bool bulkCopyableTextByte(const char byte)
+{
+    return static_cast<unsigned char>(byte) < 0x80 && byte != CHAR_NEW_LINE && byte != CHAR_CARRIAGE_RETURN && byte != CHAR_END_OF_TRANSMISSION && byte != CHAR_ESC;
+}
+
 // Maximum length for a CSI sequence's parameter string before aborting - a
 // valid one is only a handful of bytes, so this only trips on a malformed or
 // hostile sequence that never sends a final byte (defense against a server
@@ -1683,6 +1692,22 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                     mCurrentHyperlinkStartColumn = static_cast<int>(mMudBuffer.size()) - 1; // -1 because we just added 1 char
                 }
                 mCurrentHyperlinkText += QString(QChar(ch));
+            } else if (!(mpHost->mMxpProcessor.isEnabled() && (mpHost->mTelnet.isMXPEnabled() || mpHost->getForceMXPProcessorOn()))) {
+                // A plain text byte only ever decodes to itself and takes the
+                // format just computed, so the whole run of them can be copied
+                // in one append and one fill. MXP has to see every byte, and a
+                // hyperlink's text is accumulated a character at a time, so
+                // neither takes this path.
+                size_t runEnd = localBufferPosition + 1;
+                while (runEnd < localBufferLength && bulkCopyableTextByte(localBuffer[runEnd])) {
+                    ++runEnd;
+                }
+                const size_t runLength = runEnd - (localBufferPosition + 1);
+                if (runLength) {
+                    mMudLine.append(QLatin1StringView(localBuffer.data() + localBufferPosition + 1, static_cast<qsizetype>(runLength)));
+                    mMudBuffer.insert(mMudBuffer.cend(), runLength, c);
+                    localBufferPosition = runEnd - 1;
+                }
             }
         }
 
