@@ -773,7 +773,14 @@ int TLuaInterpreter::setTextEditFont(lua_State* L)
     }
 
     QFont font = pT->font();
-    font.setFamily(fontName);
+    // An unlisted name comes back from the resolution as it was given, and goes
+    // through: the font database leaves out families the platform still resolves,
+    // such as the fontconfig alias "Helvetica". The weight comes from the
+    // resolution either way, so the bold of an earlier "Family Style" name is not
+    // left behind on the next family.
+    const auto resolved = host.resolveFontFamily(fontName);
+    font.setFamily(resolved.family);
+    font.setWeight(resolved.weight);
     pT->setFont(font);
     lua_pushboolean(L, true);
     return 1;
@@ -1380,14 +1387,26 @@ int TLuaInterpreter::getFgColor(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getFont
 int TLuaInterpreter::getFont(lua_State* L)
 {
-    QString windowName = qsl("main");
-    windowName = WINDOW_NAME(L, 1);
-    auto console = CONSOLE(L, windowName);
+    const QString windowName{WINDOW_NAME(L, 1)};
     Host& host = getHostFromLua(L);
 
     auto actualFontFamily = [](const QFont& font) -> QString {
         return QFontInfo(font).family();
     };
+
+    // A console wins a name a label also carries, the way it does for every other
+    // window function. Labels are not in the map CONSOLE() searches, so a name no
+    // console answers to is tried as a label before that macro gets to refuse it:
+    auto console = CONSOLE_NIL(L, windowName);
+    if (!console) {
+        if (host.mpConsole) {
+            if (TLabel* pLabel = host.mpConsole->mLabelMap.value(windowName)) {
+                lua_pushstring(L, actualFontFamily(pLabel->font()).toUtf8().constData());
+                return 1;
+            }
+        }
+        console = CONSOLE(L, windowName);
+    }
 
     QString fontName;
 
@@ -3137,35 +3156,43 @@ int TLuaInterpreter::setFont(lua_State* L)
         return warnArgumentValue(L, __func__, "font must not be empty");
     }
 
-    QString effectiveFontName = fontName;
-    QFont::Weight fontWeight = QFont::Normal;
-
-    if (!mudlet::self()->getAvailableFonts().contains(fontName, Qt::CaseInsensitive)) {
-        // Font not found - try parsing as a static font name with style
-        auto [baseName, weight] = host.parseFontNameAndStyle(fontName);
-
-        if (mudlet::self()->getAvailableFonts().contains(baseName, Qt::CaseInsensitive)) {
-            // Found the base font family, use it with the parsed weight
-            effectiveFontName = baseName;
-            fontWeight = weight;
-            qDebug() << "setFont(): Font" << fontName << "not found, using" << baseName << "with weight" << fontWeight;
-        } else {
-            // Still not found - report error
-            return warnArgumentValue(L, __func__, qsl("font '%1' is not available").arg(fontName));
-        }
+    const auto resolved = host.resolveFontFamily(fontName);
+    if (!resolved.available) {
+        return warnArgumentValue(L, __func__, qsl("font '%1' is not available").arg(fontName));
     }
+
+    const QString effectiveFontName = resolved.family;
+    const QFont::Weight fontWeight = resolved.weight;
 
 #if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
 #if QT_VERSION < QT_VERSION_CHECK(6, 9, 0)
     // On GNU/Linux or FreeBSD ensure that emojis are displayed in colour even
     // if this font doesn't support it:
     QFont::insertSubstitution(effectiveFontName, qsl("Noto Color Emoji"));
-    // TODO issue #4159: a nonexisting font breaks the console
 #endif
     // For Qt 6.9+, emoji font support is handled globally in FontManager::addEmojiFont()
 #endif
 
-    auto console = CONSOLE(L, QString{windowName});
+    // A console wins a name a label also carries - nothing stops a label being
+    // called "main". Labels are not in the map CONSOLE() searches, so a name no
+    // console answers to is tried as a label before that macro gets to refuse it:
+    const QString targetName{windowName};
+    auto console = CONSOLE_NIL(L, targetName);
+    if (!console) {
+        if (host.mpConsole) {
+            if (TLabel* pLabel = host.mpConsole->mLabelMap.value(targetName)) {
+                QFont labelFont = host.createFontWithSettings(effectiveFontName, pLabel->font().pointSize());
+                if (fontWeight != QFont::Normal) {
+                    labelFont.setWeight(fontWeight);
+                }
+                pLabel->setFont(labelFont);
+                lua_pushboolean(L, true);
+                return 1;
+            }
+        }
+        console = CONSOLE(L, targetName);
+    }
+
     if (console == host.mpConsole) {
         // apply changes to main console and its while-scrolling component too.
         QFont newFont = host.createFontWithSettings(effectiveFontName, host.getDisplayFont().pointSize());
@@ -3174,7 +3201,7 @@ int TLuaInterpreter::setFont(lua_State* L)
             newFont.setWeight(fontWeight);
         }
 
-        auto result = host.setDisplayFont(newFont);
+        auto result = host.setDisplayFont(newFont, Host::DisplayFontChange::UserChoice);
 
         if (!result.first) {
             return warnArgumentValue(L, __func__, result.second);
@@ -4300,5 +4327,265 @@ int TLuaInterpreter::movieFunc(lua_State* L, const char* funcName)
     }
 
     lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addCommand
+int TLuaInterpreter::addCommand(lua_State* L)
+{
+    if (!lua_istable(L, 1)) {
+        return warnArgumentValue(L, __func__, "addCommand needs a table, e.g. addCommand{name = 'Speech', menuPath = 'Speech'}");
+    }
+
+    mudlet::CommandRequest request;
+    // Leaving a field out and giving it the wrong type are different mistakes:
+    // the first asks for nothing, the second asks for something and is ignored.
+    // menuPath is the one that bites, because the path is conceptually a list
+    // and the sibling surfaces field really does take one, so menuPath =
+    // {"Speech", "Voices"} is an easy thing to write and used to place the
+    // command at the top of Extensions without a word. Numbers are left alone:
+    // lua_isstring() accepts them, so shortcut = 12345 still reaches the
+    // sequence parser and is refused there for what it actually is.
+    QString wrongField;
+    QString wrongType;
+    auto stringField = [&](const char* field) -> QString {
+        lua_getfield(L, 1, field);
+        QString value;
+        if (lua_isstring(L, -1)) {
+            value = QString::fromUtf8(lua_tostring(L, -1));
+        } else if (!lua_isnoneornil(L, -1) && wrongField.isEmpty()) {
+            wrongField = QString::fromUtf8(field);
+            wrongType = QString::fromUtf8(luaL_typename(L, -1));
+        }
+        lua_pop(L, 1);
+        return value;
+    };
+
+    request.name = stringField("name");
+    request.icon = stringField("icon");
+    request.tooltip = stringField("tooltip");
+    request.menuPath = stringField("menuPath");
+    request.shortcut = stringField("shortcut");
+    if (!wrongField.isEmpty()) {
+        return warnArgumentValue(L, __func__, qsl("%1 has to be a string and this one is a %2").arg(wrongField, wrongType));
+    }
+    if (request.name.isEmpty()) {
+        return warnArgumentValue(L, __func__, "a command needs a name to show");
+    }
+
+    // surfaces is a list rather than a single word, so a client that grows
+    // another surface takes another entry rather than a new spelling of "both".
+    // A bare string is accepted for the one-surface case.
+    bool wantsMenu = false;
+    bool wantsToolbar = false;
+    bool named = false;
+    auto nameSurface = [&](const QString& surface) -> bool {
+        named = true;
+        if (surface == qsl("menu")) {
+            wantsMenu = true;
+        } else if (surface == qsl("toolbar")) {
+            wantsToolbar = true;
+        } else {
+            return false;
+        }
+        return true;
+    };
+
+    lua_getfield(L, 1, "surfaces");
+    if (lua_isstring(L, -1)) {
+        const QString surface = QString::fromUtf8(lua_tostring(L, -1));
+        if (!nameSurface(surface)) {
+            lua_pop(L, 1);
+            return warnArgumentValue(L, __func__, qsl("'%1' is not a surface this client has - use 'menu' or 'toolbar'").arg(surface));
+        }
+    } else if (lua_istable(L, -1)) {
+        lua_pushnil(L);
+        while (lua_next(L, -2) != 0) {
+            // A list of names, so a key/value table such as {menu = true} is a
+            // mistake worth naming by type: a boolean has no string form, so
+            // quoting the value would send the package looking for a surface
+            // named by the empty string
+            if (!lua_isstring(L, -1)) {
+                const QString type = QString::fromUtf8(luaL_typename(L, -1));
+                lua_pop(L, 3);
+                return warnArgumentValue(L, __func__, qsl("surfaces has to be a list of surface names and this one holds a %1 - use surfaces = {'menu', 'toolbar'}").arg(type));
+            }
+            const QString surface = QString::fromUtf8(lua_tostring(L, -1));
+            if (!nameSurface(surface)) {
+                lua_pop(L, 3);
+                return warnArgumentValue(L, __func__, qsl("'%1' is not a surface this client has - use 'menu' or 'toolbar'").arg(surface));
+            }
+            lua_pop(L, 1);
+        }
+        // An empty list asks for the command to go nowhere, which no package
+        // can have meant - and silently treating it as "both" would place a
+        // command in the two places it just said it did not want
+        if (!named) {
+            lua_pop(L, 1);
+            return warnArgumentValue(L, __func__, "surfaces is empty, so there is nowhere to put the command - name 'menu', 'toolbar', or leave surfaces out for both");
+        }
+    } else if (!lua_isnoneornil(L, -1)) {
+        const QString type = QString::fromUtf8(luaL_typename(L, -1));
+        lua_pop(L, 1);
+        return warnArgumentValue(L, __func__, qsl("surfaces has to be a surface name or a list of them, not a %1 - use 'menu' or 'toolbar'").arg(type));
+    }
+    lua_pop(L, 1);
+
+    // Leaving surfaces out means "wherever this client puts commands", which is
+    // both. Naming it and naming nothing in it is refused above.
+    if (!named) {
+        request.surfaces = mudlet::CommandSurface::Both;
+    } else if (wantsMenu && wantsToolbar) {
+        request.surfaces = mudlet::CommandSurface::Both;
+    } else if (wantsToolbar) {
+        request.surfaces = mudlet::CommandSurface::Toolbar;
+    } else {
+        request.surfaces = mudlet::CommandSurface::Menu;
+    }
+
+    auto& host = getHostFromLua(L);
+    mudlet* pMudlet = mudlet::self();
+    if (!pMudlet) {
+        return warnArgumentValue(L, __func__, "mudlet instance not available");
+    }
+
+    QString error;
+    const int commandId = pMudlet->addAddonCommand(request, &host, error);
+    if (commandId < 0) {
+        return warnArgumentValue(L, __func__, error.isEmpty() ? qsl("the command could not be placed") : error);
+    }
+
+    lua_pushinteger(L, commandId);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#removeCommand
+int TLuaInterpreter::removeCommand(lua_State* L)
+{
+    const int commandId = getVerifiedInt(L, __func__, 1, "commandId");
+
+    auto& host = getHostFromLua(L);
+    mudlet* pMudlet = mudlet::self();
+    if (!pMudlet) {
+        return warnArgumentValue(L, __func__, "mudlet instance not available");
+    }
+
+    lua_pushboolean(L, pMudlet->removeAddonCommand(commandId, &host));
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableCommand
+int TLuaInterpreter::enableCommand(lua_State* L)
+{
+    const int commandId = getVerifiedInt(L, __func__, 1, "commandId");
+
+    auto& host = getHostFromLua(L);
+    mudlet* pMudlet = mudlet::self();
+    if (!pMudlet) {
+        return warnArgumentValue(L, __func__, "mudlet instance not available");
+    }
+
+    lua_pushboolean(L, pMudlet->setAddonCommandEnabled(commandId, true, &host));
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableCommand
+int TLuaInterpreter::disableCommand(lua_State* L)
+{
+    const int commandId = getVerifiedInt(L, __func__, 1, "commandId");
+
+    auto& host = getHostFromLua(L);
+    mudlet* pMudlet = mudlet::self();
+    if (!pMudlet) {
+        return warnArgumentValue(L, __func__, "mudlet instance not available");
+    }
+
+    lua_pushboolean(L, pMudlet->setAddonCommandEnabled(commandId, false, &host));
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setCommandChecked
+int TLuaInterpreter::setCommandChecked(lua_State* L)
+{
+    const int commandId = getVerifiedInt(L, __func__, 1, "commandId");
+    const bool checked = getVerifiedBool(L, __func__, 2, "checked");
+
+    auto& host = getHostFromLua(L);
+    mudlet* pMudlet = mudlet::self();
+    if (!pMudlet) {
+        return warnArgumentValue(L, __func__, "mudlet instance not available");
+    }
+
+    lua_pushboolean(L, pMudlet->setAddonCommandChecked(commandId, checked, &host));
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setCommandIcon
+int TLuaInterpreter::setCommandIcon(lua_State* L)
+{
+    const int commandId = getVerifiedInt(L, __func__, 1, "commandId");
+    const QString icon = getVerifiedString(L, __func__, 2, "icon");
+
+    auto& host = getHostFromLua(L);
+    mudlet* pMudlet = mudlet::self();
+    if (!pMudlet) {
+        return warnArgumentValue(L, __func__, "mudlet instance not available");
+    }
+
+    lua_pushboolean(L, pMudlet->setAddonCommandIcon(commandId, icon, &host));
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setCommandTooltip
+int TLuaInterpreter::setCommandTooltip(lua_State* L)
+{
+    const int commandId = getVerifiedInt(L, __func__, 1, "commandId");
+    const QString tooltip = getVerifiedString(L, __func__, 2, "tooltip");
+
+    auto& host = getHostFromLua(L);
+    mudlet* pMudlet = mudlet::self();
+    if (!pMudlet) {
+        return warnArgumentValue(L, __func__, "mudlet instance not available");
+    }
+
+    lua_pushboolean(L, pMudlet->setAddonCommandTooltip(commandId, tooltip, &host));
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setCommandPulse
+int TLuaInterpreter::setCommandPulse(lua_State* L)
+{
+    const int commandId = getVerifiedInt(L, __func__, 1, "commandId");
+    const bool enabled = getVerifiedBool(L, __func__, 2, "enabled");
+
+    QString color1 = qsl("#ff4444");
+    QString color2 = qsl("#cc0000");
+    int interval = 500;
+
+    if (lua_gettop(L) >= 3 && !lua_isnil(L, 3)) {
+        color1 = getVerifiedString(L, __func__, 3, "color1");
+    }
+    if (lua_gettop(L) >= 4 && !lua_isnil(L, 4)) {
+        color2 = getVerifiedString(L, __func__, 4, "color2");
+    }
+    if (lua_gettop(L) >= 5 && !lua_isnil(L, 5)) {
+        interval = getVerifiedInt(L, __func__, 5, "interval");
+        if (interval < 1) {
+            return warnArgumentValue(L, __func__, qsl("interval must be greater than zero, got %1").arg(interval));
+        }
+    }
+
+    auto& host = getHostFromLua(L);
+    mudlet* pMudlet = mudlet::self();
+    if (!pMudlet) {
+        return warnArgumentValue(L, __func__, "mudlet instance not available");
+    }
+
+    QString error;
+    const bool success = pMudlet->setAddonCommandPulse(commandId, enabled, color1, color2, interval, &host, error);
+    if (!success && !error.isEmpty()) {
+        return warnArgumentValue(L, __func__, error);
+    }
+    lua_pushboolean(L, success);
     return 1;
 }

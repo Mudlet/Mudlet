@@ -450,6 +450,7 @@ private:
     inline QList<WrapInfo> getWrapInfo(const QString& lineText, bool isNewline, const int maxWidth, const int indent, const int hangingIndent);
     void shrinkBuffer();
     void syncPreTriggerPassLine(int y);
+    int remapLinkId(const TLinkStore& sourceLinkStore, int sourceLinkId, QHash<int, int>& remappedLinkIds);
     int calculateWrapPosition(int lineNumber, int begin, int end);
     void handleNewLine();
     void translateToPlainTextInner(std::string& incoming, bool isFromServer);

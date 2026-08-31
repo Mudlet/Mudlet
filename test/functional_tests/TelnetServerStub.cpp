@@ -108,11 +108,13 @@ void TelnetServerStub::onNewConnection()
         }
     });
 
-    connect(client, &QTcpSocket::disconnected, [safeClient]() {
-        if (!safeClient) {
+    // ~QTcpSocket emits disconnected() from ~QAbstractSocket, by which point the
+    // socket is no longer a QTcpSocket - so hold it as the base type here.
+    connect(client, &QTcpSocket::disconnected, [safeSocket = QPointer<QAbstractSocket>(client)]() {
+        if (!safeSocket) {
             return;
         }
-        qInfo().noquote() << qsl("Client disconnected: %1").arg(safeClient->peerAddress().toString());
-        safeClient->deleteLater();
+        qInfo().noquote() << qsl("Client disconnected: %1").arg(safeSocket->peerAddress().toString());
+        safeSocket->deleteLater();
     });
 }

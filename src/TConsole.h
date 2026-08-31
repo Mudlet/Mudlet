@@ -29,6 +29,7 @@
 
 #include "TBuffer.h"
 #include "TConsoleModel.h"
+#include "TPrintSink.h"
 
 #include <QDataStream>
 #include <QElapsedTimer>
@@ -159,7 +160,9 @@ class TSplitter;
 class dlgNotepad;
 
 
-class TConsole : public QWidget
+// TPrintSink is the write-only face core code redirects output to; QWidget
+// stays first so moc sees the QObject base it needs.
+class TConsole : public QWidget, public TPrintSink
 {
     Q_OBJECT
 
@@ -276,7 +279,9 @@ public:
     // The Central Debug Console keeps its find bar hidden until Ctrl+F, or
     // until its right-click menu asks for it:
     void showSearchBar();
-    void printFormatted(const QString& text, const std::vector<TChar>& formatting, const TLinkStore& sourceLinkStore);
+    void printFormatted(const QString& text, const std::vector<TChar>& formatting, const TLinkStore& sourceLinkStore) override;
+    void discardAll() override;
+    void discardLastLine() override;
     void printSystemMessage(const QString& msg);
     void printCommand(QString&);
     bool hasSelection();
