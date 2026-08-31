@@ -26,6 +26,7 @@
 
 #include "utils.h"
 
+#include <QByteArray>
 #include <QCoreApplication>
 #include <QElapsedTimer>
 #include <QHash>
@@ -135,6 +136,10 @@ private:
     void stopSameLineCreationLoop(const int chainId);
 
     QPointer<Host> mpHost;
+    // Storage processDataStream() lends out for the UTF-8 form of the line it is
+    // matching, kept between lines for its capacity alone - it holds nothing
+    // meaningful outside that call.
+    QByteArray mUtf8Scratch;
     QMap<int, TTrigger*> mTriggerMap;
     std::list<TTrigger*> mTriggerRootNodeList;
     // What processDataStream() iterates instead of mTriggerRootNodeList itself -

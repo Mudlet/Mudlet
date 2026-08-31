@@ -29,6 +29,7 @@
 #include "TTrigger.h"
 
 #include <QScopeGuard>
+#include <QStringConverter>
 
 #include <algorithm>
 #include <functional>
@@ -407,10 +408,33 @@ void TriggerUnit::processDataStream(const QString& data, int line)
         return;
     }
 
+    // Encoded into storage borrowed from the unit, so the capacity outlives the
+    // line and only a line longer than any before it allocates. Moving the buffer
+    // out rather than writing into the member is what makes that safe under
+    // nesting: a pass a trigger script starts finds the member empty and grows
+    // its own, so it cannot resize the one an outer pass is still matching.
+    QByteArray utf8Data = std::move(mUtf8Scratch);
+    const auto utf8Guard = qScopeGuard([this, &utf8Data] {
+        mUtf8Scratch = std::move(utf8Data);
+    });
+    // Stateless so that an unpaired surrogate at the end of the line is reported
+    // here rather than held back as state for a following call.
+    QStringEncoder toUtf8(QStringEncoder::Utf8, QStringConverter::Flag::Stateless);
+    utf8Data.resizeForOverwrite(toUtf8.requiredSpace(data.size()));
+    char* const encodedBegin = utf8Data.data();
+    const char* const encodedEnd = toUtf8.appendToBuffer(encodedBegin, data);
+    if (Q_UNLIKELY(toUtf8.hasError())) {
+        // The encoder writes a replacement character where an unpaired surrogate
+        // was, while toUtf8() drops it, and the difference would move every byte
+        // offset a capture is reported at. No decoder Mudlet has puts an unpaired
+        // surrogate on a line, so that path can afford the copy and stay exact.
+        utf8Data = data.toUtf8();
+    } else {
+        utf8Data.truncate(encodedEnd - encodedBegin);
+    }
     // subject points into utf8Data, so utf8Data has to outlive every match()
     // call below. Perl patterns see the line only as far as its first NUL
     // byte, so this is qstrnlen() rather than the byte count.
-    const QByteArray utf8Data = data.toUtf8();
     const char* subject = utf8Data.constData();
     const int subjectLength = static_cast<int>(qstrnlen(subject, utf8Data.size()));
 

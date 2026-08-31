@@ -1078,6 +1078,10 @@ private:
     QString mDiscordGameName; // Discord self-reported game name
 
     QString mLine;
+    // Storage runTriggers() lends out for the line it hands the trigger system,
+    // kept between lines for its capacity alone - it holds nothing meaningful
+    // outside that call.
+    QString mTriggerHaystack;
     QString mLogin;
     QString mPass;
 
