@@ -149,7 +149,7 @@
     },
     {
       "name": "windows-release",
-      "displayName": "Windows Release (MSYS2, Ninja) - what CI ships to players",
+      "displayName": "Windows Release (MSYS2, Ninja, what CI ships to players)",
       "inherits": ["variant", "windows-debug"],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release"
