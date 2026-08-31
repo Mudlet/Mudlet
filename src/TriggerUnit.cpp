@@ -136,6 +136,7 @@ void TriggerUnit::addTriggerRootNode(TTrigger* pT, int parentPosition, int child
     if (!pT->getID()) {
         pT->setID(getNewID());
     }
+    mpRootNodeSnapshot.reset();
     if ((parentPosition == -1) || (childPosition >= static_cast<int>(mTriggerRootNodeList.size()))) {
         mTriggerRootNodeList.push_back(pT);
     } else {
@@ -169,6 +170,7 @@ void TriggerUnit::reParentTrigger(int childID, int oldParentID, int newParentID,
     if (pOldParent) {
         pOldParent->popChild(pChild);
     } else {
+        mpRootNodeSnapshot.reset();
         mTriggerRootNodeList.remove(pChild);
     }
 
@@ -208,6 +210,7 @@ void TriggerUnit::removeTriggerRootNode(TTrigger* pT)
     // so a collision needs no coincidence)
     mLookupTable.remove(pT->getName(), pT);
     mTriggerMap.remove(pT->getID());
+    mpRootNodeSnapshot.reset();
     mTriggerRootNodeList.remove(pT);
 }
 
@@ -323,6 +326,7 @@ void TriggerUnit::reorderTriggersAfterPackageImport()
             tempList.push_back(trigger);
         }
     }
+    mpRootNodeSnapshot.reset();
     for (auto& trigger : tempList) {
         mTriggerRootNodeList.remove(trigger);
     }
@@ -435,7 +439,12 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     // mid-iteration (the underlying std::list::remove frees the iterator's
     // current node → use-after-free on the next ++). AliasUnit dodges the
     // same hazard for the same reason — see Mudlet issue #4297.
-    std::vector<TTrigger*> copyOfNodeList(mTriggerRootNodeList.cbegin(), mTriggerRootNodeList.cend());
+    // Pinned for the length of this pass rather than copied: a mutation
+    // replaces the shared snapshot instead of editing the pinned one.
+    if (!mpRootNodeSnapshot) {
+        mpRootNodeSnapshot = std::make_shared<const std::vector<TTrigger*>>(mTriggerRootNodeList.cbegin(), mTriggerRootNodeList.cend());
+    }
+    const auto pinnedNodeList = mpRootNodeSnapshot;
     // Triggers registered by a script during this pass (tempTrigger() & Co.)
     // are missing from the snapshot but must still match the current line:
     // before the snapshot the loop walked the live std::list, which a push_back
@@ -444,7 +453,7 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     // Entries below this index were added by outer (nested-feedTriggers) passes
     // and are already part of this pass's snapshot.
     const qsizetype firstNodeAddedThisPass = mRootNodesAddedWhileProcessing.size();
-    for (auto trigger : copyOfNodeList) {
+    for (auto trigger : *pinnedNodeList) {
         if (!trigger->isActive()) {
             continue;
         }

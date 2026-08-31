@@ -35,6 +35,8 @@
 #include <QString>
 
 #include <list>
+#include <memory>
+#include <vector>
 
 class Host;
 class TTrigger;
@@ -135,6 +137,13 @@ private:
     QPointer<Host> mpHost;
     QMap<int, TTrigger*> mTriggerMap;
     std::list<TTrigger*> mTriggerRootNodeList;
+    // What processDataStream() iterates instead of mTriggerRootNodeList itself -
+    // see the note there. Shared rather than rebuilt per line: a pass pins the
+    // snapshot that was current when it started, so mutating the root list
+    // mid-pass leaves that one alone and only the next pass sees the rebuilt
+    // one. Every mutation of mTriggerRootNodeList must reset() this, or a pass
+    // would go on walking triggers that have since been freed.
+    std::shared_ptr<const std::vector<TTrigger*>> mpRootNodeSnapshot;
     int mMaxID;
     bool mModuleMember;
     int statsItemsTotal = 0;
