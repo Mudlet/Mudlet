@@ -1105,23 +1105,22 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 // Zuggsoft's MXP protocol:
                 const quint8 modeChar = static_cast<unsigned char>(localBuffer[spanEnd]);
                 switch (modeChar) {
-                case static_cast<quint8>('m'):
+                case static_cast<quint8>('m'): {
                     // We have a complete SGR sequence:
 #if defined(DEBUG_SGR_PROCESSING)
                     qDebug().nospace().noquote() << "    Consider the SGR sequence: \"" << localBuffer.substr(localBufferPosition, spanEnd - spanStart).c_str() << "\"";
 #endif
-                    {
-                        // The scan above only let bytes from "0123456789;:<=>?"
-                        // through, so each one widens to a single UTF-16 code
-                        // unit and the sequence can be handed over without
-                        // building a QString for it:
-                        QVarLengthArray<char16_t, SGR_INLINE_CHARS> sgrChars(spanEnd - spanStart);
-                        for (size_t i = spanStart; i < spanEnd; ++i) {
-                            sgrChars[i - spanStart] = static_cast<unsigned char>(localBuffer[i]);
-                        }
-                        decodeSGR(QStringView(sgrChars.data(), sgrChars.size()));
+                    // Only bytes from cParameter can be here - the four that
+                    // may open a private sequence were turned away above - so
+                    // each one widens to a single UTF-16 code unit and the
+                    // parameter string can be handed over without building a
+                    // QString for it:
+                    QVarLengthArray<char16_t, SGR_INLINE_CHARS> sgrChars(spanEnd - spanStart);
+                    for (size_t i = spanStart; i < spanEnd; ++i) {
+                        sgrChars[i - spanStart] = static_cast<unsigned char>(localBuffer[i]);
                     }
-                    break;
+                    decodeSGR(QStringView(sgrChars));
+                } break;
 
                 case static_cast<quint8>('z'):
                     // We have a control sequence for MXP
