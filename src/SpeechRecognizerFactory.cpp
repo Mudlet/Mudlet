@@ -26,6 +26,10 @@
 
 #include <QDir>
 
+#if defined(Q_OS_MACOS)
+#include "AppleSpeechRecognizer.h"
+#endif
+
 SpeechRecognizer* SpeechRecognizerFactory::create(Backend backend, QObject* parent)
 {
     // Handle Auto selection - pick the first available backend
@@ -57,8 +61,16 @@ SpeechRecognizer* SpeechRecognizerFactory::create(Backend backend, QObject* pare
         return nullptr;
 
     case Backend::Platform:
-        // Future: return platform-specific implementation
+#if defined(Q_OS_MACOS)
+        if (!AppleSpeechRecognizer::speechAvailable()) {
+            qWarning() << "SpeechRecognizerFactory: the macOS speech backend was requested but the system reports no recognizer for this locale";
+            return nullptr;
+        }
+        return new AppleSpeechRecognizer(parent);
+#else
+        // Future: Windows SAPI, and whatever Linux settles on
         return nullptr;
+#endif
 
     case Backend::Auto:
         // Already handled above, but needed for compiler warning
@@ -85,7 +97,13 @@ QList<SpeechRecognizerFactory::Backend> SpeechRecognizerFactory::availableBacken
     }
 
     // Future: Check for Whisper availability
-    // Future: Check for platform API availability
+
+    // Backend::Platform is deliberately absent, even where it is available:
+    // Auto resolves to first(), and stt.init() still requires a model
+    // directory that exists, which this engine has none of. Listing it would
+    // make Auto pick a backend the Lua entry point then refuses to load.
+    // backendAvailable(Backend::Platform) answers for it honestly in the
+    // meantime, and create(Backend::Platform) builds it on request.
 
     return backends;
 }
@@ -103,7 +121,13 @@ bool SpeechRecognizerFactory::backendAvailable(Backend backend)
         return false; // Not yet implemented
 
     case Backend::Platform:
+#if defined(Q_OS_MACOS)
+        // Not gated on authorisation: a player who has not been asked yet
+        // still has a perfectly usable backend
+        return AppleSpeechRecognizer::speechAvailable();
+#else
         return false; // Not yet implemented
+#endif
 
     case Backend::Auto:
         return !availableBackends().isEmpty();

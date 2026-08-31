@@ -57,6 +57,10 @@
 #include "VoskRecognizer.h"
 #include "mudlet.h"
 
+#if defined(Q_OS_MACOS)
+#include "AppleSpeechRecognizer.h"
+#endif
+
 #include "GroupedTest.h"
 
 #include <optional>
@@ -597,6 +601,31 @@ private slots:
         QVERIFY2(recognizer.currentLanguage().isEmpty(), "a language survived releaseResources()");
         QVERIFY2(!recognizer.capabilities().biasing, "biasing was still claimed after releaseResources()");
         QVERIFY2(!recognizer.hasLiveNativeResources(), "releaseResources() left native handles behind");
+    }
+
+    // Apple's recognizer needs no download and no model, so unlike Vosk and
+    // sherpa it is available on any Mac as soon as the user has granted speech
+    // permission. What it must never do is claim a capability it cannot honour:
+    // recognition is forced on-device, so onDevice is true and audio never
+    // reaches Apple; contextualStrings gives real biasing; and the per-segment
+    // confidence and timestamps make wordResults honest.
+    void theAppleBackendClaimsOnlyWhatTheFrameworkGives()
+    {
+#if defined(Q_OS_MACOS)
+        AppleSpeechRecognizer recognizer;
+        const auto can = recognizer.capabilities();
+        QVERIFY2(can.onDevice, "recognition is forced on-device, so this must not under-report");
+        QVERIFY2(can.biasing, "contextualStrings is what carries a package's vocabulary");
+        QVERIFY2(can.wordResults, "SFTranscriptionSegment carries confidence and timings");
+        QVERIFY2(!can.grammar, "there is no grammar-constraint API to back this claim");
+
+        // No model on disk to name, ever - a package gating setup on a model
+        // path must not be told to go and install one
+        QCOMPARE(recognizer.modelPath(), QString());
+        QCOMPARE(recognizer.state(), SpeechRecognizer::State::Uninitialized);
+#else
+        QCOMPARE(SpeechRecognizerFactory::backendAvailable(SpeechRecognizerFactory::Backend::Platform), false);
+#endif
     }
 };
 

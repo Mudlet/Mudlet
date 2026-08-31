@@ -253,6 +253,17 @@ if(APPLE)
     LANGUAGE OBJCXX
     COMPILE_OPTIONS "-fobjc-arc"
   )
+
+  # The macOS speech recognition backend, on the same terms: only the .mm is
+  # appended, since AppleSpeechRecognizer.h is already in the mudlet_HDRS set
+  # above - where AUTOMOC also needs it, because the class declares Q_OBJECT.
+  list(APPEND mudlet_SRCS AppleSpeechRecognizer.mm)
+  set_source_files_properties(
+    AppleSpeechRecognizer.mm
+    PROPERTIES
+    LANGUAGE OBJCXX
+    COMPILE_OPTIONS "-fobjc-arc"
+  )
 endif()
 
 # This is for compiled UI files, not those used at runtime
@@ -294,6 +305,7 @@ set(mudlet_HDRS
     ActionUnit.h
     AliasUnit.h
     AltFocusMenuBarDisable.h
+    AppleSpeechRecognizer.h
     CredentialManager.h
     ctelnet.h
     CustomLineDrawContextMenuHandler.h
@@ -883,9 +895,14 @@ endif()
 if(APPLE)
   target_link_libraries(${EXE_MUDLET_TARGET} "-framework AppKit")
   target_link_libraries(${EXE_MUDLET_TARGET} "-framework AVFoundation")
+  # A normal link, not a weak one: Speech.framework has shipped with every
+  # macOS Mudlet supports
+  target_link_libraries(${EXE_MUDLET_TARGET} "-framework Speech")
 
-  # Microphone permission sources are already added via mudlet_SRCS/mudlet_HDRS
+  # Microphone permission and speech recognition sources are already added via
+  # mudlet_SRCS/mudlet_HDRS
   target_link_libraries(${LIB_MUDLET_TARGET} "-framework AVFoundation")
+  target_link_libraries(${LIB_MUDLET_TARGET} "-framework Speech")
 
   if(USE_UPDATER)
     # need to specifically call out Objective-C sources so that automoc builds them.

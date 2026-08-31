@@ -41,7 +41,7 @@ public:
         Vosk,     // Offline recognition using Vosk/Kaldi
         Sherpa,   // Offline streaming recognition using sherpa-onnx (Nemotron, Zipformer)
         Whisper,  // Offline recognition using whisper.cpp (future)
-        Platform, // Platform-native APIs: macOS Speech, Windows SAPI (future)
+        Platform, // Platform-native APIs: macOS Speech; Windows SAPI (future)
         Auto      // Automatically select best available backend
     };
 
