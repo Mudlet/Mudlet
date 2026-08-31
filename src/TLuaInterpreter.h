@@ -922,7 +922,6 @@ private:
     bool reportInvalidLuaCodeParam(lua_State* L, const char* functionName, const int index);
     QByteArray encodeBytes(const char*);
     void setMatches(lua_State*);
-    void resetGlobalMatchTable(lua_State*, const char* name, int& tableRef);
     void setupLanguageData();
     QString readScriptFile(const QString& path) const;
     void handleHttpOK(QNetworkReply*);
@@ -951,12 +950,14 @@ private:
     // own their buffers rather than allocating a fresh node per capture
     std::vector<std::string> mSpareCaptureGroupList;
     std::vector<int> mSpareCaptureGroupPosList;
-    // registry references to the shared empty tables the capture globals are
-    // reset to between fires, LUA_NOREF until one has been built
-    int mEmptyMatchesTableRef = LUA_NOREF;
-    int mEmptyMultiMatchesTableRef = LUA_NOREF;
+    // Bounds on what the parking above holds onto between fires
+    static constexpr std::size_t scmMaxParkedCaptures = 512;
+    static constexpr std::string::size_type scmMaxParkedCaptureBytes = 1024;
     QString mLastGlobalName;
     QByteArray mLastGlobalNameUtf8;
+    // Storage set_lua_string() encodes the line into, kept between calls for
+    // its capacity alone, and dropped past a length no game line reaches
+    static constexpr qsizetype scmMaxRetainedUtf8Scratch = 3 * 8192;
     QByteArray mUtf8Scratch;
     std::list<std::list<std::string>> mMultiCaptureGroupList;
     std::list<std::list<int>> mMultiCaptureGroupPosList;

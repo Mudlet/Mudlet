@@ -3614,44 +3614,24 @@ void TLuaInterpreter::setCaptureNameGroups(const NameGroupMatches& nameGroups, c
 }
 
 // No documentation available in wiki - internal function
-// Re-points a capture global at a shared empty table rather than building a new
-// one per trigger fire. The shared table is only reused while it is untouched:
-// a script that wrote into it, or replaced the global, gets a freshly built one,
-// so what Lua can read back is the same either way.
-void TLuaInterpreter::resetGlobalMatchTable(lua_State* L, const char* name, int& tableRef)
-{
-    if (tableRef != LUA_NOREF) {
-        lua_rawgeti(L, LUA_REGISTRYINDEX, tableRef);
-        lua_getglobal(L, name);
-        const bool alreadyInstalled = lua_rawequal(L, -1, -2);
-        lua_pop(L, 1);
-        lua_pushnil(L);
-        if (!lua_next(L, -2)) {
-            if (alreadyInstalled) {
-                lua_pop(L, 1);
-            } else {
-                lua_setglobal(L, name);
-            }
-            return;
-        }
-        // a first key means a script has written into it, so it cannot be reused
-        lua_pop(L, 3);
-        luaL_unref(L, LUA_REGISTRYINDEX, tableRef);
-        tableRef = LUA_NOREF;
-    }
-
-    lua_newtable(L);
-    lua_pushvalue(L, -1);
-    tableRef = luaL_ref(L, LUA_REGISTRYINDEX);
-    lua_setglobal(L, name);
-}
-
-// No documentation available in wiki - internal function
 void TLuaInterpreter::clearCaptureGroups()
 {
     if (mSpareCaptureGroupList.empty()) {
         mSpareCaptureGroupList.swap(mCaptureGroupList);
         mSpareCaptureGroupPosList.swap(mCaptureGroupPosList);
+        // A match-all pattern over a hostile line would otherwise leave the
+        // parked buffers at that high water mark for the rest of the session.
+        // Past the cap the cost is the allocation this parking exists to save,
+        // never unbounded memory.
+        if (mSpareCaptureGroupList.size() > scmMaxParkedCaptures) {
+            mSpareCaptureGroupList.resize(scmMaxParkedCaptures);
+            mSpareCaptureGroupPosList.resize(scmMaxParkedCaptures);
+        }
+        for (auto& capture : mSpareCaptureGroupList) {
+            if (capture.capacity() > scmMaxParkedCaptureBytes) {
+                std::string().swap(capture);
+            }
+        }
     }
     mCaptureGroupList.clear();
     mCaptureGroupPosList.clear();
@@ -3663,8 +3643,10 @@ void TLuaInterpreter::clearCaptureGroups()
 
     lua_State* L = pGlobalLua;
     const int callerStackTop = lua_gettop(L);
-    resetGlobalMatchTable(L, "matches", mEmptyMatchesTableRef);
-    resetGlobalMatchTable(L, "multimatches", mEmptyMultiMatchesTableRef);
+    lua_newtable(L);
+    lua_setglobal(L, "matches");
+    lua_newtable(L);
+    lua_setglobal(L, "multimatches");
 
     lua_settop(L, callerStackTop);
 }
@@ -5315,13 +5297,23 @@ void TLuaInterpreter::set_lua_string(const QString& varName, const QString& varV
         mLastGlobalName = varName;
         mLastGlobalNameUtf8 = varName.toUtf8();
     }
-    QStringEncoder encoder(QStringEncoder::Utf8);
+    QStringEncoder encoder(QStringEncoder::Utf8, QStringConverter::Flag::Stateless);
     mUtf8Scratch.resize(encoder.requiredSpace(varValue.size()));
     const char* const end = encoder.appendToBuffer(mUtf8Scratch.data(), varValue);
-    mUtf8Scratch.resize(end - mUtf8Scratch.constData());
+    if (Q_UNLIKELY(encoder.hasError())) {
+        // The encoder writes a replacement character where an unpaired
+        // surrogate was, while toUtf8() drops it. That path can afford the
+        // copy and stay byte for byte what a script used to be given.
+        mUtf8Scratch = varValue.toUtf8();
+    } else {
+        mUtf8Scratch.resize(end - mUtf8Scratch.constData());
+    }
 
     lua_pushstring(L, mUtf8Scratch.constData());
     lua_setglobal(L, mLastGlobalNameUtf8.constData());
+    if (mUtf8Scratch.capacity() > scmMaxRetainedUtf8Scratch) {
+        mUtf8Scratch = QByteArray();
+    }
     lua_settop(L, callerStackTop);
 }
 
@@ -5477,9 +5469,6 @@ void TLuaInterpreter::initLuaGlobals()
     if (pGlobalLua) {
         lua_close(pGlobalLua);
     }
-    // references into the registry of the state that has just gone
-    mEmptyMatchesTableRef = LUA_NOREF;
-    mEmptyMultiMatchesTableRef = LUA_NOREF;
 
     pGlobalLua = newstate();
     storeHostInLua(pGlobalLua, mpHost);
