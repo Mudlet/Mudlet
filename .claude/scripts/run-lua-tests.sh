@@ -144,7 +144,7 @@ export MUDLET_TEST_MMCP_DIR="$peer_dir"
 export XDG_RUNTIME_DIR="${MUDLET_TEST_DISCORD_RUNTIME_DIR:-$runtime_dir}"
 export LD_LIBRARY_PATH="$WS/3rdparty/discord/rpc/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 export DBUS_SESSION_BUS_ADDRESS='disabled:'
-export TESTS_DIRECTORY="$WS/src/mudlet-lua/tests"
+export TESTS_DIRECTORY="${TESTS_DIRECTORY:-$WS/src/mudlet-lua/tests}"
 export QUIT_MUDLET_AFTER_TESTS=true
 
 # Mudlet exits 0 whatever the specs did, so a failing run is only visible

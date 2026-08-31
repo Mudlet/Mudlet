@@ -573,26 +573,64 @@ private:
         dir.removeRecursively();
     }
 
-    // Starts a profile the way a user would via the GUI (mirrors the helper in
-    // ClearWindowLogTest).
+    // Starts a profile by driving the connection dialog, as a user would.
     void startProfile(const QString& hostname, const QString& address, const QString& port)
     {
         QTimer::singleShot(0, qApp, [hostname, address, port]() {
+            const auto dialog = []() {
+                return mudlet::self()->mpConnectionDialog.data();
+            };
+
             mudlet::self()->startAutoLogin({});
-            QTest::qWait(100);
-            QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button, Qt::LeftButton);
-            QTest::qWait(100);
-            QTest::keyClicks(QApplication::focusWidget(), hostname);
-            QTest::qWait(100);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100);
-            QTest::keyClicks(QApplication::focusWidget(), address);
-            QTest::qWait(100);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100);
-            QTest::keyClicks(QApplication::focusWidget(), port);
-            QTest::qWait(100);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
+
+            // slot_showConnectionDialog() defers the dialog's show() to a zero
+            // timer, and a field cannot take focus before its window is up, so
+            // this wait has to spin the event loop to get there. A predicate
+            // already true on entry - the dialog merely existing, say - would
+            // not: qWaitFor returns without processing anything in that case.
+            if (!QTest::qWaitFor(
+                        [&dialog]() {
+                            return dialog() && dialog()->isVisible();
+                        },
+                        5000)) {
+                qWarning() << "the connection dialog never appeared";
+                return;
+            }
+
+            // Focus is what each step hands to the next, so the field about to
+            // be typed into is the real precondition. Naming it also keeps a
+            // missed handoff a legible warning, rather than the null-widget
+            // assert QTest::keyClicks() aborts the whole process with.
+            const auto waitForFocus = [](QWidget* field, const char* name) {
+                if (QTest::qWaitFor(
+                            [field]() {
+                                return QApplication::focusWidget() == field;
+                            },
+                            5000)) {
+                    return true;
+                }
+                qWarning() << "focus never reached the" << name << "field";
+                return false;
+            };
+
+            QTest::mouseClick(dialog()->new_profile_button, Qt::LeftButton);
+            if (!waitForFocus(dialog()->profile_name_entry, "profile name")) {
+                return;
+            }
+            QTest::keyClicks(dialog()->profile_name_entry, hostname);
+            QTest::keyClick(dialog()->profile_name_entry, Qt::Key_Tab);
+
+            if (!waitForFocus(dialog()->host_name_entry, "server address")) {
+                return;
+            }
+            QTest::keyClicks(dialog()->host_name_entry, address);
+            QTest::keyClick(dialog()->host_name_entry, Qt::Key_Tab);
+
+            if (!waitForFocus(dialog()->port_entry, "port")) {
+                return;
+            }
+            QTest::keyClicks(dialog()->port_entry, port);
+            QTest::keyClick(dialog()->port_entry, Qt::Key_Return);
         });
 
         QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
