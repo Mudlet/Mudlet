@@ -58,6 +58,7 @@ extern "C" {
 
 #include <list>
 #include <string>
+#include <vector>
 #include <memory>
 #include <optional>
 
@@ -921,6 +922,7 @@ private:
     bool reportInvalidLuaCodeParam(lua_State* L, const char* functionName, const int index);
     QByteArray encodeBytes(const char*);
     void setMatches(lua_State*);
+    void resetGlobalMatchTable(lua_State*, const char* name, int& tableRef);
     void setupLanguageData();
     QString readScriptFile(const QString& path) const;
     void handleHttpOK(QNetworkReply*);
@@ -942,8 +944,20 @@ private:
 
 
     const int LUA_FUNCTION_MAX_ARGS = 50;
-    std::list<std::string> mCaptureGroupList;
-    std::list<int> mCaptureGroupPosList;
+    std::vector<std::string> mCaptureGroupList;
+    std::vector<int> mCaptureGroupPosList;
+    // clearCaptureGroups() parks the emptied capture storage here instead of
+    // freeing it, so the next trigger fire assigns over std::strings that still
+    // own their buffers rather than allocating a fresh node per capture
+    std::vector<std::string> mSpareCaptureGroupList;
+    std::vector<int> mSpareCaptureGroupPosList;
+    // registry references to the shared empty tables the capture globals are
+    // reset to between fires, LUA_NOREF until one has been built
+    int mEmptyMatchesTableRef = LUA_NOREF;
+    int mEmptyMultiMatchesTableRef = LUA_NOREF;
+    QString mLastGlobalName;
+    QByteArray mLastGlobalNameUtf8;
+    QByteArray mUtf8Scratch;
     std::list<std::list<std::string>> mMultiCaptureGroupList;
     std::list<std::list<int>> mMultiCaptureGroupPosList;
     QVector<QPair<QString, QString>> mCapturedNameGroups;
