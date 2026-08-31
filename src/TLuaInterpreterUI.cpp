@@ -32,6 +32,8 @@
 #include <QClipboard>
 #include <QGuiApplication>
 
+#include <iterator>
+
 #include "EAction.h"
 #include "Host.h"
 #include "TArea.h"
@@ -2536,7 +2538,7 @@ int TLuaInterpreter::selectCaptureGroup(lua_State* L)
         }
         // We want capture groups to start with 1 instead of 0 so predecrement
         // luaNumOfMatch :
-        if (--captureGroup < static_cast<int>(pL->mCaptureGroupList.size()) && captureGroup < static_cast<int>(pL->mCaptureGroupPosList.size())) {
+        if (--captureGroup < static_cast<int>(pL->mCaptureGroupList.size())) {
             const auto offset = static_cast<std::list<std::string>::difference_type>(captureGroup);
             begin = *std::next(pL->mCaptureGroupPosList.cbegin(), offset);
             length = QString::fromStdString(*std::next(pL->mCaptureGroupList.cbegin(), offset)).size();
