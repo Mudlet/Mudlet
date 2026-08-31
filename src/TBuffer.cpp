@@ -5253,6 +5253,26 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
         return output;
     }
 
+    // Building the boundary finders below runs a full Unicode analysis over the
+    // line, which is the single most expensive part of appending one. Most game
+    // output cannot wrap at all and needs none of it: every printable ASCII
+    // character is its own grapheme cluster exactly one column wide, so such a
+    // line's width is its length, and a line no wider than the wrap column has
+    // no break point to find. LineFeed and Tab are outside that range, so a
+    // line needing an embedded break never takes this path.
+    if (lineText.size() <= (isNewline ? maxWidth - indent : maxWidth) && lineText.size() <= mWrapAt) {
+        bool plainAscii = true;
+        for (const QChar c : lineText) {
+            if (c.unicode() < u' ' || c.unicode() > u'~') {
+                plainAscii = false;
+                break;
+            }
+        }
+        if (plainAscii) {
+            return output;
+        }
+    }
+
     QTextBoundaryFinder boundaryFinder(QTextBoundaryFinder::Grapheme, lineText);
     QTextBoundaryFinder lineBreakFinder(QTextBoundaryFinder::Line, lineText);
     int xPos = 0;
