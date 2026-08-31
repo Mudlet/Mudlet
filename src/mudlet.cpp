@@ -7606,6 +7606,18 @@ void mudlet::setAppearance(const enums::Appearance state, const bool& loading)
         qApp->setStyle(new AltFocusMenuBarDisable(mDefaultStyle));
     }
 
+    refreshTabBarsAfterStyleChange();
+
+    getHostManager().changeAllHostColour(getActiveHost());
+    mAppearance = state;
+    emit signal_appearanceChanged(state);
+}
+
+// The application style object is replaced in two places - setAppearance()
+// and Lua's setAppStyleSheet() - and the tab bars miss the StyleChange
+// broadcast both times (see TTabBar::refreshAfterApplicationStyleChange()).
+void mudlet::refreshTabBarsAfterStyleChange()
+{
     if (mpTabBar) {
         mpTabBar->refreshAfterApplicationStyleChange();
     }
@@ -7620,10 +7632,6 @@ void mudlet::setAppearance(const enums::Appearance state, const bool& loading)
     for (TDetachedWindow* pDetachedWindow : uniqueDetachedWindows) {
         pDetachedWindow->refreshAfterApplicationStyleChange();
     }
-
-    getHostManager().changeAllHostColour(getActiveHost());
-    mAppearance = state;
-    emit signal_appearanceChanged(state);
 }
 
 void mudlet::setInterfaceLanguage(const QString& languageCode)
