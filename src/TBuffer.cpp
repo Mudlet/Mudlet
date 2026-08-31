@@ -820,11 +820,14 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 
 void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFromServer)
 {
-    // What can appear in a CSI Parameter String (Ps) byte or at least for it
-    // to be something we can handle:
-    const QByteArray cParameter = QByteArrayLiteral("0123456789;:");
-    // What can appear in the initial position of a CSI Parameter String (Ps) byte:
-    const QByteArray cParameterInitial = QByteArrayLiteral("0123456789;:<=>?");
+    // What can appear anywhere in a CSI Parameter String (Ps): ECMA-48 5.4
+    // puts every byte of one in the range 0x30 to 0x3F, so '<', '=', '>' and
+    // '?' do not end the parameter string when they turn up after the first
+    // byte - games do emit them there and every other terminal consumes them:
+    const QByteArray cParameter = QByteArrayLiteral("0123456789;:<=>?");
+    // Which of those, in the FIRST position only, marks the whole sequence as
+    // private/reserved and so not something Mudlet can interpret:
+    const QByteArray cParameterPrivateIntroducer = QByteArrayLiteral("<=>?");
     // What can appear in a CSI Intermediate byte (includes a quote character in
     // the middle of the text here which has to be escaped with a backslash):
     const QByteArray cIntermediate = QByteArrayLiteral(" !\"#$%&'()*+,-./");
@@ -1012,18 +1015,14 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
         }
 
         if (mGotCSI) {
-            // Lookahead and try and see what we are processing
-            // At the start of a CSI sequence the only valid character is one of:
-            // "0-9:;<=>?" if it is one of "0-9:;" then it is a
-            // "parameter-string" ELSE if it is one of '<', '=', '>' or '?' it
-            // IS a private/experimental and not covered by the ECMA-48
-            // specifications..
-            // After the first character the remaining characters of the
-            // parameter string will be in the range "0-9:;" only
+            // Lookahead and try and see what we are processing. The parameter
+            // string runs over "0-9:;<=>?" - if its FIRST byte is one of '<',
+            // '=', '>' or '?' the whole sequence is private/experimental and
+            // not covered by the ECMA-48 specifications, but those same bytes
+            // later on are just parameter bytes to be consumed.
             size_t const spanStart = localBufferPosition;
             size_t spanEnd = spanStart;
-            // Only the first byte may be one of the private/reserved introducers:
-            while (spanEnd < localBufferLength && (spanEnd == spanStart ? cParameterInitial : cParameter).indexOf(localBuffer[spanEnd]) >= 0) {
+            while (spanEnd < localBufferLength && cParameter.indexOf(localBuffer[spanEnd]) >= 0) {
                 ++spanEnd;
             }
 
@@ -1053,7 +1052,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
             // first byte is within the usable subset of the allowed value - or
             // not. Doing this any earlier would consume a sequence split across
             // packets without leaving the trailing bytes for the next one.
-            if (cParameter.indexOf(localBuffer[spanStart]) == -1 && cParameterInitial.indexOf(localBuffer[spanStart]) >= 0) {
+            if (cParameterPrivateIntroducer.indexOf(localBuffer[spanStart]) >= 0) {
                 // Oh dear, the CSI parameter string sequence begins with one of
                 // the reserved characters ('<', '=', '>' or '?') which we
                 // can/do not handle

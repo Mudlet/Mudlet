@@ -275,10 +275,10 @@ describe("Tests TBuffer OSC sequence handling", function()
 
   end)
 
-  -- A CSI parameter string may only carry one of '<', '=', '>' or '?' in its
-  -- FIRST byte, where it marks a private/reserved sequence that Mudlet does not
-  -- interpret; after that only "0-9:;" are allowed. Getting those two sets the
-  -- wrong way round leaves the tail of such a sequence on screen as game text.
+  -- Every byte of a CSI parameter string is in "0-9:;<=>?"; one of '<', '=',
+  -- '>' or '?' in the FIRST byte marks the sequence as private/reserved, which
+  -- Mudlet does not interpret. Consuming a narrower set anywhere leaves the
+  -- tail of such a sequence on screen as game text.
   describe("Tests private/reserved CSI sequences", function()
 
     it("should consume a private DEC sequence that hides the cursor", function()
@@ -318,6 +318,31 @@ describe("Tests TBuffer OSC sequence handling", function()
     it("should still consume an SGR sequence with no parameters", function()
       assert.is_true(feedTriggers("CSISGR2(\027[mplain)CSISGR2\n"))
       assert.equals("CSISGR2(plain)CSISGR2", findRecentLine("CSISGR2"))
+    end)
+
+    -- SlothMUD ends every coloured span with this: a background parameter whose
+    -- value ran past 9 so the game emitted "4" plus the digit's code point.
+    -- '>' is a parameter byte, not a terminator, so the "m" is the final byte
+    -- and nothing may reach the screen.
+    it("should consume a reserved byte that appears after the first parameter", function()
+      assert.is_true(feedTriggers("CSIMID1(\027[0;37;4>mtext)CSIMID1\n"))
+      assert.equals("CSIMID1(text)CSIMID1", findRecentLine("CSIMID1"))
+    end)
+
+    it("should consume a reserved byte in the middle of a parameter", function()
+      assert.is_true(feedTriggers("CSIMID2(\027[0;3>7mtext)CSIMID2\n"))
+      assert.equals("CSIMID2(text)CSIMID2", findRecentLine("CSIMID2"))
+    end)
+
+    it("should consume every reserved byte appearing after the first parameter", function()
+      assert.is_true(feedTriggers("CSIMID3(\027[0;37;4<m\027[0;37;4=m\027[0;37;4?m)CSIMID3\n"))
+      assert.equals("CSIMID3()CSIMID3", findRecentLine("CSIMID3"))
+    end)
+
+    -- The parameters either side of the unusable one still have to be applied.
+    it("should still apply the usable parameters around a reserved byte", function()
+      assert.is_true(feedTriggers("CSIMID4(\027[0;32mgreen\027[0;37;4>mwhite)CSIMID4\n"))
+      assert.equals("CSIMID4(greenwhite)CSIMID4", findRecentLine("CSIMID4"))
     end)
 
   end)
