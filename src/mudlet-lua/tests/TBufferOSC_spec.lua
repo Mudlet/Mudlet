@@ -17,6 +17,24 @@ describe("Tests TBuffer OSC sequence handling", function()
     return nil
   end
 
+  -- the colour a word on that line ended up with, for the cases where the text
+  -- coming out right is not enough and the formatting has to be checked too
+  local function foregroundOf(needle, word)
+    local lastLine = getLastLineNumber("main")
+    local first = math.max(0, lastLine - 15)
+    local lines = getLines("main", first, lastLine + 1)
+    for i = #lines, 1, -1 do
+      if lines[i]:find(needle, 1, true) then
+        moveCursor("main", 0, first + i - 1)
+        assert.are_not.equal(-1, selectString("main", word, 1))
+        local foreground = getTextFormat("main").foreground
+        moveCursorEnd("main")
+        return foreground
+      end
+    end
+    return nil
+  end
+
   describe("Tests the protection against buffer underflow in OSC sequences", function()
     
     it("should handle OSC sequences at buffer start without crashing", function()
@@ -320,10 +338,9 @@ describe("Tests TBuffer OSC sequence handling", function()
       assert.equals("CSISGR2(plain)CSISGR2", findRecentLine("CSISGR2"))
     end)
 
-    -- SlothMUD ends every coloured span with this: a background parameter whose
-    -- value ran past 9 so the game emitted "4" plus the digit's code point.
-    -- '>' is a parameter byte, not a terminator, so the "m" is the final byte
-    -- and nothing may reach the screen.
+    -- SlothMUD ends every coloured span with this. '>' is a parameter byte, not
+    -- a terminator, so the "m" is the final byte and nothing may reach the
+    -- screen.
     it("should consume a reserved byte that appears after the first parameter", function()
       assert.is_true(feedTriggers("CSIMID1(\027[0;37;4>mtext)CSIMID1\n"))
       assert.equals("CSIMID1(text)CSIMID1", findRecentLine("CSIMID1"))
@@ -339,10 +356,30 @@ describe("Tests TBuffer OSC sequence handling", function()
       assert.equals("CSIMID3()CSIMID3", findRecentLine("CSIMID3"))
     end)
 
-    -- The parameters either side of the unusable one still have to be applied.
+    -- The parameters either side of the unusable one still have to be applied,
+    -- so both runs have to come out the colour a sequence without it gives.
     it("should still apply the usable parameters around a reserved byte", function()
       assert.is_true(feedTriggers("CSIMID4(\027[0;32mgreen\027[0;37;4>mwhite)CSIMID4\n"))
       assert.equals("CSIMID4(greenwhite)CSIMID4", findRecentLine("CSIMID4"))
+      local green = foregroundOf("CSIMID4", "green")
+      local white = foregroundOf("CSIMID4", "white")
+      assert.are_not.same(green, white)
+
+      assert.is_true(feedTriggers("CSIREF4(\027[0;32mgreen\027[0;37mwhite)CSIREF4\n"))
+      assert.are.same(foregroundOf("CSIREF4", "green"), green)
+      assert.are.same(foregroundOf("CSIREF4", "white"), white)
+    end)
+
+    -- A CSI that never gets a final byte is unusable, but the byte that ends
+    -- the scan is not part of it and has to be left alone.
+    it("should not swallow the escape that ends a sequence with no final byte", function()
+      assert.is_true(feedTriggers("CSINOFIN1(\027[0;4>\027[0mtext)CSINOFIN1\n"))
+      assert.equals("CSINOFIN1(text)CSINOFIN1", findRecentLine("CSINOFIN1"))
+    end)
+
+    it("should not swallow the newline that ends a sequence with no final byte", function()
+      assert.is_true(feedTriggers("CSINOFIN2(\027[0;4>\nCSINOFIN3)\n"))
+      assert.equals("CSINOFIN3)", findRecentLine("CSINOFIN3"))
     end)
 
   end)

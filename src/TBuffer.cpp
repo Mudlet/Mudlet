@@ -1192,7 +1192,11 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
             } // End of (isAValidFinalByte) {}
 
             mGotCSI = false;
-            localBufferPosition += 1 + spanEnd - spanStart;
+            // Step over the parameter string and the byte that ended it, unless
+            // that byte is a control one - a sequence with no final byte at all
+            // never owned the newline or escape that stopped the scan, and
+            // eating it would join two lines or drop the sequence after it:
+            localBufferPosition += spanEnd - spanStart + (static_cast<unsigned char>(localBuffer[spanEnd]) < ' ' ? 0 : 1);
             // Go around while loop again:
             continue;
 
