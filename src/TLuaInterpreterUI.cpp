@@ -32,6 +32,8 @@
 #include <QClipboard>
 #include <QGuiApplication>
 
+#include <iterator>
+
 #include "EAction.h"
 #include "Host.h"
 #include "TArea.h"
@@ -2536,26 +2538,10 @@ int TLuaInterpreter::selectCaptureGroup(lua_State* L)
         }
         // We want capture groups to start with 1 instead of 0 so predecrement
         // luaNumOfMatch :
-        if (--captureGroup < static_cast<int>(host.getLuaInterpreter()->mCaptureGroupList.size())) {
-            auto iti = pL->mCaptureGroupPosList.begin();
-            auto its = pL->mCaptureGroupList.begin();
-            begin = *iti;
-            std::string& s = *its;
-
-            for (int i = 0; iti != pL->mCaptureGroupPosList.end(); ++iti, ++i) {
-                begin = *iti;
-                if (i >= captureGroup) {
-                    break;
-                }
-            }
-            for (int i = 0; its != pL->mCaptureGroupList.end(); ++its, ++i) {
-                s = *its;
-                if (i >= captureGroup) {
-                    break;
-                }
-            }
-
-            length = QString::fromStdString(s).size();
+        if (--captureGroup < static_cast<int>(pL->mCaptureGroupList.size())) {
+            const auto offset = static_cast<std::list<std::string>::difference_type>(captureGroup);
+            begin = *std::next(pL->mCaptureGroupPosList.cbegin(), offset);
+            length = QString::fromStdString(*std::next(pL->mCaptureGroupList.cbegin(), offset)).size();
             if (TDebug::wants(TDebug::Category::Selection)) {
                 TDebug(Qt::white, Qt::red, TDebug::Category::Selection) << "selectCaptureGroup(" << begin << ", " << length << ")\n" >> &host;
             }
