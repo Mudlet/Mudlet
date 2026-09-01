@@ -63,25 +63,26 @@ ctest --preset macos-debug            # run the test suite
 | `<platform>-debug-ubsan` | macOS / Linux / Windows (MSYS2, CLANG64) | UndefinedBehaviorSanitizer |
 | `<platform>-static-analysis` | macOS / Linux / Windows (MSYS2, CLANG64) | Runs clang-tidy and cppcheck during compilation |
 | `linux-lowspec` | Linux | No sanitizers, no updater, no 3D mapper, 2 jobs — Raspberry Pi and similar |
+| `<platform>-relWithDebInfo` | macOS / Linux / Windows | Release build with debug information, no sanitizers but easier to diagnose crashes |
 | `<platform>-release` | macOS / Linux / Windows | Release build, no sanitizers - the flags CI ships to players |
 
 Every configure preset has a matching build and test preset of the same name, and all three are
 conditioned on the host system — so `cmake --list-presets` on macOS will not offer `linux-debug`,
 and `ctest --preset X` always runs against the tree that `cmake --build --preset X` produced.
 
-The plain `<platform>-debug` presets build into `build/`. Every variant builds into
-`build-<preset-name>/` instead, so an AddressSanitizer tree and a sanitizer-free tree can coexist
-without forcing each other to rebuild. The `/build*` entry in `.gitignore` covers all of them.
+The plain `<platform>-debug` presets build into `build/`. Every other variant builds into
+`build-<suffix>/` (where `<suffix>` is the preset name without the redundant OS name)
+instead, so an AddressSanitizer tree and a sanitizer-free tree can coexist without forcing each
+other to rebuild. The `/build*` entry in `.gitignore` covers all of them.
 
 ### When to use a release preset
 
 Reach for `<platform>-release` when the *speed and size* of the binary are what is being measured:
 performance work, benchmarking, or reproducing something a player reports that a Debug build may
-not show. It sets `CMAKE_BUILD_TYPE=Release` and removes any sanitizer from the build which is what
-`.github/workflows/build-mudlet.yml` passes on a `Mudlet-*` tag.
-`CI/build-mudlet-for-windows.sh` builds Release on every Windows run. A `linux-debug` binary is
-unoptimised and close to seven times the size - 297MB against
-43MB - so timings taken on one say little about the shipped client.
+not show. It sets `CMAKE_BUILD_TYPE=Release` and does not include any sanitizers in the build which
+is what `.github/workflows/build-mudlet.yml` and  `.github/workflows/build-mudlet-win.yml` passes
+on a `Mudlet-*` tag. A `linux-debug` binary is unoptimised and close to seven times the size
+- 297MB against 43MB - so timings taken on one say little about the shipped client.
 
 It is not a substitute for the CI release job. The preset stops at compiler flags: it leaves out
 the packaging, signing, Sentry DSN and `MUDLET_VERSION_BUILD` wiring, so the binary still reports

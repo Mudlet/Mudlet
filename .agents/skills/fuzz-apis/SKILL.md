@@ -16,13 +16,11 @@ inline.
 
 ## Procedure
 
-1. **Build a sanitizer binary**: `cmake --preset linux-debug` for AddressSanitizer;
+1. **Build a sanitizer binary**: `cmake --preset linux-debug-asan` for AddressSanitizer;
    `linux-debug-ubsan` for a second pass that catches what ASan cannot (loads of invalid
    bool and enum values - including from uninitialised memory, see the gotchas below -
-   misaligned access, integer overflow). `macos-debug` and `macos-debug-ubsan` are the
-   same pair on macOS. **Windows cannot fuzz**: `src/CMakeLists.txt` skips
-   `EnableSanitizers.cmake` under `WIN32` ("Sanitizers disabled on Windows" in the
-   configure output), so a Windows build reports nothing however hard you fuzz it - do
+   misaligned access, integer overflow). `macos-debug-asan` and `macos-debug-ubsan` are the
+   same pair on macOS. It is believed that **Windows cannot fuzz**: - do
    this work on Linux or macOS, and confirm a Windows-specific suspicion by other means.
 2. **Run the existing fuzzers with a handful of fresh seeds** (invocation below). Vary the
    seed, not just the iteration count - each seed explores a different path prefix.
