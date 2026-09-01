@@ -64,6 +64,7 @@ ctest --preset macos-debug            # run the test suite
 | `<platform>-debug-ubsan` | macOS / Linux | UndefinedBehaviorSanitizer |
 | `<platform>-static-analysis` | macOS / Linux | Runs clang-tidy and cppcheck during compilation |
 | `linux-lowspec` | Linux | No sanitizers, no updater, no 3D mapper, 2 jobs — Raspberry Pi and similar |
+| `<platform>-release` | macOS / Linux / Windows | Release build, no sanitizers - the flags CI ships to players |
 
 Every configure preset has a matching build and test preset of the same name, and all three are
 conditioned on the host system — so `cmake --list-presets` on macOS will not offer `linux-debug`,
@@ -72,6 +73,21 @@ and `ctest --preset X` always runs against the tree that `cmake --build --preset
 The plain `<platform>-debug` presets build into `build/`. Every variant builds into
 `build-<preset-name>/` instead, so an AddressSanitizer tree and a sanitizer-free tree can coexist
 without forcing each other to rebuild. The `/build*` entry in `.gitignore` covers all of them.
+
+### When to use a release preset
+
+Reach for `<platform>-release` when the *speed and size* of the binary are what is being measured:
+performance work, benchmarking, or reproducing something a player reports that a Debug build may
+not show. It sets `CMAKE_BUILD_TYPE=Release` and clears `USE_SANITIZER`, which is what
+`.github/workflows/build-mudlet.yml` passes on a `Mudlet-*` tag.
+`CI/build-mudlet-for-windows.sh` builds Release on every Windows run and has no sanitizer to
+clear. A `linux-debug` binary is unoptimised and close to seven times the size - 297MB against
+43MB - so timings taken on one say little about the shipped client.
+
+It is not a substitute for the CI release job. The preset stops at compiler flags: it leaves out
+the packaging, signing, Sentry DSN and `MUDLET_VERSION_BUILD` wiring, so the binary still reports
+itself as a `-dev-<sha>` build. Debug builds remain the right default for development: assertions
+and sanitizers catch what a release build quietly tolerates.
 
 ### Qt discovery
 
@@ -179,7 +195,8 @@ near-full rebuild. Run `ccache -s`; if `Cache size` has reached `Max cache size`
 
 **Sanitizers are on by default** on every non-Windows build, regardless of build type
 (`src/cmake/EnableSanitizers.cmake` defaults `USE_SANITIZER` to `address`). They cost both compile
-time and runtime speed. Use a `-nosan` preset when not chasing a memory bug.
+time and runtime speed. Use a `-nosan` or `-release` preset when not chasing a memory bug; both
+clear `USE_SANITIZER` explicitly, because a Release build type alone does not.
 
 For a combination the presets do not cover, pass a **CMake list — semicolon-separated, not
 comma-separated**: `-DUSE_SANITIZER="Address;Undefined"`. A comma-separated value is treated as one
