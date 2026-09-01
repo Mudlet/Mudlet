@@ -2684,6 +2684,7 @@ int TLuaInterpreter::setAppStyleSheet(lua_State* L)
     event.mArgumentList.append(host.getName());
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     qApp->setStyleSheet(styleSheet);
+    mudlet::self()->refreshTabBarsAfterStyleChange();
     mudlet::self()->getHostManager().postInterHostEvent(nullptr, event, true);
     lua_pushboolean(L, true);
     return 1;
