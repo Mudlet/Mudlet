@@ -99,8 +99,13 @@ private slots:
         QVERIFY2(dialog, "No connection dialog to test against");
         QVERIFY2(dialog->listWidget_profiles->isVisible(), "The games list is not on screen, so this is not the dialog the test is about");
 
-        // the focus is only handed out once the window manager activates the dialog
-        QVERIFY2(QTest::qWaitForWindowActive(dialog), "The connection dialog never became the active window");
+        // the focus is only handed out once the dialog is activated, so wait for
+        // it to arrive rather than reading it the moment the dialog is up
+        QTest::qWaitFor(
+                [dialog]() {
+                    return QApplication::focusWidget() == dialog->listWidget_profiles;
+                },
+                5000);
 
         QCOMPARE(QApplication::focusWidget(), static_cast<QWidget*>(dialog->listWidget_profiles));
     }

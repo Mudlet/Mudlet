@@ -38,8 +38,6 @@
 
 #include "GroupedTest.h"
 
-using namespace std::chrono_literals;
-
 class TutorialInvitationFocusTest : public QObject
 {
     Q_OBJECT
@@ -87,13 +85,18 @@ private slots:
     {
         auto* dialog = mudlet::self()->mpConnectionDialog.data();
         QVERIFY2(dialog, "No connection dialog to test against");
-        QVERIFY2(QTest::qWaitForWindowActive(dialog), "The connection dialog never became the active window");
 
         auto* skipButton = dialog->findChild<QPushButton*>(qsl("skipToGamesButton"));
         QVERIFY2(skipButton, "The first-launch invitation has no skip button any more");
         QVERIFY2(skipButton->isVisible(), "This is not a first-launch dialog - the skip button is not shown");
         skipButton->click();
-        QTest::qWait(100ms);
+        // the focus only reaches the application once the dialog is activated,
+        // which can happen either side of the click
+        QTest::qWaitFor(
+                [dialog]() {
+                    return QApplication::focusWidget() == dialog->listWidget_profiles;
+                },
+                5000);
 
         QCOMPARE(QApplication::focusWidget(), static_cast<QWidget*>(dialog->listWidget_profiles));
     }
