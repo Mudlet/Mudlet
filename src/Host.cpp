@@ -93,13 +93,12 @@
 #error Mudlet requires a version of libzip of at least 1.0
 #endif
 
-// How the handlers that put an operation off until the profile has finished
-// saving are hooked up. Both of them start a save of their own, and a save
-// that finishes announces itself synchronously, so a directly connected
-// handler is re-entered from inside its own body - once per operation that was
-// waiting, and a poll that asks during a save leaves one waiting per ask.
-// Queued keeps every one of them at the bottom of the stack; single-shot stops
-// a second announcement running an operation that has already been carried out.
+// Both handlers that defer an operation until the profile has finished saving
+// start a save of their own, and profileSaveFinished is emitted synchronously,
+// so a directly connected one is re-entered from inside its own body - once per
+// operation still waiting, and a caller that polls during a save leaves one
+// waiting per poll. Queued keeps each at the bottom of the stack; single-shot
+// stops a second announcement re-running an operation already carried out.
 static constexpr auto deferredSaveHandlerConnection = static_cast<Qt::ConnectionType>(Qt::QueuedConnection | Qt::SingleShotConnection);
 
 using namespace std::chrono;
