@@ -120,13 +120,16 @@ private slots:
     {
         auto& manager = mpHost->mpConsole->getHyperlinkVisibilityManager();
 
+        const int firstRemoved = 0;
         const int lastRemoved = csmBatchDeleteSize - 1;
         const int firstSurvivor = csmBatchDeleteSize;
+        QVERIFY(manager.registerHyperlink(4, firstRemoved, 0, mLinkText.length(), mLinkText, concealedRevealStyling()));
         QVERIFY(manager.registerHyperlink(5, lastRemoved, 0, mLinkText.length(), mLinkText, concealedRevealStyling()));
         QVERIFY(manager.registerHyperlink(6, firstSurvivor, 0, mLinkText.length(), mLinkText, concealedRevealStyling()));
 
         manager.adjustLineNumbers(0, csmBatchDeleteSize);
 
+        QVERIFY2(!manager.trackedLinkIds().contains(4), "the link on the first removed line was kept, so entries accumulate");
         QVERIFY2(!manager.trackedLinkIds().contains(5), "the link on the last removed line was kept, so entries accumulate");
         QVERIFY2(manager.trackedLinkIds().contains(6), "the link on the first surviving line was dropped, so it can never reveal");
         QCOMPARE(manager.mTrackedLinks[6].lineNumber, 0);
@@ -164,9 +167,7 @@ private slots:
     }
 
     // A wholeline concealment deletes the link's own line, so every link below
-    // it moves up exactly one. Driven through onLinkClicked() because a click is
-    // the only thing that conceals without a delay, and there is no Lua entry
-    // point for one - see TBufferOSC_spec.lua, which says as much.
+    // it moves up exactly one.
     void test_aWholelineConcealmentMovesTheLinksBelowItOnlyOnce()
     {
         auto* pConsole = mpHost->mpConsole.data();
@@ -290,6 +291,60 @@ private slots:
         manager.revealLink(linkId);
         qApp->processEvents();
         QCOMPARE(lineContaining(buffer, mLinkText), registeredOn - 1);
+    }
+
+    // A buffer clears itself as it is built, and every buffer of the host that
+    // is not the one a manager tracks has to leave that manager alone - a copy
+    // or a cut would otherwise drop every link on the console it was taken from.
+    void test_anotherBuffersLifecycleLeavesTheTrackedLinksAlone()
+    {
+        auto* pConsole = mpHost->mpConsole.data();
+        auto& manager = pConsole->getHyperlinkVisibilityManager();
+        QVERIFY(pConsole->clear(qsl("main")));
+
+        fill(pConsole, qsl("seed"), 3);
+        const int linkId = appendLink(pConsole);
+        qApp->processEvents();
+
+        const int registeredOn = lineContaining(pConsole->buffer, mLinkText);
+        QVERIFY(registeredOn >= 0);
+        QVERIFY(manager.registerHyperlink(linkId, registeredOn, 0, mLinkText.length(), mLinkText, concealedRevealStyling()));
+
+        // what a copy or a cut builds
+        TBuffer viewlessSlice(mpHost);
+        QVERIFY2(manager.trackedLinkIds().contains(linkId), "building a viewless buffer dropped another buffer's links");
+
+        // a scratch buffer handed a console it does not belong to
+        TBuffer consoleBoundScratch(mpHost, pConsole);
+        QVERIFY2(manager.trackedLinkIds().contains(linkId), "building a scratch buffer dropped the console's links");
+
+        consoleBoundScratch.deleteLine(0);
+        QCOMPARE(manager.mTrackedLinks[linkId].lineNumber, registeredOn);
+    }
+
+    // Every console has its own model and its own manager, so a miniconsole has
+    // to maintain its links off its own buffer rather than the main one's.
+    void test_aMiniconsoleMaintainsItsOwnTrackedLinks()
+    {
+        auto* pMain = mpHost->mpConsole.data();
+        auto* pMini = pMain->createMiniConsole(QString(), qsl("trackedLinkMini"), 0, 0, 300, 100);
+        QVERIFY2(pMini, "the miniconsole was not created, so this test proves nothing");
+        QVERIFY2(&pMini->getHyperlinkVisibilityManager() != &pMain->getHyperlinkVisibilityManager(), "the miniconsole shares the main console's manager");
+
+        auto& buffer = pMini->buffer;
+        auto& manager = pMini->getHyperlinkVisibilityManager();
+
+        fill(pMini, qsl("seed"), 3);
+        const int linkId = appendLink(pMini);
+        qApp->processEvents();
+
+        const int registeredOn = lineContaining(buffer, mLinkText);
+        QVERIFY2(registeredOn > 0, "the link has to sit below the line deleted here");
+        QVERIFY(manager.registerHyperlink(linkId, registeredOn, 0, mLinkText.length(), mLinkText, concealedRevealStyling()));
+
+        buffer.deleteLine(0);
+
+        QCOMPARE(manager.mTrackedLinks[linkId].lineNumber, registeredOn - 1);
     }
 
 private:

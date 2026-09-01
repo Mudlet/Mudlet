@@ -5664,17 +5664,20 @@ bool TBuffer::replaceInLine(QPoint& P_begin, QPoint& P_end, const QString& with,
     return true;
 }
 
-// The main console's model outlives the view built on it and keeps taking
-// lines meanwhile, so going through mpConsole alone would stop maintaining the
-// tracked links too early. Every other model is owned by its view and a
-// clipboard slice has no model at all, which is where the nullptr comes from.
+// Both branches check that this buffer is the one the manager tracks: a
+// scratch buffer can carry a console back-pointer, and every model builds its
+// buffer before a view attaches, so reaching a manager on the strength of the
+// pointer alone would let one buffer drop another's links.
 THyperlinkVisibilityManager* TBuffer::hyperlinkVisibilityManagerOrNull()
 {
     if (mpConsole) {
-        return &mpConsole->getHyperlinkVisibilityManager();
+        return (this == &mpConsole->buffer) ? &mpConsole->getHyperlinkVisibilityManager() : nullptr;
     }
-    // mainConsoleModelOrNull() rather than mainConsoleModel() because this also
-    // runs from the TBuffer constructor, before Host holds the model.
+    // The main console's model outlives the view built on it and keeps taking
+    // lines meanwhile, so stopping at mpConsole would give up maintaining its
+    // links too early. mainConsoleModelOrNull() rather than mainConsoleModel()
+    // because this also runs from the TBuffer constructor, before Host holds
+    // the model.
     TConsoleModel* pModel = mpHost.isNull() ? nullptr : mpHost->mainConsoleModelOrNull();
     return (pModel && this == &pModel->buffer) ? &pModel->mHyperlinkVisibilityManager : nullptr;
 }
