@@ -24,22 +24,30 @@
  ***************************************************************************/
 
 
+#include "TMatchState.h"
 #include "Tree.h"
 #include "utils.h" // For NameGroupMatches
 
 #include <QColor>
 #include <QDebug>
+#include <QDebugStateSaver>
+#include <QList>
 #include <QMap>
 #include <QPointer>
 #include <QSharedPointer>
+#include <QString>
+#include <QStringList>
+#include <QtGlobal>
 
 #define PCRE2_CODE_UNIT_WIDTH 8
 #include <pcre2.h>
 
+#include <list>
 #include <map>
 #include <memory>
 #include <string>
 #include <vector>
+#include <QCoreApplication>
 
 class Host;
 class TLuaInterpreter;

@@ -6443,11 +6443,11 @@ void TLuaInterpreter::initIndenterGlobals()
     if (!qsl(LUA_DEFAULT_PATH).isEmpty()) {
         additionalLuaPaths << qsl(LUA_DEFAULT_PATH "/?.lua");
     }
-    // 2 AppImage (directory of executable) - not needed for Wndows:
+    // 2 AppImage and the Windows package (directory of executable):
     //     "<applicationDirectory>/?.lua"
-#if !defined(Q_OS_WINDOWS)
+    // Windows needs this spelled out: the lua51.dll we bundle has no
+    // executable-directory entry in its built-in path, only the working directory
     additionalLuaPaths << qsl("%1/?.lua").arg(appPath);
-#endif
     // 3 QMake shadow builds without CONFIG containing "debug_and_release" but
     //    with "debug_and_release_target" (default on most OS but NOT Windows):
     //     "<applicationDirectory>/../3rdparty/?.lua"
