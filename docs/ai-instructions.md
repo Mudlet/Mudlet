@@ -82,6 +82,19 @@ QString toastMessage = tr("Banner hidden. <a href='undo'>Undo</a>");
 - Use Qt's parent-child system for automatic cleanup for Qt classes
 - Otherwise, use C++ smart pointers for non-Qt classes
 
+### Binary file formats
+
+Every `QDataStream` that reads or writes a Mudlet file must pin its version before any data crosses it:
+
+```cpp
+QDataStream ofs(&file);
+ofs.setVersion(QDataStream::Qt_5_12);
+```
+
+`QFont`'s binary representation changed at Qt 5.13, so an unpinned stream writes whatever format the Qt it was linked against defaults to, and a Mudlet built against a different Qt misparses it. Pin both halves of a reader/writer pair, even when the current payload has no `QFont` in it - the payload grows, and a writer that doesn't pin can hand a pinned reader bytes it cannot make sense of.
+
+Changing the pinned version is a file format break: it must stay at `Qt_5_12` unless the on-disk format is being migrated deliberately. For maps specifically, `TMap::mMinVersion` is the oldest map format this build can write, and a Mudlet older than that version cannot open what it saves.
+
 ### Include management
 
 Minimize `#include` directives to reduce build times:

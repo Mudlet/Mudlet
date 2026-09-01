@@ -273,6 +273,7 @@ private:
         const QByteArray raw = file.readAll();
         QByteArray needleBytes;
         QDataStream out(&needleBytes, QIODevice::WriteOnly);
+        out.setVersion(QDataStream::Qt_5_12);
         out << needle;
         // The length prefix stays in the needle so a key cannot match a longer key it is
         // a byte prefix of ("system.fallback_mapSymbolFont" vs. "...FontFudgeFactor"):
