@@ -46,7 +46,7 @@ jobs:
             run_tests: 'true'
             # Enable AddressSanitizer for PTB and testing builds, but not release
             # builds (tagged Mudlet-*) - ASAN adds significant runtime overhead
-            enable_asan: ${{!startsWith(github.ref, 'refs/tags/Mudlet-')}}
+            enable_asan: ${{!startsWith(github.ref, 'refs/tags/Mudlet-') && 'true' || 'false'}}
           - os: ubuntu-22.04
             # Another try to use GCC12
             buildname: 'ubuntu (x86_64)'

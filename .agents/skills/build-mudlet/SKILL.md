@@ -19,7 +19,7 @@ are read from disk at startup, so a Mudlet binary built anywhere on the machine 
 worktree's Lua and specs:
 
 ```bash
-.claude/scripts/run-lua-tests.sh ../otherworktree/build-linux-debug-nosan/src/mudlet
+.claude/scripts/run-lua-tests.sh ../otherworktree/build-debug/src/mudlet
 ```
 
 The script detects a binary from another build tree, shims around it with a `note:` line, and
@@ -35,9 +35,9 @@ These look Lua-only but still need a build:
 - Anything under `src/*.cpp` or `src/*.h`.
 
 Choose a donor whose branch already contains the C++ the specs rely on - one missing it fails
-specs in a way that reads exactly like a regression in the change under test. Prefer a `-nosan`
-tree: the plain `build/` preset is an AddressSanitizer build, and this script does not pass it
-the `ASAN_OPTIONS` CI uses, so a leak surfaces as a bare non-zero exit with every spec green.
+specs in a way that reads exactly like a regression in the change under test. Prefer a
+preset build (in a plain `./build/src/` directory) that does not (now) contain any
+sanitizer, so leaks or other issues won't be reported.
 
 ## Use a preset — every platform, one command
 
@@ -183,15 +183,18 @@ near-full rebuild. Run `ccache -s`; if `Cache size` has reached `Max cache size`
 
 **Sanitizers are off by default** on every build, regardless of build type
 (`CMakeLists.txt` defaults `USE_SANITIZERS` to `OFF` in the absence of a `WITH_SANITIZER`
-enviromental variable set to `YES`), they are enabled by the
-`CMakePresets.json` file that configures `WITH_SANITIZERS` and `MUDLET_SANITIZERS`.
+environmental variable set to `YES`), they will however be enabled by the relevant
+entries in the `CMakePresets.json` file that configures `WITH_SANITIZERS` and
+`MUDLET_SANITIZERS` as appropriate for the selected preset.
 Sanitizers cost both compile time and runtime speed. Use the `<platform>-debug` preset
 when not chasing a bug.
 
-For a combination the presets do not cover, set the **Environmental variable to
-a semicolon-separated (not comma-separated) list**: `WITH_SANITIZERS="address;undefined"`.
-A comma-separated value is treated as one name which will be rejected as will an
-incorrectly (not "camelCase") cased sanitizer name.
+For a combination the presets do not cover, set the **Environmental variable** to
+a **semicolon**-separated (not comma-separated) list e.g.: `MUDLET_SANITIZERS="address;undefined"`.
+Either `export` it and `WITH_SANITIZERS="YES"` into the current shell environment
+or provide both of them as prefixes in the command line when `cmake ...` is called.
+Note that a comma-separated value for `MUDLET_SANITIZERS` is treated as one name
+which will be rejected as will an incorrectly (not "camelCased") sanitizer name.
 
 Usable names are `address`, `undefined` on all three main supported OSes, with
 `thread` on macOS and Linux, plus additionally `memory` and `leak` on Linux.
@@ -205,7 +208,7 @@ selection raises a CMake error and configuration aborts.
 in `PATH`; except that on macOS, Homebrew's llvm is keg-only, so clang-tidy is
 not in `PATH` by default.
 
-Static analysis (clang-tidy and cppcheck) is available on all three plaforms and
+Static analysis (clang-tidy and cppcheck) is available on all three platforms and
 they run during compilation with the `<platform>-static-analysis` presets, which
 set `ENABLE_STATIC_ANALYSIS=ON`. The two tools are independent — whichever is on
 `PATH` runs. If one of them is missing a CMake warning will be produced, but if

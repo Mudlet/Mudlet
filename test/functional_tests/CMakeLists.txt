@@ -109,9 +109,13 @@ set(TRIGGER_GROUP_TEST_SOURCES
     MultilineTriggerReentrancyTest.cpp
     SetScriptCallbackTest.cpp
     TFeedTriggersRecursionTest.cpp
-    UnitDeferredDeleteTest.cpp
     UnitProcessingDepthTest.cpp
 )
+
+if(("address" IN_LIST SANITIZERS_SELECTED) OR ("leak" IN_LIST SANITIZERS_SELECTED))
+    # The tests in this file are useless without anything to detect a leak:
+    list(APPEND TRIGGER_GROUP_TEST_SOURCES UnitDeferredDeleteTest.cpp)
+endif()
 
 # The script editor, and the trigger, variable and script forms it hosts
 set(EDITOR_GROUP_TEST_SOURCES
@@ -249,7 +253,7 @@ set(leakCheckExcludedTests
 
 # Apple's ASan runtime has no LeakSanitizer, so detect_leaks is only meaningful
 # where the address or leak sanitizer is actually compiled in
-if(NOT APPLE AND "${USE_SANITIZER}" MATCHES "[Aa]ddress|[Ll]eak")
+if(NOT APPLE AND (("address" IN_LIST SANITIZERS_SELECTED) OR ("leak" IN_LIST SANITIZERS_SELECTED)))
     set(leakCheckAvailable TRUE)
 else()
     set(leakCheckAvailable FALSE)

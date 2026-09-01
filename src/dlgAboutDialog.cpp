@@ -1295,7 +1295,7 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
 #if defined(INCLUDE_UPDATER) || defined(DEBUG_SHOWALL)
     QString DblsqdHeader(tr("<h2><u>Dblsqd (derived work)</u></h2>"
                             "<h3>Copyright © 2017 Philipp Medien</h3>"));
-#if defined(Q_OS_MACOS)
+#if defined(Q_OS_MACOS) || defined(DEBUG_SHOWALL)
     QString SparkleHeader(tr("<h2><u>Sparkle - macOS updater</u></h2>"
                              "<h3>Copyright © 2006-2013 Andy Matuschak.<br>"
                              "Copyright © 2009-2013 Elgato Systems GmbH.<br>"
@@ -1348,9 +1348,45 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                                "Licensed under <a href=\"https://creativecommons.org/licenses/by/4.0/\">CC BY 4.0</a></h3>"));
 
 #if defined(INCLUDE_SANITIZERS) || defined(DEBUG_SHOWALL)
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_MACOS)
+    // Later version
+    QString sanitizersHeader(tr("<h2><u>Sanitizer libraries</u></h2>"
+                                "<h3>Copyright © the LLVM contributors.<br>"
+                                "All rights reserved.</h3>"));
+
+    QString LLVMException(qsl("<h4 style='text-align: center;'>---- LLVM Exceptions to the Apache 2.0 License ----</h4>"
+                              "<p>As an exception, if, as a result of your compiling your source code, portions "
+                              "of this Software are embedded into an Object form of such source code, you "
+                              "may redistribute such embedded portions in such Object form without complying "
+                              "with the conditions of Sections 4(a), 4(b) and 4(d) of the License.<p>"
+                              "<p>In addition, if you combine or link compiled forms of this Software with "
+                              "software that is licensed under the GPLv2 (\"Combined Software\") and if a "
+                              "court of competent jurisdiction determines that the patent provision (Section "
+                              "3), the indemnity provision (Section 9) or other Section of the License "
+                              "conflicts with the conditions of the GPLv2, you may retroactively and "
+                              "prospectively choose to deem waived or otherwise exclude such Section(s) of "
+                              "the License, but only in their entirety and only with respect to the Combined "
+                              "Software.<p>"
+                              "<p style='text-align: center; text-decoration: overline underline;'>Software from third parties included in the LLVM Project:</p>"
+                              "<p>The LLVM Project contains third party software which is under different license "
+                              "terms. All such code will be identified clearly using at least one of two "
+                              "mechanisms:"
+                              "<ol><li> It will be in a separate directory tree with its own `LICENSE.txt` or "
+                              "`LICENSE` file at the top containing the specific license and restrictions "
+                              "which apply to that software, or</li>"
+                              "<li> It will contain specific license and restriction terms at the top of every "
+                              "file.</li></ol><p>"
+                              "<p style='text-align: center; text-decoration: overline underline;'>Legacy LLVM License (<a href='https://llvm.org/docs/DeveloperPolicy.html#legacy'>https://llvm.org/docs/DeveloperPolicy.html#legacy</a>):</p>"
+                              "<p>The compiler_rt library is dual licensed under both the University of Illinois "
+                              "\"BSD-Like\" license and the MIT license.  As a user of this code you may choose "
+                              "to use it under either license.  As a contributor, you agree to allow your code "
+                              "to be used under both.<p>"));
+#elif defined(Q_OS_LINUX)
+    // Earlier version
     QString sanitizersHeader(tr("<h2><u>libsanitizer libraries (libasan, liblsan, libtsan, libubsan)</u></h2>"
                                 "<h3>Copyright © 2009-2019 by the LLVM contributors.<br>"
                                 "All rights reserved.</h3>"));
+#endif
 #endif
 
 #if defined(INCLUDE_OPENSSL3) || defined(DEBUG_SHOWALL)
@@ -1452,24 +1488,36 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
 #endif
 
 #if defined(INCLUDE_SANITIZERS) || defined(DEBUG_SHOWALL)
-    license_3rdParty_texts.append(qsl("<hr>%45%46")
-                                  .arg(sanitizersHeader,                       // 45 - Sanitizers header - translatable
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_MACOS)
+    license_3rdParty_texts.append(qsl("<hr>%45%46<hr width=\"33%\">%47<hr width=\"33%\">%48<hr width=\"33%\">%49")
+                                  .arg(sanitizersHeader,                       // 45 - Sanitizers header (later) - translatable
+                                       APACHE2_Body,                           // 46 - Apache 2.0 body - not translatable
+                                       LLVMException,                          // 47 - LLVM exception - not translatable
+                                       NCSA_Open_Source_Body
+                                           .arg(QLatin1String("the LLVM Team, University of Illinois at Urbana Champaign")),
+                                                                               // 48 - NCSA_OS body - not translatable
+                                       MIT_Body));                             // 49 - MIT body - not translatable
+#elif defined(Q_OS_LINUX)
+    // 46, 47 and 49 not used here
+    license_3rdParty_texts.append(qsl("<hr>%45%48")
+                                  .arg(sanitizersHeader,                       // 45 - Sanitizers header (earlier) - translatable
                                        NCSA_Open_Source_Body
                                            .arg(QLatin1String("the LLVM Team, University of Illinois at Urbana Champaign"))));
-                                                                               // 46 - Sentry body MIT - not translatable
+                                                                               // 48 - NCSA_OS body - not translatable
 #endif
-
-    license_3rdParty_texts.append(qsl("<hr>%47")
-                                  .arg(swordModelHeader));                     // 47 - sword model attribution - translatable
-
-#if defined(INCLUDE_OPENSSL3) || defined(DEBUG_SHOWALL)
-    license_3rdParty_texts.append(qsl("<hr>%48%49")
-                                  .arg(openSSL3Header,                         // 48 - OpenSSL3 header - translatable
-                                       APACHE2_Body));                         // 49 - OpenSSL3 body APACHE2 - not translatable
 #endif
 
     license_3rdParty_texts.append(qsl("<hr>%50")
-                                  .arg(speechBackendsHeader));                 // 50 - speech recognition backends - translatable
+                                  .arg(swordModelHeader));                     // 50 - sword model attribution - translatable
+
+#if defined(INCLUDE_OPENSSL3) || defined(DEBUG_SHOWALL)
+    license_3rdParty_texts.append(qsl("<hr>%51%52")
+                                  .arg(openSSL3Header,                         // 51 - OpenSSL3 header - translatable
+                                       APACHE2_Body));                         // 52 - OpenSSL3 body APACHE2 - not translatable
+#endif
+
+    license_3rdParty_texts.append(qsl("<hr>%52")
+                                  .arg(speechBackendsHeader));                 // 52 - speech recognition backends - translatable
 
     license_3rdParty_texts.append(qsl("</body></html>"));
 

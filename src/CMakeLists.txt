@@ -525,22 +525,6 @@ if(USE_3DMAPPER)
   list(APPEND mudlet_SRCS glwidget_integration.cpp)
 endif(USE_3DMAPPER)
 
-if(USE_SANITIZERS)
-  include(cmake/EnableSanitizers.cmake)
-  # The above script sets the SANITIZERS_AS_STRING and UNRECOGNISED_AS_STRING variable:
-  if (SANITIZERS_REQUESTED)
-      message(FATAL_ERROR "Unknown or unhandled sanitizer(s) requested: '${UNRECOGNISED_AS_STRING}'!")
-  endif()
-
-  if (NOT SANITIZERS_AS_STRING)
-    message(SEND_ERROR "Sanitizers enabled but none selected; either add them to the environment variable MUDLET_SANITIZERS or unset the WITH_SANITIZERS one.")
-  else()
-    message(STATUS "Compiling with the following sanitizer(s) enabled: ${SANITIZERS_AS_STRING}")
-  endif()
-else()
-  message(STATUS "Sanitizers disabled for this build.")
-endif()
-
 find_package(Qt6 6.8.2 REQUIRED
     COMPONENTS Core
                Core5Compat
@@ -722,6 +706,7 @@ if(USE_SANITIZERS AND SANITIZERS_AS_STRING)
   else()
     message(STATUS "Not including sanitizer licence details as this seem to be a local build")
   endif()
+  add_sanitizer_support("${SANITIZERS_SELECTED}")
 endif()
 
 if(UNIX)

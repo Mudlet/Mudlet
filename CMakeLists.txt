@@ -209,7 +209,7 @@ if(DEFINED ENV{WITH_SANITIZER})
     "environmental variables 'WITH_SANITIZERS' set to 'YES' as a master switch "
     "{defaults to 'NO' if not provided} and 'MUDLET_SANITIZERS' to the semicolon "
     "separated list of sanitizers to include.\n"
-    "To fix this clear the unwanted environmental variable with 'unset WITH_SANTIZER' "
+    "To fix this clear the unwanted environmental variable with 'unset WITH_SANITIZER' "
     "{assuming a 'bash' shell}.")
 endif()
 
@@ -218,7 +218,7 @@ if(DEFINED ENV{USE_SANITIZER})
     "environmental variables 'WITH_SANITIZERS' set to 'YES' as a master switch "
     "{defaults to 'NO' if not provided} and 'MUDLET_SANITIZERS' to the semicolon "
     "separated list of sanitizers to include.\n"
-    "To fix this clear the unwanted environmental variable with 'unset USE_SANTIZER' "
+    "To fix this clear the unwanted environmental variable with 'unset USE_SANITIZER' "
     "{assuming a 'bash' shell}.")
 endif()
 
@@ -237,6 +237,26 @@ endif()
 if(WIN32 AND DEFINED ENV{MSYSTEM} AND NOT "$ENV{MSYSTEM}" STREQUAL "CLANG64" AND USE_SANITIZERS)
   message(WARNING "Sanitizers are not available for the MSYS2 $ENV{MSYSTEM} environment in Windows, disabling them in build...")
   unset(USE_SANITIZERS CACHE)
+endif()
+
+if(USE_SANITIZERS)
+  include(src/cmake/EnableSanitizers.cmake)
+  # The above script sets the SANITIZERS_REQUESTED, SANITIZERS_SELECTED,
+  # SANITIZERS_AS_STRING, UNRECOGNISED_AS_STRING variables and they become "members"
+  # of this file's scope - if there are any left in here then we have something we
+  # didn't grok:
+  if (SANITIZERS_REQUESTED)
+      message(FATAL_ERROR "Unknown or unhandled sanitizer(s) requested: '${UNRECOGNISED_AS_STRING}'!")
+  endif()
+
+  if (NOT SANITIZERS_SELECTED)
+    message(SEND_ERROR "Sanitizers enabled but none selected; either add them to the environment variable MUDLET_SANITIZERS or unset the WITH_SANITIZERS one.")
+  else()
+    message(STATUS "Compiling with the following sanitizer(s) enabled: ${SANITIZERS_AS_STRING}")
+  endif()
+
+else()
+  message(STATUS "Sanitizers disabled for this build.")
 endif()
 
 # Find Core5Compat for third-party libraries (communi, edbee-lib) that still need it

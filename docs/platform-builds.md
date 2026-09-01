@@ -61,13 +61,13 @@ Sanitizers are available but not enabled on every build; the environmental varia
 the environmental variable `MUDLET_SANITIZERS` needs to be set to one (or more,
 separated by semi-colons) of the sanitizers to include.
 
-Use the `-asan` / `-tsan` / `-ubsan` presets or pass something in the second of
-those variables, e.g. `MUDLET_SANITIZERS="address;undefined"` as prefix to the commandline
-that calls `cmake`. Invalid sanitizers or combinations will be detected and cause
-`cmake` to generate an error. The default preset (without one of those suffixes)
-does not include any sanitizer; however the `CMakePresets.json` file
-that defines the possible options is likely to need to be reorganised further to
-properly provide presets for "Release" type builds.
+Use the `-asan` / `-tsan` / `-ubsan` presets or pass values in the command line
+containing the call to `cmake`, e.g. `WITH_SANTIZIERS="YES" MUDLET_SANITIZERS="address;undefined" cmake ...`.
+Invalid sanitizers or combinations will be detected and cause `cmake` to generate
+an error. The default preset (without one of those suffixes) does not include
+any sanitizer; however the `CMakePresets.json` file that defines the possible
+options is likely to need to be reorganised further to properly provide presets
+for "Release" type builds.
 
 Usable names are `address`, and `undefined` on all three main supported OSes;
 plus 'thread' on macOS; plus `thread`, `memory` and`leak` on Linux. `memoryWithOrigins`
@@ -76,7 +76,7 @@ is derived from the parent `memory` sanitizer but both require all libraries
 - including "system" ones - to also be compiled with it, so it is not a trivial
 exercise to make use of them.
 
-Static analysis (clang-tidy and cppcheck) is available on all three plaforms and
+Static analysis (clang-tidy and cppcheck) is available on all three platforms and
 they run during compilation with the `<platform>-static-analysis` presets, which
 set `ENABLE_STATIC_ANALYSIS=ON`. The two tools are independent — whichever is on
 `PATH` runs. If one of them is missing a CMake warning will be produced, but if
