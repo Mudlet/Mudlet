@@ -26,10 +26,19 @@
 
 #include "Host.h"
 #include "TKey.h"
+#include "Tree.h"
+#include "utils.h"
 
+#include <QFlags>
+#include <QLatin1Char>
+#include <QLatin1String>
+#include <QMutableSetIterator>
 #include <QScopeGuard>
+#include <QStringBuilder>
+#include <QStringList>
 
 #include <functional>
+#include <utility>
 
 KeyUnit::KeyUnit(Host* pHost)
 : mRunAllKeyMatches(false)
