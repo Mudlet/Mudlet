@@ -382,7 +382,7 @@ public:
     bool showCharacterModeWarning();
     void showedCharacterModeWarning();
     // True if the player has used Mudlet long enough not to need the tutorial
-    // tips, the interface tour or the starter UI. Memoised.
+    // tips or the interface tour. Memoised.
     bool experiencedMudletPlayer();
     // The two below are public only so they can be tested
     static void rememberFirstLaunch(QSettings& settings, const QString& profilesPath, const QDateTime& now);

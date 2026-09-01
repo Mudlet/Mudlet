@@ -8473,14 +8473,13 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl, const QString& prof
         mudlet::self()->mPackagesToInstallList.append(qsl(":/packages/generic_mapper/generic_mapper.mpackage"));
     }
 
-    // A modest starter UI that adapts to whatever any game provides, only for
-    // players new to Mudlet - veterans will have their own layouts already.
+    // A modest starter UI that adapts to whatever any game provides.
     // Games whose bundled loader above fetches the game's own full interface
     // (flagged in TGameDetails) are skipped: the starter UI would only fight
     // it for the same screen space. Games that push a GUI via Client.GUI at
     // connect time are handled at runtime instead - the starter UI stands
     // aside when one installs.
-    if (!mudlet::self()->experiencedMudletPlayer() && !TGameDetails::gameProvidesOwnUi(gameUrl)) {
+    if (!TGameDetails::gameProvidesOwnUi(gameUrl)) {
         mudlet::self()->mPackagesToInstallList.append(qsl(":/packages/mudlet-base-ui/mudlet-base-ui.mpackage"));
     }
 
