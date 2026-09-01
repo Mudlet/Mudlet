@@ -182,7 +182,7 @@ near-full rebuild. Run `ccache -s`; if `Cache size` has reached `Max cache size`
 `ccache -M <n>G`.
 
 **Sanitizers are off by default** on every build, regardless of build type
-(`CMakeLists.txt` defaults `USE_SANITIZERS` to `OFF` in the absence of a `WITH_SANITIZER`
+(`CMakeLists.txt` defaults `USE_SANITIZERS` to `OFF` in the absence of a `WITH_SANITIZERS`
 environmental variable set to `YES`), they will however be enabled by the relevant
 entries in the `CMakePresets.json` file that configures `WITH_SANITIZERS` and
 `MUDLET_SANITIZERS` as appropriate for the selected preset.
