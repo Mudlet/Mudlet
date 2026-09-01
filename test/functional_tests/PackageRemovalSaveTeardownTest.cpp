@@ -293,10 +293,11 @@ private slots:
     }
 
     // The Package Manager's repository install deletes each archive as soon as
-    // installPackage() returns (dlgPackageManager::slot_installPackageFromRepository),
-    // so no install in that loop may be put off: the first one starts a save, and the
-    // second would otherwise be left waiting on a file the loop has already deleted.
-    // This replays the loop's order for two packages.
+    // installPackage() returns (dlgPackageManager::slot_installPackageFromRepository), and
+    // its first pass leaves a save in flight. During a save an uninstall is refused
+    // outright and an install is put off, so a second pass that updates an existing
+    // package would keep the old copy and then wait on a file already deleted. This
+    // replays the loop's order for two packages, the second of them an update.
     void test_aSecondRepositoryInstallIsNotLeftWaitingOnItsDeletedArchive()
     {
         QTemporaryDir archiveDir;
@@ -308,22 +309,30 @@ private slots:
         QVERIFY2(writeInstallableArchive(firstPath, firstName), "Could not write the first test archive");
         QVERIFY2(writeInstallableArchive(secondPath, secondName), "Could not write the second test archive");
 
-        // The loop's first package, handled the way the dialog handles it.
+        // The older copy the loop's second pass is going to update.
+        mpHost->waitForProfileSave();
+        auto [older, olderMessage] = mpHost->installPackage(secondPath, enums::PackageModuleType::Package, true);
+        QVERIFY2(older, qPrintable(olderMessage));
+        mpHost->waitForProfileSave();
+        QVERIFY2(mpHost->mInstalledPackages.contains(secondName), "SETUP: there is no older copy for the second pass to update");
+
+        // The loop's first pass, handled the way the dialog handles it.
         mpHost->waitForProfileSave();
         auto [first, firstMessage] = mpHost->installPackage(firstPath, enums::PackageModuleType::Package, true);
         QVERIFY2(first, qPrintable(firstMessage));
         QVERIFY2(QFile::remove(firstPath), "Could not delete the first archive the way the loop does");
-        QVERIFY2(mpHost->currentlySavingProfile(), "SETUP: the first install left no save for the second to be put off behind");
+        QVERIFY2(mpHost->currentlySavingProfile(), "SETUP: the first pass left no save for the second to run into");
 
-        // ...and its second, which is the one at risk.
+        // ...and its second pass, which is the one at risk.
         mpHost->waitForProfileSave();
+        QVERIFY2(mpHost->uninstallPackage(secondName, enums::PackageModuleType::Package), "The update's removal was refused, so the older copy would have been kept");
         auto [second, secondMessage] = mpHost->installPackage(secondPath, enums::PackageModuleType::Package, true);
         QVERIFY2(second, qPrintable(secondMessage));
         QVERIFY2(QFile::remove(secondPath), "Could not delete the second archive the way the loop does");
 
         // Long enough that an install merely waiting its turn would have had it.
         QTest::qWait(1000);
-        QVERIFY2(mpHost->mInstalledPackages.contains(secondName), "The second install was left waiting on an archive the repository loop had already deleted");
+        QVERIFY2(mpHost->mInstalledPackages.contains(secondName), "The update was left waiting on an archive the repository loop had already deleted");
 
         mpHost->waitForProfileSave();
         QVERIFY2(mpHost->uninstallPackage(firstName, enums::PackageModuleType::Package), "the first package could not be uninstalled");
