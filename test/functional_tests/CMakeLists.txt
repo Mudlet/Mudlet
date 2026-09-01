@@ -70,6 +70,7 @@ set(WINDOW_GROUP_TEST_SOURCES
 set(PROFILE_GROUP_TEST_SOURCES
     ConfigDirOverrideTest.cpp
     ConnectionDialogCrashTest.cpp
+    ConnectionDialogFocusTest.cpp
     DefaultGameDeleteTest.cpp
     MissingDisplayFontTest.cpp
     ProfileDeletionSafetyTest.cpp
@@ -159,6 +160,7 @@ set(STARTERUI_GROUP_TEST_SOURCES
     StarterUiGaugePanelTest.cpp
     StarterUiSectionsTest.cpp
     StarterUiTriggerCostTest.cpp
+    TutorialInvitationFocusTest.cpp
     TutorialInvitationGateTest.cpp
     TutorialInvitationLayoutTest.cpp
 )
