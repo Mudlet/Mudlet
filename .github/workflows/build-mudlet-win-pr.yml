@@ -234,6 +234,7 @@ jobs:
         (startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true')
       shell: msys2 {0}
       run: |
+        set -o pipefail
         PACKAGE_DIR="${GITHUB_WORKSPACE}/package-${MSYSTEM}-release"
         # Staged a level deep: SignPath only documents ** as matching
         # subdirectories, so a pattern cannot be relied on to reach the ZIP root
@@ -277,12 +278,38 @@ jobs:
       if: steps.sign-binaries.outcome == 'success'
       shell: msys2 {0}
       run: |
+        set -o pipefail
         SIGNED_DIR="${GITHUB_WORKSPACE}/signed-binaries/app"
         PACKAGE_DIR="${GITHUB_WORKSPACE}/package-${MSYSTEM}-release"
 
         cd "${SIGNED_DIR}" || exit 1
-        find . -type f -print0 | xargs -0 cp --parents -t "${PACKAGE_DIR}" || exit 1
-        echo "Replaced $(find . -type f | wc -l) binaries with signed versions."
+        find . -type f \( -iname '*.exe' -o -iname '*.dll' \) -print0 \
+          | xargs -0 cp --parents -t "${PACKAGE_DIR}" || exit 1
+        echo "Replaced $(find . -type f \( -iname '*.exe' -o -iname '*.dll' \) | wc -l) binaries with signed versions."
+
+    - name: (Windows) Verify binaries are signed
+      # Deliberately not gated on the signing steps: a release build that
+      # skipped them must fail here rather than ship unsigned binaries
+      if: |
+        startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true'
+      shell: pwsh
+      run: |
+        $packageDir = Join-Path "${{github.workspace}}" "package-CLANG64-release"
+        $binaries = Get-ChildItem -Path $packageDir -Recurse -File |
+          Where-Object { $_.Extension -in '.exe', '.dll' }
+        if (-not $binaries) {
+          Write-Output "::error::No binaries found in $packageDir to verify"
+          exit 1
+        }
+        $signatures = $binaries | ForEach-Object { Get-AuthenticodeSignature $_.FullName }
+        $signatures | Group-Object Status | ForEach-Object { Write-Output "$($_.Count) $($_.Name)" }
+        $unsigned = $signatures | Where-Object { $_.Status -eq 'NotSigned' }
+        if ($unsigned) {
+          Write-Output "::error::$($unsigned.Count) of $($binaries.Count) binaries are unsigned"
+          $unsigned | ForEach-Object { Write-Output "  $($_.Path)" }
+          exit 1
+        }
+        Write-Output "All $($binaries.Count) binaries in the package are signed."
 
     - name: (Windows) Create portable ZIP
       # Runs after signing so the portable ships the same signed binaries as the installer
@@ -319,6 +346,7 @@ jobs:
       with:
         name: unsigned-installer
         path: ${{env.ARTIFACT_WINPATHORFILE}}
+        if-no-files-found: error
         retention-days: 1
 
     - name: (Windows) Sign installer with SignPath

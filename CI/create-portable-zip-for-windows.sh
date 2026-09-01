@@ -26,7 +26,7 @@
 
 # Exit codes:
 # 0 - Everything is fine. 8-)
-# 1 - Failure to change to a directory
+# 1 - Failure to change to a directory, copy the package or build the ZIP
 # 2 - Unsupported MSYS2 shell type
 # 4 - Package directory is missing or empty
 
@@ -56,7 +56,10 @@ fi
 mkdir -p "${PORTABLE_ZIP_DIR}"
 
 # Copy all packaged files to portable directory
-cp -r "${PACKAGE_DIR}"/* "${PORTABLE_ZIP_DIR}/"
+if ! cp -r "${PACKAGE_DIR}"/* "${PORTABLE_ZIP_DIR}/"; then
+  echo "ERROR: failed to copy ${PACKAGE_DIR} into ${PORTABLE_ZIP_DIR}"
+  exit 1
+fi
 
 # Create portable.txt file to enable portable mode (empty file)
 touch "${PORTABLE_ZIP_DIR}/portable.txt"
@@ -79,11 +82,17 @@ echo "Creating ZIP from directory: $(basename "${PORTABLE_ZIP_DIR}")"
 echo "Contents of portable directory before ZIP creation:"
 ls -la "${PORTABLE_ZIP_DIR}/" | head -20
 
-zip -r "${PORTABLE_ZIP_NAME}" "$(basename "${PORTABLE_ZIP_DIR}")"
+if ! zip -r "${PORTABLE_ZIP_NAME}" "$(basename "${PORTABLE_ZIP_DIR}")"; then
+  echo "ERROR: failed to create ${PORTABLE_ZIP_NAME}"
+  exit 1
+fi
 
-# Verify portable.txt is in the ZIP
+# Without portable.txt the ZIP is just a copy of the installed build
 echo "Verifying portable.txt is in the ZIP:"
-unzip -l "${PORTABLE_ZIP_NAME}" | grep portable.txt || echo "WARNING: portable.txt not found in ZIP!"
+if ! unzip -l "${PORTABLE_ZIP_NAME}" | grep portable.txt; then
+  echo "ERROR: portable.txt not found in ${PORTABLE_ZIP_NAME}"
+  exit 1
+fi
 
 echo ""
 echo "Created portable ZIP: ${GITHUB_WORKSPACE_UNIX_PATH}/${PORTABLE_ZIP_NAME}"

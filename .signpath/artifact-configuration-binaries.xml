@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- MIRROR ONLY. The configuration SignPath actually applies is the one stored in
+     the SignPath web app against the 'binaries' artifact configuration slug; nothing
+     in CI uploads this file. Editing it here changes nothing until the portal is
+     updated to match. -->
 <!-- GitHub Actions packages artifacts as ZIP files, so zip-file is the root element -->
 <artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
   <zip-file>
