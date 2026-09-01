@@ -60,8 +60,8 @@ private:
     static constexpr int kMaxRootTriggers = 5;
 
     // What every line of game text really pays for: the substrings the chat
-    // gates scan for before any regex runs. Measures 18. Raising this is a
-    // throughput change and wants measuring first.
+    // gates scan for before any regex runs. Measures 20, the whole budget.
+    // Raising this is a throughput change and wants measuring first.
     static constexpr int kMaxGatePatterns = 20;
 
 private slots:
@@ -246,6 +246,8 @@ private slots:
                 {qsl("Bob shouts, 'to arms!'"), QString()},
                 {qsl("You yell, 'wait for me!'"), QString()},
                 {qsl("You shout, 'over here!'"), QString()},
+                {qsl("Bob chats, 'hello everyone'"), qsl("channels")},
+                {qsl("You chat, \"test.\""), qsl("channels")},
                 {qsl("[tell] Ann: are you there?"), qsl("tells")},
                 {qsl("[newbie] Ann: how do I get out of here?"), qsl("channels")},
                 {qsl("(gossip) Ann: anyone around?"), qsl("channels")},
