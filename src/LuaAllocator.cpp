@@ -51,7 +51,7 @@ extern "C" {
 // still allocated as far as the system is concerned, so a write to a freed Lua
 // object, or a leaked one, would look like ordinary use of a live allocation -
 // a preset built to find those bugs would stop finding them in Lua.
-#if defined(__SANITIZE_ADDRESS__) || defined(__SANITIZE_THREAD__)
+#if defined(__SANITIZE_ADDRESS__) || defined(__SANITIZE_THREAD__) || defined(__SANITIZE_MEMORY__)
 #define MUDLET_LUA_ALLOC_PASSTHROUGH
 #elif defined(__has_feature)
 #if __has_feature(address_sanitizer) || __has_feature(thread_sanitizer) || __has_feature(memory_sanitizer)
