@@ -330,6 +330,23 @@ describe("Tests the functionality of installPackage", function()
     assert.is_false(packageInstalled("mudlet-spec-notazip"))
   end)
 
+  it("hands a script the reason instead of announcing it on the main console", function()
+    -- installPackage() posts the reason to the profile for an install asked for
+    -- through the interface, because most of those callers drop it. A script's
+    -- install passes quiet and is handed the reason back instead, so nothing must
+    -- appear in the message area for it to talk over.
+    defer(function() lfs.rmdir(getMudletHomeDir() .. "/mudlet-spec-notazip") end)
+
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local mark = getLastLineNumber("main")
+
+    local err = installUntilRefused(installPackage, fixtureDirectory .. "/mudlet-spec-notazip.mpackage")
+    assert.is_true(contains(err, "could not unzip package"), tostring(err))
+
+    local text = textFrom(mark)
+    assert.is_false(containsWrapped(text, "Package install failed"), text)
+  end)
+
   describe("with the fixture package installed", function()
     local runsBefore, installEvents, packageEvents, handlers
 
@@ -915,14 +932,6 @@ end)
 
 describe("Tests installing a package while the profile is being saved", function()
   it("installs a package that is asked for while an earlier install is still saving", function()
-    -- BUG: installing a package starts an asynchronous profile save, and an
-    -- install that arrives during one is postponed until profileSaveFinished().
-    -- That signal is only emitted while the profile writer is being retired, so
-    -- an install asked for after the writers are gone but before the save has
-    -- finished is never carried out - and installPackage() has already answered
-    -- true, so a script has no way to notice. Left pending rather than pinning
-    -- a silently dropped install as correct.
-    pending("installPackage() answers true but drops the install when a save is in progress")
     defer(function()
       removeFixturePackage(minimalPackage)
       removeFixturePackage("mudlet-spec-noconfig")
@@ -958,6 +967,30 @@ describe("Tests installing an archive with nothing in it for Mudlet", function()
     assert.is_true(contains(err, "no package found in"), tostring(err))
     assert.is_false(packageInstalled("mudlet-spec-emptyarchive"))
     assert.is_false(fileExists(getMudletHomeDir() .. "/mudlet-spec-emptyarchive"))
+  end)
+end)
+
+describe("Tests installing an archive whose package XML cannot be read", function()
+  it("says the package's contents could not be read", function()
+    local name = "mudlet-spec-badxml"
+    -- the install queues a save of its own, and uninstallPackage() is refused
+    -- while one runs, so use the helper that keeps asking
+    defer(function() removeFixturePackage(name) end)
+
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+
+    local mark = getLastLineNumber("main")
+    -- the archive unpacks cleanly and holds a config.lua, so the install gets as
+    -- far as reading the XML - which is malformed. Only modules were ever asked
+    -- whether their contents loaded, so this used to install to silence.
+    local ok = installPackage(fixtureDirectory .. "/" .. name .. ".mpackage")
+    local text = textFrom(mark)
+
+    assert.is_true(containsWrapped(text, 'Failed to load package "' .. name .. '"'), text)
+    -- the install still answers true and leaves the package listed, the same way a
+    -- module whose XML will not load stays listed: what changes is that it is said
+    assert.is_true(ok)
+    assert.is_true(packageInstalled(name))
   end)
 end)
 

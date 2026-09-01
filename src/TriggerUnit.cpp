@@ -25,7 +25,6 @@
 
 
 #include "Host.h"
-#include "TConsole.h"
 #include "TTrigger.h"
 
 #include <QScopeGuard>

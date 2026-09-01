@@ -69,6 +69,14 @@
       }
     },
     {
+      "name": "macos-release",
+      "displayName": "macOS Release, no sanitizers (what CI ships to players)",
+      "inherits": ["variant"],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+      }
+    },
+    {
       "name": "linux-debug",
       "displayName": "Linux Debug (Ninja, No sanitizers)",
       "inherits": "base",
@@ -123,9 +131,16 @@
       "displayName": "Linux Debug for low-memory machines (Raspberry Pi and similar)",
       "inherits": ["variant", "linux-debug"],
       "environment": {
-        "WITH_SANITIZERS": "NO",
         "WITH_UPDATER": "NO",
         "WITH_3DMAPPER": "NO"
+      }
+    },
+    {
+      "name": "linux-release",
+      "displayName": "Linux Release, no sanitizers (what CI ships to players)",
+      "inherits": ["variant"],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
       }
     },
     {
@@ -169,6 +184,14 @@
       "cacheVariables": {
         "ENABLE_STATIC_ANALYSIS": "ON"
       }
+    },
+    {
+      "name": "windows-release",
+      "displayName": "Windows Release (MSYS2, Ninja, what CI ships to players)",
+      "inherits": ["variant""],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
     }
   ],
   "buildPresets": [
@@ -204,16 +227,19 @@
     { "name": "macos-debug-tsan", "inherits": "on-macos", "configurePreset": "macos-debug-tsan" },
     { "name": "macos-debug-ubsan", "inherits": "on-macos", "configurePreset": "macos-debug-ubsan" },
     { "name": "macos-static-analysis", "inherits": "on-macos", "configurePreset": "macos-static-analysis" },
+    { "name": "macos-release", "inherits": "on-macos", "configurePreset": "macos-release" },
     { "name": "linux-debug", "inherits": "on-linux", "configurePreset": "linux-debug" },
     { "name": "linux-debug-asan", "inherits": "on-linux", "configurePreset": "linux-debug-asan" },
     { "name": "linux-debug-tsan", "inherits": "on-linux", "configurePreset": "linux-debug-tsan" },
     { "name": "linux-debug-ubsan", "inherits": "on-linux", "configurePreset": "linux-debug-ubsan" },
     { "name": "linux-static-analysis", "inherits": "on-linux", "configurePreset": "linux-static-analysis" },
     { "name": "linux-lowspec", "inherits": "on-linux", "configurePreset": "linux-lowspec", "jobs": 2 },
+    { "name": "linux-release", "inherits": "on-linux", "configurePreset": "linux-release" },
     { "name": "windows-debug", "inherits": "on-windows", "configurePreset": "windows-debug"},
     { "name": "windows-debug-asan", "inherits": "on-windows", "configurePreset": "windows-debug-asan"},
     { "name": "windows-debug-ubsan", "inherits": "on-windows", "configurePreset": "windows-debug-ubsan"},
-    { "name": "windows-static-analysis", "inherits": "on-windows", "configurePreset": "windows-static-analysis"}
+    { "name": "windows-static-analysis", "inherits": "on-windows", "configurePreset": "windows-static-analysis"},
+    { "name": "windows-release", "inherits": "on-windows", "configurePreset": "windows-release"}
   ],
   "testPresets": [
     {
@@ -258,15 +284,18 @@
     { "name": "macos-debug-tsan", "inherits": "on-macos", "configurePreset": "macos-debug-tsan" },
     { "name": "macos-debug-ubsan", "inherits": "on-macos", "configurePreset": "macos-debug-ubsan" },
     { "name": "macos-static-analysis", "inherits": "on-macos", "configurePreset": "macos-static-analysis" },
+    { "name": "macos-release", "inherits": "on-macos", "configurePreset": "macos-release" },
     { "name": "linux-debug", "inherits": "on-linux", "configurePreset": "linux-debug" },
     { "name": "linux-debug-asan", "inherits": "on-linux", "configurePreset": "linux-debug-asan" },
     { "name": "linux-debug-tsan", "inherits": "on-linux", "configurePreset": "linux-debug-tsan" },
     { "name": "linux-debug-ubsan", "inherits": "on-linux", "configurePreset": "linux-debug-ubsan" },
     { "name": "linux-static-analysis", "inherits": "on-linux", "configurePreset": "linux-static-analysis" },
     { "name": "linux-lowspec", "inherits": "on-linux", "configurePreset": "linux-lowspec" },
+    { "name": "linux-release", "inherits": "on-linux", "configurePreset": "linux-release" },
     { "name": "windows-debug", "inherits": "on-windows", "configurePreset": "windows-debug"},
     { "name": "windows-debug-asan", "inherits": "on-windows", "configurePreset": "windows-debug-asan"},
     { "name": "windows-debug-ubsan", "inherits": "on-windows", "configurePreset": "windows-debug-ubsan"},
     { "name": "windows-static-analysis", "inherits": "on-windows", "configurePreset": "windows-static-analysis"}
+    { "name": "windows-release", "inherits": "on-windowss", "configurePreset": "windows-release"}
   ]
 }

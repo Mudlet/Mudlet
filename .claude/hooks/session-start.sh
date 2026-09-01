@@ -95,6 +95,17 @@ if ! dpkg -s libxcb-shape0 >/dev/null 2>&1; then
     ffmpeg
 fi
 
+# Coverage tooling for the improve-test-coverage skill (gcovr for the report,
+# jq for its check-lines.sh helper). Separate guard: containers cached before
+# this block existed still pick it up.
+if ! command -v gcovr >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
+  echo "Installing coverage tooling..."
+  ${SUDO} apt-get update -qq
+  DEBIAN_FRONTEND=noninteractive ${SUDO} apt-get install -y --no-install-recommends \
+    gcovr \
+    jq
+fi
+
 # Lua rocks that LuaGlobal.lua and the test harnesses load, mirroring the CI
 # list in .github/workflows/build-mudlet.yml. The egress proxy blocks GitHub
 # codeload tarballs (403) while git clones are allowed, so rocks whose
