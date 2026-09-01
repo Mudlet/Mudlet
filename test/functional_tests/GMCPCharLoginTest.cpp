@@ -530,6 +530,10 @@ private slots:
         host->setLogin(qsl("player"));
         host->setPass(qsl("secret"));
 
+        // Without this the assertions below would also pass on a runner slow enough that the timer beat
+        // the frame, which would prove nothing about how the frame was handled.
+        QVERIFY2(!mpServer->receivedText().contains("player\r\n"), "the auto-login fired before the test frame was sent");
+
         mpServer->clearReceived();
         mpServer->sendGmcp(frame);
 
@@ -1123,6 +1127,27 @@ private slots:
         const int attempts = mpServer->countReceived(qsl("Char.Login.Credentials"));
         QVERIFY2(attempts >= 2, qPrintable(qsl("a throttled burst must still be answered, saw %1 attempts").arg(attempts)));
         QVERIFY2(attempts <= 4, qPrintable(qsl("200 frames should not buy 200 sign-in attempts, saw %1").arg(attempts)));
+    }
+
+    void testTypelessDefaultDropsAnAlreadyArmedAttempt()
+    {
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        host->setLogin(qsl("player"));
+        host->setPass(qsl("secret"));
+
+        mpServer->clearReceived();
+        // One burst: the first frame is answered straight away, the second falls inside the throttle
+        // window and arms an attempt for when it closes, and the third leaves no capabilities for that
+        // attempt to act on.
+        const auto typed = qsl("Char.Login.Default {\"version\": 2, \"type\": [\"password-credentials\"]}");
+        mpServer->sendGmcp(typed);
+        mpServer->sendGmcp(typed);
+        mpServer->sendGmcp(qsl("Char.Login.Default {}"));
+
+        QTest::qWait(2500ms);
+        const int attempts = mpServer->countReceived(qsl("Char.Login.Credentials"));
+        QCOMPARE(attempts, 1);
     }
 
     // ---- Char.Login.Result --------------------------------------------------

@@ -827,6 +827,11 @@ void GMCPAuthenticator::handleAuthGMCP(const QString& packageMessage, const QStr
         // auto-login, the only thing that can sign such a game in. Returning above the reset leaves an
         // attempt already running on this connection to finish.
         if (mSupportedAuthTypes.isEmpty()) {
+            // A throttled burst is served by one attempt using the capabilities the last frame left
+            // behind, and this frame leaves none - so drop an attempt the burst already armed rather
+            // than let it cancel the timers a second later.
+            ++mSignInScheduleGeneration;
+            mSignInAttemptPending = false;
 #if defined(DEBUG_GMCP_AUTHENTICATION)
             qDebug() << "GMCP Char.Login.Default named no auth type; leaving the sign-in to the standard auto-login";
 #endif
