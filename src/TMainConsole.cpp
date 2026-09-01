@@ -125,6 +125,28 @@ TMainConsole::~TMainConsole()
     for (auto commandLine : findChildren<TCommandLine*>()) {
         disconnect(commandLine, &QObject::destroyed, this, nullptr);
     }
+
+    // A label and a sub-console take themselves out of the registry from their own
+    // destructor; none of the three kinds here does. A scroll box and a text box never
+    // deregister themselves, and for the command lines that are this console's own
+    // children the handler that would have done it was disconnected just above. Quitting
+    // destroys every Host before the console, so there is not always a registry left
+    // to clear.
+    if (mpHost) {
+        const QStringList scrollBoxNames = mScrollBoxMap.keys();
+        for (const QString& scrollBoxName : scrollBoxNames) {
+            mpHost->windowRegistry().deregisterScrollBox(scrollBoxName);
+        }
+        const QStringList textBoxNames = mTextBoxMap.keys();
+        for (const QString& textBoxName : textBoxNames) {
+            mpHost->windowRegistry().deregisterTextBox(textBoxName);
+        }
+        const QStringList commandLineNames = mSubCommandLineMap.keys();
+        for (const QString& commandLineName : commandLineNames) {
+            mpHost->windowRegistry().deregisterCommandLine(commandLineName);
+        }
+    }
+
     mSubCommandLineMap.clear();
 
     // Neither is a child of this console: the map dock is reparented onto the main

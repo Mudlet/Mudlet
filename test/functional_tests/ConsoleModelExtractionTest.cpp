@@ -1893,6 +1893,39 @@ noViewSpellReport = table.concat(noViewSpellProblems, '; ')
         QVERIFY2(host->mpConsole->subCommandLineWidget(commandLineName) == replacement, "The old command line's deferred delete took its replacement out of the console's own map.");
     }
 
+    // A scroll box, a command line and a text box are the three kinds nothing
+    // deregisters from its own destructor, so closing the profile is the moment
+    // their registry entries can outlive the widgets they name.
+    void test_destroyingTheViewDeregistersItsPlainWindows()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        const QString scrollBoxName = qsl("registryOrphanedScrollBox");
+        const QString commandLineName = qsl("registryOrphanedCommandLine");
+        const QString textBoxName = qsl("registryOrphanedTextBox");
+        const auto [scrollBox, scrollBoxMessage] = host->createScrollBox(QString(), scrollBoxName, 0, 0, 40, 40);
+        QVERIFY2(scrollBox, qPrintable(scrollBoxMessage));
+        const auto [commandLine, commandLineMessage] = host->mpConsole->createCommandLine(QString(), commandLineName, 0, 50, 40, 20);
+        QVERIFY2(commandLine, qPrintable(commandLineMessage));
+        const auto [textBox, textBoxMessage] = host->mpConsole->createTextBox(QString(), textBoxName, 0, 80, 40, 40);
+        QVERIFY2(textBox, qPrintable(textBoxMessage));
+        QCOMPARE(host->windowType(scrollBoxName), std::optional<QString>(qsl("scrollbox")));
+        QCOMPARE(host->windowType(commandLineName), std::optional<QString>(qsl("commandline")));
+        QCOMPARE(host->windowType(textBoxName), std::optional<QString>(qsl("textedit")));
+
+        destroyTheView(host);
+
+        QVERIFY2(!host->windowRegistry().hasScrollBox(scrollBoxName), "Destroying the console left a scroll box in the profile's window registry, naming a widget that has gone.");
+        QVERIFY2(!host->windowRegistry().hasCommandLine(commandLineName), "Destroying the console left a command line in the profile's window registry, naming a widget that has gone.");
+        QVERIFY2(!host->windowRegistry().hasTextBox(textBoxName), "Destroying the console left a text box in the profile's window registry, naming a widget that has gone.");
+        QVERIFY2(!host->windowType(scrollBoxName).has_value(), "Host still reports a window type for a scroll box destroyed with the console.");
+        QVERIFY2(!host->windowType(commandLineName).has_value(), "Host still reports a window type for a command line destroyed with the console.");
+        QVERIFY2(!host->windowType(textBoxName).has_value(), "Host still reports a window type for a text box destroyed with the console.");
+    }
+
 private:
     // Utility function to manually start a profile like a user would do via the
     // GUI
