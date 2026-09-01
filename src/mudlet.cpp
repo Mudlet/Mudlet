@@ -4422,13 +4422,6 @@ void mudlet::slot_showEditorDialog()
     pEditor->raise();
     showEditorRestoringWindowState(pEditor);
     pEditor->activateWindow();
-
-    // Force reposition after showing, since script editor is a singleton
-    // that may restore its position after being shown
-    Host* activeHost = getActiveHost();
-    QWidget* activeConsole = activeHost ? activeHost->mpConsole : nullptr;
-    QWidget* referenceWidget = activeConsole ? activeConsole : this;
-    utils::forceRepositionDialogOnParentScreen(pEditor, referenceWidget);
 }
 
 void mudlet::slot_showTriggerDialog()
@@ -4460,9 +4453,6 @@ void mudlet::slot_showTriggerDialog()
             }
         });
     });
-
-    // Position dialog on the same screen as the main window for better multi-monitor UX
-    utils::positionDialogOnParentScreen(pEditor, this);
 
     pEditor->slot_showTriggers();
     pEditor->raise();

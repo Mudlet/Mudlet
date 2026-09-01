@@ -1901,9 +1901,15 @@ void dlgTriggerEditor::readSettings()
     const QSize size = settings.value("script_editor_size", QSize(600, 400)).toSize();
     resize(size);
 
-    // Use smart positioning instead of blindly restoring saved position
-    // This ensures the dialog opens on the same screen as the active profile
-    utils::positionDialogOnActiveProfileScreen(this, nullptr, mpHost->mpConsole);
+    // Only place the editor ourselves the very first time it is opened; after
+    // that the position the user left it at wins, even on another screen -
+    // showEvent() deals with a screen that has since gone away
+    const QVariant savedPosition = settings.value("script_editor_pos");
+    if (savedPosition.isValid()) {
+        move(savedPosition.toPoint());
+    } else {
+        utils::positionDialogOnActiveProfileScreen(this, nullptr, mpHost->mpConsole);
+    }
 
     mAutosaveInterval = settings.value("autosaveIntervalMinutes", 2).toInt();
 
@@ -1922,8 +1928,10 @@ void dlgTriggerEditor::readSettings()
 void dlgTriggerEditor::writeSettings()
 {
     QSettings& settings = *mudlet::getQSettings();
-    settings.setValue("script_editor_pos", pos());
-    settings.setValue("script_editor_size", size());
+    if (mHasBeenShown) {
+        settings.setValue("script_editor_pos", pos());
+        settings.setValue("script_editor_size", size());
+    }
     settings.setValue("autosaveIntervalMinutes", mAutosaveInterval);
 
     settings.setValue("mTriggerEditorSplitterState", mTriggerEditorSplitterState);
@@ -9898,9 +9906,8 @@ void dlgTriggerEditor::showEvent(QShowEvent* event)
 {
     QMainWindow::showEvent(event);
 
-    // Always reposition the dialog to the correct screen when shown
-    // This ensures it follows the active profile, especially after reattachment
-    utils::positionDialogOnActiveProfileScreen(this, nullptr, mpHost->mpConsole);
+    mHasBeenShown = true;
+    utils::keepDialogOnAScreen(this, mpHost->mpConsole);
 }
 
 void dlgTriggerEditor::changeView(EditorViewType view)
