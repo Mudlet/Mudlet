@@ -86,6 +86,13 @@ int luaopen_yajl(lua_State*);
 }
 
 
+// A Host outlives its main console: closing a profile's window destroys the view
+// while triggers, the buffer, logging and Lua all keep running. The live
+// Hunspell handles and the user dictionary's word set belong to that view, so
+// the spelling functions have to report this rather than dereference what is
+// gone.
+static const char* no_main_window_value = "the profile has no main window";
+
 // No documentation available in wiki - internal function
 static bool isMain(const QString& name)
 {
@@ -3388,6 +3395,7 @@ int TLuaInterpreter::getOS(lua_State* L)
 #endif
 }
 
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getProcessID
 int TLuaInterpreter::getProcessID(lua_State* L)
 {
@@ -6088,6 +6096,56 @@ void TLuaInterpreter::initLuaGlobals()
     lua_setfield(pGlobalLua, -2, "getClientList");
     lua_setglobal(pGlobalLua, "mmcp");
 
+    // Create Speech-to-Text (STT) Library
+    lua_newtable(pGlobalLua);
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::sttInit);
+    lua_setfield(pGlobalLua, -2, "init");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::sttStart);
+    lua_setfield(pGlobalLua, -2, "start");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::sttStop);
+    lua_setfield(pGlobalLua, -2, "stop");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::sttToggle);
+    lua_setfield(pGlobalLua, -2, "toggle");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::sttIsListening);
+    lua_setfield(pGlobalLua, -2, "listening");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::sttIsAvailable);
+    lua_setfield(pGlobalLua, -2, "available");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::sttIsInitialized);
+    lua_setfield(pGlobalLua, -2, "initialized");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::sttGetInfo);
+    lua_setfield(pGlobalLua, -2, "getInfo");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::sttGetModelPath);
+    lua_setfield(pGlobalLua, -2, "getModelPath");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::sttListModels);
+    lua_setfield(pGlobalLua, -2, "listModels");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::sttClose);
+    lua_setfield(pGlobalLua, -2, "close");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::sttGetPlatformKey);
+    lua_setfield(pGlobalLua, -2, "getPlatformKey");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::sttReloadLibrary);
+    lua_setfield(pGlobalLua, -2, "reloadLibrary");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::sttUnloadLibrary);
+    lua_setfield(pGlobalLua, -2, "unloadLibrary");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::sttGetLibraryPath);
+    lua_setfield(pGlobalLua, -2, "getLibraryPath");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::sttSetSilenceTimeout);
+    lua_setfield(pGlobalLua, -2, "setSilenceTimeout");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::sttSetSensitivity);
+    lua_setfield(pGlobalLua, -2, "setSensitivity");
+    lua_pushcfunction(pGlobalLua, TLuaInterpreter::sttSetVocabulary);
+    lua_setfield(pGlobalLua, -2, "setVocabulary");
+    lua_setglobal(pGlobalLua, "stt");
+
+    // Addon toolbar and menu functions, for packages adding their own controls
+    lua_register(pGlobalLua, "addCommand", TLuaInterpreter::addCommand);
+    lua_register(pGlobalLua, "removeCommand", TLuaInterpreter::removeCommand);
+    lua_register(pGlobalLua, "enableCommand", TLuaInterpreter::enableCommand);
+    lua_register(pGlobalLua, "disableCommand", TLuaInterpreter::disableCommand);
+    lua_register(pGlobalLua, "setCommandChecked", TLuaInterpreter::setCommandChecked);
+    lua_register(pGlobalLua, "setCommandIcon", TLuaInterpreter::setCommandIcon);
+    lua_register(pGlobalLua, "setCommandTooltip", TLuaInterpreter::setCommandTooltip);
+    lua_register(pGlobalLua, "setCommandPulse", TLuaInterpreter::setCommandPulse);
+
 
     QStringList additionalLuaPaths;
     QStringList additionalCPaths;
@@ -7147,6 +7205,9 @@ int TLuaInterpreter::addWordToDictionary(lua_State* L)
     }
 
     const QString text = getVerifiedString(L, __func__, 1, "word");
+    if (!host.mpConsole) {
+        return warnArgumentValue(L, __func__, no_main_window_value);
+    }
     QPair<bool, QString> const result = host.mpConsole->addWordToSet(text);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
@@ -7167,6 +7228,9 @@ int TLuaInterpreter::removeWordFromDictionary(lua_State* L)
     }
 
     const QString text = getVerifiedString(L, __func__, 1, "word");
+    if (!host.mpConsole) {
+        return warnArgumentValue(L, __func__, no_main_window_value);
+    }
     QPair<bool, QString> const result = host.mpConsole->removeWordFromSet(text);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
@@ -7196,6 +7260,9 @@ int TLuaInterpreter::spellCheckWord(lua_State* L)
     }
     const QString text{lua_tostring(L, 1)};
 
+    if (!host.mpConsole) {
+        return warnArgumentValue(L, __func__, no_main_window_value);
+    }
     Hunhandle* handle = nullptr;
     QByteArray encodedText;
     if (useUserDictionary) {
@@ -7235,6 +7302,9 @@ int TLuaInterpreter::spellSuggestWord(lua_State* L)
     }
     const QString text{lua_tostring(L, 1)};
 
+    if (!host.mpConsole) {
+        return warnArgumentValue(L, __func__, no_main_window_value);
+    }
     char** wordList;
     size_t wordCount = 0;
     Hunhandle* handle = nullptr;
@@ -7279,6 +7349,9 @@ int TLuaInterpreter::getDictionaryWordList(lua_State* L)
         return warnArgumentValue(L, __func__, "no user dictionary enabled in the preferences for this profile");
     }
 
+    if (!host.mpConsole) {
+        return warnArgumentValue(L, __func__, no_main_window_value);
+    }
     // This may stall if this is accessing the shared user dictionary and that
     // is being updated by another profile, but it should eventually return...
     // We must keep a local reference/copy of the value returned because the

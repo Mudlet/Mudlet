@@ -52,7 +52,7 @@ public:
     QHash<int, int> getExits() const;
     bool hasExit(const int) const;
     void setWeight(int);
-    void setExitLock(const int, const bool);
+    bool setExitLock(const int, const bool);
     bool setSpecialExitLock(const QString&, const bool);
     bool hasExitLock(const int to) const;
     bool hasSpecialExitLock(const QString&) const;

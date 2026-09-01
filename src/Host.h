@@ -591,6 +591,18 @@ private:
     // through mainConsoleModel()/sharedMainConsoleModel().
     std::shared_ptr<TConsoleModel> mpMainConsoleModel;
 
+    // Initialised ahead of mLuaInterpreter below, whose construction reads it:
+    // initLuaGlobals() posts a message for each Lua module that fails to load, and
+    // Host::postMessage() hands that to cTelnet::postMessage(), which asks
+    // isClosingDown() whether to flush what it has stacked up. Declaration order is
+    // what decides initialisation order, the access specifier between them is not.
+    //
+    // mpConsole's position carries the same weight: it is null for the whole of
+    // construction, so that guard returns before reaching the rest of the function,
+    // which reads members declared much later - mBgColor among them. Same class of
+    // bug as #10229, which had to move a call rather than a declaration.
+    bool mIsClosingDown = false;
+
 public:
     // Make this the first public member instantiated so we can use ITS font
     // as the "reference" or "master" font for whole profile - and so we don't
@@ -1064,7 +1076,6 @@ private:
     int mHostID;
     QString mHostName;
     QString mDiscordGameName; // Discord self-reported game name
-    bool mIsClosingDown = false;
 
     QString mLine;
     QString mLogin;
