@@ -41,6 +41,7 @@
 #include "THyperlinkStyling.h"
 #include "TLinkStore.h"
 #include "TMainConsole.h"
+#include "TTextEdit.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
