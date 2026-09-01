@@ -469,10 +469,11 @@ void dlgPackageManager::slot_installPackageFromRepository()
                         if (mpHost->mInstalledPackages.contains(packageName)) {
                             mpHost->uninstallPackage(packageName, enums::PackageModuleType::Package);
                         }
-                        if (mpHost->installPackage(filePath, enums::PackageModuleType::Package).first) {
-                            // the next install would be postponed behind this save, and the loop deletes the file it needs
-                            mpHost->waitForProfileSave();
-                        } else {
+                        // Before the install, not after it: an install begun while a save is
+                        // in flight - the uninstall above starts one - is put off until that
+                        // save finishes, long after the archive is deleted below.
+                        mpHost->waitForProfileSave();
+                        if (!mpHost->installPackage(filePath, enums::PackageModuleType::Package).first) {
                             failedPackages << packageName;
                             qWarning() << "dlgPackageManager::slot_installPackageFromRepository() ERROR - failed to install" << packageName;
                         }

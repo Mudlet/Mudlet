@@ -146,6 +146,19 @@ private:
     // ...specifically one whose config.lua renames the package to declaredName.
     static bool writeConfigOnlyArchive(const QString& path, const QString& declaredName) { return writeArchive(path, qsl("config.lua"), qsl("mpackage = \"%1\"\n").arg(declaredName).toUtf8()); }
 
+    // ...and one that installs rather than being refused: an archive is only a
+    // package if it holds a Mudlet package XML, empty though this one's units are.
+    static bool writeInstallableArchive(const QString& path, const QString& packageName)
+    {
+        static const char packageXml[] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                                         "<!DOCTYPE MudletPackage>\n"
+                                         "<MudletPackage version=\"1.001\">\n"
+                                         "<TriggerPackage /><TimerPackage /><AliasPackage /><ActionPackage />\n"
+                                         "<ScriptPackage /><KeyPackage /><VariablePackage><HiddenVariables /></VariablePackage>\n"
+                                         "</MudletPackage>\n";
+        return writeArchive(path, qsl("%1.xml").arg(packageName), QByteArray(packageXml, sizeof(packageXml) - 1));
+    }
+
     QString profileFilePath(const QString& relativePath) const { return qsl("%1/%2").arg(mudlet::getMudletPath(enums::profileHomePath, mProfileName), relativePath); }
 
 private slots:
@@ -277,6 +290,92 @@ private slots:
         auto [fileNameOk, fileNameMessage] = mpHost->installPackage(viaFileName, enums::PackageModuleType::Package, true);
         QVERIFY2(!fileNameOk, "An archive holding no package was installed");
         QVERIFY2(QFile::exists(mapFile), "Refusing the archive took the profile's map folder with it");
+    }
+
+    // The Package Manager's repository install deletes each archive as soon as
+    // installPackage() returns (dlgPackageManager::slot_installPackageFromRepository),
+    // so no install in that loop may be put off: the first one starts a save, and the
+    // second would otherwise be left waiting on a file the loop has already deleted.
+    // This replays the loop's order for two packages.
+    void test_aSecondRepositoryInstallIsNotLeftWaitingOnItsDeletedArchive()
+    {
+        QTemporaryDir archiveDir;
+        QVERIFY2(archiveDir.isValid(), "Could not create a temporary directory for the test archives");
+        const QString firstName = qsl("uninstall-save-repository-first");
+        const QString secondName = qsl("uninstall-save-repository-second");
+        const QString firstPath = archiveDir.filePath(qsl("%1.mpackage").arg(firstName));
+        const QString secondPath = archiveDir.filePath(qsl("%1.mpackage").arg(secondName));
+        QVERIFY2(writeInstallableArchive(firstPath, firstName), "Could not write the first test archive");
+        QVERIFY2(writeInstallableArchive(secondPath, secondName), "Could not write the second test archive");
+
+        // The loop's first package, handled the way the dialog handles it.
+        mpHost->waitForProfileSave();
+        auto [first, firstMessage] = mpHost->installPackage(firstPath, enums::PackageModuleType::Package, true);
+        QVERIFY2(first, qPrintable(firstMessage));
+        QVERIFY2(QFile::remove(firstPath), "Could not delete the first archive the way the loop does");
+        QVERIFY2(mpHost->currentlySavingProfile(), "SETUP: the first install left no save for the second to be put off behind");
+
+        // ...and its second, which is the one at risk.
+        mpHost->waitForProfileSave();
+        auto [second, secondMessage] = mpHost->installPackage(secondPath, enums::PackageModuleType::Package, true);
+        QVERIFY2(second, qPrintable(secondMessage));
+        QVERIFY2(QFile::remove(secondPath), "Could not delete the second archive the way the loop does");
+
+        // Long enough that an install merely waiting its turn would have had it.
+        QTest::qWait(1000);
+        QVERIFY2(mpHost->mInstalledPackages.contains(secondName), "The second install was left waiting on an archive the repository loop had already deleted");
+
+        mpHost->waitForProfileSave();
+        QVERIFY2(mpHost->uninstallPackage(firstName, enums::PackageModuleType::Package), "the first package could not be uninstalled");
+        mpHost->waitForProfileSave();
+        QVERIFY2(mpHost->uninstallPackage(secondName, enums::PackageModuleType::Package), "the second package could not be uninstalled");
+        mpHost->waitForProfileSave();
+    }
+
+    // An install put off until a save finishes must run at the bottom of the event
+    // loop, not from inside the profileSaveFinished emission that releases it. That
+    // install starts a save of its own, and a directly connected handler is
+    // therefore re-entered from its own body once per operation still waiting -
+    // deep enough on macOS to exhaust the stack (#10320).
+    void test_anInstallDeferredByASaveRunsOutsideTheAnnouncement()
+    {
+        QTemporaryDir archiveDir;
+        QVERIFY2(archiveDir.isValid(), "Could not create a temporary directory for the test archive");
+        const QString packageName = qsl("uninstall-save-deferred-install");
+        const QString archivePath = archiveDir.filePath(qsl("%1.mpackage").arg(packageName));
+        QVERIFY2(writeInstallableArchive(archivePath, packageName), "Could not write the test archive");
+
+        mpHost->waitForProfileSave();
+        QVERIFY2(!mpHost->mInstalledPackages.contains(packageName), "SETUP: the package this installs is already installed");
+
+        mpHost->saveProfile();
+        QVERIFY2(mpHost->currentlySavingProfile(), "SETUP: saveProfile() left no save for the install to be put off behind");
+
+        auto [ok, message] = mpHost->installPackage(archivePath, enums::PackageModuleType::Package, true);
+        QVERIFY2(ok, qPrintable(message));
+        QVERIFY2(!mpHost->mInstalledPackages.contains(packageName), "SETUP: the install was not put off, so there is nothing here to observe");
+
+        // Connected after the Host's own handler, so Qt runs it second and it sees
+        // whatever that handler has done by the time the announcement returns. Only
+        // the first announcement can tell the two connection types apart: the install
+        // starts a save of its own, and by the time that second one is announced the
+        // package is installed either way.
+        QObject observerContext;
+        int announcements = 0;
+        bool installedFromInsideTheAnnouncement = false;
+        connect(mpHost, &Host::profileSaveFinished, &observerContext, [&]() {
+            if (++announcements == 1) {
+                installedFromInsideTheAnnouncement = mpHost->mInstalledPackages.contains(packageName);
+            }
+        });
+
+        QTRY_VERIFY_WITH_TIMEOUT(mpHost->mInstalledPackages.contains(packageName), 10000);
+        QVERIFY2(announcements > 0, "SETUP: no save was announced, so the observer never ran");
+        QVERIFY2(!installedFromInsideTheAnnouncement, "The put-off install ran from inside the profileSaveFinished emission that released it");
+
+        mpHost->waitForProfileSave();
+        QVERIFY2(mpHost->uninstallPackage(packageName, enums::PackageModuleType::Package), "the package could not be uninstalled");
+        mpHost->waitForProfileSave();
     }
 
     // The refusal is about archives nothing could be read out of, not about
