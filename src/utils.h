@@ -357,21 +357,23 @@ public:
     }
 
     // Centre a dialog whose remembered position has since gone out of reach -
-    // the monitor it was left on can have been disconnected. Only the top of
-    // the frame is asked about: a window hanging off the top edge with nothing
-    // but its lower half showing has no title bar left to drag it back by
+    // the monitor it was left on can have been disconnected. What has to be on a
+    // screen is a piece of title bar big enough to grab and drag with, not the
+    // window: a couple of stray pixels at an edge are no way back
     static void keepDialogOnAScreen(QWidget* dialog, QWidget* parent)
     {
         if (!dialog) {
             return;
         }
 
-        constexpr int graspableTitleBarHeight = 30;
+        constexpr int graspableWidth = 40;
+        constexpr int graspableHeight = 20;
         const QRect dialogRect = dialog->frameGeometry();
-        const QRect titleBar(dialogRect.x(), dialogRect.y(), dialogRect.width(), qMin(graspableTitleBarHeight, dialogRect.height()));
+        const QRect titleBar(dialogRect.x(), dialogRect.y(), dialogRect.width(), qMin(graspableHeight, dialogRect.height()));
         const QList<QScreen*> screens = QApplication::screens();
         for (const QScreen* screen : screens) {
-            if (screen->availableGeometry().intersects(titleBar)) {
+            const QRect grabbable = screen->availableGeometry().intersected(titleBar);
+            if (grabbable.width() >= qMin(graspableWidth, titleBar.width()) && grabbable.height() >= titleBar.height()) {
                 return;
             }
         }

@@ -252,6 +252,31 @@ private slots:
         QVERIFY2(fullyOnAScreen(mpEditor), "An editor whose title bar cannot be reached should be brought back into view");
     }
 
+    // Pushed off the side until only a few pixels of title bar are left: still
+    // overlapping a screen, but with nothing wide enough to aim a pointer at
+    void testAWindowLeftAsASliverAtTheScreenEdgeIsRescued()
+    {
+        const QRect screen = QApplication::primaryScreen()->availableGeometry();
+        placeEditorAtAndClose(mpEditor, QPoint(screen.right() - 4, screen.top() + 40));
+        QVERIFY2(touchesAnyScreen(mpEditor), "setup: this case is about a window that does still overlap a screen");
+
+        QCOMPARE(reopenEditor(), mpEditor);
+        QVERIFY2(fullyOnAScreen(mpEditor), "An editor left as a sliver at the screen edge should be brought back into view");
+    }
+
+    // The other side of that: hanging off an edge is a position people choose on
+    // purpose, and as long as there is title bar to grab it is theirs to keep
+    void testAWindowDeliberatelyHungOffAnEdgeIsLeftAlone()
+    {
+        const QRect screen = QApplication::primaryScreen()->availableGeometry();
+        const QPoint hangingOff(screen.right() - 200, screen.top() + 40);
+        placeEditorAtAndClose(mpEditor, hangingOff);
+        QVERIFY2(!fullyOnAScreen(mpEditor), "setup: most of the window has to be off the screen for this to discriminate");
+
+        QCOMPARE(reopenEditor(), mpEditor);
+        QCOMPARE(mpEditor->pos(), hangingOff);
+    }
+
     // First run, with nothing remembered yet: the editor is placed in the
     // middle of the screen rather than left wherever the window system drops it
     void testTheFirstEverEditorIsCentred()
