@@ -469,9 +469,9 @@ void dlgPackageManager::slot_installPackageFromRepository()
                         if (mpHost->mInstalledPackages.contains(packageName)) {
                             mpHost->uninstallPackage(packageName, enums::PackageModuleType::Package);
                         }
-                        // Before the install, not after it: an install begun while a save is
-                        // in flight - the uninstall above starts one - is put off until that
-                        // save finishes, long after the archive is deleted below.
+                        // Before the install, not after it: the previous pass's install
+                        // leaves a save in flight, and an install begun during a save is put
+                        // off until it finishes - long after the archive is deleted below.
                         mpHost->waitForProfileSave();
                         if (!mpHost->installPackage(filePath, enums::PackageModuleType::Package).first) {
                             failedPackages << packageName;
