@@ -91,6 +91,8 @@ private:
     bool mLogTimestampsBefore = false;
     QString mEditorThemeBefore;
     QString mEditorThemeDarkBefore;
+    QString mEditorThemeFileBefore;
+    QString mEditorThemeFileDarkBefore;
     QMap<QString, QKeySequence> mShortcutsBefore;
 
     static void deleteProfileDirectory(const QString& profileName) { TestSettings::deleteProfileDirectory(profileName); }
@@ -191,6 +193,8 @@ private slots:
         mLogTimestampsBefore = mpHost->mIsLoggingTimestamps;
         mEditorThemeBefore = mpHost->mEditorTheme;
         mEditorThemeDarkBefore = mpHost->mEditorThemeDark;
+        mEditorThemeFileBefore = mpHost->mEditorThemeFile;
+        mEditorThemeFileDarkBefore = mpHost->mEditorThemeFileDark;
         mShortcutsBefore.clear();
         for (const auto& [key, pSequence] : mpHost->profileShortcuts) {
             mShortcutsBefore.insert(key, *pSequence);
@@ -211,6 +215,8 @@ private slots:
         mpHost->mIsLoggingTimestamps = mLogTimestampsBefore;
         mpHost->mEditorTheme = mEditorThemeBefore;
         mpHost->mEditorThemeDark = mEditorThemeDarkBefore;
+        mpHost->mEditorThemeFile = mEditorThemeFileBefore;
+        mpHost->mEditorThemeFileDark = mEditorThemeFileDarkBefore;
         for (const auto& [key, pSequence] : mpHost->profileShortcuts) {
             *pSequence = mShortcutsBefore.value(key);
         }
@@ -376,7 +382,10 @@ private slots:
     {
         writeEditorThemesFile(R"([{"Title": "PhaseDProbe", "FileName": "PhaseDProbe.tmTheme"}])");
         const bool dark = mudlet::self()->inDarkMode();
+        // Host::getEditorTheme() only reads the dark name when the dark file is
+        // set too, so a name on its own leaves the dialog on the light theme
         (dark ? mpHost->mEditorThemeDark : mpHost->mEditorTheme) = qsl("PhaseDProbe");
+        (dark ? mpHost->mEditorThemeFileDark : mpHost->mEditorThemeFile) = qsl("PhaseDProbe.tmTheme");
         openPreferences();
         QCOMPARE(mpPreferences->code_editor_theme_selection_combobox->currentText(), qsl("PhaseDProbe"));
 

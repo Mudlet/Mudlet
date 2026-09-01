@@ -341,8 +341,15 @@ foreach(test_name ${allFunctionalTestNames})
     # so ctest behaves the same locally and in CI. A test that needs it unset has to
     # unset it itself - nothing here checks that, so see DefaultPackagesTest, which
     # asserts the variable arrives at all.
+    #
+    # Qt adds the xdg-desktop-portal platform theme when it believes it is running
+    # sandboxed, which it decides from $SNAP, and that theme - not the application -
+    # then owns the colour scheme, so setColorScheme() stops having any effect. A
+    # cmake installed as a snap exports $SNAP to every test it runs, which makes
+    # Mudlet look sandboxed when it is an ordinary build-tree binary, so drop it.
     set_tests_properties(${test_name} PROPERTIES
         ENVIRONMENT "QT_QPA_PLATFORM=offscreen;MUDLET_TEST_MODE=1;${leakLog}ASAN_OPTIONS=${leakCheck}"
+        ENVIRONMENT_MODIFICATION "SNAP=unset:"
         LABELS "functional"
         TIMEOUT 60  # seconds
     )
