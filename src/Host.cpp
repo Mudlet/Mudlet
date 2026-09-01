@@ -2531,6 +2531,15 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     auto nameIsAStepOutOfTheProfile = [](const QString& name) {
         return name.isEmpty() || name == QLatin1String(".") || name == QLatin1String("..") || name.contains(QLatin1Char('/')) || name.contains(QLatin1Char('\\'));
     };
+    // The profile's own folders sit beside the folders its packages install into,
+    // so a manifest can ask to be installed under one of their names. Three of
+    // them are made when the profile is, which turns that install away by itself.
+    // The media folder is not: it is made the first time something is downloaded
+    // into it, which can be long after a module took the name, and from then on
+    // the module and the profile share a folder.
+    auto theProfileKeepsItsOwnDataIn = [](const QString& name) {
+        return name == QLatin1String("map") || name == QLatin1String("log") || name == QLatin1String("current") || name == QLatin1String("media");
+    };
 
     QString packageName = sanitizePackageName(fileName);
     if (nameIsAStepOutOfTheProfile(packageName)) {
@@ -2752,7 +2761,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                 // profile already knew as this module's - a name the manifest has
                 // only just asked for could be the profile's own "map" or "log".
                 const QString theModulesFolderFromLastTime = QDir(newpath).absolutePath();
-                if (theModulesFolderFromLastTime.startsWith(QDir(_home).absolutePath() + QLatin1Char('/'))) {
+                if (theModulesFolderFromLastTime.startsWith(QDir(_home).absolutePath() + QLatin1Char('/')) && !theProfileKeepsItsOwnDataIn(packageName)) {
                     removeDir(theModulesFolderFromLastTime, theModulesFolderFromLastTime);
                     movedIntoPlace = _dir.rename(_dir.absolutePath(), newpath);
                 }

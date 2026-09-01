@@ -159,6 +159,34 @@ private:
         return writeArchive(path, qsl("%1.xml").arg(packageName), QByteArray(packageXml, sizeof(packageXml) - 1));
     }
 
+    // ...and one that both installs and renames itself, which is what makes an
+    // install land in a folder other than the one it unpacked into.
+    static bool writeRenamingArchive(const QString& path, const QString& declaredName)
+    {
+        static const char packageXml[] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                                         "<!DOCTYPE MudletPackage>\n"
+                                         "<MudletPackage version=\"1.001\">\n"
+                                         "<TriggerPackage /><TimerPackage /><AliasPackage /><ActionPackage />\n"
+                                         "<ScriptPackage /><KeyPackage /><VariablePackage><HiddenVariables /></VariablePackage>\n"
+                                         "</MudletPackage>\n";
+        int errorCode = 0;
+        zip* archive = zip_open(path.toUtf8().constData(), ZIP_CREATE | ZIP_TRUNCATE, &errorCode);
+        if (!archive) {
+            return false;
+        }
+        const QByteArray config = qsl("mpackage = \"%1\"\n").arg(declaredName).toUtf8();
+        zip_source* configSource = zip_source_buffer(archive, config.constData(), config.size(), 0);
+        zip_source* xmlSource = zip_source_buffer(archive, packageXml, sizeof(packageXml) - 1, 0);
+        if (!configSource || !xmlSource || zip_file_add(archive, "config.lua", configSource, ZIP_FL_ENC_UTF_8) < 0
+            || zip_file_add(archive, qsl("%1.xml").arg(declaredName).toUtf8().constData(), xmlSource, ZIP_FL_ENC_UTF_8) < 0) {
+            zip_source_free(configSource);
+            zip_source_free(xmlSource);
+            zip_discard(archive);
+            return false;
+        }
+        return zip_close(archive) == 0;
+    }
+
     QString profileFilePath(const QString& relativePath) const { return qsl("%1/%2").arg(mudlet::getMudletPath(enums::profileHomePath, mProfileName), relativePath); }
 
 private slots:
@@ -440,6 +468,41 @@ private slots:
 
     // ...and closing the profile straight after an uninstall must leave nothing
     // of that save behind: it would run on a destroyed Host.
+    // A package installs into <profile>/<its name>, and the profile keeps its own
+    // map, logs and downloaded media in folders right beside those - so a manifest
+    // can ask for one of their names. Three of them are made when the profile is,
+    // so an install asking for those is refused outright; the media folder is only
+    // made the first time something is downloaded into it, which can be long after
+    // a module took that name. From then on the two share a folder, and the module's
+    // next sync unpacks under the archive's file name, cannot rename that onto the
+    // folder it already owns, and clears the way by deleting what is there.
+    void test_aModuleSyncDoesNotDeleteTheProfilesOwnFolder()
+    {
+        QTemporaryDir archiveDir;
+        QVERIFY(archiveDir.isValid());
+        const QString sharedName = qsl("media");
+        const QString archivePath = qsl("%1/renaming-module.zip").arg(archiveDir.path());
+        QVERIFY2(writeRenamingArchive(archivePath, sharedName), "Could not write the renaming module archive");
+
+        mpHost->waitForProfileSave();
+        QVERIFY2(!QDir(profileFilePath(sharedName)).exists(), "SETUP: the profile has that folder already, so the install below could not take the name");
+        auto [installed, message] = mpHost->installPackage(archivePath, enums::PackageModuleType::ModuleFromUI, true);
+        QVERIFY2(installed, qPrintable(message));
+        QVERIFY2(mpHost->mModuleInfo.contains(sharedName), "SETUP: the module did not register under the name its config.lua asked for");
+        QVERIFY2(QDir(profileFilePath(sharedName)).exists(), "SETUP: the module did not land in the folder the profile downloads media into");
+
+        // What downloading a sound writes, into the very folder the module now owns.
+        const QString downloadedFile = profileFilePath(qsl("%1/downloaded-sound.mp3").arg(sharedName));
+        QFile download(downloadedFile);
+        QVERIFY2(download.open(QIODevice::WriteOnly), "Could not put a download where the profile keeps them");
+        download.write("not a real sound, but the user's all the same");
+        download.close();
+
+        mpHost->waitForProfileSave();
+        mpHost->installPackage(archivePath, enums::PackageModuleType::ModuleSync, true);
+        QVERIFY2(QFile::exists(downloadedFile), "The module's sync deleted the profile's downloaded media");
+    }
+
     void test_deferredSaveDoesNotOutliveTheProfile()
     {
         const QString packageName = qsl("uninstall-save-teardown");
