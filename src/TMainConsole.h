@@ -116,8 +116,8 @@ public:
     void closeUnpackingProgress();
     void setupVideoOutput(TMediaPlayer* player, bool& setupSucceeded);
     void hideVideoOutput(TMediaPlayer* player);
-    const QByteArray& getHunspellCodecName_system() const { return mHunspellCodecName_system; }
-    Hunhandle* getHunspellHandle_system() const { return mpHunspell_system; }
+    const QByteArray& getHunspellCodecName_system();
+    Hunhandle* getHunspellHandle_system();
     // Either returns the handle of the per profile or the shared Mudlet one or
     // nullptr depending on the state of the flags mEnableUserDictionary and
     // mUseSharedDictionary:
@@ -185,12 +185,14 @@ signals:
 
 private:
     void createMapProgressDialog(const QString& title, const QString& label, const QString& cancelButtonText, int minimum, int maximum);
+    void loadSystemSpellDictionary();
 
-    // Names the dictionary mpHunspell_system was last built for. Assigned before
-    // the load is attempted and never rolled back, so a dictionary whose files
-    // are missing is remembered as loaded and never retried. Host's mSpellDic is
-    // the profile's setting; this is only ever what has been loaded from it.
-    QString mLoadedSystemDictionary;
+    // Names the dictionary mpHunspell_system is built for. The build itself
+    // waits for the first spell-check, which keeps reading the whole dictionary
+    // off the profile load. Never rolled back, so a dictionary whose files are
+    // missing is not retried. Host's mSpellDic is the profile's setting; this
+    // is only ever what has been requested from it.
+    QString mSystemDictionary;
 
     // Cloned from Host
     bool mEnableUserDictionary = true;

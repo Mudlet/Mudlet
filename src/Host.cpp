@@ -3045,11 +3045,20 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule)
 // writeProfileIniData(...) and readProfileIniData(...) might eventually
 // replace writeProfileData(...) and readProfileData(...) but for now are just
 // used to store some information about one or more TCommandLine's mHistoryData:
+QSettings& Host::profileIni()
+{
+    if (!mpProfileIni) {
+        mpProfileIni = new QSettings(mudlet::getMudletPath(enums::profileDataItemPath, getName(), qsl("profile.ini")), QSettings::IniFormat, this);
+    }
+    return *mpProfileIni;
+}
+
 bool Host::writeProfileIniData(const QString& item, const QString& what)
 {
-    QSettings settings(mudlet::getMudletPath(enums::profileDataItemPath, getName(), qsl("profile.ini")), QSettings::IniFormat);
+    auto& settings = profileIni();
     settings.setValue(item, what);
-    settings.sync();
+    // The change reaches the disk on the next pass through the event loop, so
+    // a failure only shows up on the write after the one that hit it:
     switch (settings.status()) {
     case QSettings::NoError:
         return true;
@@ -3065,8 +3074,7 @@ bool Host::writeProfileIniData(const QString& item, const QString& what)
 
 QString Host::readProfileIniData(const QString& item)
 {
-    QSettings settings(mudlet::getMudletPath(enums::profileDataItemPath, getName(), qsl("profile.ini")), QSettings::IniFormat);
-    return settings.value(item).toString();
+    return profileIni().value(item).toString();
 }
 
 // This function retrieves command line history settings based on the given
@@ -3776,6 +3784,12 @@ void Host::setName(const QString& name)
     }
 
     mHostName = name;
+
+    if (mpProfileIni) {
+        // Flushes on the way out; the next use reopens it under the new name:
+        delete mpProfileIni;
+        mpProfileIni = nullptr;
+    }
 
     mTelnet.mProfileName = name;
     if (mpMap) {

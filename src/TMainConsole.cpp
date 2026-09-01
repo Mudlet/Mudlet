@@ -1161,34 +1161,53 @@ QPair<bool, QString> TMainConsole::removeWordFromSet(const QString& word)
 
 void TMainConsole::setSystemSpellDictionary(const QString& newDict)
 {
-    if (newDict.isEmpty() || mLoadedSystemDictionary == newDict) {
+    if (newDict.isEmpty() || mSystemDictionary == newDict) {
         return;
     }
 
-    mLoadedSystemDictionary = newDict;
-
-    // Everywhere but macOS getMudletPath() probes for "<name>.aff" to settle
-    // which directory wins, so it has to get the same name the files are then
-    // loaded by.
-    const QString path = mudlet::getMudletPath(enums::hunspellDictionaryPath, newDict);
-    QString spell_aff = qsl("%1%2.aff").arg(path, newDict);
-    QString spell_dic = qsl("%1%2.dic").arg(path, newDict);
+    mSystemDictionary = newDict;
 
     if (mpHunspell_system) {
         Hunspell_destroy(mpHunspell_system);
+        mpHunspell_system = nullptr;
+        mHunspellCodecName_system.clear();
     }
+}
+
+Hunhandle* TMainConsole::getHunspellHandle_system()
+{
+    if (!mpHunspell_system && !mSystemDictionary.isEmpty()) {
+        loadSystemSpellDictionary();
+    }
+    return mpHunspell_system;
+}
+
+const QByteArray& TMainConsole::getHunspellCodecName_system()
+{
+    getHunspellHandle_system();
+    return mHunspellCodecName_system;
+}
+
+void TMainConsole::loadSystemSpellDictionary()
+{
+    // Everywhere but macOS getMudletPath() probes for "<name>.aff" to settle
+    // which directory wins, so it has to get the same name the files are then
+    // loaded by.
+    const QString path = mudlet::getMudletPath(enums::hunspellDictionaryPath, mSystemDictionary);
+    QString spell_aff = qsl("%1%2.aff").arg(path, mSystemDictionary);
+    QString spell_dic = qsl("%1%2.dic").arg(path, mSystemDictionary);
 
 #if defined(Q_OS_WINDOWS)
     // strip non-ASCII characters from the path because hunspell can't handle them
     // when compiled with MinGW 7.3.0
-    mudlet::self()->sanitizeUtf8Path(spell_aff, qsl("%1.aff").arg(newDict));
-    mudlet::self()->sanitizeUtf8Path(spell_dic, qsl("%1.dic").arg(newDict));
+    mudlet::self()->sanitizeUtf8Path(spell_aff, qsl("%1.aff").arg(mSystemDictionary));
+    mudlet::self()->sanitizeUtf8Path(spell_dic, qsl("%1.dic").arg(mSystemDictionary));
 #endif
 
     mpHunspell_system = Hunspell_create(spell_aff.toUtf8().constData(), spell_dic.toUtf8().constData());
     if (mpHunspell_system) {
         mHunspellCodecName_system = QByteArray(Hunspell_get_dic_encoding(mpHunspell_system));
-        qDebug().noquote().nospace() << "TMainConsole::setSystemSpellDictionary(\"" << newDict << "\") INFO - System Hunspell dictionary loaded for profile, it uses a \""
+        qDebug().noquote().nospace() << "TMainConsole::loadSystemSpellDictionary() INFO - System Hunspell dictionary \"" << mSystemDictionary << "\" loaded for profile, it uses a \""
                                      << Hunspell_get_dic_encoding(mpHunspell_system) << "\" encoding...";
     }
 }

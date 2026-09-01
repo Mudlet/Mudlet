@@ -84,6 +84,7 @@
 #include <QSettings>
 #include <QShortcut>
 #include <QSplitter>
+#include <QSslConfiguration>
 #include <QStyleFactory>
 #include <QStyleHints>
 #include <QTableWidget>
@@ -1629,10 +1630,6 @@ void mudlet::init()
         }
         emit signal_blinkStateChanged();
     });
-
-    // Monitor audio device changes to automatically refresh media players
-    mpMediaDevices = new QMediaDevices(this);
-    connect(mpMediaDevices, &QMediaDevices::audioOutputsChanged, this, &mudlet::slot_audioOutputDeviceChanged);
 
     // Initialize the window menu on startup
     updateWindowMenu();
@@ -3298,7 +3295,10 @@ void mudlet::addConsoleForNewHost(Host* pH)
     pH->mpEditorDialog = pEditor;
     connect(pH, &Host::profileSaveStarted, pH->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveStarted);
     connect(pH, &Host::profileSaveFinished, pH->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveFinished);
-    pEditor->fillout_form();
+    // The editor's item trees are deliberately not populated here: the
+    // profile's scripts have yet to run and ScriptUnit::compileAll() queues a
+    // full rebuild once they have, so populating now would only double the
+    // cost of the load.
 
     pH->getActionUnit()->updateAllToolbars();
 
@@ -6293,6 +6293,18 @@ void mudlet::slot_audioOutputDeviceChanged()
     }
 }
 
+// Only wanted once there is a player to refresh, and not before: constructing
+// a QMediaDevices loads the multimedia backend, which can stall start-up for
+// hundreds of milliseconds probing hardware decoders.
+void mudlet::watchAudioOutputDevices()
+{
+    if (mpMediaDevices) {
+        return;
+    }
+    mpMediaDevices = new QMediaDevices(this);
+    connect(mpMediaDevices, &QMediaDevices::audioOutputsChanged, this, &mudlet::slot_audioOutputDeviceChanged);
+}
+
 // Called by the short-cut to the menu item that doesn't pass the checked state
 // of the menu-item that it provides a short-cut to:
 void mudlet::slot_toggleCompactInputLine()
@@ -7155,7 +7167,6 @@ Host* mudlet::loadProfile(const QString& profile_name, const bool playOnline, co
     QStringList entries = dir.entryList(QStringList{qsl("*.xml")}, QDir::Files, QDir::Time);
     // pre-install packages when loading this profile for the first time
     bool preInstallPackages = false;
-    pHost->hideMudletsVariables();
     // NB: an explicitly requested saveFileName is honored even when no *.xml
     // is present - failing to open it then reports a proper load error rather
     // than silently starting a fresh profile:
