@@ -42,7 +42,7 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
-#include <QAction>
+#include <QCheckBox>
 #include <QKeySequenceEdit>
 #include <QLineEdit>
 #include <QScopeGuard>
@@ -355,7 +355,7 @@ private slots:
         QVERIFY2(mpHost->getTriggerUnit()->findTrigger(nameBefore), "The trigger lost its name while the editor was destroyed");
     }
 
-    void test_protocolActionsFireAfterPreferencesReopen()
+    void test_protocolTogglesFireAfterPreferencesReopen()
     {
         mudlet::self()->showOptionsDialog(qsl("tab_general"), mpHost);
         QTest::qWait(100ms);
@@ -369,22 +369,17 @@ private slots:
         auto* preferences = mpHost->mpDlgProfilePreferences.data();
         QVERIFY2(preferences, "Preferences dialog was not recreated");
 
-        QAction* gmcpAction = nullptr;
-        for (auto* action : preferences->findChildren<QAction*>()) {
-            if (action->text().startsWith(qsl("GMCP"))) {
-                gmcpAction = action;
-                break;
-            }
-        }
-        QVERIFY2(gmcpAction, "GMCP protocol action not found under the reopened dialog - parenting to the menu broke discovery or population");
+        auto* gmcpCheckBox = preferences->findChild<QCheckBox*>(qsl("checkBox_enableGMCP"));
+        QVERIFY2(gmcpCheckBox, "GMCP protocol checkbox not found under the reopened dialog - the protocols subpage was not built or not populated");
 
-        // initWithHost() wires GMCP's toggled() to this button's setEnabled(),
-        // so the button flipping proves the fresh action is connected
+        // buildProtocolsSubpage() wires GMCP's toggled() to this button's
+        // setEnabled(), so the button flipping proves the fresh dialog's
+        // checkbox is connected - and that the connection was made exactly once
         const bool enabledBefore = preferences->pushButton_forgetSavedSignIn->isEnabled();
-        QCOMPARE(enabledBefore, gmcpAction->isChecked());
-        gmcpAction->toggle();
+        QCOMPARE(enabledBefore, gmcpCheckBox->isChecked());
+        gmcpCheckBox->toggle();
         QCOMPARE(preferences->pushButton_forgetSavedSignIn->isEnabled(), !enabledBefore);
-        gmcpAction->toggle();
+        gmcpCheckBox->toggle();
         QCOMPARE(preferences->pushButton_forgetSavedSignIn->isEnabled(), enabledBefore);
 
         delete preferences;

@@ -286,6 +286,7 @@ public:
     QPair<bool, bool> removeWordFromSet(const QString&);
     QString readProfileData(const QString& profile, const QString& item);
     void refreshTabBar();
+    void refreshTabBarsAfterStyleChange();
     // Used by a profile to tell the mudlet class
     // to tell other profiles to reload the updated
     // maps (via signal_profileMapReloadRequested(...))
