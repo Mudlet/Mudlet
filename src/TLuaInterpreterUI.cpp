@@ -3925,9 +3925,12 @@ int TLuaInterpreter::setWindowWrapIndent(lua_State* L)
 {
     const char* windowName = WINDOW_NAME(L, 1);
     const int luaFrom = getVerifiedInt(L, __func__, 2, "wrapTo");
+    if (luaFrom < 0) {
+        return warnArgumentValue(L, __func__, qsl("indent %1 is not valid, it must be 0 or more").arg(luaFrom));
+    }
     auto console = CONSOLE(L, QString{windowName});
     console->setIndentCount(luaFrom);
-    if (luaFrom >= 0 && console->getType() == TConsole::MainConsole) {
+    if (console->getType() == TConsole::MainConsole) {
         Host& host = getHostFromLua(L);
         host.mWrapIndentCount = luaFrom;
     }
@@ -3939,9 +3942,12 @@ int TLuaInterpreter::setWindowWrapHangingIndent(lua_State* L)
 {
     const char* windowName = WINDOW_NAME(L, 1);
     const int luaFrom = getVerifiedInt(L, __func__, 2, "wrapTo");
+    if (luaFrom < 0) {
+        return warnArgumentValue(L, __func__, qsl("indent %1 is not valid, it must be 0 or more").arg(luaFrom));
+    }
     auto console = CONSOLE(L, QString{windowName});
     console->setHangingIndentCount(luaFrom);
-    if (luaFrom >= 0 && console->getType() == TConsole::MainConsole) {
+    if (console->getType() == TConsole::MainConsole) {
         Host& host = getHostFromLua(L);
         host.mWrapHangingIndentCount = luaFrom;
     }
