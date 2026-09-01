@@ -158,6 +158,7 @@ set(STARTERUI_GROUP_TEST_SOURCES
     ExperiencedPlayerGateTest.cpp
     FeatureCalloutTest.cpp
     StarterUiGaugePanelTest.cpp
+    StarterUiProtocolCatchUpTest.cpp
     StarterUiSectionsTest.cpp
     StarterUiTriggerCostTest.cpp
     TutorialInvitationGateTest.cpp
