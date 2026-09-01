@@ -584,6 +584,26 @@ jobs:
         echo "MUDLET_TEST_DISCORD_LIB_PATH=${{github.workspace}}/3rdparty/discord/rpc/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}" >> "${GITHUB_ENV}"
         echo "fake Discord IPC server ready in ${runtime_dir}"
 
+    - name: (Linux/macOS) Start telnet fixture for Lua tests
+      if: matrix.run_tests == 'true'
+      shell: bash
+      run: |
+        telnet_dir="${{runner.temp}}/mudlet-telnet-fixture"
+        rm -rf "${telnet_dir}"
+        mkdir -p "${telnet_dir}"
+        MUDLET_TEST_TELNET_DIR="${telnet_dir}" nohup python3 "${{github.workspace}}/CI/telnet-fixture-server.py" > "${{runner.temp}}/telnet-fixture.log" 2>&1 &
+        for _ in $(seq 1 50); do
+          [ -s "${telnet_dir}/port" ] && break
+          sleep 0.1
+        done
+        if [ ! -s "${telnet_dir}/port" ]; then
+          echo "telnet fixture failed to start" >&2
+          cat "${{runner.temp}}/telnet-fixture.log" 2>/dev/null || true
+          exit 1
+        fi
+        echo "MUDLET_TEST_TELNET_DIR=${telnet_dir}" >> "${GITHUB_ENV}"
+        echo "telnet fixture ready on port $(cat "${telnet_dir}/port")"
+
     - name: (Linux/macOS) Start MMCP peer fixture for Lua tests
       if: matrix.run_tests == 'true'
       shell: bash
@@ -623,6 +643,7 @@ jobs:
         MUDLET_TEST_REQUIRE_TTS_MOCK: 1
         MUDLET_TEST_REQUIRE_HTTP_FIXTURE: 1
         MUDLET_TEST_REQUIRE_MMCP_PEER: 1
+        MUDLET_TEST_REQUIRE_TELNET_FIXTURE: 1
         # Qt Multimedia runs a player here even without an audio device, so a
         # media effect spec that cannot play is a regression rather than an
         # environment quirk. macOS runners start no player at all, so the gate
@@ -671,6 +692,7 @@ jobs:
         MUDLET_TEST_REQUIRE_TTS_MOCK: 1
         MUDLET_TEST_REQUIRE_HTTP_FIXTURE: 1
         MUDLET_TEST_REQUIRE_MMCP_PEER: 1
+        MUDLET_TEST_REQUIRE_TELNET_FIXTURE: 1
         # No MUDLET_TEST_REQUIRE_MEDIA: Qt Multimedia starts no player on the
         # macOS runners, so the media effect specs pend here by design.
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
@@ -685,6 +707,15 @@ jobs:
         cat "${{runner.temp}}/discord-ipc-fixture.log" 2>/dev/null || true
         echo "--- frames it captured ---"
         cat "${{runner.temp}}/mudlet-discord-frames.jsonl" 2>/dev/null || true
+
+    - name: (Linux/macOS) Show the telnet fixture log on failure
+      if: failure() && matrix.run_tests == 'true'
+      shell: bash
+      run: |
+        echo "--- telnet fixture log ---"
+        cat "${{runner.temp}}/telnet-fixture.log" 2>/dev/null || true
+        echo "--- what it captured ---"
+        cat "${{runner.temp}}/mudlet-telnet-fixture/capture.json" 2>/dev/null || true
 
     - name: Passed Lua tests
       if: matrix.run_tests == 'true'
