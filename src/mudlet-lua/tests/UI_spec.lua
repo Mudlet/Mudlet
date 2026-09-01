@@ -2124,6 +2124,41 @@ describe("Tests UI functions", function()
       BaseUI.serverGuiRemoved("sysUninstallPackage", "SomethingElse")
       assert.are.equal("SomeGameUI", BaseUI.settings.standingAside)
     end)
+
+    -- a game with its own interface can decline this one up front, by sending
+    -- Client.GUI {"baseui": false}. C++ raises the same event for that, naming no
+    -- package, so this is the shape the decline arrives in
+    it("should stand aside when the game declines without naming a package", function()
+      BaseUI.standAside("sysServerGuiInstalled")
+      assert.is_not_nil(BaseUI.settings.standingAside)
+      assert.is_true(BaseUI.dormant())
+    end)
+
+    it("should retire its capture triggers on a decline, so no game data builds the dock", function()
+      BaseUI.standAside("sysServerGuiInstalled")
+      assert.is_false(BaseUI.chatTriggersArmed())
+      assert.is_nil(next(BaseUI.vitalsTriggerIds))
+      BaseUI.armChatTriggers()
+      BaseUI.createVitalsTriggers()
+      assert.is_false(BaseUI.chatTriggersArmed())
+      assert.is_nil(next(BaseUI.vitalsTriggerIds))
+    end)
+
+    -- the marker a nameless stand-aside stores must never match a real package,
+    -- or that package's uninstall would be read as the game changing its mind
+    it("should stay aside on a decline when a package is uninstalled", function()
+      BaseUI.standAside("sysServerGuiInstalled")
+      local marker = BaseUI.settings.standingAside
+      BaseUI.serverGuiRemoved("sysUninstallPackage", "SomeGameUI")
+      assert.are.equal(marker, BaseUI.settings.standingAside)
+    end)
+
+    it("should come back after a decline when the player asks for it", function()
+      BaseUI.standAside("sysServerGuiInstalled")
+      BaseUI.show()
+      assert.is_nil(BaseUI.settings.standingAside)
+      assert.is_false(BaseUI.dormant())
+    end)
   end)
 
   describe("tempButtonToolbar and tempButton return values", function()
