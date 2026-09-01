@@ -303,13 +303,13 @@ jobs:
         }
         $signatures = $binaries | ForEach-Object { Get-AuthenticodeSignature $_.FullName }
         $signatures | Group-Object Status | ForEach-Object { Write-Output "$($_.Count) $($_.Name)" }
-        $unsigned = $signatures | Where-Object { $_.Status -eq 'NotSigned' }
-        if ($unsigned) {
-          Write-Output "::error::$($unsigned.Count) of $($binaries.Count) binaries are unsigned"
-          $unsigned | ForEach-Object { Write-Output "  $($_.Path)" }
+        $bad = $signatures | Where-Object { $_.Status -ne 'Valid' }
+        if ($bad) {
+          Write-Output "::error::$($bad.Count) of $($binaries.Count) binaries do not have a valid signature"
+          $bad | ForEach-Object { Write-Output "  $($_.Status) $($_.Path)" }
           exit 1
         }
-        Write-Output "All $($binaries.Count) binaries in the package are signed."
+        Write-Output "All $($binaries.Count) binaries in the package have a valid signature."
 
     - name: (Windows) Create portable ZIP
       # Runs after signing so the portable ships the same signed binaries as the installer
