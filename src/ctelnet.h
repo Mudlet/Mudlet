@@ -349,6 +349,11 @@ private:
     // without a real decompression bomb.
     friend class cTelnetBufferTest;
 
+    // Calls reset() from its constructor. It has to be the Host that does that,
+    // and not cTelnet itself, because reset() clears Host members declared after
+    // cTelnet, which do not exist yet while cTelnet is being constructed.
+    friend class Host;
+
 #if defined(QT_NO_SSL)
     void abortLosingSocket(QTcpSocket* losingSocket);
 #else
@@ -364,7 +369,6 @@ private:
     int decompressBuffer(char*& in_buffer, int& length, char* out_buffer);
     void reset();
     void handleFailedConnection();
-    void forgetGameSuppliedHostState();
     void sendLoginAndPass();
 
     QByteArray prepareNewEnvironData(const QString&);

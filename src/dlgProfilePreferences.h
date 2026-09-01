@@ -24,6 +24,7 @@
  ***************************************************************************/
 
 
+#include "Host.h"
 #include "mudlet.h"
 
 #include "ui_profile_preferences.h"
@@ -33,7 +34,6 @@
 #include <QMap>
 #include <QVariant>
 
-class Host;
 class QCloseEvent;
 class QDoubleSpinBox;
 class QEvent;
@@ -306,7 +306,7 @@ private:
     QString mapSaveLoadDirectory(Host* pHost);
     void loadMap(const QString&);
     void fillOutMapHistory();
-    bool updateDisplayFont();
+    bool updateDisplayFont(Host::DisplayFontChange change);
     void cancelShortcutCaptures();
     void updateShortcutConflictWarning();
     void switchEditorTheme(const QString& themeName);

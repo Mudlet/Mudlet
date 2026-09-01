@@ -1209,14 +1209,86 @@ describe("Tests Geyser.Label font, link style and tooltip", function()
       assert.is_nil(getLabelText("glfFont"):find("<font face", 1, true))
     end)
 
-    it("says so rather than raising when the font is not installed", function()
+    it("reports success when the font is installed", function()
+      assert.is_true(label:setFont("Ubuntu Mono"))
+    end)
+
+    it("takes a \"Family Style\" name the way every other window does", function()
+      assert.is_true(label:setFont("Ubuntu Mono Bold"))
+      -- the style is the weight the widget is given, not part of the family
+      assert.are.equal("Ubuntu Mono", label.font)
+      assert.are.equal("Ubuntu Mono", getFont("glfFont"))
+    end)
+
+    it("says so rather than raising when the font is not a string", function()
+      label:setFont("Ubuntu Mono")
+      local ok, err
+      assert.has_no.errors(function() ok, err = label:setFont(12) end)
+      assert.is_nil(ok)
+      assert.is_truthy(tostring(err):find("font must be a string", 1, true))
+      assert.are.equal("Ubuntu Mono", label.font)
+    end)
+
+    it("matches an installed family ignoring case and remembers its real name", function()
+      assert.is_true(label:setFont("ubuntu mono"))
+      assert.are.equal("Ubuntu Mono", label.font)
+      assert.is_truthy(getLabelText("glfFont"):find('<font face ="Ubuntu Mono">', 1, true))
+    end)
+
+    it("warns but still takes a family the font database does not list", function()
+      label:setFont("Ubuntu Mono")
       local debugMessage = spy.on(_G, "debugc")
       finally(function() debugMessage:revert() end)
-      assert.has_no.errors(function() label:setFont("No Such Font At All") end)
+      local ok, err
+      assert.has_no.errors(function() ok, err = label:setFont("No Such Font At All") end)
+      assert.is_true(ok)
+      assert.is_nil(err)
       assert.spy(debugMessage).was.called()
       assert.is_truthy(debugMessage.calls[#debugMessage.calls].vals[1]:find("No Such Font At All", 1, true))
-      -- it still records what it was asked for, so the markup shows the ask
+      -- the database leaves out names the platform still resolves, so the name
+      -- goes into the <font face> that every echo() wraps the text in and Qt
+      -- gets to pick what it draws it with
       assert.are.equal("No Such Font At All", label.font)
+      assert.is_truthy(getLabelText("glfFont"):find('<font face ="No Such Font At All">', 1, true))
+    end)
+
+    it("does not raise when the constructor is handed a font that is not a string", function()
+      local built
+      assert.has_no.errors(function() built = track(Geyser.Label:new({name = "glfFontNotAString", x = 0, y = 60, width = 200, height = 50, font = 12})) end)
+      assert.is_truthy(built)
+      -- the refused constraint must not be left to reach the markup, where
+      -- string.format would put the bare number in the <font face>
+      assert.are.equal("", built.font)
+      assert.is_nil(getLabelText("glfFontNotAString"):find("<font face", 1, true))
+    end)
+
+    it("normalises a font constraint that is present but false", function()
+      -- false is a font that is not a string like any other, so it has to leave the
+      -- same empty string behind - not itself, which no reader of .font expects
+      local built = track(Geyser.Label:new({name = "glfFontFalse", x = 0, y = 240, width = 200, height = 50, font = false}))
+      assert.are.equal("", built.font)
+      assert.is_nil(getLabelText("glfFontFalse"):find("<font face", 1, true))
+    end)
+
+    it("takes the font of a label used as a prototype", function()
+      local prototype = track(Geyser.Label:new({name = "glfPrototype", x = 0, y = 120, width = 200, height = 50}))
+      prototype:setFont("Ubuntu Mono")
+      local child = track(prototype:new({name = "glfPrototypeChild", x = 0, y = 180, width = 200, height = 50}))
+      -- inherited through the prototype, the font reaches the markup but was never
+      -- set on the child's own widget, so getFont() still reports the default
+      assert.are.equal("Ubuntu Mono", child.font)
+      assert.is_truthy(getLabelText("glfPrototypeChild"):find('<font face ="Ubuntu Mono">', 1, true))
+      assert.are_not.equal("Ubuntu Mono", getFont("glfPrototypeChild"))
+    end)
+
+    it("keeps a child's own font off the label it was cloned from", function()
+      local prototype = track(Geyser.Label:new({name = "glfOwnPrototype", x = 0, y = 300, width = 200, height = 50}))
+      prototype:setFont("Ubuntu Mono")
+      local child = track(prototype:new({name = "glfOwnChild", x = 0, y = 360, width = 200, height = 50, font = "Bitstream Vera Sans Mono"}))
+      -- an own field on the child, so writing it must not reach through to the
+      -- prototype and re-font every other label cloned from it
+      assert.are.equal("Bitstream Vera Sans Mono", child.font)
+      assert.are.equal("Ubuntu Mono", prototype.font)
     end)
   end)
 

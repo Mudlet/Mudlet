@@ -1310,6 +1310,12 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                             "All rights reserved.</h3>"));
 #endif
 
+    //: Credits the speech recognition library Mudlet can load. It is not bundled - the user installs it - so this names it rather than reproducing its licence
+    QString speechBackendsHeader(tr("<h2><u>Speech recognition backends</u></h2>"
+                                    "<h3>Mudlet can drive <a href=\"https://alphacephei.com/vosk\">Vosk</a> (Apache 2.0).<br>"
+                                    "It does not ship with Mudlet: you install it yourself, and its licence travels "
+                                    "with the files you download.</h3>"));
+
     QString swordModelHeader(tr("<h2><u>Sword 3D Model</u></h2>"
                                "<h3>Model obtained from <a href=\"https://sketchfab.com/3d-models/sword-07463a2658e04d6ab8a42b5639a35d63\">Sketchfab</a><br>"
                                "Author: <a href=\"https://sketchfab.com/minghau\">minghauLoh</a><br>"
@@ -1422,6 +1428,9 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                                   .arg(openSSL3Header,                         // 46 - OpenSSL3 header - translatable
                                        APACHE2_Body));                         // 47 - OpenSSL3 body APACHE2 - not translatable
 #endif
+
+    license_3rdParty_texts.append(qsl("<hr>%48")
+                                  .arg(speechBackendsHeader));                 // 48 - speech recognition backends - translatable
 
     license_3rdParty_texts.append(qsl("</body></html>"));
 

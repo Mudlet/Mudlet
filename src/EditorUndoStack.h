@@ -36,6 +36,7 @@ class EditorUndoStack : public QUndoStack
 
 public:
     explicit EditorUndoStack(QObject* parent = nullptr);
+    ~EditorUndoStack() override;
 
     // Updates all commands on the stack when an item gets a new ID after undo/redo
     void remapItemIDs(int oldID, int newID);

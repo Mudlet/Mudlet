@@ -32,10 +32,13 @@ endif()
 
 # Windows, consoles and the text they draw
 set(WINDOW_GROUP_TEST_SOURCES
+    AddonControlsTest.cpp
     ConsoleModelExtractionTest.cpp
     CopyAsImageTest.cpp
+    DebugConsoleFilterTest.cpp
     FrontendRefreshSeamTest.cpp
     DetachedWindowMenuShortcutsTest.cpp
+    FramePacingTest.cpp
     GlyphOverflowTest.cpp
     HyperlinkModelSplitTest.cpp
     LabelAnchorInteractionTest.cpp
@@ -68,6 +71,7 @@ set(PROFILE_GROUP_TEST_SOURCES
     ConfigDirOverrideTest.cpp
     ConnectionDialogCrashTest.cpp
     DefaultGameDeleteTest.cpp
+    MissingDisplayFontTest.cpp
     ProfileDeletionSafetyTest.cpp
     ProfileFolderNameTest.cpp
     ProfileLifecycleTest.cpp
@@ -129,6 +133,8 @@ set(MAP_GROUP_TEST_SOURCES
     MapLevelOfDetailTest.cpp
     MapOffscreenCustomLineTest.cpp
     MapFileStatsTest.cpp
+    MapLockNoOpTest.cpp
+    MapperButtonConfigTest.cpp
     MapProgressDialogSeamTest.cpp
     MapRoomGeometryTest.cpp
     MapRoundTripTest.cpp
@@ -140,6 +146,7 @@ set(PACKAGE_GROUP_TEST_SOURCES
     ActionSelfRemovalTest.cpp
     DefaultPackagesTest.cpp
     ModuleSaveTeardownTest.cpp
+    PackageFontsOnRefusedArchiveTest.cpp
     PackageRemovalSaveTeardownTest.cpp
     PackageSelfRemovalTest.cpp
 )
@@ -177,8 +184,9 @@ set(TEARDOWN_GROUP_TEST_SOURCES
     HostWidgetDecouplingTest.cpp
 )
 
-# Sound, music and video, text-to-speech, and the rich presence published to Discord
+# Sound, music and video, speech in and out, and the rich presence published to Discord
 set(MEDIA_GROUP_TEST_SOURCES
+    SpeechRecognizerContractTest.cpp
     TDiscordModeTest.cpp
     VideoOutputHideTest.cpp
     TMediaLoopTest.cpp
@@ -352,6 +360,12 @@ set_tests_properties(MultilineTriggerReentrancyTest PROPERTIES TIMEOUT 300)
 
 # GMCPCharLoginTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(GMCPCharLoginTest PROPERTIES TIMEOUT 600)
+
+# DebugConsoleFilterTest boots a fresh profile for each of its 24 methods, and timed out against
+# the default 60s on the macOS x86_64 runner, where it measured 46.95s when it passed. Waiting on
+# the connection dialog instead of sleeping through it took the Linux run from 30s to 9s, so this
+# is headroom rather than a necessity now, and it is what the other per-method-profile tests use.
+set_tests_properties(DebugConsoleFilterTest PROPERTIES TIMEOUT 300)
 
 # TelnetReconnectStateTest creates a fresh profile per test method and reconnects it several
 # times per method, so it needs a longer timeout

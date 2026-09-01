@@ -205,7 +205,8 @@ void EditorDeleteItemCommand::undo()
                     if (!pT || !pT->mpMyChildrenList) {
                         return;
                     }
-                    for (auto* pChild : *pT->mpMyChildrenList) {
+                    for (auto* pChildNode : *pT->mpMyChildrenList) {
+                        auto* pChild = static_cast<TTrigger*>(pChildNode);
                         // Find this child in mDeletedItems by name and parent ID
                         auto childIt = std::find_if(mDeletedItems.begin(), mDeletedItems.end(), [pChild, parentID](const DeletedItemInfo& item) {
                             return item.itemName == pChild->getName() && item.parentID == parentID;
@@ -276,7 +277,8 @@ void EditorDeleteItemCommand::undo()
                     if (!pA || !pA->mpMyChildrenList) {
                         return;
                     }
-                    for (auto* pChild : *pA->mpMyChildrenList) {
+                    for (auto* pChildNode : *pA->mpMyChildrenList) {
+                        auto* pChild = static_cast<TAlias*>(pChildNode);
                         auto childIt = std::find_if(mDeletedItems.begin(), mDeletedItems.end(), [pChild, parentID](const DeletedItemInfo& item) {
                             return item.itemName == pChild->getName() && item.parentID == parentID;
                         });
@@ -345,7 +347,8 @@ void EditorDeleteItemCommand::undo()
                     if (!pT || !pT->mpMyChildrenList) {
                         return;
                     }
-                    for (auto* pChild : *pT->mpMyChildrenList) {
+                    for (auto* pChildNode : *pT->mpMyChildrenList) {
+                        auto* pChild = static_cast<TTimer*>(pChildNode);
                         auto childIt = std::find_if(mDeletedItems.begin(), mDeletedItems.end(), [pChild, parentID](const DeletedItemInfo& item) {
                             return item.itemName == pChild->getName() && item.parentID == parentID;
                         });
@@ -414,7 +417,8 @@ void EditorDeleteItemCommand::undo()
                     if (!pS || !pS->mpMyChildrenList) {
                         return;
                     }
-                    for (auto* pChild : *pS->mpMyChildrenList) {
+                    for (auto* pChildNode : *pS->mpMyChildrenList) {
+                        auto* pChild = static_cast<TScript*>(pChildNode);
                         auto childIt = std::find_if(mDeletedItems.begin(), mDeletedItems.end(), [pChild, parentID](const DeletedItemInfo& item) {
                             return item.itemName == pChild->getName() && item.parentID == parentID;
                         });
@@ -483,7 +487,8 @@ void EditorDeleteItemCommand::undo()
                     if (!pK || !pK->mpMyChildrenList) {
                         return;
                     }
-                    for (auto* pChild : *pK->mpMyChildrenList) {
+                    for (auto* pChildNode : *pK->mpMyChildrenList) {
+                        auto* pChild = static_cast<TKey*>(pChildNode);
                         auto childIt = std::find_if(mDeletedItems.begin(), mDeletedItems.end(), [pChild, parentID](const DeletedItemInfo& item) {
                             return item.itemName == pChild->getName() && item.parentID == parentID;
                         });
@@ -552,7 +557,8 @@ void EditorDeleteItemCommand::undo()
                     if (!pA || !pA->mpMyChildrenList) {
                         return;
                     }
-                    for (auto* pChild : *pA->mpMyChildrenList) {
+                    for (auto* pChildNode : *pA->mpMyChildrenList) {
+                        auto* pChild = static_cast<TAction*>(pChildNode);
                         auto childIt = std::find_if(mDeletedItems.begin(), mDeletedItems.end(), [pChild, parentID](const DeletedItemInfo& item) {
                             return item.itemName == pChild->getName() && item.parentID == parentID;
                         });

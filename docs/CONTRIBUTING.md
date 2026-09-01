@@ -15,6 +15,8 @@ Check https://www.linguistic-antipatterns.com when naming anything to help ensur
 
 ## AI Coding Assistants
 
+To put an AI agent to work on Mudlet quality - test coverage, fuzzing, performance - see [Improving Mudlet with AI agents](https://wiki.mudlet.org/w/Improving_Mudlet_with_AI_agents) and the ready-made skills in [.agents/skills](https://github.com/Mudlet/Mudlet/tree/development/.agents/skills).
+
 ### Licensing and Legal Requirements
 
 All code must be compatible with Mudlet's license.

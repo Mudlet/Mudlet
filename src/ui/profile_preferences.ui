@@ -145,7 +145,7 @@
           <item row="1" column="2" alignment="Qt::AlignmentFlag::AlignRight">
            <widget class="QLabel" name="label_toolBarVisibility">
             <property name="text">
-             <string>Show main toolbar</string>
+             <string>Show main toolbar:</string>
             </property>
             <property name="buddy">
              <cstring>comboBox_toolBarVisibility</cstring>
