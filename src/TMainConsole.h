@@ -187,11 +187,10 @@ private:
     void createMapProgressDialog(const QString& title, const QString& label, const QString& cancelButtonText, int minimum, int maximum);
     void loadSystemSpellDictionary();
 
-    // Names the dictionary mpHunspell_system is built for. The build itself
-    // waits for the first spell-check, which keeps reading the whole dictionary
-    // off the profile load. Never rolled back, so a dictionary whose files are
-    // missing is not retried. Host's mSpellDic is the profile's setting; this
-    // is only ever what has been requested from it.
+    // Names the dictionary mpHunspell_system is built for. The build waits for
+    // the first spell-check, so the profile load never reads the whole
+    // dictionary. Host's mSpellDic is the profile's setting; this is only ever
+    // what has been requested from it.
     QString mSystemDictionary;
 
     // Cloned from Host

@@ -1949,11 +1949,10 @@ QString XMLimport::readScriptElement()
         qDebug() << "XMLimport::readScriptElement() ERROR:" << errorString();
     }
 
-    // This is NOT the original version, so it will have control characters
-    // encoded up using Object Replacement and Control Symbol (for relevant ASCII control code) code-points.
-    // Every encoding starts with the Object Replacement Character and hardly any
-    // script contains one, so one scan for it spares the thirty full-text
-    // replace() scans that a package-laden profile would otherwise pay per script:
+    // From format 1.001 on, control characters are stored as U+FFFC (Object
+    // Replacement) followed by the matching Control Picture. Hardly any script
+    // holds a U+FFFC, so one contains() spares every script the 29 full-text
+    // replace() scans below:
     if ((mVersionMajor > 1 || (mVersionMajor == 1 && mVersionMinor > 0)) && localScript.contains(QChar(0xFFFC))) {
         localScript.replace(qsl("\xFFFC\x2401"), QChar('\x01')); // SOH
         localScript.replace(qsl("\xFFFC\x2402"), QChar('\x02')); // STX

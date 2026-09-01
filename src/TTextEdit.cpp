@@ -78,7 +78,6 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 , mEnableBlinkText(pH->getEnableBlinkText())
 , mMouseWheelRemainder()
 {
-    mLastClickTimer.start();
     Q_ASSERT_X(mpHost, "TTextEdit::TTextEdit(...)", "mpHost is a nullptr");
     Q_ASSERT_X(mSearchHighlightFgColor != mSearchHighlightBgColor, "TTextEdit::TTextEdit(...)", "search highlight foreground and background colors must not be the same");
     setFont(mpHost->getDisplayFont());
@@ -2136,7 +2135,9 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             forceUpdate();
         }
         mSelectedRegion = QRegion(0, 0, 0, 0);
-        if (mLastClickTimer.elapsed() < 300) {
+        // Invalid until the first click, so a click soon after the console
+        // appears does not count as the second half of a double-click:
+        if (mLastClickTimer.isValid() && mLastClickTimer.elapsed() < 300) {
             mMouseTracking = true;
             mMouseTrackLevel++;
             if (mMouseTrackLevel > 3) {

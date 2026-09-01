@@ -658,7 +658,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
             return
           end
           local commandLine = "mudlet-spec-ini-save-history"
-          -- both the setter and the save refuse while the profile-wide size is zero
+          -- setSaveCommandHistory() refuses while the profile-wide history size is zero
           local savedLines = getConfig("commandLineHistorySaveSize")
           finally(function()
             setConfig("commandLineHistorySaveSize", savedLines)

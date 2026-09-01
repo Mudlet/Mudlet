@@ -59,6 +59,7 @@
 #include <QSplashScreen>
 #include <QSslConfiguration>
 #include <QStringList>
+#include <QThreadPool>
 #include <QTranslator>
 #include "AltFocusMenuBarDisable.h"
 #include "TAccessibleConsole.h"
@@ -370,7 +371,8 @@ int main(int argc, char* argv[])
     // The first QSslSocket in the process - every profile's cTelnet holds two -
     // has Qt parse every system CA certificate on the constructing thread,
     // which lands squarely inside profile load. Doing the same initialisation
-    // on a pool thread now means it is cached by the time a profile opens:
+    // on a pool thread now means the parse is normally over before a profile
+    // opens:
     QThreadPool::globalInstance()->start([]() {
         QSslConfiguration::defaultConfiguration();
     });

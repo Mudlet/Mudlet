@@ -373,10 +373,11 @@ public:
     QColor getAnsiColor(const int ansiCode, const bool isBackground = false) const;
     QPair<bool, QString> writeProfileData(const QString&, const QString&);
     QString readProfileData(const QString&);
-    // Both keep the data in memory and let QSettings flush it on the next pass
-    // through the event loop: syncing per write costs two fdatasync()s, which
-    // made every command line a profile creates while loading a ~50 ms stall.
-    bool writeProfileIniData(const QString& item, const QString& what);
+    // Both share one QSettings kept open for the profile's lifetime; writes are
+    // left for the event loop to flush, as syncing each one cost two
+    // fdatasync()s - a ~50 ms stall for every command line a loading profile
+    // creates.
+    void writeProfileIniData(const QString& item, const QString& what);
     QString readProfileIniData(const QString& item);
     void xmlSaved(const QString& xmlName);
     bool currentlySavingProfile();
@@ -1250,7 +1251,8 @@ private:
     // attempt to save the profile and map - without asking:
     bool mForcedClose = false;
 
-    // Reached through profileIni(), which opens it on first use:
+    // Only reach through profileIni(): setName() nulls this so the path
+    // follows the name.
     QSettings* mpProfileIni = nullptr;
 };
 
