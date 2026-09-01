@@ -668,6 +668,9 @@ void UpdateDialog::handleFeedReady()
         return;
     }
 
+    // Re-derived from the settings on every check: the file a finished download
+    // left behind is deleted below once a later release supersedes it
+    mIsDownloadFinished = false;
     mUpdateFilePath = settingsValue(qsl("updateFilePath"), "", mSettings).toString();
     if (!mUpdateFilePath.isEmpty() && QFile::exists(mUpdateFilePath)) {
         QString updateFileVersion = settingsValue(qsl("updateFileVersion"), "", mSettings).toString();

@@ -513,6 +513,7 @@ private slots:
     void aFailedCheckIsNotReportedForever();
     void aCheckThatFoundNothingStillHearsTheNext();
     void theChangelogDialogFillsInItsOwnLabels();
+    void aSupersededDownloadIsFetchedAgain();
 
 private:
     // What the dialog told the user, for the failure messages: a bare
@@ -874,6 +875,35 @@ void FeedChecksumRaceTest::theChangelogDialogFillsInItsOwnLabels()
     auto* info = harness.dialog().findChild<QLabel*>(qsl("labelInfoChangelog"));
     QVERIFY2(info, "the dialog has no child named labelInfoChangelog - update_dialog.ui renamed it");
     QVERIFY2(info->text().contains(qsl("1.0.0")), qPrintable(qsl("the changelog did not name the version the user is running: \"%1\"").arg(info->text())));
+}
+
+// A finished download is remembered in the settings, and the check that finds a
+// newer release deletes the file it left behind - so the dialog has to stop
+// counting that download as done, or the release it now offers is never fetched
+void FeedChecksumRaceTest::aSupersededDownloadIsFetchedAgain()
+{
+    const auto firstOffer = qsl("2.0.0");
+    const auto secondOffer = qsl("3.0.0");
+    const QByteArray payload = stubDownloadPayload();
+
+    UpdateHarness harness;
+    QVERIFY2(harness.start(), "the stub update server needs TLS support and a free loopback port");
+    harness.server().setFeedBody(
+            QJsonDocument(QJsonArray({stubReleaseInfo(firstOffer, qsl("2026-08-29T07:00:00Z"), changelogMarker, harness.assetBaseUrl(), payload.size())})).toJson(QJsonDocument::Compact));
+    harness.server().setChecksum(QCryptographicHash::hash(payload, QCryptographicHash::Sha256).toHex());
+    harness.server().setDownloadPayload(payload);
+    dblsqd::UpdateDialog::enableAutoDownload(true, &harness.settings());
+
+    harness.openDialog(dblsqd::UpdateDialog::Manual);
+    QTRY_COMPARE_WITH_TIMEOUT(harness.settings().value(qsl("DBLSQD/updateFileVersion")).toString(), firstOffer, waitMs);
+
+    harness.server().setFeedBody(
+            QJsonDocument(QJsonArray({stubReleaseInfo(secondOffer, qsl("2026-08-31T07:00:00Z"), changelogMarker, harness.assetBaseUrl(), payload.size())})).toJson(QJsonDocument::Compact));
+    harness.feed().load();
+    QTRY_VERIFY2_WITH_TIMEOUT(harness.settings().value(qsl("DBLSQD/updateFileVersion")).toString() == secondOffer,
+                              qPrintable(qsl("the superseded download still counts as done, so the release the dialog offers was never fetched - it holds \"%1\". The dialog reported: %2")
+                                                 .arg(harness.settings().value(qsl("DBLSQD/updateFileVersion")).toString(), whatTheDialogWasTold())),
+                              waitMs);
 }
 
 QTEST_MAIN(FeedChecksumRaceTest)
