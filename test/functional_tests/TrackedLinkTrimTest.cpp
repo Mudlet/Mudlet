@@ -31,6 +31,7 @@
 
 #include <QSignalSpy>
 #include <QTemporaryDir>
+#include <QTimer>
 #include <QtTest/QtTest>
 
 #include "PortableModeTestHelper.h"
@@ -128,6 +129,7 @@ private slots:
 
         QVERIFY2(!manager.trackedLinkIds().contains(5), "the link on the last removed line was kept, so entries accumulate");
         QVERIFY2(manager.trackedLinkIds().contains(6), "the link on the first surviving line was dropped, so it can never reveal");
+        QCOMPARE(manager.mTrackedLinks[6].lineNumber, 0);
     }
 
     // Concealing a link zeroes its characters' indices, so the scan that decides
@@ -161,11 +163,10 @@ private slots:
         QCOMPARE(pConsole->getLinkStore().getHintsConst(linkId), QStringList{mLinkHint});
     }
 
-    // A wholeline concealment deletes the link's own line, and deleteLines() now
-    // moves every link below it up one. The manager used to do that itself right
-    // afterwards, which would move them twice. Driven through onLinkClicked()
-    // because a click is the only thing that conceals without a delay, and there
-    // is no Lua entry point for one - see TBufferOSC_spec.lua, which says as much.
+    // A wholeline concealment deletes the link's own line, so every link below
+    // it moves up exactly one. Driven through onLinkClicked() because a click is
+    // the only thing that conceals without a delay, and there is no Lua entry
+    // point for one - see TBufferOSC_spec.lua, which says as much.
     void test_aWholelineConcealmentMovesTheLinksBelowItOnlyOnce()
     {
         auto* pConsole = mpHost->mpConsole.data();
@@ -229,6 +230,66 @@ private slots:
         qApp->processEvents();
 
         QVERIFY2(pConsole->getLinkStore().getLinksConst(linkId).isEmpty(), "clearing the window left the link's command behind");
+    }
+
+    // A concealment queues a screen-reader announcement 300ms out, and clearing
+    // the window in between leaves it naming links the reader can no longer
+    // reach, so it has to be dropped along with them.
+    void test_clearingTheWindowDropsAQueuedHiddenAnnouncement()
+    {
+        auto* pConsole = mpHost->mpConsole.data();
+        auto& manager = pConsole->getHyperlinkVisibilityManager();
+        QVERIFY(pConsole->clear(qsl("main")));
+
+        fill(pConsole, qsl("seed"), 3);
+        const int linkId = appendLink(pConsole);
+        qApp->processEvents();
+
+        const int registeredOn = lineContaining(pConsole->buffer, mLinkText);
+        QVERIFY(registeredOn >= 0);
+        manager.registerHyperlink(linkId, registeredOn, 0, mLinkText.length(), mLinkText, concealLaterStyling());
+
+        manager.concealLink(linkId);
+        QVERIFY2(manager.mPendingHiddenCount > 0, "nothing was queued, so clearing it below proves nothing");
+        QVERIFY2(manager.mpAnnouncementTimer->isActive(), "nothing was queued, so clearing it below proves nothing");
+
+        QVERIFY(pConsole->clear(qsl("main")));
+
+        QCOMPARE(manager.mPendingHiddenCount, 0);
+        QVERIFY2(!manager.mpAnnouncementTimer->isActive(), "the announcement still fires after the links it counts have gone");
+    }
+
+    // The main console's model outlives the view built on it and keeps taking
+    // lines meanwhile, so the tracked links have to follow a deletion whether or
+    // not anyone is watching. ~TConsole is what detaches it in production.
+    void test_deletingALineMovesTrackedLinksWithNoViewAttached()
+    {
+        auto* pConsole = mpHost->mpConsole.data();
+        auto& buffer = pConsole->buffer;
+        auto& manager = pConsole->getHyperlinkVisibilityManager();
+        QVERIFY(pConsole->clear(qsl("main")));
+
+        fill(pConsole, qsl("seed"), 3);
+        const int linkId = appendLink(pConsole);
+        fill(pConsole, qsl("trailing"), 3);
+        qApp->processEvents();
+
+        const int registeredOn = lineContaining(buffer, mLinkText);
+        QVERIFY2(registeredOn > 0, "the link has to sit below the line deleted here");
+        manager.registerHyperlink(linkId, registeredOn, 0, mLinkText.length(), mLinkText, concealLaterStyling());
+
+        // blanks the link's text, so the reveal below is the only thing that can
+        // put it back and where it lands is what the stored line number says
+        manager.concealLink(linkId);
+        QVERIFY2(lineContaining(buffer, mLinkText) < 0, "the link's text is still in the buffer, so a reveal would prove nothing");
+
+        buffer.detachConsole(pConsole);
+        buffer.deleteLine(0);
+        buffer.setConsole(pConsole);
+
+        manager.revealLink(linkId);
+        qApp->processEvents();
+        QCOMPARE(lineContaining(buffer, mLinkText), registeredOn - 1);
     }
 
 private:

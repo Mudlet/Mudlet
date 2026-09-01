@@ -5664,6 +5664,21 @@ bool TBuffer::replaceInLine(QPoint& P_begin, QPoint& P_end, const QString& with,
     return true;
 }
 
+// The main console's model outlives the view built on it and keeps taking
+// lines meanwhile, so going through mpConsole alone would stop maintaining the
+// tracked links too early. Every other model is owned by its view and a
+// clipboard slice has no model at all, which is where the nullptr comes from.
+THyperlinkVisibilityManager* TBuffer::hyperlinkVisibilityManagerOrNull()
+{
+    if (mpConsole) {
+        return &mpConsole->getHyperlinkVisibilityManager();
+    }
+    // mainConsoleModelOrNull() rather than mainConsoleModel() because this also
+    // runs from the TBuffer constructor, before Host holds the model.
+    TConsoleModel* pModel = mpHost.isNull() ? nullptr : mpHost->mainConsoleModelOrNull();
+    return (pModel && this == &pModel->buffer) ? &pModel->mHyperlinkVisibilityManager : nullptr;
+}
+
 void TBuffer::clear()
 {
     // Clearing the display is not gagging: flush any deferred log text before
@@ -5699,8 +5714,8 @@ void TBuffer::clear()
     mHyperlinkActive = false;
 
     // every line is about to go, so the tracked links and any announcement queued for them go with it
-    if (mpConsole) { // null while the buffer is being constructed
-        mpConsole->getHyperlinkVisibilityManager().clear();
+    if (auto* pHyperlinkManager = hyperlinkVisibilityManagerOrNull()) {
+        pHyperlinkManager->clear();
     }
 
     while (!buffer.empty()) {
@@ -5928,8 +5943,8 @@ bool TBuffer::deleteLines(int from, int to)
 
         // Tracked OSC 8 hyperlinks are addressed by line number too, so they
         // shift with everything else - any whose line just went away are dropped
-        if (mpConsole) {
-            mpConsole->getHyperlinkVisibilityManager().adjustLineNumbers(from, delta);
+        if (auto* pHyperlinkManager = hyperlinkVisibilityManagerOrNull()) {
+            pHyperlinkManager->adjustLineNumbers(from, delta);
         }
         return true;
     }
