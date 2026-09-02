@@ -35,9 +35,12 @@ describe("Tests UI functions", function()
       setWindowWrap("testconsole", 100)
     end)
 
-    -- clear miniconsole before each test
+    -- clear miniconsole before each test. The user cursor outlives clearWindow(),
+    -- so put it back where output lands or a case that moved it changes what the
+    -- next one reads
     before_each(function()
       clearWindow("testconsole")
+      moveCursorEnd("testconsole")
     end)
 
     teardown(function()
@@ -79,13 +82,17 @@ describe("Tests UI functions", function()
       assert.are.equal(-1, selectString("testconsole", "copy4175first", 1))
 
       assert.is_true(moveCursor("testconsole", 0, 1))
-      local ok, err = pcall(copy2decho, "testconsole", "copy4175first")
-      assert.is_false(ok, "copy2decho returned instead of reporting the text was not found")
-      assert.is_truthy(tostring(err):find("copy2decho: string not found", 1, true),
-        "unexpected error: " .. tostring(err))
+      assert.are.equal("", copy2decho("testconsole", "copy4175first"))
+    end)
 
-      -- the cursor outlives the test and the cases below read it
-      moveCursor("testconsole", 0, 0)
+    -- a request longer than the line is also "not on this line", and used to be
+    -- answered with the whole line by an off-by-one that happened to come out
+    -- right - which is a different wrong answer from the fragment above
+    it("Should return nothing when asked for text longer than the current line", function()
+      decho("testconsole", "<0,255,0>dup dup<r>\n")
+
+      assert.are.equal(-1, selectString("testconsole", "dup dup dup dup", 1))
+      assert.are.equal("", copy2decho("testconsole", "dup dup dup dup"))
     end)
 
     -- TODO: https://github.com/Mudlet/Mudlet/issues/5589
@@ -106,9 +113,12 @@ describe("Tests UI functions", function()
       setWindowWrap("testconsole", 100)
     end)
 
-    -- clear miniconsole before each test
+    -- clear miniconsole before each test. The user cursor outlives clearWindow(),
+    -- so put it back where output lands or a case that moved it changes what the
+    -- next one reads
     before_each(function()
       clearWindow("testconsole")
+      moveCursorEnd("testconsole")
     end)
 
     it("Should copy colored English text", function()
