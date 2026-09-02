@@ -3927,7 +3927,7 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
         const QString _f = "json_to_value";
         logError(e, _n, _f);
         if (mudlet::smDebugMode) {
-            TDebug(Qt::white, Qt::red) << "\n " << e.c_str() << "\n" >> &host;
+            TDebug(Qt::white, Qt::red, TDebug::Category::Error) << "\n " << e.c_str() << "\n" >> &host;
         }
         // the variable did not change, so raising its arrival events would hand
         // every handler the stale value the game just tried to replace
