@@ -77,12 +77,13 @@ int utf16PositionOf(const char* utf8, const PCRE2_SIZE byteOffset)
     return codeUnits;
 }
 
-// QString::indexOf() hashes its way along the whole needle at every position.
-// Scanning for the needle's first code unit instead reaches the vectorised
-// character search in QtCore, and only the positions where that code unit
-// actually occurs pay for a comparison of the rest. Searching the QString and
-// not the UTF-8 keeps the handling of a line with a NUL in it, whose UTF-8 form
-// the caller has already cut short.
+// The /g loop's search for the next occurrence. The first search of a line
+// goes through the pattern's prepared QStringMatcher, whose skip table pays
+// for itself over every line the pattern is tried against; here the remainders
+// are short and mostly end in a hit, where a matcher measured slower than
+// scanning for the needle's first code unit and comparing the rest only where
+// it occurs. Searching the QString and not the UTF-8 keeps the handling of a
+// line with a NUL in it, whose UTF-8 form the caller has already cut short.
 int indexOfNeedle(const QString& haystack, const QString& needle, const int from)
 {
     const qsizetype needleLength = needle.size();

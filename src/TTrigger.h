@@ -226,7 +226,9 @@ private:
     std::vector<std::unique_ptr<QStringMatcher>> mSubstringMatchers;
     std::vector<QSharedPointer<pcre2_code>> mRegexes;
     std::vector<QSharedPointer<pcre2_match_data>> mMatchData;
-    std::vector<bool> mRegexJitCompiled;
+    // char rather than bool: keeps the plain element access the bit-packed
+    // specialisation takes away
+    std::vector<char> mRegexJitCompiled;
     // The pattern text in the form the capture list wants it, converted when
     // the trigger is compiled instead of on every match
     std::vector<std::string> mPatternsUtf8;
