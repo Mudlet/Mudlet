@@ -100,7 +100,7 @@ right now.
 | `sensitivity` | string | `"short"`, `"default"` or `"long"`; how quickly an utterance is judged finished. |
 | `capabilities` | table | See below. **May change when a model is loaded**, or when the engine library is unloaded or reloaded — on some backends biasing is a property of the model rather than of the engine. Re-read after `stt.init()` rather than caching at startup, or follow `sysSTTCapabilitiesChanged`. |
 | `version`, `language` | string | Present once a recognizer instance exists. |
-| `searchPaths` | table | Where the engine library is looked for (platform-tier; may be empty). Names whichever model-based engine is actually loaded, the same way `stt.getModelPath()` does. |
+| `searchPaths` | table | Where a loadable engine library is looked for (platform-tier; may be empty). This is an install location, not a statement about the running engine: it names whichever model-based engine is loaded, and when none is - because the built-in macOS backend is active, or nothing is initialised yet - it names the one that would be preferred if you installed it. So it stays a real, checkable directory to install into even while `backend` names an engine that needs no library at all. |
 
 ### `capabilities`
 
