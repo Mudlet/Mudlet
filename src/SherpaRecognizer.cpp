@@ -262,10 +262,6 @@ bool SherpaRecognizer::loadSherpaLibrary()
     }
 
     sLibraryLoaded = true;
-
-    if (s_getVersionStr) {
-    }
-
     return true;
 }
 
