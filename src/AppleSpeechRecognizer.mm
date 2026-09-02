@@ -504,7 +504,17 @@ void AppleSpeechRecognizer::handleTaskEnded(const QString& failure)
     releaseTask();
 
     if (state() == State::Processing) {
-        // doStopListening() asked for the last utterance and has now had it
+        // doStopListening() asked for the last utterance and this is the
+        // answer. A failure here has to speak: the request ended without a
+        // final result, and there is no way from out here to tell "nothing was
+        // said" from "a phrase was recognised and then lost", so staying quiet
+        // would let the second one look like the first.
+        if (!failure.isEmpty()) {
+            emit errorOccurred(failure);
+        }
+        // Ready rather than Error even so. The stop itself succeeded and the
+        // recognizer is as usable as it was before; Error would make a package
+        // reload a model that never stopped working.
         setState(State::Ready);
         return;
     }

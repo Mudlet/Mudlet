@@ -238,9 +238,12 @@ public:
     // Speech-to-text bridge: creates the single shared recognizer on first use
     // and exposes it to the Lua stt.* API. Recognizer results surface as Lua
     // events; all routing and UI policy lives in packages consuming them.
-    // backend is only consulted for that first creation - once a recognizer
-    // exists it is reused regardless of what a later call asks for, which is
-    // what "one recognizer per client" (docs/stt-api.md) means in practice.
+    // One recognizer exists at a time (docs/stt-api.md's "one recognizer per
+    // client"), and backend decides what happens when one is already built:
+    // Auto, or the backend already in place, keeps it - the stt.* setters pass
+    // Auto on every call and must not tear down a working engine. An explicit
+    // request for a different backend replaces it, which is what lets
+    // stt.init() switch engines when it is handed another engine's model.
     void initSpeechRecognition(SpeechRecognizerFactory::Backend backend = SpeechRecognizerFactory::Backend::Auto);
     SpeechRecognizer* speechRecognizer() const;
     // Raise one sysSTT* event on the active profile. Public because the stt.*

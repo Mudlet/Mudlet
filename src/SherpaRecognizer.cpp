@@ -264,7 +264,6 @@ bool SherpaRecognizer::loadSherpaLibrary()
     sLibraryLoaded = true;
 
     if (s_getVersionStr) {
-        qInfo().noquote() << "SherpaRecognizer: Loaded sherpa-onnx" << QString::fromUtf8(s_getVersionStr());
     }
 
     return true;
@@ -512,7 +511,6 @@ bool SherpaRecognizer::loadModel(const QString& modelPath)
             // 1.5 is the value sherpa-onnx uses throughout its own examples and
             // command line, so it is their number rather than one invented here.
             config->hotwords_score = 1.5f;
-            qInfo().noquote() << "SherpaRecognizer: biasing toward" << vocabulary().size() << "words";
         }
     }
 
