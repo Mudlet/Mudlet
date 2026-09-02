@@ -465,14 +465,16 @@ void dlgPackageManager::slot_installPackageFromRepository()
                     const QString& filePath = it.value();
 
                     if (mpHost) {
+                        // Ahead of both calls below, because the previous pass's install
+                        // leaves a save in flight: during a save an uninstall is refused
+                        // outright, and an install is put off until the save finishes - long
+                        // after the archive is deleted below.
+                        mpHost->waitForProfileSave();
                         // Uninstall existing package first if this is an update
                         if (mpHost->mInstalledPackages.contains(packageName)) {
                             mpHost->uninstallPackage(packageName, enums::PackageModuleType::Package);
                         }
-                        if (mpHost->installPackage(filePath, enums::PackageModuleType::Package).first) {
-                            // the next install would be postponed behind this save, and the loop deletes the file it needs
-                            mpHost->waitForProfileSave();
-                        } else {
+                        if (!mpHost->installPackage(filePath, enums::PackageModuleType::Package).first) {
                             failedPackages << packageName;
                             qWarning() << "dlgPackageManager::slot_installPackageFromRepository() ERROR - failed to install" << packageName;
                         }

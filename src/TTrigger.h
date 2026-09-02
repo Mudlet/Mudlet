@@ -37,6 +37,7 @@
 #include <QSharedPointer>
 #include <QString>
 #include <QStringList>
+#include <QStringMatcher>
 #include <QtGlobal>
 
 #define PCRE2_CODE_UNIT_WIDTH 8
@@ -74,6 +75,7 @@ struct TColorTable
 class TTrigger : public Tree<TTrigger>
 {
     Q_DECLARE_TR_FUNCTIONS(TTrigger) // Needed so we can use tr() even though TTrigger is NOT derived from QObject
+    friend class CorruptTriggerPatternsTest;
     friend class XMLexport;
     friend class XMLimport;
 
@@ -217,6 +219,7 @@ private:
 
 
     QList<int> mPatternKinds;
+    std::vector<std::unique_ptr<QStringMatcher>> mSubstringMatchers;
     QMap<int, QSharedPointer<pcre2_code>> mRegexMap;
     QMap<int, QSharedPointer<pcre2_match_data>> mMatchDataMap;
 
