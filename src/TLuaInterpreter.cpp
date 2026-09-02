@@ -4142,6 +4142,11 @@ void TLuaInterpreter::msdp2Lua(const char* src)
                     // subnegotiation gets from that same append
                     script.append('\"');
                 }
+                // Scoped to the variable that carried the imbalance, and a
+                // valueless one never reaches the flush above that would clear
+                // it - so reset here, where the next variable starts, or the
+                // flag lands on whichever variable does flush next.
+                malformed = false;
             }
             last = MSDP_VAR;
             lastVar.clear();
