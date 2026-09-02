@@ -32,6 +32,7 @@
 #include "THyperlinkCompactManager.h"
 #include "THyperlinkVisibilityManager.h"
 #include "THyperlinkSelectionManager.h"
+#include "TPrintSink.h"
 #include "TStringUtils.h"
 #include "TTextEdit.h"
 #include "UntrustedText.h"
@@ -819,11 +820,14 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 
 void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFromServer)
 {
-    // What can appear in a CSI Parameter String (Ps) byte or at least for it
-    // to be something we can handle:
-    const QByteArray cParameter = QByteArrayLiteral("0123456789;:");
-    // What can appear in the initial position of a CSI Parameter String (Ps) byte:
-    const QByteArray cParameterInitial = QByteArrayLiteral("0123456789;:<=>?");
+    // What can appear anywhere in a CSI Parameter String (Ps): ECMA-48 5.4
+    // puts every byte of one in the range 0x30 to 0x3F, so '<', '=', '>' and
+    // '?' do not end the parameter string when they turn up after the first
+    // byte - games do emit them there and every other terminal consumes them:
+    const QByteArray cParameter = QByteArrayLiteral("0123456789;:<=>?");
+    // Which of those, in the FIRST position only, marks the whole sequence as
+    // private/reserved and so not something Mudlet can interpret:
+    const QByteArray cParameterPrivateIntroducer = QByteArrayLiteral("<=>?");
     // What can appear in a CSI Intermediate byte (includes a quote character in
     // the middle of the text here which has to be escaped with a backslash):
     const QByteArray cIntermediate = QByteArrayLiteral(" !\"#$%&'()*+,-./");
@@ -1011,18 +1015,14 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
         }
 
         if (mGotCSI) {
-            // Lookahead and try and see what we are processing
-            // At the start of a CSI sequence the only valid character is one of:
-            // "0-9:;<=>?" if it is one of "0-9:;" then it is a
-            // "parameter-string" ELSE if it is one of '<', '=', '>' or '?' it
-            // IS a private/experimental and not covered by the ECMA-48
-            // specifications..
-            // After the first character the remaining characters of the
-            // parameter string will be in the range "0-9:;" only
+            // Lookahead and try and see what we are processing. The parameter
+            // string runs over "0-9:;<=>?" - if its FIRST byte is one of '<',
+            // '=', '>' or '?' the whole sequence is private/experimental and
+            // not covered by the ECMA-48 specifications, but those same bytes
+            // later on are just parameter bytes to be consumed.
             size_t const spanStart = localBufferPosition;
             size_t spanEnd = spanStart;
-            // Only the first byte may be one of the private/reserved introducers:
-            while (spanEnd < localBufferLength && (spanEnd == spanStart ? cParameterInitial : cParameter).indexOf(localBuffer[spanEnd]) >= 0) {
+            while (spanEnd < localBufferLength && cParameter.indexOf(localBuffer[spanEnd]) >= 0) {
                 ++spanEnd;
             }
 
@@ -1052,7 +1052,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
             // first byte is within the usable subset of the allowed value - or
             // not. Doing this any earlier would consume a sequence split across
             // packets without leaving the trailing bytes for the next one.
-            if (cParameter.indexOf(localBuffer[spanStart]) == -1 && cParameterInitial.indexOf(localBuffer[spanStart]) >= 0) {
+            if (cParameterPrivateIntroducer.indexOf(localBuffer[spanStart]) >= 0) {
                 // Oh dear, the CSI parameter string sequence begins with one of
                 // the reserved characters ('<', '=', '>' or '?') which we
                 // can/do not handle
@@ -1192,7 +1192,11 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
             } // End of (isAValidFinalByte) {}
 
             mGotCSI = false;
-            localBufferPosition += 1 + spanEnd - spanStart;
+            // Step over the parameter string and the byte that ended it, unless
+            // that byte is a control one - a sequence with no final byte at all
+            // never owned the newline or escape that stopped the scan, and
+            // eating it would join two lines or drop the sequence after it:
+            localBufferPosition += spanEnd - spanStart + (static_cast<unsigned char>(localBuffer[spanEnd]) < ' ' ? 0 : 1);
             // Go around while loop again:
             continue;
 
@@ -1674,10 +1678,8 @@ void TBuffer::flushPendingDestinationContent()
     }
 
     if (mpHost->mMxpFrameManager.hasActiveDestination()) {
-        TConsole* destConsole = mpHost->mMxpFrameManager.getCurrentDestinationConsole();
-
-        if (destConsole && destConsole != mpHost->mpConsole) {
-            destConsole->printFormatted(mMudLine, mMudBuffer, mLinkStore);
+        if (TPrintSink* destSink = mpHost->mMxpFrameManager.currentDestinationSink()) {
+            destSink->printFormatted(mMudLine, mMudBuffer, mLinkStore);
             mMudLine.clear();
             mMudBuffer.clear();
         }
@@ -1727,11 +1729,10 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
 
     // Check if there's an active MXP DEST - route to destination frame
     if (mpHost->mMxpFrameManager.hasActiveDestination()) {
-        TConsole* destConsole = mpHost->mMxpFrameManager.getCurrentDestinationConsole();
-        if (destConsole && destConsole != mpHost->mpConsole) {
+        if (TPrintSink* destSink = mpHost->mMxpFrameManager.currentDestinationSink()) {
             flushPendingServerWrapJoin();
             if (!mMudLine.isEmpty()) {
-                destConsole->printFormatted(mMudLine, mMudBuffer, mLinkStore);
+                destSink->printFormatted(mMudLine, mMudBuffer, mLinkStore);
             }
             mMudLine.clear();
             mMudBuffer.clear();
@@ -1818,6 +1819,9 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
     if (static_cast<size_t>(line.size()) != chars.size()) {
         qWarning() << "TBuffer::translateToPlainText(...) WARNING: mismatch in new text "
                       "data character and attribute data items!";
+    }
+    if (lineBuffer.isEmpty()) {
+        appendEmptyLine();
     }
     if (!lineBuffer.back().isEmpty()) {
         if (!line.isEmpty()) {
@@ -2234,17 +2238,19 @@ void TBuffer::decodeSGR38(const QStringList& parameters, bool isColonSeparated)
         if (parameters.count() > 2) {
             bool isOk = false;
             tag = parameters.at(2).toInt(&isOk);
-#if defined(DEBUG_SGR_PROCESSING)
             if (!isOk) {
+#if defined(DEBUG_SGR_PROCESSING)
                 if (isColonSeparated) {
                     qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) ERROR - failed to parse color index parameter element (the third part) in a SGR...;38:5:" << parameters.at(2)
-                                                 << ":...;...m sequence treating it as a zero!";
+                                                 << ":...;...m sequence, leaving the colour as it was!";
                 } else {
                     qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) ERROR - failed to parse color index parameter string (the third part) in a SGR...;38;5;" << parameters.at(2)
-                                                 << ";...m sequence treating it as a zero!";
+                                                 << ";...m sequence, leaving the colour as it was!";
                 }
-            }
 #endif
+                // An index we cannot read is not a request for colour zero:
+                return;
+            }
         } else {
             // Missing last parameter - so it is treated as a zero
 #if defined(DEBUG_SGR_PROCESSING)
@@ -2392,17 +2398,19 @@ void TBuffer::decodeSGR48(const QStringList& parameters, bool isColonSeparated)
         if (parameters.count() > 2) {
             bool isOk = false;
             tag = parameters.at(2).toInt(&isOk);
-#if defined(DEBUG_SGR_PROCESSING)
             if (!isOk) {
+#if defined(DEBUG_SGR_PROCESSING)
                 if (isColonSeparated) {
                     qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) ERROR - failed to parse color index parameter element (the third part) in a SGR...;48:5:" << parameters.at(2)
-                                                 << ":...;...m sequence treating it as a zero!";
+                                                 << ":...;...m sequence, leaving the colour as it was!";
                 } else {
                     qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) ERROR - failed to parse color index parameter string (the third part) in a SGR...;48;5;" << parameters.at(2)
-                                                 << ";...m sequence treating it as a zero!";
+                                                 << ";...m sequence, leaving the colour as it was!";
                 }
-            }
 #endif
+                // An index we cannot read is not a request for colour zero:
+                return;
+            }
         } else {
             // Missing last parameter - so it is treated as a zero
 #if defined(DEBUG_SGR_PROCESSING)
@@ -3435,9 +3443,14 @@ void TBuffer::decodeOSC(const QString& sequence)
                     if (isValid) {
                         // This will refresh the "main" console as it is only this
                         // class instance associated with that one that is to be
-                        // changed by this method:
+                        // changed by this method. With no console there is
+                        // nothing to restyle, but this buffer's own copy of the
+                        // palette still has to be refreshed - it is what stamps
+                        // the text, not the Host's:
                         if (pHost->mpConsole) {
                             pHost->mpConsole->changeColors();
+                        } else {
+                            pHost->refreshMainConsoleColors();
                         }
                         // Also need to update the Lua sub-system's "color_table"
                         pHost->updateAnsi16ColorsInTable();
@@ -4843,9 +4856,13 @@ void TBuffer::resetColors()
 
     // This will refresh the "main" console as it is only this class instance
     // associated with that one that will call this method from the
-    // decodeOSC(...) method:
+    // decodeOSC(...) method. With no console there is nothing to restyle, but
+    // this buffer's own copy of the palette still has to be refreshed - it is
+    // what stamps the text, not the Host's:
     if (pHost->mpConsole) {
         pHost->mpConsole->changeColors();
+    } else {
+        pHost->refreshMainConsoleColors();
     }
 
     // Also need to update the Lua sub-system's "color_table"
@@ -4855,6 +4872,34 @@ void TBuffer::resetColors()
 void TBuffer::append(const QString& text, int sub_start, int sub_end, const TChar& format, int linkID)
 {
     append(text, sub_start, sub_end, format.mFgColor, format.mBgColor, format.mFlags, linkID);
+}
+
+// A link index only means anything to the store that issued it, so an index from
+// another buffer is registered here and swapped for one of ours. The caller owns
+// remappedLinkIds, so one source index maps to one of ours for the whole of the
+// text being brought over, however many separate runs of it that text has.
+int TBuffer::remapLinkId(const TLinkStore& sourceLinkStore, const int sourceLinkId, QHash<int, int>& remappedLinkIds)
+{
+    if (sourceLinkId <= 0) {
+        return 0;
+    }
+
+    int destLinkId = remappedLinkIds.value(sourceLinkId);
+    if (destLinkId > 0) {
+        return destLinkId;
+    }
+
+    // a reference of this store's own, so freeing either store's leaves the other link working
+    QVector<int> luaReference;
+    for (const int sourceReference : sourceLinkStore.getReference(sourceLinkId)) {
+        luaReference.append(mpHost && sourceReference > 0 ? mpHost->mLuaInterpreter.duplicateLuaRegistryIndex(sourceReference) : 0);
+    }
+
+    destLinkId = mLinkStore.addLinks(sourceLinkStore.getLinksConst(sourceLinkId), sourceLinkStore.getHintsConst(sourceLinkId), mpHost, luaReference, sourceLinkStore.getExpireName(sourceLinkId));
+    if (sourceLinkStore.hasStyling(sourceLinkId)) {
+        mLinkStore.setStyling(destLinkId, sourceLinkStore.getStyling(sourceLinkId));
+    }
+    return remappedLinkIds.insert(sourceLinkId, destLinkId).value();
 }
 
 void TBuffer::appendFormatted(const QString& text, const std::vector<TChar>& formatting, const TLinkStore& sourceLinkStore)
@@ -4878,8 +4923,7 @@ void TBuffer::appendFormatted(const QString& text, const std::vector<TChar>& for
     const int lastLineLength = lineBuffer.at(lastLineBeforeWrap).size();
 
     bool firstChar = lineBuffer.back().isEmpty();
-    int oldSourceLinkId = 0;
-    int destLinkId = 0;
+    QHash<int, int> remappedLinkIds;
     const qsizetype length = std::max(text.size(), static_cast<qsizetype>(formatting.size()));
     const TChar defaultChar;
 
@@ -4897,16 +4941,7 @@ void TBuffer::appendFormatted(const QString& text, const std::vector<TChar>& for
 
         const TChar& srcChar = (i < static_cast<qsizetype>(formatting.size())) ? formatting.at(i) : defaultChar;
 
-        const int sourceLinkId = srcChar.linkIndex();
-        if (sourceLinkId && (oldSourceLinkId != sourceLinkId)) {
-            destLinkId = mLinkStore.addLinks(sourceLinkStore.getLinksConst(sourceLinkId), sourceLinkStore.getHintsConst(sourceLinkId), mpHost);
-            if (sourceLinkStore.hasStyling(sourceLinkId)) {
-                mLinkStore.setStyling(destLinkId, sourceLinkStore.getStyling(sourceLinkId));
-            }
-            oldSourceLinkId = sourceLinkId;
-        } else if (!sourceLinkId) {
-            destLinkId = 0;
-        }
+        const int destLinkId = remapLinkId(sourceLinkStore, srcChar.linkIndex(), remappedLinkIds);
 
         lineBuffer.back().append(ch);
         TChar destChar(srcChar);
@@ -4937,11 +4972,14 @@ void TBuffer::appendFormatted(const QString& text, const std::vector<TChar>& for
     }
 }
 
-void TBuffer::append(const QString& text, int sub_start, int sub_end, const QColor& fgColor, const QColor& bgColor, TChar::AttributeFlags flags, int linkID)
+void TBuffer::append(const QString& text, int sub_start, int sub_end, const QColor& fgColor, const QColor& bgColor, TChar::AttributeFlags flags, int linkID, const QString& timeStampOverride)
 {
+    if (buffer.empty()) {
+        appendEmptyLine();
+    }
     const int lastLineBeforeWrap = buffer.size() - 1;
     const int lastLineLength = lineBuffer.at(lastLineBeforeWrap).size();
-    appendLine(text, sub_start, sub_end, fgColor, bgColor, flags, linkID);
+    appendLine(text, sub_start, sub_end, fgColor, bgColor, flags, linkID, timeStampOverride);
     if (text.isEmpty()) {
         return;
     }
@@ -4966,7 +5004,14 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
     }
 }
 
-void TBuffer::appendLine(const QString& text, const int sub_start, const int sub_end, const QColor& fgColor, const QColor& bgColor, const TChar::AttributeFlags flags, const int linkID)
+void TBuffer::appendLine(const QString& text,
+                         const int sub_start,
+                         const int sub_end,
+                         const QColor& fgColor,
+                         const QColor& bgColor,
+                         const TChar::AttributeFlags flags,
+                         const int linkID,
+                         const QString& timeStampOverride)
 {
     if (sub_end < 0) {
         return;
@@ -5034,7 +5079,9 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
         // before JSON styling is applied
 
         if (firstChar) {
-            timeBuffer.back() = QTime::currentTime().toString(mudlet::smTimeStampFormat);
+            // A caller replaying held-back content supplies the time the text
+            // actually arrived, rather than the time it is being shown:
+            timeBuffer.back() = timeStampOverride.isEmpty() ? QTime::currentTime().toString(mudlet::smTimeStampFormat) : timeStampOverride;
             firstChar = false;
         }
     }
@@ -5128,11 +5175,19 @@ void TBuffer::paste(QPoint& P, const TBuffer& chunk)
         y = getLastLineNumber();
     }
 
+    // Copying a link index across verbatim would resolve it against whatever
+    // this store holds at that id, which is a different link or none at all
+    QHash<int, int> remappedLinkIds;
     for (int cx = 0, total = static_cast<int>(chunk.buffer.at(0).size()); cx < total; ++cx) {
         // Character at a time because insertInLine() applies a single TChar to
         // the whole run it is given, and every character here can differ
         QPoint P_current(x + cx, y);
-        insertInLine(P_current, QString(chunk.lineBuffer.at(0).at(cx)), chunk.buffer.at(0).at(cx));
+        insertInLine(P_current,
+                     QString(chunk.lineBuffer.at(0).at(cx)),
+                     TChar(chunk.buffer.at(0).at(cx).mFgColor,
+                           chunk.buffer.at(0).at(cx).mBgColor,
+                           chunk.buffer.at(0).at(cx).mFlags,
+                           remapLinkId(chunk.mLinkStore, chunk.buffer.at(0).at(cx).linkIndex(), remappedLinkIds)));
     }
 }
 

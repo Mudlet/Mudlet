@@ -26,9 +26,13 @@
 
 
 #include "dlgTriggerEditor.h"
+#include "EditorCommand.h"
+#include "utils.h"
 
+#include <QCoreApplication>
 #include <QFile>
 #include <QMap>
+#include <QMargins>
 #include <QMultiHash>
 #include <QPointer>
 #include <QXmlStreamReader>

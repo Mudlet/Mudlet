@@ -31,7 +31,6 @@
 #include <QLabel>
 #include <QMenu>
 #include <QMenuBar>
-#include <QMouseEvent>
 #include <QPainter>
 #include <QPainterPath>
 #include <QPushButton>
@@ -56,6 +55,9 @@ TUiTour::TUiTour(mudlet* pMainWindow, const bool skipIntroStep)
 {
     setObjectName(qsl("uiTour"));
     setAttribute(Qt::WA_DeleteOnClose);
+    // The overlay spans the whole window: without this, clicks and drags on it
+    // propagate to the main window underneath and still resize docks
+    setAttribute(Qt::WA_NoMousePropagation);
     setFocusPolicy(Qt::StrongFocus);
     //: Name of the interface tour overlay, announced by screen readers
     setAccessibleName(tr("Mudlet interface tour"));
@@ -183,9 +185,9 @@ void TUiTour::buildSteps()
         mSteps.push_back({nullptr,
                           //: Title of the first step of the interface tour
                           tr("Welcome to Mudlet!"),
-                          //: Body of the first step of the interface tour
+                          //: Body of the first step of the interface tour. "Next" is the button label, keep the two the same
                           tr("New here? This quick tour points out the most important parts of Mudlet - it takes less than a minute. "
-                             "Click anywhere or use the arrow keys to move through it.")});
+                             "Use Next or the arrow keys to move through it.")});
     }
 
     mSteps.push_back({[activeConsole, widgetRect]() -> QRect {
@@ -381,12 +383,6 @@ void TUiTour::keyPressEvent(QKeyEvent* event)
     } else {
         QWidget::keyPressEvent(event);
     }
-}
-
-void TUiTour::mouseReleaseEvent(QMouseEvent* event)
-{
-    event->accept();
-    slot_next();
 }
 
 bool TUiTour::eventFilter(QObject* watched, QEvent* event)

@@ -60,8 +60,8 @@ private:
     static constexpr int kMaxRootTriggers = 5;
 
     // What every line of game text really pays for: the substrings the chat
-    // gates scan for before any regex runs. Measures 18. Raising this is a
-    // throughput change and wants measuring first.
+    // gates scan for before any regex runs. Measures 20, the whole budget.
+    // Raising this is a throughput change and wants measuring first.
     static constexpr int kMaxGatePatterns = 20;
 
 private slots:
@@ -246,6 +246,8 @@ private slots:
                 {qsl("Bob shouts, 'to arms!'"), QString()},
                 {qsl("You yell, 'wait for me!'"), QString()},
                 {qsl("You shout, 'over here!'"), QString()},
+                {qsl("Bob chats, 'hello everyone'"), qsl("channels")},
+                {qsl("You chat, \"test.\""), qsl("channels")},
                 {qsl("[tell] Ann: are you there?"), qsl("tells")},
                 {qsl("[newbie] Ann: how do I get out of here?"), qsl("channels")},
                 {qsl("(gossip) Ann: anyone around?"), qsl("channels")},
@@ -320,7 +322,8 @@ private slots:
 
         int gatePatterns = 0;
         QStringList shapes;
-        for (auto gate : *tree->getChildrenList()) {
+        for (auto* gateNode : *tree->getChildrenList()) {
+            auto* gate = static_cast<TTrigger*>(gateNode);
             const QList<int> kinds = gate->getRegexCodePropertyList();
             QVERIFY2(!kinds.isEmpty(), qPrintable(qsl("gate \"%1\" has no patterns, so it passes every line straight to its regexes").arg(gate->getName())));
             for (const int kind : kinds) {
@@ -328,7 +331,8 @@ private slots:
                          qPrintable(qsl("gate \"%1\" has a pattern of kind %2 - a gate must be substring matching only, or every line pays for a regex").arg(gate->getName(), QString::number(kind))));
             }
             gatePatterns += static_cast<int>(kinds.size());
-            for (auto shape : *gate->getChildrenList()) {
+            for (auto* shapeNode : *gate->getChildrenList()) {
+                auto* shape = static_cast<TTrigger*>(shapeNode);
                 shapes << shape->getPatternsList();
             }
         }
@@ -584,7 +588,8 @@ private:
         if (trigger->getName() == name) {
             found << trigger;
         }
-        for (auto child : *trigger->getChildrenList()) {
+        for (auto* childNode : *trigger->getChildrenList()) {
+            auto* child = static_cast<TTrigger*>(childNode);
             collectByNameIn(child, name, found);
         }
     }
@@ -604,7 +609,8 @@ private:
         if (trigger->getName() == name) {
             return trigger;
         }
-        for (auto child : *trigger->getChildrenList()) {
+        for (auto* childNode : *trigger->getChildrenList()) {
+            auto* child = static_cast<TTrigger*>(childNode);
             if (TTrigger* found = findTriggerIn(child, name)) {
                 return found;
             }
@@ -616,7 +622,8 @@ private:
     {
         TTrigger* tree = findTrigger(host, qsl("Mudlet base UI chat capture"));
         QVERIFY(tree);
-        for (auto gate : *tree->getChildrenList()) {
+        for (auto* gateNode : *tree->getChildrenList()) {
+            auto* gate = static_cast<TTrigger*>(gateNode);
             const QStringList patterns = gate->getPatternsList();
             const QList<int> kinds = gate->getRegexCodePropertyList();
             for (int i = 0; i < patterns.size() && i < kinds.size(); ++i) {

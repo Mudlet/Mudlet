@@ -19,13 +19,70 @@
 
 #include "TAreaGridIndex.h"
 
-const QSet<int> TAreaGridIndex::csmEmptySet;
+const TAreaGridIndex::RoomIds TAreaGridIndex::csmEmptyCell;
+
+// There are two ways to reach the cells of a Y range: probe the range's keys
+// one at a time, or walk the keys the column holds and drop the ones outside
+// it. A zoomed-in viewport covers a handful of the rows a level occupies and a
+// zoomed-out one covers more rows than exist, so neither wins outright - the
+// smaller key count is the one to get through.
+static void appendRoomsInYRange(const QHash<int, TAreaGridIndex::RoomIds>& yMap, int minY, int maxY, QList<int>& result)
+{
+    const qint64 wantedRows = static_cast<qint64>(maxY) - minY + 1;
+    if (wantedRows > 0 && wantedRows < yMap.size()) {
+        for (int y = minY; y <= maxY; ++y) {
+            const auto yIt = yMap.constFind(y);
+            if (yIt == yMap.constEnd()) {
+                continue;
+            }
+            for (const int roomId : *yIt) {
+                result.append(roomId);
+            }
+        }
+        return;
+    }
+    for (auto yIt = yMap.constBegin(); yIt != yMap.constEnd(); ++yIt) {
+        if (yIt.key() < minY || yIt.key() > maxY) {
+            continue;
+        }
+        for (const int roomId : *yIt) {
+            result.append(roomId);
+        }
+    }
+}
+
+static void appendRoomsInYRangeWithCollisions(const QHash<int, TAreaGridIndex::RoomIds>& yMap, int minY, int maxY, QList<QPair<int, bool>>& result)
+{
+    const qint64 wantedRows = static_cast<qint64>(maxY) - minY + 1;
+    if (wantedRows > 0 && wantedRows < yMap.size()) {
+        for (int y = minY; y <= maxY; ++y) {
+            const auto yIt = yMap.constFind(y);
+            if (yIt == yMap.constEnd()) {
+                continue;
+            }
+            const bool collision = yIt->size() > 1;
+            for (const int roomId : *yIt) {
+                result.append({roomId, collision});
+            }
+        }
+        return;
+    }
+    for (auto yIt = yMap.constBegin(); yIt != yMap.constEnd(); ++yIt) {
+        if (yIt.key() < minY || yIt.key() > maxY) {
+            continue;
+        }
+        const bool collision = yIt->size() > 1;
+        for (const int roomId : *yIt) {
+            result.append({roomId, collision});
+        }
+    }
+}
 
 void TAreaGridIndex::addRoom(int id, int z, int x, int y)
 {
     auto& cell = mIndex[z][x][y];
     if (!cell.contains(id)) {
-        cell.insert(id);
+        cell.append(id);
         ++mCachedSize;
     }
 }
@@ -44,7 +101,7 @@ void TAreaGridIndex::removeRoom(int id, int z, int x, int y)
     if (yIt == xIt->end()) {
         return;
     }
-    if (yIt->remove(id)) {
+    if (yIt->removeOne(id)) {
         --mCachedSize;
     }
     if (yIt->isEmpty()) {
@@ -85,7 +142,7 @@ void TAreaGridIndex::rebuild(int z, const QHash<int, QPair<int, int>>& roomIdToX
     QHashIterator<int, QPair<int, int>> it(roomIdToXY);
     while (it.hasNext()) {
         it.next();
-        mIndex[z][it.value().first][it.value().second].insert(it.key());
+        mIndex[z][it.value().first][it.value().second].append(it.key());
     }
     mCachedMemoryEstimate = computeMemoryEstimate();
 }
@@ -99,26 +156,26 @@ void TAreaGridIndex::rebuild(const QHash<int, QHash<int, QPair<int, int>>>& zToR
     for (auto itZ = zToRoomXY.constBegin(); itZ != zToRoomXY.constEnd(); ++itZ) {
         const int z = itZ.key();
         for (auto it = itZ.value().constBegin(); it != itZ.value().constEnd(); ++it) {
-            mIndex[z][it.value().first][it.value().second].insert(it.key());
+            mIndex[z][it.value().first][it.value().second].append(it.key());
         }
         mCachedSize += itZ.value().size();
     }
     mCachedMemoryEstimate = computeMemoryEstimate();
 }
 
-const QSet<int>& TAreaGridIndex::roomsAt(int z, int x, int y) const
+const TAreaGridIndex::RoomIds& TAreaGridIndex::roomsAt(int z, int x, int y) const
 {
     const auto zIt = mIndex.constFind(z);
     if (zIt == mIndex.constEnd()) {
-        return csmEmptySet;
+        return csmEmptyCell;
     }
     const auto xIt = zIt->constFind(x);
     if (xIt == zIt->constEnd()) {
-        return csmEmptySet;
+        return csmEmptyCell;
     }
     const auto yIt = xIt->constFind(y);
     if (yIt == xIt->constEnd()) {
-        return csmEmptySet;
+        return csmEmptyCell;
     }
     return *yIt;
 }
@@ -131,21 +188,22 @@ QList<int> TAreaGridIndex::roomsInViewport(int z, int minX, int maxX, int minY, 
         return result;
     }
     const auto& xyMap = *zIt;
-    for (auto xIt = xyMap.constBegin(); xIt != xyMap.constEnd(); ++xIt) {
-        const int x = xIt.key();
-        if (x < minX || x > maxX) {
-            continue;
-        }
-        const auto& yMap = *xIt;
-        for (auto yIt = yMap.constBegin(); yIt != yMap.constEnd(); ++yIt) {
-            const int y = yIt.key();
-            if (y < minY || y > maxY) {
+    const qint64 wantedColumns = static_cast<qint64>(maxX) - minX + 1;
+    if (wantedColumns > 0 && wantedColumns < xyMap.size()) {
+        for (int x = minX; x <= maxX; ++x) {
+            const auto xIt = xyMap.constFind(x);
+            if (xIt == xyMap.constEnd()) {
                 continue;
             }
-            for (const int roomId : *yIt) {
-                result.append(roomId);
-            }
+            appendRoomsInYRange(*xIt, minY, maxY, result);
         }
+        return result;
+    }
+    for (auto xIt = xyMap.constBegin(); xIt != xyMap.constEnd(); ++xIt) {
+        if (xIt.key() < minX || xIt.key() > maxX) {
+            continue;
+        }
+        appendRoomsInYRange(*xIt, minY, maxY, result);
     }
     return result;
 }
@@ -158,22 +216,22 @@ QList<QPair<int, bool>> TAreaGridIndex::roomsInViewportWithCollisions(int z, int
         return result;
     }
     const auto& xyMap = *zIt;
-    for (auto xIt = xyMap.constBegin(); xIt != xyMap.constEnd(); ++xIt) {
-        const int x = xIt.key();
-        if (x < minX || x > maxX) {
-            continue;
-        }
-        const auto& yMap = *xIt;
-        for (auto yIt = yMap.constBegin(); yIt != yMap.constEnd(); ++yIt) {
-            const int y = yIt.key();
-            if (y < minY || y > maxY) {
+    const qint64 wantedColumns = static_cast<qint64>(maxX) - minX + 1;
+    if (wantedColumns > 0 && wantedColumns < xyMap.size()) {
+        for (int x = minX; x <= maxX; ++x) {
+            const auto xIt = xyMap.constFind(x);
+            if (xIt == xyMap.constEnd()) {
                 continue;
             }
-            const bool collision = yIt->size() > 1;
-            for (const int roomId : *yIt) {
-                result.append({roomId, collision});
-            }
+            appendRoomsInYRangeWithCollisions(*xIt, minY, maxY, result);
         }
+        return result;
+    }
+    for (auto xIt = xyMap.constBegin(); xIt != xyMap.constEnd(); ++xIt) {
+        if (xIt.key() < minX || xIt.key() > maxX) {
+            continue;
+        }
+        appendRoomsInYRangeWithCollisions(*xIt, minY, maxY, result);
     }
     return result;
 }
@@ -200,5 +258,5 @@ int TAreaGridIndex::computeMemoryEstimate() const
             }
         }
     }
-    return zCount * (kHashBase + kHashEntry) + xCount * (kHashBase + kHashEntry) + yCount * (kHashBase + kHashEntry) + roomCount * static_cast<int>(sizeof(int));
+    return zCount * (kHashBase + kHashEntry) + xCount * (kHashBase + kHashEntry) + yCount * (kHashBase + kHashEntry + static_cast<int>(sizeof(RoomIds))) + roomCount * static_cast<int>(sizeof(int));
 }

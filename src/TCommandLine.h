@@ -122,6 +122,7 @@ private:
     void restoreHistory();
     void paintEvent(QPaintEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
+    int heightForRows(const int) const;
     void updatePasswordToggleButton();
     void positionPasswordToggleButton();
 

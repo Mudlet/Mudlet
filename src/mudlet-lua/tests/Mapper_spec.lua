@@ -1629,8 +1629,10 @@ describe("Tests mapper functions against a shared fixture", function()
       -- Guarantee a clean routing graph even if an assertion above failed.
       setExitWeightFilter(nil)
       setExitWeight(rA1, "east", 0)
-      lockRoom(rA2, false)
       lockExit(rA1, "east", false)
+      for _, id in ipairs({rA2, rB1, rB2, rG1, rSandA, rSandB}) do
+        lockRoom(id, false)
+      end
     end)
 
     it("finds the shortest route and fills the speedwalk globals", function()
@@ -1701,6 +1703,106 @@ describe("Tests mapper functions against a shared fixture", function()
       local ok = getPath(rA1, rA3)
       assert.is_true(ok)
       assert.are.same({tostring(rA4), tostring(rA5), tostring(rA3)}, speedWalkPath)
+    end)
+
+    -- Every case above edits the map first, so each one searches a graph that
+    -- has just been rebuilt. These four do not, which is what puts them on the
+    -- state findPath() carries from one search to the next.
+
+    it("does not inherit the previous search's state", function()
+      local firstOk = getPath(rA1, rA3)
+      assert.is_true(firstOk)
+      assert.are.same({tostring(rA2), tostring(rA3)}, speedWalkPath)
+
+      -- Reversed, so the second search has to better the rooms the first one
+      -- had already settled rather than reaching fresh ones.
+      local ok, weight = getPath(rA3, rA1)
+      assert.is_true(ok)
+      assert.are.equal(2, weight)
+      assert.are.same({"w", "w"}, speedWalkDir)
+      assert.are.same({tostring(rA2), tostring(rA1)}, speedWalkPath)
+    end)
+
+    it("does not inherit the state of a search that found nothing", function()
+      -- Giving up means settling every room reachable from the start, so this
+      -- leaves behind the largest amount of state a search on this map can.
+      local failedOk = getPath(rA1, rSandA)
+      assert.is_false(failedOk)
+
+      local ok, weight = getPath(rA1, rA3)
+      assert.is_true(ok)
+      assert.are.equal(2, weight)
+      assert.are.same({tostring(rA2), tostring(rA3)}, speedWalkPath)
+    end)
+
+    it("does not reuse the old room numbering after the graph is rebuilt", function()
+      local firstOk = getPath(rA1, rB2)
+      assert.is_true(firstOk)
+
+      -- Locking rooms drops them from the graph, so the rooms left are
+      -- renumbered and the numbers the search above recorded no longer name the
+      -- rooms they did. Fewer rooms than before is the case that matters: a
+      -- surviving number can then be past the end of the state itself.
+      for _, id in ipairs({rA2, rB1, rB2, rG1, rSandA, rSandB}) do
+        lockRoom(id, true)
+      end
+
+      local ok, weight = getPath(rA1, rA3)
+      assert.is_true(ok)
+      assert.are.equal(3, weight)
+      assert.are.same({tostring(rA4), tostring(rA5), tostring(rA3)}, speedWalkPath)
+    end)
+  end)
+
+  describe("Tests pathfinding where the weights disagree with the coordinates", function()
+    -- A* is steered by straight-line distance to the target but pays in exit
+    -- weights, and nothing makes the two agree. rX sits right beside the target
+    -- and is reached early over a costly exit; the cheap way to it only turns up
+    -- later, through rY, which is the wrong way entirely as the crow flies. The
+    -- route through rZ is there to be beaten: it wins unless the better price
+    -- for rX is carried forward to the target.
+    local areaWeighted
+    local rWStart, rX, rY, rZ, rWGoal
+
+    setup(function()
+      areaWeighted = addAreaName("MapperSpecWeighted")
+
+      local function makeRoom(x, y)
+        local id = createRoomID()
+        addRoom(id)
+        setRoomArea(id, areaWeighted)
+        setRoomCoordinates(id, x, y, 0)
+        return id
+      end
+
+      rWGoal = makeRoom(0, 0)
+      rX = makeRoom(1, 0)
+      rZ = makeRoom(0, 10)
+      rY = makeRoom(0, 20)
+      rWStart = makeRoom(0, 30)
+
+      -- One-way throughout, so the graph is exactly the one the weights
+      -- describe and no return exit offers a cheaper way round.
+      setExit(rWStart, rX, "southeast"); setExitWeight(rWStart, "southeast", 10)
+      setExit(rWStart, rZ, "southwest"); setExitWeight(rWStart, "southwest", 5)
+      setExit(rWStart, rY, "south"); setExitWeight(rWStart, "south", 1)
+      setExit(rY, rX, "southeast"); setExitWeight(rY, "southeast", 1)
+      setExit(rZ, rWGoal, "south"); setExitWeight(rZ, "south", 20)
+      setExit(rX, rWGoal, "west"); setExitWeight(rX, "west", 20)
+    end)
+
+    teardown(function()
+      for _, id in ipairs({rWStart, rX, rY, rZ, rWGoal}) do
+        deleteRoom(id)
+      end
+      deleteArea("MapperSpecWeighted")
+    end)
+
+    it("takes the cheapest route even though a nearer room was settled first", function()
+      local ok, weight = getPath(rWStart, rWGoal)
+      assert.is_true(ok)
+      assert.are.equal(22, weight)
+      assert.are.same({tostring(rY), tostring(rX), tostring(rWGoal)}, speedWalkPath)
     end)
   end)
 
@@ -2450,6 +2552,218 @@ describe("Tests saveMap and loadMap", function()
       assert.is_true(loadMap(fixtureMap))
       assert.is_false(roomExists(stray))
     end)
+  end)
+
+  -- A real IRE map at full size - 22,854 rooms over 379 areas. Routing is the
+  -- one part of the mapper whose behaviour a small map cannot describe: the
+  -- distance heuristic gives up and returns 1 the moment a route leaves the
+  -- target's area, a one-way exit only matters when there is a second way
+  -- round, and an exit weight only reroutes when there is something to reroute
+  -- onto. See fixtures/maps/README.md for the map's provenance and shape.
+  describe("Tests pathfinding over a full-sized IRE map", function()
+    local archivePath = specDirectory .. "/fixtures/maps/achaea-map.zip"
+    local extractedPath = getMudletHomeDir() .. "/achaea-map.xml"
+    local mapRooms, mapAreas = 22854, 379
+
+    -- Every id below is load-bearing for the reason its name gives, so none of
+    -- them can be swapped for another room that merely also exists.
+    local ashtanWorkshop, cyreneBellTower = 107, 1192   -- 96 steps, 7 areas apart
+    local riparium, blackrock = 6595, 18690             -- the map's long diagonal
+    local mhaldorRoom, eleusisRoom = 4417, 2377         -- no route: different components
+    local cliffTop, cliffFoot = 1201, 9326              -- "down" is one-way
+    local hillside, nimick = 1432, 20646                -- joined by a hidden exit
+    local nimickDetour = 43                             -- steps round it when it is shut
+
+    -- speedWalkDir spells a direction short and getRoomExits spells it long,
+    -- so walking one against the other needs the two put side by side
+    local exitDirectionFor = {n = "north", ne = "northeast", e = "east", se = "southeast",
+                              s = "south", sw = "southwest", w = "west", nw = "northwest",
+                              up = "up", down = "down", ["in"] = "in", out = "out"}
+
+    -- A route of the right length is still wrong if its steps do not join up,
+    -- which comparing lengths alone would not notice.
+    local function routeIsWalkable(from)
+      local current = from
+      for step, direction in ipairs(speedWalkDir) do
+        local expected = tonumber(speedWalkPath[step])
+        local exits = getRoomExits(current)
+        if exits[exitDirectionFor[direction] or direction] ~= expected then
+          return false, ("step %d: %s does not lead from room %d to room %s"):format(step, direction, current, tostring(expected))
+        end
+        current = expected
+      end
+      return true
+    end
+
+    -- Two different libraries answer to the global `zip`: Mudlet asks for
+    -- lua-zip (brimworks) first and falls back to luazip (Kepler), and only
+    -- the latter's entry:read() takes io.read's "*a". brimworks wants a byte
+    -- count and raises "number expected, got string" for anything else, so
+    -- read in fixed chunks, which both understand, until one comes back empty.
+    local function readEntry(entry)
+      local chunks = {}
+      while true do
+        local chunk = entry:read(1024 * 1024)
+        if not chunk or chunk == "" then
+          break
+        end
+        chunks[#chunks + 1] = chunk
+      end
+      return table.concat(chunks)
+    end
+
+    local function areasVisited()
+      local seen, count = {}, 0
+      for _, id in ipairs(speedWalkPath) do
+        local area = getRoomArea(tonumber(id))
+        if not seen[area] then
+          seen[area] = true
+          count = count + 1
+        end
+      end
+      return count
+    end
+
+    setup(function()
+      -- zip is only defined when Mudlet preloaded the module, and lua-zip is a
+      -- required rock on every platform, so a nil here is a broken environment
+      -- rather than a reason to skip the block
+      assert.is_table(zip, "the lua-zip module is missing, so the map fixture cannot be unpacked")
+      local archive, openError = zip.open(archivePath)
+      assert(archive, ("could not open %s: %s"):format(archivePath, tostring(openError)))
+      local entry = assert(archive:open("achaea-map.xml"), "achaea-map.zip does not hold achaea-map.xml")
+      local document = readEntry(entry)
+      entry:close()
+      archive:close()
+      local out = assert(io.open(extractedPath, "wb"))
+      out:write(document)
+      out:close()
+
+      deleteMap()
+      assert.is_true(loadMap(extractedPath))
+      -- an import that quietly did nothing would leave every route below
+      -- failing for a reason that has nothing to do with routing
+      local rooms = 0
+      for _ in pairs(getRooms()) do rooms = rooms + 1 end
+      assert.are.equal(mapRooms, rooms)
+      local areas = 0
+      for _ in pairs(getAreaTable()) do areas = areas + 1 end
+      assert.are.equal(mapAreas, areas)
+    end)
+
+    teardown(function()
+      os.remove(extractedPath)
+    end)
+
+    after_each(function()
+      -- leave the graph as the setup built it even if an assertion above
+      -- stopped a spec before its own clean-up
+      setExitWeight(hillside, "east", 0)
+      setRoomWeight(nimick, 1)
+      lockExit(hillside, "east", false)
+    end)
+
+    it("walks a ninety-six step route across seven areas", function()
+      local ok, weight = getPath(ashtanWorkshop, cyreneBellTower)
+      assert.is_true(ok)
+      assert.are.equal(96, weight)
+      assert.are.equal(96, #speedWalkDir)
+      assert.are.equal(96, #speedWalkPath)
+      assert.are.equal(tostring(cyreneBellTower), speedWalkPath[#speedWalkPath])
+      assert.is_true(routeIsWalkable(ashtanWorkshop))
+      -- how many areas, and which rooms, depend on Qt's per-process hash seed
+      -- ordering the graph's vertices (issue #10181), so only the crossing
+      -- itself is pinned
+      assert.is_true(areasVisited() > 1)
+      assert.are_not.equal(getRoomArea(ashtanWorkshop), getRoomArea(cyreneBellTower))
+    end)
+
+    it("walks the map's long diagonal", function()
+      local ok, weight = getPath(riparium, blackrock)
+      assert.is_true(ok)
+      assert.are.equal(186, weight)
+      assert.are.equal(186, #speedWalkDir)
+      assert.is_true(routeIsWalkable(riparium))
+    end)
+
+    it("reports no route between two rooms the game only joins by ship", function()
+      -- both are ordinary city rooms; MMP has no way to spell the sailing that
+      -- connects them, so the imported graph really is in separate pieces
+      local ok, weight, message = getPath(mhaldorRoom, eleusisRoom)
+      assert.is_false(ok)
+      assert.are.equal(-1, weight)
+      assert.is_string(message)
+    end)
+
+    it("uses a one-way exit in its own direction only", function()
+      assert.are.equal(cliffFoot, getRoomExits(cliffTop)["down"])
+      assert.is_nil(getRoomExits(cliffFoot)["up"])
+
+      assert.is_true(getPath(cliffTop, cliffFoot))
+      assert.are.same({"down"}, speedWalkDir)
+
+      -- the way back exists but has to go the long way round
+      assert.is_true(getPath(cliffFoot, cliffTop))
+      assert.are.equal(6, #speedWalkDir)
+      assert.is_true(routeIsWalkable(cliffFoot))
+    end)
+
+    it("routes through a hidden exit, which imports as a locked door", function()
+      -- a door is a description of the exit, not a block on it: only lockExit
+      -- keeps a route out, which is worth pinning because door type 3 reads
+      -- like it would do the same
+      assert.are.equal(3, getDoors(hillside)["e"])
+      assert.is_true(getPath(hillside, nimick))
+      assert.are.same({"e"}, speedWalkDir)
+    end)
+
+    it("takes the long way round once that exit is locked", function()
+      lockExit(hillside, "east", true)
+      local ok, weight = getPath(hillside, nimick)
+      assert.is_true(ok)
+      assert.are.equal(nimickDetour, weight)
+      assert.are.equal(nimickDetour, #speedWalkDir)
+      assert.is_true(routeIsWalkable(hillside))
+    end)
+
+    it("takes an exit weight over the detour only once it costs more than one", function()
+      -- MMP carries no weights, so both routes cost their step count until a
+      -- weight is set here, which is the only way to reach the comparison
+      setExitWeight(hillside, "east", nimickDetour - 23)
+      local ok, weight = getPath(hillside, nimick)
+      assert.is_true(ok)
+      assert.are.equal(nimickDetour - 23, weight)
+      assert.are.same({"e"}, speedWalkDir)
+
+      setExitWeight(hillside, "east", nimickDetour + 57)
+      ok, weight = getPath(hillside, nimick)
+      assert.is_true(ok)
+      assert.are.equal(nimickDetour, weight)
+      assert.are.equal(nimickDetour, #speedWalkDir)
+      assert.is_true(routeIsWalkable(hillside))
+    end)
+
+    it("charges a room weight for arriving in the room", function()
+      setRoomWeight(nimick, 100)
+      local ok, weight = getPath(hillside, nimick)
+      assert.is_true(ok)
+      -- one step still, but it costs what the room asks rather than 1
+      assert.are.same({"e"}, speedWalkDir)
+      assert.are.equal(100, weight)
+    end)
+
+    -- distance_heuristic (src/TAstar.h) returns the euclidean distance between
+    -- two rooms' coordinates, but a diagonal exit costs 1 while moving a room
+    -- north-east moves sqrt(2) in coordinate space. The heuristic therefore
+    -- overestimates, which is what A* is not allowed to do, and the search can
+    -- settle for a route a step longer than the shortest one: room 747 to room
+    -- 42 comes back 93 steps where 92 exist. Flattening the target area's
+    -- coordinates - which makes the heuristic 0 wherever it is consulted -
+    -- returns 92, which is how the cause was pinned down. Left unpinned here
+    -- because it is a defect to fix rather than behaviour to hold still - every
+    -- route this block does pin is the true optimum, checked against a
+    -- breadth-first search, so a fix leaves them green.
+    pending("routes can come back a step longer than the shortest one - issue #10180")
   end)
 
   -- setMapPerspective/shiftMapPerspective only exist in a build made with 3D

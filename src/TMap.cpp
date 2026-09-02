@@ -28,6 +28,7 @@
 #include "TConsole.h"
 #include "TEvent.h"
 #include "TMapLabel.h"
+#include "TMapView.h"
 #include "TMapViewManager.h"
 #include "TRoomDB.h"
 #include "XMLimport.h"
@@ -39,6 +40,7 @@
 #include <QBuffer>
 #include <QDataStream>
 #include <QElapsedTimer>
+#include <QFontMetrics>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -51,10 +53,32 @@
 #include <QSizeF>
 #include <QXmlStreamReader>
 #include <chrono>
+#include <limits>
+#include <queue>
+
+#ifndef Q_MOC_RUN
+#include <boost/range/iterator_range.hpp>
+#endif
 
 using namespace std::chrono_literals;
 
 namespace {
+// A map file can carry a room symbol scaling factor that TMap's own setter
+// would refuse - hand-edited, from a third-party tool, or written by a Mudlet
+// whose JSON reader truncated it (issue #10176). Loading cannot go through the
+// setter, which would mark the freshly loaded map as unsaved, so it comes
+// through here instead: 0 and below blanks every room symbol, which is worse
+// than a factor that is merely not what the file said.
+qreal usableSymbolFontFudgeFactor(const qreal fromFile)
+{
+    if (!qIsFinite(fromFile)) {
+        // NaN compares false against both bounds, so qBound() cannot be relied
+        // on to sort it out
+        return 1.0;
+    }
+    return qBound(TMap::scmMinimumSymbolFontFudgeFactor, fromFile, TMap::scmMaximumSymbolFontFudgeFactor);
+}
+
 // Restores font information from userData that was stored during binary serialization.
 // Font data is stored as "family|pointSize|weight|italic" to avoid binary format version changes.
 void restoreLabelFontFromUserData(TMapLabel& label, int labelId, QMap<QString, QString>& userData)
@@ -272,6 +296,11 @@ bool TMap::setRoomCoordinates(int id, int x, int y, int z)
     const int oldY = pR->y();
     const int oldZ = pR->z();
 
+    // Ahead of moveRoom(), which re-measures the exits leading to this room
+    // and so needs it to be where it says it is. The area indexes are keyed on
+    // the coordinates passed in, not on the room, so the order suits them too.
+    pR->setCoordinates(x, y, z);
+
     if (oldX != x || oldY != y || oldZ != z) {
         TArea* pA = mpRoomDB->getArea(pR->getArea());
         if (pA) {
@@ -279,8 +308,6 @@ bool TMap::setRoomCoordinates(int id, int x, int y, int z)
             pA->moveRoom(id, oldZ, oldX, oldY, z, x, y);
         }
     }
-
-    pR->setCoordinates(x, y, z);
 
     setUnsaved(__func__);
     return true;
@@ -688,6 +715,9 @@ void TMap::audit()
     QMapIterator<int, TArea*> itArea(mpRoomDB->getAreaMap());
     while (itArea.hasNext()) {
         itArea.next();
+        // The audit rewrites exits, stubs and area membership behind the
+        // setters' backs, so no room re-filed its own index entry:
+        itArea.value()->markLodExitIndexDirty();
         itArea.value()->clean();
     }
 
@@ -884,6 +914,16 @@ void TMap::initGraph()
         boost::add_vertex(g);
     }
 
+    // searchGraph() keeps its per-room state between searches, so a rebuild has
+    // to put that state back in step with the graph. This function is the only
+    // one that clears g or gives it vertices, which makes it the only place the
+    // state can go stale - room deletion, area deletion and a map reload all
+    // arrive here through mMapGraphNeedsUpdate rather than touching the graph
+    // themselves. A surviving mSearchTouched would be worse than merely wrong:
+    // the next search restores the rooms it names, so an entry past a shrunken
+    // roomCount is an out-of-bounds write.
+    resetSearchState(roomCount);
+
     // Now identify the routes between rooms, and pick out the best edges of parallel ones
     for (auto l : locations) {
         unsigned const int source = l.id;
@@ -933,6 +973,103 @@ void TMap::initGraph()
     mMapGraphNeedsUpdate = false;
     qDebug() << "TMap::initGraph() INFO: built graph with:" << locations.size() << "(" << roomCount << ") locations(roomCount), and discarded" << unUsableRoomSet.count()
              << "other NOT usable rooms and found:" << edgeCount << "distinct, usable edges in:" << _time.nsecsElapsed() * 1.0e-6 << "ms.";
+}
+
+// Put every room back to "not yet reached". Refills the three per-room vectors
+// rather than only resizing them, or stale values below the old room count
+// survive a rebuild that shrank the map.
+void TMap::resetSearchState(const std::size_t roomCount)
+{
+    mSearchPredecessor.resize(roomCount);
+    for (std::size_t i = 0; i < roomCount; ++i) {
+        mSearchPredecessor[i] = i;
+    }
+    mSearchDistance.assign(roomCount, std::numeric_limits<cost>::max());
+    mSearchState.assign(roomCount, 0);
+    mSearchTouched.clear();
+}
+
+// A* from one room to another, leaving the route in mSearchPredecessor.
+//
+// boost::astar_search() would do the same job, but before it looks at a single
+// exit it resets one entry per room in the WHOLE map - four property maps' worth
+// - so a two-room walk on a 2.3 million room map pays for 2.3 million rooms.
+// Measured on Ssaliss' Aetherspace map that fixed toll is ~55ms, an order of
+// magnitude more than an ordinary search costs. Here the state lives across
+// searches instead and only the rooms the last search wrote to are put back.
+bool TMap::searchGraph(const vertex start, const vertex goal)
+{
+    // A room not yet reached is 0, one that has been reached is stateFrontier,
+    // and one already expanded is stateExpanded - though a re-opened room drops
+    // back to stateFrontier. Only 0 and stateExpanded are ever tested: writing
+    // stateFrontier is what stops a room being listed in mSearchTouched twice.
+    static constexpr quint8 stateFrontier = 1;
+    static constexpr quint8 stateExpanded = 2;
+
+    // A search that finds nothing has to settle every room it can reach, so one
+    // getPath() to an unreachable room leaves the touched list naming most of the
+    // map - 8 bytes a room, held for the rest of the session, where the old code
+    // freed its scratch after every search. Past half the map give the memory
+    // back and refill instead; the list has stopped being the smaller job by
+    // then anyway, though the point where that happens was not measured.
+    if (mSearchTouched.size() > mSearchPredecessor.size() / 2) {
+        resetSearchState(mSearchPredecessor.size());
+        std::vector<vertex>().swap(mSearchTouched);
+    } else {
+        for (const vertex touched : mSearchTouched) {
+            mSearchPredecessor[touched] = touched;
+            mSearchDistance[touched] = std::numeric_limits<cost>::max();
+            mSearchState[touched] = 0;
+        }
+        mSearchTouched.clear();
+    }
+
+    const WeightMap weights = boost::get(boost::edge_weight, g);
+    distance_heuristic<mygraph_t, cost, std::vector<location>> heuristic(locations, goal);
+
+    typedef std::pair<cost, vertex> frontierEntry;
+    std::priority_queue<frontierEntry, std::vector<frontierEntry>, std::greater<frontierEntry>> frontier;
+
+    mSearchDistance[start] = 0;
+    mSearchState[start] = stateFrontier;
+    mSearchTouched.push_back(start);
+    frontier.push({heuristic(start), start});
+
+    while (!frontier.empty()) {
+        const vertex current = frontier.top().second;
+        frontier.pop();
+        if (mSearchState[current] == stateExpanded) {
+            // A cheaper route to this room was found after it was queued, so
+            // the frontier holds it more than once; this is the stale copy.
+            continue;
+        }
+        mSearchState[current] = stateExpanded;
+        if (current == goal) {
+            return true;
+        }
+
+        for (const auto& exit : boost::make_iterator_range(boost::out_edges(current, g))) {
+            const vertex neighbour = boost::target(exit, g);
+            const cost throughCurrent = mSearchDistance[current] + boost::get(weights, exit);
+            if (throughCurrent >= mSearchDistance[neighbour]) {
+                continue;
+            }
+            if (mSearchState[neighbour] == 0) {
+                mSearchTouched.push_back(neighbour);
+            }
+            mSearchDistance[neighbour] = throughCurrent;
+            mSearchPredecessor[neighbour] = current;
+            // An already expanded room goes back into the frontier: the
+            // heuristic measures map coordinates while the costs are room
+            // weights, so the two need not agree and a better route to a room
+            // already left behind can still turn up. boost::astar_search()
+            // re-opens rooms for the same reason.
+            mSearchState[neighbour] = stateFrontier;
+            frontier.push({throughCurrent + heuristic(neighbour), neighbour});
+        }
+    }
+
+    return false;
 }
 
 bool TMap::findPath(int from, int to)
@@ -1043,111 +1180,112 @@ bool TMap::findPath(int from, int to)
         return false;
     }
 
-    std::vector<vertex> p(vertexCount);
-    // Somehow p is an ascending, monotonic series of numbers start at 0, it
-    // seems we have a redundant indirection in play there as p[0]=0, p[1]=1,..., p[n]=n ...!
-    std::vector<cost> d(vertexCount);
-    try {
-        astar_search(g, start, distance_heuristic<mygraph_t, cost, std::vector<location>>(locations, goal), predecessor_map(&p[0]).distance_map(&d[0]).visitor(astar_goal_visitor<vertex>(goal)));
-    } catch (const found_goal&) {
-        qDebug() << "TMap::findPath(" << from << "," << to << ") INFO: time elapsed in A*:" << t.nsecsElapsed() * 1.0e-6 << "ms.";
-        t.restart();
-        if (!roomidToIndex.contains(to)) {
-            qDebug() << "TMap::findPath(" << from << "," << to << ") FAIL: target room not in map graph!";
-            return false;
-        }
-
-        vertex currentVertex = roomidToIndex.value(to);
-        unsigned int currentRoomId = (locations.at(currentVertex)).id;
-
-        // We step through the found path BACKWARDS so advance (well retard)
-        // the "previous" one first, and it will be the SOURCE vertex for the
-        // edge and current will be the TARGET vertex:
-        vertex previousVertex = currentVertex;
-        do {
-            previousVertex = p[currentVertex];
-            if (previousVertex == currentVertex) {
-                qDebug() << "TMap::findPath(" << from << "," << to << ") WARN: unable to build a path in:" << t.nsecsElapsed() * 1.0e-6 << "ms.";
-                mPathList.clear();
-                mDirList.clear();
-                mWeightList.clear(); // Reset any partial results...
-                return false;
-            }
-            const unsigned int previousRoomId = (locations.at(previousVertex)).id;
-            QPair<unsigned int, unsigned int> const edgeRoomIdPair = qMakePair(previousRoomId, currentRoomId);
-            const route r = edgeHash.value(edgeRoomIdPair);
-            mPathList.prepend(currentRoomId);
-            Q_ASSERT_X(r.cost > 0, "TMap::findPath()", "broken path {QPair made from source and target roomIds for a path step NOT found in QHash table of all possible steps.}");
-            // Above was found to be triggered by the situation described in:
-            // https://bugs.launchpad.net/mudlet/+bug/1263447 on 2015-07-17 but
-            // this is because previousVertex was the same as currentVertex after
-            // the "previousVertex = p[currentVertex]" operation at the start of
-            // the do{} loop - added a test for this so should bail out if it
-            // happens - Slysven
-            mWeightList.prepend(r.cost);
-            switch (r.direction) {
-                /*
-                 * Do not translate the directions into the user's locale here,
-                 * that is to be done in the profile specific doSpeedwalk()
-                 * function of the mapper package as the language of the MUD
-                 * need not be the native language of the user - translating
-                 * them here makes the mapper harder to code as it has to
-                 * accommodate all the possible languages the GUI of Mudlet was
-                 * configured to support!
-                 */
-            case DIR_NORTH:
-                mDirList.prepend(qsl("n"));
-                break;
-            case DIR_NORTHEAST:
-                mDirList.prepend(qsl("ne"));
-                break;
-            case DIR_EAST:
-                mDirList.prepend(qsl("e"));
-                break;
-            case DIR_SOUTHEAST:
-                mDirList.prepend(qsl("se"));
-                break;
-            case DIR_SOUTH:
-                mDirList.prepend(qsl("s"));
-                break;
-            case DIR_SOUTHWEST:
-                mDirList.prepend(qsl("sw"));
-                break;
-            case DIR_WEST:
-                mDirList.prepend(qsl("w"));
-                break;
-            case DIR_NORTHWEST:
-                mDirList.prepend(qsl("nw"));
-                break;
-            case DIR_UP:
-                mDirList.prepend(qsl("up"));
-                break;
-            case DIR_DOWN:
-                mDirList.prepend(qsl("down"));
-                break;
-            case DIR_IN:
-                mDirList.prepend(qsl("in"));
-                break;
-            case DIR_OUT:
-                mDirList.prepend(qsl("out"));
-                break;
-            case DIR_OTHER:
-                mDirList.prepend(r.specialExitName);
-                break;
-            default:
-                qWarning().nospace().noquote() << "TMap::findPath(" << from << ", " << to << ") WARNING - found route between rooms (from id: " << previousRoomId << ", to id: " << currentRoomId
-                                               << ") with an invalid DIR_xxxx code: " << r.direction << " - the path will not be valid!";
-            }
-            currentVertex = previousVertex;
-            currentRoomId = previousRoomId;
-        } while (currentVertex != start);
-
-        qDebug() << "TMap::findPath(" << from << "," << to << ") INFO: found path in:" << t.nsecsElapsed() * 1.0e-6 << "ms.";
-        return true;
+    // The check above is what keeps searchGraph()'s unchecked indexing in range,
+    // so the search state has to be the same size as the graph for it to mean
+    // anything. Sizing it is initGraph()'s job and nothing else adds vertices,
+    // but boost::add_edge() on a vecS graph grows one silently to fit an
+    // out-of-range index, which would part the two without saying so.
+    if (mSearchPredecessor.size() != vertexCount) {
+        qWarning().nospace().noquote() << "TMap::findPath(" << from << "," << to << ") WARN: search state (" << mSearchPredecessor.size() << ") is out of step with the graph (" << vertexCount
+                                       << ") - resetting it.";
+        resetSearchState(vertexCount);
     }
 
-    qDebug() << "TMap::findPath(" << from << "," << to << ") INFO: did NOT find path in:" << t.nsecsElapsed() * 1.0e-6 << "ms.";
-    return false;
+    if (!searchGraph(start, goal)) {
+        qDebug() << "TMap::findPath(" << from << "," << to << ") INFO: did NOT find path in:" << t.nsecsElapsed() * 1.0e-6 << "ms.";
+        return false;
+    }
+
+    qDebug() << "TMap::findPath(" << from << "," << to << ") INFO: time elapsed in A*:" << t.nsecsElapsed() * 1.0e-6 << "ms.";
+    t.restart();
+
+    vertex currentVertex = goal;
+    unsigned int currentRoomId = (locations.at(currentVertex)).id;
+
+    // We step through the found path BACKWARDS so advance (well retard)
+    // the "previous" one first, and it will be the SOURCE vertex for the
+    // edge and current will be the TARGET vertex:
+    vertex previousVertex = currentVertex;
+    do {
+        previousVertex = mSearchPredecessor[currentVertex];
+        if (previousVertex == currentVertex) {
+            qDebug() << "TMap::findPath(" << from << "," << to << ") WARN: unable to build a path in:" << t.nsecsElapsed() * 1.0e-6 << "ms.";
+            mPathList.clear();
+            mDirList.clear();
+            mWeightList.clear(); // Reset any partial results...
+            return false;
+        }
+        const unsigned int previousRoomId = (locations.at(previousVertex)).id;
+        QPair<unsigned int, unsigned int> const edgeRoomIdPair = qMakePair(previousRoomId, currentRoomId);
+        const route r = edgeHash.value(edgeRoomIdPair);
+        mPathList.prepend(currentRoomId);
+        Q_ASSERT_X(r.cost > 0, "TMap::findPath()", "broken path {QPair made from source and target roomIds for a path step NOT found in QHash table of all possible steps.}");
+        // Above was found to be triggered by the situation described in:
+        // https://bugs.launchpad.net/mudlet/+bug/1263447 on 2015-07-17 but
+        // this is because previousVertex was the same as currentVertex after
+        // the "previousVertex = p[currentVertex]" operation at the start of
+        // the do{} loop - added a test for this so should bail out if it
+        // happens - Slysven
+        mWeightList.prepend(r.cost);
+        switch (r.direction) {
+            /*
+             * Do not translate the directions into the user's locale here,
+             * that is to be done in the profile specific doSpeedwalk()
+             * function of the mapper package as the language of the MUD
+             * need not be the native language of the user - translating
+             * them here makes the mapper harder to code as it has to
+             * accommodate all the possible languages the GUI of Mudlet was
+             * configured to support!
+             */
+        case DIR_NORTH:
+            mDirList.prepend(qsl("n"));
+            break;
+        case DIR_NORTHEAST:
+            mDirList.prepend(qsl("ne"));
+            break;
+        case DIR_EAST:
+            mDirList.prepend(qsl("e"));
+            break;
+        case DIR_SOUTHEAST:
+            mDirList.prepend(qsl("se"));
+            break;
+        case DIR_SOUTH:
+            mDirList.prepend(qsl("s"));
+            break;
+        case DIR_SOUTHWEST:
+            mDirList.prepend(qsl("sw"));
+            break;
+        case DIR_WEST:
+            mDirList.prepend(qsl("w"));
+            break;
+        case DIR_NORTHWEST:
+            mDirList.prepend(qsl("nw"));
+            break;
+        case DIR_UP:
+            mDirList.prepend(qsl("up"));
+            break;
+        case DIR_DOWN:
+            mDirList.prepend(qsl("down"));
+            break;
+        case DIR_IN:
+            mDirList.prepend(qsl("in"));
+            break;
+        case DIR_OUT:
+            mDirList.prepend(qsl("out"));
+            break;
+        case DIR_OTHER:
+            mDirList.prepend(r.specialExitName);
+            break;
+        default:
+            qWarning().nospace().noquote() << "TMap::findPath(" << from << ", " << to << ") WARNING - found route between rooms (from id: " << previousRoomId << ", to id: " << currentRoomId
+                                           << ") with an invalid DIR_xxxx code: " << r.direction << " - the path will not be valid!";
+        }
+        currentVertex = previousVertex;
+        currentRoomId = previousRoomId;
+    } while (currentVertex != start);
+
+    qDebug() << "TMap::findPath(" << from << "," << to << ") INFO: found path in:" << t.nsecsElapsed() * 1.0e-6 << "ms.";
+    return true;
 }
 
 bool TMap::serialize(QDataStream& ofs, int saveVersion)
@@ -1786,6 +1924,7 @@ bool TMap::restore(QString location)
 
         mMapSymbolFont.setStyleStrategy(static_cast<QFont::StyleStrategy>((mIsOnlyMapSymbolFontToBeUsed ? QFont::NoFontMerging : 0) | QFont::PreferOutline | QFont::PreferAntialias
                                                                           | QFont::PreferQuality | QFont::PreferNoShaping));
+        mMapSymbolFontFudgeFactor = usableSymbolFontFudgeFactor(mMapSymbolFontFudgeFactor);
         if (mVersion >= 14) {
             int areaSize = 0;
             ifs >> areaSize;
@@ -1966,6 +2105,13 @@ bool TMap::restore(QString location)
         postMessage(okMsg);
         appendErrorMsgWithNoLf(okMsg);
         if (canRestore) {
+            // The symbol settings were assigned to the members directly above,
+            // rather than through the setters, so that loading a map does not
+            // mark it unsaved. Everything mirroring them still has to be told -
+            // the rendered symbol caches and any open preferences dialog - and
+            // only now, with the rooms in place for the glyph usage table:
+            flushSymbolCaches();
+            emit signal_mapSymbolFontChanged();
             return true;
         }
     }
@@ -3123,6 +3269,111 @@ void TMap::setRoomNamesShown(bool shown)
     setUserDataBool(mUserData, ROOM_UI_SHOWNAME, shown);
 }
 
+// The style strategy carries the rendering flags applied when the map was
+// loaded, along with the NoFontMerging bit that mIsOnlyMapSymbolFontToBeUsed
+// owns. A font picked from a font combo-box or named from Lua has neither, so
+// carry the existing strategy (and size) over instead of taking the incoming
+// font wholesale.
+bool TMap::setSymbolFont(const QFont& font)
+{
+    QFont wantedFont = font;
+    wantedFont.setPointSize(mMapSymbolFont.pointSize());
+    wantedFont.setStyleStrategy(mMapSymbolFont.styleStrategy());
+    if (mMapSymbolFont == wantedFont) {
+        return false;
+    }
+
+    mMapSymbolFont = wantedFont;
+    setUnsaved(__func__);
+    flushSymbolCaches();
+    emit signal_mapSymbolFontChanged();
+    return true;
+}
+
+bool TMap::setOnlySymbolFontUsed(const bool onlyUseSelectedFont)
+{
+    if (mIsOnlyMapSymbolFontToBeUsed == onlyUseSelectedFont) {
+        return false;
+    }
+
+    mIsOnlyMapSymbolFontToBeUsed = onlyUseSelectedFont;
+    if (onlyUseSelectedFont) {
+        mMapSymbolFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(mMapSymbolFont.styleStrategy() | QFont::NoFontMerging));
+    } else {
+        mMapSymbolFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(mMapSymbolFont.styleStrategy() & ~(QFont::NoFontMerging)));
+    }
+    setUnsaved(__func__);
+    flushSymbolCaches();
+    emit signal_mapSymbolFontChanged();
+    return true;
+}
+
+// The bounds belong here rather than at each caller: a factor of zero or less
+// blanks every room symbol, so nothing may store one whatever route it came in
+// by. NaN needs saying separately because it compares false against both
+// bounds, so a plain range test would pass it through.
+bool TMap::setSymbolFontFudgeFactor(const qreal fudgeFactor)
+{
+    if (!qIsFinite(fudgeFactor) || fudgeFactor < scmMinimumSymbolFontFudgeFactor || fudgeFactor > scmMaximumSymbolFontFudgeFactor) {
+        return false;
+    }
+    if (qFuzzyCompare(mMapSymbolFontFudgeFactor, fudgeFactor)) {
+        return false;
+    }
+
+    mMapSymbolFontFudgeFactor = fudgeFactor;
+    setUnsaved(__func__);
+    flushSymbolCaches();
+    emit signal_mapSymbolFontChanged();
+    return true;
+}
+
+// The same check T2DMap::addSymbolToPixmapCache() makes before it gives up and
+// draws the replacement character instead, asked of the whole map at once. The
+// font is taken as it would be used, so whether font merging is on decides
+// whether the fallbacks count.
+QStringList TMap::symbolsNotInFont(const QFont& font)
+{
+    const QFontMetrics metrics(font);
+    QStringList missingSymbols;
+    const QHash<QString, QSet<int>> symbolsInUse = roomSymbolsHash();
+    for (auto it = symbolsInUse.cbegin(), end = symbolsInUse.cend(); it != end; ++it) {
+        for (const quint32 codePoint : it.key().toUcs4()) {
+            if (!metrics.inFontUcs4(codePoint)) {
+                missingSymbols << it.key();
+                break;
+            }
+        }
+    }
+
+    // roomSymbolsHash() is a QHash, so without this the same map gives a
+    // different order from one call to the next:
+    missingSymbols.sort();
+    return missingSymbols;
+}
+
+// Every 2D map keeps its own cache of rendered symbol pixmaps, so all of them
+// have to be dropped - the main mapper and any secondary map views.
+void TMap::flushSymbolCaches()
+{
+    if (!mpMapper.isNull() && mpMapper->mp2dMap) {
+        mpMapper->mp2dMap->flushSymbolPixmapCache();
+        mpMapper->mp2dMap->update();
+        mpMapper->update();
+    }
+
+    if (!mpViewManager) {
+        return;
+    }
+    for (const int viewId : mpViewManager->getViewIds()) {
+        auto* pView = mpViewManager->getView(viewId);
+        if (pView && pView->get2DMap()) {
+            pView->get2DMap()->flushSymbolPixmapCache();
+            pView->get2DMap()->update();
+        }
+    }
+}
+
 /*
  * Notes on the format version numbers in JSON files - we use this to track any
  * changes in a major.minor number format, the minor number is to be three
@@ -3417,7 +3668,12 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
         readJsonUserData(mapObj[QLatin1String("userData")].toObject());
     }
     const QString mapSymbolFontText = mapObj[QLatin1String("mapSymbolFontDetails")].toString();
-    const float mapSymbolFontFudgeFactor = (qRound(mapObj[QLatin1String("mapSymbolFontFudgeFactor")].toDouble() * 1000.0)) / 1000;
+    // qRound() returns an int, so dividing by an int literal here used to be
+    // integer division and every load rounded the factor to a whole number -
+    // issue #10176, which turned anything below 1.0 into a 0 that stops room
+    // symbols being drawn at all. The 1000 is to keep the value to the three
+    // decimals the preferences offer:
+    const qreal mapSymbolFontFudgeFactor = usableSymbolFontFudgeFactor(qRound(mapObj[QLatin1String("mapSymbolFontFudgeFactor")].toDouble() * 1000.0) / 1000.0);
     const bool isOnlyMapSymbolFontToBeUsed = mapObj[QLatin1String("onlyMapSymbolFontToBeUsed")].toBool();
     const int playerRoomStyle = qRound(mapObj[QLatin1String("playerRoomStyle")].toDouble());
     quint8 const playerRoomOuterDiameterPercentage = qRound(mapObj[QLatin1String("playerRoomOuterDiameterPercentage")].toDouble());
@@ -3525,6 +3781,11 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     if (mpMapper && mpMapper->mp2dMap) {
         mpMapper->mp2dMap->setPlayerRoomStyle(mPlayerRoomStyle);
     }
+    // As in restore(): the symbol settings above went straight into the members
+    // so that loading does not mark the map unsaved, which leaves the rendered
+    // symbol caches and any open preferences dialog to be told separately:
+    flushSymbolCaches();
+    emit signal_mapSymbolFontChanged();
     emit signal_mapProgressClose();
     mMapProgressStandalone = false;
     return {true, QString()};

@@ -25,10 +25,17 @@
 
 #include "Host.h"
 #include "TAlias.h"
+#include "TLuaInterpreter.h"
+#include "Tree.h"
+#include "utils.h"
 
+#include <QLatin1String>
+#include <QMutableSetIterator>
 #include <QScopeGuard>
+#include <QStringList>
 
 #include <functional>
+#include <utility>
 
 /* We need an explicit constructor in this file as the Host class is forward
  * declared in the header file and it is problematic to define any dereferencing
@@ -47,7 +54,8 @@ AliasUnit::~AliasUnit()
         alias->mpHost = nullptr;
         // Also set mpHost to null on all children recursively
         std::function<void(TAlias*)> nullifyChildren = [&nullifyChildren](TAlias* a) {
-            for (auto child : *a->mpMyChildrenList) {
+            for (auto* childNode : *a->mpMyChildrenList) {
+                auto* child = static_cast<TAlias*>(childNode);
                 child->mpHost = nullptr;
                 nullifyChildren(child);
             }
@@ -61,8 +69,9 @@ AliasUnit::~AliasUnit()
 
 void AliasUnit::_uninstall(TAlias* pChild, const QString& packageName)
 {
-    std::list<TAlias*>* childrenList = pChild->mpMyChildrenList;
-    for (auto alias : *childrenList) {
+    std::list<Tree<TAlias>*>* childrenList = pChild->mpMyChildrenList;
+    for (auto* aliasNode : *childrenList) {
+        auto* alias = static_cast<TAlias*>(aliasNode);
         _uninstall(alias, packageName);
         uninstallList.append(alias);
     }
@@ -419,8 +428,9 @@ bool AliasUnit::killAlias(const QString& name)
 
 void AliasUnit::assembleReport(TAlias* pItem)
 {
-    std::list<TAlias*>* childrenList = pItem->mpMyChildrenList;
-    for (auto pChild : *childrenList) {
+    std::list<Tree<TAlias>*>* childrenList = pItem->mpMyChildrenList;
+    for (auto* pChildNode : *childrenList) {
+        auto* pChild = static_cast<TAlias*>(pChildNode);
         ++statsItemsTotal;
         if (pChild->isActive()) {
             ++statsActiveItems;

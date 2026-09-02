@@ -311,6 +311,19 @@ private:
         QVERIFY(pAreaA->gridMode);
         QCOMPARE(pAreaA->mUserData, expectedAreaAUserData());
 
+        // Nothing on the load path sets out to build the per-area index of
+        // rooms holding custom lines. It falls out of three separate calls
+        // made for something else - TRoom::restore()'s room dimensions, the
+        // span recalculation at the end of TMap::restore(), and TArea::clean()
+        // during the audit - so cutting any one of them leaves it built by the
+        // other two and every other assertion here still passing. This is what
+        // is left to notice the day the last one goes: the mapper consults the
+        // index only for rooms that are off screen, so what silently stops
+        // being drawn is a custom line running into view from outside it.
+        QVERIFY2(
+                pAreaA->getCustomLineRoomsForZ(0).contains(scmRoom1),
+                qPrintable(qsl("room %1 holds a custom line but is missing from area A's index for z 0, loaded from format version %2").arg(QString::number(scmRoom1), QString::number(savedVersion))));
+
         TArea* pAreaB = pDB->getArea(mAreaB);
         QVERIFY(pAreaB);
         verifyArea(pAreaB, mBoundsB, qsl("area B"));
@@ -577,6 +590,44 @@ private slots:
         QVERIFY(pTargetR1);
         QCOMPARE(pTargetR1->userData, expectedRoom1UserData());
         QCOMPARE(pTargetR1->mSymbol, qsl("⚔"));
+    }
+
+    // Every production caller clears the map before restoring onto it, but
+    // nothing makes that a precondition and restoring onto a populated one used
+    // to leak every colliding room: TRoomDB::addRoom() refuses an id that is
+    // already taken and takes no ownership when it does. Deleting the refused
+    // room is only half the fix - TRoom::restore() has already stamped the
+    // colliding id on it, so ~TRoom() would use that id to evict the room
+    // legitimately holding it. This checks that half; the leak itself is what
+    // the leak-detecting Linux CI build catches.
+    void test_restoringOntoAPopulatedMapKeepsTheRoomsAlreadyThere()
+    {
+        TMap* pSourceMap = mpSource->mpMap.data();
+        const QString fileName = qsl("%1/map_onto_populated.dat").arg(mSaveDir.path());
+        QVERIFY(saveMapToFile(pSourceMap, fileName, pSourceMap->mDefaultVersion));
+
+        TMap* pTargetMap = mpTarget->mpMap.data();
+        pTargetMap->mapClear();
+        QVERIFY(pTargetMap->restore(fileName));
+        pTargetMap->audit();
+        QList<int> roomsAfterFirstLoad = pTargetMap->mpRoomDB->getRoomIDList();
+        std::sort(roomsAfterFirstLoad.begin(), roomsAfterFirstLoad.end());
+        QVERIFY(!roomsAfterFirstLoad.isEmpty());
+
+        // the same file again, this time without clearing first
+        QVERIFY(pTargetMap->restore(fileName));
+        pTargetMap->audit();
+
+        QList<int> roomsAfterSecondLoad = pTargetMap->mpRoomDB->getRoomIDList();
+        std::sort(roomsAfterSecondLoad.begin(), roomsAfterSecondLoad.end());
+        QVERIFY2(roomsAfterSecondLoad == roomsAfterFirstLoad,
+                 qPrintable(qsl("restoring onto a populated map lost rooms: %1 became %2").arg(roomsAfterFirstLoad.size()).arg(roomsAfterSecondLoad.size())));
+
+        // and the rooms that stayed are the real ones, not husks
+        TRoom* pRoom1 = pTargetMap->mpRoomDB->getRoom(scmRoom1);
+        QVERIFY2(pRoom1, "the room that was already there was evicted by the room refused for its id");
+        QCOMPARE(pRoom1->mSymbol, qsl("⚔"));
+        QCOMPARE(pRoom1->userData, expectedRoom1UserData());
     }
 };
 
