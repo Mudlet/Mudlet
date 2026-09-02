@@ -782,20 +782,16 @@ void SherpaRecognizer::slot_pcmReady(const QByteArray& pcmData)
 #ifdef DEBUG_STT
         qDebug() << "SherpaRecognizer: Final result:" << text;
 #endif
-        emit finalResult(text);
-        mLastPartialResult.clear();
-
-        // Only if this callback still owns the stream, for the reason
-        // doStopListening() re-checks state() after its own setState(): the
-        // emit above reaches Lua synchronously, and "stop after the first
-        // phrase" is the ordinary push-to-talk shape for a sysSTTResult
-        // handler. stt.stop() runs doStopListening() -> destroyStream(), and
-        // stt.close() frees the recognizer as well, so returning here to reset
-        // would hand the C ABI null handles.
-        if (!mRecognizer || !mStream) {
-            return;
-        }
+        // Reset before emitting: the emit reaches Lua synchronously, and
+        // "stop after the first phrase" is the ordinary push-to-talk shape for
+        // a sysSTTResult handler. A handler that calls stt.stop() runs
+        // doStopListening() while this frame is still on the stack - if the
+        // stream had not been reset yet, that call would finalise the same
+        // pending utterance and emit finalResult() a second time with the
+        // same text.
         s_onlineStreamReset(mRecognizer, mStream);
+        mLastPartialResult.clear();
+        emit finalResult(text);
     } else if (atEndpoint && mSilentChunks >= SILENT_CHUNKS_BEFORE_IDLE_RESET) {
         // Housekeeping during a real lull: without it the utterance clock runs
         // on through the silence until the maximum-length rule is permanently

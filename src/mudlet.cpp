@@ -35,6 +35,7 @@
 #include "TDebug.h"
 #include "TDebugFilterBar.h"
 #include "MudletInstanceCoordinator.h"
+#include "SherpaRecognizer.h"
 #include "SpeechRecognizer.h"
 #include "SpeechRecognizerFactory.h"
 #include "TDetachedWindow.h"
@@ -47,7 +48,12 @@
 #include "TRoomDB.h"
 #include "TTabBar.h"
 #include "TUiTour.h"
+#include "VoskRecognizer.h"
 #include "XMLimport.h"
+
+#if defined(Q_OS_MACOS)
+#include "AppleSpeechRecognizer.h"
+#endif
 #include "dlgAboutDialog.h"
 #include "dlgConnectionProfiles.h"
 #include "dlgMapper.h"
@@ -191,10 +197,50 @@ void mudlet::raiseSpeechEvent(const QString& name, const QString& value)
     pHost->raiseEvent(event);
 }
 
+// Which Backend enum value corresponds to a live recognizer's concrete type.
+// Not kept as a member: the object's own type already says which backend
+// built it, so a second, parallel note of the same fact could only drift from
+// it. Returns Auto for a null recognizer or a type this does not recognise,
+// which initSpeechRecognition() below treats as "nothing to compare against".
+static SpeechRecognizerFactory::Backend currentSpeechBackend(SpeechRecognizer* pRecognizer)
+{
+    if (qobject_cast<SherpaRecognizer*>(pRecognizer)) {
+        return SpeechRecognizerFactory::Backend::Sherpa;
+    }
+    if (qobject_cast<VoskRecognizer*>(pRecognizer)) {
+        return SpeechRecognizerFactory::Backend::Vosk;
+    }
+#if defined(Q_OS_MACOS)
+    if (qobject_cast<AppleSpeechRecognizer*>(pRecognizer)) {
+        return SpeechRecognizerFactory::Backend::Platform;
+    }
+#endif
+    return SpeechRecognizerFactory::Backend::Auto;
+}
+
 void mudlet::initSpeechRecognition(SpeechRecognizerFactory::Backend backend)
 {
     if (mpSpeechRecognizer) {
-        return;
+        // Auto and "the backend already built" both keep what is there:
+        // stt.start() and the other Lua setters pass Auto or an on-demand
+        // choice on every call, and rebuilding on every one of those would
+        // tear down a working recognizer under a caller who never asked to
+        // switch engines.
+        if (backend == SpeechRecognizerFactory::Backend::Auto || backend == currentSpeechBackend(mpSpeechRecognizer)) {
+            return;
+        }
+
+        // Tear the old engine down before building its replacement: it is
+        // parented to this and has live signal connections. releaseResources()
+        // drops its native resources, disconnect() detaches the connections
+        // made below, and deleteLater() - rather than delete - defers the
+        // actual destruction, since a handler reached through one of those
+        // connections may still be on the stack (the same reentrancy hazard
+        // SherpaRecognizer::slot_pcmReady() guards against).
+        mpSpeechRecognizer->releaseResources();
+        mpSpeechRecognizer->disconnect();
+        mpSpeechRecognizer->deleteLater();
+        mpSpeechRecognizer = nullptr;
     }
 
     mpSpeechRecognizer = SpeechRecognizerFactory::create(backend, this);

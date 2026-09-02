@@ -45,6 +45,7 @@
 #include <QFile>
 #include <QJsonArray>
 #include <QJsonObject>
+#include <QPointer>
 #include <QScopeGuard>
 #include <QSettings>
 #include <QSignalSpy>
@@ -685,6 +686,54 @@ private slots:
         QTest::ignoreMessage(QtWarningMsg, "SpeechRecognizerFactory: Vosk backend requested but not available");
         mudlet::self()->initSpeechRecognition(SpeechRecognizerFactory::Backend::Vosk);
         QVERIFY2(!mudlet::self()->speechRecognizer(), "an unavailable backend must not have been silently swapped for Auto's own choice");
+    }
+
+    // Live testing found that mudlet::initSpeechRecognition() returned
+    // immediately whenever mpSpeechRecognizer was already built, so
+    // stt.close() followed by stt.init() naming a different engine kept
+    // feeding models to the first engine the session ever built. This is
+    // factory and lifetime logic, not anything the engine itself does, so the
+    // built-in macOS backend - the one backend this file can build with no
+    // library and no model installed - is enough to exercise the swap and the
+    // two cases that must NOT swap, without needing a second real engine.
+    void initSpeechRecognitionSwapsToADifferentExplicitBackend()
+    {
+#if defined(Q_OS_MACOS)
+        if (!SpeechRecognizerFactory::backendAvailable(SpeechRecognizerFactory::Backend::Platform)) {
+            QSKIP("no system speech recognizer available for this locale on this machine");
+        }
+        if (VoskRecognizer::libraryAvailable()) {
+            QSKIP("libvosk is installed here, so requesting it below would succeed instead of exercising the refuse-after-teardown path this case checks");
+        }
+        QVERIFY2(!mudlet::self()->speechRecognizer(), "an earlier case in this file left a live recognizer behind");
+
+        mudlet::self()->initSpeechRecognition(SpeechRecognizerFactory::Backend::Platform);
+        QPointer<SpeechRecognizer> firstRecognizer = mudlet::self()->speechRecognizer();
+        QVERIFY2(firstRecognizer, "the built-in macOS backend must have been built");
+
+        // Auto, and the backend already in place, must both leave it alone -
+        // several call sites pass one of these on every setter call, and
+        // rebuilding on either would tear down a working recognizer under a
+        // caller who never asked to switch engines.
+        mudlet::self()->initSpeechRecognition(SpeechRecognizerFactory::Backend::Auto);
+        QCOMPARE(mudlet::self()->speechRecognizer(), firstRecognizer.data());
+        mudlet::self()->initSpeechRecognition(SpeechRecognizerFactory::Backend::Platform);
+        QCOMPARE(mudlet::self()->speechRecognizer(), firstRecognizer.data());
+
+        // A different, explicit backend must tear the first one down - proven
+        // by its own destruction below - even though the replacement is
+        // unavailable here and the swap therefore ends with nothing built.
+        QTest::ignoreMessage(QtWarningMsg, "SpeechRecognizerFactory: Vosk backend requested but not available");
+        mudlet::self()->initSpeechRecognition(SpeechRecognizerFactory::Backend::Vosk);
+        QVERIFY2(!mudlet::self()->speechRecognizer(), "a failed replacement must not have left the old backend in place");
+
+        // releaseResources() runs synchronously during the swap; the actual
+        // deleteLater() destruction needs an event loop turn.
+        QTRY_VERIFY2(firstRecognizer.isNull(), "the old backend must have been destroyed, not merely detached from mpSpeechRecognizer");
+#else
+        QCOMPARE(SpeechRecognizerFactory::backendAvailable(SpeechRecognizerFactory::Backend::Platform), false);
+        QSKIP("no backend on this platform can be built without an engine library, so the swap cannot be exercised here");
+#endif
     }
 
     // gap 2: stt.init() with no argument must be able to reach the built-in
