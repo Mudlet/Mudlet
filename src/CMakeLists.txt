@@ -254,9 +254,12 @@ if(APPLE)
     COMPILE_OPTIONS "-fobjc-arc"
   )
 
-  # The macOS speech recognition backend, on the same terms: only the .mm is
-  # appended, since AppleSpeechRecognizer.h is already in the mudlet_HDRS set
-  # above - where AUTOMOC also needs it, because the class declares Q_OBJECT.
+  # The macOS speech recognition backend. Unlike MacMicrophonePermission its
+  # class declares Q_OBJECT, so AUTOMOC must see the header - but only where
+  # the .mm that defines the class is also built. Leaving it in the
+  # unconditional mudlet_HDRS set moc'd it on every platform and left Linux and
+  # Windows linking against a vtable nothing defined. The header is appended
+  # after that set() instead, since this block runs before it.
   list(APPEND mudlet_SRCS AppleSpeechRecognizer.mm)
   set_source_files_properties(
     AppleSpeechRecognizer.mm
@@ -305,7 +308,6 @@ set(mudlet_HDRS
     ActionUnit.h
     AliasUnit.h
     AltFocusMenuBarDisable.h
-    AppleSpeechRecognizer.h
     CredentialManager.h
     ctelnet.h
     CustomLineDrawContextMenuHandler.h
@@ -500,6 +502,13 @@ set(mudlet_HDRS
     WideComboBox.h
     XMLexport.h
     XMLimport.h)
+
+if(APPLE)
+  # Appended rather than listed above: AUTOMOC generates a moc file for every
+  # Q_OBJECT header it is given, and AppleSpeechRecognizer is only compiled on
+  # Apple.
+  list(APPEND mudlet_HDRS AppleSpeechRecognizer.h)
+endif()
 
 
 if(USE_UPDATER)

@@ -94,11 +94,14 @@ public:
             return;
         }
         doStartListening();
-        // The rule doStartListening()'s comment below states, checked rather
-        // than only written down: a backend that returns while still Ready has
-        // reported a failed start to the Lua layer over an engine that may in
-        // fact be running.
-        Q_ASSERT(state() != State::Ready);
+        // Deliberately not asserted here, though the rule below is real. A
+        // backend reaches Listening through setState(), which raises
+        // sysSTTStateChanged into Lua synchronously, and a handler that stops
+        // on that event - "stop after the first phrase", the ordinary
+        // push-to-talk shape - runs doStopListening() and lands back on Ready
+        // before this frame resumes. Ready on return is therefore a legitimate
+        // outcome as well as the symptom of a backend that did nothing, and
+        // nothing here can separate the two.
     }
 
     // Finalises the pending utterance, emitting finalResult() with whatever
