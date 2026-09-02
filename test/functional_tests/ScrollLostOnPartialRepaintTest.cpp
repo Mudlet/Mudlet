@@ -33,18 +33,11 @@
 #include "GroupedTest.h"
 
 /*
- * drawForeground() blits its cached screen unshifted for a partial-region
- * repaint, which is only right when nothing has scrolled since the cache was
- * built. A widget dragged over the pane delivers one partial repaint per mouse
- * move, so a line arriving mid-drag met that path with a scroll pending: the
- * pre-scroll screen was drawn, and then mScrollVector and mLastRenderedOffset
- * were reset at the end of the function. The scroll was not deferred, it was
- * discarded, so the pane showed static text with only its bottom row changing
- * and every line from the drag never appeared at all.
- *
- * The check is that an incremental paint agrees with what a forced full repaint
- * of the same buffer draws. That is the property a screen cache owes: if the two
- * disagree, whatever the cheap path skipped is lost rather than deferred.
+ * A screen cache owes one property: an incremental paint draws what a forced
+ * full repaint of the same buffer would. Both cases below assert exactly that,
+ * because a partial-region repaint - which is what one mouse move of a widget
+ * dragged over the pane delivers - has to honour a scroll that arrived since
+ * the cache was built rather than skip it.
  */
 class ScrollLostOnPartialRepaintTest : public QObject
 {
@@ -98,28 +91,37 @@ private slots:
         QVERIFY(pane);
         auto* lua = host->getLuaInterpreter();
 
+        // sized here rather than taken as found: the guard below needs the rows,
+        // and a smaller default window would skip the case while ctest still
+        // reported a pass
+        mudlet::self()->resize(1200, 800);
+        QTest::qWait(100);
         const int screenHeight = pane->mScreenHeight;
-        if (screenHeight < 20) {
-            QSKIP("the pane is too short to leave the top of the buffer by more than the ten-line shortcut");
-        }
+        QVERIFY2(screenHeight >= 20, "the pane is too short to leave the top of the buffer by more than the ten-line shortcut");
 
-        // Short of a screenful, so the view is still at the top and the paint
-        // below leaves mLastRenderedOffset at 0.
-        lua->compileAndExecuteScript(qsl("for i = 1, %1 do echo('FILLER ' .. i .. '\\n') end\n").arg(screenHeight - 2));
+        // Measured against what the buffer already holds - a profile arrives with
+        // a few lines of its own, and connect-time output would otherwise push the
+        // view off the top and leave nothing for this case to exercise.
+        const int room = screenHeight - 2 - static_cast<int>(host->mpConsole->buffer.lineBuffer.size());
+        QVERIFY2(room > 0, "the profile filled the pane before the case could");
+        lua->compileAndExecuteScript(qsl("for i = 1, %1 do echo('FILLER ' .. i .. '\\n') end\n").arg(room));
         qApp->processEvents();
         pane->forceUpdate();
         pane->repaint();
         qApp->processEvents();
+        QVERIFY2(pane->imageTopLine() == 0, "the view already left the top, so the fallback under test is not the one that runs");
         QCOMPARE(pane->mLastRenderedOffset, 0);
 
-        // Enough at once to clear the ten-line shortcut, but few enough that
-        // y_bottom + lineOffset can still come in under mScreenHeight - which is
-        // what lets that fallback hand the shifted blit a wrong row count.
+        // Enough at once to clear the ten-line shortcut. Unpatched, the fallback
+        // derives its row count from the repaint region, so a burst this size came
+        // in under mScreenHeight and fed the shifted blit a wrong one; the fix pins
+        // y_bottom before that fallback reads it, so the count can only trip the
+        // full redraw instead.
         const int burst = screenHeight / 2 + 2;
         lua->compileAndExecuteScript(qsl("for i = 1, %1 do echo('BURST ' .. i .. '\\n') end\n").arg(burst));
         QVERIFY2(pane->imageTopLine() >= 10, "the burst did not clear the ten-line shortcut");
 
-        // A shallow region at the top, so y_bottom is small.
+        // A shallow region, which is what the fallback measured unpatched.
         pane->repaint(QRect(0, 0, pane->width(), 3 * pane->mFontHeight));
         const QImage afterIncremental = pane->mScreenMap.toImage();
 
