@@ -28,17 +28,17 @@
 #include <QString>
 #include <QStringList>
 
-class TConsole;
-
 // Manages selection state for OSC 8 hyperlinks
 // Handles group exclusivity (radio buttons) and multi-select (checkboxes)
+// Lives in the core TConsoleModel: which links a group has selected is state the
+// pipeline reads while rewriting a link's command, not anything the view holds.
 class THyperlinkSelectionManager : public QObject
 {
     Q_OBJECT
     Q_DISABLE_COPY(THyperlinkSelectionManager)
 
 public:
-    explicit THyperlinkSelectionManager(TConsole& console);
+    THyperlinkSelectionManager();
     ~THyperlinkSelectionManager();
 
     bool isSelected(const QString& group, const QString& value) const;
@@ -65,9 +65,7 @@ signals:
 
 private:
     QString addSelectedParameter(const QString& command, bool isSelected) const;
-    
-    TConsole& mpConsole;
-    
+
     // Selection state tracking: group -> (value -> selected)
     QHash<QString, QHash<QString, bool>> mSelectionState;
     

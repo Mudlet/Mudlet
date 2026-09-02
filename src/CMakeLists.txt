@@ -120,18 +120,23 @@ set(mudlet_SRCS
     SentryWrapper.cpp
     ShortcutsManager.cpp
     SingleLineTextEdit.cpp
+    SpeechAudioCapture.cpp
+    SpeechRecognizerFactory.cpp
     T2DMap.cpp
     TAccessibleTextEdit.cpp
     TAction.cpp
     TAlias.cpp
     TArea.cpp
     TAreaGridIndex.cpp
+    TAreaLodExitIndex.cpp
     TAreaSpanIndex.cpp
     TAreaZLevelIndex.cpp
     TBuffer.cpp
     TCommandLine.cpp
     TConsole.cpp
+    TConsoleModel.cpp
     TDebug.cpp
+    TDebugFilterBar.cpp
     TDetachedWindow.cpp
     TDockWidget.cpp
     TEasyButtonBar.cpp
@@ -158,6 +163,7 @@ set(mudlet_SRCS
     TLuaInterpreterMudletObjects.cpp
     TLuaInterpreterNetworking.cpp
     TLuaInterpreterTextToSpeech.cpp
+    TLuaInterpreterSpeechToText.cpp
     TLuaInterpreterUI.cpp
     TMainConsole.cpp
     TMap.cpp
@@ -216,6 +222,7 @@ set(mudlet_SRCS
     TVar.cpp
     UntrustedText.cpp
     VarUnit.cpp
+    VoskRecognizer.cpp
     WideComboBox.cpp
     XMLexport.cpp
     XMLimport.cpp)
@@ -233,6 +240,18 @@ if(APPLE)
       COMPILE_OPTIONS "-fobjc-arc"
   )
   endif()
+
+  # Native macOS microphone permission handling for speech recognition. Only
+  # the .mm is appended here: appending the header would achieve nothing, since
+  # the set(mudlet_HDRS ...) above already lists it and would overwrite this
+  # anyway. Only the .mm is compiled, so only it carries the language settings.
+  list(APPEND mudlet_SRCS MacMicrophonePermission.mm)
+  set_source_files_properties(
+    MacMicrophonePermission.mm
+    PROPERTIES
+    LANGUAGE OBJCXX
+    COMPILE_OPTIONS "-fobjc-arc"
+  )
 elseif(WIN32)
   list(APPEND mudlet_SRCS uiawrapper.cpp)
 endif()
@@ -334,6 +353,7 @@ set(mudlet_HDRS
     LabelInteractionHandler.h
     LuaInterface.h
     LuaLiteral.h
+    MacMicrophonePermission.h
     mapInfoContributorManager.h
     MiddleMousePanHandler.h
     MMCP.h
@@ -354,6 +374,9 @@ set(mudlet_HDRS
     SentryWrapper.h
     ShortcutsManager.h
     SingleLineTextEdit.h
+    SpeechAudioCapture.h
+    SpeechRecognizer.h
+    SpeechRecognizerFactory.h
     T2DMap.h
     TAccessibleConsole.h
     TAccessibleTextEdit.h
@@ -361,6 +384,7 @@ set(mudlet_HDRS
     TAlias.h
     TArea.h
     TAreaGridIndex.h
+    TAreaLodExitIndex.h
     TAreaSpanIndex.h
     TAreaZLevelIndex.h
     TAstar.h
@@ -369,6 +393,7 @@ set(mudlet_HDRS
     TConsole.h
     TConsoleModel.h
     TDebug.h
+    TDebugFilterBar.h
     TDetachedWindow.h
     TDockWidget.h
     TEasyButtonBar.h
@@ -432,6 +457,7 @@ set(mudlet_HDRS
     TMxpTagProcessor.h
     TMxpVarTagHandler.h
     TMxpVersionTagHandler.h
+    TPrintSink.h
     TrailingWhitespaceMarker.h
     Tree.h
     TriggerHighlighter.h
@@ -457,8 +483,10 @@ set(mudlet_HDRS
     UntrustedText.h
     utils.h
     VarUnit.h
+    VoskRecognizer.h
     widechar_width.h
     WideComboBox.h
+    widgetutils.h
     XMLexport.h
     XMLimport.h)
 
@@ -661,6 +689,10 @@ add_library(${LIB_MUDLET_TARGET} STATIC
 # * Produce qDebug() messages about the GMCP Char.Login authentication flow:
 # target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_GMCP_AUTHENTICATION)
 
+# * Produce qDebug() messages about speech-to-text recognition, including
+#   hallucination filtering, partial/final results, and audio level monitoring:
+# target_compile_definitions(${LIB_MUDLET_TARGET} PRIVATE DEBUG_STT)
+
 # target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_PLAYER_ICON_CONTROLS)
 
 target_sources(${LIB_MUDLET_TARGET} PUBLIC "${mudlet_BINARY_DIR}/translations/translated/qm.qrc")
@@ -854,6 +886,10 @@ endif()
 
 if(APPLE)
   target_link_libraries(${EXE_MUDLET_TARGET} "-framework AppKit")
+  target_link_libraries(${EXE_MUDLET_TARGET} "-framework AVFoundation")
+
+  # Microphone permission sources are already added via mudlet_SRCS/mudlet_HDRS
+  target_link_libraries(${LIB_MUDLET_TARGET} "-framework AVFoundation")
 
   if(USE_UPDATER)
     # need to specifically call out Objective-C sources so that automoc builds them.
@@ -954,7 +990,11 @@ if(UNIX AND NOT APPLE)
     PATTERN "*.mpackage" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
                                      WORLD_READ
     PATTERN "*.xml" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
-    PATTERN "*.txt" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
+    PATTERN "*.txt" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+    # the map fixture the pathfinding specs need. It stays zipped rather than
+    # joining the *.xml above because unpacked it is 5.5MiB rather than 633KiB,
+    # and every package built from this tree would carry the difference
+    PATTERN "*.zip" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
   install(
     DIRECTORY "../3rdparty/lcf"
     DESTINATION "share/mudlet/lua"

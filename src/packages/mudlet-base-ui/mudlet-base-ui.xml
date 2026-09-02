@@ -207,8 +207,12 @@
 					<string>You exclaim</string>
 					<string>You yell</string>
 					<string>You shout</string>
+					<string>chats</string>
+					<string>You chat</string>
 				</regexCodeList>
 				<regexCodePropertyList>
+					<integer>0</integer>
+					<integer>0</integer>
 					<integer>0</integer>
 					<integer>0</integer>
 					<integer>0</integer>
@@ -295,6 +299,46 @@
 					<colorTriggerBgColor>#000000</colorTriggerBgColor>
 					<regexCodeList>
 						<string>^You (?:yell|shout)[^,:]{0,20},?\s*['"]</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>1</integer>
+					</regexCodePropertyList>
+				</Trigger>
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>someone chats</name>
+					<script>BaseUI.routeChatLine("channels")</script>
+					<triggerType>1</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>^\w[\w'-]* chats[^,:]{0,20},?\s*['"]</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>1</integer>
+					</regexCodePropertyList>
+				</Trigger>
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>you chat</name>
+					<script>BaseUI.routeChatLine("channels")</script>
+					<triggerType>1</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>^You chat[^,:]{0,20},?\s*['"]</string>
 					</regexCodeList>
 					<regexCodePropertyList>
 						<integer>1</integer>
@@ -750,6 +794,8 @@ local chatPatterns = {
   { regex = [=[^You (?:say|ask|exclaim)[^,:]{0,20},?\s*['"]]=] },
   { regex = [=[^\w[\w'-]* (?:yells|shouts)[^,:]{0,20},?\s*['"]]=] },
   { regex = [=[^You (?:yell|shout)[^,:]{0,20},?\s*['"]]=] },
+  { regex = [=[^\w[\w'-]* chats[^,:]{0,20},?\s*['"]]=] },
+  { regex = [=[^You chat[^,:]{0,20},?\s*['"]]=] },
   { regex = [=[^\[([\w][\w -]{0,18})\]]=], tagged = true },
   { regex = [=[^\(([\w -]{1,18})\)[:\s]]=], tagged = true },
   { regex = [=[^&lt; ?([\w -]{1,18}) ?\|]=], tagged = true },
@@ -2630,7 +2676,38 @@ onEvent("mapOpenEvent", "BaseUI.checkMapData")
 onEvent("sysMapDownloadEvent", "BaseUI.checkMapData")
 onEvent("sysMapAreaChanged", "BaseUI.checkMapData")
 onEvent("gmcp.Room.Info", "BaseUI.checkMapData")
-onEvent("gmcp.room.info", "BaseUI.checkMapData")</script>
+onEvent("gmcp.room.info", "BaseUI.checkMapData")
+
+-- Everything above only reacts to what arrives next, which leaves the dock
+-- waiting on a game that has already spoken. Installing the package mid-session,
+-- or reloading the profile, runs this script on a connection that is already up:
+-- sysProtocolEnabled has been and gone, so the two handlers hung off it never
+-- run for this connection, and the vitals already sitting in the globals are
+-- never looked at. Catch up on what is in hand instead of making the player wait
+-- for the next vitals message - on a GMCP game that is the difference between
+-- the dock appearing at once and it appearing whenever the character next takes
+-- damage.
+--
+-- On a fresh connection every branch below is a no-op, so this costs nothing and
+-- sends nothing: gmcp is created empty and only filled once data arrives, and
+-- msdp is not created at all until the first MSDP variable lands. What is sent
+-- is only what the handlers themselves would have sent.
+--
+-- Only while a connection is actually up, though. Neither global is ever cleared
+-- - gmcp is filled in place, and msdp is never torn down - so on a disconnected
+-- profile they still describe whoever the last connection left behind, and
+-- painting them would present a finished session as current.
+local _, _, connected = getConnectionInfo()
+if connected then
+  if type(gmcp) == "table" and next(gmcp) then
+    BaseUI.enableChannelCapture(nil, "GMCP")
+    BaseUI.updateVitals()
+  end
+  if type(msdp) == "table" then
+    BaseUI.enableMsdpVitals(nil, "MSDP")
+    BaseUI.updateMsdpVitals()
+  end
+end</script>
 			<eventHandlerList />
 		</Script>
 	</ScriptPackage>

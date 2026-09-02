@@ -2030,6 +2030,8 @@ describe("Tests UI functions", function()
         "You exclaim, 'finally!'",
         "Bob yells, 'help!'",
         "You shout, 'hello'",
+        "Bob chats, 'hello everyone'",
+        'You chat, "test."',
         "[newbie] Ann: how do I get out of here?",
         "(gossip) Ann: anyone around?",
         "< chat | Ann: anyone around?",
@@ -2040,6 +2042,7 @@ describe("Tests UI functions", function()
       local notChatLines = {
         "You are standing in a dark forest.",
         "The orc hits you for 14 damage!",
+        "You chat with the innkeeper.",
         "[combat] 100/120 hp",
         "(12) something that is not a channel",
       }
@@ -2123,6 +2126,41 @@ describe("Tests UI functions", function()
       BaseUI.standAside("sysServerGuiInstalled", "SomeGameUI")
       BaseUI.serverGuiRemoved("sysUninstallPackage", "SomethingElse")
       assert.are.equal("SomeGameUI", BaseUI.settings.standingAside)
+    end)
+
+    -- a game with its own interface can decline this one up front, by sending
+    -- Client.GUI {"baseui": false}. C++ raises the same event for that, naming no
+    -- package, so this is the shape the decline arrives in
+    it("should stand aside when the game declines without naming a package", function()
+      BaseUI.standAside("sysServerGuiInstalled")
+      assert.is_not_nil(BaseUI.settings.standingAside)
+      assert.is_true(BaseUI.dormant())
+    end)
+
+    it("should retire its capture triggers on a decline, so no game data builds the dock", function()
+      BaseUI.standAside("sysServerGuiInstalled")
+      assert.is_false(BaseUI.chatTriggersArmed())
+      assert.is_nil(next(BaseUI.vitalsTriggerIds))
+      BaseUI.armChatTriggers()
+      BaseUI.createVitalsTriggers()
+      assert.is_false(BaseUI.chatTriggersArmed())
+      assert.is_nil(next(BaseUI.vitalsTriggerIds))
+    end)
+
+    -- the marker a nameless stand-aside stores must never match a real package,
+    -- or that package's uninstall would be read as the game changing its mind
+    it("should stay aside on a decline when a package is uninstalled", function()
+      BaseUI.standAside("sysServerGuiInstalled")
+      local marker = BaseUI.settings.standingAside
+      BaseUI.serverGuiRemoved("sysUninstallPackage", "SomeGameUI")
+      assert.are.equal(marker, BaseUI.settings.standingAside)
+    end)
+
+    it("should come back after a decline when the player asks for it", function()
+      BaseUI.standAside("sysServerGuiInstalled")
+      BaseUI.show()
+      assert.is_nil(BaseUI.settings.standingAside)
+      assert.is_false(BaseUI.dormant())
     end)
   end)
 
@@ -4131,13 +4169,16 @@ describe("Window and label state", function()
 
   describe("font readback", function()
     local console = name("wlsFontConsole")
+    local fontLabel = name("wlsFontLabel")
 
     setup(function()
       createMiniConsole(console, 10, 10, 300, 150)
+      createLabel(fontLabel, 10, 200, 200, 40, 1)
     end)
 
     teardown(function()
       deleteMiniConsole(console)
+      deleteLabel(fontLabel)
     end)
 
     it("setFontSize round-trips through getFontSize", function()
@@ -4191,15 +4232,59 @@ describe("Window and label state", function()
     end)
 
     it("setFont rejects a font that is not available", function()
+      local original = getFont(console)
       local ok, err = setFont(console, "wlsNoSuchFontFamily")
       assert.is_nil(ok)
       assert.are.equal("font 'wlsNoSuchFontFamily' is not available", err)
+      assert.are.equal(original, getFont(console))
+    end)
+
+    it("setFont on the main console rejects a font that is not available", function()
+      local original = getFont("main")
+      local ok, err = setFont("main", "wlsNoSuchMainFontFamily")
+      assert.is_nil(ok)
+      assert.are.equal("font 'wlsNoSuchMainFontFamily' is not available", err)
+      assert.are.equal(original, getFont("main"))
     end)
 
     it("setFont rejects an empty font name", function()
       local ok, err = setFont(console, "")
       assert.is_nil(ok)
       assert.are.equal("font must not be empty", err)
+    end)
+
+    -- labels are not in the console map, so they used to be the one window kind
+    -- setFont()/getFont() could not see at all
+    it("setFont and getFont reach a label as well as a console", function()
+      assert.is_true(setFont(fontLabel, "Ubuntu Mono"))
+      assert.are.equal("Ubuntu Mono", getFont(fontLabel))
+    end)
+
+    it("setFont takes a \"Family Style\" name on a label", function()
+      assert.is_true(setFont(fontLabel, "Ubuntu Mono Bold"))
+      -- the style becomes the weight, so the family reported is the base one
+      assert.are.equal("Ubuntu Mono", getFont(fontLabel))
+    end)
+
+    it("setFont rejects a font that is not available on a label", function()
+      assert.is_true(setFont(fontLabel, "Ubuntu Mono"))
+      local ok, err = setFont(fontLabel, "wlsNoSuchLabelFontFamily")
+      assert.is_nil(ok)
+      assert.are.equal("font 'wlsNoSuchLabelFontFamily' is not available", err)
+      assert.are.equal("Ubuntu Mono", getFont(fontLabel))
+    end)
+
+    -- nothing stops a label being called "main", so the console has to win the
+    -- name or setFont("main", ...) would silently miss the main console
+    it("setFont targets the main console even when a label is also named main", function()
+      local original = getFont("main")
+      assert.is_true(setFont("main", "Bitstream Vera Sans Mono"))
+      assert.is_true(createLabel("main", 0, 0, 50, 20, 1))
+      assert.is_true(setFont("main", "Ubuntu Mono"))
+      assert.are.equal("Ubuntu Mono", getFont("main"))
+      assert.is_true(deleteLabel("main"))
+      assert.are.equal("Ubuntu Mono", getFont("main"))
+      assert.is_true(setFont("main", original))
     end)
 
     it("getAvailableFonts returns a table keyed by font name", function()

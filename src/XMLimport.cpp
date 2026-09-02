@@ -27,12 +27,20 @@
 #include "LuaInterface.h"
 #include "CredentialManager.h"
 #include "SecureStringUtils.h"
-#include "TConsole.h"
+#include "TAction.h"
+#include "TAlias.h"
+#include "TKey.h"
+#include "TMainConsole.h"
 #include "TMap.h"
 #include "TRoomDB.h"
 #include "TRoom.h"
+#include "TScript.h"
+#include "TTimer.h"
+#include "TTrigger.h"
+#include "TVar.h"
 #include "VarUnit.h"
 #include "mudlet.h"
+#include "dlgTriggerEditor.h"
 
 #include <QBuffer>
 #include <QClipboard>
@@ -1213,6 +1221,13 @@ void XMLimport::readHost(Host* pHost)
 
     pHost->setUserBorders(borders);
     pHost->loadPackageInfo();
+    // A package import comes through here too, into a profile that does have a
+    // console - and that one needs the whole restyle, not just the model:
+    if (pHost->mpConsole) {
+        pHost->mpConsole->changeColors();
+    } else {
+        pHost->refreshMainConsoleColors();
+    }
 }
 
 bool XMLimport::readHostColorElement(Host* pHost, QStringView elementName)

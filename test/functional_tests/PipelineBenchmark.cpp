@@ -132,6 +132,16 @@ private:
     static constexpr int kDisplayPaints = 200;
     static constexpr int kDisplayPasses = 5;
 
+    // A cramped window and a roomy one, so that benchDisplayTail() can report
+    // whether one paint's cost follows the pane's area or the single line that
+    // actually changed. Both have to be sizes the main window will really adopt;
+    // the pass asserts that the row counts came out far enough apart to compare.
+    static constexpr int kDisplayTailSmallWidth = 640;
+    static constexpr int kDisplayTailSmallHeight = 400;
+    static constexpr int kDisplayTailLargeWidth = 1600;
+    static constexpr int kDisplayTailLargeHeight = 1000;
+    static constexpr int kDisplayTailPaints = 400;
+
     enum class LineShape {
         Prompt,
         Damage,
@@ -706,12 +716,8 @@ private slots:
         Host* host = startProfile(DefaultPackages::Install);
         QVERIFY(host);
         const int rootTriggers = static_cast<int>(host->getTriggerUnit()->getTriggerRootNodeList().size());
-        // The starter UI is gated on mudlet::experiencedMudletPlayer(), which
-        // answers from the config root's Mudlet history - the empty one
-        // initTestCase() redirects to - and without it this slot silently
-        // measures the same thing as benchTextPipeline. A trigger count would
-        // not catch that: the other default packages register root folders of
-        // their own.
+        // A trigger count would not catch a missing starter UI: the other default
+        // packages register root folders of their own.
         QVERIFY2(host->mInstalledPackages.contains(qsl("mudlet-base-ui")),
                  "the starter UI is not installed, so this profile is not the one a new user gets and defaults_* "
                  "would describe something else entirely.");
@@ -815,8 +821,129 @@ private slots:
         emitMetric("display_lines_per_sec", paintsPerSec * rows);
     }
 
+    // benchDisplay() above measures the worst case, a full redraw every paint. A
+    // console following a game does the opposite: one line arrives and the rest
+    // of the screen is already drawn, which is what drawForeground()'s scroll
+    // shortcut exists for. What this measures is how much per-paint cost SURVIVES
+    // that shortcut - and specifically whether it scales with the pane's area
+    // rather than with the one line that changed, which is what makes a game feel
+    // slower in a maximised window than in a small one.
+    void benchDisplayTail()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        QVERIFY(noTriggersAreRunningYet(host));
+
+        host->mTelnet.loopbackTest(mCorpus);
+        const int bufferedLines = host->mpConsole->buffer.getLastLineNumber();
+        QVERIFY2(bufferedLines > 1000, qPrintable(qsl("console buffer only holds %1 lines - the pipeline did not process the corpus").arg(bufferedLines)));
+
+        TTextEdit* pane = host->mpConsole->mUpperPane;
+        QVERIFY(pane);
+
+        TailResult small;
+        measureTailPaints(pane, bufferedLines, kDisplayTailSmallWidth, kDisplayTailSmallHeight, small);
+        QVERIFY2(!QTest::currentTestFailed(), "the small-window pass did not produce a usable measurement");
+
+        TailResult large;
+        measureTailPaints(pane, bufferedLines, kDisplayTailLargeWidth, kDisplayTailLargeHeight, large);
+        QVERIFY2(!QTest::currentTestFailed(), "the large-window pass did not produce a usable measurement");
+
+        // Without a real size difference between the two passes there is no ratio
+        // worth reporting - the window refused to resize, and every number below
+        // would read as a flat 1.0 whatever the paint path does.
+        QVERIFY2(large.cells > small.cells * 2.0,
+                 qPrintable(qsl("the large pane draws %1 cells against the small pane's %2, which is too close to compare - the main window did not take one of the two sizes")
+                                    .arg(large.cells)
+                                    .arg(small.cells)));
+
+        emitMetric("display_tail_small_paint_ms", small.paintMs);
+        emitMetric("display_tail_large_paint_ms", large.paintMs);
+        // Cells drawn at each size: invariants, because two builds that drew
+        // differently sized screens did not do the same work.
+        emitMetric("display_tail_small_cells", static_cast<qint64>(small.cells));
+        emitMetric("display_tail_large_cells", static_cast<qint64>(large.cells));
+        // The headline pair. area_ratio is how much bigger the surface got;
+        // cost_ratio is how much dearer one paint got with it. A paint path that
+        // really only redraws the line that changed holds cost_ratio near 1.0
+        // while area_ratio climbs.
+        emitMetric("display_tail_area_ratio", large.cells / small.cells);
+        emitMetric("display_tail_cost_ratio", large.paintMs / small.paintMs);
+    }
+
 private:
     enum class DefaultPackages { Skip, Install };
+
+    struct TailResult
+    {
+        double paintMs = 0.0;
+        // Character cells on screen. Proportional to the painted pixel area, and
+        // unlike a pixel count it does not move with the platform's font metrics.
+        double cells = 0.0;
+        int rows = 0;
+    };
+
+    // One line of new text per paint at a given window size, which is the shape
+    // of a console following a game rather than one being scrolled through.
+    // Fills `result` rather than returning it so that the QVERIFY macros - which
+    // expand to a bare `return` - can be used here at all; the caller checks
+    // QTest::currentTestFailed() afterwards.
+    void measureTailPaints(TTextEdit* pane, const int bufferedLines, const int windowWidth, const int windowHeight, TailResult& result)
+    {
+        // Sized through the main window for the reason benchDisplay() gives: a
+        // pane resized on its own stays clipped by its unchanged parents.
+        mudlet::self()->resize(windowWidth, windowHeight);
+        // Outside every timed region below. It has to run for the resize to reach
+        // the pane at all, and it is also the only thing that can fire the
+        // scroll-stopped timer, whose slot forces a full redraw.
+        qApp->processEvents();
+
+        result.rows = pane->getScreenHeight();
+        QVERIFY2(result.rows > 1, qPrintable(qsl("the display pane draws %1 rows, which is too few to describe a console").arg(result.rows)));
+        result.cells = static_cast<double>(result.rows) * pane->getColumnCount();
+
+        // Far enough into the buffer that imageTopLine() clears the threshold
+        // below which drawForeground() gives up on the scroll shortcut, and with
+        // room for every paint of every pass to land on real text.
+        const int firstLine = result.rows + 16;
+        QVERIFY2(bufferedLines > firstLine + kDisplayTailPaints,
+                 qPrintable(qsl("%1 buffered lines cannot feed %2 single-line paints below a %3-row screen").arg(bufferedLines).arg(kDisplayTailPaints).arg(result.rows)));
+
+        QPixmap target(pane->size());
+        target.fill(Qt::magenta);
+
+        // Two warm-up paints, not one: the first leaves tail mode and is drawn
+        // under the forced full redraw that transition asks for, and only the
+        // second establishes the last-rendered offset that the scroll shortcut
+        // differences against.
+        pane->scrollTo(firstLine);
+        pane->render(&target);
+        pane->scrollTo(firstLine + 1);
+        pane->render(&target);
+        QVERIFY2(frameHasContent(target.toImage()), "the rendered frame is a single flat colour - nothing was drawn, so the timings below would describe an empty widget");
+
+        // The shortcut only runs while consecutive paints scroll by less than a
+        // screenful, and imageTopLine() is the offset it differences to decide
+        // that. Prove a one-line step really moves it by one line: if it did not,
+        // this would quietly time full redraws and measure benchDisplay() again.
+        const int beforeTop = pane->imageTopLine();
+        pane->scrollTo(firstLine + 2);
+        const int afterTop = pane->imageTopLine();
+        QVERIFY2(afterTop - beforeTop == 1, qPrintable(qsl("a one-line scroll moved the top line by %1, so these paints would not be the incremental ones this measures").arg(afterTop - beforeTop)));
+        QVERIFY2(beforeTop > 10, qPrintable(qsl("the top line is %1, close enough to the start of the buffer that drawForeground() forces full redraws").arg(beforeTop)));
+
+        double best = std::numeric_limits<double>::max();
+        for (int pass = 0; pass < kDisplayPasses; ++pass) {
+            QElapsedTimer timer;
+            timer.start();
+            for (int i = 0; i < kDisplayTailPaints; ++i) {
+                pane->scrollTo(firstLine + i);
+                pane->render(&target);
+            }
+            best = std::min(best, timer.nsecsElapsed() / 1.0e9);
+        }
+        result.paintMs = (best / kDisplayTailPaints) * 1000.0;
+    }
 
     // Called before the benchmark installs any of its own, so anything running
     // came from elsewhere and would be timed as pipeline cost.

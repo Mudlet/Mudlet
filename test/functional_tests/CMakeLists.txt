@@ -32,23 +32,33 @@ endif()
 
 # Windows, consoles and the text they draw
 set(WINDOW_GROUP_TEST_SOURCES
+    AddonControlsTest.cpp
     ConsoleModelExtractionTest.cpp
     CopyAsImageTest.cpp
+    DebugConsoleFilterTest.cpp
     FrontendRefreshSeamTest.cpp
     DetachedWindowMenuShortcutsTest.cpp
+    FramePacingTest.cpp
     GlyphOverflowTest.cpp
+    HyperlinkModelSplitTest.cpp
     LabelAnchorInteractionTest.cpp
     LabelMovieRefusalTest.cpp
     MainConsoleSelectionTest.cpp
+    TabDetachThresholdTest.cpp
+    DetachedWindowDiscordButtonTest.cpp
     MainWindowSizeReportTest.cpp
+    CommandLineScrollRangeTest.cpp
     DetachedWindowOwnershipTest.cpp
     MxpFramePlacementTest.cpp
+    MxpDestFrameClearTest.cpp
     LabelBackgroundPaintTest.cpp
     MxpWatchdogBufferLifetimeTest.cpp
     NarrowWindowWrapTest.cpp
     DetachedWindowToolBarIconSizeTest.cpp
     PastedLinkStateTest.cpp
     ProfileSwitchMiniconsoleTest.cpp
+    RecolouredLineCacheTest.cpp
+    TrackedLinkTrimTest.cpp
     ProfileSwitchShortcutTest.cpp
     SubCommandLineLifetimeTest.cpp
     WindowBackgroundTest.cpp
@@ -61,7 +71,9 @@ set(WINDOW_GROUP_TEST_SOURCES
 set(PROFILE_GROUP_TEST_SOURCES
     ConfigDirOverrideTest.cpp
     ConnectionDialogCrashTest.cpp
+    ConnectionDialogFocusTest.cpp
     DefaultGameDeleteTest.cpp
+    MissingDisplayFontTest.cpp
     ProfileDeletionSafetyTest.cpp
     ProfileFolderNameTest.cpp
     ProfileLifecycleTest.cpp
@@ -79,6 +91,7 @@ set(TELNET_GROUP_TEST_SOURCES
     cTelnetBufferTest.cpp
     GMCPCharLoginTest.cpp
     TelnetAtcpMspTest.cpp
+    TelnetLatencyMeasurementTest.cpp
     TelnetBenchmark.cpp
     TelnetCharsetNegotiationTest.cpp
     CrashTestHookTest.cpp
@@ -116,12 +129,18 @@ set(EDITOR_GROUP_TEST_SOURCES
 set(MAP_GROUP_TEST_SOURCES
     EmbeddedMapperCreationTest.cpp
     MapAreaReassignmentTest.cpp
+    MapAreaSelectionTest.cpp
     MapCloseDuringImportTest.cpp
     MapDownloadTest.cpp
+    MapLevelOfDetailTest.cpp
+    MapOffscreenCustomLineTest.cpp
     MapFileStatsTest.cpp
+    MapLockNoOpTest.cpp
+    MapperButtonConfigTest.cpp
     MapProgressDialogSeamTest.cpp
     MapRoomGeometryTest.cpp
     MapRoundTripTest.cpp
+    MapSymbolFontTest.cpp
 )
 
 # Packages and modules: installing them, saving them and removing them
@@ -129,6 +148,7 @@ set(PACKAGE_GROUP_TEST_SOURCES
     ActionSelfRemovalTest.cpp
     DefaultPackagesTest.cpp
     ModuleSaveTeardownTest.cpp
+    PackageFontsOnRefusedArchiveTest.cpp
     PackageRemovalSaveTeardownTest.cpp
     PackageSelfRemovalTest.cpp
 )
@@ -139,10 +159,26 @@ set(STARTERUI_GROUP_TEST_SOURCES
     ExperiencedPlayerGateTest.cpp
     FeatureCalloutTest.cpp
     StarterUiGaugePanelTest.cpp
+    StarterUiProtocolCatchUpTest.cpp
     StarterUiSectionsTest.cpp
     StarterUiTriggerCostTest.cpp
+    TutorialInvitationFocusTest.cpp
     TutorialInvitationGateTest.cpp
     TutorialInvitationLayoutTest.cpp
+)
+
+# The settings dialog: its sidebar-and-cards shell, the deep links into it, how
+# a change reaches the Host, and what it does with no profile loaded
+set(SETTINGS_GROUP_TEST_SOURCES
+    SettingsAppearanceTest.cpp
+    SettingsBannerTest.cpp
+    SettingsDeepLinkTest.cpp
+    SettingsDirtyApplyTest.cpp
+    SettingsHostLifecycleTest.cpp
+    SettingsInstantApplyTest.cpp
+    SettingsLiveSyncTest.cpp
+    SettingsSearchTest.cpp
+    SettingsShellNavigationTest.cpp
 )
 
 # Teardown: who owns a profile's dialogs and windows, and what becomes of them when it closes
@@ -152,8 +188,9 @@ set(TEARDOWN_GROUP_TEST_SOURCES
     HostWidgetDecouplingTest.cpp
 )
 
-# Sound, music and video, text-to-speech, and the rich presence published to Discord
+# Sound, music and video, speech in and out, and the rich presence published to Discord
 set(MEDIA_GROUP_TEST_SOURCES
+    SpeechRecognizerContractTest.cpp
     TDiscordModeTest.cpp
     VideoOutputHideTest.cpp
     TMediaLoopTest.cpp
@@ -185,6 +222,21 @@ add_functional_test_binary(UndoServerWrapReplay UndoServerWrapReplay.cpp)
 # also registers it with ctest.
 option(REGISTER_PERF_BENCHMARK "Register the report-only PipelineBenchmark with ctest (it is built either way)" OFF)
 add_functional_test_binary(PipelineBenchmark PipelineBenchmark.cpp)
+# The 2D mapper's companion. Never registered with ctest at all: it needs a map
+# file too big to commit, handed to it in MUDLET_BENCH_MAP, and skips without one.
+# The benchmarks stay standalone binaries rather than joining a group, at the
+# cost of a link step and ~250MB each, for two reasons. add_grouped_test_binary()
+# registers an add_test() per source, so joining one would put an always-skipped
+# case into every CI run; and a group binary's layout and static initialisers
+# change whenever any unrelated sibling test file does, which is a few percent of
+# wall clock landing in numbers whose whole job is to be compared across builds.
+add_functional_test_binary(MapRenderBenchmark MapRenderBenchmark.cpp)
+# Report-only baseline for the A* speedwalk search and the graph rebuild that
+# feeds it, run as
+#   MUDLET_BENCH_MAP=/path/to/map.dat QT_QPA_PLATFORM=offscreen ./PathfindBenchmark
+# Never registered with ctest at all, because the map it needs is far too big to
+# commit and it skips without one.
+add_functional_test_binary(PathfindBenchmark PathfindBenchmark.cpp)
 if(REGISTER_PERF_BENCHMARK)
     add_test(NAME PipelineBenchmark COMMAND $<TARGET_FILE:PipelineBenchmark>)
     # large corpus fed repeatedly, so allow a generous timeout
@@ -249,6 +301,7 @@ add_grouped_test_binary(functional_trigger_tests ${TRIGGER_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_editor_tests ${EDITOR_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_map_tests ${MAP_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_package_tests ${PACKAGE_GROUP_TEST_SOURCES})
+add_grouped_test_binary(functional_settings_tests ${SETTINGS_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_starterui_tests ${STARTERUI_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_teardown_tests ${TEARDOWN_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_media_tests ${MEDIA_GROUP_TEST_SOURCES})
@@ -292,8 +345,15 @@ foreach(test_name ${allFunctionalTestNames})
     # so ctest behaves the same locally and in CI. A test that needs it unset has to
     # unset it itself - nothing here checks that, so see DefaultPackagesTest, which
     # asserts the variable arrives at all.
+    #
+    # Qt adds the xdg-desktop-portal platform theme when it believes it is running
+    # sandboxed, which it decides from $SNAP, and that theme - not the application -
+    # then owns the colour scheme, so setColorScheme() stops having any effect. A
+    # cmake installed as a snap exports $SNAP to every test it runs, which makes
+    # Mudlet look sandboxed when it is an ordinary build-tree binary, so drop it.
     set_tests_properties(${test_name} PROPERTIES
         ENVIRONMENT "QT_QPA_PLATFORM=offscreen;MUDLET_TEST_MODE=1;${leakLog}ASAN_OPTIONS=${leakCheck}"
+        ENVIRONMENT_MODIFICATION "SNAP=unset:"
         LABELS "functional"
         TIMEOUT 60  # seconds
     )
@@ -312,9 +372,20 @@ set_tests_properties(MultilineTriggerReentrancyTest PROPERTIES TIMEOUT 300)
 # GMCPCharLoginTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(GMCPCharLoginTest PROPERTIES TIMEOUT 600)
 
+# DebugConsoleFilterTest boots a fresh profile for each of its 24 methods, and timed out against
+# the default 60s on the macOS x86_64 runner, where it measured 46.95s when it passed. Waiting on
+# the connection dialog instead of sleeping through it took the Linux run from 30s to 9s, so this
+# is headroom rather than a necessity now, and it is what the other per-method-profile tests use.
+set_tests_properties(DebugConsoleFilterTest PROPERTIES TIMEOUT 300)
+
 # TelnetReconnectStateTest creates a fresh profile per test method and reconnects it several
 # times per method, so it needs a longer timeout
 set_tests_properties(TelnetReconnectStateTest PROPERTIES TIMEOUT 300)
+
+# TelnetLatencyMeasurementTest boots a full profile and then spends its runtime in
+# real time by design - every round trip it times, and every stall it places, has
+# to be waited out - so it needs a longer timeout
+set_tests_properties(TelnetLatencyMeasurementTest PROPERTIES TIMEOUT 300)
 
 # TelnetConnectFailureTest creates a fresh profile per test method and waits out a connection
 # attempt that is refused and then retried, so it needs a longer timeout
@@ -340,6 +411,19 @@ set_tests_properties(TelnetNewEnvironTest TelnetOptionsReportTest TelnetAtcpMspT
 # ProfileLifecycleTest opens and closes several profiles, and every open is a
 # full profile load and every close a full save, so it needs a longer timeout
 set_tests_properties(ProfileLifecycleTest PROPERTIES TIMEOUT 300)
+
+# FeedChecksumRaceTest passes in about 5 seconds, so this timeout is only ever
+# reached by a run that is already failing - and that run has to be allowed to
+# finish, because the assertion message is the whole point of the file. Its
+# nominal budget looks like ~120s of QTRY timeouts, but QTRY waits three times
+# what it is told: once to poll, then twice more to build the "would have passed
+# after N ms" debug message. Measured with every wire it covers cut, the file
+# takes 263s, so anything below that turns a readable failure into a silent
+# ctest kill. Guarded, because without the updater the test does not exist and
+# naming a test that does not exist is a hard CMake error
+if(USE_UPDATER)
+    set_tests_properties(FeedChecksumRaceTest PROPERTIES TIMEOUT 600)
+endif()
 
 # TMediaLoopTest probes the audio backend and creates a fresh profile per test method,
 # and each clip has to be waited out in real time, so it needs a longer timeout.
@@ -374,6 +458,19 @@ set_tests_properties(ProfileRoundTripTest MapRoundTripTest MapProgressDialogSeam
 # which takes minutes rather than milliseconds if the quadratic term returns
 set_tests_properties(MapAreaReassignmentTest PROPERTIES TIMEOUT 300)
 
+# The settings tests build the whole preferences dialog once per test method,
+# and several of them wait out a quiet window to prove no apply happened
+set_tests_properties(SettingsAppearanceTest
+                     SettingsBannerTest
+                     SettingsDeepLinkTest
+                     SettingsDirtyApplyTest
+                     SettingsHostLifecycleTest
+                     SettingsInstantApplyTest
+                     SettingsLiveSyncTest
+                     SettingsSearchTest
+                     SettingsShellNavigationTest
+                     PROPERTIES TIMEOUT 300)
+
 # HostWidgetDecouplingTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(HostWidgetDecouplingTest PROPERTIES TIMEOUT 300)
 
@@ -388,6 +485,10 @@ set_tests_properties(ConnectionDialogCrashTest PROPERTIES TIMEOUT 300)
 # FrontendRefreshSeamTest creates a fresh profile per test method, and one of them waits out the
 # post-load tab indicator refresh before it can prove anything, so it needs a longer timeout
 set_tests_properties(FrontendRefreshSeamTest PROPERTIES TIMEOUT 300)
+
+# HyperlinkModelSplitTest creates a fresh profile per test method, and one of
+# them waits out a deliberately long OSC 8 reveal delay, so it needs a longer timeout
+set_tests_properties(HyperlinkModelSplitTest PROPERTIES TIMEOUT 300)
 
 # NarrowWindowWrapTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(NarrowWindowWrapTest PROPERTIES TIMEOUT 300)

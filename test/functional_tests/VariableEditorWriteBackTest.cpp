@@ -43,8 +43,10 @@
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
+#include "dlgSystemMessageArea.h"
 #include "dlgTriggerEditor.h"
 #include "dlgVarsMainArea.h"
+#include "edbee/models/textdocument.h"
 #include "mudlet.h"
 
 #include <QDropEvent>
@@ -247,9 +249,9 @@ private slots:
         execLua(qsl("nulKeyTable = nil nulKeyDecoy = nil"));
     }
 
-    // A global whose name is not an identifier is not reached by that name
-    // either: the write paths put a root into Lua source bare, so a dot in it
-    // reads as an index into whatever global comes before the dot.
+    // A global whose own name holds a dot is not the editor's to write either:
+    // the saved and hidden bookkeeping keys a member by its dotted path, so this
+    // global and the member that path names are one entry to it.
     void test_editingAGlobalWithADotInItsNameLeavesOtherTablesAlone()
     {
         execLua(qsl("dotted = {} _G['dotted.global'] = 'dotted global value' dottedDecoy = 'decoy value'"));
@@ -316,6 +318,48 @@ private slots:
         QVERIFY2(luaHolds(qsl("stringKeyGlobal"), qsl("edited global value")), "editing the global did not reach Lua");
 
         execLua(qsl("stringKeyGlobal = nil stringKeyDecoy = nil"));
+    }
+
+    // A key reaches Lua as bytes, so a quote in one is nothing the view has to
+    // work around (#10114).
+    void test_aMemberWhoseKeyHoldsAQuoteIsEditable()
+    {
+        execLua(qsl("quoteKeyTable = {} quoteKeyTable['say \"hi\"'] = 'quoted member value' quoteKeyDecoy = 'decoy value'"));
+        mpEditor->repopulateVars();
+
+        QTreeWidgetItem* pMember = findVariableItem({qsl("quoteKeyTable"), qsl("say \"hi\"")});
+        QVERIFY2(pMember, "the Variables view did not show the member under the name Lua gives its key");
+        QTreeWidgetItem* pDecoy = findVariableItem({qsl("quoteKeyDecoy")});
+        QVERIFY2(pDecoy, "the Variables view did not show the variable to click away to");
+
+        selectVariable(pMember);
+        QVERIFY2(!bannerShowing(), "a variable the editor can write must not be reported as one it cannot");
+        mpEditor->mpSourceEditorEdbeeDocument->setText(qsl("edited member value"));
+        selectVariable(pDecoy);
+        QCOMPARE(luaMemberCount(qsl("quoteKeyTable")), 1);
+        QVERIFY2(luaHolds(qsl("quoteKeyTable['say \"hi\"']"), qsl("edited member value")), "editing the member did not reach Lua");
+
+        execLua(qsl("quoteKeyTable = nil quoteKeyDecoy = nil"));
+    }
+
+    // ...and a global's name is no different, identifier or not.
+    void test_aGlobalWhoseNameIsNotAnIdentifierIsEditable()
+    {
+        execLua(qsl("_G['a global with spaces'] = 'spaced global value' spacedDecoy = 'decoy value'"));
+        mpEditor->repopulateVars();
+
+        QTreeWidgetItem* pGlobal = findVariableItem({qsl("a global with spaces")});
+        QVERIFY2(pGlobal, "the Variables view did not show the global");
+        QTreeWidgetItem* pDecoy = findVariableItem({qsl("spacedDecoy")});
+        QVERIFY2(pDecoy, "the Variables view did not show the variable to click away to");
+
+        selectVariable(pGlobal);
+        QVERIFY2(!bannerShowing(), "a variable the editor can write must not be reported as one it cannot");
+        mpEditor->mpSourceEditorEdbeeDocument->setText(qsl("edited global value"));
+        selectVariable(pDecoy);
+        QVERIFY2(luaHolds(qsl("_G['a global with spaces']"), qsl("edited global value")), "editing the global did not reach Lua");
+
+        execLua(qsl("_G['a global with spaces'] = nil spacedDecoy = nil"));
     }
 
     // Dropping an item somewhere else in the Variables view rearranges the view

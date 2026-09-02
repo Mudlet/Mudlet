@@ -2775,9 +2775,7 @@ int TLuaInterpreter::lockExit(lua_State* L)
 
     const Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
-    if (pR) {
-        pR->setExitLock(dir, b);
-        host.mpMap->setUnsaved(__func__);
+    if (pR && pR->setExitLock(dir, b)) {
         host.mpMap->updateArea(pR->getArea());
         host.mpMap->mMapGraphNeedsUpdate = true;
     }
@@ -2792,10 +2790,13 @@ int TLuaInterpreter::lockRoom(lua_State* L)
     const Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (pR) {
+        const bool changed = pR->isLocked != b;
         pR->isLocked = b;
-        host.mpMap->setUnsaved(__func__);
-        host.mpMap->updateArea(pR->getArea());
-        host.mpMap->mMapGraphNeedsUpdate = true;
+        if (changed) {
+            host.mpMap->setUnsaved(__func__);
+            host.mpMap->updateArea(pR->getArea());
+            host.mpMap->mMapGraphNeedsUpdate = true;
+        }
         lua_pushboolean(L, true);
     } else {
         lua_pushboolean(L, false);
@@ -2823,14 +2824,17 @@ int TLuaInterpreter::lockSpecialExit(lua_State* L)
     if (!pR) {
         return warnArgumentValue(L, __func__, csmInvalidExitRoomID.arg(fromRoomID));
     }
+    const bool changed = pR->hasSpecialExitLock(dir) != b;
     if (!pR->setSpecialExitLock(dir, b)) {
         return warnArgumentValue(L, __func__, qsl("the special exit name/command %1 does not exist in roomID %2").arg(dir, QString::number(fromRoomID)));
     }
 
     lua_pushboolean(L, true);
-    host.mpMap->setUnsaved(__func__);
-    host.mpMap->updateArea(pR->getArea());
-    host.mpMap->mMapGraphNeedsUpdate = true;
+    if (changed) {
+        host.mpMap->setUnsaved(__func__);
+        host.mpMap->updateArea(pR->getArea());
+        host.mpMap->mMapGraphNeedsUpdate = true;
+    }
     return 1;
 }
 
@@ -2881,6 +2885,8 @@ int TLuaInterpreter::registerMapInfo(lua_State* L)
     const int callback = luaL_ref(L, LUA_REGISTRYINDEX);
 
     auto& host = getHostFromLua(L);
+    // capture the profile as a pointer - the lambda copies its captures and Host is non-copyable
+    auto* pHost = &host;
     host.mpMap->mMapInfoContributorManager->registerContributor(
             name,
             [=](int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor) {
@@ -2898,9 +2904,9 @@ int TLuaInterpreter::registerMapInfo(lua_State* L)
 
                 const int error = lua_pcall(L, 4, 6, 0);
                 if (error) {
-                    if (mudlet::smDebugMode && lua_isstring(L, -1)) {
+                    if (TDebug::wants(TDebug::Category::Map) && lua_isstring(L, -1)) {
                         auto errorMessage = lua_tostring(L, -1);
-                        TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA ERROR: when running map info callback for '" << name << "\nreason: " << errorMessage << "\n" >> 0;
+                        TDebug(QColor(Qt::white), QColor(Qt::red), TDebug::Category::Map) << "LUA ERROR: when running map info callback for '" << name << "\nreason: " << errorMessage << "\n" >> pHost;
                     }
                     lua_settop(L, callerStackTop);
                     return MapInfoProperties{};
@@ -3814,10 +3820,10 @@ TLuaInterpreter::ExitWeightFilterResult TLuaInterpreter::applyExitWeightFilter(i
 
     const int error = lua_pcall(L, 2, 1, 0);
     if (error) {
-        if (mudlet::smDebugMode && lua_isstring(L, -1)) {
+        if (TDebug::wants(TDebug::Category::Map) && lua_isstring(L, -1)) {
             const char* errorMessage = lua_tostring(L, -1);
             if (errorMessage) {
-                TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA ERROR: when running exit weight filter\nreason: " << errorMessage << "\n" >> 0;
+                TDebug(QColor(Qt::white), QColor(Qt::red), TDebug::Category::Map) << "LUA ERROR: when running exit weight filter\nreason: " << errorMessage << "\n" >> mpHost;
             }
         }
         lua_pop(L, 1);
@@ -3827,8 +3833,8 @@ TLuaInterpreter::ExitWeightFilterResult TLuaInterpreter::applyExitWeightFilter(i
     if (lua_isboolean(L, -1)) {
         if (!lua_toboolean(L, -1)) {
             result.blocked = true;
-        } else if (mudlet::smDebugMode) {
-            TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA WARNING: exit weight filter returned boolean 'true', expected numeric weight. Ignoring.\n" >> 0;
+        } else if (TDebug::wants(TDebug::Category::Map)) {
+            TDebug(QColor(Qt::white), QColor(Qt::red), TDebug::Category::Map) << "LUA WARNING: exit weight filter returned boolean 'true', expected numeric weight. Ignoring.\n" >> mpHost;
         }
     } else if (lua_isnil(L, -1)) {
         // nothing to do
@@ -3846,12 +3852,13 @@ TLuaInterpreter::ExitWeightFilterResult TLuaInterpreter::applyExitWeightFilter(i
         const QString value = QString::fromUtf8(rawValue, static_cast<int>(length));
         if (value.compare(qsl("block"), Qt::CaseInsensitive) == 0) {
             result.blocked = true;
-        } else if (mudlet::smDebugMode) {
-            TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA WARNING: exit weight filter returned unexpected string '" << value << "', expected numeric weight. Ignoring.\n" >> 0;
+        } else if (TDebug::wants(TDebug::Category::Map)) {
+            TDebug(QColor(Qt::white), QColor(Qt::red), TDebug::Category::Map) << "LUA WARNING: exit weight filter returned unexpected string '" << value << "', expected numeric weight. Ignoring.\n"
+                    >> mpHost;
         }
     } else {
-        if (mudlet::smDebugMode) {
-            TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA WARNING: exit weight filter returned unexpected type '" << luaL_typename(L, -1) << "', ignoring.\n" >> 0;
+        if (TDebug::wants(TDebug::Category::Map)) {
+            TDebug(QColor(Qt::white), QColor(Qt::red), TDebug::Category::Map) << "LUA WARNING: exit weight filter returned unexpected type '" << luaL_typename(L, -1) << "', ignoring.\n" >> mpHost;
         }
     }
 

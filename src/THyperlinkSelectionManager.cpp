@@ -20,14 +20,13 @@
 
 #include "THyperlinkSelectionManager.h"
 #include "LuaLiteral.h"
-#include "TConsole.h"
+#include "utils.h"
 
 #include <QUrl>
 #include <QUrlQuery>
 
-THyperlinkSelectionManager::THyperlinkSelectionManager(TConsole& console)
-: QObject(&console)
-, mpConsole(console)
+THyperlinkSelectionManager::THyperlinkSelectionManager()
+: QObject(nullptr)
 {
 }
 

@@ -861,12 +861,126 @@ describe("Tests Other.lua functions", function()
       originalValues.showSentText = nil
     end)
 
+    it("round-trips the 2D map room symbol font", function()
+      -- Unlike the other map keys these do not need an open mapper, because the
+      -- settings live on the map object rather than the mapper widget.
+      local original = getConfig("mapSymbolFont")
+      assert.is_string(original)
+      snapshot("mapSymbolFont")
+
+      -- pick an installed font that is not the one in use, so the assertion
+      -- cannot pass by doing nothing. pairs() has no defined order, so sort.
+      local names = {}
+      for name in pairs(getAvailableFonts()) do
+        names[#names + 1] = name
+      end
+      table.sort(names)
+      local otherFont
+      for _, name in ipairs(names) do
+        if name ~= original then
+          otherFont = name
+          break
+        end
+      end
+      assert.is_string(otherFont)
+
+      assert.is_true(setConfig("mapSymbolFont", otherFont))
+      assert.equals(otherFont, getConfig("mapSymbolFont"))
+
+      -- matched case-insensitively, read back as the font database spells it
+      assert.is_true(setConfig("mapSymbolFont", otherFont:upper()))
+      assert.equals(otherFont, getConfig("mapSymbolFont"))
+
+      local ok, err = setConfig("mapSymbolFont", "No Such Font At All")
+      assert.is_nil(ok)
+      assert.is_string(err)
+      assert.equals(otherFont, getConfig("mapSymbolFont"))
+
+      restore("mapSymbolFont")
+    end)
+
+    it("round-trips the 2D map room symbol scaling factor", function()
+      snapshot("mapSymbolFontScaling")
+      assert.is_true(setConfig("mapSymbolFontScaling", 1.25))
+      assert.equals(1.25, getConfig("mapSymbolFontScaling"))
+      -- the ends of the range the preferences spin-box offers
+      assert.is_true(setConfig("mapSymbolFontScaling", 0.50))
+      assert.equals(0.50, getConfig("mapSymbolFontScaling"))
+      assert.is_true(setConfig("mapSymbolFontScaling", 2.00))
+      assert.equals(2.00, getConfig("mapSymbolFontScaling"))
+
+      assert.is_true(setConfig("mapSymbolFontScaling", 1.10))
+      -- NaN belongs in this list because it is the one value a plain range
+      -- check does not stop: it compares false against both bounds. The
+      -- infinities are here only to pin that they stay refused - the range
+      -- check already handles those, and 0 is the value that would really do
+      -- damage, blanking every room symbol.
+      for _, value in ipairs({0.49, 2.01, -1, 0, 0/0, 1/0, -1/0}) do
+        local ok, err = setConfig("mapSymbolFontScaling", value)
+        assert.is_nil(ok, "setConfig accepted out-of-range value: " .. tostring(value))
+        assert.is_string(err)
+        assert.is_truthy(err:find("out of range", 1, true), err)
+      end
+      assert.equals(1.10, getConfig("mapSymbolFontScaling"))
+
+      restore("mapSymbolFontScaling")
+    end)
+
+    -- The flag's whole effect on the font is the NoFontMerging style strategy
+    -- bit, which is not visible from Lua at all - getConfig("mapSymbolFont")
+    -- reports the family. So this only pins the round-trip; that setting a
+    -- font afterwards does not silently drop the bit is pinned by
+    -- test_pickingAFontKeepsTheOnlyUseSelectedStrategy in
+    -- test/functional_tests/MapSymbolFontTest.cpp.
+    it("round-trips the only-use-selected symbol font flag", function()
+      snapshot("mapSymbolFontOnlyUseSelected")
+
+      assert.is_true(setConfig("mapSymbolFontOnlyUseSelected", true))
+      assert.is_true(getConfig("mapSymbolFontOnlyUseSelected"))
+
+      assert.is_true(setConfig("mapSymbolFontOnlyUseSelected", false))
+      assert.is_false(getConfig("mapSymbolFontOnlyUseSelected"))
+
+      restore("mapSymbolFontOnlyUseSelected")
+    end)
+
+    -- The preferences have a whole dialog listing which room symbols the chosen
+    -- font can draw; a script has only what setConfig hands back. The font is
+    -- still taken, so the warning rides along with a true rather than
+    -- replacing it.
+    it("warns when the chosen symbol font cannot draw a symbol the map uses", function()
+      snapshot("mapSymbolFont")
+
+      -- U+10FFFD, the last codepoint of Private Use Plane 16. Nothing is
+      -- assigned there, so no font on any machine this runs on has a glyph for
+      -- it and the map is guaranteed to hold a symbol that cannot be drawn.
+      local unrenderable = "\244\143\191\189"
+      local roomId = createRoomID()
+      assert.is_true(addRoom(roomId))
+      assert.is_true(setRoomChar(roomId, unrenderable))
+
+      local ok, warning = setConfig("mapSymbolFont", getConfig("mapSymbolFont"))
+      assert.is_true(ok, "the font was refused outright rather than taken with a warning")
+      assert.is_string(warning, "setConfig said nothing about a symbol that will show as the replacement character")
+      assert.is_truthy(warning:find(unrenderable, 1, true), warning)
+
+      -- and it stops saying so once nothing in the map needs that glyph
+      assert.is_true(setRoomChar(roomId, "A"))
+      local okAgain, warningAgain = setConfig("mapSymbolFont", getConfig("mapSymbolFont"))
+      assert.is_true(okAgain)
+      assert.is_falsy(warningAgain and warningAgain:find(unrenderable, 1, true), tostring(warningAgain))
+
+      deleteRoom(roomId)
+      restore("mapSymbolFont")
+    end)
+
     it("round-trips the string enum options", function()
       local enums = {
         caretShortcut = {"none", "tab", "ctrltab", "f6"},
         blankLinesBehaviour = {"show", "hide", "replacewithspace"},
         controlCharacterHandling = {"asis", "oem", "picture"},
         ambiguousEAsianWidthCharacters = {"narrow", "wide", "auto"},
+        mapperButton = {"scripted", "disabled", "default"},
       }
       local exercised = 0
       for key, values in pairs(enums) do
@@ -895,6 +1009,20 @@ describe("Tests Other.lua functions", function()
       assert.is_nil(ok)
       assert.is_string(err)
       restore("caretShortcut")
+    end)
+
+    it("starts mapperButton on default each session and keeps the last good mode on a bad value", function()
+      -- mapperButton is deliberately session-only (an uninstalled UI package
+      -- must not leave the map button dead for good), so a fresh self-test
+      -- profile has to read "default"
+      snapshot("mapperButton")
+      assert.equals("default", getConfig("mapperButton"))
+      assert.is_true(setConfig("mapperButton", "scripted"))
+      local ok, err = setConfig("mapperButton", "sideways")
+      assert.is_nil(ok)
+      assert.is_string(err)
+      assert.equals("scripted", getConfig("mapperButton"))
+      restore("mapperButton")
     end)
 
     it("round-trips commandLineHistorySaveSize (numeric option)", function()
@@ -955,6 +1083,102 @@ describe("Tests Other.lua functions", function()
     end)
   end)
 
+  describe("Tests the functionality of phpTable", function()
+    -- Collects the entire iteration rather than a keyed table: a duplicated key
+    -- and a key left behind with a nil value are both only visible in the
+    -- sequence the pairs iterator yields.
+    local function entries(t)
+      local collected = {}
+      for key, value in t:pairs() do
+        collected[#collected + 1] = tostring(key) .. "=" .. tostring(value)
+      end
+      return collected
+    end
+
+    -- specs that assert iteration order seed one key at a time: the constructor
+    -- walks its arguments with pairs(), whose order is unspecified and is not
+    -- insertion order
+    it("should return a table which contains the keys and values of the tables passed in", function()
+      local t = phpTable({ one = "1", two = "2" })
+      assert.equals("1", t.one)
+      assert.equals("2", t.two)
+    end)
+
+    it("should merge multiple tables given as arguments, with later tables winning", function()
+      local t = phpTable({ a = 1, b = 1 }, { b = 2 })
+      assert.equals(1, t.a)
+      assert.equals(2, t.b)
+    end)
+
+    it("should iterate over its elements in insertion order using its pairs method", function()
+      local t = phpTable({ first = 1 })
+      t.second = 2
+      local collected = {}
+      for key, value in t:pairs() do
+        collected[#collected + 1] = tostring(key) .. "=" .. tostring(value)
+      end
+      assert.same({ "first=1", "second=2" }, collected)
+    end)
+
+    it("should yield a key holding false only once after it is overwritten", function()
+      local t = phpTable({ flag = false })
+      assert.is_false(t.flag)
+      t.flag = true
+      assert.same({ "flag=true" }, entries(t))
+    end)
+
+    it("should delete a key holding false when it is assigned nil", function()
+      local t = phpTable({ flag = false })
+      t.flag = nil
+      assert.is_nil(t.flag)
+      assert.same({}, entries(t))
+    end)
+
+    it("should not register a key that never existed when it is assigned nil", function()
+      local t = phpTable({ kept = 1 })
+      t.ghost = nil
+      assert.is_nil(t.ghost)
+      assert.same({ "kept=1" }, entries(t))
+    end)
+
+    it("should keep the original position of a key when its value is overwritten", function()
+      local t = phpTable({ a = 1 })
+      t.b = 2
+      t.a = 3
+      local collected = {}
+      for key, value in t:pairs() do
+        collected[#collected + 1] = tostring(key) .. "=" .. tostring(value)
+      end
+      assert.same({ "a=3", "b=2" }, collected)
+    end)
+
+    it("should remove a key from iteration when its value is set to nil", function()
+      local t = phpTable({ a = 1 })
+      t.b = 2
+      t.b = nil
+      assert.is_nil(t.b)
+      local keys = {}
+      for key in t:pairs() do
+        keys[#keys + 1] = key
+      end
+      assert.same({ "a" }, keys)
+    end)
+
+    it("should iterate over no elements when called with no arguments", function()
+      local t = phpTable()
+      local count = 0
+      for _ in t:pairs() do
+        count = count + 1
+      end
+      assert.equals(0, count)
+    end)
+
+    it("should error if given a non-nil argument that is not a table", function()
+      local errfn = function() phpTable("not a table") end
+      assert.error_matches(errfn, "table expected")
+    end)
+  end)
+
     --[[
     TODO:
       remember()
@@ -964,7 +1188,6 @@ describe("Tests Other.lua functions", function()
       table.pickle()
       tacle.load()
       table.unpickle()
-      phpTable()
       getColorWildcard()
       lockExit()
       hasExitLock()

@@ -185,6 +185,22 @@ describe("Tests functionality of Adjustable.Container", function()
       assert.are.same({}, leftovers)
     end)
 
+    -- #9568: add() puts the child in the Inside container, but there was no
+    -- remove() override, so removal reached only the outer container's own
+    -- lists. The child stayed tracked by Inside, and a later delete() on the
+    -- container destroyed it along with the children it really did own.
+    it("stops tracking a child that was removed from it", function()
+      local child = Geyser.MiniConsole:new({name = "gasRemovedChild"}, container)
+      assert.is_truthy(container.Inside.windowList.gasRemovedChild, "setup: the child never reached the Inside container")
+
+      container:remove(child)
+
+      assert.is_nil(container.Inside.windowList.gasRemovedChild, "the Inside container still tracks a child that was removed")
+      assert.is_nil(container.windowList.gasRemovedChild)
+
+      child:delete()
+    end)
+
     it("puts its backdrop label over the container's geometry", function()
       assert.are.equal("label", windowType("gasContaineradjLabel"))
       assert.are.same({x = 20, y = 30, width = 200, height = 200}, geometry("gasContaineradjLabel"))
@@ -328,11 +344,15 @@ describe("Tests functionality of Adjustable.Container", function()
         x = 0, y = 0, width = 100, height = 100,
         autoLoad = false,
       })
-      assert.is_not_nil(saving.autoSaveHandler)
+      local handler = saving.autoSaveHandler
+      assert.is_not_nil(handler)
       saving:delete()
       -- left registered, the handler would write a deleted container's geometry
       -- back out at exit, over whatever took its name in the meantime
       assert.is_nil(saving.autoSaveHandler)
+      -- killAnonymousEventHandler answers falsy for an id it no longer holds,
+      -- which is how a killed registration is told apart from a blanked field
+      assert.is_falsy(killAnonymousEventHandler(handler))
       assert.is_false(saving.autoSave)
     end)
 
@@ -1756,7 +1776,6 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       assert.is_false(container.autoSave)
       -- the handler is really gone rather than only flagged off
       assert.is_false(handlerAlive(handler))
-      container.autoSaveHandler = nil
     end)
 
     it("keeps the one handler it already has rather than stacking a second", function()
@@ -1766,16 +1785,36 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       container:enableAutoSave()
       assert.are.equal(handler, container.autoSaveHandler)
       container:disableAutoSave()
-      container.autoSaveHandler = nil
     end)
 
-    -- disableAutoSave kills the handler but leaves its id on the container, and
-    -- enableAutoSave only registers when autoSaveHandler is nil. Turning auto
-    -- saving off and on again therefore leaves the container claiming autoSave
-    -- is true with nothing registered behind it, so its layout is silently not
-    -- written at exit. Recorded rather than asserted, so that fixing it does
-    -- not have to fight a spec.
-    pending("Adjustable.Container:enableAutoSave registering again after disableAutoSave - the killed handler's id is left behind, so the second enable short-circuits and nothing saves on exit")
+    it("registers a different, live handler again after disableAutoSave", function()
+      local container = make("gapAutoSaveReenable")
+      container:enableAutoSave()
+      local firstHandler = container.autoSaveHandler
+      assert.is_not_nil(firstHandler)
+
+      container:disableAutoSave()
+      assert.is_false(handlerAlive(firstHandler))
+      assert.is_nil(container.autoSaveHandler)
+
+      container:enableAutoSave()
+      local secondHandler = container.autoSaveHandler
+      assert.is_true(container.autoSave)
+      assert.are_not.equal(firstHandler, secondHandler)
+      assert.is_true(handlerAlive(secondHandler))
+      container:disableAutoSave()
+    end)
+
+    it("does not error when disableAutoSave is called twice in a row", function()
+      local container = make("gapAutoSaveTwice")
+      -- starting from autoSave off means even the first call has no handler
+      assert.has_no.errors(function() container:disableAutoSave() end)
+      container:enableAutoSave()
+      container:disableAutoSave()
+      assert.has_no.errors(function() container:disableAutoSave() end)
+      assert.is_false(container.autoSave)
+      assert.is_nil(container.autoSaveHandler)
+    end)
   end)
 
   describe("Adjustable.Container lock styles", function()

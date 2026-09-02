@@ -325,6 +325,32 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "are always willing to answer questions and to help out however necessary. Best "
                  "of all, playing the Realms of Despair is totally FREE!")},
 
+            {qsl("Rites of Passage MUD"),
+             qsl("play.ropmud.com"),
+             4443,
+             false,
+             qsl("<a href='https://ropmud.com/index.html'>Website</a><br>"
+                 "<a href='https://discord.gg/CkYm9WRnyw'>Discord</a>"),
+             qsl(":/icons/banner_ropmud.png"),
+             qsl("Rites of Passage is a PVPVE (Player vs Player vs Environment) MUD where Good "
+                 "and Evil are locked in eternal war. Hunt powerful monsters for legendary "
+                 "loot, then defend it from enemy players hunting you. Every expedition into "
+                 "dangerous territory carries the thrill of both PvE challenge and PvP risk."
+                 "\n\n"
+                 "The environment is deadly - 80+ areas filled with creatures guarding "
+                 "valuable equipment, quests that reward the bold, and a remort system that "
+                 "lets you grow stronger with each life. But the real tension comes from "
+                 "other players. That raid boss you're fighting? The enemy faction might be "
+                 "watching, waiting for you to weaken before they strike. That rare gem "
+                 "you just looted? You'll need to make it home alive."
+                 "\n\n"
+                 "This is a PK MUD. Combat between Good and Evil players isn't just allowed "
+                 "- it's encouraged. Killing enemies earns warpoints, experience, and their "
+                 "gear. Climb the ranks. Make the topten list. Build your reputation through "
+                 "conquest. If you want the risk of PvP combined with challenging "
+                 "environment combat, you've found your home."),
+             true}, // ROP loader installs its own custom interface
+
             {qsl("ZombieMUD"),
              qsl("zombiemud.org"),
              3000,
@@ -628,7 +654,7 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
              qsl(":/icons/carrionfields.png"),
              qsl("Carrion Fields is a unique blend of high-caliber roleplay and complex, hardcore "
                  "player-versus-player combat that has been running continuously, and 100% free, "
-                 "for over 25 years."
+                 "for over 30 years."
                  "\n\n"
                  "Choose from among 21 races, 17 highly customizable classes, and several cabals "
                  "and religions to suit your playstyle and the story you want to tell. Our "
@@ -637,7 +663,7 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "\n\n"
                  "We like to think of ourselves as the Dark Souls of MUDs, with a community that "
                  "is supportive of new players - unforgiving though our world may be. Join us for a "
-                 "real challenge and real rewards: adrenalin-pumping battles, memorable quests run "
+                 "real challenge and real rewards: adrenaline-pumping battles, memorable quests run "
                  "by our volunteer immortal staff, and stories that will stick with you for a "
                  "lifetime."),
              true}, // CF-loader installs CFGUI
