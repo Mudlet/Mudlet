@@ -22,6 +22,7 @@
 #include "SpeechAudioCapture.h"
 #include "mudlet.h"
 
+#include <QCoreApplication>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -139,7 +140,6 @@ struct SherpaOnnxOnlineRecognizerResult
 QLibrary SherpaRecognizer::sSherpaLibrary;
 bool SherpaRecognizer::sLibraryLoaded = false;
 bool SherpaRecognizer::sLibraryLoadAttempted = false;
-bool SherpaRecognizer::sLibraryUnloadedByRequest = false;
 
 SherpaRecognizer::create_recognizer_fn SherpaRecognizer::s_createOnlineRecognizer = nullptr;
 SherpaRecognizer::destroy_recognizer_fn SherpaRecognizer::s_destroyOnlineRecognizer = nullptr;
@@ -219,7 +219,19 @@ bool SherpaRecognizer::loadSherpaLibrary()
     if (!sSherpaLibrary.load()) {
         // Try common installation paths
         for (const QString& path : librarySearchPaths()) {
-            preloadBundledDependencies(QFileInfo(path).absolutePath());
+            const QFileInfo candidate(path);
+            // Nothing is preloaded from a directory that does not hold the
+            // sherpa library. preloadBundledDependencies() maps every
+            // onnxruntime it finds with RTLD_GLOBAL and deliberately never
+            // unloads it, and the candidate list includes /usr/local/lib and
+            // /opt/homebrew/lib - so probing every directory unconditionally
+            // left a player's unrelated Homebrew onnxruntime mapped into
+            // Mudlet for the rest of the session, on nothing more than a
+            // read-shaped stt.available().
+            if (!candidate.exists()) {
+                continue;
+            }
+            preloadBundledDependencies(candidate.absolutePath());
             sSherpaLibrary.setFileName(path);
             if (sSherpaLibrary.load()) {
                 break;
@@ -267,12 +279,12 @@ bool SherpaRecognizer::loadSherpaLibrary()
 
 bool SherpaRecognizer::sherpaAvailable()
 {
-    // Not probed again while a caller has deliberately unloaded it - the same
-    // rule the Vosk backend follows, and for the same reason: otherwise
-    // stt.unloadLibrary() is undone by the next call that only looks like a
-    // read, and on Windows the delete it existed to permit fails on a mapped
-    // module. reloadLibrary() is what clears this.
-    if (!sLibraryLoadAttempted && !sLibraryUnloadedByRequest) {
+    // No equivalent of Vosk's "unloaded on request" latch here, because
+    // stt.unloadLibrary()/stt.reloadLibrary() are wired to the Vosk loader
+    // alone - see the limitation recorded in docs/stt-api.md. Nothing can put
+    // this backend's library into that state, so there is nothing to check
+    // for before probing.
+    if (!sLibraryLoadAttempted) {
         loadSherpaLibrary();
     }
     return sLibraryLoaded;
@@ -368,6 +380,23 @@ static bool tokensAreUppercase(const QString& tokensPath)
 
 bool SherpaRecognizer::loadModel(const QString& modelPath)
 {
+    // Loading a model over a running session would free the decoder while the
+    // device stayed open: audio kept arriving with nothing to decode it, the
+    // state said Ready, and neither stop() nor close() could reach the
+    // microphone again because both check listening() first. The recording
+    // light stayed on for the rest of the session.
+    // VoskRecognizer::initialize() carries the same guard for the same reason.
+    const bool interruptedASession = (state() == State::Listening || state() == State::Processing);
+    mpCapture->stop();
+    if (interruptedASession) {
+        // The caller asked to load a model, not to stop listening, and the
+        // utterance in flight goes with the decoder. Reported rather than
+        // dropped quietly: no finalResult() is coming, so silence here is
+        // indistinguishable from the player never having said anything.
+        //: Shown when loading a speech model ends a listening session that was already under way, losing what was being said
+        emit errorOccurred(tr("Loading a speech model stopped the listening session that was under way - anything said during it is lost."));
+    }
+
     if (!loadSherpaLibrary()) {
         //: Shown when speech recognition is asked to load a model but the recognition library itself is not installed
         emit errorOccurred(tr("sherpa-onnx library not available"));
@@ -667,6 +696,7 @@ void SherpaRecognizer::startListeningInternal()
     mLastPartialResult.clear();
     mSilentChunks = 0;
     mRecentAudioLevel = 0.0f;
+    mMissingResultReported = false;
 
     // mpCapture emits its own translated captureError before returning false,
     // which slot_captureError() has already turned into errorOccurred - only
@@ -700,6 +730,13 @@ void SherpaRecognizer::doStopListening()
                 emit finalResult(text);
             }
             s_destroyOnlineRecognizerResult(result);
+        } else {
+            // Not the same as having heard nothing: the decoder was asked to
+            // hand back what it made of the audio and handed back nothing at
+            // all. Reported the way VoskRecognizer::parseEngineResult() reports
+            // it, so a lost phrase does not read as a quiet room.
+            //: Shown when the speech engine accepted a phrase and then returned no transcription for it
+            emit errorOccurred(tr("The speech engine returned no result for what it just heard."));
         }
     }
 
@@ -735,7 +772,7 @@ void SherpaRecognizer::slot_pcmReady(const QByteArray& pcmData)
     // reflects the phrase rather than whichever 50ms chunk was last seen
     mRecentAudioLevel = mRecentAudioLevel * 0.7f + level * 0.3f;
 
-    if (level < SILENCE_LEVEL) {
+    if (level < scmSilenceLevel) {
         ++mSilentChunks;
     } else {
         mSilentChunks = 0;
@@ -763,6 +800,13 @@ void SherpaRecognizer::slot_pcmReady(const QByteArray& pcmData)
     if (result) {
         text = result->text ? QString::fromUtf8(result->text).trimmed() : QString();
         s_destroyOnlineRecognizerResult(result);
+    } else if (!mMissingResultReported) {
+        // As in doStopListening(): nothing back at all is a fault, not silence.
+        // Latched to once per session - this runs on every 50ms chunk, and a
+        // library broken enough to do it once will do it twenty times a second.
+        mMissingResultReported = true;
+        //: Shown when the speech engine accepted a phrase and then returned no transcription for it
+        emit errorOccurred(tr("The speech engine returned no result for what it just heard."));
     }
 
     // The endpointer trips on any silence rule, including trailing silence
@@ -786,7 +830,7 @@ void SherpaRecognizer::slot_pcmReady(const QByteArray& pcmData)
         s_onlineStreamReset(mRecognizer, mStream);
         mLastPartialResult.clear();
         emit finalResult(text);
-    } else if (atEndpoint && mSilentChunks >= SILENT_CHUNKS_BEFORE_IDLE_RESET) {
+    } else if (atEndpoint && mSilentChunks >= scmSilentChunksBeforeIdleReset) {
         // Housekeeping during a real lull: without it the utterance clock runs
         // on through the silence until the maximum-length rule is permanently
         // met, which would cut the next phrase short at its first word. Safe
@@ -852,9 +896,9 @@ void SherpaRecognizer::releaseSherpaResources()
 
 void SherpaRecognizer::releaseResources()
 {
-    // Same reason as initialize()/loadModel() stopping it before reloading: the
-    // device has to go before the decoder, or a caller is left with a live
-    // microphone it has no way to close
+    // Same reason loadModel() stops it before reloading: the device has to go
+    // before the decoder, or a caller is left with a live microphone it has no
+    // way to close
     mpCapture->stop();
     releaseSherpaResources();
     // capabilities() already answers false for biasing once mRecognizer is
@@ -907,8 +951,13 @@ bool SherpaRecognizer::setSensitivity(Sensitivity sensitivity)
     // The endpoint rules are baked into the recognizer at creation, so a
     // loaded model is reloaded for the change to take effect. Only when idle:
     // a listening session keeps the rules it started with.
+    // The reload's own answer, not an unconditional yes: a reload that failed
+    // leaves the engine in Error while mSensitivity already holds the new
+    // value, so returning true here would hand the caller exactly the
+    // readback-agrees-engine-disagrees pair SpeechRecognizer.h says this bool
+    // exists to prevent.
     if (state() == State::Ready && !mModelPath.isEmpty()) {
-        initialize(mModelPath);
+        return initialize(mModelPath);
     }
     return true;
 }

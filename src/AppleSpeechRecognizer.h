@@ -31,9 +31,9 @@
 class SpeechAudioCapture;
 
 // The Objective-C objects this backend holds - the recognizer, the request it
-// feeds and the task decoding it. Declared opaque here rather than in the
-// header so this file stays plain C++: moc compiles it, and so does the
-// contract test, neither of which is Objective-C++. Defined in the .mm.
+// feeds and the task decoding it. Named here and defined in the .mm, so that
+// this header stays plain C++: moc compiles it, and so does the contract test,
+// neither of which is Objective-C++.
 struct AppleSpeechSession;
 
 // Speech recognition through macOS's own Speech framework (SFSpeechRecognizer).

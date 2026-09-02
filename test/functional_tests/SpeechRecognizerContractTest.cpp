@@ -395,6 +395,13 @@ private slots:
     // Reported as the place to install a model into, so it has to be a place
     // that exists. A made-up default named a directory the user never created,
     // and the "install a model" message was unreachable behind it.
+    //
+    // Only asserts anything on a machine with a Vosk model installed:
+    // VoskRecognizer::defaultModelPath() has no made-up fallback any more - that
+    // absence is the fix - so on a clean CI machine it is empty and this returns
+    // without checking anything. Kept because it is the one place the regression
+    // would be caught, and it is caught on any developer machine set up to use
+    // the feature at all.
     void theDefaultModelPathIsAModelOrNothing()
     {
         const QString defaultPath = VoskRecognizer::defaultModelPath();
@@ -587,10 +594,13 @@ private slots:
     }
 
     // capabilities().biasing and modelPath() must answer from the live handle,
-    // not from mSupportsBiasing/mModelPath alone: those are set by loadModel()
-    // before the recognizer handle exists and releaseResources() does not
-    // erase them, so without the gate both would go on reporting a model that
-    // is no longer loaded. This pins the gate on a recognizer that never
+    // not from mSupportsBiasing/mModelPath alone: both are set by loadModel()
+    // before the recognizer handle exists, and mModelPath survives
+    // releaseResources() untouched, so without the gate modelPath() would go on
+    // naming a model that is no longer loaded. releaseResources() does clear
+    // mSupportsBiasing and mBpeVocabPath - SherpaRecognizer.h says it keeps
+    // those redundant with the gate on purpose rather than leaning on it
+    // alone - so biasing is held to the same answer from two directions. This pins the gate on a recognizer that never
     // successfully loaded a model at all - the strongest case reachable
     // without the sherpa-onnx library actually installed, since only a real,
     // successful load ever sets mSupportsBiasing true or mModelPath non-empty
@@ -686,54 +696,6 @@ private slots:
         QTest::ignoreMessage(QtWarningMsg, "SpeechRecognizerFactory: Vosk backend requested but not available");
         mudlet::self()->initSpeechRecognition(SpeechRecognizerFactory::Backend::Vosk);
         QVERIFY2(!mudlet::self()->speechRecognizer(), "an unavailable backend must not have been silently swapped for Auto's own choice");
-    }
-
-    // Live testing found that mudlet::initSpeechRecognition() returned
-    // immediately whenever mpSpeechRecognizer was already built, so
-    // stt.close() followed by stt.init() naming a different engine kept
-    // feeding models to the first engine the session ever built. This is
-    // factory and lifetime logic, not anything the engine itself does, so the
-    // built-in macOS backend - the one backend this file can build with no
-    // library and no model installed - is enough to exercise the swap and the
-    // two cases that must NOT swap, without needing a second real engine.
-    void initSpeechRecognitionSwapsToADifferentExplicitBackend()
-    {
-#if defined(Q_OS_MACOS)
-        if (!SpeechRecognizerFactory::backendAvailable(SpeechRecognizerFactory::Backend::Platform)) {
-            QSKIP("no system speech recognizer available for this locale on this machine");
-        }
-        if (VoskRecognizer::libraryAvailable()) {
-            QSKIP("libvosk is installed here, so requesting it below would succeed instead of exercising the refuse-after-teardown path this case checks");
-        }
-        QVERIFY2(!mudlet::self()->speechRecognizer(), "an earlier case in this file left a live recognizer behind");
-
-        mudlet::self()->initSpeechRecognition(SpeechRecognizerFactory::Backend::Platform);
-        QPointer<SpeechRecognizer> firstRecognizer = mudlet::self()->speechRecognizer();
-        QVERIFY2(firstRecognizer, "the built-in macOS backend must have been built");
-
-        // Auto, and the backend already in place, must both leave it alone -
-        // several call sites pass one of these on every setter call, and
-        // rebuilding on either would tear down a working recognizer under a
-        // caller who never asked to switch engines.
-        mudlet::self()->initSpeechRecognition(SpeechRecognizerFactory::Backend::Auto);
-        QCOMPARE(mudlet::self()->speechRecognizer(), firstRecognizer.data());
-        mudlet::self()->initSpeechRecognition(SpeechRecognizerFactory::Backend::Platform);
-        QCOMPARE(mudlet::self()->speechRecognizer(), firstRecognizer.data());
-
-        // A different, explicit backend must tear the first one down - proven
-        // by its own destruction below - even though the replacement is
-        // unavailable here and the swap therefore ends with nothing built.
-        QTest::ignoreMessage(QtWarningMsg, "SpeechRecognizerFactory: Vosk backend requested but not available");
-        mudlet::self()->initSpeechRecognition(SpeechRecognizerFactory::Backend::Vosk);
-        QVERIFY2(!mudlet::self()->speechRecognizer(), "a failed replacement must not have left the old backend in place");
-
-        // releaseResources() runs synchronously during the swap; the actual
-        // deleteLater() destruction needs an event loop turn.
-        QTRY_VERIFY2(firstRecognizer.isNull(), "the old backend must have been destroyed, not merely detached from mpSpeechRecognizer");
-#else
-        QCOMPARE(SpeechRecognizerFactory::backendAvailable(SpeechRecognizerFactory::Backend::Platform), false);
-        QSKIP("no backend on this platform can be built without an engine library, so the swap cannot be exercised here");
-#endif
     }
 
     // gap 2: stt.init() with no argument must be able to reach the built-in
@@ -869,6 +831,93 @@ private slots:
 
         QVERIFY2(names.contains(voskModel), "a Vosk model on disk was not listed");
         QVERIFY2(names.contains(sherpaModel), "a sherpa model on disk was not listed - listModels must not be Vosk-only");
+    }
+
+    // Last in the file on purpose: alone among the cases here, these two
+    // leave a recognizer built on mudlet::self() for the rest of the
+    // process - keeping one is the behaviour they exist to prove - and
+    // several cases above open by asserting the bridge is empty.
+    // Live testing found that mudlet::initSpeechRecognition() returned
+    // immediately whenever mpSpeechRecognizer was already built, so
+    // stt.close() followed by stt.init() naming a different engine kept
+    // feeding models to the first engine the session ever built. Fixing that
+    // brought the opposite risk with it, so the two rules that must NOT
+    // rebuild are pinned here.
+    //
+    // Runs on macOS only, and only where the system speech recognizer is
+    // available for the machine's locale: the built-in macOS backend is the
+    // one backend this file can build with no library and no model installed,
+    // and without it there is nothing to hold on to. Everywhere else this
+    // asserts that no such backend exists and skips.
+    void initSpeechRecognitionKeepsTheBackendOnAutoAndOnTheSameBackend()
+    {
+#if defined(Q_OS_MACOS)
+        if (!SpeechRecognizerFactory::backendAvailable(SpeechRecognizerFactory::Backend::Platform)) {
+            QSKIP("no system speech recognizer available for this locale on this machine");
+        }
+        QVERIFY2(!mudlet::self()->speechRecognizer(), "an earlier case in this file left a live recognizer behind");
+
+        mudlet::self()->initSpeechRecognition(SpeechRecognizerFactory::Backend::Platform);
+        const QPointer<SpeechRecognizer> firstRecognizer = mudlet::self()->speechRecognizer();
+        QVERIFY2(firstRecognizer, "the built-in macOS backend must have been built");
+
+        // Auto, and the backend already in place, must both leave it alone -
+        // several call sites pass one of these on every setter call, and
+        // rebuilding on either would tear down a working recognizer under a
+        // caller who never asked to switch engines.
+        mudlet::self()->initSpeechRecognition(SpeechRecognizerFactory::Backend::Auto);
+        QCOMPARE(mudlet::self()->speechRecognizer(), firstRecognizer.data());
+        mudlet::self()->initSpeechRecognition(SpeechRecognizerFactory::Backend::Platform);
+        QCOMPARE(mudlet::self()->speechRecognizer(), firstRecognizer.data());
+#else
+        QCOMPARE(SpeechRecognizerFactory::backendAvailable(SpeechRecognizerFactory::Backend::Platform), false);
+        QSKIP("no backend on this platform can be built without an engine library, so this cannot be exercised here");
+#endif
+    }
+
+    // sttInit() derives the backend from the model directory's own layout, so
+    // naming a sherpa-onnx model on a Vosk-only machine resolves to a backend
+    // that cannot be built. Tearing the old engine down before finding that
+    // out cost the player a loaded, working model for a mistyped path - so the
+    // replacement is built first, and a failure leaves what is there untouched.
+    //
+    // Runs on macOS only, needs the system speech recognizer available for the
+    // machine's locale, and additionally skips wherever libvosk is installed,
+    // since then the request below would succeed and there would be no failed
+    // replacement to observe. On a developer machine with Vosk set up it never
+    // executes; CI, which installs neither, is where it does its work.
+    void initSpeechRecognitionKeepsAWorkingBackendWhenTheReplacementCannotBeBuilt()
+    {
+#if defined(Q_OS_MACOS)
+        if (!SpeechRecognizerFactory::backendAvailable(SpeechRecognizerFactory::Backend::Platform)) {
+            QSKIP("no system speech recognizer available for this locale on this machine");
+        }
+        if (VoskRecognizer::libraryAvailable()) {
+            QSKIP("libvosk is installed here, so requesting it below would succeed instead of failing the way this case needs");
+        }
+
+        // Reaches the case above's recognizer when that one ran, and builds one
+        // otherwise, so this does not depend on the order the slots run in
+        mudlet::self()->initSpeechRecognition(SpeechRecognizerFactory::Backend::Platform);
+        const QPointer<SpeechRecognizer> workingRecognizer = mudlet::self()->speechRecognizer();
+        QVERIFY2(workingRecognizer, "the built-in macOS backend must have been built");
+
+        QTest::ignoreMessage(QtWarningMsg, "SpeechRecognizerFactory: Vosk backend requested but not available");
+        mudlet::self()->initSpeechRecognition(SpeechRecognizerFactory::Backend::Vosk);
+
+        QVERIFY2(mudlet::self()->speechRecognizer(), "a replacement that could not be built left the bridge with no engine at all");
+        QCOMPARE(mudlet::self()->speechRecognizer(), workingRecognizer.data());
+
+        // Not merely still pointed at: an engine retired the way the swap path
+        // retires one is deleteLater()d, so the destruction only lands on an
+        // event loop turn. Take one, then check the object is still there.
+        QTest::qWait(1);
+        QVERIFY2(!workingRecognizer.isNull(), "the working backend was torn down for a replacement that never arrived");
+        QCOMPARE(mudlet::self()->speechRecognizer(), workingRecognizer.data());
+#else
+        QCOMPARE(SpeechRecognizerFactory::backendAvailable(SpeechRecognizerFactory::Backend::Platform), false);
+        QSKIP("no backend on this platform can be built without an engine library, so this cannot be exercised here");
+#endif
     }
 };
 

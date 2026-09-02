@@ -94,12 +94,28 @@ public:
             return;
         }
         doStartListening();
+        // The rule doStartListening()'s comment below states, checked rather
+        // than only written down: a backend that returns while still Ready has
+        // reported a failed start to the Lua layer over an engine that may in
+        // fact be running.
+        Q_ASSERT(state() != State::Ready);
     }
 
     // Finalises the pending utterance, emitting finalResult() with whatever
     // is pending. Only Listening has one to finalise.
     void stopListening()
     {
+        // Starting is a stop too, for cancel()'s reason below: there is no
+        // audio to finalise yet, but leaving the request pending means
+        // answering the permission dialog later opens the microphone after
+        // the caller asked to stop. Handled here rather than in each caller -
+        // sttToggle() read Starting as "not listening", took the start branch,
+        // and told the player it was now listening while the microphone opened
+        // behind them.
+        if (state() == State::Starting) {
+            cancel();
+            return;
+        }
         if (state() != State::Listening) {
             return;
         }
@@ -201,6 +217,11 @@ public:
             return VocabularyResult::Applied;
         }
         const VocabularyResult result = applyVocabulary(words);
+        // applyVocabulary()'s documented contract, checked rather than only
+        // written down: the capability test above has already ruled the third
+        // case out, so a backend answering Unsupported here would be claiming
+        // support and refusing the words in the same breath.
+        Q_ASSERT(result != VocabularyResult::Unsupported);
         mVocabularyApplied = (result == VocabularyResult::Applied);
         return result;
     }

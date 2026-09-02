@@ -18,8 +18,11 @@
  ***************************************************************************/
 
 // Speech-to-text Lua API functions for TLuaInterpreter
-// These functions provide a minimal bridge between the Vosk-based
-// speech recognition engine and Lua scripts.
+// These functions provide a minimal bridge between Mudlet's speech recognition
+// engines - Vosk, sherpa-onnx and the built-in macOS backend - and Lua
+// scripts. Which one answers is decided by SpeechRecognizerFactory; nothing
+// here is engine-specific beyond the model and library management calls that
+// docs/stt-api.md marks platform-tier.
 
 #include "TLuaInterpreter.h"
 
@@ -375,17 +378,18 @@ int TLuaInterpreter::sttStop(lua_State* L)
     // answers, and returning true for both told a caller its session had ended
     // cleanly when the engine had faulted and produced nothing.
     if (pRecognizer->state() == SpeechRecognizer::State::Error) {
-        return warnArgumentValue(L, funcName, "nothing was stopped - speech recognition is in an error state; the sysSTTError event carries the reason");
+        const QString message = qsl("nothing was stopped - speech recognition is in an error state; the sysSTTError event carries the reason");
+        // Raised as well as returned: docs/stt-api.md's "refusals speak" covers
+        // every refusal the engine caused, and a consumer driving the bridge
+        // from events alone heard nothing at all about this one.
+        reportSpeechRefusal(message);
+        return warnArgumentValue(L, funcName, message);
     }
 
-    if (pRecognizer->listening()) {
-        pRecognizer->stopListening();
-    } else if (pRecognizer->starting()) {
-        // A start still waiting on the permission dialog: there is no audio to
-        // finalise, and leaving it pending means answering the dialog later
-        // opens the microphone after the player asked to stop
-        pRecognizer->cancel();
-    }
+    // Unconditional: which states have something to stop, and what a pending
+    // start does instead of finalising, are SpeechRecognizer::stopListening()'s
+    // rules now rather than this binding's copy of them.
+    pRecognizer->stopListening();
 
     lua_pushboolean(L, true);
     return 1;
@@ -412,7 +416,12 @@ int TLuaInterpreter::sttToggle(lua_State* L)
         return warnArgumentValue(L, funcName, message);
     }
 
-    if (pRecognizer->listening()) {
+    // starting() counts as on: a request still waiting on the permission
+    // dialog is one the player asked for, and reading it as off took the start
+    // branch, had it refused silently, and answered "now listening" while the
+    // microphone opened behind them. stopListening() handles Starting itself,
+    // so the branch below needs no special case of its own.
+    if (pRecognizer->listening() || pRecognizer->starting()) {
         pRecognizer->stopListening();
         lua_pushboolean(L, false);
     } else {

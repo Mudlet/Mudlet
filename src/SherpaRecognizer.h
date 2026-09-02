@@ -98,7 +98,6 @@ public:
 
     // Reset library load state to allow re-checking (e.g., after installation)
     static bool resetLibraryLoadState();
-    static void unloadLibraryByRequest(bool unloaded) { sLibraryUnloadedByRequest = unloaded; }
 
     // Get the list of paths where the sherpa-onnx library is searched
     static QStringList librarySearchPaths();
@@ -196,11 +195,16 @@ private:
     // Smoothed microphone level, reported so a consumer can see how well the
     // speech arrived rather than only what was made of it
     float mRecentAudioLevel = 0.0f;
-    static constexpr float SILENCE_LEVEL = 0.01f;
+    // Whether this session has already reported the decoder handing back no
+    // result object at all. Latched, because the chunk handler that checks it
+    // runs twenty times a second and a library broken enough to do this once
+    // will do it on every chunk.
+    bool mMissingResultReported = false;
+    static constexpr float scmSilenceLevel = 0.01f;
     // A second of continuous silence before the decoder may be reset outside
     // of finishing an utterance: long enough that a phrase getting under way
     // has already registered and can block it.
-    static constexpr int SILENT_CHUNKS_BEFORE_IDLE_RESET = 20;
+    static constexpr int scmSilentChunksBeforeIdleReset = 20;
 
     // sherpa-onnx handles (opaque pointers)
     const SherpaOnnxOnlineRecognizer* mRecognizer = nullptr;
@@ -213,9 +217,6 @@ private:
     static QLibrary sSherpaLibrary;
     static bool sLibraryLoaded;
     static bool sLibraryLoadAttempted;
-    // Set by unloadLibrary(), cleared by reloadLibrary(): while it stands, no
-    // read-shaped call may map the library back in behind the caller's back
-    static bool sLibraryUnloadedByRequest;
 
     // sherpa-onnx C API function pointers
     using create_recognizer_fn = const SherpaOnnxOnlineRecognizer* (*)(const SherpaOnnxOnlineRecognizerConfig*);

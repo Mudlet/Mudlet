@@ -187,6 +187,13 @@ void mudlet::raiseSpeechEvent(const QString& name, const QString& value)
 {
     Host* pHost = getActiveHost();
     if (!pHost) {
+        // A fault landing as the last profile closes has nowhere to be raised,
+        // and dropping it silently leaves no trace of it anywhere. Only the
+        // error path is logged: the result and state events are ordinary
+        // traffic, and warning on every one of those would bury this.
+        if (name == qsl("sysSTTError")) {
+            qWarning().noquote() << "speech recognition error with no active profile to report it to:" << value;
+        }
         return;
     }
     TEvent event{};
@@ -229,24 +236,31 @@ void mudlet::initSpeechRecognition(SpeechRecognizerFactory::Backend backend)
         if (backend == SpeechRecognizerFactory::Backend::Auto || backend == currentSpeechBackend(mpSpeechRecognizer)) {
             return;
         }
+    }
 
-        // Tear the old engine down before building its replacement: it is
-        // parented to this and has live signal connections. releaseResources()
-        // drops its native resources, disconnect() detaches the connections
-        // made below, and deleteLater() - rather than delete - defers the
-        // actual destruction, since a handler reached through one of those
-        // connections may still be on the stack (the same reentrancy hazard
+    // Build the replacement before touching what is already working. The
+    // backend is derived from the model directory's layout, so a mistyped path
+    // on a machine with only one engine installed resolves to the other one and
+    // create() answers nullptr - and tearing down first would have cost the
+    // caller their loaded model to answer a call that could not be honoured.
+    SpeechRecognizer* pReplacement = SpeechRecognizerFactory::create(backend, this);
+    if (!pReplacement) {
+        return;
+    }
+
+    if (mpSpeechRecognizer) {
+        // Now the replacement is in hand, retire the old engine: it is parented
+        // to this and has live signal connections. releaseResources() drops its
+        // native resources, disconnect() detaches the connections made below,
+        // and deleteLater() - rather than delete - defers the actual
+        // destruction, since a handler reached through one of those connections
+        // may still be on the stack (the same reentrancy hazard
         // SherpaRecognizer::slot_pcmReady() guards against).
         mpSpeechRecognizer->releaseResources();
         mpSpeechRecognizer->disconnect();
         mpSpeechRecognizer->deleteLater();
-        mpSpeechRecognizer = nullptr;
     }
-
-    mpSpeechRecognizer = SpeechRecognizerFactory::create(backend, this);
-    if (!mpSpeechRecognizer) {
-        return;
-    }
+    mpSpeechRecognizer = pReplacement;
 
     // Bridge glue only: recognizer signals surface as Lua events on the active
     // profile. Text routing, UI state and policy all belong to the packages

@@ -473,21 +473,29 @@ void AppleSpeechRecognizer::handleRecognition(quint64 generation, const QString&
         return; // from a task this recognizer has already moved on from
     }
 
+    // The transcription first, even when a failure came with it: Apple can
+    // deliver a final result and a non-fatal error in the same callback, and
+    // handling the failure first threw the phrase away. Ending the task is
+    // still the failure's business, so that follows.
+    if (finalUtterance && !text.isEmpty()) {
+        emit finalResult(text);
+        if (!words.isEmpty()) {
+            emit wordsResult(words);
+        }
+        mLastPartialResult.clear();
+        // A final result ends the task, so the session needs another one to go
+        // on hearing anything
+        handleTaskEnded(failure);
+        return;
+    }
+
     if (!failure.isEmpty()) {
         handleTaskEnded(failure);
         return;
     }
 
     if (finalUtterance) {
-        if (!text.isEmpty()) {
-            emit finalResult(text);
-            if (!words.isEmpty()) {
-                emit wordsResult(words);
-            }
-        }
         mLastPartialResult.clear();
-        // A final result ends the task, so the session needs another one to go
-        // on hearing anything
         handleTaskEnded(QString());
         return;
     }
@@ -528,6 +536,14 @@ void AppleSpeechRecognizer::handleTaskEnded(const QString& failure)
     // way of closing a quiet stretch or a finished phrase, however it worded
     // it. Only tasks dying the instant they start are a fault worth reporting
     // - anything else and a silent room would end the session.
+    //
+    // Logged all the same, whether or not it is reported: a recognizer failing
+    // over and over just outside the immediate-failure window leaves a live
+    // microphone, a moving audio level and a state that says listening, and
+    // without this there was nothing anywhere to explain it.
+    if (!failure.isEmpty()) {
+        qWarning().noquote() << "AppleSpeechRecognizer: recognition task ended mid-session:" << failure;
+    }
     mConsecutiveImmediateFailures = diedImmediately ? mConsecutiveImmediateFailures + 1 : 0;
     if (mConsecutiveImmediateFailures >= scmMaxImmediateFailures) {
         mpCapture->stop();
@@ -568,6 +584,11 @@ void AppleSpeechRecognizer::doStopListening()
         // Nothing came back. Processing is not a state anything can be started
         // from, so waiting for ever would take the recognizer with it.
         cancelTask();
+        // Said out loud before settling: from Lua this is processing followed
+        // by ready with no result in between, which is exactly what a phrase
+        // nobody spoke looks like - and here a phrase was spoken and lost.
+        //: Shown when macOS speech recognition was asked for the last phrase and never answered
+        emit errorOccurred(tr("macOS speech recognition did not return the last phrase in time; it has been lost."));
         setState(State::Ready);
     });
 }
