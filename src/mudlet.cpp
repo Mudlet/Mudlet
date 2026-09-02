@@ -57,6 +57,7 @@
 #include "dlgPackageManager.h"
 #include "dlgProfilePreferences.h"
 #include "MMCPServer.h"
+#include "widgetutils.h"
 
 #include <QAccessible>
 #include <QAccessibleAnnouncementEvent>
@@ -1060,7 +1061,6 @@ void mudlet::init()
     auto frame = new QWidget(this);
     setCentralWidget(frame);
     mpTabBar = new TTabBar(frame);
-    mpTabBar->setMaximumHeight(30);
     mpTabBar->setFocusPolicy(Qt::NoFocus);
     mpTabBar->setTabsClosable(true);
     mpTabBar->setAutoHide(true);
@@ -1079,6 +1079,7 @@ void mudlet::init()
     connect(mpTabBar, &QWidget::customContextMenuRequested, this, &mudlet::slot_showTabContextMenu);
     auto layoutTopLevel = new QVBoxLayout(frame);
     layoutTopLevel->setContentsMargins(0, 0, 0, 0);
+    layoutTopLevel->setSpacing(0);
     layoutTopLevel->addWidget(mpTabBar);
     mpWidget_profileContainer = new QWidget(frame);
     const QPalette mainPalette;
@@ -2414,7 +2415,7 @@ void mudlet::slot_moduleManager()
     Host* activeHost = getActiveHost();
     QWidget* activeConsole = activeHost ? activeHost->mpConsole : nullptr;
     QWidget* referenceWidget = activeConsole ? activeConsole : this;
-    utils::forceRepositionDialogOnParentScreen(moduleManager, referenceWidget);
+    widgetutils::forceRepositionDialogOnParentScreen(moduleManager, referenceWidget);
 }
 
 bool mudlet::openWebPage(const QString& path)
@@ -2454,7 +2455,7 @@ void mudlet::slot_packageManager()
     Host* activeHost = getActiveHost();
     QWidget* activeConsole = activeHost ? activeHost->mpConsole : nullptr;
     QWidget* referenceWidget = activeConsole ? activeConsole : this;
-    utils::forceRepositionDialogOnParentScreen(packageManager, referenceWidget);
+    widgetutils::forceRepositionDialogOnParentScreen(packageManager, referenceWidget);
 }
 
 void mudlet::slot_packageExporter()
@@ -2474,7 +2475,7 @@ void mudlet::slot_packageExporter()
     Host* activeHost = getActiveHost();
     QWidget* activeConsole = activeHost ? activeHost->mpConsole : nullptr;
     QWidget* referenceWidget = activeConsole ? activeConsole : this;
-    utils::forceRepositionDialogOnParentScreen(d, referenceWidget);
+    widgetutils::forceRepositionDialogOnParentScreen(d, referenceWidget);
 }
 
 // Qt reports several inactive states - suspended, hidden, and plain inactive -
@@ -4428,7 +4429,7 @@ void mudlet::slot_showEditorDialog()
     Host* activeHost = getActiveHost();
     QWidget* activeConsole = activeHost ? activeHost->mpConsole : nullptr;
     QWidget* referenceWidget = activeConsole ? activeConsole : this;
-    utils::forceRepositionDialogOnParentScreen(pEditor, referenceWidget);
+    widgetutils::forceRepositionDialogOnParentScreen(pEditor, referenceWidget);
 }
 
 void mudlet::slot_showTriggerDialog()
@@ -4462,7 +4463,7 @@ void mudlet::slot_showTriggerDialog()
     });
 
     // Position dialog on the same screen as the main window for better multi-monitor UX
-    utils::positionDialogOnParentScreen(pEditor, this);
+    widgetutils::positionDialogOnParentScreen(pEditor, this);
 
     pEditor->slot_showTriggers();
     pEditor->raise();
@@ -4872,7 +4873,7 @@ void mudlet::showOptionsDialog(const QString& tab, Host* pHost)
     // that restores its position after being shown
     QWidget* hostConsole = pHost ? pHost->mpConsole : nullptr;
     QWidget* referenceWidget = hostConsole ? hostConsole : this;
-    utils::forceRepositionDialogOnParentScreen(pPrefs, referenceWidget);
+    widgetutils::forceRepositionDialogOnParentScreen(pPrefs, referenceWidget);
 }
 
 void mudlet::slot_assignShortcutsFromProfile(Host* pHost)
@@ -5457,7 +5458,7 @@ void mudlet::slot_notes()
     Host* activeHost = getActiveHost();
     QWidget* activeConsole = activeHost ? activeHost->mpConsole : nullptr;
     QWidget* referenceWidget = activeConsole ? activeConsole : this;
-    utils::forceRepositionDialogOnParentScreen(pNotes, referenceWidget);
+    widgetutils::forceRepositionDialogOnParentScreen(pNotes, referenceWidget);
 }
 
 void mudlet::slot_profileDiscord()
@@ -7572,11 +7573,6 @@ void mudlet::setAppearance(const enums::Appearance state, const bool& loading)
         return;
     }
 
-    mDarkMode = false;
-    if (state == enums::Appearance::dark || (state == enums::Appearance::systemSetting && QGuiApplication::styleHints()->colorScheme() == Qt::ColorScheme::Dark)) {
-        mDarkMode = true;
-    }
-
     switch (state) {
     case enums::Appearance::dark:
         QGuiApplication::styleHints()->setColorScheme(Qt::ColorScheme::Dark);
@@ -7587,6 +7583,14 @@ void mudlet::setAppearance(const enums::Appearance state, const bool& loading)
     case enums::Appearance::systemSetting:
         QGuiApplication::styleHints()->setColorScheme(Qt::ColorScheme::Unknown);
         break;
+    }
+
+    // Only read the scheme after the override above has been replaced -
+    // before that, colorScheme() still reports the previous explicit
+    // choice, so systemSetting would inherit it instead of the OS setting.
+    mDarkMode = false;
+    if (state == enums::Appearance::dark || (state == enums::Appearance::systemSetting && QGuiApplication::styleHints()->colorScheme() == Qt::ColorScheme::Dark)) {
+        mDarkMode = true;
     }
 
     if (needsCustomDarkTheme()) {
@@ -7602,9 +7606,32 @@ void mudlet::setAppearance(const enums::Appearance state, const bool& loading)
         qApp->setStyle(new AltFocusMenuBarDisable(mDefaultStyle));
     }
 
+    refreshTabBarsAfterStyleChange();
+
     getHostManager().changeAllHostColour(getActiveHost());
     mAppearance = state;
     emit signal_appearanceChanged(state);
+}
+
+// The application style object is replaced in two places - setAppearance()
+// and Lua's setAppStyleSheet() - and the tab bars miss the StyleChange
+// broadcast both times (see TTabBar::refreshAfterApplicationStyleChange()).
+void mudlet::refreshTabBarsAfterStyleChange()
+{
+    if (mpTabBar) {
+        mpTabBar->refreshAfterApplicationStyleChange();
+    }
+    // mDetachedWindows is keyed by profile name, so a window hosting several
+    // profiles appears once per profile - collect the unique windows first.
+    QSet<TDetachedWindow*> uniqueDetachedWindows;
+    for (const auto& pDetachedWindow : std::as_const(mDetachedWindows)) {
+        if (pDetachedWindow) {
+            uniqueDetachedWindows.insert(pDetachedWindow);
+        }
+    }
+    for (TDetachedWindow* pDetachedWindow : uniqueDetachedWindows) {
+        pDetachedWindow->refreshAfterApplicationStyleChange();
+    }
 }
 
 void mudlet::setInterfaceLanguage(const QString& languageCode)
@@ -8472,14 +8499,13 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl, const QString& prof
         mudlet::self()->mPackagesToInstallList.append(qsl(":/packages/generic_mapper/generic_mapper.mpackage"));
     }
 
-    // A modest starter UI that adapts to whatever any game provides, only for
-    // players new to Mudlet - veterans will have their own layouts already.
+    // A modest starter UI that adapts to whatever any game provides.
     // Games whose bundled loader above fetches the game's own full interface
     // (flagged in TGameDetails) are skipped: the starter UI would only fight
     // it for the same screen space. Games that push a GUI via Client.GUI at
     // connect time are handled at runtime instead - the starter UI stands
     // aside when one installs.
-    if (!mudlet::self()->experiencedMudletPlayer() && !TGameDetails::gameProvidesOwnUi(gameUrl)) {
+    if (!TGameDetails::gameProvidesOwnUi(gameUrl)) {
         mudlet::self()->mPackagesToInstallList.append(qsl(":/packages/mudlet-base-ui/mudlet-base-ui.mpackage"));
     }
 
