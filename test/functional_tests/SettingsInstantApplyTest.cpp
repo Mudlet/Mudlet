@@ -149,8 +149,6 @@ private slots:
     {
         delete mpPreferences;
         mpPreferences = nullptr;
-        // A case that closed the dialog leaves a profile save running - mFORCE_SAVE_ON_EXIT
-        // defaults to on - and that write lands off the main thread, in some later case.
         mpHost->waitForProfileSave();
     }
 
@@ -321,8 +319,6 @@ private slots:
         openPreferences();
         mpPreferences->checkBox_enableTextAnalyzer->click();
         mpPreferences->close();
-        // ...by this close, not by one left over from an earlier case: saveProfile()
-        // registers its writer before returning, and refuses to start a second save
         QVERIFY2(mpHost->currentlySavingProfile(), "closing the settings did not start a profile save");
 
         // the write itself runs off the main thread
