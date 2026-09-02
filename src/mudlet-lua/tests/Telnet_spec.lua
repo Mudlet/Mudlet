@@ -152,6 +152,7 @@ describe("Tests MSDP subnegotiation handling", function()
   -- rather than one value if a control character arrives unescaped.
   local VAR, VAL = "<01>", "<02>"
   local TABLE_OPEN, TABLE_CLOSE = "<03>", "<04>"
+  local ARRAY_CLOSE = "<06>"
 
   local function feedMsdp(payload)
     local ok, msg = feedTelnet("<T_IAC><T_SB><O_MSDP>" .. payload .. "<T_IAC><T_SE>")
@@ -287,7 +288,10 @@ describe("Tests MSDP subnegotiation handling", function()
       assert.is_false(fired, "a variable the game never finished sending raised its arrival event")
     end)
 
-    it("drops a variable that closes a table it never opened", function()
+    it("yields no variable and no event when the game closes a table it never opened", function()
+      -- the drop and a failed decode are indistinguishable from Lua: both leave the
+      -- variable unset and silent. What the drop adds is a named diagnostic and the
+      -- same outcome on every yajl version, and MsdpMalformedDiagnosticTest covers that
       local fired = false
       local id = registerAnonymousEventHandler("msdp.MSDPOVER", function() fired = true end)
       feedMsdp(VAR .. "MSDPOVER" .. VAL .. TABLE_CLOSE .. VAR .. "MSDPNEXT" .. VAL .. "ok")
@@ -297,15 +301,36 @@ describe("Tests MSDP subnegotiation handling", function()
       assert.equals("ok", msdp.MSDPNEXT, "the malformed variable took the rest of the message with it")
     end)
 
-    it("drops an unbalanced close even when it is the message's last variable", function()
-      -- the mid-loop flush catches an unbalanced close when another variable
-      -- follows it - this is the other path, where the message ends on it
+    it("yields no variable and no event when an unbalanced close ends the message", function()
+      -- the end flush rather than the mid-loop one; as above, this asserts the
+      -- outcome both mechanisms share, not the drop itself
       local fired = false
       local id = registerAnonymousEventHandler("msdp.MSDPSOLE", function() fired = true end)
       feedMsdp(VAR .. "MSDPSOLE" .. VAL .. TABLE_CLOSE)
       killAnonymousEventHandler(id)
       assert.is_nil(msdp.MSDPSOLE)
       assert.is_false(fired, "a variable with an unbalanced close raised its arrival event")
+    end)
+
+    -- the close arrives on a variable that never got a value, so there is nothing to
+    -- flush and nothing to clear the malformed flag - it used to survive to the next
+    -- variable, dropping a well-formed one and naming it in the error. One case per
+    -- marker rather than a loop over both, so a failure of either is its own report
+    local function strayCloseKeepsTheNextVariable(marker, name)
+      local fired = false
+      local id = registerAnonymousEventHandler("msdp." .. name, function() fired = true end)
+      feedMsdp(VAR .. "MSDPKEPT" .. VAL .. "1" .. VAR .. "MSDPVOID" .. marker .. VAR .. name .. VAL .. "3")
+      killAnonymousEventHandler(id)
+      assert.equals("3", msdp[name], name .. " was dropped, so the stray close was still blamed on it")
+      assert.is_true(fired, name .. " arrived without raising its event")
+    end
+
+    it("keeps the variable after a stray table close, which used to take the blame", function()
+      strayCloseKeepsTheNextVariable(TABLE_CLOSE, "MSDPSTRAYT")
+    end)
+
+    it("keeps the variable after a stray array close, which used to take the blame", function()
+      strayCloseKeepsTheNextVariable(ARRAY_CLOSE, "MSDPSTRAYA")
     end)
 
     it("keeps the old value and stays silent when a decode fails", function()
