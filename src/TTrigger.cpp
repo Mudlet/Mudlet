@@ -26,17 +26,37 @@
 
 
 #include "Host.h"
+#include "TBuffer.h"
 #include "TConsole.h"
 #include "TConsoleModel.h"
 #include "TDebug.h"
+#include "TLuaInterpreter.h"
 #include "TMatchState.h"
 #include "TMedia.h"
-#include "mudlet.h"
+#include "TMediaData.h"
+#include "TriggerUnit.h"
+#include "TMainConsole.h"
+#include <QByteArray>
+#include <QChar>
+#include <QDebug>
+#include <QDir>
+#include <QLatin1Char>
+#include <QLatin1String>
+#include <QMultiMap>
+#include <QPair>
 #include <QRegularExpression>
+#include <QScopedPointer>
+#include <QSharedPointer>
+#include <QStringView>
+#include <QVector>
 
+#include <cstdint>
 #include <cstring>
+#include <deque>
 #include <list>
+#include <new>
 #include <sstream>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -250,6 +270,7 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
 {
     patterns.replaceInStrings("\n", "");
     mPatterns.clear();
+    mSubstringMatchers.clear();
     mRegexes.clear();
     mMatchData.clear();
     mRegexJitCompiled.clear();
@@ -302,6 +323,12 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
             mRegexes.emplace_back();
             mMatchData.emplace_back();
             mRegexJitCompiled.push_back(false);
+
+            if (patternKinds.at(i) == REGEX_SUBSTRING) {
+                mSubstringMatchers.emplace_back(std::make_unique<QStringMatcher>(patterns.at(i)));
+            } else {
+                mSubstringMatchers.emplace_back(nullptr);
+            }
 
             if (patternKinds.at(i) == REGEX_PERL) {
                 const QByteArray& regexp = patterns.at(i).toUtf8();
@@ -768,7 +795,7 @@ void TTrigger::setExpiryCount(int expiryCount)
 
 bool TTrigger::match_substring(const QString& haystack, const QString& needle, int patternNumber, int posOffset, int lineNumber)
 {
-    const int where = indexOfNeedle(haystack, needle, 0);
+    const int where = mSubstringMatchers[patternNumber]->indexIn(haystack);
     if (where != -1) {
         processSubstringMatch(haystack, needle, patternNumber, posOffset, where, lineNumber);
         return true;
@@ -1425,6 +1452,7 @@ bool TTrigger::setupTmpColorTrigger(int ansiFg, int ansiBg)
     // Everything setRegexCodeList() fills is indexed by pattern number, so a
     // pattern added here has to extend all of it - even though a colour
     // pattern is matched out of mColorPatternList and compiles no regex.
+    mSubstringMatchers.emplace_back(nullptr);
     mPatternsUtf8.emplace_back(patternText.toUtf8().constData());
     mRegexes.emplace_back();
     mMatchData.emplace_back();

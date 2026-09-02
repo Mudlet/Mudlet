@@ -53,6 +53,7 @@ class QJsonObject;
 class QRegularExpression;
 class QTimer;
 class TConsole;
+class THyperlinkVisibilityManager;
 
 class WrapInfo
 {
@@ -447,6 +448,7 @@ public:
     bool mEchoingText = false;
 
 private:
+    THyperlinkVisibilityManager* hyperlinkVisibilityManagerOrNull();
     inline QList<WrapInfo> getWrapInfo(const QString& lineText, bool isNewline, const int maxWidth, const int indent, const int hangingIndent);
     void shrinkBuffer();
     void syncPreTriggerPassLine(int y);

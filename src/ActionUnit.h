@@ -26,11 +26,13 @@
 
 #include "utils.h"
 
+#include <QList>
 #include <QMap>
 #include <QPointer>
 #include <QString>
 #include <list>
 #include <utility>
+#include <vector>
 
 class Host;
 class mudlet;

@@ -876,6 +876,14 @@ function Adjustable.Container:add(window, cons)
     end
 end
 
+function Adjustable.Container:remove(window)
+    if self.Inside and self.Inside.windowList[window.name] then
+        self.Inside:remove(window)
+    else
+        Geyser.remove(self, window)
+    end
+end
+
 -- overridden show function to prevent to show the right click menu on show
 function Adjustable.Container:show(auto)
     Geyser.Container.show(self, auto)

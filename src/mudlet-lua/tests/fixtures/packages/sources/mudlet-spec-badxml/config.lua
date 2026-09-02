@@ -1,0 +1,5 @@
+mpackage = [[mudlet-spec-badxml]]
+author = [[Mudlet test suite]]
+title = [[Fixture whose XML cannot be parsed, for Package_spec.lua]]
+version = [[1.0]]
+description = [[A valid archive holding a Mudlet XML file that is malformed, so the import fails while the archive itself unpacks cleanly.]]

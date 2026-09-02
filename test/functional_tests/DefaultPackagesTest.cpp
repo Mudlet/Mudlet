@@ -155,12 +155,14 @@ private slots:
 
     // Games that install an interface of their own get a loader instead of the
     // starter UI, which would otherwise fight it for the same screen space.
-    // This config dir has no profiles, so the player counts as new to Mudlet.
     void test_gamesWithTheirOwnUiSkipTheStarterUi()
     {
         QVERIFY(preinstallsFor(qsl("example.com")).contains(qsl(":/packages/mudlet-base-ui/mudlet-base-ui.mpackage")));
+        // mg.mud.de is one of MorgenGrauen's alternate addresses and icesus.org
+        // is Icesus' primary one, so both halves of the URL match are covered.
         QVERIFY(!preinstallsFor(qsl("mg.mud.de")).contains(qsl(":/packages/mudlet-base-ui/mudlet-base-ui.mpackage")));
         QVERIFY(preinstallsFor(qsl("mg.mud.de")).contains(qsl(":/packages/mg-loader/mg-loader.mpackage")));
+        QVERIFY(!preinstallsFor(qsl("icesus.org")).contains(qsl(":/packages/mudlet-base-ui/mudlet-base-ui.mpackage")));
     }
 
     // Why mpkg cannot be in a test profile: see setupPreInstallPackages() in
