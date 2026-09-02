@@ -277,7 +277,7 @@ void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
     aboutMudletBody.append(
         tr("<p>Others too, have make their mark on different aspects of the Mudlet project and if they have not been mentioned here it is by no means intentional! For past contributors you may see them mentioned in the <b><a href=\"https://launchpad.net/~mudlet-makers/+members#active\">Mudlet Makers</a></b> list (on our former bug-tracking site), or for on-going contributors they may well be included in the <b><a href=\"https://github.com/Mudlet/Mudlet/graphs/contributors\">Contributors</a></b> list on GitHub.</p>\n"
            "<br>\n"
-           "<p>Many icons are taken from the <span style=\"color:#bc8942;\"><b><u>KDE4 oxygen icon theme</u></b></span> at <a href=\"https://web.archive.org/web/20130921230632/http://www.oxygen-icons.org/\">www.oxygen-icons.org <sup>{wayback machine archive}</sup></a> or <a href=\"http://www.kde.org\">www.kde.org</a>.  Most of the rest are from Thorsten Wilms, or from Stephen Lyons combining bits of Thorsten's work with the other sources.</p>\n"
+           "<p>Many icons are taken from the <span style=\"color:#bc8942;\"><b><u>KDE4 oxygen icon theme</u></b></span> at <a href=\"https://web.archive.org/web/20130921230632/http://www.oxygen-icons.org/\">www.oxygen-icons.org <sup>{wayback machine archive}</sup></a> or <a href=\"http://www.kde.org\">www.kde.org</a>.  Most of the rest are from Thorsten Wilms, or from Stephen Lyons combining bits of Thorsten's work with the other sources.  The settings dialog's line icons are from the <span style=\"color:#bc8942;\"><b><u>Lucide icon set</u></b></span> at <a href=\"https://lucide.dev\">lucide.dev</a>, used under the ISC licence.</p>\n"
            "<p>Special thanks to <span style=\"color:#bc8942;\"><b>Brett Duzevich</b></span> and <span style=\"color:#bc8942;\"><b>Ronny Ho</b></span>. They have contributed many good ideas and thus helped improve the scripting framework substantially.</p>\n"
            "<p>Thanks to <span style=\"color:#bc8942;\"><b>Tomas Mecir</b></span> (<span style=\"color:#0000ff;\">kmuddy@kmuddy.com</span>) who brought us all together and inspired us with his KMuddy project. Mudlet is using some of the telnet code he wrote for his KMuddy project (<a href=\"https://cgit.kde.org/kmuddy.git/\">cgit.kde.org/kmuddy.git/</a>).</p>\n"
            "<p>Special thanks to <span style=\"color:#bc8942;\"><b>Nick Gammon</b></span> (<a href=\"http://www.gammon.com.au/mushclient/mushclient.htm\">www.gammon.com.au/mushclient/mushclient.htm</a>) for giving us some valued pieces of advice.</p>"));
@@ -1310,6 +1310,12 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                             "All rights reserved.</h3>"));
 #endif
 
+    //: Credits the speech recognition library Mudlet can load. It is not bundled - the user installs it - so this names it rather than reproducing its licence
+    QString speechBackendsHeader(tr("<h2><u>Speech recognition backends</u></h2>"
+                                    "<h3>Mudlet can drive <a href=\"https://alphacephei.com/vosk\">Vosk</a> (Apache 2.0).<br>"
+                                    "It does not ship with Mudlet: you install it yourself, and its licence travels "
+                                    "with the files you download.</h3>"));
+
     QString swordModelHeader(tr("<h2><u>Sword 3D Model</u></h2>"
                                "<h3>Model obtained from <a href=\"https://sketchfab.com/3d-models/sword-07463a2658e04d6ab8a42b5639a35d63\">Sketchfab</a><br>"
                                "Author: <a href=\"https://sketchfab.com/minghau\">minghauLoh</a><br>"
@@ -1422,6 +1428,9 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                                   .arg(openSSL3Header,                         // 46 - OpenSSL3 header - translatable
                                        APACHE2_Body));                         // 47 - OpenSSL3 body APACHE2 - not translatable
 #endif
+
+    license_3rdParty_texts.append(qsl("<hr>%48")
+                                  .arg(speechBackendsHeader));                 // 48 - speech recognition backends - translatable
 
     license_3rdParty_texts.append(qsl("</body></html>"));
 

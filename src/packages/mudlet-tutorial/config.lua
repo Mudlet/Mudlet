@@ -17,5 +17,5 @@ After installing, just following along with the onscreen commands.
 
 * https://mudlet.org
 * https://wiki.mudlet.org]]
-version = [[4]]
+version = [[5]]
 created = "2025-09-07T10:32:00+07:00"

@@ -106,6 +106,7 @@ if(WIN32)
   set(APP_TARGET mudlet.exe)
 elseif(APPLE)
   set(APP_TARGET Mudlet)
+  enable_language(OBJCXX)
 else()
   set(APP_TARGET mudlet)
 endif()
@@ -136,7 +137,7 @@ else()
 endif()
 
 # Set APP_VERSION
-set(APP_VERSION 4.22.0)
+set(APP_VERSION 5.0.0)
 
 # Set APP_BUILD based on environment variable MUDLET_VERSION_BUILD. An explicitly
 # empty value must be distinguished from an unset one so release builds (CI exports
@@ -303,4 +304,8 @@ add_subdirectory(3rdparty/communi)
 add_subdirectory(3rdparty/qt-tags-widget)
 add_subdirectory(translations/translated)
 add_subdirectory(src)
-add_subdirectory(test)
+
+option(BUILD_TESTING "Build the test tree" ON)
+if(BUILD_TESTING)
+  add_subdirectory(test)
+endif()

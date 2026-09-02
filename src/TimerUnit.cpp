@@ -24,10 +24,21 @@
 #include "TimerUnit.h"
 
 
+#include "Host.h"
+#include "Tree.h"
 #include "mudlet.h"
 #include "TTimer.h"
+#include "utils.h"
+
+#include <QLatin1String>
+#include <QMutableSetIterator>
+#include <QSetIterator>
+#include <QStringList>
+#include <QTimer>
+#include <QVariant>
 
 #include <functional>
+#include <utility>
 
 /* We need an explicit constructor in this file as the Host class is forward
  * declared in the header file and it is problematic to define any dereferencing
@@ -46,7 +57,8 @@ TimerUnit::~TimerUnit()
         timer->mpHost = nullptr;
         // Also set mpHost to null on all children recursively
         std::function<void(TTimer*)> nullifyChildren = [&nullifyChildren](TTimer* t) {
-            for (auto child : *t->mpMyChildrenList) {
+            for (auto* childNode : *t->mpMyChildrenList) {
+                auto* child = static_cast<TTimer*>(childNode);
                 child->mpHost = nullptr;
                 nullifyChildren(child);
             }
@@ -68,8 +80,9 @@ void TimerUnit::resetStats()
 
 void TimerUnit::_uninstall(TTimer* pChild, const QString& packageName)
 {
-    std::list<TTimer*>* childrenList = pChild->mpMyChildrenList;
-    for (auto timer : *childrenList) {
+    std::list<Tree<TTimer>*>* childrenList = pChild->mpMyChildrenList;
+    for (auto* timerNode : *childrenList) {
+        auto* timer = static_cast<TTimer*>(timerNode);
         _uninstall(timer, packageName);
         uninstallList.append(timer);
     }
@@ -494,8 +507,9 @@ void TimerUnit::markCleanup(TTimer* pT)
 
 void TimerUnit::assembleReport(TTimer* pItem)
 {
-    std::list<TTimer*>* childrenList = pItem->mpMyChildrenList;
-    for (auto pChild : *childrenList) {
+    std::list<Tree<TTimer>*>* childrenList = pItem->mpMyChildrenList;
+    for (auto* pChildNode : *childrenList) {
+        auto* pChild = static_cast<TTimer*>(pChildNode);
         ++statsItemsTotal;
         if (pChild->isOffsetTimer() ? pChild->shouldBeActive() : pChild->isActive()) {
             ++statsActiveItems;

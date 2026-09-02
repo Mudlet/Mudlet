@@ -244,5 +244,54 @@ describe("Tests MXP handling", function()
       assert.is_true(holds(frameLines(), "MXPDEST4 red in the frame"))
       assert.are.same(plainColour, mainColourOf("MXPDEST4 back in main"))
     end)
+
+    -- EOF on the opening tag empties the frame before the redirected text
+    -- lands, so the frame ends up holding only what this redirect wrote
+    it("empties the frame when the redirect carries EOF", function()
+      assert.is_true(feedTriggers(('<DEST %s>MXPDEST5 stale</DEST>'):format(frame) .. "\n"))
+      -- the state EOF is meant to undo, so a frame that was empty anyway
+      -- cannot pass this by accident
+      assert.is_true(holds(frameLines(), "MXPDEST5 stale"))
+      assert.is_true(feedTriggers("MXPDEST12 anchored in main\n"))
+
+      assert.is_true(feedTriggers(('<DEST %s EOF>MXPDEST6 fresh</DEST>'):format(frame) .. "\n"))
+      local shown = table.concat(frameLines(), "|")
+      assert.is_false(holds(frameLines(), "MXPDEST5 stale"), shown)
+      assert.is_true(holds(frameLines(), "MXPDEST6 fresh"), shown)
+      -- an EOF clear that overreached past the frame would take main with it
+      assert.is_true(mainRecentlyHolds("MXPDEST12 anchored in main"))
+    end)
+
+    -- EOL discards the part-written line the frame was left sitting on rather
+    -- than continuing it. A redirect closes its own last line, so the open
+    -- line has to come from elsewhere - an echo into the frame leaves one the
+    -- way a game writing a partial line into the frame would.
+    it("drops the frame's unfinished line when the redirect carries EOL", function()
+      echo(frame, "MXPDEST7 unfinished")
+      assert.is_true(holds(frameLines(), "MXPDEST7 unfinished"))
+      assert.is_true(feedTriggers("MXPDEST13 anchored in main\n"))
+
+      assert.is_true(feedTriggers(('<DEST %s EOL>MXPDEST8 after</DEST>'):format(frame) .. "\n"))
+      local shown = table.concat(frameLines(), "|")
+      -- without the clear the redirect continues that line instead, so the
+      -- needle survives as the head of a joined-up line
+      assert.is_false(holds(frameLines(), "MXPDEST7 unfinished"), shown)
+      assert.is_true(holds(frameLines(), "MXPDEST8 after"), shown)
+      assert.is_true(mainRecentlyHolds("MXPDEST13 anchored in main"))
+    end)
+
+    -- EOL is the narrower of the two: it must leave the finished lines above
+    -- the open one where they are, which is what tells it apart from EOF
+    it("keeps the frame's finished lines when the redirect carries EOL", function()
+      assert.is_true(feedTriggers(('<DEST %s>MXPDEST9 kept</DEST>'):format(frame) .. "\n"))
+      echo(frame, "MXPDEST10 unfinished")
+      assert.is_true(holds(frameLines(), "MXPDEST10 unfinished"))
+      assert.is_true(holds(frameLines(), "MXPDEST9 kept"))
+
+      assert.is_true(feedTriggers(('<DEST %s EOL>MXPDEST11 after</DEST>'):format(frame) .. "\n"))
+      local shown = table.concat(frameLines(), "|")
+      assert.is_true(holds(frameLines(), "MXPDEST9 kept"), shown)
+      assert.is_false(holds(frameLines(), "MXPDEST10 unfinished"), shown)
+    end)
   end)
 end)

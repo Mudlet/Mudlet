@@ -93,6 +93,14 @@
 #error Mudlet requires a version of libzip of at least 1.0
 #endif
 
+// Both handlers that defer an operation until the profile has finished saving
+// start a save of their own, and profileSaveFinished is emitted synchronously,
+// so a directly connected one is re-entered from inside its own body - once per
+// operation still waiting, and a caller that polls during a save leaves one
+// waiting per poll. Queued keeps each at the bottom of the stack; single-shot
+// stops a second announcement re-running an operation already carried out.
+static constexpr auto deferredSaveHandlerConnection = static_cast<Qt::ConnectionType>(Qt::QueuedConnection | Qt::SingleShotConnection);
+
 using namespace std::chrono;
 
 stopWatch::stopWatch()
@@ -280,8 +288,13 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mPass(pass)
 , mPort(port)
 {
+    // cTelnet is declared ahead of the members reset() clears (mMxpProcessor,
+    // mMSSPTlsPort, mIsRemoteEchoingActive and friends), so it cannot do this from
+    // its own constructor - at that point those members do not exist yet.
+    mTelnet.reset();
+
     TDebug::addHost(this, mHostName);
-    setDisplayFont(QFont(qsl("Bitstream Vera Sans Mono"), 14, QFont::Normal));
+    setDisplayFont(QFont(scmDefaultFontFamily, 14, QFont::Normal));
 
     // The "autolog" sentinel file controls whether logging the game's text as
     // plain text or HTML is immediately resumed on profile loading. Do not
@@ -836,9 +849,11 @@ void Host::updateModuleZip(const ModuleWriteJob& job)
     const int xmlIndex = zip_name_locate(zipFile, qsl("%1.xml").arg(moduleName).toUtf8().constData(), ZIP_FL_ENC_GUESS);
     zip_delete(zipFile, xmlIndex);
     struct zip_source* s = zip_source_file(zipFile, filename_xml.toUtf8().constData(), 0, -1);
-    if (mudlet::smDebugMode && s == nullptr) {
-        //: This error message will appear when the xml file inside the module zip cannot be updated for some reason.
-        TDebug(QColor(Qt::white), QColor(Qt::red)) << tr("Failed to open xml file \"%1\" inside module %2 to update it. Error message was: \"%3\".").arg(filename_xml, zipName, zip_strerror(zipFile));
+    if (s == nullptr) {
+        // Not a TDebug: this runs on a worker thread, which must not touch a
+        // profile's console.
+        qWarning().noquote().nospace() << "Host::updateModuleZip(\"" << zipName << "\", \"" << moduleName << "\") WARNING - failed to open xml file \"" << filename_xml
+                                       << "\" inside the module to update it, error: \"" << zip_strerror(zipFile) << "\"";
     }
     err = zip_file_add(zipFile, qsl("%1.xml").arg(moduleName).toUtf8().constData(), s, ZIP_FL_ENC_UTF_8 | ZIP_FL_OVERWRITE);
 
@@ -849,10 +864,7 @@ void Host::updateModuleZip(const ModuleWriteJob& job)
     }
 
     if (err == -1) {
-        if (mudlet::smDebugMode && err == -1) {
-            //: This error message will appear when a module is saved as package but cannot be done for some reason.
-            TDebug(QColor(Qt::white), QColor(Qt::red)) << tr("Failed to save \"%1\" to module \"%2\". Error message was: \"%3\".").arg(moduleName, zipName, zip_strerror(zipFile));
-        }
+        qWarning().noquote().nospace() << "Host::updateModuleZip(\"" << zipName << "\", \"" << moduleName << "\") WARNING - failed to save the module, error: \"" << zip_strerror(zipFile) << "\"";
         // Properly dispose of things after failing to zip_close(...) the
         // archive:
         zip_discard(zipFile);
@@ -865,10 +877,15 @@ void Host::reloadModule(const QString& syncModuleName, const QString& syncingFro
     if (syncingFromHost.isEmpty() && currentlySavingProfile()) {
         //create a dummy object to singleshot connect (disconnect/delete after execution)
         QObject* obj = new QObject(this);
-        connect(this, &Host::profileSaveFinished, obj, [=, this]() {
-            reloadModule(syncModuleName);
-            obj->deleteLater();
-        });
+        connect(
+                this,
+                &Host::profileSaveFinished,
+                obj,
+                [=, this]() {
+                    reloadModule(syncModuleName);
+                    obj->deleteLater();
+                },
+                deferredSaveHandlerConnection);
         return;
     }
     QMap<QString, QStringList> installedModules = mInstalledModules;
@@ -959,6 +976,12 @@ bool Host::resetProfile_phase1()
 
 void Host::resetProfile_phase2()
 {
+    // The Lua state goes with the reset, taking every id a package was holding
+    // with it, so the commands those ids named have to go too - otherwise a
+    // package that places its command from a script adds another on every
+    // reset and can never remove the ones before.
+    mudlet::self()->removeAddonCommandsForHost(this);
+
     getAliasUnit()->removeAllTempAliases();
     getTimerUnit()->removeAllTempTimers();
     getTriggerUnit()->removeAllTempTriggers();
@@ -1155,6 +1178,11 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
         for (const auto& xmlFilename : savedModuleXmlNames) {
             xmlSaved(xmlFilename);
         }
+        // With no module writers to retire, nothing above can have emitted it,
+        // and the profile's own writer retired while the flag above was still set
+        if (savedModuleXmlNames.isEmpty() && !currentlySavingProfile()) {
+            emit profileSaveFinished();
+        }
     });
     connect(watcher, &QFutureWatcher<void>::finished, watcher, &QObject::deleteLater);
     watcher->setFuture(mModuleFuture);
@@ -1184,7 +1212,12 @@ void Host::xmlSaved(const QString& xmlName)
         writers.remove(xmlName);
     }
 
-    if (writers.empty()) {
+    // An empty writers list is not the end of the save: the module write runs
+    // after the profile's own writer has retired, so announcing a finish here
+    // while mWritingHostAndModules is still set tells anything waiting on it -
+    // a deferred package install, say - that a save is still running, so it
+    // defers again onto a signal that has already gone by.
+    if (!currentlySavingProfile()) {
         emit profileSaveFinished();
     }
 }
@@ -1341,11 +1374,20 @@ QString Host::mediaLocationMSP() const
 }
 
 // Completely specifies the font for use in the main console and elsewhere:
-std::pair<bool, QString> Host::setDisplayFont(const QFont& font)
+std::pair<bool, QString> Host::setDisplayFont(const QFont& font, const DisplayFontChange change)
 {
     const QFontMetrics metrics(font);
     if (metrics.averageCharWidth() == 0) {
         return {false, qsl("specified font is invalid (its letters have 0 width)")};
+    }
+
+    // Only an explicit new choice of family retires the stand-in, never a size or
+    // antialiasing tweak. The family cannot decide that for itself: while the
+    // stand-in is up the family on show IS the stand-in, so a user picking that
+    // very family and the preferences re-sending it because only the size or the
+    // antialiasing changed look exactly alike.
+    if (change == DisplayFontChange::UserChoice) {
+        mMissingDisplayFontFamily.clear();
     }
 
     if (mpConsole) {
@@ -1365,12 +1407,30 @@ std::pair<bool, QString> Host::setDisplayFont(const QFont& font)
     return {true, QString()};
 }
 
-// Also completely specifies the font for use in the main console and elsewhere:
 void Host::setDisplayFontFromString(const QString& fontData)
 {
     QFont font;
-    font.fromString(fontData);
-    setDisplayFont(font);
+    // A description fromString() will not read leaves the font as constructed, which
+    // is the application's proportional UI font rather than a record of what the
+    // profile asked for. It rejects one that names no family, so that is covered too.
+    if (!font.fromString(fontData)) {
+        qWarning().nospace().noquote() << "Host::setDisplayFontFromString(...) WARNING - \"" << fontData << "\" is not a font description, so the font in use is kept.";
+        return;
+    }
+
+    // <mDisplayFont> is written only by a profile's own save, and so reaches here
+    // twice: reading that save, before the one-shot check that stands a default in
+    // for a missing font, and again if such a save is installed as a package, which
+    // can be long after it. The second is a choice of family rather than an
+    // adjustment, so it retires the stand-in and becomes what gets saved. A family
+    // that is not installed retires nothing though - the check does not run a second
+    // time, so nothing would notice this one is missing too and the family the
+    // profile asked for would be forgotten in favour of one nobody has.
+    const auto resolved = resolveFontFamily(font.family());
+    const auto change = resolved.available ? DisplayFontChange::UserChoice : DisplayFontChange::Adjustment;
+    if (const auto [applied, error] = setDisplayFont(font, change); !applied) {
+        qWarning().nospace().noquote() << "Host::setDisplayFontFromString(...) WARNING - \"" << fontData << "\" was refused: " << error;
+    }
 }
 
 void Host::setDisplayFontSize(int size)
@@ -1443,6 +1503,72 @@ std::pair<QString, QFont::Weight> Host::parseFontNameAndStyle(const QString& fon
     }
 
     return {fontName, QFont::Normal};
+}
+
+Host::FontFamilyResolution Host::resolveFontFamily(const QString& requested) const
+{
+    const QStringList availableFonts = mudlet::self()->getAvailableFonts();
+    // The family as the font database spells it, not as it was typed: it is what
+    // ends up reported back by getFont() and remembered by the Geyser wrappers.
+    for (const QString& family : availableFonts) {
+        if (family.compare(requested, Qt::CaseInsensitive) == 0) {
+            return {family, QFont::Normal, true};
+        }
+    }
+
+    auto [baseName, weight] = parseFontNameAndStyle(requested);
+    if (baseName != requested) {
+        for (const QString& family : availableFonts) {
+            if (family.compare(baseName, Qt::CaseInsensitive) == 0) {
+                return {family, weight, true};
+            }
+        }
+    }
+
+    return {requested, QFont::Normal, false};
+}
+
+bool Host::substituteMissingDisplayFont()
+{
+    const QFont current = getDisplayFont();
+    const QString requestedFamily = current.family();
+    const auto resolved = resolveFontFamily(requestedFamily);
+
+    if (resolved.available && resolved.family.compare(requestedFamily, Qt::CaseInsensitive) == 0) {
+        return false;
+    }
+
+    QFont font = current;
+    if (resolved.available) {
+        font.setFamily(resolved.family);
+        font.setWeight(resolved.weight);
+        setDisplayFont(font);
+        return true;
+    }
+
+    // Nothing stands in for the bundled default itself: on an installation where
+    // it failed to register there is no better font to move the profile to, and
+    // "missing, using itself instead" would only mislead
+    if (requestedFamily.compare(scmDefaultFontFamily, Qt::CaseInsensitive) == 0) {
+        qWarning().nospace().noquote() << "Host::substituteMissingDisplayFont() WARNING - the bundled default font \"" << scmDefaultFontFamily
+                                       << "\" is not registered, so nothing can stand in for it.";
+        return false;
+    }
+
+    font.setFamily(scmDefaultFontFamily);
+    setDisplayFont(font);
+    // Only this branch remembers anything: a "Family Style" name resolves to a
+    // base family that IS installed, so saving that name is no loss.
+    mMissingDisplayFontFamily = requestedFamily;
+
+    qWarning().nospace().noquote() << "Host::substituteMissingDisplayFont() WARNING - the font \"" << requestedFamily << "\" this profile asks for is not installed, using \"" << scmDefaultFontFamily
+                                   << "\" instead.";
+    //: %1 is the font family the profile asked for, %2 is the font Mudlet ships with and is using instead
+    postMessage(tr("[ WARN ]  - The font \"%1\" that this profile uses is not installed on this computer, so "
+                   "the default \"%2\" is being used instead. Install that font, or pick another one in the "
+                   "preferences, to stop this message.")
+                        .arg(requestedFamily, scmDefaultFontFamily));
+    return true;
 }
 
 // Now returns the total weight of the path
@@ -1993,9 +2119,11 @@ void Host::runTriggers(int line)
     QString haystack = consoleModel.mCurrentLine;
     haystack.append('\n');
 
-    if (mudlet::smDebugMode) {
-        TDebug(Qt::darkGreen, Qt::black) << "new line arrived:" >> this;
-        TDebug(Qt::lightGray, Qt::black) << TDebug::csmContinue << haystack << "\n" >> this;
+    if (TDebug::wants(TDebug::Category::GameLine)) {
+        TDebug(Qt::darkGreen, Qt::black, TDebug::Category::GameLine) << "new line arrived:" >> this;
+        // haystack already ends in a newline - adding another leaves a
+        // blank row under every single game line:
+        TDebug(Qt::lightGray, Qt::black, TDebug::Category::GameLine) << TDebug::csmContinue << haystack >> this;
     }
     incomingStreamProcessor(haystack, line);
 
@@ -2220,19 +2348,41 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     if (currentlySavingProfile()) {
         // Auto-retry installation after save completes
         QObject* obj = new QObject(this);
-        connect(this, &Host::profileSaveFinished, obj, [=, this]() {
-            // The synchronous caller has already been told {true, ""} below;
-            // surface any deferred failure via the warning log and the
-            // profile's message area so it isn't lost silently.
-            auto [ok, msg] = installPackage(fileName, thing, quiet);
-            if (!ok) {
-                qWarning() << "Host::installPackage() deferred install of" << fileName << "failed:" << msg;
-                postMessage(tr("[ ERROR ] - Package install failed for \"%1\": %2").arg(fileName, msg));
-            }
-            obj->deleteLater();
-        });
+        connect(
+                this,
+                &Host::profileSaveFinished,
+                obj,
+                [=, this]() {
+                    auto [ok, msg] = installPackage(fileName, thing, quiet);
+                    if (!ok) {
+                        qWarning() << "Host::installPackage() deferred install of" << fileName << "failed:" << msg;
+                        // A non-quiet install has already been reported by fail() inside the
+                        // call above. A quiet one has not, and cannot be: quiet's bargain is
+                        // that the caller gets the reason as a return value instead of a
+                        // console line, and this caller was handed {true, ""} long before the
+                        // failure happened. Nobody else can say it, so say it here.
+                        if (quiet) {
+                            postMessage(tr("[ ERROR ] - Package install failed for \"%1\": %2").arg(fileName, msg));
+                        }
+                    }
+                    obj->deleteLater();
+                },
+                deferredSaveHandlerConnection);
         return {true, QString()};
     }
+
+    // Every failure below returns a reason, and most callers drop it: the package
+    // manager logs it without showing it, and the repository, default-package and
+    // module-sync installs ignore it altogether. Say it once here instead. Script
+    // installs pass quiet and get the reason back as a return value, so they are
+    // left to report it themselves rather than having it appear unbidden.
+    auto fail = [this, &fileName, quiet](const QString& reason) -> std::pair<bool, QString> {
+        qWarning() << "Host::installPackage() failed for" << fileName << ":" << reason;
+        if (!quiet) {
+            postMessage(tr("[ ERROR ] - Package install failed for \"%1\": %2").arg(fileName, reason));
+        }
+        return {false, reason};
+    };
 
     bool showedUnpackingDialog = false;
 
@@ -2243,19 +2393,16 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         && (fileName.endsWith(qsl(".zip"), Qt::CaseInsensitive) || fileName.endsWith(qsl(".mpackage"), Qt::CaseInsensitive))) {
         tempFile = std::make_unique<QTemporaryFile>();
         if (!tempFile->open()) {
-            qWarning() << "Host::installPackage() failed to create temporary file for resource:" << fileName;
-            return {false, qsl("Failed to create temporary file for resource package")};
+            return fail(qsl("failed to create a temporary file for the resource package: %1").arg(tempFile->errorString()));
         }
 
         QFile resourceFile(fileName);
         if (!resourceFile.open(QIODevice::ReadOnly)) {
-            qWarning() << "Host::installPackage() failed to open resource file:" << fileName << "Error:" << resourceFile.errorString();
-            return {false, qsl("Failed to open resource package file")};
+            return fail(qsl("failed to open the resource package file: %1").arg(resourceFile.errorString()));
         }
 
         if (tempFile->write(resourceFile.readAll()) == -1) {
-            qWarning() << "Host::installPackage() failed to write resource data to temp file. Error:" << tempFile->errorString();
-            return {false, qsl("Failed to write resource package data to temporary file")};
+            return fail(qsl("failed to write the resource package to a temporary file: %1").arg(tempFile->errorString()));
         }
 
         tempFile->close();
@@ -2270,12 +2417,12 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     //     This separation is necessary to be able to reuse code while avoiding infinite loops from script installations.
 
     if (actualFileName.isEmpty()) {
-        return {false, qsl("no package file was actually given")};
+        return fail(qsl("no package file was actually given"));
     }
 
     QFile file(actualFileName);
     if (!file.open(QFile::ReadOnly | QFile::Text)) {
-        return {false, qsl("could not open file '%1").arg(actualFileName)};
+        return fail(qsl("could not open file '%1").arg(actualFileName));
     }
 
     QString packageName = sanitizePackageName(fileName);
@@ -2296,14 +2443,14 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                 mModulesLoadedOk.remove(packageName);
             } else {
                 // Module actually exists, show duplicate error
-                return {false, tr("Module \"%1\" is already installed. Please uninstall it first or choose a different name.").arg(packageName)};
+                return fail(tr("Module \"%1\" is already installed. Please uninstall it first or choose a different name.").arg(packageName));
             }
         } else if ((thing == enums::PackageModuleType::ModuleFromScript) && (mActiveModules.contains(packageName))) {
-            return {false, qsl("module %1 is already installed").arg(packageName)}; //we're already installed
+            return fail(qsl("module %1 is already installed").arg(packageName)); //we're already installed
         }
     } else {
         if (mInstalledPackages.contains(packageName)) {
-            return {false, qsl("package %1 is already installed").arg(packageName)};
+            return fail(qsl("package %1 is already installed").arg(packageName));
         }
     }
     //the extra module check is needed here to prevent infinite loops from script loaded modules
@@ -2325,7 +2472,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         const bool destinationAlreadyExisted = QDir(_dest).exists();
         const bool mkpathSuccessful = _tmpDir.mkpath(_dest);
         if (!mkpathSuccessful) {
-            return {false, qsl("could not create destination folder")};
+            return fail(qsl("could not create destination folder"));
         }
         QString folderThisInstallMade = destinationAlreadyExisted ? QString() : QDir(_dest).absolutePath();
 
@@ -2346,7 +2493,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             emit signal_hideUnpackingProgress();
         }
         if (!unzipSuccessful) {
-            return {false, qsl("could not unzip package")};
+            return fail(qsl("could not unzip package"));
         }
 
         // requirements for zip packages:
@@ -2370,7 +2517,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                 if (mInstalledPackages.contains(packageName)) {
                     // cleanup and quit if already installed
                     removeDir(_dir.absolutePath(), _dir.absolutePath());
-                    return {false, qsl("package %1 is already installed").arg(packageName)};
+                    return fail(qsl("package %1 is already installed").arg(packageName));
                 }
             }
             // continuing, so update the folder name on disk
@@ -2383,6 +2530,12 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                 folderThisInstallMade = QDir(newpath).absolutePath();
             }
             _dir = QDir(newpath);
+        }
+        // make any fonts in the package available to Mudlet for use - before the
+        // XML below is imported, because the scripts in it run as they are read
+        // in and one of them may well want to use a font the package brought
+        if (thing != enums::PackageModuleType::ModuleSync) {
+            installPackageFonts(packageName);
         }
         QStringList _filterList;
         _filterList << qsl("*.xml") << qsl("*.trigger");
@@ -2413,6 +2566,13 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                     qWarning() << "Host::installPackage() WARNING - failed to load module" << packageName << ":" << errorMsg;
                     postMessage(tr("[ WARN ]  - Failed to load module \"%1\": %2").arg(packageName, errorMsg));
                 }
+            } else if (!success) {
+                // Only modules were ever asked whether their contents loaded, so a
+                // package whose XML is corrupt was registered, left in the profile
+                // and never mentioned - the silence this whole change is about
+                qWarning() << "Host::installPackage() WARNING - failed to load package" << packageName << ":" << errorMsg;
+                //: %1 is the package name, %2 is the reason its contents could not be read
+                postMessage(tr("[ WARN ]  - Failed to load package \"%1\": %2").arg(packageName, errorMsg));
             }
             file2.close();
         }
@@ -2427,6 +2587,9 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         // for a module whose name is already in mInstalledModules on the way in
         // (profile loading, and installModule() over a stale entry, both do that).
         if (!registeredFromArchive) {
+            // the fonts were registered up front for the scripts' sake, and nothing
+            // got installed that could own them - take them back out again
+            mudlet::self()->mFontManager.unloadFonts(getName(), packageName);
             // Only ever remove the folder this install made, and only if it is
             // inside the profile: the package name can come out empty (a file
             // called ".mpackage"), name a folder of the user's ("map"), or be
@@ -2439,13 +2602,12 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             } else {
                 qWarning() << "Host::installPackage() WARNING - refused" << fileName << "as package" << packageName << "but leaving" << _dir.absolutePath() << "alone: this install did not make it";
             }
-            return {false, qsl("no package found in %1 - no Mudlet package file in it could be read").arg(fileName)};
+            return fail(qsl("no package found in %1 - no Mudlet package file in it could be read").arg(fileName));
         }
     } else {
         file2.setFileName(fileName);
         if (!file2.open(QFile::ReadOnly | QFile::Text)) {
-            qWarning() << "Host: failed to open file for reading:" << fileName << file2.errorString();
-            return {false, qsl("could not open package file")};
+            return fail(qsl("could not open the package file: %1").arg(file2.errorString()));
         }
         XMLimport reader(this);
         if (thing != enums::PackageModuleType::Package) {
@@ -2465,6 +2627,10 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                 qWarning() << "Host::installPackage() WARNING - failed to load module" << packageName << ":" << errorMsg;
                 postMessage(tr("[ WARN ]  - Failed to load module \"%1\": %2").arg(packageName, errorMsg));
             }
+        } else if (!success) {
+            qWarning() << "Host::installPackage() WARNING - failed to load package" << packageName << ":" << errorMsg;
+            //: %1 is the package name, %2 is the reason its contents could not be read
+            postMessage(tr("[ WARN ]  - Failed to load package \"%1\": %2").arg(packageName, errorMsg));
         }
         file2.close();
     }
@@ -2476,11 +2642,6 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     }
     // reorder permanent and temporary triggers: perm first, temp second
     mTriggerUnit.reorderTriggersAfterPackageImport();
-
-    // make any fonts in the package available to Mudlet for use
-    if (thing != enums::PackageModuleType::ModuleSync) {
-        installPackageFonts(packageName);
-    }
 
     // Defer raising install events until the next event loop iteration
     // This ensures all package installation is complete (including variable loading)
@@ -2690,13 +2851,16 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
             //we're a dual install, reinstalling package
             mInstalledPackages.removeAll(packageName); //so we don't get denied from installPackage
             //get the pre package list so we don't get duplicates
-            installPackage(entry[0], enums::PackageModuleType::Package);
+            // quiet because this is not an install the user asked for: reporting it as
+            // one would talk over the uninstall they did ask for. Putting a dual
+            // install back properly, and saying so when it cannot be, is its own job
+            installPackage(entry[0], enums::PackageModuleType::Package, true);
         }
     } else {
         mInstalledPackages.removeAll(packageName);
         if (dualInstallations) {
             QStringList entry = mInstalledModules[packageName];
-            installPackage(entry[0], enums::PackageModuleType::ModuleFromUI);
+            installPackage(entry[0], enums::PackageModuleType::ModuleFromUI, true);
             //restore the module edit flag
             mInstalledModules[packageName] = entry;
         }
@@ -2709,6 +2873,15 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
 
     const QString dest = mudlet::getMudletPath(enums::profilePackagePath, getName(), packageName);
     removeDir(dest, dest);
+
+    // The fonts this package brought went out with it, so a display font that
+    // came from it is now missing and Qt would quietly render some other family
+    // instead. It has to sit past the reinstall above: uninstalling a module
+    // that shares a package's name puts that package and its fonts straight
+    // back, and moving the profile off the font in between would stick, since
+    // nothing moves it back on again. Past removeDir() too, because changing the
+    // font runs the profile's sysSettingChanged handlers.
+    substituteMissingDisplayFont();
 
     // save the profile on the next Qt main loop cycle in order for the asyncronous save mechanism
     // not to try to write to disk a package/module that just got uninstalled and removed from memory
@@ -2860,8 +3033,8 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule)
         break;
     }
 
-    if (mudlet::smDebugMode) {
-        TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA: " << reason.c_str() << " in " << luaConfig << " ERROR:" << e.c_str() << "\n" >> 0;
+    if (TDebug::wants(TDebug::Category::Error)) {
+        TDebug(QColor(Qt::white), QColor(Qt::red), TDebug::Category::Error) << "LUA: " << reason.c_str() << " in " << luaConfig << " ERROR:" << e.c_str() << "\n" >> this;
     }
 
     lua_pop(L, -1);
@@ -3740,6 +3913,31 @@ QDockWidget* Host::mapWidget() const
     }
 
     return mpConsole->mpDockableMapWidget;
+}
+
+// Hands TMap::mpMapper back to this profile's own mapper. The map dock and the
+// detached windows borrow it while they show a map of their own, and every one
+// of them gives it back through here. createMapper() records the embedded
+// mapper on the console and puts it in the main frame or a user window, so a
+// profile that has one is never the mpDockableMapWidget case below.
+void Host::restoreOwnMapper()
+{
+    if (!mpMap) {
+        return;
+    }
+
+    if (mpConsole && mpConsole->mpMapper) {
+        mpMap->mpMapper = mpConsole->mpMapper;
+    } else if (mpConsole && mpConsole->mpDockableMapWidget) {
+        auto hostMapWidget = mpConsole->mpDockableMapWidget->widget();
+
+        if (auto hostMapper = qobject_cast<dlgMapper*>(hostMapWidget)) {
+            mpMap->mpMapper = hostMapper;
+        }
+    }
+#if defined(DEBUG_WINDOW_HANDLING)
+    qDebug() << "Host::restoreOwnMapper:" << getName() << "- map is now drawn by" << mpMap->mpMapper.data();
+#endif
 }
 
 std::pair<bool, QString> Host::setMapperTitle(const QString& title)
@@ -4974,6 +5172,25 @@ bool Host::setCommandForegroundColor(const QString& name, int r, int g, int b, i
     return false;
 }
 
+// Returns true when a script has claimed the built-in map buttons for this
+// profile via setConfig("mapperButton", ...): "disabled" swallows the request
+// outright, "scripted" turns it into a sysMapperButtonAction event so the
+// profile's UI package can show or hide its own map window instead.
+bool Host::interceptMapperButton()
+{
+    if (mMapperButtonMode == MapperButtonMode::Disabled) {
+        return true;
+    }
+    if (mMapperButtonMode == MapperButtonMode::Scripted) {
+        TEvent event{};
+        event.mArgumentList.append(QLatin1String("sysMapperButtonAction"));
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        raiseEvent(event);
+        return true;
+    }
+    return false;
+}
+
 // Needed to extract into a separate method from mudlet::slot_mapper() so that
 // we can use it WITHOUT loading a file - at least for the
 // TConsole::importMap(...) case that may need to create a map widget before it
@@ -4989,19 +5206,33 @@ void Host::showHideOrCreateMapper(const bool loadDefaultMap)
     createMapper(loadDefaultMap);
 }
 
+// Whether the profile's mapper currently counts as on screen - the same
+// reading that toggleMapperVisibility() bases its decision on, shared so a
+// menu label saying what the next activation will do cannot disagree with it.
+bool Host::mapperShown() const
+{
+    if (!mpMap || !mpMap->mpMapper) {
+        return false;
+    }
+    if (mpMap->mpMapper->isFloatAndDockable()) {
+        // When in a dock widget, check the parent's visibility, not the child's,
+        // to correctly handle the case where the dock widget was closed via X button.
+        return mpMap->mpMapper->parentWidget()->isVisible();
+    }
+    return mpMap->mpMapper->isVisible();
+}
+
 void Host::toggleMapperVisibility()
 {
     auto pMap = mpMap.data();
+    const bool shown = mapperShown();
     if (pMap->mpMapper->isFloatAndDockable()) {
         // If we are using a floating/dockable widget we must show/hide that
         // only and not the mapper widget (otherwise it messes up {shrinks
         // to a minimal size} the mapper inside the container dock widget). This
         // is the same as the case for a TConsole inside a TDockWidget in
         // (void) TDockWidget::setVisible(bool).
-        // When in a dock widget, check the parent's visibility, not the child's,
-        // to correctly handle the case where the dock widget was closed via X button.
-        const bool isCurrentlyVisible = pMap->mpMapper->parentWidget()->isVisible();
-        if (isCurrentlyVisible) {
+        if (shown) {
             pMap->mpMapper->parentWidget()->setVisible(false);
         } else {
             // When showing, show child first then parent - same pattern as TDockWidget
@@ -5009,8 +5240,7 @@ void Host::toggleMapperVisibility()
             pMap->mpMapper->parentWidget()->setVisible(true);
         }
     } else {
-        const bool visStatus = pMap->mpMapper->isVisible();
-        pMap->mpMapper->setVisible(!visStatus);
+        pMap->mpMapper->setVisible(!shown);
     }
 }
 
@@ -5528,6 +5758,15 @@ QFont Host::getDisplayFont()
     }
 
     return mTempDisplayFont.value();
+}
+
+QFont Host::getDisplayFontForSaving()
+{
+    QFont font = getDisplayFont();
+    if (!mMissingDisplayFontFamily.isEmpty()) {
+        font.setFamily(mMissingDisplayFontFamily);
+    }
+    return font;
 }
 
 QFont Host::getAndClearTempDisplayFont()

@@ -40,17 +40,17 @@ public:
     virtual ~Tree();
 
     T* getParent() const { return mpParent; }
-    std::list<T*>* getChildrenList() const;
+    std::list<Tree<T>*>* getChildrenList() const;
     std::list<T*> getAncestorList() const;
     bool hasChildren() const { return (!mpMyChildrenList->empty()); }
     int getChildCount() const { return mpMyChildrenList->size(); }
     int getID() const { return mID; }
     virtual void setID(const int id) { mID = id; }
     // Enum-based API for clear insertion mode specification
-    void addChild(T* newChild, TreeItemInsertMode mode, int position = 0);
+    void addChild(Tree<T>* newChild, TreeItemInsertMode mode, int position = 0);
     // Legacy integer-based position API - delegates to enum-based version
-    void addChild(T* newChild, int parentPostion = -1, int parentPosition = -1);
-    bool popChild(T* removeChild);
+    void addChild(Tree<T>* newChild, int parentPostion = -1, int parentPosition = -1);
+    bool popChild(Tree<T>* removeChild);
     void setParent(T* parent);
     void enableFamily();
     void disableFamily();
@@ -86,7 +86,10 @@ public:
     }
 
     T* mpParent;
-    std::list<T*>* mpMyChildrenList;
+    // Tree<T>* and not T*: a node adds itself to its parent's list from Tree's
+    // own constructor, where its T subobject does not exist yet, so casting
+    // down to T* there is undefined behaviour.
+    std::list<Tree<T>*>* mpMyChildrenList;
     int mID;
     QString mPackageName;
     // Not used:    QString mModuleName;
@@ -108,7 +111,7 @@ private:
 template <class T>
 Tree<T>::Tree()
 : mpParent(nullptr)
-, mpMyChildrenList(new std::list<T*>)
+, mpMyChildrenList(new std::list<Tree<T>*>)
 , mID(0)
 , mOK_init(true)
 , mOK_code(true)
@@ -122,7 +125,7 @@ Tree<T>::Tree()
 template <class T>
 Tree<T>::Tree(T* pParent)
 : mpParent(pParent)
-, mpMyChildrenList(new std::list<T*>)
+, mpMyChildrenList(new std::list<Tree<T>*>)
 , mID(0)
 , mOK_init(true)
 , mOK_code(true)
@@ -132,7 +135,7 @@ Tree<T>::Tree(T* pParent)
 , mFolder(false)
 {
     if (pParent) {
-        pParent->addChild(static_cast<T*>(this));
+        pParent->addChild(this);
     } else {
         mpParent = nullptr;
     }
@@ -143,13 +146,13 @@ Tree<T>::~Tree()
 {
     while (!mpMyChildrenList->empty()) {
         auto it = mpMyChildrenList->begin();
-        T* pChild = *it;
+        Tree<T>* pChild = *it;
         delete pChild;
     }
     delete mpMyChildrenList;
     mpMyChildrenList = nullptr;
     if (mpParent) {
-        mpParent->popChild(static_cast<T*>(this)); // tell parent about my death
+        mpParent->popChild(this); // tell parent about my death
         if (std::uncaught_exceptions()) {
             std::cout << "ERROR: Hook destructed during stack rewind because of an uncaught exception." << std::endl;
         }
@@ -263,7 +266,7 @@ void Tree<T>::disableFamily()
 
 // Enum-based addChild implementation
 template <class T>
-void Tree<T>::addChild(T* newChild, TreeItemInsertMode mode, int position)
+void Tree<T>::addChild(Tree<T>* newChild, TreeItemInsertMode mode, int position)
 {
     if (mode == TreeItemInsertMode::Append || position >= static_cast<int>(mpMyChildrenList->size())) {
         mpMyChildrenList->push_back(newChild);
@@ -282,7 +285,7 @@ void Tree<T>::addChild(T* newChild, TreeItemInsertMode mode, int position)
 
 // Legacy integer-based addChild - delegates to enum-based version
 template <class T>
-void Tree<T>::addChild(T* newChild, int parentPosition, int childPosition)
+void Tree<T>::addChild(Tree<T>* newChild, int parentPosition, int childPosition)
 {
     if (parentPosition == -1 || childPosition == -1) {
         addChild(newChild, TreeItemInsertMode::Append, 0);
@@ -298,7 +301,7 @@ void Tree<T>::setParent(T* pParent)
 }
 
 template <class T>
-bool Tree<T>::popChild(T* pChild)
+bool Tree<T>::popChild(Tree<T>* pChild)
 {
     for (auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++) {
         if (*it == pChild) {
@@ -310,7 +313,7 @@ bool Tree<T>::popChild(T* pChild)
 }
 
 template <class T>
-std::list<T*>* Tree<T>::getChildrenList() const
+std::list<Tree<T>*>* Tree<T>::getChildrenList() const
 {
     return mpMyChildrenList;
 }
