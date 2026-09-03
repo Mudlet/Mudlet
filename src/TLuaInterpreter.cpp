@@ -3619,13 +3619,21 @@ void TLuaInterpreter::clearCaptureGroups()
     if (mSpareCaptureGroupList.empty()) {
         mSpareCaptureGroupList.swap(mCaptureGroupList);
         mSpareCaptureGroupPosList.swap(mCaptureGroupPosList);
-        // A match-all pattern over a hostile line would otherwise leave the
-        // parked buffers at that high water mark for the rest of the session.
-        // Past the cap the cost is the allocation this parking exists to save,
-        // never unbounded memory.
+        // A match-all trigger's /g loop accumulates every match on the line into
+        // one capture list, so what it parks scales with matches per line rather
+        // than with the pattern's group count. Past the cap the cost is the
+        // allocation this parking exists to save, never unbounded memory.
         if (mSpareCaptureGroupList.size() > scmMaxParkedCaptures) {
             mSpareCaptureGroupList.resize(scmMaxParkedCaptures);
             mSpareCaptureGroupPosList.resize(scmMaxParkedCaptures);
+        }
+        // resize() destroys the elements past the cap but keeps capacity(), so
+        // both vector blocks would otherwise stay at the high water mark
+        if (mSpareCaptureGroupList.capacity() > scmMaxParkedCaptureSlack) {
+            mSpareCaptureGroupList.shrink_to_fit();
+        }
+        if (mSpareCaptureGroupPosList.capacity() > scmMaxParkedCaptureSlack) {
+            mSpareCaptureGroupPosList.shrink_to_fit();
         }
         for (auto& capture : mSpareCaptureGroupList) {
             if (capture.capacity() > scmMaxParkedCaptureBytes) {
