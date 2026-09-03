@@ -654,7 +654,7 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
              qsl(":/icons/carrionfields.png"),
              qsl("Carrion Fields is a unique blend of high-caliber roleplay and complex, hardcore "
                  "player-versus-player combat that has been running continuously, and 100% free, "
-                 "for over 25 years."
+                 "for over 30 years."
                  "\n\n"
                  "Choose from among 21 races, 17 highly customizable classes, and several cabals "
                  "and religions to suit your playstyle and the story you want to tell. Our "
@@ -663,7 +663,7 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "\n\n"
                  "We like to think of ourselves as the Dark Souls of MUDs, with a community that "
                  "is supportive of new players - unforgiving though our world may be. Join us for a "
-                 "real challenge and real rewards: adrenalin-pumping battles, memorable quests run "
+                 "real challenge and real rewards: adrenaline-pumping battles, memorable quests run "
                  "by our volunteer immortal staff, and stories that will stick with you for a "
                  "lifetime."),
              true}, // CF-loader installs CFGUI

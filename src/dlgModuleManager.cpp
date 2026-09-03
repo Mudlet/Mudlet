@@ -148,13 +148,12 @@ void dlgModuleManager::slot_installModule()
     QStringList failedModules;
 
     for (const QString& fileName : fileNames) {
-        auto [success, errorMsg] = mpHost->installPackage(fileName, enums::PackageModuleType::ModuleFromUI);
-        if (success) {
+        if (mpHost->installPackage(fileName, enums::PackageModuleType::ModuleFromUI).first) {
             mpHost->waitForProfileSave();
         } else {
             const QString baseName = QFileInfo(fileName).fileName();
             failedModules << baseName;
-            qWarning() << "dlgModuleManager::slot_installModule() ERROR - failed to import" << baseName << ":" << errorMsg;
+            qWarning() << "dlgModuleManager::slot_installModule() ERROR - failed to import" << baseName;
         }
     }
 
