@@ -135,6 +135,7 @@ public:
     friend class FrontendRefreshSeamTest;
     friend class TTextEditBlinkTest;
     static bool shouldRegisterBlinkClient(bool enableBlinkText, bool hasBlinkingContentInRedrawnRegion, bool isBlinkClientRegistered, bool reusedCachedScreenContent);
+    static QSize renderSurfaceSize(int screenWidth, int fontWidth, int pixmapHeight, qreal devicePixelRatio);
 
     QColor mFgColor;
     bool mIsCommandPopup = false;
