@@ -466,7 +466,7 @@ private:
     bool processEUC_KRSequence(const std::string&, bool, size_t, size_t&, bool&);
     // Views into the string decodeSGR() was handed, so none may outlive that call.
     using SgrParameters = QVarLengthArray<QStringView, 12>;
-    void decodeSGR(const QString&);
+    void decodeSGR(QStringView);
     void decodeSGR38(const SgrParameters&, bool isColonSeparated = true);
     void decodeSGR48(const SgrParameters&, bool isColonSeparated = true);
     void decodeOSC(const QString&);
