@@ -24,6 +24,7 @@
 // authentication.
 
 #include <QFileInfo>
+#include <QSettings>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 #include <chrono>
@@ -164,7 +165,13 @@ public:
         return sslClient && sslClient->isEncrypted();
     }
     QStringList receivedGmcp() const { return mReceivedGmcp; }
-    void clearReceived() { mReceivedGmcp.clear(); }
+    // Client bytes outside telnet sequences - what the timer-driven auto-login types.
+    QByteArray receivedText() const { return mReceivedText; }
+    void clearReceived()
+    {
+        mReceivedGmcp.clear();
+        mReceivedText.clear();
+    }
 
     // Send one GMCP message as IAC SB GMCP <message> IAC SE.
     void sendGmcp(const QString& message)
@@ -253,6 +260,7 @@ private:
         int i = 0;
         while (i < mBuffer.size()) {
             if (static_cast<unsigned char>(mBuffer.at(i)) != static_cast<unsigned char>(TN_IAC)) {
+                mReceivedText.append(mBuffer.at(i));
                 ++i;
                 continue;
             }
@@ -300,8 +308,37 @@ private:
     QPointer<QTcpSocket> mClient;
     QByteArray mBuffer;
     QStringList mReceivedGmcp;
+    QByteArray mReceivedText;
     bool mGmcpEnabled = false;
     int mConnectionCount = 0;
+};
+
+// The auto-login delays live in a QSettings file shared by every case in this binary, so they have to
+// go back however a QVERIFY leaves the test body.
+class ScopedAutoLoginDelays
+{
+public:
+    ScopedAutoLoginDelays(int usernameMs, int passwordMs)
+    : mpSettings(mudlet::getQSettings())
+    , mSavedUsername(mpSettings->value(qsl("autoLoginUsernameDelay")))
+    , mSavedPassword(mpSettings->value(qsl("autoLoginPasswordDelay")))
+    {
+        mpSettings->setValue(qsl("autoLoginUsernameDelay"), usernameMs);
+        mpSettings->setValue(qsl("autoLoginPasswordDelay"), passwordMs);
+    }
+
+    ~ScopedAutoLoginDelays()
+    {
+        restore(qsl("autoLoginUsernameDelay"), mSavedUsername);
+        restore(qsl("autoLoginPasswordDelay"), mSavedPassword);
+    }
+
+private:
+    void restore(const QString& key, const QVariant& saved) { saved.isValid() ? mpSettings->setValue(key, saved) : mpSettings->remove(key); }
+
+    QSettings* mpSettings;
+    QVariant mSavedUsername;
+    QVariant mSavedPassword;
 };
 
 // Serves a static OpenID Connect discovery document over loopback http, which
@@ -467,6 +504,57 @@ private slots:
         QJsonObject sent;
         QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "client did not hand off with Char.Login.Credentials");
         QVERIFY2(sent.isEmpty(), "hand-off Char.Login.Credentials should be an empty object");
+    }
+
+    void testDefaultWithoutAuthTypesLeavesTimerAutoLoginAlone_data()
+    {
+        QTest::addColumn<QString>("frame");
+        // Federation 2 sends the first of these.
+        QTest::newRow("no type key") << qsl("Char.Login.Default {}");
+        QTest::newRow("empty type array") << qsl("Char.Login.Default {\"type\": []}");
+        QTest::newRow("every type entry malformed") << qsl("Char.Login.Default {\"type\": [\"\", 5, null]}");
+        QTest::newRow("unparseable payload") << qsl("Char.Login.Default {");
+    }
+
+    void testDefaultWithoutAuthTypesLeavesTimerAutoLoginAlone()
+    {
+        // A Char.Login.Default naming no usable method cannot be driven over GMCP, so the timer-driven
+        // auto-login has to survive the frame and type the credentials itself.
+        QFETCH(QString, frame);
+        // mTimerLogin is already running by now - it starts when the socket connects - so this budget
+        // has to cover the GMCP round trip below as well.
+        ScopedAutoLoginDelays delays(1500, 200);
+
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        host->setLogin(qsl("player"));
+        host->setPass(qsl("secret"));
+
+        // Without this the assertions below would also pass on a runner slow enough that the timer beat
+        // the frame, which would prove nothing about how the frame was handled.
+        QVERIFY2(!mpServer->receivedText().contains("player\r\n"), "the auto-login fired before the test frame was sent");
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(frame);
+
+        // Wait for whichever comes first: the hand-off a build that drives this frame sends (which
+        // arrives in milliseconds), or the name the timer types. That way a regression fails on the
+        // line below rather than after the full timeout.
+        const bool typedName = QTest::qWaitFor(
+                [this]() {
+                    return mpServer->countReceived(qsl("Char.Login.Credentials")) > 0 || mpServer->receivedText().contains("player\r\n");
+                },
+                8000);
+        QCOMPARE(mpServer->countReceived(qsl("Char.Login.Credentials")), 0);
+        QVERIFY2(typedName, "the timer auto-login did not send the character name");
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return mpServer->receivedText().contains("secret\r\n");
+                         },
+                         4000),
+                 "the timer auto-login did not send the password");
+        const QByteArray typed = mpServer->receivedText();
+        QVERIFY2(typed.indexOf("player\r\n") < typed.indexOf("secret\r\n"), "the password was typed before the character name");
     }
 
     void testPartialCredentialsAreNotSent()
@@ -1039,6 +1127,27 @@ private slots:
         const int attempts = mpServer->countReceived(qsl("Char.Login.Credentials"));
         QVERIFY2(attempts >= 2, qPrintable(qsl("a throttled burst must still be answered, saw %1 attempts").arg(attempts)));
         QVERIFY2(attempts <= 4, qPrintable(qsl("200 frames should not buy 200 sign-in attempts, saw %1").arg(attempts)));
+    }
+
+    void testTypelessDefaultDropsAnAlreadyArmedAttempt()
+    {
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        host->setLogin(qsl("player"));
+        host->setPass(qsl("secret"));
+
+        mpServer->clearReceived();
+        // One burst: the first frame is answered straight away, the second falls inside the throttle
+        // window and arms an attempt for when it closes, and the third leaves no capabilities for that
+        // attempt to act on.
+        const auto typed = qsl("Char.Login.Default {\"version\": 2, \"type\": [\"password-credentials\"]}");
+        mpServer->sendGmcp(typed);
+        mpServer->sendGmcp(typed);
+        mpServer->sendGmcp(qsl("Char.Login.Default {}"));
+
+        QTest::qWait(2500ms);
+        const int attempts = mpServer->countReceived(qsl("Char.Login.Credentials"));
+        QCOMPARE(attempts, 1);
     }
 
     // ---- Char.Login.Result --------------------------------------------------

@@ -1686,7 +1686,7 @@ void dlgConnectionProfiles::fillout_form()
     // Dedicated single-game builds go straight to their game's profile instead
     // of the Mudlet tutorial invitation, and someone with a history of using
     // Mudlet gets the games list rather than a beginner's invitation - the same
-    // call the UI tour and the starter UI make:
+    // call the UI tour makes:
     if (firstMudletLaunch && noSavedProfiles && !mTutorialDismissed && onlyShownPredefinedProfiles.isEmpty() && !mudlet::self()->experiencedMudletPlayer()) {
         // Hide the profile list and show only the tutorial-focused welcome
         widget_topLeft->hide();
