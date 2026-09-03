@@ -24,10 +24,21 @@
 #include "TimerUnit.h"
 
 
+#include "Host.h"
+#include "Tree.h"
 #include "mudlet.h"
 #include "TTimer.h"
+#include "utils.h"
+
+#include <QLatin1String>
+#include <QMutableSetIterator>
+#include <QSetIterator>
+#include <QStringList>
+#include <QTimer>
+#include <QVariant>
 
 #include <functional>
+#include <utility>
 
 /* We need an explicit constructor in this file as the Host class is forward
  * declared in the header file and it is problematic to define any dereferencing

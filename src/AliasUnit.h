@@ -26,12 +26,16 @@
 
 #include "utils.h"
 
+#include <QList>
+#include <QMap>
 #include <QMultiMap>
 #include <QPointer>
 #include <QSet>
 #include <QString>
 
 #include <list>
+#include <tuple>
+#include <vector>
 
 class Host;
 class TAlias;

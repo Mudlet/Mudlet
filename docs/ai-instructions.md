@@ -6,9 +6,12 @@ Mudlet is a cross-platform MUD client built with Qt6 and C++20, providing script
 
 ## Skills
 
-Task-specific instructions live in `.agents/skills/<name>/SKILL.md`, in the [Agent Skills](https://agentskills.io) format. Claude Code, GitHub Copilot and Cursor all read this directory (Claude Code via the `.claude/skills` symlink). Read the relevant one before starting that kind of task rather than working from memory:
+Task-specific instructions live in `.agents/skills/<name>/SKILL.md`, in the [Agent Skills](https://agentskills.io) format. Claude Code, GitHub Copilot, Cursor and OpenAI Codex all read this directory (Claude Code via the `.claude/skills` symlink). Read the relevant one before starting that kind of task rather than working from memory:
 
 - `build-mudlet` - building, rebuilding or running Mudlet on any platform
+- `fuzz-apis` - fuzzing the parsers and scripting API under sanitizer builds
+- `improve-performance` - benchmarking, measurement discipline and finding where time goes
+- `improve-test-coverage` - measuring C++ line coverage and growing the test suite
 - `open-pr` - publishing a branch and opening a pull request upstream
 
 ## Coding standards

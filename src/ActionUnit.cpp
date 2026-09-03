@@ -24,13 +24,22 @@
 #include "ActionUnit.h"
 
 
+#include "Host.h"
 #include "TAction.h"
-#include "TCommandLine.h"
 #include "TEasyButtonBar.h"
 #include "TToolBar.h"
+#include "Tree.h"
 #include "mudlet.h"
+#include "TMainConsole.h"
+#include "utils.h"
 
+#include <QDebug>
+#include <QDockWidget>
+#include <QLayout>
+#include <QMapIterator>
+#include <QPoint>
 #include <QSet>
+#include <QWidget>
 
 #include <functional>
 

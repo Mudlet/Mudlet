@@ -26,13 +26,17 @@
 
 #include "utils.h"
 
+#include <QList>
 #include <QMap>
+#include <QMultiMap>
 #include <QObject>
 #include <QPointer>
 #include <QSet>
 #include <QString>
 
 #include <list>
+#include <tuple>
+#include <vector>
 
 class Host;
 class TKey;

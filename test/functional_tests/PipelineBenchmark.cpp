@@ -716,12 +716,8 @@ private slots:
         Host* host = startProfile(DefaultPackages::Install);
         QVERIFY(host);
         const int rootTriggers = static_cast<int>(host->getTriggerUnit()->getTriggerRootNodeList().size());
-        // The starter UI is gated on mudlet::experiencedMudletPlayer(), which
-        // answers from the config root's Mudlet history - the empty one
-        // initTestCase() redirects to - and without it this slot silently
-        // measures the same thing as benchTextPipeline. A trigger count would
-        // not catch that: the other default packages register root folders of
-        // their own.
+        // A trigger count would not catch a missing starter UI: the other default
+        // packages register root folders of their own.
         QVERIFY2(host->mInstalledPackages.contains(qsl("mudlet-base-ui")),
                  "the starter UI is not installed, so this profile is not the one a new user gets and defaults_* "
                  "would describe something else entirely.");
