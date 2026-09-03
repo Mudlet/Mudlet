@@ -91,6 +91,7 @@ set(TELNET_GROUP_TEST_SOURCES
     cTelnetBufferTest.cpp
     GMCPCharLoginTest.cpp
     TelnetAtcpMspTest.cpp
+    TelnetLargeBurstTest.cpp
     TelnetLatencyMeasurementTest.cpp
     TelnetBenchmark.cpp
     TelnetCharsetNegotiationTest.cpp
@@ -385,6 +386,10 @@ set_tests_properties(TelnetReconnectStateTest PROPERTIES TIMEOUT 300)
 
 # MsdpMalformedDiagnosticTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(MsdpMalformedDiagnosticTest PROPERTIES TIMEOUT 300)
+
+# TelnetLargeBurstTest boots a full profile and then waits out a 780 KB burst,
+# both of which sanitiser builds stretch well past the default budget.
+set_tests_properties(TelnetLargeBurstTest PROPERTIES TIMEOUT 300)
 
 # TelnetLatencyMeasurementTest boots a full profile and then spends its runtime in
 # real time by design - every round trip it times, and every stall it places, has
