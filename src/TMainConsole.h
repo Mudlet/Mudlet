@@ -257,6 +257,8 @@ private:
     // Where the three by-name-alone kinds are resolved to a widget, in the one
     // order the core resolves a name that is more than one of them in.
     QWidget* plainWindowWidget(const QString& name) const;
+    void registerLabelWidget(const QString& name, TLabel* pLabel);
+    void deregisterLabelWidget(TLabel* pLabel);
 
     // The view's half of the scroll box and text box bookkeeping, paired with
     // registerSubCommandLine()/deregisterSubCommandLine(). Every insertion into

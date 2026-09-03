@@ -18,10 +18,10 @@
  ***************************************************************************/
 
 /*
- * Locks in who Mudlet considers an experienced player. That decision gates all
- * of the first-time guidance - the interface tour, the starter UI package and
- * the one-line hints - so getting it wrong either buries a newcomer's
- * onboarding or drops a beginner tour on top of a ten-year veteran's session.
+ * Locks in who Mudlet considers an experienced player. That decision gates the
+ * first-time guidance - the interface tour and the one-line hints - so getting
+ * it wrong either buries a newcomer's onboarding or drops a beginner tour on
+ * top of a ten-year veteran's session.
  *
  * mudlet::rememberFirstLaunch() and mudlet::evaluateExperiencedPlayer() take
  * their settings, profiles path and "now" as arguments, so most cases run

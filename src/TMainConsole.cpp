@@ -152,6 +152,12 @@ TMainConsole::~TMainConsole()
 
     mSubCommandLineMap.clear();
 
+    // Labels carry a destroyed() handler of the same shape, so the same window is
+    // unsafe for them and the same sweep closes it.
+    for (auto label : findChildren<TLabel*>()) {
+        disconnect(label, &QObject::destroyed, this, nullptr);
+    }
+
     // Neither is a child of this console: the map dock is reparented onto the main
     // window by addDockWidget(), and the unpacking dialog is parentless. So neither
     // dies with the console automatically.
@@ -466,15 +472,15 @@ void TMainConsole::resetMainConsole()
         }
     }
 
-    QMutableMapIterator<QString, TLabel*> itLabel(mLabelMap);
-    while (itLabel.hasNext()) {
-        itLabel.next();
-        mpHost->windowRegistry().deregisterLabel(itLabel.key(), &itLabel.value()->model());
-        if (itLabel.value()->mpMovie) {
-            mpHost->getGifTracker()->unregisterGif(itLabel.value()->mpMovie);
+    const QList<QString> labelNames = mLabelMap.keys();
+    for (const auto& labelName : labelNames) {
+        auto label = mLabelMap.value(labelName);
+        mpHost->windowRegistry().deregisterLabel(labelName, &label->model());
+        if (label->mpMovie) {
+            mpHost->getGifTracker()->unregisterGif(label->mpMovie);
         }
-        itLabel.value()->deleteLater();
-        itLabel.remove();
+        deregisterLabelWidget(label);
+        label->deleteLater();
     }
 
     const QStringList scrollBoxNames = mScrollBoxMap.keys();
@@ -571,8 +577,7 @@ bool TMainConsole::createLabel(const QString& windowname, const QString& name, i
         } else {
             pL = new TLabel(mpHost, name, mpMainFrame);
         }
-        mLabelMap[name] = pL;
-        mpHost->windowRegistry().registerLabel(name, &pL->model());
+        registerLabelWidget(name, pL);
         pL->setAutoFillBackground(fillBackground);
         pL->setClickThrough(clickThrough);
         pL->resize(width, height);
@@ -598,9 +603,10 @@ std::pair<bool, QString> TMainConsole::deleteLabel(const QString& name)
         return {false, QLatin1String("a label cannot have an empty string as its name")};
     }
 
-    auto pL = mLabelMap.take(name);
+    auto pL = mLabelMap.value(name);
     if (pL) {
         mpHost->windowRegistry().deregisterLabel(name, &pL->model());
+        deregisterLabelWidget(pL);
         if (pL->mpMovie) {
             mpHost->getGifTracker()->unregisterGif(pL->mpMovie);
         }
@@ -933,6 +939,36 @@ void TMainConsole::registerSubCommandLine(const QString& name, TCommandLine* pCo
     // the whole map, so even changing the display font in Preferences hits it.
     connect(pCommandLine, &QObject::destroyed, this, [this, pCommandLine]() {
         deregisterSubCommandLine(pCommandLine);
+    });
+}
+
+void TMainConsole::registerLabelWidget(const QString& name, TLabel* pLabel)
+{
+    mLabelMap[name] = pLabel;
+    mpHost->windowRegistry().registerLabel(name, &pLabel->model());
+
+    // A label created into a user window or a scroll box is a child widget of it,
+    // so deleting that window destroys the label with deleteLabel() never called.
+    // ~TLabel takes the model out of the window registry; without this the map
+    // beside it, which holds no QPointers, keeps an entry that every by-name label
+    // call Host forwards through this class then reads as a live widget.
+    connect(pLabel, &QObject::destroyed, this, [this, pLabel]() {
+        deregisterLabelWidget(pLabel);
+    });
+}
+
+void TMainConsole::deregisterLabelWidget(TLabel* pLabel)
+{
+    // Reached from destroyed() as well, by which point ~TLabel has run and the
+    // label's model has gone - so nothing here may read through pLabel.
+    //
+    // This is the only destroyed() connection made from a label to this console,
+    // so severing all of them is severing just that one.
+    disconnect(pLabel, &QObject::destroyed, this, nullptr);
+    // Erase by value: destroyed() names the widget, not the name it was filed
+    // under, and a replacement filed under that name must be left in place.
+    mLabelMap.removeIf([pLabel](const auto& it) {
+        return it.value() == pLabel;
     });
 }
 

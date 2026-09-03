@@ -32,6 +32,7 @@ endif()
 
 # Windows, consoles and the text they draw
 set(WINDOW_GROUP_TEST_SOURCES
+    AddonControlsTest.cpp
     ConsoleModelExtractionTest.cpp
     CopyAsImageTest.cpp
     DebugConsoleFilterTest.cpp
@@ -49,6 +50,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     CommandLineScrollRangeTest.cpp
     DetachedWindowOwnershipTest.cpp
     MxpFramePlacementTest.cpp
+    MxpDestFrameClearTest.cpp
     LabelBackgroundPaintTest.cpp
     MxpWatchdogBufferLifetimeTest.cpp
     NarrowWindowWrapTest.cpp
@@ -69,6 +71,7 @@ set(WINDOW_GROUP_TEST_SOURCES
 set(PROFILE_GROUP_TEST_SOURCES
     ConfigDirOverrideTest.cpp
     ConnectionDialogCrashTest.cpp
+    ConnectionDialogFocusTest.cpp
     DefaultGameDeleteTest.cpp
     MissingDisplayFontTest.cpp
     ProfileDeletionSafetyTest.cpp
@@ -88,6 +91,7 @@ set(TELNET_GROUP_TEST_SOURCES
     cTelnetBufferTest.cpp
     GMCPCharLoginTest.cpp
     TelnetAtcpMspTest.cpp
+    TelnetLargeBurstTest.cpp
     TelnetLatencyMeasurementTest.cpp
     TelnetBenchmark.cpp
     TelnetCharsetNegotiationTest.cpp
@@ -100,6 +104,7 @@ set(TELNET_GROUP_TEST_SOURCES
     TelnetStringSequenceRecoveryTest.cpp
     TelnetTlsPromptTest.cpp
     TOscTest.cpp
+    MsdpMalformedDiagnosticTest.cpp
 )
 
 # Triggers and the other scriptable units, and what a running script does to them
@@ -132,6 +137,7 @@ set(MAP_GROUP_TEST_SOURCES
     MapLevelOfDetailTest.cpp
     MapOffscreenCustomLineTest.cpp
     MapFileStatsTest.cpp
+    MapLockNoOpTest.cpp
     MapperButtonConfigTest.cpp
     MapProgressDialogSeamTest.cpp
     MapRoomGeometryTest.cpp
@@ -155,10 +161,26 @@ set(STARTERUI_GROUP_TEST_SOURCES
     ExperiencedPlayerGateTest.cpp
     FeatureCalloutTest.cpp
     StarterUiGaugePanelTest.cpp
+    StarterUiProtocolCatchUpTest.cpp
     StarterUiSectionsTest.cpp
     StarterUiTriggerCostTest.cpp
+    TutorialInvitationFocusTest.cpp
     TutorialInvitationGateTest.cpp
     TutorialInvitationLayoutTest.cpp
+)
+
+# The settings dialog: its sidebar-and-cards shell, the deep links into it, how
+# a change reaches the Host, and what it does with no profile loaded
+set(SETTINGS_GROUP_TEST_SOURCES
+    SettingsAppearanceTest.cpp
+    SettingsBannerTest.cpp
+    SettingsDeepLinkTest.cpp
+    SettingsDirtyApplyTest.cpp
+    SettingsHostLifecycleTest.cpp
+    SettingsInstantApplyTest.cpp
+    SettingsLiveSyncTest.cpp
+    SettingsSearchTest.cpp
+    SettingsShellNavigationTest.cpp
 )
 
 # Teardown: who owns a profile's dialogs and windows, and what becomes of them when it closes
@@ -168,8 +190,9 @@ set(TEARDOWN_GROUP_TEST_SOURCES
     HostWidgetDecouplingTest.cpp
 )
 
-# Sound, music and video, text-to-speech, and the rich presence published to Discord
+# Sound, music and video, speech in and out, and the rich presence published to Discord
 set(MEDIA_GROUP_TEST_SOURCES
+    SpeechRecognizerContractTest.cpp
     TDiscordModeTest.cpp
     VideoOutputHideTest.cpp
     TMediaLoopTest.cpp
@@ -280,6 +303,7 @@ add_grouped_test_binary(functional_trigger_tests ${TRIGGER_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_editor_tests ${EDITOR_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_map_tests ${MAP_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_package_tests ${PACKAGE_GROUP_TEST_SOURCES})
+add_grouped_test_binary(functional_settings_tests ${SETTINGS_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_starterui_tests ${STARTERUI_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_teardown_tests ${TEARDOWN_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_media_tests ${MEDIA_GROUP_TEST_SOURCES})
@@ -323,8 +347,15 @@ foreach(test_name ${allFunctionalTestNames})
     # so ctest behaves the same locally and in CI. A test that needs it unset has to
     # unset it itself - nothing here checks that, so see DefaultPackagesTest, which
     # asserts the variable arrives at all.
+    #
+    # Qt adds the xdg-desktop-portal platform theme when it believes it is running
+    # sandboxed, which it decides from $SNAP, and that theme - not the application -
+    # then owns the colour scheme, so setColorScheme() stops having any effect. A
+    # cmake installed as a snap exports $SNAP to every test it runs, which makes
+    # Mudlet look sandboxed when it is an ordinary build-tree binary, so drop it.
     set_tests_properties(${test_name} PROPERTIES
         ENVIRONMENT "QT_QPA_PLATFORM=offscreen;MUDLET_TEST_MODE=1;${leakLog}ASAN_OPTIONS=${leakCheck}"
+        ENVIRONMENT_MODIFICATION "SNAP=unset:"
         LABELS "functional"
         TIMEOUT 60  # seconds
     )
@@ -352,6 +383,13 @@ set_tests_properties(DebugConsoleFilterTest PROPERTIES TIMEOUT 300)
 # TelnetReconnectStateTest creates a fresh profile per test method and reconnects it several
 # times per method, so it needs a longer timeout
 set_tests_properties(TelnetReconnectStateTest PROPERTIES TIMEOUT 300)
+
+# MsdpMalformedDiagnosticTest creates a fresh profile per test method, so it needs a longer timeout
+set_tests_properties(MsdpMalformedDiagnosticTest PROPERTIES TIMEOUT 300)
+
+# TelnetLargeBurstTest boots a full profile and then waits out a 780 KB burst,
+# both of which sanitiser builds stretch well past the default budget.
+set_tests_properties(TelnetLargeBurstTest PROPERTIES TIMEOUT 300)
 
 # TelnetLatencyMeasurementTest boots a full profile and then spends its runtime in
 # real time by design - every round trip it times, and every stall it places, has
@@ -428,6 +466,19 @@ set_tests_properties(ProfileRoundTripTest MapRoundTripTest MapProgressDialogSeam
 # MapAreaReassignmentTest reports a cost curve built from thousands of rooms,
 # which takes minutes rather than milliseconds if the quadratic term returns
 set_tests_properties(MapAreaReassignmentTest PROPERTIES TIMEOUT 300)
+
+# The settings tests build the whole preferences dialog once per test method,
+# and several of them wait out a quiet window to prove no apply happened
+set_tests_properties(SettingsAppearanceTest
+                     SettingsBannerTest
+                     SettingsDeepLinkTest
+                     SettingsDirtyApplyTest
+                     SettingsHostLifecycleTest
+                     SettingsInstantApplyTest
+                     SettingsLiveSyncTest
+                     SettingsSearchTest
+                     SettingsShellNavigationTest
+                     PROPERTIES TIMEOUT 300)
 
 # HostWidgetDecouplingTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(HostWidgetDecouplingTest PROPERTIES TIMEOUT 300)

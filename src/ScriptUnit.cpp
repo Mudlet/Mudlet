@@ -26,8 +26,17 @@
 
 #include "Host.h"
 #include "TScript.h"
+#include "Tree.h"
+#include "dlgTriggerEditor.h"
+#include "utils.h"
+
+#include <QLatin1String>
+#include <QMapIterator>
+#include <QSet>
+#include <QStringList>
 
 #include <functional>
+#include <utility>
 
 /* We need an explicit constructor in this file as the Host class is forward
  * declared in the header file and it is problematic to define any dereferencing

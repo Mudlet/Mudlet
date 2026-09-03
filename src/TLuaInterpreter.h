@@ -58,6 +58,7 @@ extern "C" {
 
 #include <list>
 #include <string>
+#include <vector>
 #include <memory>
 #include <optional>
 
@@ -249,6 +250,34 @@ public:
     static int setIrcServer(lua_State*);
     static int setIrcChannels(lua_State*);
     static int restartIrc(lua_State*);
+    // Speech-to-text (STT) functions
+    static int sttInit(lua_State*);
+    static int sttStart(lua_State*);
+    static int sttStop(lua_State*);
+    static int sttToggle(lua_State*);
+    static int sttIsListening(lua_State*);
+    static int sttIsAvailable(lua_State*);
+    static int sttIsInitialized(lua_State*);
+    static int sttGetInfo(lua_State*);
+    static int sttGetModelPath(lua_State*);
+    static int sttGetLibraryPath(lua_State*);
+    static int sttListModels(lua_State*);
+    static int sttClose(lua_State*);
+    static int sttGetPlatformKey(lua_State*);
+    static int sttReloadLibrary(lua_State*);
+    static int sttUnloadLibrary(lua_State*);
+    static int sttSetSilenceTimeout(lua_State*);
+    static int sttSetSensitivity(lua_State*);
+    static int sttSetVocabulary(lua_State*);
+    // Addon toolbar/menu functions
+    static int addCommand(lua_State*);
+    static int removeCommand(lua_State*);
+    static int enableCommand(lua_State*);
+    static int disableCommand(lua_State*);
+    static int setCommandChecked(lua_State*);
+    static int setCommandIcon(lua_State*);
+    static int setCommandTooltip(lua_State*);
+    static int setCommandPulse(lua_State*);
     static int showUnzipProgress(lua_State*);
     static int setAppStyleSheet(lua_State*);
     static int setProfileStyleSheet(lua_State*);
@@ -914,8 +943,22 @@ private:
 
 
     const int LUA_FUNCTION_MAX_ARGS = 50;
-    std::list<std::string> mCaptureGroupList;
-    std::list<int> mCaptureGroupPosList;
+    std::vector<std::string> mCaptureGroupList;
+    std::vector<int> mCaptureGroupPosList;
+    // clearCaptureGroups() parks the emptied capture storage here instead of
+    // freeing it, so the next trigger fire assigns over std::strings that still
+    // own their buffers rather than allocating a fresh node per capture
+    std::vector<std::string> mSpareCaptureGroupList;
+    std::vector<int> mSpareCaptureGroupPosList;
+    // Bounds on what the parking above holds onto between fires
+    static constexpr std::size_t scmMaxParkedCaptures = 512;
+    static constexpr std::string::size_type scmMaxParkedCaptureBytes = 1024;
+    QString mLastGlobalName;
+    QByteArray mLastGlobalNameUtf8;
+    // Storage set_lua_string() encodes the line into, kept between calls for
+    // its capacity alone, and dropped past a length no game line reaches
+    static constexpr qsizetype scmMaxRetainedUtf8Scratch = 3 * 8192;
+    QByteArray mUtf8Scratch;
     std::list<std::list<std::string>> mMultiCaptureGroupList;
     std::list<std::list<int>> mMultiCaptureGroupPosList;
     QVector<QPair<QString, QString>> mCapturedNameGroups;

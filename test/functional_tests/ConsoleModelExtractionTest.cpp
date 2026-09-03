@@ -1070,6 +1070,8 @@ noViewSpellReport = table.concat(noViewSpellProblems, '; ')
         QVERIFY2(created, qPrintable(message));
         const TLabelModel* firstModel = host->windowRegistry().labelModel(labelName);
         QVERIFY2(firstModel, "Creating a label registered no model in the profile's window registry.");
+        QPointer<TLabel> firstWidget = host->mpConsole->labelWidget(labelName);
+        QVERIFY2(firstWidget, "Creating a label left the console's own widget map empty.");
 
         const auto [deleted, deleteMessage] = host->mpConsole->deleteLabel(labelName);
         QVERIFY2(deleted, qPrintable(deleteMessage));
@@ -1086,8 +1088,11 @@ noViewSpellReport = table.concat(noViewSpellProblems, '; ')
 
         // deleteLabel() only defers the widget's destruction, so the first
         // label's destructor runs from here - after its replacement has already
-        // claimed the name. Deregistration is identity-checked for exactly this.
-        QTest::qWait(100ms);
+        // claimed the name. Deregistration is identity-checked for exactly this,
+        // and that destruction is asserted rather than waited on, so the checks
+        // below cannot pass by never having reached it.
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        QVERIFY2(firstWidget.isNull(), "The deleted label was never destroyed, so nothing below tests the identity check.");
         QVERIFY2(host->windowRegistry().labelModel(labelName) == secondModel, "The deferred destruction of a deleted label evicted the replacement that had taken its name.");
         QVERIFY2(host->mpConsole->labelWidget(labelName), "The replacement label lost its widget.");
     }
@@ -1134,6 +1139,101 @@ noViewSpellReport = table.concat(noViewSpellProblems, '; ')
 
         QVERIFY2(!host->windowRegistry().hasLabel(labelName), "Destroying the console left its labels in the profile's window registry, pointing at models that have gone.");
         QVERIFY2(!host->windowRegistry().labelModel(labelName), "Destroying the console left a handle on a freed label model in the profile's window registry.");
+    }
+
+    // A label created into a user window is a child widget of that window's dock,
+    // so deleting the window destroys the label without deleteLabel() ever
+    // running. Both halves of the pair have to notice: the console's map holds
+    // raw pointers, so an entry left behind is read as a live widget by every
+    // by-name setter Host still forwards through the view.
+    void test_deletingAUserWindowTakesItsLabelsWithIt()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        const QString windowName = qsl("registryParentWindow");
+        const QString labelName = qsl("registryChildLabel");
+        runLua(host, qsl("openUserWindow('%1')\n").arg(windowName));
+        const auto [created, message] = host->createLabel(windowName, labelName, 0, 0, 10, 10, true, false);
+        QVERIFY2(created, qPrintable(message));
+        QPointer<TLabel> widget = host->mpConsole->labelWidget(labelName);
+        QVERIFY2(widget, "Creating a label into a user window left the console's own widget map empty.");
+
+        const auto [deleted, deleteMessage] = host->mpConsole->deleteMiniConsole(windowName);
+        QVERIFY2(deleted, qPrintable(deleteMessage));
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        QVERIFY2(widget.isNull(), "Deleting the user window did not destroy the label it contained, so the checks below prove nothing.");
+
+        QVERIFY2(!host->windowRegistry().hasLabel(labelName), "A label destroyed with its parent window stayed in the profile's window registry.");
+        QVERIFY2(!host->mpConsole->labelWidget(labelName), "A label destroyed with its parent window left a dangling widget in the console's map.");
+        // The call that reads the map entry and dies in the freed widget
+        QVERIFY2(!host->setClickthrough(labelName, true), "setClickthrough reached a label that had been destroyed with its parent window.");
+
+        // The name has to be usable again, not refused as still taken
+        const auto [recreated, recreateMessage] = host->createLabel(QString(), labelName, 0, 0, 10, 10, true, false);
+        QVERIFY2(recreated, qPrintable(qsl("The name of a label destroyed with its window could not be used again: %1").arg(recreateMessage)));
+    }
+
+    // A scroll box is the other thing a label can be created into, and it is torn
+    // down by a different call, so it needs its own pass over the same ground.
+    void test_deletingAScrollBoxTakesItsLabelsWithIt()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        const QString scrollBoxName = qsl("registryParentScrollBox");
+        const QString labelName = qsl("registryScrollBoxChildLabel");
+        runLua(host, qsl("createScrollBox('%1', 0, 0, 200, 200)\n").arg(scrollBoxName));
+        const auto [created, message] = host->createLabel(scrollBoxName, labelName, 0, 0, 10, 10, true, false);
+        QVERIFY2(created, qPrintable(message));
+        QPointer<TLabel> widget = host->mpConsole->labelWidget(labelName);
+        QVERIFY2(widget, "Creating a label into a scroll box left the console's own widget map empty.");
+
+        const auto [deleted, deleteMessage] = host->mpConsole->deleteScrollBox(scrollBoxName);
+        QVERIFY2(deleted, qPrintable(deleteMessage));
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        QVERIFY2(widget.isNull(), "Deleting the scroll box did not destroy the label it contained, so the checks below prove nothing.");
+
+        QVERIFY2(!host->windowRegistry().hasLabel(labelName), "A label destroyed with its scroll box stayed in the profile's window registry.");
+        QVERIFY2(!host->mpConsole->labelWidget(labelName), "A label destroyed with its scroll box left a dangling widget in the console's map.");
+        QVERIFY2(!host->setClickthrough(labelName, true), "setClickthrough reached a label that had been destroyed with its scroll box.");
+    }
+
+    // The console's own labels die after its members have, so their destroyed()
+    // handlers would run against a map that has already gone. ~TMainConsole
+    // severs them first, and the console's own destroyed() - emitted before Qt
+    // deletes the children - is the one place that can still be asked.
+    void test_destroyingTheViewSeversItsLabelDestroyedHandlers()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        const QString labelName = qsl("registrySweptLabel");
+        const auto [created, message] = host->createLabel(QString(), labelName, 0, 0, 10, 10, true, false);
+        QVERIFY2(created, qPrintable(message));
+        TLabel* label = host->mpConsole->labelWidget(labelName);
+        QVERIFY2(label, "Creating a label left the console's own widget map empty.");
+
+        TMainConsole* console = host->mpConsole;
+        bool consoleWasDestroyed = false;
+        bool alreadySevered = false;
+        const auto probe = QObject::connect(console, &QObject::destroyed, [&consoleWasDestroyed, &alreadySevered, label, console]() {
+            consoleWasDestroyed = true;
+            alreadySevered = !QObject::disconnect(label, &QObject::destroyed, console, nullptr);
+        });
+
+        destroyTheView(host);
+        // The lambda writes to this frame, so it must not outlive it
+        QObject::disconnect(probe);
+
+        QVERIFY2(consoleWasDestroyed, "The console never emitted destroyed(), so the check below was never made.");
+        QVERIFY2(alreadySevered, "A label of the console still had its destroyed() handler attached when the console went, so it would have run against a destroyed map.");
     }
 
     // Host answers "is there a label called this, and what is it" from the
