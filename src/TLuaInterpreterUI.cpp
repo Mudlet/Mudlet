@@ -2539,9 +2539,9 @@ int TLuaInterpreter::selectCaptureGroup(lua_State* L)
         // We want capture groups to start with 1 instead of 0 so predecrement
         // luaNumOfMatch :
         if (--captureGroup < static_cast<int>(pL->mCaptureGroupList.size())) {
-            const auto offset = static_cast<std::list<std::string>::difference_type>(captureGroup);
-            begin = *std::next(pL->mCaptureGroupPosList.cbegin(), offset);
-            length = QString::fromStdString(*std::next(pL->mCaptureGroupList.cbegin(), offset)).size();
+            const auto offset = static_cast<std::size_t>(captureGroup);
+            begin = pL->mCaptureGroupPosList[offset];
+            length = QString::fromStdString(pL->mCaptureGroupList[offset]).size();
             if (TDebug::wants(TDebug::Category::Selection)) {
                 TDebug(Qt::white, Qt::red, TDebug::Category::Selection) << "selectCaptureGroup(" << begin << ", " << length << ")\n" >> &host;
             }
@@ -2684,6 +2684,7 @@ int TLuaInterpreter::setAppStyleSheet(lua_State* L)
     event.mArgumentList.append(host.getName());
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     qApp->setStyleSheet(styleSheet);
+    mudlet::self()->refreshTabBarsAfterStyleChange();
     mudlet::self()->getHostManager().postInterHostEvent(nullptr, event, true);
     lua_pushboolean(L, true);
     return 1;

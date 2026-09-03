@@ -22,14 +22,11 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <QApplication>
 #include <QCryptographicHash>
 #include <QEnterEvent>
 #include <QDir>
 #include <QRegularExpression>
 #include <QString>
-#include <QScreen>
-#include <QWidget>
 
 #include <cstdint>
 #include <cstring>
@@ -103,35 +100,6 @@ public:
     // defining a static function/method here we can save using the same
     // qsl all over the place:
     static QString richText(const QString& text) { return qsl("<p>%1</p>").arg(text); }
-
-    // Call this in the destructor of a window class that connects any of its
-    // own widgets to its own slots - keep it first, so that nothing else the
-    // destructor does can deliver a child's signal either.
-    //
-    // A visible window is taken off the screen while the base-class
-    // destructors unwind: ~QDialog hides it explicitly, and any other window
-    // class gets closed by ~QWidget. That moves the keyboard focus away from
-    // whichever child widget holds it, and an editing widget reacts to the
-    // focus-out by emitting - QLineEdit (once its text has been touched, which
-    // includes any setText()), QAbstractSpinBox and QKeySequenceEdit all emit
-    // editingFinished() there. Qt then tries to deliver that to a slot of a
-    // window whose derived part has already been destroyed, which aborts with
-    // "Called object is not of the correct type (class destructor may have
-    // already run)" (#9574). In a release build the assert is compiled out and
-    // the slot runs against destroyed members instead.
-    //
-    // A window that is being destroyed cannot do anything useful with a
-    // signal from its own widgets, so every one of them is severed rather
-    // than just the widget types that emit during teardown today. Note that
-    // this only reaches connections whose receiver is the window: a
-    // connect(child, &Signal, [this]{...}) written without a context object
-    // survives it and brings the crash back, so always pass the context:
-    static void disconnectChildSignals(QWidget* window)
-    {
-        for (QObject* child : window->findChildren<QObject*>()) {
-            QObject::disconnect(child, nullptr, window, nullptr);
-        }
-    }
 
     // Qt 6.9 deprecated QDateTime::setOffsetFromUtc(int) and made it hard to
     // replicate the exact strings that we had before:
@@ -286,132 +254,6 @@ public:
         }
         return sanitized;
     }
-
-    // Position a dialog on the same screen as its parent window
-    // This improves multi-monitor UX by keeping dialogs with their parent windows
-    static void positionDialogOnParentScreen(QWidget* dialog, QWidget* parent)
-    {
-        if (!dialog || !parent) {
-            return;
-        }
-
-        // Get the screen containing the parent window
-        // Use mapToGlobal to get the actual screen position of the parent widget
-        QPoint parentPos = parent->mapToGlobal(parent->rect().center());
-        const QScreen* parentScreen = QApplication::screenAt(parentPos);
-        if (!parentScreen) {
-            // Fallback to parent's screen property if screenAt fails
-            parentScreen = parent->screen();
-        }
-
-        if (parentScreen) {
-            // Get the current screen of the dialog to see if it needs repositioning
-            // Use the dialog's current geometry center for more accurate screen detection
-            QPoint dialogCenter = dialog->mapToGlobal(dialog->rect().center());
-            const QScreen* dialogScreen = QApplication::screenAt(dialogCenter);
-
-            // A hidden dialog reports no screen of its own, so this recentres one that is
-            // merely closed even when it holds a position worth keeping - not for windows
-            // whose position is remembered
-            if (!dialog->isVisible() || !dialogScreen || dialogScreen != parentScreen) {
-                centerDialogOnScreen(dialog, parentScreen);
-            }
-        }
-    }
-
-    // Position a dialog on the same screen as the active profile's console
-    // This version considers the actual console widget position for better accuracy
-    static void positionDialogOnActiveProfileScreen(QWidget* dialog, QWidget* parentWindow, QWidget* activeConsole)
-    {
-        if (!dialog) {
-            return;
-        }
-
-        // Prefer the active console position if available, otherwise fall back to parent window
-        QWidget* referenceWidget = activeConsole ? activeConsole : parentWindow;
-        if (referenceWidget) {
-            positionDialogOnParentScreen(dialog, referenceWidget);
-        }
-    }
-
-    // Centre a dialog on the parent's screen, discarding wherever it currently sits.
-    // Only for dialogs whose position is not persisted: a window that restores a
-    // remembered position lands back in the middle of the screen on every re-show
-    static void forceRepositionDialogOnParentScreen(QWidget* dialog, QWidget* parent)
-    {
-        if (!dialog || !parent) {
-            return;
-        }
-
-        // Get the screen containing the parent window
-        QPoint parentPos = parent->mapToGlobal(parent->rect().center());
-        const QScreen* parentScreen = QApplication::screenAt(parentPos);
-        if (!parentScreen) {
-            parentScreen = parent->screen();
-        }
-
-        if (parentScreen) {
-            // Always reposition, regardless of current dialog position
-            centerDialogOnScreen(dialog, parentScreen);
-        }
-    }
-
-    // Centre a dialog whose remembered position has since gone out of reach -
-    // the monitor it was left on can have been disconnected. What has to be on a
-    // screen is a piece of title bar big enough to grab and drag with, not the
-    // window: a couple of stray pixels at an edge are no way back
-    static void keepDialogOnAScreen(QWidget* dialog, QWidget* parent)
-    {
-        if (!dialog) {
-            return;
-        }
-
-        constexpr int graspableWidth = 40;
-        constexpr int graspableHeight = 20;
-        const QRect dialogRect = dialog->frameGeometry();
-        const QRect titleBar(dialogRect.x(), dialogRect.y(), dialogRect.width(), qMin(graspableHeight, dialogRect.height()));
-        const QList<QScreen*> screens = QApplication::screens();
-        for (const QScreen* screen : screens) {
-            const QRect grabbable = screen->availableGeometry().intersected(titleBar);
-            if (grabbable.width() >= qMin(graspableWidth, titleBar.width()) && grabbable.height() >= titleBar.height()) {
-                return;
-            }
-        }
-
-        const QScreen* fallbackScreen = parent ? parent->screen() : QApplication::primaryScreen();
-        centerDialogOnScreen(dialog, fallbackScreen);
-    }
-
-    // Position a dialog in the center of the specified screen
-    static void centerDialogOnScreen(QWidget* dialog, const QScreen* screen)
-    {
-        if (!dialog || !screen) {
-            return;
-        }
-
-        const QRect screenGeometry = screen->availableGeometry();
-
-        // Ensure dialog has a size first
-        if (dialog->size().isEmpty()) {
-            dialog->adjustSize();
-        }
-
-        // Calculate center position
-        const QSize dialogSize = dialog->size();
-        const QPoint centerPoint = screenGeometry.center();
-        const QPoint newPos(
-            centerPoint.x() - dialogSize.width() / 2,
-            centerPoint.y() - dialogSize.height() / 2);
-
-        // Ensure dialog stays within screen bounds
-        QPoint constrainedPos = newPos;
-        constrainedPos.setX(qMax(screenGeometry.left(),
-                                qMin(newPos.x(), screenGeometry.right() - dialogSize.width())));
-        constrainedPos.setY(qMax(screenGeometry.top(),
-                                qMin(newPos.y(), screenGeometry.bottom() - dialogSize.height())));
-
-        dialog->move(constrainedPos);
-    }
 };
 
-#endif // UPDATER_H
+#endif // MUDLET_UTILS_H

@@ -250,10 +250,9 @@ Traps:
   `Mudlet.app`'s binary) pointing at a per-version directory is the cross-platform way,
   and it also keeps an older version from migrating or rewriting the real
   `~/.config/mudlet`.
-- Seeding any `Mudlet.ini` key also suppresses the 5.0 starter UI. That is what you want
-  against versions that never had it, but the starter UI's trigger package is real
-  per-line cost for a default new profile - decide explicitly which configuration is being
-  compared.
+- Every new profile from 5.0 on carries the starter UI, whose trigger package is real
+  per-line cost. A version that never shipped it is therefore not comparable on a default
+  profile - decide explicitly which configuration is being compared.
 
 ## Lua-only changes need no rebuild
 

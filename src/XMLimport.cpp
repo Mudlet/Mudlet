@@ -27,12 +27,20 @@
 #include "LuaInterface.h"
 #include "CredentialManager.h"
 #include "SecureStringUtils.h"
+#include "TAction.h"
+#include "TAlias.h"
+#include "TKey.h"
 #include "TMainConsole.h"
 #include "TMap.h"
 #include "TRoomDB.h"
 #include "TRoom.h"
+#include "TScript.h"
+#include "TTimer.h"
+#include "TTrigger.h"
+#include "TVar.h"
 #include "VarUnit.h"
 #include "mudlet.h"
+#include "dlgTriggerEditor.h"
 
 #include <QBuffer>
 #include <QClipboard>

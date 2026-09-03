@@ -1431,6 +1431,18 @@ you can use it but there could be issues with aligning columns of text</string>
              <enum>QFrame::Shape::NoFrame</enum>
             </property>
             <layout class="QHBoxLayout" name="horizontalLayout_frame_console_buffer_size">
+             <property name="leftMargin">
+              <number>0</number>
+             </property>
+             <property name="topMargin">
+              <number>0</number>
+             </property>
+             <property name="rightMargin">
+              <number>0</number>
+             </property>
+             <property name="bottomMargin">
+              <number>0</number>
+             </property>
              <item>
               <widget class="QLabel" name="label_console_buffer_size_spinBox">
                <property name="sizePolicy">
@@ -5149,48 +5161,6 @@ you can use it but there could be issues with aligning columns of text</string>
      </widget>
     </widget>
    </item>
-   <item>
-    <widget class="QWidget" name="widget_bottom" native="true">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <layout class="QHBoxLayout" name="horizontalLayout_widget_bottom">
-      <item>
-       <spacer name="horizontalSpacer_bottom">
-        <property name="orientation">
-         <enum>Qt::Orientation::Horizontal</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>444</width>
-          <height>21</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-      <item>
-       <widget class="QPushButton" name="closeButton">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="text">
-         <string>Save</string>
-        </property>
-        <property name="icon">
-         <iconset>
-          <normaloff>:/icons/icons/dialog-close.png</normaloff>:/icons/icons/dialog-close.png</iconset>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
   </layout>
  </widget>
  <customwidgets>
@@ -5203,7 +5173,6 @@ you can use it but there could be issues with aligning columns of text</string>
  </customwidgets>
  <tabstops>
   <tabstop>tabWidget</tabstop>
-  <tabstop>closeButton</tabstop>
   <tabstop>MainIconSize</tabstop>
   <tabstop>comboBox_menuBarVisibility</tabstop>
   <tabstop>TEFolderIconSize</tabstop>
