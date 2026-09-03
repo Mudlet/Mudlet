@@ -1108,7 +1108,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 case static_cast<quint8>('m'): {
                     // We have a complete SGR sequence:
 #if defined(DEBUG_SGR_PROCESSING)
-                    qDebug().nospace().noquote() << "    Consider the SGR sequence: \"" << localBuffer.substr(localBufferPosition, spanEnd - spanStart).c_str() << "\"";
+                    qDebug().nospace().noquote() << "    Consider the SGR sequence: \"" << localBuffer.substr(spanStart, spanEnd - spanStart).c_str() << "\"";
 #endif
                     // Only bytes from cParameter can be here - the four that
                     // may open a private sequence were turned away above - so

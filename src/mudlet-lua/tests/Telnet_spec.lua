@@ -121,6 +121,17 @@ describe("Tests SGR default colour handling", function()
     assert.are.same({175, 255, 255}, getTextFormat("main").foreground)
   end)
 
+  -- the parameter string itself outgrows SGR_INLINE_CHARS in TBuffer.cpp, the
+  -- inline capacity of the buffer the CSI scanner widens those bytes into, so
+  -- this is the case that spills that buffer onto the heap
+  it("keeps a colour correct past the inline length of a parameter string", function()
+    local parameters = string.rep("0;", 31) .. "38;5;159"
+    assert.is_true(#parameters > 64, "the sequence stopped reaching the heap path")
+    feed("\27[0m\27[" .. parameters .. "mSgrLongL\r\n")
+    selectMarker("SgrLongL")
+    assert.are.same({175, 255, 255}, getTextFormat("main").foreground)
+  end)
+
   it("restores the default background and keeps it through a later bold", function()
     feed("\27[0m\27[41mSgrRedBgH \27[49mSgrPlainBgH \27[1mSgrBoldBgH\r\n")
     selectMarker("SgrPlainBgH")
