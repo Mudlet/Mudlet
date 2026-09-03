@@ -149,6 +149,7 @@ private slots:
     {
         delete mpPreferences;
         mpPreferences = nullptr;
+        mpHost->waitForProfileSave();
     }
 
     // Nothing is pressed: the user stops editing and the setting is written
@@ -318,6 +319,7 @@ private slots:
         openPreferences();
         mpPreferences->checkBox_enableTextAnalyzer->click();
         mpPreferences->close();
+        QVERIFY2(mpHost->currentlySavingProfile(), "closing the settings did not start a profile save");
 
         // the write itself runs off the main thread
         QVERIFY2(QTest::qWaitFor(
