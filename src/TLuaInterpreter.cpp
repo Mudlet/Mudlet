@@ -3627,8 +3627,7 @@ void TLuaInterpreter::clearCaptureGroups()
             mSpareCaptureGroupList.resize(scmMaxParkedCaptures);
             mSpareCaptureGroupPosList.resize(scmMaxParkedCaptures);
         }
-        // resize() destroys the elements past the cap but keeps capacity(), so
-        // both vector blocks would otherwise stay at the high water mark
+        // resize() down destroys the elements past the cap but keeps capacity()
         if (mSpareCaptureGroupList.capacity() > scmMaxParkedCaptureSlack) {
             mSpareCaptureGroupList.shrink_to_fit();
         }
