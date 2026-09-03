@@ -2115,9 +2115,23 @@ void Host::runTriggers(int line)
     consoleModel.mCurrentLine = consoleModel.buffer.line(line);
     getLuaInterpreter()->set_lua_string(TConsole::cmLuaLineVariable, consoleModel.mCurrentLine);
     // The matchers take the haystack by reference all the way down, so it must be
-    // a local: a nested pass reassigns mCurrentLine under them.
-    QString haystack = consoleModel.mCurrentLine;
-    haystack.append('\n');
+    // a local: a nested pass reassigns mCurrentLine under them. Its storage is
+    // borrowed from the Host, so the capacity outlives the line and only a line
+    // longer than any before it allocates. Moving the buffer out rather than
+    // writing into the member is what makes that safe under nesting: a pass a
+    // trigger script starts finds the member empty and grows its own, so it
+    // cannot resize the one an outer pass is matching on.
+    QString haystack = std::move(mTriggerHaystack);
+    const auto haystackGuard = qScopeGuard([this, &haystack] {
+        if (haystack.capacity() > scmMaxRetainedHaystack) {
+            haystack = QString();
+        }
+        mTriggerHaystack = std::move(haystack);
+    });
+    haystack.resize(0);
+    haystack.reserve(consoleModel.mCurrentLine.size() + 1);
+    haystack.append(QStringView{consoleModel.mCurrentLine});
+    haystack.append(u'\n');
 
     if (TDebug::wants(TDebug::Category::GameLine)) {
         TDebug(Qt::darkGreen, Qt::black, TDebug::Category::GameLine) << "new line arrived:" >> this;
