@@ -101,11 +101,13 @@ void ActionUnit::doCleanup()
     if (mProcessingDepth > 0) {
         return;
     }
+
     // Called once per unit for every line of game text, and next to never has
     // anything queued, so skip setting up the flush below.
     if (!hasPendingDeletes()) {
         return;
     }
+
     // Flush the deletes uninstall() deferred (#9337). uninstallList is ordered
     // children-before-parents and each ~Tree unlinks from its parent, so deleting
     // children first empties the parent's child list (no double free); the seen
