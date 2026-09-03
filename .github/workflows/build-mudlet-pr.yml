@@ -334,8 +334,8 @@ jobs:
          echo "WITH_FONTS=no" >> $GITHUB_ENV
 
     # Saves are keyed per commit, so the primary key deliberately matches no entry
-    # and every restore prefix-matches the newest. On a tagged release the
-    # leak-detection leg compiles without ASan, so it wants the plain leg's cache.
+    # and every restore prefix-matches the newest. The tag branch in the key is
+    # inert on a pull request and kept only to mirror build-mudlet.yml.
     - name: Restore ccache
       uses: actions/cache/restore@v6
       with:

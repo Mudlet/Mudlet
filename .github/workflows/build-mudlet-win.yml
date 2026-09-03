@@ -17,8 +17,9 @@ on:
   schedule:
     - cron: '0 2 * * *'
 
-# Permissions required for SignPath trusted build verification: its action reads
-# job details and downloads the artifact with the workflow token (actions: read).
+# An explicit block sets every unlisted scope to none, so every consumer here has
+# to be listed. actions: read is SignPath's - its action reads job details and
+# downloads the artifact it signs.
 permissions:
   id-token: write
   contents: read
