@@ -4183,7 +4183,7 @@ std::pair<bool, QString> Host::createLabel(const QString& windowname, const QStr
     } else if (pC) {
         return {false, qsl("a miniconsole/userwindow with the name '%1' already exists").arg(name)};
     }
-    return {false, qsl("label '%1' already exists").arg(name)};
+    return {false, qsl("could not create label '%1'").arg(name)};
 }
 
 bool Host::setClickthrough(const QString& name, bool clickthrough)

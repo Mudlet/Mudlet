@@ -1068,6 +1068,8 @@ noViewSpellReport = table.concat(noViewSpellProblems, '; ')
         QVERIFY2(created, qPrintable(message));
         const TLabelModel* firstModel = host->windowRegistry().labelModel(labelName);
         QVERIFY2(firstModel, "Creating a label registered no model in the profile's window registry.");
+        QPointer<TLabel> firstWidget = host->mpConsole->labelWidget(labelName);
+        QVERIFY2(firstWidget, "Creating a label left the console's own widget map empty.");
 
         const auto [deleted, deleteMessage] = host->mpConsole->deleteLabel(labelName);
         QVERIFY2(deleted, qPrintable(deleteMessage));
@@ -1084,8 +1086,11 @@ noViewSpellReport = table.concat(noViewSpellProblems, '; ')
 
         // deleteLabel() only defers the widget's destruction, so the first
         // label's destructor runs from here - after its replacement has already
-        // claimed the name. Deregistration is identity-checked for exactly this.
-        QTest::qWait(100ms);
+        // claimed the name. Deregistration is identity-checked for exactly this,
+        // and that destruction is asserted rather than waited on, so the checks
+        // below cannot pass by never having reached it.
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        QVERIFY2(firstWidget.isNull(), "The deleted label was never destroyed, so nothing below tests the identity check.");
         QVERIFY2(host->windowRegistry().labelModel(labelName) == secondModel, "The deferred destruction of a deleted label evicted the replacement that had taken its name.");
         QVERIFY2(host->mpConsole->labelWidget(labelName), "The replacement label lost its widget.");
     }
@@ -1132,6 +1137,39 @@ noViewSpellReport = table.concat(noViewSpellProblems, '; ')
 
         QVERIFY2(!host->windowRegistry().hasLabel(labelName), "Destroying the console left its labels in the profile's window registry, pointing at models that have gone.");
         QVERIFY2(!host->windowRegistry().labelModel(labelName), "Destroying the console left a handle on a freed label model in the profile's window registry.");
+    }
+
+    // A label created into a user window is a child widget of that window's dock,
+    // so deleting the window destroys the label without deleteLabel() ever
+    // running. Both halves of the pair have to notice: the console's map holds
+    // raw pointers, so an entry left behind is read as a live widget by every
+    // by-name setter Host still forwards through the view.
+    void test_deletingAUserWindowTakesItsLabelsWithIt()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        const QString windowName = qsl("registryParentWindow");
+        const QString labelName = qsl("registryChildLabel");
+        runLua(host, qsl("openUserWindow('%1')\n").arg(windowName));
+        const auto [created, message] = host->createLabel(windowName, labelName, 0, 0, 10, 10, true, false);
+        QVERIFY2(created, qPrintable(message));
+        QPointer<TLabel> widget = host->mpConsole->labelWidget(labelName);
+        QVERIFY2(widget, "Creating a label into a user window left the console's own widget map empty.");
+
+        const auto [deleted, deleteMessage] = host->mpConsole->deleteMiniConsole(windowName);
+        QVERIFY2(deleted, qPrintable(deleteMessage));
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        QVERIFY2(widget.isNull(), "Deleting the user window did not destroy the label it contained, so the checks below prove nothing.");
+
+        QVERIFY2(!host->windowRegistry().hasLabel(labelName), "A label destroyed with its parent window stayed in the profile's window registry.");
+        QVERIFY2(!host->mpConsole->labelWidget(labelName), "A label destroyed with its parent window left a dangling widget in the console's map.");
+
+        // The name has to be usable again, not refused as still taken
+        const auto [recreated, recreateMessage] = host->createLabel(QString(), labelName, 0, 0, 10, 10, true, false);
+        QVERIFY2(recreated, qPrintable(qsl("The name of a label destroyed with its window could not be used again: %1").arg(recreateMessage)));
     }
 
     // Host answers "is there a label called this, and what is it" from the

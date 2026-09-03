@@ -45,6 +45,10 @@ class TLabel : public QLabel
 {
     Q_OBJECT
 
+    // Declared ahead of every other member: the references below are initialised
+    // from it, so it has to be constructed first.
+    std::unique_ptr<TLabelModel> mpModel;
+
 public:
     Q_DISABLE_COPY(TLabel)
     explicit TLabel(Host*, const QString&, QWidget* pW = nullptr);
@@ -67,12 +71,10 @@ public:
     void clearVisitedLinks();
     TLabelModel& model() { return *mpModel; }
 
-    // The members below are references initialised from *mpModel in declaration
-    // order, so the model has to stay declared ahead of them all. They alias the
-    // label's identity, callback registry indexes, link colouring and background
-    // colour, which live in the core TLabelModel this label owns and the
-    // profile's TWindowRegistry indexes by name.
-    std::unique_ptr<TLabelModel> mpModel;
+    // The members below are references aliasing the model above. They stand for
+    // the label's identity, callback registry indexes, link colouring and
+    // background colour, which live in the core TLabelModel this label owns and
+    // the profile's TWindowRegistry indexes by name.
     QPointer<Host>& mpHost;
     QString& mName;
     int& mClickFunction;

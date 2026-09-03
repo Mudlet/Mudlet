@@ -55,7 +55,8 @@ public:
     }
 
     bool hasLabel(const QString& name) const { return mLabels.contains(name); }
-    TLabelModel* labelModel(const QString& name) const { return mLabels.value(name); }
+    TLabelModel* labelModel(const QString& name) { return mLabels.value(name); }
+    const TLabelModel* labelModel(const QString& name) const { return mLabels.value(name); }
 
 private:
     QMap<QString, TLabelModel*> mLabels;

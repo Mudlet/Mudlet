@@ -206,6 +206,8 @@ signals:
 
 private:
     void createMapProgressDialog(const QString& title, const QString& label, const QString& cancelButtonText, int minimum, int maximum);
+    void registerLabelWidget(const QString& name, TLabel* pLabel);
+    void deregisterLabelWidget(TLabel* pLabel);
 
     // The view's half of the label bookkeeping; the core's half is the Host's
     // window registry, which this class registers into and deregisters from
