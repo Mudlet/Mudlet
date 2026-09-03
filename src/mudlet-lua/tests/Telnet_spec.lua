@@ -121,6 +121,17 @@ describe("Tests SGR default colour handling", function()
     assert.are.same({175, 255, 255}, getTextFormat("main").foreground)
   end)
 
+  -- a bare ESC[m is a full reset only while the parameter tokeniser keeps empty
+  -- parts - skip them and the sequence carries no parameter at all, and does nothing
+  it("treats a parameterless SGR sequence as a full reset", function()
+    feed("\27[0m\27[1;31mSgrBoldRedL \27[mSgrPlainL\r\n")
+    selectMarker("SgrBoldRedL")
+    assert.is_true(isAnsiFgColor(3), "the bold red text did not come out bright red")
+    selectMarker("SgrPlainL")
+    assert.is_true(isAnsiFgColor(0), "the parameterless sequence did not restore the default foreground")
+    assert.is_false(getTextFormat("main").bold, "the parameterless sequence did not clear bold")
+  end)
+
   it("restores the default background and keeps it through a later bold", function()
     feed("\27[0m\27[41mSgrRedBgH \27[49mSgrPlainBgH \27[1mSgrBoldBgH\r\n")
     selectMarker("SgrPlainBgH")
