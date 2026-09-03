@@ -5467,7 +5467,10 @@ void cTelnet::readPendingSocketData()
     int amount = mpSocket->read(in_buffer, BUFFER_SIZE);
     processSocketData(in_buffer, amount);
 
-    if (mpSocket && mpSocket->bytesAvailable() > 0) {
+    // amount > 0 as well as bytesAvailable(): a read that yields nothing while the
+    // socket still reports bytes would otherwise requeue forever, spinning a core
+    // for as long as the connection stayed in that state.
+    if (amount > 0 && mpSocket && mpSocket->bytesAvailable() > 0) {
         QMetaObject::invokeMethod(this, &cTelnet::readPendingSocketData, Qt::QueuedConnection);
     }
 }

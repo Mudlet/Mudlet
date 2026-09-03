@@ -24,6 +24,11 @@
  * remainder sitting unread in the socket's own buffer, for as long as it took the
  * game to send something else - the display stopping part-way through the burst.
  *
+ * The stranding only happens where the host's socket receive buffer swallows the
+ * whole burst, so the test only discriminates there - on Linux, which autotunes to
+ * tens of MB. Elsewhere it passes without discriminating; see the note on the test
+ * itself.
+ *
  * Run with: ctest -R TelnetLargeBurstTest -V
  */
 
