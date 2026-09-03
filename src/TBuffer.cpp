@@ -109,11 +109,13 @@ bool endsStringSequence(const char byte)
 }
 
 // A byte the decoder's main loop would turn into exactly one QChar of the same
-// value whatever the session's encoding: printable 7-bit, so it neither ends
-// the line, introduces an escape sequence, nor begins a multi-byte character in
-// any encoding Mudlet decodes. Runs of these can be copied in one go. DEL is
-// excluded because EUC-KR alone treats it as an invalid first byte and renders
-// it as the replacement character.
+// value whatever the session's encoding, so runs of them can be copied in one
+// go. That is every 7-bit byte except the four the loop acts on itself: the
+// two line endings, End of Transmission and ESC. The remaining C0 controls are
+// deliberately included - none of them is special-cased on the text path, so
+// each decodes to itself like any printable character. DEL is excluded because
+// EUC-KR alone treats it as an invalid first byte and renders it as the
+// replacement character.
 bool bulkCopyableTextByte(const char byte)
 {
     return static_cast<unsigned char>(byte) < 0x7F && byte != CHAR_NEW_LINE && byte != CHAR_CARRIAGE_RETURN && byte != CHAR_END_OF_TRANSMISSION && byte != CHAR_ESC;
@@ -1843,9 +1845,10 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
     // costs more than the single copy each of these makes. The copies are also
     // exactly the size of the line, where the accumulators have grown to fit
     // the longest line ever seen, so this is what keeps the stored lines from
-    // each holding a worst-case block. Emptying them before the commit rather
-    // than after leaves them usable by any nested pass that the trigger engine
-    // starts from within commitLineData().
+    // each holding a worst-case block - and past csmMaxRetainedLineCapacity
+    // the accumulator itself is let go rather than kept. Emptying them before
+    // the commit rather than after leaves them usable by any nested pass that
+    // the trigger engine starts from within commitLineData().
     QString line;
     if (!mMudLine.isEmpty()) {
         line = QString(mMudLine.constData(), mMudLine.size());
@@ -1853,6 +1856,12 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
     }
     std::vector<TChar> chars(mMudBuffer);
     mMudBuffer.clear();
+    if (static_cast<size_t>(mMudLine.capacity()) > csmMaxRetainedLineCapacity) {
+        QString().swap(mMudLine);
+    }
+    if (mMudBuffer.capacity() > csmMaxRetainedLineCapacity) {
+        std::vector<TChar>().swap(mMudBuffer);
+    }
     commitLineData(std::move(line), std::move(chars), ch);
     ++localBufferPosition;
     return true;
@@ -1933,7 +1942,7 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
         mPreTriggerPassLineNumber = lineIndex;
         mpHost->runTriggers(lineIndex);
         mSpareTriggerPassLine.swap(mPreTriggerPassLine);
-        if (mSpareTriggerPassLine.capacity() > csmMaxRetainedPassLine) {
+        if (mSpareTriggerPassLine.capacity() > csmMaxRetainedLineCapacity) {
             std::vector<TChar>().swap(mSpareTriggerPassLine);
         }
         mPreTriggerPassLine.swap(savedPassLine);
