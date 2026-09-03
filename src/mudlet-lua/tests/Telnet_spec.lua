@@ -152,6 +152,7 @@ describe("Tests MSDP subnegotiation handling", function()
   -- rather than one value if a control character arrives unescaped.
   local VAR, VAL = "<01>", "<02>"
   local TABLE_OPEN, TABLE_CLOSE = "<03>", "<04>"
+  local ARRAY_CLOSE = "<06>"
 
   local function feedMsdp(payload)
     local ok, msg = feedTelnet("<T_IAC><T_SB><O_MSDP>" .. payload .. "<T_IAC><T_SE>")
@@ -242,6 +243,122 @@ describe("Tests MSDP subnegotiation handling", function()
       assert.equals("Market Square", msdp.MSDPB3, "a non-numeric value mid-batch went missing")
       assert.equals("a rat", msdp.MSDPB4)
     end)
+
+    it("keeps a table's shape when it holds an array of two or more elements", function()
+      -- two adjacent values inside an explicit array look, from inside, like the
+      -- top-level unmarked-list pattern, and used to make the whole variable gain
+      -- an array level it never had
+      feedMsdp(VAR .. "MSDPSHAPE" .. VAL .. TABLE_OPEN
+               .. VAR .. "L" .. VAL .. "<05>" .. VAL .. "a" .. VAL .. "b" .. "<06>"
+               .. VAR .. "Z" .. VAL .. "plain"
+               .. TABLE_CLOSE)
+      assert.is_table(msdp.MSDPSHAPE, "the variable went missing entirely")
+      assert.equals("plain", msdp.MSDPSHAPE.Z, "Z is not reachable, so the table gained a spurious array level")
+      assert.same({"a", "b"}, msdp.MSDPSHAPE.L)
+      assert.is_nil(msdp.MSDPSHAPE[1], "the whole table was wrapped in an array it never had")
+    end)
+
+    it("still turns adjacent top-level values into a list", function()
+      -- the specification allows "string values together for command-like
+      -- variables" with no array markers, and that is the one case the wrap is for
+      feedMsdp(VAR .. "MSDPCMD" .. VAL .. "alpha" .. VAL .. "beta")
+      assert.same({"alpha", "beta"}, msdp.MSDPCMD)
+    end)
+
+    it("wraps only the variable that was an unmarked list", function()
+      -- one flag used to serve the whole subnegotiation, so a list flushed
+      -- mid-message went out unwrapped and the wrap landed on whichever variable
+      -- came last instead
+      feedMsdp(VAR .. "MSDPLIST" .. VAL .. "a" .. VAL .. "b" .. VAR .. "MSDPSOLO" .. VAL .. "solo")
+      assert.same({"a", "b"}, msdp.MSDPLIST)
+      assert.equals("solo", msdp.MSDPSOLO, "the unmarked-list wrap leaked onto the wrong variable")
+    end)
+
+    it("drops a variable whose table the game never closed, without an event", function()
+      -- IAC SE already arrived, so there is no more data coming for this message:
+      -- an open structure at its end is malformed, and what yajl makes of the
+      -- truncated JSON varies by version - from a silent nothing to a stored null
+      -- sentinel a script can trip over
+      local fired = false
+      local id = registerAnonymousEventHandler("msdp.MSDPCUT", function() fired = true end)
+      feedMsdp(VAR .. "MSDPWHOLE" .. VAL .. "fine" .. VAR .. "MSDPCUT" .. VAL .. TABLE_OPEN)
+      killAnonymousEventHandler(id)
+      assert.equals("fine", msdp.MSDPWHOLE, "the complete variable ahead of the truncated one has to survive")
+      assert.is_nil(msdp.MSDPCUT)
+      assert.is_false(fired, "a variable the game never finished sending raised its arrival event")
+    end)
+
+    it("yields no variable and no event when the game closes a table it never opened", function()
+      -- the drop and a failed decode are indistinguishable from Lua: both leave the
+      -- variable unset and silent. What the drop adds is a named diagnostic and the
+      -- same outcome on every yajl version, and MsdpMalformedDiagnosticTest covers that
+      local fired = false
+      local id = registerAnonymousEventHandler("msdp.MSDPOVER", function() fired = true end)
+      feedMsdp(VAR .. "MSDPOVER" .. VAL .. TABLE_CLOSE .. VAR .. "MSDPNEXT" .. VAL .. "ok")
+      killAnonymousEventHandler(id)
+      assert.is_nil(msdp.MSDPOVER)
+      assert.is_false(fired, "a variable with an unbalanced close raised its arrival event")
+      assert.equals("ok", msdp.MSDPNEXT, "the malformed variable took the rest of the message with it")
+    end)
+
+    it("yields no variable and no event when an unbalanced close ends the message", function()
+      -- the end flush rather than the mid-loop one; as above, this asserts the
+      -- outcome both mechanisms share, not the drop itself
+      local fired = false
+      local id = registerAnonymousEventHandler("msdp.MSDPSOLE", function() fired = true end)
+      feedMsdp(VAR .. "MSDPSOLE" .. VAL .. TABLE_CLOSE)
+      killAnonymousEventHandler(id)
+      assert.is_nil(msdp.MSDPSOLE)
+      assert.is_false(fired, "a variable with an unbalanced close raised its arrival event")
+    end)
+
+    -- the close arrives on a variable that never got a value, so there is nothing to
+    -- flush and nothing to clear the malformed flag - it used to survive to the next
+    -- variable, dropping a well-formed one and naming it in the error. One case per
+    -- marker rather than a loop over both, so a failure of either is its own report
+    local function strayCloseKeepsTheNextVariable(marker, name)
+      local fired = false
+      local id = registerAnonymousEventHandler("msdp." .. name, function() fired = true end)
+      feedMsdp(VAR .. "MSDPKEPT" .. VAL .. "1" .. VAR .. "MSDPVOID" .. marker .. VAR .. name .. VAL .. "3")
+      killAnonymousEventHandler(id)
+      assert.equals("3", msdp[name], name .. " was dropped, so the stray close was still blamed on it")
+      assert.is_true(fired, name .. " arrived without raising its event")
+    end
+
+    it("keeps the variable after a stray table close, which used to take the blame", function()
+      strayCloseKeepsTheNextVariable(TABLE_CLOSE, "MSDPSTRAYT")
+    end)
+
+    it("keeps the variable after a stray array close, which used to take the blame", function()
+      strayCloseKeepsTheNextVariable(ARRAY_CLOSE, "MSDPSTRAYA")
+    end)
+
+    it("keeps the old value and stays silent when a decode fails", function()
+      -- balanced markers can still make undecodable JSON (two roots), which slips
+      -- past the structural checks and fails at the decoder - the arrival event
+      -- used to fire anyway, handing every handler the stale value
+      feedMsdp(VAR .. "MSDPSTALE" .. VAL .. "old")
+      local fired = false
+      local id = registerAnonymousEventHandler("msdp.MSDPSTALE", function() fired = true end)
+      feedMsdp(VAR .. "MSDPSTALE" .. VAL .. TABLE_OPEN .. TABLE_CLOSE .. TABLE_OPEN .. TABLE_CLOSE)
+      killAnonymousEventHandler(id)
+      assert.equals("old", msdp.MSDPSTALE, "the failed decode overwrote the value it could not replace")
+      assert.is_false(fired, "a decode failure raised the arrival event anyway")
+    end)
+end)
+
+describe("Tests GMCP decode failures", function()
+  it("raises no events for a GMCP message whose JSON cannot be decoded", function()
+    -- the decode-failure path is shared with MSDP: no arrival events for a
+    -- message that changed nothing
+    local fired = false
+    local id = registerAnonymousEventHandler("gmcp.Spec.BadJson", function() fired = true end)
+    local ok, msg = feedTelnet("<T_IAC><T_SB><O_GMCP>Spec.BadJson {broken<T_IAC><T_SE>")
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+    killAnonymousEventHandler(id)
+    assert.is_nil(gmcp.Spec and gmcp.Spec.BadJson)
+    assert.is_false(fired, "a GMCP decode failure raised the arrival event anyway")
+  end)
 end)
 
 describe("Tests addSupportedTelnetOption", function()
