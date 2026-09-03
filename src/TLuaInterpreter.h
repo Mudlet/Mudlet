@@ -58,6 +58,7 @@ extern "C" {
 
 #include <list>
 #include <string>
+#include <vector>
 #include <memory>
 #include <optional>
 
@@ -942,8 +943,22 @@ private:
 
 
     const int LUA_FUNCTION_MAX_ARGS = 50;
-    std::list<std::string> mCaptureGroupList;
-    std::list<int> mCaptureGroupPosList;
+    std::vector<std::string> mCaptureGroupList;
+    std::vector<int> mCaptureGroupPosList;
+    // clearCaptureGroups() parks the emptied capture storage here instead of
+    // freeing it, so the next trigger fire assigns over std::strings that still
+    // own their buffers rather than allocating a fresh node per capture
+    std::vector<std::string> mSpareCaptureGroupList;
+    std::vector<int> mSpareCaptureGroupPosList;
+    // Bounds on what the parking above holds onto between fires
+    static constexpr std::size_t scmMaxParkedCaptures = 512;
+    static constexpr std::string::size_type scmMaxParkedCaptureBytes = 1024;
+    QString mLastGlobalName;
+    QByteArray mLastGlobalNameUtf8;
+    // Storage set_lua_string() encodes the line into, kept between calls for
+    // its capacity alone, and dropped past a length no game line reaches
+    static constexpr qsizetype scmMaxRetainedUtf8Scratch = 3 * 8192;
+    QByteArray mUtf8Scratch;
     std::list<std::list<std::string>> mMultiCaptureGroupList;
     std::list<std::list<int>> mMultiCaptureGroupPosList;
     QVector<QPair<QString, QString>> mCapturedNameGroups;

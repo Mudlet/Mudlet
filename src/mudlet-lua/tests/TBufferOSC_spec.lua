@@ -17,6 +17,24 @@ describe("Tests TBuffer OSC sequence handling", function()
     return nil
   end
 
+  -- the colour a word on that line ended up with, for the cases where the text
+  -- coming out right is not enough and the formatting has to be checked too
+  local function foregroundOf(needle, word)
+    local lastLine = getLastLineNumber("main")
+    local first = math.max(0, lastLine - 15)
+    local lines = getLines("main", first, lastLine + 1)
+    for i = #lines, 1, -1 do
+      if lines[i]:find(needle, 1, true) then
+        moveCursor("main", 0, first + i - 1)
+        assert.are_not.equal(-1, selectString("main", word, 1))
+        local foreground = getTextFormat("main").foreground
+        moveCursorEnd("main")
+        return foreground
+      end
+    end
+    return nil
+  end
+
   describe("Tests the protection against buffer underflow in OSC sequences", function()
     
     it("should handle OSC sequences at buffer start without crashing", function()
@@ -275,10 +293,10 @@ describe("Tests TBuffer OSC sequence handling", function()
 
   end)
 
-  -- A CSI parameter string may only carry one of '<', '=', '>' or '?' in its
-  -- FIRST byte, where it marks a private/reserved sequence that Mudlet does not
-  -- interpret; after that only "0-9:;" are allowed. Getting those two sets the
-  -- wrong way round leaves the tail of such a sequence on screen as game text.
+  -- Every byte of a CSI parameter string is in "0-9:;<=>?"; one of '<', '=',
+  -- '>' or '?' in the FIRST byte marks the sequence as private/reserved, which
+  -- Mudlet does not interpret. Consuming a narrower set anywhere leaves the
+  -- tail of such a sequence on screen as game text.
   describe("Tests private/reserved CSI sequences", function()
 
     it("should consume a private DEC sequence that hides the cursor", function()
@@ -318,6 +336,65 @@ describe("Tests TBuffer OSC sequence handling", function()
     it("should still consume an SGR sequence with no parameters", function()
       assert.is_true(feedTriggers("CSISGR2(\027[mplain)CSISGR2\n"))
       assert.equals("CSISGR2(plain)CSISGR2", findRecentLine("CSISGR2"))
+    end)
+
+    -- SlothMUD ends every coloured span with this. '>' is a parameter byte, not
+    -- a terminator, so the "m" is the final byte and nothing may reach the
+    -- screen.
+    it("should consume a reserved byte that appears after the first parameter", function()
+      assert.is_true(feedTriggers("CSIMID1(\027[0;37;4>mtext)CSIMID1\n"))
+      assert.equals("CSIMID1(text)CSIMID1", findRecentLine("CSIMID1"))
+    end)
+
+    it("should consume a reserved byte in the middle of a parameter", function()
+      assert.is_true(feedTriggers("CSIMID2(\027[0;3>7mtext)CSIMID2\n"))
+      assert.equals("CSIMID2(text)CSIMID2", findRecentLine("CSIMID2"))
+    end)
+
+    it("should consume every reserved byte appearing after the first parameter", function()
+      assert.is_true(feedTriggers("CSIMID3(\027[0;37;4<m\027[0;37;4=m\027[0;37;4?m)CSIMID3\n"))
+      assert.equals("CSIMID3()CSIMID3", findRecentLine("CSIMID3"))
+    end)
+
+    -- The parameters either side of the unusable one still have to be applied,
+    -- so both runs have to come out the colour a sequence without it gives.
+    it("should still apply the usable parameters around a reserved byte", function()
+      assert.is_true(feedTriggers("CSIMID4(\027[0;32mgreen\027[0;37;4>mwhite)CSIMID4\n"))
+      assert.equals("CSIMID4(greenwhite)CSIMID4", findRecentLine("CSIMID4"))
+      local green = foregroundOf("CSIMID4", "green")
+      local white = foregroundOf("CSIMID4", "white")
+      assert.are_not.same(green, white)
+
+      assert.is_true(feedTriggers("CSIREF4(\027[0;32mgreen\027[0;37mwhite)CSIREF4\n"))
+      assert.are.same(foregroundOf("CSIREF4", "green"), green)
+      assert.are.same(foregroundOf("CSIREF4", "white"), white)
+    end)
+
+    -- A CSI that never gets a final byte is unusable, but the byte that ends
+    -- the scan is not part of it and has to be left alone.
+    it("should not swallow the escape that ends a sequence with no final byte", function()
+      assert.is_true(feedTriggers("CSINOFIN1(\027[0;4>\027[0mtext)CSINOFIN1\n"))
+      assert.equals("CSINOFIN1(text)CSINOFIN1", findRecentLine("CSINOFIN1"))
+    end)
+
+    it("should not swallow the newline that ends a sequence with no final byte", function()
+      assert.is_true(feedTriggers("CSINOFIN2(\027[0;4>\nCSINOFIN3)\n"))
+      assert.equals("CSINOFIN3)", findRecentLine("CSINOFIN3"))
+    end)
+
+    -- Consuming a reserved byte puts it in front of the SGR decoder, so a
+    -- parameter it has made unreadable must change nothing rather than be
+    -- read as far as it parses or fall back to colour zero.
+    it("should apply nothing from a parameter a reserved byte has broken", function()
+      assert.is_true(feedTriggers("CSIBAD1(\027[0;37mplain\027[1<2mafter)CSIBAD1\n"))
+      assert.equals("CSIBAD1(plainafter)CSIBAD1", findRecentLine("CSIBAD1"))
+      assert.are.same(foregroundOf("CSIBAD1", "plain"), foregroundOf("CSIBAD1", "after"))
+    end)
+
+    it("should apply nothing from a colour index a reserved byte has broken", function()
+      assert.is_true(feedTriggers("CSIBAD2(\027[0;37mplain\027[38;5;1<2mafter)CSIBAD2\n"))
+      assert.equals("CSIBAD2(plainafter)CSIBAD2", findRecentLine("CSIBAD2"))
+      assert.are.same(foregroundOf("CSIBAD2", "plain"), foregroundOf("CSIBAD2", "after"))
     end)
 
   end)
@@ -525,6 +602,94 @@ describe("Tests TBuffer OSC sequence handling", function()
         for lineNumber = 0, lastLine do
           assert.equals(snapshot[lineNumber], getLines("main", lineNumber, lineNumber + 1)[1],
             "revealing a link whose line was trimmed away rewrote line " .. lineNumber)
+        end
+      end)
+    end)
+
+    -- deleteLine() shifts every line below the one it removes, so a tracked
+    -- link's recorded line number stops matching where its text now sits - the
+    -- same defect as above reached by the route a trigger gag takes.
+    it("does not rewrite an unrelated line after deleteLine() moved the link's line", function()
+      if not os.getenv("MUDLET_TEST_MODE") then
+        pending("waiting for the reveal timer needs MUDLET_TEST_MODE")
+        return
+      end
+      withSmallBuffer(function()
+        clearWindow()
+        for i = 1, 3 do echo("oscdelseed " .. i .. "\n") end
+        local link = "\027]8;;send:osc8del?config={\"visibility\":{\"action\":\"reveal\",\"delay\":3000}}\027\\HIDDENWORD\027]8;;\027\\"
+        assert.is_true(feedTriggers("OSCDEL1(" .. link .. ")OSCDEL1\n"))
+        local registeredAt, concealed = findLine("OSCDEL1")
+        assert.is_truthy(registeredAt and registeredAt < 20, "the link did not land at a low buffer index")
+        -- concealment proves the link registered, so there is tracked state to go stale
+        assert.equals("OSCDEL1(          )OSCDEL1", concealed)
+
+        -- fillers must be longer than the link's startColumn + length, or
+        -- performReveal() bounds-checks out and the case passes unfixed
+        for i = 1, 12 do echo("oscdelfiller padded out well past the link column " .. i .. "\n") end
+
+        -- take a line above the link, so everything below it moves up one
+        assert.is_true(moveCursor(0, 0))
+        deleteLine()
+        local movedTo = findLine("OSCDEL1")
+        assert.equals(registeredAt - 1, movedTo, "deleting an earlier line did not move the link's line up")
+
+        local lastLine = getLastLineNumber("main")
+        local snapshot = {}
+        for lineNumber = 0, lastLine do
+          snapshot[lineNumber] = getLines("main", lineNumber, lineNumber + 1)[1]
+        end
+
+        pumpEvents(3500)
+        -- the link's own line is the one that should change: it reveals where the
+        -- text actually sits now, and every other line is left alone
+        assert.equals("OSCDEL1(HIDDENWORD)OSCDEL1", getLines("main", movedTo, movedTo + 1)[1],
+          "the reveal did not land on the line the link moved to")
+        for lineNumber = 0, lastLine do
+          if lineNumber ~= movedTo then
+            assert.equals(snapshot[lineNumber], getLines("main", lineNumber, lineNumber + 1)[1],
+              "a link tracked across deleteLine() rewrote line " .. lineNumber)
+          end
+        end
+      end)
+    end)
+
+    -- clearWindow() discards every line, so a tracked link's line number stops
+    -- meaning anything - the same defect as above reached by a second route. The
+    -- buffer is refilled afterwards so a broken reveal has something to overwrite.
+    it("does not rewrite an unrelated line after clearWindow() discarded the link's line", function()
+      if not os.getenv("MUDLET_TEST_MODE") then
+        pending("waiting for the reveal timer needs MUDLET_TEST_MODE")
+        return
+      end
+      withSmallBuffer(function()
+        clearWindow()
+        for i = 1, 3 do echo("oscclrseed " .. i .. "\n") end
+        local link = "\027]8;;send:osc8clr?config={\"visibility\":{\"action\":\"reveal\",\"delay\":3000}}\027\\HIDDENWORD\027]8;;\027\\"
+        assert.is_true(feedTriggers("OSCCLR1(" .. link .. ")OSCCLR1\n"))
+        local registeredAt, concealed = findLine("OSCCLR1")
+        assert.is_truthy(registeredAt and registeredAt < 20, "the link did not land at a low buffer index")
+        -- concealment proves the link registered, so there is tracked state for
+        -- clearWindow() to leave behind
+        assert.equals("OSCCLR1(          )OSCCLR1", concealed)
+
+        clearWindow()
+        assert.is_nil(findLine("OSCCLR1"), "clearWindow() left the link's line in the buffer")
+
+        -- fillers must be longer than the link's startColumn + length, or
+        -- performReveal() bounds-checks out and the case passes unfixed
+        for i = 1, 12 do echo("oscclrfiller padded out well past the link column " .. i .. "\n") end
+
+        local lastLine = getLastLineNumber("main")
+        local snapshot = {}
+        for lineNumber = 0, lastLine do
+          snapshot[lineNumber] = getLines("main", lineNumber, lineNumber + 1)[1]
+        end
+
+        pumpEvents(3500)
+        for lineNumber = 0, lastLine do
+          assert.equals(snapshot[lineNumber], getLines("main", lineNumber, lineNumber + 1)[1],
+            "a link tracked across clearWindow() rewrote line " .. lineNumber)
         end
       end)
     end)

@@ -65,6 +65,15 @@
       }
     },
     {
+      "name": "macos-release",
+      "displayName": "macOS Release, no sanitizers (what CI ships to players)",
+      "inherits": ["variant", "macos-debug"],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "USE_SANITIZER": ""
+      }
+    },
+    {
       "name": "linux-debug",
       "displayName": "Linux Debug (Ninja, AddressSanitizer)",
       "inherits": "base",
@@ -117,6 +126,15 @@
       }
     },
     {
+      "name": "linux-release",
+      "displayName": "Linux Release, no sanitizers (what CI ships to players)",
+      "inherits": ["variant", "linux-debug"],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "USE_SANITIZER": ""
+      }
+    },
+    {
       "name": "windows-debug",
       "displayName": "Windows Debug (MSYS2, Ninja)",
       "inherits": "base",
@@ -127,6 +145,14 @@
       },
       "cacheVariables": {
         "CMAKE_PREFIX_PATH": "$env{MSYSTEM_PREFIX}"
+      }
+    },
+    {
+      "name": "windows-release",
+      "displayName": "Windows Release (MSYS2, Ninja, what CI ships to players)",
+      "inherits": ["variant", "windows-debug"],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
       }
     }
   ],
@@ -154,6 +180,7 @@
     { "name": "macos-debug-tsan", "inherits": "on-macos", "configurePreset": "macos-debug-tsan" },
     { "name": "macos-debug-ubsan", "inherits": "on-macos", "configurePreset": "macos-debug-ubsan" },
     { "name": "macos-static-analysis", "inherits": "on-macos", "configurePreset": "macos-static-analysis" },
+    { "name": "macos-release", "inherits": "on-macos", "configurePreset": "macos-release" },
     { "name": "linux-debug", "inherits": "on-linux", "configurePreset": "linux-debug" },
     { "name": "linux-debug-nosan", "inherits": "on-linux", "configurePreset": "linux-debug-nosan" },
     { "name": "linux-debug-tsan", "inherits": "on-linux", "configurePreset": "linux-debug-tsan" },
@@ -165,9 +192,19 @@
       "configurePreset": "linux-lowspec",
       "jobs": 2
     },
+    { "name": "linux-release", "inherits": "on-linux", "configurePreset": "linux-release" },
     {
       "name": "windows-debug",
       "configurePreset": "windows-debug",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "windows-release",
+      "configurePreset": "windows-release",
       "condition": {
         "type": "equals",
         "lhs": "${hostSystemName}",
@@ -208,16 +245,28 @@
     { "name": "macos-debug-tsan", "inherits": "on-macos", "configurePreset": "macos-debug-tsan" },
     { "name": "macos-debug-ubsan", "inherits": "on-macos", "configurePreset": "macos-debug-ubsan" },
     { "name": "macos-static-analysis", "inherits": "on-macos", "configurePreset": "macos-static-analysis" },
+    { "name": "macos-release", "inherits": "on-macos", "configurePreset": "macos-release" },
     { "name": "linux-debug", "inherits": "on-linux", "configurePreset": "linux-debug" },
     { "name": "linux-debug-nosan", "inherits": "on-linux", "configurePreset": "linux-debug-nosan" },
     { "name": "linux-debug-tsan", "inherits": "on-linux", "configurePreset": "linux-debug-tsan" },
     { "name": "linux-debug-ubsan", "inherits": "on-linux", "configurePreset": "linux-debug-ubsan" },
     { "name": "linux-static-analysis", "inherits": "on-linux", "configurePreset": "linux-static-analysis" },
     { "name": "linux-lowspec", "inherits": "on-linux", "configurePreset": "linux-lowspec" },
+    { "name": "linux-release", "inherits": "on-linux", "configurePreset": "linux-release" },
     {
       "name": "windows-debug",
       "inherits": "test-defaults",
       "configurePreset": "windows-debug",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "windows-release",
+      "inherits": "test-defaults",
+      "configurePreset": "windows-release",
       "condition": {
         "type": "equals",
         "lhs": "${hostSystemName}",
