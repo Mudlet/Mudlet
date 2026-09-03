@@ -3934,16 +3934,21 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
             }
         }
     } else {
-        {
-            std::string e;
-            if (lua_isstring(L, -1)) {
-                e = "Lua error:";
-                e += lua_tostring(L, -1);
-            }
-            const QString _n = "JSON decoder error:";
-            const QString _f = "json_to_value";
-            logError(e, _n, _f);
+        std::string e;
+        if (lua_isstring(L, -1)) {
+            e = "could not decode " + protocol.toStdString() + "." + key.toStdString() + " - any previous value is kept: ";
+            e += lua_tostring(L, -1);
         }
+        const QString _n = "JSON decoder error:";
+        const QString _f = "json_to_value";
+        logError(e, _n, _f);
+        if (mudlet::smDebugMode) {
+            TDebug(Qt::white, Qt::red, TDebug::Category::Error) << "\n " << e.c_str() << "\n" >> &host;
+        }
+        // the variable did not change, so raising its arrival events would hand
+        // every handler the stale value the game just tried to replace
+        lua_settop(L, callerStackTop);
+        return;
     }
     lua_settop(L, callerStackTop);
 
@@ -4121,6 +4126,9 @@ void TLuaInterpreter::msdp2Lua(const char* src)
 
     QByteArray script;
     bool no_array_marker_bug = false;
+    // a TABLE_CLOSE or ARRAY_CLOSE with nothing open - the JSON built from it
+    // would carry a stray brace, and what yajl does with that varies by version
+    bool malformed = false;
     // Measured as the name is written rather than recomputed from varList at the
     // strip: a name holding a byte JSON has to escape is longer in script than
     // the raw name is, and the strip then leaves part of the prefix behind.
@@ -4138,6 +4146,8 @@ void TLuaInterpreter::msdp2Lua(const char* src)
             }
             if (nest) {
                 --nest;
+            } else {
+                malformed = true;
             }
             script.append('}');
             last = MSDP_TABLE_CLOSE;
@@ -4153,6 +4163,8 @@ void TLuaInterpreter::msdp2Lua(const char* src)
             }
             if (nest) {
                 --nest;
+            } else {
+                malformed = true;
             }
             script.append(']');
             last = MSDP_ARRAY_CLOSE;
@@ -4173,8 +4185,21 @@ void TLuaInterpreter::msdp2Lua(const char* src)
                     QString token = varList.front();
                     token = token.remove(QLatin1Char('\"'));
                     script = script.replace(0, topLevelPrefixLength, QByteArray());
-                    mpHost->processDiscordMSDP(token, script);
-                    setMSDPTable(token, script);
+                    if (malformed) {
+                        std::string e = "dropped MSDP variable \"" + token.toStdString() + "\": the game closed a table or array it never opened";
+                        logError(e, qsl("MSDP"), qsl("msdp2Lua"));
+                        malformed = false;
+                    } else {
+                        mpHost->processDiscordMSDP(token, script);
+                        if (no_array_marker_bug && !script.startsWith('[')) {
+                            script.prepend('[');
+                            script.append(']');
+                        }
+                        setMSDPTable(token, script);
+                    }
+                    // scoped to the variable just flushed, or an unmarked array
+                    // would wrap whichever variable happens to come last
+                    no_array_marker_bug = false;
                     varList.clear();
                     script.clear();
                     // the quote above closed the value just flushed - this one
@@ -4182,6 +4207,11 @@ void TLuaInterpreter::msdp2Lua(const char* src)
                     // subnegotiation gets from that same append
                     script.append('\"');
                 }
+                // Scoped to the variable that carried the imbalance, and a
+                // valueless one never reaches the flush above that would clear
+                // it - so reset here, where the next variable starts, or the
+                // flag lands on whichever variable does flush next.
+                malformed = false;
             }
             last = MSDP_VAR;
             lastVar.clear();
@@ -4195,7 +4225,13 @@ void TLuaInterpreter::msdp2Lua(const char* src)
                 }
             }
             if (last == MSDP_VAL) {
-                no_array_marker_bug = true;
+                // adjacent values with no ARRAY_OPEN are the specification's
+                // "string values together for command-like variables", which only
+                // exists at the top level - inside a structure the array carries
+                // its own markers and this wrap would add a level it never had
+                if (!nest) {
+                    no_array_marker_bug = true;
+                }
                 script.append('\"');
             }
             if (last == MSDP_VAL || last == MSDP_TABLE_CLOSE || last == MSDP_ARRAY_CLOSE) {
@@ -4240,6 +4276,20 @@ void TLuaInterpreter::msdp2Lua(const char* src)
         QString token = varList.front();
         token = token.remove(QLatin1Char('\"'));
         script = script.replace(0, topLevelPrefixLength, QByteArray());
+        if (nest || malformed) {
+            // unbalanced structure markers make truncated JSON and what yajl does with that varies by version, so drop the variable ourselves and name which way the imbalance went
+            std::string reason;
+            if (nest && malformed) {
+                reason = "closed a table or array it never opened and ended the message with another still open";
+            } else if (nest) {
+                reason = "ended the message with a table or array still open";
+            } else {
+                reason = "closed a table or array it never opened";
+            }
+            std::string e = "dropped MSDP variable \"" + token.toStdString() + "\": the game " + reason;
+            logError(e, qsl("MSDP"), qsl("msdp2Lua"));
+            return;
+        }
         if (no_array_marker_bug) {
             if (!script.startsWith('[')) {
                 script.prepend('[');

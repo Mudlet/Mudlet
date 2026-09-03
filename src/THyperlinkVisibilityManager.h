@@ -72,6 +72,11 @@ class THyperlinkVisibilityManager : public QObject
 {
     Q_OBJECT
 
+    // Reads the tracked line numbers and the queued announcement directly - the
+    // announcement is otherwise only observable through a screen reader, and a
+    // line number only through the side effect of revealing the link.
+    friend class TrackedLinkTrimTest;
+
 public:
     explicit THyperlinkVisibilityManager(TConsoleModel& model);
     ~THyperlinkVisibilityManager() override;
