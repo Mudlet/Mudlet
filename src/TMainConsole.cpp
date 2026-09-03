@@ -129,7 +129,10 @@ TMainConsole::~TMainConsole()
     // A label and a sub-console take themselves out of the registry from their own
     // destructor; none of the three kinds here does. A scroll box and a text box never
     // deregister themselves, and for the command lines that are this console's own
-    // children the handler that would have done it was disconnected just above. Quitting
+    // children the handler that would have done it was disconnected just above. A dock
+    // widget has no destructor either but needs no sweep: one only ever exists beside a
+    // user window's sub-console, and closing the profile closes every sub-console before
+    // the console goes, which takes the dock out through TConsole::closeEvent(). Quitting
     // destroys every Host before the console, so there is not always a registry left
     // to clear.
     if (mpHost) {
