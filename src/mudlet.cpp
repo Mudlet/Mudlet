@@ -6036,6 +6036,10 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
         pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("mudlet = mudlet or {} mudlet.uiTourPending = true"));
     }
 
+    // mPackagesToInstallList is only filled for a profile being created, so an
+    // existing one needs its bundled packages brought up to date separately
+    pHost->refreshBundledPackages();
+
     // install default packages
     for (const auto& package : std::as_const(mPackagesToInstallList)) {
         pHost->installPackage(package, enums::PackageModuleType::Package);

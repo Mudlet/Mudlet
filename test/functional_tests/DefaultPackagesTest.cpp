@@ -226,6 +226,71 @@ private slots:
         QVERIFY2(mpHost->mInstalledPackages.contains(installedAs), qPrintable(qsl("%1 installed but is not registered as %2").arg(package, installedAs)));
     }
 
+    // A profile meets the bundled packages once, when it is created, and keeps
+    // whatever it installed then. Nothing else notices when that copy falls
+    // behind the one the build carries: the profile just goes on running the old
+    // one, and a package that can update itself over the network does so on every
+    // launch rather than using what it was shipped.
+    void test_outdatedBundledPackageIsReplaced()
+    {
+        const QString package = qsl("echo");
+
+        mpHost->mBlockScriptCompile = false;
+        if (!mpHost->mInstalledPackages.contains(package)) {
+            auto [installed, message] = mpHost->installPackage(qsl(":/packages/%1/%1.mpackage").arg(package), enums::PackageModuleType::Package, true);
+            QVERIFY2(installed, qPrintable(message));
+        }
+
+        const QString bundledVersion = mpHost->mPackageInfo.value(package).value(qsl("version"));
+        QVERIFY2(!bundledVersion.isEmpty(), "the bundled package declares no version, so there is nothing to compare against");
+
+        // stand in for a profile that installed this package from an older Mudlet.
+        // The sentinel only survives if the package info is left as it is - a
+        // reinstall rebuilds the whole map from the archive's config.lua.
+        mpHost->mPackageInfo[package][qsl("version")] = qsl("0");
+        mpHost->mPackageInfo[package][qsl("sentinel")] = qsl("kept");
+
+        mpHost->refreshBundledPackages();
+
+        QVERIFY2(mpHost->mInstalledPackages.contains(package), "the outdated package was retired but never put back");
+        QCOMPARE(mpHost->mPackageInfo.value(package).value(qsl("version")), bundledVersion);
+        QVERIFY2(mpHost->mPackageInfo.value(package).value(qsl("sentinel")).isEmpty(), "the package was left in place rather than replaced");
+    }
+
+    // Replacing a package discards any local changes to its items, so it only
+    // happens when the build really does carry something newer.
+    void test_currentOrNewerBundledPackageIsLeftAlone_data()
+    {
+        QTest::addColumn<QString>("installedVersion");
+
+        QTest::newRow("already at the bundled version") << QString();
+        QTest::newRow("updated past the bundled version") << qsl("999");
+    }
+
+    void test_currentOrNewerBundledPackageIsLeftAlone()
+    {
+        QFETCH(QString, installedVersion);
+        const QString package = qsl("echo");
+
+        mpHost->mBlockScriptCompile = false;
+        if (!mpHost->mInstalledPackages.contains(package)) {
+            auto [installed, message] = mpHost->installPackage(qsl(":/packages/%1/%1.mpackage").arg(package), enums::PackageModuleType::Package, true);
+            QVERIFY2(installed, qPrintable(message));
+        }
+
+        if (!installedVersion.isEmpty()) {
+            mpHost->mPackageInfo[package][qsl("version")] = installedVersion;
+        }
+        const QString expectedVersion = mpHost->mPackageInfo.value(package).value(qsl("version"));
+        QVERIFY(!expectedVersion.isEmpty());
+        mpHost->mPackageInfo[package][qsl("sentinel")] = qsl("kept");
+
+        mpHost->refreshBundledPackages();
+
+        QCOMPARE(mpHost->mPackageInfo.value(package).value(qsl("version")), expectedVersion);
+        QCOMPARE(mpHost->mPackageInfo.value(package).value(qsl("sentinel")), qsl("kept"));
+    }
+
     // Each package directory carries the archive Mudlet installs. Unpack every
     // one the way Host::installPackage() does and check it is shaped the way
     // the installer requires: metadata in config.lua, exactly one xml.
