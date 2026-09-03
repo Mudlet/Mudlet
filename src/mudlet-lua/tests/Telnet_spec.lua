@@ -96,6 +96,42 @@ describe("Tests SGR default colour handling", function()
     assert.is_true(getTextFormat("main").bold)
   end)
 
+  it("sets a truecolour foreground and background from one sequence", function()
+    feed("\27[0m\27[38;2;120;134;94;48;2;85;250;33mSgrTrueI\r\n")
+    selectMarker("SgrTrueI")
+    local format = getTextFormat("main")
+    assert.are.same({120, 134, 94}, format.foreground)
+    assert.are.same({85, 250, 33}, format.background)
+  end)
+
+  it("reads colon separated and semicolon separated colours in one sequence", function()
+    feed("\27[0m\27[1;38:2::120:134:94;48:5:240mSgrMixedJ\r\n")
+    selectMarker("SgrMixedJ")
+    local format = getTextFormat("main")
+    assert.are.same({120, 134, 94}, format.foreground)
+    assert.are.same({88, 88, 88}, format.background)
+    assert.is_true(format.bold)
+  end)
+
+  -- thirteen parameters outgrows the inline capacity of the array decodeSGR()
+  -- collects them into, so this is the case that spills onto the heap
+  it("keeps a colour correct past the twelfth parameter of a sequence", function()
+    feed("\27[0m\27[0;0;0;0;0;0;0;0;0;0;38;5;159mSgrSpillK\r\n")
+    selectMarker("SgrSpillK")
+    assert.are.same({175, 255, 255}, getTextFormat("main").foreground)
+  end)
+
+  -- a bare ESC[m is a full reset only while the parameter tokeniser keeps empty
+  -- parts - skip them and the sequence carries no parameter at all, and does nothing
+  it("treats a parameterless SGR sequence as a full reset", function()
+    feed("\27[0m\27[1;31mSgrBoldRedL \27[mSgrPlainL\r\n")
+    selectMarker("SgrBoldRedL")
+    assert.is_true(isAnsiFgColor(3), "the bold red text did not come out bright red")
+    selectMarker("SgrPlainL")
+    assert.is_true(isAnsiFgColor(0), "the parameterless sequence did not restore the default foreground")
+    assert.is_false(getTextFormat("main").bold, "the parameterless sequence did not clear bold")
+  end)
+
   it("restores the default background and keeps it through a later bold", function()
     feed("\27[0m\27[41mSgrRedBgH \27[49mSgrPlainBgH \27[1mSgrBoldBgH\r\n")
     selectMarker("SgrPlainBgH")
