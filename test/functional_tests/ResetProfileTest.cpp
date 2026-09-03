@@ -42,6 +42,7 @@
 #include "Host.h"
 #include "LuaInterface.h"
 #include "MudletInstanceCoordinator.h"
+#include "TAlias.h"
 #include "TEvent.h"
 #include "TKey.h"
 #include "TLabel.h"

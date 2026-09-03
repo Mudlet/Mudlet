@@ -243,6 +243,8 @@ private:
     // setWindow() destination, shared so the two cannot disagree about what
     // "main" means.
     QWidget* parentWidgetFor(const QString& windowname) const;
+    void registerLabelWidget(const QString& name, TLabel* pLabel);
+    void deregisterLabelWidget(TLabel* pLabel);
 
     // The view's half of the label, sub-console and dock bookkeeping; the core's
     // half is the Host's window registry, which this class registers into and

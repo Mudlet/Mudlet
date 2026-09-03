@@ -26,17 +26,182 @@
 
 
 #include "Host.h"
+#include "TBuffer.h"
 #include "TConsole.h"
 #include "TConsoleModel.h"
 #include "TDebug.h"
+#include "TLuaInterpreter.h"
 #include "TMatchState.h"
 #include "TMedia.h"
-#include "mudlet.h"
+#include "TMediaData.h"
+#include "TriggerUnit.h"
+#include "TMainConsole.h"
+#include <QByteArray>
+#include <QChar>
+#include <QDebug>
+#include <QDir>
+#include <QLatin1Char>
+#include <QLatin1String>
+#include <QMultiMap>
+#include <QPair>
 #include <QRegularExpression>
+#include <QScopedPointer>
+#include <QSharedPointer>
+#include <QStringView>
+#include <QVector>
 
-#include <cassert>
+#include <cstdint>
+#include <cstring>
+#include <deque>
+#include <list>
+#include <new>
 #include <sstream>
+#include <utility>
 #include <vector>
+
+namespace {
+// The UTF-8 handed to a pattern is the encoding of the same text the QString
+// holds, so the UTF-16 index a byte offset stands at is just the number of code
+// units the bytes before it decode to. Counting those beats decoding the prefix
+// into a QString that is thrown away once its length has been read.
+int utf16PositionOf(const char* utf8, const PCRE2_SIZE byteOffset)
+{
+    int codeUnits = 0;
+    for (PCRE2_SIZE i = 0; i < byteOffset; ++i) {
+        const auto byte = static_cast<unsigned char>(utf8[i]);
+        if ((byte & 0xC0) != 0x80) {
+            // Anything outside the basic multilingual plane needs a surrogate pair
+            codeUnits += (byte >= 0xF0) ? 2 : 1;
+        }
+    }
+    return codeUnits;
+}
+
+// The /g loop's search for the next occurrence. The first search of a line
+// goes through the pattern's prepared QStringMatcher, whose skip table pays
+// for itself over every line the pattern is tried against; here the remainders
+// are short and mostly end in a hit, where a matcher measured slower than
+// scanning for the needle's first code unit and comparing the rest only where
+// it occurs. Searching the QString and not the UTF-8 keeps the handling of a
+// line with a NUL in it, whose UTF-8 form the caller has already cut short.
+int indexOfNeedle(const QString& haystack, const QString& needle, const int from)
+{
+    const qsizetype needleLength = needle.size();
+    const qsizetype lastStart = haystack.size() - needleLength;
+    if (needleLength < 2 || from < 0) {
+        return static_cast<int>(haystack.indexOf(needle, from));
+    }
+    const QChar* const haystackData = haystack.constData();
+    const QChar* const needleData = needle.constData();
+    const size_t middleBytes = static_cast<size_t>(needleLength - 2) * sizeof(QChar);
+    for (qsizetype at = from; at <= lastStart;) {
+        const qsizetype found = QStringView(haystackData + at, lastStart + 1 - at).indexOf(needleData[0]);
+        if (found < 0) {
+            return -1;
+        }
+        at += found;
+        // The last code unit rules out nearly every candidate without a call
+        if (haystackData[at + needleLength - 1] == needleData[needleLength - 1] && (!middleBytes || !std::memcmp(haystackData + at + 1, needleData + 1, middleBytes))) {
+            return static_cast<int>(at);
+        }
+        ++at;
+    }
+    return -1;
+}
+
+// QColor::operator==() is an exported, out-of-line comparison of a colour spec
+// and five component words, and a colour trigger makes one of those per
+// character of every line it is offered. For two RGB colours that is exactly a
+// comparison of the front of the object, so do it here where it can be
+// inlined. HSL and HSV both compare approximately - HSV counts hue 0 and hue
+// 36000 as the same red - so they are left to Qt. Every colour a trigger
+// actually sees is RGB, which makes the fast path the predicted one.
+constexpr size_t COLOR_COMPARED_BYTES = sizeof(QColor::Spec) + 5 * sizeof(ushort);
+static_assert(sizeof(QColor) == 16 && COLOR_COMPARED_BYTES == 14, "QColor is no longer a spec word followed by five component words - use QColor::operator==() instead of sameColor()");
+
+inline bool sameColor(const QColor& left, const QColor& right)
+{
+    if (Q_LIKELY(left.spec() == QColor::Rgb && right.spec() == QColor::Rgb)) {
+        return std::memcmp(&left, &right, COLOR_COMPARED_BYTES) == 0;
+    }
+    return left == right;
+}
+
+// Holds the capture list and position list of one fire, taking their nodes
+// from TCaptureNodePool and handing them back when the fire is over.
+//
+// The lists belong to the caller rather than to the trigger because a script
+// can feed text back through the pipeline and re-enter matching on the very
+// trigger that is still running; each level of that gets its own lists, and
+// only the emptied nodes are shared.
+class CaptureLists
+{
+public:
+    CaptureLists() = default;
+    CaptureLists(const CaptureLists&) = delete;
+    CaptureLists& operator=(const CaptureLists&) = delete;
+
+    ~CaptureLists()
+    {
+        TCaptureNodePool::park(mCaptures);
+        TCaptureNodePool::park(mPositions);
+    }
+
+    void add(const char* capture, const size_t length, const int position)
+    {
+        TCaptureNodePool::takeCapture(mCaptures).assign(capture, length);
+        TCaptureNodePool::takePosition(mPositions) = position;
+    }
+
+    void add(const std::string& capture, const int position)
+    {
+        TCaptureNodePool::takeCapture(mCaptures).assign(capture);
+        TCaptureNodePool::takePosition(mPositions) = position;
+    }
+
+    void addEmpty(const int position)
+    {
+        TCaptureNodePool::takeCapture(mCaptures).clear();
+        TCaptureNodePool::takePosition(mPositions) = position;
+    }
+
+    void add(const QStringView capture, const int position)
+    {
+        std::string& target = TCaptureNodePool::takeCapture(mCaptures);
+        if (!assignAscii(target, capture)) {
+            // Encoded exactly as QString::toUtf8() would, so an unpaired
+            // surrogate cannot shift the byte offset the capture reports
+            target.assign(capture.toUtf8().constData());
+        }
+        TCaptureNodePool::takePosition(mPositions) = position;
+    }
+
+    std::list<std::string> mCaptures;
+    std::list<int> mPositions;
+
+private:
+    // UTF-8 is the identity over ASCII, so an ASCII run can be built straight
+    // into the recycled buffer with no QByteArray in between. Stops at the
+    // first NUL, as std::string(const char*) does, which is the same byte the
+    // long way round would stop at. Answers false with the target clobbered if
+    // the run holds anything above ASCII, leaving the caller to overwrite it.
+    static bool assignAscii(std::string& target, const QStringView capture)
+    {
+        target.clear();
+        for (const QChar character : capture) {
+            const char16_t unit = character.unicode();
+            if (unit >= 0x80) {
+                return false;
+            }
+            if (unit == u'\0') {
+                break;
+            }
+            target.push_back(static_cast<char>(unit));
+        }
+        return true;
+    }
+};
+} // namespace
 
 // Some extraordinary numbers outside of the range (0-255) used for ANSI colors:
 // Changing them WILL modify the Lua API of TLuaInterpreter::tempColorTrigger
@@ -106,8 +271,11 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
 {
     patterns.replaceInStrings("\n", "");
     mPatterns.clear();
-    mRegexMap.clear();
-    mMatchDataMap.clear();
+    mSubstringMatchers.clear();
+    mRegexes.clear();
+    mMatchData.clear();
+    mRegexJitCompiled.clear();
+    mPatternsUtf8.clear();
     mPatternKinds.clear();
     mLuaConditionMap.clear();
     mColorPatternList.clear();
@@ -152,6 +320,16 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
             mPatternKinds.append(patternKinds.at(i));
 
             const int patternIndex = mPatterns.size() - 1;
+            mPatternsUtf8.emplace_back(patterns.at(i).toUtf8().constData());
+            mRegexes.emplace_back();
+            mMatchData.emplace_back();
+            mRegexJitCompiled.push_back(false);
+
+            if (patternKinds.at(i) == REGEX_SUBSTRING) {
+                mSubstringMatchers.emplace_back(std::make_unique<QStringMatcher>(patterns.at(i)));
+            } else {
+                mSubstringMatchers.emplace_back(nullptr);
+            }
 
             if (patternKinds.at(i) == REGEX_PERL) {
                 const QByteArray& regexp = patterns.at(i).toUtf8();
@@ -182,14 +360,14 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
                                                   .arg(QString::number(i + 1), QString(regexp.constData()).toHtmlEscaped(), QString(error).toHtmlEscaped())));
                     state = false;
                 } else {
-                    pcre2_jit_compile(re.data(), PCRE2_JIT_COMPLETE);
+                    mRegexJitCompiled[patternIndex] = (pcre2_jit_compile(re.data(), PCRE2_JIT_COMPLETE) == 0);
                     // One of these per pattern of every trigger created, so it
                     // belongs with the other high volume trigger detail:
                     if (TDebug::wants(TDebug::Category::TriggerDetail)) {
                         TDebug(Qt::white, Qt::darkGreen, TDebug::Category::TriggerDetail, mName) << "[OK]: REGEX_COMPILE OK\n" >> mpHost;
                     }
                 }
-                mRegexMap[patternIndex] = re;
+                mRegexes[patternIndex] = re;
                 mTriggerContainsPerlRegex = true;
             }
 
@@ -247,9 +425,16 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
 
 bool TTrigger::match_perl(const char* haystackC, const int haystackCLength, const QString& haystack, int patternNumber, int posOffset, int lineNumber)
 {
-    assert(mRegexMap.contains(patternNumber));
+    if (Q_UNLIKELY(patternNumber < 0 || patternNumber >= static_cast<int>(mRegexes.size()))) {
+        return false;
+    }
 
-    QSharedPointer<pcre2_code> const re = mRegexMap[patternNumber];
+    // A reference rather than a copy, which means it stops being valid the
+    // moment setRegexCodeList() clears the vector. Nothing between here and
+    // END: runs Lua - the capture loops all finish before the first execute()
+    // - so that cannot happen mid-call. Moving a script-invoking call above
+    // END:, or reading re or ovector after one, would break that.
+    const QSharedPointer<pcre2_code>& re = mRegexes[patternNumber];
 
     if (!re) {
         if (TDebug::wants(TDebug::Category::Error)) {
@@ -261,7 +446,7 @@ bool TTrigger::match_perl(const char* haystackC, const int haystackCLength, cons
         return false; //regex compile error
     }
 
-    QSharedPointer<pcre2_match_data>& matchData = mMatchDataMap[patternNumber];
+    QSharedPointer<pcre2_match_data>& matchData = mMatchData[patternNumber];
     if (!matchData) {
         matchData.reset(pcre2_match_data_create_from_pattern(re.data(), nullptr), pcre2_match_data_deleter);
         if (!matchData) {
@@ -270,7 +455,10 @@ bool TTrigger::match_perl(const char* haystackC, const int haystackCLength, cons
     }
     pcre2_match_data* match_data = matchData.data();
 
-    int rc = pcre2_match(re.data(), reinterpret_cast<PCRE2_SPTR>(haystackC), haystackCLength, 0, 0, match_data, nullptr);
+    // pcre2_match() finds the JIT code by itself, but only after a preamble of
+    // option and argument checks that a matching run repeats for every line
+    const int rc = mRegexJitCompiled[patternNumber] ? pcre2_jit_match(re.data(), reinterpret_cast<PCRE2_SPTR>(haystackC), haystackCLength, 0, 0, match_data, nullptr)
+                                                    : pcre2_match(re.data(), reinterpret_cast<PCRE2_SPTR>(haystackC), haystackCLength, 0, 0, match_data, nullptr);
 
     if (rc < 0) {
         return false;
@@ -299,27 +487,25 @@ void TTrigger::processRegexMatch(const char* haystackC,
 
     int i = 0;
     int numberOfCaptureGroups = 0;
-    std::list<std::string> captureList;
-    std::list<int> posList;
+    CaptureLists lists;
+    std::list<std::string>& captureList = lists.mCaptures;
+    std::list<int>& posList = lists.mPositions;
     QMap<QString, QPair<int, int>> namePositions;
     NameGroupMatches nameGroups;
     for (i = 0; i < rc; i++) {
         const char* substring_start = haystackC + ovector[2 * i];
         const int substring_length = ovector[2 * i + 1] - ovector[2 * i];
-        std::string match;
         if (substring_length < 1) {
-            captureList.push_back(match);
-            posList.push_back(-1);
+            lists.addEmpty(-1);
             continue;
         }
 
-        const int utf16_pos = QString::fromUtf8(haystackC, ovector[2 * i]).length();
-        match.append(substring_start, substring_length);
-        captureList.push_back(match);
-        posList.push_back(utf16_pos + posOffset);
+        const int utf16_pos = utf16PositionOf(haystackC, ovector[2 * i]);
+        // Built where it is kept: a local to copy from would allocate twice
+        lists.add(substring_start, static_cast<size_t>(substring_length), utf16_pos + posOffset);
         if (TDebug::wants(TDebug::Category::TriggerDetail)) {
             TDebug(Qt::darkCyan, Qt::black, TDebug::Category::TriggerDetail, mName) << "capture group #" << (i + 1) << " = " >> mpHost;
-            TDebug(Qt::darkMagenta, Qt::black, TDebug::Category::TriggerDetail, mName) << TDebug::csmContinue << "<" << match.c_str() << ">\n" >> mpHost;
+            TDebug(Qt::darkMagenta, Qt::black, TDebug::Category::TriggerDetail, mName) << TDebug::csmContinue << "<" << captureList.back().c_str() << ">\n" >> mpHost;
         }
     }
 
@@ -341,9 +527,9 @@ void TTrigger::processRegexMatch(const char* haystackC,
             if (ovector[2 * n] == PCRE2_UNSET) { //NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
                 continue;
             }
-            auto* substring_start = haystackC + ovector[2 * n];                     //NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic, cppcoreguidelines-pro-bounds-constant-array-index)
-            auto substring_length = ovector[2 * n + 1] - ovector[2 * n];            //NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
-            auto utf16_pos = QString::fromUtf8(haystackC, ovector[2 * n]).length(); //NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
+            auto* substring_start = haystackC + ovector[2 * n];          //NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic, cppcoreguidelines-pro-bounds-constant-array-index)
+            auto substring_length = ovector[2 * n + 1] - ovector[2 * n]; //NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
+            auto utf16_pos = utf16PositionOf(haystackC, ovector[2 * n]); //NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
             auto capture = QString::fromUtf8(substring_start, substring_length);
             nameGroups << qMakePair(name, capture);
             namePositions.insert(name, qMakePair(utf16_pos + posOffset, static_cast<int>(capture.length())));
@@ -379,19 +565,15 @@ void TTrigger::processRegexMatch(const char* haystackC,
             const char* substring_start = haystackC + ovector[2 * i];
             const int substring_length = ovector[2 * i + 1] - ovector[2 * i];
 
-            std::string match;
             if (substring_length < 1) {
-                captureList.push_back(match);
-                posList.push_back(-1);
+                lists.addEmpty(-1);
                 continue;
             }
-            const int utf16_pos = QString::fromUtf8(haystackC, ovector[2 * i]).length();
-            match.append(substring_start, substring_length);
-            captureList.push_back(match);
-            posList.push_back(utf16_pos + posOffset);
+            const int utf16_pos = utf16PositionOf(haystackC, ovector[2 * i]);
+            lists.add(substring_start, static_cast<size_t>(substring_length), utf16_pos + posOffset);
             if (TDebug::wants(TDebug::Category::TriggerDetail)) {
                 TDebug(Qt::darkCyan, Qt::black, TDebug::Category::TriggerDetail, mName) << "<regex mode: match all> capture group #" << (i + 1) << " = " >> mpHost;
-                TDebug(Qt::darkMagenta, Qt::black, TDebug::Category::TriggerDetail, mName) << "<" << match.c_str() << ">\n" >> mpHost;
+                TDebug(Qt::darkMagenta, Qt::black, TDebug::Category::TriggerDetail, mName) << "<" << captureList.back().c_str() << ">\n" >> mpHost;
             }
         }
     }
@@ -478,18 +660,29 @@ END: {
 bool TTrigger::match_begin_of_line_substring(const QString& haystack, const QString& needle, int patternNumber, int posOffset, int lineNumber)
 {
     if (haystack.startsWith(needle)) {
-        processBeginOfLine(needle, patternNumber, posOffset, lineNumber);
+        processBeginOfLine(patternNumber, posOffset, lineNumber);
         return true;
     }
     return false;
 }
 
-void TTrigger::processBeginOfLine(const QString& needle, int patternNumber, int posOffset, int lineNumber)
+// The pattern of a substring, start of line or exact match is also its capture,
+// so it is converted once when the trigger is compiled rather than on each match
+const std::string& TTrigger::patternUtf8(const int patternNumber) const
 {
-    std::list<std::string> captureList;
-    std::list<int> posList;
-    captureList.emplace_back(needle.toUtf8().constData());
-    posList.push_back(0 + posOffset);
+    static const std::string empty;
+    if (patternNumber < 0 || patternNumber >= static_cast<int>(mPatternsUtf8.size())) {
+        return empty;
+    }
+    return mPatternsUtf8[patternNumber];
+}
+
+void TTrigger::processBeginOfLine(int patternNumber, int posOffset, int lineNumber)
+{
+    CaptureLists lists;
+    std::list<std::string>& captureList = lists.mCaptures;
+    std::list<int>& posList = lists.mPositions;
+    lists.add(patternUtf8(patternNumber), 0 + posOffset);
     if (TDebug::wants(TDebug::Category::TriggerMatch)) {
         TDebug(Qt::darkCyan, Qt::black, TDebug::Category::TriggerMatch, mName) << "Trigger name=" << mName << "(" << mPatterns.value(patternNumber) << ") matched.\n" >> mpHost;
     }
@@ -543,8 +736,7 @@ void TTrigger::updateMultistates(int regexNumber, std::list<std::string>& captur
         auto pCondition = std::make_unique<TMatchState>(mPatterns.size(), mConditionLineDelta);
         auto* pConditionRaw = pCondition.get();
         mConditionMap[pConditionRaw] = std::move(pCondition);
-        pConditionRaw->multiCaptureList.push_back(captureList);
-        pConditionRaw->multiCapturePosList.push_back(posList);
+        pConditionRaw->addCaptures(captureList, posList);
         if (nameMatches) {
             pConditionRaw->nameCaptures.push_back(*nameMatches);
         } else {
@@ -566,8 +758,7 @@ void TTrigger::updateMultistates(int regexNumber, std::list<std::string>& captur
                             >> mpHost;
                 }
                 matchStatePair.second->conditionMatched();
-                matchStatePair.second->multiCaptureList.push_back(captureList);
-                matchStatePair.second->multiCapturePosList.push_back(posList);
+                matchStatePair.second->addCaptures(captureList, posList);
                 if (nameMatches != nullptr) {
                     matchStatePair.second->nameCaptures.push_back(*nameMatches);
                 } else {
@@ -605,7 +796,7 @@ void TTrigger::setExpiryCount(int expiryCount)
 
 bool TTrigger::match_substring(const QString& haystack, const QString& needle, int patternNumber, int posOffset, int lineNumber)
 {
-    const int where = haystack.indexOf(needle);
+    const int where = mSubstringMatchers[patternNumber]->indexIn(haystack);
     if (where != -1) {
         processSubstringMatch(haystack, needle, patternNumber, posOffset, where, lineNumber);
         return true;
@@ -615,14 +806,14 @@ bool TTrigger::match_substring(const QString& haystack, const QString& needle, i
 
 void TTrigger::processSubstringMatch(const QString& haystack, const QString& needle, int regexNumber, int posOffset, int where, int lineNumber)
 {
-    std::list<std::string> captureList;
-    std::list<int> posList;
-    captureList.emplace_back(needle.toUtf8().constData());
-    posList.push_back(where + posOffset);
+    CaptureLists lists;
+    std::list<std::string>& captureList = lists.mCaptures;
+    std::list<int>& posList = lists.mPositions;
+    const std::string& capture = patternUtf8(regexNumber);
+    lists.add(capture, where + posOffset);
     if (mPerlSlashGOption) {
-        while ((where = haystack.indexOf(needle, where + 1)) != -1) {
-            captureList.emplace_back(needle.toUtf8().constData());
-            posList.push_back(where + posOffset);
+        while ((where = indexOfNeedle(haystack, needle, where + 1)) != -1) {
+            lists.add(capture, where + posOffset);
         }
     }
     if (TDebug::wants(TDebug::Category::TriggerMatch)) {
@@ -681,8 +872,7 @@ bool TTrigger::match_color_pattern(int line, int patternNumber, int posOffset, i
         return false;
     }
     bool canExecute = false;
-    std::list<std::string> captureList;
-    std::list<int> posList;
+    CaptureLists lists;
     TConsoleModel& consoleModel = mpHost->mainConsoleModel();
     if (line >= static_cast<int>(consoleModel.buffer.buffer.size())) {
         return false;
@@ -713,15 +903,26 @@ bool TTrigger::match_color_pattern(int line, int patternNumber, int posOffset, i
         return false; // no color settings to match against
     }
 
+    // Nothing below changes any of these, but the colour comparison is an
+    // out-of-line call that the compiler has to assume might, so read them once
+    // rather than once per character of the line:
+    const int ansiFg = pCT->ansiFg;
+    const int ansiBg = pCT->ansiBg;
+    const QColor& patternFg = pCT->mFgColor;
+    const QColor& patternBg = pCT->mBgColor;
+    const QColor& defaultFg = consoleModel.mFgColor;
+    const QColor& defaultBg = consoleModel.mBgColor;
+    const int passLineSize = pPassLine ? static_cast<int>(pPassLine->size()) : 0;
+
     for (auto it = bufferLine.begin() + start; pos < end; ++it, ++pos) {
-        const TChar& character = (pPassLine && pos < static_cast<int>(pPassLine->size())) ? (*pPassLine)[pos] : *it;
+        const TChar& character = (pos < passLineSize) ? (*pPassLine)[pos] : *it;
         // This now allows matching against the current default colours (-2) and
         // allows ONE of the foreground or background to NOT be considered (-1)
         // Ideally we should base the matching on only the ANSI code but not
         // all parts of the text come from the Server and can be determined to
         // have come from a decoded ANSI code number:
-        if (((pCT->ansiFg == scmIgnored) || ((pCT->ansiFg == scmDefault) && consoleModel.mFgColor == character.foreground()) || (pCT->mFgColor == character.foreground()))
-            && ((pCT->ansiBg == scmIgnored) || ((pCT->ansiBg == scmDefault) && consoleModel.mBgColor == character.background()) || (pCT->mBgColor == character.background()))) {
+        if (((ansiFg == scmIgnored) || ((ansiFg == scmDefault) && sameColor(defaultFg, character.foreground())) || sameColor(patternFg, character.foreground()))
+            && ((ansiBg == scmIgnored) || ((ansiBg == scmDefault) && sameColor(defaultBg, character.background())) || sameColor(patternBg, character.background()))) {
             if (matchBegin == -1) {
                 matchBegin = pos;
             }
@@ -732,14 +933,7 @@ bool TTrigger::match_color_pattern(int line, int patternNumber, int posOffset, i
 
         if ((!matching) || (matching && (pos + 1 >= end))) {
             if (matchBegin > -1) {
-                std::string got;
-                if (matching) {
-                    got = lineBuffer.mid(matchBegin, pos - matchBegin + 1).toUtf8().constData();
-                } else {
-                    got = lineBuffer.mid(matchBegin, pos - matchBegin).toUtf8().constData();
-                }
-                captureList.push_back(got);
-                posList.push_back(matchBegin);
+                lists.add(QStringView(lineBuffer).mid(matchBegin, matching ? (pos - matchBegin + 1) : (pos - matchBegin)), matchBegin);
                 matchBegin = -1;
                 canExecute = true;
                 matching = false;
@@ -748,7 +942,7 @@ bool TTrigger::match_color_pattern(int line, int patternNumber, int posOffset, i
     }
 
     if (canExecute) {
-        processColorPattern(patternNumber, captureList, posList, line);
+        processColorPattern(patternNumber, lists.mCaptures, lists.mPositions, line);
         return true;
     }
     return false;
@@ -838,11 +1032,12 @@ bool TTrigger::match_line_spacer(int patternNumber)
 
 bool TTrigger::match_lua_code(int patternNumber)
 {
-    if (mLuaConditionMap.find(patternNumber) == mLuaConditionMap.end()) {
+    const auto condition = mLuaConditionMap.find(patternNumber);
+    if (condition == mLuaConditionMap.end()) {
         return false;
     }
 
-    if (mpLua->callConditionFunction(mLuaConditionMap[patternNumber], mName)) {
+    if (mpLua->callConditionFunction(condition->second, mName)) {
         if (TDebug::wants(TDebug::Category::TriggerMatch)) {
             TDebug(Qt::yellow, Qt::black, TDebug::Category::TriggerMatch, mName) << "Trigger name=" << mName << "(" << mPatterns.value(patternNumber) << ") matched.\n" >> mpHost;
         }
@@ -889,18 +1084,18 @@ bool TTrigger::match_exact_match(const QString& haystack, const QString& needle,
     }
 
     if (text == needle) {
-        processExactMatch(needle, patternNumber, posOffset, lineNumber);
+        processExactMatch(patternNumber, posOffset, lineNumber);
         return true;
     }
     return false;
 }
 
-void TTrigger::processExactMatch(const QString& needle, int patternNumber, int posOffset, int lineNumber)
+void TTrigger::processExactMatch(int patternNumber, int posOffset, int lineNumber)
 {
-    std::list<std::string> captureList;
-    std::list<int> posList;
-    captureList.emplace_back(needle.toUtf8().constData());
-    posList.push_back(0 + posOffset);
+    CaptureLists lists;
+    std::list<std::string>& captureList = lists.mCaptures;
+    std::list<int>& posList = lists.mPositions;
+    lists.add(patternUtf8(patternNumber), 0 + posOffset);
     if (TDebug::wants(TDebug::Category::TriggerMatch)) {
         TDebug(Qt::yellow, Qt::black, TDebug::Category::TriggerMatch, mName) << "Trigger name=" << mName << "(" << mPatterns.value(patternNumber) << ") matched.\n" >> mpHost;
     }
@@ -999,7 +1194,7 @@ bool TTrigger::match(const char* haystackC, const int haystackCLength, const QSt
                 break;
             }
             ret = false;
-            switch (mPatternKinds.value(patternNumber)) {
+            switch (mPatternKinds.at(patternNumber)) {
             case REGEX_SUBSTRING:
                 ret = match_substring(haystack, mPatterns.at(patternNumber), patternNumber, posOffset, line);
                 break;
@@ -1252,8 +1447,17 @@ bool TTrigger::setupTmpColorTrigger(int ansiFg, int ansiBg)
 
     // createColorPatternText(...) now returns an empty string if BOTH color
     // codes are the scmIgnored ones:
-    mPatterns << createColorPatternText(ansiFg, ansiBg);
+    const QString patternText = createColorPatternText(ansiFg, ansiBg);
+    mPatterns << patternText;
     mPatternKinds << REGEX_COLOR_PATTERN;
+    // Everything setRegexCodeList() fills is indexed by pattern number, so a
+    // pattern added here has to extend all of it - even though a colour
+    // pattern is matched out of mColorPatternList and compiles no regex.
+    mSubstringMatchers.emplace_back(nullptr);
+    mPatternsUtf8.emplace_back(patternText.toUtf8().constData());
+    mRegexes.emplace_back();
+    mMatchData.emplace_back();
+    mRegexJitCompiled.push_back(false);
     mColorPatternList.emplace_back(std::move(pCT));
     return true;
 }

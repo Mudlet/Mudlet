@@ -26,6 +26,7 @@
 
 #include "utils.h"
 
+#include <QByteArray>
 #include <QCoreApplication>
 #include <QElapsedTimer>
 #include <QHash>
@@ -35,6 +36,8 @@
 #include <QString>
 
 #include <list>
+#include <memory>
+#include <vector>
 
 class Host;
 class TTrigger;
@@ -133,8 +136,24 @@ private:
     void stopSameLineCreationLoop(const int chainId);
 
     QPointer<Host> mpHost;
+    // Storage processDataStream() lends out for the UTF-8 form of the line it is
+    // matching, kept between lines for its capacity alone - it holds nothing
+    // meaningful outside that call. Past this size the capacity is dropped
+    // instead of kept, so one outsized line cannot hold its allocation for the
+    // rest of the session; the bound is three bytes per QChar of a line longer
+    // than any game sends.
+    static constexpr qsizetype scmMaxRetainedUtf8Scratch = 3 * 8192;
+    QByteArray mUtf8Scratch;
     QMap<int, TTrigger*> mTriggerMap;
     std::list<TTrigger*> mTriggerRootNodeList;
+    // What processDataStream() iterates instead of mTriggerRootNodeList itself -
+    // see the note there. Shared rather than rebuilt per line: a pass pins the
+    // snapshot that was current when it started, so mutating the root list
+    // mid-pass leaves that one alone and only the next pass sees the rebuilt
+    // one. Every mutation of mTriggerRootNodeList must set the flag below, or a
+    // pass would go on walking triggers that have since been freed.
+    std::shared_ptr<std::vector<TTrigger*>> mpRootNodeSnapshot;
+    bool mRootNodeSnapshotStale = true;
     int mMaxID;
     bool mModuleMember;
     int statsItemsTotal = 0;

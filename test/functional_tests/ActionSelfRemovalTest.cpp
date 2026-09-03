@@ -207,6 +207,36 @@ private slots:
 
     // Starts a profile the way a user would via the GUI (mirrors the helper in
     // TFeedTriggersRecursionTest).
+    // installPackage() works out why an install failed and hands the reason back,
+    // but most callers drop it: a GUI install used to fail with nothing on screen
+    // and only a qWarning on a terminal no player sees. A non-quiet install of a
+    // file that is not an archive has to say so in the profile's message area.
+    // Script installs pass quiet and are deliberately left out of that - they get
+    // the reason as a return value - which is why this drives
+    // Host::installPackage() directly rather than the Lua installPackage().
+    void test_aFailedInstallTellsTheUserWhy()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "Could not start a profile");
+
+        // A file that exists but is not an archive, which is the failure a user
+        // meets most often - unzip refuses it.
+        const QString brokenPackage = qsl("%1/broken.mpackage").arg(mudlet::getMudletPath(enums::profileHomePath, mpHostname));
+        QFile broken(brokenPackage);
+        QVERIFY2(broken.open(QIODevice::WriteOnly), qPrintable(qsl("Could not create %1").arg(brokenPackage)));
+        broken.write("this is not a zip archive");
+        broken.close();
+
+        auto [installed, reason] = host->installPackage(brokenPackage, enums::PackageModuleType::Package);
+        QVERIFY2(!installed, "Installing a file that is not an archive must fail");
+        QVERIFY2(!reason.isEmpty(), "A failed install must come back with a reason");
+
+        QApplication::processEvents();
+        QVERIFY2(bufferContains(qsl("Package install failed")), qPrintable(qsl("The failure must reach the profile's message area, but the buffer held: \"%1\"").arg(joinedBuffer())));
+        QVERIFY2(bufferContains(reason), qPrintable(qsl("The message must carry the reason \"%1\", but the buffer held: \"%2\"").arg(reason, joinedBuffer())));
+    }
+
     void startProfile(const QString& hostname, const QString& address, const QString& port)
     {
         auto host = TestProfile::create(hostname, address, port);
