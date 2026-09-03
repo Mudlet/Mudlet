@@ -72,6 +72,7 @@
 #include <QJsonObject>
 #include <QJsonParseError>
 #include <QSaveFile>
+#include <QStringConverter>
 #include <QTemporaryDir>
 #include <QTemporaryFile>
 #include <QTextStream>
@@ -3594,17 +3595,15 @@ void TLuaInterpreter::setMultiCaptureGroups(const std::list<std::list<std::strin
 // No documentation available in wiki - internal function
 void TLuaInterpreter::setCaptureGroups(const std::list<std::string>& captureList, const std::list<int>& posList)
 {
-    mCaptureGroupList = captureList;
-    mCaptureGroupPosList = posList;
-
-    /*
-     * std::list<string>::iterator it2 = mCaptureGroupList.begin();
-     * std::list<int>::iterator it1 = mCaptureGroupPosList.begin();
-     * int i=0;
-     * for ( ; it1!=mCaptureGroupPosList.end(); it1++, it2++, i++) {
-     *     cout << "group#"<<i<<" begin="<<*it1<<" len="<<(*it2).size()<<"word="<<*it2<<endl;
-     * }
-     */
+    // Take back the storage clearCaptureGroups() parked, unless a nested pass is
+    // still holding it - assigning over the recycled std::strings reuses their
+    // buffers, which is worth having on a path that runs per trigger fire
+    if (mCaptureGroupList.empty()) {
+        mCaptureGroupList.swap(mSpareCaptureGroupList);
+        mCaptureGroupPosList.swap(mSpareCaptureGroupPosList);
+    }
+    mCaptureGroupList.assign(captureList.begin(), captureList.end());
+    mCaptureGroupPosList.assign(posList.begin(), posList.end());
 }
 
 // No documentation available in wiki - internal function
@@ -3617,6 +3616,23 @@ void TLuaInterpreter::setCaptureNameGroups(const NameGroupMatches& nameGroups, c
 // No documentation available in wiki - internal function
 void TLuaInterpreter::clearCaptureGroups()
 {
+    if (mSpareCaptureGroupList.empty()) {
+        mSpareCaptureGroupList.swap(mCaptureGroupList);
+        mSpareCaptureGroupPosList.swap(mCaptureGroupPosList);
+        // A match-all pattern over a hostile line would otherwise leave the
+        // parked buffers at that high water mark for the rest of the session.
+        // Past the cap the cost is the allocation this parking exists to save,
+        // never unbounded memory.
+        if (mSpareCaptureGroupList.size() > scmMaxParkedCaptures) {
+            mSpareCaptureGroupList.resize(scmMaxParkedCaptures);
+            mSpareCaptureGroupPosList.resize(scmMaxParkedCaptures);
+        }
+        for (auto& capture : mSpareCaptureGroupList) {
+            if (capture.capacity() > scmMaxParkedCaptureBytes) {
+                std::string().swap(capture);
+            }
+        }
+    }
     mCaptureGroupList.clear();
     mCaptureGroupPosList.clear();
     mMultiCaptureGroupList.clear();
@@ -4308,24 +4324,25 @@ void TLuaInterpreter::setChannel102Table(int& var, int& arg)
 // No documentation available in wiki - internal function
 void TLuaInterpreter::setMatches(lua_State* L)
 {
-    if (!mCaptureGroupList.empty()) {
-        lua_newtable(L);
-
-        // set values
-        int i = 1; // Lua indexes start with 1 as a general convention
-        for (auto it = mCaptureGroupList.begin(); it != mCaptureGroupList.end(); it++, i++) {
-            // if ((*it).length() < 1) continue; //have empty capture groups to be undefined keys i.e. matches[emptyCapGroupNumber] = nil otherwise it's = "" i.e. an empty string
-            lua_pushnumber(L, i);
-            lua_pushstring(L, (*it).c_str());
-            lua_settable(L, -3);
-        }
-        for (const auto& [name, capture] : mCapturedNameGroups) {
-            lua_pushstring(L, name.toUtf8().constData());
-            lua_pushstring(L, capture.toUtf8().constData());
-            lua_settable(L, -3);
-        }
-        lua_setglobal(L, "matches");
+    if (mCaptureGroupList.empty()) {
+        return;
     }
+
+    // presized, so filling it in does not rehash the table on the way up
+    lua_createtable(L, static_cast<int>(mCaptureGroupList.size()), static_cast<int>(mCapturedNameGroups.size()));
+
+    // empty capture groups stay defined keys i.e. matches[emptyCapGroupNumber] = "" rather than nil
+    int i = 1; // Lua indexes start with 1 as a general convention
+    for (const auto& capture : mCaptureGroupList) {
+        lua_pushstring(L, capture.c_str());
+        lua_rawseti(L, -2, i++);
+    }
+    for (const auto& [name, capture] : mCapturedNameGroups) {
+        lua_pushstring(L, name.toUtf8().constData());
+        lua_pushstring(L, capture.toUtf8().constData());
+        lua_rawset(L, -3);
+    }
+    lua_setglobal(L, "matches");
 }
 
 // No documentation available in wiki - internal function
@@ -5323,8 +5340,30 @@ void TLuaInterpreter::set_lua_string(const QString& varName, const QString& varV
     lua_State* L = pGlobalLua;
     const int callerStackTop = lua_gettop(L);
 
-    lua_pushstring(L, varValue.toUtf8().constData());
-    lua_setglobal(L, varName.toUtf8().constData());
+    // This runs once per incoming line, and both toUtf8() calls it replaces
+    // allocated a QByteArray every time. The name is nearly always the same one,
+    // and the value is encoded into a buffer that is kept between calls.
+    if (mLastGlobalName != varName) {
+        mLastGlobalName = varName;
+        mLastGlobalNameUtf8 = varName.toUtf8();
+    }
+    QStringEncoder encoder(QStringEncoder::Utf8, QStringConverter::Flag::Stateless);
+    mUtf8Scratch.resize(encoder.requiredSpace(varValue.size()));
+    const char* const end = encoder.appendToBuffer(mUtf8Scratch.data(), varValue);
+    if (Q_UNLIKELY(encoder.hasError())) {
+        // The encoder writes a replacement character where an unpaired
+        // surrogate was, while toUtf8() drops it. That path can afford the
+        // copy and stay byte for byte what a script used to be given.
+        mUtf8Scratch = varValue.toUtf8();
+    } else {
+        mUtf8Scratch.resize(end - mUtf8Scratch.constData());
+    }
+
+    lua_pushstring(L, mUtf8Scratch.constData());
+    lua_setglobal(L, mLastGlobalNameUtf8.constData());
+    if (mUtf8Scratch.capacity() > scmMaxRetainedUtf8Scratch) {
+        mUtf8Scratch = QByteArray();
+    }
     lua_settop(L, callerStackTop);
 }
 
