@@ -581,6 +581,9 @@ private:
     QString mMudLine;
     std::vector<TChar> mMudBuffer;
     std::vector<TChar> mPreTriggerPassLine;
+    // Parked between lines so that the trigger-pass snapshot can reuse an
+    // allocation instead of making a fresh one for each committed line:
+    std::vector<TChar> mSpareTriggerPassLine;
     int mPreTriggerPassLineNumber = -1;
     // A line that ended at the game's own wrap column (Host::mUndoServerWrap)
     // is held here instead of being committed, so its continuation can be
@@ -700,6 +703,11 @@ private:
     // A longer number opening a line is likelier a year or a price ending a
     // wrapped sentence than a list number; only "[...]" is trusted past it:
     static constexpr qsizetype csmMaxListNumberDigits = 3;
+    // Past this a per-line accumulator's allocation is released rather than
+    // kept for the next line: one very long line - a game dumping a help file,
+    // or a pasted log - would otherwise park its capacity for the rest of the
+    // session, and a TChar costs tens of bytes where a character costs two:
+    static constexpr size_t csmMaxRetainedLineCapacity = 8192;
 
     // Timestamp to prevent duplicate OSC 8 documentation injection
     qint64 mLastOSC8DocsInjectionTime = 0;

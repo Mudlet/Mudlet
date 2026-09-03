@@ -41,6 +41,7 @@
 #include "TEncodingHelper.h"
 #include "SentryWrapper.h"
 
+#include <QDateTime>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -61,6 +62,31 @@ using namespace std::chrono_literals;
 
 namespace {
 
+// Every line appended to a buffer is stamped with the time it arrived, and
+// QTime::currentTime() consults the timezone database on each call - which on
+// glibc means a stat() of /etc/localtime per line. The stamp has millisecond
+// resolution at best, so a burst of lines arriving within the same millisecond
+// all get the same string: work it out once and hand out copies until either
+// the millisecond or the (translated, so changeable) format moves on.
+QString currentTimeStamp()
+{
+    static qint64 cachedMSecs = 0;
+    static QString cachedFormat;
+    static QString cachedStamp;
+
+    if (QDateTime::currentMSecsSinceEpoch() != cachedMSecs || cachedFormat != mudlet::smTimeStampFormat) {
+        // The stamp is filed under the millisecond it was read in rather than
+        // the one the check above read, which can be the one before it if the
+        // clock ticks between the two. Filing it under the earlier one would
+        // stamp the rest of that millisecond's lines a millisecond early.
+        const QDateTime now = QDateTime::currentDateTime();
+        cachedMSecs = now.toMSecsSinceEpoch();
+        cachedFormat = mudlet::smTimeStampFormat;
+        cachedStamp = now.time().toString(mudlet::smTimeStampFormat);
+    }
+    return cachedStamp;
+}
+
 // How much of a string sequence (OSC, DCS, SOS, PM or APC) is held while
 // waiting for its terminator - beyond this the bytes are discarded as they
 // arrive rather than buffered, so a server that never terminates one cannot
@@ -80,6 +106,19 @@ constexpr size_t STRING_SEQUENCE_EXCERPT_LENGTH = 40;
 bool endsStringSequence(const char byte)
 {
     return byte != CHAR_CARRIAGE_RETURN && CHAR_IS_COMMIT_CHAR(byte);
+}
+
+// A byte the decoder's main loop would turn into exactly one QChar of the same
+// value whatever the session's encoding, so runs of them can be copied in one
+// go. That is every 7-bit byte except the four the loop acts on itself: the
+// two line endings, End of Transmission and ESC. The remaining C0 controls are
+// deliberately included - none of them is special-cased on the text path, so
+// each decodes to itself like any printable character. DEL is excluded because
+// EUC-KR alone treats it as an invalid first byte and renders it as the
+// replacement character.
+bool bulkCopyableTextByte(const char byte)
+{
+    return static_cast<unsigned char>(byte) < 0x7F && byte != CHAR_NEW_LINE && byte != CHAR_CARRIAGE_RETURN && byte != CHAR_END_OF_TRANSMISSION && byte != CHAR_ESC;
 }
 
 // Maximum length for a CSI sequence's parameter string before aborting - a
@@ -1676,6 +1715,22 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                     mCurrentHyperlinkStartColumn = static_cast<int>(mMudBuffer.size()) - 1; // -1 because we just added 1 char
                 }
                 mCurrentHyperlinkText += QString(QChar(ch));
+            } else if (!(mpHost->mMxpProcessor.isEnabled() && (mpHost->mTelnet.isMXPEnabled() || mpHost->getForceMXPProcessorOn()))) {
+                // A plain text byte only ever decodes to itself and takes the
+                // format just computed, so the whole run of them can be copied
+                // in one append and one fill. MXP has to see every byte, and a
+                // hyperlink's text is accumulated a character at a time, so
+                // neither takes this path.
+                size_t runEnd = localBufferPosition + 1;
+                while (runEnd < localBufferLength && bulkCopyableTextByte(localBuffer[runEnd])) {
+                    ++runEnd;
+                }
+                const size_t runLength = runEnd - (localBufferPosition + 1);
+                if (runLength) {
+                    mMudLine.append(QLatin1StringView(localBuffer.data() + localBufferPosition + 1, static_cast<qsizetype>(runLength)));
+                    mMudBuffer.insert(mMudBuffer.cend(), runLength, c);
+                    localBufferPosition = runEnd - 1;
+                }
             }
         }
 
@@ -1799,14 +1854,29 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
         flushPendingServerWrapJoin();
     }
 
+    // Copy out and empty rather than swap, so that both accumulators keep
+    // their allocation for the next line. Swapping leaves them empty, and
+    // grown back from empty they reallocate several times per line - which
+    // costs more than the single copy each of these makes. The copies are also
+    // exactly the size of the line, where the accumulators have grown to fit
+    // the longest line ever seen, so this is what keeps the stored lines from
+    // each holding a worst-case block - and past csmMaxRetainedLineCapacity
+    // the accumulator itself is let go rather than kept. Emptying them before
+    // the commit rather than after leaves them usable by any nested pass that
+    // the trigger engine starts from within commitLineData().
     QString line;
-    line.swap(mMudLine);
-    // Copy out and clear rather than swap, so that mMudBuffer keeps its
-    // allocation for the next line. Swapping leaves it empty, and a vector
-    // grown back from empty reallocates several times per line - which costs
-    // more than the single copy this makes.
+    if (!mMudLine.isEmpty()) {
+        line = QString(mMudLine.constData(), mMudLine.size());
+        mMudLine.resize(0);
+    }
     std::vector<TChar> chars(mMudBuffer);
     mMudBuffer.clear();
+    if (static_cast<size_t>(mMudLine.capacity()) > csmMaxRetainedLineCapacity) {
+        QString().swap(mMudLine);
+    }
+    if (mMudBuffer.capacity() > csmMaxRetainedLineCapacity) {
+        std::vector<TChar>().swap(mMudBuffer);
+    }
     commitLineData(std::move(line), std::move(chars), ch);
     ++localBufferPosition;
     return true;
@@ -1844,8 +1914,8 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
             }
             lineBuffer << QString();
         }
-        buffer.push_back(chars);
-        timeBuffer << QTime::currentTime().toString(mudlet::smTimeStampFormat);
+        buffer.push_back(std::move(chars));
+        timeBuffer << currentTimeStamp();
         if (ch == '\xff') {
             promptBuffer.append(true);
         } else {
@@ -1860,8 +1930,8 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
             }
             lineBuffer.back().append(QString());
         }
-        buffer.back() = chars;
-        timeBuffer.back() = QTime::currentTime().toString(mudlet::smTimeStampFormat);
+        buffer.back() = std::move(chars);
+        timeBuffer.back() = currentTimeStamp();
         if (ch == '\xff') {
             promptBuffer.back() = true;
         } else {
@@ -1876,12 +1946,21 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
         // after earlier triggers in this pass have recolored the line;
         // save/restore gives nested feedTriggers() passes (which re-enter
         // this function) their own snapshot:
-        std::vector<TChar> savedPassLine = std::move(mPreTriggerPassLine);
+        // The snapshot is taken through a spare member rather than by moving
+        // the committed formats in, so that its allocation stays in
+        // circulation instead of one being made and freed for every line:
+        std::vector<TChar> savedPassLine;
+        savedPassLine.swap(mPreTriggerPassLine);
         const int savedPassLineNumber = mPreTriggerPassLineNumber;
-        mPreTriggerPassLine = std::move(chars);
+        mPreTriggerPassLine.swap(mSpareTriggerPassLine);
+        mPreTriggerPassLine.assign(buffer.back().cbegin(), buffer.back().cend());
         mPreTriggerPassLineNumber = lineIndex;
         mpHost->runTriggers(lineIndex);
-        mPreTriggerPassLine = std::move(savedPassLine);
+        mSpareTriggerPassLine.swap(mPreTriggerPassLine);
+        if (mSpareTriggerPassLine.capacity() > csmMaxRetainedLineCapacity) {
+            std::vector<TChar>().swap(mSpareTriggerPassLine);
+        }
+        mPreTriggerPassLine.swap(savedPassLine);
         mPreTriggerPassLineNumber = savedPassLineNumber;
     }
 
@@ -4967,7 +5046,7 @@ void TBuffer::appendFormatted(const QString& text, const std::vector<TChar>& for
         buffer.back().push_back(destChar);
 
         if (firstChar) {
-            timeBuffer.back() = QTime::currentTime().toString(mudlet::smTimeStampFormat);
+            timeBuffer.back() = currentTimeStamp();
             firstChar = false;
         }
     }
@@ -5099,7 +5178,7 @@ void TBuffer::appendLine(const QString& text,
         if (firstChar) {
             // A caller replaying held-back content supplies the time the text
             // actually arrived, rather than the time it is being shown:
-            timeBuffer.back() = timeStampOverride.isEmpty() ? QTime::currentTime().toString(mudlet::smTimeStampFormat) : timeStampOverride;
+            timeBuffer.back() = timeStampOverride.isEmpty() ? currentTimeStamp() : timeStampOverride;
             firstChar = false;
         }
     }
@@ -5109,7 +5188,7 @@ void TBuffer::appendEmptyLine()
 {
     buffer.emplace_back();
     lineBuffer.push_back(QString());
-    timeBuffer << QTime::currentTime().toString(mudlet::smTimeStampFormat);
+    timeBuffer << currentTimeStamp();
     promptBuffer << false;
 }
 
@@ -5276,6 +5355,26 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
         // Return a simple wrap info without character width calculations
         output.append(WrapInfo(isNewline, false, 0, lineText.length()));
         return output;
+    }
+
+    // Building the boundary finders below runs a full Unicode analysis over the
+    // line, which is the single most expensive part of appending one. Most game
+    // output cannot wrap at all and needs none of it: every printable ASCII
+    // character is its own grapheme cluster exactly one column wide, so such a
+    // line's width is its length, and a line no wider than the wrap column has
+    // no break point to find. LineFeed and Tab are outside that range, so a
+    // line needing an embedded break never takes this path.
+    if (lineText.size() <= (isNewline ? maxWidth - indent : maxWidth) && lineText.size() <= mWrapAt) {
+        bool plainAscii = true;
+        for (const QChar c : lineText) {
+            if (c.unicode() < u' ' || c.unicode() > u'~') {
+                plainAscii = false;
+                break;
+            }
+        }
+        if (plainAscii) {
+            return output;
+        }
     }
 
     QTextBoundaryFinder boundaryFinder(QTextBoundaryFinder::Grapheme, lineText);
@@ -6592,32 +6691,26 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
 
         // Will be one (BMP codepoint) or two (non-BMP codepoints) QChar(s)
         if (isValid) {
-            const QString codePoint = QString(bufferData.substr(pos, utf8SequenceLength).c_str());
-            switch (codePoint.size()) {
-            default:
-                Q_UNREACHABLE(); // This can't happen, unless we got start or length wrong in std::string::substr()
-                qWarning().nospace() << "TBuffer::processUtf8Sequence(...) " << utf8SequenceLength << "-byte UTF-8 sequence accepted, and it encoded to " << codePoint.size()
-                                     << " QChars which does not make sense!!!";
-                isValid = false;
-                isToUseReplacementMark = true;
-                break;
-            case 2:
-                isNonBMPCharacter = true;
-                // Fall-through
-                [[fallthrough]];
-            case 1:
+            // Every way of being malformed - a bad continuation byte, an
+            // overlong form, a surrogate, a codepoint past U+10FFFF, a 5 or 6
+            // byte sequence and the BOM - has already been rejected above, so
+            // the bits can be gathered here rather than paying for a QString
+            // per character:
+            char32_t codePoint = static_cast<quint8>(bufferData.at(pos)) & (utf8SequenceLength == 2 ? 0x1F : (utf8SequenceLength == 3 ? 0x0F : 0x07));
+            for (size_t i = 1; i < utf8SequenceLength; ++i) {
+                codePoint = (codePoint << 6) | (static_cast<quint8>(bufferData.at(pos + i)) & 0x3F);
+            }
+            const bool nonBMP = QChar::requiresSurrogates(codePoint);
 #if defined(DEBUG_UTF8_PROCESSING)
-                qDebug().nospace() << "TBuffer::processUtf8Sequence(...) " << utf8SequenceLength << "-byte UTF-8 sequence accepted, it was " << codePoint.size() << " QChar(s) long [" << codePoint
-                                   << "]";
+            qDebug().nospace() << "TBuffer::processUtf8Sequence(...) " << utf8SequenceLength << "-byte UTF-8 sequence accepted, it was " << (nonBMP ? 2 : 1) << " QChar(s) long [U+" << Qt::hex
+                               << static_cast<quint32>(codePoint) << Qt::dec << "]";
 #endif
-                mMudLine.append(codePoint);
-                break;
-            case 0:
-                qWarning().nospace() << "TBuffer::processUtf8Sequence(...) " << utf8SequenceLength
-                                     << "-byte UTF-8 sequence accepted, but it did not encode to "
-                                        "ANY QChar(s)!!!";
-                isValid = false;
-                isToUseReplacementMark = true;
+            if (nonBMP) {
+                isNonBMPCharacter = true;
+                mMudLine.append(QChar(QChar::highSurrogate(codePoint)));
+                mMudLine.append(QChar(QChar::lowSurrogate(codePoint)));
+            } else {
+                mMudLine.append(QChar(static_cast<char16_t>(codePoint)));
             }
         }
 
