@@ -1,6 +1,6 @@
 # DUPLICATE WORKFLOW: This file is paired with build-mudlet-win-pr.yml
 # Changes here likely need to be mirrored there as well, apart from the
-# ccache/sentry-native save steps below: only a push to development writes
+# ccache/sentry-native save steps below: only builds of development write
 # these shared caches, every other build restores read-only, so
 # build-mudlet-win-pr.yml has no equivalent save steps at all.
 name: 🔨 Build Mudlet (windows)
@@ -17,10 +17,12 @@ on:
   schedule:
     - cron: '0 2 * * *'
 
-# id-token and contents are what SignPath's trusted build verification needs.
+# Permissions required for SignPath trusted build verification: its action reads
+# job details and downloads the artifact with the workflow token (actions: read).
 permissions:
   id-token: write
   contents: read
+  actions: read
 
 jobs:
   compile-mudlet:
@@ -61,6 +63,8 @@ jobs:
         $GITHUB_WORKSPACE/CI/setup-windows-sdk.sh
         $GITHUB_WORKSPACE/CI/validate-deployment-for-windows.sh
 
+    # Saves are keyed per commit, so the primary key deliberately matches no entry
+    # and every restore prefix-matches the newest.
     - name: Restore ccache
       uses: actions/cache/restore@v6
       with:
@@ -72,7 +76,7 @@ jobs:
       shell: msys2 {0}
       env:
         CCACHE_DIR: ${{runner.workspace}}/ccache
-        CCACHE_MAXSIZE: 300M
+        CCACHE_MAXSIZE: 500M
       run: ccache --zero-stats --show-stats
 
     - name: Get sentry-native commit hash
@@ -92,7 +96,7 @@ jobs:
     - name: (Windows) Build
       shell: msys2 {0}
       env:
-        CCACHE_MAXSIZE: 300M
+        CCACHE_MAXSIZE: 500M
         GITHUB_REPO_TAG: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
         GITHUB_SCHEDULED_BUILD: ${{ github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' }}
         GITHUB_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
@@ -117,7 +121,7 @@ jobs:
       shell: msys2 {0}
       env:
         CCACHE_DIR: ${{runner.workspace}}/ccache
-        CCACHE_MAXSIZE: 300M
+        CCACHE_MAXSIZE: 500M
       run: ccache --show-stats
 
     - name: (Windows) Run QTest

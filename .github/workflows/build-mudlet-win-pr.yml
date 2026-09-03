@@ -1,13 +1,14 @@
 # DUPLICATE WORKFLOW: This file is paired with build-mudlet-win.yml
 # Changes here likely need to be mirrored there as well, apart from the
-# ccache/sentry-native handling: only a push to development writes these
+# ccache/sentry-native handling: only builds of development write these
 # shared caches, so there are no save steps here at all - a pull request
 # never owns an entry of its own.
 name: 🔨 Build Mudlet - PR (windows)
 on:
   pull_request:
 
-# Permissions required for SignPath trusted build verification
+# Permissions required for SignPath trusted build verification: its action reads
+# job details and downloads the artifact with the workflow token (actions: read).
 permissions:
   id-token: write
   contents: read
@@ -85,6 +86,8 @@ jobs:
         $GITHUB_WORKSPACE/CI/setup-windows-sdk.sh
         $GITHUB_WORKSPACE/CI/validate-deployment-for-windows.sh
 
+    # Saves are keyed per commit, so the primary key deliberately matches no entry
+    # and every restore prefix-matches the newest.
     - name: Restore ccache
       uses: actions/cache/restore@v6
       with:
@@ -96,6 +99,7 @@ jobs:
       shell: msys2 {0}
       env:
         CCACHE_DIR: ${{runner.workspace}}/ccache
+        CCACHE_MAXSIZE: 500M
       run: ccache --zero-stats --show-stats
 
     - name: Get sentry-native commit hash
@@ -115,6 +119,7 @@ jobs:
     - name: (Windows) Build
       shell: msys2 {0}
       env:
+        CCACHE_MAXSIZE: 500M
         GITHUB_REPO_TAG: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
         GITHUB_SCHEDULED_BUILD: ${{ github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' }}
         GITHUB_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
@@ -130,6 +135,7 @@ jobs:
       shell: msys2 {0}
       env:
         CCACHE_DIR: ${{runner.workspace}}/ccache
+        CCACHE_MAXSIZE: 500M
       run: ccache --show-stats
 
     - name: (Windows) Run QTest
