@@ -871,8 +871,8 @@ void TMainConsole::deregisterLabelWidget(TLabel* pLabel)
     // This is the only destroyed() connection made from a label to this console,
     // so severing all of them is severing just that one.
     disconnect(pLabel, &QObject::destroyed, this, nullptr);
-    // Erase by value rather than by name: deleteLabel() defers the widget's
-    // destruction, so a replacement may already hold the name and must stay.
+    // Erase by value: destroyed() names the widget, not the name it was filed
+    // under, and a replacement filed under that name must be left in place.
     mLabelMap.removeIf([pLabel](const auto& it) {
         return it.value() == pLabel;
     });
