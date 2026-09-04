@@ -452,7 +452,7 @@ describe("Tests how a GMCP message is split into name and data", function()
   end)
 
   it("reads a payload that is a bare number", function()
-    pending("json_to_value returns a function rather than a number for a bare JSON number, so gmcp.X ends up holding a function")
+    pending("json_to_value returns a function rather than a number for a bare JSON number, so gmcp.X ends up holding a function (#10362)")
   end)
 end)
 
@@ -960,11 +960,11 @@ describe("Tests the encodings Mudlet carries its own tables for", function()
   end)
 
   it("carries the accented letters of CP437", function()
-    pending("TTextCodec_437's table holds Medievia's map glyphs from 0x80 to 0xAF, so CP437 can neither send nor read Ç, ü, é or Ü")
+    pending("TTextCodec_437's table holds Medievia's map glyphs from 0x80 to 0xAF, so CP437 can neither send nor read Ç, ü, é or Ü (#10395)")
   end)
 
   it("carries the lower case Greek letters of CP737", function()
-    pending("both CP737 tables hold CP437's characters from 0x98 to 0xAF, so bytes for α to ψ come out as ÿ, Ö, á and friends")
+    pending("both CP737 tables hold CP437's characters from 0x98 to 0xAF, so bytes for α to ψ come out as ÿ, Ö, á and friends (#10395)")
   end)
 end)
 
