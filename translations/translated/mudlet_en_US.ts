@@ -15,7 +15,7 @@
 <context>
     <name>MapInfoContributorManager</name>
     <message numerus="yes">
-        <location filename="../../src/mapInfoContributorManager.cpp" line="245"/>
+        <location filename="../../src/mapInfoContributorManager.cpp" line="281"/>
         <source>Center of %n selected rooms</source>
         <extracomment>This description is shown when MORE THAN ONE room is selected.</extracomment>
         <translatorcomment>From viewing the source code it is clear that the %n == 1 case is NEVER used, i.e. the singular translation is not required for English locales.</translatorcomment>
@@ -28,7 +28,7 @@
 <context>
     <name>ModernGLWidget</name>
     <message numerus="yes">
-        <location filename="../../src/modern_glwidget.cpp" line="256"/>
+        <location filename="../../src/modern_glwidget.cpp" line="258"/>
         <source>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</source>
         <translation>
             <numerusform>You have a map loaded (%n room), but Mudlet does not know where you are at the moment.</numerusform>
@@ -39,7 +39,7 @@
 <context>
     <name>T2DMap</name>
     <message numerus="yes">
-        <location filename="../../src/T2DMap.cpp" line="2419"/>
+        <location filename="../../src/T2DMap.cpp" line="2655"/>
         <source>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</source>
         <translation>
             <numerusform>You have a map loaded (%n room), but Mudlet does not know where you are at the moment.</numerusform>
@@ -48,9 +48,53 @@
     </message>
 </context>
 <context>
+    <name>TDebug</name>
+    <message numerus="yes">
+        <location filename="../../src/TDebug.cpp" line="132"/>
+        <source>%n kind(s) of message are hidden - use the controls below to change that.
+</source>
+        <extracomment>Shown in the Central Debug Console when it opens with some kinds of message hidden. %n is how many.</extracomment>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+            <numerusform></numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/TDebug.cpp" line="179"/>
+        <source>%n message(s) dropped while paused.
+</source>
+        <extracomment>Shown in the Central Debug Console on resuming, when more messages arrived while paused than could be held back.</extracomment>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+            <numerusform></numerusform>
+        </translation>
+    </message>
+</context>
+<context>
+    <name>TDebugFilterBar</name>
+    <message numerus="yes">
+        <location filename="../../src/TDebugFilterBar.cpp" line="462"/>
+        <source>%n message(s) held</source>
+        <extracomment>Shown in the Central Debug Console&apos;s toolbar while it is paused</extracomment>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+            <numerusform></numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/TDebugFilterBar.cpp" line="467"/>
+        <source>, %n dropped</source>
+        <extracomment>Appended to the &quot;N messages held&quot; label once the Central Debug Console has been paused long enough to start discarding the oldest ones</extracomment>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+            <numerusform></numerusform>
+        </translation>
+    </message>
+</context>
+<context>
     <name>THyperlinkVisibilityManager</name>
     <message numerus="yes">
-        <location filename="../../src/THyperlinkVisibilityManager.cpp" line="758"/>
+        <location filename="../../src/THyperlinkVisibilityManager.cpp" line="743"/>
         <source>%n link(s) hidden</source>
         <extracomment>Screen-reader announcement when multiple OSC 8 hyperlinks are hidden at once; %n is the count</extracomment>
         <translation>
@@ -62,7 +106,7 @@
 <context>
     <name>TRoomDB</name>
     <message numerus="yes">
-        <location filename="../../src/TRoomDB.cpp" line="756"/>
+        <location filename="../../src/TRoomDB.cpp" line="760"/>
         <source>[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.
 Look for further messages related to the rooms that are supposed
 to be in this/these area(s)...</source>
@@ -77,7 +121,7 @@ to be in these areas...</numerusform>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/TRoomDB.cpp" line="763"/>
+        <location filename="../../src/TRoomDB.cpp" line="767"/>
         <source>[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.
 Look for further messages related to the rooms that is/are supposed to
 be in this/these area(s)...</source>
@@ -92,7 +136,7 @@ be in these areas...</numerusform>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/TRoomDB.cpp" line="772"/>
+        <location filename="../../src/TRoomDB.cpp" line="776"/>
         <source>[ INFO ]  - The missing area(s) are now called:
 (ID) ==&gt; &quot;name&quot;</source>
         <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
@@ -108,7 +152,7 @@ be in these areas...</numerusform>
 <context>
     <name>TTrigger</name>
     <message numerus="yes">
-        <location filename="../../src/TTrigger.cpp" line="1094"/>
+        <location filename="../../src/TTrigger.cpp" line="1356"/>
         <source>Trigger name=%1 will fire %n more time(s).</source>
         <translation>
             <numerusform>Trigger name=%1 will fire %n more time.</numerusform>
@@ -117,9 +161,30 @@ be in these areas...</numerusform>
     </message>
 </context>
 <context>
+    <name>TriggerUnit</name>
+    <message numerus="yes">
+        <location filename="../../src/TriggerUnit.cpp" line="388"/>
+        <source>%n trigger(s) created while processing this line have been stopped: temporary ones removed, permanent ones switched off until the profile is reloaded.</source>
+        <extracomment>%n is a count of triggers. Shown in the game window when a trigger keeps creating new triggers that match the same line, which would otherwise never end</extracomment>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+            <numerusform></numerusform>
+        </translation>
+    </message>
+</context>
+<context>
     <name>cTelnet</name>
     <message numerus="yes">
-        <location filename="../../src/ctelnet.cpp" line="799"/>
+        <location filename="../../src/ctelnet.cpp" line="826"/>
+        <source>[ INFO ]  - Trying again in %n second(s)...</source>
+        <extracomment>%n is the number of seconds before Mudlet tries the connection again.</extracomment>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+            <numerusform></numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/ctelnet.cpp" line="1057"/>
         <source>[ ALERT ] - Socket got disconnected, for %n reason(s):
 %1</source>
         <extracomment>This message is used when we have been trying to connect or we were connected securely, but the connection has been lost. It is possible with a secure connection that there is MORE than one error message to show, but for English or other locales where the singular case (%n==1) is distinct it would be perfectly feasible to replace &quot;for %n reason(s)&quot; with &quot;because&quot; for that number (1) of errors - however the text should then be repeated in the corresponding situation for an &quot;open&quot; connection which is different in that it only ever has one &quot;reason&quot; to report.</extracomment>
@@ -131,7 +196,7 @@ be in these areas...</numerusform>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ctelnet.cpp" line="1040"/>
+        <location filename="../../src/ctelnet.cpp" line="1320"/>
         <source>The %n IP address(es) of %1 has/have been found. It/They are:</source>
         <extracomment>This text is used in the (expected) case when the user has provided a URL (%1) for the Game Server rather than (unusually) an IP address. After a DNS lookup we have found at least one but possibly more (%n) IP addresses, which will be listed (one per line) immediately afterwards.</extracomment>
         <translation>
@@ -143,7 +208,7 @@ be in these areas...</numerusform>
 <context>
     <name>dlgPackageExporter</name>
     <message numerus="yes">
-        <location filename="../../src/dlgPackageExporter.cpp" line="1943"/>
+        <location filename="../../src/dlgPackageExporter.cpp" line="1995"/>
         <source>Select what to export (%n item(s))</source>
         <extracomment>This is the text shown at the top of a groupbox when there is %n (one or more) items to export in the Package exporter dialogue; the initial (and when there is no items selected) is a separate text.</extracomment>
         <translation>
@@ -155,7 +220,7 @@ be in these areas...</numerusform>
 <context>
     <name>dlgPackageManager</name>
     <message numerus="yes">
-        <location filename="../../src/dlgPackageManager.cpp" line="801"/>
+        <location filename="../../src/dlgPackageManager.cpp" line="834"/>
         <source>Update (%n)</source>
         <extracomment>Message on button in package manager to update one or multiple (%n is the count) selected packages.</extracomment>
         <translation>
@@ -164,7 +229,7 @@ be in these areas...</numerusform>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/dlgPackageManager.cpp" line="811"/>
+        <location filename="../../src/dlgPackageManager.cpp" line="844"/>
         <source>Install (%n)</source>
         <extracomment>Message on button in package manager to install one or multiple (%n is the count) selected packages.</extracomment>
         <translation>
@@ -173,7 +238,7 @@ be in these areas...</numerusform>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/dlgPackageManager.cpp" line="836"/>
+        <location filename="../../src/dlgPackageManager.cpp" line="869"/>
         <source>Remove (%n)</source>
         <extracomment>Message on button in package manager to remove one or multiple (%n is the count) selected packages.</extracomment>
         <translation>
@@ -185,8 +250,8 @@ be in these areas...</numerusform>
 <context>
     <name>dlgProfilePreferences</name>
     <message numerus="yes">
-        <location filename="../../src/dlgProfilePreferences.cpp" line="185"/>
-        <location filename="../../src/dlgProfilePreferences.cpp" line="3383"/>
+        <location filename="../../src/dlgProfilePreferences.cpp" line="257"/>
+        <location filename="../../src/dlgProfilePreferences.cpp" line="6988"/>
         <source>copy to %n destination(s)</source>
         <extracomment>text on button to put the map from this profile into the other profiles to receive the map from this profile, %n is the number of other profiles that have already been selected to receive it and will be zero or more. The button will also be disabled (greyed out) in the zero case but the text will still be visible.</extracomment>
         <translation>
@@ -195,7 +260,7 @@ be in these areas...</numerusform>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/dlgProfilePreferences.cpp" line="3388"/>
+        <location filename="../../src/dlgProfilePreferences.cpp" line="6993"/>
         <source>%n selected - change destinations...</source>
         <extracomment>text on button to select other profiles to receive the map from this profile, %n is the number of other profiles that have already been selected to receive it and will always be 1 or more</extracomment>
         <translation>
@@ -228,7 +293,6 @@ be in these areas...</numerusform>
     <message numerus="yes">
         <location filename="../../src/dlgRoomProperties.cpp" line="216"/>
         <source> %n room(s) are currently hidden.</source>
-        <extracomment>room properties dialog, additional sentance inserted into setting text for checkbox, when some (%n) but not all of the rooms are hidden. Ensure that, if the locale uses spaces between words, that one is present at the beginning or end so that the text is correctly spaced when it is inserted into the primary text.</extracomment>
         <translation>
             <numerusform> %n room is currently hidden.</numerusform>
             <numerusform> %n rooms are currently hidden.</numerusform>
@@ -302,7 +366,16 @@ be in these areas...</numerusform>
 <context>
     <name>mudlet</name>
     <message numerus="yes">
-        <location filename="../../src/mudlet.cpp" line="5749"/>
+        <location filename="../../src/mudlet.cpp" line="582"/>
+        <source>a key sequence can be %n step(s) long at most</source>
+        <extracomment>Refusal shown to a package that asked for a keyboard shortcut of more steps than Qt can hold, %n is that limit as a number</extracomment>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+            <numerusform></numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/mudlet.cpp" line="7058"/>
         <source>&lt;p&gt;About Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n update(s) is/are now available!&lt;/i&gt;&lt;p&gt;</source>
         <extracomment>This is the tooltip text for the &apos;About&apos; Mudlet main toolbar button when it has been changed by adding a menu which now contains the original &apos;About Mudlet&apos; action and a new one to access the manual update process</extracomment>
         <translation>
@@ -311,7 +384,7 @@ be in these areas...</numerusform>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/mudlet.cpp" line="5767"/>
+        <location filename="../../src/mudlet.cpp" line="7076"/>
         <source>Review %n update(s)...</source>
         <extracomment>Review update(s) menu item, %n is the count of how many updates are available</extracomment>
         <translation>
@@ -320,7 +393,7 @@ be in these areas...</numerusform>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/mudlet.cpp" line="5769"/>
+        <location filename="../../src/mudlet.cpp" line="7078"/>
         <source>Review the update(s) available...</source>
         <extracomment>Tool-tip for review update(s) menu item, given that the count of how many updates are available is already shown in the menu, the %n parameter that is that number need not be used here</extracomment>
         <translation>
