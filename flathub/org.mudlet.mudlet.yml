@@ -55,9 +55,10 @@ modules:
       - -Dintrospection=false
       - -Dcrypto=disabled
     sources:
-      - type: archive
-        url: https://download.gnome.org/sources/libsecret/0.21/libsecret-0.21.7.tar.xz
-        sha256: 6b452e4750590a2b5617adc40026f28d2f4903de15f1250e1d1c40bfd68ed55e
+      - commit: 0936f740c02b60f02657729cd99f581db4517a41
+        tag: 0.21.7
+        type: git
+        url: https://gitlab.gnome.org/GNOME/libsecret.git
     cleanup:
       - /bin/secret-tool
 
@@ -145,13 +146,14 @@ modules:
     - /bin/pcretest
 
   - name: boost
-    buildsystem: simple
+    buildsystem: 'simple'
     build-commands:
-      - cp -r boost /app/include/
+      # we don't need to build boost, only using it for headers
+      - cp -r * /app/include
     sources:
       - type: archive
-        url: https://archives.boost.io/release/1.87.0/source/boost_1_87_0.tar.bz2
-        sha256: af57be25cb4c4f4b413ed692fe378affb4352ea50fbe294a11ef548f4d527d89
+        url: 'https://archives.boost.io/release/1.90.0/source/boost_1_90_0.tar.bz2'
+        sha256: 49551aff3b22cbc5c5a9ed3dbc92f0e23ea50a0f7325b0d198b705e8ee3fc305
 
   - name: lua-yajl
     buildsystem: simple
@@ -179,15 +181,6 @@ modules:
       - type: file
         url: 'https://luarocks.org/manifests/hisham/luafilesystem-1.9.0-1.src.rock'
         sha256: 3de68d619f6ad95a27f4728814375447d921305194b7050dee6199057c31282f
-
-  - name: lpeg
-    buildsystem: simple
-    build-commands:
-      - luarocks install --tree="/app" lpeg-1.1.0-2.src.rock LUA_INCDIR="/app/include"
-    sources:
-      - type: file
-        url: 'https://luarocks.org/manifests/gvvaughan/lpeg-1.1.0-2.src.rock'
-        sha256: 836d315b920a5cdd62e21786c6c9fad547c4faa131d5583ebca64f0b6595ee76
 
   - name: lua-zip
     buildsystem: simple
@@ -250,8 +243,8 @@ modules:
       - -DCMAKE_BUILD_TYPE=RelWithDebInfo
       - -DUSE_3DMAPPER=OFF
     sources:
-      - type: dir
-        path: ../
-      - type: shell
-        commands:
-          - sed -i 's/find_package(Boost 1.44 CONFIG REQUIRED)/find_package(Boost 1.44 REQUIRED)/' src/CMakeLists.txt
+      - type: git
+        url: https://github.com/Mudlet/Mudlet.git
+        # Update tag and commit for each release
+        tag: Mudlet-4.19.1
+        commit: f5516c367ab04977cee2cab604cd76c20e7efbab
