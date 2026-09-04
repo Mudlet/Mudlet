@@ -90,6 +90,12 @@ public:
     static const Categories csmNoisyCategories;
     static const Categories csmAllCategories;
 
+    // The master switch that every wants() test sits under. It does not gate
+    // passesFilters(), and a handful of messages - the profile-started line and
+    // the identifier table in changeHostName() - are emitted without a wants()
+    // guard, so they appear whatever this is set to:
+    inline static bool smDebugMode = false;
+
 private:
     // A shared map that is uses to put a short identifier on each debug message
     // - the first value is used to create a table to display on changes and the
@@ -161,7 +167,7 @@ public:
     static void flushMessageQueue();
     static QString getTag(Host*);
 
-    // Cheap enough to use in place of a bare 'mudlet::smDebugMode' test, so
+    // Cheap enough to use in place of a bare 'smDebugMode' test, so
     // that the message is never even assembled when it would be filtered out:
     static bool wants(const Category);
 

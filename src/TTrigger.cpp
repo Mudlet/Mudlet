@@ -109,24 +109,6 @@ int indexOfNeedle(const QString& haystack, const QString& needle, const int from
     return -1;
 }
 
-// QColor::operator==() is an exported, out-of-line comparison of a colour spec
-// and five component words, and a colour trigger makes one of those per
-// character of every line it is offered. For two RGB colours that is exactly a
-// comparison of the front of the object, so do it here where it can be
-// inlined. HSL and HSV both compare approximately - HSV counts hue 0 and hue
-// 36000 as the same red - so they are left to Qt. Every colour a trigger
-// actually sees is RGB, which makes the fast path the predicted one.
-constexpr size_t COLOR_COMPARED_BYTES = sizeof(QColor::Spec) + 5 * sizeof(ushort);
-static_assert(sizeof(QColor) == 16 && COLOR_COMPARED_BYTES == 14, "QColor is no longer a spec word followed by five component words - use QColor::operator==() instead of sameColor()");
-
-inline bool sameColor(const QColor& left, const QColor& right)
-{
-    if (Q_LIKELY(left.spec() == QColor::Rgb && right.spec() == QColor::Rgb)) {
-        return std::memcmp(&left, &right, COLOR_COMPARED_BYTES) == 0;
-    }
-    return left == right;
-}
-
 // Holds the capture list and position list of one fire, taking their nodes
 // from TCaptureNodePool and handing them back when the fire is over.
 //
@@ -914,15 +896,30 @@ bool TTrigger::match_color_pattern(int line, int patternNumber, int posOffset, i
     const QColor& defaultBg = consoleModel.mBgColor;
     const int passLineSize = pPassLine ? static_cast<int>(pPassLine->size()) : 0;
 
+    // This allows matching against the current default colours (-2) and
+    // allows ONE of the foreground or background to NOT be considered (-1)
+    // Ideally we should base the matching on only the ANSI code but not
+    // all parts of the text come from the Server and can be determined to
+    // have come from a decoded ANSI code number:
+    const auto colorsMatch = [&](const TChar& character) {
+        return ((ansiFg == scmIgnored) || ((ansiFg == scmDefault) && sameColor(defaultFg, character.foreground())) || sameColor(patternFg, character.foreground()))
+               && ((ansiBg == scmIgnored) || ((ansiBg == scmDefault) && sameColor(defaultBg, character.background())) || sameColor(patternBg, character.background()));
+    };
+
+    if (end > start && passLineSize >= end) {
+        if (const TChar* pUniformColors = consoleModel.buffer.preTriggerPassLineUniformColors(line)) {
+            if (!colorsMatch(*pUniformColors)) {
+                return false;
+            }
+            lists.add(QStringView(lineBuffer).mid(start, end - start), start);
+            processColorPattern(patternNumber, lists.mCaptures, lists.mPositions, line);
+            return true;
+        }
+    }
+
     for (auto it = bufferLine.begin() + start; pos < end; ++it, ++pos) {
         const TChar& character = (pos < passLineSize) ? (*pPassLine)[pos] : *it;
-        // This now allows matching against the current default colours (-2) and
-        // allows ONE of the foreground or background to NOT be considered (-1)
-        // Ideally we should base the matching on only the ANSI code but not
-        // all parts of the text come from the Server and can be determined to
-        // have come from a decoded ANSI code number:
-        if (((ansiFg == scmIgnored) || ((ansiFg == scmDefault) && sameColor(defaultFg, character.foreground())) || sameColor(patternFg, character.foreground()))
-            && ((ansiBg == scmIgnored) || ((ansiBg == scmDefault) && sameColor(defaultBg, character.background())) || sameColor(patternBg, character.background()))) {
+        if (colorsMatch(character)) {
             if (matchBegin == -1) {
                 matchBegin = pos;
             }

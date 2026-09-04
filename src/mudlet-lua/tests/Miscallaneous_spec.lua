@@ -617,6 +617,24 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       -- history is silently never written again, which the user only discovers
       -- on the next launch.
       describe("Tests that an end of session save writes the command line histories", function()
+        -- A save another spec started can still be running, and saveProfile()
+        -- answers nil - without emitting anything - until it finishes.
+        local function saveWaitingOutAnyOtherSave()
+          local saved, message
+          for _ = 1, 100 do
+            saved, message = saveProfile()
+            -- Of the refusals saveProfile() can answer with, an already running
+            -- save is the only one waiting clears, and only test mode can pump
+            -- the event loop to let it. The rest are permanent, so they go back
+            -- as they are rather than costing five seconds of pumping first.
+            if saved or not testMode or not tostring(message):find("a save is already in progress", 1, true) then
+              break
+            end
+            pumpEvents(50)
+          end
+          return saved, message
+        end
+
         it("writes the main command line's history file out again", function()
           -- slot_saveHistory() returns without writing anything unless both of
           -- these are on, so they are what makes a missing file mean the signal
@@ -636,18 +654,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           os.remove(historyFile)
           assert.is_false(fileExists(historyFile), "the previous history file could not be cleared")
 
-          -- A save another spec started can still be running, and saveProfile()
-          -- answers nil - without emitting anything - until it finishes. Of the
-          -- refusals it can answer with that is the only one waiting clears,
-          -- and only test mode can pump the event loop to let it.
-          local saved, message
-          for _ = 1, 100 do
-            saved, message = saveProfile()
-            if saved or not testMode then
-              break
-            end
-            pumpEvents(50)
-          end
+          local saved, message = saveWaitingOutAnyOtherSave()
           if not saved and not testMode then
             pending("the profile save was refused and only test mode can wait one out: " .. tostring(message))
             return
@@ -657,6 +664,34 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           -- slot_saveHistory() writes from inside the emit, so the file is
           -- there by the time saveProfile() has returned
           assert.is_true(fileExists(historyFile), "the end of session save never wrote the command line history out")
+        end)
+
+        it("writes nothing for a command line whose history saving is turned off", function()
+          local savedLines = getConfig("commandLineHistorySaveSize")
+          local savedSaving = getSaveCommandHistory("main")
+          finally(function()
+            setSaveCommandHistory("main", savedSaving)
+            setConfig("commandLineHistorySaveSize", savedLines)
+          end)
+
+          -- the profile-wide size stays on, so only the per-command-line
+          -- setting is left to answer for the file not coming back
+          setConfig("commandLineHistorySaveSize", 10)
+          assert.is_true(setSaveCommandHistory("main", false))
+          assert.is_false((getSaveCommandHistory("main")))
+
+          local historyFile = getMudletHomeDir() .. "/command_history_main"
+          os.remove(historyFile)
+          assert.is_false(fileExists(historyFile), "the previous history file could not be cleared")
+
+          local saved, message = saveWaitingOutAnyOtherSave()
+          if not saved and not testMode then
+            pending("the profile save was refused and only test mode can wait one out: " .. tostring(message))
+            return
+          end
+          assert.is_true(saved, tostring(message))
+
+          assert.is_false(fileExists(historyFile), "the history was written out despite saving being turned off for that command line")
         end)
       end)
     end)
