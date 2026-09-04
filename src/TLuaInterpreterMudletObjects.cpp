@@ -49,6 +49,7 @@
 #include "TTabBar.h"
 #include "TTextEdit.h"
 #include "TTimer.h"
+#include "TriggerMatchPool.h"
 #include "dlgComposer.h"
 #include "dlgIRC.h"
 #include "dlgMapper.h"
@@ -708,6 +709,15 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
     lua_settable(L, -3);
 
     lua_settable(L, -3); // patterns
+
+    lua_pushstring(L, "prescanWorkers");
+    lua_pushnumber(L, TriggerMatchPool::instance().workerCount());
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "prescans");
+    lua_pushnumber(L, static_cast<double>(TriggerMatchPool::instance().prescanCount()));
+    lua_settable(L, -3);
+
     lua_settable(L, -3); // triggers
 
     // Aliases

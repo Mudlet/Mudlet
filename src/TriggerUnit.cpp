@@ -26,6 +26,7 @@
 
 #include "Host.h"
 #include "TTrigger.h"
+#include "TriggerMatchPool.h"
 
 #include <QScopeGuard>
 #include <QStringConverter>
@@ -166,6 +167,11 @@ void TriggerUnit::reParentTrigger(int childID, int oldParentID, int newParentID,
     if (!pChild) {
         return;
     }
+
+    // Moving a trigger changes which lineages the flattened prescan list should
+    // hold - a trigger under a chain is matched against its parent's capture
+    // rather than the line, so it must not be judged against the line.
+    TTrigger::bumpStructureGeneration();
 
     if (pOldParent) {
         pOldParent->popChild(pChild);
@@ -401,6 +407,39 @@ void TriggerUnit::stopSameLineCreationLoop(const int chainId)
                                 .arg(triggerName, created));
 }
 
+// Flattens out the triggers whose own patterns gate what is below them. The walk
+// stops at any trigger that has both patterns and children: ruling such a parent
+// out already rules out everything beneath it, and its children are matched
+// against one of its captures rather than against the line, so a verdict reached
+// against the line would not apply to them.
+void TriggerUnit::collectPrescanTasks(TTrigger* pT)
+{
+    if (!pT->getPatternsList().isEmpty()) {
+        mPrescanTasks.push_back(pT);
+    }
+    if (pT->isFilterChain()) {
+        return;
+    }
+    for (auto* childNode : *pT->mpMyChildrenList) {
+        collectPrescanTasks(static_cast<TTrigger*>(childNode));
+    }
+}
+
+// Rebuilt only when the tree changed shape or a pattern was recompiled - a
+// stale entry could otherwise name a trigger that has since been freed.
+void TriggerUnit::rebuildPrescanTasksIfStale()
+{
+    const quint64 generation = TTrigger::structureGeneration();
+    if (generation == mPrescanTasksGeneration) {
+        return;
+    }
+    mPrescanTasks.clear();
+    for (auto trigger : mTriggerRootNodeList) {
+        collectPrescanTasks(trigger);
+    }
+    mPrescanTasksGeneration = generation;
+}
+
 void TriggerUnit::processDataStream(const QString& data, int line)
 {
     if (data.isEmpty()) {
@@ -488,6 +527,30 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     // Entries below this index were added by outer (nested-feedTriggers) passes
     // and are already part of this pass's snapshot.
     const qsizetype firstNodeAddedThisPass = mRootNodesAddedWhileProcessing.size();
+    // Ask a few threads which of these can do anything on this line, so the walk
+    // below only stops at the ones that can. Nothing else changes hands: every
+    // match that fires is still found, run and ordered by that loop, on this
+    // thread, exactly as it was.
+    const quint32 previousPrescanPassId = TTrigger::prescanPassId();
+    TTrigger::setPrescanPassId(0);
+    const auto prescanGuard = qScopeGuard([previousPrescanPassId] {
+        TTrigger::setPrescanPassId(previousPrescanPassId);
+    });
+    rebuildPrescanTasksIfStale();
+    // Only while the client is behind, which a chunk carrying many lines at once
+    // is what looks like from here. Handing one line's matching to other cores
+    // costs a wake-up that is repaid only when the next line is already waiting;
+    // at the speed a game sends text the threads would wake, find half a
+    // microsecond of work and sleep again, spending CPU to save nothing anyone
+    // could perceive.
+    const bool inFlood = mpHost && mpHost->mpConsole && mpHost->mpConsole->buffer.pendingChunkLines() >= TriggerMatchPool::instance().floodChunkLines();
+    if (inFlood && static_cast<int>(mPrescanTasks.size()) >= TriggerMatchPool::instance().threshold()) {
+        const quint32 passId = TTrigger::nextPrescanPassId();
+        if (TriggerMatchPool::instance().prescan(mPrescanTasks.data(), static_cast<int>(mPrescanTasks.size()), passId, subject, subjectLength, data)) {
+            TTrigger::setPrescanPassId(passId);
+        }
+    }
+
     for (auto trigger : *pinnedNodeList) {
         if (!trigger->isActive()) {
             continue;

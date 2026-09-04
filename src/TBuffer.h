@@ -371,6 +371,9 @@ public:
     void clearLastLine();
     QPoint getEndPos();
     void translateToPlainText(std::string& incoming, bool isFromServer = false);
+    // How many newlines the chunk being decoded carries in total, zero outside
+    // one - see translateToPlainTextInner().
+    int pendingChunkLines() const { return mPendingChunkLines; }
     // Commits a line held back by the server-wrap undoing (Host::mUndoServerWrap)
     // - public so that the connection teardown can flush it:
     void flushPendingServerWrapJoin();
@@ -622,6 +625,7 @@ private:
     // Set whilst a locally generated feed is being processed, so a nested feed
     // (e.g. an MXP <HR> inside locally fed text) does not swap the state again:
     bool mProcessingLocalFeed = false;
+    int mPendingChunkLines = 0;
 
     // keeps track of the previously logged buffer lines to ensure no log duplication
     // happens when you enter a command
