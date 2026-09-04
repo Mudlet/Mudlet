@@ -35,7 +35,7 @@
 #include <QScrollArea>
 #include <QSignalSpy>
 
-#include "MudletPaths.h"
+#include "utils.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "SettingsTestHelper.h"
@@ -122,7 +122,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(utils::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -308,7 +308,7 @@ private slots:
         const bool analyzerBefore = mpHost->mEnableTextAnalyzer;
         mpHost->mFORCE_SAVE_ON_EXIT = true;
 
-        const QString saveDirPath = MudletPaths::getMudletPath(enums::profileXmlFilesPath, mProfileName);
+        const QString saveDirPath = utils::getMudletPath(enums::profileXmlFilesPath, mProfileName);
         QDir saveDir(saveDirPath);
         QVERIFY(QDir().mkpath(saveDirPath));
         for (const QString& file : saveDir.entryList({qsl("*.xml")}, QDir::Files)) {

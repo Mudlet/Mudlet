@@ -24,7 +24,7 @@
 
 #include "TMedia.h"
 
-#include "MudletPaths.h"
+#include "utils.h"
 
 #include <QDir>
 #include <QFileInfo>
@@ -457,7 +457,7 @@ void TMedia::parseGMCP(QString& packageMessage, QString& gmcp)
 // Documentation: https://wiki.mudlet.org/w/Manual:Miscellaneous_Functions#purgeMediaCache
 std::pair<bool, QString> TMedia::purgeMediaCache()
 {
-    const QString mediaPath = MudletPaths::getMudletPath(enums::profileMediaPath, mpHost->getName());
+    const QString mediaPath = utils::getMudletPath(enums::profileMediaPath, mpHost->getName());
     QDir mediaDir(mediaPath);
 
     if (!mediaDir.mkpath(mediaPath)) {
@@ -748,13 +748,13 @@ void TMedia::setMediaPlayersMuted(const TMediaData::MediaProtocol mediaProtocol,
 
 void TMedia::transitionNonRelativeFile(TMediaData& mediaData)
 {
-    const QString mediaPath = MudletPaths::getMudletPath(enums::profileMediaPath, mpHost->getName());
+    const QString mediaPath = utils::getMudletPath(enums::profileMediaPath, mpHost->getName());
     const QDir mediaDir(mediaPath);
 
     if (!mediaDir.mkpath(mediaPath)) {
-        qWarning() << qsl("TMedia::playMedia() WARNING - attempt made to create a directory failed: %1").arg(MudletPaths::getMudletPath(enums::profileMediaPath, mpHost->getName()));
+        qWarning() << qsl("TMedia::playMedia() WARNING - attempt made to create a directory failed: %1").arg(utils::getMudletPath(enums::profileMediaPath, mpHost->getName()));
     } else {
-        const QString mediaFilePath = qsl("%1/%2").arg(MudletPaths::getMudletPath(enums::profileMediaPath, mpHost->getName()), mediaData.mediaFileName().section(QLatin1Char('/'), -1));
+        const QString mediaFilePath = qsl("%1/%2").arg(utils::getMudletPath(enums::profileMediaPath, mpHost->getName()), mediaData.mediaFileName().section(QLatin1Char('/'), -1));
         const QFile mediaFile(mediaFilePath);
 
         if (!mediaFile.exists() && !QFile::copy(mediaData.mediaFileName(), mediaFilePath)) {
@@ -825,7 +825,7 @@ bool TMedia::isFileRelative(TMediaData& mediaData)
 
 bool TMedia::mediaFilePathEscapesMediaDir(TMediaData& mediaData) const
 {
-    return mediaFilePathEscapesMediaDir(MudletPaths::getMudletPath(enums::profileMediaPath, mpHost->getName()), mediaData.mediaFileName());
+    return mediaFilePathEscapesMediaDir(utils::getMudletPath(enums::profileMediaPath, mpHost->getName()), mediaData.mediaFileName());
 }
 
 // Returns true if mediaFileName would resolve to a location outside mediaRoot. Two layers:
@@ -914,7 +914,7 @@ QStringList TMedia::parseFileNameList(TMediaData& mediaData, QDir& dir)
             }
         }
 
-        fileNameList << qsl("%1/%2").arg(MudletPaths::getMudletPath(enums::profileMediaPath, mpHost->getName()), mediaData.mediaFileName());
+        fileNameList << qsl("%1/%2").arg(utils::getMudletPath(enums::profileMediaPath, mpHost->getName()), mediaData.mediaFileName());
     }
 
     return fileNameList;
@@ -929,21 +929,21 @@ QStringList TMedia::getFileNameList(TMediaData& mediaData)
     }
 
     if (mediaData.mediaInput() == TMediaData::MediaInputFile) {
-        const QString mediaPath = MudletPaths::getMudletPath(enums::profileMediaPath, mpHost->getName());
+        const QString mediaPath = utils::getMudletPath(enums::profileMediaPath, mpHost->getName());
         QDir mediaDir(mediaPath);
 
         if (!mediaDir.mkpath(mediaPath)) {
-            qWarning() << qsl("TMedia::getFileNameList() WARNING - attempt made to create a directory failed: %1").arg(MudletPaths::getMudletPath(enums::profileMediaPath, mpHost->getName()));
+            qWarning() << qsl("TMedia::getFileNameList() WARNING - attempt made to create a directory failed: %1").arg(utils::getMudletPath(enums::profileMediaPath, mpHost->getName()));
             return fileNameList;
         }
 
         if (!mediaData.mediaFileName().isEmpty() && mediaData.mediaFileName().contains(QLatin1Char('/'))) {
-            const QString mediaSubPath = qsl("%1/%2").arg(MudletPaths::getMudletPath(enums::profileMediaPath, mpHost->getName()), mediaData.mediaFileName().section(QLatin1Char('/'), 0, -2));
+            const QString mediaSubPath = qsl("%1/%2").arg(utils::getMudletPath(enums::profileMediaPath, mpHost->getName()), mediaData.mediaFileName().section(QLatin1Char('/'), 0, -2));
             QDir mediaSubDir(mediaSubPath);
 
             if (!mediaSubDir.mkpath(mediaSubPath)) {
                 qWarning() << qsl("TMedia::getFileNameList() WARNING - attempt made to create a directory failed: %1")
-                                      .arg(MudletPaths::getMudletPath(enums::profileMediaPath, mpHost->getName()), mediaData.mediaFileName().section(QLatin1Char('/'), 0, -2));
+                                      .arg(utils::getMudletPath(enums::profileMediaPath, mpHost->getName()), mediaData.mediaFileName().section(QLatin1Char('/'), 0, -2));
                 return fileNameList;
             }
 
@@ -1136,21 +1136,21 @@ void TMedia::downloadFile(TMediaData& mediaData)
         return;
     }
 
-    const QString mediaPath = MudletPaths::getMudletPath(enums::profileMediaPath, mpHost->getName());
+    const QString mediaPath = utils::getMudletPath(enums::profileMediaPath, mpHost->getName());
     const QDir mediaDir(mediaPath);
 
     if (!mediaDir.mkpath(mediaPath)) {
-        qWarning() << qsl("TMedia::downloadFile() WARNING - attempt made to create a directory failed: %1").arg(MudletPaths::getMudletPath(enums::profileMediaPath, mpHost->getName()));
+        qWarning() << qsl("TMedia::downloadFile() WARNING - attempt made to create a directory failed: %1").arg(utils::getMudletPath(enums::profileMediaPath, mpHost->getName()));
         return;
     }
 
     if (!mediaData.mediaFileName().isEmpty() && mediaData.mediaFileName().contains(QLatin1Char('/'))) {
-        const QString mediaSubPath = qsl("%1/%2").arg(MudletPaths::getMudletPath(enums::profileMediaPath, mpHost->getName()), mediaData.mediaFileName().section(QLatin1Char('/'), 0, -2));
+        const QString mediaSubPath = qsl("%1/%2").arg(utils::getMudletPath(enums::profileMediaPath, mpHost->getName()), mediaData.mediaFileName().section(QLatin1Char('/'), 0, -2));
         const QDir mediaSubDir(mediaSubPath);
 
         if (!mediaSubDir.mkpath(mediaSubPath)) {
             qWarning() << qsl("TMedia::downloadFile() WARNING - attempt made to create a directory failed: %1")
-                                  .arg(MudletPaths::getMudletPath(enums::profileMediaPath, mpHost->getName()), mediaData.mediaFileName().section(QLatin1Char('/'), 0, -2));
+                                  .arg(utils::getMudletPath(enums::profileMediaPath, mpHost->getName()), mediaData.mediaFileName().section(QLatin1Char('/'), 0, -2));
             return;
         }
     }
@@ -1211,7 +1211,7 @@ QString TMedia::setupMediaAbsolutePathFileName(TMediaData& mediaData)
     QString absolutePathFileName;
 
     if (mediaData.mediaInput() == TMediaData::MediaInputFile) {
-        absolutePathFileName = qsl("%1/%2").arg(MudletPaths::getMudletPath(enums::profileMediaPath, mpHost->getName()), mediaData.mediaFileName());
+        absolutePathFileName = qsl("%1/%2").arg(utils::getMudletPath(enums::profileMediaPath, mpHost->getName()), mediaData.mediaFileName());
     } else if (mediaData.mediaInput() == TMediaData::MediaInputStream) {
         absolutePathFileName = TMedia::getStreamUrl(mediaData);
     }

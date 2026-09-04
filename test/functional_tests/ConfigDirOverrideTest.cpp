@@ -38,7 +38,6 @@
 
 #include <QtTest/QtTest>
 
-#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "mudlet.h"
 #include "utils.h"
@@ -391,7 +390,7 @@ private slots:
         qputenv("XDG_CONFIG_HOME", xdg.path().toUtf8());
 
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), target);
+        QCOMPARE(utils::getMudletPath(enums::mainPath), target);
     }
 
     // The warning is all that tells an affected user where their other profiles went.
@@ -422,7 +421,7 @@ private slots:
         }
         qunsetenv("XDG_CONFIG_HOME");
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/.config/mudlet").arg(QDir::homePath()));
+        QCOMPARE(utils::getMudletPath(enums::mainPath), qsl("%1/.config/mudlet").arg(QDir::homePath()));
     }
 };
 

@@ -120,7 +120,7 @@ done
 
 # The location that windeployqt6 puts the Qt translation files by default is
 # "./translations" unfortunately "QLibraryInfo::path(QLibraryInfo::TranslationsPath)"
-# in the calls to "QString MudletPaths::getMudletPath(const enums::mudletPathType, const QString&, const QString&)"
+# in the calls to "QString utils::getMudletPath(const enums::mudletPathType, const QString&, const QString&)"
 # with "enums::qtTranslationsPath" as the first argument returns:
 # "./share/Qt6/translations" - which means the Qt translations were not getting
 # loaded for our Windows builds:

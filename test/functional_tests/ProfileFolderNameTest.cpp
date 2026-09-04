@@ -30,7 +30,7 @@
  * Run with: ctest -R ProfileFolderNameTest -V
  */
 
-#include "MudletPaths.h"
+#include "utils.h"
 #include "PortableModeTestHelper.h"
 #include "MudletInstanceCoordinator.h"
 #include "dlgConnectionProfiles.h"
@@ -60,7 +60,7 @@ private:
 
     void makeExternalProfileFolder(const QString& name) const
     {
-        QVERIFY(QDir().mkpath(MudletPaths::getMudletPath(enums::profileHomePath, name)));
+        QVERIFY(QDir().mkpath(utils::getMudletPath(enums::profileHomePath, name)));
         // A folder copied by a file manager carries the original's connection
         // data files with it:
         QVERIFY(mudlet::self()->writeProfileData(name, qsl("url"), qsl("mudlet.org")).first);
@@ -110,7 +110,7 @@ private slots:
         mudlet::start();
         mudlet::self()->setupConfig();
         // never touch the user's real profiles:
-        QVERIFY(MudletPaths::getMudletPath(enums::profilesPath).startsWith(mXdgDir.path()));
+        QVERIFY(utils::getMudletPath(enums::profilesPath).startsWith(mXdgDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -145,7 +145,7 @@ private slots:
             QVERIFY2(button->isEnabled(), qPrintable(qsl("'%1' button is disabled for profile '%2'").arg(button->text(), mCopiedName)));
         }
         // the folder must not have been renamed behind the user's back:
-        QVERIFY(QDir(MudletPaths::getMudletPath(enums::profileHomePath, mCopiedName)).exists());
+        QVERIFY(QDir(utils::getMudletPath(enums::profileHomePath, mCopiedName)).exists());
     }
 
     void test_folderWithDisallowedCharacterIsNotMangled()
@@ -159,7 +159,7 @@ private slots:
         for (auto* button : buttons) {
             QVERIFY2(button->isEnabled(), qPrintable(qsl("'%1' button is disabled for profile '%2'").arg(button->text(), mForeignName)));
         }
-        QVERIFY(QDir(MudletPaths::getMudletPath(enums::profileHomePath, mForeignName)).exists());
+        QVERIFY(QDir(utils::getMudletPath(enums::profileHomePath, mForeignName)).exists());
     }
 
     void test_folderWithTrailingWhitespaceIsNotMangled()
@@ -173,7 +173,7 @@ private slots:
         for (auto* button : buttons) {
             QVERIFY2(button->isEnabled(), qPrintable(qsl("'%1' button is disabled for profile '%2'").arg(button->text(), mPaddedName)));
         }
-        QVERIFY(QDir(MudletPaths::getMudletPath(enums::profileHomePath, mPaddedName)).exists());
+        QVERIFY(QDir(utils::getMudletPath(enums::profileHomePath, mPaddedName)).exists());
     }
 
     // The exemption must not disable validation of names the user types:

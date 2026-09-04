@@ -22,7 +22,6 @@
 
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "TMainConsole.h"
@@ -30,6 +29,7 @@
 #include "ctelnet.h"
 #include "dlgModuleManager.h"
 #include "mudlet.h"
+#include "utils.h"
 
 #include "GroupedTest.h"
 
@@ -60,7 +60,7 @@ private:
     void listModules(Host* host)
     {
         for (const QString& name : mModuleNames) {
-            host->mInstalledModules[name] = QStringList{qsl("%1/%2.xml").arg(MudletPaths::getMudletPath(enums::profileHomePath, mpHostname), name), qsl("0")};
+            host->mInstalledModules[name] = QStringList{qsl("%1/%2.xml").arg(utils::getMudletPath(enums::profileHomePath, mpHostname), name), qsl("0")};
             host->mModulePriorities[name] = 0;
         }
     }
@@ -173,7 +173,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, profileName));
+        QDir dir(utils::getMudletPath(enums::profileHomePath, profileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }

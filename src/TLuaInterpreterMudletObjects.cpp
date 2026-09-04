@@ -28,8 +28,8 @@
 // mudlet-object specific functions of TLuaInterpreter, split out separately
 // for convenience and to keep TLuaInterpreter.cpp size reasonable
 
-#include "MudletPaths.h"
 #include "TLuaInterpreter.h"
+#include "utils.h"
 
 #include "EAction.h"
 #include "EventLoopPump.h"
@@ -938,7 +938,7 @@ int TLuaInterpreter::invokeFileDialog(lua_State* L)
     }
 
     Host& host = getHostFromLua(L);
-    QString location = MudletPaths::getMudletPath(enums::profileHomePath, host.getName());
+    QString location = utils::getMudletPath(enums::profileHomePath, host.getName());
     const bool luaDir = lua_toboolean(L, 1);
     const QString title{lua_tostring(L, 2)};
 
@@ -3082,7 +3082,7 @@ int TLuaInterpreter::tempTrigger(lua_State* L)
 int TLuaInterpreter::getProfiles(lua_State* L)
 {
     auto& hostManager = mudlet::self()->getHostManager();
-    const QStringList profiles = QDir(MudletPaths::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    const QStringList profiles = QDir(utils::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
 
     lua_newtable(L);
 

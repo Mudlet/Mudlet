@@ -25,25 +25,28 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "MudletPaths.h"
-
 #include "utils.h"
 
 #include <QCoreApplication>
 #include <QFile>
 #include <QLibraryInfo>
 
-void MudletPaths::setConfigPath(const QString& path)
+namespace {
+QString smConfigPath;
+bool smUsingMudletDictionaries = false;
+} // namespace
+
+void utils::setConfigPath(const QString& path)
 {
     smConfigPath = path;
 }
 
-bool MudletPaths::usingMudletDictionaries()
+bool utils::usingMudletDictionaries()
 {
     return smUsingMudletDictionaries;
 }
 
-QString MudletPaths::getMudletPath(const enums::mudletPathType mode, const QString& extra1, const QString& extra2)
+QString utils::getMudletPath(const enums::mudletPathType mode, const QString& extra1, const QString& extra2)
 {
     const QString confPath = smConfigPath;
     switch (mode) {

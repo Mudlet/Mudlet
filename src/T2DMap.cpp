@@ -27,7 +27,6 @@
 
 
 #include "Host.h"
-#include "MudletPaths.h"
 #include "TArea.h"
 #include "TConsole.h"
 #include "TEvent.h"
@@ -5386,7 +5385,7 @@ void T2DMap::slot_loadMap()
     }
 
     QSettings& settings = *mudlet::getQSettings();
-    QString lastDir = settings.value("lastFileDialogLocation", MudletPaths::getMudletPath(enums::profileHomePath, mpHost->getName())).toString();
+    QString lastDir = settings.value("lastFileDialogLocation", utils::getMudletPath(enums::profileHomePath, mpHost->getName())).toString();
 
 
     const QString fileName = QFileDialog::getOpenFileName(this,

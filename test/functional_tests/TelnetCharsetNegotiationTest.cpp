@@ -37,7 +37,7 @@
 #include <QtNetwork/QTcpSocket>
 #include <memory>
 
-#include "MudletPaths.h"
+#include "utils.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -326,7 +326,7 @@ private slots:
         QVERIFY2(mpServer->start(), "KaVirServerStub failed to bind a loopback port");
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(utils::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -548,7 +548,7 @@ private:
 
     void deleteProfileDirectory()
     {
-        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, mHostname));
+        QDir dir(utils::getMudletPath(enums::profileHomePath, mHostname));
         if (dir.exists()) {
             dir.removeRecursively();
         }

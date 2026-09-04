@@ -21,11 +21,11 @@
 #include <QPushButton>
 #include <QtTest/QtTest>
 
-#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "TFeatureCallout.h"
 #include "enums.h"
 #include "mudlet.h"
+#include "utils.h"
 
 #include "GroupedTest.h"
 
@@ -83,7 +83,7 @@ private slots:
         qputenv("XDG_CONFIG_HOME", mConfig.path().toUtf8());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfig.path()));
+        QCOMPARE(utils::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfig.path()));
     }
 
     void cleanupTestCase()

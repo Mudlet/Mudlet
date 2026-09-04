@@ -57,7 +57,7 @@
 #include <chrono>
 #include <zip.h>
 
-#include "MudletPaths.h"
+#include "utils.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -95,7 +95,7 @@ private:
 
     static void deleteProfileDirectory(const QString& profileName)
     {
-        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, profileName));
+        QDir dir(utils::getMudletPath(enums::profileHomePath, profileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }
@@ -160,7 +160,7 @@ private:
         return contents;
     }
 
-    QString moduleXmlPath() const { return MudletPaths::getMudletPath(enums::profilePackagePathFileName, mProfileName, mModuleName); }
+    QString moduleXmlPath() const { return utils::getMudletPath(enums::profilePackagePathFileName, mProfileName, mModuleName); }
 
     static QByteArray readFile(const QString& path)
     {
@@ -192,14 +192,14 @@ private:
         return written;
     }
 
-    QStringList moduleBackupFiles() const { return QDir(MudletPaths::getMudletPath(enums::moduleBackupsPath)).entryList(QStringList{qsl("%1*").arg(mModuleName)}, QDir::Files); }
+    QStringList moduleBackupFiles() const { return QDir(utils::getMudletPath(enums::moduleBackupsPath)).entryList(QStringList{qsl("%1*").arg(mModuleName)}, QDir::Files); }
 
     // A backup is named after the second it was taken in, and QFile::copy() will not
     // overwrite, so counting backups across two saves in the same second proves
     // nothing. Clearing them first makes "was one taken?" a plain yes or no.
     void clearModuleBackups() const
     {
-        QDir backups(MudletPaths::getMudletPath(enums::moduleBackupsPath));
+        QDir backups(utils::getMudletPath(enums::moduleBackupsPath));
         for (const auto& backup : moduleBackupFiles()) {
             backups.remove(backup);
         }

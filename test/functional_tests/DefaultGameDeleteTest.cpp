@@ -32,7 +32,7 @@
 #include <QTabBar>
 #include <QTabWidget>
 
-#include "MudletPaths.h"
+#include "utils.h"
 #include "PortableModeTestHelper.h"
 #include "MudletInstanceCoordinator.h"
 #include "TGameDetails.h"
@@ -85,7 +85,7 @@ private:
     // a second profile on disk keeps the dialog out of its first-launch state,
     // where fillout_form() hides the games list along with the Remove button
     // and the notification area
-    bool makeProfileOnDisk(const QString& game) const { return QDir().mkpath(MudletPaths::getMudletPath(enums::profileHomePath, game)); }
+    bool makeProfileOnDisk(const QString& game) const { return QDir().mkpath(utils::getMudletPath(enums::profileHomePath, game)); }
 
 private slots:
     void initTestCase()
@@ -103,7 +103,7 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(utils::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -122,7 +122,7 @@ private slots:
         // an on-disk profile dir makes the game appear under "My games"; an
         // empty one means slot_deleteProfile() deletes it without raising the
         // confirmation dialog
-        QVERIFY(QDir().mkpath(MudletPaths::getMudletPath(enums::profileHomePath, mGame)));
+        QVERIFY(QDir().mkpath(utils::getMudletPath(enums::profileHomePath, mGame)));
 
         auto* dlg = new dlgConnectionProfiles();
         dlg->show();
@@ -137,13 +137,13 @@ private slots:
         // having no sub-directory of its own - nothing but the connection
         // details the dialog wrote there - is what makes slot_deleteProfile()
         // skip the confirmation dialog; assert it so a change there fails loudly
-        QVERIFY(QDir(MudletPaths::getMudletPath(enums::profileHomePath, mGame)).entryList(QDir::Dirs | QDir::NoDotAndDotDot).isEmpty());
+        QVERIFY(QDir(utils::getMudletPath(enums::profileHomePath, mGame)).entryList(QDir::Dirs | QDir::NoDotAndDotDot).isEmpty());
         const auto items = dlg->findData(*dlg->listWidget_profiles, mGame, dlgConnectionProfiles::csmNameRole);
         dlg->listWidget_profiles->setCurrentItem(items.first());
         dlg->slot_deleteProfile();
 
         QVERIFY2(!gameListed(dlg, mGame), "deleted game should no longer show under 'My games'");
-        QVERIFY2(!QDir(MudletPaths::getMudletPath(enums::profileHomePath, mGame)).exists(), "profile data should be removed from disk");
+        QVERIFY2(!QDir(utils::getMudletPath(enums::profileHomePath, mGame)).exists(), "profile data should be removed from disk");
 
         tabBar->setCurrentIndex(1); // "All games", refills the list
         QVERIFY2(gameListed(dlg, mGame), "a deleted pre-installed game must still be offered under 'All games'");
@@ -205,7 +205,7 @@ private slots:
     void test_removeIsNotOfferedForAGameWithoutProfileData()
     {
         mudlet::self()->mpSettings->setValue(qsl("deletedDefaultMuds"), QStringList{});
-        QVERIFY(!QDir(MudletPaths::getMudletPath(enums::profileHomePath, mGame)).exists());
+        QVERIFY(!QDir(utils::getMudletPath(enums::profileHomePath, mGame)).exists());
         QVERIFY(makeProfileOnDisk(mOtherGame));
 
         auto* dlg = new dlgConnectionProfiles();
@@ -226,8 +226,8 @@ private slots:
         QVERIFY(selectProfile(dlg, mGame));
         QVERIFY2(dlg->remove_profile_button->isEnabled(), "a game with profile data on disk must stay removable");
 
-        QVERIFY(QDir(MudletPaths::getMudletPath(enums::profileHomePath, mGame)).removeRecursively());
-        QVERIFY(QDir(MudletPaths::getMudletPath(enums::profileHomePath, mOtherGame)).removeRecursively());
+        QVERIFY(QDir(utils::getMudletPath(enums::profileHomePath, mGame)).removeRecursively());
+        QVERIFY(QDir(utils::getMudletPath(enums::profileHomePath, mOtherGame)).removeRecursively());
         dlg->deleteLater();
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
     }
@@ -267,7 +267,7 @@ private slots:
         QVERIFY(selectProfile(dlg, mGame));
         dlg->slot_deleteProfile();
 
-        QVERIFY2(!QDir(MudletPaths::getMudletPath(enums::profileHomePath, mGame)).exists(), "profile data should be removed from disk");
+        QVERIFY2(!QDir(utils::getMudletPath(enums::profileHomePath, mGame)).exists(), "profile data should be removed from disk");
         QVERIFY2(gameListed(dlg, mGame), "the catalog still offers the game, which is what makes the removal invisible");
         QVERIFY2(!mudlet::self()->mpSettings->value(qsl("deletedDefaultMuds"), QStringList()).toStringList().contains(mGame), "a removed game must not be recorded in a list nothing reads for games");
         QVERIFY2(dlg->notificationArea->isVisibleTo(dlg), "the confirmation has to be on screen");
@@ -285,7 +285,7 @@ private slots:
         QVERIFY(dlg->notificationAreaMessageBox->text().contains(mGame));
         QVERIFY2(dlg->notificationAreaMessageBox->text() != confirmation, "a removal that found nothing must not repeat the confirmation");
 
-        QVERIFY(QDir(MudletPaths::getMudletPath(enums::profileHomePath, mOtherGame)).removeRecursively());
+        QVERIFY(QDir(utils::getMudletPath(enums::profileHomePath, mOtherGame)).removeRecursively());
         dlg->deleteLater();
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
     }
