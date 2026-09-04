@@ -618,14 +618,16 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       -- on the next launch.
       describe("Tests that an end of session save writes the command line histories", function()
         -- A save another spec started can still be running, and saveProfile()
-        -- answers nil - without emitting anything - until it finishes. Of the
-        -- refusals it can answer with that is the only one waiting clears, and
-        -- only test mode can pump the event loop to let it.
+        -- answers nil - without emitting anything - until it finishes.
         local function saveWaitingOutAnyOtherSave()
           local saved, message
           for _ = 1, 100 do
             saved, message = saveProfile()
-            if saved or not testMode then
+            -- Of the refusals saveProfile() can answer with, an already running
+            -- save is the only one waiting clears, and only test mode can pump
+            -- the event loop to let it. The rest are permanent, so they go back
+            -- as they are rather than costing five seconds of pumping first.
+            if saved or not testMode or not tostring(message):find("a save is already in progress", 1, true) then
               break
             end
             pumpEvents(50)
