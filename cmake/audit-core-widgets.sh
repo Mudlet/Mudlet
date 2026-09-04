@@ -23,6 +23,18 @@
 # resulting offending-file count is stable across Qt 6.x versions because Mudlet
 # only uses widget classes whose module membership is unchanged.
 #
+# Known gap - what counts as being *in* the target: the file list is parsed from
+# the set(mudlet_SRCS|HDRS ...) and list(APPEND mudlet_SRCS|HDRS ...) blocks only.
+# A file added straight to the library with target_sources() is invisible here,
+# so this audit and CMakeListsConsistencyTest (which counts bare basenames
+# anywhere in the file) disagree about membership. Nothing relies on that today:
+# the one such call naming C++ files, sparkleupdater.h/.mm, also appears in a
+# list(APPEND ...). Parsing it is not free - those paths are written as
+# "${CMAKE_CURRENT_SOURCE_DIR}/sparkleupdater.h", so a naive extension yields a
+# quoted, variable-prefixed string that fails the on-disk check and reports a
+# phantom missing file. Add the unquoting and basename handling with it if a file
+# ever joins mudlet_core through target_sources() alone.
+#
 # Usage:
 #   cmake/audit-core-widgets.sh                 # print the Markdown report, exit 0
 #   cmake/audit-core-widgets.sh --enforce       # CI guard: exit 1 if count > baseline
@@ -58,7 +70,7 @@ BASELINE_FILE="$SCRIPT_DIR/core-widgets-baseline.txt"
 err() { printf '%s: %s\n' "$PROG" "$1" >&2; }
 
 usage() {
-  sed -n '2,41p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '2,53p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 while [ $# -gt 0 ]; do
@@ -147,10 +159,20 @@ fi
 
 comm -23 "$widgets_sorted" "$lower_module_names" \
   | grep -vE '^[0-9]+\.[0-9]+\.[0-9]+$' > "$SET_HEADERS" # drop the versioned private-headers subdir
-grep -E '^Q[A-Z]' "$SET_HEADERS" > "$SET_CLASSES"
 
 if [ ! -s "$SET_HEADERS" ]; then
   err "derived an empty QtWidgets header set from $QW - aborting"
+  exit 2
+fi
+
+# SET_CLASSES drives the symbol signal - the half of the audit that catches a file
+# using QApplication with no direct include of it. An empty set silently demotes
+# the audit to a plain include scan, and the resulting lower count reads as
+# progress, so it gets the same check SET_HEADERS gets above.
+grep -E '^Q[A-Z]' "$SET_HEADERS" > "$SET_CLASSES"
+if [ ! -s "$SET_CLASSES" ]; then
+  err "derived no QtWidgets class names from $QW (no CamelCase class headers found)."
+  err "the symbol half of the audit would be dead and the count silently too low; aborting."
   exit 2
 fi
 
