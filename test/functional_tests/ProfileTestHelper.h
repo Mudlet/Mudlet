@@ -99,15 +99,12 @@ inline Host* create(const QString& profileName,
 
     // Until the zero-timer in slot_showConnectionDialog() has shown and activated
     // the dialog, the focus slot_addProfile() sets reaches only the window, never
-    // QApplication::focusWidget(), which is what the waits below read. So being
-    // visible is not enough to click into: activation is a queued window-system
-    // event, and any window still open from an earlier test can be the one that
-    // ends up with it. Ask again on every turn until the dialog holds it, rather
-    // than typing into a dialog that cannot report focus and blaming the field.
+    // QApplication::focusWidget(), which is what the waits below read. Activation
+    // is queued, so a window an earlier test left open can be holding it.
     if (!QTest::qWaitFor(
                 []() {
                     dlgConnectionProfiles* dialog = mudlet::self()->mpConnectionDialog;
-                    if (!dialog || !dialog->isVisible() || !dialog->new_profile_button || !dialog->profile_name_entry) {
+                    if (!dialog || !dialog->isVisible()) {
                         return false;
                     }
                     if (!dialog->isActiveWindow()) {
@@ -117,7 +114,9 @@ inline Host* create(const QString& profileName,
                     return true;
                 },
                 timeout)) {
-        qWarning() << "TestProfile::create() - the connection dialog was never shown and activated";
+        const dlgConnectionProfiles* dialog = mudlet::self()->mpConnectionDialog;
+        qWarning() << "TestProfile::create() - the connection dialog never became active. dialog:" << dialog << "visible:" << (dialog && dialog->isVisible())
+                   << "active:" << (dialog && dialog->isActiveWindow()) << "activation is held by:" << QApplication::focusWindow();
         return nullptr;
     }
 
