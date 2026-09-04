@@ -508,6 +508,134 @@ describe("Trigger processing", function()
                 "the match should still be selectable after text was inserted before it")
         end)
 
+        -- Editing a line that a trigger pass is still running over shifts every
+        -- character after the edit, so the retained original colors have to be
+        -- rebased. Without that, a later color trigger matches at the pre-edit
+        -- offsets and captures a span of text that was never that color.
+        -- The green run is recolored first so that the originals are actually
+        -- retained: with nothing retained the live line answers correctly on its
+        -- own and the rebase is not what is under test.
+        it("should match original colors at their new offsets after text is inserted", function()
+            _G.insertShiftMatches = {}
+
+            local inserter = tempRegexTrigger("^AAAABBBB$", function()
+                if selectString("BBBB", 1) > -1 then
+                    setFgColor(0, 0, 255)
+                end
+                resetFormat()
+                moveCursor(0, getLineNumber())
+                insertText("ZZZZ")
+            end)
+            -- ANSI 1 = red foreground, -1 = ignore the background
+            local colorTrigger = tempAnsiColorTrigger(1, -1,
+                [[table.insert(_G.insertShiftMatches, matches[1])]])
+
+            -- SGR 31 = red foreground, 32 = green foreground
+            feedTriggers("\n\27[31mAAAA\27[32mBBBB\27[0m\n")
+
+            local matchedShifted = contains(_G.insertShiftMatches, "AAAA")
+            local matchedStale = contains(_G.insertShiftMatches, "ZZZZ")
+            killTrigger(inserter)
+            killTrigger(colorTrigger)
+            _G.insertShiftMatches = nil
+
+            assert.is_true(matchedShifted, "The red run should be matched where the insert moved it to")
+            assert.is_false(matchedStale, "The inserted text must not be matched as though it were the red run")
+        end)
+
+        -- An empty replacement is the deletion path, and it returns from
+        -- insertInLine() before that function's own rebase, so replaceInLine()'s
+        -- is the only one covering it.
+        it("should match original colors at their new offsets after part of the line is deleted", function()
+            _G.deleteShiftMatches = {}
+
+            local deleter = tempRegexTrigger("^CCCCDDDD$", function()
+                if selectString("DDDD", 1) > -1 then
+                    setFgColor(0, 0, 255)
+                end
+                resetFormat()
+                if selectString("CC", 1) > -1 then
+                    replace("")
+                end
+                resetFormat()
+            end)
+            local colorTrigger = tempAnsiColorTrigger(1, -1,
+                [[table.insert(_G.deleteShiftMatches, matches[1])]])
+
+            feedTriggers("\n\27[31mCCCC\27[32mDDDD\27[0m\n")
+
+            local matchedShifted = contains(_G.deleteShiftMatches, "CC")
+            local matchedStale = contains(_G.deleteShiftMatches, "CCDD")
+            killTrigger(deleter)
+            killTrigger(colorTrigger)
+            _G.deleteShiftMatches = nil
+
+            assert.is_true(matchedShifted, "The red run left behind should be matched at its new length")
+            assert.is_false(matchedStale, "The green text pulled left must not be matched as red")
+        end)
+
+        -- A nested pass takes the retained originals over for its own line, so
+        -- the enclosing line's have to be retained before that happens. A recolor
+        -- made from inside the nested pass is the only way to reach that window.
+        it("should keep the outer line's original colors when a nested pass recolors it", function()
+            _G.nestedRecolorMatches = {}
+            _G.nestedRecolorLine = nil
+
+            -- fires first in the outer pass, so it is created first
+            local feeder = tempRegexTrigger("^OuterRecolorLine$", function()
+                _G.nestedRecolorLine = getLineNumber()
+                feedTriggers("\nNestedRecolorInner\n")
+            end)
+            -- matches only the fed line, so it runs inside the nested pass
+            local recolorer = tempRegexTrigger("^NestedRecolorInner$", function()
+                moveCursor(0, _G.nestedRecolorLine)
+                if selectString("OuterRecolorLine", 1) > -1 then
+                    setFgColor(0, 0, 255)
+                end
+                deselect()
+                resetFormat()
+            end)
+            -- ANSI 7 = white foreground, 0 = black background, as the line arrived
+            local colorTrigger = tempAnsiColorTrigger(7, 0,
+                [[table.insert(_G.nestedRecolorMatches, matches[1])]])
+
+            feedTriggers("\n\27[37;40mOuterRecolorLine\27[0m\n")
+
+            local outerMatched = contains(_G.nestedRecolorMatches, "OuterRecolorLine")
+            killTrigger(feeder)
+            killTrigger(recolorer)
+            killTrigger(colorTrigger)
+            _G.nestedRecolorMatches = nil
+            _G.nestedRecolorLine = nil
+
+            assert.is_true(outerMatched,
+                "the outer pass must still see the colors the game sent, not the ones a nested pass painted on")
+        end)
+
+        -- wrapLine() rebuilds the line out of the buffer, so calling it on the
+        -- line being processed swaps out the very characters the pass is matching
+        -- against.
+        it("should keep the original colors when a trigger wraps the line being processed", function()
+            _G.wrapPassMatches = {}
+            -- longer than the console's wrap width, so the line really is split
+            local longLine = string.rep("WRAPME AAAA BBBB CCCC DDDD ", 8)
+
+            local wrapper = tempRegexTrigger("^WRAPME", function()
+                wrapLine("main", getLineNumber())
+            end)
+            local colorTrigger = tempAnsiColorTrigger(1, -1,
+                [[table.insert(_G.wrapPassMatches, matches[1])]])
+
+            feedTriggers("\n\27[31m" .. longLine .. "\27[0m\n")
+
+            local matchedAny = #_G.wrapPassMatches > 0
+            killTrigger(wrapper)
+            killTrigger(colorTrigger)
+            _G.wrapPassMatches = nil
+
+            assert.is_true(matchedAny, "the red text should still be matched after the line was wrapped")
+        end)
+
     end)
 
     describe("tempAnsiColorTrigger callbacks", function()
