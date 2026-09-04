@@ -36,6 +36,16 @@ TConsoleModel::TConsoleModel(Host* pHost)
 {
 }
 
+QStringList TConsoleModel::lines(int from, int to)
+{
+    QStringList ret;
+    const int delta = abs(from - to);
+    for (int i = 0; i < delta; i++) {
+        ret << buffer.line(from + i);
+    }
+    return ret;
+}
+
 // Two gotchas in here:
 //
 // - the strings destined for the log file itself are translated against the

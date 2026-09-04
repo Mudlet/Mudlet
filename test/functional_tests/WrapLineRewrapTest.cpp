@@ -528,7 +528,7 @@ private:
     {
         startProfile();
         runLua(qsl("createMiniConsole('%1', 0, 0, 600, 600)").arg(mMiniConsole));
-        auto* console = mudlet::self()->getActiveHost()->mpConsole->mSubConsoleMap.value(mMiniConsole);
+        auto* console = mudlet::self()->getActiveHost()->mpConsole->subConsoleWidget(mMiniConsole);
         if (console) {
             console->setWrapAt(width);
         }
