@@ -360,6 +360,18 @@ quint8 TChar::alternateFont() const
     return 1;
 }
 
+#ifndef QT_NO_DEBUG
+static quint64 colorFingerprint(const std::vector<TChar>& line)
+{
+    quint64 hash = 14695981039346656037ULL;
+    for (const TChar& character : line) {
+        hash = (hash ^ character.foreground().rgba()) * 1099511628211ULL;
+        hash = (hash ^ character.background().rgba()) * 1099511628211ULL;
+    }
+    return hash;
+}
+#endif
+
 // Store for text and attributes (such as character color) to be drawn on screen
 // Contents are rendered by a TTextEdit
 TBuffer::TBuffer(Host* pH, TConsole* pConsole)
@@ -1930,6 +1942,9 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
             }
             lineBuffer.back().append(QString());
         }
+        // Console output from a trigger replaces the characters of the line
+        // that same trigger pass is still running over:
+        materialisePreTriggerPassLine(static_cast<int>(buffer.size()) - 1);
         buffer.back() = std::move(chars);
         timeBuffer.back() = currentTimeStamp();
         if (ch == '\xff') {
@@ -1941,27 +1956,46 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
     const int lineIndex = lineBuffer.size() - 1;
     mCommitLineIndices.append(lineIndex);
     if (!mSkipTriggerProcessing) {
-        // Keep the just-committed formats around so that color triggers
-        // can match against the colors as received from the game even
-        // after earlier triggers in this pass have recolored the line;
-        // save/restore gives nested feedTriggers() passes (which re-enter
-        // this function) their own snapshot:
-        // The snapshot is taken through a spare member rather than by moving
-        // the committed formats in, so that its allocation stays in
-        // circulation instead of one being made and freed for every line:
+        // Color triggers match against the colors as received from the game, so
+        // a line an earlier trigger in this pass recolored has to keep its
+        // originals somewhere. materialisePreTriggerPassLine() copies them out
+        // when something first overwrites them rather than up front, because
+        // most lines are never touched and the copy is 44 bytes a character.
+        // A nested pass is about to take the pass state over, so the enclosing
+        // line has to be copied out now - a recolor made from inside that pass
+        // would aim the barrier at the nested line instead:
+        materialisePreTriggerPassLine(mPreTriggerPassLineNumber);
+        // The save/restore gives each nested pass its own snapshot; the spare
+        // member keeps that snapshot's allocation in circulation instead of one
+        // being made and freed for every line:
         std::vector<TChar> savedPassLine;
         savedPassLine.swap(mPreTriggerPassLine);
         const int savedPassLineNumber = mPreTriggerPassLineNumber;
+        const bool savedPassSnapshotTaken = mPreTriggerPassSnapshotTaken;
         mPreTriggerPassLine.swap(mSpareTriggerPassLine);
-        mPreTriggerPassLine.assign(buffer.back().cbegin(), buffer.back().cend());
+        mPreTriggerPassLine.clear();
+        mPreTriggerPassSnapshotTaken = false;
         mPreTriggerPassLineNumber = lineIndex;
+#ifndef QT_NO_DEBUG
+        const quint64 committedColors = colorFingerprint(buffer.back());
+#endif
         mpHost->runTriggers(lineIndex);
+#ifndef QT_NO_DEBUG
+        // A write that reaches the committed line without passing
+        // materialisePreTriggerPassLine() leaves no trace at runtime - color
+        // triggers just quietly match the recolored text - so catch it here
+        // instead of in a bug report:
+        if (!mPreTriggerPassSnapshotTaken && mPreTriggerPassLineNumber == lineIndex && lineIndex < static_cast<int>(buffer.size())) {
+            Q_ASSERT_X(colorFingerprint(buffer[lineIndex]) == committedColors, "TBuffer::commitLineData", "a trigger recolored the line without going through materialisePreTriggerPassLine()");
+        }
+#endif
         mSpareTriggerPassLine.swap(mPreTriggerPassLine);
         if (mSpareTriggerPassLine.capacity() > csmMaxRetainedLineCapacity) {
             std::vector<TChar>().swap(mSpareTriggerPassLine);
         }
         mPreTriggerPassLine.swap(savedPassLine);
         mPreTriggerPassLineNumber = savedPassLineNumber;
+        mPreTriggerPassSnapshotTaken = savedPassSnapshotTaken;
     }
 
     // Only use of TBuffer::wrap(), breaks up new text
@@ -2245,7 +2279,7 @@ void TBuffer::startServerWrapFlushTimer()
 
 const std::vector<TChar>* TBuffer::preTriggerPassLine(int lineNumber) const
 {
-    if (lineNumber >= 0 && lineNumber == mPreTriggerPassLineNumber) {
+    if (lineNumber >= 0 && lineNumber == mPreTriggerPassLineNumber && mPreTriggerPassSnapshotTaken) {
         return &mPreTriggerPassLine;
     }
     return nullptr;
@@ -2257,6 +2291,17 @@ void TBuffer::syncPreTriggerPassLine(int y)
 {
     if (y >= 0 && y == mPreTriggerPassLineNumber && y < static_cast<int>(buffer.size())) {
         mPreTriggerPassLine = buffer[y];
+        mPreTriggerPassSnapshotTaken = true;
+    }
+}
+
+// The write barrier: copies the colors as the game sent them out of the line at
+// the moment something first overwrites them, and not before:
+void TBuffer::materialisePreTriggerPassLine(int y)
+{
+    if (!mPreTriggerPassSnapshotTaken && y >= 0 && y == mPreTriggerPassLineNumber && y < static_cast<int>(buffer.size())) {
+        mPreTriggerPassLine.assign(buffer[y].cbegin(), buffer[y].cend());
+        mPreTriggerPassSnapshotTaken = true;
     }
 }
 
@@ -4689,6 +4734,7 @@ void TBuffer::clearLinkIndices(int lineNumber, int startColumn, int length)
         return;
     }
 
+    materialisePreTriggerPassLine(lineNumber);
     std::vector<TChar>& line = buffer[lineNumber];
 
     // Extra safety: ensure we don't go out of bounds
@@ -4735,6 +4781,7 @@ void TBuffer::restoreLinkIndices(int lineNumber, int startColumn, int length, in
         return;
     }
 
+    materialisePreTriggerPassLine(lineNumber);
     std::vector<TChar>& line = buffer[lineNumber];
 
     // Extra safety: ensure we don't go out of bounds
@@ -5019,6 +5066,8 @@ void TBuffer::appendFormatted(const QString& text, const std::vector<TChar>& for
     const int lastLineBeforeWrap = buffer.size() - 1;
     const int lastLineLength = lineBuffer.at(lastLineBeforeWrap).size();
 
+    materialisePreTriggerPassLine(lastLineBeforeWrap);
+
     bool firstChar = lineBuffer.back().isEmpty();
     QHash<int, int> remappedLinkIds;
     const qsizetype length = std::max(text.size(), static_cast<qsizetype>(formatting.size()));
@@ -5136,6 +5185,7 @@ void TBuffer::appendLine(const QString& text,
     }
 
     int lastLine = buffer.size() - 1;
+    materialisePreTriggerPassLine(lastLine);
 
     if (Q_UNLIKELY(lastLine < 0)) {
         // There are NO lines in the buffer - so initialize with a new empty line
@@ -5779,6 +5829,7 @@ QStringList TBuffer::split(int line, const QRegularExpression& splitter)
 
 void TBuffer::expandLine(int y, int count, TChar& pC)
 {
+    materialisePreTriggerPassLine(y);
     const int size = buffer[y].size() - 1;
     for (int i = size, total = size + count; i < total; ++i) {
         buffer[y].push_back(pC);
@@ -5991,6 +6042,7 @@ QSet<int> TBuffer::collectActiveLinkIds() const
 void TBuffer::clearLastLine()
 {
     if (!buffer.empty()) {
+        materialisePreTriggerPassLine(static_cast<int>(buffer.size()) - 1);
         buffer.back().clear();
         if (!lineBuffer.isEmpty()) {
             lineBuffer.back().clear();
@@ -6148,6 +6200,7 @@ bool TBuffer::applyLink(const QPoint& P_begin, const QPoint& P_end, const QStrin
          * && ( x2 < static_cast<int>(buffer.at(y2).size()) ) )
          */
         for (int y = y1; y <= y2; ++y) {
+            materialisePreTriggerPassLine(y);
             int x = 0;
             if (y == y1) {
                 x = x1;
@@ -6194,6 +6247,7 @@ bool TBuffer::applyAttribute(const QPoint& P_begin, const QPoint& P_end, const T
          */
 
         for (int y = y1; y <= y2; ++y) {
+            materialisePreTriggerPassLine(y);
             int x = 0;
             if (y == y1) {
                 x = x1;
@@ -6235,6 +6289,7 @@ bool TBuffer::applyFgColor(const QPoint& P_begin, const QPoint& P_end, const QCo
          */
 
         for (int y = y1; y <= y2; ++y) {
+            materialisePreTriggerPassLine(y);
             int x = 0;
             if (y == y1) {
                 // Override position start column if on first line to given start column
@@ -6276,6 +6331,7 @@ bool TBuffer::applyBgColor(const QPoint& P_begin, const QPoint& P_end, const QCo
          */
 
         for (int y = y1; y <= y2; ++y) {
+            materialisePreTriggerPassLine(y);
             int x = 0;
             if (y == y1) {
                 // Override position start column if on first line to given start column
@@ -8023,6 +8079,7 @@ void TBuffer::revealSpoilerLink(int linkIndex)
     // Find all characters with this link index and restore their original text
     int charIndex = 0;
     for (size_t lineNum = 0; lineNum < buffer.size(); ++lineNum) {
+        materialisePreTriggerPassLine(static_cast<int>(lineNum));
         auto& line = buffer[lineNum];
         QString lineText = lineBuffer.at(static_cast<int>(lineNum));
         bool lineModified = false;
@@ -8304,7 +8361,8 @@ void TBuffer::updateLinkCharacters(int linkIndex)
 #endif
 
     // Iterate through all lines in the buffer
-    for (auto& line : buffer) {
+    for (size_t lineNumber = 0; lineNumber < buffer.size(); ++lineNumber) {
+        auto& line = buffer[lineNumber];
         // Iterate through all characters in the line
         for (auto& tchar : line) {
 #if defined(DEBUG_OSC_PROCESSING)
@@ -8312,6 +8370,7 @@ void TBuffer::updateLinkCharacters(int linkIndex)
 #endif
             // Check if this character belongs to the link we're updating
             if (tchar.linkIndex() == linkIndex) {
+                materialisePreTriggerPassLine(static_cast<int>(lineNumber));
 #if defined(DEBUG_OSC_PROCESSING)
                 matchingCharacters++;
                 static int charUpdateCount = 0;

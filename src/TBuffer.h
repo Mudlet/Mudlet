@@ -454,6 +454,7 @@ private:
     inline QList<WrapInfo> getWrapInfo(const QString& lineText, bool isNewline, const int maxWidth, const int indent, const int hangingIndent);
     void shrinkBuffer();
     void syncPreTriggerPassLine(int y);
+    void materialisePreTriggerPassLine(int y);
     int remapLinkId(const TLinkStore& sourceLinkStore, int sourceLinkId, QHash<int, int>& remappedLinkIds);
     int calculateWrapPosition(int lineNumber, int begin, int end);
     void handleNewLine();
@@ -585,6 +586,9 @@ private:
     // allocation instead of making a fresh one for each committed line:
     std::vector<TChar> mSpareTriggerPassLine;
     int mPreTriggerPassLineNumber = -1;
+    // False while nothing has overwritten the committed line yet, so the
+    // colors the game sent are still readable from the line itself:
+    bool mPreTriggerPassSnapshotTaken = true;
     // A line that ended at the game's own wrap column (Host::mUndoServerWrap)
     // is held here instead of being committed, so its continuation can be
     // joined back on and triggers run once over the whole logical line:
