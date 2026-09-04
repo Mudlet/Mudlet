@@ -72,6 +72,7 @@
 #include <QJsonObject>
 #include <QJsonParseError>
 #include <QSaveFile>
+#include <QStringConverter>
 #include <QTemporaryDir>
 #include <QTemporaryFile>
 #include <QTextStream>
@@ -133,7 +134,7 @@ const QString TLuaInterpreter::csmInvalidAreaName{qsl("string '%1' is not a vali
     ({                                                                                                                                                                                                 \
         const QString& name_ = (ARG_name);                                                                                                                                                             \
         auto console_ = getHostFromLua(ARG_L).mpConsole;                                                                                                                                               \
-        auto cmdLine_ = !console_ ? nullptr : (isMain(name_) ? &*console_->mpCommandLine : console_->mSubCommandLineMap.value(name_));                                                                 \
+        auto cmdLine_ = !console_ ? nullptr : (isMain(name_) ? &*console_->mpCommandLine : console_->subCommandLineWidget(name_));                                                                     \
         if (!cmdLine_) {                                                                                                                                                                               \
             lua_pushnil(ARG_L);                                                                                                                                                                        \
             lua_pushfstring(ARG_L, bad_cmdline_value, name_.toUtf8().constData());                                                                                                                     \
@@ -2335,12 +2336,12 @@ int TLuaInterpreter::getTimestamp(lua_State* L)
         }
         return warnArgumentValue(L, __func__, qsl("line number %1 invalid, it is beyond the last line of the buffer").arg(luaLine));
     }
-    auto pC = host.mpConsole->mSubConsoleMap.value(name);
-    if (!pC) {
+    auto pModel = host.windowRegistry().subConsoleModel(name);
+    if (!pModel) {
         return warnArgumentValue(L, __func__, qsl("mini console, user window or buffer '%1' not found").arg(name));
     }
-    if (luaLine < pC->buffer.timeBuffer.size()) {
-        lua_pushstring(L, pC->buffer.timeBuffer.at(luaLine).toUtf8().constData());
+    if (luaLine < pModel->buffer.timeBuffer.size()) {
+        lua_pushstring(L, pModel->buffer.timeBuffer.at(luaLine).toUtf8().constData());
         return 1;
     }
     return warnArgumentValue(L, __func__, qsl("line number %1 invalid, it is beyond the last line of the buffer").arg(luaLine));
@@ -3594,17 +3595,15 @@ void TLuaInterpreter::setMultiCaptureGroups(const std::list<std::list<std::strin
 // No documentation available in wiki - internal function
 void TLuaInterpreter::setCaptureGroups(const std::list<std::string>& captureList, const std::list<int>& posList)
 {
-    mCaptureGroupList = captureList;
-    mCaptureGroupPosList = posList;
-
-    /*
-     * std::list<string>::iterator it2 = mCaptureGroupList.begin();
-     * std::list<int>::iterator it1 = mCaptureGroupPosList.begin();
-     * int i=0;
-     * for ( ; it1!=mCaptureGroupPosList.end(); it1++, it2++, i++) {
-     *     cout << "group#"<<i<<" begin="<<*it1<<" len="<<(*it2).size()<<"word="<<*it2<<endl;
-     * }
-     */
+    // Take back the storage clearCaptureGroups() parked, unless a nested pass is
+    // still holding it - assigning over the recycled std::strings reuses their
+    // buffers, which is worth having on a path that runs per trigger fire
+    if (mCaptureGroupList.empty()) {
+        mCaptureGroupList.swap(mSpareCaptureGroupList);
+        mCaptureGroupPosList.swap(mSpareCaptureGroupPosList);
+    }
+    mCaptureGroupList.assign(captureList.begin(), captureList.end());
+    mCaptureGroupPosList.assign(posList.begin(), posList.end());
 }
 
 // No documentation available in wiki - internal function
@@ -3617,6 +3616,23 @@ void TLuaInterpreter::setCaptureNameGroups(const NameGroupMatches& nameGroups, c
 // No documentation available in wiki - internal function
 void TLuaInterpreter::clearCaptureGroups()
 {
+    if (mSpareCaptureGroupList.empty()) {
+        mSpareCaptureGroupList.swap(mCaptureGroupList);
+        mSpareCaptureGroupPosList.swap(mCaptureGroupPosList);
+        // A match-all pattern over a hostile line would otherwise leave the
+        // parked buffers at that high water mark for the rest of the session.
+        // Past the cap the cost is the allocation this parking exists to save,
+        // never unbounded memory.
+        if (mSpareCaptureGroupList.size() > scmMaxParkedCaptures) {
+            mSpareCaptureGroupList.resize(scmMaxParkedCaptures);
+            mSpareCaptureGroupPosList.resize(scmMaxParkedCaptures);
+        }
+        for (auto& capture : mSpareCaptureGroupList) {
+            if (capture.capacity() > scmMaxParkedCaptureBytes) {
+                std::string().swap(capture);
+            }
+        }
+    }
     mCaptureGroupList.clear();
     mCaptureGroupPosList.clear();
     mMultiCaptureGroupList.clear();
@@ -3918,16 +3934,21 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
             }
         }
     } else {
-        {
-            std::string e;
-            if (lua_isstring(L, -1)) {
-                e = "Lua error:";
-                e += lua_tostring(L, -1);
-            }
-            const QString _n = "JSON decoder error:";
-            const QString _f = "json_to_value";
-            logError(e, _n, _f);
+        std::string e;
+        if (lua_isstring(L, -1)) {
+            e = "could not decode " + protocol.toStdString() + "." + key.toStdString() + " - any previous value is kept: ";
+            e += lua_tostring(L, -1);
         }
+        const QString _n = "JSON decoder error:";
+        const QString _f = "json_to_value";
+        logError(e, _n, _f);
+        if (TDebug::smDebugMode) {
+            TDebug(Qt::white, Qt::red, TDebug::Category::Error) << "\n " << e.c_str() << "\n" >> &host;
+        }
+        // the variable did not change, so raising its arrival events would hand
+        // every handler the stale value the game just tried to replace
+        lua_settop(L, callerStackTop);
+        return;
     }
     lua_settop(L, callerStackTop);
 
@@ -4105,6 +4126,9 @@ void TLuaInterpreter::msdp2Lua(const char* src)
 
     QByteArray script;
     bool no_array_marker_bug = false;
+    // a TABLE_CLOSE or ARRAY_CLOSE with nothing open - the JSON built from it
+    // would carry a stray brace, and what yajl does with that varies by version
+    bool malformed = false;
     // Measured as the name is written rather than recomputed from varList at the
     // strip: a name holding a byte JSON has to escape is longer in script than
     // the raw name is, and the strip then leaves part of the prefix behind.
@@ -4122,6 +4146,8 @@ void TLuaInterpreter::msdp2Lua(const char* src)
             }
             if (nest) {
                 --nest;
+            } else {
+                malformed = true;
             }
             script.append('}');
             last = MSDP_TABLE_CLOSE;
@@ -4137,6 +4163,8 @@ void TLuaInterpreter::msdp2Lua(const char* src)
             }
             if (nest) {
                 --nest;
+            } else {
+                malformed = true;
             }
             script.append(']');
             last = MSDP_ARRAY_CLOSE;
@@ -4157,8 +4185,21 @@ void TLuaInterpreter::msdp2Lua(const char* src)
                     QString token = varList.front();
                     token = token.remove(QLatin1Char('\"'));
                     script = script.replace(0, topLevelPrefixLength, QByteArray());
-                    mpHost->processDiscordMSDP(token, script);
-                    setMSDPTable(token, script);
+                    if (malformed) {
+                        std::string e = "dropped MSDP variable \"" + token.toStdString() + "\": the game closed a table or array it never opened";
+                        logError(e, qsl("MSDP"), qsl("msdp2Lua"));
+                        malformed = false;
+                    } else {
+                        mpHost->processDiscordMSDP(token, script);
+                        if (no_array_marker_bug && !script.startsWith('[')) {
+                            script.prepend('[');
+                            script.append(']');
+                        }
+                        setMSDPTable(token, script);
+                    }
+                    // scoped to the variable just flushed, or an unmarked array
+                    // would wrap whichever variable happens to come last
+                    no_array_marker_bug = false;
                     varList.clear();
                     script.clear();
                     // the quote above closed the value just flushed - this one
@@ -4166,6 +4207,11 @@ void TLuaInterpreter::msdp2Lua(const char* src)
                     // subnegotiation gets from that same append
                     script.append('\"');
                 }
+                // Scoped to the variable that carried the imbalance, and a
+                // valueless one never reaches the flush above that would clear
+                // it - so reset here, where the next variable starts, or the
+                // flag lands on whichever variable does flush next.
+                malformed = false;
             }
             last = MSDP_VAR;
             lastVar.clear();
@@ -4179,7 +4225,13 @@ void TLuaInterpreter::msdp2Lua(const char* src)
                 }
             }
             if (last == MSDP_VAL) {
-                no_array_marker_bug = true;
+                // adjacent values with no ARRAY_OPEN are the specification's
+                // "string values together for command-like variables", which only
+                // exists at the top level - inside a structure the array carries
+                // its own markers and this wrap would add a level it never had
+                if (!nest) {
+                    no_array_marker_bug = true;
+                }
                 script.append('\"');
             }
             if (last == MSDP_VAL || last == MSDP_TABLE_CLOSE || last == MSDP_ARRAY_CLOSE) {
@@ -4224,6 +4276,20 @@ void TLuaInterpreter::msdp2Lua(const char* src)
         QString token = varList.front();
         token = token.remove(QLatin1Char('\"'));
         script = script.replace(0, topLevelPrefixLength, QByteArray());
+        if (nest || malformed) {
+            // unbalanced structure markers make truncated JSON and what yajl does with that varies by version, so drop the variable ourselves and name which way the imbalance went
+            std::string reason;
+            if (nest && malformed) {
+                reason = "closed a table or array it never opened and ended the message with another still open";
+            } else if (nest) {
+                reason = "ended the message with a table or array still open";
+            } else {
+                reason = "closed a table or array it never opened";
+            }
+            std::string e = "dropped MSDP variable \"" + token.toStdString() + "\": the game " + reason;
+            logError(e, qsl("MSDP"), qsl("msdp2Lua"));
+            return;
+        }
         if (no_array_marker_bug) {
             if (!script.startsWith('[')) {
                 script.prepend('[');
@@ -4258,24 +4324,25 @@ void TLuaInterpreter::setChannel102Table(int& var, int& arg)
 // No documentation available in wiki - internal function
 void TLuaInterpreter::setMatches(lua_State* L)
 {
-    if (!mCaptureGroupList.empty()) {
-        lua_newtable(L);
-
-        // set values
-        int i = 1; // Lua indexes start with 1 as a general convention
-        for (auto it = mCaptureGroupList.begin(); it != mCaptureGroupList.end(); it++, i++) {
-            // if ((*it).length() < 1) continue; //have empty capture groups to be undefined keys i.e. matches[emptyCapGroupNumber] = nil otherwise it's = "" i.e. an empty string
-            lua_pushnumber(L, i);
-            lua_pushstring(L, (*it).c_str());
-            lua_settable(L, -3);
-        }
-        for (const auto& [name, capture] : mCapturedNameGroups) {
-            lua_pushstring(L, name.toUtf8().constData());
-            lua_pushstring(L, capture.toUtf8().constData());
-            lua_settable(L, -3);
-        }
-        lua_setglobal(L, "matches");
+    if (mCaptureGroupList.empty()) {
+        return;
     }
+
+    // presized, so filling it in does not rehash the table on the way up
+    lua_createtable(L, static_cast<int>(mCaptureGroupList.size()), static_cast<int>(mCapturedNameGroups.size()));
+
+    // empty capture groups stay defined keys i.e. matches[emptyCapGroupNumber] = "" rather than nil
+    int i = 1; // Lua indexes start with 1 as a general convention
+    for (const auto& capture : mCaptureGroupList) {
+        lua_pushstring(L, capture.c_str());
+        lua_rawseti(L, -2, i++);
+    }
+    for (const auto& [name, capture] : mCapturedNameGroups) {
+        lua_pushstring(L, name.toUtf8().constData());
+        lua_pushstring(L, capture.toUtf8().constData());
+        lua_rawset(L, -3);
+    }
+    lua_setglobal(L, "matches");
 }
 
 // No documentation available in wiki - internal function
@@ -5273,8 +5340,30 @@ void TLuaInterpreter::set_lua_string(const QString& varName, const QString& varV
     lua_State* L = pGlobalLua;
     const int callerStackTop = lua_gettop(L);
 
-    lua_pushstring(L, varValue.toUtf8().constData());
-    lua_setglobal(L, varName.toUtf8().constData());
+    // This runs once per incoming line, and both toUtf8() calls it replaces
+    // allocated a QByteArray every time. The name is nearly always the same one,
+    // and the value is encoded into a buffer that is kept between calls.
+    if (mLastGlobalName != varName) {
+        mLastGlobalName = varName;
+        mLastGlobalNameUtf8 = varName.toUtf8();
+    }
+    QStringEncoder encoder(QStringEncoder::Utf8, QStringConverter::Flag::Stateless);
+    mUtf8Scratch.resize(encoder.requiredSpace(varValue.size()));
+    const char* const end = encoder.appendToBuffer(mUtf8Scratch.data(), varValue);
+    if (Q_UNLIKELY(encoder.hasError())) {
+        // The encoder writes a replacement character where an unpaired
+        // surrogate was, while toUtf8() drops it. That path can afford the
+        // copy and stay byte for byte what a script used to be given.
+        mUtf8Scratch = varValue.toUtf8();
+    } else {
+        mUtf8Scratch.resize(end - mUtf8Scratch.constData());
+    }
+
+    lua_pushstring(L, mUtf8Scratch.constData());
+    lua_setglobal(L, mLastGlobalNameUtf8.constData());
+    if (mUtf8Scratch.capacity() > scmMaxRetainedUtf8Scratch) {
+        mUtf8Scratch = QByteArray();
+    }
     lua_settop(L, callerStackTop);
 }
 

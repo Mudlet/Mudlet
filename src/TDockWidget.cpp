@@ -79,7 +79,7 @@ void TDockWidget::setVisible(bool visible)
         }
         return;
     }
-    auto pC = mpHost->mpConsole->mSubConsoleMap.value(mWidgetConsoleName);
+    auto pC = mpHost->mpConsole->subConsoleWidget(mWidgetConsoleName);
     if (!pC) {
         return;
     }

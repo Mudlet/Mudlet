@@ -2245,9 +2245,9 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
     if (mpConsole->getType() == TConsole::CentralDebugConsole) {
         title = tr("Mudlet, debug console extract");
     } else if (mpConsole->getType() == TConsole::SubConsole) {
-        title = tr("Mudlet, %1 mini-console extract from %2 profile").arg(mpHost->mpConsole->mSubConsoleMap.key(mpConsole), mpHost->getName());
+        title = tr("Mudlet, %1 mini-console extract from %2 profile").arg(mpHost->mpConsole->subConsoleName(mpConsole), mpHost->getName());
     } else if (mpConsole->getType() == TConsole::UserWindow) {
-        title = tr("Mudlet, %1 user window extract from %2 profile").arg(mpHost->mpConsole->mSubConsoleMap.key(mpConsole), mpHost->getName());
+        title = tr("Mudlet, %1 user window extract from %2 profile").arg(mpHost->mpConsole->subConsoleName(mpConsole), mpHost->getName());
     } else {
         title = tr("Mudlet, main console extract from %1 profile").arg(mpHost->getName());
     }

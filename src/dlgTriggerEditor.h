@@ -742,6 +742,10 @@ private:
     // space-driven auto-collapse:
     bool mShowAllTriggerControls = false;
 
+    // Every profile builds an editor when it loads but they share one saved
+    // window position, so one that was never opened must not write over it:
+    bool mHasBeenShown = false;
+
     // tracks location of the splitter in the trigger editor for each tab
     QByteArray mTriggerEditorSplitterState;
     QByteArray mAliasEditorSplitterState;

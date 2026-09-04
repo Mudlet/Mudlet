@@ -68,10 +68,10 @@ void dlgModuleManager::layoutModules()
     moduleTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
     moduleTable->verticalHeader()->hide();
     moduleTable->setShowGrid(true);
-    //clear everything
-    for (int i = 0; i <= moduleTable->rowCount(); i++) {
-        moduleTable->removeRow(i);
-    }
+    // every row has to go, not every other one: removing a row moves the ones
+    // below it up, so a loop that advances as it removes leaves half of what
+    // was listed behind for the rebuilt listing to be added on top of
+    moduleTable->setRowCount(0);
     //order modules by priority and then alphabetically
     QMap<int, QStringList> mOrder;
     while (it.hasNext()) {
@@ -177,12 +177,30 @@ void dlgModuleManager::slot_uninstallModule()
 
     const int cRow = moduleTable->currentRow();
     QTableWidgetItem* pI = moduleTable->item(cRow, 0);
-    if (pI) {
-        mpHost->uninstallPackage(pI->text(), enums::PackageModuleType::ModuleFromUI);
+    if (!pI) {
+        return;
     }
-    for (int i = moduleTable->rowCount() - 1; i >= 0; --i) {
-        moduleTable->removeRow(i);
+    // Read before the uninstall, not after: it pumps the event loop while it waits
+    // a profile save out, and a handler that takes a module away rebuilds this
+    // table - which deletes the item this row is holding.
+    const QString moduleName = pI->text();
+    if (!mpHost->uninstallPackage(moduleName, enums::PackageModuleType::ModuleFromUI)) {
+        // a save in progress is the one the user can do something about; the other
+        // is a row that outlived its module, which the rebuild below clears up, so
+        // it says that rather than blaming a save that is not running
+        QString msg;
+        if (mpHost->currentlySavingProfile()) {
+            //: %1 is the name of the module the user asked to remove
+            msg = tr("\"%1\" could not be removed while the profile is being saved. Please try again in a moment.").arg(moduleName);
+        } else {
+            //: %1 is the name of the module the user asked to remove, which turned out not to be installed any more
+            msg = tr("\"%1\" is no longer installed, so there was nothing to remove.").arg(moduleName);
+        }
+        //: Title of the dialog that says why a module the user asked to remove was not removed
+        QMessageBox::warning(this, tr("Removal failed"), msg);
     }
+    // rebuilt whether the removal took or not: refused, this puts back what is
+    // actually installed, which is the only thing that clears a stale row
     layoutModules();
 }
 

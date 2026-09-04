@@ -157,13 +157,13 @@ private slots:
         TConsole* miniConsole = console->createMiniConsole(QString(), name, 0, 0, 300, 100);
         QVERIFY2(miniConsole, "could not create the miniconsole");
         miniConsole->setCmdVisible(true); // what Lua enableCommandLine(name) does
-        QVERIFY2(console->mSubCommandLineMap.contains(name), "command line not registered after enabling it");
+        QVERIFY2(console->subCommandLineWidget(name), "command line not registered after enabling it");
 
         auto [deleted, deleteMsg] = console->deleteMiniConsole(name);
         QVERIFY2(deleted, qPrintable(deleteMsg));
         runDeferredDeletes();
 
-        QVERIFY2(!console->mSubCommandLineMap.contains(name), "stale command line entry left behind after deleting the miniconsole that owned it");
+        QVERIFY2(!console->subCommandLineWidget(name), "stale command line entry left behind after deleting the miniconsole that owned it");
 
         // The observable non-crashing symptom of the stale entry: the name still
         // looks taken, so a fresh command line of that name cannot be made.
@@ -183,13 +183,13 @@ private slots:
         QVERIFY2(console->createScrollBox(QString(), scrollBoxName, 0, 0, 300, 200), "could not create the scroll box");
         auto [created, createMsg] = console->createCommandLine(scrollBoxName, cmdLineName, 0, 0, 100, 30);
         QVERIFY2(created, qPrintable(createMsg));
-        QVERIFY(console->mSubCommandLineMap.contains(cmdLineName));
+        QVERIFY(console->subCommandLineWidget(cmdLineName));
 
         auto [deleted, deleteMsg] = console->deleteScrollBox(scrollBoxName);
         QVERIFY2(deleted, qPrintable(deleteMsg));
         runDeferredDeletes();
 
-        QVERIFY2(!console->mSubCommandLineMap.contains(cmdLineName), "stale command line entry left behind after deleting the scroll box that owned it");
+        QVERIFY2(!console->subCommandLineWidget(cmdLineName), "stale command line entry left behind after deleting the scroll box that owned it");
 
         // Observable consequence: the name is free again.
         auto [recreated, recreateMsg] = console->createCommandLine(QString(), cmdLineName, 0, 0, 100, 30);
@@ -210,13 +210,13 @@ private slots:
         QVERIFY2(opened, qPrintable(openMsg));
         auto [created, createMsg] = console->createCommandLine(windowName, cmdLineName, 0, 0, 100, 30);
         QVERIFY2(created, qPrintable(createMsg));
-        QVERIFY(console->mSubCommandLineMap.contains(cmdLineName));
+        QVERIFY(console->subCommandLineWidget(cmdLineName));
 
         auto [deleted, deleteMsg] = console->deleteMiniConsole(windowName);
         QVERIFY2(deleted, qPrintable(deleteMsg));
         runDeferredDeletes();
 
-        QVERIFY2(!console->mSubCommandLineMap.contains(cmdLineName), "stale command line entry left behind after deleting the user window that owned it");
+        QVERIFY2(!console->subCommandLineWidget(cmdLineName), "stale command line entry left behind after deleting the user window that owned it");
 
         auto [recreated, recreateMsg] = console->createCommandLine(QString(), cmdLineName, 0, 0, 100, 30);
         QVERIFY2(recreated, qPrintable(recreateMsg));
@@ -237,7 +237,7 @@ private slots:
         QVERIFY2(deleted, qPrintable(deleteMsg));
         runDeferredDeletes();
 
-        QVERIFY2(!console->mSubCommandLineMap.contains(name), "command line entry left behind after deleteCommandLine()");
+        QVERIFY2(!console->subCommandLineWidget(name), "command line entry left behind after deleteCommandLine()");
 
         // Recreating under the same name must work.
         auto [recreated, recreateMsg] = console->createCommandLine(QString(), name, 0, 0, 100, 30);
@@ -259,7 +259,7 @@ private slots:
         TConsole* miniConsole = console->createMiniConsole(QString(), name, 0, 0, 300, 100);
         QVERIFY2(miniConsole, "could not create the miniconsole");
         miniConsole->setCmdVisible(true);
-        QVERIFY(console->mSubCommandLineMap.contains(name));
+        QVERIFY(console->subCommandLineWidget(name));
 
         auto [deleted, deleteMsg] = console->deleteMiniConsole(name);
         QVERIFY2(deleted, qPrintable(deleteMsg));
@@ -270,7 +270,7 @@ private slots:
         auto [fontSet, fontMsg] = mpHost->setDisplayFont(changedFont);
         QVERIFY2(fontSet, qPrintable(fontMsg));
 
-        QVERIFY2(!console->mSubCommandLineMap.contains(name), "stale command line entry survived into the setFont() walk");
+        QVERIFY2(!console->subCommandLineWidget(name), "stale command line entry survived into the setFont() walk");
 
         auto [recreated, recreateMsg] = console->createCommandLine(QString(), name, 0, 0, 100, 30);
         QVERIFY2(recreated, qPrintable(recreateMsg));
@@ -293,12 +293,12 @@ private slots:
         // Deliberately no event loop turn here - the old widget is still alive.
         auto [recreated, recreateMsg] = console->createCommandLine(QString(), name, 0, 0, 100, 30);
         QVERIFY2(recreated, qPrintable(recreateMsg));
-        TCommandLine* replacement = console->mSubCommandLineMap.value(name);
+        TCommandLine* replacement = console->subCommandLineWidget(name);
         QVERIFY(replacement);
 
         runDeferredDeletes();
 
-        QVERIFY2(console->mSubCommandLineMap.value(name) == replacement, "the old command line's deregistration took the replacement with it");
+        QVERIFY2(console->subCommandLineWidget(name) == replacement, "the old command line's deregistration took the replacement with it");
         console->deleteCommandLine(name);
         runDeferredDeletes();
     }
@@ -315,7 +315,7 @@ private slots:
 
         auto [created, createMsg] = console->createCommandLine(QString(), name, 0, 0, 100, 30);
         QVERIFY2(created, qPrintable(createMsg));
-        QVERIFY(console->mSubCommandLineMap.contains(name));
+        QVERIFY(console->subCommandLineWidget(name));
     }
 };
 
