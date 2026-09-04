@@ -365,6 +365,11 @@ private:
     void updateProtocolSummary();
     void buildDiscordSummaryCard();
     void updateDiscordSummary();
+#ifdef INCLUDE_MCPSERVER
+    // The AI assistant settings, reached from the General page's summary card
+    void buildMcpSummaryCard();
+    void updateMcpSummary();
+#endif
     // The one status hero: what the current connection's security actually is,
     // rather than what the settings below it ask for
     void buildSecurityStatusCard();
@@ -524,6 +529,10 @@ private:
     QPointer<QGroupBox> mpCard_discord;
     QPointer<QPushButton> mpButton_discordSubpage;
     QPointer<QGroupBox> mpCard_securityStatus;
+#ifdef INCLUDE_MCPSERVER
+    QPointer<QGroupBox> mpCard_mcpAssistant;
+    QPointer<QPushButton> mpButton_mcpSubpage;
+#endif
     QPointer<QLabel> mpLabel_securityHeadline;
     QPointer<QLabel> mpLabel_securityDetail;
     QPointer<QLabel> mpLabel_securityLink;

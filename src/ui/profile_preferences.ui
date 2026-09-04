@@ -4913,7 +4913,7 @@ you can use it but there could be issues with aligning columns of text</string>
           <string extracomment="Title of the Preferences group of settings for letting an AI assistant control Mudlet. MCP is the name of the Model Context Protocol standard, leave it as-is.">AI assistant access (MCP)</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_groupBox_mcpServer">
-          <item row="0" column="0" colspan="3">
+          <item row="0" column="0">
            <widget class="QCheckBox" name="checkBox_enableMCPServer">
             <property name="toolTip">
              <string extracomment="Tooltip on the checkbox that starts the MCP server.">&lt;p&gt;Runs a Model Context Protocol (MCP) server so an AI assistant can run Lua inside Mudlet on your behalf. One server covers the whole application, so an assistant can reach every open profile.&lt;/p&gt;&lt;p&gt;&lt;b&gt;Lua can run programs and change files on this computer, not just script your game.&lt;/b&gt; The address Mudlet shows once the server starts contains an access token - give it only to the assistant you mean to hand control to, and leave this off when you are not using it.&lt;/p&gt;</string>
@@ -4927,48 +4927,6 @@ you can use it but there could be issues with aligning columns of text</string>
            </widget>
           </item>
           <item row="1" column="0">
-           <widget class="QLabel" name="label_mcpServerPort">
-            <property name="text">
-             <string extracomment="Label in front of the number entry for the network port the MCP server listens on.">Port:</string>
-            </property>
-            <property name="buddy">
-             <cstring>spinBox_mcpServerPort</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="QSpinBox" name="spinBox_mcpServerPort">
-            <property name="toolTip">
-             <string extracomment="Tooltip on the number entry for the network port the MCP server listens on.">&lt;p&gt;The port the MCP server listens on. Change this if another program on this computer is already using it.&lt;/p&gt;</string>
-            </property>
-            <property name="accessibleDescription">
-             <string extracomment="Screen reader description of the number entry for the network port the MCP server listens on.">The port the MCP server listens on. Change this if another program on this computer is already using it.</string>
-            </property>
-            <property name="minimum">
-             <number>1</number>
-            </property>
-            <property name="maximum">
-             <number>65535</number>
-            </property>
-            <property name="value">
-             <number>11235</number>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="2">
-           <spacer name="hSpacer_mcpServerPort">
-            <property name="orientation">
-             <enum>Qt::Horizontal</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>40</width>
-              <height>20</height>
-             </size>
-            </property>
-           </spacer>
-          </item>
-          <item row="2" column="0" colspan="3">
            <widget class="QLabel" name="label_mcpServerEndpoint">
             <property name="text">
              <string notr="true"/>
@@ -4976,12 +4934,29 @@ you can use it but there could be issues with aligning columns of text</string>
             <property name="textInteractionFlags">
              <set>Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
             </property>
+            <property name="settingsControlDescription" stdset="0">
+             <bool>true</bool>
+            </property>
             <property name="wordWrap">
              <bool>true</bool>
             </property>
            </widget>
           </item>
-          <item row="3" column="0" colspan="3">
+          <item row="2" column="0">
+           <widget class="Line" name="line_mcpServer">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QLabel" name="label_mcpSetUpAssistant">
+            <property name="text">
+             <string extracomment="Heading above the row of buttons that hand an AI assistant the details it needs to control Mudlet.">Set up an assistant</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="0">
            <layout class="QHBoxLayout" name="hLayout_mcpServerButtons">
             <item>
              <widget class="QPushButton" name="pushButton_connectClaudeDesktop">
@@ -4992,7 +4967,7 @@ you can use it but there could be issues with aligning columns of text</string>
                <string extracomment="Screen reader description of the button that registers Mudlet in the Claude Desktop application's settings.">Adds Mudlet to Claude Desktop's settings so its AI assistant can control Mudlet. Restart Claude Desktop afterwards to pick it up - from then on it finds Mudlet on its own, whenever both are running.</string>
               </property>
               <property name="text">
-               <string extracomment="Label of the button that registers Mudlet in the Claude Desktop application's settings. Claude Desktop is a product name, leave it as-is.">Connect Claude Desktop</string>
+               <string extracomment="Label of the button that registers Mudlet in the Claude Desktop application's settings. Claude Desktop is a product name, leave it as-is.">Claude Desktop</string>
               </property>
              </widget>
             </item>
@@ -5005,7 +4980,7 @@ you can use it but there could be issues with aligning columns of text</string>
                <string extracomment="Screen reader description of the button that registers Mudlet in the settings shared by the ChatGPT desktop app and Codex.">Adds Mudlet to ChatGPT's settings, shared with Codex, so its AI assistant can control Mudlet. Restart ChatGPT afterwards to pick it up - from then on it finds Mudlet on its own, whenever both are running.</string>
               </property>
               <property name="text">
-               <string extracomment="Label of the button that registers Mudlet in the settings shared by the ChatGPT desktop app and Codex. ChatGPT is a product name, leave it as-is.">Connect ChatGPT</string>
+               <string extracomment="Label of the button that registers Mudlet in the settings shared by the ChatGPT desktop app and Codex. ChatGPT is a product name, leave it as-is.">ChatGPT</string>
               </property>
              </widget>
             </item>
@@ -5021,7 +4996,7 @@ you can use it but there could be issues with aligning columns of text</string>
                <bool>true</bool>
               </property>
               <property name="text">
-               <string extracomment="Label of the button that reveals the MCP server's address for pasting into an AI assistant Mudlet cannot set up by itself.">Connect another assistant</string>
+               <string extracomment="Label of the button that reveals the MCP server's address for pasting into an AI assistant Mudlet cannot set up by itself.">Something else</string>
               </property>
              </widget>
             </item>
@@ -5040,7 +5015,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </item>
            </layout>
           </item>
-          <item row="4" column="0" colspan="3">
+          <item row="5" column="0">
            <widget class="QWidget" name="widget_mcpManualConnect" native="true">
             <property name="visible">
              <bool>false</bool>
@@ -5098,7 +5073,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </layout>
            </widget>
           </item>
-          <item row="5" column="0" colspan="3">
+          <item row="6" column="0">
            <widget class="QLabel" name="label_mcpConnectResult">
             <property name="text">
              <string notr="true"/>
@@ -5106,6 +5081,111 @@ you can use it but there could be issues with aligning columns of text</string>
             <property name="wordWrap">
              <bool>true</bool>
             </property>
+           </widget>
+          </item>
+          <item row="7" column="0">
+           <layout class="QHBoxLayout" name="hLayout_mcpAdvanced">
+            <item>
+             <widget class="QToolButton" name="pushButton_mcpAdvanced">
+              <property name="toolTip">
+               <string extracomment="Tooltip on the button that folds out the MCP server's less commonly needed settings.">&lt;p&gt;Shows the network port the MCP server listens on, which only needs changing if another program on this computer is already using it.&lt;/p&gt;</string>
+              </property>
+              <property name="accessibleDescription">
+               <string extracomment="Screen reader description of the button that folds out the MCP server's less commonly needed settings.">Shows the network port the MCP server listens on, which only needs changing if another program on this computer is already using it.</string>
+              </property>
+              <property name="checkable">
+               <bool>true</bool>
+              </property>
+              <property name="autoRaise">
+               <bool>true</bool>
+              </property>
+              <property name="arrowType">
+               <enum>Qt::RightArrow</enum>
+              </property>
+              <property name="toolButtonStyle">
+               <enum>Qt::ToolButtonTextBesideIcon</enum>
+              </property>
+              <property name="text">
+               <string extracomment="Label of the button that folds out the MCP server's less commonly needed settings.">Advanced</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="hSpacer_mcpAdvanced">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </item>
+          <item row="8" column="0">
+           <widget class="QWidget" name="widget_mcpAdvanced" native="true">
+            <property name="visible">
+             <bool>false</bool>
+            </property>
+            <layout class="QHBoxLayout" name="hLayout_mcpAdvancedContent">
+             <property name="leftMargin">
+              <number>20</number>
+             </property>
+             <property name="topMargin">
+              <number>0</number>
+             </property>
+             <property name="rightMargin">
+              <number>0</number>
+             </property>
+             <property name="bottomMargin">
+              <number>0</number>
+             </property>
+             <item>
+              <widget class="QLabel" name="label_mcpServerPort">
+               <property name="text">
+                <string extracomment="Label in front of the number entry for the network port the MCP server listens on.">Port:</string>
+               </property>
+               <property name="buddy">
+                <cstring>spinBox_mcpServerPort</cstring>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QSpinBox" name="spinBox_mcpServerPort">
+               <property name="toolTip">
+                <string extracomment="Tooltip on the number entry for the network port the MCP server listens on.">&lt;p&gt;The port the MCP server listens on. Change this if another program on this computer is already using it.&lt;/p&gt;</string>
+               </property>
+               <property name="accessibleDescription">
+                <string extracomment="Screen reader description of the number entry for the network port the MCP server listens on.">The port the MCP server listens on. Change this if another program on this computer is already using it.</string>
+               </property>
+               <property name="minimum">
+                <number>1</number>
+               </property>
+               <property name="maximum">
+                <number>65535</number>
+               </property>
+               <property name="value">
+                <number>11235</number>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <spacer name="hSpacer_mcpServerPort">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>40</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+            </layout>
            </widget>
           </item>
          </layout>
