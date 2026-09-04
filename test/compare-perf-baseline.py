@@ -61,6 +61,12 @@ HARNESSES = {
             "corpus_version",
             "display_rows_per_paint",
             "display_cols_per_paint",
+            # Every display timing is paid per device pixel while every other
+            # display invariant is logical, so two runs at different scale
+            # factors agree on the workload and disagree on every paint metric -
+            # the ratio reported as a code change. Formatted %.2f, so 1.00 and
+            # 1.25 stay distinct.
+            "display_device_pixel_ratio",
             "display_tail_small_cells",
             "display_tail_large_cells",
             "display_overlay_small_cells",
@@ -139,6 +145,18 @@ HARNESSES = {
 MODE_METRICS = ("bench_frame_hash_mode",)
 
 INVARIANTS = COMMON_INVARIANTS + MODE_METRICS + tuple(name for harness in HARNESSES.values() for name in harness["invariants"])
+
+# Why a differing invariant means the runs are not comparable, where the default
+# answer - the two builds are not the same harness, rebuild them - would send
+# someone rebuilding over something no build can change.
+INVARIANT_HINTS = {
+    "display_device_pixel_ratio": (
+        "the two runs drew at different display scaling, and every paint metric is paid per "
+        "device pixel while every other display invariant is logical - so the ratio would be "
+        "reported as a paint regression. Re-run both at the same QT_SCALE_FACTOR, or with none "
+        "set at all; rebuilding cannot change it."
+    ),
+}
 
 # Wall-clock ceiling for a single benchmark run under --run. The ASan/offscreen
 # functional-test build feeds a huge corpus several times, so this is generous.
@@ -263,11 +281,12 @@ def check_invariants(before, after):
                 f"the same {before_harness} harness/build and cannot be compared."
             )
         if before[name] != after[name]:
-            fail(
-                f"{name} differs ({before[name]:g} vs {after[name]:g}) - the two runs measured "
-                "different workloads or build configurations and cannot be compared. "
-                f"Rebuild both trees from the same {before_harness} harness, built the same way."
+            reason = INVARIANT_HINTS.get(
+                name,
+                "the two runs measured different workloads or build configurations and cannot be "
+                f"compared. Rebuild both trees from the same {before_harness} harness, built the same way.",
             )
+            fail(f"{name} differs ({before[name]:g} vs {after[name]:g}) - {reason}")
 
     for name in HARNESSES[before_harness].get("must_be_set", ()):
         for label in ("before", "after"):

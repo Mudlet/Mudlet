@@ -821,6 +821,12 @@ private slots:
         // difference between two builds means they did not draw the same thing.
         emitMetric("display_rows_per_paint", static_cast<qint64>(rows));
         emitMetric("display_cols_per_paint", static_cast<qint64>(pane->getColumnCount()));
+        // Not the workload but the surface under it, and an invariant for the
+        // same reason: every display timing below is paid per device pixel,
+        // while every other invariant here is logical and so identical at any
+        // scale factor. Without this a run at 1.0 and a run at 2.0 agree on
+        // everything the script checks and disagree on every paint timing.
+        emitMetric("display_device_pixel_ratio", pane->devicePixelRatioF());
         // Lines/s the display can sustain, directly comparable to text_lines_per_sec.
         emitMetric("display_lines_per_sec", paintsPerSec * rows);
     }
@@ -882,8 +888,9 @@ private slots:
     // Its guard on the cached screen is separate from the scroll shortcut's, and
     // when it rejects the cache the repaint falls through to that shortcut, which
     // blits and then redraws nothing - so the damaged band is never drawn and the
-    // paint gets FASTER. Issue #10341 is that, unfixed on development as this
-    // lands, and both benchmarks above stay flat through it.
+    // paint gets FASTER. Issue #10341 was exactly that, and both benchmarks above
+    // stayed flat through it - which is why this one exists. Reproducing it now
+    // means reverting #10343 and running at a fractional QT_SCALE_FACTOR.
     void benchDisplayOverlay()
     {
         Host* host = startProfile();

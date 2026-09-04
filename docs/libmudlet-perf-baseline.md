@@ -116,6 +116,7 @@ METRIC display_paints_per_sec ...
 METRIC display_paint_ms ...
 METRIC display_rows_per_paint ...
 METRIC display_cols_per_paint ...
+METRIC display_device_pixel_ratio ...
 METRIC display_lines_per_sec ...
 METRIC display_tail_small_paint_ms ...
 METRIC display_tail_large_paint_ms ...
@@ -221,15 +222,21 @@ than silently passing whenever it cannot trust the comparison:
 
 - an invariant (`text_corpus_lines`, `text_corpus_bytes`, `trigger_count`,
   `build_asan`, `corpus_version`, `display_rows_per_paint`,
-  `display_cols_per_paint`, `display_tail_small_cells`,
-  `display_tail_large_cells`, `display_overlay_small_cells`,
-  `display_overlay_large_cells`, `display_overlay_cache_reused`) is missing from
+  `display_cols_per_paint`, `display_device_pixel_ratio`,
+  `display_tail_small_cells`, `display_tail_large_cells`,
+  `display_overlay_small_cells`, `display_overlay_large_cells`,
+  `display_overlay_cache_reused`) is missing from
   either run, or differs between them - the two runs used different corpora,
-  trigger sets, screen geometry or build
+  trigger sets, screen geometry, display scaling or build
   flavours. `build_asan` specifically stops an ASan build being compared against
   a release build, `corpus_version` stops a comparison across a retuned corpus,
   and the `display_*` cell and geometry invariants stop one across a
-  differently-sized screen. `display_overlay_cache_reused` is the odd one out and
+  differently-sized screen. `display_device_pixel_ratio` stops one across a
+  different scale factor: the paint timings are paid per device pixel while every
+  other display invariant is logical, so without it a 1.0 run against a 2.0 run
+  agrees on every check and reports the ratio as a paint regression - measured
+  here as `display_paint_ms` +55% and `display_tail_large_paint_ms` +194% with no
+  code change at all. `display_overlay_cache_reused` is the odd one out and
   is explained under the display benchmark below.
   Because the invariants come from several slots, compare **full runs**: a
   single-slot run on both sides is refused for the missing ones.
@@ -317,6 +324,15 @@ speedup.
 It is checked against 1, not merely for agreement between the two runs: two
 builds that have both lost the path are equal, not comparable. The benchmark also
 warns on stderr naming the window that lost it, so a single run says so too.
+
+What it does **not** see is #10341 at the ratio the invocation above actually
+runs at. That truncation only loses the branch where the device pixel product
+comes out fractional, so the buggy build reads 1 at 1.0 - which is what
+`QT_QPA_PLATFORM=offscreen` gives - and 0 at 1.25 or 1.75. Reproducing that class
+of bug takes a fractional `QT_SCALE_FACTOR`, and since `REGISTER_PERF_BENCHMARK`
+is off by default, nothing runs this unattended to catch one either way. It costs
+the metric less than it sounds: any *other* way of losing the branch reads 0 at
+any ratio, which is most of what it guards.
 
 The `display_*` metrics are reported, not gated by default. They measure at
 least as tightly as the text metrics do on an unloaded machine, so gate on them
