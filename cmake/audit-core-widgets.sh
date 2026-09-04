@@ -33,7 +33,8 @@
 # anywhere in the file) do not agree about membership, and a file that joins
 # mudlet_core by one of those routes is scanned by nobody. An entry *inside* the
 # parsed blocks that cannot be reduced to a bare filename is warned about rather
-# than skipped, which covers the generator-expression and quoted-path cases.
+# than skipped, as is a target_sources() whose target cannot be resolved, which
+# covers the generator-expression, quoted-path and unknown-target cases.
 #
 # Usage:
 #   cmake/audit-core-widgets.sh                 # print the Markdown report, exit 0
@@ -49,10 +50,12 @@
 #   --src DIR          Mudlet src/ dir (default: derived from this script's location).
 #   -h, --help         show this help.
 #
-# The ratchet itself is the CoreWidgetsAuditTest ctest case
-# (test/ci/core-widgets-audit-test.sh), which runs this script and compares what it
-# measures against docs/libmudlet-widgets-report.md and the baseline. This script
-# only measures and reports; it does not gate.
+# Nothing gates on this count yet. Steps 3-10 of the refactor legitimately move
+# files between the core and app targets, so an intermediate step can correctly
+# raise it, and the audit only becomes a CI gate once the count reaches 0 (#9516).
+# Until then the committed report and baseline are regenerated in each libmudlet PR
+# and drift shows up in the diff - which is why this script must never report a
+# wrong number quietly.
 #
 # Regenerate the committed artefacts - baseline first, so the report records it:
 #   bash cmake/audit-core-widgets.sh --count > cmake/core-widgets-baseline.txt
@@ -76,7 +79,7 @@ BASELINE_FILE="$SCRIPT_DIR/core-widgets-baseline.txt"
 err() { printf '%s: %s\n' "$PROG" "$1" >&2; }
 
 usage() {
-  sed -n '2,59p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '2,61p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 while [ $# -gt 0 ]; do
@@ -206,14 +209,52 @@ CLASS_SET_SIZE=$(wc -l < "$SET_CLASSES" | tr -d ' ')
 # lines, so each is tracked rather than assumed to be single-line.
 awk '
   BEGIN { srcprefix = "${CMAKE_CURRENT_SOURCE_DIR}/" }
+  # LIB_MUDLET_TARGET is set in the parent CMakeLists.txt, so it is the one name
+  # the single-line set() harvest below cannot resolve for itself.
+  function resolveTarget(name,   v) {
+    if (name !~ /^[$][{][A-Za-z_][A-Za-z0-9_]*[}]$/) return name
+    v = substr(name, 3, length(name) - 3)
+    if (v in var) return var[v]
+    if (v == "LIB_MUDLET_TARGET") return "mudlet_core"
+    return ""
+  }
+  function targetSeen(name,   t) {
+    tgtpending = 0
+    t = resolveTarget(name)
+    if (t == "mudlet_core") { intgt = 1; return }
+    if (t != "") return
+    printf "audit-core-widgets: cannot tell which target this target_sources() adds to, so nothing scanned its files: %s\n", (name == "" ? "(no target named)" : name) > "/dev/stderr"
+  }
   {
     sub(/\r$/, "")               # tolerate CRLF checkouts
     sub(/#.*/, "")               # a comment cannot contribute or terminate a block
+    if (match($0, /^[ \t]*set\([ \t]*/)) {
+      vrest = substr($0, RSTART + RLENGTH)
+      if (match(vrest, /^[A-Za-z_][A-Za-z0-9_]*/)) {
+        vname = substr(vrest, 1, RLENGTH)
+        vval = substr(vrest, RLENGTH + 1)
+        sub(/\)[ \t]*$/, "", vval)
+        sub(/^[ \t]+/, "", vval); sub(/[ \t]+$/, "", vval); gsub(/"/, "", vval)
+        if (vval != "" && vval !~ /[ \t${}]/) var[vname] = vval
+      }
+    }
     if ($0 ~ /^[ \t]*set\(mudlet_(SRCS|HDRS)([ \t]|$)/) inblk=1
     if ($0 ~ /list\(APPEND[ \t]+mudlet_(SRCS|HDRS)([ \t]|\)|$)/) inapp=1
     # Only the library target. target_sources() on the executable adds files that
     # are not part of mudlet_core, so counting them would inflate the denominator.
-    if ($0 ~ /target_sources[ \t]*\(/ && (index($0, "${LIB_MUDLET_TARGET}") || index($0, "mudlet_core"))) intgt=1
+    # CMake allows the target name on a line of its own after "target_sources(", and
+    # that spelling used to match nothing here: the file joined mudlet_core with its
+    # widget use uncounted and the run stayed silent, so the name is carried across
+    # lines now.
+    if (match($0, /target_sources[ \t]*\(/)) {
+      trest = substr($0, RSTART + RLENGTH)
+      sub(/^[ \t]+/, "", trest)
+      if (trest == "") tgtpending=1
+      else { split(trest, tname, /[ \t)]/); targetSeen(tname[1]) }
+    } else if (tgtpending) {
+      trest = $0; sub(/^[ \t]+/, "", trest)
+      if (trest != "") { split(trest, tname, /[ \t)]/); targetSeen(tname[1]) }
+    }
     if (inblk || inapp || intgt) {
       line=$0; gsub(/[()]/," ",line)
       n=split(line,a,/[ \t]+/)
@@ -236,7 +277,7 @@ awk '
           printf "audit-core-widgets: not a bare filename, so nothing scanned it: %s\n", a[i] > "/dev/stderr"
       }
     }
-    if ($0 ~ /\)/) { inblk=0; inapp=0; intgt=0 }
+    if ($0 ~ /\)/) { inblk=0; inapp=0; intgt=0; tgtpending=0 }
   }
 ' "$CMAKE_FILE" | sort -uf > "$FILE_LIST"
 
@@ -288,7 +329,11 @@ RESULTS="$TMPDIR_AUDIT/results.txt"
     sub(/\/\/.*$/,"",line)
     if (line ~ /^[ \t]*#[ \t]*include[ \t]*[<"]/) {
       s=line; sub(/^[^<"]*[<"]/,"",s); sub(/[>"].*$/,"",s)
-      if (s=="QtWidgets" || s ~ /^QtWidgets\//) { inc[FILENAME]++; mark(FILENAME, "QtWidgets/" s) }
+      if (s=="QtWidgets") { inc[FILENAME]++; mark(FILENAME, "QtWidgets") }
+      # The prefix is stripped before being re-added: an include that already spells
+      # it out was recorded as QtWidgets/QtWidgets/QWidget, which no reader or
+      # parser expects and regenerating only reproduced.
+      else if (s ~ /^QtWidgets\//) { inc[FILENAME]++; sub(/^QtWidgets\//, "", s); mark(FILENAME, "QtWidgets/" s) }
       else if (s ~ /\//) { }
       else if (s in W) { inc[FILENAME]++; mark(FILENAME, s) }
       next
@@ -392,9 +437,10 @@ bash cmake/audit-core-widgets.sh --count > cmake/core-widgets-baseline.txt
 bash cmake/audit-core-widgets.sh > docs/libmudlet-widgets-report.md
 \`\`\`
 
-**Guard:** the \`CoreWidgetsAuditTest\` ctest case (\`test/ci/core-widgets-audit-test.sh\`)
-fails when a file gains a Qt Widgets dependency it does not have in the offending
-list below, so this report cannot silently fall out of date.
+Nothing gates on this count yet: steps 3-10 of the refactor legitimately move files
+between the core and app targets, so an intermediate step can correctly raise it.
+The audit becomes a CI gate once the count reaches **0**. Until then this report and
+the baseline are regenerated in each libmudlet PR, so drift shows up in the diff.
 
 ## Summary
 

@@ -33,9 +33,10 @@ bash cmake/audit-core-widgets.sh --count > cmake/core-widgets-baseline.txt
 bash cmake/audit-core-widgets.sh > docs/libmudlet-widgets-report.md
 ```
 
-**Guard:** the `CoreWidgetsAuditTest` ctest case (`test/ci/core-widgets-audit-test.sh`)
-fails when a file gains a Qt Widgets dependency it does not have in the offending
-list below, so this report cannot silently fall out of date.
+Nothing gates on this count yet: steps 3-10 of the refactor legitimately move files
+between the core and app targets, so an intermediate step can correctly raise it.
+The audit becomes a CI gate once the count reaches **0**. Until then this report and
+the baseline are regenerated in each libmudlet PR, so drift shows up in the diff.
 
 ## Summary
 
