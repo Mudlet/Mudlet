@@ -110,6 +110,12 @@ TMainConsole::~TMainConsole()
     }
     mSubCommandLineMap.clear();
 
+    // Labels carry a destroyed() handler of the same shape, so the same window is
+    // unsafe for them and the same sweep closes it.
+    for (auto label : findChildren<TLabel*>()) {
+        disconnect(label, &QObject::destroyed, this, nullptr);
+    }
+
     // Neither is a child of this console: the map dock is reparented onto the main
     // window by addDockWidget(), and the unpacking dialog is parentless. So neither
     // dies with the console automatically.
@@ -373,14 +379,15 @@ void TMainConsole::resetMainConsole()
         itSubConsole.remove();
     }
 
-    QMutableMapIterator<QString, TLabel*> itLabel(mLabelMap);
-    while (itLabel.hasNext()) {
-        itLabel.next();
-        if (itLabel.value()->mpMovie) {
-            mpHost->getGifTracker()->unregisterGif(itLabel.value()->mpMovie);
+    const QList<QString> labelNames = mLabelMap.keys();
+    for (const auto& labelName : labelNames) {
+        auto label = mLabelMap.value(labelName);
+        mpHost->windowRegistry().deregisterLabel(labelName, &label->model());
+        if (label->mpMovie) {
+            mpHost->getGifTracker()->unregisterGif(label->mpMovie);
         }
-        itLabel.value()->deleteLater();
-        itLabel.remove();
+        deregisterLabelWidget(label);
+        label->deleteLater();
     }
 
     QMutableMapIterator<QString, TScrollBox*> itScrollBox(mScrollBoxMap);
@@ -463,7 +470,7 @@ TScrollBox* TMainConsole::createScrollBox(const QString& windowname, const QStri
     return nullptr;
 }
 
-TLabel* TMainConsole::createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough)
+bool TMainConsole::createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough)
 {
     //if pW put Label in Userwindow
     auto pL = mLabelMap.value(name);
@@ -477,7 +484,7 @@ TLabel* TMainConsole::createLabel(const QString& windowname, const QString& name
         } else {
             pL = new TLabel(mpHost, name, mpMainFrame);
         }
-        mLabelMap[name] = pL;
+        registerLabelWidget(name, pL);
         pL->setAutoFillBackground(fillBackground);
         pL->setClickThrough(clickThrough);
         pL->resize(width, height);
@@ -491,10 +498,10 @@ TLabel* TMainConsole::createLabel(const QString& windowname, const QString& name
         // rather than kept. A script wanting a transparent label has to say so with
         // setBackgroundColor(name, 0, 0, 0, 0).
         mpHost->setBackgroundColor(name, 32, 32, 32, 255);
-        return pL;
+        return true;
     }
 
-    return nullptr;
+    return false;
 }
 
 std::pair<bool, QString> TMainConsole::deleteLabel(const QString& name)
@@ -503,8 +510,10 @@ std::pair<bool, QString> TMainConsole::deleteLabel(const QString& name)
         return {false, QLatin1String("a label cannot have an empty string as its name")};
     }
 
-    auto pL = mLabelMap.take(name);
+    auto pL = mLabelMap.value(name);
     if (pL) {
+        mpHost->windowRegistry().deregisterLabel(name, &pL->model());
+        deregisterLabelWidget(pL);
         if (pL->mpMovie) {
             mpHost->getGifTracker()->unregisterGif(pL->mpMovie);
         }
@@ -839,6 +848,36 @@ void TMainConsole::registerSubCommandLine(const QString& name, TCommandLine* pCo
     });
 }
 
+void TMainConsole::registerLabelWidget(const QString& name, TLabel* pLabel)
+{
+    mLabelMap[name] = pLabel;
+    mpHost->windowRegistry().registerLabel(name, &pLabel->model());
+
+    // A label created into a user window or a scroll box is a child widget of it,
+    // so deleting that window destroys the label with deleteLabel() never called.
+    // ~TLabel takes the model out of the window registry; without this the map
+    // beside it, which holds no QPointers, keeps an entry that every by-name label
+    // call Host forwards through this class then reads as a live widget.
+    connect(pLabel, &QObject::destroyed, this, [this, pLabel]() {
+        deregisterLabelWidget(pLabel);
+    });
+}
+
+void TMainConsole::deregisterLabelWidget(TLabel* pLabel)
+{
+    // Reached from destroyed() as well, by which point ~TLabel has run and the
+    // label's model has gone - so nothing here may read through pLabel.
+    //
+    // This is the only destroyed() connection made from a label to this console,
+    // so severing all of them is severing just that one.
+    disconnect(pLabel, &QObject::destroyed, this, nullptr);
+    // Erase by value: destroyed() names the widget, not the name it was filed
+    // under, and a replacement filed under that name must be left in place.
+    mLabelMap.removeIf([pLabel](const auto& it) {
+        return it.value() == pLabel;
+    });
+}
+
 void TMainConsole::deregisterSubCommandLine(TCommandLine* pCommandLine)
 {
     // This is the only destroyed() connection made from a command line to this
@@ -878,45 +917,209 @@ std::pair<bool, QString> TMainConsole::createTextBox(const QString& windowname, 
     return {false, QLatin1String("couldn't create text edit")};
 }
 
-bool TMainConsole::setBackgroundImage(const QString& name, const QString& path)
+bool TMainConsole::setLabelClickThrough(const QString& name, bool clickThrough)
 {
     auto pL = mLabelMap.value(name);
-    if (pL) {
-        const QPixmap bgPixmap(path);
-        pL->setPixmap(bgPixmap);
-        return true;
+    if (!pL) {
+        return false;
     }
-    return false;
+    pL->setClickThrough(clickThrough);
+    return true;
 }
 
-// Does NOT act on the TMainConsole itself:
-bool TMainConsole::setBackgroundColor(const QString& name, int r, int g, int b, int alpha)
+bool TMainConsole::setLabelLinkStyle(const QString& name, const QString& linkColor, const QString& linkVisitedColor, bool underline)
 {
-    auto pC = mSubConsoleMap.value(name);
     auto pL = mLabelMap.value(name);
-    if (pC) {
-        QPalette mainPalette;
-        mainPalette.setColor(QPalette::Window, QColor(r, g, b, alpha));
-        pC->setPalette(mainPalette);
-        pC->mUpperPane->mBgColor = QColor(r, g, b, alpha);
-        pC->mLowerPane->mBgColor = QColor(r, g, b, alpha);
-        // update the display properly when color selections change.
-        pC->mUpperPane->updateScreenView();
-        pC->mUpperPane->forceUpdate();
-        if (!pC->mUpperPane->mIsTailMode) {
-            // The upper pane having mIsTailMode true means lower pane is hidden
-            pC->mLowerPane->updateScreenView();
-            pC->mLowerPane->forceUpdate();
-        }
-        return true;
+    if (!pL) {
+        return false;
     }
-    if (pL) {
-        QPalette mainPalette;
-        mainPalette.setColor(QPalette::Window, QColor(r, g, b, alpha));
-        pL->setPalette(mainPalette);
-        return true;
+    pL->setLinkStyle(linkColor, linkVisitedColor, underline);
+    return true;
+}
+
+bool TMainConsole::resetLabelLinkStyle(const QString& name)
+{
+    auto pL = mLabelMap.value(name);
+    if (!pL) {
+        return false;
     }
-    return false;
+    pL->resetLinkStyle();
+    return true;
+}
+
+bool TMainConsole::clearLabelVisitedLinks(const QString& name)
+{
+    auto pL = mLabelMap.value(name);
+    if (!pL) {
+        return false;
+    }
+    pL->clearVisitedLinks();
+    return true;
+}
+
+bool TMainConsole::showLabel(const QString& name)
+{
+    auto pL = mLabelMap.value(name);
+    if (!pL) {
+        return false;
+    }
+    pL->show();
+    return true;
+}
+
+bool TMainConsole::hideLabel(const QString& name)
+{
+    auto pL = mLabelMap.value(name);
+    if (!pL) {
+        return false;
+    }
+    pL->hide();
+    return true;
+}
+
+bool TMainConsole::resizeLabel(const QString& name, int width, int height)
+{
+    auto pL = mLabelMap.value(name);
+    if (!pL) {
+        return false;
+    }
+    pL->resize(width, height);
+    return true;
+}
+
+bool TMainConsole::moveLabel(const QString& name, int x, int y)
+{
+    auto pL = mLabelMap.value(name);
+    if (!pL) {
+        return false;
+    }
+    pL->move(x, y);
+    return true;
+}
+
+// Resolves the destination window the same way Host::setWindow() does for the
+// elements it moves itself, so the two have to be kept in step.
+bool TMainConsole::reparentLabel(const QString& windowname, const QString& name, int x, int y, bool show)
+{
+    auto pL = mLabelMap.value(name);
+    if (!pL) {
+        return false;
+    }
+
+    QWidget* pW = mpMainFrame;
+    if (auto pD = mDockWidgetMap.value(windowname)) {
+        pW = pD->widget();
+    }
+    if (auto pSW = mScrollBoxMap.value(windowname)) {
+        pW = pSW->widget();
+    }
+
+    pL->setParent(pW);
+    pL->move(x, y);
+    if (show) {
+        pL->show();
+    }
+    return true;
+}
+
+bool TMainConsole::setLabelText(const QString& name, const QString& text)
+{
+    auto pL = mLabelMap.value(name);
+    if (!pL) {
+        return false;
+    }
+    pL->setText(text);
+    return true;
+}
+
+std::pair<bool, QString> TMainConsole::setLabelMovie(const QString& name, const QString& moviePath)
+{
+    auto pL = mLabelMap.value(name);
+    if (!pL) {
+        return {false, qsl("label '%1' does not exist").arg(name)};
+    }
+
+    // The file is read through a throwaway QMovie: the label's own must not take
+    // the path, and the gif tracker must not be given a movie to count, before
+    // the file is known to be one
+    if (const QMovie candidate(moviePath); !candidate.isValid()) {
+        return {false, qsl("no valid movie found at '%1'").arg(moviePath)};
+    }
+
+    auto myMovie = pL->mpMovie;
+    if (!myMovie) {
+        myMovie = new QMovie();
+        mpHost->getGifTracker()->registerGif(myMovie);
+        myMovie->setCacheMode(QMovie::CacheAll);
+        pL->mpMovie = myMovie;
+        myMovie->setParent(pL);
+    }
+
+    myMovie->setFileName(moviePath);
+    myMovie->stop();
+    pL->setMovie(myMovie);
+    myMovie->start();
+    return {true, QString()};
+}
+
+bool TMainConsole::setLabelBackgroundColor(const QString& name, const QColor& color)
+{
+    auto pL = mLabelMap.value(name);
+    if (!pL) {
+        return false;
+    }
+    pL->setBackgroundColor(color);
+    return true;
+}
+
+std::optional<QColor> TMainConsole::getLabelBackgroundColor(const QString& name) const
+{
+    auto pL = mLabelMap.value(name);
+    if (!pL) {
+        return {};
+    }
+    // Answered from the palette, as this API always has; TLabel re-stamps it with
+    // the last set colour across restyles, so a caller's own background-color
+    // stylesheet can paint something this does not report
+    return {pL->palette().color(QPalette::Window)};
+}
+
+bool TMainConsole::setLabelBackgroundImage(const QString& name, const QString& path)
+{
+    auto pL = mLabelMap.value(name);
+    if (!pL) {
+        return false;
+    }
+    pL->setPixmap(QPixmap(path));
+    return true;
+}
+
+bool TMainConsole::resetLabelBackgroundImage(const QString& name)
+{
+    auto pL = mLabelMap.value(name);
+    if (!pL) {
+        return false;
+    }
+    pL->clear();
+    return true;
+}
+
+std::optional<QRect> TMainConsole::getLabelGeometry(const QString& name) const
+{
+    auto pL = mLabelMap.value(name);
+    if (!pL) {
+        return {};
+    }
+    return {QRect(pL->pos(), pL->size())};
+}
+
+std::optional<bool> TMainConsole::getLabelVisible(const QString& name) const
+{
+    auto pL = mLabelMap.value(name);
+    if (!pL) {
+        return {};
+    }
+    return {pL->isVisibleTo(this)};
 }
 
 bool TMainConsole::raiseWindow(const QString& name)

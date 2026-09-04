@@ -18,6 +18,7 @@
  ***************************************************************************/
 
 #include <QFile>
+#include <QImage>
 #include <QRegularExpression>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
@@ -29,9 +30,13 @@
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TConsoleModel.h"
+#include "TDockWidget.h"
+#include "TLabel.h"
+#include "TLabelModel.h"
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
 #include "TTrigger.h"
+#include "TWindowRegistry.h"
 #include "TelnetServerStub.h"
 #include "XMLimport.h"
 #include "ctelnet.h"
@@ -1012,6 +1017,381 @@ noViewSpellReport = table.concat(noViewSpellProblems, '; ')
         QVERIFY2(joinedBuffer(model->buffer).contains(longLine), "Rewrapping the model's buffer lost the line's text.");
     }
 
+    // A label's core-side handle is its TLabelModel in the profile's window
+    // registry. Core has no widget map to consult, so a creation that filled
+    // only the console's own map would leave the registry-answered lookups in
+    // Host blind to the label.
+    void test_creatingALabelRegistersItsModel()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        const QString labelName = qsl("registryCreatedLabel");
+        QVERIFY2(!host->windowRegistry().hasLabel(labelName), "The registry claims a label that was never created.");
+
+        const auto [created, message] = host->createLabel(QString(), labelName, 10, 20, 100, 50, true, false);
+        QVERIFY2(created, qPrintable(message));
+
+        TLabel* widget = host->mpConsole->labelWidget(labelName);
+        QVERIFY2(widget, "Creating a label left the console's own widget map empty.");
+
+        QVERIFY2(host->windowRegistry().hasLabel(labelName), "Creating a label registered no model in the profile's window registry.");
+        QCOMPARE(host->windowRegistry().labelModel(labelName), &widget->model());
+        QCOMPARE(widget->model().mName, labelName);
+        QCOMPARE(widget->model().mpHost.data(), host);
+
+        QCOMPARE(&widget->mName, &widget->model().mName);
+        QCOMPARE(&widget->mClickFunction, &widget->model().mClickFunction);
+        QCOMPARE(&widget->mLinkColor, &widget->model().mLinkColor);
+        QCOMPARE(&widget->mVisitedLinks, &widget->model().mVisitedLinks);
+
+        // The callback registry indexes are the model's, so the registry entry
+        // is the whole of what a callback setter needs - no widget in between
+        runLua(host, qsl("setLabelClickCallback('%1', function() end)\n").arg(labelName));
+        QVERIFY2(host->windowRegistry().labelModel(labelName)->mClickFunction != 0, "Registering a click callback left nothing on the label's model.");
+    }
+
+    // Destroying a label has to take its model back out, or the name stays
+    // taken: the refusal to create a second label of the same name is answered
+    // from the registry, as is every other by-name lookup in Host.
+    void test_deletingALabelDeregistersItsModel()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        const QString labelName = qsl("registryDeletedLabel");
+        const auto [created, message] = host->createLabel(QString(), labelName, 0, 0, 40, 40, true, false);
+        QVERIFY2(created, qPrintable(message));
+        const TLabelModel* firstModel = host->windowRegistry().labelModel(labelName);
+        QVERIFY2(firstModel, "Creating a label registered no model in the profile's window registry.");
+        QPointer<TLabel> firstWidget = host->mpConsole->labelWidget(labelName);
+        QVERIFY2(firstWidget, "Creating a label left the console's own widget map empty.");
+
+        const auto [deleted, deleteMessage] = host->mpConsole->deleteLabel(labelName);
+        QVERIFY2(deleted, qPrintable(deleteMessage));
+
+        QVERIFY2(!host->windowRegistry().hasLabel(labelName), "Deleting a label left its model in the profile's window registry.");
+        QVERIFY2(!host->windowRegistry().labelModel(labelName), "Deleting a label left a stale model handle in the profile's window registry.");
+        QVERIFY2(!host->windowType(labelName).has_value(), "Host still reports a window type for the deleted label.");
+
+        const auto [recreated, recreateMessage] = host->createLabel(QString(), labelName, 0, 0, 40, 40, true, false);
+        QVERIFY2(recreated, qPrintable(qsl("The name of a deleted label could not be used again: %1").arg(recreateMessage)));
+        const TLabelModel* secondModel = host->windowRegistry().labelModel(labelName);
+        QVERIFY2(secondModel, "The replacement label registered no model.");
+        QVERIFY2(secondModel != firstModel, "The replacement label registered the model of the one it replaced.");
+
+        // deleteLabel() only defers the widget's destruction, so the first
+        // label's destructor runs from here - after its replacement has already
+        // claimed the name. Deregistration is identity-checked for exactly this,
+        // and that destruction is asserted rather than waited on, so the checks
+        // below cannot pass by never having reached it.
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        QVERIFY2(firstWidget.isNull(), "The deleted label was never destroyed, so nothing below tests the identity check.");
+        QVERIFY2(host->windowRegistry().labelModel(labelName) == secondModel, "The deferred destruction of a deleted label evicted the replacement that had taken its name.");
+        QVERIFY2(host->mpConsole->labelWidget(labelName), "The replacement label lost its widget.");
+    }
+
+    // Resetting the profile destroys every label the console built without going
+    // anywhere near deleteLabel(), so that second destruction path has to clear
+    // the registry as well.
+    void test_resettingTheMainConsoleDeregistersItsLabels()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        const QString labelName = qsl("registryResetLabel");
+        const auto [created, message] = host->createLabel(QString(), labelName, 0, 0, 40, 40, true, false);
+        QVERIFY2(created, qPrintable(message));
+        QVERIFY2(host->windowRegistry().hasLabel(labelName), "Creating a label registered no model in the profile's window registry.");
+
+        host->mpConsole->resetMainConsole();
+
+        QVERIFY2(!host->windowRegistry().hasLabel(labelName), "Resetting the main console left its labels in the profile's window registry.");
+        const auto [recreated, recreateMessage] = host->createLabel(QString(), labelName, 0, 0, 40, 40, true, false);
+        QVERIFY2(recreated, qPrintable(qsl("The name of a label the reset destroyed could not be used again: %1").arg(recreateMessage)));
+    }
+
+    // Closing the profile takes the console down and every label with it, as Qt
+    // children, without anything having emptied the console's map first. Host
+    // outlives all of that, so a label that goes this way has to take itself out
+    // of the registry or leave a handle on a freed model behind.
+    void test_destroyingTheViewDeregistersItsLabels()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        const QString labelName = qsl("registryOrphanedLabel");
+        const auto [created, message] = host->createLabel(QString(), labelName, 0, 0, 40, 40, true, false);
+        QVERIFY2(created, qPrintable(message));
+        QVERIFY2(host->windowRegistry().hasLabel(labelName), "Creating a label registered no model in the profile's window registry.");
+
+        destroyTheView(host);
+
+        QVERIFY2(!host->windowRegistry().hasLabel(labelName), "Destroying the console left its labels in the profile's window registry, pointing at models that have gone.");
+        QVERIFY2(!host->windowRegistry().labelModel(labelName), "Destroying the console left a handle on a freed label model in the profile's window registry.");
+    }
+
+    // A label created into a user window is a child widget of that window's dock,
+    // so deleting the window destroys the label without deleteLabel() ever
+    // running. Both halves of the pair have to notice: the console's map holds
+    // raw pointers, so an entry left behind is read as a live widget by every
+    // by-name setter Host still forwards through the view.
+    void test_deletingAUserWindowTakesItsLabelsWithIt()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        const QString windowName = qsl("registryParentWindow");
+        const QString labelName = qsl("registryChildLabel");
+        runLua(host, qsl("openUserWindow('%1')\n").arg(windowName));
+        const auto [created, message] = host->createLabel(windowName, labelName, 0, 0, 10, 10, true, false);
+        QVERIFY2(created, qPrintable(message));
+        QPointer<TLabel> widget = host->mpConsole->labelWidget(labelName);
+        QVERIFY2(widget, "Creating a label into a user window left the console's own widget map empty.");
+
+        const auto [deleted, deleteMessage] = host->mpConsole->deleteMiniConsole(windowName);
+        QVERIFY2(deleted, qPrintable(deleteMessage));
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        QVERIFY2(widget.isNull(), "Deleting the user window did not destroy the label it contained, so the checks below prove nothing.");
+
+        QVERIFY2(!host->windowRegistry().hasLabel(labelName), "A label destroyed with its parent window stayed in the profile's window registry.");
+        QVERIFY2(!host->mpConsole->labelWidget(labelName), "A label destroyed with its parent window left a dangling widget in the console's map.");
+        // The call that reads the map entry and dies in the freed widget
+        QVERIFY2(!host->setClickthrough(labelName, true), "setClickthrough reached a label that had been destroyed with its parent window.");
+
+        // The name has to be usable again, not refused as still taken
+        const auto [recreated, recreateMessage] = host->createLabel(QString(), labelName, 0, 0, 10, 10, true, false);
+        QVERIFY2(recreated, qPrintable(qsl("The name of a label destroyed with its window could not be used again: %1").arg(recreateMessage)));
+    }
+
+    // A scroll box is the other thing a label can be created into, and it is torn
+    // down by a different call, so it needs its own pass over the same ground.
+    void test_deletingAScrollBoxTakesItsLabelsWithIt()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        const QString scrollBoxName = qsl("registryParentScrollBox");
+        const QString labelName = qsl("registryScrollBoxChildLabel");
+        runLua(host, qsl("createScrollBox('%1', 0, 0, 200, 200)\n").arg(scrollBoxName));
+        const auto [created, message] = host->createLabel(scrollBoxName, labelName, 0, 0, 10, 10, true, false);
+        QVERIFY2(created, qPrintable(message));
+        QPointer<TLabel> widget = host->mpConsole->labelWidget(labelName);
+        QVERIFY2(widget, "Creating a label into a scroll box left the console's own widget map empty.");
+
+        const auto [deleted, deleteMessage] = host->mpConsole->deleteScrollBox(scrollBoxName);
+        QVERIFY2(deleted, qPrintable(deleteMessage));
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        QVERIFY2(widget.isNull(), "Deleting the scroll box did not destroy the label it contained, so the checks below prove nothing.");
+
+        QVERIFY2(!host->windowRegistry().hasLabel(labelName), "A label destroyed with its scroll box stayed in the profile's window registry.");
+        QVERIFY2(!host->mpConsole->labelWidget(labelName), "A label destroyed with its scroll box left a dangling widget in the console's map.");
+        QVERIFY2(!host->setClickthrough(labelName, true), "setClickthrough reached a label that had been destroyed with its scroll box.");
+    }
+
+    // The console's own labels die after its members have, so their destroyed()
+    // handlers would run against a map that has already gone. ~TMainConsole
+    // severs them first, and the console's own destroyed() - emitted before Qt
+    // deletes the children - is the one place that can still be asked.
+    void test_destroyingTheViewSeversItsLabelDestroyedHandlers()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        const QString labelName = qsl("registrySweptLabel");
+        const auto [created, message] = host->createLabel(QString(), labelName, 0, 0, 10, 10, true, false);
+        QVERIFY2(created, qPrintable(message));
+        TLabel* label = host->mpConsole->labelWidget(labelName);
+        QVERIFY2(label, "Creating a label left the console's own widget map empty.");
+
+        TMainConsole* console = host->mpConsole;
+        bool consoleWasDestroyed = false;
+        bool alreadySevered = false;
+        const auto probe = QObject::connect(console, &QObject::destroyed, [&consoleWasDestroyed, &alreadySevered, label, console]() {
+            consoleWasDestroyed = true;
+            alreadySevered = !QObject::disconnect(label, &QObject::destroyed, console, nullptr);
+        });
+
+        destroyTheView(host);
+        // The lambda writes to this frame, so it must not outlive it
+        QObject::disconnect(probe);
+
+        QVERIFY2(consoleWasDestroyed, "The console never emitted destroyed(), so the check below was never made.");
+        QVERIFY2(alreadySevered, "A label of the console still had its destroyed() handler attached when the console went, so it would have run against a destroyed map.");
+    }
+
+    // Host answers "is there a label called this, and what is it" from the
+    // registry alone. Filling the console's widget map without registering the
+    // model has to leave every one of these unable to find the label.
+    void test_coreLabelLookupsReadTheRegistry()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        const QString labelName = qsl("registryLookupLabel");
+        const QString absentName = qsl("registryNoSuchLabel");
+        const auto [created, message] = host->createLabel(QString(), labelName, 10, 20, 100, 50, true, false);
+        QVERIFY2(created, qPrintable(message));
+
+        QCOMPARE(host->windowType(labelName), std::optional<QString>(qsl("label")));
+        QCOMPARE(host->windowGeometry(labelName), std::optional<QRect>(QRect(10, 20, 100, 50)));
+        QCOMPARE(host->windowVisible(labelName), std::optional<bool>(true));
+
+        // The name is taken, and both refusals are the registry's answer
+        const auto [second, secondMessage] = host->createLabel(QString(), labelName, 0, 0, 10, 10, true, false);
+        QVERIFY2(!second, "A second label was created under a name already in use.");
+        QCOMPARE(secondMessage, qsl("label '%1' already exists").arg(labelName));
+        const auto [window, windowMessage] = host->openWindow(labelName, false, false, qsl("f"));
+        QVERIFY2(!window, "A user window was created under the name of an existing label.");
+        QCOMPARE(windowMessage, qsl("label with the name '%1' already exists").arg(labelName));
+
+        // setMovie() decides whether the label is there before it ever looks at
+        // the file, so the two refusals tell the registry hit from the miss
+        const QString absentMovie = qsl("no-such-movie.gif");
+        const auto [movie, movieMessage] = host->setMovie(labelName, absentMovie);
+        QVERIFY2(!movie, "setMovie() accepted a file that is not there.");
+        QCOMPARE(movieMessage, qsl("no valid movie found at '%1'").arg(absentMovie));
+        const auto [strayMovie, strayMovieMessage] = host->setMovie(absentName, absentMovie);
+        QVERIFY2(!strayMovie, "setMovie() found a label that was never created.");
+        QCOMPARE(strayMovieMessage, qsl("label '%1' does not exist").arg(absentName));
+
+        // and the registry is what routes each of these to the label
+        QVERIFY2(host->hideWindow(labelName), "hideWindow() did not find the label.");
+        QVERIFY2(host->showWindow(labelName), "showWindow() did not find the label.");
+        QVERIFY2(host->moveWindow(labelName, 5, 6), "moveWindow() did not find the label.");
+        QVERIFY2(host->resizeWindow(labelName, 70, 30), "resizeWindow() did not find the label.");
+        QString imagePath = writeTestImage();
+        QVERIFY2(!imagePath.isEmpty(), "Could not write the image to hand to setBackgroundImage().");
+        QVERIFY2(host->setBackgroundImage(labelName, imagePath, 1, false), "setBackgroundImage() did not find the label.");
+        QVERIFY2(host->resetBackgroundImage(labelName, false), "resetBackgroundImage() did not find the label.");
+
+        QVERIFY2(!host->windowType(absentName).has_value(), "Host reports a window type for a label that was never created.");
+        QVERIFY2(!host->windowGeometry(absentName).has_value(), "Host reports a geometry for a label that was never created.");
+        QVERIFY2(!host->windowVisible(absentName).has_value(), "Host reports a visibility for a label that was never created.");
+        QVERIFY2(!host->showWindow(absentName), "showWindow() found a label that was never created.");
+    }
+
+    // Core reaches a label only by name: Host hands the console the name and the
+    // console resolves it against its own widget map. A forwarder that reported
+    // success without acting would leave the label untouched, so each named
+    // operation is checked on the widget rather than on its return value.
+    void test_namedLabelOpsReachTheWidget()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        const QString labelName = qsl("registryOpsLabel");
+        const auto [created, message] = host->createLabel(QString(), labelName, 10, 20, 100, 50, true, false);
+        QVERIFY2(created, qPrintable(message));
+        TLabel* widget = host->mpConsole->labelWidget(labelName);
+        QVERIFY2(widget, "Creating a label left the console's own widget map empty.");
+        QWidget* const mainParent = widget->parentWidget();
+        QVERIFY2(mainParent, "The label was created with no parent.");
+
+        QVERIFY2(host->echoWindow(labelName, qsl("registry echo")), "echoWindow() did not find the label.");
+        QCOMPARE(widget->text(), qsl("registry echo"));
+
+        QVERIFY2(host->moveWindow(labelName, 33, 44), "moveWindow() did not find the label.");
+        QCOMPARE(widget->pos(), QPoint(33, 44));
+
+        QVERIFY2(host->resizeWindow(labelName, 120, 60), "resizeWindow() did not find the label.");
+        QCOMPARE(widget->size(), QSize(120, 60));
+
+        QCOMPARE(host->windowGeometry(labelName), std::optional<QRect>(QRect(33, 44, 120, 60)));
+
+        QVERIFY2(host->hideWindow(labelName), "hideWindow() did not find the label.");
+        QVERIFY2(widget->isHidden(), "hideWindow() left the label showing.");
+        QCOMPARE(host->windowVisible(labelName), std::optional<bool>(false));
+
+        QVERIFY2(host->showWindow(labelName), "showWindow() did not find the label.");
+        QVERIFY2(!widget->isHidden(), "showWindow() left the label hidden.");
+        QCOMPARE(host->windowVisible(labelName), std::optional<bool>(true));
+
+        // setWindow() is the one named operation that has a destination to
+        // resolve as well, and the label has to end up parented to it
+        const QString userWindowName = qsl("registryOpsWindow");
+        runLua(host, qsl("openUserWindow('%1')\n").arg(userWindowName));
+        auto* dockWidget = host->mpConsole->mDockWidgetMap.value(userWindowName);
+        QVERIFY2(dockWidget, "The user window to move the label into was not created.");
+
+        const auto [moved, moveMessage] = host->setWindow(userWindowName, labelName, 5, 6, true);
+        QVERIFY2(moved, qPrintable(moveMessage));
+        QCOMPARE(widget->parentWidget(), dockWidget->widget());
+        QCOMPARE(widget->pos(), QPoint(5, 6));
+
+        const auto [movedBack, moveBackMessage] = host->setWindow(qsl("main"), labelName, 7, 8, true);
+        QVERIFY2(movedBack, qPrintable(moveBackMessage));
+        QCOMPARE(widget->parentWidget(), mainParent);
+        QCOMPARE(widget->pos(), QPoint(7, 8));
+    }
+
+    // The same for the named operations that restyle a label rather than move it.
+    void test_namedLabelStyleOpsReachTheWidget()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        const QString labelName = qsl("registryStyleLabel");
+        const auto [created, message] = host->createLabel(QString(), labelName, 10, 20, 100, 50, true, false);
+        QVERIFY2(created, qPrintable(message));
+        TLabel* widget = host->mpConsole->labelWidget(labelName);
+        QVERIFY2(widget, "Creating a label left the console's own widget map empty.");
+
+        QVERIFY2(host->setClickthrough(labelName, true), "setClickthrough() did not find the label.");
+        QVERIFY2(widget->testAttribute(Qt::WA_TransparentForMouseEvents), "setClickthrough() did not reach the widget.");
+        QVERIFY2(host->setClickthrough(labelName, false), "setClickthrough() did not find the label.");
+        QVERIFY2(!widget->testAttribute(Qt::WA_TransparentForMouseEvents), "Switching clickthrough back off did not reach the widget.");
+
+        QVERIFY2(host->setLabelStyleSheet(labelName, qsl("padding: 3px;")), "setLabelStyleSheet() did not find the label.");
+        QCOMPARE(widget->styleSheet(), qsl("padding: 3px;"));
+
+        QVERIFY2(host->setLinkStyle(labelName, qsl("#ff0000"), qsl("#00ff00"), false), "setLinkStyle() did not find the label.");
+        QCOMPARE(widget->mLinkColor, qsl("#ff0000"));
+        QCOMPARE(widget->mLinkVisitedColor, qsl("#00ff00"));
+        QVERIFY2(!widget->mLinkUnderline, "setLinkStyle() did not reach the widget's underlining.");
+        QCOMPARE(widget->palette().color(QPalette::Active, QPalette::Link), QColor(255, 0, 0));
+
+        QVERIFY2(host->resetLinkStyle(labelName), "resetLinkStyle() did not find the label.");
+        QVERIFY2(widget->mLinkColor.isEmpty(), "resetLinkStyle() did not reach the widget.");
+        QVERIFY2(widget->mLinkVisitedColor.isEmpty(), "resetLinkStyle() left the visited-link colour behind.");
+        QVERIFY2(widget->mLinkUnderline, "resetLinkStyle() did not restore the widget's underlining.");
+
+        widget->mVisitedLinks.insert(qsl("https://example.invalid/visited"));
+        QVERIFY2(host->clearVisitedLinks(labelName), "clearVisitedLinks() did not find the label.");
+        QVERIFY2(widget->mVisitedLinks.isEmpty(), "clearVisitedLinks() did not reach the widget.");
+
+        QVERIFY2(host->setBackgroundColor(labelName, 12, 34, 56, 255), "setBackgroundColor() did not find the label.");
+        QCOMPARE(widget->palette().color(QPalette::Window), QColor(12, 34, 56, 255));
+        QCOMPARE(host->getBackgroundColor(labelName), std::optional<QColor>(QColor(12, 34, 56, 255)));
+
+        QString imagePath = writeTestImage();
+        QVERIFY2(!imagePath.isEmpty(), "Could not write the image to hand to setBackgroundImage().");
+        QVERIFY2(host->setBackgroundImage(labelName, imagePath, 1, false), "setBackgroundImage() did not find the label.");
+        QVERIFY2(!widget->pixmap().isNull(), "setBackgroundImage() did not reach the widget.");
+        QVERIFY2(host->resetBackgroundImage(labelName, false), "resetBackgroundImage() did not find the label.");
+        QVERIFY2(widget->pixmap().isNull(), "resetBackgroundImage() did not reach the widget.");
+    }
+
 private:
     // Utility function to manually start a profile like a user would do via the
     // GUI
@@ -1270,6 +1650,17 @@ private:
         const int value = lua_isnumber(L, -1) ? static_cast<int>(lua_tonumber(L, -1)) : -1;
         lua_pop(L, 1);
         return value;
+    }
+
+    // Writes a real image out, so a background image that landed can be told from
+    // one that did not: QPixmap turns a path it cannot read into a null pixmap
+    // without complaining.
+    QString writeTestImage()
+    {
+        const QString path = qsl("%1/label-background.png").arg(mConfigDir.path());
+        QImage image(4, 4, QImage::Format_ARGB32);
+        image.fill(QColorConstants::Svg::orange);
+        return image.save(path) ? path : QString();
     }
 
     // Utility function

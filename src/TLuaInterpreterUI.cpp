@@ -159,7 +159,7 @@ static bool isMain(const QString& name)
     ({                                                                                                                                                                                                 \
         const QString& name_ = (ARG_name);                                                                                                                                                             \
         auto console_ = getHostFromLua(ARG_L).mpConsole;                                                                                                                                               \
-        auto label_ = console_ ? console_->mLabelMap.value(name_) : nullptr;                                                                                                                           \
+        auto label_ = console_ ? console_->labelWidget(name_) : nullptr;                                                                                                                               \
         if (!label_) {                                                                                                                                                                                 \
             lua_pushnil(ARG_L);                                                                                                                                                                        \
             lua_pushfstring(ARG_L, bad_label_value, name_.toUtf8().constData());                                                                                                                       \
@@ -1402,7 +1402,7 @@ int TLuaInterpreter::getFont(lua_State* L)
     auto console = CONSOLE_NIL(L, windowName);
     if (!console) {
         if (host.mpConsole) {
-            if (TLabel* pLabel = host.mpConsole->mLabelMap.value(windowName)) {
+            if (TLabel* pLabel = host.mpConsole->labelWidget(windowName)) {
                 lua_pushstring(L, actualFontFamily(pLabel->font()).toUtf8().constData());
                 return 1;
             }
@@ -3167,7 +3167,7 @@ int TLuaInterpreter::setFont(lua_State* L)
     auto console = CONSOLE_NIL(L, targetName);
     if (!console) {
         if (host.mpConsole) {
-            if (TLabel* pLabel = host.mpConsole->mLabelMap.value(targetName)) {
+            if (TLabel* pLabel = host.mpConsole->labelWidget(targetName)) {
                 QFont labelFont = host.createFontWithSettings(effectiveFontName, pLabel->font().pointSize());
                 if (fontWeight != QFont::Normal) {
                     labelFont.setWeight(fontWeight);
