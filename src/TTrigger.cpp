@@ -214,6 +214,7 @@ TTrigger::TTrigger(TTrigger* parent, Host* pHost)
 , mpHost(pHost)
 , mpLua(mpHost->getLuaInterpreter())
 {
+    ++smStructureGeneration;
 }
 
 TTrigger::TTrigger(const QString& name, const QStringList& patterns, const QList<int>& patternKinds, bool isMultiline, Host* pHost)
@@ -230,6 +231,7 @@ TTrigger::TTrigger(const QString& name, const QStringList& patterns, const QList
 
 TTrigger::~TTrigger()
 {
+    ++smStructureGeneration;
     mColorPatternList.clear();
     mConditionMap.clear();
 
@@ -266,9 +268,14 @@ static void pcre2_match_data_deleter(pcre2_match_data* pointer)
     pcre2_match_data_free(pointer);
 }
 
+quint64 TTrigger::smStructureGeneration = 0;
+quint32 TTrigger::smPrescanPassId = 0;
+quint32 TTrigger::smPrescanPassIdCounter = 0;
+
 //FIXME: lock if code *OR* regex doesn't compile
 bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, bool existingTrigger)
 {
+    ++smStructureGeneration;
     patterns.replaceInStrings("\n", "");
     mPatterns.clear();
     mSubstringMatchers.clear();
@@ -1148,6 +1155,85 @@ void TTrigger::processExactMatch(int patternNumber, int posOffset, int lineNumbe
 // haystack: string to match as a QString
 // line: line number in the buffer
 // posOffset: position in the line to start matching from; used by child triggers
+
+bool TTrigger::prescanMayFire(const char* haystackC, const int haystackCLength, const QString& haystack, pcre2_match_data* scratch) const
+{
+    // Everything below decides "this trigger cannot possibly do anything on
+    // this line". Anything whose outcome depends on more than the line text -
+    // multiline state, a line counter, a colour scan of the buffer, Lua - is
+    // not decidable here and gets a yes.
+    if (!isActive() || !mpMyChildrenList) {
+        return true;
+    }
+    if (mIsLineTrigger || mIsMultiline || mKeepFiring > 0) {
+        return true;
+    }
+    if (haystack.isEmpty()) {
+        // match() bails before running a pattern, so nothing can happen
+        return false;
+    }
+    const int size = mPatternKinds.size();
+    if (!size) {
+        // A folder with no pattern of its own passes every line to its children
+        return true;
+    }
+    for (int patternNumber = 0; patternNumber < size; patternNumber++) {
+        switch (mPatternKinds.at(patternNumber)) {
+        case REGEX_SUBSTRING:
+            if (patternNumber >= static_cast<int>(mSubstringMatchers.size()) || !mSubstringMatchers[patternNumber]) {
+                return true;
+            }
+            if (mSubstringMatchers[patternNumber]->indexIn(haystack) != -1) {
+                return true;
+            }
+            break;
+
+        case REGEX_PERL: {
+            if (patternNumber >= static_cast<int>(mRegexes.size())) {
+                return true;
+            }
+            const QSharedPointer<pcre2_code>& re = mRegexes[patternNumber];
+            if (!re) {
+                // A pattern that does not compile never matches, but match_perl()
+                // tells the user so every time it is asked. Ruling the trigger out
+                // here would silence that warning for exactly as long as the text
+                // keeps flooding.
+                return true;
+            }
+            const int rc = mRegexJitCompiled[patternNumber] ? pcre2_jit_match(re.data(), reinterpret_cast<PCRE2_SPTR>(haystackC), haystackCLength, 0, 0, scratch, nullptr)
+                                                            : pcre2_match(re.data(), reinterpret_cast<PCRE2_SPTR>(haystackC), haystackCLength, 0, 0, scratch, nullptr);
+            if (rc >= 0) {
+                return true;
+            }
+            break;
+        }
+
+        case REGEX_BEGIN_OF_LINE_SUBSTRING:
+            if (haystack.startsWith(mPatterns.at(patternNumber))) {
+                return true;
+            }
+            break;
+
+        case REGEX_EXACT_MATCH: {
+            QStringView text(haystack);
+            if (text.endsWith(QChar('\n'))) {
+                text.chop(1);
+            }
+            if (text == mPatterns.at(patternNumber)) {
+                return true;
+            }
+            break;
+        }
+
+        default:
+            // colour, prompt, line spacer and Lua patterns are not decidable
+            // from the line text alone
+            return true;
+        }
+    }
+    return false;
+}
+
 bool TTrigger::match(const char* haystackC, const int haystackCLength, const QString& haystack, int line, int posOffset)
 {
     // Guard against re-entrancy: cleanup may have deleted this trigger while
@@ -1159,6 +1245,14 @@ bool TTrigger::match(const char* haystackC, const int haystackCLength, const QSt
 
     bool ret = false;
     if (isActive()) {
+        // The prescan ran every pattern this trigger could match the line with
+        // and none did, so there is nothing here for the line to trip. Only ever
+        // reached for a trigger whose patterns are a pure function of the line.
+        // mKeepFiring is re-read rather than taken from the verdict because an
+        // earlier trigger's script can have opened this one since.
+        if (mPrescanPassId == smPrescanPassId && !mPrescanMayFire && mKeepFiring <= 0) {
+            return false;
+        }
         if (mIsLineTrigger) {
             if (--mStartOfLineDelta < 0) {
                 execute();

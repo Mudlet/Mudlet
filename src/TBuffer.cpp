@@ -53,6 +53,8 @@
 #include <QTimer>
 #include <QUrlQuery>
 
+#include <QScopeGuard>
+
 #include <algorithm>
 #include <iterator>
 #include <utility>
@@ -862,6 +864,16 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 
 void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFromServer)
 {
+    // How much text this call has to get through, so the trigger engine can tell
+    // a flood from a line trickling in - see TriggerUnit::processDataStream().
+    // Restored rather than cleared on the way out because a nested feed re-enters
+    // here and the outer chunk is still being decoded.
+    const int previousPendingLines = mPendingChunkLines;
+    mPendingChunkLines = static_cast<int>(std::count(incoming.cbegin(), incoming.cend(), '\n'));
+    const auto pendingLinesGuard = qScopeGuard([this, previousPendingLines] {
+        mPendingChunkLines = previousPendingLines;
+    });
+
     // What can appear anywhere in a CSI Parameter String (Ps): ECMA-48 5.4
     // puts every byte of one in the range 0x30 to 0x3F, so '<', '=', '>' and
     // '?' do not end the parameter string when they turn up after the first
