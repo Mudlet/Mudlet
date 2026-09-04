@@ -2605,9 +2605,6 @@ void TDetachedWindow::showScriptEditorDialog(std::function<void(dlgTriggerEditor
             showMethod(pEditor);
         }
 
-        // Position dialog on the same screen as this detached window
-        widgetutils::positionDialogOnParentScreen(pEditor, this);
-
         // Show and activate the editor
         pEditor->raise();
         pEditor->showNormal();

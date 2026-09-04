@@ -35,9 +35,12 @@ describe("Tests UI functions", function()
       setWindowWrap("testconsole", 100)
     end)
 
-    -- clear miniconsole before each test
+    -- clear miniconsole before each test. The user cursor outlives clearWindow(),
+    -- so put it back where output lands or a case that moved it changes what the
+    -- next one reads
     before_each(function()
       clearWindow("testconsole")
+      moveCursorEnd("testconsole")
     end)
 
     teardown(function()
@@ -66,6 +69,32 @@ describe("Tests UI functions", function()
       assert.are.equal(testdecho, copy2decho("testconsole"))
     end)
 
+    -- #4175: selectString() only searches the current line and answers -1 for
+    -- text that is not on it, which is truthy in Lua - so the "string not found"
+    -- error never fired and characters were taken from whichever line the cursor
+    -- was on. A multiline trigger reaches this whenever it copies an earlier
+    -- line's multimatches, since it fires with the cursor on the last one.
+    it("Should not copy the current line when asked for text that is not on it", function()
+      decho("testconsole", "<0,255,0>copy4175first<r>\n")
+      decho("testconsole", "<255,0,0>copy4175second and longer<r>\n")
+
+      assert.is_true(moveCursor("testconsole", 0, 1))
+      assert.are.equal(-1, selectString("testconsole", "copy4175first", 1))
+
+      assert.is_true(moveCursor("testconsole", 0, 1))
+      assert.are.equal("", copy2decho("testconsole", "copy4175first"))
+    end)
+
+    -- a request longer than the line is also "not on this line", and used to be
+    -- answered with the whole line by an off-by-one that happened to come out
+    -- right - which is a different wrong answer from the fragment above
+    it("Should return nothing when asked for text longer than the current line", function()
+      decho("testconsole", "<0,255,0>dup dup<r>\n")
+
+      assert.are.equal(-1, selectString("testconsole", "dup dup dup dup", 1))
+      assert.are.equal("", copy2decho("testconsole", "dup dup dup dup"))
+    end)
+
     -- TODO: https://github.com/Mudlet/Mudlet/issues/5589
     -- it("Should copy2decho text with italics, bold, and underline", function()
     --   local testdecho = "separate: <i>italic</i>, <b>bold</b>, <u>underline</u>. all together: <i>italic<b>bold<u>underline<r>"
@@ -84,9 +113,12 @@ describe("Tests UI functions", function()
       setWindowWrap("testconsole", 100)
     end)
 
-    -- clear miniconsole before each test
+    -- clear miniconsole before each test. The user cursor outlives clearWindow(),
+    -- so put it back where output lands or a case that moved it changes what the
+    -- next one reads
     before_each(function()
       clearWindow("testconsole")
+      moveCursorEnd("testconsole")
     end)
 
     it("Should copy colored English text", function()
