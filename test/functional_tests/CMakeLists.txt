@@ -149,9 +149,13 @@ set(MAP_GROUP_TEST_SOURCES
 set(PACKAGE_GROUP_TEST_SOURCES
     ActionSelfRemovalTest.cpp
     DefaultPackagesTest.cpp
+    DualPackageModuleTest.cpp
+    ModuleManagerListingTest.cpp
     ModuleSaveTeardownTest.cpp
     PackageFontsOnRefusedArchiveTest.cpp
+    PackageManagerRemovalTest.cpp
     PackageRemovalSaveTeardownTest.cpp
+    PackageRepositoryDownloadTest.cpp
     PackageSelfRemovalTest.cpp
 )
 
@@ -479,6 +483,13 @@ set_tests_properties(SettingsAppearanceTest
                      SettingsSearchTest
                      SettingsShellNavigationTest
                      PROPERTIES TIMEOUT 300)
+
+# PackageRepositoryDownloadTest passes in seconds, so this timeout is only ever
+# reached by a run that is already failing - and each of its QTRY assertions has
+# to be allowed to run out, 15s apiece, before it can say what went wrong. That
+# adds up to a couple of minutes across the cases, so a shorter timeout would
+# turn a readable failure into a silent ctest kill
+set_tests_properties(PackageRepositoryDownloadTest PROPERTIES TIMEOUT 300)
 
 # HostWidgetDecouplingTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(HostWidgetDecouplingTest PROPERTIES TIMEOUT 300)
