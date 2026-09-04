@@ -475,12 +475,12 @@ void TriggerUnit::processDataStream(const QString& data, int line)
         if (mpRootNodeSnapshot.use_count() != 1) {
             mpRootNodeSnapshot = std::make_shared<RootNodeSnapshot>();
         }
-        mpRootNodeSnapshot->nodes.assign(mTriggerRootNodeList.cbegin(), mTriggerRootNodeList.cend());
-        mpRootNodeSnapshot->prescan.rebuild(mpRootNodeSnapshot->nodes);
+        mpRootNodeSnapshot->mNodes.assign(mTriggerRootNodeList.cbegin(), mTriggerRootNodeList.cend());
+        mpRootNodeSnapshot->mPrescan.rebuild(mpRootNodeSnapshot->mNodes);
         mRootNodeSnapshotStale = false;
     }
     const auto pinnedSnapshot = mpRootNodeSnapshot;
-    const std::vector<TTrigger*>& pinnedNodeList = pinnedSnapshot->nodes;
+    const std::vector<TTrigger*>& pinnedNodeList = pinnedSnapshot->mNodes;
     // Triggers registered by a script during this pass (tempTrigger() & Co.)
     // are missing from the snapshot but must still match the current line:
     // before the snapshot the loop walked the live std::list, which a push_back
@@ -489,7 +489,7 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     // Entries below this index were added by outer (nested-feedTriggers) passes
     // and are already part of this pass's snapshot.
     const qsizetype firstNodeAddedThisPass = mRootNodesAddedWhileProcessing.size();
-    if (pinnedSnapshot->prescan.active()) {
+    if (pinnedSnapshot->mPrescan.active()) {
         // Borrowed from the unit so that only a longer line than any before it
         // allocates, and moved out so a nested pass grows its own.
         std::vector<int> scratch = std::move(mCandidateScratch);
@@ -498,8 +498,21 @@ void TriggerUnit::processDataStream(const QString& data, int line)
             mCandidateScratch = std::move(scratch);
             mCandidates = std::move(candidates);
         });
-        pinnedSnapshot->prescan.candidates(data, scratch, candidates);
-        for (const int position : candidates) {
+        pinnedSnapshot->mPrescan.candidates(data, scratch, candidates);
+        // A firing script can make a later trigger fire without matching -
+        // setTriggerStayOpen() is the reachable way - and the candidate list was
+        // settled before that happened. So from the moment one does, the rest of
+        // the line goes to every remaining trigger, as an unfiltered pass would.
+        const quint32 epochAtStart = mUnfilterableEpoch;
+        const int rootCount = static_cast<int>(pinnedNodeList.size());
+        size_t nextCandidate = 0;
+        for (int position = 0; position < rootCount; ++position) {
+            if (mUnfilterableEpoch == epochAtStart) {
+                if (nextCandidate >= candidates.size()) {
+                    break;
+                }
+                position = candidates[nextCandidate++];
+            }
             TTrigger* trigger = pinnedNodeList[position];
             if (!trigger->isActive()) {
                 continue;
@@ -635,8 +648,9 @@ void TriggerUnit::setTriggerStayOpen(const QString& name, int lines)
     for (auto it = begin; it != end; ++it) {
         it.value()->mKeepFiring = lines;
     }
-    // it now fires without matching, so it can no longer be filtered out of a line
-    markPrescanStale();
+    // it now fires without matching, so it can no longer be filtered out of a
+    // line - including the one being processed right now
+    markRootUnfilterable();
 }
 
 bool TriggerUnit::killTrigger(const QString& name)

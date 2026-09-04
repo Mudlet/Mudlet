@@ -83,6 +83,14 @@ public:
     // Called by anything that changes whether a trigger can be ruled out of a
     // line by its text alone.
     void markPrescanStale() { mRootNodeSnapshotStale = true; }
+    // As above, but for the changes that make a trigger fire without matching
+    // text. Those have to reach the line already being processed, whose
+    // candidate list was settled before the change - see processDataStream().
+    void markRootUnfilterable()
+    {
+        ++mUnfilterableEpoch;
+        mRootNodeSnapshotStale = true;
+    }
     void doCleanup();
     void uninstall(const QString&);
     void _uninstall(TTrigger* pChild, const QString& packageName);
@@ -161,13 +169,14 @@ private:
     // are rebuilt and pinned together.
     struct RootNodeSnapshot
     {
-        std::vector<TTrigger*> nodes;
-        TTriggerPrescan prescan;
+        std::vector<TTrigger*> mNodes;
+        TTriggerPrescan mPrescan;
     };
     std::shared_ptr<RootNodeSnapshot> mpRootNodeSnapshot;
     bool mRootNodeSnapshotStale = true;
     std::vector<int> mCandidateScratch;
     std::vector<int> mCandidates;
+    quint32 mUnfilterableEpoch = 0;
     int mMaxID;
     bool mModuleMember;
     int statsItemsTotal = 0;

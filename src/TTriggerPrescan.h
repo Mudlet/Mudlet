@@ -63,6 +63,8 @@ private:
     static constexpr quint32 scmGramBitsLog = 16;
     static constexpr quint32 scmGramBitsMask = (1u << scmGramBitsLog) - 1;
 
+    static quint32 gramBit(quint32 gram);
+
     bool mActive = false;
     // Which n-grams anything is filed under at all - one bit test rejects most
     // of a line's positions before the map is consulted.

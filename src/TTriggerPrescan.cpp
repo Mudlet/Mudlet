@@ -54,6 +54,13 @@ static inline double characterScore(const QChar c)
     return 0.5;
 }
 
+// gramHash() forces the low bit, so masking the hash directly would only ever
+// reach the odd half of the bitmap and double the false-positive rate.
+quint32 TTriggerPrescan::gramBit(const quint32 gram)
+{
+    return (gram ^ (gram >> 16)) & scmGramBitsMask;
+}
+
 quint32 TTriggerPrescan::patternGram(const QString& pattern)
 {
     if (pattern.size() < scmGramLength) {
@@ -97,7 +104,7 @@ void TTriggerPrescan::rebuild(const std::vector<TTrigger*>& roots)
         }
         for (const quint32 gram : grams) {
             mIndex[gram].push_back(position);
-            const quint32 bit = gram & scmGramBitsMask;
+            const quint32 bit = gramBit(gram);
             mGramBits[bit >> 6] |= (1ULL << (bit & 63));
         }
         ++indexed;
@@ -128,7 +135,7 @@ void TTriggerPrescan::candidates(const QString& line, std::vector<int>& scratch,
     const int last = line.size() - scmGramLength;
     for (int i = 0; i <= last; ++i) {
         const quint32 gram = gramHash(data + i);
-        const quint32 bit = gram & scmGramBitsMask;
+        const quint32 bit = gramBit(gram);
         if (!(mGramBits[bit >> 6] & (1ULL << (bit & 63)))) {
             continue;
         }

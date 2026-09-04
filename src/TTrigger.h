@@ -124,7 +124,7 @@ public:
     // Empty when the trigger cannot be decided from the line's text alone, in
     // which case TTriggerPrescan offers it every line.
     const std::vector<quint32>& prescanGrams() const;
-    void invalidatePrescan();
+    void invalidatePrescan(bool nowFiresWithoutMatching = false);
 
     bool isMultiline() const { return mIsMultiline; }
     int getTriggerType() const { return mTriggerType; }
@@ -132,7 +132,7 @@ public:
     void setIsLineTrigger(bool b)
     {
         mIsLineTrigger = b;
-        invalidatePrescan();
+        invalidatePrescan(b);
     }
     void setStartOfLineDelta(int b) { mStartOfLineDelta = b; }
     void setLineDelta(int b) { mLineDelta = b; }
@@ -140,7 +140,7 @@ public:
     void setIsMultiline(bool b)
     {
         mIsMultiline = b;
-        invalidatePrescan();
+        invalidatePrescan(b);
     }
     void enableTrigger(const QString&);
     void disableTrigger(const QString&);

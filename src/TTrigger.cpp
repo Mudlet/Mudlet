@@ -307,6 +307,8 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
     if (existingTrigger && (patternKinds.empty()) && (!isFolder()) && (!mColorTrigger)) {
         setError(tr("error: this trigger has no patterns defined"));
         mOK_init = false;
+        // the patterns the grams were taken from are gone, so they have to go too
+        rebuildPrescanGrams();
         return false;
     }
 
@@ -454,11 +456,15 @@ void TTrigger::rebuildPrescanGrams()
 
 // The index is rebuilt from the trigger's current state, so anything that
 // changes whether or how it can be filtered has to reach the unit that holds it.
-void TTrigger::invalidatePrescan()
+void TTrigger::invalidatePrescan(const bool nowFiresWithoutMatching)
 {
     if (mpHost) {
         if (auto* unit = mpHost->getTriggerUnit()) {
-            unit->markPrescanStale();
+            if (nowFiresWithoutMatching) {
+                unit->markRootUnfilterable();
+            } else {
+                unit->markPrescanStale();
+            }
         }
     }
 }
@@ -1288,9 +1294,9 @@ bool TTrigger::match(const char* haystackC, const int haystackCLength, const QSt
                     conditionMet = true;
                     const bool wasFilterable = !mKeepFiring;
                     mKeepFiring = mStayOpen;
-                    if (wasFilterable && mKeepFiring) {
-                        // it now fires without matching, so it can no longer be
-                        // filtered out of a line
+                    if (wasFilterable != !mKeepFiring) {
+                        // whether it fires without matching just changed, so
+                        // whether it can be filtered out of a line changed too
                         invalidatePrescan();
                     }
                     break;

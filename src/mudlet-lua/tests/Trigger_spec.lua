@@ -2507,6 +2507,60 @@ describe("Trigger processing", function()
             assert.are.equal(1, _G.TrigSpec.count, "a trigger created mid-line did not see that line")
         end)
 
+        -- Filtering hands back positions in the root list, not the order the
+        -- patterns happen to appear in the line, and an unfilterable trigger
+        -- keeps its place among the filtered ones.
+        it("fires triggers in creation order wherever their text sits", function()
+            track(tempTrigger("alpha_marker_one", function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = "A" end))
+            track(tempRegexTrigger("^beta", function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = "B" end))
+            track(tempTrigger("beta_marker_two", function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = "C" end))
+            -- C's text deliberately sits before A's on the line
+            feedTriggers("\nbeta_marker_two then alpha_marker_one\n")
+            assert.are.same({"A", "B", "C"}, _G.TrigSpec.seen, "filtering changed the order triggers fire in")
+        end)
+
+        -- A colour trigger carries a pattern string that it never matches by
+        -- text, so filing it under that text would leave it never reached.
+        it("still fires a colour trigger", function()
+            local id = tempColorTrigger(4, 2, function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end)
+            feedTriggers("\n\27[31;40mcolour among many\27[0m\n")
+            -- kill before asserting: a leaked colour trigger matches by SGR and
+            -- would fire on later specs' fed lines
+            killTrigger(id)
+            assert.are.equal(1, _G.TrigSpec.count, "a colour trigger stopped firing among many substring ones")
+        end)
+
+        -- A firing script can feed more text through the same unit, so the
+        -- candidate list the outer pass is walking has to survive the nested one.
+        it("keeps the outer line's remaining triggers across a nested feed", function()
+            track(tempTrigger("nested_inner_line", function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = "inner" end))
+            track(tempTrigger("outer_feeder_here", function()
+                _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = "feeder"
+                feedTriggers("\ncontains nested_inner_line now\n")
+            end))
+            track(tempTrigger("outer_trailer_here", function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = "trailer" end))
+            feedTriggers("\nouter_feeder_here and outer_trailer_here\n")
+            assert.are.same({"feeder", "inner", "trailer"}, _G.TrigSpec.seen,
+                "a nested feedTriggers disturbed the outer line's remaining triggers")
+        end)
+
+        -- The candidate list for a line is settled before any trigger runs, so a
+        -- script that makes a LATER trigger fire without matching has to reach
+        -- the line already in flight.
+        it("fires a trigger opened by an earlier trigger on that same line", function()
+            -- the opener is created first, so the trigger it opens is still ahead
+            -- of it in the list when the line is only part way through
+            track(tempTrigger("opener_fires_here", function()
+                setTriggerStayOpen("SpecOpenedMidLine", 3)
+            end))
+            trackPerm("SpecOpenedMidLine",
+                permSubstringTrigger("SpecOpenedMidLine", "", {"never_on_this_line"},
+                    [[_G.TrigSpec.count = _G.TrigSpec.count + 1]]))
+            feedTriggers("\nopener_fires_here now\n")
+            assert.are.equal(1, _G.TrigSpec.count,
+                "a trigger made stay-open mid-line did not fire on that line")
+        end)
+
         it("keeps offering the right triggers after some are killed", function()
             local doomed = tempTrigger("doomed_pattern", function() _G.TrigSpec.count = _G.TrigSpec.count + 100 end)
             track(tempTrigger("survivor_pattern", function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end))
