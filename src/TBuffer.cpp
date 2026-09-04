@@ -6249,8 +6249,11 @@ bool TBuffer::applyAttribute(const QPoint& P_begin, const QPoint& P_end, const T
          * && ( x2 < static_cast<int>(buffer.at(y2).size()) ) )
          */
 
+        // Deliberately no materialisePreTriggerPassLine() here: color matching
+        // reads only foreground()/background(), so a display attribute leaves the
+        // retained colors valid, and snapshotting would put a copy back on every
+        // line for a script that styles all of them.
         for (int y = y1; y <= y2; ++y) {
-            materialisePreTriggerPassLine(y);
             int x = 0;
             if (y == y1) {
                 x = x1;
