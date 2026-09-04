@@ -5,6 +5,7 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 if(USE_SANITIZERS)
     include(${CMAKE_SOURCE_DIR}/src/cmake/EnableSanitizers.cmake)
+    add_sanitizer_support("${SANITIZERS_SELECTED}")
 endif()
 
 find_package(Qt6 6.8.2 REQUIRED COMPONENTS Test Network Gui Widgets)
