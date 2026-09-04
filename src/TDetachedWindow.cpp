@@ -25,6 +25,7 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "mudlet.h"
+#include "widgetutils.h"
 #include "utils.h"
 #include "dlgMapper.h"
 #include "TRoomDB.h"
@@ -168,7 +169,6 @@ void TDetachedWindow::setupUI()
 
     // Create a tab bar to show the profile names and allow reattachment
     mpTabBar = new TTabBar(centralWidget);
-    mpTabBar->setMaximumHeight(30);
     mpTabBar->setTabsClosable(true);
     mpTabBar->setMovable(true);
 
@@ -318,6 +318,7 @@ void TDetachedWindow::createMenus()
     //: This explains the "Show map" item in the "Toolbox" menu in the menubar of a detached Mudlet window.
     mpMenuShowMapAction->setStatusTip(tr("Show or hide the game map."));
     connect(mpMenuShowMapAction, &QAction::triggered, this, &TDetachedWindow::slot_toggleMap);
+    connect(toolboxMenu, &QMenu::aboutToShow, this, &TDetachedWindow::slot_updateShowMapActionText);
     toolboxMenu->addAction(mpMenuShowMapAction);
 
     //: This is an item in the "Toolbox" menu in the menubar of a detached Mudlet window.
@@ -2605,7 +2606,7 @@ void TDetachedWindow::showScriptEditorDialog(std::function<void(dlgTriggerEditor
         }
 
         // Position dialog on the same screen as this detached window
-        utils::positionDialogOnParentScreen(pEditor, this);
+        widgetutils::positionDialogOnParentScreen(pEditor, this);
 
         // Show and activate the editor
         pEditor->raise();
@@ -2919,7 +2920,7 @@ void TDetachedWindow::slot_showPreferencesDialog()
         // Position the preferences dialog on the same screen as this detached window
         auto pPrefs = pHost ? pHost->mpDlgProfilePreferences : mudletInstance->mpDlgProfilePreferences;
         if (pPrefs) {
-            utils::positionDialogOnParentScreen(pPrefs, this);
+            widgetutils::positionDialogOnParentScreen(pPrefs, this);
 
             // Set up focus restoration for the preferences dialog to return to this detached window
             mudletInstance->setupPreferencesFocusRestoration(pPrefs);
@@ -2948,7 +2949,7 @@ void TDetachedWindow::slot_showNotesDialog()
 
         // Position the notes dialog on the same screen as this detached window
         if (pHost->mpNotePad) {
-            utils::positionDialogOnParentScreen(pHost->mpNotePad, this);
+            widgetutils::positionDialogOnParentScreen(pHost->mpNotePad, this);
 
             // Set up focus restoration for the notepad to return to this detached window
             mudletInstance->setupNotepadFocusRestoration(pHost->mpNotePad);
@@ -2984,7 +2985,7 @@ void TDetachedWindow::slot_showPackageManagerDialog()
 
         // Position the package manager dialog on the same screen as this detached window
         if (pHost->mpPackageManager) {
-            utils::positionDialogOnParentScreen(pHost->mpPackageManager, this);
+            widgetutils::positionDialogOnParentScreen(pHost->mpPackageManager, this);
 
             // Set up focus restoration for the package manager to return to this detached window
             mudletInstance->setupPackageManagerFocusRestoration(pHost->mpPackageManager);
@@ -3013,7 +3014,7 @@ void TDetachedWindow::slot_showModuleManagerDialog()
 
         // Position the module manager dialog on the same screen as this detached window
         if (pHost->mpModuleManager) {
-            utils::positionDialogOnParentScreen(pHost->mpModuleManager, this);
+            widgetutils::positionDialogOnParentScreen(pHost->mpModuleManager, this);
 
             // Set up focus restoration for the module manager to return to this detached window
             mudletInstance->setupModuleManagerFocusRestoration(pHost->mpModuleManager);
@@ -3163,6 +3164,13 @@ void TDetachedWindow::refreshTabBar()
     }
 }
 
+void TDetachedWindow::refreshAfterApplicationStyleChange()
+{
+    if (mpTabBar) {
+        mpTabBar->refreshAfterApplicationStyleChange();
+    }
+}
+
 void TDetachedWindow::slot_closeAllProfiles()
 {
     // Properly close all profiles before closing the window
@@ -3261,6 +3269,41 @@ void TDetachedWindow::slot_toggleMap()
     withCurrentProfileActive([this]() {
         mudlet::self()->slot_showMapperDialog();
     });
+}
+
+// The Toolbox map entry toggles the mapper, so its label has to say which way
+// the next activation will take it. Computed as the menu opens rather than
+// tracked on every path that can show or hide a mapper.
+void TDetachedWindow::slot_updateShowMapActionText()
+{
+    // Unlike the main window's Toolbox entry, this one runs
+    // mudlet::slot_showMapperDialog(), which is not a plain toggle: a map dock
+    // living in a detached window is closed there and shown in the main window
+    // instead. So the label cannot come from where the mapper happens to be
+    // shown - it has to predict that slot's outcome: an embedded mapper is
+    // toggled in place, and otherwise only a visible main window map dock gets
+    // hidden; anything else ends with a map on screen.
+    Host* pHost = nullptr;
+    auto pMudlet = mudlet::self();
+    if (!mCurrentProfileName.isEmpty() && pMudlet) {
+        pHost = pMudlet->getHostManager().getHost(mCurrentProfileName);
+    }
+    bool willHide = false;
+    if (pHost) {
+        if (pHost->mpConsole && pHost->mpConsole->mpMapper) {
+            willHide = pHost->mapperShown();
+        } else {
+            auto mainMapDock = pMudlet->getMainWindowDockWidget(qsl("map_%1").arg(mCurrentProfileName));
+            willHide = mainMapDock && mainMapDock->isVisible();
+        }
+    }
+    if (willHide) {
+        //: Toolbox menu entry of a detached window while the map is on screen - activating it hides the map
+        mpMenuShowMapAction->setText(tr("Hide &map"));
+    } else {
+        //: Toolbox menu entry of a detached window while no map is on screen - activating it shows the map, creating it if need be
+        mpMenuShowMapAction->setText(tr("Show &map"));
+    }
 }
 
 void TDetachedWindow::slot_toggleCompactInputLine()

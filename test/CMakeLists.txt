@@ -7,7 +7,7 @@ if(NOT WIN32)
     include(${CMAKE_SOURCE_DIR}/src/cmake/EnableSanitizers.cmake)
 endif()
 
-find_package(Qt6 6.8.2 REQUIRED COMPONENTS Test Network Widgets)
+find_package(Qt6 6.8.2 REQUIRED COMPONENTS Test Network Gui Widgets)
 
 # On Windows Qt diverts QTest's stdout to OutputDebugString unless it believes
 # stderr has a console attached, which an MSYS2 shell or a CI runner does not give
@@ -111,7 +111,7 @@ add_executable(ReleaseChangelogSpanTest
     ${CMAKE_SOURCE_DIR}/src/updater/Release.cpp
     ${CMAKE_SOURCE_DIR}/src/updater/SemVer.cpp
 )
-target_link_libraries(ReleaseChangelogSpanTest PRIVATE Qt6::Test Qt6::Network Qt6::Widgets)
+target_link_libraries(ReleaseChangelogSpanTest PRIVATE Qt6::Test Qt6::Network Qt6::Gui)
 add_test(NAME ReleaseChangelogSpanTest COMMAND $<TARGET_FILE:ReleaseChangelogSpanTest>)
 set_tests_properties(ReleaseChangelogSpanTest PROPERTIES
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
@@ -133,12 +133,12 @@ set_tests_properties(CMakeListsConsistencyTest PROPERTIES
 # The version comparison every update offer is decided by. Built from the one
 # updater source it covers rather than linked against the Mudlet library, because
 # the library only contains it when configured with USE_UPDATER - which CI's
-# -testing builds are not. utils.h reaches QApplication, hence Qt6::Widgets.
+# -testing builds are not. utils.h reaches QEnterEvent, hence Qt6::Gui.
 add_executable(SemVerTest
     SemVerTest.cpp
     ${CMAKE_SOURCE_DIR}/src/updater/SemVer.cpp
 )
-target_link_libraries(SemVerTest PRIVATE Qt6::Test Qt6::Widgets)
+target_link_libraries(SemVerTest PRIVATE Qt6::Test Qt6::Gui)
 add_test(NAME SemVerTest COMMAND $<TARGET_FILE:SemVerTest>)
 set_tests_properties(SemVerTest PROPERTIES
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
@@ -153,7 +153,7 @@ add_executable(ReleaseChecksumPairingTest
     ${CMAKE_SOURCE_DIR}/src/updater/Release.cpp
     ${CMAKE_SOURCE_DIR}/src/updater/SemVer.cpp
 )
-target_link_libraries(ReleaseChecksumPairingTest PRIVATE Qt6::Test Qt6::Network Qt6::Widgets)
+target_link_libraries(ReleaseChecksumPairingTest PRIVATE Qt6::Test Qt6::Network Qt6::Gui)
 add_test(NAME ReleaseChecksumPairingTest COMMAND $<TARGET_FILE:ReleaseChecksumPairingTest>)
 set_tests_properties(ReleaseChecksumPairingTest PROPERTIES
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
@@ -168,7 +168,7 @@ add_executable(ReleasePlatformAssetTest
     ${CMAKE_SOURCE_DIR}/src/updater/Release.cpp
     ${CMAKE_SOURCE_DIR}/src/updater/SemVer.cpp
 )
-target_link_libraries(ReleasePlatformAssetTest PRIVATE Qt6::Test Qt6::Network Qt6::Widgets)
+target_link_libraries(ReleasePlatformAssetTest PRIVATE Qt6::Test Qt6::Network Qt6::Gui)
 add_test(NAME ReleasePlatformAssetTest COMMAND $<TARGET_FILE:ReleasePlatformAssetTest>)
 set_tests_properties(ReleasePlatformAssetTest PROPERTIES
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"

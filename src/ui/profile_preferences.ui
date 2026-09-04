@@ -1431,6 +1431,18 @@ you can use it but there could be issues with aligning columns of text</string>
              <enum>QFrame::Shape::NoFrame</enum>
             </property>
             <layout class="QHBoxLayout" name="horizontalLayout_frame_console_buffer_size">
+             <property name="leftMargin">
+              <number>0</number>
+             </property>
+             <property name="topMargin">
+              <number>0</number>
+             </property>
+             <property name="rightMargin">
+              <number>0</number>
+             </property>
+             <property name="bottomMargin">
+              <number>0</number>
+             </property>
              <item>
               <widget class="QLabel" name="label_console_buffer_size_spinBox">
                <property name="sizePolicy">
@@ -4998,15 +5010,18 @@ you can use it but there could be issues with aligning columns of text</string>
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="pushButton_copyMCPServerAddress">
+             <widget class="QPushButton" name="pushButton_mcpConnectManually">
               <property name="toolTip">
-               <string extracomment="Tooltip on the button that copies the MCP server's address to the clipboard.">&lt;p&gt;Copies the server's address, including its access token, for pasting into another AI assistant. The token changes every time Mudlet starts.&lt;/p&gt;</string>
+               <string extracomment="Tooltip on the button that reveals the MCP server's address for pasting into an AI assistant Mudlet cannot set up by itself.">&lt;p&gt;Shows the server's address, for an AI assistant Mudlet cannot set up for you. The address contains an access token, and the token changes every time Mudlet starts.&lt;/p&gt;</string>
               </property>
               <property name="accessibleDescription">
-               <string extracomment="Screen reader description of the button that copies the MCP server's address to the clipboard.">Copies the server's address, including its access token, for pasting into another AI assistant. The token changes every time Mudlet starts.</string>
+               <string extracomment="Screen reader description of the button that reveals the MCP server's address for pasting into an AI assistant Mudlet cannot set up by itself.">Shows the server's address, for an AI assistant Mudlet cannot set up for you. The address contains an access token, and the token changes every time Mudlet starts.</string>
+              </property>
+              <property name="checkable">
+               <bool>true</bool>
               </property>
               <property name="text">
-               <string extracomment="Label of the button that copies the MCP server's address to the clipboard.">Copy address</string>
+               <string extracomment="Label of the button that reveals the MCP server's address for pasting into an AI assistant Mudlet cannot set up by itself.">Connect another assistant</string>
               </property>
              </widget>
             </item>
@@ -5026,6 +5041,64 @@ you can use it but there could be issues with aligning columns of text</string>
            </layout>
           </item>
           <item row="4" column="0" colspan="3">
+           <widget class="QWidget" name="widget_mcpManualConnect" native="true">
+            <property name="visible">
+             <bool>false</bool>
+            </property>
+            <layout class="QVBoxLayout" name="vLayout_mcpManualConnect">
+             <property name="leftMargin">
+              <number>0</number>
+             </property>
+             <property name="topMargin">
+              <number>0</number>
+             </property>
+             <property name="rightMargin">
+              <number>0</number>
+             </property>
+             <property name="bottomMargin">
+              <number>0</number>
+             </property>
+             <item>
+              <widget class="QLabel" name="label_mcpManualConnectHint">
+               <property name="text">
+                <string extracomment="Explanation shown when the user asks to connect an AI assistant to Mudlet by hand, above the address they have to paste into it.">Paste this address into your AI assistant. Keep it private - it is what stops other programs using Mudlet.</string>
+               </property>
+               <property name="wordWrap">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <layout class="QHBoxLayout" name="hLayout_mcpManualConnect">
+               <item>
+                <widget class="QLineEdit" name="lineEdit_mcpServerAddress">
+                 <property name="readOnly">
+                  <bool>true</bool>
+                 </property>
+                 <property name="accessibleName">
+                  <string extracomment="Screen reader name of the read-only field holding the MCP server's address.">MCP server address</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QPushButton" name="pushButton_copyMCPServerAddress">
+                 <property name="toolTip">
+                  <string extracomment="Tooltip on the button that copies the MCP server's address to the clipboard.">&lt;p&gt;Copies the server's address, including its access token, for pasting into another AI assistant. The token changes every time Mudlet starts.&lt;/p&gt;</string>
+                 </property>
+                 <property name="accessibleDescription">
+                  <string extracomment="Screen reader description of the button that copies the MCP server's address to the clipboard.">Copies the server's address, including its access token, for pasting into another AI assistant. The token changes every time Mudlet starts.</string>
+                 </property>
+                 <property name="text">
+                  <string extracomment="Label of the button that copies the MCP server's address to the clipboard.">Copy</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item row="5" column="0" colspan="3">
            <widget class="QLabel" name="label_mcpConnectResult">
             <property name="text">
              <string notr="true"/>
@@ -5292,48 +5365,6 @@ you can use it but there could be issues with aligning columns of text</string>
      </widget>
     </widget>
    </item>
-   <item>
-    <widget class="QWidget" name="widget_bottom" native="true">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <layout class="QHBoxLayout" name="horizontalLayout_widget_bottom">
-      <item>
-       <spacer name="horizontalSpacer_bottom">
-        <property name="orientation">
-         <enum>Qt::Orientation::Horizontal</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>444</width>
-          <height>21</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-      <item>
-       <widget class="QPushButton" name="closeButton">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="text">
-         <string>Save</string>
-        </property>
-        <property name="icon">
-         <iconset>
-          <normaloff>:/icons/icons/dialog-close.png</normaloff>:/icons/icons/dialog-close.png</iconset>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
   </layout>
  </widget>
  <customwidgets>
@@ -5346,7 +5377,6 @@ you can use it but there could be issues with aligning columns of text</string>
  </customwidgets>
  <tabstops>
   <tabstop>tabWidget</tabstop>
-  <tabstop>closeButton</tabstop>
   <tabstop>MainIconSize</tabstop>
   <tabstop>comboBox_menuBarVisibility</tabstop>
   <tabstop>TEFolderIconSize</tabstop>

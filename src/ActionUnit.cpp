@@ -24,13 +24,22 @@
 #include "ActionUnit.h"
 
 
+#include "Host.h"
 #include "TAction.h"
-#include "TCommandLine.h"
 #include "TEasyButtonBar.h"
 #include "TToolBar.h"
+#include "Tree.h"
 #include "mudlet.h"
+#include "TMainConsole.h"
+#include "utils.h"
 
+#include <QDebug>
+#include <QDockWidget>
+#include <QLayout>
+#include <QMapIterator>
+#include <QPoint>
 #include <QSet>
+#include <QWidget>
 
 #include <functional>
 
@@ -101,6 +110,13 @@ void ActionUnit::doCleanup()
     if (mProcessingDepth > 0) {
         return;
     }
+
+    // Called once per unit for every line of game text, and next to never has
+    // anything queued, so skip setting up the flush below.
+    if (!hasPendingDeletes()) {
+        return;
+    }
+
     // Flush the deletes uninstall() deferred (#9337). uninstallList is ordered
     // children-before-parents and each ~Tree unlinks from its parent, so deleting
     // children first empties the parent's child list (no double free); the seen

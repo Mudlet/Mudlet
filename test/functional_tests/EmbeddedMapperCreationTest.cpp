@@ -20,13 +20,16 @@
 /*
  * Covers TMainConsole::createMapper() - the embedded mapper behind Lua
  * createMapper() and Geyser.Mapper{embedded = true} - on both sides of its
- * already-loaded-map branch.
+ * already-loaded-map branch, and that the main toolbar map action leaves an
+ * embedded mapper in charge of TMap::mpMapper instead of building a
+ * competing main window dock over it.
  *
  * An embedded mapper and the dockable map widget are mutually exclusive for the
  * life of a profile and neither can be destroyed, so the busted suite cannot go
  * here and each test method needs a mudlet of its own.
  */
 
+#include <QDockWidget>
 #include <QFileInfo>
 #include <QSignalSpy>
 #include <QTemporaryDir>
@@ -163,19 +166,30 @@ private slots:
     // is reloaded.
     void test_theEmbeddedMapperSurvivesTheToolbarMapDockClosing()
     {
+        // The toolbar refuses to build a dock over an existing embedded
+        // mapper, so the dock has to predate it. Once both exist, toggling the
+        // dock visible repoints TMap::mpMapper at the dock's own mapper, and
+        // hiding it again has to hand the map back to the embedded one.
+        mudlet::self()->slot_showMapperDialog();
+        const QString mapKey = qsl("map_%1").arg(mHostname);
+        QDockWidget* pDock = mudlet::self()->getMainWindowDockWidget(mapKey);
+        QVERIFY2(pDock, "the toolbar action created no map dock, so this case covers nothing");
+
         auto [created, message] = mpHost->mpConsole->createMapper(QString(), 0, 0, 300, 300);
         QVERIFY2(created, qPrintable(message));
         dlgMapper* pEmbedded = mpHost->mpConsole->mpMapper.data();
         QVERIFY2(pEmbedded, "createMapper() left no embedded mapper to lose");
         QCOMPARE(mpHost->mpMap->mpMapper.data(), pEmbedded);
 
+        // Toggle the dock off and on again through the toolbar entry point:
+        // showing it is what takes TMap::mpMapper over.
         mudlet::self()->slot_showMapperDialog();
-        const QString mapKey = qsl("map_%1").arg(mHostname);
-        QDockWidget* pDock = mudlet::self()->getMainWindowDockWidget(mapKey);
-        QVERIFY2(pDock, "the toolbar action created no map dock, so this case covers nothing");
+        qApp->processEvents();
+        mudlet::self()->slot_showMapperDialog();
+        qApp->processEvents();
         QVERIFY2(mpHost->mpMap->mpMapper.data() != pEmbedded, "the dock did not take the map over, so restoring it below would prove nothing");
 
-        pDock->setVisible(false);
+        mudlet::self()->slot_showMapperDialog();
         qApp->processEvents();
 
         QVERIFY2(mpHost->mpMap->mpMapper, "closing the toolbar map dock left the map with no mapper at all, so nothing redraws it");
@@ -191,6 +205,47 @@ private slots:
         QVERIFY(mpHost->mpConsole->mpMapper);
 
         QVERIFY2(mapOpenEventCountIs(1), "createMapper() did not raise mapOpenEvent exactly once for a first-run profile");
+    }
+
+    // The main toolbar map button runs mudlet::slot_showMapperDialog(). With a
+    // script-embedded mapper alive it must not build the per-profile main
+    // window dock: that dock takes over TMap::mpMapper - the only widget map
+    // updates are painted through - and the embedded mapper then only repaints
+    // on direct interaction, even after the dock is closed again.
+    void test_toolbarMapActionLeavesEmbeddedMapperInCharge()
+    {
+        auto [created, message] = mpHost->mpConsole->createMapper(QString(), 0, 0, 300, 300);
+        QVERIFY2(created, qPrintable(message));
+        QVERIFY(mpHost->mpConsole->mpMapper);
+        QCOMPARE(mpHost->mpMap->mpMapper.data(), mpHost->mpConsole->mpMapper.data());
+
+        mudlet::self()->slot_showMapperDialog();
+
+        QVERIFY2(!mudlet::self()->findChild<QDockWidget*>(qsl("dockMap_%1_main").arg(mHostname)), "the toolbar map action built a competing main window map dock over an embedded mapper");
+        QCOMPARE(mpHost->mpMap->mpMapper.data(), mpHost->mpConsole->mpMapper.data());
+        QVERIFY2(mapOpenEventCountIs(1), "the toolbar map action raised mapOpenEvent over an existing embedded mapper");
+    }
+
+    // The Toolbox map entry's label is recomputed as the menu opens so that it
+    // says what the next activation will do. The update slot is driven
+    // directly here - opening the real menu needs a user.
+    void test_showMapMenuLabelSaysWhatTheNextActivationDoes()
+    {
+        mudlet::self()->slot_updateShowMapActionText();
+        QCOMPARE(mudlet::self()->dactionShowMap->text(), mudlet::tr("Show map"));
+
+        mudlet::self()->show();
+        auto [created, message] = mpHost->mpConsole->createMapper(QString(), 0, 0, 300, 300);
+        QVERIFY2(created, qPrintable(message));
+        qApp->processEvents();
+        QVERIFY2(mpHost->mapperShown(), "the embedded mapper did not come up on screen, so the Hide map branch cannot be exercised");
+        mudlet::self()->slot_updateShowMapActionText();
+        QCOMPARE(mudlet::self()->dactionShowMap->text(), mudlet::tr("Hide map"));
+
+        // What the menu entry itself runs - with a mapper alive this toggles it away
+        mudlet::self()->slot_mapper();
+        mudlet::self()->slot_updateShowMapActionText();
+        QCOMPARE(mudlet::self()->dactionShowMap->text(), mudlet::tr("Show map"));
     }
 
 private:

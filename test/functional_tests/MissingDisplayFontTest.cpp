@@ -289,6 +289,9 @@ private:
 private slots:
     void initTestCase()
     {
+#ifndef INCLUDE_FONTS
+        QSKIP("Built with WITH_FONTS=NO, so the bundled fonts this registers - the family it falls back to, and the one it renames for a package to supply - are not in the resources");
+#else
         QVERIFY(mConfigDir.isValid());
         QVERIFY(mSaveDir.isValid());
         QVERIFY(mArchiveDir.isValid());
@@ -312,6 +315,7 @@ private slots:
         QVERIFY(mpHost);
 
         QVERIFY2(!mudlet::self()->getAvailableFonts().contains(mMissingFamily, Qt::CaseInsensitive), "the stand-in for an uninstalled font turns out to be installed");
+#endif
     }
 
     // Registered per case rather than once for the class, because a couple of
@@ -514,7 +518,7 @@ private slots:
         QVERIFY2(pHost->mpConsole, "the profile came up without a main console");
 
         QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("createTextEdit('main', 'mdfTextEdit', 0, 0, 100, 50)")));
-        auto* pTextEdit = pHost->mpConsole->mTextBoxMap.value(qsl("mdfTextEdit"));
+        auto* pTextEdit = pHost->mpConsole->textBoxWidget(qsl("mdfTextEdit"));
         QVERIFY2(pTextEdit, "the test text edit was not created");
 
         QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("setTextEditFont('mdfTextEdit', '%1 Bold')").arg(mOtherBundledFamily)));

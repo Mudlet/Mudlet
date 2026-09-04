@@ -150,6 +150,9 @@ private:
 private slots:
     void initTestCase()
     {
+#ifndef INCLUDE_FONTS
+        QSKIP("Built with WITH_FONTS=NO, so there is no bundled font in the resources to build the test packages out of");
+#else
         if (portableMarkerPresent()) {
             QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
         }
@@ -180,6 +183,7 @@ private slots:
         if (QFontDatabase::families().contains(mFontFamily)) {
             QSKIP("the font this test installs is already registered on this machine, so a package bringing it cannot be told apart");
         }
+#endif
     }
 
     void cleanupTestCase()
