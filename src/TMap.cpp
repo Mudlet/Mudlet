@@ -1704,19 +1704,10 @@ bool TMap::validatePotentialMapFile(QFile& file, QDataStream& ifs)
     }
 
     ifs.setDevice(&file);
-    // Is the RUN-TIME version of the Qt libraries equal to or more than
-    // Qt 5.13.0? Then force things to use the backwards compatible format
-    // - for us - of Qt 5.12.0 - this is needed because the way that the
-    // QFont class is stored in a binary format has changed at 5.13 and it
-    // causes crashes when a new version of the Qt libraries tries to read
-    // the older format:
-    if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-        // 18 is the enum value corresponding to QDataStream::Qt_5_12 which
-        // we want to force to be used but we cannot use the enum directly
-        // because it will not be defined in older versions of the Qt
-        // library when the code is compilated:
-        ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
-    }
+    // QFont's binary representation changed at Qt 5.13, so the stream version is
+    // pinned to Qt 5.12's here and everywhere else Mudlet reads or writes one,
+    // to keep the files readable across Mudlet versions:
+    ifs.setVersion(QDataStream::Qt_5_12);
     ifs >> version;
     if ((version < 1) || (version > 127)) {
         const QString errMsg = tr("[ ALERT ] - File does not seem to be a Mudlet Map file. The part that indicates\n"
@@ -2160,9 +2151,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
     }
     int otherProfileVersion = 0;
     QDataStream ifs(&file);
-    if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-        ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
-    }
+    ifs.setVersion(QDataStream::Qt_5_12);
     ifs >> otherProfileVersion;
 
     const QString infoMsg = tr(R"([ INFO ]  - Checking map file "%1", format version "%2".)").arg(file.fileName()).arg(otherProfileVersion);

@@ -32,6 +32,7 @@
 #include "CredentialManager.h"
 #include "DarkTheme.h"
 #include "LuaInterface.h"
+#include "TBuffer.h"
 #include "TDebug.h"
 #include "TDebugFilterBar.h"
 #include "MudletInstanceCoordinator.h"
@@ -156,7 +157,7 @@ using namespace std::chrono_literals;
 bool TConsoleMonitor::eventFilter(QObject* obj, QEvent* event)
 {
     if (event->type() == QEvent::Close) {
-        mudlet::smDebugMode = false;
+        TDebug::smDebugMode = false;
         mudlet::self()->refreshTabBar();
         return QObject::eventFilter(obj, event);
     }
@@ -2182,11 +2183,11 @@ void mudlet::loadMaps()
  in a console and might require translation for a few locales; the content
  is as per QDateTime::toString(...) and needs to follow the rules for that
  function as well as being suitable for the translation locale.*/
-    smTimeStampFormat = tr("hh:mm:ss.zzz ");
+    TBuffer::smTimeStampFormat = tr("hh:mm:ss.zzz ");
     /*: This represents the format of the timestamps shown for lines that do not
  have a timestamp in a console that is showing them. If localised this
- should be set to the same format and length as the smTimeStampFormat:*/
-    smBlankTimeStamp = tr("------------ ");
+ should be set to the same format and length as TBuffer::smTimeStampFormat:*/
+    TBuffer::smBlankTimeStamp = tr("------------ ");
 }
 
 // migrates the Central Debug Console to the next available host, if any
@@ -3675,9 +3676,7 @@ bool mudlet::saveWindowLayout()
 
         const QByteArray layoutData = saveState();
         QDataStream ofs(&layoutFile);
-        if (scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            ofs.setVersion(scmQDataStreamFormat_5_12);
-        }
+        ofs.setVersion(QDataStream::Qt_5_12);
         ofs << layoutData;
         if (!layoutFile.commit()) {
             qDebug() << "mudlet::saveWindowLayout: error saving window layout: " << layoutFile.errorString();
@@ -3711,9 +3710,7 @@ bool mudlet::loadWindowLayout()
 
             QByteArray layoutData;
             QDataStream ifs(&layoutFile);
-            if (scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-                ifs.setVersion(scmQDataStreamFormat_5_12);
-            }
+            ifs.setVersion(QDataStream::Qt_5_12);
             ifs >> layoutData;
             layoutFile.close();
 
@@ -3751,9 +3748,7 @@ bool mudlet::saveFloatingDockGeometries()
     }
 
     QDataStream ofs(&geoFile);
-    if (scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-        ofs.setVersion(scmQDataStreamFormat_5_12);
-    }
+    ofs.setVersion(QDataStream::Qt_5_12);
 
     QMap<QString, QByteArray> geometries;
     for (auto pHost : mHostManager) {
@@ -3789,9 +3784,7 @@ void mudlet::restoreFloatingDockGeometries()
     }
 
     QDataStream ifs(&geoFile);
-    if (scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-        ifs.setVersion(scmQDataStreamFormat_5_12);
-    }
+    ifs.setVersion(QDataStream::Qt_5_12);
 
     QMap<QString, QByteArray> geometries;
     ifs >> geometries;
@@ -5572,9 +5565,7 @@ QString mudlet::readProfileData(const QString& profile, const QString& item)
     }
 
     QDataStream ifs(&file);
-    if (scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-        ifs.setVersion(scmQDataStreamFormat_5_12);
-    }
+    ifs.setVersion(QDataStream::Qt_5_12);
     QString ret;
 
     ifs >> ret;
@@ -5595,6 +5586,7 @@ QPair<bool, QString> mudlet::writeProfileData(const QString& profile, const QStr
     QSaveFile file(utils::getMudletPath(enums::profileDataItemPath, profile, item));
     if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         QDataStream ofs(&file);
+        ofs.setVersion(QDataStream::Qt_5_12);
         ofs << what;
         if (!file.commit()) {
             qDebug().noquote().nospace() << "mudlet::writeProfileData(...) ERROR - writing profile: \"" << profile << "\", item: \"" << item << "\", reason: \"" << file.errorString() << "\".";
@@ -8202,7 +8194,7 @@ void mudlet::refreshTabBar()
     for (const auto& pHost : mHostManager) {
         const QString hostName = pHost->getName();
 
-        if (smDebugMode) {
+        if (TDebug::smDebugMode) {
             mpTabBar->applyPrefixToDisplayedText(hostName, TDebug::getTag(pHost.data()));
         } else {
             mpTabBar->applyPrefixToDisplayedText(hostName);

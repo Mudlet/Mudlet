@@ -26,6 +26,7 @@
 #include "ProfileTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
+#include "TBuffer.h"
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
 #include "TelnetServerStub.h"
@@ -160,9 +161,9 @@ private slots:
         QCOMPARE(joinedText(console), qsl("abcdefghijklmnopqrstuvwxyz"));
         QCOMPARE(nonEmptyLineCount(console), 3);
         QCOMPARE(console->buffer.line(0), qsl("abcdefghij"));
-        QVERIFY2(console->buffer.timeBuffer.at(0) != mudlet::smBlankTimeStamp, "the line that starts the paragraph lost its timestamp");
-        QCOMPARE(console->buffer.timeBuffer.at(1), mudlet::smBlankTimeStamp);
-        QCOMPARE(console->buffer.timeBuffer.at(2), mudlet::smBlankTimeStamp);
+        QVERIFY2(console->buffer.timeBuffer.at(0) != TBuffer::smBlankTimeStamp, "the line that starts the paragraph lost its timestamp");
+        QCOMPARE(console->buffer.timeBuffer.at(1), TBuffer::smBlankTimeStamp);
+        QCOMPARE(console->buffer.timeBuffer.at(2), TBuffer::smBlankTimeStamp);
     }
 
     // The shortcut stops at a blank line rather than keeping it: the rewrap

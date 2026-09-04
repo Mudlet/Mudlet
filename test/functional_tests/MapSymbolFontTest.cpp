@@ -555,9 +555,7 @@ private slots:
         QSaveFile mapFile(file);
         QVERIFY(mapFile.open(QIODevice::WriteOnly));
         QDataStream out(&mapFile);
-        if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            out.setVersion(mudlet::scmQDataStreamFormat_5_12);
-        }
+        out.setVersion(QDataStream::Qt_5_12);
         QVERIFY(map()->serialize(out, map()->mDefaultVersion));
         QVERIFY(mapFile.commit());
 
@@ -580,9 +578,7 @@ private slots:
         QSaveFile mapFile(binaryFile);
         QVERIFY(mapFile.open(QIODevice::WriteOnly));
         QDataStream out(&mapFile);
-        if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            out.setVersion(mudlet::scmQDataStreamFormat_5_12);
-        }
+        out.setVersion(QDataStream::Qt_5_12);
         QVERIFY(map()->serialize(out, map()->mDefaultVersion));
         QVERIFY(mapFile.commit());
 
