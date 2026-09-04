@@ -906,7 +906,10 @@ bool TTrigger::match_color_pattern(int line, int patternNumber, int posOffset, i
                && ((ansiBg == scmIgnored) || ((ansiBg == scmDefault) && sameColor(defaultBg, character.background())) || sameColor(patternBg, character.background()));
     };
 
-    if (end > start && passLineSize >= end) {
+    // A snapshot that stops short of the window cannot answer for the text past
+    // its end; with no snapshot taken the line itself still holds the game's
+    // colors for the whole of it:
+    if (end > start && (!pPassLine || passLineSize >= end)) {
         if (const TChar* pUniformColors = consoleModel.buffer.preTriggerPassLineUniformColors(line)) {
             if (!colorsMatch(*pUniformColors)) {
                 return false;

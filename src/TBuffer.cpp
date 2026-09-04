@@ -2310,14 +2310,20 @@ void TBuffer::materialisePreTriggerPassLine(int y)
 
 const TChar* TBuffer::preTriggerPassLineUniformColors(int lineNumber)
 {
-    if (lineNumber < 0 || lineNumber != mPreTriggerPassLineNumber || mPreTriggerPassLine.empty()) {
+    if (lineNumber < 0 || lineNumber != mPreTriggerPassLineNumber || lineNumber >= static_cast<int>(buffer.size())) {
         return nullptr;
     }
-    const TChar& first = mPreTriggerPassLine.front();
+    // Until a write materialises the snapshot the line still holds the colors
+    // the game sent, so it answers for them itself - which is most lines:
+    const std::vector<TChar>& passLine = mPreTriggerPassSnapshotTaken ? mPreTriggerPassLine : buffer[lineNumber];
+    if (passLine.empty()) {
+        return nullptr;
+    }
+    const TChar& first = passLine.front();
     if (mPreTriggerPassLineUniformity == PassLineUniformity::Unknown) {
         // The first character only stands in for the rest of them while this
         // compares colors the same way the trigger it answers for does
-        const bool uniform = std::all_of(mPreTriggerPassLine.cbegin() + 1, mPreTriggerPassLine.cend(), [&first](const TChar& character) {
+        const bool uniform = std::all_of(passLine.cbegin() + 1, passLine.cend(), [&first](const TChar& character) {
             return sameColor(first.foreground(), character.foreground()) && sameColor(first.background(), character.background());
         });
         mPreTriggerPassLineUniformity = uniform ? PassLineUniformity::Uniform : PassLineUniformity::Mixed;
