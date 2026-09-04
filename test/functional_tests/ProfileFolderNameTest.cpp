@@ -62,8 +62,8 @@ private:
         QVERIFY(QDir().mkpath(mudlet::getMudletPath(enums::profileHomePath, name)));
         // A folder copied by a file manager carries the original's connection
         // data files with it:
-        QVERIFY(mudlet::self()->writeProfileData(name, qsl("url"), qsl("mudlet.org")).first);
-        QVERIFY(mudlet::self()->writeProfileData(name, qsl("port"), qsl("23")).first);
+        QVERIFY(utils::writeProfileData(name, qsl("url"), qsl("mudlet.org")).first);
+        QVERIFY(utils::writeProfileData(name, qsl("port"), qsl("23")).first);
     }
 
     // The Connect and Offline buttons are the only AcceptRole buttons in the

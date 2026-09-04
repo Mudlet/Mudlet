@@ -151,8 +151,8 @@ private slots:
         mudlet::self()->setStorePasswordsSecurely(false);
 
         makeProfileWithSavedGame(mKeeper);
-        mudlet::self()->writeProfileData(mKeeper, qsl("url"), qsl("mudlet.org"));
-        mudlet::self()->writeProfileData(mKeeper, qsl("port"), qsl("23"));
+        utils::writeProfileData(mKeeper, qsl("url"), qsl("mudlet.org"));
+        utils::writeProfileData(mKeeper, qsl("port"), qsl("23"));
     }
 
     void cleanupTestCase()
@@ -232,8 +232,8 @@ private slots:
     {
         const QString unplayed = qsl("QA Unplayed");
         QVERIFY(QDir().mkpath(profilePath(unplayed)));
-        mudlet::self()->writeProfileData(unplayed, qsl("url"), qsl("mudlet.org"));
-        mudlet::self()->writeProfileData(unplayed, qsl("port"), qsl("23"));
+        utils::writeProfileData(unplayed, qsl("url"), qsl("mudlet.org"));
+        utils::writeProfileData(unplayed, qsl("port"), qsl("23"));
 
         auto* dlg = openDialog();
         selectProfile(dlg, unplayed);
@@ -300,7 +300,7 @@ private slots:
     {
         const QString secretive = qsl("QA Secretive");
         QVERIFY(QDir().mkpath(profilePath(secretive)));
-        mudlet::self()->writeProfileData(secretive, qsl("password"), qsl("hunter2"));
+        utils::writeProfileData(secretive, qsl("password"), qsl("hunter2"));
         QVERIFY(QDir(profilePath(secretive)).entryList(QDir::Dirs | QDir::Hidden | QDir::NoDotAndDotDot).isEmpty());
 
         auto* dlg = openDialog();
@@ -320,8 +320,8 @@ private slots:
     {
         const QString named = qsl("QA Named");
         QVERIFY(QDir().mkpath(profilePath(named)));
-        mudlet::self()->writeProfileData(named, qsl("url"), qsl("mudlet.org"));
-        mudlet::self()->writeProfileData(named, qsl("login"), qsl("Aurelius"));
+        utils::writeProfileData(named, qsl("url"), qsl("mudlet.org"));
+        utils::writeProfileData(named, qsl("login"), qsl("Aurelius"));
 
         auto* dlg = openDialog();
         selectProfile(dlg, named);
@@ -456,8 +456,8 @@ private slots:
         const QString awkward = qsl("QA..Dots");
         QVERIFY(!dlgConnectionProfiles::profileNameUsableAsIs(awkward));
         makeProfileWithSavedGame(awkward);
-        mudlet::self()->writeProfileData(awkward, qsl("url"), qsl("mudlet.org"));
-        mudlet::self()->writeProfileData(awkward, qsl("port"), qsl("23"));
+        utils::writeProfileData(awkward, qsl("url"), qsl("mudlet.org"));
+        utils::writeProfileData(awkward, qsl("port"), qsl("23"));
 
         auto* dlg = openDialog();
         selectProfile(dlg, awkward);

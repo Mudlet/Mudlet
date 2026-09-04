@@ -406,7 +406,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     languageSearchNames.removeDuplicates();
     comboBox_guiLanguage->setProperty(scmProp_searchKeywords, languageSearchNames.join(qsl(", ")));
 
-    auto currentLanguage = pMudlet->getInterfaceLanguage();
+    auto currentLanguage = utils::getInterfaceLanguage();
     int currentIndex = comboBox_guiLanguage->findData(currentLanguage);
     if (Q_LIKELY(currentIndex != -1)) {
         // The language code has been found in the UserData role for one of the

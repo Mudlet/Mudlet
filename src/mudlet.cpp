@@ -1013,7 +1013,7 @@ void mudlet::init()
 
     scanForMudletTranslations(qsl(":/lang"));
     scanForQtTranslations(getMudletPath(enums::qtTranslationsPath));
-    loadTranslators(mInterfaceLanguage);
+    loadTranslators(utils::getInterfaceLanguage());
 
     // Cannot assign a value in the constructor list as it requires the
     // translations to be loaded first:
@@ -4014,18 +4014,18 @@ void mudlet::readEarlySettings(const QSettings& settings)
         mAppearance = static_cast<enums::Appearance>(appearance);
     }
 
-    mInterfaceLanguage = settings.value("interfaceLanguage", autodetectPreferredLanguage()).toString();
-    mUserLocale = QLocale(mInterfaceLanguage);
+    utils::setInterfaceLanguage(settings.value("interfaceLanguage", autodetectPreferredLanguage()).toString());
+    mUserLocale = QLocale(utils::getInterfaceLanguage());
     if (mUserLocale == QLocale::c()) {
-        qWarning().nospace().noquote() << "mudlet::readEarlySettings(...) WARNING - Unable to convert language code \"" << mInterfaceLanguage
+        qWarning().nospace().noquote() << "mudlet::readEarlySettings(...) WARNING - Unable to convert language code \"" << utils::getInterfaceLanguage()
                                        << "\" to a recognised locale, reverting to the POSIX 'C' one.";
         return;
     }
 
     // #if QT_VERSION < QT_VERSION_CHECK(6, 2, 0)
-    //     qDebug().nospace().noquote() << "mudlet::readEarlySettings(...) INFO - Using language code \"" << mInterfaceLanguage << "\" to switch to \"" << QLocale::languageToString(mUserLocale.language()) << " (" << QLocale::countryToString(mUserLocale.country()) << ")\" locale.";
+    //     qDebug().nospace().noquote() << "mudlet::readEarlySettings(...) INFO - Using language code \"" << utils::getInterfaceLanguage() << "\" to switch to \"" << QLocale::languageToString(mUserLocale.language()) << " (" << QLocale::countryToString(mUserLocale.country()) << ")\" locale.";
     // #else
-    //     qDebug().nospace().noquote() << "mudlet::readEarlySettings(...) INFO - Using language code \"" << mInterfaceLanguage << "\" to switch to \"" << QLocale::languageToString(mUserLocale.language()) << " (" << QLocale::territoryToString(mUserLocale.territory()) << ")\" locale.";
+    //     qDebug().nospace().noquote() << "mudlet::readEarlySettings(...) INFO - Using language code \"" << utils::getInterfaceLanguage() << "\" to switch to \"" << QLocale::languageToString(mUserLocale.language()) << " (" << QLocale::territoryToString(mUserLocale.territory()) << ")\" locale.";
     // #endif
 }
 
@@ -4286,7 +4286,7 @@ void mudlet::writeSettings()
     settings.setValue("showTabConnectionIndicators", mShowTabConnectionIndicators);
     settings.setValue("showIconsInMenus", mShowIconsOnMenuCheckedState);
     settings.setValue("copyAsImageTimeout", mCopyAsImageTimeout);
-    settings.setValue("interfaceLanguage", mInterfaceLanguage);
+    settings.setValue("interfaceLanguage", utils::getInterfaceLanguage());
     // 'darkTheme' value was only used during PTBs, remove it to reduce confusion in the future
     settings.remove("darkTheme");
     settings.setValue("appearance", mAppearance);
@@ -5550,54 +5550,6 @@ void mudlet::slot_replay()
     loadReplay(pHost, fileName);
 }
 
-QString mudlet::readProfileData(const QString& profile, const QString& item)
-{
-    QFile file(getMudletPath(enums::profileDataItemPath, profile, item));
-    if (!file.exists()) {
-        return QString();
-    }
-
-    if (!file.open(QIODevice::ReadOnly)) {
-        qWarning() << "mudlet: failed to open profile data file for reading:" << file.fileName() << file.errorString();
-        return QString();
-    }
-
-    QDataStream ifs(&file);
-    ifs.setVersion(QDataStream::Qt_5_12);
-    QString ret;
-
-    ifs >> ret;
-    file.close();
-    return ret;
-}
-
-QPair<bool, QString> mudlet::writeProfileData(const QString& profile, const QString& item, const QString& what)
-{
-    // Ensure the profile directory exists before attempting to write profile data
-    const QDir profileDir;
-    const QString profileHomePath = getMudletPath(enums::profileHomePath, profile);
-    if (!QDir(profileHomePath).exists() && !profileDir.mkpath(profileHomePath)) {
-        qDebug().noquote().nospace() << "mudlet::writeProfileData(...) ERROR - could not create profile directory: \"" << profileHomePath << "\"";
-        return qMakePair(false, qsl("Could not create profile directory: %1").arg(profileHomePath));
-    }
-
-    QSaveFile file(getMudletPath(enums::profileDataItemPath, profile, item));
-    if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
-        QDataStream ofs(&file);
-        ofs.setVersion(QDataStream::Qt_5_12);
-        ofs << what;
-        if (!file.commit()) {
-            qDebug().noquote().nospace() << "mudlet::writeProfileData(...) ERROR - writing profile: \"" << profile << "\", item: \"" << item << "\", reason: \"" << file.errorString() << "\".";
-        }
-    }
-
-    if (file.error() == QFile::NoError) {
-        return qMakePair(true, QString());
-    }
-
-    return qMakePair(false, file.errorString());
-}
-
 void mudlet::deleteProfileData(const QString& profile, const QString& item)
 {
     if (!QFile::remove(getMudletPath(enums::profileDataItemPath, profile, item))) {
@@ -5639,7 +5591,7 @@ void mudlet::startAutoLogin(const QStringList& cliProfiles, const bool offline)
     }
 
     for (auto& hostName : hostList) {
-        const QString val = readProfileData(hostName, qsl("autologin"));
+        const QString val = utils::readProfileData(hostName, qsl("autologin"));
         if (val.toInt() == Qt::Checked) {
             QElapsedTimer timer;
             timer.start();
@@ -5831,8 +5783,8 @@ QString mudlet::findMatchingProfile(const QString& host, int port)
     QDateTime latestTime;
 
     for (const auto& profileName : std::as_const(profileNames)) {
-        QString profileHost = readProfileData(profileName, qsl("url"));
-        QString profilePort = readProfileData(profileName, qsl("port"));
+        QString profileHost = utils::readProfileData(profileName, qsl("url"));
+        QString profilePort = utils::readProfileData(profileName, qsl("port"));
 
         if (!profileHost.compare(host, Qt::CaseInsensitive) && profilePort.toInt() == port) {
             QString profilePath = getMudletPath(enums::profileHomePath, profileName);
@@ -5881,15 +5833,15 @@ QString mudlet::createProfileForUri(const TelnetUriData& uriData)
 
     qDebug() << "mudlet::createProfileForUri() - Creating profile:" << profileName;
 
-    writeProfileData(profileName, qsl("url"), uriData.host);
-    writeProfileData(profileName, qsl("port"), QString::number(uriData.port));
+    utils::writeProfileData(profileName, qsl("url"), uriData.host);
+    utils::writeProfileData(profileName, qsl("port"), QString::number(uriData.port));
 
     if (!uriData.username.isEmpty()) {
-        writeProfileData(profileName, qsl("login"), uriData.username);
+        utils::writeProfileData(profileName, qsl("login"), uriData.username);
     }
 
     if (uriData.useTls) {
-        writeProfileData(profileName, qsl("ssl_tsl"), QString::number(Qt::Checked));
+        utils::writeProfileData(profileName, qsl("ssl_tsl"), QString::number(Qt::Checked));
     }
 
     return profileName;
@@ -5929,7 +5881,7 @@ void mudlet::handleTelnetUri(const QString& uri)
             return;
         }
     } else if (uriData->useTls) {
-        writeProfileData(profileName, qsl("ssl_tsl"), QString::number(Qt::Checked));
+        utils::writeProfileData(profileName, qsl("ssl_tsl"), QString::number(Qt::Checked));
     }
 
     qDebug() << "mudlet::handleTelnetUri() - Auto-loading profile:" << profileName;
@@ -7320,7 +7272,7 @@ bool mudlet::migratePasswordsToSecureStorage()
     bool anyMigrationNeeded = false;
 
     for (const auto& profile : profiles) {
-        const auto password = readProfileData(profile, qsl("password"));
+        const auto password = utils::readProfileData(profile, qsl("password"));
         if (!password.isEmpty()) {
             // Use CredentialManager to store the password securely
             if (CredentialManager::storeCredential(profile, "character", password)) {
@@ -7372,7 +7324,7 @@ bool mudlet::migratePasswordsToProfileStorage()
 
         if (!password.isEmpty()) {
             // Store in profile data
-            writeProfileData(profile, qsl("password"), password);
+            utils::writeProfileData(profile, qsl("password"), password);
 
             // Only remove from secure storage if this version is >= 4.20.0
             // This prevents breaking compatibility with older Mudlet versions
@@ -7421,7 +7373,7 @@ void mudlet::slot_passwordMigratedToPortableStorage(QKeychain::Job* job)
 
     } else {
         auto readJob = static_cast<QKeychain::ReadPasswordJob*>(job);
-        writeProfileData(profileName, qsl("password"), readJob->textData());
+        utils::writeProfileData(profileName, qsl("password"), readJob->textData());
 
         // Only delete from secure storage if this version is >= 4.20.0
         // This prevents breaking compatibility with older Mudlet versions
@@ -7620,9 +7572,9 @@ void mudlet::refreshTabBarsAfterStyleChange()
 
 void mudlet::setInterfaceLanguage(const QString& languageCode)
 {
-    if (mInterfaceLanguage != languageCode) {
-        mInterfaceLanguage = languageCode;
-        mUserLocale = QLocale(mInterfaceLanguage);
+    if (utils::getInterfaceLanguage() != languageCode) {
+        utils::setInterfaceLanguage(languageCode);
+        mUserLocale = QLocale(utils::getInterfaceLanguage());
         if (mUserLocale == QLocale::c()) {
             qWarning().nospace().noquote() << "mudlet::setInterfaceLanguage(\"" << languageCode
                                            << "\") WARNING - Unable to convert given language code to a recognised locale, reverting to the POSIX 'C' one.";
@@ -8755,28 +8707,7 @@ void mudlet::changeEvent(QEvent* event)
 
 bool mudlet::profileExists(const QString& profileName)
 {
-    return !getCanonicalProfileName(profileName).isEmpty();
-}
-
-QString mudlet::getCanonicalProfileName(const QString& profileName)
-{
-    if (profileName.isEmpty()) {
-        return QString();
-    }
-
-    const QStringList profiles = QDir(mudlet::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
-    for (const auto& profile : profiles) {
-        if (profile.compare(profileName, Qt::CaseInsensitive) == 0) {
-            return profile;
-        }
-    }
-
-    const auto it = TGameDetails::findGame(profileName, Qt::CaseInsensitive);
-    if (it != TGameDetails::scmDefaultGames.constEnd()) {
-        return it->name;
-    }
-
-    return QString();
+    return !utils::getCanonicalProfileName(profileName).isEmpty();
 }
 
 void mudlet::saveDetachedWindowsGeometry()

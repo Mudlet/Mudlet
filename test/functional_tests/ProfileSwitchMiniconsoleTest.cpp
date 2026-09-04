@@ -98,8 +98,8 @@ private:
 
     bool provisionProfileOnDisk(const QString& profileName) const
     {
-        return QDir().mkpath(mudlet::getMudletPath(enums::profileHomePath, profileName)) && mudlet::self()->writeProfileData(profileName, qsl("url"), mLocalhost).first
-               && mudlet::self()->writeProfileData(profileName, qsl("port"), mPort).first;
+        return QDir().mkpath(mudlet::getMudletPath(enums::profileHomePath, profileName)) && utils::writeProfileData(profileName, qsl("url"), mLocalhost).first
+               && utils::writeProfileData(profileName, qsl("port"), mPort).first;
     }
 
     // Returns the Lua error, or a null QString when the chunk ran

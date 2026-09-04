@@ -45,7 +45,7 @@ private:
   QTemporaryDir mTempDir;
 
   // Mirrors the portable password file write logic from
-  // dlgConnectionProfiles::writeProfileData / mudlet::writeProfileData
+  // dlgConnectionProfiles::writeProfileData / utils::writeProfileData
   bool writePortablePasswordFile(const QString &profileDir, const QString &item,
                                  const QString &password) {
     const QString filePath = QStringLiteral("%1/%2").arg(profileDir, item);
@@ -61,7 +61,7 @@ private:
   }
 
   // Mirrors the portable password file read logic from
-  // dlgConnectionProfiles::readProfileData / mudlet::readProfileData
+  // dlgConnectionProfiles::readProfileData / utils::readProfileData
   QString readPortablePasswordFile(const QString &profileDir,
                                    const QString &item) {
     const QString filePath = QStringLiteral("%1/%2").arg(profileDir, item);

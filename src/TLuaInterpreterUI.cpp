@@ -2640,7 +2640,7 @@ int TLuaInterpreter::setActiveProfile(lua_State* L)
         return 2;
     }
 
-    const QString profileName = mudlet::self()->getCanonicalProfileName(requestedName);
+    const QString profileName = utils::getCanonicalProfileName(requestedName);
     if (profileName.isEmpty()) {
         lua_pushboolean(L, false);
         lua_pushfstring(L, "setActiveProfile: profile '%s' does not exist", requestedName.toUtf8().constData());

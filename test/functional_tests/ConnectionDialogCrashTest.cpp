@@ -132,8 +132,8 @@ private:
     // reports instead of QVERIFYing: a QVERIFY here would only leave the helper
     bool makeProfileFolder(const QString& name) const
     {
-        return QDir().mkpath(mudlet::getMudletPath(enums::profileHomePath, name)) && mudlet::self()->writeProfileData(name, qsl("url"), mProfileUrl).first
-               && mudlet::self()->writeProfileData(name, qsl("port"), mProfilePort).first;
+        return QDir().mkpath(mudlet::getMudletPath(enums::profileHomePath, name)) && utils::writeProfileData(name, qsl("url"), mProfileUrl).first
+               && utils::writeProfileData(name, qsl("port"), mProfilePort).first;
     }
 
 private slots:

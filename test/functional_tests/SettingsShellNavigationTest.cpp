@@ -577,7 +577,7 @@ private slots:
 
         BracketingTranslator translator;
         QCoreApplication::installTranslator(&translator);
-        mpPreferences->slot_guiLanguageChanged(mudlet::self()->getInterfaceLanguage());
+        mpPreferences->slot_guiLanguageChanged(utils::getInterfaceLanguage());
         QCoreApplication::removeTranslator(&translator);
         QCoreApplication::processEvents();
 
@@ -596,7 +596,7 @@ private slots:
 
         BracketingTranslator translator;
         QCoreApplication::installTranslator(&translator);
-        mpPreferences->slot_guiLanguageChanged(mudlet::self()->getInterfaceLanguage());
+        mpPreferences->slot_guiLanguageChanged(utils::getInterfaceLanguage());
         // Read before the translator goes, so that a failure here cannot leave
         // it installed for the cases that follow
         const QString category = sidebar()->item(rowOf(qsl("general")))->text();
@@ -1219,7 +1219,7 @@ private slots:
         auto* pGerman = new QTranslator(qApp);
         QVERIFY2(pGerman->load(qsl("mudlet_de_DE"), qsl(":/lang")), "no German translation in the binary's resources, so nothing here would lengthen a string");
         QVERIFY(qApp->installTranslator(pGerman));
-        mpPreferences->slot_guiLanguageChanged(mudlet::self()->getInterfaceLanguage());
+        mpPreferences->slot_guiLanguageChanged(utils::getInterfaceLanguage());
         qApp->processEvents();
         // Read before the translator goes, so a failure cannot leave it
         // installed for the cases that follow

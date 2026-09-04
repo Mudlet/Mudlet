@@ -25,6 +25,7 @@
 #include <QCryptographicHash>
 #include <QEnterEvent>
 #include <QDir>
+#include <QPair>
 #include <QRegularExpression>
 #include <QString>
 
@@ -254,6 +255,25 @@ public:
         }
         return sanitized;
     }
+
+    static QString readProfileData(const QString& profile, const QString& item);
+
+    // Creates the profile's directory when it is not there yet, so a write for a
+    // profile that does not exist brings one into being.
+    static QPair<bool, QString> writeProfileData(const QString& profile, const QString& item, const QString& what);
+
+    // The on-disk spelling of a profile named in any case, or an empty string if
+    // neither an existing profile nor a predefined game goes by that name.
+    static QString getCanonicalProfileName(const QString& profileName);
+
+    // Has default form of "en_US" but can be just an ISO language code e.g. "fr" for french,
+    // without a country designation. Replaces xx in "mudlet_xx.qm" to provide the translation
+    // file for GUI translation
+    static const QString& getInterfaceLanguage() { return smInterfaceLanguage; }
+    static void setInterfaceLanguage(const QString& language) { smInterfaceLanguage = language; }
+
+private:
+    inline static QString smInterfaceLanguage;
 };
 
 #endif // MUDLET_UTILS_H

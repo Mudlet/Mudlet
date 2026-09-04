@@ -2365,7 +2365,7 @@ QString cTelnet::getNewEnvironTLS()
 
 QString cTelnet::getNewEnvironLanguage()
 {
-    return mudlet::self()->getInterfaceLanguage();
+    return utils::getInterfaceLanguage();
 }
 
 QString cTelnet::getNewEnvironWordWrap()
