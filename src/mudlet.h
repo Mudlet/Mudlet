@@ -293,6 +293,7 @@ public:
     QPair<bool, bool> removeWordFromSet(const QString&);
     QString readProfileData(const QString& profile, const QString& item);
     void refreshTabBar();
+    void refreshTabBarsAfterStyleChange();
     // Used by a profile to tell the mudlet class
     // to tell other profiles to reload the updated
     // maps (via signal_profileMapReloadRequested(...))
@@ -389,7 +390,7 @@ public:
     bool showCharacterModeWarning();
     void showedCharacterModeWarning();
     // True if the player has used Mudlet long enough not to need the tutorial
-    // tips, the interface tour or the starter UI. Memoised.
+    // tips or the interface tour. Memoised.
     bool experiencedMudletPlayer();
     // The two below are public only so they can be tested
     static void rememberFirstLaunch(QSettings& settings, const QString& profilesPath, const QDateTime& now);

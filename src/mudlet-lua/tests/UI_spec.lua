@@ -35,9 +35,12 @@ describe("Tests UI functions", function()
       setWindowWrap("testconsole", 100)
     end)
 
-    -- clear miniconsole before each test
+    -- clear miniconsole before each test. The user cursor outlives clearWindow(),
+    -- so put it back where output lands or a case that moved it changes what the
+    -- next one reads
     before_each(function()
       clearWindow("testconsole")
+      moveCursorEnd("testconsole")
     end)
 
     teardown(function()
@@ -66,6 +69,32 @@ describe("Tests UI functions", function()
       assert.are.equal(testdecho, copy2decho("testconsole"))
     end)
 
+    -- #4175: selectString() only searches the current line and answers -1 for
+    -- text that is not on it, which is truthy in Lua - so the "string not found"
+    -- error never fired and characters were taken from whichever line the cursor
+    -- was on. A multiline trigger reaches this whenever it copies an earlier
+    -- line's multimatches, since it fires with the cursor on the last one.
+    it("Should not copy the current line when asked for text that is not on it", function()
+      decho("testconsole", "<0,255,0>copy4175first<r>\n")
+      decho("testconsole", "<255,0,0>copy4175second and longer<r>\n")
+
+      assert.is_true(moveCursor("testconsole", 0, 1))
+      assert.are.equal(-1, selectString("testconsole", "copy4175first", 1))
+
+      assert.is_true(moveCursor("testconsole", 0, 1))
+      assert.are.equal("", copy2decho("testconsole", "copy4175first"))
+    end)
+
+    -- a request longer than the line is also "not on this line", and used to be
+    -- answered with the whole line by an off-by-one that happened to come out
+    -- right - which is a different wrong answer from the fragment above
+    it("Should return nothing when asked for text longer than the current line", function()
+      decho("testconsole", "<0,255,0>dup dup<r>\n")
+
+      assert.are.equal(-1, selectString("testconsole", "dup dup dup dup", 1))
+      assert.are.equal("", copy2decho("testconsole", "dup dup dup dup"))
+    end)
+
     -- TODO: https://github.com/Mudlet/Mudlet/issues/5589
     -- it("Should copy2decho text with italics, bold, and underline", function()
     --   local testdecho = "separate: <i>italic</i>, <b>bold</b>, <u>underline</u>. all together: <i>italic<b>bold<u>underline<r>"
@@ -84,9 +113,12 @@ describe("Tests UI functions", function()
       setWindowWrap("testconsole", 100)
     end)
 
-    -- clear miniconsole before each test
+    -- clear miniconsole before each test. The user cursor outlives clearWindow(),
+    -- so put it back where output lands or a case that moved it changes what the
+    -- next one reads
     before_each(function()
       clearWindow("testconsole")
+      moveCursorEnd("testconsole")
     end)
 
     it("Should copy colored English text", function()
@@ -201,6 +233,23 @@ describe("Tests UI functions", function()
       assert.is_true(deleteCommandLine("testDeleteCmdLine"))
       -- Verify command line no longer exists
       assert.is_nil(windowType("testDeleteCmdLine"))
+    end)
+
+    -- Deleting one command line walks the whole set of them looking for the
+    -- widget that is going, so a second one has to come through untouched.
+    it("Should leave another command line alone when deleting one", function()
+      createCommandLine("testDeleteCmdLineGoing", 10, 10, 100, 30)
+      createCommandLine("testDeleteCmdLineStaying", 10, 50, 100, 30)
+      assert.is_true(deleteCommandLine("testDeleteCmdLineGoing"))
+      assert.is_nil(windowType("testDeleteCmdLineGoing"))
+      -- the survivor is still a command line in every way, not just by name
+      assert.are.equal("commandline", windowType("testDeleteCmdLineStaying"))
+      assert.are.same({10, 50, 100, 30}, {getWindowGeometry("testDeleteCmdLineStaying")})
+      hideWindow("testDeleteCmdLineStaying")
+      assert.is_false(windowVisible("testDeleteCmdLineStaying"))
+      showWindow("testDeleteCmdLineStaying")
+      assert.is_true(windowVisible("testDeleteCmdLineStaying"))
+      assert.is_true(deleteCommandLine("testDeleteCmdLineStaying"))
     end)
 
     it("Should delete a scrollbox", function()
@@ -2030,6 +2079,8 @@ describe("Tests UI functions", function()
         "You exclaim, 'finally!'",
         "Bob yells, 'help!'",
         "You shout, 'hello'",
+        "Bob chats, 'hello everyone'",
+        'You chat, "test."',
         "[newbie] Ann: how do I get out of here?",
         "(gossip) Ann: anyone around?",
         "< chat | Ann: anyone around?",
@@ -2040,6 +2091,7 @@ describe("Tests UI functions", function()
       local notChatLines = {
         "You are standing in a dark forest.",
         "The orc hits you for 14 damage!",
+        "You chat with the innkeeper.",
         "[combat] 100/120 hp",
         "(12) something that is not a channel",
       }
@@ -2123,6 +2175,41 @@ describe("Tests UI functions", function()
       BaseUI.standAside("sysServerGuiInstalled", "SomeGameUI")
       BaseUI.serverGuiRemoved("sysUninstallPackage", "SomethingElse")
       assert.are.equal("SomeGameUI", BaseUI.settings.standingAside)
+    end)
+
+    -- a game with its own interface can decline this one up front, by sending
+    -- Client.GUI {"baseui": false}. C++ raises the same event for that, naming no
+    -- package, so this is the shape the decline arrives in
+    it("should stand aside when the game declines without naming a package", function()
+      BaseUI.standAside("sysServerGuiInstalled")
+      assert.is_not_nil(BaseUI.settings.standingAside)
+      assert.is_true(BaseUI.dormant())
+    end)
+
+    it("should retire its capture triggers on a decline, so no game data builds the dock", function()
+      BaseUI.standAside("sysServerGuiInstalled")
+      assert.is_false(BaseUI.chatTriggersArmed())
+      assert.is_nil(next(BaseUI.vitalsTriggerIds))
+      BaseUI.armChatTriggers()
+      BaseUI.createVitalsTriggers()
+      assert.is_false(BaseUI.chatTriggersArmed())
+      assert.is_nil(next(BaseUI.vitalsTriggerIds))
+    end)
+
+    -- the marker a nameless stand-aside stores must never match a real package,
+    -- or that package's uninstall would be read as the game changing its mind
+    it("should stay aside on a decline when a package is uninstalled", function()
+      BaseUI.standAside("sysServerGuiInstalled")
+      local marker = BaseUI.settings.standingAside
+      BaseUI.serverGuiRemoved("sysUninstallPackage", "SomeGameUI")
+      assert.are.equal(marker, BaseUI.settings.standingAside)
+    end)
+
+    it("should come back after a decline when the player asks for it", function()
+      BaseUI.standAside("sysServerGuiInstalled")
+      BaseUI.show()
+      assert.is_nil(BaseUI.settings.standingAside)
+      assert.is_false(BaseUI.dormant())
     end)
   end)
 
@@ -3623,6 +3710,22 @@ describe("Window and label state", function()
       assert.are.equal("scrollbox", windowType(scrollBox))
     end)
 
+    -- A scroll box, a command line and a text edit each have a name space of
+    -- their own, so one name can be more than one of them at a time. Every
+    -- by-name lookup then answers with the scroll box until it is gone.
+    it("resolves a name that is both a scroll box and a text edit as the scroll box", function()
+      local shared = name("wlsSharedName")
+      createScrollBox(shared, 10, 20, 120, 90)
+      createTextEdit(shared, 30, 40, 160, 110)
+      assert.are.equal("scrollbox", windowType(shared))
+      assert.are.same({10, 20, 120, 90}, {getWindowGeometry(shared)})
+      deleteScrollBox(shared)
+      assert.are.equal("textedit", windowType(shared))
+      assert.are.same({30, 40, 160, 110}, {getWindowGeometry(shared)})
+      deleteTextEdit(shared)
+      assert.is_nil(windowType(shared))
+    end)
+
     it("openUserWindow reports the window as a userwindow and is repeatable", function()
       assert.are.equal("userwindow", windowType(userWindow))
       -- re-opening an already open user window re-shows the same dock rather
@@ -4856,6 +4959,18 @@ describe("Window and label state", function()
       local x, y, w, h = getWindowGeometry(label)
       assert.are.same({3, 4, 100, 50}, {x, y, w, h})
       assert.is_true(windowVisible(label))
+    end)
+
+    it("moves an element into a scroll box, which is a parent window as much as a user window is", function()
+      local scrollBox = name("wlsReparentScrollBox")
+      createScrollBox(scrollBox, 30, 40, 150, 120)
+      assert.is_true(setWindow(scrollBox, label, 5, 6, true))
+      -- the coordinates are the scroll box's own, not the main window's
+      assert.are.same({5, 6, 100, 50}, {getWindowGeometry(label)})
+      assert.is_true(windowVisible(label))
+      -- put the label back before the box goes, or it dies as its child
+      setWindow("main", label, 11, 22, true)
+      deleteScrollBox(scrollBox)
     end)
 
     it("moves an element back to the main window", function()

@@ -54,6 +54,7 @@
 #include "EditorMoveItemCommand.h"
 #include "EditorToggleActiveCommand.h"
 #include "mudlet.h"
+#include "widgetutils.h"
 #include "utils.h"
 #include "edbee/models/textdocumentscopes.h"
 
@@ -1421,7 +1422,7 @@ dlgTriggerEditor::~dlgTriggerEditor()
     // of the item fields has the keyboard focus then emits editingFinished()
     // into one of the slot_saveProperty_...() slots when this object is no
     // longer a valid receiver (#9574)
-    utils::disconnectChildSignals(this);
+    widgetutils::disconnectChildSignals(this);
     // The undo stacks are not in this widget's child tree - the edbee one hangs
     // off a parentless CharTextDocument - so disconnect them by hand:
     if (mpTextUndoStack) {
@@ -1901,9 +1902,15 @@ void dlgTriggerEditor::readSettings()
     const QSize size = settings.value("script_editor_size", QSize(600, 400)).toSize();
     resize(size);
 
-    // Use smart positioning instead of blindly restoring saved position
-    // This ensures the dialog opens on the same screen as the active profile
-    utils::positionDialogOnActiveProfileScreen(this, nullptr, mpHost->mpConsole);
+    // Only place the editor ourselves the very first time it is opened; after
+    // that the position the user left it at wins, even on another screen -
+    // showEvent() deals with a screen that has since gone away
+    const QVariant savedPosition = settings.value("script_editor_pos");
+    if (savedPosition.isValid()) {
+        move(savedPosition.toPoint());
+    } else {
+        widgetutils::positionDialogOnActiveProfileScreen(this, nullptr, mpHost->mpConsole);
+    }
 
     mAutosaveInterval = settings.value("autosaveIntervalMinutes", 2).toInt();
 
@@ -1922,8 +1929,10 @@ void dlgTriggerEditor::readSettings()
 void dlgTriggerEditor::writeSettings()
 {
     QSettings& settings = *mudlet::getQSettings();
-    settings.setValue("script_editor_pos", pos());
-    settings.setValue("script_editor_size", size());
+    if (mHasBeenShown) {
+        settings.setValue("script_editor_pos", pos());
+        settings.setValue("script_editor_size", size());
+    }
     settings.setValue("autosaveIntervalMinutes", mAutosaveInterval);
 
     settings.setValue("mTriggerEditorSplitterState", mTriggerEditorSplitterState);
@@ -9898,9 +9907,8 @@ void dlgTriggerEditor::showEvent(QShowEvent* event)
 {
     QMainWindow::showEvent(event);
 
-    // Always reposition the dialog to the correct screen when shown
-    // This ensures it follows the active profile, especially after reattachment
-    utils::positionDialogOnActiveProfileScreen(this, nullptr, mpHost->mpConsole);
+    mHasBeenShown = true;
+    widgetutils::keepDialogOnAScreen(this, mpHost->mpConsole);
 }
 
 void dlgTriggerEditor::changeView(EditorViewType view)
@@ -12497,13 +12505,12 @@ void dlgTriggerEditor::slot_import()
     QStringList failedPackages;
 
     for (const QString& fileName : fileNames) {
-        auto [success, errorMsg] = mpHost->installPackage(fileName, enums::PackageModuleType::Package);
-        if (success) {
+        if (mpHost->installPackage(fileName, enums::PackageModuleType::Package).first) {
             mpHost->waitForProfileSave();
         } else {
             const QString baseName = QFileInfo(fileName).fileName();
             failedPackages << baseName;
-            qWarning() << "dlgTriggerEditor::slot_import() ERROR - failed to import" << baseName << ":" << errorMsg;
+            qWarning() << "dlgTriggerEditor::slot_import() ERROR - failed to import" << baseName;
         }
     }
 

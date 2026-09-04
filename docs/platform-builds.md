@@ -17,9 +17,10 @@ cmake --build --preset macos-debug
 ```
 
 Run `cmake --list-presets` to see the presets available on your machine; alongside `macos-debug`
-there are `-nosan`, `-tsan` and `-ubsan` variants and a `macos-static-analysis` preset. Variants
-build into `build-<preset-name>/` rather than `build/`, so several configurations can coexist
-without invalidating each other.
+there are `-nosan`, `-tsan` and `-ubsan` variants, a `macos-static-analysis` preset and a
+`macos-release` one carrying the flags CI ships to players. Variants build into
+`build-<preset-name>/` rather than `build/`, so several configurations can coexist without
+invalidating each other.
 
 The presets do not pin a Qt location, relying on CMake's default search path. If Qt is not found,
 pass it explicitly: `cmake --preset macos-debug -DCMAKE_PREFIX_PATH="$(brew --prefix qt6)"`.
@@ -53,15 +54,18 @@ cmake --build --preset windows-debug
 ```
 
 Sanitizers are not enabled on Windows (`src/CMakeLists.txt` guards them with `if(NOT WIN32)`),
-so there is no `-nosan` variant.
+so there is no `-nosan` variant. `windows-release` reads `MSYSTEM_PREFIX` the same way, adds
+`CMAKE_BUILD_TYPE=Release` to match `CI/build-mudlet-for-windows.sh` - which builds Release on
+every Windows run - and builds into `build-windows-release/`.
 
 ## Sanitizers and static analysis
 
-Sanitizers are enabled on every non-Windows build; `USE_SANITIZER` defaults to `address`. Use the
-`-tsan` / `-ubsan` / `-nosan` presets to change that, or pass a CMake list — semicolon-separated,
-not comma-separated — such as `-DUSE_SANITIZER="Address;Undefined"`. A comma-separated value is
-read as a single name, which silently skips the per-sanitizer options such as
-`-fno-omit-frame-pointer`.
+Sanitizers are enabled on every non-Windows build; `USE_SANITIZER` defaults to `address`, and a
+Release build type does not turn them off on its own - `<platform>-release` clears the variable
+explicitly. Use the `-tsan` / `-ubsan` / `-nosan` presets to change the choice, or pass a CMake
+list — semicolon-separated, not comma-separated — such as `-DUSE_SANITIZER="Address;Undefined"`.
+A comma-separated value is read as a single name, which silently skips the per-sanitizer options
+such as `-fno-omit-frame-pointer`.
 
 Usable names are `Address`, `Thread` and `Undefined` on macOS, plus `Memory` and `Leak` on Linux.
 `MemoryWithOrigins` appears in the `USE_SANITIZER` cache docstring but has no mapping declared in

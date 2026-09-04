@@ -155,6 +155,7 @@ set(mudlet_SRCS
     TKey.cpp
     TKeySequenceEdit.cpp
     TLabel.cpp
+    TLabelModel.cpp
     TLinkStore.cpp
     TLuaInterpreter.cpp
     TLuaInterpreterDiscord.cpp
@@ -428,6 +429,7 @@ set(mudlet_HDRS
     TKey.h
     TKeySequenceEdit.h
     TLabel.h
+    TLabelModel.h
     TLinkStore.h
     TLuaInterpreter.h
     TMainConsole.h
@@ -494,12 +496,14 @@ set(mudlet_HDRS
     TTrigger.h
     TUiTour.h
     TVar.h
+    TWindowRegistry.h
     UntrustedText.h
     utils.h
     VarUnit.h
     VoskRecognizer.h
     widechar_width.h
     WideComboBox.h
+    widgetutils.h
     XMLexport.h
     XMLimport.h)
 
