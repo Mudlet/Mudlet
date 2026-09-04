@@ -10846,37 +10846,37 @@ Message on button in package manager initially and when the view is NOT the &quo
       <location filename="../src/dlgProfilePreferences.cpp" line="996"/>
       <source>General</source>
       <extracomment>Sidebar category in the settings dialog, holding saving, language, logging, web search and update options</extracomment>
-      <translation type="unfinished"/>
+      <translation>Allgemein</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="998"/>
       <source>Appearance</source>
       <extracomment>Sidebar category in the settings dialog, holding the theme, icon sizes and profile tab options</extracomment>
-      <translation type="unfinished"/>
+      <translation>Farbschema</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1000"/>
       <source>Main display</source>
       <extracomment>Sidebar category in the settings dialog, holding the font, colors, borders and wrapping of the game&apos;s text window</extracomment>
-      <translation type="unfinished"/>
+      <translation>Hauptanzeige</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1002"/>
       <source>Input line</source>
       <extracomment>Sidebar category in the settings dialog, holding the options of the command line the player types into</extracomment>
-      <translation type="unfinished"/>
+      <translation>Eingabezeile</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1004"/>
       <source>Editor</source>
       <extracomment>Sidebar category in the settings dialog, holding the script editor&apos;s options</extracomment>
-      <translation type="unfinished"/>
+      <translation>Editor</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1006"/>
       <source>Mapper</source>
       <extracomment>Sidebar category in the settings dialog, holding the map&apos;s files, view and colors</extracomment>
-      <translation type="unfinished"/>
+      <translation>Mapper</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1008"/>
@@ -10888,7 +10888,7 @@ Message on button in package manager initially and when the view is NOT the &quo
       <location filename="../src/dlgProfilePreferences.cpp" line="1010"/>
       <source>Connection</source>
       <extracomment>Sidebar category in the settings dialog, holding the game protocol, encoding and compatibility options</extracomment>
-      <translation type="unfinished"/>
+      <translation>Verbindung</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1012"/>
@@ -10900,25 +10900,25 @@ Message on button in package manager initially and when the view is NOT the &quo
       <location filename="../src/dlgProfilePreferences.cpp" line="1014"/>
       <source>Accessibility</source>
       <extracomment>Sidebar category in the settings dialog, holding the screen reader and other accessibility options</extracomment>
-      <translation type="unfinished"/>
+      <translation>Barrierefreiheit</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1016"/>
       <source>Shortcuts</source>
       <extracomment>Sidebar category in the settings dialog, holding the main window&apos;s keyboard shortcuts</extracomment>
-      <translation type="unfinished"/>
+      <translation>Tastaturkürzel</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1018"/>
       <source>Advanced</source>
       <extracomment>Sidebar category in the settings dialog, holding development and diagnostic options</extracomment>
-      <translation type="unfinished"/>
+      <translation>Fortgeschrittene Einstellungen</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1092"/>
       <source>Settings</source>
       <extracomment>Wordmark at the top of the settings dialog&apos;s category sidebar, beside the Mudlet icon</extracomment>
-      <translation type="unfinished"/>
+      <translation>Einstellungen</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1094"/>
@@ -10966,7 +10966,7 @@ Message on button in package manager initially and when the view is NOT the &quo
       <location filename="../src/dlgProfilePreferences.cpp" line="1120"/>
       <source>Theme</source>
       <extracomment>Card title on the Appearance settings page, above the light/dark theme selector</extracomment>
-      <translation type="unfinished"/>
+      <translation>Design</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1122"/>
@@ -11035,7 +11035,7 @@ Breadcrumb name of the subpage holding the Discord Rich Presence settings, reach
       <location filename="../src/dlgProfilePreferences.cpp" line="1148"/>
       <source>Game protocols</source>
       <extracomment>Breadcrumb name of the subpage holding the telnet protocols, reached from the Connection settings page</extracomment>
-      <translation type="unfinished"/>
+      <translation>Spiel-Protokolle</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1154"/>
@@ -11565,7 +11565,7 @@ Breadcrumb name of the subpage holding the Discord Rich Presence settings, reach
       <location filename="../src/dlgProfilePreferences.cpp" line="2656"/>
       <source>Search results</source>
       <extracomment>Title shown in place of a category name while the settings search is showing its results</extracomment>
-      <translation type="unfinished"/>
+      <translation>Suchergebnisse</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4740"/>
@@ -16419,7 +16419,7 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.</translation>
       <location filename="../src/mudlet.cpp" line="5181"/>
       <source>Show map</source>
       <extracomment>Toolbox menu entry while no map is on screen - activating it shows the map, creating it if need be</extracomment>
-      <translation type="unfinished"/>
+      <translation>Karte anzeigen</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="5270"/>
@@ -18930,7 +18930,7 @@ Du kannst sie verwenden, aber es könnte Probleme mit der Ausrichtung von Textsp
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="148"/>
       <source>Show main toolbar:</source>
-      <translation type="unfinished"/>
+      <translation>Funktionsleiste anzeigen:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="375"/>
