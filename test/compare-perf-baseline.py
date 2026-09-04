@@ -75,8 +75,8 @@ HARNESSES = {
         # Invariants that also have to hold a particular value, not merely agree
         # with each other. Two builds that have both lost the cached-screen path
         # both emit 0, which equality is perfectly happy with - and the timings
-        # they carry then describe a full redraw on both sides rather than the
-        # repaint the metric names.
+        # they carry then describe a repaint that skipped the damaged band on
+        # both sides, which is faster than the one the metric names.
         "must_be_set": ("display_overlay_cache_reused",),
         # Throughput for the text and trigger pipelines, plus the shipped default
         # packages on the same corpus - the pipeline metrics run on a bare
