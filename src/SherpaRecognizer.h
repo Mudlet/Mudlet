@@ -192,8 +192,13 @@ private:
     bool mUppercaseTokens = false;
 
     // What capabilities() last reported, so announceCapabilitiesIfChanged()
-    // can tell a real change from a re-read of the same answer
-    Capabilities mAnnouncedCapabilities;
+    // can tell a real change from a re-read of the same answer. Seeded with
+    // what capabilities() answers before anything is loaded, which is not the
+    // all-false default: onDevice is unconditionally true for this engine, so
+    // an unseeded record differs from the very first answer and announces a
+    // change nothing made - reachable by calling releaseResources() on a
+    // recognizer that never loaded a thing.
+    Capabilities mAnnouncedCapabilities{.onDevice = true};
 
     // Consecutive silent audio chunks, used to tell a genuine lull from the
     // moment speech is starting. Chunks arrive every 50ms.

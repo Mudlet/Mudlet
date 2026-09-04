@@ -1087,6 +1087,21 @@ private slots:
         QCOMPARE(usable, QStringList({qsl("kill goblin")}));
     }
 
+    // capabilities() answers onDevice = true for this engine whether or not a
+    // model is loaded, so a record of "what was last announced" left at the
+    // all-false default differs from the very first real answer and reports a
+    // change nothing made. No sherpa library is needed to see it: releasing a
+    // recognizer that never loaded anything is enough.
+    void releasingAnEngineThatLoadedNothingAnnouncesNoCapabilityChange()
+    {
+        SherpaRecognizer recognizer;
+        QSignalSpy capabilityChanges(&recognizer, &SpeechRecognizer::capabilitiesChanged);
+
+        recognizer.releaseResources();
+
+        QCOMPARE(capabilityChanges.count(), 0);
+    }
+
     void aRejectedWordIsNotSilentlyDropped()
     {
         QStringList rejected;

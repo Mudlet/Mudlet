@@ -429,9 +429,9 @@ bool SherpaRecognizer::loadModel(const QString& modelPath)
     }
 
     if (!loadSherpaLibrary()) {
+        setState(State::Error);
         //: Shown when speech recognition is asked to load a model but the recognition library itself is not installed
         emit errorOccurred(tr("sherpa-onnx library not available"));
-        setState(State::Error);
         return false;
     }
 
@@ -453,9 +453,9 @@ bool SherpaRecognizer::loadModel(const QString& modelPath)
 
     const QDir modelDir(modelPath);
     if (!modelDir.exists()) {
+        refuseLoad();
         //: Shown when a speech model cannot be found; %1 is the folder that was looked for
         emit errorOccurred(tr("Model path does not exist: %1").arg(modelPath));
-        refuseLoad();
         return false;
     }
 
@@ -478,8 +478,8 @@ bool SherpaRecognizer::loadModel(const QString& modelPath)
 
     if (encoderPath.isEmpty() || decoderPath.isEmpty() || joinerPath.isEmpty() || tokensPath.isEmpty()) {
         //: Shown when a model directory exists but does not contain the files a sherpa-onnx streaming model needs; %1 is that directory
-        emit errorOccurred(tr("Not a sherpa-onnx streaming model (needs tokens.txt and encoder/decoder/joiner .onnx files): %1").arg(modelPath));
         refuseLoad();
+        emit errorOccurred(tr("Not a sherpa-onnx streaming model (needs tokens.txt and encoder/decoder/joiner .onnx files): %1").arg(modelPath));
         return false;
     }
 
@@ -588,9 +588,16 @@ bool SherpaRecognizer::loadModel(const QString& modelPath)
 
     mRecognizer = s_createOnlineRecognizer(config);
     if (!mRecognizer) {
+        setState(State::Error);
+        // capabilities() gates biasing on a live recognizer, so failing here
+        // has already changed the answer from whatever the last good load
+        // announced. Left unsaid, the stale record also swallows the recovery:
+        // the next successful load compares against it, finds no difference,
+        // and stays silent too - so a consumer doing what docs/stt-api.md asks
+        // and re-reading on the signal is wrong from here on.
+        announceCapabilitiesIfChanged();
         //: Shown when a speech model folder exists but could not be loaded; %1 is that folder
         emit errorOccurred(tr("Failed to load sherpa-onnx model from: %1").arg(modelPath));
-        setState(State::Error);
         return false;
     }
 
@@ -649,7 +656,13 @@ bool SherpaRecognizer::initialize(const QString& modelPath)
         clearAppliedVocabulary();
     }
 
-    return state() == State::Ready;
+    // Not "is Ready": setState() reaches Lua synchronously, so a
+    // sysSTTStateChanged handler has already run by the time this line does -
+    // and the shape docs/stt-api.md encourages, starting on ready, leaves the
+    // state Listening. Reporting that as a failed load told stt.init() to
+    // answer nil for a model that was at that moment decoding speech. Error is
+    // the one state that means the load did not happen.
+    return state() != State::Error;
 }
 
 void SherpaRecognizer::doStartListening()
@@ -694,9 +707,9 @@ void SherpaRecognizer::doStartListening()
                 // SherpaRecognizer::tr, not QObject::tr: the lambda is not a member, and
                 // the default context would file this identical string a second
                 // time for translators to translate twice
+                weakThis->setState(State::Error);
                 //: Shown when the player refuses Mudlet access to the microphone; the path names the macOS setting that grants it
                 emit weakThis->errorOccurred(SherpaRecognizer::tr("Microphone permission denied. Please grant microphone access in System Settings > Privacy & Security > Microphone."));
-                weakThis->setState(State::Error);
             }
         });
         return;
@@ -704,12 +717,12 @@ void SherpaRecognizer::doStartListening()
     case MacMicrophonePermission::AuthorizationStatus::Denied:
     case MacMicrophonePermission::AuthorizationStatus::Restricted:
         qWarning() << "SherpaRecognizer: Microphone permission denied or restricted";
-        //: Shown when microphone access was refused earlier and has to be granted in system settings before speech will work
-        emit errorOccurred(tr("Microphone permission denied. Please grant microphone access in System Settings > Privacy & Security > Microphone."));
         // The same state a denial reaches when the dialog is answered now, as
         // docs/stt-api.md requires: a package driving its controls from state
         // would otherwise keep offering to listen on a machine that cannot
         setState(State::Error);
+        //: Shown when microphone access was refused earlier and has to be granted in system settings before speech will work
+        emit errorOccurred(tr("Microphone permission denied. Please grant microphone access in System Settings > Privacy & Security > Microphone."));
         return;
     case MacMicrophonePermission::AuthorizationStatus::Authorized:
         break;
@@ -722,9 +735,9 @@ void SherpaRecognizer::doStartListening()
 void SherpaRecognizer::startListeningInternal()
 {
     if (!mRecognizer) {
+        setState(State::Error);
         //: Shown when speech recognition could not be prepared for listening
         emit errorOccurred(tr("Failed to initialize speech recognition"));
-        setState(State::Error);
         return;
     }
 
@@ -734,9 +747,9 @@ void SherpaRecognizer::startListeningInternal()
     mStream = s_createOnlineStream(mRecognizer);
     if (!mStream) {
         qWarning() << "SherpaRecognizer: Failed to create recognition stream";
+        setState(State::Error);
         //: Shown when speech recognition could not be prepared for listening
         emit errorOccurred(tr("Failed to initialize speech recognition"));
-        setState(State::Error);
         return;
     }
 
@@ -894,8 +907,8 @@ void SherpaRecognizer::slot_captureError(const QString& message)
 {
     // The capture component has already torn its device down; the recognizer
     // just surfaces the fault and leaves Listening
-    emit errorOccurred(message);
     setState(State::Error);
+    emit errorOccurred(message);
 }
 
 float SherpaRecognizer::calculateAudioLevel(const QByteArray& data) const
