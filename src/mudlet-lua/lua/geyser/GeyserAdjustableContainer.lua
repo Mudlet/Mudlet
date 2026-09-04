@@ -457,7 +457,7 @@ function Adjustable.Container:adjustConnectedContainers()
                 if where == "left" then
                     local right_x = container:get_x() + container:get_width()
                     local left_x = self:get_x() + self:get_width()
-                    container:move(make_percent(left_x/winw), nil)
+                    container:move(keepRelative(container.x, left_x, winw), nil)
                     container:resize(keepRelative(container.width, right_x - left_x, winw), nil)
                 end
                 if where == "bottom" then
@@ -466,7 +466,7 @@ function Adjustable.Container:adjustConnectedContainers()
                 if where == "top" then
                     local bottom_y = container:get_y() + container:get_height()
                     local top_y = self:get_y() + self:get_height()
-                    container:move(nil, make_percent(top_y/winh))
+                    container:move(nil, keepRelative(container.y, top_y, winh))
                     container:resize(nil, keepRelative(container.height, bottom_y - top_y, winh))
                 end
             end

@@ -2100,5 +2100,15 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       assert.is_falsy(tostring(side.height):find("%%"),
         "an absolute height came back as " .. tostring(side.height) .. ", so it would start following the window")
     end)
+
+    it("leaves a container that was positioned absolutely absolute", function()
+      make({name = "gasConnectTopPos", x = "0%", y = "0%", width = "100%", height = "10%", attached = "top"})
+      local side = make({name = "gasConnectSidePos", x = 0, y = 120, width = "25%", height = "90%", attached = "left"})
+
+      side:connectToBorder("top")
+
+      assert.is_falsy(tostring(side.y):find("%%"),
+        "an absolute y came back as " .. tostring(side.y) .. ", so it would start following the window")
+    end)
   end)
 end)
