@@ -10,27 +10,30 @@ local function magiclines(s)
   return s:gmatch("(.-)\n")
 end
 
+-- ::warning:: turns this into an annotation on the GitHub Actions run
+local function warn(message)
+  print("::warning::" .. message)
+end
+
 local function scrapeLuaFunctions(htmlbody)
   local funcs = {}
   local funcsHash = {}
   local count = 0
+  local duplicates = 0
   local state = 0
-  local line = nil
-  local match = nil
-  local name, usage, definition
+  local name, usage
   for line in magiclines(htmlbody) do
     if state == 0 then
-      --print("testing match on " .. line)
-      name = string.match(line, '<h2><span class="mw%-headline" id="(.-)">.-</span></h2>')
+      -- take the heading text rather than the anchor id: MediaWiki suffixes the id
+      -- of a repeated heading with _2, _3 ... which is not part of the function name
+      name = string.match(line, '<h2><span class="mw%-headline" id=".-">(.-)</span></h2>')
       if name then
         state = 1
-        --print("Name: " .. name)
       end
     elseif state == 1 then
       usage = string.match(line, '<dl><dt>(.-)</dt>')
       if usage then
         state = 0
-        --print("Usage: " .. usage)
         local func = {}
         func.name = trim(name)
         func.usage = trim(usage)
@@ -39,18 +42,24 @@ local function scrapeLuaFunctions(htmlbody)
     end
   end
 
-  funcsHash = {}
-  local count = 0
   for i, v in ipairs(funcs) do
     count = count + 1
-    --print(v.name .. " - " .. v.usage)
     if not string.match(v.name, "[%:%.]") then
-      funcsHash[v.name] = v.usage
+      if funcsHash[v.name] then
+        duplicates = duplicates + 1
+        warn(string.format("%s is documented more than once in the manual - keeping '%s' and dropping '%s'. Merge the duplicate headings on the wiki.",
+                           v.name, funcsHash[v.name], v.usage))
+      else
+        funcsHash[v.name] = v.usage
+      end
     end
   end
 
   local jsonText = lunajson.encode(funcsHash)
   print(count .. " functions in the API.")
+  if duplicates > 0 then
+    print(duplicates .. " duplicate function heading(s) in the manual.")
+  end
 
   return jsonText
 end
