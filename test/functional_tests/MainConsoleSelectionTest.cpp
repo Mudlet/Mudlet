@@ -288,6 +288,61 @@ private slots:
         QCOMPARE(pane->cursor().shape(), Qt::IBeamCursor);
     }
 
+    // The same reset, reached by the other bounds check: an empty line inside
+    // the buffer answers the line check but has no character to look a link up
+    // on, so convertMouseXToBufferX() falls out of its loop and the reset has to
+    // come from the character check instead. That check also stands between the
+    // condition and its own at(tCharIndex) call, so losing it on this arm throws
+    // rather than merely stranding the hand.
+    void test_theCursorStopsBeingAHandOverAnEmptyLineInsideTheBuffer()
+    {
+        mpServer->setWelcomeMessage(qsl("cursor test\r\n"));
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        QVERIFY2(waitForTextInBuffer(qsl("cursor test")), "the welcome text never reached the buffer");
+
+        mudlet::self()->resize(1200, 800);
+        QTest::qWait(100ms);
+
+        TTextEdit* pane = upperPane();
+        QVERIFY2(pane, "No upper pane available");
+
+        auto host = mudlet::self()->getActiveHost();
+        // Hide would keep the blank line out of the buffer and ReplaceWithSpace
+        // would give it a character to find, either of which leaves this
+        // exercising the same arm as the test above
+        host->mBlankLineBehaviour = Host::BlankLineBehaviour::Show;
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("clearWindow()\nechoLink('LinkAboveEmptyRow', [[ ]], '', true)\necho('\\n\\nrowBelowTheBlankOne\\n')\n")),
+                 "the echoLink() call failed");
+        QVERIFY2(waitForTextInBuffer(qsl("rowBelowTheBlankOne")), "the text under the blank line never reached the buffer");
+        QTest::qWait(100ms);
+
+        QPoint overTheLink;
+        for (int y = pane->mFontHeight / 2; y < pane->height() && overTheLink.isNull(); y += pane->mFontHeight) {
+            for (int x = pane->mFontWidth / 2; x < pane->width(); x += pane->mFontWidth) {
+                sendMouse(pane, QEvent::MouseMove, Qt::NoButton, Qt::NoButton, QPointF(x, y));
+                if (pane->cursor().shape() == Qt::PointingHandCursor) {
+                    overTheLink = QPoint(x, y);
+                    break;
+                }
+            }
+        }
+        QVERIFY2(!overTheLink.isNull(), "no pixel of the pane produced the hand cursor, so the move below proves nothing");
+        QCOMPARE(pane->cursor().shape(), Qt::PointingHandCursor);
+
+        // straight down onto the blank line, which the row under it keeps inside
+        // the buffer
+        const int blankRowY = overTheLink.y() + pane->mFontHeight;
+        const int blankRowLine = (blankRowY / pane->mFontHeight) + pane->imageTopLine();
+        QVERIFY2(blankRowLine < static_cast<int>(pane->mpBuffer->buffer.size()),
+                 "the row below the link is past the buffer, which is the case the test above covers rather than this one");
+        QVERIFY2(pane->mpBuffer->buffer.at(blankRowLine).empty(),
+                 qPrintable(qsl("the row below the link holds %1 characters rather than none, so the character check is not what has to reject it")
+                                    .arg(pane->mpBuffer->buffer.at(blankRowLine).size())));
+        sendMouse(pane, QEvent::MouseMove, Qt::NoButton, Qt::NoButton, QPointF(overTheLink.x(), blankRowY));
+
+        QCOMPARE(pane->cursor().shape(), Qt::IBeamCursor);
+    }
+
     void cleanup()
     {
         const QString profilePath = mudlet::getMudletPath(enums::profileHomePath, mpHostname);
