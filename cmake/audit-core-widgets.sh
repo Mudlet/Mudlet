@@ -38,21 +38,21 @@
 #
 # Usage:
 #   cmake/audit-core-widgets.sh                 # print the Markdown report, exit 0
+#   cmake/audit-core-widgets.sh --enforce       # CI guard: exit 1 if count > baseline
 #   cmake/audit-core-widgets.sh --summary       # one-line count, exit 0
 #   cmake/audit-core-widgets.sh --count         # bare offending-file count, exit 0
-#   cmake/audit-core-widgets.sh --classes       # the derived QtWidgets class names, exit 0
 #
 # Options:
 #   --qt-include DIR   Qt headers dir (the one containing QtWidgets/). Overrides
 #                      auto-detection.
-#   --baseline FILE    baseline file to record in the report (default:
-#                      cmake/core-widgets-baseline.txt).
+#   --baseline FILE    baseline file for --enforce, also recorded in the report
+#                      (default: cmake/core-widgets-baseline.txt).
 #   --src DIR          Mudlet src/ dir (default: derived from this script's location).
 #   -h, --help         show this help.
 #
 # Nothing gates on this count yet. Steps 3-10 of the refactor legitimately move
 # files between the core and app targets, so an intermediate step can correctly
-# raise it, and the audit only becomes a CI gate once the count reaches 0 (#9516).
+# raise it, and --enforce only becomes a CI gate once the count reaches 0 (#9516).
 # Until then the committed report and baseline are regenerated in each libmudlet PR
 # and drift shows up in the diff - which is why this script must never report a
 # wrong number quietly.
@@ -79,14 +79,14 @@ BASELINE_FILE="$SCRIPT_DIR/core-widgets-baseline.txt"
 err() { printf '%s: %s\n' "$PROG" "$1" >&2; }
 
 usage() {
-  sed -n '2,61p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '2,62p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 while [ $# -gt 0 ]; do
   case "$1" in
+    --enforce) MODE=enforce ;;
     --summary) MODE=summary ;;
     --count) MODE=count ;;
-    --classes) MODE=classes ;;
     --qt-include) shift; QT_INCLUDE="${1:-}" ;;
     --qt-include=*) QT_INCLUDE="${1#*=}" ;;
     --baseline) shift; BASELINE_FILE="${1:-}" ;;
@@ -293,6 +293,14 @@ while IFS= read -r f; do
   fi
 done < "$FILE_LIST"
 
+# Under --enforce the audit is a CI gate: a file listed in CMakeLists.txt but
+# absent from disk means the list is stale or the parser drifted, so counting
+# the survivors would under-report. Fail loudly instead of silently skipping.
+if [ "$MODE" = enforce ] && [ "$missing" -gt 0 ]; then
+  err "$missing file(s) listed in $CMAKE_FILE are missing from disk; failing under --enforce."
+  exit 2
+fi
+
 if [ ! -s "$EXISTING" ]; then
   err "no source files parsed from $CMAKE_FILE"
   exit 2
@@ -393,8 +401,17 @@ case "$MODE" in
     exit 0
     ;;
 
-  classes)
-    cat "$SET_CLASSES"
+  enforce)
+    BASE=$(read_baseline) || exit 2
+    printf 'mudlet_core Qt Widgets audit: %s offending files (baseline %s).\n' "$OFFENDING" "$BASE"
+    if [ "$OFFENDING" -gt "$BASE" ]; then
+      err "regression: $OFFENDING > baseline $BASE. New/changed files pulled Qt Widgets into mudlet_core."
+      err "Offenders above baseline - inspect recent changes; run without --enforce for the full report."
+      exit 1
+    fi
+    if [ "$OFFENDING" -lt "$BASE" ]; then
+      printf 'Improvement: below baseline. Lower %s to %s to lock in the gain.\n' "$BASELINE_FILE" "$OFFENDING"
+    fi
     exit 0
     ;;
 
@@ -410,7 +427,8 @@ case "$MODE" in
 Measures how many source files in the \`mudlet_core\` static-library target
 (\`src/CMakeLists.txt\`) still depend on Qt Widgets. Part of the libmudlet
 refactor (#8681, #9011): the goal is to drive this count to **0** so \`mudlet_core\`
-can build with Qt Widgets absent.
+can build with Qt Widgets absent, after which this audit becomes an enforcing CI
+guard (\`--enforce\`).
 
 A file is counted as depending on Qt Widgets if it either:
 
@@ -439,8 +457,8 @@ bash cmake/audit-core-widgets.sh > docs/libmudlet-widgets-report.md
 
 Nothing gates on this count yet: steps 3-10 of the refactor legitimately move files
 between the core and app targets, so an intermediate step can correctly raise it.
-The audit becomes a CI gate once the count reaches **0**. Until then this report and
-the baseline are regenerated in each libmudlet PR, so drift shows up in the diff.
+\`--enforce\` becomes a CI gate once the count reaches **0**. Until then this report
+and the baseline are regenerated in each libmudlet PR, so drift shows up in the diff.
 
 ## Summary
 
