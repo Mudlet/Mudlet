@@ -532,7 +532,7 @@ void TTextEdit::layoutLine(int lineNumber, int lineOfScreen, const TChar& timeSt
             // by the mouse...
             cursor.setX(cursor.x() + layoutGrapheme(layout, cursor, c, 0, lineNumber, timeStampStyle));
         }
-        currentSize += mudlet::smTimeStampFormat.size();
+        currentSize += TBuffer::smTimeStampFormat.size();
     }
 
     //get the longest line
@@ -1750,51 +1750,49 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
 
 void TTextEdit::updateTextCursor(const QMouseEvent* event, int lineIndex, int tCharIndex, bool isOutOfbounds)
 {
-    if (lineIndex < static_cast<int>(mpBuffer->buffer.size())) {
-        if (tCharIndex < static_cast<int>(mpBuffer->buffer[lineIndex].size())) {
-            if (mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex() && !isOutOfbounds) {
-                int linkIndex = mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex();
+    const int lineCount = static_cast<int>(mpBuffer->buffer.size());
+    const int charCount = lineIndex < lineCount ? static_cast<int>(mpBuffer->buffer.at(lineIndex).size()) : 0;
+    if (lineIndex < lineCount && tCharIndex < charCount && mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex() && !isOutOfbounds) {
+        int linkIndex = mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex();
 
-                setCursor(Qt::PointingHandCursor);
-                QStringList tooltip = mpBuffer->mLinkStore.getHints(linkIndex);
-                QStringList commands = mpBuffer->mLinkStore.getLinks(linkIndex);
-                // If a special tooltip hint was given, use that one.
-                // The server chooses this text and QToolTip renders anything
-                // Qt::mightBeRichText() accepts as HTML, so escape it and wrap it
-                // in an explicit document rather than letting that guess decide
-                // whether the markup is live. white-space:pre keeps the line
-                // breaks the plain-text path used to give.
-                // An empty string is how QToolTip is told to hide, so it has to
-                // stay empty rather than becoming an empty document.
-                const QString tooltipText = tooltip.size() > commands.size() ? tooltip[0] : tooltip.join(QChar::LineFeed);
-                const QString tooltipMarkup = tooltipText.isEmpty() ? QString() : qsl("<html><body style='white-space:pre'>%1</body></html>").arg(tooltipText.toHtmlEscaped());
-                QToolTip::showText(event->globalPosition().toPoint(), tooltipMarkup);
+        setCursor(Qt::PointingHandCursor);
+        QStringList tooltip = mpBuffer->mLinkStore.getHints(linkIndex);
+        QStringList commands = mpBuffer->mLinkStore.getLinks(linkIndex);
+        // If a special tooltip hint was given, use that one.
+        // The server chooses this text and QToolTip renders anything
+        // Qt::mightBeRichText() accepts as HTML, so escape it and wrap it
+        // in an explicit document rather than letting that guess decide
+        // whether the markup is live. white-space:pre keeps the line
+        // breaks the plain-text path used to give.
+        // An empty string is how QToolTip is told to hide, so it has to
+        // stay empty rather than becoming an empty document.
+        const QString tooltipText = tooltip.size() > commands.size() ? tooltip[0] : tooltip.join(QChar::LineFeed);
+        const QString tooltipMarkup = tooltipText.isEmpty() ? QString() : qsl("<html><body style='white-space:pre'>%1</body></html>").arg(tooltipText.toHtmlEscaped());
+        QToolTip::showText(event->globalPosition().toPoint(), tooltipMarkup);
 
-                // Update hover state for CSS pseudo-class support
-                // Don't set hover state for disabled links - they should stay disabled
-                // Also don't set hover if this link was just clicked - wait for mouse to leave first
-                if (mpBuffer->getHoveredLink() != linkIndex) {
-                    auto currentState = mpBuffer->getLinkState(linkIndex);
-                    if (currentState != Mudlet::HyperlinkStyling::StateDisabled && linkIndex != mpBuffer->getLastClickedLinkIndex()) {
-                        mpBuffer->setHoveredLink(linkIndex);
-                        forceUpdate(); // Trigger re-render with new hover state
-                    }
-                }
-            } else {
-                setCursor(Qt::IBeamCursor);
-                QToolTip::hideText();
-
-                // Clear hover state if we're not over a link
-                if (mpBuffer->getHoveredLink() != 0) {
-                    mpBuffer->setHoveredLink(0);
-                    forceUpdate(); // Trigger re-render
-                }
-
-                // Clear last clicked link when mouse leaves - allows hover to work again
-                if (mpBuffer->getLastClickedLinkIndex() != 0) {
-                    mpBuffer->clearLastClickedLinkIndex();
-                }
+        // Update hover state for CSS pseudo-class support
+        // Don't set hover state for disabled links - they should stay disabled
+        // Also don't set hover if this link was just clicked - wait for mouse to leave first
+        if (mpBuffer->getHoveredLink() != linkIndex) {
+            auto currentState = mpBuffer->getLinkState(linkIndex);
+            if (currentState != Mudlet::HyperlinkStyling::StateDisabled && linkIndex != mpBuffer->getLastClickedLinkIndex()) {
+                mpBuffer->setHoveredLink(linkIndex);
+                forceUpdate(); // Trigger re-render with new hover state
             }
+        }
+    } else {
+        setCursor(Qt::IBeamCursor);
+        QToolTip::hideText();
+
+        // Clear hover state if we're not over a link
+        if (mpBuffer->getHoveredLink() != 0) {
+            mpBuffer->setHoveredLink(0);
+            forceUpdate(); // Trigger re-render
+        }
+
+        // Clear last clicked link when mouse leaves - allows hover to work again
+        if (mpBuffer->getLastClickedLinkIndex() != 0) {
+            mpBuffer->clearLastClickedLinkIndex();
         }
     }
 }
@@ -1848,7 +1846,7 @@ int TTextEdit::convertMouseXToBufferX(const int mouseX, const int lineNumber, bo
             // Do an additional check if we need to establish whether we are
             // over just the timestamp part of the line:
             if (Q_UNLIKELY(isOverTimeStamp && mpConsole->showTimeStamps() && indexOfChar == 0)) {
-                if ((mouseX + offset) < (mudlet::smTimeStampFormat.size() * mFontWidth)) {
+                if ((mouseX + offset) < (TBuffer::smTimeStampFormat.size() * mFontWidth)) {
                     // The mouse position is actually over the timestamp region
                     // to the left of the main text:
                     *isOverTimeStamp = true;
@@ -1859,7 +1857,7 @@ int TTextEdit::convertMouseXToBufferX(const int mouseX, const int lineNumber, bo
             //mCursorX relevant for horizontal scrollbars
             //Otherwise the value is always 0
             if (mpConsole->showTimeStamps()) {
-                rightX = (mudlet::smTimeStampFormat.size() + column - mCursorX) * mFontWidth;
+                rightX = (TBuffer::smTimeStampFormat.size() + column - mCursorX) * mFontWidth;
             } else {
                 rightX = (column - mCursorX) * mFontWidth;
             }
@@ -2452,7 +2450,7 @@ void TTextEdit::slot_copySelectionToClipboardImage()
     for (int y = firstLine, total = lastLine + 1; y < total; ++y) {
         const QString lineText{mpBuffer->lineBuffer.at(y)};
         // Will accumulate the width in pixels of the current line:
-        auto lineWidth{(mpConsole->showTimeStamps() ? mudlet::smTimeStampFormat.size() : 0) * mFontWidth};
+        auto lineWidth{(mpConsole->showTimeStamps() ? TBuffer::smTimeStampFormat.size() : 0) * mFontWidth};
         // Accumulated width in "normal" width characters:
         int column{};
         QTextBoundaryFinder boundaryFinder(QTextBoundaryFinder::Grapheme, lineText);
@@ -2473,7 +2471,7 @@ void TTextEdit::slot_copySelectionToClipboardImage()
             // The timestamp is (currently) 13 "normal width" characters
             // but that might not always be the case in some future I18n
             // situations:
-            lineWidth = (mpConsole->showTimeStamps() ? mudlet::smTimeStampFormat.size() + column : column) * mFontWidth;
+            lineWidth = (mpConsole->showTimeStamps() ? TBuffer::smTimeStampFormat.size() + column : column) * mFontWidth;
             indexOfChar = nextBoundary;
         }
         largestLine = std::max(static_cast<int>(lineWidth), largestLine);

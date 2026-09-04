@@ -1730,7 +1730,7 @@ void cTelnet::checkNAWS()
     }
     // Use the smaller of the screen width or the wrapAt, then subtract the
     // width of the time stamps if they are showing:
-    int naws_x = std::min(pHost->mScreenWidth, pHost->mWrapAt) - (pHost->mpConsole->showTimeStamps() ? mudlet::smTimeStampFormat.size() : 0);
+    int naws_x = std::min(pHost->mScreenWidth, pHost->mWrapAt) - (pHost->mpConsole->showTimeStamps() ? TBuffer::smTimeStampFormat.size() : 0);
     int naws_y = pHost->mScreenHeight;
     if ((naws_y > 0) && (myOptionState.test(static_cast<size_t>(OPT_NAWS))) && ((mNaws_x != naws_x) || (mNaws_y != naws_y))) {
         sendNAWS(naws_x, naws_y);
@@ -5275,9 +5275,7 @@ bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
             mIsReplayRunFromLua = true;
         }
         replayStream.setDevice(&replayFile);
-        if (QVersionNumber::fromString(QString(qVersion())) >= QVersionNumber(5, 13, 0)) {
-            replayStream.setVersion(mudlet::scmQDataStreamFormat_5_12);
-        }
+        replayStream.setVersion(QDataStream::Qt_5_12);
         loadingReplay = true;
         if (mudlet::self()->replayStart()) {
             auto [ok, modifiedFormat] = testReadReplayFile();

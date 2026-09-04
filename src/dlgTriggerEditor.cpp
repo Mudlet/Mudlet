@@ -10897,10 +10897,10 @@ void dlgTriggerEditor::slot_toggleCentralDebugConsole()
 {
     mudlet::self()->attachDebugArea(mpHost->getName());
 
-    mudlet::smpDebugArea->setVisible(!mudlet::smDebugMode);
-    mudlet::smDebugMode = !mudlet::smDebugMode;
+    mudlet::smpDebugArea->setVisible(!TDebug::smDebugMode);
+    TDebug::smDebugMode = !TDebug::smDebugMode;
     mudlet::smpDebugArea->setWindowTitle(tr("Central Debug Console"));
-    if (mudlet::smDebugMode) {
+    if (TDebug::smDebugMode) {
         // If this is the first time the window is shown we want any previously
         // enqueued messages to be painted onto the central debug console:
         TDebug::flushMessageQueue();
