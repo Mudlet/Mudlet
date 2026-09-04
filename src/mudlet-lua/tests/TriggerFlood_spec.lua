@@ -9,11 +9,12 @@
 -- drifts from the first, triggers stop firing and nothing says so. These specs
 -- feed the same lines both ways and require the same firings.
 --
--- The prescan needs at least two workers (MUDLET_MATCH_THREADS, default
--- min(4, cores / 2)), and the counter that proves a burst reached it is only
--- reported under MUDLET_TEST_MODE. Without either there is nothing here worth
--- running, and these report as pending rather than passing on a comparison that
--- never happened.
+-- The pool needs two threads to share a batch between (MUDLET_MATCH_THREADS,
+-- default min(4, cores / 2)) and turns itself off below that, so by default a
+-- machine with fewer than four cores never runs it. The counter that proves a
+-- burst reached the pool is reported under MUDLET_TEST_MODE only. Without
+-- either there is nothing here worth running, and these report as pending
+-- rather than passing on a comparison that never happened.
 describe("trigger matching under a flood", function()
 
     -- Enough pattern-bearing triggers to clear the prescan's threshold without
@@ -51,6 +52,9 @@ describe("trigger matching under a flood", function()
             if not workers then
                 pending("counting what reaches the prescan needs MUDLET_TEST_MODE")
             end
+            -- the count includes the calling thread, and is zero when the
+            -- pool declined to start, so this asks whether the parallel path
+            -- exists at all rather than how wide it is
             if workers < 2 then
                 pending("this machine has too few cores to run the parallel prescan")
             end

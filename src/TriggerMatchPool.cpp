@@ -43,10 +43,14 @@ TriggerMatchPool& TriggerMatchPool::instance()
 TriggerMatchPool::TriggerMatchPool()
 {
     const int cores = std::max(1, QThread::idealThreadCount());
-    int wanted = qEnvironmentVariableIntValue("MUDLET_MATCH_THREADS");
-    if (wanted <= 0) {
+    bool configured = false;
+    int wanted = qEnvironmentVariableIntValue("MUDLET_MATCH_THREADS", &configured);
+    if (!configured) {
         // Half the machine, capped: past four the tail of the fork-join grows
-        // faster than the share of work each extra thread takes away.
+        // faster than the share of work each extra thread takes away. An
+        // unreadable value counts as unset, but a readable zero does not: that
+        // is how the pool is turned off, so it has to survive to the check below
+        // rather than be replaced by the default here.
         wanted = std::min(4, cores / 2);
     }
     wanted = std::min(wanted, cores);

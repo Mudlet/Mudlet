@@ -62,7 +62,11 @@ public:
     // How many lines one chunk has to carry before its matching is worth
     // sharing out - see TriggerUnit::processDataStream().
     int floodChunkLines() const { return mFloodChunkLines; }
-    int workerCount() const { return static_cast<int>(mThreads.size()); }
+    // How many threads share a prescan: the helpers plus the calling thread,
+    // which takes a share of the work too. Zero when the pool is off, which is
+    // the only case in which it declines every batch, so this is also how a
+    // caller asks whether the parallel path is in use at all.
+    int workerCount() const { return mThreads.empty() ? 0 : static_cast<int>(mThreads.size()) + 1; }
     // How many batches have been shared out since the client started. Only
     // moves on the main thread, and only when the pool actually took a batch,
     // so a reader can tell a run that used the pool from one that never met the
