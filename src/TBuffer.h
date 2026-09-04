@@ -43,6 +43,7 @@
 #include <QVarLengthArray>
 #include <QVector>
 
+#include <cstring>
 #include <deque>
 #include <memory>
 #include <string>
@@ -74,6 +75,22 @@ public:
     {
     }
 };
+
+// Only two RGB colors compare as a plain comparison of the front of the object,
+// which can be inlined here rather than made as a call into Qt. HSV, HSL and
+// ExtendedRgb all compare approximately - HSV counts hue 0 and hue 36000 as the
+// same red - so those are left to QColor::operator==(). Every color a trigger
+// actually sees is RGB, which makes the fast path the predicted one.
+constexpr size_t COLOR_COMPARED_BYTES = sizeof(QColor::Spec) + 5 * sizeof(ushort);
+static_assert(sizeof(QColor) == 16 && COLOR_COMPARED_BYTES == 14, "QColor is no longer a spec word followed by five component words - use QColor::operator==() instead of sameColor()");
+
+inline bool sameColor(const QColor& left, const QColor& right)
+{
+    if (Q_LIKELY(left.spec() == QColor::Rgb && right.spec() == QColor::Rgb)) {
+        return std::memcmp(&left, &right, COLOR_COMPARED_BYTES) == 0;
+    }
+    return left == right;
+}
 
 class TChar
 {
@@ -363,6 +380,9 @@ public:
     // Colors of the current trigger-pass line as committed, before any
     // trigger ran; nullptr when lineNumber is not the line being processed:
     const std::vector<TChar>* preTriggerPassLine(int lineNumber) const;
+    // The one color pair shared by every character of that same line, or
+    // nullptr when its colors vary or there is no snapshot for it:
+    const TChar* preTriggerPassLineUniformColors(int lineNumber);
     int find(int line, const QString& what, int pos);
     QStringList split(int line, const QString& splitter);
     QStringList split(int line, const QRegularExpression& splitter);
@@ -597,6 +617,9 @@ private:
     // allocation instead of making a fresh one for each committed line:
     std::vector<TChar> mSpareTriggerPassLine;
     int mPreTriggerPassLineNumber = -1;
+    enum class PassLineUniformity { Unknown, Uniform, Mixed };
+    // Worked out on demand, so a profile with no color triggers never pays for it:
+    PassLineUniformity mPreTriggerPassLineUniformity = PassLineUniformity::Unknown;
     // A line that ended at the game's own wrap column (Host::mUndoServerWrap)
     // is held here instead of being committed, so its continuation can be
     // joined back on and triggers run once over the whole logical line:

@@ -209,6 +209,10 @@ private slots:
         QTimer::singleShot(0ms, qApp, [this, host]() {
             host->forceClose();
             mCloseAccepted = host->requestClose();
+            // Host leaves profile.ini for the event loop to flush, so a setting
+            // stored this late can only reach the disk through the Host's own
+            // destruction:
+            host->writeProfileIniData(qsl("Test/FlushedAtClose"), qsl("yes"));
             mudlet::self()->getHostManager().deleteHost(mProfileName);
         });
 
@@ -224,6 +228,11 @@ private slots:
         QVERIFY2(mCloseAccepted, "Closing the profile was refused");
         QCOMPARE(gaveUpWaitingWarnings, 0);
         QVERIFY2(lastSavedProfileContains(mProfileName, mKeptPackage), "The save the quit waited for reached no profile on disk");
+        // Read as text: a QSettings would answer from the QConfFile cache that
+        // every instance for this path shares, disk or no disk.
+        QFile ini(MudletPaths::getMudletPath(enums::profileDataItemPath, mProfileName, qsl("profile.ini")));
+        QVERIFY2(ini.open(QFile::ReadOnly | QFile::Text), "profile.ini was never written");
+        QVERIFY2(QString::fromUtf8(ini.readAll()).contains(qsl("FlushedAtClose=yes")), "A profile.ini setting stored as the profile closed never reached the disk");
     }
 };
 

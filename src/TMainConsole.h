@@ -187,8 +187,8 @@ public:
     void closeUnpackingProgress();
     void setupVideoOutput(TMediaPlayer* player, bool& setupSucceeded);
     void hideVideoOutput(TMediaPlayer* player);
-    const QByteArray& getHunspellCodecName_system() const { return mHunspellCodecName_system; }
-    Hunhandle* getHunspellHandle_system() const { return mpHunspell_system; }
+    const QByteArray& getHunspellCodecName_system();
+    Hunhandle* getHunspellHandle_system();
     // Either returns the handle of the per profile or the shared Mudlet one or
     // nullptr depending on the state of the flags mEnableUserDictionary and
     // mUseSharedDictionary:
@@ -239,6 +239,7 @@ private slots:
     // owns everything else about it.
     void slot_loggingAnnouncement(const bool isLogging, const QString& logFileName);
     void slot_loggingStateChanged(const bool isLogging);
+    void slot_warmSystemSpellDictionary();
 
 
 signals:
@@ -250,6 +251,7 @@ signals:
 
 private:
     void createMapProgressDialog(const QString& title, const QString& label, const QString& cancelButtonText, int minimum, int maximum);
+    void loadSystemSpellDictionary();
     // Where reparentLabel() and reparentWindow() parent an element named as a
     // setWindow() destination, shared so the two cannot disagree about what
     // "main" means.
@@ -287,11 +289,11 @@ private:
     QMap<QString, TTextBox*> mTextBoxMap;
     QMap<QString, TScrollBox*> mScrollBoxMap;
 
-    // Names the dictionary mpHunspell_system was last built for. Assigned before
-    // the load is attempted and never rolled back, so a dictionary whose files
-    // are missing is remembered as loaded and never retried. Host's mSpellDic is
-    // the profile's setting; this is only ever what has been loaded from it.
-    QString mLoadedSystemDictionary;
+    // Names the dictionary mpHunspell_system is built for. The build is put off
+    // until the load has finished, so the profile load never reads the whole
+    // dictionary. Host's mSpellDic is the profile's setting; this is only ever
+    // what has been requested from it.
+    QString mSystemDictionary;
 
     // Cloned from Host
     bool mEnableUserDictionary = true;

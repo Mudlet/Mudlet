@@ -3494,7 +3494,8 @@ bool TLuaInterpreter::compile(const QString& code, QString& errorMsg, const QStr
     // caller's and has to be left exactly as it was found:
     const int callerStackTop = lua_gettop(L);
 
-    const int error = (luaL_loadbuffer(L, code.toUtf8().constData(), strlen(code.toUtf8().constData()), name.toUtf8().constData()) || lua_pcall(L, 0, 0, 0));
+    const QByteArray utf8Code = code.toUtf8();
+    const int error = (luaL_loadbuffer(L, utf8Code.constData(), utf8Code.size(), name.toUtf8().constData()) || lua_pcall(L, 0, 0, 0));
 
     if (error) {
         // The error object is on the top of the stack. Absolute slot 1 - which
@@ -3557,7 +3558,8 @@ bool TLuaInterpreter::reportInvalidLuaCodeParam(lua_State* L, const char* functi
 std::pair<bool, QString> TLuaInterpreter::validLuaCode(const QString& code)
 {
     lua_State* L = pGlobalLua;
-    const int error = luaL_loadbuffer(L, code.toUtf8().constData(), strlen(code.toUtf8().constData()), code.toUtf8().data());
+    const QByteArray utf8Code = code.toUtf8();
+    const int error = luaL_loadbuffer(L, utf8Code.constData(), utf8Code.size(), utf8Code.constData());
     const int topElementIndex = lua_gettop(L);
     QString e = "invalid Lua code: ";
     if (error) {
