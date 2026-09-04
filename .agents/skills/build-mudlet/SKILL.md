@@ -74,6 +74,22 @@ The plain `<platform>-debug` presets build into `build/`. Every variant builds i
 `build-<preset-name>/` instead, so an AddressSanitizer tree and a sanitizer-free tree can coexist
 without forcing each other to rebuild. The `/build*` entry in `.gitignore` covers all of them.
 
+### Link with mold on Linux
+
+Linking is the bulk of a warm rebuild, and mold shrinks it dramatically - PR #9927 measured a CI
+link tail of 4m13s against 29s after switching the Linux builds to it. Whenever mold is installed,
+pass it at *configure* time:
+
+```bash
+cmake --preset linux-debug-nosan -DUSE_ALTERNATE_LINKER=mold
+```
+
+`USE_ALTERNATE_LINKER` also takes `gold`, `lld` and `bfd`, and warns and falls back to the system
+linker when the one named is not installed. The flag becomes `add_link_options()` baked into the
+build tree, so a tree already configured without it keeps using the system linker until it is
+reconfigured - `readelf -p .comment build-<preset>/src/mudlet | grep mold` says which linker a
+binary actually got.
+
 ### When to use a release preset
 
 Reach for `<platform>-release` when the *speed and size* of the binary are what is being measured:
@@ -135,9 +151,8 @@ preset. The hook exports `CMAKE_PREFIX_PATH` pointing at the aqt Qt, so the docu
 commands work unchanged. On a warm container the hook finishes in seconds and a full build is
 mostly ccache hits — measured 5m25s wall for all targets at 99% hit rate, most of it linking —
 versus ~25 minutes cold. If the container cache is cold the hook itself takes ~30 minutes, once.
-The hook also pre-configures `build-linux-debug-nosan/` with `-DUSE_ALTERNATE_LINKER=mold`:
-linking is the bulk of a warm rebuild and mold shrinks it dramatically (PR #9927 measured a CI
-link tail of 4m13s → 29s). Keep that flag if you reconfigure the tree from scratch.
+The hook also pre-configures `build-linux-debug-nosan/` with `-DUSE_ALTERNATE_LINKER=mold` - keep
+that flag if you reconfigure the tree from scratch, and see "Link with mold on Linux" above.
 Run Mudlet headlessly there with `QT_QPA_PLATFORM=offscreen`.
 
 Both test harnesses work in the remote container (validated: 112/112 ctest, 3202 busted
