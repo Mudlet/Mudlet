@@ -181,7 +181,6 @@ public:
     QString scmVersion;
     QString confPath;
     // These have to be "inline" to satisfy the ODR (One Definition Rule):
-    inline static bool smDebugMode = false;
     inline static bool smFirstLaunch = false;
     inline static QVariantHash smLuaFunctionNames;
     inline static QPointer<TConsole> smpDebugConsole;
@@ -191,11 +190,6 @@ public:
     inline static bool smMirrorToStdOut = false;
     // adjust Mudlet settings to match Steam's requirements
     inline static bool smSteamMode = false;
-    // This may need to be localised, it represents the format of the timestamp
-    inline static QString smTimeStampFormat = qsl("hh:mm:ss.zzz ");
-    // If localised this should be set to the same format and length as the
-    // smTimeStampFormat:
-    inline static QString smBlankTimeStamp = qsl("------------ ");
 
 
     void showEvent(QShowEvent*) override;

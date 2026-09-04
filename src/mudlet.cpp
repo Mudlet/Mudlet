@@ -32,6 +32,7 @@
 #include "CredentialManager.h"
 #include "DarkTheme.h"
 #include "LuaInterface.h"
+#include "TBuffer.h"
 #include "TDebug.h"
 #include "TDebugFilterBar.h"
 #include "MudletInstanceCoordinator.h"
@@ -156,7 +157,7 @@ using namespace std::chrono_literals;
 bool TConsoleMonitor::eventFilter(QObject* obj, QEvent* event)
 {
     if (event->type() == QEvent::Close) {
-        mudlet::smDebugMode = false;
+        TDebug::smDebugMode = false;
         mudlet::self()->refreshTabBar();
         return QObject::eventFilter(obj, event);
     }
@@ -2180,11 +2181,11 @@ void mudlet::loadMaps()
  in a console and might require translation for a few locales; the content
  is as per QDateTime::toString(...) and needs to follow the rules for that
  function as well as being suitable for the translation locale.*/
-    smTimeStampFormat = tr("hh:mm:ss.zzz ");
+    TBuffer::smTimeStampFormat = tr("hh:mm:ss.zzz ");
     /*: This represents the format of the timestamps shown for lines that do not
  have a timestamp in a console that is showing them. If localised this
- should be set to the same format and length as the smTimeStampFormat:*/
-    smBlankTimeStamp = tr("------------ ");
+ should be set to the same format and length as TBuffer::smTimeStampFormat:*/
+    TBuffer::smBlankTimeStamp = tr("------------ ");
 }
 
 // migrates the Central Debug Console to the next available host, if any
@@ -8411,7 +8412,7 @@ void mudlet::refreshTabBar()
     for (const auto& pHost : mHostManager) {
         const QString hostName = pHost->getName();
 
-        if (smDebugMode) {
+        if (TDebug::smDebugMode) {
             mpTabBar->applyPrefixToDisplayedText(hostName, TDebug::getTag(pHost.data()));
         } else {
             mpTabBar->applyPrefixToDisplayedText(hostName);
