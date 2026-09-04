@@ -123,17 +123,19 @@ private:
         qint64 addedMs = 0;
     };
 
-    // How long converting a table cost, over and above building the same table and not
-    // returning it. Timing the snippet as a whole would mostly measure how fast this
-    // machine runs a Lua loop of that many iterations, which says nothing about the walk.
+    // How long converting a table cost, with the loop that built it outside the timed
+    // region: timing the snippet as a whole would mostly measure how fast this machine
+    // runs a Lua loop of that many iterations, which says nothing about the walk. The
+    // build leaves the table in a global so the second call only has to return it -
+    // timing both calls and subtracting put the difference of two large numbers where a
+    // small one belongs, which on a loaded machine came out as noise either way round.
     WalkTiming timeWalk(const QString& build) const
     {
+        const bool builtOk = TMCPLuaBridge::runLua(L, build + qsl("collectgarbage('collect') return #t"), 60000).success;
         QElapsedTimer elapsed;
         elapsed.start();
-        const bool builtOk = TMCPLuaBridge::runLua(L, build + qsl("return #t"), 60000).success;
-        const qint64 withoutWalk = elapsed.restart();
-        const bool walkedOk = TMCPLuaBridge::runLua(L, build + qsl("return t"), 60000).success;
-        return {builtOk && walkedOk, elapsed.elapsed() - withoutWalk};
+        const bool walkedOk = TMCPLuaBridge::runLua(L, qsl("return t"), 60000).success;
+        return {builtOk && walkedOk, elapsed.elapsed()};
     }
 
     const void* globalPrint() const
@@ -993,25 +995,32 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
         // QJsonObject keeps its keys sorted, so every insert moves everything after it:
         // uncapped, this table took 4675ms to render, all of it on Mudlet's only thread.
         // Both of these are past the key cap, so the walk breaks off after the same 20000
-        // keys either way and the wider one costs no more. That comparison is what makes
-        // the case, not a millisecond budget: a sanitised CI runner spends longer on a
-        // capped walk than this machine does on an uncapped one, so no one number is both
-        // loose enough to pass there and tight enough to fail here.
-        const WalkTiming capped = timeWalk(qsl("local t = {} for i = 1, 40000 do t['key'..i] = i end "));
-        const WalkTiming tenTimesWider = timeWalk(qsl("local t = {} for i = 1, 400000 do t['key'..i] = i end "));
+        // keys either way. That comparison is what makes the case, not a millisecond
+        // budget: a sanitised CI runner spends longer on a capped walk than this machine
+        // does on an uncapped one, so no one number is both loose enough to pass there and
+        // tight enough to fail here.
+        // The wider walk still costs about twice the narrower one, because reaching 20000
+        // live nodes scattered over a ten times larger table misses cache that much more
+        // often, so the bound has to clear 2x rather than sit at 1x. Measured with the
+        // caps lifted the same ratio is 110x, which is the margin this is really weighing.
+        const WalkTiming capped = timeWalk(qsl("t = {} for i = 1, 40000 do t['key'..i] = i end "));
+        const WalkTiming tenTimesWider = timeWalk(qsl("t = {} for i = 1, 400000 do t['key'..i] = i end "));
 
         QVERIFY(capped.ok);
         QVERIFY(tenTimesWider.ok);
-        QVERIFY2(tenTimesWider.addedMs < 3 * capped.addedMs + 100, qPrintable(qsl("ten times the keys took %1ms to walk against %2ms").arg(tenTimesWider.addedMs).arg(capped.addedMs)));
+        QVERIFY2(tenTimesWider.addedMs < 10 * capped.addedMs, qPrintable(qsl("ten times the keys took %1ms to walk against %2ms").arg(tenTimesWider.addedMs).arg(capped.addedMs)));
     }
 
     void testALongArrayIsCutShortQuicklyAndIsStillAnArray()
     {
         // Both are past the node cap, so the walk stops after the same 200000 entries and
         // the longer one costs no more - see the wide-table case above for why the two are
-        // weighed against each other rather than against a millisecond budget.
-        const WalkTiming capped = timeWalk(qsl("local t = {} for i = 1, 400000 do t[i] = i end "));
-        const WalkTiming fiveTimesLonger = timeWalk(qsl("local t = {} for i = 1, 2000000 do t[i] = i end "));
+        // weighed against each other rather than against a millisecond budget. An array is
+        // appended to rather than inserted into in sorted order, so it has none of that
+        // case's scattered-node penalty and does sit at 1x; the bound stays tight because
+        // with the cap lifted this ratio is only 6x, not that case's 110x.
+        const WalkTiming capped = timeWalk(qsl("t = {} for i = 1, 400000 do t[i] = i end "));
+        const WalkTiming fiveTimesLonger = timeWalk(qsl("t = {} for i = 1, 2000000 do t[i] = i end "));
 
         QVERIFY(capped.ok);
         QVERIFY(fiveTimesLonger.ok);
