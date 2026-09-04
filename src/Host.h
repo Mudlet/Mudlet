@@ -65,6 +65,7 @@ class xml_document;
 class QDockWidget;
 class QJsonObject;
 class QKeyEvent;
+class QSettings;
 
 class TEvent;
 class TArea;
@@ -376,8 +377,12 @@ public:
     void postMessage(const QString message) { mTelnet.postMessage(message); }
     QColor getAnsiColor(const int ansiCode, const bool isBackground = false) const;
     QPair<bool, QString> writeProfileData(const QString&, const QString&);
-    bool writeProfileIniData(const QString& item, const QString& what);
     QString readProfileData(const QString&);
+    // Both share one QSettings kept open for the profile's lifetime; writes are
+    // left for the event loop to flush, as syncing each one cost two
+    // fdatasync()s - a ~50 ms stall for every command line a loading profile
+    // creates.
+    void writeProfileIniData(const QString& item, const QString& what);
     QString readProfileIniData(const QString& item);
     void xmlSaved(const QString& xmlName);
     bool currentlySavingProfile();
@@ -581,6 +586,8 @@ public:
     bool fontsAntiAlias() const { return !mNoAntiAlias; }
 
 private:
+    QSettings& profileIni();
+
     bool mNoAntiAlias = false;
     // These are used only during profile initiation to provide faked details
     // for things looking to the main console font before it gets instantiated:
@@ -1257,6 +1264,10 @@ private:
     // Set when the mudlet singleton demands that we close - used to force an
     // attempt to save the profile and map - without asking:
     bool mForcedClose = false;
+
+    // Only reach through profileIni(): setName() nulls this so the path
+    // follows the name.
+    QSettings* mpProfileIni = nullptr;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)
