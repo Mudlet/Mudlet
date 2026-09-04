@@ -1952,9 +1952,11 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
         std::vector<TChar> savedPassLine;
         savedPassLine.swap(mPreTriggerPassLine);
         const int savedPassLineNumber = mPreTriggerPassLineNumber;
+        const PassLineUniformity savedPassLineUniformity = mPreTriggerPassLineUniformity;
         mPreTriggerPassLine.swap(mSpareTriggerPassLine);
         mPreTriggerPassLine.assign(buffer.back().cbegin(), buffer.back().cend());
         mPreTriggerPassLineNumber = lineIndex;
+        mPreTriggerPassLineUniformity = PassLineUniformity::Unknown;
         mpHost->runTriggers(lineIndex);
         mSpareTriggerPassLine.swap(mPreTriggerPassLine);
         if (mSpareTriggerPassLine.capacity() > csmMaxRetainedLineCapacity) {
@@ -1962,6 +1964,7 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
         }
         mPreTriggerPassLine.swap(savedPassLine);
         mPreTriggerPassLineNumber = savedPassLineNumber;
+        mPreTriggerPassLineUniformity = savedPassLineUniformity;
     }
 
     // Only use of TBuffer::wrap(), breaks up new text
@@ -2257,7 +2260,28 @@ void TBuffer::syncPreTriggerPassLine(int y)
 {
     if (y >= 0 && y == mPreTriggerPassLineNumber && y < static_cast<int>(buffer.size())) {
         mPreTriggerPassLine = buffer[y];
+        mPreTriggerPassLineUniformity = PassLineUniformity::Unknown;
     }
+}
+
+const TChar* TBuffer::preTriggerPassLineUniformColors(int lineNumber)
+{
+    if (lineNumber < 0 || lineNumber != mPreTriggerPassLineNumber || mPreTriggerPassLine.empty()) {
+        return nullptr;
+    }
+    const TChar& first = mPreTriggerPassLine.front();
+    if (mPreTriggerPassLineUniformity == PassLineUniformity::Unknown) {
+        // The first character only stands in for the rest of them while this
+        // compares colors the same way the trigger it answers for does
+        const bool uniform = std::all_of(mPreTriggerPassLine.cbegin() + 1, mPreTriggerPassLine.cend(), [&first](const TChar& character) {
+            return sameColor(first.foreground(), character.foreground()) && sameColor(first.background(), character.background());
+        });
+        mPreTriggerPassLineUniformity = uniform ? PassLineUniformity::Uniform : PassLineUniformity::Mixed;
+    }
+    if (mPreTriggerPassLineUniformity == PassLineUniformity::Uniform) {
+        return &first;
+    }
+    return nullptr;
 }
 
 void TBuffer::processMxpWatchdogCallback()
