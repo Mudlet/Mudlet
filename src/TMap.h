@@ -126,8 +126,7 @@ public:
     void updateArea(int areaId);
 
     void audit();
-    // One switch for every profile, not per map: the main window persists it
-    // and the preferences dialog toggles it for the whole application.
+    // One switch for the whole application, not one per map.
     inline static bool smShowMapAuditErrors = false;
 
     QList<int> detectRoomCollisions(int id);
