@@ -27,11 +27,13 @@ included in the count; the refactor plan moves those wholesale to a future
 `mudlet_app` target rather than de-widgeting them, so the count drops through a
 mix of moving and refactoring.
 
-**Regenerate** - baseline first, so the report records it:
+**Regenerate** - baseline first, so the report records it. Write through a temporary
+file: a redirect truncates its target before the audit runs, so a fatal error would
+leave the baseline empty and every later run would abort on it.
 
 ```sh
-bash cmake/audit-core-widgets.sh --count > cmake/core-widgets-baseline.txt
-bash cmake/audit-core-widgets.sh > docs/libmudlet-widgets-report.md
+bash cmake/audit-core-widgets.sh --count > baseline.tmp && mv baseline.tmp cmake/core-widgets-baseline.txt
+bash cmake/audit-core-widgets.sh > report.tmp && mv report.tmp docs/libmudlet-widgets-report.md
 ```
 
 Nothing gates on this count yet: steps 3-10 of the refactor legitimately move files
