@@ -2044,10 +2044,8 @@ noViewSpellReport = table.concat(noViewSpellProblems, '; ')
         QVERIFY2(deleted, qPrintable(deleteMessage));
         QVERIFY2(!host->windowRegistry().hasCommandLine(commandLineName), "Deleting a command line left it in the profile's window registry.");
 
-        // The replacement is told from the original by identity below, and a
-        // QPointer that has already gone null compares unequal to anything - so
-        // if the deferred delete has landed by here there is no replacement being
-        // tested at all, just a second create.
+        // A QPointer that has gone null compares unequal to anything, so the identity
+        // check below would take a plain second create for a replacement.
         QVERIFY2(!original.isNull(), "The old command line was already destroyed before its replacement was made, so nothing below tests a replacement outliving a deferred delete.");
 
         const auto [recreated, recreateMessage] = host->mpConsole->createCommandLine(QString(), commandLineName, 0, 50, 40, 20);
@@ -2181,13 +2179,12 @@ noViewSpellReport = table.concat(noViewSpellProblems, '; ')
         QCOMPARE(luaGlobalString(host, "roundTrippedText"), qsl("the replacement is reachable"));
     }
 
-    // The other parent both kinds can be created into, and the other half of the
-    // fix: a scroll box inside a scroll box is one of this console's own
-    // recursive children, which ~TMainConsole's sweep finds and severs, where a
-    // user window's child hangs off a dock and never is. deleteScrollBox() severs
-    // only the outer box's own destroyed() connection, so the nested ones have to
-    // still be there to fire - a disconnect widened to a blanket form would leave
-    // the user window case green and break this one.
+    // A scroll box inside a scroll box is one of this console's own recursive
+    // children, which ~TMainConsole's sweep finds and severs, where a user window's
+    // child hangs off a dock and never is. deleteScrollBox() severs only the outer
+    // box's own destroyed() connection, so the nested ones have to still be there
+    // to fire - a disconnect widened to a blanket form would leave the user window
+    // case green and break this one.
     void test_deletingAScrollBoxTakesItsPlainWindowsWithIt()
     {
         startProfile();
@@ -2232,10 +2229,9 @@ noViewSpellReport = table.concat(noViewSpellProblems, '; ')
         QVERIFY2(!host->windowType(textBoxName).has_value(), "Host still reports a window type for a text edit destroyed with the scroll box it was in.");
         QVERIFY2(!host->mpConsole->textBoxWidget(textBoxName), "A text edit destroyed with the scroll box it was in left a dangling widget in the console's map.");
 
-        // Both names have to be usable again. The scroll box one goes through
-        // Host, which reads the registry and would otherwise resize the freed
-        // widget; the text edit one is read straight out of the console's map, so
-        // it is written through and read back to show the map holds a live one.
+        // The scroll box goes through Host, which reads the registry; the text edit
+        // is read straight out of the console's map, so it is written through and
+        // read back to show the map holds a live one.
         const auto [recreatedScrollBox, scrollBoxMessage] = host->createScrollBox(QString(), innerName, 0, 0, 40, 40);
         QVERIFY2(recreatedScrollBox, qPrintable(qsl("The name of a scroll box destroyed with its scroll box could not be used again: %1").arg(scrollBoxMessage)));
         const auto [recreatedTextBox, textBoxMessage] = host->mpConsole->createTextBox(QString(), textBoxName, 0, 50, 40, 40);
@@ -2302,10 +2298,8 @@ noViewSpellReport = table.concat(noViewSpellProblems, '; ')
         QVERIFY2(deleted, qPrintable(deleteMessage));
         QVERIFY2(!host->windowRegistry().hasScrollBox(scrollBoxName), "Deleting a scroll box left it in the profile's window registry.");
 
-        // The replacement is told from the original by identity below, and a
-        // QPointer that has already gone null compares unequal to anything - so
-        // if the deferred delete has landed by here there is no replacement being
-        // tested at all, just a second create.
+        // A QPointer that has gone null compares unequal to anything, so the identity
+        // check below would take a plain second create for a replacement.
         QVERIFY2(!original.isNull(), "The old scroll box was already destroyed before its replacement was made, so nothing below tests a replacement outliving a deferred delete.");
 
         runLua(host, qsl("createScrollBox('%1', 0, 0, 40, 40)\n").arg(scrollBoxName));
@@ -2346,10 +2340,8 @@ noViewSpellReport = table.concat(noViewSpellProblems, '; ')
         QVERIFY2(deleted, qPrintable(deleteMessage));
         QVERIFY2(!host->windowRegistry().hasTextBox(textBoxName), "Deleting a text edit left it in the profile's window registry.");
 
-        // The replacement is told from the original by identity below, and a
-        // QPointer that has already gone null compares unequal to anything - so
-        // if the deferred delete has landed by here there is no replacement being
-        // tested at all, just a second create.
+        // A QPointer that has gone null compares unequal to anything, so the identity
+        // check below would take a plain second create for a replacement.
         QVERIFY2(!original.isNull(), "The old text edit was already destroyed before its replacement was made, so nothing below tests a replacement outliving a deferred delete.");
 
         const auto [recreated, recreateMessage] = host->mpConsole->createTextBox(QString(), textBoxName, 0, 80, 40, 40);
