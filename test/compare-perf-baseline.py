@@ -72,6 +72,12 @@ HARNESSES = {
             # says so, where a percentage would bury it.
             "display_overlay_cache_reused",
         ),
+        # Invariants that also have to hold a particular value, not merely agree
+        # with each other. Two builds that have both lost the cached-screen path
+        # both emit 0, which equality is perfectly happy with - and the timings
+        # they carry then describe a full redraw on both sides rather than the
+        # repaint the metric names.
+        "must_be_set": ("display_overlay_cache_reused",),
         # Throughput for the text and trigger pipelines, plus the shipped default
         # packages on the same corpus - the pipeline metrics run on a bare
         # profile, so only defaults_text_lines_per_sec can see a package costing
@@ -262,6 +268,16 @@ def check_invariants(before, after):
                 "different workloads or build configurations and cannot be compared. "
                 f"Rebuild both trees from the same {before_harness} harness, built the same way."
             )
+
+    for name in HARNESSES[before_harness].get("must_be_set", ()):
+        for label in ("before", "after"):
+            run = before if label == "before" else after
+            if not run[name]:
+                fail(
+                    f"{name} is 0 in the {label} run - that run did not measure what the metric "
+                    "names, so comparing it says nothing. Both runs having lost it makes them "
+                    "equal, not comparable."
+                )
 
     for name in HARNESSES[before_harness].get("soft_invariants", ()):
         if name in before and name in after and before[name] != after[name]:

@@ -143,9 +143,6 @@ private:
     static constexpr int kDisplayTailLargeHeight = 1000;
     static constexpr int kDisplayTailPaints = 400;
 
-    // The overlay pass repaints a band this many rows tall, the shape a window
-    // edge or a Geyser label dragged across the console damages: a few rows, no
-    // new text, and no scroll.
     static constexpr int kDisplayOverlayBandRows = 3;
     static constexpr int kDisplayOverlayPaints = 400;
 
@@ -880,10 +877,13 @@ private slots:
 
     // The third way into drawForeground(), and the one nothing else here covers:
     // a partial repaint with no new text and no scroll, which is what a window
-    // or a Geyser label dragged over the console leaves behind. It has its own
-    // guard on the cached screen, and when that guard rejects the cache every
-    // such repaint quietly becomes a full redraw. Issue #10341 was exactly that,
-    // and both benchmarks above stayed flat through it.
+    // or a Geyser label dragged over the console leaves behind.
+    //
+    // Its guard on the cached screen is separate from the scroll shortcut's, and
+    // when it rejects the cache the repaint falls through to that shortcut, which
+    // blits and then redraws nothing - so the damaged band is never drawn and the
+    // paint gets FASTER. Issue #10341 is that, unfixed on development as this
+    // lands, and both benchmarks above stay flat through it.
     void benchDisplayOverlay()
     {
         Host* host = startProfile();
@@ -914,15 +914,11 @@ private slots:
         emitMetric("display_overlay_large_paint_ms", large.paintMs);
         emitMetric("display_overlay_small_cells", static_cast<qint64>(small.cells));
         emitMetric("display_overlay_large_cells", static_cast<qint64>(large.cells));
-        // The blit is itself proportional to the screen, so cost_ratio does not
-        // flatten out entirely - what it does is stay well under area_ratio,
-        // which a full redraw of the band would not.
         emitMetric("display_overlay_area_ratio", large.cells / small.cells);
         emitMetric("display_overlay_cost_ratio", large.paintMs / small.paintMs);
-        // 1 only when both windows really took the cached-screen blit. Without
-        // this the timings alone are ambiguous: a build whose guard rejects the
-        // cache still reports a plausible number, and the comparison would read
-        // a silent full-redraw regression as a modest slowdown.
+        // 1 only when both windows really took the cached-screen blit, without
+        // which the timings above are not merely noisy but inverted: the build
+        // that lost the path is the faster-looking one.
         emitMetric("display_overlay_cache_reused", static_cast<qint64>((small.cacheReused && large.cacheReused) ? 1 : 0));
     }
 
@@ -945,8 +941,8 @@ private:
     // Blitting the cache is not on its own the answer, because the scroll
     // shortcut below it blits the same pixmap and is what a build with a broken
     // guard falls through to. The two are told apart by what they redraw: the
-    // cached-screen blit redraws the damaged band, the scroll shortcut redraws
-    // only the bottom row and leaves the band as it found it. So the cache is
+    // cached-screen blit redraws the damaged band, the scroll shortcut starts
+    // from the bottom row and leaves the band as it found it. So the cache is
     // marked twice, once outside the band and once inside it, and only the
     // wanted path arrives with the first mark and without the second.
     bool overlayPaintReusedCache(TTextEdit* pane, QPixmap& target, const QRect& band)
@@ -1068,9 +1064,7 @@ private:
         result.paintMs = (best / kDisplayTailPaints) * 1000.0;
     }
 
-    // A band of rows repainted with no new text and no scroll, which is the
-    // damage a window edge or a Geyser label dragged across the console leaves
-    // behind. Fills `result` for the reason measureTailPaints() gives.
+    // Fills `result` for the reason measureTailPaints() gives.
     void measureOverlayPaints(TTextEdit* pane, const int bufferedLines, const int windowWidth, const int windowHeight, OverlayResult& result)
     {
         mudlet::self()->resize(windowWidth, windowHeight);
@@ -1092,11 +1086,24 @@ private:
         pane->scrollTo(firstLine);
         pane->render(&target);
         QVERIFY2(frameHasContent(target.toImage()), "the rendered frame is a single flat colour - nothing was drawn, so the timings below would describe an empty widget");
-        QVERIFY2(pane->imageTopLine() > 10, qPrintable(qsl("the top line is %1, close enough to the start of the buffer that drawForeground() forces full redraws").arg(pane->imageTopLine())));
+        QVERIFY2(pane->imageTopLine() > 0, "the screen is at the very start of the buffer, where drawForeground() refuses the cached-screen blit outright");
 
         const QRect band(0, (result.rows / 3) * pane->mFontHeight, pane->width(), kDisplayOverlayBandRows * pane->mFontHeight);
         QVERIFY2(band.height() < pane->rect().height(), "the band covers the whole pane, so these would be full repaints rather than the partial ones this measures");
         QVERIFY2(band.top() >= pane->mFontHeight, "the band starts at the top row, leaving no row above it for the probe below to mark");
+        // Any of these makes drawForeground() write the repaint back to the
+        // cache, which swaps the two pixmaps and leaves the probe reading the
+        // pre-render cache rather than what was just painted - reporting 0 for a
+        // reason that has nothing to do with the paint path. The first two also
+        // widen the redraw to the whole screen below the band, so the timings
+        // would stop describing a band at all.
+        QVERIFY2(!pane->mMouseTracking && !pane->mForceUpdate && pane->mDirtyFirstLine < 0,
+                 "a drag, a forced redraw or a pending dirty line is in progress, so this would measure a wider repaint than the band and read the wrong pixmap back");
+        // The probe marks the cache and reads the band back out of the buffer, so
+        // a cache too small to carry the marks would report them missing - the
+        // same answer as a rejected cache, arrived at for an unrelated reason.
+        QVERIFY2(!pane->mScreenMap.isNull() && pane->mScreenMap.height() >= qRound(band.bottom() * pane->devicePixelRatioF()),
+                 "the cached screen is too small to mark, so the probe could not tell a rejected cache from an unreadable one");
 
         double best = std::numeric_limits<double>::max();
         for (int pass = 0; pass < kDisplayPasses; ++pass) {
@@ -1111,6 +1118,12 @@ private:
 
         // Last, because it leaves marks in the cache: nothing is timed after it.
         result.cacheReused = overlayPaintReusedCache(pane, target, band);
+        if (!result.cacheReused) {
+            qWarning("%s",
+                     qPrintable(qsl("the %1x%2 window's repaints did not reuse the cached screen, so the overlay timings from it describe a paint that skipped the band rather than one that drew it")
+                                        .arg(windowWidth)
+                                        .arg(windowHeight)));
+        }
     }
 
     // Called before the benchmark installs any of its own, so anything running

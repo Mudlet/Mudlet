@@ -279,9 +279,10 @@ workload, and comparing their throughput would report a geometry difference as a
 code change. That is the same role `text_corpus_lines` and `text_corpus_bytes`
 play for the text bench.
 
-The slot runs last so that its render target and the paint path's cached screen
-pixmap fall outside both `peak_rss_kb` and `defaults_peak_rss_kb`, whose
-difference is documented above as what the default packages cost.
+Every drawing slot runs after the memory ones so that their render targets and
+the paint path's cached screen pixmap fall outside both `peak_rss_kb` and
+`defaults_peak_rss_kb`, whose difference is documented above as what the default
+packages cost.
 
 ### The cached screen (`display_tail_*`, `display_overlay_*`)
 
@@ -299,23 +300,23 @@ actually spends its time doing:
 
 Each runs the same workload in a 640x400 and a 1600x1000 window and reports
 `*_area_ratio` (how much bigger the screen got, ~4.9) against `*_cost_ratio` (how
-much dearer one paint got with it). A path really reusing the cache holds
-cost_ratio far below area_ratio.
+much dearer one paint got with it, ~1.6). Read the pair as context for a change,
+not as proof the cache is working - the blit is itself proportional to the screen,
+so a broken path does not announce itself in the ratio. That is what the metric
+below is for.
 
 `display_overlay_cache_reused` is an **invariant, not a timing**: 1 only when
 both windows really took the cached-screen blit. It exists because the timings
-alone are actively misleading when that branch breaks. Issue #10341 - the guard
-rejecting the cache it had just allocated at fractional device pixel ratios - was
-measured here at `QT_SCALE_FACTOR=1.25` reporting **0.17ms against the fixed
-build's 0.37ms**: the broken build looks twice as fast because it never draws the
-band at all. A percentage would have reported that as a large speedup. Refusing
-the comparison says what actually happened.
+are not merely noisy when that branch breaks, they are inverted. A repaint whose
+cached-screen guard fails falls through to the scroll shortcut, which blits and
+then redraws nothing - so the damaged band is never drawn and the paint gets
+faster. Issue #10341 measured here at `QT_SCALE_FACTOR=1.25` reports **0.17ms
+against a fixed build's 0.37ms**. A percentage would call the regression a 2x
+speedup.
 
-The reuse is detected by observation rather than by re-testing the guard, which
-would only keep agreeing with itself: the cache is marked above and inside the
-band, and only the wanted branch arrives with the first mark and without the
-second. The scroll shortcut blits the same pixmap, so blitting alone does not
-distinguish them.
+It is checked against 1, not merely for agreement between the two runs: two
+builds that have both lost the path are equal, not comparable. The benchmark also
+warns on stderr naming the window that lost it, so a single run says so too.
 
 The `display_*` metrics are reported, not gated by default. They measure at
 least as tightly as the text metrics do on an unloaded machine, so gate on them
