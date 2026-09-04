@@ -36,7 +36,7 @@
 #include "TDebug.h"
 #include "TDebugFilterBar.h"
 #include "MudletInstanceCoordinator.h"
-#include "utils.h"
+#include "MudletPaths.h"
 #include "SpeechRecognizer.h"
 #include "SpeechRecognizerFactory.h"
 #include "TDetachedWindow.h"
@@ -971,9 +971,9 @@ static bool anyProfilesExist(const QString& profilesPath);
 
 void mudlet::init()
 {
-    smFirstLaunch = !anyProfilesExist(utils::getMudletPath(enums::profilesPath));
+    smFirstLaunch = !anyProfilesExist(MudletPaths::getMudletPath(enums::profilesPath));
     // Must be after setupConfig() created mpSettings and before anything of this run is written
-    rememberFirstLaunch(*mpSettings, utils::getMudletPath(enums::profilesPath), QDateTime::currentDateTime());
+    rememberFirstLaunch(*mpSettings, MudletPaths::getMudletPath(enums::profilesPath), QDateTime::currentDateTime());
 
     QFile gitShaFile(":/app-build.txt");
     if (!gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
@@ -1012,7 +1012,7 @@ void mudlet::init()
     setAppearance(mAppearance, true);
 
     scanForMudletTranslations(qsl(":/lang"));
-    scanForQtTranslations(utils::getMudletPath(enums::qtTranslationsPath));
+    scanForQtTranslations(MudletPaths::getMudletPath(enums::qtTranslationsPath));
     loadTranslators(mInterfaceLanguage);
 
     // Cannot assign a value in the constructor list as it requires the
@@ -1741,7 +1741,7 @@ void mudlet::setupConfig()
         }
     }
     qDebug() << "mudlet::setupConfig() INFO:" << "using config dir:" << confPath;
-    utils::setConfigPath(confPath);
+    MudletPaths::setConfigPath(confPath);
 
     // parented to the application, not this window: the window deletes itself
     // on close and the Updater keeps using this QSettings past that point.
@@ -3667,7 +3667,7 @@ bool mudlet::saveWindowLayout()
         return false;
     }
 
-    const QString layoutFilePath = utils::getMudletPath(enums::mainDataItemPath, qsl("windowLayout.dat"));
+    const QString layoutFilePath = MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("windowLayout.dat"));
 
     QSaveFile layoutFile(layoutFilePath);
     if (layoutFile.open(QIODevice::WriteOnly)) {
@@ -3701,7 +3701,7 @@ bool mudlet::loadWindowLayout()
     }
     qDebug() << "mudlet::loadWindowLayout() - loading layout.";
 
-    const QString layoutFilePath = utils::getMudletPath(enums::mainDataItemPath, qsl("windowLayout.dat"));
+    const QString layoutFilePath = MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("windowLayout.dat"));
 
     QFile layoutFile(layoutFilePath);
     if (layoutFile.exists()) {
@@ -3739,7 +3739,7 @@ void mudlet::commitLayoutUpdates(bool flush)
 
 bool mudlet::saveFloatingDockGeometries()
 {
-    const QString geoFilePath = utils::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutGeometry.dat"));
+    const QString geoFilePath = MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutGeometry.dat"));
 
     QSaveFile geoFile(geoFilePath);
     if (!geoFile.open(QIODevice::WriteOnly)) {
@@ -3776,7 +3776,7 @@ bool mudlet::saveFloatingDockGeometries()
 
 void mudlet::restoreFloatingDockGeometries()
 {
-    const QString geoFilePath = utils::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutGeometry.dat"));
+    const QString geoFilePath = MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutGeometry.dat"));
 
     QFile geoFile(geoFilePath);
     if (!geoFile.exists() || !geoFile.open(QIODevice::ReadOnly)) {
@@ -5537,7 +5537,7 @@ void mudlet::slot_replay()
     }
 
     QSettings& settings = *mudlet::getQSettings();
-    QString lastDir = settings.value("lastFileDialogLocation", utils::getMudletPath(enums::profileHomePath, pHost->getName())).toString();
+    QString lastDir = settings.value("lastFileDialogLocation", MudletPaths::getMudletPath(enums::profileHomePath, pHost->getName())).toString();
 
 
     const QString fileName = QFileDialog::getOpenFileName(this, tr("Select Replay"), lastDir, tr("*.dat"));
@@ -5554,7 +5554,7 @@ void mudlet::slot_replay()
 
 QString mudlet::readProfileData(const QString& profile, const QString& item)
 {
-    QFile file(utils::getMudletPath(enums::profileDataItemPath, profile, item));
+    QFile file(MudletPaths::getMudletPath(enums::profileDataItemPath, profile, item));
     if (!file.exists()) {
         return QString();
     }
@@ -5577,13 +5577,13 @@ QPair<bool, QString> mudlet::writeProfileData(const QString& profile, const QStr
 {
     // Ensure the profile directory exists before attempting to write profile data
     const QDir profileDir;
-    const QString profileHomePath = utils::getMudletPath(enums::profileHomePath, profile);
+    const QString profileHomePath = MudletPaths::getMudletPath(enums::profileHomePath, profile);
     if (!QDir(profileHomePath).exists() && !profileDir.mkpath(profileHomePath)) {
         qDebug().noquote().nospace() << "mudlet::writeProfileData(...) ERROR - could not create profile directory: \"" << profileHomePath << "\"";
         return qMakePair(false, qsl("Could not create profile directory: %1").arg(profileHomePath));
     }
 
-    QSaveFile file(utils::getMudletPath(enums::profileDataItemPath, profile, item));
+    QSaveFile file(MudletPaths::getMudletPath(enums::profileDataItemPath, profile, item));
     if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         QDataStream ofs(&file);
         ofs.setVersion(QDataStream::Qt_5_12);
@@ -5602,7 +5602,7 @@ QPair<bool, QString> mudlet::writeProfileData(const QString& profile, const QStr
 
 void mudlet::deleteProfileData(const QString& profile, const QString& item)
 {
-    if (!QFile::remove(utils::getMudletPath(enums::profileDataItemPath, profile, item))) {
+    if (!QFile::remove(MudletPaths::getMudletPath(enums::profileDataItemPath, profile, item))) {
         qWarning() << "Couldn't delete profile data file" << item;
     }
 }
@@ -5612,7 +5612,7 @@ void mudlet::startAutoLogin(const QStringList& cliProfiles, const bool offline)
     QElapsedTimer timer;
     timer.start();
 
-    QStringList hostList = QDir(utils::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    QStringList hostList = QDir(MudletPaths::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
     hostList += TGameDetails::keys();
     hostList << qsl("Mudlet self-test");
     hostList.removeDuplicates();
@@ -5823,7 +5823,7 @@ std::optional<mudlet::TelnetUriData> mudlet::parseTelnetUri(const QString& uri)
 // Find existing profile matching host and port
 QString mudlet::findMatchingProfile(const QString& host, int port)
 {
-    QDir profilesDir(utils::getMudletPath(enums::profilesPath));
+    QDir profilesDir(MudletPaths::getMudletPath(enums::profilesPath));
     QStringList profileNames = profilesDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
 
     profileNames += TGameDetails::keys();
@@ -5837,7 +5837,7 @@ QString mudlet::findMatchingProfile(const QString& host, int port)
         QString profilePort = readProfileData(profileName, qsl("port"));
 
         if (!profileHost.compare(host, Qt::CaseInsensitive) && profilePort.toInt() == port) {
-            QString profilePath = utils::getMudletPath(enums::profileHomePath, profileName);
+            QString profilePath = MudletPaths::getMudletPath(enums::profileHomePath, profileName);
             QFileInfo profileInfo(profilePath);
 
             if (matchedProfile.isEmpty() || profileInfo.lastModified() > latestTime) {
@@ -6310,7 +6310,7 @@ void mudlet::slot_compactInputLine(const bool state)
 mudlet::~mudlet()
 {
     if (mpHunspell_sharedDictionary) {
-        saveDictionary(utils::getMudletPath(enums::mainDataItemPath, qsl("mudlet")), mWordSet_shared);
+        saveDictionary(MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("mudlet")), mWordSet_shared);
         Hunspell_destroy(mpHunspell_sharedDictionary);
         mpHunspell_sharedDictionary = nullptr;
     }
@@ -6753,7 +6753,7 @@ bool mudlet::loadEdbeeTheme(const QString& themeName, const QString& themeFile)
     // getMudletPath(...) needs the themeFile to determine if it is the
     // "default" which is stored in the resource file and not downloaded into
     // the cache:
-    const QString themeLocation(utils::getMudletPath(enums::editorWidgetThemePathFile, themeFile));
+    const QString themeLocation(MudletPaths::getMudletPath(enums::editorWidgetThemePathFile, themeFile));
     auto result = themeManager->readThemeFile(themeLocation, themeName);
     if (result == nullptr) {
         qWarning() << themeManager->lastErrorMessage();
@@ -6920,7 +6920,7 @@ Host* mudlet::loadProfile(const QString& profile_name, const bool playOnline, co
         pHost->mSslTsl = (*it).tlsEnabled;
     }
 
-    const QString folder = utils::getMudletPath(enums::profileXmlFilesPath, profile_name);
+    const QString folder = MudletPaths::getMudletPath(enums::profileXmlFilesPath, profile_name);
     QDir dir(folder);
     dir.setSorting(QDir::Time);
     // Only consider profile saves (*.xml): a crash during a save can leave behind
@@ -7014,7 +7014,7 @@ bool mudlet::loadReplay(Host* pHost, const QString& replayFileName, QString* pEr
 
     QString absoluteReplayFileName;
     if (QFileInfo(replayFileName).isRelative()) {
-        absoluteReplayFileName = qsl("%1/%2").arg(utils::getMudletPath(enums::profileReplayAndLogFilesPath, pHost->getName()), replayFileName);
+        absoluteReplayFileName = qsl("%1/%2").arg(MudletPaths::getMudletPath(enums::profileReplayAndLogFilesPath, pHost->getName()), replayFileName);
     } else {
         absoluteReplayFileName = replayFileName;
     }
@@ -7106,7 +7106,7 @@ bool mudlet::migratePasswordsToSecureStorage()
 
     mStorePasswordsSecurely = true;
 
-    const QStringList profiles = QDir(utils::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    const QStringList profiles = QDir(MudletPaths::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
 
     bool anyMigrationNeeded = false;
 
@@ -7155,7 +7155,7 @@ bool mudlet::migratePasswordsToProfileStorage()
     }
     mStorePasswordsSecurely = false;
 
-    const QStringList profiles = QDir(utils::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    const QStringList profiles = QDir(MudletPaths::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
 
     for (const auto& profile : profiles) {
         // Try to retrieve password from CredentialManager
@@ -7676,9 +7676,9 @@ Hunhandle* mudlet::prepareProfileDictionary(const QString& hostName, QSet<QStrin
 {
     // Need to check that the files exist first:
     // full dictionary path+filename
-    QString dictionaryPath(utils::getMudletPath(enums::profileDataItemPath, hostName, qsl("profile.dic")));
+    QString dictionaryPath(MudletPaths::getMudletPath(enums::profileDataItemPath, hostName, qsl("profile.dic")));
     // full affix path+filename
-    QString affixPath(utils::getMudletPath(enums::profileDataItemPath, hostName, qsl("profile.aff")));
+    QString affixPath(MudletPaths::getMudletPath(enums::profileDataItemPath, hostName, qsl("profile.aff")));
 
     int oldWordCount = 0;
     QStringList wordList;
@@ -7739,8 +7739,8 @@ Hunhandle* mudlet::prepareSharedDictionary()
     }
 
     // Need to check that the files exist first:
-    QString dictionaryPath(utils::getMudletPath(enums::mainDataItemPath, qsl("mudlet.dic")));
-    QString affixPath(utils::getMudletPath(enums::mainDataItemPath, qsl("mudlet.aff")));
+    QString dictionaryPath(MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("mudlet.dic")));
+    QString affixPath(MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("mudlet.aff")));
     int oldWordCount = 0;
     QStringList wordList;
     QHash<QString, unsigned int> graphemeCounts;
@@ -7855,7 +7855,7 @@ QSet<QString> mudlet::getWordSet()
 std::pair<bool, QString> mudlet::setProfileIcon(const QString& profile, const QString& newIconPath)
 {
     QDir dir;
-    auto profileIconPath = utils::getMudletPath(enums::profileDataItemPath, profile, qsl("profileicon"));
+    auto profileIconPath = MudletPaths::getMudletPath(enums::profileDataItemPath, profile, qsl("profileicon"));
     if (QFileInfo::exists(profileIconPath) && !dir.remove(profileIconPath)) {
         qWarning() << "mudlet::setProfileIcon() ERROR: couldn't remove existing icon" << profileIconPath;
         return {false, qsl("couldn't remove existing icon file")};
@@ -7872,7 +7872,7 @@ std::pair<bool, QString> mudlet::setProfileIcon(const QString& profile, const QS
 std::pair<bool, QString> mudlet::resetProfileIcon(const QString& profile)
 {
     QDir dir;
-    auto profileIconPath = utils::getMudletPath(enums::profileDataItemPath, profile, qsl("profileicon"));
+    auto profileIconPath = MudletPaths::getMudletPath(enums::profileDataItemPath, profile, qsl("profileicon"));
     if (QFileInfo::exists(profileIconPath) && !dir.remove(profileIconPath)) {
         qWarning() << "mudlet::resetProfileIcon() ERROR: couldn't remove existing icon" << profileIconPath;
         return {false, qsl("couldn't remove existing icon file")};
@@ -8495,7 +8495,7 @@ bool mudlet::experiencedMudletPlayer()
         return true;
     }
 
-    cachedResult = evaluateExperiencedPlayer(*settings, utils::getMudletPath(enums::profilesPath), QDateTime::currentDateTime());
+    cachedResult = evaluateExperiencedPlayer(*settings, MudletPaths::getMudletPath(enums::profilesPath), QDateTime::currentDateTime());
     return cachedResult.value();
 }
 
@@ -8555,7 +8555,7 @@ QString mudlet::getCanonicalProfileName(const QString& profileName)
         return QString();
     }
 
-    const QStringList profiles = QDir(utils::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    const QStringList profiles = QDir(MudletPaths::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
     for (const auto& profile : profiles) {
         if (profile.compare(profileName, Qt::CaseInsensitive) == 0) {
             return profile;

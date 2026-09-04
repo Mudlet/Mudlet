@@ -21,7 +21,7 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
-#include "utils.h"
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -105,7 +105,7 @@ private slots:
         mpPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(utils::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -215,7 +215,7 @@ private:
                 timeoutMs);
     }
 
-    void deleteProfileDirectory(const QString& profileName) { deleteDirectory(utils::getMudletPath(enums::profileHomePath, profileName)); }
+    void deleteProfileDirectory(const QString& profileName) { deleteDirectory(MudletPaths::getMudletPath(enums::profileHomePath, profileName)); }
 
     void deleteDirectory(const QString& path)
     {
@@ -229,7 +229,7 @@ private:
 private slots:
     void cleanup()
     {
-        const QString profilePath = utils::getMudletPath(enums::profileHomePath, mpHostname);
+        const QString profilePath = MudletPaths::getMudletPath(enums::profileHomePath, mpHostname);
         mpWatchedPane = nullptr;
         delete mudlet::self();
         delete mpServer;

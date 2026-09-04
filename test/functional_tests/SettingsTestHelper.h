@@ -30,6 +30,7 @@
 #include <QWidget>
 #include <QtTest/QTest>
 
+#include "MudletPaths.h"
 #include "utils.h"
 
 // Free inline functions rather than a QObject on purpose: a header is not listed
@@ -48,7 +49,7 @@ inline constexpr int scmApplyTimeout = 10000;
 
 inline void deleteProfileDirectory(const QString& profileName)
 {
-    QDir dir(utils::getMudletPath(enums::profileHomePath, profileName));
+    QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, profileName));
     if (dir.exists()) {
         dir.removeRecursively();
     }

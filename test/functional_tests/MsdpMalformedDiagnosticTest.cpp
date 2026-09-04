@@ -20,7 +20,7 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
-#include "utils.h"
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -203,7 +203,7 @@ private:
         return gained.join(QChar('\n'));
     }
 
-    void deleteProfileDirectory(const QString& profileName) { deleteDirectory(utils::getMudletPath(enums::profileHomePath, profileName)); }
+    void deleteProfileDirectory(const QString& profileName) { deleteDirectory(MudletPaths::getMudletPath(enums::profileHomePath, profileName)); }
 
     void deleteDirectory(const QString& path)
     {
@@ -217,7 +217,7 @@ private:
 private slots:
     void cleanup()
     {
-        const QString profilePath = utils::getMudletPath(enums::profileHomePath, mpHostname);
+        const QString profilePath = MudletPaths::getMudletPath(enums::profileHomePath, mpHostname);
         delete mudlet::self();
         delete mpServer;
         mpServer = nullptr;

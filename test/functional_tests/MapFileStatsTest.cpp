@@ -42,10 +42,10 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
+#include "MudletPaths.h"
 #include "TMap.h"
 #include "TRoomDB.h"
 #include "mudlet.h"
-#include "utils.h"
 
 #include "GroupedTest.h"
 
@@ -71,7 +71,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName) const
     {
-        QDir dir(utils::getMudletPath(enums::profileHomePath, profileName));
+        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, profileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }
@@ -79,7 +79,7 @@ private:
 
     TMap* map() const { return mpHost->mpMap.data(); }
 
-    QString otherProfileMapDir() const { return utils::getMudletPath(enums::profileMapsPath, mOtherProfileName); }
+    QString otherProfileMapDir() const { return MudletPaths::getMudletPath(enums::profileMapsPath, mOtherProfileName); }
 
     // The player room has to be recorded against the profile the file will
     // claim to belong to, since that is the entry the read looks up.
@@ -138,7 +138,7 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(utils::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);

@@ -31,7 +31,7 @@
 
 #include "EAction.h"
 #include "Host.h"
-#include "utils.h"
+#include "MudletPaths.h"
 #include "TAlias.h"
 #include "TCommandLine.h"
 #include "TConsole.h"
@@ -1688,7 +1688,7 @@ int TLuaInterpreter::showUnzipProgress(lua_State* L)
 int TLuaInterpreter::getMudletHomeDir(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    const QString nativeHomeDirectory = utils::getMudletPath(enums::profileHomePath, host.getName());
+    const QString nativeHomeDirectory = MudletPaths::getMudletPath(enums::profileHomePath, host.getName());
     lua_pushstring(L, nativeHomeDirectory.toUtf8().constData());
     return 1;
 }
@@ -6240,7 +6240,7 @@ void TLuaInterpreter::initLuaGlobals()
     QStringList additionalLuaPaths;
     QStringList additionalCPaths;
     const auto appPath{QCoreApplication::applicationDirPath()};
-    const auto profilePath{utils::getMudletPath(enums::profileHomePath, hostName)};
+    const auto profilePath{MudletPaths::getMudletPath(enums::profileHomePath, hostName)};
 
     // Allow for modules or libraries placed in the profile root directory:
     additionalLuaPaths << qsl("%1/?.lua").arg(profilePath);
@@ -7527,7 +7527,7 @@ int TLuaInterpreter::getProfileInformation(lua_State* L)
 static QString canonicalProfileFolder(const QString& profileName)
 {
     const QString folder = mudlet::self()->getCanonicalProfileName(profileName);
-    if (folder.isEmpty() || !QDir(utils::getMudletPath(enums::profileHomePath, folder)).exists()) {
+    if (folder.isEmpty() || !QDir(MudletPaths::getMudletPath(enums::profileHomePath, folder)).exists()) {
         return QString();
     }
     return folder;
@@ -8750,7 +8750,7 @@ int TLuaInterpreter::getConfig(lua_State* L)
                  const auto logDir = host.mLogDir;
 
                  if (logDir == nullptr || logDir.isEmpty()) {
-                     lua_pushstring(L, utils::getMudletPath(enums::profileReplayAndLogFilesPath, getHostFromLua(L).getName()).toUtf8().constData());
+                     lua_pushstring(L, MudletPaths::getMudletPath(enums::profileReplayAndLogFilesPath, getHostFromLua(L).getName()).toUtf8().constData());
                  } else {
                      lua_pushstring(L, host.mLogDir.toUtf8().constData());
                  }

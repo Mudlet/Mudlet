@@ -62,6 +62,7 @@
 
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "T2DMap.h"
@@ -73,7 +74,6 @@
 #include "ctelnet.h"
 #include "dlgMapper.h"
 #include "mudlet.h"
-#include "utils.h"
 
 #include "GroupedTest.h"
 
@@ -242,7 +242,7 @@ private:
 
     void deleteProfileDirectory() const
     {
-        QDir dir(utils::getMudletPath(enums::profileHomePath, mProfileName));
+        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, mProfileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }
@@ -389,7 +389,7 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(utils::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);

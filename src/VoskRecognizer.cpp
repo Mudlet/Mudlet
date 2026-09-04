@@ -19,9 +19,9 @@
 
 #include "VoskRecognizer.h"
 
+#include "MudletPaths.h"
 #include "SpeechAudioCapture.h"
 #include "mudlet.h"
-#include "utils.h"
 
 #include <QDir>
 #include <QJsonArray>
@@ -299,7 +299,7 @@ bool VoskRecognizer::resetLibraryLoadState()
 
 QString VoskRecognizer::userLibraryPath()
 {
-    return utils::getMudletPath(enums::mainDataItemPath, qsl("vosk-lib"));
+    return MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("vosk-lib"));
 }
 
 QStringList VoskRecognizer::librarySearchPaths()
@@ -927,7 +927,7 @@ QString VoskRecognizer::defaultModelPath()
 
 QString VoskRecognizer::modelsDirectoryPath()
 {
-    return utils::getMudletPath(enums::mainDataItemPath, qsl("vosk-models"));
+    return MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("vosk-models"));
 }
 
 QStringList VoskRecognizer::getInstalledModels()

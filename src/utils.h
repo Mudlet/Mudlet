@@ -22,8 +22,6 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "enums.h"
-
 #include <QCryptographicHash>
 #include <QEnterEvent>
 #include <QDir>
@@ -256,16 +254,6 @@ public:
         }
         return sanitized;
     }
-
-    // Answers with a path rooted at an empty string until setConfigPath() has run,
-    // so an unconfigured call yields "/profiles/<name>" rather than failing
-    static QString getMudletPath(enums::mudletPathType mode, const QString& extra1 = QString(), const QString& extra2 = QString());
-    static void setConfigPath(const QString& path);
-    // Whether the main dictionary files are the ones bundled with Mudlet (true)
-    // or ones provided by the system (false). Settled as a side effect of
-    // resolving enums::hunspellDictionaryPath, so it only answers once that has
-    // been asked for.
-    static bool usingMudletDictionaries();
 };
 
 #endif // MUDLET_UTILS_H

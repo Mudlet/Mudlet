@@ -44,6 +44,7 @@
 
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "TLabel.h"
@@ -150,13 +151,13 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(utils::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::getQSettings()->setValue(qsl("uiTourShown"), true);
         mudlet::getQSettings()->sync();
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
-        QDir(utils::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
+        QDir(MudletPaths::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
 
         mpHost = TestProfile::create(mHostname, mLocalhost, mPort);
         QVERIFY2(mpHost, "the test profile did not load");
@@ -171,7 +172,7 @@ private slots:
         mpServer = nullptr;
         mpHost = nullptr;
         if (mudlet::self()) {
-            QDir(utils::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
+            QDir(MudletPaths::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
             delete mudlet::self();
         }
         // Only if this process is the one that redirected it: an initTestCase that skipped
@@ -371,7 +372,7 @@ private:
 
     bool writeClip(QString& failure) const
     {
-        const QString mediaPath = utils::getMudletPath(enums::profileMediaPath, mHostname);
+        const QString mediaPath = MudletPaths::getMudletPath(enums::profileMediaPath, mHostname);
         if (!QDir().mkpath(mediaPath)) {
             failure = qsl("could not create the profile media directory %1").arg(mediaPath);
             return false;
