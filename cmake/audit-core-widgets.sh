@@ -25,21 +25,27 @@
 #
 # Known gap - what counts as being *in* the target: the file list is parsed from
 # the set(mudlet_SRCS|HDRS ...) and list(APPEND mudlet_SRCS|HDRS ...) blocks only.
-# A file added straight to the library with target_sources() is invisible here,
-# so this audit and CMakeListsConsistencyTest (which counts bare basenames
-# anywhere in the file) disagree about membership. Nothing relies on that today:
-# the one such call naming C++ files, sparkleupdater.h/.mm, also appears in a
-# list(APPEND ...). Parsing it is not free - those paths are written as
-# "${CMAKE_CURRENT_SOURCE_DIR}/sparkleupdater.h", so a naive extension yields a
-# quoted, variable-prefixed string that fails the on-disk check and reports a
-# phantom missing file. Add the unquoting and basename handling with it if a file
-# ever joins mudlet_core through target_sources() alone.
+# Three kinds of target member sit outside that:
+#   - files added straight to the library with target_sources(). The one such call
+#     naming C++ files, sparkleupdater.h/.mm, is also in a list(APPEND ...), so
+#     nothing is lost today. Parsing it is not free: those paths are written
+#     "${CMAKE_CURRENT_SOURCE_DIR}/sparkleupdater.h", and a naive extension yields
+#     a quoted, variable-prefixed string that fails the on-disk check and reports
+#     a phantom missing file. Add unquoting and basename handling along with it.
+#   - mudlet_UIS and mudlet_RCCS, which are target members but not C++ sources.
+#   - anything reaching the target through a variable this parser does not know.
+# So this audit and CMakeListsConsistencyTest (which counts bare basenames
+# anywhere in the file) do not agree about membership, and a file that joins
+# mudlet_core by one of those routes is scanned by nobody. An entry *inside* the
+# parsed blocks that cannot be reduced to a bare filename is warned about rather
+# than skipped, which covers the generator-expression and quoted-path cases.
 #
 # Usage:
 #   cmake/audit-core-widgets.sh                 # print the Markdown report, exit 0
 #   cmake/audit-core-widgets.sh --enforce       # CI guard: exit 1 if count > baseline
 #   cmake/audit-core-widgets.sh --summary       # one-line count, exit 0
 #   cmake/audit-core-widgets.sh --count         # bare offending-file count, exit 0
+#   cmake/audit-core-widgets.sh --classes       # the derived QtWidgets class names, exit 0
 #
 # Options:
 #   --qt-include DIR   Qt headers dir (the one containing QtWidgets/). Overrides
@@ -70,7 +76,7 @@ BASELINE_FILE="$SCRIPT_DIR/core-widgets-baseline.txt"
 err() { printf '%s: %s\n' "$PROG" "$1" >&2; }
 
 usage() {
-  sed -n '2,53p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '2,59p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 while [ $# -gt 0 ]; do
@@ -78,6 +84,7 @@ while [ $# -gt 0 ]; do
     --enforce) MODE=enforce ;;
     --summary) MODE=summary ;;
     --count) MODE=count ;;
+    --classes) MODE=classes ;;
     --qt-include) shift; QT_INCLUDE="${1:-}" ;;
     --qt-include=*) QT_INCLUDE="${1#*=}" ;;
     --baseline) shift; BASELINE_FILE="${1:-}" ;;
@@ -133,6 +140,13 @@ if [ ! -d "$QW" ]; then
   exit 2
 fi
 
+# Recorded in the report so a later run can tell "this Qt sees fewer widget
+# classes than the one that generated the record" apart from "this is simply a
+# different Qt". Both derived sets grow between Qt releases, so their sizes are
+# only comparable within one version.
+QT_VER=$(sed -n 's/^#define QTCORE_VERSION_STR  *"\([^"]*\)".*/\1/p' "$QTINC/QtCore/qtcoreversion.h" 2>/dev/null | head -1)
+[ -n "$QT_VER" ] || QT_VER="unknown"
+
 # A header counts as QtWidgets only if its filename is absent from QtGui/ and
 # QtCore/ - that filters Qt6 compatibility forwarders such as qaction.h and
 # qshortcut.h whose classes moved to QtGui.
@@ -176,6 +190,13 @@ if [ ! -s "$SET_CLASSES" ]; then
   exit 2
 fi
 
+# The sizes of the two derived sets are the audit's own measuring instrument. A
+# pruned Qt, or one that relocated classes out of QtWidgets, shrinks them - and
+# every class that drops out silently takes its users out of the offending count,
+# which reads as progress. Recording them lets the guard notice.
+HEADER_SET_SIZE=$(wc -l < "$SET_HEADERS" | tr -d ' ')
+CLASS_SET_SIZE=$(wc -l < "$SET_CLASSES" | tr -d ' ')
+
 # mudlet_core's file list lives in the mudlet_SRCS / mudlet_HDRS variables of
 # src/CMakeLists.txt; both the set(...) blocks and later list(APPEND ...) lines
 # contribute, so the awk below must catch both forms. Comments are stripped and
@@ -192,7 +213,16 @@ awk '
     if (inblk || inapp) {
       line=$0; gsub(/[()]/," ",line)
       n=split(line,a,/[ \t]+/)
-      for (i=1;i<=n;i++) if (a[i] ~ /\.(cpp|mm|h)$/) print a[i]
+      for (i=1;i<=n;i++) {
+        if (a[i] == "") continue
+        if (a[i] ~ /\.(cpp|mm|h)$/) { print a[i]; continue }
+        # An entry naming a source in a form this parser cannot reduce to a bare
+        # filename - a quoted path, or a generator expression like
+        # $<$<BOOL:${USE_X}>:Foo.cpp> - is silently scanned by nobody, so the file
+        # joins mudlet_core with its Qt Widgets use uncounted. Warn rather than skip.
+        if (a[i] ~ /\.(cpp|mm|h)[^A-Za-z0-9_]/)
+          printf "audit-core-widgets: not a bare filename, so nothing scanned it: %s\n", a[i] > "/dev/stderr"
+      }
     }
     if ($0 ~ /\)/) { inblk=0; inapp=0 }
   }
@@ -314,6 +344,11 @@ case "$MODE" in
     exit 0
     ;;
 
+  classes)
+    cat "$SET_CLASSES"
+    exit 0
+    ;;
+
   enforce)
     BASE=$(read_baseline) || exit 2
     printf 'mudlet_core Qt Widgets audit: %s offending files (baseline %s).\n' "$OFFENDING" "$BASE"
@@ -377,6 +412,9 @@ list below, so this report cannot silently fall out of date.
 | Metric | Count |
 | --- | ---: |
 | Source files in \`mudlet_core\` | ${TOTAL} |
+| Qt version measured against | ${QT_VER} |
+| QtWidgets headers seen | ${HEADER_SET_SIZE} |
+| QtWidgets classes seen | ${CLASS_SET_SIZE} |
 | Files depending on Qt Widgets | ${OFFENDING} |
 | Clean files | ${CLEAN} |
 | Committed baseline | ${BASE:-n/a} |
