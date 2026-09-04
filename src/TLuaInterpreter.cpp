@@ -134,7 +134,7 @@ const QString TLuaInterpreter::csmInvalidAreaName{qsl("string '%1' is not a vali
     ({                                                                                                                                                                                                 \
         const QString& name_ = (ARG_name);                                                                                                                                                             \
         auto console_ = getHostFromLua(ARG_L).mpConsole;                                                                                                                                               \
-        auto cmdLine_ = !console_ ? nullptr : (isMain(name_) ? &*console_->mpCommandLine : console_->mSubCommandLineMap.value(name_));                                                                 \
+        auto cmdLine_ = !console_ ? nullptr : (isMain(name_) ? &*console_->mpCommandLine : console_->subCommandLineWidget(name_));                                                                     \
         if (!cmdLine_) {                                                                                                                                                                               \
             lua_pushnil(ARG_L);                                                                                                                                                                        \
             lua_pushfstring(ARG_L, bad_cmdline_value, name_.toUtf8().constData());                                                                                                                     \
@@ -2336,12 +2336,12 @@ int TLuaInterpreter::getTimestamp(lua_State* L)
         }
         return warnArgumentValue(L, __func__, qsl("line number %1 invalid, it is beyond the last line of the buffer").arg(luaLine));
     }
-    auto pC = host.mpConsole->mSubConsoleMap.value(name);
-    if (!pC) {
+    auto pModel = host.windowRegistry().subConsoleModel(name);
+    if (!pModel) {
         return warnArgumentValue(L, __func__, qsl("mini console, user window or buffer '%1' not found").arg(name));
     }
-    if (luaLine < pC->buffer.timeBuffer.size()) {
-        lua_pushstring(L, pC->buffer.timeBuffer.at(luaLine).toUtf8().constData());
+    if (luaLine < pModel->buffer.timeBuffer.size()) {
+        lua_pushstring(L, pModel->buffer.timeBuffer.at(luaLine).toUtf8().constData());
         return 1;
     }
     return warnArgumentValue(L, __func__, qsl("line number %1 invalid, it is beyond the last line of the buffer").arg(luaLine));

@@ -203,6 +203,23 @@ describe("Tests UI functions", function()
       assert.is_nil(windowType("testDeleteCmdLine"))
     end)
 
+    -- Deleting one command line walks the whole set of them looking for the
+    -- widget that is going, so a second one has to come through untouched.
+    it("Should leave another command line alone when deleting one", function()
+      createCommandLine("testDeleteCmdLineGoing", 10, 10, 100, 30)
+      createCommandLine("testDeleteCmdLineStaying", 10, 50, 100, 30)
+      assert.is_true(deleteCommandLine("testDeleteCmdLineGoing"))
+      assert.is_nil(windowType("testDeleteCmdLineGoing"))
+      -- the survivor is still a command line in every way, not just by name
+      assert.are.equal("commandline", windowType("testDeleteCmdLineStaying"))
+      assert.are.same({10, 50, 100, 30}, {getWindowGeometry("testDeleteCmdLineStaying")})
+      hideWindow("testDeleteCmdLineStaying")
+      assert.is_false(windowVisible("testDeleteCmdLineStaying"))
+      showWindow("testDeleteCmdLineStaying")
+      assert.is_true(windowVisible("testDeleteCmdLineStaying"))
+      assert.is_true(deleteCommandLine("testDeleteCmdLineStaying"))
+    end)
+
     it("Should delete a scrollbox", function()
       createScrollBox("testDeleteScrollBox", 10, 10, 100, 100)
       assert.is_true(deleteScrollBox("testDeleteScrollBox"))
@@ -3661,6 +3678,22 @@ describe("Window and label state", function()
       assert.are.equal("scrollbox", windowType(scrollBox))
     end)
 
+    -- A scroll box, a command line and a text edit each have a name space of
+    -- their own, so one name can be more than one of them at a time. Every
+    -- by-name lookup then answers with the scroll box until it is gone.
+    it("resolves a name that is both a scroll box and a text edit as the scroll box", function()
+      local shared = name("wlsSharedName")
+      createScrollBox(shared, 10, 20, 120, 90)
+      createTextEdit(shared, 30, 40, 160, 110)
+      assert.are.equal("scrollbox", windowType(shared))
+      assert.are.same({10, 20, 120, 90}, {getWindowGeometry(shared)})
+      deleteScrollBox(shared)
+      assert.are.equal("textedit", windowType(shared))
+      assert.are.same({30, 40, 160, 110}, {getWindowGeometry(shared)})
+      deleteTextEdit(shared)
+      assert.is_nil(windowType(shared))
+    end)
+
     it("openUserWindow reports the window as a userwindow and is repeatable", function()
       assert.are.equal("userwindow", windowType(userWindow))
       -- re-opening an already open user window re-shows the same dock rather
@@ -4894,6 +4927,18 @@ describe("Window and label state", function()
       local x, y, w, h = getWindowGeometry(label)
       assert.are.same({3, 4, 100, 50}, {x, y, w, h})
       assert.is_true(windowVisible(label))
+    end)
+
+    it("moves an element into a scroll box, which is a parent window as much as a user window is", function()
+      local scrollBox = name("wlsReparentScrollBox")
+      createScrollBox(scrollBox, 30, 40, 150, 120)
+      assert.is_true(setWindow(scrollBox, label, 5, 6, true))
+      -- the coordinates are the scroll box's own, not the main window's
+      assert.are.same({5, 6, 100, 50}, {getWindowGeometry(label)})
+      assert.is_true(windowVisible(label))
+      -- put the label back before the box goes, or it dies as its child
+      setWindow("main", label, 11, 22, true)
+      deleteScrollBox(scrollBox)
     end)
 
     it("moves an element back to the main window", function()
