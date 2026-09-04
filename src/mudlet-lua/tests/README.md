@@ -87,7 +87,7 @@ Dropping `xvfb-run` and running on the desktop's own compositor
 (`QT_QPA_PLATFORM=wayland`) works too and gives the same result, at the cost of a
 Mudlet window on screen for the duration. For a headless *Wayland* session - only
 worth it when the behaviour under test is Wayland-specific - see the
-headless gnome-shell rig in `docs/demo-videos.md`.
+headless gnome-shell rig in `docs/demo-videos-wayland.md`.
 
 `--offline` opens the profile without connecting to its game server, which is
 what lets a spec use `feedTelnet()` - that function only injects while the telnet
