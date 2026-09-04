@@ -53,6 +53,12 @@ public:
 
     // SpeechRecognizer interface implementation
     bool initialize(const QString& modelPath) override;
+    // The subset of a vocabulary that can safely reach sherpa-onnx's hotword
+    // parser, with everything left out collected into pRejected when it is not
+    // null. Static and public so it can be tested directly: what it prevents is
+    // the process ending, and no in-tree test can load a real sherpa library to
+    // reach the parser itself.
+    static QStringList usableHotwords(const QStringList& words, QStringList* pRejected = nullptr);
     // Read from the model rather than fixed for the engine: biasing needs the
     // model's own sub-word vocabulary, so the same engine can bias one model
     // and not the next. Gated on mRecognizer, not just on mSupportsBiasing/

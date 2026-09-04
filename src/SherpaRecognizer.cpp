@@ -378,6 +378,37 @@ static bool tokensAreUppercase(const QString& tokensPath)
     return upper > lower;
 }
 
+// sherpa-onnx reads the hotwords buffer as one phrase per line and treats a
+// token opening with ':' or '#' as a number, calling std::stof on the rest of
+// it with nothing guarding the parse; an entry that yields no tokens at all
+// reaches an unguarded substr(1) for the same reason. Neither the library nor
+// Mudlet catches anything on this path - Mudlet is built without exceptions -
+// so either one ends the process, and the words come from whatever a package
+// or a player typed. Dropped rather than escaped, because the format has no
+// escape to use. simplified() also collapses any embedded newline, which would
+// otherwise forge extra lines in a buffer that is line-delimited.
+QStringList SherpaRecognizer::usableHotwords(const QStringList& words, QStringList* pRejected)
+{
+    QStringList usable;
+    for (const QString& word : words) {
+        const QString entry = word.simplified();
+        const QStringList tokens = entry.split(QLatin1Char(' '), Qt::SkipEmptyParts);
+        bool safe = !tokens.isEmpty();
+        for (const QString& token : tokens) {
+            if (token.startsWith(QLatin1Char(':')) || token.startsWith(QLatin1Char('#'))) {
+                safe = false;
+                break;
+            }
+        }
+        if (safe) {
+            usable.append(entry);
+        } else if (pRejected) {
+            pRejected->append(word);
+        }
+    }
+    return usable;
+}
+
 bool SherpaRecognizer::loadModel(const QString& modelPath)
 {
     // Loading a model over a running session would free the decoder while the
@@ -404,13 +435,27 @@ bool SherpaRecognizer::loadModel(const QString& modelPath)
         return false;
     }
 
-    releaseSherpaResources();
+    // Both checks below are filesystem work and need nothing native, so they
+    // run before anything is freed. Freeing first meant a mistyped path took
+    // down a model that was loaded and working - stt.init("<typo>") returned
+    // false and left the session with no decoder, no model path and Error.
+    const auto refuseLoad = [this]() {
+        if (mRecognizer) {
+            // Untouched decoder, and the microphone was stopped above, so this
+            // is exactly an idle loaded engine. Error would end the session as
+            // surely as freeing the decoder did, since initialized() is false
+            // in Error and Lua could not start again without reloading.
+            setState(State::Ready);
+        } else {
+            setState(State::Error);
+        }
+    };
 
     const QDir modelDir(modelPath);
     if (!modelDir.exists()) {
         //: Shown when a speech model cannot be found; %1 is the folder that was looked for
         emit errorOccurred(tr("Model path does not exist: %1").arg(modelPath));
-        setState(State::Error);
+        refuseLoad();
         return false;
     }
 
@@ -434,9 +479,11 @@ bool SherpaRecognizer::loadModel(const QString& modelPath)
     if (encoderPath.isEmpty() || decoderPath.isEmpty() || joinerPath.isEmpty() || tokensPath.isEmpty()) {
         //: Shown when a model directory exists but does not contain the files a sherpa-onnx streaming model needs; %1 is that directory
         emit errorOccurred(tr("Not a sherpa-onnx streaming model (needs tokens.txt and encoder/decoder/joiner .onnx files): %1").arg(modelPath));
-        setState(State::Error);
+        refuseLoad();
         return false;
     }
+
+    releaseSherpaResources();
 
     mModelPath = modelPath;
     // Hotword biasing works by scoring the model's own sub-word units, so it
@@ -509,7 +556,7 @@ bool SherpaRecognizer::loadModel(const QString& modelPath)
     // asking for the other. The buffers must outlive the create call below,
     // which copies out of them.
     const QByteArray bpeVocabUtf8 = mBpeVocabPath.toUtf8();
-    QStringList biasWords = vocabulary();
+    QStringList biasWords = usableHotwords(vocabulary(), nullptr);
     if (mUppercaseTokens) {
         for (QString& word : biasWords) {
             word = word.toUpper();
@@ -521,7 +568,7 @@ bool SherpaRecognizer::loadModel(const QString& modelPath)
         config->model_config.modeling_unit = "bpe";
         config->model_config.bpe_vocab = bpeVocabUtf8.constData();
 
-        if (!vocabulary().isEmpty()) {
+        if (!biasWords.isEmpty()) {
             config->decoding_method = "modified_beam_search";
             config->hotwords_buf = hotwordsUtf8.constData();
             config->hotwords_buf_size = hotwordsUtf8.size();
@@ -911,7 +958,14 @@ void SherpaRecognizer::releaseResources()
 
 SpeechRecognizer::VocabularyResult SherpaRecognizer::applyVocabulary(const QStringList& words)
 {
-    Q_UNUSED(words)
+    QStringList rejected;
+    usableHotwords(words, &rejected);
+    if (!rejected.isEmpty()) {
+        // Said here rather than in loadModel(), which reuses the stored list on
+        // every reload and would repeat this each time.
+        //: Shown when some words cannot be used to bias speech recognition and were left out; %1 is the list of those words
+        emit errorOccurred(tr("These words cannot be used for speech biasing and were ignored: %1").arg(rejected.join(qsl(", "))));
+    }
     // The base has already stored these and established that this model can be
     // biased and that they differ from what is in effect.
     //

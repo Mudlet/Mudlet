@@ -149,7 +149,13 @@ that a package should not assume one behaves like another:
   returns `false` — reported through `sysSTTError` as a failure this attempt
   made, not as "this backend can't", since it can — and takes effect only at
   the model's next load, whether that is a later `setVocabulary()` call made
-  once back in `ready`, or the next `stt.init()`.
+  once back in `ready`, or the next `stt.init()`. A word sherpa-onnx's hotword
+  format cannot represent is left out of the biasing rather than passed
+  through: an entry whose tokens open with `:` or `#`, which that format reads
+  as a score, and an entry with nothing in it. Those are named in a
+  `sysSTTError` when the vocabulary is set, and the rest of the list still
+  applies — the parser has no escape for them and reacts to one by ending the
+  process, so there is nothing safe to pass through.
 - **The built-in macOS backend**: real biasing through `contextualStrings`,
   attached to each recognition request rather than baked into a model. There
   is nothing to rebuild, so the call always returns `true`. But a request

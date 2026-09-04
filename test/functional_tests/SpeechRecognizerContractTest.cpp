@@ -1050,6 +1050,50 @@ private slots:
         QSKIP("no backend on this platform can be built without an engine library, so this cannot be exercised here");
 #endif
     }
+
+    // sherpa-onnx's hotword parser calls std::stof on whatever follows a
+    // leading ':' or '#' with nothing guarding it, and reaches an unguarded
+    // substr(1) for an entry that tokenises to nothing. Mudlet is built
+    // without exceptions, so either one ends the process - and the words come
+    // from stt.setVocabulary(), which takes whatever a package or a player
+    // typed. No in-tree test can load a real sherpa library to reach the
+    // parser, so the filter that keeps those inputs away from it is tested
+    // directly instead.
+    void aVocabularyCannotCarryHotwordSyntaxIntoTheParser()
+    {
+        QStringList rejected;
+        const QStringList usable = SherpaRecognizer::usableHotwords(
+                {qsl("kill goblin"), qsl("heal :self"), qsl("#north"), qsl("look")}, &rejected);
+
+        QCOMPARE(usable, QStringList({qsl("kill goblin"), qsl("look")}));
+        QCOMPARE(rejected, QStringList({qsl("heal :self"), qsl("#north")}));
+    }
+
+    void anEntryWithNothingInItIsRejected()
+    {
+        QStringList rejected;
+        const QStringList usable = SherpaRecognizer::usableHotwords({QString(), qsl("   "), qsl("go")}, &rejected);
+
+        QCOMPARE(usable, QStringList({qsl("go")}));
+        QCOMPARE(rejected.size(), 2);
+    }
+
+    // The buffer is line-delimited, so a newline inside one entry would forge
+    // another - including an empty one, which is itself unparseable.
+    void anEmbeddedNewlineCannotForgeASecondEntry()
+    {
+        const QStringList usable = SherpaRecognizer::usableHotwords({qsl("kill\ngoblin")});
+
+        QCOMPARE(usable, QStringList({qsl("kill goblin")}));
+    }
+
+    void aRejectedWordIsNotSilentlyDropped()
+    {
+        QStringList rejected;
+        SherpaRecognizer::usableHotwords({qsl(":1.5")}, &rejected);
+
+        QCOMPARE(rejected, QStringList({qsl(":1.5")}));
+    }
 };
 
 #include "SpeechRecognizerContractTest.moc"
