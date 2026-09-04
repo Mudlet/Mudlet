@@ -27,8 +27,6 @@
 #include "TAccessibleTextEdit.h"
 #include "TTextEdit.h"
 
-#include <QtMath>
-
 #include "Host.h"
 #include "TBuffer.h"
 #include "TConsole.h"
@@ -48,6 +46,7 @@
 #include <cmath>
 #include <QtEvents>
 #include <QtGlobal>
+#include <QtMath>
 #include <QAccessible>
 #include <QAccessibleTextCursorEvent>
 #include <QAccessibleTextInsertEvent>
@@ -1233,7 +1232,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     // the bottom cell - descenders and underscores do at many font sizes - has
     // somewhere to go instead of being cut off by the edge of the pixmap.
     const int pixmapHeight = (mScreenHeight + 1) * mFontHeight;
-    const QSize surfaceSize = renderSurfaceSize(mScreenWidth, mFontWidth, pixmapHeight, dpr);
+    const QSize surfaceSize = smallestEnclosingSurfaceSize(mScreenWidth, mFontWidth, pixmapHeight, dpr);
     // Building a pane-sized pixmap costs the same whether one line changed or
     // all of them did, so it is only done when there is no buffer to reuse -
     // the pane changed size or resolution, or nothing has been painted yet.
@@ -1436,7 +1435,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     }
 }
 
-QSize TTextEdit::renderSurfaceSize(const int screenWidth, const int fontWidth, const int pixmapHeight, const qreal devicePixelRatio)
+QSize TTextEdit::smallestEnclosingSurfaceSize(const int screenWidth, const int fontWidth, const int pixmapHeight, const qreal devicePixelRatio)
 {
     return QSize(qCeil(screenWidth * fontWidth * devicePixelRatio), qCeil(pixmapHeight * devicePixelRatio));
 }
