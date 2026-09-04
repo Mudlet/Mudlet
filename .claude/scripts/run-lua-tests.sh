@@ -155,12 +155,8 @@ export MUDLET_TEST_MMCP_DIR="$peer_dir"
 export MUDLET_TEST_TELNET_DIR="$telnet_dir"
 export XDG_RUNTIME_DIR="${MUDLET_TEST_DISCORD_RUNTIME_DIR:-$runtime_dir}"
 # Xvfb is an X server, so both toolkits have to target X11 - on a Wayland desktop
-# neither picks it by itself. Qt would take the wayland plugin over xvfb-run's
-# DISPLAY, and the GTK3 platform theme Qt loads under GNOME calls gtk_init(),
-# which exits the process outright when it cannot open a display: it looks for
-# $XDG_RUNTIME_DIR/wayland-0, and the runtime dir set above is the Discord
-# fixture's, which has no wayland socket. That killed the run before Mudlet
-# reached any of its own startup, with exit code 1 and nothing on stdout.
+# neither picks it by itself, and the GTK3 platform theme Qt loads under GNOME
+# calls gtk_init(), which exits the process when it cannot open a display.
 export QT_QPA_PLATFORM=xcb
 export GDK_BACKEND=x11
 export LD_LIBRARY_PATH="$WS/3rdparty/discord/rpc/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"

@@ -1,9 +1,8 @@
 # Recording before & after demo videos
 
 Record a before & after demo video of a Mudlet bug fix or UI change:
-headless recording on Linux - under Xvfb by default, or in a headless GNOME
-session when the behaviour is Wayland-specific - then trimming and labelling
-the result for attaching to a pull request or issue.
+headless recording on Linux with Xvfb/xdotool/ffmpeg, then trimming and
+labelling the result for attaching to a pull request or issue.
 
 ## When to use
 
@@ -14,15 +13,9 @@ and reporters can see the fix without building the branch themselves.
 
 ## Platform support
 
-This workflow is currently **Linux only**. Additions documenting an equivalent
-macOS or Windows workflow are very welcome - please extend this file.
-
-Recording happens under Xvfb, which is its own X server - so it works just as
-well while you are logged into a Wayland desktop, provided both toolkits are
-pointed at X11 (see the prerequisites). The one thing it cannot show you is
-behaviour that is itself Wayland-specific, because Mudlet runs under Qt's
-`xcb` plugin either way; for that rare case, `docs/demo-videos-wayland.md`
-records in a headless GNOME session instead.
+This workflow is currently **Linux only** (Xvfb, xdotool, ImageMagick,
+openbox). Additions documenting an equivalent macOS or Windows workflow are
+very welcome - please extend this file.
 
 ## Prerequisites
 
@@ -33,12 +26,9 @@ records in a headless GNOME session instead.
   worktrees are the easiest way to keep both build trees alive at once. When
   the change is toggled by a setting rather than code, one binary is enough.
 
-Recording under Xvfb **from a Wayland desktop** additionally needs
-`QT_QPA_PLATFORM=xcb` and `GDK_BACKEND=x11` (the reference script sets both on
-Mudlet). Xvfb is an X server, and neither toolkit targets it by itself there:
-Qt takes the wayland plugin over `xvfb-run`'s `DISPLAY`, and the GTK3 platform
-theme Qt loads under GNOME calls `gtk_init()`, which exits the process outright
-when it cannot open a display.
+Xvfb is an X server, so on a **Wayland desktop** both toolkits have to be
+pointed at X11 - the reference script sets `QT_QPA_PLATFORM=xcb` and
+`GDK_BACKEND=x11` on Mudlet for that.
 
 ## Workflow overview
 
@@ -103,8 +93,8 @@ session() { # $1 = mudlet binary, $2 = tag ("before"/"after"), $3 = extra Mudlet
     # uiTourShown skips the first-run UI tour; $3 carries per-session settings,
     # e.g. appearance=2 for dark mode (themes the app chrome, not the console)
     printf '[General]\nuiTourShown=true\n%s\n' "$3" > "$home/.config/mudlet/Mudlet.ini"
-    # GDK_BACKEND matters on a Wayland desktop: Qt's GTK3 platform theme calls
-    # gtk_init(), which kills the process outright if GTK looks for wayland
+    # on a Wayland desktop, Qt's GTK3 platform theme calls gtk_init(), which
+    # exits the process outright if GTK is left looking for wayland
     HOME=$home QT_QPA_PLATFORM=xcb GDK_BACKEND=x11 "$1" --profile "Mudlet Tutorial" &
     MUDLET_PID=$!    # global so the EXIT trap can reach it
     # --profile opens a small window; normalize the geometry as soon as the
