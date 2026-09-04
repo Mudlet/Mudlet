@@ -3,10 +3,9 @@
 #
 # cmake/audit-core-widgets.sh measures how many mudlet_core files still depend on
 # Qt Widgets, and docs/libmudlet-widgets-report.md plus
-# cmake/core-widgets-baseline.txt record that measurement. Nothing ran the script,
-# so the record rotted twice: once to a stale 402/147, and once when an
-# include-hygiene change put `#include <QApplication>` back into XMLexport.cpp and
-# took the count from 149 to 150 with nothing to notice.
+# cmake/core-widgets-baseline.txt record that measurement. A recorded measurement
+# nothing re-checks drifts from the code it describes, and an unenforced ratchet is
+# not a ratchet.
 #
 # This runs as the CoreWidgetsAuditTest ctest case, so it rides the ctest run every
 # CI job already performs rather than costing a job of its own.
