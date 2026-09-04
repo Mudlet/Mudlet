@@ -32,10 +32,13 @@
  * found the defects in the first place. Verified by reverting each fix and
  * watching the case go red, which is also the limit worth stating: with no
  * library, initialize() refuses at its first guard, so nothing below that guard
- * is reachable from any test here. That is why modelPath() and currentLanguage()
- * read the live model handle rather than a remembered string - the answer is
- * then true from paths a test cannot reach, instead of resting on where an
- * assignment happens to sit.
+ * is reachable. That is why modelPath() and currentLanguage() read the live
+ * model handle rather than a remembered string - the answer is then true from
+ * paths CI cannot reach, instead of resting on where an assignment happens to
+ * sit. aReleasedModelIsNoLongerNamed() is the one case that does go below the
+ * guard, and it skips wherever no library loads: run it against a real libvosk,
+ * or against a stand-in exporting the ten symbols loadVoskLibrary() resolves,
+ * to see dropping that gate go red.
  *
  * Run with: ctest -R SpeechRecognizerContractTest -V
  */
@@ -125,6 +128,37 @@ protected:
         ++mApplyCallCount;
         return mNextApplyResult;
     }
+};
+
+// A backend whose start does not complete inside the call, the way one
+// waiting on a permission dialog does not. Nothing in tree can be held in
+// Starting from a test - Vosk reaches it only behind a real microphone
+// permission prompt - so the base class's rules for that state need a backend
+// whose start parks there on demand.
+class PendingStartStubRecognizer : public SpeechRecognizer
+{
+public:
+    // Ready is what startListening() requires, and there is no model to load
+    // to get there
+    bool initialize(const QString&) override
+    {
+        setState(State::Ready);
+        return true;
+    }
+    QString currentLanguage() const override { return QString(); }
+    bool setLanguage(const QString&) override { return true; }
+    QString backendName() const override { return qsl("PendingStartStub"); }
+    QString backendVersion() const override { return qsl("1.0"); }
+    bool setSensitivity(Sensitivity) override { return true; }
+    Sensitivity sensitivity() const override { return Sensitivity::Default; }
+
+    int mStopCallCount = 0;
+    int mCancelCallCount = 0;
+
+protected:
+    void doStartListening() override { setState(State::Starting); }
+    void doStopListening() override { ++mStopCallCount; }
+    void doCancel() override { ++mCancelCallCount; }
 };
 
 } // namespace
@@ -317,6 +351,78 @@ private slots:
         recognizer.cancel();
         QCOMPARE(errors.count(), 1);
         QVERIFY(states.isEmpty());
+    }
+
+    // A start that has not completed is still a start, and stopping one has to
+    // withdraw it: leaving the request pending means answering the permission
+    // dialog later opens the microphone after the caller asked to stop. The
+    // base class routes Starting through cancel() for exactly that, and
+    // nothing pinned it - the word did not appear in this file at all, so the
+    // branch could be deleted with every case still green.
+    void stoppingAPendingStartWithdrawsIt()
+    {
+        PendingStartStubRecognizer recognizer;
+        QSignalSpy states(&recognizer, &SpeechRecognizer::stateChanged);
+        QVERIFY(states.isValid());
+
+        QVERIFY(recognizer.initialize(QString()));
+        QCOMPARE(recognizer.state(), SpeechRecognizer::State::Ready);
+
+        recognizer.startListening();
+        QCOMPARE(recognizer.state(), SpeechRecognizer::State::Starting);
+
+        recognizer.stopListening();
+        QVERIFY2(recognizer.state() == SpeechRecognizer::State::Ready, "a stop while still Starting left the request pending, so answering the permission dialog would open the microphone anyway");
+
+        // Withdrawn by the base itself, which is why the header tells a
+        // backend's own continuation to re-check state() rather than wait for
+        // a doCancel() that never comes
+        QCOMPARE(recognizer.mCancelCallCount, 0);
+        // Nothing was captured, so there is nothing to finalise either
+        QCOMPARE(recognizer.mStopCallCount, 0);
+
+        // Announced, not merely arrived at: Ready, Starting, Ready
+        QCOMPARE(states.count(), 3);
+        QCOMPARE(states.at(2).at(0).value<SpeechRecognizer::State>(), SpeechRecognizer::State::Ready);
+    }
+
+    // modelPath() and currentLanguage() are gated on the live model handle
+    // rather than reading remembered strings, so a released model cannot still
+    // be named - releaseResources() clears mModelPath but nothing clears the
+    // language, and the gate is the whole of what keeps that honest.
+    //
+    // Needs a library and a model it accepts, which CI has neither of: with no
+    // libvosk, initialize() refuses at its first guard and no handle is ever
+    // taken, so there is nothing for a release to have to hide. Where they are
+    // installed - a developer machine, or a run with a stand-in library on the
+    // search path - this is the case that catches the gate being dropped.
+    void aReleasedModelIsNoLongerNamed()
+    {
+        // A model directory of this case's own, rather than whatever happens
+        // to be installed: the library is what decides whether this can run,
+        // and depending on a downloaded model as well would narrow that to
+        // almost nowhere. Taken away again at the end, since
+        // listModelsSpansEveryModelBasedEngine() counts what is on disk.
+        const QString modelPath = qsl("%1/vosk-model-contract-test").arg(VoskRecognizer::modelsDirectoryPath());
+        QVERIFY(QDir().mkpath(qsl("%1/am").arg(modelPath)));
+        auto removeModelDir = qScopeGuard([modelPath]() {
+            QDir(modelPath).removeRecursively();
+        });
+
+        VoskRecognizer recognizer;
+        if (!recognizer.initialize(modelPath)) {
+            QSKIP("no Vosk library that loads a model here, so no live model handle can be taken to release");
+        }
+
+        QVERIFY2(!recognizer.modelPath().isEmpty(), "a loaded model must be named");
+        QVERIFY2(!recognizer.currentLanguage().isEmpty(), "a loaded model must report the language it was read as");
+        QVERIFY(recognizer.hasLiveNativeResources());
+
+        recognizer.releaseResources();
+        QCOMPARE(recognizer.state(), SpeechRecognizer::State::Uninitialized);
+        QVERIFY2(!recognizer.hasLiveNativeResources(), "releaseResources() left native handles behind");
+        QVERIFY2(recognizer.modelPath().isEmpty(), "a model path survived the model it describes");
+        QVERIFY2(recognizer.currentLanguage().isEmpty(), "a language survived the model it was read from");
     }
 
     // Which models can be biased is only known once one is loaded, so words a
@@ -738,21 +844,46 @@ private slots:
             lua_close(L);
         });
 
-        const bool expected = !SpeechRecognizerFactory::availableBackends().isEmpty() || SpeechRecognizerFactory::backendAvailable(SpeechRecognizerFactory::Backend::Platform);
-
+        // Read once, then asserted against a stated expectation rather than
+        // against production's own expression: computing the expected value
+        // the same way stt.available() computes it made this mirror the
+        // binding instead of checking it, and a revert to "Vosk alone" stayed
+        // green because both sides moved together.
         TLuaInterpreter::sttIsAvailable(L);
-        QCOMPARE(static_cast<bool>(lua_toboolean(L, -1)), expected);
+        const bool available = lua_toboolean(L, -1);
         lua_pop(L, 1);
 
         TLuaInterpreter::sttGetInfo(L);
         QVERIFY(lua_istable(L, -1));
         lua_getfield(L, -1, "available");
-        QCOMPARE(static_cast<bool>(lua_toboolean(L, -1)), expected);
+        QCOMPARE(static_cast<bool>(lua_toboolean(L, -1)), available);
         lua_pop(L, 1);
 
         lua_getfield(L, -1, "searchPaths");
         QVERIFY2(lua_istable(L, -1), "searchPaths must always be a table, engine installed or not");
         lua_pop(L, 2); // searchPaths, then the getInfo() table
+
+        const bool voskInstalled = SpeechRecognizerFactory::backendAvailable(SpeechRecognizerFactory::Backend::Vosk);
+        const bool sherpaInstalled = SpeechRecognizerFactory::backendAvailable(SpeechRecognizerFactory::Backend::Sherpa);
+        const bool platformInstalled = SpeechRecognizerFactory::backendAvailable(SpeechRecognizerFactory::Backend::Platform);
+
+        if (!sherpaInstalled && !platformInstalled) {
+            // Nothing here can tell a Vosk-only answer from a correct one:
+            // with Vosk the only candidate, both say the same thing. Stated
+            // rather than quietly passing, since a green that proves nothing
+            // is what this case was rewritten to stop.
+            QCOMPARE(available, voskInstalled);
+            QSKIP("only Vosk could answer on this machine, so this cannot tell a Vosk-only availability answer from a correct one");
+        }
+        if (voskInstalled) {
+            QCOMPARE(available, true);
+            QSKIP("libvosk is installed here as well, so a Vosk-only answer would also be true");
+        }
+
+        // A non-Vosk engine is installed and Vosk is not: speech recognition
+        // genuinely works on this machine, and the only way to answer false is
+        // to have asked Vosk alone.
+        QVERIFY2(available, "a sherpa-onnx or built-in backend is installed here, so availability must not be answered from Vosk alone");
     }
 
     // gap 3: with no model-based engine installed at all, stt.getModelPath()

@@ -89,7 +89,17 @@ AppleSpeechRecognizer::~AppleSpeechRecognizer()
 
 bool AppleSpeechRecognizer::initialize(const QString& modelPath)
 {
-    Q_UNUSED(modelPath)
+    // This backend has no models: macOS supplies the recognition for a locale
+    // and there is nothing on disk to point at. Answering true for a path it
+    // never read told a caller their model had loaded, which is the answer
+    // that disagrees with reality. Refused before anything is torn down, and
+    // without moving to Error - a caller's mistaken argument leaves the engine
+    // exactly as usable as it was.
+    if (!modelPath.isEmpty()) {
+        //: Shown when a script hands the built-in macOS speech recognition a model folder, which it has no use for; %1 is that folder
+        emit errorOccurred(tr("The built-in macOS speech recognition uses no model files, so it cannot load '%1' - call stt.init() with no argument to use it.").arg(modelPath));
+        return false;
+    }
 
     // The device has to go before the engine it was feeding, or a caller
     // re-initialising mid-session is left with a live microphone and no way to

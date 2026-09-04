@@ -28,7 +28,7 @@ Design contract, before the tables:
 
 | Function | Returns | Behaviour |
 | --- | --- | --- |
-| `stt.init([modelPath])` | `true` \| `nil, error` | Load a model and reach `ready`. A `modelPath` chooses its engine by the directory's own layout — a Vosk model and a sherpa-onnx model are never confused, even on a machine with both engines installed. A layout matching neither falls back to the install-preference order, but only on the first `stt.init()` of a session: once an engine exists, a path that names no recognisable layout keeps the engine that is already built rather than re-resolving to whichever is preferred. The engine is built lazily, on the first call that needs one, and is reused across calls that keep naming the same engine — including across `stt.close()`, which releases its native resources but does not discard the engine object. A `stt.init()` whose model belongs to a *different* engine than the one currently built replaces it: the old engine releases its resources and is torn down, and a fresh engine is built for the new model — engines can be switched within a session, with no restart needed. With no argument, uses the default installed model; if no model-based engine is installed but a model-less one is (the built-in macOS backend today), that one is used instead, with nothing to install. The three ways it can have nothing to load are distinguished, because they send the reader to different places: no engine library (naming where it was looked for), no model installed (naming the directory one belongs in), and a path that does not exist. When the configured model is missing and another is loaded in its place, the substitution is reported through `sysSTTError` rather than made quietly — the call still succeeds. |
+| `stt.init([modelPath])` | `true` \| `nil, error` | Load a model and reach `ready`. A `modelPath` chooses its engine by the directory's own layout — a Vosk model and a sherpa-onnx model are never confused, even on a machine with both engines installed. A layout matching neither falls back to the install-preference order, but only on the first `stt.init()` of a session: once an engine exists, a path that names no recognisable layout keeps the engine that is already built rather than re-resolving to whichever is preferred. The engine is built lazily, on the first call that needs one, and is reused across calls that keep naming the same engine — including across `stt.close()`, which releases its native resources but does not discard the engine object. A `stt.init()` whose model belongs to a *different* engine than the one currently built replaces it: the old engine releases its resources and is torn down, and a fresh engine is built for the new model — engines can be switched within a session, with no restart needed. With no argument, uses the default installed model; if no model-based engine is installed but a model-less one is (the built-in macOS backend today), that one is used instead, with nothing to install. The three ways it can have nothing to load are distinguished, because they send the reader to different places: no engine library (naming where it was looked for), no model installed (naming the directory one belongs in), and a path that does not exist. When the configured Vosk model is missing and another is loaded in its place, the substitution is reported through `sysSTTError` rather than made quietly — the call still succeeds; the notice is Vosk's alone, because the `selectedModel` setting it describes is resolved only against Vosk's models directory. Naming a model whose engine is not installed is refused, naming that engine and where its library was looked for, and the engine already loaded is left as it was — a Vosk model on a sherpa-only machine never reaches the sherpa decoder to be reported as a broken sherpa model. The built-in macOS backend loads no models at all, so giving it a `modelPath` is refused rather than answered `true` for a model it never read. |
 | `stt.start()` | `true` \| `nil, error` | Begin listening. `true` means the request was accepted, not always that audio is already flowing: a client that must ask permission first reports `starting`, and the outcome arrives as `sysSTTStateChanged`. A request refused outright — no model, a phrase still processing, a microphone that will not open, permission already denied — returns `nil` and an error, with the detail in `sysSTTError`. Starting while already listening, or while `starting`, succeeds without asking twice. |
 | `stt.stop()` | `true` \| `nil, error` | Stop listening and **finalise**: remaining audio is decoded and reported via `sysSTTResult`, and the state reaches `ready`. Whether it has got there by the time the call returns depends on the engine, the way `start()`'s `starting` does: Vosk and sherpa-onnx decode the remainder inside the call, so the state is already `ready`; the built-in macOS backend returns while still `processing` and settles when its recognition task reports back (or after its finalise timeout), with `sysSTTStateChanged` announcing it. A package must not assume the first shape — `stt.stop()` immediately followed by `stt.start()`, and two `stt.toggle()` calls in quick succession, are **refused on macOS**, because starting from `processing` is refused. Wait for `sysSTTStateChanged` to report `ready`. Stopping when nothing is listening succeeds; stopping in `error` returns `nil` and a message, since "stopped" and "was never running because it failed" are different answers. |
 | `stt.toggle()` | `true`=now listening, `false`=stopped \| `nil, error` | Convenience start/stop. |
@@ -37,7 +37,7 @@ Design contract, before the tables:
 | `stt.initialized()` | boolean | A model is loaded (`state` is neither `uninitialized` nor `error`). |
 | `stt.listening()` | boolean | The engine is capturing now. Reads the engine, always in step with `getInfo().listening`. |
 | `stt.setSilenceTimeout(msec)` | `true` \| `nil, error` | After `msec` of continuous silence, listening ends exactly as `stt.stop()` would — finalised, never discarded. `0` (the default) keeps listening open-ended. Holds across listening sessions, not across restarts - neither this nor `setSensitivity` is saved. |
-| `stt.setSensitivity(mode)` | `true` \| `nil, error` | How quickly an utterance is judged finished: `"short"` for commands, `"default"` for balanced use, `"long"` for dictation. Engines map this onto their own end-of-speech detection, so the effect is comparable rather than identical between them; an engine that must rebuild to apply it may pause briefly when a model is already loaded. |
+| `stt.setSensitivity(mode)` | `true` \| `nil, error` | How quickly an utterance is judged finished: `"short"` for commands, `"default"` for balanced use, `"long"` for dictation. Engines map this onto their own end-of-speech detection, so the effect is comparable rather than identical between them; an engine that must rebuild to apply it may pause briefly when a model is already loaded. Not every engine can: the built-in macOS backend has no end-of-speech tuning at all and refuses every mode, permanently, and an older libvosk without the endpointer symbol refuses too. Both return `nil` and a message naming the engine that cannot do it — a refusal to plan around, not a fault to retry. |
 | `stt.setVocabulary(words)` | boolean \| `nil, error` | Tell the engine which words to expect, so it favours them when a sound could be several things — a game's command verbs, its exits, the names of what is in front of you. Takes an array of words or short phrases; keep it to a shortlist rather than a dictionary, since applying one can make the engine rebuild and pause briefly. `true` means the engine took them. `false` is not an error: it means this backend cannot use vocabulary at all (see capabilities), so correct the results yourself instead. A backend that *can* and failed this time also returns `false`, reporting the fault through `sysSTTError`, so a caller branching only on the boolean still degrades gracefully while the failure stays visible. `nil, error` means there was no engine to offer the words to. What "took them" actually means differs enough between backends that it is spelled out per engine below the `capabilities` table. |
 | `stt.getInfo()` | table | Everything the engine can say about itself at this moment: what is loaded, what it is capable of, and what it is doing right now. The keys are listed below. Always a table, even with no engine installed: every key below is present except `version` and `language`, which need a recognizer to exist, and every capability reads `false` - so a caller can read it without guarding. |
 
@@ -56,7 +56,7 @@ returning `false` with a message, `listModels` returning `{}`.
 | `stt.listModels()` | table | Array of `{name, path}` for installed models, across **every** model-based engine at once — not only whichever is currently loaded. Deliberately works without the engine library, so downloaded models stay visible. |
 | `stt.getPlatformKey()` | string \| `nil` | Platform/architecture key for selecting an engine build (`"macos"`, `"windows-x64"`, `"windows-x86"`, `"linux-x86_64"`, `"linux-aarch64"`); `nil` when no published build exists. |
 | `stt.reloadLibrary()` | boolean \| `false, error` | Re-run engine detection after an install. Refuses while the recognizer is in use or holds live native resources. **Vosk only** — see below. |
-| `stt.unloadLibrary()` | `true` \| `false, error` | Unload the engine so its file can be deleted (Windows cannot delete a mapped module). Same refusal rules. **Vosk only** — see below. |
+| `stt.unloadLibrary()` | `true` \| `false, error` | Unload the engine so its file can be deleted (Windows cannot delete a mapped module). Same refusal rules, plus one of its own: with any engine other than Vosk loaded it refuses rather than reporting an unload it cannot perform. **Vosk only** — see below. |
 
 **Known limitation: `reloadLibrary`/`unloadLibrary` act on Vosk alone.** Desktop
 Mudlet's dynamically-loaded backends are Vosk and sherpa-onnx, but only Vosk's
@@ -71,11 +71,15 @@ anything to act on for it — but neither is a no-op either. Both refuse while
 the recognizer is listening, is initialized, or holds live native resources —
 any one of the three is enough. A loaded Apple recognizer meets at least the
 second and third even when it is sitting idle in `ready`, so they return
-`false` with
-"cannot unload the speech recognition library while it is in use, close speech
-recognition first" — a refusal driven by a backend the Vosk loader knows
-nothing about. A loaded sherpa-onnx recognizer blocks a Vosk unload in exactly
-the same way. Call `stt.close()` first if the intent really is to unload Vosk.
+`false` with "cannot unload the speech recognition library while it is in use,
+close speech recognition first" — `stt.reloadLibrary()` says "cannot reload"
+in the same sentence, since the two calls report their own names — a refusal
+driven by a backend the Vosk loader knows nothing about. A loaded sherpa-onnx
+recognizer blocks a Vosk unload in exactly the same way. Call `stt.close()`
+first if the intent really is to unload Vosk — and note that closing is not
+enough to make `stt.unloadLibrary()` succeed while a non-Vosk engine is the one
+loaded: it then refuses with a message naming that engine, rather than
+answering `true` for a library it has no way to release.
 
 `stt.available()` / `getInfo().available`, `stt.getModelPath()`,
 `stt.getLibraryPath()`, and `getInfo().searchPaths` answer for whichever
@@ -114,7 +118,11 @@ right now.
 | `onDevice` | Audio is processed on this machine and never leaves it. An implementation backed by a remote service MUST report `false`. |
 
 Desktop Mudlet's Vosk backend reports `{biasing = false, grammar = false,
-words = true, onDevice = true}`. Its sherpa-onnx backend reports `{biasing,
+words = true, onDevice = true}`, where `words` is `true` only while the
+library's word-level symbol resolves — an older or partial libvosk without it
+reports `false` rather than promising a `sysSTTWords` that would never arrive,
+and unloading or reloading the library changes the answer, announced through
+`sysSTTCapabilitiesChanged`. Its sherpa-onnx backend reports `{biasing,
 grammar = false, words = false, onDevice = true}`, where `biasing` is `true`
 only once a model whose directory carries a `bpe.vocab` file has loaded —
 swap in a model without one and it drops back to `false`, announced through
@@ -161,7 +169,7 @@ arguments only — the one type every client event system carries.
 | `sysSTTResult` | final text | An utterance completed — by endpointing, `stt.stop()`, or the silence timeout. The consumer's cue to act on the text. |
 | `sysSTTWords` | JSON string | Alongside each `sysSTTResult`, on backends whose `words` capability is true. Describes **the text as emitted**: an implementation that drops a word from the result must drop it here too, or the two events describe different phrases. Schema below. |
 | `sysSTTStateChanged` | state name | Any transition between the six states. |
-| `sysSTTError` | message | Anything the user should know went wrong: refusals to start, capture faults, model failures, and a configured model quietly replaced by another. The state moves to `error` for faults, but refusal messages can arrive without a state change. Refusals carry the same text the call returned as its second value; faults reported by the engine are translated. **Raised with no engine installed too** — a consumer driving the bridge from events alone must be able to tell "no engine" from "nothing said yet". |
+| `sysSTTError` | message | Anything the user should know went wrong: refusals to start, capture faults, model failures, and a configured model quietly replaced by another. The state moves to `error` for faults, but refusal messages can arrive without a state change. Most refusals carry the same text the call returned as its second value; a refused `stt.start()` is the exception, since the engine's own reason is what the event carries while the call returns only a pointer to it. **Raised with no engine installed too** — a consumer driving the bridge from events alone must be able to tell "no engine" from "nothing said yet". |
 | `sysSTTCapabilitiesChanged` | JSON string | The `capabilities` table changed: a model loaded, or the engine library was unloaded or reloaded underneath it. Same keys as `getInfo().capabilities`. |
 
 ### `sysSTTWords` schema
@@ -175,9 +183,10 @@ A JSON array, one object per word of the accompanying final result:
 `conf` is 0–1; `start`/`end` are seconds, but which clock they are measured on
 is the engine's own and a consumer must not assume one: Vosk resets its decoder
 only when a session is cancelled, so its timings accumulate across the whole
-listening session; sherpa-onnx resets after every final result and the built-in
-macOS backend builds a fresh recognition request per utterance, so on both of
-those the timings restart with each phrase. Treat them as relative within a
+listening session, while the built-in macOS backend builds a fresh recognition
+request per utterance, so its timings restart with each phrase. Desktop
+Mudlet's sherpa-onnx backend never raises this event at all — its `words`
+capability is `false` — so it has no timings of either shape to describe. Treat them as relative within a
 single `sysSTTWords` payload rather than as a session timeline. The
 timings are load-bearing: a word whose span covers pooled silence rather than
 speech is how decoder hallucinations are told apart from spoken words, so an
