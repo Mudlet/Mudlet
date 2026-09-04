@@ -154,6 +154,12 @@ export MUDLET_TEST_HTTP_PORT="$HTTP_PORT"
 export MUDLET_TEST_MMCP_DIR="$peer_dir"
 export MUDLET_TEST_TELNET_DIR="$telnet_dir"
 export XDG_RUNTIME_DIR="${MUDLET_TEST_DISCORD_RUNTIME_DIR:-$runtime_dir}"
+# Replacing XDG_RUNTIME_DIR above also hides the desktop's Wayland socket. Where
+# Qt loads its GTK platform theme, GDK then finds no display it is willing to
+# open and gtk_init() exits the process during QApplication construction - status
+# 1, before Mudlet prints a line. The run is under an X server either way, so name
+# the backend GDK should have picked; it is a no-op without that theme plugin.
+export GDK_BACKEND=x11
 export LD_LIBRARY_PATH="$WS/3rdparty/discord/rpc/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 export DBUS_SESSION_BUS_ADDRESS='disabled:'
 export TESTS_DIRECTORY="${TESTS_DIRECTORY:-$WS/src/mudlet-lua/tests}"

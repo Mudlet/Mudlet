@@ -1423,11 +1423,32 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.equals(0, select('#', setMergeTables("MudletSpec.NeverAModule", "MudletSpec.NeverAnother")))
       end)
 
+      -- the merge only happens as GMCP arrives from a server, so feed a real
+      -- subnegotiation rather than filling the gmcp table directly
+      local function feedGmcp(message)
+        local ok, err = feedTelnet("<T_IAC><T_SB><O_GMCP>" .. message .. "<T_IAC><T_SE>")
+        assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(err))
+      end
+
       it("merges the keys it was given into an incoming GMCP table", function()
-        -- The merge only happens as GMCP or MSDP arrives from a server. Now
-        -- that specs run offline, feedTelnet() can deliver a GMCP
-        -- subnegotiation itself, so this is writable - just not written yet.
-        pending("feeding the profile a GMCP subnegotiation is not written yet")
+        assert.is_nil(gmcp.MudletSpec and gmcp.MudletSpec.Merged)
+        setMergeTables("MudletSpec.Merged")
+
+        feedGmcp('MudletSpec.Merged {"hp": 10, "mp": 20}')
+        feedGmcp('MudletSpec.Merged {"hp": 5}')
+
+        assert.equals(5, gmcp.MudletSpec.Merged.hp)
+        assert.equals(20, gmcp.MudletSpec.Merged.mp, "the partial update replaced the table instead of merging into it")
+      end)
+
+      it("leaves a module it was not given to be replaced wholesale", function()
+        assert.is_nil(gmcp.MudletSpec and gmcp.MudletSpec.Replaced)
+
+        feedGmcp('MudletSpec.Replaced {"hp": 10, "mp": 20}')
+        feedGmcp('MudletSpec.Replaced {"hp": 5}')
+
+        assert.equals(5, gmcp.MudletSpec.Replaced.hp)
+        assert.is_nil(gmcp.MudletSpec.Replaced.mp, "an unregistered module merged instead of being replaced")
       end)
     end)
 
