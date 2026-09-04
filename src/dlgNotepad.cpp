@@ -24,7 +24,8 @@
 #include "dlgNotepad.h"
 
 #include "MudletPaths.h"
-#include "mudlet.h"
+#include "Host.h"
+#include "utils.h"
 
 #include <QApplication>
 #include <QCloseEvent>
@@ -45,6 +46,7 @@
 #include <QSaveFile>
 #include <QShortcut>
 #include <QStringConverter>
+#include <QTabBar>
 #include <QTextDocument>
 #include <QTextStream>
 #include <QTimer>
