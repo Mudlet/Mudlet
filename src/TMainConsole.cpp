@@ -55,6 +55,7 @@
 #include <QSizePolicy>
 #include <QTextBoundaryFinder>
 #include <QTextCodec>
+#include <QTimer>
 #include <QPainter>
 #include <QVideoWidget>
 
@@ -104,7 +105,7 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
     // leaving it for the first spell-check would put that wait in front of the
     // first word typed, so a queued connection has the event loop do it once
     // the profile has finished loading:
-    connect(mudlet::self(), &mudlet::signal_profileLoaded, this, &TMainConsole::getHunspellHandle_system, Qt::QueuedConnection);
+    connect(mudlet::self(), &mudlet::signal_profileLoaded, this, &TMainConsole::slot_warmSystemSpellDictionary, Qt::QueuedConnection);
 
     // Load up the spelling dictionary for the profile - needs to handle the
     // absence of files for the first run in a new profile or from an older
@@ -1828,6 +1829,24 @@ void TMainConsole::setSystemSpellDictionary(const QString& newDict)
         Hunspell_destroy(mpHunspell_system);
         mpHunspell_system = nullptr;
         mHunspellCodecName_system.clear();
+    }
+
+    // A dictionary picked in the preferences leaves the handle cold, and only
+    // another profile being opened would emit signal_profileLoaded to warm it
+    // again - so read the new one here instead of in front of the next word
+    // typed. During a profile load the handle is warmed once at the end, after
+    // the profile's own choice of dictionary has been read from its XML.
+    if (!mpHost->mIsProfileLoadingSequence) {
+        QTimer::singleShot(0, this, &TMainConsole::slot_warmSystemSpellDictionary);
+    }
+}
+
+void TMainConsole::slot_warmSystemSpellDictionary()
+{
+    // spellCheck() and spellSuggestWord() do not consult this flag, so the
+    // lazy getter still serves a script in a profile that has spell check off:
+    if (mpHost->mEnableSpellCheck) {
+        getHunspellHandle_system();
     }
 }
 
