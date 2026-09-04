@@ -76,7 +76,7 @@ QChar dlgConnectionProfiles::firstInvalidProfileNameChar(const QString& name)
 }
 
 // Characters that make a name unusable no matter where it came from:
-// utils::sanitizeForPath() silently rewrites them out of any path built from
+// MudletPaths::sanitizeForPath() silently rewrites them out of any path built from
 // the profile name, and CredentialManager::generateFilePath() refuses to
 // produce a path at all - so a profile named this way could never store or
 // retrieve its password. Mirrors the pattern used there:

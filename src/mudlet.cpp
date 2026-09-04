@@ -1658,31 +1658,7 @@ void mudlet::init()
     //    });
 }
 
-static QString findExecutableDir()
-{
-    // Linux AppImage support
-    QProcessEnvironment systemEnvironment = QProcessEnvironment::systemEnvironment();
-    if (systemEnvironment.contains(qsl("APPIMAGE"))) {
-        QString appimgPath = systemEnvironment.value(qsl("APPIMAGE"), QString());
-        return QFileInfo(appimgPath).dir().path();
-    }
-    return QCoreApplication::applicationDirPath();
-}
-
-static QString readMarkerFile(const QString& path)
-{
-    QString line;
-    QFile file(path);
-    if (!file.open(QIODevice::ReadOnly)) {
-        qWarning() << "mudlet: failed to open file for reading:" << path << file.errorString();
-        return QString();
-    }
-    QTextStream(&file).readLineInto(&line);
-    file.close();
-    return line;
-}
-
-static bool validateConfDir(QString& path)
+static bool validateConfDir(const QString& path)
 {
     if (path.isEmpty()) {
         qWarning("WARN: portable data path not specified");
@@ -1703,39 +1679,18 @@ static bool validateConfDir(QString& path)
 
 void mudlet::setupConfig()
 {
-    QString confPath;
-    QString confDirDefault = qsl("%1/.config/mudlet").arg(QDir::homePath());
-    QString execDir = findExecutableDir();
-    QString markerExecDir = qsl("%1/portable.txt").arg(execDir);
-    QString markerHomeDir = qsl("%1/portable.txt").arg(confDirDefault);
-    if (QFileInfo(markerExecDir).isFile()) {
-        QString portPath = readMarkerFile(markerExecDir);
-        if (portPath.isEmpty()) {
-            portPath = qsl("./portable"); // fallback value for empty portable.txt
-        }
-        portPath = utils::pathResolveRelative(QDir::cleanPath(portPath), execDir);
-        if (!validateConfDir(portPath)) {
-            qFatal("FATAL: portable data path invalid");
-        }
-        confPath = portPath;
-    } else if (QFileInfo(markerHomeDir).isFile()) {
-        QString portPath = readMarkerFile(markerHomeDir);
-        portPath = utils::pathResolveRelative(QDir::cleanPath(portPath), execDir);
-        if (!validateConfDir(portPath)) {
-            qFatal("FATAL: portable data path invalid");
-        }
-        confPath = portPath;
-    } else {
-        const auto resolution = utils::xdgConfigDir(confDirDefault);
-        confPath = resolution.path;
-        if (resolution.migrationPending) {
-            qInfo().nospace() << "mudlet::setupConfig() INFO: XDG_CONFIG_HOME is set but $XDG_CONFIG_HOME/mudlet holds no profiles, so the existing " << confPath
-                              << " is still in use. Move its contents into $XDG_CONFIG_HOME/mudlet to migrate.";
-        }
-        if (!resolution.shadowedProfilesPath.isEmpty()) {
-            qWarning().nospace() << "mudlet::setupConfig() WARN: using $XDG_CONFIG_HOME/mudlet (" << confPath << ") because it holds profiles, but " << resolution.shadowedProfilesPath
-                                 << " holds profiles as well and they will not be listed. Unset XDG_CONFIG_HOME to use that directory instead.";
-        }
+    const auto resolution = MudletPaths::resolveConfigRoot(MudletPaths::executableDir());
+    const QString confPath = resolution.path;
+    if (resolution.portable && !validateConfDir(confPath)) {
+        qFatal("FATAL: portable data path invalid");
+    }
+    if (resolution.migrationPending) {
+        qInfo().nospace() << "mudlet::setupConfig() INFO: XDG_CONFIG_HOME is set but $XDG_CONFIG_HOME/mudlet holds no profiles, so the existing " << confPath
+                          << " is still in use. Move its contents into $XDG_CONFIG_HOME/mudlet to migrate.";
+    }
+    if (!resolution.shadowedProfilesPath.isEmpty()) {
+        qWarning().nospace() << "mudlet::setupConfig() WARN: using $XDG_CONFIG_HOME/mudlet (" << confPath << ") because it holds profiles, but " << resolution.shadowedProfilesPath
+                             << " holds profiles as well and they will not be listed. Unset XDG_CONFIG_HOME to use that directory instead.";
     }
     qDebug() << "mudlet::setupConfig() INFO:" << "using config dir:" << confPath;
     MudletPaths::setConfigPath(confPath);

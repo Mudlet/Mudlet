@@ -195,8 +195,8 @@ void msys2QtMessageHandler(QtMsgType type, const QMessageLogContext& context, co
 #if !defined(Q_OS_MACOS)
 // Reads highDpiScaleFactorRoundingPolicy from Mudlet.ini before QApplication
 // creation, since Qt requires this to be set before the application is constructed.
-// Replicates setupConfig() config path detection using argv[0] instead of
-// QCoreApplication::applicationDirPath() which isn't available yet.
+// Resolves the config root from argv[0] because
+// QCoreApplication::applicationDirPath() isn't available yet.
 static void applyHighDpiRoundingPolicyFromConfig(int argc, char* argv[])
 {
     if (!qEnvironmentVariableIsEmpty("QT_SCALE_FACTOR_ROUNDING_POLICY")) {
@@ -213,35 +213,7 @@ static void applyHighDpiRoundingPolicyFromConfig(int argc, char* argv[])
         return;
     }
 
-    const QString confDirDefault = qsl("%1/.config/mudlet").arg(QDir::homePath());
-    QString confPath;
-
-    const QString markerExecDir = qsl("%1/portable.txt").arg(execDir);
-    const QString markerHomeDir = qsl("%1/portable.txt").arg(confDirDefault);
-
-    if (QFileInfo(markerExecDir).isFile()) {
-        QFile file(markerExecDir);
-        QString portPath;
-        if (file.open(QIODevice::ReadOnly)) {
-            QTextStream(&file).readLineInto(&portPath);
-        }
-        if (portPath.isEmpty()) {
-            portPath = qsl("./portable");
-        }
-        confPath = utils::pathResolveRelative(QDir::cleanPath(portPath), execDir);
-    } else if (QFileInfo(markerHomeDir).isFile()) {
-        QFile file(markerHomeDir);
-        QString portPath;
-        if (file.open(QIODevice::ReadOnly)) {
-            QTextStream(&file).readLineInto(&portPath);
-        }
-        confPath = utils::pathResolveRelative(QDir::cleanPath(portPath), execDir);
-    } else {
-        // Mirror setupConfig()'s XDG_CONFIG_HOME resolution so this early
-        // Mudlet.ini read looks in the same config root.
-        confPath = utils::xdgConfigDir(confDirDefault).path;
-    }
-
+    const QString confPath = MudletPaths::resolveConfigRoot(execDir).path;
     if (confPath.isEmpty()) {
         return;
     }

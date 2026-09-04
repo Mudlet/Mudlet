@@ -7343,7 +7343,7 @@ void T2DMap::slot_exportAreaToImage()
     QString defaultFileName;
     if (!areaName.isEmpty()) {
         // Use sanitized area name for filename
-        defaultFileName = qsl("%1.png").arg(utils::sanitizeForPath(areaName));
+        defaultFileName = qsl("%1.png").arg(MudletPaths::sanitizeForPath(areaName));
     } else {
         // Fall back to area ID if no area name
         defaultFileName = qsl("area_%1.png").arg(mAreaID);

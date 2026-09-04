@@ -32,30 +32,62 @@
 
 #include <QString>
 
-// Every on-disk location Mudlet reads or writes, derived from the one
-// configuration root that setConfigPath() settles at startup. Engine code needs
-// those paths before - and, headless, without ever - a main window, so they are
-// deliberately not part of class mudlet.
-class MudletPaths
+// Every on-disk location Mudlet reads or writes, derived from one config root:
+// a portable.txt marker beside the executable or in ~/.config/mudlet names it,
+// otherwise $XDG_CONFIG_HOME/mudlet and then ~/.config/mudlet are tried. Engine
+// code needs these paths before - and, headless, without ever - a main window,
+// so they are deliberately not part of class mudlet.
+namespace MudletPaths {
+
+struct ConfigDirResolution
 {
-public:
-    MudletPaths() = delete;
-    MudletPaths(const MudletPaths&) = delete;
-    MudletPaths& operator=(const MudletPaths&) = delete;
-
-    // Answers with a path rooted at an empty string until setConfigPath() has run,
-    // so an unconfigured call yields "/profiles/<name>" rather than failing
-    static QString getMudletPath(enums::mudletPathType mode, const QString& extra1 = QString(), const QString& extra2 = QString());
-    static void setConfigPath(const QString& path);
-    // Whether the main dictionary files are the ones bundled with Mudlet (true)
-    // or ones provided by the system (false). Settled as a side effect of
-    // resolving enums::hunspellDictionaryPath, so it only answers once that has
-    // been asked for.
-    static bool usingMudletDictionaries();
-
-private:
-    inline static QString smConfigPath;
-    inline static bool smUsingMudletDictionaries = false;
+    QString path;
+    // A portable.txt marker named the path; the caller decides whether what it
+    // named is usable
+    bool portable = false;
+    // XDG_CONFIG_HOME is set, but an existing legacy dir was used anyway, so
+    // the caller can hint at the migration
+    bool migrationPending = false;
+    // The legacy default, when it holds profiles that the chosen dir now hides.
+    // The caller has to name it, or those profiles read as gone.
+    QString shadowedProfilesPath;
 };
+
+// Where the running executable lives, or where the AppImage sits when running
+// from one
+QString executableDir();
+
+// Applies the whole precedence to a given executable directory. Remembers
+// nothing, so the Mudlet.ini read that happens before QApplication exists can
+// share it.
+ConfigDirResolution resolveConfigRoot(const QString& execDir);
+
+// The XDG leg on its own: $XDG_CONFIG_HOME/mudlet takes a tie with
+// legacyDefault so that a fresh install lands there
+ConfigDirResolution xdgConfigDir(const QString& legacyDefault);
+
+// A directory that cannot be listed must never read as "nothing here": that
+// inference is what hides profiles, so assume the strongest content instead.
+bool configDirHoldsProfiles(const QString& dir);
+
+// Resolves the config root itself on first use; setConfigPath() replaces it,
+// which is how setupConfig() installs the root it has validated and how tests
+// point Mudlet at a scratch directory
+QString getMudletPath(enums::mudletPathType mode, const QString& extra1 = QString(), const QString& extra2 = QString());
+void setConfigPath(const QString& path);
+
+// Whether the main dictionary files are the ones bundled with Mudlet (true) or
+// ones provided by the system (false). Settled as a side effect of resolving
+// enums::hunspellDictionaryPath, so it only answers once that has been asked for.
+bool usingMudletDictionaries();
+
+// Replaces filesystem-unsafe characters with underscores and bounds the length.
+// Callers file data under the result, so shortening has to keep distinct
+// inputs distinct: a shortened name carries a digest of the whole input, since
+// plain truncation made two long profile names share - and overwrite - one
+// stored password.
+QString sanitizeForPath(const QString& input);
+
+} // namespace MudletPaths
 
 #endif // MUDLET_MUDLETPATHS_H

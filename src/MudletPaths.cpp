@@ -30,22 +30,180 @@
 #include "utils.h"
 
 #include <QCoreApplication>
+#include <QCryptographicHash>
+#include <QDebug>
+#include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QLibraryInfo>
+#include <QProcessEnvironment>
+#include <QRegularExpression>
+#include <QTextStream>
+
+namespace {
+QString configRoot;
+bool mudletDictionariesInUse = false;
+
+constexpr int maxPathComponentLength = 50;
+constexpr int pathComponentDigestLength = 16;
+
+// How strongly a directory claims to be Mudlet's config root; the stronger
+// claim wins in xdgConfigDir(), so the order is the contract.
+enum class ConfigDirClaim {
+    absent = 0,
+    // Exists, but holds nothing Mudlet put there - including the stale
+    // Mudlet.conf pre-4.19 Mudlet left in $XDG_CONFIG_HOME/mudlet while its
+    // profiles stayed in ~/.config/mudlet
+    unclaimed = 1,
+    settings = 2,
+    profiles = 3,
+};
+
+ConfigDirClaim configDirClaim(const QString& dir)
+{
+    if (!QDir(dir).exists()) {
+        return ConfigDirClaim::absent;
+    }
+    if (MudletPaths::configDirHoldsProfiles(dir)) {
+        return ConfigDirClaim::profiles;
+    }
+    if (QFileInfo::exists(qsl("%1/Mudlet.ini").arg(dir))) {
+        return ConfigDirClaim::settings;
+    }
+    return ConfigDirClaim::unclaimed;
+}
+
+// $XDG_CONFIG_HOME/mudlet claims more than it holds, because creating
+// profiles/ there is the deliberate opt-in into an isolated config root. The
+// legacy dir gets no such credit: an empty profiles/ left behind by deleting
+// the last profile would otherwise outrank a config root in active use.
+ConfigDirClaim xdgConfigDirClaim(const QString& dir)
+{
+    if (QDir(qsl("%1/profiles").arg(dir)).exists()) {
+        return ConfigDirClaim::profiles;
+    }
+    return configDirClaim(dir);
+}
+
+// cleanPath() is not enough: a symlinked ~/.config gives one directory two
+// spellings, and dotfile managers produce exactly that
+QString configDirIdentity(const QString& dir)
+{
+    const QString canonical = QFileInfo(dir).canonicalFilePath();
+    return canonical.isEmpty() ? QDir::cleanPath(dir) : canonical;
+}
+
+// Makes a relative path absolute against base; an absolute or empty path is
+// returned as it came
+QString pathResolveRelative(const QString& path, const QString& base)
+{
+    if (path.isEmpty() || QDir::isAbsolutePath(path)) {
+        return path;
+    }
+    return QDir::cleanPath(base + "/" + path);
+}
+
+QString readMarkerFile(const QString& path)
+{
+    QString line;
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) {
+        qWarning() << "mudlet: failed to open file for reading:" << path << file.errorString();
+        return QString();
+    }
+    QTextStream(&file).readLineInto(&line);
+    return line;
+}
+} // namespace
+
+QString MudletPaths::executableDir()
+{
+    const QProcessEnvironment systemEnvironment = QProcessEnvironment::systemEnvironment();
+    if (systemEnvironment.contains(qsl("APPIMAGE"))) {
+        return QFileInfo(systemEnvironment.value(qsl("APPIMAGE"))).dir().path();
+    }
+    return QCoreApplication::applicationDirPath();
+}
+
+MudletPaths::ConfigDirResolution MudletPaths::resolveConfigRoot(const QString& execDir)
+{
+    const QString confDirDefault = qsl("%1/.config/mudlet").arg(QDir::homePath());
+    const QString markerExecDir = qsl("%1/portable.txt").arg(execDir);
+    const QString markerHomeDir = qsl("%1/portable.txt").arg(confDirDefault);
+    if (QFileInfo(markerExecDir).isFile()) {
+        QString portPath = readMarkerFile(markerExecDir);
+        if (portPath.isEmpty()) {
+            portPath = qsl("./portable"); // fallback value for empty portable.txt
+        }
+        return {.path = pathResolveRelative(QDir::cleanPath(portPath), execDir), .portable = true};
+    }
+    if (QFileInfo(markerHomeDir).isFile()) {
+        return {.path = pathResolveRelative(QDir::cleanPath(readMarkerFile(markerHomeDir)), execDir), .portable = true};
+    }
+    return xdgConfigDir(confDirDefault);
+}
+
+MudletPaths::ConfigDirResolution MudletPaths::xdgConfigDir(const QString& legacyDefault)
+{
+    const QString xdgConfigHome = qEnvironmentVariable("XDG_CONFIG_HOME");
+    // The XDG base-dir spec requires an absolute path; a relative (or empty)
+    // value must be ignored, which also avoids a surprising CWD-relative root.
+    if (xdgConfigHome.isEmpty() || !QDir::isAbsolutePath(xdgConfigHome)) {
+        return {.path = legacyDefault};
+    }
+    const QString xdgTarget = QDir::cleanPath(qsl("%1/mudlet").arg(xdgConfigHome));
+    if (xdgConfigDirClaim(xdgTarget) < configDirClaim(legacyDefault)) {
+        return {.path = legacyDefault, .migrationPending = true};
+    }
+    // XDG_CONFIG_HOME=$HOME/.config makes both candidates one directory
+    const bool shadowing = configDirIdentity(legacyDefault) != configDirIdentity(xdgTarget) && configDirHoldsProfiles(legacyDefault);
+    return {.path = xdgTarget, .shadowedProfilesPath = shadowing ? legacyDefault : QString()};
+}
+
+bool MudletPaths::configDirHoldsProfiles(const QString& dir)
+{
+    if (!QDir(dir).exists()) {
+        return false;
+    }
+    if (!QFileInfo(dir).isReadable()) {
+        return true;
+    }
+    const QDir profiles(qsl("%1/profiles").arg(dir));
+    if (!profiles.exists()) {
+        return false;
+    }
+    // Counted as mudlet.cpp's anyProfilesExist() does, so the two cannot disagree
+    return !QFileInfo(profiles.path()).isReadable() || !profiles.entryList(QDir::Dirs | QDir::NoDotAndDotDot).isEmpty();
+}
 
 void MudletPaths::setConfigPath(const QString& path)
 {
-    smConfigPath = path;
+    configRoot = path;
 }
 
 bool MudletPaths::usingMudletDictionaries()
 {
-    return smUsingMudletDictionaries;
+    return mudletDictionariesInUse;
+}
+
+QString MudletPaths::sanitizeForPath(const QString& input)
+{
+    static const auto fileSystemUnsafeChars = QRegularExpression(qsl(R"REGEX([/\\:*?"<>|])REGEX"));
+    QString sanitized = input;
+    sanitized.replace(fileSystemUnsafeChars, qsl("_"));
+    if (sanitized.length() > maxPathComponentLength) {
+        const QString digest = QString::fromLatin1(QCryptographicHash::hash(input.toUtf8(), QCryptographicHash::Sha256).toHex()).left(pathComponentDigestLength);
+        sanitized = qsl("%1-%2").arg(sanitized.left(maxPathComponentLength - pathComponentDigestLength - 1), digest);
+    }
+    return sanitized;
 }
 
 QString MudletPaths::getMudletPath(const enums::mudletPathType mode, const QString& extra1, const QString& extra2)
 {
-    const QString confPath = smConfigPath;
+    if (configRoot.isEmpty()) {
+        configRoot = resolveConfigRoot(executableDir()).path;
+    }
+    const QString confPath = configRoot;
     switch (mode) {
     case enums::mainPath:
         // The root of all mudlet data for the user - does not end in a '/'
@@ -150,29 +308,29 @@ QString MudletPaths::getMudletPath(const enums::mudletPathType mode, const QStri
     case enums::hunspellDictionaryPath:
         // Added for 3.18.0 when user dictionary capability added
 #if defined(Q_OS_MACOS)
-        smUsingMudletDictionaries = true;
+        mudletDictionariesInUse = true;
         return qsl("%1/../Resources/").arg(QCoreApplication::applicationDirPath());
 #elif defined(Q_OS_FREEBSD)
         if (QFile::exists(qsl("/usr/local/share/hunspell/%1.aff").arg(extra1))) {
-            smUsingMudletDictionaries = false;
+            mudletDictionariesInUse = false;
             return QLatin1String("/usr/local/share/hunspell/");
         }
         if (QFile::exists(qsl("/usr/share/hunspell/%1.aff").arg(extra1))) {
-            smUsingMudletDictionaries = false;
+            mudletDictionariesInUse = false;
             return QLatin1String("/usr/share/hunspell/");
         }
         if (QFile::exists(qsl("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From debug or release subdirectory of a shadow build directory alongside the ./src one:
-            smUsingMudletDictionaries = true;
+            mudletDictionariesInUse = true;
             return qsl("%1/../../src/").arg(QCoreApplication::applicationDirPath());
         }
         if (QFile::exists(qsl("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From shadow build directory alongside the ./src one:
-            smUsingMudletDictionaries = true;
+            mudletDictionariesInUse = true;
             return qsl("%1/../src/").arg(QCoreApplication::applicationDirPath());
         }
         // From build within ./src
-        smUsingMudletDictionaries = true;
+        mudletDictionariesInUse = true;
         return qsl("%1/").arg(QCoreApplication::applicationDirPath());
 #elif defined(Q_OS_OPENBSD)
         // OpenBSD uses dictionary files from Mozilla rather than direct from,
@@ -181,29 +339,29 @@ QString MudletPaths::getMudletPath(const enums::mudletPathType mode, const QStri
         // - some of the entries for some of the locale/language/other parts of
         // the filesnames seem to be a bit random:
         if (QFile::exists(qsl("/usr/local/share/mozilla-dicts/%1.aff").arg(extra1))) {
-            smUsingMudletDictionaries = false;
+            mudletDictionariesInUse = false;
             return QLatin1String("/usr/local/share/mozilla-dicts/");
         }
         if (QFile::exists(qsl("/usr/share/mozilla-dicts/%1.aff").arg(extra1))) {
-            smUsingMudletDictionaries = false;
+            mudletDictionariesInUse = false;
             return QLatin1String("/usr/share/mozilla-dicts/");
         }
         if (QFile::exists(qsl("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From debug or release subdirectory of a shadow build directory alongside the ./src one:
-            smUsingMudletDictionaries = true;
+            mudletDictionariesInUse = true;
             return qsl("%1/../../src/").arg(QCoreApplication::applicationDirPath());
         }
         if (QFile::exists(qsl("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From shadow build directory alongside the ./src one:
-            smUsingMudletDictionaries = true;
+            mudletDictionariesInUse = true;
             return qsl("%1/../src/").arg(QCoreApplication::applicationDirPath());
         }
         // From build within ./src
-        smUsingMudletDictionaries = true;
+        mudletDictionariesInUse = true;
         return qsl("%1/").arg(QCoreApplication::applicationDirPath());
 #elif defined(Q_OS_LINUX)
         if (QFile::exists(qsl("/usr/share/hunspell/%1.aff").arg(extra1))) {
-            smUsingMudletDictionaries = false;
+            mudletDictionariesInUse = false;
             return QLatin1String("/usr/share/hunspell/");
         }
         if (QFile::exists(qsl("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
@@ -211,14 +369,14 @@ QString MudletPaths::getMudletPath(const enums::mudletPathType mode, const QStri
             // alongside the ./src one. {Typically QMake builds from Qtcreator
             // with CONFIG containing both 'debug_and_release' and
             // 'debug_and_release_target' (this is normal also on Windows):
-            smUsingMudletDictionaries = true;
+            mudletDictionariesInUse = true;
             return qsl("%1/../../src/").arg(QCoreApplication::applicationDirPath());
         }
         if (QFile::exists(qsl("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From shadow build directory alongside the ./src one. {Typically
             // QMake builds from Qtcreator with CONFIG NOT containing both
             // 'debug_and_release' and 'debug_and_release_target':
-            smUsingMudletDictionaries = true;
+            mudletDictionariesInUse = true;
             return qsl("%1/../src/").arg(QCoreApplication::applicationDirPath());
         }
         if (QFile::exists(qsl("%1/../../mudlet/src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
@@ -226,16 +384,16 @@ QString MudletPaths::getMudletPath(const enums::mudletPathType mode, const QStri
             // CMake builds from Qtcreator which are outside of the unpacked
             // source code from a git repo or tarball - which has to have been
             // unpacked/placed in a directory called 'mudlet'}:
-            smUsingMudletDictionaries = true;
+            mudletDictionariesInUse = true;
             return qsl("%1/../../mudlet/src/").arg(QCoreApplication::applicationDirPath());
         }
         // From build within ./src AND installer builds that bundle
         // dictionaries in the same directory as the executable:
-        smUsingMudletDictionaries = true;
+        mudletDictionariesInUse = true;
         return qsl("%1/").arg(QCoreApplication::applicationDirPath());
 #else
         // Probably Windows!
-        smUsingMudletDictionaries = true;
+        mudletDictionariesInUse = true;
         if (QFile::exists(qsl("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From debug or release subdirectory of a shadow build directory alongside the ./src one:
             return qsl("%1/../../src/").arg(QCoreApplication::applicationDirPath());

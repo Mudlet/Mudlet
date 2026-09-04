@@ -45,7 +45,9 @@
 
 #include <QAccessibleInterface>
 #include <QAccessibleWidget>
+#include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QLabel>
