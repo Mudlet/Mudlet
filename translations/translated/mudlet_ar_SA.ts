@@ -10692,7 +10692,7 @@ Message on button in package manager initially and when the view is NOT the &quo
       <location filename="../src/dlgProfilePreferences.cpp" line="1004"/>
       <source>Editor</source>
       <extracomment>Sidebar category in the settings dialog, holding the script editor&apos;s options</extracomment>
-      <translation type="unfinished"/>
+      <translation>محرر</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1006"/>
@@ -11309,7 +11309,7 @@ Breadcrumb name of the subpage holding the Discord Rich Presence settings, reach
       <location filename="../src/dlgProfilePreferences.cpp" line="1846"/>
       <source>Language</source>
       <extracomment>Card title on the General settings page, above the interface language selector</extracomment>
-      <translation type="unfinished"/>
+      <translation>اللغة</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1848"/>
@@ -15430,7 +15430,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
       <location filename="../src/mudlet.cpp" line="272"/>
       <source>Extensions</source>
       <extracomment>Name of the menu that packages add their own commands to, shown inside the Options menu</extracomment>
-      <translation type="unfinished"/>
+      <translation>التمديدات</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="303"/>
