@@ -114,21 +114,34 @@ public:
     void execute();
     bool isFilterChain();
     bool setRegexCodeList(QStringList patterns, QList<int> patternKinds, bool existingTrigger = true);
+    void rebuildPrescanGrams();
     QString getScript() const { return mScript; }
     bool setScript(const QString& script);
     bool compileScript();
     bool match(const char* haystackC, int haystackCLength, const QString&, int line, int posOffset = 0);
     bool checkIfNew();
     void unmarkAsNew();
+    // Empty when the trigger cannot be decided from the line's text alone, in
+    // which case TTriggerPrescan offers it every line.
+    const std::vector<quint32>& prescanGrams() const;
+    void invalidatePrescan(bool nowFiresWithoutMatching = false);
 
     bool isMultiline() const { return mIsMultiline; }
     int getTriggerType() const { return mTriggerType; }
     bool isLineTrigger() const { return mIsLineTrigger; }
-    void setIsLineTrigger(bool b) { mIsLineTrigger = b; }
+    void setIsLineTrigger(bool b)
+    {
+        mIsLineTrigger = b;
+        invalidatePrescan(b);
+    }
     void setStartOfLineDelta(int b) { mStartOfLineDelta = b; }
     void setLineDelta(int b) { mLineDelta = b; }
     void setTriggerType(int b) { mTriggerType = b; }
-    void setIsMultiline(bool b) { mIsMultiline = b; }
+    void setIsMultiline(bool b)
+    {
+        mIsMultiline = b;
+        invalidatePrescan(b);
+    }
     void enableTrigger(const QString&);
     void disableTrigger(const QString&);
     TTrigger* killTrigger(const QString&);
@@ -172,6 +185,7 @@ public:
     QPointer<Host> mpHost;
     QString mName;
     QStringList mPatterns;
+    std::vector<quint32> mPrescanGrams;
     bool exportItem = true;
     bool mModuleMasterFolder = false;
     // specifies whenever the payload is Lua code as a string

@@ -40,8 +40,10 @@
  * package; see docs/libmudlet-perf-baseline.md.
  */
 
+#include <QFile>
 #include <QFileInfo>
 #include <QTemporaryDir>
+#include <QTextStream>
 #include <QtTest/QtTest>
 
 #include <algorithm>
@@ -387,6 +389,33 @@ private:
     int installTriggerSet(Host* host, bool& allOk)
     {
         int n = 0;
+
+        // A plain-substring workload of arbitrary size, one pattern per line,
+        // for measuring how matching scales with trigger count.
+        const QByteArray substringFile = qgetenv("MUDLET_BENCH_SUBSTRINGS");
+        if (!substringFile.isEmpty()) {
+            QFile f(QString::fromLocal8Bit(substringFile));
+            if (!f.open(QIODevice::ReadOnly | QIODevice::Text)) {
+                allOk = false;
+                return 0;
+            }
+            QTextStream in(&f);
+            while (!in.atEnd()) {
+                const QString pattern = in.readLine();
+                if (pattern.isEmpty()) {
+                    continue;
+                }
+                auto* pT = new TTrigger(qsl("bench_%1").arg(n), {pattern}, {REGEX_SUBSTRING}, false, host);
+                pT->setIsFolder(false);
+                pT->setTemporary(false);
+                pT->setIsActive(true);
+                allOk = pT->registerTrigger() && allOk;
+                allOk = pT->setScript(QString()) && allOk;
+                allOk = pT->state() && allOk;
+                ++n;
+            }
+            return n;
+        }
 
         auto addKind = [&](const QStringList& patterns, int kind, bool multiline) {
             QList<int> kinds;

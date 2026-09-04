@@ -472,14 +472,15 @@ void TriggerUnit::processDataStream(const QString& data, int line)
         // triggers churn - a one-shot tempTrigger() invalidates the snapshot
         // every time it fires - down to no allocation per line as well. Only a
         // snapshot an outer pass has pinned has to be left alone and replaced.
-        if (mpRootNodeSnapshot.use_count() == 1) {
-            mpRootNodeSnapshot->assign(mTriggerRootNodeList.cbegin(), mTriggerRootNodeList.cend());
-        } else {
-            mpRootNodeSnapshot = std::make_shared<std::vector<TTrigger*>>(mTriggerRootNodeList.cbegin(), mTriggerRootNodeList.cend());
+        if (mpRootNodeSnapshot.use_count() != 1) {
+            mpRootNodeSnapshot = std::make_shared<RootNodeSnapshot>();
         }
+        mpRootNodeSnapshot->mNodes.assign(mTriggerRootNodeList.cbegin(), mTriggerRootNodeList.cend());
+        mpRootNodeSnapshot->mPrescan.rebuild(mpRootNodeSnapshot->mNodes);
         mRootNodeSnapshotStale = false;
     }
-    const auto pinnedNodeList = mpRootNodeSnapshot;
+    const auto pinnedSnapshot = mpRootNodeSnapshot;
+    const std::vector<TTrigger*>& pinnedNodeList = pinnedSnapshot->mNodes;
     // Triggers registered by a script during this pass (tempTrigger() & Co.)
     // are missing from the snapshot but must still match the current line:
     // before the snapshot the loop walked the live std::list, which a push_back
@@ -488,11 +489,43 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     // Entries below this index were added by outer (nested-feedTriggers) passes
     // and are already part of this pass's snapshot.
     const qsizetype firstNodeAddedThisPass = mRootNodesAddedWhileProcessing.size();
-    for (auto trigger : *pinnedNodeList) {
-        if (!trigger->isActive()) {
-            continue;
+    if (pinnedSnapshot->mPrescan.active()) {
+        // Borrowed from the unit so that only a longer line than any before it
+        // allocates, and moved out so a nested pass grows its own.
+        std::vector<int> scratch = std::move(mCandidateScratch);
+        std::vector<int> candidates = std::move(mCandidates);
+        const auto candidateGuard = qScopeGuard([this, &scratch, &candidates] {
+            mCandidateScratch = std::move(scratch);
+            mCandidates = std::move(candidates);
+        });
+        pinnedSnapshot->mPrescan.candidates(data, scratch, candidates);
+        // A firing script can make a later trigger fire without matching -
+        // setTriggerStayOpen() is the reachable way - and the candidate list was
+        // settled before that happened. So from the moment one does, the rest of
+        // the line goes to every remaining trigger, as an unfiltered pass would.
+        const quint32 epochAtStart = mUnfilterableEpoch;
+        const int rootCount = static_cast<int>(pinnedNodeList.size());
+        size_t nextCandidate = 0;
+        for (int position = 0; position < rootCount; ++position) {
+            if (mUnfilterableEpoch == epochAtStart) {
+                if (nextCandidate >= candidates.size()) {
+                    break;
+                }
+                position = candidates[nextCandidate++];
+            }
+            TTrigger* trigger = pinnedNodeList[position];
+            if (!trigger->isActive()) {
+                continue;
+            }
+            trigger->match(subject, subjectLength, data, line);
         }
-        trigger->match(subject, subjectLength, data, line);
+    } else {
+        for (auto trigger : pinnedNodeList) {
+            if (!trigger->isActive()) {
+                continue;
+            }
+            trigger->match(subject, subjectLength, data, line);
+        }
     }
     // A match here can register more triggers, which also get a shot at the
     // current line - so the list grows in front of the loop, and a trigger that
@@ -615,6 +648,9 @@ void TriggerUnit::setTriggerStayOpen(const QString& name, int lines)
     for (auto it = begin; it != end; ++it) {
         it.value()->mKeepFiring = lines;
     }
+    // it now fires without matching, so it can no longer be filtered out of a
+    // line - including the one being processed right now
+    markRootUnfilterable();
 }
 
 bool TriggerUnit::killTrigger(const QString& name)

@@ -24,6 +24,7 @@
  ***************************************************************************/
 
 
+#include "TTriggerPrescan.h"
 #include "utils.h"
 
 #include <QByteArray>
@@ -79,6 +80,17 @@ public:
     int getNewID();
     QMultiMap<QString, TTrigger*> mLookupTable;
     void markCleanup(TTrigger* pT);
+    // Called by anything that changes whether a trigger can be ruled out of a
+    // line by its text alone.
+    void markPrescanStale() { mRootNodeSnapshotStale = true; }
+    // As above, but for the changes that make a trigger fire without matching
+    // text. Those have to reach the line already being processed, whose
+    // candidate list was settled before the change - see processDataStream().
+    void markRootUnfilterable()
+    {
+        ++mUnfilterableEpoch;
+        mRootNodeSnapshotStale = true;
+    }
     void doCleanup();
     void uninstall(const QString&);
     void _uninstall(TTrigger* pChild, const QString& packageName);
@@ -153,8 +165,18 @@ private:
     // mid-pass leaves that one alone and only the next pass sees the rebuilt
     // one. Every mutation of mTriggerRootNodeList must set the flag below, or a
     // pass would go on walking triggers that have since been freed.
-    std::shared_ptr<std::vector<TTrigger*>> mpRootNodeSnapshot;
+    // The prescan files triggers by their position in the snapshot, so the two
+    // are rebuilt and pinned together.
+    struct RootNodeSnapshot
+    {
+        std::vector<TTrigger*> mNodes;
+        TTriggerPrescan mPrescan;
+    };
+    std::shared_ptr<RootNodeSnapshot> mpRootNodeSnapshot;
     bool mRootNodeSnapshotStale = true;
+    std::vector<int> mCandidateScratch;
+    std::vector<int> mCandidates;
+    quint32 mUnfilterableEpoch = 0;
     int mMaxID;
     bool mModuleMember;
     int statsItemsTotal = 0;

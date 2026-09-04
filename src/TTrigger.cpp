@@ -24,6 +24,8 @@
 
 #include "TTrigger.h"
 
+#include "TTriggerPrescan.h"
+
 
 #include "Host.h"
 #include "TBuffer.h"
@@ -305,6 +307,8 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
     if (existingTrigger && (patternKinds.empty()) && (!isFolder()) && (!mColorTrigger)) {
         setError(tr("error: this trigger has no patterns defined"));
         mOK_init = false;
+        // the patterns the grams were taken from are gone, so they have to go too
+        rebuildPrescanGrams();
         return false;
     }
 
@@ -420,7 +424,61 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
     }
 
     mOK_init = state;
+    rebuildPrescanGrams();
     return state;
+}
+
+// A pattern that matches by containment cannot match a line that lacks the
+// pattern's own characters, so one n-gram per pattern is enough for
+// TTriggerPrescan to rule the whole trigger out. Any other pattern kind - a
+// regex, a colour, a Lua condition - is not decidable from the line's text, so
+// one of those leaves the trigger unfilterable and it keeps seeing every line.
+void TTrigger::rebuildPrescanGrams()
+{
+    std::vector<quint32> grams;
+    grams.reserve(mPatterns.size());
+    for (int i = 0; i < mPatterns.size(); ++i) {
+        const int kind = mPatternKinds.at(i);
+        if (kind != REGEX_SUBSTRING && kind != REGEX_BEGIN_OF_LINE_SUBSTRING && kind != REGEX_EXACT_MATCH) {
+            grams.clear();
+            break;
+        }
+        const quint32 gram = TTriggerPrescan::patternGram(mPatterns.at(i));
+        if (!gram) {
+            grams.clear();
+            break;
+        }
+        grams.push_back(gram);
+    }
+    mPrescanGrams = std::move(grams);
+    invalidatePrescan();
+}
+
+// The index is rebuilt from the trigger's current state, so anything that
+// changes whether or how it can be filtered has to reach the unit that holds it.
+void TTrigger::invalidatePrescan(const bool nowFiresWithoutMatching)
+{
+    if (mpHost) {
+        if (auto* unit = mpHost->getTriggerUnit()) {
+            if (nowFiresWithoutMatching) {
+                unit->markRootUnfilterable();
+            } else {
+                unit->markPrescanStale();
+            }
+        }
+    }
+}
+
+const std::vector<quint32>& TTrigger::prescanGrams() const
+{
+    static const std::vector<quint32> unfilterable;
+    // A line trigger fires on a line count rather than on text, a multiline one
+    // has to see every line to advance its state, and a trigger still counting
+    // down its stay-open fires without matching at all.
+    if (mIsLineTrigger || mIsMultiline || mKeepFiring > 0) {
+        return unfilterable;
+    }
+    return mPrescanGrams;
 }
 
 bool TTrigger::match_perl(const char* haystackC, const int haystackCLength, const QString& haystack, int patternNumber, int posOffset, int lineNumber)
@@ -1234,7 +1292,13 @@ bool TTrigger::match(const char* haystackC, const int haystackCLength, const QSt
             if (!mIsMultiline) {
                 if (ret) {
                     conditionMet = true;
+                    const bool wasFilterable = !mKeepFiring;
                     mKeepFiring = mStayOpen;
+                    if (wasFilterable != !mKeepFiring) {
+                        // whether it fires without matching just changed, so
+                        // whether it can be filtered out of a line changed too
+                        invalidatePrescan();
+                    }
                     break;
                 }
             } else {
@@ -1321,6 +1385,9 @@ bool TTrigger::match(const char* haystackC, const int haystackCLength, const QSt
 
         if ((mKeepFiring > 0) && (!conditionMet)) {
             mKeepFiring--;
+            if (!mKeepFiring) {
+                invalidatePrescan();
+            }
             if ((mKeepFiring == mStayOpen) || (mpMyChildrenList->empty())) {
                 execute();
             }
@@ -1459,6 +1526,7 @@ bool TTrigger::setupTmpColorTrigger(int ansiFg, int ansiBg)
     mMatchData.emplace_back();
     mRegexJitCompiled.push_back(false);
     mColorPatternList.emplace_back(std::move(pCT));
+    rebuildPrescanGrams();
     return true;
 }
 
