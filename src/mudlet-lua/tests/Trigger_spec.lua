@@ -948,6 +948,96 @@ describe("Trigger processing", function()
 
     end)
 
+    describe("substring pattern matching", function()
+
+        local line = "ab café the quick brown fox jumps over the lazy dog. 🐉"
+
+        -- Mudlet only summarises a line's character pairs once a profile has
+        -- enough substring patterns for the summary to pay for itself. These
+        -- match nothing and exist only to carry a profile well past that
+        -- threshold, so that raising it later cannot quietly move these specs
+        -- off the summarised path they are written to cover.
+        local function installBallast()
+            local ids = {}
+            for i = 1, 20 do
+                ids[i] = tempTrigger("SpecBigramBallast" .. i, function() end)
+            end
+            return ids
+        end
+
+        local function killAll(ids)
+            for _, id in ipairs(ids) do
+                disableTrigger(id)
+                killTrigger(id)
+            end
+        end
+
+        -- Whether to summarise a line is judged from the line before it, so the
+        -- line is fed twice and only the second pass counted.
+        local function hitsFor(needles)
+            local hits = {}
+            local ids = installBallast()
+            for _, needle in ipairs(needles) do
+                hits[needle] = 0
+                ids[#ids + 1] = tempTrigger(needle, function()
+                    hits[needle] = hits[needle] + 1
+                end)
+            end
+
+            feedTriggers("\n" .. line .. "\n")
+            for _, needle in ipairs(needles) do
+                hits[needle] = 0
+            end
+            feedTriggers("\n" .. line .. "\n")
+
+            killAll(ids)
+            return hits
+        end
+
+        it("matches substrings of every shape that occur in the line", function()
+            local needles = {"a", "ab", "café", "é the", "🐉", "the quick", "brown fox", "over the lazy", "dog."}
+            local hits = hitsFor(needles)
+            for _, needle in ipairs(needles) do
+                assert.are.equal(1, hits[needle], "'" .. needle .. "' occurs in the line and should have matched")
+            end
+        end)
+
+        it("does not match text the line only appears to contain", function()
+            -- each of these is built from characters, and "quick the" from
+            -- character pairs, that the line itself does have
+            local needles = {"ZZ", "Fox", "cafe", "quick the", "abé", "dog.."}
+            local hits = hitsFor(needles)
+            for _, needle in ipairs(needles) do
+                assert.are.equal(0, hits[needle], "'" .. needle .. "' does not occur in the line and should not have matched")
+            end
+        end)
+
+        it("matches a capture the filtering parent carried over from an earlier line", function()
+            _G.TrigBigramCarried = 0
+            local code = [==[ ]==]
+            -- enough plain substring triggers that the profile summarises its
+            -- lines at all, which is the condition this spec is about
+            local ballast = installBallast()
+            feedTriggers("warming the line summary\n")
+
+            tempComplexRegexTrigger("SpecBigramParent", [[^first (\w+)$]], code, 1, 0, 0, 1, 0, 0, 0, 0, 0, 3)
+            tempComplexRegexTrigger("SpecBigramParent", [[^second (\w+)$]], code, 1, 0, 0, 1, 0, 0, 0, 0, 0, 3)
+            permSubstringTrigger("SpecBigramChild", "SpecBigramParent", {"zebra"},
+                                 [==[_G.TrigBigramCarried = _G.TrigBigramCarried + 1]==])
+
+            feedTriggers("first zebra\n")
+            feedTriggers("second wombat\n")
+
+            local fires = _G.TrigBigramCarried
+            killTrigger("SpecBigramChild")
+            killTrigger("SpecBigramParent")
+            killAll(ballast)
+            _G.TrigBigramCarried = nil
+            assert.are.equal(1, fires, "the child searches its parent's capture, which need not come from the line that completed the match")
+        end)
+
+    end)
+
     describe("temporary trigger argument validation", function()
 
         it("tempTrigger rejects a non-string, non-function body", function()
