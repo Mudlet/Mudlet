@@ -704,6 +704,14 @@ TConsole::~TConsole()
     // for the whole of this teardown, so unbind it up front.
     mpModel->buffer.detachConsole(this);
 
+    // The backstop against a stale registry entry: TMainConsole deregisters
+    // where it destroys a sub-console, but one can also die as a child of the
+    // widget it was created into - a scroll box, say - with nobody having taken
+    // it out of the map first.
+    if (mpHost && (mType & (SubConsole | UserWindow | Buffer))) {
+        mpHost->windowRegistry().deregisterSubConsole(mConsoleName, mpModel.get());
+    }
+
 #if defined(DEBUG_CODEPOINT_PROBLEMS)
     if (mType & ~CentralDebugConsole) {
         // Codepoint issues reporting is not enabled for the CDC:
@@ -996,7 +1004,7 @@ void TConsole::closeEvent(QCloseEvent* event)
 
     if (mType & (SubConsole | Buffer)) {
         if (mudlet::self()->isGoingDown() || mpHost->isClosingDown()) {
-            auto pC = mpHost->mpConsole->mSubConsoleMap.take(mConsoleName);
+            auto pC = mpHost->mpConsole->deregisterSubConsole(mConsoleName);
             if (pC) {
                 // As it happens pC will be identical to 'this' it is just that
                 // we will have removed it from the main TConsole's
@@ -1016,8 +1024,8 @@ void TConsole::closeEvent(QCloseEvent* event)
 
     if (mType == UserWindow) {
         if (mudlet::self()->isGoingDown() || mpHost->isClosingDown()) {
-            auto pC = mpHost->mpConsole->mSubConsoleMap.take(mConsoleName);
-            auto pD = mpHost->mpConsole->mDockWidgetMap.take(mConsoleName);
+            auto pC = mpHost->mpConsole->deregisterSubConsole(mConsoleName);
+            auto pD = mpHost->mpConsole->deregisterDockWidget(mConsoleName);
             if (pC) {
                 // As it happens pC will be identical to 'this' it is just that
                 // we will have removed it from the main TConsole's
@@ -1530,12 +1538,7 @@ int TConsole::getLineCount()
 
 QStringList TConsole::getLines(int from, int to)
 {
-    QStringList ret;
-    const int delta = abs(from - to);
-    for (int i = 0; i < delta; i++) {
-        ret << buffer.line(from + i);
-    }
-    return ret;
+    return mpModel->lines(from, to);
 }
 
 void TConsole::selectCurrentLine()

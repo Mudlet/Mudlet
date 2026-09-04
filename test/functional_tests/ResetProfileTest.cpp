@@ -516,11 +516,11 @@ private slots:
     auto [ok, msg] =
         mpHost->createMiniConsole(qsl("main"), qsl("test_mc"), 0, 0, 100, 100);
     QVERIFY2(ok, qPrintable(msg));
-    QVERIFY(mpHost->mpConsole->mSubConsoleMap.contains(qsl("test_mc")));
+    QVERIFY(mpHost->windowRegistry().hasSubConsole(qsl("test_mc")));
 
     performReset();
 
-    QVERIFY2(!mpHost->mpConsole->mSubConsoleMap.contains(qsl("test_mc")),
+    QVERIFY2(!mpHost->windowRegistry().hasSubConsole(qsl("test_mc")),
              "Mini console should be removed after reset");
   }
 

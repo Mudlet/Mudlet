@@ -138,7 +138,7 @@ private:
         return true;
     }
 
-    TConsole* miniconsoleOf(Host* pHost) const { return pHost->mpConsole ? pHost->mpConsole->mSubConsoleMap.value(mMiniconsoleName) : nullptr; }
+    TConsole* miniconsoleOf(Host* pHost) const { return pHost->mpConsole ? pHost->mpConsole->subConsoleWidget(mMiniconsoleName) : nullptr; }
 
     bool createMiniconsole(Host* pHost) const
     {

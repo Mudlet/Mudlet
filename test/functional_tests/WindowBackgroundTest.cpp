@@ -226,7 +226,7 @@ private slots:
 
         runLua(qsl("setBackgroundImage('main', [[%1]], 'cover', true)").arg(imagePath));
         runLua(qsl("createMiniConsole('lowerConsole', 10, 10, 200, 100)"));
-        QVERIFY(mpHost->mpConsole->mSubConsoleMap.contains(qsl("lowerConsole")));
+        QVERIFY(mpHost->windowRegistry().hasSubConsole(qsl("lowerConsole")));
 
         runLua(qsl("lowerWindow('lowerConsole')"));
 
