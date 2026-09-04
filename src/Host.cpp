@@ -1099,6 +1099,12 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
                                      << "' so assuming it is an end of session save and the TCommandLines' histories need saving...";
         emit signal_saveCommandLinesHistory();
     }
+    // The event loop flushes profile.ini, so a write there only shows up as
+    // having failed later - by the time the profile is next saved:
+    if (mpProfileIni && mpProfileIni->status() == QSettings::AccessError) {
+        qWarning().nospace().noquote()
+                << "Host::saveProfile(...) ERROR - the profile's \"profile.ini\" file could not be written, the command lines' history settings and the notepad's window state may be lost.";
+    }
 
     auto writer = std::make_shared<XMLexport>(this);
     writers.insert(qsl("profile"), writer);
@@ -3372,31 +3378,28 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule, QString*
     return noManifest(qsl("%1: %2").arg(QString::fromStdString(reason), QString::fromStdString(e)));
 }
 
-// writeProfileIniData(...) and readProfileIniData(...) might eventually
-// replace writeProfileData(...) and readProfileData(...) but for now are just
-// used to store some information about one or more TCommandLine's mHistoryData:
-bool Host::writeProfileIniData(const QString& item, const QString& what)
+// profile.ini holds the command lines' history settings and the notepad's
+// window state. Opened once per Host; setName() drops it because the path
+// carries the name:
+QSettings& Host::profileIni()
 {
-    QSettings settings(mudlet::getMudletPath(enums::profileDataItemPath, getName(), qsl("profile.ini")), QSettings::IniFormat);
-    settings.setValue(item, what);
-    settings.sync();
-    switch (settings.status()) {
-    case QSettings::NoError:
-        return true;
-    case QSettings::FormatError:
-        qWarning().nospace().noquote() << "Host::writeProfileIniData(\"" << item << "\", \"" << what << "\") ERROR - failed to save this detail, reason: \"Format error\".";
-        return false;
-    case QSettings::AccessError:
-        qWarning().nospace().noquote() << "Host::writeProfileIniData(\"" << item << "\", \"" << what << "\") ERROR - failed to save this detail, reason: \"Access error\".";
-        return false;
+    if (!mpProfileIni) {
+        mpProfileIni = new QSettings(mudlet::getMudletPath(enums::profileDataItemPath, getName(), qsl("profile.ini")), QSettings::IniFormat, this);
+        if (mpProfileIni->status() == QSettings::FormatError) {
+            qWarning().nospace().noquote() << "Host::profileIni() ERROR - the profile's \"profile.ini\" file could not be parsed, the settings it held will be replaced.";
+        }
     }
-    Q_UNREACHABLE();
+    return *mpProfileIni;
+}
+
+void Host::writeProfileIniData(const QString& item, const QString& what)
+{
+    profileIni().setValue(item, what);
 }
 
 QString Host::readProfileIniData(const QString& item)
 {
-    QSettings settings(mudlet::getMudletPath(enums::profileDataItemPath, getName(), qsl("profile.ini")), QSettings::IniFormat);
-    return settings.value(item).toString();
+    return profileIni().value(item).toString();
 }
 
 // This function retrieves command line history settings based on the given
@@ -4102,6 +4105,12 @@ void Host::setName(const QString& name)
     }
 
     mHostName = name;
+
+    if (mpProfileIni) {
+        // Flushes on the way out; the next use reopens it under the new name:
+        delete mpProfileIni;
+        mpProfileIni = nullptr;
+    }
 
     mTelnet.mProfileName = name;
     if (mpMap) {

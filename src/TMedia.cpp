@@ -1521,6 +1521,7 @@ std::shared_ptr<TMediaPlayer> TMedia::getMediaPlayer(TMediaData& mediaData)
     }
 
     // No available player, create a new one
+    mudlet::self()->watchAudioOutputDevices();
     auto newPlayer = std::make_shared<TMediaPlayer>(mpHost, mediaData);
 
     if (!newPlayer || !newPlayer->mediaPlayer()) {
