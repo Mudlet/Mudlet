@@ -26,14 +26,16 @@
 
 
 #include "dlgTriggerEditor.h"
+#include "EditorCommand.h"
+#include "utils.h"
 
-#include <QApplication>
+#include <QCoreApplication>
 #include <QFile>
 #include <QMap>
+#include <QMargins>
 #include <QMultiHash>
 #include <QPointer>
 #include <QXmlStreamReader>
-#include <QClipboard>
 
 class Host;
 class TAction;
@@ -100,7 +102,7 @@ private:
     void readHiddenVariables();
 
     void readStringList(QStringList&, const QString&);
-    void readIntegerList(QList<int>&, const QString& parentName, const QString &whatIsParent);
+    void readIntegerList(QList<int>&, const QString& parentName, const QString& whatIsParent);
     void readModulesDetailsMap(QMap<QString, QStringList>&);
     void getVersionString(QString&);
     QString readScriptElement();
@@ -126,7 +128,7 @@ private:
     bool gotScript = false;
     int module = 0;
     int mMaxRoomId = 0;
-    quint8 mVersionMajor = 1; // 0 to 255
+    quint8 mVersionMajor = 1;  // 0 to 255
     quint16 mVersionMinor = 0; // 0 to 999 for 3 digit decimal value. Cannot be a quint8 as that only allows x.255 for the decimal
 };
 

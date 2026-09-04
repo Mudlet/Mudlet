@@ -36,11 +36,14 @@
  * Run with: ctest -R MapRoundTripTest -V
  */
 
+#include <QFileInfo>
 #include <QtTest/QtTest>
 
+#include <QFile>
 #include <QSaveFile>
 #include <QTemporaryDir>
 
+#include "PortableModeTestHelper.h"
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
@@ -50,12 +53,7 @@
 #include "TRoomDB.h"
 #include "mudlet.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForMapRoundTripTest();
+#include "GroupedTest.h"
 
 namespace {
 const int scmRoom1 = 101;
@@ -85,6 +83,8 @@ class MapRoundTripTest : public QObject
     Q_OBJECT
 
 private:
+    QTemporaryDir mConfigDir;
+    QByteArray mSavedXdg;
     Host* mpSource = nullptr;
     Host* mpTarget = nullptr;
     const QString mSourceName = qsl("MapRoundTripSource-Test");
@@ -113,10 +113,6 @@ private:
     AreaBounds mBoundsB;
     QImage mLabelImage;
     QSizeF mLabelSize;
-    // Once the source map has been saved at a format below 19 its mUserData
-    // carries stray system.fallback_mapSymbolFont* keys forever - see the
-    // QEXPECT_FAIL in verifyMap():
-    bool mSourcePollutedByPre19Save = false;
 
     static QMap<QString, QString> expectedMapUserData() { return {{qsl("map.author 日本語"), qsl("величина <>&\"' ]]>")}, {qsl("plain"), qsl("value")}}; }
 
@@ -169,7 +165,7 @@ private:
 
         for (const int id : {scmRoom1, scmRoom2, scmRoom3, scmRoom4}) {
             QVERIFY(pMap->addRoom(id));
-            QVERIFY(pMap->setRoomArea(id, id == scmRoom4 ? mAreaB : mAreaA, false));
+            QVERIFY(pMap->setRoomArea(id, id == scmRoom4 ? mAreaB : mAreaA));
         }
         QVERIFY(pMap->setRoomCoordinates(scmRoom1, 0, 0, 0));
         QVERIFY(pMap->setRoomCoordinates(scmRoom2, -3, 7, 0));
@@ -268,6 +264,23 @@ private:
         return file.commit();
     }
 
+    // QDataStream stores QStrings as a length prefix plus the string encoded as UTF-16BE,
+    // so the raw file can be scanned for a serialized string's bytes:
+    static bool fileContainsSerializedString(const QString& fileName, const QString& needle)
+    {
+        QFile file(fileName);
+        if (!file.open(QIODevice::ReadOnly)) {
+            return false;
+        }
+        const QByteArray raw = file.readAll();
+        QByteArray needleBytes;
+        QDataStream out(&needleBytes, QIODevice::WriteOnly);
+        out << needle;
+        // The length prefix stays in the needle so a key cannot match a longer key it is
+        // a byte prefix of ("system.fallback_mapSymbolFont" vs. "...FontFudgeFactor"):
+        return raw.contains(needleBytes);
+    }
+
     void verifyArea(TArea* pArea, const AreaBounds& bounds, const QString& areaLabel)
     {
         QVERIFY2(pArea, qPrintable(qsl("%1 is missing").arg(areaLabel)));
@@ -290,6 +303,7 @@ private:
         QCOMPARE(pDB->getAreaNamesMap().value(mAreaB), scmAreaBName);
 
         TArea* pAreaA = pDB->getArea(mAreaA);
+        QVERIFY(pAreaA);
         verifyArea(pAreaA, mBoundsA, qsl("area A"));
         if (QTest::currentTestFailed()) {
             return;
@@ -297,7 +311,21 @@ private:
         QVERIFY(pAreaA->gridMode);
         QCOMPARE(pAreaA->mUserData, expectedAreaAUserData());
 
+        // Nothing on the load path sets out to build the per-area index of
+        // rooms holding custom lines. It falls out of three separate calls
+        // made for something else - TRoom::restore()'s room dimensions, the
+        // span recalculation at the end of TMap::restore(), and TArea::clean()
+        // during the audit - so cutting any one of them leaves it built by the
+        // other two and every other assertion here still passing. This is what
+        // is left to notice the day the last one goes: the mapper consults the
+        // index only for rooms that are off screen, so what silently stops
+        // being drawn is a custom line running into view from outside it.
+        QVERIFY2(
+                pAreaA->getCustomLineRoomsForZ(0).contains(scmRoom1),
+                qPrintable(qsl("room %1 holds a custom line but is missing from area A's index for z 0, loaded from format version %2").arg(QString::number(scmRoom1), QString::number(savedVersion))));
+
         TArea* pAreaB = pDB->getArea(mAreaB);
+        QVERIFY(pAreaB);
         verifyArea(pAreaB, mBoundsB, qsl("area B"));
         if (QTest::currentTestFailed()) {
             return;
@@ -344,14 +372,9 @@ private:
         QCOMPARE(pR1->customLinesColor, (QMap<QString, QColor>{{qsl("n"), scmCustomLineColor}}));
         QCOMPARE(pR1->customLinesStyle, (QMap<QString, Qt::PenStyle>{{qsl("n"), Qt::DashLine}}));
         QCOMPARE(pR1->customLinesArrow, (QMap<QString, bool>{{qsl("n"), true}}));
-        if (savedVersion == 19) {
-            // Finding: TMap::serialize() stores the symbol fallback for
-            // mSaveVersion <= 19 but TRoom::restore() only removes it again
-            // for version < 19, so a map saved at exactly format 19 leaves a
-            // stray "system.fallback_symbol" entry in the room's userData
-            // after loading:
-            QEXPECT_FAIL("", "system.fallback_symbol is written at save version 19 (TMap::serialize) but only stripped for versions below 19 (TRoom::restore)", Continue);
-        }
+        // The format 19 leg runs after the format 17/18 ones, so this also
+        // guards against a < 19 save leaving a stray system.fallback_symbol
+        // entry behind in the live source room's user data:
         QCOMPARE(pR1->userData, expectedRoom1UserData());
 
         TRoom* pR2 = pDB->getRoom(scmRoom2);
@@ -394,17 +417,10 @@ private:
         QCOMPARE(pR4->getOut(), scmRoom2);
         QCOMPARE(pR4->getNorthwest(), scmRoom3);
 
-        if (savedVersion >= 19 && mSourcePollutedByPre19Save) {
-            // Finding: TMap::serialize() inserts system.fallback_mapSymbolFont,
-            // system.fallback_mapSymbolFontFudgeFactor and
-            // system.fallback_onlyUseMapSymbolFont into the live map's
-            // mUserData when saving at format < 19 and never removes them
-            // afterwards, so every subsequent save at format >= 19 embeds
-            // those stale keys and TMap::restore() only strips them again for
-            // format < 19 loads:
-            QEXPECT_FAIL(
-                    "", "saving at format < 19 permanently pollutes TMap::mUserData with system.fallback_mapSymbolFont* keys (TMap::serialize) which leak into later format >= 19 saves", Continue);
-        }
+        // The format 19 leg runs after the format 17/18 ones, so this also
+        // guards against a < 19 save leaving stray
+        // system.fallback_mapSymbolFont* entries behind in the live source
+        // map's user data:
         QCOMPARE(pMap->mUserData, expectedMapUserData());
         QCOMPARE(pMap->mEnvColors, (QMap<int, int>{{5, 2}, {12, 7}}));
         QCOMPARE(pMap->mCustomEnvColors.value(300), QColor(12, 34, 56));
@@ -428,9 +444,13 @@ private:
     {
         const QString fileName = qsl("%1/map_v%2.dat").arg(mSaveDir.path()).arg(saveVersion);
         QVERIFY2(saveMapToFile(mpSource->mpMap.data(), fileName, saveVersion), qPrintable(qsl("failed to save map at format version %1").arg(saveVersion)));
-        if (saveVersion < 19) {
-            mSourcePollutedByPre19Save = true;
-        }
+
+        // Saving at any format must not leak system.fallback_* keys into the
+        // live source map's or rooms' user data - room 1 carries a symbol and
+        // a symbol color, room 3 is hidden:
+        QCOMPARE(mpSource->mpMap->mUserData, expectedMapUserData());
+        QCOMPARE(mpSource->mpMap->mpRoomDB->getRoom(scmRoom1)->userData, expectedRoom1UserData());
+        QVERIFY(mpSource->mpMap->mpRoomDB->getRoom(scmRoom3)->userData.isEmpty());
 
         TMap* pTargetMap = mpTarget->mpMap.data();
         pTargetMap->mapClear();
@@ -452,10 +472,24 @@ private:
 private slots:
     void initTestCase()
     {
-        initializeQRCResourcesForMapRoundTripTest();
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
+        // A config root of this process's own. Sharing the developer's
+        // ~/.config/mudlet means sharing a profile list, so a second copy of
+        // this test running at the same time is told the name it types is
+        // already in use and never gets an enabled Connect button. Since #9712
+        // the opt-in that makes setupConfig() adopt a directory is
+        // $XDG_CONFIG_HOME/mudlet/profiles, not the mudlet directory alone.
+        QVERIFY(mConfigDir.isValid());
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+        qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
 
         mudlet::start();
         mudlet::self()->setupConfig();
+        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -486,9 +520,14 @@ private slots:
     {
         mpSource = nullptr;
         mpTarget = nullptr;
-        deleteProfileDirectory(mSourceName);
-        deleteProfileDirectory(mTargetName);
-        delete mudlet::self();
+        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
+        // getMudletPath() dereferences the instance rather than checking it
+        if (mudlet::self()) {
+            deleteProfileDirectory(mSourceName);
+            deleteProfileDirectory(mTargetName);
+            delete mudlet::self();
+        }
+        mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
     }
 
     void test_roundTripAtDefaultVersion() { roundTripAtVersion(mpSource->mpMap->mDefaultVersion); }
@@ -506,22 +545,91 @@ private slots:
         QFETCH(int, saveVersion);
         roundTripAtVersion(saveVersion);
     }
+
+    void test_taintedMapSelfCleansOnFormat19PlusLoad()
+    {
+        // Simulate a map already tainted in the wild by past versions whose
+        // saving in a format below 19 left the fallback keys behind in the
+        // live user data - which then rode along in every format >= 19 save:
+        TMap* pSourceMap = mpSource->mpMap.data();
+        TRoom* pSourceR1 = pSourceMap->mpRoomDB->getRoom(scmRoom1);
+        QVERIFY(pSourceR1);
+        pSourceMap->mUserData.insert(qsl("system.fallback_mapSymbolFont"), qsl("Stale Font,10,-1,5,400,0,0,0,0,0"));
+        pSourceMap->mUserData.insert(qsl("system.fallback_mapSymbolFontFudgeFactor"), qsl("9.99"));
+        pSourceMap->mUserData.insert(qsl("system.fallback_onlyUseMapSymbolFont"), qsl("false"));
+        // The unique value doubles as the proof below that this key really
+        // made it into the file:
+        pSourceR1->userData.insert(qsl("system.fallback_symbol"), qsl("stale-room-symbol-junk"));
+
+        const int saveVersion = pSourceMap->mDefaultVersion;
+        QVERIFY(saveVersion >= 19);
+        const QString fileName = qsl("%1/map_tainted_v%2.dat").arg(mSaveDir.path()).arg(saveVersion);
+        QVERIFY(saveMapToFile(pSourceMap, fileName, saveVersion));
+
+        // Undo the tainting of the live source map:
+        pSourceMap->mUserData = expectedMapUserData();
+        pSourceR1->userData = expectedRoom1UserData();
+
+        // The junk keys really did make it into the serialized stream:
+        QVERIFY(fileContainsSerializedString(fileName, qsl("system.fallback_mapSymbolFont")));
+        QVERIFY(fileContainsSerializedString(fileName, qsl("system.fallback_onlyUseMapSymbolFont")));
+        QVERIFY(fileContainsSerializedString(fileName, qsl("stale-room-symbol-junk")));
+
+        TMap* pTargetMap = mpTarget->mpMap.data();
+        pTargetMap->mapClear();
+        QVERIFY(pTargetMap->restore(fileName));
+        pTargetMap->audit();
+
+        // Loading strips the junk keys while the legitimate user data - and
+        // the authoritative values stored directly in the stream - survive:
+        QCOMPARE(pTargetMap->mUserData, expectedMapUserData());
+        QCOMPARE(pTargetMap->mMapSymbolFont.family(), qsl("DejaVu Serif"));
+        QCOMPARE(pTargetMap->mMapSymbolFontFudgeFactor, 1.25);
+        QVERIFY(pTargetMap->mIsOnlyMapSymbolFontToBeUsed);
+        TRoom* pTargetR1 = pTargetMap->mpRoomDB->getRoom(scmRoom1);
+        QVERIFY(pTargetR1);
+        QCOMPARE(pTargetR1->userData, expectedRoom1UserData());
+        QCOMPARE(pTargetR1->mSymbol, qsl("⚔"));
+    }
+
+    // Every production caller clears the map before restoring onto it, but
+    // nothing makes that a precondition and restoring onto a populated one used
+    // to leak every colliding room: TRoomDB::addRoom() refuses an id that is
+    // already taken and takes no ownership when it does. Deleting the refused
+    // room is only half the fix - TRoom::restore() has already stamped the
+    // colliding id on it, so ~TRoom() would use that id to evict the room
+    // legitimately holding it. This checks that half; the leak itself is what
+    // the leak-detecting Linux CI build catches.
+    void test_restoringOntoAPopulatedMapKeepsTheRoomsAlreadyThere()
+    {
+        TMap* pSourceMap = mpSource->mpMap.data();
+        const QString fileName = qsl("%1/map_onto_populated.dat").arg(mSaveDir.path());
+        QVERIFY(saveMapToFile(pSourceMap, fileName, pSourceMap->mDefaultVersion));
+
+        TMap* pTargetMap = mpTarget->mpMap.data();
+        pTargetMap->mapClear();
+        QVERIFY(pTargetMap->restore(fileName));
+        pTargetMap->audit();
+        QList<int> roomsAfterFirstLoad = pTargetMap->mpRoomDB->getRoomIDList();
+        std::sort(roomsAfterFirstLoad.begin(), roomsAfterFirstLoad.end());
+        QVERIFY(!roomsAfterFirstLoad.isEmpty());
+
+        // the same file again, this time without clearing first
+        QVERIFY(pTargetMap->restore(fileName));
+        pTargetMap->audit();
+
+        QList<int> roomsAfterSecondLoad = pTargetMap->mpRoomDB->getRoomIDList();
+        std::sort(roomsAfterSecondLoad.begin(), roomsAfterSecondLoad.end());
+        QVERIFY2(roomsAfterSecondLoad == roomsAfterFirstLoad,
+                 qPrintable(qsl("restoring onto a populated map lost rooms: %1 became %2").arg(roomsAfterFirstLoad.size()).arg(roomsAfterSecondLoad.size())));
+
+        // and the rooms that stayed are the real ones, not husks
+        TRoom* pRoom1 = pTargetMap->mpRoomDB->getRoom(scmRoom1);
+        QVERIFY2(pRoom1, "the room that was already there was evicted by the room refused for its id");
+        QCOMPARE(pRoom1->mSymbol, qsl("⚔"));
+        QCOMPARE(pRoom1->userData, expectedRoom1UserData());
+    }
 };
 
-void initializeQRCResourcesForMapRoundTripTest()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "MapRoundTripTest.moc"
-QTEST_MAIN(MapRoundTripTest)
+MUDLET_GROUPED_TEST_MAIN(MapRoundTripTest)

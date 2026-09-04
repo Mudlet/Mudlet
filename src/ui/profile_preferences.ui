@@ -145,7 +145,7 @@
           <item row="1" column="2" alignment="Qt::AlignmentFlag::AlignRight">
            <widget class="QLabel" name="label_toolBarVisibility">
             <property name="text">
-             <string>Show main toolbar</string>
+             <string>Show main toolbar:</string>
             </property>
             <property name="buddy">
              <cstring>comboBox_toolBarVisibility</cstring>
@@ -366,6 +366,19 @@
             </property>
             <property name="text">
              <string>Allow server to download and play media</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0" colspan="2">
+           <widget class="QCheckBox" name="checkBox_enableOSC8Hyperlinks">
+            <property name="toolTip">
+             <string>&lt;p&gt;OSC 8 lets a game server put clickable links in its output, which can send commands, pre-fill your input line, or open a web page. Uncheck to ignore them and to stop telling servers that Mudlet supports them.&lt;/p&gt;</string>
+            </property>
+            <property name="accessibleDescription">
+             <string>When checked, clickable OSC 8 hyperlinks from the game server are shown and Mudlet advertises support for them. When unchecked, the sequences are ignored and the capability is not advertised.</string>
+            </property>
+            <property name="text">
+             <string>Enable OSC 8 hyperlinks from the server</string>
             </property>
            </widget>
           </item>
@@ -1342,7 +1355,7 @@ you can use it but there could be issues with aligning columns of text</string>
                <string>&lt;p&gt;Some games wrap their own lines and offer no way to turn that off, which makes triggers awkward to write: the text a trigger sees can be split mid-sentence. This option joins those wrapped lines back together before triggers run, so triggers always see whole lines and the wrapping above applies for display instead.&lt;/p&gt;&lt;p&gt;Set the column to the width the game wraps at (very often 80). Only lines from the game are affected.&lt;/p&gt;&lt;p&gt;&lt;i&gt;This feature is experimental: it tells wrapped prose apart from prompts, tables and ASCII art by their shape, so the occasional line may still be joined or left split when it should not be.&lt;/i&gt;&lt;/p&gt;</string>
               </property>
               <property name="text">
-               <string>Undo the game's own wrapping at:</string>
+               <string>Undo the game's own wrapping (experimental) at:</string>
               </property>
              </widget>
             </item>
@@ -1384,6 +1397,25 @@ you can use it but there could be issues with aligning columns of text</string>
             </item>
            </layout>
           </item>
+          <item>
+           <widget class="QLabel" name="label_undo_server_wrap_experimental">
+            <property name="visible">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string>&lt;i&gt;Experimental: the odd line can still be joined or left split when it should not be. &lt;a href=&quot;https://github.com/Mudlet/Mudlet/issues&quot;&gt;Tell us how it works for you&lt;/a&gt; - your feedback is what will make this better.&lt;/i&gt;</string>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+            <property name="indent">
+             <number>20</number>
+            </property>
+            <property name="openExternalLinks">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -1399,6 +1431,18 @@ you can use it but there could be issues with aligning columns of text</string>
              <enum>QFrame::Shape::NoFrame</enum>
             </property>
             <layout class="QHBoxLayout" name="horizontalLayout_frame_console_buffer_size">
+             <property name="leftMargin">
+              <number>0</number>
+             </property>
+             <property name="topMargin">
+              <number>0</number>
+             </property>
+             <property name="rightMargin">
+              <number>0</number>
+             </property>
+             <property name="bottomMargin">
+              <number>0</number>
+             </property>
              <item>
               <widget class="QLabel" name="label_console_buffer_size_spinBox">
                <property name="sizePolicy">
@@ -5117,48 +5161,6 @@ you can use it but there could be issues with aligning columns of text</string>
      </widget>
     </widget>
    </item>
-   <item>
-    <widget class="QWidget" name="widget_bottom" native="true">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <layout class="QHBoxLayout" name="horizontalLayout_widget_bottom">
-      <item>
-       <spacer name="horizontalSpacer_bottom">
-        <property name="orientation">
-         <enum>Qt::Orientation::Horizontal</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>444</width>
-          <height>21</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-      <item>
-       <widget class="QPushButton" name="closeButton">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="text">
-         <string>Save</string>
-        </property>
-        <property name="icon">
-         <iconset>
-          <normaloff>:/icons/icons/dialog-close.png</normaloff>:/icons/icons/dialog-close.png</iconset>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
   </layout>
  </widget>
  <customwidgets>
@@ -5171,7 +5173,6 @@ you can use it but there could be issues with aligning columns of text</string>
  </customwidgets>
  <tabstops>
   <tabstop>tabWidget</tabstop>
-  <tabstop>closeButton</tabstop>
   <tabstop>MainIconSize</tabstop>
   <tabstop>comboBox_menuBarVisibility</tabstop>
   <tabstop>TEFolderIconSize</tabstop>
@@ -5185,6 +5186,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>pushButton_chooseProtocols</tabstop>
   <tabstop>acceptServerGUI</tabstop>
   <tabstop>acceptServerMedia</tabstop>
+  <tabstop>checkBox_enableOSC8Hyperlinks</tabstop>
   <tabstop>mIsToLogInHtml</tabstop>
   <tabstop>lineEdit_logFileFolder</tabstop>
   <tabstop>comboBox_logFileNameFormat</tabstop>

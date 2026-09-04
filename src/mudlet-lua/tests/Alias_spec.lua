@@ -1,5 +1,36 @@
 describe("Alias processing", function()
 
+    -- TAlias's match-all loop is unconditional, and it steps one byte after an
+    -- empty match, so on a command holding a multi-byte character it can land
+    -- mid-character. pcre2 then rejects the offset and TAlias::match() ends the
+    -- loop, dropping every capture past that character.
+    describe("captures across a multi-byte character", function()
+
+        it("keeps collecting captures past a multi-byte character", function()
+            -- expandAlias() sends the command through the same encoding path as
+            -- typing it, so a non-UTF-8 encoding would strip the character and let
+            -- this pass without testing anything
+            assert.are.equal("UTF-8", getServerEncoding(), "this spec needs a UTF-8 server encoding to send a multi-byte command")
+            local seen = {}
+            local id = tempAlias([[(\d*)]], function()
+                seen = {}
+                for i = 1, #matches do
+                    seen[i] = matches[i]
+                end
+            end)
+            expandAlias("caf\195\169 9", false)
+            assert.is_true(killAlias(id), "a temporary alias should be removable by id")
+            local found = false
+            for _, capture in ipairs(seen) do
+                if capture == "9" then
+                    found = true
+                end
+            end
+            assert.is_true(found, "the capture after the multi-byte character was dropped")
+        end)
+
+    end)
+
     -- Test for nested alias processing with self-deletion (GitHub issue #8817)
     -- This verifies the fix that uses mProcessingDepth counter instead of a bool flag
     --
@@ -270,6 +301,37 @@ describe("Alias processing", function()
             assert.is_false(killAlias("no_such_alias_name"), "killing a missing alias should return false")
         end)
 
+        it("killAlias returns false the second time, as the alias is already dead", function()
+            local id = tempAlias("^spec_double_kill_alias$", [[]])
+            assert.is_true(killAlias(id), "killing a live temporary alias should report success")
+            -- the alias is still present here: only the deferred cleanup frees it, so
+            -- the second kill really is being told about a corpse it can find
+            assert.are.equal(1, exists(id, "alias"), "the killed alias is still present until cleanup runs")
+            assert.are.equal(0, isActive(id, "alias"), "a killed alias is no longer active")
+            assert.is_false(killAlias(id),
+                "killing an already killed alias achieves nothing and has to say so")
+            -- an incoming line runs every unit's deferred cleanup, which is what
+            -- finally frees the alias; the answer has to be the same after it
+            feedTriggers("\nspec_alias_kill_flush\n")
+            assert.are.equal(0, exists(id, "alias"), "the alias should be gone after kill and cleanup")
+            assert.is_false(killAlias(id), "a freed alias cannot be killed either")
+        end)
+
+        it("killAlias returns false the second time inside the alias's own script", function()
+            _G.AliasSpec = {}
+            local id
+            id = tempAlias("^spec_self_kill_alias$", function()
+                _G.AliasSpec.killed = killAlias(id)
+                _G.AliasSpec.killedAgain = killAlias(id)
+            end)
+            expandAlias("spec_self_kill_alias")
+            assert.is_not_nil(_G.AliasSpec.killed, "the alias should have matched and run")
+            assert.is_true(_G.AliasSpec.killed,
+                "killAlias should report success from inside the alias's own script")
+            assert.is_false(_G.AliasSpec.killedAgain,
+                "killing the same alias twice from its own script must fail the second time")
+        end)
+
         it("killAlias returns false for a permanent alias (they cannot be killed)", function()
             local id = permAlias("SpecPermAliasKill", "", "^spec_perm_kill$", [[]])
             assert.is_true(id > 0)
@@ -293,6 +355,43 @@ describe("Alias processing", function()
             enableAlias(id)
             assert.are.equal(1, isActive(id, "alias"), "a re-enabled alias should be active")
             killAlias(id)
+        end)
+
+        it("freeing a temporary alias leaves a same-named permanent one reachable", function()
+            -- tempAlias names its alias after its id, so a permanent alias called
+            -- after that number shares the name - and the name lookup table holds
+            -- several aliases per name
+            local tempId = tempAlias("^spec_evicted_temp$", [[]])
+            local sharedName = tostring(tempId)
+            -- permanent aliases cannot be deleted from Lua, so earlier local runs
+            -- can leave same-named ones behind: work from a relative baseline
+            local before = exists(sharedName, "alias")
+            assert.is_true(permAlias(sharedName, "", "^spec_evicted_perm$", [[]]) > 0)
+            finally(function() disableAlias(sharedName) end)
+            assert.are.equal(before + 1, exists(sharedName, "alias"))
+
+            assert.is_true(killAlias(tempId), "the temporary alias is the one that can be killed")
+            -- an incoming line runs every unit's deferred cleanup, which frees it
+            feedTriggers("\nspec_alias_eviction_flush\n")
+
+            assert.are.equal(before, exists(sharedName, "alias"), "only the temporary alias should leave the lookup table")
+            assert.is_true(enableAlias(sharedName), "the permanent alias must still be reachable by name")
+        end)
+
+        it("killAlias finds a temporary alias behind a same-named permanent one", function()
+            -- killAlias walks the root node list in creation order, so a permanent
+            -- alias restored from the profile sits in front of this session's
+            -- temporaries: it must be scanned past, not reported as a failure
+            local seed = tempAlias("^spec_kill_order_seed$", [[]])
+            killAlias(seed)
+            -- permAlias itself takes seed + 1, so the next temporary takes seed + 2
+            local sharedName = tostring(seed + 2)
+            assert.is_true(permAlias(sharedName, "", "^spec_kill_order_perm$", [[]]) > 0)
+            finally(function() disableAlias(sharedName) end)
+
+            local tempId = tempAlias("^spec_kill_order_temp$", [[]])
+            assert.are.equal(seed + 2, tempId, "ids should still be handed out in sequence")
+            assert.is_true(killAlias(tempId), "killAlias must scan past the permanent alias")
         end)
 
     end)

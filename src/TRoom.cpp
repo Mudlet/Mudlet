@@ -219,6 +219,31 @@ int TRoom::stringToDirCode(const QString& string) const
     return DIR_OTHER;
 }
 
+// Any change to a 2D-plane exit or stub can change what the renderer's
+// reduced-detail tier has to draw for this room, which its area caches - see
+// TAreaLodExitIndex. Only this room's entry moves: no other room's exits are
+// measured against where this one's lead. Paths that write the exit members
+// directly rather than through the setters - XMLimport, restore(), the map
+// auditor - invalidate the whole area's index instead.
+void TRoom::refreshLodExitIndex()
+{
+    if (!mpRoomDB) {
+        return;
+    }
+    TArea* pA = mpRoomDB->getArea(area);
+    if (pA) {
+        pA->updateLodExitRoom(id);
+    }
+}
+
+// The 2D-plane exit setters all route through here so that no caller of one
+// has to remember the index needs telling.
+void TRoom::setPlanarExit(int& exit, const int id)
+{
+    exit = id;
+    refreshLodExitIndex();
+}
+
 bool TRoom::hasExitStub(int direction)
 {
     if (exitStubs.contains(direction)) {
@@ -247,6 +272,9 @@ void TRoom::setExitStub(int direction, bool status)
             // Since there is no change don't proceed to mark map as needing saving
             return;
         }
+    }
+    if (direction >= DIR_NORTH && direction <= DIR_SOUTHWEST) {
+        refreshLodExitIndex();
     }
     mpRoomDB->mpMap->setUnsaved(__func__);
 }
@@ -336,21 +364,8 @@ void TRoom::setId(const int roomId)
     id = roomId;
 }
 
-// The second optional argument delays area related recaluclations when true
-// until called with false (the default) - it records the "dirty" areas so that
-// the affected areas can be identified.
-// The caller, should set the argument true for all but the last when working
-// through a list of rooms.
-// There IS a theoretical risk that if the last called room "doesn't exist" then
-// the area related recalculations won't get done - so had better provide an
-// alternative means to do them as a fault recovery
-bool TRoom::setArea(int areaID, bool deferAreaRecalculations)
+bool TRoom::setArea(int areaID)
 {
-    // Track dirty areas by ID rather than TArea* across calls: a TArea* held
-    // through a deferred window can dangle if the map is cleared in between
-    // (e.g. clearMapDB(), profile close, bulk map reload). Looking up the
-    // pointer freshly at flush time safely skips areas that no longer exist.
-    static QSet<int> dirtyAreaIds;
     TArea* pA = mpRoomDB->getArea(areaID);
     if (!pA) {
         // There is no TArea instance with that _areaID
@@ -367,18 +382,7 @@ bool TRoom::setArea(int areaID, bool deferAreaRecalculations)
     //remove from the old area
     TArea* pA2 = mpRoomDB->getArea(area);
     if (pA2) {
-        pA2->removeRoom(id, deferAreaRecalculations);
-        // Ah, all rooms in the OLD area that led to the room now become area
-        // exits for that OLD area {so must run determineAreaExits() for the
-        // old area after the room has moved to the new area see other
-        // "if( pA2 )" below} - other exits that led to the room from other
-        // areas are still "out of area exits" UNLESS the room moves to the SAME
-        // area that the other exits are in.
-        // Add to local store of dirty areas
-        dirtyAreaIds.insert(area);
-        // Flag the area itself in case something goes
-        // wrong on last room in a series
-        pA2->mIsDirty = true;
+        pA2->removeRoom(id);
     } else {
         //: Although this is reported as an error it is not a problem
         mpRoomDB->mpMap->logError(tr("When setting the Area for RoomID %1 it did not have a current area, this is unexpected but not a problem!")
@@ -388,20 +392,15 @@ bool TRoom::setArea(int areaID, bool deferAreaRecalculations)
     area = areaID;
     pA->addRoom(id);
 
-    dirtyAreaIds.insert(areaID);
-    pA->mIsDirty = true;
-
-    if (!deferAreaRecalculations) {
-        // Swap out the set before iterating so that reentrant calls into
-        // setArea() from within clean()/determineAreaExits() (e.g. via Lua
-        // event handlers) don't mutate the container we're walking.
-        QSet<int> toClean;
-        toClean.swap(dirtyAreaIds);
-        for (const int aid : toClean) {
-            if (TArea* pArea = mpRoomDB->getArea(aid)) {
-                pArea->clean();
-            }
-        }
+    // Both refreshes have to run once the room's own area has been updated, as
+    // that is what decides whether a special exit crosses an area boundary.
+    pA->determineAreaExitsOfRoom(id);
+    pA->refreshAreaExitsToRoom(id);
+    if (pA2 && pA2 != pA) {
+        // Exits that led to the room from the old area's rooms now leave that
+        // area; exits from any third area still do, so they are unaffected.
+        pA2->refreshAreaExitsToRoom(id);
+        pA2->refreshLodExitEntrances(id);
     }
 
     mpRoomDB->mpMap->setUnsaved(__func__);
@@ -450,6 +449,9 @@ bool TRoom::setExit(const int to, const int direction)
         break;
     default:
         return false;
+    }
+    if (direction >= DIR_NORTH && direction <= DIR_SOUTHWEST) {
+        refreshLodExitIndex();
     }
     mpRoomDB->updateEntranceMap(this);
     mpRoomDB->mpMap->setUnsaved(__func__);
@@ -638,22 +640,32 @@ QHash<int, int> TRoom::getExits() const
     return exitList;
 }
 
-void TRoom::setExitLock(int exit, bool state)
+bool TRoom::setExitLock(int exit, bool state)
 {
+    bool changed = false;
     if (state) {
         if ((!exitLocks.contains(exit)) && (exit >= DIR_NORTH && exit <= DIR_OUT)) {
             exitLocks.push_back(exit);
+            changed = true;
         }
     } else {
-        exitLocks.removeAll(exit);
+        changed = exitLocks.removeAll(exit) > 0;
     }
-    mpRoomDB->mpMap->setUnsaved(__func__);
+
+    if (changed) {
+        mpRoomDB->mpMap->setUnsaved(__func__);
+    }
+    return changed;
 }
 
 bool TRoom::setSpecialExitLock(const QString& cmd, const bool doLock)
 {
     if (!mSpecialExits.contains(cmd)) {
         return false;
+    }
+
+    if (mSpecialExitLocks.contains(cmd) == doLock) {
+        return true;
     }
 
     if (doLock) {
@@ -768,6 +780,17 @@ void TRoom::removeAllSpecialExitsToRoom(const int roomId)
     }
 }
 
+void TRoom::indexCustomLines()
+{
+    if (customLines.empty() || !mpRoomDB) {
+        return;
+    }
+    TArea* pA = mpRoomDB->getArea(area);
+    if (pA) {
+        pA->addRoomWithCustomLines(id, mZ);
+    }
+}
+
 void TRoom::calcRoomDimensions()
 {
     min_x = mX;
@@ -776,8 +799,19 @@ void TRoom::calcRoomDimensions()
     max_y = mY;
 
     if (customLines.empty()) {
+        // The room may have just lost its last line: left in the index it
+        // would cost every later frame a lookup and a cull test for lines that
+        // are no longer there.
+        if (mpRoomDB) {
+            TArea* pA = mpRoomDB->getArea(area);
+            if (pA) {
+                pA->removeRoomWithCustomLines(id, mZ);
+            }
+        }
         return;
     }
+
+    indexCustomLines();
 
     QMapIterator<QString, QList<QPointF>> it(customLines);
     while (it.hasNext()) {
@@ -892,8 +926,17 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
             if (!hiddenString.compare(QLatin1String("true"), Qt::CaseInsensitive)) {
                 hidden = true;
             }
+        } else {
+            // The stream carries the authoritative value so any copy of the
+            // fallback key in the user data is stale:
+            userData.remove(QLatin1String("system.fallback_hidden"));
         }
-        if (version < 19) {
+        if (version >= 19) {
+            // Clean up a stale fallback key that past versions could leave
+            // behind in the live room's user data (and thus in files saved
+            // from it) after saving in a format before 19:
+            userData.remove(QLatin1String("system.fallback_symbol"));
+        } else {
             const QString symbolString = userData.take(QLatin1String("system.fallback_symbol"));
             if (!symbolString.isEmpty()) {
                 // There is a fallback in the user data
@@ -915,6 +958,10 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
         if (userData.contains(symbolColorFallbackKey)) {
             mSymbolColor = QColor(userData.take(symbolColorFallbackKey));
         }
+    } else {
+        // The stream carries the authoritative value so any copy of the
+        // fallback key in the user data is stale:
+        userData.remove(QLatin1String("system.fallback_symbol_color"));
     }
 
     // Border properties are stored in userData (not binary stream) to avoid map bloat
@@ -1527,6 +1574,12 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
             mpRoomDB->mpMap->appendRoomErrorMsg(id, infoMsg, true);
         }
     }
+
+    // The audit rewrites exit destinations, which the entrance hash built
+    // during the load has no entry for. Removing the superseded entries as
+    // well would be a full scan of the hash per room, and the consumers all
+    // re-check the exit anyway, so the leftovers are left to them.
+    mpRoomDB->updateEntranceMap(this, true);
 }
 
 void TRoom::auditExit(int& exitRoomId,                     // Reference to where exit goes to

@@ -22,6 +22,7 @@
 #include "updater/Feed.h"
 #include "updater/UpdateDialog.h"
 
+#include <QCoreApplication>
 #include <QDateTime>
 #include <QMessageBox>
 #include <QPushButton>
@@ -89,21 +90,82 @@ Updater::Updater(QObject* parent, QSettings* settings, bool testVersion)
     feed.reset(new dblsqd::Feed(this));
     feed->setRepo(qsl("Mudlet"), qsl("Mudlet"), testVersion);
     mPeriodicCheck = std::make_unique<QTimer>();
+
+#if !defined(Q_OS_MACOS)
+    // The update dialog must not be deleted in ~Updater: this Updater is
+    // parented to the application object (so it can offer an update after the
+    // last window closes, #9388), which means ~Updater only runs inside the
+    // application's own destructor - after ~QApplication has torn down all
+    // widget infrastructure. Deleting a QWidget that late corrupts the heap on
+    // Windows (#9122). aboutToQuit fires while the application is still fully
+    // alive, so destroy it there instead.
+    //
+    // deleteLater(), not delete: quit() emits aboutToQuit synchronously and the
+    // dialog quits when dismissed, so this can run with dialog code still on
+    // the stack (#9967). Qt flushes pending DeferredDelete events as exec()
+    // unwinds, so the dialog is still destroyed before ~QApplication.
+    connect(QCoreApplication::instance(), &QCoreApplication::aboutToQuit, this, [this]() {
+        if (updateDialog) {
+            updateDialog->deleteLater();
+        }
+    });
+#endif
 }
 
-Updater::~Updater()
+Updater::~Updater() = default;
+
+// A download is kept deliberately - UpdateDialog records it in settings and
+// reuses it next launch rather than fetching another 135MB - and the installer
+// copied from it on Windows has to outlive Mudlet, since the batch file only
+// runs it once Mudlet has exited. What was missing is anything to collect the
+// ones that never get reused: the installer copy, which nothing has ever
+// deleted, and downloads orphaned when Mudlet went away without recording them
+// (#9985). Those accumulated at ~135MB apiece.
+//
+// keepFilePath is the download UpdateDialog still intends to use. Everything
+// else is fair game once it has had time to be claimed - a second Mudlet may
+// have just started a download of its own, and an installer waiting for the
+// batch file to pick it up is only seconds old.
+void Updater::cleanupStaleUpdateFiles(const QString& directory, const QString& keepFilePath)
 {
-#if !defined(Q_OS_MACOS)
-    // QPointer::data() returns null if Qt already deleted the dialog; only
-    // delete if it hasn't been cleaned up yet.
-    if (updateDialog) {
-        delete updateDialog;
+    if (directory.isEmpty()) {
+        qWarning() << "No temporary directory to clean leftover update files from";
+        return;
     }
-#endif
+
+    const QDir tempDir(directory);
+    const QStringList leftovers{qsl("mudlet-update-*"), qsl("mudlet-setup-*.exe")};
+    const QDateTime unclaimedBy = QDateTime::currentDateTime().addSecs(-3600);
+    const QString keepFile = keepFilePath.isEmpty() ? QString() : QFileInfo(keepFilePath).absoluteFilePath();
+    qint64 freedBytes = 0;
+    int removedCount = 0;
+    int failedCount = 0;
+
+    for (const QFileInfo& fileInfo : tempDir.entryInfoList(leftovers, QDir::Files)) {
+        if (fileInfo.absoluteFilePath() == keepFile || fileInfo.lastModified() > unclaimedBy) {
+            continue;
+        }
+        const qint64 fileSize = fileInfo.size();
+        if (QFile::remove(fileInfo.absoluteFilePath())) {
+            freedBytes += fileSize;
+            ++removedCount;
+        } else {
+            ++failedCount;
+        }
+    }
+
+    if (removedCount) {
+        qWarning() << "Removed" << removedCount << "leftover update file(s), freeing" << (freedBytes / 1024) << "KB";
+    }
+    if (failedCount) {
+        qWarning() << "Could not remove" << failedCount << "leftover update file(s) in" << directory << "- retrying on the next start";
+    }
 }
 
 void Updater::checkUpdatesOnStart()
 {
+    cleanupStaleUpdateFiles(QStandardPaths::writableLocation(QStandardPaths::TempLocation), dblsqd::UpdateDialog::pendingDownloadPath(mSettings));
+
 #if defined(Q_OS_MACOS)
     setupOnMacOS();
 #elif defined(Q_OS_LINUX)
@@ -138,9 +200,25 @@ void Updater::checkUpdatesOnStart()
     mPeriodicCheck->start();
 }
 
+// Whether the platform updater is set up and can answer for itself. On macOS
+// that only happens in checkUpdatesOnStart(), so anything reaching the Updater
+// before then - the preferences dialog above all - has to ask first. Elsewhere
+// the automatic-update flag lives in QSettings and is readable straight away.
+bool Updater::ready() const
+{
+#if defined(Q_OS_MACOS)
+    return msparkleUpdater != nullptr;
+#else
+    return true;
+#endif
+}
+
 void Updater::setAutomaticUpdates(const bool state)
 {
 #if defined(Q_OS_MACOS)
+    if (!ready()) {
+        return;
+    }
     msparkleUpdater->setAutomaticallyDownloadsUpdates(state);
 #else
     dblsqd::UpdateDialog::enableAutoDownload(state, mSettings);
@@ -153,6 +231,9 @@ void Updater::setAutomaticUpdates(const bool state)
 bool Updater::updateAutomatically() const
 {
 #if defined(Q_OS_MACOS)
+    if (!ready()) {
+        return false;
+    }
     return msparkleUpdater->automaticallyDownloadsUpdates();
 #else
     return dblsqd::UpdateDialog::autoDownloadEnabled(true, mSettings);
@@ -162,6 +243,9 @@ bool Updater::updateAutomatically() const
 void Updater::manuallyCheckUpdates()
 {
 #if defined(Q_OS_MACOS)
+    if (!ready()) {
+        return;
+    }
     msparkleUpdater->checkForUpdates();
 #else
     if (mManualCheckInProgress) {
@@ -237,7 +321,7 @@ bool Updater::downloadReleaseIfValid(const dblsqd::Release& release)
         }
         return false;
     }
-    feed->downloadRelease(release);
+    feed->downloadRelease(release, /*requireChecksums=*/true);
     return true;
 }
 
@@ -291,8 +375,16 @@ void Updater::setupPlatformUpdater()
     });
 
     connect(feed.get(), &dblsqd::Feed::downloadError, this, [this](const QString& error) {
+        // Only a check the user started reaches the console. An automatic one
+        // runs twice a day whether or not anybody is interested, so its failures
+        // would just repeat in red; once the update dialog is listening it
+        // reports them itself.
+        if (mManualCheckInProgress) {
+            qWarning() << "Manual update download failed:" << error;
+            emit signal_updateCheckFailed(error);
+            return;
+        }
         qWarning() << "Automatic update download failed:" << error;
-        emit signal_updateCheckFailed(error);
     });
 }
 #endif // !Q_OS_MACOS

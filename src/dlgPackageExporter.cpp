@@ -558,6 +558,7 @@ void dlgPackageExporter::slot_packageChanged(int index)
     ui->textEdit_description->setMarkdown(description);
     const QString version = packageInfo.value(qsl("version"));
     ui->lineEdit_version->setText(version);
+    ui->lineEdit_helpUrl->setText(packageInfo.value(qsl("helpURL")));
     populateDependencies(); // available dependencies, as opposed to required ones which is next
     const QStringList dependencies = packageInfo.value(qsl("dependencies")).split(QLatin1Char(','));
     ui->comboBox_dependencies->clear();
@@ -1018,7 +1019,9 @@ void dlgPackageExporter::slot_exportPackage()
                                 return;
                             }
                         }
-                        auto [installSuccess, installMessage] = mpHost->installPackage(mPackagePathFileName, enums::PackageModuleType::ModuleFromUI);
+                        // quiet: the failure branch below reports it with context the
+                        // console line cannot carry - that it was exported but not installed
+                        auto [installSuccess, installMessage] = mpHost->installPackage(mPackagePathFileName, enums::PackageModuleType::ModuleFromUI, true);
                         if (installSuccess) {
                             const QString savedDir = QFileInfo(mPackagePathFileName).absolutePath();
                             const QString savedDirLink = qsl("<a href=\"%1\">%2</a>").arg(QUrl::fromLocalFile(savedDir).toString(QUrl::FullyEncoded).toHtmlEscaped(), savedDir.toHtmlEscaped());
@@ -1269,6 +1272,18 @@ void dlgPackageExporter::exportXml(bool& isOk,
     }
 }
 
+QString dlgPackageExporter::normalizedHelpUrl() const
+{
+    QString url = ui->lineEdit_helpUrl->text().trimmed();
+    // anchored so a "://" buried in a query string does not count as a scheme
+    static const QRegularExpression schemePattern(qsl("^[a-zA-Z][a-zA-Z0-9+.-]*://"));
+    if (!url.isEmpty() && !url.contains(schemePattern)) {
+        // scheme-less URLs silently fail to open in a browser later
+        url.prepend(qsl("https://"));
+    }
+    return url;
+}
+
 void dlgPackageExporter::writeConfigFile(const QString& stagingDirName, const QFileInfo& iconFile, const QString& packageDescription)
 {
     QStringList dependencies;
@@ -1284,6 +1299,7 @@ void dlgPackageExporter::writeConfigFile(const QString& stagingDirName, const QF
     appendToDetails(qsl("title"), ui->lineEdit_title->text());
     appendToDetails(qsl("description"), packageDescription);
     appendToDetails(qsl("version"), ui->lineEdit_version->text());
+    appendToDetails(qsl("helpURL"), normalizedHelpUrl());
     appendToDetails(qsl("dependencies"), dependencies.join(","));
     const auto iso8601timestamp = utils::dateStamp();
     mPackageConfig.append(qsl("created = \"%1\"\n").arg(iso8601timestamp));
@@ -1669,13 +1685,13 @@ void dlgPackageExporter::checkChildren(QTreeWidgetItem* item) const
 
 void dlgPackageExporter::recurseTriggers(TTrigger* trig, QTreeWidgetItem* qTrig)
 {
-    std::list<TTrigger*>* childList = trig->getChildrenList();
+    std::list<Tree<TTrigger>*>* childList = trig->getChildrenList();
     if (childList->empty()) {
         return;
     }
-    std::list<TTrigger*>::iterator it;
+    std::list<Tree<TTrigger>*>::iterator it;
     for (it = childList->begin(); it != childList->end(); ++it) {
-        TTrigger* pChild = *it;
+        auto* pChild = static_cast<TTrigger*>(*it);
         if (pChild->isTemporary()) {
             continue;
         }
@@ -1717,13 +1733,13 @@ void dlgPackageExporter::listTriggers()
 
 void dlgPackageExporter::recurseAliases(TAlias* item, QTreeWidgetItem* qItem)
 {
-    std::list<TAlias*>* childList = item->getChildrenList();
+    std::list<Tree<TAlias>*>* childList = item->getChildrenList();
     if (childList->empty()) {
         return;
     }
-    std::list<TAlias*>::iterator it;
+    std::list<Tree<TAlias>*>::iterator it;
     for (it = childList->begin(); it != childList->end(); ++it) {
-        TAlias* pChild = *it;
+        auto* pChild = static_cast<TAlias*>(*it);
         if (pChild->isTemporary()) {
             continue;
         }
@@ -1765,13 +1781,13 @@ void dlgPackageExporter::listAliases()
 
 void dlgPackageExporter::recurseScripts(TScript* item, QTreeWidgetItem* qItem)
 {
-    std::list<TScript*>* childList = item->getChildrenList();
+    std::list<Tree<TScript>*>* childList = item->getChildrenList();
     if (childList->empty()) {
         return;
     }
-    std::list<TScript*>::iterator it;
+    std::list<Tree<TScript>*>::iterator it;
     for (it = childList->begin(); it != childList->end(); ++it) {
-        TScript* pChild = *it;
+        auto* pChild = static_cast<TScript*>(*it);
         QStringList sl;
         sl << pChild->getName();
         auto pItem = new QTreeWidgetItem(sl);
@@ -1807,13 +1823,13 @@ void dlgPackageExporter::listScripts()
 
 void dlgPackageExporter::recurseKeys(TKey* item, QTreeWidgetItem* qItem)
 {
-    std::list<TKey*>* childList = item->getChildrenList();
+    std::list<Tree<TKey>*>* childList = item->getChildrenList();
     if (childList->empty()) {
         return;
     }
-    std::list<TKey*>::iterator it;
+    std::list<Tree<TKey>*>::iterator it;
     for (it = childList->begin(); it != childList->end(); ++it) {
-        TKey* pChild = *it;
+        auto* pChild = static_cast<TKey*>(*it);
         if (pChild->isTemporary()) {
             continue;
         }
@@ -1855,13 +1871,13 @@ void dlgPackageExporter::listKeys()
 
 void dlgPackageExporter::recurseActions(TAction* item, QTreeWidgetItem* qItem)
 {
-    std::list<TAction*>* childList = item->getChildrenList();
+    std::list<Tree<TAction>*>* childList = item->getChildrenList();
     if (childList->empty()) {
         return;
     }
-    std::list<TAction*>::iterator it;
+    std::list<Tree<TAction>*>::iterator it;
     for (it = childList->begin(); it != childList->end(); ++it) {
-        TAction* pChild = *it;
+        auto* pChild = static_cast<TAction*>(*it);
         QStringList sl;
         sl << pChild->getName();
         auto pItem = new QTreeWidgetItem(sl);
@@ -1897,13 +1913,13 @@ void dlgPackageExporter::listActions()
 
 void dlgPackageExporter::recurseTimers(TTimer* item, QTreeWidgetItem* qItem)
 {
-    std::list<TTimer*>* childList = item->getChildrenList();
+    std::list<Tree<TTimer>*>* childList = item->getChildrenList();
     if (childList->empty()) {
         return;
     }
-    std::list<TTimer*>::iterator it;
+    std::list<Tree<TTimer>*>::iterator it;
     for (it = childList->begin(); it != childList->end(); ++it) {
-        TTimer* pChild = *it;
+        auto* pChild = static_cast<TTimer*>(*it);
         if (pChild->isTemporary()) {
             continue;
         }

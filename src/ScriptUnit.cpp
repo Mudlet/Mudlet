@@ -26,8 +26,17 @@
 
 #include "Host.h"
 #include "TScript.h"
+#include "Tree.h"
+#include "dlgTriggerEditor.h"
+#include "utils.h"
+
+#include <QLatin1String>
+#include <QMapIterator>
+#include <QSet>
+#include <QStringList>
 
 #include <functional>
+#include <utility>
 
 /* We need an explicit constructor in this file as the Host class is forward
  * declared in the header file and it is problematic to define any dereferencing
@@ -42,7 +51,8 @@ ScriptUnit::~ScriptUnit()
     for (auto script : mScriptRootNodeList) {
         script->mpHost = nullptr;
         std::function<void(TScript*)> nullifyChildren = [&nullifyChildren](TScript* s) {
-            for (auto child : *s->mpMyChildrenList) {
+            for (auto* childNode : *s->mpMyChildrenList) {
+                auto* child = static_cast<TScript*>(childNode);
                 child->mpHost = nullptr;
                 nullifyChildren(child);
             }
@@ -63,8 +73,9 @@ void ScriptUnit::resetStats()
 
 void ScriptUnit::_uninstall(TScript* pChild, const QString& packageName)
 {
-    std::list<TScript*>* childrenList = pChild->mpMyChildrenList;
-    for (auto script : *childrenList) {
+    std::list<Tree<TScript>*>* childrenList = pChild->mpMyChildrenList;
+    for (auto* scriptNode : *childrenList) {
+        auto* script = static_cast<TScript*>(scriptNode);
         _uninstall(script, packageName);
         uninstallList.append(script);
     }
@@ -79,8 +90,50 @@ void ScriptUnit::uninstall(const QString& packageName)
             uninstallList.append(rootScript);
         }
     }
-    for (auto& script : uninstallList) {
-        delete script;
+    // Re-entrant uninstall (#9337): a package's own script (e.g. a package
+    // auto-updater calling uninstallPackage()) is removing its package while one
+    // of that package's scripts is still on the call stack - either an event
+    // handler Host::raiseEvent() is dispatching to, or a top-level body
+    // TScript::compileScript() is compiling. Deleting now would be a use-after-free
+    // (of the script still executing, and of the other TScript pointers raiseEvent()
+    // or ScriptUnit::compileAll() is still iterating), so defer to doCleanup() at
+    // depth 0. Deactivating is enough to stop the handlers firing for the rest of
+    // the dispatch: TScript::callEventHandler() checks isActive().
+    if (mProcessingDepth > 0) {
+        for (auto script : uninstallList) {
+            script->setIsActive(false);
+        }
+        return;
+    }
+    // At depth 0 delete straight away, but go through doCleanup() rather than a bare
+    // loop: uninstallList is a member that a prior deferred uninstall may have left
+    // populated, so a second uninstall of the same still-registered package can queue
+    // the same pointers twice - doCleanup()'s seen set stops that double-freeing.
+    doCleanup();
+}
+
+// Flush the deletes uninstall() deferred (#9337). uninstallList is ordered
+// children-before-parents and each ~Tree unlinks from its parent, so deleting
+// children first empties the parent's child list (no double free); the seen
+// set guards a node queued twice by re-entrant uninstalls.
+void ScriptUnit::doCleanup()
+{
+    if (mProcessingDepth > 0) {
+        return;
+    }
+
+    // Called once per unit for every line of game text, and next to never has
+    // anything queued, so skip setting up the flush below.
+    if (!hasPendingDeletes()) {
+        return;
+    }
+
+    QSet<TScript*> deletedScripts;
+    for (auto script : uninstallList) {
+        if (!deletedScripts.contains(script)) {
+            deletedScripts.insert(script);
+            delete script;
+        }
     }
     uninstallList.clear();
 }
@@ -237,11 +290,22 @@ int ScriptUnit::getNewID()
 
 void ScriptUnit::compileAll(bool saveLoadingError)
 {
-    for (auto script : mScriptRootNodeList) {
+    // Iterate a snapshot of the root list: a script's top-level body, run by
+    // compile() below, can uninstall its own package (a package auto-updater
+    // pattern). uninstall() defers the actual delete whilst compileScript() is on
+    // the stack, so no node is unlinked mid-loop, but taking a copy keeps the
+    // iteration safe even against a body that adds or removes root scripts:
+    const std::vector<TScript*> rootNodes(mScriptRootNodeList.begin(), mScriptRootNodeList.end());
+    for (auto script : rootNodes) {
         if (script->isActive()) {
             script->compileAll(saveLoadingError);
         }
     }
+    // The loop is now done with the (possibly self-uninstalled) scripts, so flush
+    // the deletes uninstall() deferred - before the editor tree is rebuilt below and
+    // before returning to the event loop, where the 0ms save Host::uninstallPackage()
+    // queues would otherwise serialize the still-live "uninstalled" scripts back in:
+    doCleanup();
     if (mpHost->mpEditorDialog) {
         mpHost->mpEditorDialog->doCleanReset();
     }
@@ -269,8 +333,9 @@ std::vector<int> ScriptUnit::findItems(const QString& name, const bool exactMatc
 
 void ScriptUnit::assembleReport(TScript* pItem)
 {
-    std::list<TScript*>* childrenList = pItem->mpMyChildrenList;
-    for (auto pChild : *childrenList) {
+    std::list<Tree<TScript>*>* childrenList = pItem->mpMyChildrenList;
+    for (auto* pChildNode : *childrenList) {
+        auto* pChild = static_cast<TScript*>(pChildNode);
         ++statsItemsTotal;
         if (pChild->isActive()) {
             ++statsActiveItems;

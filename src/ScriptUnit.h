@@ -26,11 +26,15 @@
 
 #include "utils.h"
 
+#include <QList>
 #include <QMap>
 #include <QPointer>
 #include <QString>
+#include <QtGlobal>
 
 #include <list>
+#include <tuple>
+#include <vector>
 
 class Host;
 class TScript;
@@ -44,15 +48,9 @@ public:
     explicit ScriptUnit(Host*);
     ~ScriptUnit();
 
-    std::list<TScript*> getScriptRootNodeList()
-    {
-        return mScriptRootNodeList;
-    }
+    std::list<TScript*> getScriptRootNodeList() { return mScriptRootNodeList; }
 
-    QMap<int, TScript*> getScriptList()
-    {
-        return mScriptMap;
-    }
+    QMap<int, TScript*> getScriptList() { return mScriptMap; }
 
     TScript* getScript(int id);
     void compileAll(bool saveLoadingError = false);
@@ -63,12 +61,24 @@ public:
     void stopAllTriggers();
     void uninstall(const QString&);
     void _uninstall(TScript* pChild, const QString& packageName);
+    // Tracks Host::raiseEvent() dispatch nesting so that uninstall() can defer
+    // deleting a package's scripts while one of their event handlers is still on
+    // the call stack (e.g. a handler calling uninstallPackage() on its own
+    // package) - deferred items are flushed by doCleanup() at depth 0:
+    void beginProcessing() { ++mProcessingDepth; }
+    void endProcessing()
+    {
+        --mProcessingDepth;
+        Q_ASSERT(mProcessingDepth >= 0);
+    }
+    void doCleanup();
     int getNewID();
     std::vector<int> findItems(const QString& name, const bool exactMatch = true, const bool caseSensitive = true);
     void resetStats();
     std::tuple<QString, int, int, int> assembleReport();
 
     QList<TScript*> uninstallList;
+    bool hasPendingDeletes() const { return !uninstallList.isEmpty(); }
 
 
 private:
@@ -84,6 +94,9 @@ private:
     QPointer<Host> mpHost;
     QMap<int, TScript*> mScriptMap;
     std::list<TScript*> mScriptRootNodeList;
+    // > 0 whilst Host::raiseEvent() is dispatching to event handlers; uninstall()
+    // and doCleanup() must not delete scripts then:
+    int mProcessingDepth = 0;
     int mMaxID = 0;
     int statsItemsTotal = 0;
     int statsTempItems = 0;

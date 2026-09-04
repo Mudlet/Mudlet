@@ -1,5 +1,9 @@
 # DUPLICATE WORKFLOW: This file is paired with build-mudlet-win.yml
-# Changes here likely need to be mirrored there as well.
+# Changes here likely need to be mirrored there as well, apart from the ccache
+# handling: caches here are scoped to their own pull request ref and keyed per
+# commit, so there is never a key to delete before saving one. The generations
+# an earlier push left behind are retired by cleanup-caches.yml instead, which
+# runs in the base repository and so has a writable token even for a fork.
 name: 🔨 Build Mudlet - PR (windows)
 on:
   pull_request:
@@ -9,12 +13,41 @@ permissions:
   id-token: write
   contents: read
   actions: read
+  pull-requests: read
 
 jobs:
+  changes:
+    name: detect buildable changes
+    runs-on: ubuntu-latest
+    if: ${{ github.repository_owner == 'Mudlet' }}
+    outputs:
+      build: ${{steps.filter.outputs.build}}
+    steps:
+    - name: Check whether anything affecting the build changed
+      id: filter
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        # Only genuinely inert paths are listed - CI, CMake and packaging scripts
+        # all affect the build. Anything unexpected falls through to building.
+        files=$(gh api --paginate \
+          "/repos/${{github.repository}}/pulls/${{github.event.pull_request.number}}/files" \
+          -q '.[].filename')
+        echo "Changed files:"
+        printf '%s\n' "$files"
+
+        if printf '%s\n' "$files" | grep -qvE '(^docs/|^\.github/ISSUE_TEMPLATE/|\.md$)'; then
+          echo "build=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "build=false" >> "$GITHUB_OUTPUT"
+          echo "::notice::Documentation-only change - skipping the build matrix"
+        fi
+
   compile-mudlet:
     name: ${{matrix.buildname}}
     runs-on: ${{matrix.os}}
-    if: ${{ github.repository_owner == 'Mudlet' }}
+    needs: changes
+    if: ${{ github.repository_owner == 'Mudlet' && needs.changes.outputs.build == 'true' }}
     concurrency:
       group: ${{github.workflow}}-${{matrix.buildname}}-${{ github.event.pull_request.number || github.ref }}
       cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -103,30 +136,74 @@ jobs:
     - name: (Windows) Run QTest
       shell: msys2 {0}
       run: |
-        LUA_PATH=$(cygpath -u "$(luarocks --lua-version 5.1 path --lr-path)" )
+        LUA_PATH=$(luarocks --lua-version 5.1 path --lr-path)
         export LUA_PATH
-        LUA_CPATH=$(cygpath -u "$(luarocks --lua-version 5.1 path --lr-cpath)" )
+        LUA_CPATH=$(luarocks --lua-version 5.1 path --lr-cpath)
         export LUA_CPATH
 
-        ctest --test-dir $GITHUB_WORKSPACE/build-$MSYSTEM/test --output-on-failure
+        ctest --test-dir $GITHUB_WORKSPACE/build-$MSYSTEM/test --output-on-failure -j $(nproc)
       env:
-        QT_FORCE_STDERR_LOGGING: 1
+        # This runner has Qt's FFmpeg backend and can decode, so TMediaLoopTest must
+        # demonstrate every media behaviour rather than skip any of them. Without a floor
+        # somewhere, a lost codec or a changed default backend would turn the whole file
+        # green-by-skip on every platform and say nothing about it.
+        MUDLET_MEDIA_TESTS_REQUIRE_PLAYBACK: 1
 
     - name: (Windows) Run Lua tests
-      timeout-minutes: 1
+      # ~94s measured here, and a slow runner can take half again as long - kept in
+      # step with the other platforms
+      timeout-minutes: 6
       shell: msys2 {0}
       env:
         AUTORUN_BUSTED_TESTS: 'true'
         MUDLET_TEST_MODE: 1
+        MUDLET_TEST_REQUIRE_TTS_MOCK: 1
+        MUDLET_TEST_REQUIRE_HTTP_FIXTURE: 1
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
         QUIT_MUDLET_AFTER_TESTS: 'true'
       run: |
-        LUA_PATH=$(cygpath -u "$(luarocks --lua-version 5.1 path --lr-path)" )
+        LUA_PATH=$(luarocks --lua-version 5.1 path --lr-path)
         export LUA_PATH
-        LUA_CPATH=$(cygpath -u "$(luarocks --lua-version 5.1 path --lr-cpath)" )
+        LUA_CPATH=$(luarocks --lua-version 5.1 path --lr-cpath)
         export LUA_CPATH
 
-        $GITHUB_WORKSPACE/build-$MSYSTEM/release/mudlet.exe --profile "Mudlet self-test"
+        # Linux and macOS start the fixture HTTP server in a step of their own,
+        # but each msys2 step here is its own shell and a process backgrounded
+        # in one is not guaranteed to still be around in the next, so start the
+        # server in the very shell that runs the tests and stop it on the way
+        # out. Paths are handed over in mixed form (C:/...) because bash and
+        # the native Windows python both understand that.
+        temp_dir="$(cygpath -m "${RUNNER_TEMP}")"
+        port_file="${temp_dir}/mudlet-http-fixture-port"
+        fixture_log="${temp_dir}/http-fixture-server.log"
+        rm -f "${port_file}"
+        python_bin=python3
+        command -v "${python_bin}" > /dev/null 2>&1 || python_bin=python
+        MUDLET_TEST_HTTP_PORT_FILE="${port_file}" "${python_bin}" "$GITHUB_WORKSPACE/CI/http-fixture-server.py" > "${fixture_log}" 2>&1 &
+        fixture_pid=$!
+        # Disowned so that stopping it is not reported as a job crash, and -9
+        # because a plain SIGTERM does not reach a native Windows process from
+        # msys2. The server's log is one line when all is well, so print it
+        # either way rather than only where trouble is expected.
+        disown "${fixture_pid}" 2>/dev/null || true
+        trap 'kill -9 "${fixture_pid}" > /dev/null 2>&1 || true; cat "${fixture_log}" 2>/dev/null || true' EXIT
+        for _ in $(seq 1 100); do
+          [ -s "${port_file}" ] && break
+          sleep 0.1
+        done
+        if [ ! -s "${port_file}" ]; then
+          echo "fixture HTTP server failed to start" >&2
+          exit 1
+        fi
+        MUDLET_TEST_HTTP_PORT="$(cat "${port_file}")"
+        export MUDLET_TEST_HTTP_PORT
+        if ! curl -fsS --max-time 10 "http://127.0.0.1:${MUDLET_TEST_HTTP_PORT}/fixture.txt" > /dev/null; then
+          echo "fixture HTTP server is not serving fixtures" >&2
+          exit 1
+        fi
+        echo "fixture HTTP server ready on 127.0.0.1:${MUDLET_TEST_HTTP_PORT}"
+
+        $GITHUB_WORKSPACE/build-$MSYSTEM/release/mudlet.exe --profile "Mudlet self-test" --offline
 
     - name: Passed Lua tests
       shell: msys2 {0}
@@ -144,6 +221,12 @@ jobs:
         path: ${{runner.workspace}}/ccache
         key: ${{ steps.restore-ccache.outputs.cache-primary-key }}
 
+    - name: (Windows) Package
+      shell: msys2 {0}
+      run: $GITHUB_WORKSPACE/CI/package-mudlet-for-windows.sh
+      env:
+        WITH_SENTRY: "ON"
+
     - name: (Windows) Prepare binaries for signing
       id: prepare-signing
       if: |
@@ -151,21 +234,20 @@ jobs:
         (startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true')
       shell: msys2 {0}
       run: |
-        SIGNING_DIR="${GITHUB_WORKSPACE}/signing-binaries"
-        mkdir -p "${SIGNING_DIR}"
+        set -o pipefail
+        PACKAGE_DIR="${GITHUB_WORKSPACE}/package-${MSYSTEM}-release"
+        # Staged a level deep: SignPath only documents ** as matching
+        # subdirectories, so a pattern cannot be relied on to reach the ZIP root
+        STAGING_DIR="${GITHUB_WORKSPACE}/signing-binaries/app"
+        rm -rf "${GITHUB_WORKSPACE}/signing-binaries"
+        mkdir -p "${STAGING_DIR}"
 
-        cp -v "${GITHUB_WORKSPACE}/build-${MSYSTEM}/release/mudlet.exe" "${SIGNING_DIR}/"
-        cp -v "${GITHUB_WORKSPACE}/build-${MSYSTEM}/release/MudletCrashReporter.exe" "${SIGNING_DIR}/"
+        cd "${PACKAGE_DIR}" || exit 1
+        find . -type f \( -iname '*.exe' -o -iname '*.dll' \) -print0 \
+          | xargs -0 cp --parents -t "${STAGING_DIR}" || exit 1
+        echo "Staged $(find "${STAGING_DIR}" -type f | wc -l) binaries for signing"
 
-        if [ -f "${GITHUB_WORKSPACE}/build-${MSYSTEM}/release/crashpad_handler.exe" ]; then
-          cp -v "${GITHUB_WORKSPACE}/build-${MSYSTEM}/release/crashpad_handler.exe" "${SIGNING_DIR}/"
-        fi
-        if [ -f "${GITHUB_WORKSPACE}/build-${MSYSTEM}/release/crashpad_wer.dll" ]; then
-          cp -v "${GITHUB_WORKSPACE}/build-${MSYSTEM}/release/crashpad_wer.dll" "${SIGNING_DIR}/"
-        fi
-
-        echo "SIGNING_DIR=$(cygpath -aw "${SIGNING_DIR}")" >> $GITHUB_ENV
-        echo "signing_dir=${SIGNING_DIR}" >> $GITHUB_OUTPUT
+        echo "SIGNING_DIR=$(cygpath -aw "${GITHUB_WORKSPACE}/signing-binaries")" >> $GITHUB_ENV
 
     - name: (Windows) Upload unsigned binaries for signing
       id: upload-unsigned-binaries
@@ -174,6 +256,7 @@ jobs:
       with:
         name: unsigned-binaries
         path: ${{env.SIGNING_DIR}}
+        if-no-files-found: error
         retention-days: 1
 
     - name: (Windows) Sign binaries with SignPath
@@ -188,34 +271,51 @@ jobs:
         artifact-configuration-slug: 'binaries'
         github-artifact-id: ${{steps.upload-unsigned-binaries.outputs.artifact-id}}
         wait-for-completion: true
-        output-artifact-directory: ${{steps.prepare-signing.outputs.signing_dir}}
+        output-artifact-directory: ${{github.workspace}}/signed-binaries
         wait-for-completion-timeout-in-seconds: 3600
 
     - name: (Windows) Replace binaries with signed versions
       if: steps.sign-binaries.outcome == 'success'
       shell: msys2 {0}
       run: |
-        SIGNING_DIR="${GITHUB_WORKSPACE}/signing-binaries"
-        BUILD_DIR="${GITHUB_WORKSPACE}/build-${MSYSTEM}/release"
+        set -o pipefail
+        SIGNED_DIR="${GITHUB_WORKSPACE}/signed-binaries/app"
+        PACKAGE_DIR="${GITHUB_WORKSPACE}/package-${MSYSTEM}-release"
 
-        cp -v "${SIGNING_DIR}/mudlet.exe" "${BUILD_DIR}/"
-        cp -v "${SIGNING_DIR}/MudletCrashReporter.exe" "${BUILD_DIR}/"
+        cd "${SIGNED_DIR}" || exit 1
+        find . -type f \( -iname '*.exe' -o -iname '*.dll' \) -print0 \
+          | xargs -0 cp --parents -t "${PACKAGE_DIR}" || exit 1
+        echo "Replaced $(find . -type f \( -iname '*.exe' -o -iname '*.dll' \) | wc -l) binaries with signed versions."
 
-        if [ -f "${SIGNING_DIR}/crashpad_handler.exe" ]; then
-          cp -v "${SIGNING_DIR}/crashpad_handler.exe" "${BUILD_DIR}/"
-        fi
-        if [ -f "${SIGNING_DIR}/crashpad_wer.dll" ]; then
-          cp -v "${SIGNING_DIR}/crashpad_wer.dll" "${BUILD_DIR}/"
-        fi
+    - name: (Windows) Verify binaries are signed
+      # Deliberately not gated on the signing steps: a release build that
+      # skipped them must fail here rather than ship unsigned binaries
+      if: |
+        startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true'
+      shell: pwsh
+      run: |
+        $packageDir = Join-Path "${{github.workspace}}" "package-CLANG64-release"
+        $binaries = Get-ChildItem -Path $packageDir -Recurse -File |
+          Where-Object { $_.Extension -in '.exe', '.dll' }
+        if (-not $binaries) {
+          Write-Output "::error::No binaries found in $packageDir to verify"
+          exit 1
+        }
+        $signatures = $binaries | ForEach-Object { Get-AuthenticodeSignature $_.FullName }
+        $signatures | Group-Object Status | ForEach-Object { Write-Output "$($_.Count) $($_.Name)" }
+        $bad = $signatures | Where-Object { $_.Status -ne 'Valid' }
+        if ($bad) {
+          Write-Output "::error::$($bad.Count) of $($binaries.Count) binaries do not have a valid signature"
+          $bad | ForEach-Object { Write-Output "  $($_.Status) $($_.Path)" }
+          exit 1
+        }
+        Write-Output "All $($binaries.Count) binaries in the package have a valid signature."
 
-        echo "Binary signing complete."
-
-    - name: (Windows) Package
+    - name: (Windows) Create portable ZIP
+      # Runs after signing so the portable ships the same signed binaries as the installer
       shell: msys2 {0}
-      run: $GITHUB_WORKSPACE/CI/package-mudlet-for-windows.sh
-      env:
-        WITH_SENTRY: "ON"
-  
+      run: $GITHUB_WORKSPACE/CI/create-portable-zip-for-windows.sh
+
     - name: (Windows) Deploy
       shell: msys2 {0}
       env:
@@ -246,6 +346,7 @@ jobs:
       with:
         name: unsigned-installer
         path: ${{env.ARTIFACT_WINPATHORFILE}}
+        if-no-files-found: error
         retention-days: 1
 
     - name: (Windows) Sign installer with SignPath
@@ -305,7 +406,9 @@ jobs:
     - name: Upload artifact to make.mudlet.org
       shell: msys2 {0}
       if: env.ARTIFACT_NAME
-      run: curl --retry 5 -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.ARTIFACT_NAME}}&unzip=${{env.ARTIFACT_UNZIP}}"
+      # --fail-with-body: gha_queue.php reports refusals (e.g. a duplicate artifact name after a
+      # job re-run) as a 4xx with the reason in the body, which plain curl would exit 0 on
+      run: curl --fail-with-body --retry 5 -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.ARTIFACT_NAME}}&unzip=${{env.ARTIFACT_UNZIP}}"
 
     - name: Register PTB Release
       shell: msys2 {0}

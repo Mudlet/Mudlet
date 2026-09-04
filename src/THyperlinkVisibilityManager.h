@@ -22,13 +22,13 @@
 
 #include <QObject>
 #include <QMap>
-#include <QTimer>
-#include <QPointer>
+#include <QSet>
 #include <QString>
 
 #include "THyperlinkStyling.h"
 
-class TConsole;
+class QTimer;
+struct TConsoleModel;
 
 struct TrackedHyperlink
 {
@@ -65,12 +65,20 @@ struct TrackedHyperlink
     bool skipFirstOutput = false; // Skip the first output gap after registration
 };
 
+// Tracks which OSC 8 hyperlinks are concealed and when each is due to change:
+// model state, since concealing rewrites the model's buffer. Redrawing is the
+// view's half - this emits visibilityChanged() and TConsole repaints.
 class THyperlinkVisibilityManager : public QObject
 {
     Q_OBJECT
 
+    // Reads the tracked line numbers and the queued announcement directly - the
+    // announcement is otherwise only observable through a screen reader, and a
+    // line number only through the side effect of revealing the link.
+    friend class TrackedLinkTrimTest;
+
 public:
-    explicit THyperlinkVisibilityManager(TConsole* pConsole);
+    explicit THyperlinkVisibilityManager(TConsoleModel& model);
     ~THyperlinkVisibilityManager() override;
 
     // Returns true if link should start hidden
@@ -85,6 +93,7 @@ public:
     void concealLink(int linkId);
     void revealLink(int linkId);
     bool isLinkConcealed(int linkId) const;
+    QSet<int> trackedLinkIds() const;
     void removeLinksOnLine(int lineNumber);
     void adjustLineNumbers(int deletedLineStart, int deletedLineCount);
     void clear();
@@ -106,7 +115,7 @@ private:
 
     void processExpireTriggeredLinks(bool input, bool prompt, bool output);
 
-    QPointer<TConsole> mpConsole;
+    TConsoleModel& mModel;
     QMap<int, TrackedHyperlink> mTrackedLinks;
     QTimer* mpTimer = nullptr;
     QTimer* mpOutputGapTimer = nullptr;

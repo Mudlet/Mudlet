@@ -25,8 +25,16 @@
 
 
 #include "Host.h"
+#include "ScriptUnit.h"
 #include "TDebug.h"
-#include "mudlet.h"
+#include "TLuaInterpreter.h"
+
+#include <QColor>
+#include <QMap>
+#include <QScopeGuard>
+
+#include <list>
+#include <utility>
 
 TScript::TScript(TScript* parent, Host* pHost)
 : Tree<TScript>(parent)
@@ -83,7 +91,8 @@ void TScript::compileAll(bool saveLoadingError)
         mNeedsToBeCompiled = true;
     }
     compile(saveLoadingError);
-    for (auto script : *mpMyChildrenList) {
+    for (auto* scriptNode : *mpMyChildrenList) {
+        auto* script = static_cast<TScript*>(scriptNode);
         script->compileAll(saveLoadingError);
     }
 }
@@ -100,8 +109,8 @@ void TScript::compile(bool saveLoadingError)
 {
     if (mNeedsToBeCompiled) {
         if (!compileScript(saveLoadingError)) {
-            if (mudlet::smDebugMode) {
-                TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of script:" << mName << "\n" >> mpHost;
+            if (TDebug::wants(TDebug::Category::Error)) {
+                TDebug(Qt::white, Qt::red, TDebug::Category::Error, mName) << "ERROR: Lua compile error. compiling script of script:" << mName << "\n" >> mpHost;
             }
             mOK_code = false;
         }
@@ -120,6 +129,26 @@ bool TScript::setScript(const QString& script)
 
 bool TScript::compileScript(bool saveLoadingError)
 {
+    // Whilst this frame is on the stack ScriptUnit::uninstall() must defer deleting
+    // this profile's scripts: the top-level Lua body run below (the lua_pcall inside
+    // TLuaInterpreter::compile()) can uninstall its own package - a common package
+    // auto-updater pattern - and freeing this script mid-compile, or writing to it
+    // after compile() returns (see mNeedsToBeCompiled/mOK_code below and in
+    // setScript()), is a use-after-free. See ScriptUnit::mProcessingDepth.
+    ScriptUnit* pUnit = mpHost->getScriptUnit();
+    pUnit->beginProcessing();
+    // NB: deliberately decrement-only - do NOT add a doCleanup() call here. setScript()
+    // writes mOK_code AFTER this returns and ScriptUnit::compileAll()'s loop is still
+    // iterating the root list, so deleting `this` now would be a use-after-free. The
+    // deferred deletes are flushed at a safe point once the pointer is no longer in
+    // use: after ScriptUnit::compileAll()'s loop, at the end of the editor's
+    // saveScript(), in Host::raiseEvent()'s scope guard, and by the catch-all
+    // doCleanup() in Host::incomingStreamProcessor()/slot_purgeTemps() and the queued
+    // save in Host::uninstallPackage().
+    const auto processingGuard = qScopeGuard([pUnit] {
+        pUnit->endProcessing();
+    });
+
     QString error;
     if (mpHost->mLuaInterpreter.compile(mScript, error, QString("Script: ") + getName())) {
         mNeedsToBeCompiled = false;

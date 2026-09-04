@@ -24,22 +24,31 @@
  ***************************************************************************/
 
 
+#include "TMatchState.h"
 #include "Tree.h"
 #include "utils.h" // For NameGroupMatches
 
 #include <QColor>
 #include <QDebug>
+#include <QDebugStateSaver>
+#include <QList>
 #include <QMap>
 #include <QPointer>
 #include <QSharedPointer>
+#include <QString>
+#include <QStringList>
+#include <QStringMatcher>
+#include <QtGlobal>
 
 #define PCRE2_CODE_UNIT_WIDTH 8
 #include <pcre2.h>
 
+#include <list>
 #include <map>
 #include <memory>
 #include <string>
 #include <vector>
+#include <QCoreApplication>
 
 class Host;
 class TLuaInterpreter;
@@ -66,6 +75,7 @@ struct TColorTable
 class TTrigger : public Tree<TTrigger>
 {
     Q_DECLARE_TR_FUNCTIONS(TTrigger) // Needed so we can use tr() even though TTrigger is NOT derived from QObject
+    friend class CorruptTriggerPatternsTest;
     friend class XMLexport;
     friend class XMLimport;
 
@@ -107,7 +117,7 @@ public:
     QString getScript() const { return mScript; }
     bool setScript(const QString& script);
     bool compileScript();
-    bool match(char*, const QString&, int line, int posOffset = 0);
+    bool match(const char* haystackC, int haystackCLength, const QString&, int line, int posOffset = 0);
     bool checkIfNew();
     void unmarkAsNew();
 
@@ -123,7 +133,7 @@ public:
     void disableTrigger(const QString&);
     TTrigger* killTrigger(const QString&);
     bool match_substring(const QString&, const QString&, int, int posOffset, int lineNumber);
-    bool match_perl(char*, const QString&, int, int posOffset, int lineNumber);
+    bool match_perl(const char* haystackC, int haystackCLength, const QString&, int, int posOffset, int lineNumber);
     bool match_exact_match(const QString&, const QString&, int, int posOffset, int lineNumber);
     bool match_begin_of_line_substring(const QString& haystack, const QString& needle, int patternNumber, int posOffset, int lineNumber);
     bool match_lua_code(int);
@@ -172,13 +182,27 @@ public:
     int getExpiryCount() const;
     void setExpiryCount(int expiryCount);
 
+    // Set when the trigger is registered as a root node while a line is being
+    // processed, and cleared when that line is done with - see TriggerUnit's
+    // same-line creation chains. The id names the lineage this trigger belongs
+    // to, the generation is how many creations deep in it this trigger sits;
+    // everything its script creates during that line joins the same lineage one
+    // generation further down.
+    int sameLineChainId() const { return mSameLineChainId; }
+    int sameLineGeneration() const { return mSameLineGeneration; }
+    void setSameLineChain(const int chainId, const int generation)
+    {
+        mSameLineChainId = chainId;
+        mSameLineGeneration = generation;
+    }
+
 
 private:
     TTrigger() = default;
 
     inline void updateMultistates(int regexNumber, std::list<std::string>& captureList, std::list<int>& posList, const NameGroupMatches* nameMatches = nullptr);
     inline void filter(std::string&, int&, int lineNumber);
-    void processExactMatch(const QString& needle, int patternNumber, int posOffset, int lineNumber);
+    void processExactMatch(int patternNumber, int posOffset, int lineNumber);
     void processRegexMatch(const char* haystackC,
                            const QString& haystack,
                            int patternNumber,
@@ -188,14 +212,26 @@ private:
                            pcre2_match_data* match_data,
                            int rc,
                            int lineNumber);
-    void processBeginOfLine(const QString& needle, int patternNumber, int posOffset, int lineNumber);
+    void processBeginOfLine(int patternNumber, int posOffset, int lineNumber);
     void processSubstringMatch(const QString& haystack, const QString& needle, int regexNumber, int posOffset, int where, int lineNumber);
     void processColorPattern(int patternNumber, std::list<std::string>& captureList, std::list<int>& posList, int lineNumber);
     void processPromptMatch(int patternNumber);
+    const std::string& patternUtf8(int patternNumber) const;
 
 
     QList<int> mPatternKinds;
-    QMap<int, QSharedPointer<pcre2_code>> mRegexMap;
+    // Indexed by pattern number rather than keyed by it: every line reaches
+    // these for every pattern of every trigger, which is no place for a tree
+    // lookup and a reference count
+    std::vector<std::unique_ptr<QStringMatcher>> mSubstringMatchers;
+    std::vector<QSharedPointer<pcre2_code>> mRegexes;
+    std::vector<QSharedPointer<pcre2_match_data>> mMatchData;
+    // char rather than bool: keeps the plain element access the bit-packed
+    // specialisation takes away
+    std::vector<char> mRegexJitCompiled;
+    // The pattern text in the form the capture list wants it, converted when
+    // the trigger is compiled instead of on every match
+    std::vector<std::string> mPatternsUtf8;
 
     // Lua code as a string to run
     QString mScript;
@@ -225,6 +261,8 @@ private:
     bool mModuleMember = false;
     // -1: don't self-destruct, 0: delete, 1+: number of times it can still fire
     int mExpiryCount = -1;
+    int mSameLineChainId = 0;
+    int mSameLineGeneration = 0;
 };
 
 #ifndef QT_NO_DEBUG_STREAM
@@ -244,7 +282,7 @@ inline QDebug& operator<<(QDebug& debug, const TTrigger* trigger)
     debug.nospace() << ", isMultiline=" << trigger->isMultiline();
     debug.nospace() << ", patterns=" << trigger->getPatternsList();
     debug.nospace() << ", regexCodes=" << trigger->getRegexCodePropertyList();
-    debug.nospace() << ", script is in: " << (trigger->mRegisteredAnonymousLuaFunction ? "string": "Lua function");
+    debug.nospace() << ", script is in: " << (trigger->mRegisteredAnonymousLuaFunction ? "string" : "Lua function");
     debug.nospace() << ", script=" << trigger->getScript();
     debug.nospace() << ')';
     return debug;

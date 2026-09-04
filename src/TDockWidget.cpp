@@ -30,6 +30,7 @@ TDockWidget::TDockWidget(Host* pH, const QString& consoleName)
 , mWidgetConsoleName(consoleName)
 , mpHost(pH)
 {
+    setFeatures(QDockWidget::DockWidgetClosable | QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
 }
 
 // This sets the mutual pointers that the TConsole and the TDockWidget now
@@ -78,7 +79,7 @@ void TDockWidget::setVisible(bool visible)
         }
         return;
     }
-    auto pC = mpHost->mpConsole->mSubConsoleMap.value(mWidgetConsoleName);
+    auto pC = mpHost->mpConsole->subConsoleWidget(mWidgetConsoleName);
     if (!pC) {
         return;
     }

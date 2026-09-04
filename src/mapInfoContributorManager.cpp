@@ -31,6 +31,11 @@ MapInfoContributorManager::MapInfoContributorManager(QObject* parent, Host* pH)
 : QObject(parent)
 , mpHost(pH)
 {
+    registerBuiltInContributors();
+}
+
+void MapInfoContributorManager::registerBuiltInContributors()
+{
     registerContributor(qsl("Short"), [=, this](int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor) {
         return shortInfo(roomID, selectionSize, areaId, displayAreaId, infoColor);
     });
@@ -41,6 +46,8 @@ MapInfoContributorManager::MapInfoContributorManager(QObject* parent, Host* pH)
 
 MapInfoContributorManager::~MapInfoContributorManager()
 {
+    // Only safe because Host declares mLuaInterpreter before mpMap, so this
+    // manager - a child of TMap - is destroyed while that state is still open.
     for (auto it = mLuaCallbackRefs.begin(); it != mLuaCallbackRefs.end(); ++it) {
         luaL_unref(it->L, LUA_REGISTRYINDEX, it->ref);
     }
@@ -76,6 +83,35 @@ bool MapInfoContributorManager::removeContributor(const QString& name)
     ordering.removeOne(name);
     emit signal_contributorsUpdated();
     return contributors.remove(name) > 0;
+}
+
+void MapInfoContributorManager::removeLuaContributors()
+{
+    if (mLuaCallbackRefs.isEmpty()) {
+        return;
+    }
+    // Unlike removeContributor() this leaves mpHost->mMapInfoContributors
+    // alone: that is the saved set of enabled contributor names, and every
+    // consumer of it intersects it with getContributorKeys(), so a name with no
+    // contributor is inert - which is what lets one that is registered again
+    // come back enabled.
+    for (const auto& [name, callbackRef] : std::as_const(mLuaCallbackRefs).asKeyValueRange()) {
+        // there is no way to notice a caller that got the order wrong: unrefing
+        // a closed state is a use-after-free that only some platforms fault on
+        Q_ASSERT(callbackRef.L == mpHost->mLuaInterpreter.getLuaGlobalState());
+        luaL_unref(callbackRef.L, LUA_REGISTRYINDEX, callbackRef.ref);
+        contributors.remove(name);
+        ordering.removeOne(name);
+    }
+    mLuaCallbackRefs.clear();
+    // Registering under a built-in's name replaces it, so put the built-ins
+    // back rather than leave a reset profile with fewer contributors than a
+    // freshly loaded one. Only once the refs above are cleared, or this would
+    // unref them a second time.
+    if (!contributors.contains(qsl("Short")) || !contributors.contains(qsl("Full"))) {
+        registerBuiltInContributors();
+    }
+    emit signal_contributorsUpdated();
 }
 
 void MapInfoContributorManager::releaseLuaCallbackRef(const QString& name)

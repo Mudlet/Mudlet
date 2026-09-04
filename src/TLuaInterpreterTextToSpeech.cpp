@@ -59,6 +59,7 @@
 #include "glwidget_integration.h"
 #endif
 
+#include <chrono>
 #include <limits>
 #include <math.h>
 
@@ -67,6 +68,7 @@
 #include <QDesktopServices>
 #include <QFileInfo>
 #include <QMovie>
+#include <QTimer>
 #include <QVector>
 #ifdef QT_TEXTTOSPEECH_LIB
 #include <QTextToSpeech>
@@ -79,8 +81,33 @@ bool bSpeechBuilt;
 bool bSpeechQueueing;
 int speechState = QTextToSpeech::State::Ready;
 QString speechCurrent;
+// Whether a ttsSpeechStarted has been raised for what speechCurrent holds. The
+// events are raised off the engine's state edges, and an engine that is already
+// speaking has no edge to report when it is given something else to say.
+static bool speechStartAnnounced = false;
+// Set while the utterance ttsSpeak() last asked for was started over one that
+// was still being spoken. Every engine stops the running utterance inside say(),
+// and the Ready that reports that has to be told apart from the engine going
+// idle - see ttsSpeak().
+static bool speechInterrupting = false;
+// How long an engine is given to start the utterance that interrupted another
+// before a Ready held back on its account is taken at face value after all.
+static constexpr std::chrono::milliseconds scmInterruptedSpeechGrace{250};
 
 static const QTextToSpeech::State TEXT_TO_SPEECH_ERROR_STATE = QTextToSpeech::State::Error;
+
+// ttsStateChanged() raises this same event whenever the engine reports a state
+// edge into Speaking; ttsSpeak() raises it through here for the utterance an
+// already-speaking engine starts without any such edge.
+static void raiseSpeechStartedEvent(const QString& text)
+{
+    TEvent event{};
+    event.mArgumentList.append(QLatin1String("ttsSpeechStarted"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(text);
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mudlet::self()->getHostManager().postInterHostEvent(nullptr, event, true);
+}
 
 // No documentation available in wiki - internal function
 void TLuaInterpreter::ttsBuild()
@@ -89,7 +116,18 @@ void TLuaInterpreter::ttsBuild()
         return;
     }
 
-    speechUnit = new QTextToSpeech();
+    // Under automated tests always request Qt's deterministic "mock" engine and
+    // never fall back to a real backend, which would speak aloud and make specs
+    // host-dependent. When the mock plugin is absent Qt leaves the engine in the
+    // Error state with no voices, so the TTS specs skip (or fail where the mock
+    // is mandatory) instead of exercising a developer's real speech engine. This
+    // also makes a non-empty voice list a reliable proof that the mock was
+    // selected. Outside test mode the default engine is built exactly as before.
+    if (qEnvironmentVariableIsSet("MUDLET_TEST_MODE")) {
+        speechUnit = new QTextToSpeech(qsl("mock"));
+    } else {
+        speechUnit = new QTextToSpeech();
+    }
     bSpeechBuilt = true;
     bSpeechQueueing = false;
 
@@ -103,6 +141,10 @@ int TLuaInterpreter::ttsSkip(lua_State* L)
     Q_UNUSED(L)
     TLuaInterpreter::ttsBuild();
 
+    // An explicit stop ends whatever is being spoken outright, so the Ready it
+    // produces is the engine going idle and must drain the queue as it always
+    // has - it is not the interruption ttsSpeak() has to defend against.
+    speechInterrupting = false;
     speechUnit->stop();
 
     return 0;
@@ -111,12 +153,22 @@ int TLuaInterpreter::ttsSkip(lua_State* L)
 // No documentation available in wiki - internal function
 void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
 {
+    // ttsSpeak() announces an utterance itself when the engine was already
+    // speaking, because there is then no state edge to announce it. An engine
+    // that gets round to reporting the interruption afterwards ends up here
+    // with an edge back into Speaking for that same utterance, which would tell
+    // a script it started twice.
+    const bool alreadyAnnounced = (state == QTextToSpeech::State::Speaking && speechStartAnnounced);
+
     if (state != speechState) {
         speechState = state;
         TEvent event{};
         switch (state) {
         case QTextToSpeech::State::Paused:
             event.mArgumentList.append(QLatin1String("ttsSpeechPaused"));
+            // Resuming has always announced the utterance again, so let it:
+            // being paused is the end of what was announced before.
+            speechStartAnnounced = false;
             break;
         case QTextToSpeech::State::Speaking:
             event.mArgumentList.append(QLatin1String("ttsSpeechStarted"));
@@ -140,9 +192,37 @@ void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
         if (state == QTextToSpeech::Speaking) {
             event.mArgumentList.append(speechCurrent);
             event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            // The engine has taken up what it was last given, so ttsSpeak() has
+            // nothing left to announce and any interruption is over.
+            speechStartAnnounced = true;
+            speechInterrupting = false;
         }
 
-        mudlet::self()->getHostManager().postInterHostEvent(NULL, event, true);
+        if (!alreadyAnnounced) {
+            mudlet::self()->getHostManager().postInterHostEvent(NULL, event, true);
+        }
+    }
+
+    if (state == QTextToSpeech::State::Ready && speechInterrupting) {
+        // Not the engine falling idle but the utterance ttsSpeak() spoke over
+        // ending inside say(). Draining here would speak a queued line on top of
+        // the one the script has just asked for, and that one is then never
+        // heard at all (#9659). The engine reports Speaking for the requested
+        // utterance next, which clears this above.
+        speechInterrupting = false;
+        bSpeechQueueing = false;
+        // Unless it does not: an engine that rejects an utterance outright, or
+        // that replaces one without ever reporting a state change, leaves this
+        // as the last word on the matter, and a queue waiting on a Ready that
+        // is never coming waits forever. Look again once the engine has had its
+        // chance to start speaking - if it is still idle, that Ready did mean
+        // idle and the queue is free to go.
+        QTimer::singleShot(scmInterruptedSpeechGrace, qApp, []() {
+            if (!speechUnit.isNull() && speechUnit->state() == QTextToSpeech::State::Ready && !speechQueue.isEmpty()) {
+                TLuaInterpreter::ttsStateChanged(QTextToSpeech::State::Ready);
+            }
+        });
+        return;
     }
 
     if (state != QTextToSpeech::State::Ready || speechQueue.empty()) {
@@ -150,11 +230,13 @@ void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
         return;
     }
 
-    QString textToSay;
-    textToSay = speechQueue.takeFirst();
+    const QString textToSay = speechQueue.takeFirst();
 
-    speechUnit->say(textToSay);
+    // recorded before say() because the engine can switch to Speaking inside
+    // that call, and this function reports speechCurrent with the event
     speechCurrent = textToSay;
+    speechStartAnnounced = false;
+    speechUnit->say(textToSay);
 
     return;
 }
@@ -168,7 +250,7 @@ int TLuaInterpreter::ttsClearQueue(lua_State* L)
         int index = getVerifiedInt(L, __func__, 1, "index");
         index--;
         if (index < 0 || index >= speechQueue.size()) {
-            return warnArgumentValue(L, __func__, qsl("index %1 out of bounds for queue size %2").arg(index + 1, speechQueue.size()));
+            return warnArgumentValue(L, __func__, qsl("index %1 out of bounds for queue size %2").arg(index + 1).arg(speechQueue.size()));
         }
 
         speechQueue.remove(index);
@@ -220,7 +302,7 @@ int TLuaInterpreter::ttsGetQueue(lua_State* L)
     if (lua_gettop(L) > 0) {
         int index = getVerifiedInt(L, __func__, 1, "index");
         index--;
-        if (index < 0 || index > speechQueue.size()) {
+        if (index < 0 || index >= speechQueue.size()) {
             lua_pushboolean(L, false);
             return 1;
         }
@@ -311,25 +393,37 @@ int TLuaInterpreter::ttsPause(lua_State* L)
 int TLuaInterpreter::ttsQueue(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
-    QString inputText = getVerifiedString(L, __func__, 1, "input").trimmed();
-    if (inputText.isEmpty()) { // there's nothing more to say. discussion: https://github.com/Mudlet/Mudlet/issues/4688
-        return warnArgumentValue(L, __func__, qsl("skipped empty text to speak (TTS)"));
+    if (!checkStringArg(L, __func__, 1, "input")) {
+        return lua_error(L);
     }
+    // the empty-input refusal has to stay ahead of the argument #2 check, as it
+    // did before, or ttsQueue("", <bad index>) would raise instead of returning
+    // nil and a message
+    {
+        const QString trimmedText = QString{lua_tostring(L, 1)}.trimmed();
+        if (trimmedText.isEmpty()) { // there's nothing more to say. discussion: https://github.com/Mudlet/Mudlet/issues/4688
+            return warnArgumentValue(L, __func__, qsl("skipped empty text to speak (TTS)"));
+        }
+    }
+    if (lua_gettop(L) > 1 && !checkIntArg(L, __func__, 2, "index")) {
+        return lua_error(L);
+    }
+    QString inputText = QString{lua_tostring(L, 1)}.trimmed();
 
     std::vector<QString> const dontSpeak = {"<", ">", "&lt;", "&gt;"}; // discussion: https://github.com/Mudlet/Mudlet/issues/4689
     for (const QString& dropThis : dontSpeak) {
         if (inputText.contains(dropThis)) {
             inputText.replace(dropThis, QString());
-            if (mudlet::smDebugMode) {
+            if (TDebug::wants(TDebug::Category::LuaWarning)) {
                 auto& host = getHostFromLua(L);
-                TDebug(Qt::white, Qt::darkGreen) << "LUA: removed angle-shaped brackets (<>) from text to speak (TTS)\n" >> &host;
+                TDebug(Qt::white, Qt::darkGreen, TDebug::Category::LuaWarning) << "LUA: removed angle-shaped brackets (<>) from text to speak (TTS)\n" >> &host;
             }
         }
     }
 
     int index;
     if (lua_gettop(L) > 1) {
-        index = getVerifiedInt(L, __func__, 2, "index");
+        index = static_cast<int>(lua_tointeger(L, 2));
         index--;
         if (index < 0) {
             index = 0;
@@ -355,6 +449,9 @@ int TLuaInterpreter::ttsQueue(lua_State* L)
 
     if (speechQueue.size() == 1 && speechUnit->state() == QTextToSpeech::State::Ready && !bSpeechQueueing) {
         bSpeechQueueing = true;
+        // The engine says it is idle, so nothing is left of any utterance an
+        // earlier ttsSpeak() interrupted and this queued line is free to start.
+        speechInterrupting = false;
         TLuaInterpreter::ttsStateChanged(speechUnit->state());
     }
 
@@ -385,15 +482,31 @@ int TLuaInterpreter::ttsSpeak(lua_State* L)
     for (const QString& dropThis : dontSpeak) {
         if (textToSay.contains(dropThis)) {
             textToSay.replace(dropThis, QString());
-            if (mudlet::smDebugMode) {
+            if (TDebug::wants(TDebug::Category::LuaWarning)) {
                 auto& host = getHostFromLua(L);
-                TDebug(Qt::white, Qt::darkGreen) << "LUA: removed angle-shaped brackets (<>) from text to speak (TTS)\n" >> &host;
+                TDebug(Qt::white, Qt::darkGreen, TDebug::Category::LuaWarning) << "LUA: removed angle-shaped brackets (<>) from text to speak (TTS)\n" >> &host;
             }
         }
     }
 
-    speechUnit->say(textToSay);
+    // recorded before say() because the engine can switch to Speaking inside
+    // that call, and ttsStateChanged() reports speechCurrent with the event
     speechCurrent = textToSay;
+    speechStartAnnounced = false;
+    // Every engine stops what it is saying inside say() and reports Ready for
+    // it, some during the call and some shortly after. That Ready says the
+    // interrupted utterance ended, not that the engine has nothing to do, so
+    // ttsStateChanged() must not drain the queue over the top of this one.
+    speechInterrupting = (speechUnit->state() == QTextToSpeech::State::Speaking);
+    speechUnit->say(textToSay);
+
+    // An engine that was already speaking stays in the Speaking state through
+    // all of that, and the events are raised off state edges - so without this
+    // nothing tells a script that what is being spoken has changed (#9659).
+    if (!speechStartAnnounced && speechUnit->state() == QTextToSpeech::State::Speaking) {
+        speechStartAnnounced = true;
+        raiseSpeechStartedEvent(textToSay);
+    }
     return 0;
 }
 
@@ -511,7 +624,6 @@ int TLuaInterpreter::ttsSetVoiceByName(lua_State* L)
     for (const auto& voice : speechVoices) {
         if (voice.name() == nextVoice) {
             speechUnit->setVoice(voice);
-            lua_pushboolean(L, true);
 
             TEvent event{};
             event.mArgumentList.append(QLatin1String("ttsVoiceChanged"));
@@ -520,6 +632,7 @@ int TLuaInterpreter::ttsSetVoiceByName(lua_State* L)
             event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
             mudlet::self()->getHostManager().postInterHostEvent(NULL, event, true);
 
+            lua_pushboolean(L, true);
             return 1;
         }
     }

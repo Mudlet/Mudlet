@@ -96,6 +96,7 @@ class QFrame;
 class QToolButton;
 class TAction;
 class TKey;
+class TVar;
 class TConsole;
 class dlgVarsMainArea;
 class QShortcut;
@@ -105,8 +106,11 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
 {
     Q_OBJECT
 
-    // Allow QTest-based test class to access private members
+    // Allow QTest-based test classes to access private members
     friend class dlgTriggerEditorUndoRedoTest;
+    friend class EditorBannerViewSwitchTest;
+    friend class ScriptEventHandlerLifetimeTest;
+    friend class VariableEditorWriteBackTest;
 
     enum SearchDataRole {
         // Value is the ID of the item found MUST BE Qt::UserRole to avoid
@@ -173,6 +177,7 @@ public:
 
     Q_DISABLE_COPY(dlgTriggerEditor)
     dlgTriggerEditor(Host*);
+    ~dlgTriggerEditor();
 
     Q_DECLARE_FLAGS(SearchOptions, SearchOption)
 
@@ -201,6 +206,7 @@ public:
     void addVar(bool);
     int canRecast(QTreeWidgetItem*, int newNameType, int newValueType);
     void saveVar();
+    void showVariableRenameRefused(TVar*);
     void repopulateVars();
     void changeView(EditorViewType);
     void recurseVariablesUp(QTreeWidgetItem* const, QList<QTreeWidgetItem*>&);
@@ -374,6 +380,7 @@ private slots:
     void slot_saveProperty_ActionCommandUp();
     void slot_saveProperty_ActionIsPushDown();
     void slot_saveProperty_ActionBarColumns();
+    void slot_saveProperty_ActionBarFillerOffset();
     void slot_saveProperty_ActionBarOrientation();
     void slot_saveProperty_ActionBarLocation();
     void slot_saveProperty_ActionButtonRotation();
@@ -642,6 +649,8 @@ private:
     dlgSystemMessageArea* mpSystemMessageArea = nullptr;
 
     bool mIsScriptsMainAreaEditHandler = false;
+    // Not owned, and does not outlive a
+    // listWidget_script_registered_event_handlers->clear()
     QListWidgetItem* mpScriptsMainAreaEditHandlerItem = nullptr;
     bool mIsGrabKey = false;
     QPointer<Host> mpHost;
@@ -733,6 +742,10 @@ private:
     // space-driven auto-collapse:
     bool mShowAllTriggerControls = false;
 
+    // Every profile builds an editor when it loads but they share one saved
+    // window position, so one that was never opened must not write over it:
+    bool mHasBeenShown = false;
+
     // tracks location of the splitter in the trigger editor for each tab
     QByteArray mTriggerEditorSplitterState;
     QByteArray mAliasEditorSplitterState;
@@ -791,6 +804,7 @@ private:
 
     // Banner methods
     void handleBannerDismiss();
+    void cancelBannerUndoTimer();
     void showBannerUndoToast();
     void undoBannerDismiss();
     void handlePermanentBannerDismiss();

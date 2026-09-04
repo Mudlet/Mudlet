@@ -25,8 +25,19 @@
 
 
 #include "Host.h"
+#include "KeyUnit.h"
 #include "TDebug.h"
-#include "mudlet.h"
+#include "TLuaInterpreter.h"
+#include "utils.h"
+
+#include <QColor>
+#include <QDebug>
+#include <QFlags>
+#include <QMap>
+#include <QMultiMap>
+#include <QObject>
+
+#include <list>
 
 TKey::TKey(TKey* parent, Host* pHost)
 : Tree<TKey>(parent)
@@ -88,7 +99,8 @@ bool TKey::match(const Qt::Key key, const Qt::KeyboardModifiers modifier, const 
             }
         }
 
-        for (auto childKey : *mpMyChildrenList) {
+        for (auto* childKeyNode : *mpMyChildrenList) {
+            auto* childKey = static_cast<TKey*>(childKeyNode);
             if (childKey->match(key, modifier, isToMatchAll)) {
                 if (isToMatchAll) {
                     isAMatch = true;
@@ -100,6 +112,28 @@ bool TKey::match(const Qt::Key key, const Qt::KeyboardModifiers modifier, const 
     }
 
     return isAMatch;
+}
+
+
+bool TKey::wouldMatch(const Qt::Key key, const Qt::KeyboardModifiers modifier) const
+{
+    // Also covers the dereference below - isActive() is false once mpMyChildrenList is gone
+    if (!isActive()) {
+        return false;
+    }
+
+    if (!isFolder() && (mKeyCode == key) && (mKeyModifier == modifier)) {
+        return true;
+    }
+
+    for (auto* childKeyNode : *mpMyChildrenList) {
+        auto* childKey = static_cast<TKey*>(childKeyNode);
+        if (childKey->wouldMatch(key, modifier)) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 
@@ -118,7 +152,8 @@ void TKey::enableKey(const QString& name)
     if (mName == name) {
         setIsActive(true);
     }
-    for (auto key : *mpMyChildrenList) {
+    for (auto* keyNode : *mpMyChildrenList) {
+        auto* key = static_cast<TKey*>(keyNode);
         key->enableKey(name);
     }
 }
@@ -128,7 +163,8 @@ void TKey::disableKey(const QString& name)
     if (mName == name) {
         setIsActive(false);
     }
-    for (auto key : *mpMyChildrenList) {
+    for (auto* keyNode : *mpMyChildrenList) {
+        auto* key = static_cast<TKey*>(keyNode);
         key->disableKey(name);
     }
 }
@@ -137,12 +173,13 @@ void TKey::compileAll()
 {
     mNeedsToBeCompiled = true;
     if (!compileScript()) {
-        if (mudlet::smDebugMode) {
-            TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of key binding:" << mName << "\n" >> mpHost;
+        if (TDebug::wants(TDebug::Category::Error)) {
+            TDebug(Qt::white, Qt::red, TDebug::Category::Error, mName) << "ERROR: Lua compile error. compiling script of key binding:" << mName << "\n" >> mpHost;
         }
         mOK_code = false;
     }
-    for (auto key : *mpMyChildrenList) {
+    for (auto* keyNode : *mpMyChildrenList) {
+        auto* key = static_cast<TKey*>(keyNode);
         key->compileAll();
     }
 }
@@ -151,19 +188,31 @@ void TKey::compile()
 {
     if (mNeedsToBeCompiled) {
         if (!compileScript()) {
-            if (mudlet::smDebugMode) {
-                TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of key binding:" << mName << "\n" >> mpHost;
+            if (TDebug::wants(TDebug::Category::Error)) {
+                TDebug(Qt::white, Qt::red, TDebug::Category::Error, mName) << "ERROR: Lua compile error. compiling script of key binding:" << mName << "\n" >> mpHost;
             }
             mOK_code = false;
         }
     }
-    for (auto key : *mpMyChildrenList) {
+    for (auto* keyNode : *mpMyChildrenList) {
+        auto* key = static_cast<TKey*>(keyNode);
         key->compile();
     }
 }
 
 bool TKey::setScript(const QString& script)
 {
+    // Switching from a registered anonymous Lua function (set up by tempKey with a
+    // function argument) to a script string: release the old function from the Lua
+    // registry and leave callback mode. Otherwise execute() keeps calling the stale
+    // function so the new script never runs, and the registry entry leaks - the
+    // destructor would take its mScript-based branch and delete the compiled function.
+    if (mRegisteredAnonymousLuaFunction) {
+        if (mpHost) {
+            mpHost->mLuaInterpreter.delete_luafunction(this);
+        }
+        mRegisteredAnonymousLuaFunction = false;
+    }
     mScript = script;
     mNeedsToBeCompiled = true;
     mOK_code = compileScript();
@@ -208,7 +257,7 @@ void TKey::execute()
     }
 
     if (mRegisteredAnonymousLuaFunction) {
-        mpHost->mLuaInterpreter.call_luafunction(this);
+        mpHost->mLuaInterpreter.call_luafunction(this, mName);
         return;
     }
 

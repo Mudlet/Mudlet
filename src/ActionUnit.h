@@ -26,10 +26,13 @@
 
 #include "utils.h"
 
+#include <QList>
 #include <QMap>
 #include <QPointer>
 #include <QString>
 #include <list>
+#include <utility>
+#include <vector>
 
 class Host;
 class mudlet;
@@ -46,15 +49,9 @@ public:
     explicit ActionUnit(Host*);
     ~ActionUnit();
 
-    std::list<TAction*> getActionRootNodeList()
-    {
-        return mActionRootNodeList;
-    }
+    std::list<TAction*> getActionRootNodeList() { return mActionRootNodeList; }
 
-    QMap<int, TAction*> getActionList()
-    {
-        return mActionMap;
-    }
+    QMap<int, TAction*> getActionList() { return mActionMap; }
 
     TAction* getAction(int id);
     TAction* findAction(const QString&);
@@ -67,6 +64,15 @@ public:
     int getNewID();
     void uninstall(const QString&);
     void _uninstall(TAction* pChild, const QString& packageName);
+    void doCleanup();
+    void beginProcessing() { ++mProcessingDepth; }
+    // Only decrements the depth - deliberately no doCleanup() here: that would
+    // delete `this` (and other deferred actions) while a caller of
+    // TAction::execute() may still hold the pointer. Deferred deletes are
+    // flushed once no button script is executing - by the dispatchers right
+    // after execute() returns and by Host's catch-all doCleanup() calls.
+    void endProcessing();
+    int processingDepth() const { return mProcessingDepth; }
     void updateAllToolbars();
     std::list<QPointer<TToolBar>> getToolBarList() { return mToolBarList; }
     TAction* getHeadAction(TToolBar*);
@@ -75,15 +81,19 @@ public:
     void regenerateEasyButtonBars();
     void constructToolbar(TAction*, TToolBar* pToolBar);
     void constructToolbar(TAction*, TEasyButtonBar* pTB);
-    void showToolBar(const QString&);
-    void hideToolBar(const QString&);
+    std::pair<bool, QString> showToolBar(const QString&);
+    std::pair<bool, QString> hideToolBar(const QString&);
 
     QList<TAction*> uninstallList;
+    bool hasPendingDeletes() const { return !uninstallList.isEmpty(); }
 
 private:
     ActionUnit() = default;
 
     TAction* getActionPrivate(int id);
+    TAction* findEasyButtonBarAction(const QString& name);
+    bool namesAFloatingToolBar(const QString& name);
+    std::pair<bool, QString> setToolBarActive(const QString& name, const bool active);
     void addActionRootNode(TAction* pT, int parentPosition = -1, int childPosition = -1);
     void addAction(TAction* pT);
     void removeActionRootNode(TAction* pT);
@@ -92,6 +102,9 @@ private:
     QMap<int, TAction*> mActionMap;
     std::list<TAction*> mActionRootNodeList;
     int mMaxID = 0;
+    // > 0 whilst a TAction::execute() is on the call stack; uninstall() and
+    // doCleanup() must not delete actions then - see ActionUnit::uninstall():
+    int mProcessingDepth = 0;
     bool mModuleMember = false;
     std::list<QPointer<TToolBar>> mToolBarList;
     std::list<QPointer<TEasyButtonBar>> mEasyButtonBarList;

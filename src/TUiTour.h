@@ -28,7 +28,6 @@
 class QFrame;
 class QKeyEvent;
 class QLabel;
-class QMouseEvent;
 class QPaintEvent;
 class QPushButton;
 
@@ -56,7 +55,6 @@ signals:
 protected:
     void paintEvent(QPaintEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
-    void mouseReleaseEvent(QMouseEvent* event) override;
     bool eventFilter(QObject* watched, QEvent* event) override;
 
 private slots:

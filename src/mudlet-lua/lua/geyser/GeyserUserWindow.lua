@@ -49,8 +49,10 @@ function Geyser.UserWindow:resetWindow()
 end
 
 --Override show to keep the dimensions of the UserWindow
-function Geyser.UserWindow:show()
-  self.Parent.show(self)
+--@param auto passed on by a container showing its children, and used by the
+--            base class to pick which of the two hidden flags to clear
+function Geyser.UserWindow:show(auto)
+  self.Parent.show(self, auto)
 end
 
 --- Your UserWindow will be docked at position (pos):
@@ -58,7 +60,15 @@ end
 --@param pos possible positions are "top", "bottom","left", "right" and "floating"
 function Geyser.UserWindow:setDockPosition(pos)
   self.dockPosition = pos
-  return openUserWindow(self.name, false, self.autoDock, pos)
+  local docked = openUserWindow(self.name, false, self.autoDock, pos)
+  -- opening the dock brings the window back on screen, so leaving self.hidden
+  -- set would make the next hide() a no-op: Geyser.Container:hide() skips the
+  -- widget for anything that already believes itself hidden. auto_hidden is
+  -- deliberately left alone: clearing that one is the container cascade's job.
+  if self.hidden then
+    self:show()
+  end
+  return docked
 end
 
 --- Enables the automatic docking at the borders if it was previously disabled
@@ -92,6 +102,30 @@ function Geyser.UserWindow:setStyleSheet(css)
   css = css or self.stylesheet
   setUserWindowStyleSheet(self.name, css)
   self.stylesheet = css
+end
+
+--- Deletes the UserWindow, along with the root container Geyser made for it
+function Geyser.UserWindow:type_delete()
+  local root = self.rootContainer
+  Geyser.MiniConsole.type_delete(self)
+  -- Geyser.Container:new gives every user window a "<name>Container" root
+  -- container. Left behind it is not inert: its get_width/get_height ask
+  -- getUserWindowSize for a window that is gone, which answers with the main
+  -- window's size, so the orphan claims all of it in every layout pass.
+  -- Unregistering it rather than calling delete() on it keeps this safe when
+  -- the user window is being deleted by that very container.
+  if not root or not root.container then
+    return
+  end
+  if table.is_empty(root.windowList) then
+    root.container:remove(root)
+  else
+    -- anything else put in the root container by hand is still using it, so it
+    -- has to stay - but it measures a user window that is about to be gone
+    debugc(string.format(
+      "Geyser.UserWindow: the root container of '%s' still holds other objects, so it is being left in place - it will report the main window's size from now on, because the user window it measured has been deleted",
+      self.name))
+  end
 end
 
 Geyser.UserWindow.Parent = Geyser.Window
@@ -128,6 +162,11 @@ function Geyser.UserWindow:new(cons)
 
   if me.restoreLayout then
     openUserWindow(me.name, me.restoreLayout, me.autoDock)
+  elseif me.docked == false then
+    -- this window is floated a few lines further down anyway, and docking it
+    -- first takes the dock's size off the main window straight away - which is
+    -- what the percentage constraints below would then be resolved against
+    openUserWindow(me.name, me.restoreLayout, me.autoDock, "floating")
   else
     openUserWindow(me.name, me.restoreLayout, me.autoDock, me.dockPosition)
   end
@@ -171,6 +210,11 @@ function Geyser.UserWindow:new(cons)
   
   me:resetWindow()
   if me.stylesheet then me:setStyleSheet() end
+
+  -- Geyser.Container:new() settles the hidden constraint before there is a widget to hide, so the hide is made good here
+  if me.hidden or me.auto_hidden then
+    hideWindow(me.name)
+  end
 
   Geyser.parentWindows = Geyser.parentWindows or {}
   Geyser.parentWindows[me.name] = me
