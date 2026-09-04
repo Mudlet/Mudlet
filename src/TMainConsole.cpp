@@ -83,6 +83,11 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
 
     // Load up the spelling dictionary from the system:
     setSystemSpellDictionary(mpHost->getSpellDic());
+    // Reading it costs tens of milliseconds, so it is not read here - but
+    // leaving it for the first spell-check would put that wait in front of the
+    // first word typed, so a queued connection has the event loop do it once
+    // the profile has finished loading:
+    connect(mudlet::self(), &mudlet::signal_profileLoaded, this, &TMainConsole::getHunspellHandle_system, Qt::QueuedConnection);
 
     // Load up the spelling dictionary for the profile - needs to handle the
     // absence of files for the first run in a new profile or from an older

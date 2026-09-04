@@ -3493,7 +3493,7 @@ bool TLuaInterpreter::compile(const QString& code, QString& errorMsg, const QStr
     const int callerStackTop = lua_gettop(L);
 
     const QByteArray utf8Code = code.toUtf8();
-    const int error = (luaL_loadbuffer(L, utf8Code.constData(), strlen(utf8Code.constData()), name.toUtf8().constData()) || lua_pcall(L, 0, 0, 0));
+    const int error = (luaL_loadbuffer(L, utf8Code.constData(), utf8Code.size(), name.toUtf8().constData()) || lua_pcall(L, 0, 0, 0));
 
     if (error) {
         // The error object is on the top of the stack. Absolute slot 1 - which
