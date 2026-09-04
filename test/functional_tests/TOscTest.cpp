@@ -35,6 +35,7 @@
 
 #include "LuaLiteral.h"
 #include "MudletInstanceCoordinator.h"
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "TAccessibleTextEdit.h"
@@ -212,7 +213,7 @@ private slots:
     mPort = QString::number(mpServer->serverPort());
     mudlet::start();
     mudlet::self()->setupConfig();
-    QCOMPARE(mudlet::getMudletPath(enums::mainPath),
+    QCOMPARE(MudletPaths::getMudletPath(enums::mainPath),
              qsl("%1/mudlet").arg(mConfigDir.path()));
     mudlet::self()->takeOwnershipOfInstanceCoordinator(
         std::make_unique<MudletInstanceCoordinator>(
@@ -221,7 +222,7 @@ private slots:
     mudlet::self()->setStorePasswordsSecurely(false);
 
     const QString path =
-        mudlet::getMudletPath(enums::profileHomePath, mHostname);
+        MudletPaths::getMudletPath(enums::profileHomePath, mHostname);
     QDir(path).removeRecursively();
 
     mpHost = TestProfile::create(mHostname, mLocalhost, mPort);
@@ -1680,7 +1681,7 @@ private slots:
     // getMudletPath() dereferences the instance rather than checking it
     if (mudlet::self()) {
       const QString path =
-          mudlet::getMudletPath(enums::profileHomePath, mHostname);
+          MudletPaths::getMudletPath(enums::profileHomePath, mHostname);
       QDir(path).removeRecursively();
       delete mudlet::self();
     }

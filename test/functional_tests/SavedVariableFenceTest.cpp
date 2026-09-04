@@ -37,6 +37,7 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -177,7 +178,7 @@ private slots:
         QVERIFY2(mpServer->serverPort() != 0, "TelnetServerStub failed to bind a loopback port");
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -352,7 +353,7 @@ private slots:
             vu->savedVars.insert(shape.globalName);
         }
 
-        const QString xmlPath = mudlet::getMudletPath(enums::profileHomePath, mHostname) + qsl("/saved-variable-fence-test.xml");
+        const QString xmlPath = MudletPaths::getMudletPath(enums::profileHomePath, mHostname) + qsl("/saved-variable-fence-test.xml");
         QVERIFY2(exportProfileTo(xmlPath), "the profile could not be exported");
 
         // nothing of the seeding may survive into the checks below, or they would
@@ -450,7 +451,7 @@ private:
 
     QString exportProfileXml()
     {
-        const QString xmlPath = mudlet::getMudletPath(enums::profileHomePath, mHostname) + qsl("/saved-variable-fence-export.xml");
+        const QString xmlPath = MudletPaths::getMudletPath(enums::profileHomePath, mHostname) + qsl("/saved-variable-fence-export.xml");
         if (!exportProfileTo(xmlPath)) {
             return {};
         }
@@ -479,7 +480,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = mudlet::getMudletPath(enums::profileHomePath, profileName);
+        const QString path = MudletPaths::getMudletPath(enums::profileHomePath, profileName);
         QDir dir(path);
 
         if (!dir.exists()) {

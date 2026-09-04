@@ -70,6 +70,7 @@
 
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
+#include "MudletPaths.h"
 #include "ProfileTestHelper.h"
 #include "TMainConsole.h"
 #include "TMap.h"
@@ -312,7 +313,7 @@ private:
 
     void deleteProfileDirectory() const
     {
-        QDir dir(mudlet::getMudletPath(enums::profileHomePath, mProfileName));
+        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, mProfileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }
@@ -577,7 +578,7 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -670,7 +671,7 @@ private slots:
 
         // A download with no local name of its own and an URL ending in "xml"
         // lands on the profile's map.xml, inside this test's own config root:
-        const QString stored = mudlet::getMudletPath(enums::profileXmlMapPathFileName, mProfileName);
+        const QString stored = MudletPaths::getMudletPath(enums::profileXmlMapPathFileName, mProfileName);
         QFile file(stored);
         QVERIFY2(file.open(QIODevice::ReadOnly), qPrintable(qsl("the downloaded map was not saved to %1").arg(stored)));
         QCOMPARE(file.readAll(), scmMapXml);
@@ -709,7 +710,7 @@ private slots:
         QVERIFY2(startSpy.at(0).at(1).toString().contains(mProfileName), "the progress label does not name the profile the map is for");
         QCOMPARE(disableCancelSpy.count(), 1);
 
-        const QString stored = mudlet::getMudletPath(enums::profileXmlMapPathFileName, mProfileName);
+        const QString stored = MudletPaths::getMudletPath(enums::profileXmlMapPathFileName, mProfileName);
         QFile file(stored);
         QVERIFY2(file.open(QIODevice::ReadOnly), qPrintable(qsl("the downloaded map was not saved to %1").arg(stored)));
         QCOMPARE(file.readAll(), scmMapXml);
@@ -795,7 +796,7 @@ private slots:
     void test_httpErrorIsReportedAndLeavesNothingBehind()
     {
         TMap* pMap = mpHost->mpMap.data();
-        const QString stored = mudlet::getMudletPath(enums::profileXmlMapPathFileName, mProfileName);
+        const QString stored = MudletPaths::getMudletPath(enums::profileXmlMapPathFileName, mProfileName);
         QFile::remove(stored);
 
         QVERIFY2(runDownload(mpMapServer->url(qsl("/nosuchmap.xml"))), "the failed map download never finished");
@@ -926,7 +927,7 @@ private slots:
     void test_cancelLeavesTheLoadedMapAndItsFileAlone()
     {
         TMap* pMap = mpHost->mpMap.data();
-        const QString stored = mudlet::getMudletPath(enums::profileXmlMapPathFileName, mProfileName);
+        const QString stored = MudletPaths::getMudletPath(enums::profileXmlMapPathFileName, mProfileName);
         QVERIFY2(runDownload(mpMapServer->url(qsl("/map.xml"))), "the download that gives this test a map to keep never finished");
         QCOMPARE(pMap->mpRoomDB->getRoomMap().size(), 2);
 
@@ -955,7 +956,7 @@ private slots:
         TMap* pMap = mpHost->mpMap.data();
         // Inside the profile's own directory but below a path component that is
         // not there, so QSaveFile cannot open it:
-        const QString unwritable = qsl("%1/no-such-directory/map.xml").arg(mudlet::getMudletPath(enums::profileHomePath, mProfileName));
+        const QString unwritable = qsl("%1/no-such-directory/map.xml").arg(MudletPaths::getMudletPath(enums::profileHomePath, mProfileName));
 
         QVERIFY2(runDownload(mpMapServer->url(qsl("/map.xml")), unwritable), "the map download never finished");
 
@@ -1253,7 +1254,7 @@ private slots:
 
         // A non-XML download is stored under the profile's map directory, not as
         // its map.xml:
-        const QString stored = mudlet::getMudletPath(enums::profileMapPathFileName, mProfileName, qsl("map.dat"));
+        const QString stored = MudletPaths::getMudletPath(enums::profileMapPathFileName, mProfileName, qsl("map.dat"));
         QVERIFY2(QFileInfo::exists(stored), qPrintable(qsl("the downloaded map was not saved to %1").arg(stored)));
 
         TRoom* pRoom = pMap->mpRoomDB->getRoom(7);
@@ -1280,8 +1281,8 @@ private slots:
         TMap* pMap = mpHost->mpMap.data();
         pMap->mapClear();
         mpMapServer->serve(qsl("/MAP.XML"), scmMapXml);
-        const QString xmlDestination = mudlet::getMudletPath(enums::profileXmlMapPathFileName, mProfileName);
-        const QString binaryDestination = mudlet::getMudletPath(enums::profileMapPathFileName, mProfileName, qsl("map.dat"));
+        const QString xmlDestination = MudletPaths::getMudletPath(enums::profileXmlMapPathFileName, mProfileName);
+        const QString binaryDestination = MudletPaths::getMudletPath(enums::profileMapPathFileName, mProfileName, qsl("map.dat"));
         QFile::remove(xmlDestination);
         QFile::remove(binaryDestination);
 

@@ -21,6 +21,7 @@
  ***************************************************************************/
 
 
+#include "MudletPaths.h"
 #include "TConsole.h"
 
 
@@ -177,7 +178,7 @@ TMainConsole::~TMainConsole()
         if (mudlet::self()) {
             // Need to commit any changes to personal dictionary
             qDebug() << "TCommandLine::~TConsole(...) INFO - Saving profile's own Hunspell dictionary...";
-            mudlet::self()->saveDictionary(mudlet::self()->getMudletPath(enums::profileDataItemPath, mProfileName, qsl("profile")), mWordSet_profile);
+            mudlet::self()->saveDictionary(MudletPaths::getMudletPath(enums::profileDataItemPath, mProfileName, qsl("profile")), mWordSet_profile);
         }
     }
 }
@@ -1822,7 +1823,7 @@ void TMainConsole::setSystemSpellDictionary(const QString& newDict)
     // Everywhere but macOS getMudletPath() probes for "<name>.aff" to settle
     // which directory wins, so it has to get the same name the files are then
     // loaded by.
-    const QString path = mudlet::getMudletPath(enums::hunspellDictionaryPath, newDict);
+    const QString path = MudletPaths::getMudletPath(enums::hunspellDictionaryPath, newDict);
     QString spell_aff = qsl("%1%2.aff").arg(path, newDict);
     QString spell_dic = qsl("%1%2.dic").arg(path, newDict);
 
@@ -1856,7 +1857,7 @@ void TMainConsole::setProfileSpellDictionary()
             mpHunspell_profile = nullptr;
             // Need to commit any changes to personal dictionary
             qDebug() << "TMainConsole::setProfileSpellDictionary() INFO - Saving profile's own Hunspell dictionary...";
-            mudlet::self()->saveDictionary(mudlet::self()->getMudletPath(enums::profileDataItemPath, mProfileName, qsl("profile")), mWordSet_profile);
+            mudlet::self()->saveDictionary(MudletPaths::getMudletPath(enums::profileDataItemPath, mProfileName, qsl("profile")), mWordSet_profile);
         }
         // Nothing else to do if not using the shared one
 
@@ -2059,15 +2060,15 @@ bool TMainConsole::saveMap(const QString& location, int saveVersion)
 {
     QString filename_map = location;
     if (filename_map.isEmpty()) {
-        filename_map = mudlet::getMudletPath(enums::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
+        filename_map = MudletPaths::getMudletPath(enums::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
     } else if (const QFileInfo fileInfo(location); fileInfo.isRelative()) {
         // Resolve the name relative to the profile home directory the way
         // TMainConsole::importMap does, rather than against whatever directory
         // Mudlet happens to have been started in:
-        filename_map = QDir::cleanPath(mudlet::getMudletPath(enums::profileDataItemPath, mProfileName, fileInfo.filePath()));
+        filename_map = QDir::cleanPath(MudletPaths::getMudletPath(enums::profileDataItemPath, mProfileName, fileInfo.filePath()));
     }
 
-    const QDir dir_map(mudlet::getMudletPath(enums::profileMapsPath, mProfileName));
+    const QDir dir_map(MudletPaths::getMudletPath(enums::profileMapsPath, mProfileName));
     if (!dir_map.exists() && !dir_map.mkpath(dir_map.path())) {
         qDebug().noquote() << "Error saving map: could not make the profile's map directory" << dir_map.path();
         return false;
@@ -2130,7 +2131,7 @@ bool TMainConsole::loadMap(const QString& location)
     // under a bare name is looked for where it was written:
     QString filePathName = location;
     if (const QFileInfo fileInfo(location); !location.isEmpty() && fileInfo.isRelative()) {
-        filePathName = QDir::cleanPath(mudlet::getMudletPath(enums::profileDataItemPath, mProfileName, fileInfo.filePath()));
+        filePathName = QDir::cleanPath(MudletPaths::getMudletPath(enums::profileDataItemPath, mProfileName, fileInfo.filePath()));
     }
 
     qDebug() << "TMainConsole::loadMap() - restore map case 1.";
@@ -2208,7 +2209,7 @@ bool TMainConsole::importMap(const QString& location, QString* errMsg)
     if (!fileInfo.filePath().isEmpty()) {
         if (fileInfo.isRelative()) {
             // Resolve the name relative to the profile home directory:
-            filePathNameString = QDir::cleanPath(mudlet::getMudletPath(enums::profileDataItemPath, mProfileName, fileInfo.filePath()));
+            filePathNameString = QDir::cleanPath(MudletPaths::getMudletPath(enums::profileDataItemPath, mProfileName, fileInfo.filePath()));
         } else {
             if (fileInfo.exists()) {
                 filePathNameString = fileInfo.canonicalFilePath(); // Cannot use canonical path if file doesn't exist!

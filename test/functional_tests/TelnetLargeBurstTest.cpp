@@ -38,6 +38,7 @@
 #include <algorithm>
 #include <memory>
 
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "MudletInstanceCoordinator.h"
@@ -106,7 +107,7 @@ private slots:
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
 
-        QDir(mudlet::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
+        QDir(MudletPaths::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
         mpHost = TestProfile::create(mHostname, mLocalhost, QString::number(mpServer->serverPort()));
         if (!mpHost) {
             QFAIL("No active host available for the test.");
@@ -125,7 +126,7 @@ private slots:
         // Null when initTestCase skipped or failed ahead of mudlet::start(), and
         // getMudletPath() dereferences the instance rather than checking it
         if (mudlet::self()) {
-            QDir(mudlet::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
+            QDir(MudletPaths::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
             delete mudlet::self();
         }
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);

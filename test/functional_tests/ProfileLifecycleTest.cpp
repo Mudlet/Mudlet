@@ -36,6 +36,7 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -133,7 +134,7 @@ private:
     // constructor reads both back out of the profile's data files.
     bool provisionProfileOnDisk(const QString& profileName) const
     {
-        return QDir().mkpath(mudlet::getMudletPath(enums::profileHomePath, profileName)) && mudlet::self()->writeProfileData(profileName, qsl("url"), mLocalhost).first
+        return QDir().mkpath(MudletPaths::getMudletPath(enums::profileHomePath, profileName)) && mudlet::self()->writeProfileData(profileName, qsl("url"), mLocalhost).first
                && mudlet::self()->writeProfileData(profileName, qsl("port"), mPort).first;
     }
 
@@ -297,7 +298,7 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         // Written before init(), which is where a config with no keys at all
         // gets stamped as a first launch. A settings file that already holds
         // something is how mudletUsedBefore() recognises an existing player, so
@@ -336,7 +337,7 @@ private slots:
 
     void test_loadProfileRefusesAProfileThatDoesNotExist()
     {
-        QVERIFY2(!QDir(mudlet::getMudletPath(enums::profileHomePath, mAbsentProfile)).exists(), "the profile this test needs to be absent exists");
+        QVERIFY2(!QDir(MudletPaths::getMudletPath(enums::profileHomePath, mAbsentProfile)).exists(), "the profile this test needs to be absent exists");
 
         const LuaOutcome outcome = callLua(mpFirstHost, qsl("loadProfile('%1')").arg(mAbsentProfile));
 

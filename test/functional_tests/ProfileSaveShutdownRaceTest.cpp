@@ -44,6 +44,7 @@
 #include <QTemporaryDir>
 #include <chrono>
 
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -92,7 +93,7 @@ private:
 
     static void deleteProfileDirectory(const QString& profileName)
     {
-        QDir dir(mudlet::getMudletPath(enums::profileHomePath, profileName));
+        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, profileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }
@@ -103,7 +104,7 @@ private:
     // they were taken, so the last in name order is the newest.
     static bool lastSavedProfileContains(const QString& profileName, const QString& needle)
     {
-        const QDir directory(mudlet::getMudletPath(enums::profileXmlFilesPath, profileName));
+        const QDir directory(MudletPaths::getMudletPath(enums::profileXmlFilesPath, profileName));
         const QStringList saved = directory.entryList(QStringList{qsl("*.xml")}, QDir::Files, QDir::Name);
         if (saved.isEmpty()) {
             return false;

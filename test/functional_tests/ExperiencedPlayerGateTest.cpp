@@ -34,6 +34,7 @@
 #include <QtTest/QtTest>
 #include <QTimeZone>
 
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "MudletInstanceCoordinator.h"
 #include "mudlet.h"
@@ -292,9 +293,10 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), configDir);
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), configDir);
         QVERIFY2(mudlet::getQSettings()->allKeys().isEmpty(), "a fresh config dir must start out with an empty Mudlet.ini - something wrote settings before init()");
-        QVERIFY2(QDir(mudlet::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot).isEmpty(), "the opt-in profiles/ dir has to be empty, or this is not a fresh install");
+        QVERIFY2(QDir(MudletPaths::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot).isEmpty(),
+                 "the opt-in profiles/ dir has to be empty, or this is not a fresh install");
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
 
         mudlet::self()->init();
@@ -315,7 +317,7 @@ private slots:
         auto* settings = mudlet::getQSettings();
         QVERIFY(settings);
         settings->remove(mKey);
-        QVERIFY(!makeProfile(mudlet::getMudletPath(enums::mainPath), qsl("Achaea")).isEmpty());
+        QVERIFY(!makeProfile(MudletPaths::getMudletPath(enums::mainPath), qsl("Achaea")).isEmpty());
 
         QVERIFY2(mudlet::self()->experiencedMudletPlayer(), "a profile with no recorded first launch must read as an experienced player");
     }
