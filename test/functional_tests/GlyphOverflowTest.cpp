@@ -382,7 +382,7 @@ private slots:
         Host* host = startOfflineProfile();
         QVERIFY2(host, "Could not start an offline profile");
         runLua(host, qsl("createMiniConsole('overflowMini', 0, 0, 800, 400)"));
-        auto* mini = host->mpConsole->mSubConsoleMap.value(qsl("overflowMini"));
+        auto* mini = host->mpConsole->subConsoleWidget(qsl("overflowMini"));
         QVERIFY2(mini, "The miniconsole was not created");
         TTextEdit* pane = mini->mUpperPane;
         QVERIFY2(pane, "The miniconsole has no pane");

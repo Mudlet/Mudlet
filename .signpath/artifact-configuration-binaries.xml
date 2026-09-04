@@ -1,18 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- MIRROR ONLY. The configuration SignPath actually applies is the one stored in
+     the SignPath web app against the 'binaries' artifact configuration slug; nothing
+     in CI uploads this file. Editing it here changes nothing until the portal is
+     updated to match. -->
 <!-- GitHub Actions packages artifacts as ZIP files, so zip-file is the root element -->
 <artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
   <zip-file>
-    <pe-file path="mudlet.exe">
+    <!-- The workflow stages everything under app/ because SignPath only documents
+         ** as matching subdirectories, so a bare **/*.dll may not reach the ZIP root.
+         min-matches is left at its default of 1 so an empty staging directory fails
+         the request instead of silently signing nothing. -->
+    <pe-file path="**/*.exe" max-matches="unbounded">
       <authenticode-sign/>
     </pe-file>
-    <!-- <pe-file path="MudletCrashReporter.exe">
+    <pe-file path="**/*.dll" max-matches="unbounded">
       <authenticode-sign/>
     </pe-file>
-    <pe-file path="crashpad_handler.exe">
-      <authenticode-sign/>
-    </pe-file>
-    <pe-file path="crashpad_wer.dll">
-      <authenticode-sign/>
-    </pe-file> -->
   </zip-file>
 </artifact-configuration>

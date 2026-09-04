@@ -26,12 +26,16 @@
 
 #include "utils.h"
 
+#include <QList>
+#include <QMap>
 #include <QMultiMap>
 #include <QPointer>
 #include <QSet>
 #include <QString>
 
 #include <list>
+#include <tuple>
+#include <vector>
 
 class Host;
 class TAlias;
@@ -72,6 +76,7 @@ public:
     QMultiMap<QString, TAlias*> mLookupTable;
     QSet<TAlias*> mCleanupSet;
     QList<TAlias*> uninstallList;
+    bool hasPendingDeletes() const { return !mCleanupSet.isEmpty() || !uninstallList.isEmpty(); }
 
 
 private:
