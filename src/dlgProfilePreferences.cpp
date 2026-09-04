@@ -42,6 +42,7 @@
 #include "TTimer.h"
 #include "TTrigger.h"
 #include "ctelnet.h"
+#include "discord.h"
 #include "dlgIRC.h"
 #include "dlgMapper.h"
 #include "dlgTriggerEditor.h"
@@ -4061,7 +4062,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         break;
     }
 
-    if (mudlet::self()->mDiscord.libraryLoaded()) {
+    if (Discord::self()->libraryLoaded()) {
         Host::DiscordOptionFlags const discordFlags = pHost->mDiscordAccessFlags;
         groupBox_discordPrivacy->show();
         mpCard_discord->show();
@@ -6795,7 +6796,7 @@ void dlgProfilePreferences::applyAll()
             const QString newDiscordUserName = lineEdit_discordUserName->text().trimmed().toLower();
             if (pHost->mRequiredDiscordUserName != newDiscordUserName) {
                 pHost->mRequiredDiscordUserName = newDiscordUserName;
-                pMudlet->mDiscord.UpdatePresence();
+                Discord::self()->UpdatePresence();
             }
         }
 
@@ -6933,7 +6934,7 @@ void dlgProfilePreferences::applyAll()
         pMudlet->setAppearance(static_cast<enums::Appearance>(comboBox_appearance->currentIndex()));
     }
 
-    pMudlet->mDiscord.UpdatePresence();
+    Discord::self()->UpdatePresence();
 
     emit signal_preferencesSaved();
 
@@ -7724,14 +7725,12 @@ void dlgProfilePreferences::generateDiscordTooltips()
         return;
     }
 
-    auto* mudlet = mudlet::self();
-
-    auto detail = mudlet->mDiscord.getDetailText(mpHost);
+    auto detail = Discord::self()->getDetailText(mpHost);
     if (!detail.isEmpty()) {
         detail = qsl("<br/>(\"%1\")").arg(detail);
     }
 
-    auto state = mudlet->mDiscord.getStateText(mpHost);
+    auto state = Discord::self()->getStateText(mpHost);
     if (!state.isEmpty()) {
         state = qsl("<br/>(\"%1\")").arg(state);
     }
