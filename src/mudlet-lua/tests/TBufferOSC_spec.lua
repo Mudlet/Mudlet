@@ -397,6 +397,49 @@ describe("Tests TBuffer OSC sequence handling", function()
       assert.are.same(foregroundOf("CSIBAD2", "plain"), foregroundOf("CSIBAD2", "after"))
     end)
 
+    -- A CSI carrying an "intermediate" byte (space, or one of "!\"#$%&'()*+,-./")
+    -- is one Mudlet does not act on: it consumes the parameters and the
+    -- intermediate byte and gives up, so the final byte after them is left over
+    -- and shows as text, which TBuffer.cpp calls a limitation rather than intent.
+    it("should consume the parameters of a sequence with an intermediate byte", function()
+      assert.is_true(feedTriggers("CSIINT1(\027[1 pX)CSIINT1\n"))
+      assert.equals("CSIINT1(pX)CSIINT1", findRecentLine("CSIINT1"))
+    end)
+
+    -- The only case where the intermediate byte is also the last byte, so the
+    -- only one holding the bounds check on the look ahead for the final byte.
+    it("should consume an intermediate byte that is the last byte of the data", function()
+      assert.is_true(feedTriggers("CSIINT2(\027[1 "))
+      assert.is_true(feedTriggers("Y)CSIINT2\n"))
+      assert.equals("CSIINT2(Y)CSIINT2", findRecentLine("CSIINT2"))
+    end)
+
+    -- MAX_CSI_SEQUENCE_LENGTH in TBuffer.cpp: past it the parameter string is
+    -- thrown away rather than buffered without bound while a server that never
+    -- sends a final byte keeps feeding parameter bytes.
+    local lengthCap = 4096
+
+    -- no-op parameters padding a green one out to the given parameter string
+    -- length, so a discard and a parse can be told apart by the colour - either
+    -- way nothing of the sequence reaches the screen
+    local function paddedGreen(length)
+      return string.rep("0;", (length - 2) / 2) .. "32"
+    end
+
+    it("should still act on a parameter string just under the length cap", function()
+      assert.is_true(feedTriggers("\027[0mCSICAP1(\027[" .. paddedGreen(lengthCap - 2) .. "mgreen\027[0m)CSICAP1\n"))
+      assert.equals("CSICAP1(green)CSICAP1", findRecentLine("CSICAP1"))
+      assert.is_true(feedTriggers("\027[0mCSICAP2(green)CSICAP2\n"))
+      assert.are_not.same(foregroundOf("CSICAP1", "green"), foregroundOf("CSICAP2", "green"))
+    end)
+
+    it("should discard a parameter string that runs past the length cap", function()
+      assert.is_true(feedTriggers("\027[0mCSICAP3(\027[" .. paddedGreen(lengthCap + 2) .. "mgreen\027[0m)CSICAP3\n"))
+      assert.equals("CSICAP3(green)CSICAP3", findRecentLine("CSICAP3"))
+      assert.is_true(feedTriggers("\027[0mCSICAP4(green)CSICAP4\n"))
+      assert.are.same(foregroundOf("CSICAP3", "green"), foregroundOf("CSICAP4", "green"))
+    end)
+
   end)
 
   -- A line written through TBuffer::appendLine() that holds the documentation

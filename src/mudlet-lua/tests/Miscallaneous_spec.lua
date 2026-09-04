@@ -913,6 +913,61 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           assert.is_true(contains(contents, getProfileName()), "the HTML log title does not name the profile")
           assert.is_true(contains(contents, "mudlet-spec-html-logged-line"), "the console output did not reach the HTML log")
         end)
+
+        it("marks the text up with the colours and attributes it carries", function()
+          local logPath
+          local htmlLogging = getConfig("logInHTML")
+          finally(function()
+            startLogging(false)
+            setConfig("logInHTML", htmlLogging)
+            if logPath then
+              os.remove(logPath)
+            end
+          end)
+          setConfig("logInHTML", true)
+
+          logPath = select(3, startLogging(true))
+
+          feedTelnet("\27[0m\27[30;47mSpecHtmlPlain\27[0m\n")
+          feedTelnet("\27[0m\27[7;30;47mSpecHtmlReverse\27[0m\n")
+          feedTelnet("\27[0m\27[1;3mSpecHtmlBoldItalic\27[0m\n")
+          feedTelnet("\27[0m\27[4;9;53mSpecHtmlDecorated\27[0m\n")
+          echo("SpecHtmlAngles a<b>c\n")
+          -- a received line is only written once the next one commits
+          feedTelnet("SpecHtmlFlush\n")
+          startLogging(false)
+
+          local contents = readFile(logPath)
+          assert.is_string(contents, "the HTML log file that was closed is not readable")
+
+          -- the style of the span that the marker's own text sits in
+          local function styleOf(marker)
+            local at = contents:find(marker, 1, true)
+            assert.is_truthy(at, marker .. " never reached the HTML log")
+            return contents:sub(1, at - 1):match(".*<span([^>]*)>")
+          end
+
+          local function coloursOf(style)
+            local fr, fg, fb, br, bg, bb = style:match("color: rgb%((%d+),(%d+),(%d+)%); background: rgb%((%d+),(%d+),(%d+)%)")
+            assert.is_truthy(fr, "no foreground and background pair in " .. tostring(style))
+            return table.concat({fr, fg, fb}, ","), table.concat({br, bg, bb}, ",")
+          end
+
+          local plainFg, plainBg = coloursOf(styleOf("SpecHtmlPlain"))
+          local reverseFg, reverseBg = coloursOf(styleOf("SpecHtmlReverse"))
+          assert.are_not.equal(plainFg, plainBg, "the precondition failed - this needs two different colours to tell a swap from a no-op")
+          assert.equal(plainBg, reverseFg, "the reverse attribute did not put the background colour in front")
+          assert.equal(plainFg, reverseBg, "the reverse attribute did not put the foreground colour behind")
+
+          local boldItalic = styleOf("SpecHtmlBoldItalic")
+          assert.is_true(contains(boldItalic, "font-weight: bold;"), boldItalic)
+          assert.is_true(contains(boldItalic, "font-style: italic;"), boldItalic)
+
+          local decorated = styleOf("SpecHtmlDecorated")
+          assert.is_true(contains(decorated, "text-decoration: underline line-through overline;"), decorated)
+
+          assert.is_true(contains(contents, "SpecHtmlAngles a&lt;b&gt;c"), "the angle brackets in the logged text were not escaped")
+        end)
       end)
 
       -- A received line is held back from the log until the next one commits.
