@@ -1,5 +1,10 @@
 include(${CMAKE_SOURCE_DIR}/3rdparty/cmake-scripts/sanitizers.cmake)
 
+if(DEFINED SANITIZERS_SELECTED)
+    # We have already been run once this run, so skip doing it again
+    return
+endif()
+
 if(DEFINED ENV{MUDLET_SANITIZERS} AND NOT "$ENV{MUDLET_SANITIZERS}" STREQUAL "")
 
     # The available sanitizers are OS dependent - we ought to account for that:
