@@ -66,7 +66,7 @@ ctest --preset macos-debug            # run the test suite
 | `linux-lowspec` | Linux | No sanitizers, no updater, no 3D mapper, 2 jobs — Raspberry Pi and similar |
 | `<platform>-release` | macOS / Linux / Windows | Release build, no sanitizers - the flags CI ships to players |
 
-Every configure preset has a matching build and test preset of the same name, and all three are
+Every developer preset has a matching build and test preset of the same name, and all three are
 conditioned on the host system — so `cmake --list-presets` on macOS will not offer `linux-debug`,
 and `ctest --preset X` always runs against the tree that `cmake --build --preset X` produced.
 
@@ -74,12 +74,25 @@ The plain `<platform>-debug` presets build into `build/`. Every variant builds i
 `build-<preset-name>/` instead, so an AddressSanitizer tree and a sanitizer-free tree can coexist
 without forcing each other to rebuild. The `/build*` entry in `.gitignore` covers all of them.
 
+### Reproducing what CI configures
+
+`ci-linux`, `ci-macos`, `ci-windows` and `ci-codeql` are the presets the workflows themselves
+configure with, so `cmake --preset ci-linux` reproduces a CI build rather than approximating one.
+They take `CMAKE_BUILD_TYPE`, `USE_SANITIZER`, `WITH_SENTRY`, `SENTRY_DSN` and
+`SENTRY_SEND_DEBUG` from the environment, since a run varies those by tag and by matrix entry;
+leaving them unset gives what a pull request build gets. `ci-windows` builds into
+`build-$MSYSTEM/`, but the other three build into `../b/ninja` — beside the checkout, not inside
+it, which is where the workflows' ctest and packaging steps look — so reach for them to
+investigate a CI failure, not for day-to-day work. They have no test presets: the workflows call
+`ctest` themselves, with per-platform labels and environment.
+
 ### When to use a release preset
 
 Reach for `<platform>-release` when the *speed and size* of the binary are what is being measured:
 performance work, benchmarking, or reproducing something a player reports that a Debug build may
 not show. It sets `CMAKE_BUILD_TYPE=Release` and clears `USE_SANITIZER`, which is what
-`.github/workflows/build-mudlet.yml` passes on a `Mudlet-*` tag.
+`.github/workflows/build-mudlet.yml` hands the `ci-linux` and `ci-macos` presets on a
+`Mudlet-*` tag.
 `CI/build-mudlet-for-windows.sh` builds Release on every Windows run and has no sanitizer to
 clear. A `linux-debug` binary is unoptimised and close to seven times the size - 297MB against
 43MB - so timings taken on one say little about the shipped client.

@@ -58,6 +58,16 @@ so there is no `-nosan` variant. `windows-release` reads `MSYSTEM_PREFIX` the sa
 `CMAKE_BUILD_TYPE=Release` to match `CI/build-mudlet-for-windows.sh` - which builds Release on
 every Windows run - and builds into `build-windows-release/`.
 
+## Reproducing a CI build
+
+`CMakePresets.json` also carries the presets CI configures with — `ci-linux`, `ci-macos`,
+`ci-windows` and `ci-codeql` — so a build that fails only on a runner can be reproduced with
+`cmake --preset ci-linux` instead of transcribing flags out of the workflow. The values a run
+varies by tag or matrix entry (`CMAKE_BUILD_TYPE`, `USE_SANITIZER`, `WITH_SENTRY`, `SENTRY_DSN`,
+`SENTRY_SEND_DEBUG`) come from the environment; unset, they give what a pull request build gets.
+These presets build outside the checkout, into `../b/ninja`, because that is where the workflows'
+ctest and packaging steps look — `ci-windows` is the exception and uses `build-$MSYSTEM/`.
+
 ## Sanitizers and static analysis
 
 Sanitizers are enabled on every non-Windows build; `USE_SANITIZER` defaults to `address`, and a

@@ -362,23 +362,19 @@ jobs:
         key: sentry-${{ runner.os }}-${{ runner.arch }}-${{ steps.sentry-hash.outputs.SENTRY_HASH }}
 
     - name: Build Mudlet
-      uses: lukka/run-cmake@v3
+      uses: lukka/run-cmake@v10.9
       with:
-        cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
-        cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
-        buildDirectory: '${{runner.workspace}}/b/ninja'
-        cmakeAppendedArgs: >-
-          -G Ninja
-          -DCMAKE_BUILD_TYPE=${{ startsWith(github.ref, 'refs/tags/Mudlet-') && 'Release' || '' }}
-          -DCMAKE_PREFIX_PATH=${{ env.CMAKE_PREFIX_PATH != '' && env.CMAKE_PREFIX_PATH || (env.QT_PREFIX != '' && env.QT_PREFIX || env.MINGW_BASE_DIR) }}
-          -DUSE_SANITIZER=${{ matrix.enable_asan == 'true' && !startsWith(github.ref, 'refs/tags/Mudlet-') && 'Address' || '' }}
-          -DUSE_ALTERNATE_LINKER=${{ runner.os == 'Linux' && 'mold' || '' }}
-          ${{ runner.os == 'macOS' && format('-DLUA_INCLUDE_DIR={0}/.lua/include -DLUA_LIBRARY={0}/.lua/lib/liblua.a', github.workspace) || '' }}
-          -DWITH_SENTRY=ON
-          -DSENTRY_SEND_DEBUG=${{ (startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true') && '1' || '0' }}
-          -DSENTRY_DSN=${{ secrets.SENTRY_DSN }}
+        configurePreset: ${{ runner.os == 'macOS' && 'ci-macos' || 'ci-linux' }}
+        buildPreset: ${{ runner.os == 'macOS' && 'ci-macos' || 'ci-linux' }}
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
+        # The run-varying half of the ci-linux/ci-macos presets - everything else
+        # about the configuration lives in CMakePresets.json
+        CMAKE_BUILD_TYPE: ${{ startsWith(github.ref, 'refs/tags/Mudlet-') && 'Release' || '' }}
+        USE_SANITIZER: ${{ matrix.enable_asan == 'true' && !startsWith(github.ref, 'refs/tags/Mudlet-') && 'Address' || '' }}
+        WITH_SENTRY: 'ON'
+        SENTRY_SEND_DEBUG: ${{ (startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true') && '1' || '0' }}
+        SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         MUDLET_SANITIZERS: ${{ github.event_name == 'pull_request' && 'address' || '' }}
         SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
