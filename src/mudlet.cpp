@@ -3674,9 +3674,7 @@ bool mudlet::saveWindowLayout()
 
         const QByteArray layoutData = saveState();
         QDataStream ofs(&layoutFile);
-        if (scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            ofs.setVersion(scmQDataStreamFormat_5_12);
-        }
+        ofs.setVersion(QDataStream::Qt_5_12);
         ofs << layoutData;
         if (!layoutFile.commit()) {
             qDebug() << "mudlet::saveWindowLayout: error saving window layout: " << layoutFile.errorString();
@@ -3710,9 +3708,7 @@ bool mudlet::loadWindowLayout()
 
             QByteArray layoutData;
             QDataStream ifs(&layoutFile);
-            if (scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-                ifs.setVersion(scmQDataStreamFormat_5_12);
-            }
+            ifs.setVersion(QDataStream::Qt_5_12);
             ifs >> layoutData;
             layoutFile.close();
 
@@ -3750,9 +3746,7 @@ bool mudlet::saveFloatingDockGeometries()
     }
 
     QDataStream ofs(&geoFile);
-    if (scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-        ofs.setVersion(scmQDataStreamFormat_5_12);
-    }
+    ofs.setVersion(QDataStream::Qt_5_12);
 
     QMap<QString, QByteArray> geometries;
     for (auto pHost : mHostManager) {
@@ -3788,9 +3782,7 @@ void mudlet::restoreFloatingDockGeometries()
     }
 
     QDataStream ifs(&geoFile);
-    if (scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-        ifs.setVersion(scmQDataStreamFormat_5_12);
-    }
+    ifs.setVersion(QDataStream::Qt_5_12);
 
     QMap<QString, QByteArray> geometries;
     ifs >> geometries;
@@ -5571,9 +5563,7 @@ QString mudlet::readProfileData(const QString& profile, const QString& item)
     }
 
     QDataStream ifs(&file);
-    if (scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-        ifs.setVersion(scmQDataStreamFormat_5_12);
-    }
+    ifs.setVersion(QDataStream::Qt_5_12);
     QString ret;
 
     ifs >> ret;
@@ -5594,6 +5584,7 @@ QPair<bool, QString> mudlet::writeProfileData(const QString& profile, const QStr
     QSaveFile file(getMudletPath(enums::profileDataItemPath, profile, item));
     if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         QDataStream ofs(&file);
+        ofs.setVersion(QDataStream::Qt_5_12);
         ofs << what;
         if (!file.commit()) {
             qDebug().noquote().nospace() << "mudlet::writeProfileData(...) ERROR - writing profile: \"" << profile << "\", item: \"" << item << "\", reason: \"" << file.errorString() << "\".";

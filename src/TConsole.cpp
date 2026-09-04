@@ -1100,9 +1100,7 @@ void TConsole::slot_toggleReplayRecording()
             printSystemMessage(tr("Failed to open replay recording file for writing.") % QChar::LineFeed);
             return;
         }
-        if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            mReplayStream.setVersion(mudlet::scmQDataStreamFormat_5_12);
-        }
+        mReplayStream.setVersion(QDataStream::Qt_5_12);
         mReplayStream.setDevice(&mReplayFile);
         mpHost->mTelnet.recordReplay();
         printSystemMessage(tr("Replay recording has started. File: %1").arg(mReplayFile.fileName()) % QChar::LineFeed);
