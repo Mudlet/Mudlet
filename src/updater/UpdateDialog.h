@@ -24,11 +24,13 @@
 #include "Release.h"
 
 #include <QDialog>
+#include <QHash>
 #include <QVariant>
 
 #include <memory>
 
 class QAbstractButton;
+class QLabel;
 class QPixmap;
 class QSettings;
 
@@ -88,6 +90,7 @@ private:
 
     QSettings* mSettings;
     void replaceAppVars(QString& string);
+    void applyAppVars(QLabel* label);
     QString generateChangelogDocument();
     QString generateCompareLink() const;
 
@@ -116,6 +119,11 @@ private:
     QString mMinVersion;
     QString mMaxVersion;
     QString mPreviousVersion;
+    // The %APPNAME%/%UPDATE_VERSION%/%CURRENT_VERSION% text update_dialog.ui
+    // starts out with, kept because substituting into the widget itself would
+    // consume the placeholders and freeze what the next check can say
+    QHash<QLabel*, QString> mLabelTemplates;
+    QString mWindowTitleTemplate;
 
     static void setSettingsValue(const QString& key, const QVariant& value, QSettings* settings);
     static QVariant settingsValue(const QString& key, const QVariant& defaultValue, QSettings* settings);

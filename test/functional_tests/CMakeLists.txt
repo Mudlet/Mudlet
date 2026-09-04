@@ -430,9 +430,10 @@ set_tests_properties(ProfileLifecycleTest PROPERTIES TIMEOUT 300)
 # finish, because the assertion message is the whole point of the file. Its
 # nominal budget looks like ~120s of QTRY timeouts, but QTRY waits three times
 # what it is told: once to poll, then twice more to build the "would have passed
-# after N ms" debug message. Measured with every wire it covers cut, the file
-# takes 263s, so anything below that turns a readable failure into a silent
-# ctest kill. Guarded, because without the updater the test does not exist and
+# after N ms" debug message. Measured at 263s with every wire cut, and the five
+# cases added since each stop at their first blocking wait for at most 220s
+# more, so anything below that turns a readable failure into a silent ctest
+# kill. Guarded, because without the updater the test does not exist and
 # naming a test that does not exist is a hard CMake error
 if(USE_UPDATER)
     set_tests_properties(FeedChecksumRaceTest PROPERTIES TIMEOUT 600)
