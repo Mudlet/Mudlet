@@ -343,7 +343,9 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
             mRegexJitCompiled.push_back(false);
 
             if (patternKinds.at(i) == REGEX_SUBSTRING) {
-                mSubstringPatterns.emplace_back(TSubstringPattern{std::make_unique<QStringMatcher>(patterns.at(i)), TBigramFilter::bitsFor(patterns.at(i))});
+                // Qt::CaseSensitive is the default, spelt out because bitsFor() summarises
+                // this same string case-sensitively: change one and the other has to follow
+                mSubstringPatterns.emplace_back(TSubstringPattern{std::make_unique<QStringMatcher>(patterns.at(i), Qt::CaseSensitive), TBigramFilter::bitsFor(patterns.at(i))});
             } else {
                 mSubstringPatterns.emplace_back();
             }
@@ -816,6 +818,10 @@ bool TTrigger::match_substring(const QString& haystack, const QString& needle, i
 {
     const TSubstringPattern& pattern = mSubstringPatterns[patternNumber];
     if (pLineBigrams && !pLineBigrams->couldContain(haystack, pattern.bigrams)) {
+        // A pattern that occurs in the line contributes only pairs the line already has, so
+        // it can never be dismissed - unless the filter and the matcher have stopped
+        // comparing the same way, which nothing else would notice
+        Q_ASSERT_X(pattern.matcher->indexIn(haystack) == -1, "TTrigger::match_substring", "the bigram filter dismissed a pattern the matcher does find in the line");
         return false;
     }
     const int where = pattern.matcher->indexIn(haystack);
