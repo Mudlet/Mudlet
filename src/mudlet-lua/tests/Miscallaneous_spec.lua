@@ -1680,6 +1680,156 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       end)
     end)
 
+    describe("Tests the functionality of ancestors", function()
+      -- Nesting needs permanent items, which Lua cannot delete again, so each
+      -- item type gets one group and one child, built on first use and shared
+      -- by the specs below.
+      local nestedItems = {}
+
+      local createChild = {
+        timer = function(name, parent) return permTimer(name, parent, 0, "") end,
+        alias = function(name, parent) return permAlias(name, parent, "^mudletSpecAncestorNeverTyped$", "") end,
+        keybind = function(name, parent) return permKey(name, parent, mudlet.key.F12, "") end,
+        script = function(name, parent) return permScript(name, parent, "") end,
+      }
+      -- permGroup spells the key type "key" where ancestors() spells it "keybind"
+      local groupType = {timer = "timer", alias = "alias", keybind = "key", script = "script"}
+
+      local function nested(itemType)
+        if not nestedItems[itemType] then
+          local groupName = "mudletSpecAncestorGroup" .. itemType
+          assert.is_true(permGroup(groupName, groupType[itemType]), "could not create the " .. itemType .. " group")
+          local id = createChild[itemType]("mudletSpecAncestorChild" .. itemType, groupName)
+          assert.is_true(type(id) == "number" and id > 0, "could not nest a " .. itemType .. " in " .. groupName)
+          nestedItems[itemType] = {id = id, group = groupName}
+        end
+        return nestedItems[itemType].id, nestedItems[itemType].group
+      end
+
+      local function assertNamesTheGroup(list, groupName)
+        assert.is_table(list)
+        assert.equals(1, #list, "expected exactly the one group the item was created in")
+        assert.equals(groupName, list[1].name)
+        assert.equals("group", list[1].node)
+        assert.is_number(list[1].id)
+        assert.is_boolean(list[1].isActive)
+      end
+
+      it("raises a Lua error when called with no arguments", function()
+        assertArgError(function() ancestors() end, "ancestors: bad argument #1 type")
+      end)
+
+      it("raises a Lua error when given no item type", function()
+        assertArgError(function() ancestors(1) end, "ancestors: bad argument #2 type")
+      end)
+
+      it("returns nil+msg for a negative item ID", function()
+        local ok, err = ancestors(-1, "alias")
+        assert.is_nil(ok)
+        assert.is_true(contains(err, "does not seem to be parseable as a positive integer"), tostring(err))
+      end)
+
+      it("returns nil+msg for an item that does not exist", function()
+        local ok, err = ancestors(9999999, "trigger")
+        assert.is_nil(ok)
+        assert.is_true(contains(err, "does not exist"), tostring(err))
+      end)
+
+      it("returns nil+msg for an item type it does not know", function()
+        local ok, err = ancestors(1, "sandwich")
+        assert.is_nil(ok)
+        assert.is_true(contains(err, "invalid item type 'sandwich' given"), tostring(err))
+      end)
+
+      it("returns an empty list for a temporary item, which has no ancestors", function()
+        local triggerId = tempTrigger("mudletSpecAncestorsTrigger", function() end)
+        local timerId = tempTimer(60, function() end)
+        finally(function()
+          killTrigger(tostring(triggerId))
+          killTimer(timerId)
+        end)
+
+        assert.same({}, ancestors(triggerId, "trigger"))
+        assert.same({}, ancestors(timerId, "timer"))
+      end)
+
+      it("names every group between a nested trigger and the top, innermost first", function()
+        -- the run-tests package (the one running these specs) is the only
+        -- hierarchy a spec can count on being there
+        local nestedTriggers = findItems("Trigger", "trigger")
+        assert.equals(1, #nestedTriggers, "expected exactly the run-tests package's nested 'Trigger'")
+        local list = ancestors(nestedTriggers[1], "trigger")
+
+        assert.is_true(#list >= 3, "expected at least the three groups the trigger is nested in, got " .. #list)
+        assert.equals("Not Filter", list[1].name)
+        assert.equals("Filter", list[2].name)
+        assert.equals("Test selectCaptureGroup with nested hierarchy", list[3].name)
+        for index, ancestor in ipairs(list) do
+          assert.is_number(ancestor.id)
+          assert.is_true(ancestor.node == "group" or ancestor.node == "package",
+            "ancestor " .. index .. " of a trigger should be a group or a package, got " .. tostring(ancestor.node))
+        end
+      end)
+
+      it("reports each ancestor's own active state, not the item's", function()
+        local nestedTriggers = findItems("Trigger", "trigger")
+        assert.equals(1, #nestedTriggers, "expected exactly the run-tests package's nested 'Trigger'")
+        local childId = nestedTriggers[1]
+        finally(function() enableTrigger("Not Filter") end)
+
+        assert.is_true(ancestors(childId, "trigger")[1].isActive)
+
+        assert.is_true(disableTrigger("Not Filter"))
+        local list = ancestors(childId, "trigger")
+        assert.is_false(list[1].isActive, "the disabled group still reported itself as active")
+        assert.is_true(list[2].isActive, "disabling one group should not touch the group above it")
+      end)
+
+      it("names the group a permanent timer sits in", function()
+        local id, groupName = nested("timer")
+        assertNamesTheGroup(ancestors(id, "timer"), groupName)
+      end)
+
+      it("names the group a permanent alias sits in", function()
+        local id, groupName = nested("alias")
+        assertNamesTheGroup(ancestors(id, "alias"), groupName)
+      end)
+
+      it("names the group a permanent keybind sits in", function()
+        local id, groupName = nested("keybind")
+        assertNamesTheGroup(ancestors(id, "keybind"), groupName)
+      end)
+
+      it("names the group a permanent script sits in", function()
+        local id, groupName = nested("script")
+        assertNamesTheGroup(ancestors(id, "script"), groupName)
+      end)
+
+      it("names the toolbar a button sits on", function()
+        local toolbar = "mudletSpecAncestorToolbar"
+        -- Lua cannot delete a toolbar again, and one left docked keeps its
+        -- share of the main window's height for the rest of the run - which is
+        -- enough to stop the window resize specs elsewhere from having room to
+        -- measure. Hiding it hands that height back.
+        finally(function() hideToolBar(toolbar) end)
+        if exists(toolbar, "button") == 0 then
+          assert.is_true(tempButtonToolbar(toolbar, 0, 0) > 0)
+        end
+        local buttonId = tempButton(toolbar, "mudletSpecAncestorButton", 0)
+        assert.is_true(type(buttonId) == "number" and buttonId > 0, "could not put a button on " .. toolbar)
+
+        assertNamesTheGroup(ancestors(buttonId, "button"), toolbar)
+      end)
+
+      it("is case insensitive about the item type", function()
+        local id, groupName = nested("timer")
+        -- the group is named again here rather than only comparing the two
+        -- calls: two empty lists match each other just as well
+        assertNamesTheGroup(ancestors(id, "TIMER"), groupName)
+        assert.same(ancestors(id, "timer"), ancestors(id, "TIMER"))
+      end)
+    end)
+
     describe("Tests the functionality of getProfiles", function()
       it("lists this profile as loaded, with what it was set up with", function()
         local profiles = getProfiles()
