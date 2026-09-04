@@ -1750,51 +1750,49 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
 
 void TTextEdit::updateTextCursor(const QMouseEvent* event, int lineIndex, int tCharIndex, bool isOutOfbounds)
 {
-    if (lineIndex < static_cast<int>(mpBuffer->buffer.size())) {
-        if (tCharIndex < static_cast<int>(mpBuffer->buffer[lineIndex].size())) {
-            if (mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex() && !isOutOfbounds) {
-                int linkIndex = mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex();
+    const int lineCount = static_cast<int>(mpBuffer->buffer.size());
+    const int charCount = lineIndex < lineCount ? static_cast<int>(mpBuffer->buffer.at(lineIndex).size()) : 0;
+    if (lineIndex < lineCount && tCharIndex < charCount && mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex() && !isOutOfbounds) {
+        int linkIndex = mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex();
 
-                setCursor(Qt::PointingHandCursor);
-                QStringList tooltip = mpBuffer->mLinkStore.getHints(linkIndex);
-                QStringList commands = mpBuffer->mLinkStore.getLinks(linkIndex);
-                // If a special tooltip hint was given, use that one.
-                // The server chooses this text and QToolTip renders anything
-                // Qt::mightBeRichText() accepts as HTML, so escape it and wrap it
-                // in an explicit document rather than letting that guess decide
-                // whether the markup is live. white-space:pre keeps the line
-                // breaks the plain-text path used to give.
-                // An empty string is how QToolTip is told to hide, so it has to
-                // stay empty rather than becoming an empty document.
-                const QString tooltipText = tooltip.size() > commands.size() ? tooltip[0] : tooltip.join(QChar::LineFeed);
-                const QString tooltipMarkup = tooltipText.isEmpty() ? QString() : qsl("<html><body style='white-space:pre'>%1</body></html>").arg(tooltipText.toHtmlEscaped());
-                QToolTip::showText(event->globalPosition().toPoint(), tooltipMarkup);
+        setCursor(Qt::PointingHandCursor);
+        QStringList tooltip = mpBuffer->mLinkStore.getHints(linkIndex);
+        QStringList commands = mpBuffer->mLinkStore.getLinks(linkIndex);
+        // If a special tooltip hint was given, use that one.
+        // The server chooses this text and QToolTip renders anything
+        // Qt::mightBeRichText() accepts as HTML, so escape it and wrap it
+        // in an explicit document rather than letting that guess decide
+        // whether the markup is live. white-space:pre keeps the line
+        // breaks the plain-text path used to give.
+        // An empty string is how QToolTip is told to hide, so it has to
+        // stay empty rather than becoming an empty document.
+        const QString tooltipText = tooltip.size() > commands.size() ? tooltip[0] : tooltip.join(QChar::LineFeed);
+        const QString tooltipMarkup = tooltipText.isEmpty() ? QString() : qsl("<html><body style='white-space:pre'>%1</body></html>").arg(tooltipText.toHtmlEscaped());
+        QToolTip::showText(event->globalPosition().toPoint(), tooltipMarkup);
 
-                // Update hover state for CSS pseudo-class support
-                // Don't set hover state for disabled links - they should stay disabled
-                // Also don't set hover if this link was just clicked - wait for mouse to leave first
-                if (mpBuffer->getHoveredLink() != linkIndex) {
-                    auto currentState = mpBuffer->getLinkState(linkIndex);
-                    if (currentState != Mudlet::HyperlinkStyling::StateDisabled && linkIndex != mpBuffer->getLastClickedLinkIndex()) {
-                        mpBuffer->setHoveredLink(linkIndex);
-                        forceUpdate(); // Trigger re-render with new hover state
-                    }
-                }
-            } else {
-                setCursor(Qt::IBeamCursor);
-                QToolTip::hideText();
-
-                // Clear hover state if we're not over a link
-                if (mpBuffer->getHoveredLink() != 0) {
-                    mpBuffer->setHoveredLink(0);
-                    forceUpdate(); // Trigger re-render
-                }
-
-                // Clear last clicked link when mouse leaves - allows hover to work again
-                if (mpBuffer->getLastClickedLinkIndex() != 0) {
-                    mpBuffer->clearLastClickedLinkIndex();
-                }
+        // Update hover state for CSS pseudo-class support
+        // Don't set hover state for disabled links - they should stay disabled
+        // Also don't set hover if this link was just clicked - wait for mouse to leave first
+        if (mpBuffer->getHoveredLink() != linkIndex) {
+            auto currentState = mpBuffer->getLinkState(linkIndex);
+            if (currentState != Mudlet::HyperlinkStyling::StateDisabled && linkIndex != mpBuffer->getLastClickedLinkIndex()) {
+                mpBuffer->setHoveredLink(linkIndex);
+                forceUpdate(); // Trigger re-render with new hover state
             }
+        }
+    } else {
+        setCursor(Qt::IBeamCursor);
+        QToolTip::hideText();
+
+        // Clear hover state if we're not over a link
+        if (mpBuffer->getHoveredLink() != 0) {
+            mpBuffer->setHoveredLink(0);
+            forceUpdate(); // Trigger re-render
+        }
+
+        // Clear last clicked link when mouse leaves - allows hover to work again
+        if (mpBuffer->getLastClickedLinkIndex() != 0) {
+            mpBuffer->clearLastClickedLinkIndex();
         }
     }
 }
