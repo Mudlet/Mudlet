@@ -1942,8 +1942,9 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
             }
             lineBuffer.back().append(QString());
         }
-        // Console output from a trigger replaces the characters of the line
-        // that same trigger pass is still running over:
+        // A commit re-entered from inside a pass - feedTriggers(), MXP - fills
+        // the empty last line, which can be the one the enclosing pass is still
+        // running over:
         materialisePreTriggerPassLine(static_cast<int>(buffer.size()) - 1);
         buffer.back() = std::move(chars);
         timeBuffer.back() = currentTimeStamp();
@@ -1961,9 +1962,9 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
         // originals somewhere. materialisePreTriggerPassLine() copies them out
         // when something first overwrites them rather than up front, because
         // most lines are never touched and the copy is 44 bytes a character.
-        // A nested pass is about to take the pass state over, so the enclosing
-        // line has to be copied out now - a recolor made from inside that pass
-        // would aim the barrier at the nested line instead:
+        // Any pass already running is about to lose the pass state to this one,
+        // so its line has to be copied out now - a recolor made from inside this
+        // pass would aim the barrier at this line instead:
         materialisePreTriggerPassLine(mPreTriggerPassLineNumber);
         // The save/restore gives each nested pass its own snapshot; the spare
         // member keeps that snapshot's allocation in circulation instead of one
@@ -2286,7 +2287,7 @@ const std::vector<TChar>* TBuffer::preTriggerPassLine(int lineNumber) const
 }
 
 // A structural edit to the trigger-pass line makes the edited text the new
-// baseline for color matching, as it was before the snapshot existed:
+// baseline for color matching:
 void TBuffer::syncPreTriggerPassLine(int y)
 {
     if (y >= 0 && y == mPreTriggerPassLineNumber && y < static_cast<int>(buffer.size())) {
@@ -2295,8 +2296,6 @@ void TBuffer::syncPreTriggerPassLine(int y)
     }
 }
 
-// The write barrier: copies the colors as the game sent them out of the line at
-// the moment something first overwrites them, and not before:
 void TBuffer::materialisePreTriggerPassLine(int y)
 {
     if (!mPreTriggerPassSnapshotTaken && y >= 0 && y == mPreTriggerPassLineNumber && y < static_cast<int>(buffer.size())) {
@@ -5613,6 +5612,10 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
     if (static_cast<int>(buffer.size()) < startLine || startLine < 0) {
         return 0;
     }
+
+    // The Lua wrapLine() reaches here from inside a trigger pass, and rebuilding
+    // the line replaces the characters the pass is matching against:
+    materialisePreTriggerPassLine(startLine);
 
     // consider moving this upstream and returning an error if you try to set indentation higher than wrapWidth
     const int indent = (indentSize < maxWidth) ? indentSize : 0;

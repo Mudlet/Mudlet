@@ -586,8 +586,8 @@ private:
     // allocation instead of making a fresh one for each committed line:
     std::vector<TChar> mSpareTriggerPassLine;
     int mPreTriggerPassLineNumber = -1;
-    // False while nothing has overwritten the committed line yet, so the
-    // colors the game sent are still readable from the line itself:
+    // Meaningful only inside a trigger pass: false until something overwrites
+    // the committed line, while the game's colors are still readable from it:
     bool mPreTriggerPassSnapshotTaken = true;
     // A line that ended at the game's own wrap column (Host::mUndoServerWrap)
     // is held here instead of being committed, so its continuation can be

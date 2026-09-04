@@ -880,8 +880,8 @@ bool TTrigger::match_color_pattern(int line, int patternNumber, int posOffset, i
     std::vector<TChar>& bufferLine = consoleModel.buffer.buffer[line];
     const QString& lineBuffer = consoleModel.buffer.lineBuffer[line];
     // Match against the colors as they arrived from the game, not as already
-    // recolored by other triggers or scripts earlier in this trigger pass;
-    // text inserted mid-pass has no game original so it is read live:
+    // recolored by other triggers or scripts earlier in this trigger pass; with
+    // no snapshot taken, or past its end, the line itself still holds them:
     const std::vector<TChar>* pPassLine = consoleModel.buffer.preTriggerPassLine(line);
     // Filter ("only pass matches") parents hand children just the matched
     // capture, so restrict the scan to that window; for top-level triggers
