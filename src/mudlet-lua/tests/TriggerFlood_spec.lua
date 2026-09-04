@@ -10,9 +10,10 @@
 -- feed the same lines both ways and require the same firings.
 --
 -- The prescan needs at least two workers (MUDLET_MATCH_THREADS, default
--- min(4, cores / 2)), so on a machine with fewer than four cores there is
--- nothing here to test and these report as pending rather than passing on a
--- comparison that never happened.
+-- min(4, cores / 2)), and the counter that proves a burst reached it is only
+-- reported under MUDLET_TEST_MODE. Without either there is nothing here worth
+-- running, and these report as pending rather than passing on a comparison that
+-- never happened.
 describe("trigger matching under a flood", function()
 
     -- Enough pattern-bearing triggers to clear the prescan's threshold without
@@ -46,7 +47,11 @@ describe("trigger matching under a flood", function()
     -- about a comparison that never happened.
     local function itFlood(name, body)
         it(name, function()
-            if getProfileStats().triggers.prescanWorkers < 2 then
+            local workers = getProfileStats().triggers.prescanWorkers
+            if not workers then
+                pending("counting what reaches the prescan needs MUDLET_TEST_MODE")
+            end
+            if workers < 2 then
                 pending("this machine has too few cores to run the parallel prescan")
             end
             body()

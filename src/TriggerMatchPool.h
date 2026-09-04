@@ -102,7 +102,7 @@ private:
     quint64 mPrescanCount = 0;
     int mThreshold = 0;
     int mFloodChunkLines = 0;
-    long long mSpinBudget = 0;
+    qint64 mSpinBudget = 0;
     int mChunkSize = 0;
 };
 

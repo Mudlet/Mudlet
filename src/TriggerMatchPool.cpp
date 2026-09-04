@@ -120,7 +120,7 @@ void TriggerMatchPool::runChunks(int slot)
 void TriggerMatchPool::workerLoop(int slot, uint64_t startEpoch)
 {
     uint64_t seen = startEpoch;
-    long long idle = 0;
+    qint64 idle = 0;
     for (;;) {
         const uint64_t epoch = mEpoch.load(std::memory_order_acquire);
         if (epoch != seen) {
