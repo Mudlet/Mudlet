@@ -6,8 +6,7 @@
 Measures how many source files in the `mudlet_core` static-library target
 (`src/CMakeLists.txt`) still depend on Qt Widgets. Part of the libmudlet
 refactor (#8681, #9011): the goal is to drive this count to **0** so `mudlet_core`
-can build with Qt Widgets absent, after which this audit becomes an enforcing CI
-guard (`--enforce`).
+can build with Qt Widgets absent.
 
 A file is counted as depending on Qt Widgets if it either:
 

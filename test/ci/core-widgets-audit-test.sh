@@ -19,7 +19,9 @@
 # all of those as progress and then tells the engineer to bank the phantom win. So
 # this floors the denominator, floors the derived Qt sets, checks that every widget
 # class the record depends on is still visible, fails on stale-list drift, and
-# refuses to skip on CI.
+# refuses to skip on CI. Its own parsers get the same treatment, because a parser
+# that quietly stops understanding the report disarms whichever check it feeds while
+# the run stays green.
 
 set -uo pipefail
 
@@ -46,7 +48,7 @@ fail() {
 # Unchecked, a failed mktemp leaves WORK_DIR empty, every temp path below becomes
 # absolute at /, and the run dies with "/live-report.md: Permission denied" while
 # blaming the audit and the Qt install. set -e is deliberately off, so check it.
-WORK_DIR="$(mktemp -d)" || fail "could not create a temporary directory (is TMPDIR=${TMPDIR:-/tmp} writable?)"
+WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/core-widgets-audit-test.XXXXXX")" || fail "could not create a temporary directory (is TMPDIR=${TMPDIR:-/tmp} writable?)"
 if [ -z "${WORK_DIR}" ] || [ ! -d "${WORK_DIR}" ]; then
   fail "mktemp -d produced no usable directory (is TMPDIR=${TMPDIR:-/tmp} writable?)"
 fi
@@ -105,6 +107,14 @@ qt_include_complaint() {
 # when the passed-in value is rejected.
 find_qt_include() {
   local candidate label
+  # ctest passes MUDLET_QT_INCLUDE_DIR through unconditionally, so an empty one is
+  # test/CMakeLists.txt reporting that its own probe found no Qt include directory.
+  # That test property overrides whatever the caller exported, so telling the reader
+  # to set the variable would send them somewhere that cannot help; record the real
+  # state instead of letting the variable look merely unset.
+  if [ "${MUDLET_QT_INCLUDE_DIR+set}" = set ] && [ -z "${MUDLET_QT_INCLUDE_DIR}" ]; then
+    echo "MUDLET_QT_INCLUDE_DIR=<empty: test/CMakeLists.txt probed for a Qt headers dir and found none>" >> "${CANDIDATES}"
+  fi
   for label in MUDLET_QT_INCLUDE_DIR QT_INCLUDE_DIR; do
     candidate="${!label:-}"
     [ -n "${candidate}" ] || continue
@@ -137,9 +147,13 @@ if ! QT_INCLUDE="$(find_qt_include)"; then
   tried="$(sed 's/^/           /' "${CANDIDATES}")"
   [ -n "${tried}" ] || tried="           (nothing - no MUDLET_QT_INCLUDE_DIR, and no qtpaths/qmake on PATH)"
   skip_or_fail "no Qt headers with QtWidgets/, QtGui/ and QtCore/ found, so the Widgets audit cannot run.
-       Point at them with MUDLET_QT_INCLUDE_DIR=<dir containing QtWidgets/> to run this check.
        Tried:
 ${tried}
+       Under ctest the answer comes from the probe in test/CMakeLists.txt, which sets
+       MUDLET_QT_INCLUDE_DIR as a test property - that overrides anything exported into the shell, so
+       when the line above shows it empty the lever is that probe, not the environment. Teach it the
+       layout your Qt uses. Running this script by hand, MUDLET_QT_INCLUDE_DIR=<dir containing
+       QtWidgets/> is the lever.
        On a macOS framework build the headers are QtWidgets.framework/Headers, which is not this
        layout; the include dir Qt lays down beside the frameworks is the one to point at."
 fi
@@ -207,13 +221,84 @@ offending_files() {
   sed -n 's/^| `\([^`]*\)` | .*/\1/p' "$1"
 }
 
-# Every distinct widget class named in the report's reference column, which is what
-# the recorded count was actually built out of.
-referenced_classes() {
+# The reference column of the report's offending rows, one row per line. Split out
+# so the matched-row count is available on its own: a parser that stops matching
+# rows is the loudest symptom of a reformatted report.
+refs_column() {
   # shellcheck disable=SC2016 # the backticks are literal Markdown, not a subshell
-  sed -n 's/^| `[^`]*` | [0-9]* | [0-9]* | \(.*\) |$/\1/p' "$1" \
-    | tr ',' '\n' | sed 's/^[ \t]*//; s/[ \t]*$//' \
+  sed -n 's/^| `[^`]*` | [0-9]* | [0-9]* | \(.*\) |$/\1/p' "$1"
+}
+
+# Every distinct widget class named in that column, which is what the recorded count
+# was actually built out of. The trims use POSIX character classes rather than
+# [ \t]: inside a bracket expression a backslash is an ordinary character, so BSD
+# sed - macOS /usr/bin/sed - reads [ \t] as the set {space, backslash, t} and the
+# trailing trim strips a real "t" off QWidget, QLayout, QTextEdit and the 16 other
+# recorded class names that end in one.
+referenced_classes() {
+  refs_column "$1" \
+    | tr ',' '\n' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' \
     | grep -E '^Q[A-Z][A-Za-z0-9_]*$' | sort -u
+}
+
+# The same classes read a second, deliberately loose way: drop the File column, then
+# treat everything after it as tokens. This one does not care how many columns the
+# table has or how they are punctuated, so a disagreement with referenced_classes()
+# means the strict parser above only half-understands the table. That is the silent
+# half of the failure - a fifth column is swallowed by the greedy capture and the
+# last class of every row vanishes with exit 0 - which total loss, caught by grep's
+# no-match exit under pipefail, does not cover.
+referenced_classes_loose() {
+  # shellcheck disable=SC2016 # the backticks are literal Markdown, not a subshell
+  sed -n 's/^| `[^`]*` |//p' "$1" \
+    | sed 's/[^A-Za-z0-9_]/ /g' | tr ' ' '\n' \
+    | grep -E '^Q[A-Z][A-Za-z0-9_]*$' | sort -u
+}
+
+# The class-presence check is built entirely on these references, so a parse that
+# quietly shrinks is that defence quietly switching itself off. Prove the parse is
+# whole before anything leans on it: every offending row has at least one widget
+# reference, and the two readings above have to agree.
+read_refs() {
+  local report="$1" label="$2" rows="$3" remedy="$4" out="$5"
+  local loose="${out%.txt}-loose.txt"
+  local matched
+  matched="$(refs_column "${report}" | wc -l | tr -d ' ')"
+  if [ "${matched}" -ne "${rows}" ]; then
+    fail "the widget-class reference parser read ${matched} of the ${rows} offending rows in ${label}.
+       Every offending file has at least one widget reference, so a row it cannot read is a row whose
+       classes drop out of the class-presence check - the one thing that notices a Qt which dropped or
+       relocated a widget class.
+       ${remedy}"
+  fi
+  # Driving the offending count to 0 is the point of the whole refactor, and it is
+  # the one case where an empty reference set is the truth rather than a parser that
+  # stopped working. The row check above has already proved the count and the table
+  # agree, so there is nothing left to cross-check.
+  if [ "${rows}" -eq 0 ]; then
+    : > "${out}"
+    return 0
+  fi
+  if ! referenced_classes "${report}" > "${out}"; then
+    fail "read no widget-class references at all out of ${label}, so the class-presence check would run
+       on an empty set and pass on anything.
+       ${remedy}"
+  fi
+  if ! referenced_classes_loose "${report}" > "${loose}"; then
+    fail "the strict parser read widget-class references out of ${label} but the loose cross-check read
+       none, so the two disagree about the shape of the table itself.
+       ${remedy}"
+  fi
+  if ! cmp -s "${out}" "${loose}"; then
+    {
+      echo "FAIL: the two readings of the widget-class references in ${label} disagree, so the strict parser"
+      echo "      understands only part of the table and the class-presence check would run on a shrunken set."
+      echo "      Only the loose reading found:  $(comm -13 "${out}" "${loose}" | tr '\n' ' ')"
+      echo "      Only the strict reading found: $(comm -23 "${out}" "${loose}" | tr '\n' ' ')"
+      echo "      ${remedy}"
+    } >&2
+    exit 1
+  fi
 }
 
 offender_count() {
@@ -225,6 +310,26 @@ offender_count() {
 # offenders rather than fixing them.
 total_count() {
   sed -n 's/^| Source files in .mudlet_core. | \([0-9][0-9]*\) |.*/\1/p' "$1" | head -1
+}
+
+# True when $1 is the same Qt version as $2 or newer. Anything that is not a dotted
+# numeric on either side answers false, so an unrecognised version makes the caller
+# fall back to its lenient path rather than invent an ordering.
+qt_version_at_least() {
+  case "$1" in [0-9]*.[0-9]*) ;; *) return 1 ;; esac
+  case "$2" in [0-9]*.[0-9]*) ;; *) return 1 ;; esac
+  awk -v live="$1" -v recorded="$2" '
+    BEGIN {
+      n = split(live, a, ".")
+      m = split(recorded, b, ".")
+      for (i = 1; i <= 4; i++) {
+        x = (i <= n && a[i] ~ /^[0-9]+$/) ? a[i] + 0 : 0
+        y = (i <= m && b[i] ~ /^[0-9]+$/) ? b[i] + 0 : 0
+        if (x > y) exit 0
+        if (x < y) exit 1
+      }
+      exit 0
+    }'
 }
 
 # The measuring instrument itself.
@@ -281,6 +386,53 @@ LIVE_QTVER="$(qt_version_of "${LIVE_REPORT}")"
 LIVE_HDRS="$(header_set_of "${LIVE_REPORT}")"
 LIVE_CLS="$(class_set_of "${LIVE_REPORT}")"
 
+# LIVE_TOTAL gets this treatment above and the committed side of all three gets it
+# just after; the live side was missed. Unvalidated, these go empty together the
+# moment a Summary row label changes, "[ '' -lt 320 ]" makes bash print "integer
+# expression expected" and return 2, the enclosing if reads that as false, and the
+# instrument floor below silently stops firing while the run still exits 0 - so
+# ctest never shows the bash error either.
+case "${LIVE_HDRS}" in
+  '' | *[!0-9]*)
+    fail "could not read the 'QtWidgets headers seen' count out of a freshly generated report (got '${LIVE_HDRS}').
+       That row is one of the two inputs to the instrument floor below, so an unread one disarms the
+       check that notices a pruned Qt.
+       The report format and this test's parser have diverged - fix the parser in ${SELF}."
+    ;;
+esac
+case "${LIVE_CLS}" in
+  '' | *[!0-9]*)
+    fail "could not read the 'QtWidgets classes seen' count out of a freshly generated report (got '${LIVE_CLS}').
+       That row is one of the two inputs to the instrument floor below, so an unread one disarms the
+       check that notices a pruned Qt.
+       The report format and this test's parser have diverged - fix the parser in ${SELF}."
+    ;;
+esac
+# A version string rather than an integer, so it gets its own shape check - and it
+# needs one most: an unread version is not a different version, but it reads as one,
+# which downgrades the strict same-version instrument floor to the lenient path that
+# affirms the count instead of checking it.
+case "${LIVE_QTVER}" in
+  '')
+    fail "could not read the 'Qt version measured against' row out of a freshly generated report.
+       An unread version reads as a different version, which downgrades the strict instrument floor
+       below to the lenient path - and that path affirms the measurement rather than questioning it.
+       The report format and this test's parser have diverged - fix the parser in ${SELF}."
+    ;;
+  unknown)
+    fail "the audit could not read a Qt version out of ${QT_INCLUDE}/QtCore/qtcoreversion.h and reported
+       'unknown'. QtCore/ is present or this run would have stopped earlier, so a QtCore without that
+       header is an incomplete Qt - exactly the case where a lower offending count is not progress.
+       The instrument floor below needs a version to compare against, so this cannot be waved through."
+    ;;
+  [0-9]*.[0-9]*) ;;
+  *)
+    fail "the 'Qt version measured against' row of a freshly generated report reads '${LIVE_QTVER}', which is
+       not a version number. The report format and this test's parser have diverged - fix the parser
+       in ${SELF}."
+    ;;
+esac
+
 echo "mudlet_core Qt Widgets audit: ${LIVE_COUNT} of ${LIVE_TOTAL} files (committed report ${COMMITTED_SUMMARY} of ${COMMITTED_TOTAL}, baseline ${BASE})"
 echo "Qt ${LIVE_QTVER}: ${LIVE_HDRS} QtWidgets headers, ${LIVE_CLS} classes (report recorded Qt ${COMMITTED_QTVER}: ${COMMITTED_HDRS}/${COMMITTED_CLS})"
 
@@ -291,9 +443,38 @@ echo "Qt ${LIVE_QTVER}: ${LIVE_HDRS} QtWidgets headers, ${LIVE_CLS} classes (rep
 # comparison cannot distinguish from ordinary version drift.
 MISSING_CLASSES="${WORK_DIR}/missing-classes.txt"
 COMMITTED_REFS="${WORK_DIR}/committed-refs.txt"
-if ! referenced_classes "${REPORT}" > "${COMMITTED_REFS}"; then
-  fail "could not read the widget-class references out of docs/libmudlet-widgets-report.md"
+LIVE_REFS="${WORK_DIR}/live-refs.txt"
+UNKNOWN_REFS="${WORK_DIR}/unknown-refs.txt"
+
+read_refs "${LIVE_REPORT}" "a freshly generated report" "${LIVE_COUNT}" \
+  "Fix the parser in ${SELF} before trusting the guard again." "${LIVE_REFS}"
+read_refs "${REPORT}" "docs/libmudlet-widgets-report.md" "${COMMITTED_SUMMARY}" \
+  "It is a generated file, so either it was hand-edited or it predates this table format. Regenerate it:
+${REGENERATE}" "${COMMITTED_REFS}"
+COMMITTED_REFS_N="$(wc -l < "${COMMITTED_REFS}" | tr -d ' ')"
+
+# Reading the live report with the same parser gives it a known-good answer to be
+# checked against, which the committed report alone cannot provide: every class the
+# live report names came out of this Qt's own class list, so anything the parser
+# produces that is not in that list is the parser mangling names rather than the Qt
+# missing them. That is what catches the BSD-sed trim above turning QWidget into
+# QWidge - which would otherwise be reported as 19 classes missing from Qt.
+if ! comm -23 "${LIVE_REFS}" <(sort "${LIVE_CLASSES}") > "${UNKNOWN_REFS}"; then
+  fail "could not compare the freshly parsed widget-class references against this Qt's QtWidgets set"
 fi
+if [ -s "${UNKNOWN_REFS}" ]; then
+  {
+    echo "FAIL: $(wc -l < "${UNKNOWN_REFS}" | tr -d ' ') name(s) parsed out of a freshly generated report are not QtWidgets classes"
+    echo "      in the very Qt that report was generated from:"
+    sed 's/^/    /' "${UNKNOWN_REFS}"
+    echo
+    echo "The audit wrote those references and this test read them back, so the two cannot legitimately"
+    echo "disagree: the parser in ${SELF} is mangling the names, not the Qt missing the classes. Fix it"
+    echo "before trusting the class-presence check below, which is comparing the same mangled names."
+  } >&2
+  exit 1
+fi
+
 if ! comm -23 "${COMMITTED_REFS}" <(sort "${LIVE_CLASSES}") > "${MISSING_CLASSES}"; then
   fail "could not compare the recorded widget classes against the ones this Qt exposes"
 fi
@@ -304,8 +485,9 @@ if [ -s "${MISSING_CLASSES}" ]; then
     cat <<EOF
 
 The audit derives its class list from the Qt it is pointed at, so a class that is
-absent takes every file using it out of the count. The result looks like progress
-and is not: ${LIVE_COUNT} of ${LIVE_TOTAL} against a recorded ${COMMITTED_SUMMARY} of ${COMMITTED_TOTAL}.
+absent takes every file using it out of the count. Whatever this run measured is
+therefore not comparable with the record, whichever way the two happen to differ:
+this run ${LIVE_COUNT} of ${LIVE_TOTAL}, record ${COMMITTED_SUMMARY} of ${COMMITTED_TOTAL}.
 
 Qt headers used: ${QT_INCLUDE} (Qt ${LIVE_QTVER}, ${LIVE_CLS} classes)
 Report recorded: Qt ${COMMITTED_QTVER}, ${COMMITTED_CLS} classes
@@ -320,20 +502,34 @@ EOF
   exit 1
 fi
 
-# Sizes are only comparable within one Qt version: both sets grow between releases
-# (Qt 6.4.2 exposes 316/193 where 6.12.0 exposes 320/196), so a strict floor across
-# versions would fail every older Qt. Within a version a drop means a pruned install.
-if [ "${LIVE_QTVER}" = "${COMMITTED_QTVER}" ]; then
+# Both derived sets only ever grow between Qt releases - 6.4.2 exposes 316/193 where
+# 6.12.0 exposes 320/196 - so a strict floor against an older Qt would fail every
+# older Qt, and an earlier round established that. The same property cuts the other
+# way, though: a Qt at or past the recorded version has no legitimate reason to
+# expose fewer, so the floor is safe there too, not only at exactly equal versions.
+# Below the recorded version the sizes really are incomparable and only the
+# class-presence check above applies.
+if qt_version_at_least "${LIVE_QTVER}" "${COMMITTED_QTVER}"; then
   if [ "${LIVE_HDRS}" -lt "${COMMITTED_HDRS}" ] || [ "${LIVE_CLS}" -lt "${COMMITTED_CLS}" ]; then
+    if [ "${LIVE_QTVER}" = "${COMMITTED_QTVER}" ]; then
+      recordedFrom="the same Qt version"
+    else
+      recordedFrom="Qt ${COMMITTED_QTVER}, which is older and so cannot expose more"
+    fi
     fail "this Qt ${LIVE_QTVER} exposes ${LIVE_HDRS} QtWidgets headers and ${LIVE_CLS} classes, but the report recorded
-       ${COMMITTED_HDRS} and ${COMMITTED_CLS} from the same Qt version. The measuring instrument has shrunk, so a lower
-       offending count is not progress. Usual cause: a pruned or partial Qt install.
+       ${COMMITTED_HDRS} and ${COMMITTED_CLS} from ${recordedFrom}.
+       The measuring instrument has shrunk, so a lower offending count is not progress.
+       Usual cause: a pruned or partial Qt install.
        Qt headers used: ${QT_INCLUDE}"
   fi
 elif [ "${LIVE_HDRS}" -lt "${COMMITTED_HDRS}" ] || [ "${LIVE_CLS}" -lt "${COMMITTED_CLS}" ]; then
-  echo "NOTE: this Qt (${LIVE_QTVER}) exposes fewer QtWidgets headers/classes than the Qt the report was"
-  echo "      generated with (${COMMITTED_QTVER}): ${LIVE_HDRS}/${LIVE_CLS} against ${COMMITTED_HDRS}/${COMMITTED_CLS}. Sizes are not compared"
-  echo "      across versions; the class-presence check above found nothing missing, so the count stands."
+  echo "NOTE: this Qt (${LIVE_QTVER}) is older than the Qt the report was generated with (${COMMITTED_QTVER}) and"
+  echo "      exposes fewer QtWidgets headers/classes: ${LIVE_HDRS}/${LIVE_CLS} against ${COMMITTED_HDRS}/${COMMITTED_CLS}. Both sets grow"
+  echo "      between releases, so that difference is not evidence of a pruned Qt - and it is not evidence"
+  echo "      against one either. The class-presence check above covers the ${COMMITTED_REFS_N} classes the report already"
+  echo "      counts, out of the ${LIVE_CLS} this Qt exposes: it establishes that no counted class vanished, not that"
+  echo "      the rest of the instrument is whole. Regenerate against this Qt, or run the guard against"
+  echo "      Qt ${COMMITTED_QTVER} or newer, to have the size floor apply."
 fi
 
 if [ "${LIVE_TOTAL}" -lt "${COMMITTED_TOTAL}" ]; then
@@ -341,8 +537,9 @@ if [ "${LIVE_TOTAL}" -lt "${COMMITTED_TOTAL}" ]; then
        Fewer offenders is progress; a smaller TOTAL means the audit measured less of mudlet_core than before,
        and every file it stopped looking at took its Qt Widgets dependencies out of the count with it.
        Usual cause: the mudlet_SRCS / mudlet_HDRS variables in src/CMakeLists.txt were renamed or restructured.
-       The audit parses those two names literally, so the planned mudlet_core/mudlet_app split will land here -
-       teach cmake/audit-core-widgets.sh the new names rather than regenerating against the smaller view.
+       The audit parses those two names, and target_sources() on the mudlet_core target, literally - so the
+       planned mudlet_core/mudlet_app split will land here. Teach cmake/audit-core-widgets.sh the new names
+       rather than regenerating against the smaller view.
        If files genuinely left the target, regenerate so future runs compare against the new total:
 ${REGENERATE}"
 fi
@@ -450,10 +647,19 @@ ${REGENERATE}"
 fi
 
 if [ "${LIVE_COUNT}" -lt "${BASE}" ] || [ "${LIVE_COUNT}" -ne "${COMMITTED_SUMMARY}" ] || [ "${LIVE_TOTAL}" -ne "${COMMITTED_TOTAL}" ]; then
-  # An improvement must never break somebody's build, so this only reports.
+  # An improvement must never break somebody's build, so this only reports. It also
+  # fires when only the baseline or only the total diverges, with no drop anywhere,
+  # so the wording has to follow what actually differs rather than assume a gain.
   echo "NOTE: the record is behind - now ${LIVE_COUNT} of ${LIVE_TOTAL}, report ${COMMITTED_SUMMARY} of ${COMMITTED_TOTAL}, baseline ${BASE}."
-  echo "      Every widget class the report counts is still visible in this Qt, so the drop is real."
-  echo "      Lock the gain in so it cannot be given back:"
+  if [ "${LIVE_COUNT}" -lt "${COMMITTED_SUMMARY}" ]; then
+    echo "      $((COMMITTED_SUMMARY - LIVE_COUNT)) file(s) the report records as offending no longer are, and every widget class the"
+    echo "      report counts is still visible in this Qt, so that drop is not an artefact of a shrunken"
+    echo "      class set. Lock the gain in so it cannot be given back:"
+  else
+    echo "      The offending count has not dropped below the ${COMMITTED_SUMMARY} the report records; the committed"
+    echo "      numbers and this run simply disagree. Regenerate so future runs compare against what the"
+    echo "      code does now:"
+  fi
   echo "${REGENERATE}"
 fi
 

@@ -223,6 +223,21 @@ if(NOT WIN32)
         endif()
     endforeach()
 
+    # The test property below overrides anything exported into the shell, so when
+    # this probe comes up empty the test cannot be rescued by setting the
+    # environment variable it names - this loop is the only lever. Say so here,
+    # where the candidate list is still to hand, because the test itself is a hard
+    # failure rather than a skip on CI. The plausible case is a macOS framework
+    # layout, where the headers live in QtWidgets.framework/Headers instead.
+    if(NOT coreWidgetsQtInclude)
+        message(WARNING
+            "CoreWidgetsAuditTest: no Qt headers directory containing QtWidgets/, QtGui/ and QtCore/ "
+            "was found, so the test will skip locally and fail on CI. Add the layout your Qt uses to "
+            "the probe in test/CMakeLists.txt; exporting MUDLET_QT_INCLUDE_DIR cannot help, because "
+            "the test's ENVIRONMENT property overrides it. Candidates tried: "
+            "${coreWidgetsQtIncludeCandidates}")
+    endif()
+
     add_test(NAME CoreWidgetsAuditTest
         COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/ci/core-widgets-audit-test.sh
     )

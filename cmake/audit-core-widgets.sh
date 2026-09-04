@@ -24,14 +24,9 @@
 # only uses widget classes whose module membership is unchanged.
 #
 # Known gap - what counts as being *in* the target: the file list is parsed from
-# the set(mudlet_SRCS|HDRS ...) and list(APPEND mudlet_SRCS|HDRS ...) blocks only.
-# Three kinds of target member sit outside that:
-#   - files added straight to the library with target_sources(). The one such call
-#     naming C++ files, sparkleupdater.h/.mm, is also in a list(APPEND ...), so
-#     nothing is lost today. Parsing it is not free: those paths are written
-#     "${CMAKE_CURRENT_SOURCE_DIR}/sparkleupdater.h", and a naive extension yields
-#     a quoted, variable-prefixed string that fails the on-disk check and reports
-#     a phantom missing file. Add unquoting and basename handling along with it.
+# the set(mudlet_SRCS|HDRS ...) and list(APPEND mudlet_SRCS|HDRS ...) blocks, plus
+# target_sources() calls naming the library target. Two kinds of target member
+# still sit outside that:
 #   - mudlet_UIS and mudlet_RCCS, which are target members but not C++ sources.
 #   - anything reaching the target through a variable this parser does not know.
 # So this audit and CMakeListsConsistencyTest (which counts bare basenames
@@ -42,7 +37,6 @@
 #
 # Usage:
 #   cmake/audit-core-widgets.sh                 # print the Markdown report, exit 0
-#   cmake/audit-core-widgets.sh --enforce       # CI guard: exit 1 if count > baseline
 #   cmake/audit-core-widgets.sh --summary       # one-line count, exit 0
 #   cmake/audit-core-widgets.sh --count         # bare offending-file count, exit 0
 #   cmake/audit-core-widgets.sh --classes       # the derived QtWidgets class names, exit 0
@@ -50,9 +44,15 @@
 # Options:
 #   --qt-include DIR   Qt headers dir (the one containing QtWidgets/). Overrides
 #                      auto-detection.
-#   --baseline FILE    baseline file for --enforce (default: cmake/core-widgets-baseline.txt).
+#   --baseline FILE    baseline file to record in the report (default:
+#                      cmake/core-widgets-baseline.txt).
 #   --src DIR          Mudlet src/ dir (default: derived from this script's location).
 #   -h, --help         show this help.
+#
+# The ratchet itself is the CoreWidgetsAuditTest ctest case
+# (test/ci/core-widgets-audit-test.sh), which runs this script and compares what it
+# measures against docs/libmudlet-widgets-report.md and the baseline. This script
+# only measures and reports; it does not gate.
 #
 # Regenerate the committed artefacts - baseline first, so the report records it:
 #   bash cmake/audit-core-widgets.sh --count > cmake/core-widgets-baseline.txt
@@ -81,7 +81,6 @@ usage() {
 
 while [ $# -gt 0 ]; do
   case "$1" in
-    --enforce) MODE=enforce ;;
     --summary) MODE=summary ;;
     --count) MODE=count ;;
     --classes) MODE=classes ;;
@@ -199,32 +198,45 @@ CLASS_SET_SIZE=$(wc -l < "$SET_CLASSES" | tr -d ' ')
 
 # mudlet_core's file list lives in the mudlet_SRCS / mudlet_HDRS variables of
 # src/CMakeLists.txt; both the set(...) blocks and later list(APPEND ...) lines
-# contribute, so the awk below must catch both forms. Comments are stripped and
-# CRLF tolerated first so a ")" or a filename inside a "#" comment - or a
-# Windows-style checkout - cannot silently truncate or pad the parsed list. A
-# list(APPEND ...) may also span several lines, so its block is tracked like a
-# set() block rather than assumed to be single-line.
+# contribute, and target_sources() attaches files to the library target directly -
+# which is the idiom the planned mudlet_core/mudlet_app split will use - so the awk
+# below must catch all three forms. Comments are stripped and CRLF tolerated first
+# so a ")" or a filename inside a "#" comment - or a Windows-style checkout - cannot
+# silently truncate or pad the parsed list. Any of the blocks may span several
+# lines, so each is tracked rather than assumed to be single-line.
 awk '
+  BEGIN { srcprefix = "${CMAKE_CURRENT_SOURCE_DIR}/" }
   {
     sub(/\r$/, "")               # tolerate CRLF checkouts
     sub(/#.*/, "")               # a comment cannot contribute or terminate a block
     if ($0 ~ /^[ \t]*set\(mudlet_(SRCS|HDRS)([ \t]|$)/) inblk=1
     if ($0 ~ /list\(APPEND[ \t]+mudlet_(SRCS|HDRS)([ \t]|\)|$)/) inapp=1
-    if (inblk || inapp) {
+    # Only the library target. target_sources() on the executable adds files that
+    # are not part of mudlet_core, so counting them would inflate the denominator.
+    if ($0 ~ /target_sources[ \t]*\(/ && (index($0, "${LIB_MUDLET_TARGET}") || index($0, "mudlet_core"))) intgt=1
+    if (inblk || inapp || intgt) {
       line=$0; gsub(/[()]/," ",line)
       n=split(line,a,/[ \t]+/)
       for (i=1;i<=n;i++) {
         if (a[i] == "") continue
-        if (a[i] ~ /\.(cpp|mm|h)$/) { print a[i]; continue }
-        # An entry naming a source in a form this parser cannot reduce to a bare
-        # filename - a quoted path, or a generator expression like
-        # $<$<BOOL:${USE_X}>:Foo.cpp> - is silently scanned by nobody, so the file
-        # joins mudlet_core with its Qt Widgets use uncounted. Warn rather than skip.
-        if (a[i] ~ /\.(cpp|mm|h)[^A-Za-z0-9_]/)
+        # The target_sources() entries naming C++ files are written
+        # "${CMAKE_CURRENT_SOURCE_DIR}/sparkleupdater.h". Unquoting and dropping that
+        # one prefix is what keeps them out of the missing-from-disk report below;
+        # leaving either in place would invent a phantom missing file, which is worse
+        # than not parsing the call at all.
+        tok=a[i]; gsub(/"/,"",tok)
+        if (index(tok, srcprefix) == 1) tok=substr(tok, length(srcprefix) + 1)
+        if (tok ~ /\.(cpp|mm|h)$/ && tok !~ /[${}<>*?]/) { print tok; continue }
+        # An entry naming a source in a form this parser cannot reduce to a path
+        # under src/ - one routed through some other variable, or a generator
+        # expression like $<$<BOOL:${USE_X}>:Foo.cpp> - is silently scanned by
+        # nobody, so the file joins mudlet_core with its Qt Widgets use uncounted.
+        # Warn rather than skip: the ctest guard turns a warning here into a failure.
+        if (a[i] ~ /\.(cpp|mm|h)([^A-Za-z0-9_]|$)/)
           printf "audit-core-widgets: not a bare filename, so nothing scanned it: %s\n", a[i] > "/dev/stderr"
       }
     }
-    if ($0 ~ /\)/) { inblk=0; inapp=0 }
+    if ($0 ~ /\)/) { inblk=0; inapp=0; intgt=0 }
   }
 ' "$CMAKE_FILE" | sort -uf > "$FILE_LIST"
 
@@ -239,14 +251,6 @@ while IFS= read -r f; do
     err "listed but not found on disk (skipped): $f"
   fi
 done < "$FILE_LIST"
-
-# Under --enforce the audit is a CI gate: a file listed in CMakeLists.txt but
-# absent from disk means the list is stale or the parser drifted, so counting
-# the survivors would under-report. Fail loudly instead of silently skipping.
-if [ "$MODE" = enforce ] && [ "$missing" -gt 0 ]; then
-  err "$missing file(s) listed in $CMAKE_FILE are missing from disk; failing under --enforce."
-  exit 2
-fi
 
 if [ ! -s "$EXISTING" ]; then
   err "no source files parsed from $CMAKE_FILE"
@@ -349,20 +353,6 @@ case "$MODE" in
     exit 0
     ;;
 
-  enforce)
-    BASE=$(read_baseline) || exit 2
-    printf 'mudlet_core Qt Widgets audit: %s offending files (baseline %s).\n' "$OFFENDING" "$BASE"
-    if [ "$OFFENDING" -gt "$BASE" ]; then
-      err "regression: $OFFENDING > baseline $BASE. New/changed files pulled Qt Widgets into mudlet_core."
-      err "Offenders above baseline - inspect recent changes; run without --enforce for the full report."
-      exit 1
-    fi
-    if [ "$OFFENDING" -lt "$BASE" ]; then
-      printf 'Improvement: below baseline. Lower %s to %s to lock in the gain.\n' "$BASELINE_FILE" "$OFFENDING"
-    fi
-    exit 0
-    ;;
-
   report)
     BASE="n/a"
     if [ -f "$BASELINE_FILE" ]; then BASE=$(read_baseline) || exit 2; fi
@@ -375,8 +365,7 @@ case "$MODE" in
 Measures how many source files in the \`mudlet_core\` static-library target
 (\`src/CMakeLists.txt\`) still depend on Qt Widgets. Part of the libmudlet
 refactor (#8681, #9011): the goal is to drive this count to **0** so \`mudlet_core\`
-can build with Qt Widgets absent, after which this audit becomes an enforcing CI
-guard (\`--enforce\`).
+can build with Qt Widgets absent.
 
 A file is counted as depending on Qt Widgets if it either:
 
