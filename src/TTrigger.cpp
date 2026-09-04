@@ -261,6 +261,23 @@ static void pcre2_code_deleter(pcre2_code* pointer)
     pcre2_code_free(pointer);
 }
 
+// A pattern of fewer than two characters sets no bits, so it is never filtered
+// out.
+TBigramFilter::Bits TBigramFilter::bitsFor(const QString& text)
+{
+    static_assert(Bits::scmWords * 64 == 256, "the hash below yields a bit number of 0-255, which has to be exactly the number of bits Bits holds");
+    Bits bits;
+    const QChar* data = text.constData();
+    for (qsizetype i = 1, size = text.size(); i < size; ++i) {
+        const quint32 pair = (static_cast<quint32>(data[i - 1].unicode()) << 16) | data[i].unicode();
+        // Knuth's multiplicative hash: only the top bits of the product depend
+        // on every bit of the pair
+        const quint32 bit = (pair * 2654435761u) >> 24;
+        bits.words[bit / 64] |= (quint64(1) << (bit % 64));
+    }
+    return bits;
+}
+
 static void pcre2_match_data_deleter(pcre2_match_data* pointer)
 {
     pcre2_match_data_free(pointer);
@@ -271,7 +288,7 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
 {
     patterns.replaceInStrings("\n", "");
     mPatterns.clear();
-    mSubstringMatchers.clear();
+    mSubstringPatterns.clear();
     mRegexes.clear();
     mMatchData.clear();
     mRegexJitCompiled.clear();
@@ -326,9 +343,9 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
             mRegexJitCompiled.push_back(false);
 
             if (patternKinds.at(i) == REGEX_SUBSTRING) {
-                mSubstringMatchers.emplace_back(std::make_unique<QStringMatcher>(patterns.at(i)));
+                mSubstringPatterns.emplace_back(TSubstringPattern{std::make_unique<QStringMatcher>(patterns.at(i)), TBigramFilter::bitsFor(patterns.at(i))});
             } else {
-                mSubstringMatchers.emplace_back(nullptr);
+                mSubstringPatterns.emplace_back();
             }
 
             if (patternKinds.at(i) == REGEX_PERL) {
@@ -780,7 +797,8 @@ void TTrigger::filter(std::string& capture, int& posOffset, int lineNumber)
     const int captureLength = static_cast<int>(qstrnlen(capture.data(), capture.size()));
     for (auto* triggerNode : *mpMyChildrenList) {
         auto* trigger = static_cast<TTrigger*>(triggerNode);
-        trigger->match(capture.data(), captureLength, text, lineNumber, posOffset);
+        // no line filter: a capture is not the line those bits were built from
+        trigger->match(capture.data(), captureLength, text, lineNumber, posOffset, nullptr);
     }
 }
 
@@ -794,9 +812,13 @@ void TTrigger::setExpiryCount(int expiryCount)
     mExpiryCount = expiryCount;
 }
 
-bool TTrigger::match_substring(const QString& haystack, const QString& needle, int patternNumber, int posOffset, int lineNumber)
+bool TTrigger::match_substring(const QString& haystack, const QString& needle, int patternNumber, int posOffset, int lineNumber, const TBigramFilter* pLineBigrams)
 {
-    const int where = mSubstringMatchers[patternNumber]->indexIn(haystack);
+    const TSubstringPattern& pattern = mSubstringPatterns[patternNumber];
+    if (pLineBigrams && !pLineBigrams->couldContain(haystack, pattern.bigrams)) {
+        return false;
+    }
+    const int where = pattern.matcher->indexIn(haystack);
     if (where != -1) {
         processSubstringMatch(haystack, needle, patternNumber, posOffset, where, lineNumber);
         return true;
@@ -1148,7 +1170,7 @@ void TTrigger::processExactMatch(int patternNumber, int posOffset, int lineNumbe
 // haystack: string to match as a QString
 // line: line number in the buffer
 // posOffset: position in the line to start matching from; used by child triggers
-bool TTrigger::match(const char* haystackC, const int haystackCLength, const QString& haystack, int line, int posOffset)
+bool TTrigger::match(const char* haystackC, const int haystackCLength, const QString& haystack, int line, int posOffset, const TBigramFilter* pLineBigrams)
 {
     // Guard against re-entrancy: cleanup may have deleted this trigger while
     // match() was still on the call stack
@@ -1196,7 +1218,7 @@ bool TTrigger::match(const char* haystackC, const int haystackCLength, const QSt
             ret = false;
             switch (mPatternKinds.at(patternNumber)) {
             case REGEX_SUBSTRING:
-                ret = match_substring(haystack, mPatterns.at(patternNumber), patternNumber, posOffset, line);
+                ret = match_substring(haystack, mPatterns.at(patternNumber), patternNumber, posOffset, line, pLineBigrams);
                 break;
 
             case REGEX_PERL:
@@ -1311,7 +1333,7 @@ bool TTrigger::match(const char* haystackC, const int haystackCLength, const QSt
             if (conditionMet || (mPatterns.empty())) {
                 for (auto* triggerNode : *mpMyChildrenList) {
                     auto* trigger = static_cast<TTrigger*>(triggerNode);
-                    ret = trigger->match(haystackC, haystackCLength, haystack, line, posOffset);
+                    ret = trigger->match(haystackC, haystackCLength, haystack, line, posOffset, pLineBigrams);
                     if (ret) {
                         conditionMet = true;
                     }
@@ -1326,7 +1348,7 @@ bool TTrigger::match(const char* haystackC, const int haystackCLength, const QSt
             }
             for (auto* triggerNode : *mpMyChildrenList) {
                 auto* trigger = static_cast<TTrigger*>(triggerNode);
-                ret = trigger->match(haystackC, haystackCLength, haystack, line, posOffset);
+                ret = trigger->match(haystackC, haystackCLength, haystack, line, posOffset, pLineBigrams);
                 if (ret) {
                     conditionMet = true;
                 }
@@ -1453,7 +1475,7 @@ bool TTrigger::setupTmpColorTrigger(int ansiFg, int ansiBg)
     // Everything setRegexCodeList() fills is indexed by pattern number, so a
     // pattern added here has to extend all of it - even though a colour
     // pattern is matched out of mColorPatternList and compiles no regex.
-    mSubstringMatchers.emplace_back(nullptr);
+    mSubstringPatterns.emplace_back();
     mPatternsUtf8.emplace_back(patternText.toUtf8().constData());
     mRegexes.emplace_back();
     mMatchData.emplace_back();
