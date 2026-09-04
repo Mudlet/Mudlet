@@ -2802,6 +2802,9 @@ describe("Tests saveJsonMap and loadJsonMap", function()
   local jsonPath = getMudletHomeDir() .. "/mapper_spec_roundtrip.json"
   local suffixlessPath = getMudletHomeDir() .. "/mapper_spec_suffixless"
   local notJsonPath = getMudletHomeDir() .. "/mapper_spec_notjson.json"
+  -- nothing writes this one: it is the path the reader is asked for to be told
+  -- it is not there, so a leftover of any kind would answer a different question
+  local absentPath = getMudletHomeDir() .. "/mapper_spec_absent.json"
 
   local missingRoomId = 990000001
   local roomA, roomB
@@ -2811,6 +2814,7 @@ describe("Tests saveJsonMap and loadJsonMap", function()
     os.remove(suffixlessPath)
     os.remove(suffixlessPath .. ".json")
     os.remove(notJsonPath)
+    os.remove(absentPath)
   end
 
   setup(function()
@@ -3068,7 +3072,7 @@ describe("Tests saveJsonMap and loadJsonMap", function()
     end)
 
     it("returns nil and a message for a file that is not there", function()
-      local ok, err = loadJsonMap(getMudletHomeDir() .. "/mapper_spec_absent.json")
+      local ok, err = loadJsonMap(absentPath)
       assert.is_nil(ok)
       assert.is_truthy(err:find("could not open file", 1, true), err)
     end)
