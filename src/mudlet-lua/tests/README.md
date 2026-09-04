@@ -69,6 +69,26 @@ xvfb-run -a ./build/src/mudlet --profile "Mudlet self-test" --mirror --offline
 A failure writes a marker file (`/tmp/busted-tests-failed` on Linux/macOS) so the
 caller can detect it.
 
+On a **Wayland** desktop that invocation needs two more variables:
+
+```sh
+QT_QPA_PLATFORM=xcb GDK_BACKEND=x11 xvfb-run -a ./build/src/mudlet ...
+```
+
+Xvfb is an X server, and neither toolkit targets it by itself there. Qt takes the
+wayland plugin over `xvfb-run`'s `DISPLAY`, and the GTK3 platform theme Qt loads
+under GNOME calls `gtk_init()`, which exits the process outright when it cannot
+open a display - it looks for `$XDG_RUNTIME_DIR/wayland-0`, which a harness that
+sets its own `XDG_RUNTIME_DIR` does not have. The run then dies before Mudlet
+reaches any of its own startup: exit code 1, nothing on stdout, no marker file.
+`.claude/scripts/run-lua-tests.sh` exports both.
+
+Dropping `xvfb-run` and running on the desktop's own compositor
+(`QT_QPA_PLATFORM=wayland`) works too and gives the same result, at the cost of a
+Mudlet window on screen for the duration. For a headless *Wayland* session - only
+worth it when the behaviour under test is Wayland-specific - see the
+headless gnome-shell rig in `docs/demo-videos.md`.
+
 `--offline` opens the profile without connecting to its game server, which is
 what lets a spec use `feedTelnet()` - that function only injects while the telnet
 socket is unconnected. Specs that rely on it fail without the flag, so keep it on
