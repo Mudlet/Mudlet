@@ -3029,6 +3029,24 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       assert.are.same({10, 20, 30, 255}, getCustomEnvColorTable()[501])
     end)
 
+    it("puts a symbol font scaling below one back, rather than rounding it away", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonScalingArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      local savedScaling = getConfig("mapSymbolFontScaling")
+      finally(function() setConfig("mapSymbolFontScaling", savedScaling) end)
+
+      -- the scaling is not room or area data, so deleteMap leaves it alone and
+      -- roundTrip cannot show it moving. Moving it somewhere else between the
+      -- two halves is what makes the value that comes back the file's own.
+      setConfig("mapSymbolFontScaling", 0.5)
+      assert.is_true(saveJsonMap(jsonPath))
+      setConfig("mapSymbolFontScaling", 2.0)
+      assert.is_true(loadJsonMap(jsonPath))
+
+      assert.are.equal(0.5, getConfig("mapSymbolFontScaling"))
+    end)
+
     -- TMap::readJsonColor returns QColor(red, green, blue) for a colour array of
     -- either three or four values, so the alpha the exporter wrote as
     -- "color32RGBA" never reaches the QColor and comes back as 255. Every colour
@@ -3042,6 +3060,11 @@ describe("Tests saveJsonMap and loadJsonMap", function()
     -- a stub survives only for up, down, in and out, whose two spellings match
     -- https://github.com/Mudlet/Mudlet/issues/10369
     pending("a stub exit's door is dropped on export in the eight compass directions")
+
+    -- TMap::readJsonUserData inserts each key it reads into the live map's user
+    -- data without emptying it first, and the JSON import never reaches the
+    -- clear a binary load gets, so keys the previous map had outlive it.
+    pending("map user data from the map being replaced survives a JSON import")
   end)
 
   describe("Tests the saveJsonMap and loadJsonMap argument contract", function()
