@@ -2116,8 +2116,8 @@ noViewSpellReport = table.concat(noViewSpellProblems, '; ')
         runLua(host, qsl("deleteMiniConsole('%1')\n").arg(windowName));
         QTRY_VERIFY_WITH_TIMEOUT(widget.isNull(), 5000);
 
-        QVERIFY2(!host->windowRegistry().hasScrollBox(scrollBoxName), "A scroll box destroyed with its user window stayed in the profile's window registry.");
         QVERIFY2(!host->windowType(scrollBoxName).has_value(), "Host still reports a window type for a scroll box destroyed with its user window.");
+        QVERIFY2(!host->windowRegistry().hasScrollBox(scrollBoxName), "A scroll box destroyed with its user window stayed in the profile's window registry.");
 
         // The crashing call: with the registry entry left behind this takes the
         // "already exists" branch and resizes the freed widget, and with only the
@@ -2147,8 +2147,8 @@ noViewSpellReport = table.concat(noViewSpellProblems, '; ')
         runLua(host, qsl("deleteMiniConsole('%1')\n").arg(windowName));
         QTRY_VERIFY_WITH_TIMEOUT(widget.isNull(), 5000);
 
-        QVERIFY2(!host->windowRegistry().hasTextBox(textBoxName), "A text edit destroyed with its user window stayed in the profile's window registry.");
         QVERIFY2(!host->windowType(textBoxName).has_value(), "Host still reports a window type for a text edit destroyed with its user window.");
+        QVERIFY2(!host->windowRegistry().hasTextBox(textBoxName), "A text edit destroyed with its user window stayed in the profile's window registry.");
         QVERIFY2(!host->mpConsole->textBoxWidget(textBoxName), "A text edit destroyed with its user window left a dangling widget in the console's map.");
 
         // The crashing call, which reads that map entry and dies in the freed widget

@@ -440,6 +440,8 @@ void TMainConsole::registerScrollBox(const QString& name, TScrollBox* pScrollBox
 
 void TMainConsole::deregisterScrollBox(TScrollBox* pScrollBox)
 {
+    // This is the only destroyed() connection made from a scroll box to this
+    // console, so severing all of them is severing just that one.
     disconnect(pScrollBox, &QObject::destroyed, this, nullptr);
     // By value, not by name: a replacement may already hold the name
     mScrollBoxMap.removeIf([this, pScrollBox](const auto& it) {
@@ -468,6 +470,8 @@ void TMainConsole::registerTextBox(const QString& name, TTextBox* pTextBox)
 
 void TMainConsole::deregisterTextBox(TTextBox* pTextBox)
 {
+    // This is the only destroyed() connection made from a text edit to this
+    // console, so severing all of them is severing just that one.
     disconnect(pTextBox, &QObject::destroyed, this, nullptr);
     mTextBoxMap.removeIf([this, pTextBox](const auto& it) {
         if (it.value() != pTextBox) {
@@ -752,8 +756,6 @@ std::pair<bool, QString> TMainConsole::deleteTextBox(const QString& name)
 
     auto pTextBox = mTextBoxMap.value(name);
     if (pTextBox) {
-        // Not a bare take(): the widget outlives this call until its deferred
-        // delete lands, so its destroyed() handler must not stay armed
         deregisterTextBox(pTextBox);
         pTextBox->deleteLater();
 
@@ -777,8 +779,6 @@ std::pair<bool, QString> TMainConsole::deleteScrollBox(const QString& name)
 
     auto pScrollBox = mScrollBoxMap.value(name);
     if (pScrollBox) {
-        // Not a bare take(): the widget outlives this call until its deferred
-        // delete lands, so its destroyed() handler must not stay armed
         deregisterScrollBox(pScrollBox);
         // Using deleteLater() rather than delete as it seems a safer option
         // given that this item is likely to be linked to some events and
