@@ -39,11 +39,10 @@ class TLabelModel;
 // belongs to (a TLabelModel by its TLabel, a TConsoleModel by its TConsole), so
 // it is the view that has to keep the registry in step: register where it
 // creates the widget, deregister where it destroys it. TMainConsole's own
-// QMap<QString, TLabel*> and QMap<QString, TConsole*> stay as the view's half of
-// that pair, and remain its only way to reach a widget by name.
-//
-// Labels, sub-consoles and user-window docks are indexed here so far; command
-// lines, scroll boxes and text boxes still live solely in the view's maps.
+// QMap<QString, TLabel*>, QMap<QString, TConsole*> and the like stay as the
+// view's half of that pair, and remain its only way to reach a widget by name.
+// Kinds with no core-side state at all are indexed by name alone - see the dock
+// widget and scroll box comments below.
 class TWindowRegistry
 {
 public:
@@ -115,6 +114,41 @@ public:
 
     bool hasDockWidget(const QString& name) const { return mDockWidgets.contains(name); }
 
+    // Scroll boxes, command lines and text boxes are indexed by name alone, for
+    // the reason dock widgets are: core asks nothing of one beyond whether the
+    // name exists and what kind it is. Every operation on the widget itself -
+    // show, hide, move, resize, read back its geometry - is a plain QWidget call
+    // the view makes, and the state behind it (a text box's text, a command
+    // line's action function, which the widget's own key handler is the sole
+    // reader of) is never read core-side. So there is nothing for a model to
+    // hold.
+    //
+    // Three sets rather than one map because the three name spaces are
+    // independent: nothing stops the same name being a scroll box and a text box
+    // at once, and where that happens both Host and the view resolve it in the
+    // order these are declared in.
+    void registerScrollBox(const QString& name) { mScrollBoxes.insert(name); }
+    void deregisterScrollBox(const QString& name) { mScrollBoxes.remove(name); }
+    bool hasScrollBox(const QString& name) const { return mScrollBoxes.contains(name); }
+
+    void registerCommandLine(const QString& name) { mCommandLines.insert(name); }
+
+    // None of these three is identity-checked, unlike labels and sub-consoles:
+    // no widget of these kinds deregisters itself from its own destructor, so
+    // every removal is the view taking the name out of its map at the same
+    // moment, and there is no window in which a stale deregistration could evict
+    // a replacement. A command line does get dropped from the view's map by its
+    // destroyed() handler, but that drops it by widget identity and so only ever
+    // names a name the dying command line still holds.
+    void deregisterCommandLine(const QString& name) { mCommandLines.remove(name); }
+    bool hasCommandLine(const QString& name) const { return mCommandLines.contains(name); }
+
+    void registerTextBox(const QString& name) { mTextBoxes.insert(name); }
+    void deregisterTextBox(const QString& name) { mTextBoxes.remove(name); }
+    bool hasTextBox(const QString& name) const { return mTextBoxes.contains(name); }
+
+    bool hasPlainWindow(const QString& name) const { return hasScrollBox(name) || hasCommandLine(name) || hasTextBox(name); }
+
 private:
     struct SubConsoleEntry
     {
@@ -125,6 +159,9 @@ private:
     QMap<QString, TLabelModel*> mLabels;
     QMap<QString, SubConsoleEntry> mSubConsoles;
     QSet<QString> mDockWidgets;
+    QSet<QString> mScrollBoxes;
+    QSet<QString> mCommandLines;
+    QSet<QString> mTextBoxes;
 };
 
 #endif // MUDLET_TWINDOWREGISTRY_H

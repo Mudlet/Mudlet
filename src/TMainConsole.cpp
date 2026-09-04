@@ -34,6 +34,7 @@
 #include "TMap.h"
 #include "TMedia.h"
 #include "TRoomDB.h"
+#include "TScrollBox.h"
 #include "TTextBox.h"
 #include "TTextEdit.h"
 #include "dlgMapper.h"
@@ -124,6 +125,31 @@ TMainConsole::~TMainConsole()
     for (auto commandLine : findChildren<TCommandLine*>()) {
         disconnect(commandLine, &QObject::destroyed, this, nullptr);
     }
+
+    // A label and a sub-console take themselves out of the registry from their own
+    // destructor; none of the three kinds here does. A scroll box and a text box never
+    // deregister themselves, and for the command lines that are this console's own
+    // children the handler that would have done it was disconnected just above. A dock
+    // widget has no destructor either but needs no sweep: one only ever exists beside a
+    // user window's sub-console, and closing the profile closes every sub-console before
+    // the console goes, which takes the dock out through TConsole::closeEvent(). Quitting
+    // destroys every Host before the console, so there is not always a registry left
+    // to clear.
+    if (mpHost) {
+        const QStringList scrollBoxNames = mScrollBoxMap.keys();
+        for (const QString& scrollBoxName : scrollBoxNames) {
+            mpHost->windowRegistry().deregisterScrollBox(scrollBoxName);
+        }
+        const QStringList textBoxNames = mTextBoxMap.keys();
+        for (const QString& textBoxName : textBoxNames) {
+            mpHost->windowRegistry().deregisterTextBox(textBoxName);
+        }
+        const QStringList commandLineNames = mSubCommandLineMap.keys();
+        for (const QString& commandLineName : commandLineNames) {
+            mpHost->windowRegistry().deregisterCommandLine(commandLineName);
+        }
+    }
+
     mSubCommandLineMap.clear();
 
     // Labels carry a destroyed() handler of the same shape, so the same window is
@@ -395,6 +421,30 @@ TDockWidget* TMainConsole::deregisterDockWidget(const QString& name)
     return mDockWidgetMap.take(name);
 }
 
+void TMainConsole::registerScrollBox(const QString& name, TScrollBox* pScrollBox)
+{
+    mScrollBoxMap[name] = pScrollBox;
+    mpHost->windowRegistry().registerScrollBox(name);
+}
+
+TScrollBox* TMainConsole::deregisterScrollBox(const QString& name)
+{
+    mpHost->windowRegistry().deregisterScrollBox(name);
+    return mScrollBoxMap.take(name);
+}
+
+void TMainConsole::registerTextBox(const QString& name, TTextBox* pTextBox)
+{
+    mTextBoxMap[name] = pTextBox;
+    mpHost->windowRegistry().registerTextBox(name);
+}
+
+TTextBox* TMainConsole::deregisterTextBox(const QString& name)
+{
+    mpHost->windowRegistry().deregisterTextBox(name);
+    return mTextBoxMap.take(name);
+}
+
 void TMainConsole::resetMainConsole()
 {
     // Delete DockWidgets first — their child UserWindow TConsoles will be
@@ -433,18 +483,18 @@ void TMainConsole::resetMainConsole()
         label->deleteLater();
     }
 
-    QMutableMapIterator<QString, TScrollBox*> itScrollBox(mScrollBoxMap);
-    while (itScrollBox.hasNext()) {
-        itScrollBox.next();
-        itScrollBox.value()->deleteLater();
-        itScrollBox.remove();
+    const QStringList scrollBoxNames = mScrollBoxMap.keys();
+    for (const QString& scrollBoxName : scrollBoxNames) {
+        if (auto pScrollBox = deregisterScrollBox(scrollBoxName)) {
+            pScrollBox->deleteLater();
+        }
     }
 
-    QMutableMapIterator<QString, TTextBox*> itTextBox(mTextBoxMap);
-    while (itTextBox.hasNext()) {
-        itTextBox.next();
-        itTextBox.value()->deleteLater();
-        itTextBox.remove();
+    const QStringList textBoxNames = mTextBoxMap.keys();
+    for (const QString& textBoxName : textBoxNames) {
+        if (auto pTextBox = deregisterTextBox(textBoxName)) {
+            pTextBox->deleteLater();
+        }
     }
 }
 
@@ -487,7 +537,7 @@ TConsole* TMainConsole::createMiniConsole(const QString& windowname, const QStri
 }
 
 // This is a scrollBox overlaid on to the main console
-TScrollBox* TMainConsole::createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height)
+bool TMainConsole::createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height)
 {
     //if pW then add ScrollBox as Overlay to the Userwindow
     auto pW = mDockWidgetMap.value(windowname);
@@ -501,16 +551,16 @@ TScrollBox* TMainConsole::createScrollBox(const QString& windowname, const QStri
         } else {
             pS = new TScrollBox(mpHost, mpMainFrame);
         }
-        mScrollBoxMap[name] = pS;
+        registerScrollBox(name, pS);
         pS->setObjectName(name);
         pS->resize(width, height);
         pS->setContentsMargins(0, 0, 0, 0);
         pS->move(x, y);
         pS->show();
 
-        return pS;
+        return true;
     }
-    return nullptr;
+    return false;
 }
 
 bool TMainConsole::createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough)
@@ -667,7 +717,7 @@ std::pair<bool, QString> TMainConsole::deleteTextBox(const QString& name)
         return {false, QLatin1String("a text edit cannot have an empty string as its name")};
     }
 
-    auto pTextBox = mTextBoxMap.take(name);
+    auto pTextBox = deregisterTextBox(name);
     if (pTextBox) {
         pTextBox->deleteLater();
 
@@ -689,7 +739,7 @@ std::pair<bool, QString> TMainConsole::deleteScrollBox(const QString& name)
         return {false, QLatin1String("a scrollbox cannot have an empty string as its name")};
     }
 
-    auto pScrollBox = mScrollBoxMap.take(name);
+    auto pScrollBox = deregisterScrollBox(name);
     if (pScrollBox) {
         // Using deleteLater() rather than delete as it seems a safer option
         // given that this item is likely to be linked to some events and
@@ -879,6 +929,7 @@ void TMainConsole::registerSubCommandLine(const QString& name, TCommandLine* pCo
         deregisterSubCommandLine(pDisplaced);
     }
     mSubCommandLineMap[name] = pCommandLine;
+    mpHost->windowRegistry().registerCommandLine(name);
 
     // A TCommandLine is always a child widget of something else - the miniconsole
     // it is embedded in, or the user window / scroll box it was created into - so
@@ -928,8 +979,19 @@ void TMainConsole::deregisterSubCommandLine(TCommandLine* pCommandLine)
     disconnect(pCommandLine, &QObject::destroyed, this, nullptr);
     // Erase by value rather than by name: a replacement command line may have been
     // registered under the same name in the meantime and must be left in place.
-    mSubCommandLineMap.removeIf([pCommandLine](const auto& it) {
-        return it.value() == pCommandLine;
+    // The window registry hears only about the names this erase actually took, so
+    // the replacement keeps its entry there too.
+    mSubCommandLineMap.removeIf([this, pCommandLine](const auto& it) {
+        if (it.value() != pCommandLine) {
+            return false;
+        }
+        // The destroyed() handler above can run once the Host is gone: quitting
+        // destroys every Host before the deferred deletes of the widgets a user
+        // window holds. There is no registry left to take the name out of then.
+        if (mpHost) {
+            mpHost->windowRegistry().deregisterCommandLine(it.key());
+        }
+        return true;
     });
 }
 
@@ -951,7 +1013,7 @@ std::pair<bool, QString> TMainConsole::createTextBox(const QString& windowname, 
         } else {
             pT = new TTextBox(mpHost, name, mpMainFrame);
         }
-        mTextBoxMap[name] = pT;
+        registerTextBox(name, pT);
         pT->resize(width, height);
         pT->move(x, y);
         pT->show();
@@ -1389,6 +1451,98 @@ std::optional<bool> TMainConsole::getSubConsoleVisible(const QString& name) cons
         return {pD->isVisibleTo(this)};
     }
     return {pC->isVisibleTo(this)};
+}
+
+// Scroll box first, then command line, then text box: nothing stops one name
+// being more than one of the three, and this is the order the core has always
+// resolved such a name in.
+QWidget* TMainConsole::plainWindowWidget(const QString& name) const
+{
+    if (auto pS = mScrollBoxMap.value(name)) {
+        return pS;
+    }
+    if (auto pN = mSubCommandLineMap.value(name)) {
+        return pN;
+    }
+    return mTextBoxMap.value(name);
+}
+
+bool TMainConsole::showPlainWindow(const QString& name)
+{
+    auto pW = plainWindowWidget(name);
+    if (!pW) {
+        return false;
+    }
+    pW->show();
+    return true;
+}
+
+bool TMainConsole::hidePlainWindow(const QString& name)
+{
+    auto pW = plainWindowWidget(name);
+    if (!pW) {
+        return false;
+    }
+    pW->hide();
+    return true;
+}
+
+bool TMainConsole::resizePlainWindow(const QString& name, int width, int height)
+{
+    auto pW = plainWindowWidget(name);
+    if (!pW) {
+        return false;
+    }
+    pW->resize(width, height);
+    return true;
+}
+
+bool TMainConsole::movePlainWindow(const QString& name, int x, int y)
+{
+    auto pW = plainWindowWidget(name);
+    if (!pW) {
+        return false;
+    }
+    pW->move(x, y);
+    return true;
+}
+
+std::optional<QRect> TMainConsole::getPlainWindowGeometry(const QString& name) const
+{
+    auto pW = plainWindowWidget(name);
+    if (!pW) {
+        return {};
+    }
+    return {QRect(pW->pos(), pW->size())};
+}
+
+std::optional<bool> TMainConsole::getPlainWindowVisible(const QString& name) const
+{
+    auto pW = plainWindowWidget(name);
+    if (!pW) {
+        return {};
+    }
+    return {pW->isVisibleTo(this)};
+}
+
+bool TMainConsole::setCommandLineAction(const QString& name, const int func)
+{
+    auto pN = mSubCommandLineMap.value(name);
+    if (!pN) {
+        return false;
+    }
+    pN->setAction(func);
+    return true;
+}
+
+bool TMainConsole::resetCommandLineAction(const QString& name)
+{
+    auto pN = mSubCommandLineMap.value(name);
+    if (!pN) {
+        return false;
+    }
+    pN->resetAction();
+    return true;
 }
 
 void TMainConsole::setDockWidgetStyleSheets(const QString& styleSheet)

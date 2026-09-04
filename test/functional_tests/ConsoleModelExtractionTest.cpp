@@ -30,6 +30,7 @@
 #include "PortableModeTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
+#include "TCommandLine.h"
 #include "TConsoleModel.h"
 #include "TDockWidget.h"
 #include "TLabel.h"
@@ -1884,6 +1885,145 @@ noViewSpellReport = table.concat(noViewSpellProblems, '; ')
         QVERIFY2(widget->mpMainDisplay->styleSheet() != sentinel, "Changing every host's colours did not reach the miniconsole.");
         QVERIFY2(widget->mpMainDisplay->styleSheet().contains(qsl("12,34,56")),
                  qPrintable(qsl("The miniconsole was restyled with something other than its own background colour: %1").arg(widget->mpMainDisplay->styleSheet())));
+    }
+
+    // Resetting the profile destroys every scroll box, command line and text box
+    // the console built without going near any of the delete paths, so that walk
+    // has to clear the registry too - and it empties the maps it is walking as it
+    // goes.
+    void test_resettingTheMainConsoleDeregistersItsPlainWindows()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        const QString scrollBoxName = qsl("registryResetScrollBox");
+        const QString commandLineName = qsl("registryResetCommandLine");
+        const QString textBoxName = qsl("registryResetTextBox");
+        const auto [scrollBox, scrollBoxMessage] = host->createScrollBox(QString(), scrollBoxName, 0, 0, 40, 40);
+        QVERIFY2(scrollBox, qPrintable(scrollBoxMessage));
+        const auto [commandLine, commandLineMessage] = host->mpConsole->createCommandLine(QString(), commandLineName, 0, 50, 40, 20);
+        QVERIFY2(commandLine, qPrintable(commandLineMessage));
+        const auto [textBox, textBoxMessage] = host->mpConsole->createTextBox(QString(), textBoxName, 0, 80, 40, 40);
+        QVERIFY2(textBox, qPrintable(textBoxMessage));
+        QVERIFY2(host->windowRegistry().hasScrollBox(scrollBoxName), "Creating a scroll box registered nothing in the profile's window registry.");
+        QVERIFY2(host->windowRegistry().hasCommandLine(commandLineName), "Creating a command line registered nothing in the profile's window registry.");
+        QVERIFY2(host->windowRegistry().hasTextBox(textBoxName), "Creating a text box registered nothing in the profile's window registry.");
+
+        host->mpConsole->resetMainConsole();
+
+        QVERIFY2(!host->windowRegistry().hasScrollBox(scrollBoxName), "Resetting the main console left a scroll box in the profile's window registry.");
+        QVERIFY2(!host->windowRegistry().hasCommandLine(commandLineName), "Resetting the main console left a command line in the profile's window registry.");
+        QVERIFY2(!host->windowRegistry().hasTextBox(textBoxName), "Resetting the main console left a text box in the profile's window registry.");
+        QVERIFY2(!host->windowType(scrollBoxName).has_value(), "Host still reports a window type for a scroll box the reset destroyed.");
+        QVERIFY2(!host->windowType(commandLineName).has_value(), "Host still reports a window type for a command line the reset destroyed.");
+        QVERIFY2(!host->windowType(textBoxName).has_value(), "Host still reports a window type for a text box the reset destroyed.");
+
+        const auto [recreated, recreateMessage] = host->createScrollBox(QString(), scrollBoxName, 0, 0, 40, 40);
+        QVERIFY2(recreated, qPrintable(qsl("The name of a scroll box the reset destroyed could not be used again: %1").arg(recreateMessage)));
+    }
+
+    // A command line created into a scroll box is that box's Qt child, so
+    // deleting the box destroys it without anything having taken it out of the
+    // view's map first. Its destroyed() handler is the only thing that can clear
+    // the registry entry, and it runs long after the delete was asked for.
+    void test_aCommandLineDestroyedWithItsParentDeregisters()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        const QString scrollBoxName = qsl("registryHostingScrollBox");
+        const QString commandLineName = qsl("registryNestedCommandLine");
+        const auto [scrollBox, scrollBoxMessage] = host->createScrollBox(QString(), scrollBoxName, 0, 0, 100, 100);
+        QVERIFY2(scrollBox, qPrintable(scrollBoxMessage));
+        const auto [commandLine, commandLineMessage] = host->mpConsole->createCommandLine(scrollBoxName, commandLineName, 0, 0, 80, 20);
+        QVERIFY2(commandLine, qPrintable(commandLineMessage));
+        const QPointer<TCommandLine> commandLineWidget = host->mpConsole->subCommandLineWidget(commandLineName);
+        QVERIFY2(commandLineWidget, "Creating a command line inside a scroll box left no widget in the console's own map.");
+        QCOMPARE(host->windowType(commandLineName), std::optional<QString>(qsl("commandline")));
+
+        const auto [deleted, deleteMessage] = host->mpConsole->deleteScrollBox(scrollBoxName);
+        QVERIFY2(deleted, qPrintable(deleteMessage));
+
+        // Still registered at this point, because the scroll box is only queued
+        // for deletion. That is what makes the assertions after the wait a test
+        // of the destroyed() handler and of nothing else.
+        QVERIFY2(host->windowRegistry().hasCommandLine(commandLineName), "Deleting a scroll box deregistered the command line inside it before the widget was destroyed.");
+
+        QTRY_VERIFY_WITH_TIMEOUT(commandLineWidget.isNull(), 5000);
+
+        QVERIFY2(!host->windowRegistry().hasCommandLine(commandLineName), "Destroying a scroll box left the command line inside it in the profile's window registry.");
+        QVERIFY2(!host->windowType(commandLineName).has_value(), "Host still reports a window type for a command line destroyed with the scroll box it was in.");
+        QVERIFY2(!host->mpConsole->subCommandLineWidget(commandLineName), "The console's own map still hands out a command line destroyed with its scroll box.");
+    }
+
+    // Deleting a command line only queues the widget for deletion, so a
+    // replacement takes the name while the old widget is still alive, and the old
+    // one's deferred delete lands afterwards. The registry has to come out of that
+    // holding the replacement, not the leftovers of either step.
+    void test_aReplacedCommandLineKeepsTheReplacementRegistered()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        const QString commandLineName = qsl("registryReplacedCommandLine");
+        const auto [commandLine, commandLineMessage] = host->mpConsole->createCommandLine(QString(), commandLineName, 0, 50, 40, 20);
+        QVERIFY2(commandLine, qPrintable(commandLineMessage));
+        const QPointer<TCommandLine> original = host->mpConsole->subCommandLineWidget(commandLineName);
+        QVERIFY2(original, "Creating a command line left no widget in the console's own map.");
+
+        const auto [deleted, deleteMessage] = host->mpConsole->deleteCommandLine(commandLineName);
+        QVERIFY2(deleted, qPrintable(deleteMessage));
+        QVERIFY2(!host->windowRegistry().hasCommandLine(commandLineName), "Deleting a command line left it in the profile's window registry.");
+
+        const auto [recreated, recreateMessage] = host->mpConsole->createCommandLine(QString(), commandLineName, 0, 50, 40, 20);
+        QVERIFY2(recreated, qPrintable(recreateMessage));
+        TCommandLine* replacement = host->mpConsole->subCommandLineWidget(commandLineName);
+        QVERIFY2(replacement && replacement != original, "Creating a command line over a deleted name did not produce a new widget.");
+
+        QTRY_VERIFY_WITH_TIMEOUT(original.isNull(), 5000);
+
+        QVERIFY2(host->windowRegistry().hasCommandLine(commandLineName), "The old command line's deferred delete took its replacement's registry entry with it.");
+        QCOMPARE(host->windowType(commandLineName), std::optional<QString>(qsl("commandline")));
+        QVERIFY2(host->mpConsole->subCommandLineWidget(commandLineName) == replacement, "The old command line's deferred delete took its replacement out of the console's own map.");
+    }
+
+    // A scroll box, a command line and a text box are the three kinds nothing
+    // deregisters from its own destructor, so closing the profile is the moment
+    // their registry entries can outlive the widgets they name.
+    void test_destroyingTheViewDeregistersItsPlainWindows()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        const QString scrollBoxName = qsl("registryOrphanedScrollBox");
+        const QString commandLineName = qsl("registryOrphanedCommandLine");
+        const QString textBoxName = qsl("registryOrphanedTextBox");
+        const auto [scrollBox, scrollBoxMessage] = host->createScrollBox(QString(), scrollBoxName, 0, 0, 40, 40);
+        QVERIFY2(scrollBox, qPrintable(scrollBoxMessage));
+        const auto [commandLine, commandLineMessage] = host->mpConsole->createCommandLine(QString(), commandLineName, 0, 50, 40, 20);
+        QVERIFY2(commandLine, qPrintable(commandLineMessage));
+        const auto [textBox, textBoxMessage] = host->mpConsole->createTextBox(QString(), textBoxName, 0, 80, 40, 40);
+        QVERIFY2(textBox, qPrintable(textBoxMessage));
+        QCOMPARE(host->windowType(scrollBoxName), std::optional<QString>(qsl("scrollbox")));
+        QCOMPARE(host->windowType(commandLineName), std::optional<QString>(qsl("commandline")));
+        QCOMPARE(host->windowType(textBoxName), std::optional<QString>(qsl("textedit")));
+
+        destroyTheView(host);
+
+        QVERIFY2(!host->windowRegistry().hasScrollBox(scrollBoxName), "Destroying the console left a scroll box in the profile's window registry, naming a widget that has gone.");
+        QVERIFY2(!host->windowRegistry().hasCommandLine(commandLineName), "Destroying the console left a command line in the profile's window registry, naming a widget that has gone.");
+        QVERIFY2(!host->windowRegistry().hasTextBox(textBoxName), "Destroying the console left a text box in the profile's window registry, naming a widget that has gone.");
+        QVERIFY2(!host->windowType(scrollBoxName).has_value(), "Host still reports a window type for a scroll box destroyed with the console.");
+        QVERIFY2(!host->windowType(commandLineName).has_value(), "Host still reports a window type for a command line destroyed with the console.");
+        QVERIFY2(!host->windowType(textBoxName).has_value(), "Host still reports a window type for a text box destroyed with the console.");
     }
 
 private:
