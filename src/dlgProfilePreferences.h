@@ -287,6 +287,11 @@ private:
     void addActionsToPreview(TAction* pActionParent, std::vector<std::tuple<QString, QString, int>>& items);
     void addScriptsToPreview(TScript* pScriptParent, std::vector<std::tuple<QString, QString, int>>& items);
     void addKeysToPreview(TKey* pKeyParent, std::vector<std::tuple<QString, QString, int>>& items);
+#ifdef INCLUDE_MCPSERVER
+    // What still stands between a registered assistant and a reachable Mudlet,
+    // or an empty string when nothing does
+    QString mcpServerNotReadyHint() const;
+#endif
     // Writes every control a profile decides the value of. Safe to run again on
     // a dialog already showing one: everything it builds is built once and
     // re-read afterwards, every list it fills is emptied first, and every
@@ -536,6 +541,11 @@ private:
     // it with, written out by restyleSidebarIcons() for the theme's colour
     QMap<QString, QString> mCategoryIconMarkup;
     QTimer* mpTimer_apply = nullptr;
+#ifdef INCLUDE_MCPSERVER
+    // What this dialog last put on the MCP result line about the server itself, so a
+    // later success takes back only that and not a connect button's message
+    QString mMCPReportedError;
+#endif
     // Holds the typing back until it stops, so that a query only part typed is
     // not answered by moving most of the dialog onto the results page and back
     QTimer* mpTimer_search = nullptr;

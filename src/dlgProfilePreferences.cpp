@@ -3876,6 +3876,12 @@ void dlgProfilePreferences::populateApplicationSettings()
         const QSignalBlocker portBlocker(spinBox_mcpServerPort);
         spinBox_mcpServerPort->setValue(pMudlet->mcpServerPort());
     }
+    if (label_mcpConnectResult->text().isEmpty()) {
+        // A start refused at launch has no dialog open to report to, so the reason waits
+        // here for the first one. Anything already written is a fresher answer than this.
+        mMCPReportedError = pMudlet->mcpLastError();
+        label_mcpConnectResult->setText(mMCPReportedError);
+    }
     slot_updateMCPServerEndpoint();
 #endif
 }
@@ -6961,20 +6967,21 @@ void dlgProfilePreferences::applyAll()
         QString mcpError;
         const auto requestedMcpPort = static_cast<quint16>(spinBox_mcpServerPort->value());
         if (pMudlet->setMCPEnabled(checkBox_enableMCPServer->isChecked(), requestedMcpPort, mcpError)) {
-            label_mcpConnectResult->clear();
+            if (!mMCPReportedError.isEmpty() && label_mcpConnectResult->text() == mMCPReportedError) {
+                // Only a reason of our own that is now out of date is ours to take back. The
+                // connect buttons write here too, and their message outlives the tick that
+                // their own text asks the user for.
+                label_mcpConnectResult->clear();
+            }
+            mMCPReportedError.clear();
         } else {
-            // A server that was already up is put back on the port it was serving on, which
-            // also puts the port box back. Saying the setting was kept would then be untrue,
-            // and the user would look for a change that is not there.
-            const quint16 keptMcpPort = pMudlet->mcpServerPort();
-            label_mcpConnectResult->setText(
-                    keptMcpPort == requestedMcpPort
-                            //: Shown beneath the AI assistant settings when the MCP server could not open its port and nothing is serving. %1 is a TCP port number, %2 the reason the socket could not be opened.
-                            ? tr("Mudlet could not listen on port %1: %2 Another program may already be using that port - try a different one.").arg(QString::number(requestedMcpPort), mcpError)
-                            //: Shown beneath the AI assistant settings when the MCP server could not move to a new port and went back to the one it was serving on. %1 is the TCP port number that could not be opened, %2 the reason, %3 the port Mudlet carried on serving on instead.
-                            : tr("Mudlet could not listen on port %1: %2 Another program may already be using that port, so Mudlet is still serving on port %3.")
-                                      .arg(QString::number(requestedMcpPort), mcpError, QString::number(keptMcpPort)));
+            mMCPReportedError = mcpError;
+            label_mcpConnectResult->setText(mcpError);
         }
+        // refreshFromSettings() is the usual way back to the widgets, but it stands down
+        // while the search is open or the port box is still being typed into - both of
+        // which are exactly when this runs.
+        slot_updateMCPServerEndpoint();
     }
 #endif
 
@@ -8151,6 +8158,19 @@ void dlgProfilePreferences::slot_changeShowMapAuditErrors(const bool state)
 }
 
 #ifdef INCLUDE_MCPSERVER
+QString dlgProfilePreferences::mcpServerNotReadyHint() const
+{
+    if (!checkBox_enableMCPServer->isChecked()) {
+        //: Appended to either connect button's success message when the server checkbox above it is not on yet.
+        return tr("Also tick the checkbox above, or it will find nobody to talk to.");
+    }
+    if (mudlet::self()->mcpEndpoint().isEmpty()) {
+        //: Appended to either connect button's success message when the server is switched on but could not start.
+        return tr("Mudlet is not serving yet though, so check the port above.");
+    }
+    return {};
+}
+
 void dlgProfilePreferences::slot_updateMCPServerEndpoint()
 {
     mudlet* pMudlet = mudlet::self();
@@ -8168,9 +8188,11 @@ void dlgProfilePreferences::slot_updateMCPServerEndpoint()
         widget_mcpManualConnect->hide();
     }
 
-    if (!liveEndpoint.isEmpty() && pMudlet->mcpServerPort() == port) {
+    if (!liveEndpoint.isEmpty()) {
+        // The port it answers on, not the one in the box: a failed move leaves the two
+        // disagreeing, and the box is the request while this line is the outcome.
         //: Shown beneath the AI assistant settings while the MCP server is running. %1 is a TCP port number.
-        label_mcpServerEndpoint->setText(tr("Listening on port %1.").arg(port));
+        label_mcpServerEndpoint->setText(tr("Listening on port %1.").arg(pMudlet->mcpServerPort()));
         return;
     }
 
@@ -8180,8 +8202,14 @@ void dlgProfilePreferences::slot_updateMCPServerEndpoint()
         return;
     }
 
-    // Between the box being ticked and the change being applied a moment later, and after a
-    // start that did not take - which reports itself on the result line below the buttons.
+    if (!pMudlet->mcpLastError().isEmpty()) {
+        // The reason is on the result line below the buttons, which this must not contradict
+        //: Shown beneath the AI assistant settings when the MCP server could not open its port. The reason appears below the buttons.
+        label_mcpServerEndpoint->setText(tr("The server is not running."));
+        return;
+    }
+
+    // The moment between the box being ticked and the change being applied
     //: Shown beneath the AI assistant settings in the moment between the server being switched on and it answering. %1 is a TCP port number.
     label_mcpServerEndpoint->setText(tr("Starting on port %1...").arg(port));
 }
@@ -8192,10 +8220,10 @@ void dlgProfilePreferences::slot_connectClaudeDesktop()
     case TMCPBridge::ConnectOutcome::Written: {
         //: Shown beneath the AI assistant settings after Mudlet was added to the Claude Desktop application's settings. Claude Desktop is a product name, leave it as-is.
         QString message = tr("Done - restart Claude Desktop and Mudlet will appear among its connectors.");
-        if (!checkBox_enableMCPServer->isChecked() || mudlet::self()->mcpEndpoint().isEmpty()) {
+        const QString hint = mcpServerNotReadyHint();
+        if (!hint.isEmpty()) {
             message.append(QChar::Space);
-            //: Appended to either connect button's success message when the server checkbox above it is not on yet.
-            message.append(tr("Also tick the checkbox above, or it will find nobody to talk to."));
+            message.append(hint);
         }
         label_mcpConnectResult->setText(message);
         break;
@@ -8233,10 +8261,10 @@ void dlgProfilePreferences::slot_connectChatGpt()
     case TMCPBridge::ConnectOutcome::Written: {
         //: Shown beneath the AI assistant settings after Mudlet was added to the settings shared by the ChatGPT desktop app and Codex. ChatGPT and Codex are product names, leave them as-is.
         QString message = tr("Done - restart ChatGPT (or Codex) and Mudlet will appear among its connectors.");
-        if (!checkBox_enableMCPServer->isChecked() || mudlet::self()->mcpEndpoint().isEmpty()) {
+        const QString hint = mcpServerNotReadyHint();
+        if (!hint.isEmpty()) {
             message.append(QChar::Space);
-            //: Appended to either connect button's success message when the server checkbox above it is not on yet.
-            message.append(tr("Also tick the checkbox above, or it will find nobody to talk to."));
+            message.append(hint);
         }
         label_mcpConnectResult->setText(message);
         break;
