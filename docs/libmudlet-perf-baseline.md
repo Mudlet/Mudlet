@@ -117,6 +117,19 @@ METRIC display_paint_ms ...
 METRIC display_rows_per_paint ...
 METRIC display_cols_per_paint ...
 METRIC display_lines_per_sec ...
+METRIC display_tail_small_paint_ms ...
+METRIC display_tail_large_paint_ms ...
+METRIC display_tail_small_cells ...
+METRIC display_tail_large_cells ...
+METRIC display_tail_area_ratio ...
+METRIC display_tail_cost_ratio ...
+METRIC display_overlay_small_paint_ms ...
+METRIC display_overlay_large_paint_ms ...
+METRIC display_overlay_small_cells ...
+METRIC display_overlay_large_cells ...
+METRIC display_overlay_area_ratio ...
+METRIC display_overlay_cost_ratio ...
+METRIC display_overlay_cache_reused ...
 ```
 
 ### Two profile configurations, and why the split matters
@@ -208,11 +221,16 @@ than silently passing whenever it cannot trust the comparison:
 
 - an invariant (`text_corpus_lines`, `text_corpus_bytes`, `trigger_count`,
   `build_asan`, `corpus_version`, `display_rows_per_paint`,
-  `display_cols_per_paint`) is missing from either run, or differs between them -
-  the two runs used different corpora, trigger sets, screen geometry or build
+  `display_cols_per_paint`, `display_tail_small_cells`,
+  `display_tail_large_cells`, `display_overlay_small_cells`,
+  `display_overlay_large_cells`, `display_overlay_cache_reused`) is missing from
+  either run, or differs between them - the two runs used different corpora,
+  trigger sets, screen geometry or build
   flavours. `build_asan` specifically stops an ASan build being compared against
   a release build, `corpus_version` stops a comparison across a retuned corpus,
-  and the two `display_*` invariants stop one across a differently-sized screen.
+  and the `display_*` cell and geometry invariants stop one across a
+  differently-sized screen. `display_overlay_cache_reused` is the odd one out and
+  is explained under the display benchmark below.
   Because the invariants come from several slots, compare **full runs**: a
   single-slot run on both sides is refused for the missing ones.
 - a **gated** metric is missing from either run, or its "before" value is not
@@ -264,6 +282,40 @@ play for the text bench.
 The slot runs last so that its render target and the paint path's cached screen
 pixmap fall outside both `peak_rss_kb` and `defaults_peak_rss_kb`, whose
 difference is documented above as what the default packages cost.
+
+### The cached screen (`display_tail_*`, `display_overlay_*`)
+
+`benchDisplay` above measures the worst case, a full redraw every paint. The two
+benchmarks after it measure the two ways `drawForeground()` avoids one by reusing
+the screen it drew last time, because between them they are what a console
+actually spends its time doing:
+
+- **`display_tail_*`** - one line of new text per paint, a console following a
+  game. Served by the scroll shortcut.
+- **`display_overlay_*`** - a three-row band repainted with no new text and no
+  scroll, the damage a window edge or a Geyser label dragged across the console
+  leaves behind. Served by the cached-screen blit, which is a separate branch
+  with its own guard.
+
+Each runs the same workload in a 640x400 and a 1600x1000 window and reports
+`*_area_ratio` (how much bigger the screen got, ~4.9) against `*_cost_ratio` (how
+much dearer one paint got with it). A path really reusing the cache holds
+cost_ratio far below area_ratio.
+
+`display_overlay_cache_reused` is an **invariant, not a timing**: 1 only when
+both windows really took the cached-screen blit. It exists because the timings
+alone are actively misleading when that branch breaks. Issue #10341 - the guard
+rejecting the cache it had just allocated at fractional device pixel ratios - was
+measured here at `QT_SCALE_FACTOR=1.25` reporting **0.17ms against the fixed
+build's 0.37ms**: the broken build looks twice as fast because it never draws the
+band at all. A percentage would have reported that as a large speedup. Refusing
+the comparison says what actually happened.
+
+The reuse is detected by observation rather than by re-testing the guard, which
+would only keep agreeing with itself: the cache is marked above and inside the
+band, and only the wanted branch arrives with the first mark and without the
+second. The scroll shortcut blits the same pixmap, so blitting alone does not
+distinguish them.
 
 The `display_*` metrics are reported, not gated by default. They measure at
 least as tightly as the text metrics do on an unloaded machine, so gate on them

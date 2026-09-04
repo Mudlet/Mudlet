@@ -134,6 +134,7 @@ public:
     friend class FramePacingTest;
     friend class FrontendRefreshSeamTest;
     friend class TTextEditBlinkTest;
+    friend class PipelineBenchmark;
     static bool shouldRegisterBlinkClient(bool enableBlinkText, bool hasBlinkingContentInRedrawnRegion, bool isBlinkClientRegistered, bool reusedCachedScreenContent);
 
     QColor mFgColor;

@@ -41,6 +41,7 @@
  */
 
 #include <QFileInfo>
+#include <QPainter>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -141,6 +142,12 @@ private:
     static constexpr int kDisplayTailLargeWidth = 1600;
     static constexpr int kDisplayTailLargeHeight = 1000;
     static constexpr int kDisplayTailPaints = 400;
+
+    // The overlay pass repaints a band this many rows tall, the shape a window
+    // edge or a Geyser label dragged across the console damages: a few rows, no
+    // new text, and no scroll.
+    static constexpr int kDisplayOverlayBandRows = 3;
+    static constexpr int kDisplayOverlayPaints = 400;
 
     enum class LineShape {
         Prompt,
@@ -871,8 +878,124 @@ private slots:
         emitMetric("display_tail_cost_ratio", large.paintMs / small.paintMs);
     }
 
+    // The third way into drawForeground(), and the one nothing else here covers:
+    // a partial repaint with no new text and no scroll, which is what a window
+    // or a Geyser label dragged over the console leaves behind. It has its own
+    // guard on the cached screen, and when that guard rejects the cache every
+    // such repaint quietly becomes a full redraw. Issue #10341 was exactly that,
+    // and both benchmarks above stayed flat through it.
+    void benchDisplayOverlay()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        QVERIFY(noTriggersAreRunningYet(host));
+
+        host->mTelnet.loopbackTest(mCorpus);
+        const int bufferedLines = host->mpConsole->buffer.getLastLineNumber();
+        QVERIFY2(bufferedLines > 1000, qPrintable(qsl("console buffer only holds %1 lines - the pipeline did not process the corpus").arg(bufferedLines)));
+
+        TTextEdit* pane = host->mpConsole->mUpperPane;
+        QVERIFY(pane);
+
+        OverlayResult small;
+        measureOverlayPaints(pane, bufferedLines, kDisplayTailSmallWidth, kDisplayTailSmallHeight, small);
+        QVERIFY2(!QTest::currentTestFailed(), "the small-window pass did not produce a usable measurement");
+
+        OverlayResult large;
+        measureOverlayPaints(pane, bufferedLines, kDisplayTailLargeWidth, kDisplayTailLargeHeight, large);
+        QVERIFY2(!QTest::currentTestFailed(), "the large-window pass did not produce a usable measurement");
+
+        QVERIFY2(large.cells > small.cells * 2.0,
+                 qPrintable(qsl("the large pane draws %1 cells against the small pane's %2, which is too close to compare - the main window did not take one of the two sizes")
+                                    .arg(large.cells)
+                                    .arg(small.cells)));
+
+        emitMetric("display_overlay_small_paint_ms", small.paintMs);
+        emitMetric("display_overlay_large_paint_ms", large.paintMs);
+        emitMetric("display_overlay_small_cells", static_cast<qint64>(small.cells));
+        emitMetric("display_overlay_large_cells", static_cast<qint64>(large.cells));
+        // The blit is itself proportional to the screen, so cost_ratio does not
+        // flatten out entirely - what it does is stay well under area_ratio,
+        // which a full redraw of the band would not.
+        emitMetric("display_overlay_area_ratio", large.cells / small.cells);
+        emitMetric("display_overlay_cost_ratio", large.paintMs / small.paintMs);
+        // 1 only when both windows really took the cached-screen blit. Without
+        // this the timings alone are ambiguous: a build whose guard rejects the
+        // cache still reports a plausible number, and the comparison would read
+        // a silent full-redraw regression as a modest slowdown.
+        emitMetric("display_overlay_cache_reused", static_cast<qint64>((small.cacheReused && large.cacheReused) ? 1 : 0));
+    }
+
 private:
     enum class DefaultPackages { Skip, Install };
+
+    struct OverlayResult
+    {
+        double paintMs = 0.0;
+        double cells = 0.0;
+        int rows = 0;
+        bool cacheReused = false;
+    };
+
+    // Whether a partial repaint really took drawForeground()'s cached-screen
+    // blit, observed rather than recomputed: a copy of the guard would go on
+    // agreeing with itself long after the guard it was copied from started
+    // rejecting the cache.
+    //
+    // Blitting the cache is not on its own the answer, because the scroll
+    // shortcut below it blits the same pixmap and is what a build with a broken
+    // guard falls through to. The two are told apart by what they redraw: the
+    // cached-screen blit redraws the damaged band, the scroll shortcut redraws
+    // only the bottom row and leaves the band as it found it. So the cache is
+    // marked twice, once outside the band and once inside it, and only the
+    // wanted path arrives with the first mark and without the second.
+    bool overlayPaintReusedCache(TTextEdit* pane, QPixmap& target, const QRect& band)
+    {
+        const QColor outsideMark(0, 255, 0);
+        const QColor insideMark(0, 0, 255);
+        const int insideRow = band.top() / pane->mFontHeight;
+        markCacheRow(pane, 0, outsideMark);
+        markCacheRow(pane, insideRow, insideMark);
+        pane->render(&target, QPoint(), QRegion(band));
+
+        const QImage painted = pane->mRenderBuffer.toImage();
+        const int insideTop = qRound(insideRow * pane->mFontHeight * pane->devicePixelRatioF());
+        const double insideMarkLeft = markedFraction(painted, insideTop, insideMark);
+        const bool cacheWasBlitted = markedFraction(painted, 0, outsideMark) > 0.9;
+        const bool bandWasRedrawn = insideMarkLeft >= 0.0 && insideMarkLeft < 0.1;
+        return cacheWasBlitted && bandWasRedrawn;
+    }
+
+    static void markCacheRow(TTextEdit* pane, const int row, const QColor& colour)
+    {
+        QPainter mark(&pane->mScreenMap);
+        mark.setCompositionMode(QPainter::CompositionMode_Source);
+        mark.fillRect(QRect(0, row * pane->mFontHeight, pane->width(), pane->mFontHeight), colour);
+    }
+
+    // Share of a marked row still carrying its colour, or -1.0 if the row could
+    // not be read - which the caller has to treat as a failure, since "no mark
+    // found" is one of the two answers it is asking for. Sampled a few device
+    // rows below the top edge, which keeps the reading clear of the neighbouring
+    // row whatever the device pixel ratio rounded the boundary to.
+    static double markedFraction(const QImage& image, const int deviceTop, const QColor& colour)
+    {
+        if (image.isNull() || deviceTop < 0 || deviceTop + 6 >= image.height() || image.width() < 8) {
+            return -1.0;
+        }
+        const QRgb wanted = colour.rgb() | 0xff000000u;
+        int hits = 0;
+        int seen = 0;
+        for (int y = deviceTop + 2; y < deviceTop + 6; ++y) {
+            for (int x = 0; x < image.width(); x += 8) {
+                ++seen;
+                if ((image.pixel(x, y) | 0xff000000u) == wanted) {
+                    ++hits;
+                }
+            }
+        }
+        return seen ? static_cast<double>(hits) / seen : -1.0;
+    }
 
     struct TailResult
     {
@@ -943,6 +1066,51 @@ private:
             best = std::min(best, timer.nsecsElapsed() / 1.0e9);
         }
         result.paintMs = (best / kDisplayTailPaints) * 1000.0;
+    }
+
+    // A band of rows repainted with no new text and no scroll, which is the
+    // damage a window edge or a Geyser label dragged across the console leaves
+    // behind. Fills `result` for the reason measureTailPaints() gives.
+    void measureOverlayPaints(TTextEdit* pane, const int bufferedLines, const int windowWidth, const int windowHeight, OverlayResult& result)
+    {
+        mudlet::self()->resize(windowWidth, windowHeight);
+        qApp->processEvents();
+
+        result.rows = pane->getScreenHeight();
+        QVERIFY2(result.rows > kDisplayOverlayBandRows * 3,
+                 qPrintable(qsl("the display pane draws %1 rows, too few to hold a %2-row band with screen either side of it").arg(result.rows).arg(kDisplayOverlayBandRows)));
+        result.cells = static_cast<double>(result.rows) * pane->getColumnCount();
+
+        const int firstLine = result.rows + 16;
+        QVERIFY2(bufferedLines > firstLine + result.rows, qPrintable(qsl("%1 buffered lines cannot fill a %2-row screen that far into the buffer").arg(bufferedLines).arg(result.rows)));
+
+        QPixmap target(pane->size());
+        target.fill(Qt::magenta);
+
+        // A full paint first: it is what leaves a complete screen in the cache
+        // for the partial paints below to have something to reuse.
+        pane->scrollTo(firstLine);
+        pane->render(&target);
+        QVERIFY2(frameHasContent(target.toImage()), "the rendered frame is a single flat colour - nothing was drawn, so the timings below would describe an empty widget");
+        QVERIFY2(pane->imageTopLine() > 10, qPrintable(qsl("the top line is %1, close enough to the start of the buffer that drawForeground() forces full redraws").arg(pane->imageTopLine())));
+
+        const QRect band(0, (result.rows / 3) * pane->mFontHeight, pane->width(), kDisplayOverlayBandRows * pane->mFontHeight);
+        QVERIFY2(band.height() < pane->rect().height(), "the band covers the whole pane, so these would be full repaints rather than the partial ones this measures");
+        QVERIFY2(band.top() >= pane->mFontHeight, "the band starts at the top row, leaving no row above it for the probe below to mark");
+
+        double best = std::numeric_limits<double>::max();
+        for (int pass = 0; pass < kDisplayPasses; ++pass) {
+            QElapsedTimer timer;
+            timer.start();
+            for (int i = 0; i < kDisplayOverlayPaints; ++i) {
+                pane->render(&target, QPoint(), QRegion(band));
+            }
+            best = std::min(best, timer.nsecsElapsed() / 1.0e9);
+        }
+        result.paintMs = (best / kDisplayOverlayPaints) * 1000.0;
+
+        // Last, because it leaves marks in the cache: nothing is timed after it.
+        result.cacheReused = overlayPaintReusedCache(pane, target, band);
     }
 
     // Called before the benchmark installs any of its own, so anything running

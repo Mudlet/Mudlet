@@ -63,6 +63,14 @@ HARNESSES = {
             "display_cols_per_paint",
             "display_tail_small_cells",
             "display_tail_large_cells",
+            "display_overlay_small_cells",
+            "display_overlay_large_cells",
+            # 0 when the overlay bench's repaints stopped reusing the cached
+            # screen. An invariant rather than a gated metric because the timings
+            # of a build that lost that path are not slower versions of the same
+            # work, they are a different paint entirely - refusing to compare
+            # says so, where a percentage would bury it.
+            "display_overlay_cache_reused",
         ),
         # Throughput for the text and trigger pipelines, plus the shipped default
         # packages on the same corpus - the pipeline metrics run on a bare
