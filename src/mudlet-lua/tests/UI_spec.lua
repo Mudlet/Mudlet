@@ -6137,6 +6137,52 @@ describe("Main window size and saved layout", function()
     assert.is_true(tallHeight <= smallHeight + 300)
   end)
 
+  -- Everything getColumnCount("main") is made of, read together with the
+  -- size, so a column count that disagrees with the width says which of them
+  -- moved: the font, the borders or the pane itself.
+  local function mainConsoleGeometry()
+    local width, height = getMainWindowSize()
+    local fontName = getFont("main")
+    local fontSize = getFontSize("main")
+    local charWidth, charHeight = calcFontSize(fontSize, fontName)
+    local attached = {}
+    if Adjustable and Adjustable.Container and Adjustable.Container.Attached then
+      for side, containers in pairs(Adjustable.Container.Attached) do
+        for containerName in pairs(containers) do
+          attached[#attached + 1] = side .. ":" .. containerName
+        end
+      end
+    end
+    return {
+      width = width, height = height,
+      columns = getColumnCount("main"), rows = getRowCount("main"),
+      fontName = fontName, fontSize = fontSize,
+      charWidth = charWidth, charHeight = charHeight,
+      borders = getBorderSizes(), attached = attached,
+    }
+  end
+
+  local function describeGeometry(geometry)
+    local pixelsPerColumn = geometry.columns > 0 and geometry.width / geometry.columns or 0
+    return ("%dx%d px, %dx%d cells (%.1f px per column), font %s %d (%dx%d px per cell), borders left %d right %d top %d bottom %d, attached containers: %s"):format(
+      geometry.width, geometry.height, geometry.columns, geometry.rows, pixelsPerColumn,
+      geometry.fontName, geometry.fontSize, geometry.charWidth, geometry.charHeight,
+      geometry.borders.left, geometry.borders.right, geometry.borders.top, geometry.borders.bottom,
+      #geometry.attached > 0 and table.concat(geometry.attached, " ") or "none")
+  end
+
+  -- Width and column count at intervals after a reading, to show a
+  -- disagreement between the two either clearing or staying put.
+  local function traceSettling()
+    local samples = {}
+    for _ = 1, 10 do
+      pumpEvents(50)
+      local width = getMainWindowSize()
+      samples[#samples + 1] = ("%d/%d"):format(width, getColumnCount("main"))
+    end
+    return table.concat(samples, " ")
+  end
+
   it("a main window that loses more than half its width is reported at the width it has", function()
     if not resizableWindowAvailable() then
       return
@@ -6144,26 +6190,29 @@ describe("Main window size and saved layout", function()
     finally(restoreMainWindowSize)
     setMainWindowSize(1600, 700)
     pumpEvents(200)
-    local wideWidth = getMainWindowSize()
-    local wideColumns = getColumnCount("main")
+    local wide = mainConsoleGeometry()
 
     setMainWindowSize(300, 700)
     pumpEvents(200)
-    local narrowWidth = getMainWindowSize()
-    local narrowColumns = getColumnCount("main")
+    local narrow = mainConsoleGeometry()
+    -- after both readings, so it cannot change their timing
+    local settling = traceSettling()
+    local report = ("\n  wide:     %s\n  narrow:   %s\n  settling: %s"):format(
+      describeGeometry(wide), describeGeometry(narrow), settling)
 
     -- the main window has a minimum width of its own, so how narrow it really
     -- became is read off the column count rather than assumed; that and
     -- getMainWindowSize() have to tell the same story
-    if narrowColumns * 2 >= wideColumns then
-      pending("this display would not take the main window below half its width")
+    if narrow.columns * 2 >= wide.columns then
+      pending("this display would not take the main window below half its width" .. report)
       return
     end
     -- the console holds fewer than half the columns it did, so the width it
     -- reports has to have more than halved with them; merely falling would also
     -- be true of a size that only got part of the way down
-    assert.is_true(narrowWidth * 2 < wideWidth,
-      ("getMainWindowSize reported %d, down from %d, while the console went from %d to %d columns"):format(narrowWidth, wideWidth, wideColumns, narrowColumns))
+    assert.is_true(narrow.width * 2 < wide.width,
+      ("getMainWindowSize reported %d, down from %d, while the console went from %d to %d columns%s"):format(
+        narrow.width, wide.width, wide.columns, narrow.columns, report))
   end)
 
   it("the main window can be put back the size it was", function()
