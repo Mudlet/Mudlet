@@ -43,6 +43,7 @@
 #include <QTimer>
 #include <QtTest/QtTest>
 #include <chrono>
+#include <functional>
 
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
@@ -59,6 +60,8 @@ using namespace std::chrono_literals;
 namespace {
 const QByteArray csGoAhead = QByteArrayLiteral("\xff\xf9"); // IAC GA
 const QByteArray csReply = QByteArrayLiteral("You are in a well lit room.\r\n");
+// Attempts allowed at a round trip the runner stalled the reading away from - see takeReading()
+constexpr int csReadingAttempts = 3;
 } // namespace
 
 class TelnetLatencyMeasurementTest : public QObject
@@ -109,6 +112,49 @@ private:
             replyFromServer();
         });
         runEventLoop(flightTime + 400ms);
+    }
+
+    // Takes 'roundTrip' until it publishes a reading. One is only published when
+    // Mudlet kept up with its event loop for the whole wait - see
+    // NETWORK_LATENCY_MAX_STALL in ctelnet.cpp - so a runner that stalls anywhere
+    // inside the window drops it and leaves the previous reading standing. That is
+    // the measurement working as designed, but it leaves nothing to judge the round
+    // trip by, so it is worth taking again rather than failing on.
+    //
+    // Only a missing reading is retried. One that arrives with the wrong value
+    // is a real result and is left for the caller to assert on, since retrying
+    // those would let a measurement that answers for the wrong command pass on
+    // whichever attempt happened to look right.
+    bool takeReading(const std::function<void()>& roundTrip)
+    {
+        for (int attempt = 0; attempt < csReadingAttempts; ++attempt) {
+            mpHost->mTelnet.networkLatencyTime = 0.0;
+            roundTrip();
+            if (latency() > 0.0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // A quiet round trip, taken again if the runner stalled across it.
+    bool takeQuietReading(const std::chrono::milliseconds flightTime)
+    {
+        return takeReading([this, flightTime]() {
+            measureQuietRoundTrip(flightTime);
+        });
+    }
+
+    // The same, for the round trip whose reply carries no GA.
+    bool takeReadingWithoutGoAhead(const std::chrono::milliseconds flightTime)
+    {
+        return takeReading([this, flightTime]() {
+            sendCommand();
+            QTimer::singleShot(flightTime, this, [this]() {
+                mpServer->sendRaw(QByteArrayLiteral("Nothing happens.\r\n"));
+            });
+            runEventLoop(flightTime + 400ms);
+        });
     }
 
 private slots:
@@ -174,15 +220,8 @@ private slots:
     // pass the rest of the file by never publishing a reading at all.
     void reportsRoundTripMeasuredWhileResponsive()
     {
-        // A reading is dropped when the event loop misses a beat, and an
-        // oversubscribed runner can delay one on its own; that is worth a
-        // retry, not a failure.
-        double measured = 0.0;
-        for (int attempt = 0; attempt < 3 && !(measured > 0.2 && measured < 0.6); ++attempt) {
-            measureQuietRoundTrip(300ms);
-            measured = latency();
-        }
-        QVERIFY2(measured > 0.2 && measured < 0.6, qPrintable(qsl("A 0.3s round trip taken with the event loop running should be reported as roughly that, got %1s").arg(measured)));
+        QVERIFY2(takeQuietReading(300ms), "A round trip taken with the event loop running published no reading at all");
+        QVERIFY2(latency() > 0.2 && latency() < 0.6, qPrintable(qsl("A 0.3s round trip taken with the event loop running should be reported as roughly that, got %1s").arg(latency())));
     }
 
     // The reported bug: with the reply already sitting in the socket, the time
@@ -190,7 +229,7 @@ private slots:
     // network's, and must not be published as the ping.
     void dropsRoundTripMeasuredAcrossAStall()
     {
-        measureQuietRoundTrip(300ms);
+        QVERIFY2(takeQuietReading(300ms), "Setup failed: no reading to start from was published at all");
         const double beforeStall = latency();
         QVERIFY2(beforeStall > 0.2 && beforeStall < 0.6, qPrintable(qsl("Setup failed: expected a ~0.3s reading to start from, got %1s").arg(beforeStall)));
 
@@ -205,7 +244,7 @@ private slots:
 
         // ...and dropping that reading did not put the measurement out of
         // action: the next quiet round trip is measured, and measured afresh.
-        measureQuietRoundTrip(600ms);
+        QVERIFY2(takeQuietReading(600ms), "The stall left the measurement out of action: no later round trip was reported at all");
         QVERIFY2(latency() > 0.5 && latency() < 0.9, qPrintable(qsl("A 0.6s round trip after the stall should have been reported as roughly that, got %1s").arg(latency())));
     }
 
@@ -213,7 +252,7 @@ private slots:
     // however long afterwards - being timed as that command's reply.
     void abandonsAMeasurementTheGameNeverAnswers()
     {
-        measureQuietRoundTrip(300ms);
+        QVERIFY2(takeQuietReading(300ms), "Setup failed: no reading to start from was published at all");
         const double beforeSilence = latency();
         QVERIFY2(beforeSilence > 0.2 && beforeSilence < 0.6, qPrintable(qsl("Setup failed: expected a ~0.3s reading to start from, got %1s").arg(beforeSilence)));
 
@@ -227,7 +266,7 @@ private slots:
         // ...and it was abandoned rather than merely left unpublished: an
         // abandoned measurement lets the next command start one of its own,
         // while one still outstanding would swallow this round trip too
-        measureQuietRoundTrip(700ms);
+        QVERIFY2(takeQuietReading(700ms), "The command sent after the unanswered one was not measured at all");
         QVERIFY2(latency() > 0.5 && latency() < 1.0, qPrintable(qsl("The command sent after the unanswered one was not measured on its own, got %1s").arg(latency())));
     }
 
@@ -235,16 +274,11 @@ private slots:
     // measured, leaving one reading to stand in silently for all of them.
     void measuresCommandsAfterAReplyWithoutGoAhead()
     {
-        sendCommand();
-        QTimer::singleShot(200ms, this, [this]() {
-            mpServer->sendRaw(QByteArrayLiteral("Nothing happens.\r\n"));
-        });
-        runEventLoop(600ms);
+        QVERIFY2(takeReadingWithoutGoAhead(200ms), "Setup failed: a reply that carried no GA published no reading at all");
         const double afterUnprompted = latency();
         QVERIFY2(afterUnprompted > 0.1 && afterUnprompted < 0.5, qPrintable(qsl("Setup failed: expected the 0.2s round trip to be the standing reading, got %1s").arg(afterUnprompted)));
 
-        measureQuietRoundTrip(700ms);
-
+        QVERIFY2(takeQuietReading(700ms), "A round trip after a reply that carried no GA was not measured at all");
         QVERIFY2(latency() > 0.5 && latency() < 1.0, qPrintable(qsl("A 0.7s round trip was not measured on its own after a reply that carried no GA, got %1s").arg(latency())));
     }
 
@@ -252,7 +286,7 @@ private slots:
     // connection: the next one's first packet is not its reply.
     void abandonsAMeasurementWhenTheConnectionGoesAway()
     {
-        measureQuietRoundTrip(300ms);
+        QVERIFY2(takeQuietReading(300ms), "Setup failed: no reading to start from was published at all");
         const double beforeReconnect = latency();
         QVERIFY2(beforeReconnect > 0.2 && beforeReconnect < 0.6, qPrintable(qsl("Setup failed: expected a ~0.3s reading to start from, got %1s").arg(beforeReconnect)));
 
