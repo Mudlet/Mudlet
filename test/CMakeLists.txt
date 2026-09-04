@@ -195,6 +195,46 @@ if(NOT WIN32)
     )
 endif()
 
+# The libmudlet Qt Widgets ratchet (#8681, #9011): fails when a mudlet_core file
+# gains a Widgets dependency docs/libmudlet-widgets-report.md does not record.
+# Shelling out to cmake/audit-core-widgets.sh costs no link step, and riding the
+# ctest run every CI job already performs costs no CI job either.
+if(NOT WIN32)
+    # The audit separates real QtWidgets headers from the forwarders whose classes
+    # moved to QtGui, so it needs the headers directory holding all of QtWidgets/,
+    # QtGui/ and QtCore/. Qt6::Widgets names ".../include/QtWidgets", whose parent
+    # is that directory - but check the entries themselves too, rather than assume
+    # which form a given Qt lays down.
+    set(coreWidgetsQtIncludeCandidates "")
+    get_target_property(coreWidgetsQtIncludeDirs Qt6::Widgets INTERFACE_INCLUDE_DIRECTORIES)
+    foreach(includeDir ${coreWidgetsQtIncludeDirs} ${Qt6Widgets_INCLUDE_DIRS})
+        get_filename_component(includeParent "${includeDir}" DIRECTORY)
+        list(APPEND coreWidgetsQtIncludeCandidates "${includeDir}" "${includeParent}")
+    endforeach()
+    list(APPEND coreWidgetsQtIncludeCandidates "${QT6_INSTALL_PREFIX}/include")
+
+    set(coreWidgetsQtInclude "")
+    foreach(candidate ${coreWidgetsQtIncludeCandidates})
+        if(IS_DIRECTORY "${candidate}/QtWidgets"
+           AND IS_DIRECTORY "${candidate}/QtGui"
+           AND IS_DIRECTORY "${candidate}/QtCore")
+            set(coreWidgetsQtInclude "${candidate}")
+            break()
+        endif()
+    endforeach()
+
+    add_test(NAME CoreWidgetsAuditTest
+        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/ci/core-widgets-audit-test.sh
+    )
+    # A Qt whose headers cannot be located skips rather than fails: the audit is a
+    # progress metric, and a contributor with an unusual layout should not be
+    # blocked by one. Everything it can actually measure is still enforced.
+    set_tests_properties(CoreWidgetsAuditTest PROPERTIES
+        SKIP_RETURN_CODE 77
+        ENVIRONMENT "MUDLET_QT_INCLUDE_DIR=${coreWidgetsQtInclude}"
+    )
+endif()
+
 add_subdirectory(functional_tests)
 
 # CI runners are elevated, so nothing there catches a test executable Windows

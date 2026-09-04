@@ -15,7 +15,7 @@
 #      QSizePolicy) even when the header arrives transitively via another
 #      include. These symbols are exactly what fails to compile once Qt Widgets
 #      is gone, so they must be measured too - a pure include scan misses files
-#      like XMLexport.cpp (uses QApplication with no direct include).
+#      like VarUnit.h (uses QTreeWidgetItem with no direct include).
 #
 # The QtWidgets header/symbol sets are derived from the installed Qt's own module
 # layout (headers present in QtWidgets/ but not in QtGui/ or QtCore/, so Qt6
@@ -27,6 +27,7 @@
 #   cmake/audit-core-widgets.sh                 # print the Markdown report, exit 0
 #   cmake/audit-core-widgets.sh --enforce       # CI guard: exit 1 if count > baseline
 #   cmake/audit-core-widgets.sh --summary       # one-line count, exit 0
+#   cmake/audit-core-widgets.sh --count         # bare offending-file count, exit 0
 #
 # Options:
 #   --qt-include DIR   Qt headers dir (the one containing QtWidgets/). Overrides
@@ -35,7 +36,8 @@
 #   --src DIR          Mudlet src/ dir (default: derived from this script's location).
 #   -h, --help         show this help.
 #
-# Regenerate the committed report:
+# Regenerate the committed artefacts - baseline first, so the report records it:
+#   bash cmake/audit-core-widgets.sh --count > cmake/core-widgets-baseline.txt
 #   bash cmake/audit-core-widgets.sh > docs/libmudlet-widgets-report.md
 
 set -u
@@ -56,13 +58,14 @@ BASELINE_FILE="$SCRIPT_DIR/core-widgets-baseline.txt"
 err() { printf '%s: %s\n' "$PROG" "$1" >&2; }
 
 usage() {
-  sed -n '2,39p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '2,41p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --enforce) MODE=enforce ;;
     --summary) MODE=summary ;;
+    --count) MODE=count ;;
     --qt-include) shift; QT_INCLUDE="${1:-}" ;;
     --qt-include=*) QT_INCLUDE="${1#*=}" ;;
     --baseline) shift; BASELINE_FILE="${1:-}" ;;
@@ -284,6 +287,11 @@ case "$MODE" in
     exit 0
     ;;
 
+  count)
+    printf '%s\n' "$OFFENDING"
+    exit 0
+    ;;
+
   enforce)
     BASE=$(read_baseline) || exit 2
     printf 'mudlet_core Qt Widgets audit: %s offending files (baseline %s).\n' "$OFFENDING" "$BASE"
@@ -331,8 +339,16 @@ included in the count; the refactor plan moves those wholesale to a future
 \`mudlet_app\` target rather than de-widgeting them, so the count drops through a
 mix of moving and refactoring.
 
-**Regenerate:** \`bash cmake/audit-core-widgets.sh > docs/libmudlet-widgets-report.md\`
-**CI guard:** \`bash cmake/audit-core-widgets.sh --enforce\` (baseline in \`cmake/core-widgets-baseline.txt\`)
+**Regenerate** - baseline first, so the report records it:
+
+\`\`\`sh
+bash cmake/audit-core-widgets.sh --count > cmake/core-widgets-baseline.txt
+bash cmake/audit-core-widgets.sh > docs/libmudlet-widgets-report.md
+\`\`\`
+
+**Guard:** the \`CoreWidgetsAuditTest\` ctest case (\`test/ci/core-widgets-audit-test.sh\`)
+fails when a file gains a Qt Widgets dependency it does not have in the offending
+list below, so this report cannot silently fall out of date.
 
 ## Summary
 
