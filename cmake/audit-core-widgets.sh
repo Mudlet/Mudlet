@@ -32,9 +32,9 @@
 # So this audit and CMakeListsConsistencyTest (which counts bare basenames
 # anywhere in the file) do not agree about membership, and a file that joins
 # mudlet_core by one of those routes is scanned by nobody. An entry *inside* the
-# parsed blocks that cannot be reduced to a bare filename is warned about rather
-# than skipped, as is a target_sources() whose target cannot be resolved, which
-# covers the generator-expression, quoted-path and unknown-target cases.
+# parsed blocks that cannot be reduced to a bare filename aborts the run, as does
+# a target_sources() whose target cannot be resolved: the count is already wrong
+# at that point, so it is not reported at all.
 #
 # Usage:
 #   cmake/audit-core-widgets.sh                 # print the Markdown report, exit 0
@@ -87,11 +87,11 @@ while [ $# -gt 0 ]; do
     --enforce) MODE=enforce ;;
     --summary) MODE=summary ;;
     --count) MODE=count ;;
-    --qt-include) shift; QT_INCLUDE="${1:-}" ;;
+    --qt-include) shift; [ $# -gt 0 ] || { err "--qt-include needs a directory"; exit 2; }; QT_INCLUDE="$1" ;;
     --qt-include=*) QT_INCLUDE="${1#*=}" ;;
-    --baseline) shift; BASELINE_FILE="${1:-}" ;;
+    --baseline) shift; [ $# -gt 0 ] || { err "--baseline needs a file"; exit 2; }; BASELINE_FILE="$1" ;;
     --baseline=*) BASELINE_FILE="${1#*=}" ;;
-    --src) shift; SRC_DIR="${1:-}" ;;
+    --src) shift; [ $# -gt 0 ] || { err "--src needs a directory"; exit 2; }; SRC_DIR="$1" ;;
     --src=*) SRC_DIR="${1#*=}" ;;
     -h|--help) usage; exit 0 ;;
     *) err "unknown argument: $1"; usage >&2; exit 2 ;;
@@ -142,10 +142,6 @@ if [ ! -d "$QW" ]; then
   exit 2
 fi
 
-# Recorded in the report so a later run can tell "this Qt sees fewer widget
-# classes than the one that generated the record" apart from "this is simply a
-# different Qt". Both derived sets grow between Qt releases, so their sizes are
-# only comparable within one version.
 QT_VER=$(sed -n 's/^#define QTCORE_VERSION_STR  *"\([^"]*\)".*/\1/p' "$QTINC/QtCore/qtcoreversion.h" 2>/dev/null | head -1)
 [ -n "$QT_VER" ] || QT_VER="unknown"
 
@@ -157,21 +153,27 @@ trap 'rm -rf "$TMPDIR_AUDIT"' EXIT INT TERM
 SET_HEADERS="$TMPDIR_AUDIT/headers.txt"
 SET_CLASSES="$TMPDIR_AUDIT/classes.txt"
 FILE_LIST="$TMPDIR_AUDIT/files.txt"
+PARSE_WARNINGS="$TMPDIR_AUDIT/parse-warnings.txt"
 
 lower_module_names="$TMPDIR_AUDIT/lower.txt"
 widgets_sorted="$TMPDIR_AUDIT/widgets_all.txt"
-{ ls "$QTINC/QtGui" 2>/dev/null; ls "$QTINC/QtCore" 2>/dev/null; } | sort -u > "$lower_module_names"
-ls "$QW" | sort > "$widgets_sorted"
 
-# A partial/broken Qt (QtWidgets present, QtGui/QtCore missing) would leave the
-# filter set empty, so every QtWidgets forwarder header (qaction.h, qshortcut.h,
-# ... whose classes actually live in QtGui) would be miscounted as a Widgets
-# dependency. Refuse to run rather than emit a silently inflated count.
-if [ ! -s "$lower_module_names" ]; then
-  err "no QtGui/QtCore headers found under $QTINC (partial or broken Qt install)."
-  err "cannot separate QtWidgets headers from forwarders relocated to QtGui; aborting."
-  exit 2
-fi
+# Checked one module at a time, and without hiding ls's own error: an unreadable
+# QtGui still leaves a non-empty union from QtCore, and the QtWidgets forwarders
+# whose classes moved to QtGui would then be miscounted as Widgets dependencies.
+for module in QtGui QtCore; do
+  if ! ls "$QTINC/$module" > "$TMPDIR_AUDIT/$module.txt"; then
+    err "cannot read $QTINC/$module - partial, broken or unreadable Qt install; aborting."
+    exit 2
+  fi
+  if [ ! -s "$TMPDIR_AUDIT/$module.txt" ]; then
+    err "no headers found in $QTINC/$module (partial or broken Qt install)."
+    err "cannot separate QtWidgets headers from forwarders relocated to QtGui; aborting."
+    exit 2
+  fi
+done
+sort -u "$TMPDIR_AUDIT/QtGui.txt" "$TMPDIR_AUDIT/QtCore.txt" > "$lower_module_names"
+ls "$QW" | sort > "$widgets_sorted"
 
 comm -23 "$widgets_sorted" "$lower_module_names" \
   | grep -vE '^[0-9]+\.[0-9]+\.[0-9]+$' > "$SET_HEADERS" # drop the versioned private-headers subdir
@@ -182,22 +184,27 @@ if [ ! -s "$SET_HEADERS" ]; then
 fi
 
 # SET_CLASSES drives the symbol signal - the half of the audit that catches a file
-# using QApplication with no direct include of it. An empty set silently demotes
-# the audit to a plain include scan, and the resulting lower count reads as
-# progress, so it gets the same check SET_HEADERS gets above.
+# using QApplication with no direct include of it. Every class missing from this
+# set silently takes its users out of the offending count, and a lower count
+# reads as progress, so a pruned or stubbed Qt looks like the goal being reached.
+# Emptiness is too weak a check to catch that: a set with one class left passes
+# it. These four have been in QtWidgets since Qt 4 and are used throughout
+# Mudlet, so their absence means a broken instrument rather than a clean tree.
 grep -E '^Q[A-Z]' "$SET_HEADERS" > "$SET_CLASSES"
-if [ ! -s "$SET_CLASSES" ]; then
-  err "derived no QtWidgets class names from $QW (no CamelCase class headers found)."
-  err "the symbol half of the audit would be dead and the count silently too low; aborting."
+missing_canary=""
+for class in QWidget QApplication QLabel QSizePolicy; do
+  grep -qx "$class" "$SET_CLASSES" || missing_canary="$missing_canary $class"
+done
+if [ -n "$missing_canary" ]; then
+  err "the QtWidgets class set derived from $QW is missing:$missing_canary"
+  err "that set is the audit's own instrument, so the count would be silently too low; aborting."
   exit 2
 fi
 
-# The sizes of the two derived sets are the audit's own measuring instrument. A
-# pruned Qt, or one that relocated classes out of QtWidgets, shrinks them - and
-# every class that drops out silently takes its users out of the offending count,
-# which reads as progress. Recording them lets the guard notice.
-HEADER_SET_SIZE=$(wc -l < "$SET_HEADERS" | tr -d ' ')
-CLASS_SET_SIZE=$(wc -l < "$SET_CLASSES" | tr -d ' ')
+# Auto-detection takes the first qtpaths/qmake on PATH, so the count can come
+# from a different Qt than the reader assumes. Announced on stderr rather than
+# in the report, which has to stay byte-identical across Qt versions.
+err "measuring against Qt $QT_VER at $QTINC"
 
 # mudlet_core's file list lives in the mudlet_SRCS / mudlet_HDRS variables of
 # src/CMakeLists.txt; both the set(...) blocks and later list(APPEND ...) lines
@@ -240,19 +247,17 @@ awk '
     }
     if ($0 ~ /^[ \t]*set\(mudlet_(SRCS|HDRS)([ \t]|$)/) inblk=1
     if ($0 ~ /list\(APPEND[ \t]+mudlet_(SRCS|HDRS)([ \t]|\)|$)/) inapp=1
-    # Only the library target. target_sources() on the executable adds files that
+    # Only the library target: target_sources() on the executable adds files that
     # are not part of mudlet_core, so counting them would inflate the denominator.
-    # CMake allows the target name on a line of its own after "target_sources(", and
-    # that spelling used to match nothing here: the file joined mudlet_core with its
-    # widget use uncounted and the run stayed silent, so the name is carried across
-    # lines now.
+    # CMake allows the target name on a line of its own after "target_sources(",
+    # hence tgtpending carrying the lookup across to the next line.
     if (match($0, /target_sources[ \t]*\(/)) {
       trest = substr($0, RSTART + RLENGTH)
-      sub(/^[ \t]+/, "", trest)
+      sub(/^[ \t]+/, "", trest); gsub(/"/, "", trest)
       if (trest == "") tgtpending=1
       else { split(trest, tname, /[ \t)]/); targetSeen(tname[1]) }
     } else if (tgtpending) {
-      trest = $0; sub(/^[ \t]+/, "", trest)
+      trest = $0; sub(/^[ \t]+/, "", trest); gsub(/"/, "", trest)
       if (trest != "") { split(trest, tname, /[ \t)]/); targetSeen(tname[1]) }
     }
     if (inblk || inapp || intgt) {
@@ -272,14 +277,24 @@ awk '
         # under src/ - one routed through some other variable, or a generator
         # expression like $<$<BOOL:${USE_X}>:Foo.cpp> - is silently scanned by
         # nobody, so the file joins mudlet_core with its Qt Widgets use uncounted.
-        # Warn rather than skip: the ctest guard turns a warning here into a failure.
         if (a[i] ~ /\.(cpp|mm|h)([^A-Za-z0-9_]|$)/)
           printf "audit-core-widgets: not a bare filename, so nothing scanned it: %s\n", a[i] > "/dev/stderr"
       }
     }
     if ($0 ~ /\)/) { inblk=0; inapp=0; intgt=0; tgtpending=0 }
   }
-' "$CMAKE_FILE" | sort -uf > "$FILE_LIST"
+' "$CMAKE_FILE" 2> "$PARSE_WARNINGS" | sort -uf > "$FILE_LIST"
+
+# Each warning means a file reached mudlet_core by a route the parser could not
+# follow, so nothing scanned it and the count below is already too low. That is a
+# wrong number, not a caveat, so it is fatal in every mode - including the ones
+# that regenerate the committed baseline and report.
+if [ -s "$PARSE_WARNINGS" ]; then
+  cat "$PARSE_WARNINGS" >&2
+  err "entries in $CMAKE_FILE could not be resolved to a file, so nothing scanned them."
+  err "the count would be silently too low; teach the parser this spelling before trusting it."
+  exit 2
+fi
 
 EXISTING="$TMPDIR_AUDIT/existing.txt"
 : > "$EXISTING"
@@ -293,11 +308,10 @@ while IFS= read -r f; do
   fi
 done < "$FILE_LIST"
 
-# Under --enforce the audit is a CI gate: a file listed in CMakeLists.txt but
-# absent from disk means the list is stale or the parser drifted, so counting
-# the survivors would under-report. Fail loudly instead of silently skipping.
-if [ "$MODE" = enforce ] && [ "$missing" -gt 0 ]; then
-  err "$missing file(s) listed in $CMAKE_FILE are missing from disk; failing under --enforce."
+# A file listed in CMakeLists.txt but absent from disk means the list is stale or
+# the parser drifted, so counting the survivors would under-report.
+if [ "$missing" -gt 0 ]; then
+  err "$missing file(s) listed in $CMAKE_FILE are missing from disk; aborting."
   exit 2
 fi
 
@@ -338,9 +352,8 @@ RESULTS="$TMPDIR_AUDIT/results.txt"
     if (line ~ /^[ \t]*#[ \t]*include[ \t]*[<"]/) {
       s=line; sub(/^[^<"]*[<"]/,"",s); sub(/[>"].*$/,"",s)
       if (s=="QtWidgets") { inc[FILENAME]++; mark(FILENAME, "QtWidgets") }
-      # The prefix is stripped before being re-added: an include that already spells
-      # it out was recorded as QtWidgets/QtWidgets/QWidget, which no reader or
-      # parser expects and regenerating only reproduced.
+      # Stripped before being re-added, so an include that already spells the
+      # module out does not end up recorded as QtWidgets/QtWidgets/QWidget.
       else if (s ~ /^QtWidgets\//) { inc[FILENAME]++; sub(/^QtWidgets\//, "", s); mark(FILENAME, "QtWidgets/" s) }
       else if (s ~ /\//) { }
       else if (s in W) { inc[FILENAME]++; mark(FILENAME, s) }
@@ -392,18 +405,21 @@ read_baseline() {
 
 case "$MODE" in
   summary)
-    printf 'mudlet_core Qt Widgets audit: %s of %s files depend on Qt Widgets\n' "$OFFENDING" "$TOTAL"
+    # A failed write must not exit 0: the documented way to refresh the baseline
+    # is "--count > cmake/core-widgets-baseline.txt", and the shell truncates that
+    # file before this runs, so a silent failure leaves it empty.
+    printf 'mudlet_core Qt Widgets audit: %s of %s files depend on Qt Widgets\n' "$OFFENDING" "$TOTAL" || exit 2
     exit 0
     ;;
 
   count)
-    printf '%s\n' "$OFFENDING"
+    printf '%s\n' "$OFFENDING" || exit 2
     exit 0
     ;;
 
   enforce)
     BASE=$(read_baseline) || exit 2
-    printf 'mudlet_core Qt Widgets audit: %s offending files (baseline %s).\n' "$OFFENDING" "$BASE"
+    printf 'mudlet_core Qt Widgets audit: %s offending files (baseline %s).\n' "$OFFENDING" "$BASE" || exit 2
     if [ "$OFFENDING" -gt "$BASE" ]; then
       err "regression: $OFFENDING > baseline $BASE. New/changed files pulled Qt Widgets into mudlet_core."
       err "Offenders above baseline - inspect recent changes; run without --enforce for the full report."
@@ -418,6 +434,10 @@ case "$MODE" in
   report)
     BASE="n/a"
     if [ -f "$BASELINE_FILE" ]; then BASE=$(read_baseline) || exit 2; fi
+    # Assembled in full before anything reaches stdout, because the documented
+    # recipe redirects stdout straight over the committed report: a write that
+    # fails midway would otherwise leave a truncated file behind and exit 0.
+    {
     cat <<EOF
 <!-- GENERATED FILE - do not edit by hand. -->
 <!-- Regenerate: bash cmake/audit-core-widgets.sh > docs/libmudlet-widgets-report.md -->
@@ -465,9 +485,6 @@ and the baseline are regenerated in each libmudlet PR, so drift shows up in the 
 | Metric | Count |
 | --- | ---: |
 | Source files in \`mudlet_core\` | ${TOTAL} |
-| Qt version measured against | ${QT_VER} |
-| QtWidgets headers seen | ${HEADER_SET_SIZE} |
-| QtWidgets classes seen | ${CLASS_SET_SIZE} |
 | Files depending on Qt Widgets | ${OFFENDING} |
 | Clean files | ${CLEAN} |
 | Committed baseline | ${BASE:-n/a} |
@@ -498,6 +515,8 @@ EOF
 
 </details>
 EOF
+    } > "$TMPDIR_AUDIT/report.md" || { err "failed to assemble the report"; exit 2; }
+    cat "$TMPDIR_AUDIT/report.md" || { err "failed to write the report to stdout"; exit 2; }
     exit 0
     ;;
 esac

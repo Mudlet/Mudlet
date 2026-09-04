@@ -44,9 +44,6 @@ and the baseline are regenerated in each libmudlet PR, so drift shows up in the 
 | Metric | Count |
 | --- | ---: |
 | Source files in `mudlet_core` | 421 |
-| Qt version measured against | 6.12.0 |
-| QtWidgets headers seen | 320 |
-| QtWidgets classes seen | 196 |
 | Files depending on Qt Widgets | 149 |
 | Clean files | 272 |
 | Committed baseline | 149 |
