@@ -1431,7 +1431,10 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       end
 
       it("merges the keys it was given into an incoming GMCP table", function()
-        assert.is_nil(gmcp.MudletSpec and gmcp.MudletSpec.Merged)
+        -- gmcp outlives the spec and a merge key can never be taken off again,
+        -- so own the module outright rather than assume an untouched session
+        gmcp.MudletSpec = nil
+        finally(function() gmcp.MudletSpec = nil end)
         setMergeTables("MudletSpec.Merged")
 
         feedGmcp('MudletSpec.Merged {"hp": 10, "mp": 20}')
@@ -1442,7 +1445,8 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       end)
 
       it("leaves a module it was not given to be replaced wholesale", function()
-        assert.is_nil(gmcp.MudletSpec and gmcp.MudletSpec.Replaced)
+        gmcp.MudletSpec = nil
+        finally(function() gmcp.MudletSpec = nil end)
 
         feedGmcp('MudletSpec.Replaced {"hp": 10, "mp": 20}')
         feedGmcp('MudletSpec.Replaced {"hp": 5}')
