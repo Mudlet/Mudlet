@@ -876,8 +876,15 @@ int TLuaInterpreter::sttSetSensitivity(lua_State* L)
         // was true, but the built-in macOS backend can never tune
         // end-of-speech detection in any build, and telling a player to go
         // and find a better one sends them after something that does not exist.
-        const QString message = qsl("the %1 speech engine cannot tune end-of-speech detection").arg(pRecognizer->backendName());
-        reportSpeechRefusal(message);
+        // backendName() is already a proper name, so it carries the sentence
+        // on its own - "the Apple Speech speech engine" reads as a stutter.
+        //
+        // Returned but not raised, matching setVocabulary() below: an engine
+        // that can never do this is answering a capability question, not
+        // reporting a fault, and a package applying its saved sensitivity
+        // whenever speech starts would otherwise raise sysSTTError on every
+        // single start for a limit that will never change.
+        const QString message = qsl("%1 cannot tune end-of-speech detection").arg(pRecognizer->backendName());
         return warnArgumentValue(L, "stt.setSensitivity", message);
     }
     lua_pushboolean(L, true);

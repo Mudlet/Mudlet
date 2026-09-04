@@ -37,7 +37,7 @@ Design contract, before the tables:
 | `stt.initialized()` | boolean | A model is loaded (`state` is neither `uninitialized` nor `error`). |
 | `stt.listening()` | boolean | The engine is capturing now. Reads the engine, always in step with `getInfo().listening`. |
 | `stt.setSilenceTimeout(msec)` | `true` \| `nil, error` | After `msec` of continuous silence, listening ends exactly as `stt.stop()` would — finalised, never discarded. `0` (the default) keeps listening open-ended. Holds across listening sessions, not across restarts - neither this nor `setSensitivity` is saved. |
-| `stt.setSensitivity(mode)` | `true` \| `nil, error` | How quickly an utterance is judged finished: `"short"` for commands, `"default"` for balanced use, `"long"` for dictation. Engines map this onto their own end-of-speech detection, so the effect is comparable rather than identical between them; an engine that must rebuild to apply it may pause briefly when a model is already loaded. Not every engine can: the built-in macOS backend has no end-of-speech tuning at all and refuses every mode, permanently, and an older libvosk without the endpointer symbol refuses too. Both return `nil` and a message naming the engine that cannot do it — a refusal to plan around, not a fault to retry. |
+| `stt.setSensitivity(mode)` | `true` \| `nil, error` | How quickly an utterance is judged finished: `"short"` for commands, `"default"` for balanced use, `"long"` for dictation. Engines map this onto their own end-of-speech detection, so the effect is comparable rather than identical between them; an engine that must rebuild to apply it may pause briefly when a model is already loaded. Not every engine can: the built-in macOS backend has no end-of-speech tuning at all and refuses every mode, permanently, and an older libvosk without the endpointer symbol refuses too. Both return `nil` and a message naming the engine that cannot do it — a refusal to plan around, not a fault to retry, so it is returned rather than raised as `sysSTTError`. |
 | `stt.setVocabulary(words)` | boolean \| `nil, error` | Tell the engine which words to expect, so it favours them when a sound could be several things — a game's command verbs, its exits, the names of what is in front of you. Takes an array of words or short phrases; keep it to a shortlist rather than a dictionary, since applying one can make the engine rebuild and pause briefly. `true` means the engine took them. `false` is not an error: it means this backend cannot use vocabulary at all (see capabilities), so correct the results yourself instead. A backend that *can* and failed this time also returns `false`, reporting the fault through `sysSTTError`, so a caller branching only on the boolean still degrades gracefully while the failure stays visible. `nil, error` means there was no engine to offer the words to. What "took them" actually means differs enough between backends that it is spelled out per engine below the `capabilities` table. |
 | `stt.getInfo()` | table | Everything the engine can say about itself at this moment: what is loaded, what it is capable of, and what it is doing right now. The keys are listed below. Always a table, even with no engine installed: every key below is present except `version` and `language`, which need a recognizer to exist, and every capability reads `false` - so a caller can read it without guarding. |
 
@@ -211,7 +211,11 @@ capability.
    still raises the event, or a consumer written against events alone cannot
    tell a missing engine from a quiet microphone. A refusal caused by the
    script's own arguments is returned but not announced, since one package's
-   mistake is not news for every other package on the profile.
+   mistake is not news for every other package on the profile. So is a limit
+   the engine can never lift - `setSensitivity` on a backend with no
+   end-of-speech tuning - which is a capability answer of rule 3's kind
+   rather than a fault. Announced, it would fire on every single start for
+   a package that reapplies its saved settings whenever speech begins.
 3. **`setVocabulary`'s boolean is a capability answer**, not a success flag.
    Packages branch on it: `true` → engine handles vocabulary; `false` → apply
    client-side correction.
