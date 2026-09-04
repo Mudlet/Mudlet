@@ -159,6 +159,11 @@ SherpaRecognizer::SherpaRecognizer(QObject* parent)
 : SpeechRecognizer(parent)
 , mpCapture(new SpeechAudioCapture(this))
 {
+    // Explicitly qualified: this is the answer for an engine with nothing
+    // loaded, and it must be this class's, not the base's all-false one.
+    // Explicitly qualified: this is the answer for an engine with nothing
+    // loaded, and it must be this class's, not the base's all-false one.
+    mAnnouncedCapabilities = SherpaRecognizer::capabilities();
     connect(mpCapture, &SpeechAudioCapture::pcm, this, &SherpaRecognizer::slot_pcmReady);
     connect(mpCapture, &SpeechAudioCapture::captureError, this, &SherpaRecognizer::slot_captureError);
     // A silence timeout ends the utterance the way the user stopping would:

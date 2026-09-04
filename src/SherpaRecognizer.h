@@ -72,6 +72,10 @@ public:
     {
         Capabilities answer;
         answer.biasing = mRecognizer && mSupportsBiasing;
+        // Unconditional: the endpoint rules are this engine's own, baked in at
+        // creation. setSensitivity() returning false here means the reload it
+        // needed failed, not that tuning is beyond it.
+        answer.sensitivity = true;
         answer.onDevice = true;
         return answer;
     }
@@ -192,13 +196,14 @@ private:
     bool mUppercaseTokens = false;
 
     // What capabilities() last reported, so announceCapabilitiesIfChanged()
-    // can tell a real change from a re-read of the same answer. Seeded with
-    // what capabilities() answers before anything is loaded, which is not the
-    // all-false default: onDevice is unconditionally true for this engine, so
-    // an unseeded record differs from the very first answer and announces a
-    // change nothing made - reachable by calling releaseResources() on a
-    // recognizer that never loaded a thing.
-    Capabilities mAnnouncedCapabilities{.onDevice = true};
+    // can tell a real change from a re-read of the same answer. Seeded in the
+    // constructor from capabilities() itself rather than left at the all-false
+    // default: several of this engine's answers do not depend on a model, so
+    // an unseeded record differs from the very first real answer and announces
+    // a change nothing made - reachable by calling releaseResources() on a
+    // recognizer that never loaded a thing. Seeded from the function rather
+    // than a matching literal so that adding a capability cannot forget it.
+    Capabilities mAnnouncedCapabilities;
 
     // Consecutive silent audio chunks, used to tell a genuine lull from the
     // moment speech is starting. Chunks arrive every 50ms.

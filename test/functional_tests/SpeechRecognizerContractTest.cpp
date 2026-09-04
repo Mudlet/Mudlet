@@ -1102,6 +1102,24 @@ private slots:
         QCOMPARE(capabilityChanges.count(), 0);
     }
 
+    // "Cannot ever" and "did not this time" both left setSensitivity() false,
+    // and the bridge read every false as the first - so sherpa-onnx, whose
+    // false means a model rebuild failed, told packages to stop asking about
+    // something transient. The two are separated before the call now, so the
+    // capability has to be right per backend.
+    void anEngineSaysWhetherSensitivityCanBeTunedAtAll()
+    {
+        SherpaRecognizer sherpa;
+        QVERIFY2(sherpa.supportsSensitivity(),
+                 "sherpa-onnx bakes its own endpoint rules, so a refusal from it is this attempt failing, not a limit");
+
+#if defined(Q_OS_MACOS)
+        AppleSpeechRecognizer apple;
+        QVERIFY2(!apple.supportsSensitivity(),
+                 "the built-in macOS backend decides its own endpointing and exposes nothing to tune");
+#endif
+    }
+
     void aRejectedWordIsNotSilentlyDropped()
     {
         QStringList rejected;

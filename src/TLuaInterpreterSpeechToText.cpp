@@ -684,6 +684,9 @@ int TLuaInterpreter::sttGetInfo(lua_State* L)
     lua_pushstring(L, "words");
     lua_pushboolean(L, pRecognizer && pRecognizer->supportsWordResults());
     lua_settable(L, -3);
+    lua_pushstring(L, "sensitivity");
+    lua_pushboolean(L, pRecognizer && pRecognizer->supportsSensitivity());
+    lua_settable(L, -3);
     lua_pushstring(L, "onDevice");
     lua_pushboolean(L, pRecognizer && pRecognizer->onDevice());
     lua_settable(L, -3);
@@ -870,7 +873,12 @@ int TLuaInterpreter::sttSetSensitivity(lua_State* L)
         return warnArgumentValue(L, "stt.setSensitivity", message);
     }
 
-    if (!pRecognizer->setSensitivity(sensitivity)) {
+    // Asked before the call, not inferred from its answer. Both produce false
+    // and they call for opposite responses: a package told "cannot" stops
+    // asking, which is right for an engine that never can and wrong for one
+    // whose reload happened to fail. Only the engine knows which it is, and
+    // only capabilities() can say so before the attempt.
+    if (!pRecognizer->supportsSensitivity()) {
         // Names the engine rather than blaming "this build of the speech
         // engine": for an older libvosk without the endpointer symbol that
         // was true, but the built-in macOS backend can never tune
@@ -879,13 +887,22 @@ int TLuaInterpreter::sttSetSensitivity(lua_State* L)
         // backendName() is already a proper name, so it carries the sentence
         // on its own - "the Apple Speech speech engine" reads as a stutter.
         //
-        // Returned but not raised, matching setVocabulary() below: an engine
-        // that can never do this is answering a capability question, not
-        // reporting a fault, and a package applying its saved sensitivity
-        // whenever speech starts would otherwise raise sysSTTError on every
-        // single start for a limit that will never change.
+        // Returned but not raised, matching setVocabulary(): an engine that
+        // can never do this is answering a capability question, not reporting
+        // a fault, and a package applying its saved sensitivity whenever
+        // speech starts would otherwise raise sysSTTError on every single
+        // start for a limit that will never change.
         const QString message = qsl("%1 cannot tune end-of-speech detection").arg(pRecognizer->backendName());
         return warnArgumentValue(L, "stt.setSensitivity", message);
+    }
+
+    if (!pRecognizer->setSensitivity(sensitivity)) {
+        // An engine that can tune and did not, this once. sherpa-onnx rebuilds
+        // the model to re-bake its endpoint rules and returns that rebuild's
+        // answer, so the reason is whatever went wrong with the rebuild - which
+        // it has already said through sysSTTError, in terms this layer cannot
+        // improve on. Pointed at rather than restated, the way stt.start() does.
+        return warnArgumentValue(L, "stt.setSensitivity", "the sensitivity could not be applied this time - the sysSTTError event carries the reason");
     }
     lua_pushboolean(L, true);
     return 1;

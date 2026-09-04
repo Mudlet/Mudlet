@@ -79,6 +79,11 @@ public:
         // supply real ones must not claim this, and a package that waits for
         // sysSTTWords before acting on a result would wait forever.
         answer.wordResults = (s_vosk_recognizer_set_words != nullptr);
+        // Same reasoning as wordResults above: an older libvosk without the
+        // endpointer symbol cannot be tuned at all, and setEndpointerMode()
+        // refuses rather than remembering a request the engine never got. That
+        // is a property of the installed library, not of the attempt.
+        answer.sensitivity = (s_vosk_recognizer_set_endpointer_mode != nullptr);
         answer.onDevice = true;
         return answer;
     }
