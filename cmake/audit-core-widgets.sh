@@ -23,12 +23,15 @@
 # resulting offending-file count is stable across Qt 6.x versions because Mudlet
 # only uses widget classes whose module membership is unchanged.
 #
-# Known gap - what counts as being *in* the target: the file list is parsed from
-# the set(mudlet_SRCS|HDRS ...) and list(APPEND mudlet_SRCS|HDRS ...) blocks, plus
-# target_sources() calls naming the library target. Two kinds of target member
-# still sit outside that:
+# Known gap - what counts as being *in* the target: the file list is parsed from the
+# set(mudlet_SRCS|HDRS ...) and list(APPEND|PREPEND|INSERT ...) blocks, plus
+# add_library() and target_sources() calls naming the library target. Three kinds of
+# target member still sit outside that:
 #   - mudlet_UIS and mudlet_RCCS, which are target members but not C++ sources.
 #   - anything reaching the target through a variable this parser does not know.
+#   - anything added from a nested add_subdirectory(), which is not followed, or
+#     spelled with an uppercase command name, which CMake allows and Mudlet does not
+#     use.
 # So this audit and CMakeListsConsistencyTest (which counts bare basenames
 # anywhere in the file) do not agree about membership, and a file that joins
 # mudlet_core by one of those routes is scanned by nobody. An entry *inside* the
@@ -87,12 +90,12 @@ while [ $# -gt 0 ]; do
     --enforce) MODE=enforce ;;
     --summary) MODE=summary ;;
     --count) MODE=count ;;
-    --qt-include) shift; [ $# -gt 0 ] || { err "--qt-include needs a directory"; exit 2; }; QT_INCLUDE="$1" ;;
-    --qt-include=*) QT_INCLUDE="${1#*=}" ;;
-    --baseline) shift; [ $# -gt 0 ] || { err "--baseline needs a file"; exit 2; }; BASELINE_FILE="$1" ;;
-    --baseline=*) BASELINE_FILE="${1#*=}" ;;
-    --src) shift; [ $# -gt 0 ] || { err "--src needs a directory"; exit 2; }; SRC_DIR="$1" ;;
-    --src=*) SRC_DIR="${1#*=}" ;;
+    --qt-include) shift; [ -n "${1:-}" ] || { err "--qt-include needs a directory"; exit 2; }; QT_INCLUDE="$1" ;;
+    --qt-include=*) QT_INCLUDE="${1#*=}"; [ -n "$QT_INCLUDE" ] || { err "--qt-include needs a directory"; exit 2; } ;;
+    --baseline) shift; [ -n "${1:-}" ] || { err "--baseline needs a file"; exit 2; }; BASELINE_FILE="$1" ;;
+    --baseline=*) BASELINE_FILE="${1#*=}"; [ -n "$BASELINE_FILE" ] || { err "--baseline needs a file"; exit 2; } ;;
+    --src) shift; [ -n "${1:-}" ] || { err "--src needs a directory"; exit 2; }; SRC_DIR="$1" ;;
+    --src=*) SRC_DIR="${1#*=}"; [ -n "$SRC_DIR" ] || { err "--src needs a directory"; exit 2; } ;;
     -h|--help) usage; exit 0 ;;
     *) err "unknown argument: $1"; usage >&2; exit 2 ;;
   esac
@@ -149,10 +152,14 @@ QT_VER=$(sed -n 's/^#define QTCORE_VERSION_STR  *"\([^"]*\)".*/\1/p' "$QTINC/QtC
 # QtCore/ - that filters Qt6 compatibility forwarders such as qaction.h and
 # qshortcut.h whose classes moved to QtGui.
 TMPDIR_AUDIT=$(mktemp -d "${TMPDIR:-/tmp}/core-widgets.XXXXXX") || { err "mktemp failed"; exit 2; }
-trap 'rm -rf "$TMPDIR_AUDIT"' EXIT INT TERM
+trap 'rm -rf "$TMPDIR_AUDIT"' EXIT
+# sh resumes after the handler returns unless it exits, and the count would then be
+# taken from files the handler just deleted - reading as zero, the goal number.
+trap 'rm -rf "$TMPDIR_AUDIT"; trap - EXIT; exit 2' INT TERM
 SET_HEADERS="$TMPDIR_AUDIT/headers.txt"
 SET_CLASSES="$TMPDIR_AUDIT/classes.txt"
 FILE_LIST="$TMPDIR_AUDIT/files.txt"
+FILE_LIST_RAW="$TMPDIR_AUDIT/files-raw.txt"
 PARSE_WARNINGS="$TMPDIR_AUDIT/parse-warnings.txt"
 
 lower_module_names="$TMPDIR_AUDIT/lower.txt"
@@ -214,14 +221,20 @@ err "measuring against Qt $QT_VER at $QTINC"
 # so a ")" or a filename inside a "#" comment - or a Windows-style checkout - cannot
 # silently truncate or pad the parsed list. Any of the blocks may span several
 # lines, so each is tracked rather than assumed to be single-line.
-awk '
-  BEGIN { srcprefix = "${CMAKE_CURRENT_SOURCE_DIR}/" }
-  # LIB_MUDLET_TARGET is set in the parent CMakeLists.txt, so it is the one name
-  # the single-line set() harvest below cannot resolve for itself.
+# Target names such as LIB_MUDLET_TARGET live in the root CMakeLists.txt; without it
+# a target_sources() naming one is unresolvable and the run aborts on correct input.
+ROOT_CMAKE="$SRC_DIR/../CMakeLists.txt"
+set --
+[ -f "$ROOT_CMAKE" ] && set -- "$ROOT_CMAKE"
+set -- "$@" "$CMAKE_FILE"
+
+awk -v cmakefile="$CMAKE_FILE" '
+  BEGIN { srcprefix = "${CMAKE_CURRENT_SOURCE_DIR}/"; listdirprefix = "${CMAKE_CURRENT_LIST_DIR}/" }
   function resolveTarget(name,   v) {
     if (name !~ /^[$][{][A-Za-z_][A-Za-z0-9_]*[}]$/) return name
     v = substr(name, 3, length(name) - 3)
     if (v in var) return var[v]
+    # Only reached when the root CMakeLists.txt was unreadable.
     if (v == "LIB_MUDLET_TARGET") return "mudlet_core"
     return ""
   }
@@ -245,13 +258,15 @@ awk '
         if (vval != "" && vval !~ /[ \t${}]/) var[vname] = vval
       }
     }
-    if ($0 ~ /^[ \t]*set\(mudlet_(SRCS|HDRS)([ \t]|$)/) inblk=1
-    if ($0 ~ /list\(APPEND[ \t]+mudlet_(SRCS|HDRS)([ \t]|\)|$)/) inapp=1
+    # The root file is read for its set() lines alone; only src/ contributes files.
+    if (FILENAME != cmakefile) next
+    if ($0 ~ /^[ \t]*set\([ \t]*mudlet_(SRCS|HDRS)([ \t]|$)/) inblk=1
+    if ($0 ~ /list\([ \t]*(APPEND|PREPEND|INSERT)[ \t]+mudlet_(SRCS|HDRS)([ \t]|\)|$)/) inapp=1
     # Only the library target: target_sources() on the executable adds files that
     # are not part of mudlet_core, so counting them would inflate the denominator.
     # CMake allows the target name on a line of its own after "target_sources(",
     # hence tgtpending carrying the lookup across to the next line.
-    if (match($0, /target_sources[ \t]*\(/)) {
+    if (match($0, /(target_sources|add_library)[ \t]*\(/)) {
       trest = substr($0, RSTART + RLENGTH)
       sub(/^[ \t]+/, "", trest); gsub(/"/, "", trest)
       if (trest == "") tgtpending=1
@@ -272,6 +287,7 @@ awk '
         # than not parsing the call at all.
         tok=a[i]; gsub(/"/,"",tok)
         if (index(tok, srcprefix) == 1) tok=substr(tok, length(srcprefix) + 1)
+        else if (index(tok, listdirprefix) == 1) tok=substr(tok, length(listdirprefix) + 1)
         if (tok ~ /\.(cpp|mm|h)$/ && tok !~ /[${}<>*?]/) { print tok; continue }
         # An entry naming a source in a form this parser cannot reduce to a path
         # under src/ - one routed through some other variable, or a generator
@@ -283,7 +299,8 @@ awk '
     }
     if ($0 ~ /\)/) { inblk=0; inapp=0; intgt=0; tgtpending=0 }
   }
-' "$CMAKE_FILE" 2> "$PARSE_WARNINGS" | sort -uf > "$FILE_LIST"
+' "$@" 2> "$PARSE_WARNINGS" > "$FILE_LIST_RAW" || { err "parsing $CMAKE_FILE failed"; exit 2; }
+sort -uf "$FILE_LIST_RAW" > "$FILE_LIST" || { err "sorting the parsed file list failed"; exit 2; }
 
 # Each warning means a file reached mudlet_core by a route the parser could not
 # follow, so nothing scanned it and the count below is already too low. That is a
@@ -328,11 +345,20 @@ RESULTS="$TMPDIR_AUDIT/results.txt"
   BEGIN{
     while ((getline l < setfile) > 0)  W[l]=1
     while ((getline c < classfile) > 0) C[c]=1
-    # Match a complete /* ... */ comment whose body may itself contain "*"
-    # (e.g. a one-line "/** ... */"). The old /\*[^*]*\*\// stopped at the
-    # first inner "*", failed to strip such comments, then mistook them for an
-    # unterminated block and silently swallowed the rest of the file.
-    blockcmt = "/\\*([^*]|\\*+[^*/])*\\*+/"
+  }
+  # Whichever of "//" and "/*" comes first wins, so a "/*" inside a line comment cannot
+  # open a block and a "//" inside a block comment cannot close one. Getting that wrong
+  # swallows the rest of the file, dropping an offending file from the count.
+  function stripComments(l,   a, b, e, rest) {
+    while (1) {
+      a = index(l, "//"); b = index(l, "/*")
+      if (a > 0 && (b == 0 || a < b)) return substr(l, 1, a - 1)
+      if (b == 0) return l
+      rest = substr(l, b + 2)
+      e = index(rest, "*/")
+      if (e == 0) { incmt = 1; return substr(l, 1, b - 1) }
+      l = substr(l, 1, b - 1) " " substr(rest, e + 2)
+    }
   }
   FNR==1 {
     if (nf && incmt) badcmt=order[nf]
@@ -346,9 +372,11 @@ RESULTS="$TMPDIR_AUDIT/results.txt"
       if (p==0) next
       line=substr(line, p+2); incmt=0
     }
-    gsub(blockcmt,"",line)
-    if (line ~ /\/\*/) { sub(/\/\*.*$/,"",line); incmt=1 }
-    sub(/\/\/.*$/,"",line)
+    # A string can hold "/*" or "//" - a glob like "*/*.lua", or a URL - which would
+    # otherwise open a phantom comment and hide the rest of the file. Include lines keep
+    # their quotes: the header name is inside them.
+    if (line !~ /^[ \t]*#[ \t]*include[ \t]*[<"]/) gsub(/"([^"\\]|\\.)*"/, "\"\"", line)
+    line = stripComments(line)
     if (line ~ /^[ \t]*#[ \t]*include[ \t]*[<"]/) {
       s=line; sub(/^[^<"]*[<"]/,"",s); sub(/[>"].*$/,"",s)
       if (s=="QtWidgets") { inc[FILENAME]++; mark(FILENAME, "QtWidgets") }
@@ -387,6 +415,15 @@ fi
 
 TOTAL=$(wc -l < "$RESULTS" | tr -d ' ')
 OFFENDING=$(awk -F'\t' '$1+$2>0' "$RESULTS" | wc -l | tr -d ' ')
+
+# Every file the parser found has to come back with a row. A signal or a failure
+# part-way through leaves fewer, and a shortfall only ever removes offenders - so it
+# reads as progress towards the goal of zero.
+WANTED=$(wc -l < "$EXISTING" | tr -d ' ')
+if [ "$TOTAL" != "$WANTED" ]; then
+  err "scanned $TOTAL of the $WANTED files parsed from $CMAKE_FILE; the count would be too low. Aborting."
+  exit 2
+fi
 CLEAN=$((TOTAL - OFFENDING))
 
 read_baseline() {
