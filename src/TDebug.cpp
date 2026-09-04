@@ -22,9 +22,9 @@
  ***************************************************************************/
 
 
-#include "TBuffer.h"
 #include "TDebug.h"
 
+#include "TBuffer.h"
 #include "TConsole.h"
 #include "TDebugFilterBar.h"
 #include "TTabBar.h"

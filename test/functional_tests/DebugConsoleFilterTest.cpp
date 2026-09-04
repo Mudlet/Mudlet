@@ -23,6 +23,7 @@
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "PortableModeTestHelper.h"
+#include "TBuffer.h"
 #include "TConsole.h"
 #include "TDebug.h"
 #include "TLuaInterpreter.h"

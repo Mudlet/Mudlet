@@ -32,6 +32,7 @@
 #include "CredentialManager.h"
 #include "DarkTheme.h"
 #include "LuaInterface.h"
+#include "TBuffer.h"
 #include "TDebug.h"
 #include "TDebugFilterBar.h"
 #include "MudletInstanceCoordinator.h"
