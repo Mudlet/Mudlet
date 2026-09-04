@@ -188,9 +188,7 @@ private slots:
         mpServer = nullptr;
         if (mudlet::self()) {
             // Mudlet writes the profile out as it shuts down, so removing the
-            // directory first only has it recreated. The path has to be read
-            // while the singleton is alive though - getMudletPath() reaches
-            // through self() without checking it.
+            // directory first only has it recreated.
             const QString profileDir = MudletPaths::getMudletPath(enums::profileHomePath, mHostname);
             delete mudlet::self();
             QDir(profileDir).removeRecursively();

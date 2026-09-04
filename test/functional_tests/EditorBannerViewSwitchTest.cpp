@@ -155,8 +155,7 @@ private slots:
         delete mpServer;
         mpServer = nullptr;
         // Null when initTestCase skipped or failed ahead of mudlet::start(), and
-        // getQSettings() and getMudletPath() dereference the instance rather
-        // than checking it
+        // getQSettings() dereferences the instance rather than checking it
         if (mudlet::self()) {
             clearBannerSettings();
             deleteProfileDirectory(mProfileName);
