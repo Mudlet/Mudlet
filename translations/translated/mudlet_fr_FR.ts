@@ -10683,7 +10683,7 @@ Message on button in package manager initially and when the view is NOT the &quo
       <location filename="../src/dlgProfilePreferences.cpp" line="1004"/>
       <source>Editor</source>
       <extracomment>Sidebar category in the settings dialog, holding the script editor&apos;s options</extracomment>
-      <translation type="unfinished"/>
+      <translation>Editeur</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1006"/>
@@ -11300,7 +11300,7 @@ Breadcrumb name of the subpage holding the Discord Rich Presence settings, reach
       <location filename="../src/dlgProfilePreferences.cpp" line="1846"/>
       <source>Language</source>
       <extracomment>Card title on the General settings page, above the interface language selector</extracomment>
-      <translation type="unfinished"/>
+      <translation>Langue</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1848"/>
@@ -16169,7 +16169,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
       <location filename="../src/mudlet.cpp" line="5181"/>
       <source>Show map</source>
       <extracomment>Toolbox menu entry while no map is on screen - activating it shows the map, creating it if need be</extracomment>
-      <translation type="unfinished"/>
+      <translation>Afficher la carte</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="5270"/>
