@@ -204,7 +204,7 @@ local function installUntilRefused(install, path)
     end
     pumpEvents(400 * attempt)
   end
-  assert.is_true(false, "the install was postponed instead of being answered")
+  assert.is_true(false, "the install was never refused - it was carried out, or postponed three times over")
 end
 
 -- reloadModule() is postponed the same way and then quietly dropped, so ask
@@ -318,16 +318,42 @@ describe("Tests the functionality of installPackage", function()
   it("returns nil+msg for a file that is not there", function()
     local err = installUntilRefused(installPackage, fixtureDirectory .. "/mudlet-spec-there-is-no-such-package.mpackage")
     assert.is_true(contains(err, "could not open file"), tostring(err))
+    -- the quoting has to close, or the reason runs into whatever follows it
+    assert.is_true(contains(err, "mudlet-spec-there-is-no-such-package.mpackage'"),
+                   "the reason did not name the file it could not open, in closed quotes: " .. tostring(err))
   end)
 
   it("returns nil+msg for a file that is not a zip archive", function()
-    -- the failed unpacking still creates the destination folder; drop it so the
-    -- profile is left exactly as it was found
-    defer(function() lfs.rmdir(getMudletHomeDir() .. "/mudlet-spec-notazip") end)
-
     local err = installUntilRefused(installPackage, fixtureDirectory .. "/mudlet-spec-notazip.mpackage")
     assert.is_true(contains(err, "could not unzip package"), tostring(err))
     assert.is_false(packageInstalled("mudlet-spec-notazip"))
+    -- the destination folder is made before the unpacking discovers the file is
+    -- not an archive, so a failure that walks away from it strands a folder in
+    -- the profile under the archive's name (#9654)
+    assert.is_false(fileExists(getMudletHomeDir() .. "/mudlet-spec-notazip"),
+                    "the failed unpacking stranded the folder it had made in the profile")
+  end)
+
+  it("leaves a folder that was already in the profile alone when the unpacking fails", function()
+    -- the archive's own file name decides where it unpacks, so an archive named
+    -- after a folder the profile already has - "map", "log", or anything else
+    -- the user put there - unpacks straight into it. A failure that then cleans
+    -- up after itself must only take away a folder it made itself.
+    local standIn = getMudletHomeDir() .. "/mudlet-spec-notazip"
+    local occupant = standIn .. "/please-do-not-delete-me.txt"
+    lfs.mkdir(standIn)
+    local file = io.open(occupant, "w")
+    assert.is_not_nil(file, "could not write to " .. occupant)
+    file:write("the install did not make this folder, so it may not remove it")
+    file:close()
+    defer(function()
+      os.remove(occupant)
+      lfs.rmdir(standIn)
+    end)
+
+    local err = installUntilRefused(installPackage, fixtureDirectory .. "/mudlet-spec-notazip.mpackage")
+    assert.is_true(contains(err, "could not unzip package"), tostring(err))
+    assert.is_true(fileExists(occupant), "the failed install deleted a folder that was in the profile before it ran")
   end)
 
   it("hands a script the reason instead of announcing it on the main console", function()
@@ -335,8 +361,6 @@ describe("Tests the functionality of installPackage", function()
     -- through the interface, because most of those callers drop it. A script's
     -- install passes quiet and is handed the reason back instead, so nothing must
     -- appear in the message area for it to talk over.
-    defer(function() lfs.rmdir(getMudletHomeDir() .. "/mudlet-spec-notazip") end)
-
     assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
     local mark = getLastLineNumber("main")
 
@@ -345,6 +369,32 @@ describe("Tests the functionality of installPackage", function()
 
     local text = textFrom(mark)
     assert.is_false(containsWrapped(text, "Package install failed"), text)
+  end)
+
+  it("tells a script its postponed install failed", function()
+    -- The same install asked for while the profile is being saved is put off and
+    -- answers true there and then, so when the second attempt fails there is no
+    -- return value left for the reason to travel back on. Saying it on the main
+    -- console is all that is left, quiet caller or not.
+    local archive = fixtureDirectory .. "/mudlet-spec-notazip.mpackage"
+    local mark, postponed
+    for _ = 1, 5 do
+      assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+      mark = getLastLineNumber("main")
+      assert.is_true(saveProfile())
+      -- true means it was put off: the archive is not a zip, so an install that is
+      -- carried out there and then answers nil and a reason instead
+      if installPackage(archive) == true then
+        postponed = true
+        break
+      end
+      pumpEvents(200)
+    end
+    assert.is_true(postponed, "the install was never put off, so there is no postponed failure to report")
+
+    assert.is_true(waitUntil(function() return containsWrapped(textFrom(mark), "Package install failed") end, 5000),
+                   textFrom(mark))
+    assert.is_true(containsWrapped(textFrom(mark), "could not unzip package"), textFrom(mark))
   end)
 
   describe("with the fixture package installed", function()
@@ -460,6 +510,32 @@ describe("Tests the functionality of uninstallPackage", function()
     assert.equals(minimalPackage, generic[1][1])
     assert.equals(1, #detailed)
     assert.equals(minimalPackage, detailed[1][1])
+  end)
+
+  it("still describes the package while its uninstall is being announced", function()
+    withFixturePackage(minimalPackage)
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+
+    -- what a handler hears this event to do is tidy up after the package, and
+    -- what it has to go on is the package's own details: its version decides
+    -- which of its settings to migrate or throw away, its title is what it names
+    -- in whatever it says to the user. Dropping those first leaves the handler
+    -- asking about a package that no longer describes itself, with the uninstall
+    -- already past the point of being called off.
+    local versionSeen, titleSeen
+    local handler = registerAnonymousEventHandler("sysUninstall", function(_, which)
+      if which == minimalPackage then
+        versionSeen = getPackageInfo(minimalPackage, "version")
+        titleSeen = getPackageInfo(minimalPackage, "title")
+      end
+    end)
+    defer(function() killAnonymousEventHandler(handler) end)
+
+    removeFixturePackage(minimalPackage)
+
+    assert.equals("1.0", versionSeen, "the package's details were dropped before its uninstall was announced")
+    assert.equals("Minimal fixture package for Package_spec.lua", titleSeen)
+    assert.same({}, getPackageInfo(minimalPackage), "the details outlived the uninstall")
   end)
 end)
 
@@ -972,6 +1048,524 @@ describe("Tests a package that uninstalls itself", function()
   end)
 end)
 
+describe("Tests installing one name as both a package and a module", function()
+  -- A package is a copy the profile owns, a module is a link to a file other
+  -- profiles may share, and one name could be installed both ways at once. The
+  -- item units uninstall by name alone, so removing either half destroyed both
+  -- halves' items - which is why the second install of a name is refused rather
+  -- than the other half being put back afterwards, something that cannot be done
+  -- at all once the file it would be restored from has changed or gone.
+
+  it("refuses to install a module over a package of the same name", function()
+    withFixturePackage(moduleName)
+    lfs.mkdir(scratchDirectory)
+    local path = scratchDirectory .. "/" .. moduleName .. ".mpackage"
+    defer(function()
+      os.remove(path)
+      lfs.rmdir(scratchDirectory)
+    end)
+    copyFile(fixtureDirectory .. "/" .. moduleName .. ".mpackage", path)
+
+    local reason = installUntilRefused(installModule, path)
+    assert.is_true(contains(reason, "already installed"), tostring(reason))
+    assert.is_false(moduleInstalled(moduleName))
+    -- the package standing in the way has to be left exactly as it was
+    assert.is_true(packageInstalled(moduleName), "the package that refused the module was removed by the refusal")
+    assert.equals(1, exists(moduleName .. " alias", "alias"), "the installed package lost its alias to the refusal")
+  end)
+
+  it("refuses to install a package over a module of the same name", function()
+    withFixtureModule(moduleName)
+
+    local reason = installUntilRefused(installPackage, fixtureDirectory .. "/" .. moduleName .. ".mpackage")
+    assert.is_true(contains(reason, "already installed"), tostring(reason))
+    assert.is_false(packageInstalled(moduleName))
+    assert.is_true(moduleInstalled(moduleName), "the module that refused the package was removed by the refusal")
+    assert.equals(1, exists(moduleName .. " alias", "alias"), "the installed module lost its alias to the refusal")
+  end)
+
+  -- A module is a link to a file, and that file lives wherever the user keeps
+  -- it: a network share, an external disk, a folder something else is syncing.
+  -- Whether the path resolves this second says nothing about the module, which
+  -- is loaded, listed and running all of its items either way - so the refusal
+  -- above has to hold when the file cannot be reached. Answering the question
+  -- with the filesystem unlists a live module instead, and its items stay
+  -- behind under the name the package then takes, so uninstalling that package
+  -- later takes the module's items with it.
+  it("refuses a package over a module whose own file has gone missing", function()
+    local vanishing = "mudlet-spec-vanished"
+    lfs.mkdir(scratchDirectory)
+    local moduleFile = scratchDirectory .. "/" .. vanishing .. ".xml"
+    local archive = scratchDirectory .. "/" .. vanishing .. ".mpackage"
+    defer(function()
+      removeFixturePackage(vanishing)
+      removeFixtureModule(vanishing)
+      os.remove(moduleFile)
+      os.remove(archive)
+      lfs.rmdir(scratchDirectory)
+    end)
+
+    local file = io.open(moduleFile, "w")
+    assert.is_not_nil(file, "could not write to " .. moduleFile)
+    file:write([[<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+	<TriggerPackage />
+	<TimerPackage />
+	<AliasPackage>
+		<Alias isActive="yes" isFolder="no">
+			<name>mudlet-spec-vanished alias</name>
+			<script>echo("mudlet-spec-vanished alias fired\n")</script>
+			<command></command>
+			<packageName></packageName>
+			<regex>^mudlet-spec-vanished$</regex>
+		</Alias>
+	</AliasPackage>
+	<ActionPackage />
+	<ScriptPackage />
+	<KeyPackage />
+	<VariablePackage>
+		<HiddenVariables />
+	</VariablePackage>
+</MudletPackage>
+]])
+    file:close()
+
+    installUntilConfirmed(installModule, moduleFile, function() return moduleInstalled(vanishing) end,
+                          "the module whose file is about to go")
+    assert.equals(1, exists(vanishing .. " alias", "alias"), "the module's alias was never installed")
+    -- a module loaded from an XML unpacks no folder of its own, so the file is
+    -- the only thing on disk there is to look for
+    assert.is_false(fileExists(getMudletHomeDir() .. "/" .. vanishing))
+    assert.is_true(os.remove(moduleFile) ~= nil, "could not take the module's file away")
+
+    -- no config.lua in this one, so it installs under the name of the copy
+    copyFile(fixtureDirectory .. "/mudlet-spec-noconfig.mpackage", archive)
+    local reason = installUntilRefused(installPackage, archive)
+
+    assert.is_true(contains(reason, "already installed"), tostring(reason))
+    assert.is_false(packageInstalled(vanishing), "the package was installed over a module that is still running")
+    assert.is_true(moduleInstalled(vanishing), "the live module was unlisted because its file could not be reached")
+    assert.equals(1, exists(vanishing .. " alias", "alias"), "the module lost its alias to an install that was refused")
+    assert.equals(0, exists("mudlet-spec-noconfig alias", "alias"), "the refused archive's own contents were installed anyway")
+  end)
+
+  -- The other way a live module goes unlisted. A module whose XML stops part-way
+  -- through has imported everything up to the break and is running it, but the
+  -- import reports failure, so the module never reaches the mark that says it
+  -- loaded. Reading that mark rather than the items themselves unlists it just
+  -- the same, and the package that then takes the name takes those items with it
+  -- when it goes.
+  it("refuses a package over a module whose XML stopped part-way through", function()
+    local partial = "mudlet-spec-partialxml"
+    local archive = withFixtureModule(partial)
+
+    assert.is_true(moduleInstalled(partial), "the module whose XML broke was not listed")
+    assert.equals(1, exists(partial .. " alias", "alias"), "the items imported before the break did not survive")
+
+    local reason = installUntilRefused(installPackage, archive)
+
+    assert.is_true(contains(reason, "already installed"), tostring(reason))
+    assert.is_false(packageInstalled(partial), "the package was installed over a module that is still running")
+    assert.is_true(moduleInstalled(partial), "the live module was unlisted because its XML had not loaded in full")
+    assert.equals(1, exists(partial .. " alias", "alias"), "the module lost its alias to an install that was refused")
+  end)
+
+  -- The other way round: a module of nothing but variables, fonts, images or a
+  -- map loads completely and still leaves every one of the six units empty,
+  -- because XMLimport deletes the master folder of each unit its file did not
+  -- mention. Asking the units alone answers that such a name is free, and that
+  -- answer is acted on - so merely offering a package under the name strikes a
+  -- module that is installed and running off the listing.
+  it("refuses a package over a module that installed no items at all", function()
+    local varsOnly = "mudlet-spec-varsonly"
+    local archive = withFixtureModule(varsOnly)
+    defer(function() mudletSpecVarsOnly = nil end)
+
+    assert.is_true(moduleInstalled(varsOnly), "the module that owns no items was not listed")
+    assert.equals("installed", mudletSpecVarsOnly,
+                  "SETUP: the module never finished loading, so this is the part-way case above rather than the no-items one")
+
+    local reason = installUntilRefused(installPackage, archive)
+
+    assert.is_true(contains(reason, "already installed"), tostring(reason))
+    assert.is_false(packageInstalled(varsOnly), "the package was installed over a module that is still installed")
+    assert.is_true(moduleInstalled(varsOnly), "the module was struck off the listing by an install that was refused")
+  end)
+
+  -- The two refusals above run on the name the archive's file has. An archive
+  -- carrying a config.lua is renamed to whatever that file says straight after,
+  -- so an archive under any other name reached the registration with a name the
+  -- refusals never saw - and installed the combination they exist to prevent.
+  local renamerArchive = fixtureDirectory .. "/mudlet-spec-renamer.mpackage"
+  local otherRenamerArchive = fixtureDirectory .. "/mudlet-spec-renamer2.mpackage"
+  local renamedTo = "mudlet-spec-renamed"
+
+  local function installRenamerAsPackage()
+    defer(function() removeFixturePackage(renamedTo) end)
+    installUntilConfirmed(installPackage, renamerArchive, function() return packageInstalled(renamedTo) end,
+                          "the renaming fixture as a package")
+  end
+
+  local function copyOfRenamerInTheProfile()
+    lfs.mkdir(scratchDirectory)
+    local path = scratchDirectory .. "/mudlet-spec-renamer.mpackage"
+    defer(function()
+      os.remove(path)
+      lfs.rmdir(scratchDirectory)
+    end)
+    copyFile(renamerArchive, path)
+    return path
+  end
+
+  it("refuses a module whose config.lua renames it onto an installed package", function()
+    installRenamerAsPackage()
+
+    local reason = installUntilRefused(installModule, copyOfRenamerInTheProfile())
+    assert.is_true(contains(reason, "already installed"), tostring(reason))
+    assert.is_true(contains(reason, renamedTo), "the refusal named the file rather than the name it would have taken: " .. tostring(reason))
+    assert.is_false(moduleInstalled(renamedTo), "the module was registered under the name its config.lua asked for")
+    assert.is_true(packageInstalled(renamedTo), "the package that refused the module was removed by the refusal")
+    assert.equals(1, exists(renamedTo .. " alias", "alias"), "the installed package lost its alias to the refusal")
+  end)
+
+  it("refuses a package whose config.lua renames it onto an installed module", function()
+    local path = copyOfRenamerInTheProfile()
+    defer(function() removeFixtureModule(renamedTo) end)
+    installUntilConfirmed(installModule, path, function() return moduleInstalled(renamedTo) end,
+                          "the renaming fixture as a module")
+
+    local reason = installUntilRefused(installPackage, otherRenamerArchive)
+    assert.is_true(contains(reason, "already installed"), tostring(reason))
+    assert.is_false(packageInstalled(renamedTo), "the package was registered under the name its config.lua asked for")
+    assert.is_true(moduleInstalled(renamedTo), "the module that refused the package was removed by the refusal")
+    assert.equals(1, exists(renamedTo .. " alias", "alias"), "the installed module lost its alias to the refusal")
+  end)
+
+  -- Both refusals above are about an archive that really does end up on the
+  -- name it is turned away over. Asking them of the archive's own file name
+  -- turns away one that never lands on that name at all: this one renames
+  -- itself out of the way, so the only thing the file name settles is which
+  -- folder it is unpacked into - which is the package's own.
+  it("lets a module whose config.lua renames it past a package under its file name", function()
+    lfs.mkdir(scratchDirectory)
+    local squatterDirectory = scratchDirectory .. "/under-the-file-name"
+    lfs.mkdir(squatterDirectory)
+    local squatter = squatterDirectory .. "/mudlet-spec-renamer.mpackage"
+    defer(function()
+      os.remove(squatter)
+      lfs.rmdir(squatterDirectory)
+      lfs.rmdir(scratchDirectory)
+    end)
+    -- an archive with no config.lua is installed under the name of the file it
+    -- came in, so a copy of one under this name is how a package comes to hold
+    -- the renaming archive's file name
+    copyFile(fixtureDirectory .. "/mudlet-spec-noconfig.mpackage", squatter)
+    defer(function() removeFixturePackage("mudlet-spec-renamer") end)
+    installUntilConfirmed(installPackage, squatter, function() return packageInstalled("mudlet-spec-renamer") end,
+                          "a package under the renaming archive's file name")
+
+    defer(function() removeFixtureModule(renamedTo) end)
+    installUntilConfirmed(installModule, copyOfRenamerInTheProfile(), function() return moduleInstalled(renamedTo) end,
+                          "the renaming fixture as a module past a package holding its file name")
+
+    assert.is_true(packageInstalled("mudlet-spec-renamer"), "the package under the file name was taken away by an install that did not collide with it")
+    assert.equals(1, exists("mudlet-spec-noconfig alias", "alias"), "the package under the file name lost its alias to the module install")
+    assert.is_true(fileExists(getMudletHomeDir() .. "/mudlet-spec-renamer/mudlet-spec-noconfig.xml"),
+                   "the module was unpacked into the folder of the package holding its file name")
+  end)
+
+  -- and the same the other way about, which is a separate refusal
+  it("lets a package whose config.lua renames it past a module under its file name", function()
+    lfs.mkdir(scratchDirectory)
+    local squatter = scratchDirectory .. "/mudlet-spec-renamer.mpackage"
+    defer(function()
+      os.remove(squatter)
+      lfs.rmdir(scratchDirectory)
+    end)
+    copyFile(fixtureDirectory .. "/mudlet-spec-noconfig.mpackage", squatter)
+    defer(function() removeFixtureModule("mudlet-spec-renamer") end)
+    installUntilConfirmed(installModule, squatter, function() return moduleInstalled("mudlet-spec-renamer") end,
+                          "a module under the renaming archive's file name")
+
+    defer(function() removeFixturePackage(renamedTo) end)
+    installUntilConfirmed(installPackage, renamerArchive, function() return packageInstalled(renamedTo) end,
+                          "the renaming fixture as a package past a module holding its file name")
+
+    assert.is_true(moduleInstalled("mudlet-spec-renamer"), "the module under the file name was taken away by an install that did not collide with it")
+    assert.equals(1, exists("mudlet-spec-noconfig alias", "alias"), "the module under the file name lost its alias to the package install")
+  end)
+
+  -- A module whose config.lua renames it is unpacked under its archive's own file
+  -- name by every sync, so its rename always lands on the folder the module
+  -- already has - and a sync's uninstall leaves that folder alone on purpose, for
+  -- the reinstall to write over.
+  it("takes an updated archive up when it reloads a module whose config.lua renames it", function()
+    local path = copyOfRenamerInTheProfile()
+    defer(function() removeFixtureModule(renamedTo) end)
+    installUntilConfirmed(installModule, path, function() return moduleInstalled(renamedTo) end,
+                          "the renaming fixture as a module")
+    assert.equals(1, exists(renamedTo .. " alias", "alias"), "SETUP: the module's alias was not there before the reload")
+
+    -- a module is reloaded from the archive it was installed from, so writing a
+    -- different archive over that file is what the user updating a module looks
+    -- like from here. This one installs under the same name and different items.
+    copyFile(otherRenamerArchive, path)
+
+    -- a postponed reload is dropped rather than carried out later, and a dropped
+    -- one would leave everything below true without the reload ever happening
+    assert.is_true(waitForProfileSaveToPass(), "SETUP: a save was still running, so the reload would have been dropped")
+    reloadModule(renamedTo)
+    pumpEvents(1000)
+
+    assert.is_true(moduleInstalled(renamedTo), "the reload took the module away")
+    assert.equals(1, exists("mudlet-spec-renamer2 alias", "alias"), "the reload put back what the module held before rather than what its archive holds now")
+    assert.equals(0, exists(renamedTo .. " alias", "alias"), "the items of the archive that was replaced are still installed")
+    assert.is_false(fileExists(getMudletHomeDir() .. "/mudlet-spec-renamer"),
+                    "the reload left the folder it unpacked into in the profile, under the archive's file name")
+  end)
+
+  -- The folder an install is staged in is taken away again on every way out, so
+  -- one still sitting there is the leavings of an install that was interrupted.
+  -- Unpacking on top of it would import whatever it still holds under the name
+  -- being installed, which is somebody else's items under the user's package.
+  it("does not install what a staging folder left over from an interrupted install holds", function()
+    lfs.mkdir(scratchDirectory)
+    local squatterDirectory = scratchDirectory .. "/under-the-file-name"
+    lfs.mkdir(squatterDirectory)
+    local squatter = squatterDirectory .. "/mudlet-spec-renamer.mpackage"
+    defer(function()
+      os.remove(squatter)
+      lfs.rmdir(squatterDirectory)
+      lfs.rmdir(scratchDirectory)
+    end)
+    copyFile(fixtureDirectory .. "/mudlet-spec-noconfig.mpackage", squatter)
+    defer(function() removeFixturePackage("mudlet-spec-renamer") end)
+    installUntilConfirmed(installPackage, squatter, function() return packageInstalled("mudlet-spec-renamer") end,
+                          "a package under the renaming archive's file name")
+
+    -- only a name the other half already holds is staged, which is why the
+    -- package above has to be installed first for this folder to be in the way
+    local leftOver = getMudletHomeDir() .. "/mudlet-spec-renamer.mudlet-installing"
+    lfs.mkdir(leftOver)
+    defer(function()
+      os.remove(leftOver .. "/mudlet-spec-leftover.xml")
+      lfs.rmdir(leftOver)
+    end)
+    local stray = io.open(leftOver .. "/mudlet-spec-leftover.xml", "w")
+    assert.is_truthy(stray, "could not write the leftover staging folder's XML")
+    stray:write([[<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+	<TriggerPackage />
+	<TimerPackage />
+	<AliasPackage>
+		<Alias isActive="yes" isFolder="no">
+			<name>mudlet-spec-leftover alias</name>
+			<script></script>
+			<command></command>
+			<packageName></packageName>
+			<regex>^mudlet-spec-leftover$</regex>
+		</Alias>
+	</AliasPackage>
+	<ActionPackage />
+	<ScriptPackage />
+	<KeyPackage />
+	<VariablePackage>
+		<HiddenVariables />
+	</VariablePackage>
+</MudletPackage>
+]])
+    stray:close()
+    assert.is_true(fileExists(leftOver), "SETUP: the leftover staging folder was not created")
+
+    defer(function() removeFixtureModule(renamedTo) end)
+    installUntilConfirmed(installModule, copyOfRenamerInTheProfile(), function() return moduleInstalled(renamedTo) end,
+                          "the renaming fixture as a module past a leftover staging folder")
+
+    assert.equals(0, exists("mudlet-spec-leftover alias", "alias"), "the leftover staging folder's items were installed under the module's name")
+  end)
+
+  it("refuses a module whose config.lua renames it onto an installed module", function()
+    local path = copyOfRenamerInTheProfile()
+    defer(function() removeFixtureModule(renamedTo) end)
+    installUntilConfirmed(installModule, path, function() return moduleInstalled(renamedTo) end,
+                          "the renaming fixture as a module")
+    assert.equals("1.0", getModuleInfo(renamedTo, "version"), "the fixture did not install with the version its config.lua gives")
+
+    -- a module already using the name is taken apart by name so that a sync can
+    -- put it back, so the refusal has to come first: afterwards there is nothing
+    -- left to refuse on behalf of, and the module is rebuilt from its own folder
+    -- while answering to the details of the archive that was turned away
+    local reason = installUntilRefused(installModule, otherRenamerArchive)
+    assert.is_true(contains(reason, "already installed"), tostring(reason))
+    assert.is_true(moduleInstalled(renamedTo), "the module that refused the install was removed by the refusal")
+    assert.equals(1, exists(renamedTo .. " alias", "alias"), "the installed module lost its alias to the refusal")
+    assert.equals(0, exists("mudlet-spec-renamer2 alias", "alias"), "the refused archive's own contents were installed anyway")
+    assert.equals("1.0", getModuleInfo(renamedTo, "version"),
+                  "the refused install left the installed module describing the one it turned away")
+    assert.is_false(fileExists(getMudletHomeDir() .. "/mudlet-spec-renamer2"),
+                    "the refused install stranded the folder it unpacked in the profile")
+  end)
+
+  it("takes the folder a refused install unpacked away with it", function()
+    installRenamerAsPackage()
+    -- the archive unpacks under its own file name and is only renamed to the
+    -- name in its config.lua once the checks have passed, so a refusal leaves a
+    -- folder behind under the file's name unless it is cleaned up (#9654)
+    installUntilRefused(installModule, copyOfRenamerInTheProfile())
+    assert.is_false(fileExists(getMudletHomeDir() .. "/mudlet-spec-renamer"),
+                    "the refused install stranded the folder it unpacked in the profile")
+  end)
+
+  -- The archive unpacks under its own file name and is then renamed to the name
+  -- its config.lua gives. A folder already sitting at that name makes the rename
+  -- fail, and the two below are what that has to come to: the folder is left
+  -- exactly as it was found, the one this install unpacked goes with the
+  -- refusal, and nothing in the folder that was there is taken for the package.
+  it("leaves a folder already using the name in a config.lua alone", function()
+    local occupied = getMudletHomeDir() .. "/" .. renamedTo
+    local occupant = occupied .. "/please-do-not-delete-me.txt"
+    lfs.mkdir(occupied)
+    local file = io.open(occupant, "w")
+    assert.is_not_nil(file, "could not write to " .. occupant)
+    file:write("this folder was in the profile before the install ran")
+    file:close()
+    defer(function()
+      os.remove(occupant)
+      lfs.rmdir(occupied)
+    end)
+
+    local reason = installUntilRefused(installPackage, renamerArchive)
+    assert.is_true(contains(reason, "already in the profile"), tostring(reason))
+    assert.is_true(fileExists(occupant), "the install deleted a folder it found rather than the one it unpacked")
+    assert.is_false(packageInstalled(renamedTo), "the install registered the contents of a folder it did not unpack")
+    assert.is_false(fileExists(getMudletHomeDir() .. "/mudlet-spec-renamer"),
+                    "the install whose rename failed stranded the folder it unpacked")
+  end)
+
+  it("does not install what it finds in a folder already using the name", function()
+    -- an orphaned package folder is easy to come by - #9654 leaves one behind,
+    -- and so does an uninstall whose folder removal did not go through - and one
+    -- holding a package XML was read in place of the archive: its contents were
+    -- imported, registered under the name the archive asked for, and the install
+    -- reported success. The user is then running a package nobody asked for
+    -- while the manager, getPackageInfo() and the repository all describe the
+    -- archive they installed.
+    local occupied = getMudletHomeDir() .. "/" .. renamedTo
+    local occupant = occupied .. "/whatever-was-here-before.xml"
+    lfs.mkdir(occupied)
+    local file = io.open(occupant, "w")
+    assert.is_not_nil(file, "could not write to " .. occupant)
+    file:write([[<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+	<TriggerPackage />
+	<TimerPackage />
+	<AliasPackage>
+		<Alias isActive="yes" isFolder="no">
+			<name>mudlet-spec-occupant alias</name>
+			<script>echo("mudlet-spec-occupant alias fired\n")</script>
+			<command></command>
+			<packageName></packageName>
+			<regex>^mudlet-spec-occupant$</regex>
+		</Alias>
+	</AliasPackage>
+	<ActionPackage />
+	<ScriptPackage />
+	<KeyPackage />
+	<VariablePackage>
+		<HiddenVariables />
+	</VariablePackage>
+</MudletPackage>
+]])
+    file:close()
+    defer(function()
+      removeFixturePackage(renamedTo)
+      os.remove(occupant)
+      lfs.rmdir(occupied)
+    end)
+
+    local reason = installUntilRefused(installPackage, renamerArchive)
+    assert.is_true(contains(reason, "already in the profile"), tostring(reason))
+    assert.is_false(packageInstalled(renamedTo), "a folder the install found was registered as the package")
+    assert.equals(0, exists("mudlet-spec-occupant alias", "alias"), "the install put the contents of a folder it found into the profile")
+    assert.equals(0, exists(renamedTo .. " alias", "alias"), "the refused archive's own contents were installed anyway")
+    assert.is_true(fileExists(occupant), "the install deleted a folder it found rather than the one it unpacked")
+    assert.is_false(fileExists(getMudletHomeDir() .. "/mudlet-spec-renamer"),
+                    "the install whose rename failed stranded the folder it unpacked")
+    assert.same({}, getPackageInfo(renamedTo), "the refused archive left its details behind under the name it asked for")
+  end)
+
+  it("leaves the details of the package that refused an install alone", function()
+    installRenamerAsPackage()
+    assert.equals("1.0", getPackageInfo(renamedTo, "version"), "the fixture did not install with the version its config.lua gives")
+
+    -- reading the details is what tells the install its new name, so by the time
+    -- it is refused the refused archive's details have already been filed under
+    -- the name it was asking for
+    local reason = installUntilRefused(installPackage, otherRenamerArchive)
+    assert.is_true(contains(reason, "already installed"), tostring(reason))
+    assert.equals("1.0", getPackageInfo(renamedTo, "version"),
+                  "the refused install left the installed package describing the one it turned away")
+  end)
+end)
+
+describe("Tests uninstalling a package while the profile is being saved", function()
+  it("finishes an uninstall whose own event handler started a profile save", function()
+    withFixturePackage(minimalPackage)
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    assert.equals(1, exists(minimalPackage .. " alias", "alias"), "the package's alias should be installed to begin with")
+
+    -- by the time a handler hears this the uninstall has been announced to every
+    -- package in the profile, and packages take themselves apart when they hear it
+    -- - generic_mapper kills all of its event handlers - so a save started here
+    -- cannot be answered by abandoning the uninstall
+    local saves = 0
+    local handler = registerAnonymousEventHandler("sysUninstall", function(_, which)
+      if which == minimalPackage then
+        saves = saves + 1
+        saveProfile()
+      end
+    end)
+    defer(function() killAnonymousEventHandler(handler) end)
+
+    local removed = uninstallPackage(minimalPackage)
+    pumpEvents(200)
+
+    assert.equals(1, saves, "the handler that starts the save never ran")
+    assert.is_true(removed, "the uninstall was abandoned after its own events had already gone out")
+    assert.is_false(packageInstalled(minimalPackage), "the package stayed listed after being told it was uninstalled")
+    assert.equals(0, exists(minimalPackage .. " alias", "alias"), "the package's alias outlived its uninstall")
+  end)
+
+  it("reports an uninstall a handler had already carried out as done", function()
+    withFixturePackage(minimalPackage)
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+
+    -- a handler that removes the package itself gets there first, and what the
+    -- caller asked for has happened by the time they are answered. Reporting
+    -- that as a refusal is what would hurt: a caller replacing a package reads
+    -- one as a reason to skip installing the replacement.
+    local removedItself = false
+    local handler = registerAnonymousEventHandler("sysUninstall", function(_, which)
+      if which == minimalPackage and not removedItself then
+        removedItself = true
+        uninstallPackage(minimalPackage)
+      end
+    end)
+    defer(function() killAnonymousEventHandler(handler) end)
+
+    local removed = uninstallPackage(minimalPackage)
+    pumpEvents(200)
+
+    assert.is_true(removedItself, "the handler that removes the package never ran")
+    assert.is_true(removed, "an uninstall a handler had already carried out was reported as refused")
+    assert.is_false(packageInstalled(minimalPackage))
+    assert.equals(0, exists(minimalPackage .. " alias", "alias"), "the package's alias outlived its uninstall")
+  end)
+end)
+
 describe("Tests installing a package while the profile is being saved", function()
   it("installs a package that is asked for while an earlier install is still saving", function()
     defer(function()
@@ -979,8 +1573,15 @@ describe("Tests installing a package while the profile is being saved", function
       removeFixturePackage("mudlet-spec-noconfig")
     end)
     installFixturePackage(minimalPackage)
+    saveProfile()
+    -- SETUP: installPackage() answers an empty path true only from the
+    -- postponement at its head, so this says a save really is running. Without
+    -- it a drained save turns this spec into a plain install test that passes
+    -- whether the postponement works or not.
+    assert.is_true(installPackage(""), "SETUP: no profile save was running, so nothing below was postponed")
 
     assert.is_true(installPackage(fixtureDirectory .. "/mudlet-spec-noconfig.mpackage"))
+    assert.is_false(packageInstalled("mudlet-spec-noconfig"), "the install was carried out there and then rather than postponed")
     assert.is_true(waitUntil(function() return packageInstalled("mudlet-spec-noconfig") end, 5000))
   end)
 end)
@@ -1012,6 +1613,60 @@ describe("Tests installing an archive with nothing in it for Mudlet", function()
   end)
 end)
 
+describe("Tests installing an archive whose config.lua names it with a file extension", function()
+  it("files the details under the name it installs as, not the one its manifest wrote", function()
+    -- the name a manifest asks for is trimmed of the things a package file is
+    -- called before anything is installed under it, so a manifest that writes
+    -- "mudlet-spec-dotted.xml" installs a package called "mudlet-spec-dotted"
+    local dottedPackage = "mudlet-spec-dotted"
+    local manifestName = dottedPackage .. ".xml"
+    withFixturePackage(dottedPackage)
+
+    assert.equals("3.3", getPackageInfo(dottedPackage, "version"), "the installed package cannot describe itself")
+    assert.same({}, getPackageInfo(manifestName), "the details were filed under a name nothing is installed as")
+
+    -- and details filed under a name nothing is installed as are never taken
+    -- away: an uninstall only knows the name the package went in under, so the
+    -- entry outlives the package and the profile writes it back out for good
+    removeFixturePackage(dottedPackage)
+    assert.same({}, getPackageInfo(manifestName), "an uninstalled package still describes itself under the name its manifest wrote")
+  end)
+
+  -- Trimming is asked for at more than one level of an install, and taking one
+  -- ending off can leave another that was not there before, so a name trimmed
+  -- once and the same name trimmed twice come out different: the package is
+  -- installed under one of them and its details filed under the other.
+  it("trims a name that hides a second ending under the first all the way down", function()
+    local nestedPackage = "mudlet-spec-nested"
+    local manifestName = nestedPackage .. ".x.zipml"
+    local halfTrimmedName = nestedPackage .. ".xml"
+    withFixturePackage(nestedPackage)
+
+    assert.equals("1.0", getPackageInfo(nestedPackage, "version"), "the installed package cannot describe itself")
+    assert.same({}, getPackageInfo(manifestName), "the details were filed under the name the manifest wrote")
+    assert.same({}, getPackageInfo(halfTrimmedName), "the details were filed under a name only half of the trimming reached")
+  end)
+end)
+
+describe("Tests installing an archive that is nothing but a manifest", function()
+  it("takes back the details it filed before finding nothing to install", function()
+    -- the name and the details are read out of config.lua before anything is
+    -- installed, so an archive turned away after that has already written them
+    -- in. Left there, getPackageInfo() answers for a package that was never
+    -- installed, the package manager offers a row for it that nothing can
+    -- remove, and the profile writes the entry back out every time it saves.
+    local named = "mudlet-spec-manifestonly-named"
+    defer(function() removeFixturePackage(named) end)
+
+    local reason = installUntilRefused(installPackage, fixtureDirectory .. "/mudlet-spec-manifestonly.mpackage")
+
+    assert.is_true(contains(reason, "no package found"), tostring(reason))
+    assert.is_false(packageInstalled(named))
+    assert.same({}, getPackageInfo(named), "the refused archive left its details behind under the name it asked for")
+    assert.is_false(fileExists(getMudletHomeDir() .. "/" .. named), "the refused archive stranded the folder it unpacked")
+  end)
+end)
+
 describe("Tests installing an archive whose package XML cannot be read", function()
   it("says the package's contents could not be read", function()
     local name = "mudlet-spec-badxml"
@@ -1033,6 +1688,123 @@ describe("Tests installing an archive whose package XML cannot be read", functio
     -- module whose XML will not load stays listed: what changes is that it is said
     assert.is_true(ok)
     assert.is_true(packageInstalled(name))
+  end)
+
+  it("says the same for a package XML installed without an archive around it", function()
+    -- the report lives twice, once per branch, and a bare XML is a route of its
+    -- own: the editor's import and installPackage() with an .xml path both take it
+    local name = "mudlet-spec-badxml-bare"
+    defer(function() removeFixturePackage(name) end)
+
+    local mark = getLastLineNumber("main")
+    installUntilConfirmed(installPackage, fixtureDirectory .. "/sources/" .. name .. "/" .. name .. ".xml",
+                          function() return packageInstalled(name) end, "the truncated bare XML")
+
+    assert.is_true(containsWrapped(textFrom(mark), 'Failed to load package "' .. name .. '"'), textFrom(mark))
+  end)
+end)
+
+describe("Tests installing an archive whose config.lua will not run", function()
+  local function warningsSince(mark)
+    local stripped = (tostring(textFrom(mark)):gsub("%s+", ""))
+    local _, occurrences = stripped:gsub("couldnotberead", "")
+    return occurrences
+  end
+
+  it("says the manifest was lost and installs under the archive's own name", function()
+    local name = "mudlet-spec-badconfig"
+    defer(function() removeFixturePackage(name) end)
+    defer(function() removeFixturePackage("mudlet-spec-badconfig-renamed") end)
+
+    -- marked before the first attempt so that the announcement is caught whichever
+    -- attempt goes through: an install asked for while the profile is being saved
+    -- is put off, answers true and says nothing
+    local mark = getLastLineNumber("main")
+    -- the manifest names the package, and it is read by running it: one line
+    -- that raises throws away the name, author, version and description above
+    -- it together, and the install carries on under the name of the file
+    installUntilConfirmed(installPackage, fixtureDirectory .. "/" .. name .. ".mpackage",
+                          function() return packageInstalled(name) end, "the fixture with the config.lua that raises")
+    local text = textFrom(mark)
+
+    assert.is_true(containsWrapped(text, 'The config.lua of "' .. name .. '" could not be read'), text)
+    assert.is_false(packageInstalled("mudlet-spec-badconfig-renamed"),
+                    "the package installed under the name of a manifest that never ran")
+    -- what the silence costs: a name-based uninstall, a repository update and
+    -- anything depending on it all stop matching, with nothing to go on
+    assert.same({}, getPackageInfo(name))
+    assert.equals(1, exists(name .. " alias", "alias"), "the archive's contents were not installed")
+  end)
+
+  -- The same archive installed as a module is reinstalled on every profile save
+  -- and on every reloadModule(), so saying it there is the same sentence over
+  -- and over for a manifest the user was told about once already, on the
+  -- install they asked for.
+  it("does not say it again on every module sync", function()
+    local name = "mudlet-spec-badconfig"
+    defer(function() removeFixturePackage("mudlet-spec-badconfig-renamed") end)
+
+    local before = getLastLineNumber("main")
+    withFixtureModule(name)
+    assert.is_true(moduleInstalled(name), "the fixture module did not install")
+    assert.is_true(warningsSince(before) >= 1, "the install the user asked for never said the manifest was lost")
+
+    assert.is_true(waitForProfileSaveToPass())
+    local mark = getLastLineNumber("main")
+    reloadModule(name)
+    pumpEvents(600)
+    reloadModule(name)
+    pumpEvents(600)
+
+    assert.equals(0, warningsSince(mark), "the manifest warning came back on every module sync")
+  end)
+
+  -- Trimming the name a manifest asks for can leave nothing at all, and the
+  -- install then falls back to the name the archive's own file has. That is the
+  -- same loss as a config.lua that will not run - no details filed, nothing to
+  -- match a name-based uninstall or a repository update against - so it is said
+  -- rather than passed over in silence.
+  it("says so when the name its config.lua asks for trims away to nothing", function()
+    local name = "mudlet-spec-emptyname"
+    defer(function() removeFixturePackage(name) end)
+
+    local mark = getLastLineNumber("main")
+    installUntilConfirmed(installPackage, fixtureDirectory .. "/" .. name .. ".mpackage",
+                          function() return packageInstalled(name) end, "the fixture whose manifest name trims away")
+    local text = textFrom(mark)
+
+    assert.is_true(containsWrapped(text, 'The config.lua of "' .. name .. '" could not be read'), text)
+    assert.same({}, getPackageInfo(name))
+    assert.equals(1, exists(name .. " alias", "alias"), "the archive's contents were not installed")
+  end)
+
+  -- A package file's ending is taken out of the name wherever it appears rather
+  -- than only off the end, so "...mpackage" gives up the ".mpackage" sitting in
+  -- its middle and what is left is "..". The name becomes the folder the archive
+  -- is unpacked into, and that one is the folder holding every profile.
+  it("refuses a name that trims down to a step out of the profile", function()
+    lfs.mkdir(scratchDirectory)
+    local climber = scratchDirectory .. "/...mpackage"
+    defer(function()
+      os.remove(climber)
+      lfs.rmdir(scratchDirectory)
+    end)
+    copyFile(fixtureDirectory .. "/mudlet-spec-noconfig.mpackage", climber)
+
+    local profilesDirectory = getMudletHomeDir():match("^(.*)[/\\][^/\\]+$")
+    assert.is_string(profilesDirectory, "could not work out the folder holding the profiles")
+    local before = {}
+    for entry in lfs.dir(profilesDirectory) do
+      before[entry] = true
+    end
+
+    local reason = installUntilRefused(installPackage, climber)
+    assert.is_truthy(reason, "a name that climbs out of the profile was installed")
+
+    for entry in lfs.dir(profilesDirectory) do
+      assert.is_true(before[entry] == true, "the archive was unpacked into the folder holding every profile: " .. entry)
+    end
+    assert.equals(0, exists("mudlet-spec-noconfig alias", "alias"), "the archive's items were installed anyway")
   end)
 end)
 

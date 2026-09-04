@@ -26,8 +26,8 @@
 
 
 #include "TConsole.h"
-#include "TScrollBox.h"
 #include <QFile>
+#include <QPointer>
 #include <QTextStream>
 #include <QWidget>
 #include <optional>
@@ -37,6 +37,7 @@
 #include <list>
 
 class TMediaPlayer;
+class TScrollBox;
 class TTextBox;
 class QDialog;
 class QDockWidget;
@@ -54,7 +55,7 @@ public:
     void resetMainConsole();
     void closeEvent(QCloseEvent*) override;
     TConsole* createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height);
-    TScrollBox* createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height);
+    bool createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height);
     bool raiseWindow(const QString& name);
     bool lowerWindow(const QString& name);
     bool showWindow(const QString& name);
@@ -68,13 +69,13 @@ public:
     QPair<quint8, TChar> getTextAttributes(const QString&) const;
     void luaWrapLine(QString& buf, int line);
     QString getCurrentLine(const std::string&);
-    TConsole* createBuffer(const QString& name);
+    bool createBuffer(const QString& name);
     std::pair<bool, QString> setUserWindowStyleSheet(const QString& name, const QString& userWindowStyleSheet);
     std::optional<QString> getUserWindowStyleSheet(const QString& name) const;
     std::pair<bool, QString> setUserWindowTitle(const QString& name, const QString& text);
     std::pair<bool, QString> getUserWindowTitle(const QString& name) const;
     bool setTextFormat(const QString& name, const QColor& fgColor, const QColor& bgColor, const TChar::AttributeFlags& flags);
-    TLabel* createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough = false);
+    bool createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough = false);
     std::pair<bool, QString> createMapper(const QString& windowname, int, int, int, int);
     std::pair<bool, QString> createCommandLine(const QString& windowname, const QString& name, int, int, int, int);
     void registerSubCommandLine(const QString& name, TCommandLine* pCommandLine);
@@ -95,8 +96,78 @@ public:
     std::optional<QString> getLabelToolTip(const QString& name) const;
     std::pair<bool, QString> setLabelCursor(const QString& name, int shape);
     std::pair<bool, QString> setLabelCustomCursor(const QString& name, const QString& pixMapLocation, int hotX, int hotY);
-    bool setBackgroundImage(const QString& name, const QString& path);
-    bool setBackgroundColor(const QString& name, int r, int g, int b, int alpha);
+    // The label operations Host forwards to this view by name, never by widget;
+    // each resolves the name against the view's own map and reports failure for a
+    // name that is not a label's.
+    bool setLabelClickThrough(const QString& name, bool clickThrough);
+    bool setLabelLinkStyle(const QString& name, const QString& linkColor, const QString& linkVisitedColor, bool underline);
+    bool resetLabelLinkStyle(const QString& name);
+    bool clearLabelVisitedLinks(const QString& name);
+    bool showLabel(const QString& name);
+    bool hideLabel(const QString& name);
+    bool resizeLabel(const QString& name, int width, int height);
+    bool moveLabel(const QString& name, int x, int y);
+    bool reparentLabel(const QString& windowname, const QString& name, int x, int y, bool show);
+    bool setLabelText(const QString& name, const QString& text);
+    std::pair<bool, QString> setLabelMovie(const QString& name, const QString& moviePath);
+    bool setLabelBackgroundColor(const QString& name, const QColor& color);
+    std::optional<QColor> getLabelBackgroundColor(const QString& name) const;
+    bool setLabelBackgroundImage(const QString& name, const QString& path);
+    bool resetLabelBackgroundImage(const QString& name);
+    std::optional<QRect> getLabelGeometry(const QString& name) const;
+    std::optional<bool> getLabelVisible(const QString& name) const;
+    // For callers that need the widget itself. An accessor rather than the open
+    // map, so that inserting and removing entries stays in this class, which is
+    // what keeps the window registry in step with it.
+    TLabel* labelWidget(const QString& name) const { return mLabelMap.value(name); }
+    // The view's half of the sub-console and user-window-dock bookkeeping. Every
+    // insertion into and removal from the two maps goes through these four, so
+    // that the Host's window registry cannot fall out of step with them.
+    void registerSubConsole(const QString& name, TConsole* pConsole);
+    TConsole* deregisterSubConsole(const QString& name);
+    void registerDockWidget(const QString& name, TDockWidget* pDockWidget);
+    TDockWidget* deregisterDockWidget(const QString& name);
+    // For callers that need the widgets themselves.
+    TConsole* subConsoleWidget(const QString& name) const { return mSubConsoleMap.value(name); }
+    QString subConsoleName(TConsole* pConsole) const { return mSubConsoleMap.key(pConsole); }
+    TDockWidget* dockWidget(const QString& name) const { return mDockWidgetMap.value(name); }
+    QStringList dockWidgetNames() const { return QStringList(mDockWidgetMap.keys()); }
+    // The sub-console operations Host forwards to this view by name, never by
+    // widget. Each folds in whatever the name's dock needs, so that the core is
+    // left with one branch per operation rather than a console-or-dock pair.
+    void closeSubConsole(const QString& name);
+    void changeSubConsoleColors(const QString& name);
+    bool showSubConsole(const QString& name);
+    bool hideSubConsole(const QString& name);
+    bool resizeSubConsole(const QString& name, int width, int height);
+    bool moveSubConsole(const QString& name, int x, int y);
+    bool reparentWindow(const QString& windowname, const QString& name, int x, int y, bool show);
+    bool pasteToSubConsole(const QString& name);
+    std::optional<QSize> subConsoleFontSize(const QString& name) const;
+    bool setSubConsoleBackgroundColor(const QString& name, const QColor& color);
+    bool setSubConsoleBackgroundImage(const QString& name, const QString& path, int mode);
+    bool resetSubConsoleBackgroundImage(const QString& name);
+    bool setSubConsoleCommandBackgroundColor(const QString& name, const QColor& color);
+    bool setSubConsoleCommandForegroundColor(const QString& name, const QColor& color);
+    std::optional<QRect> getSubConsoleGeometry(const QString& name) const;
+    std::optional<bool> getSubConsoleVisible(const QString& name) const;
+    void setDockWidgetStyleSheets(const QString& styleSheet);
+    void setDockLayoutChanged(const QString& name);
+    bool clearDockLayoutChanged(const QString& name);
+    TCommandLine* subCommandLineWidget(const QString& name) const { return mSubCommandLineMap.value(name); }
+    QList<TCommandLine*> subCommandLineWidgets() const { return mSubCommandLineMap.values(); }
+    TTextBox* textBoxWidget(const QString& name) const { return mTextBoxMap.value(name); }
+    // One set of operations for scroll boxes, command lines and text boxes
+    // together rather than one per kind: each is the same plain QWidget call
+    // whichever of the three the name turns out to be.
+    bool showPlainWindow(const QString& name);
+    bool hidePlainWindow(const QString& name);
+    bool resizePlainWindow(const QString& name, int width, int height);
+    bool movePlainWindow(const QString& name, int x, int y);
+    std::optional<QRect> getPlainWindowGeometry(const QString& name) const;
+    std::optional<bool> getPlainWindowVisible(const QString& name) const;
+    bool setCommandLineAction(const QString& name, const int func);
+    bool resetCommandLineAction(const QString& name);
     void setSystemSpellDictionary(const QString&);
     void setProfileSpellDictionary();
     void showStatistics();
@@ -135,12 +206,6 @@ public:
     void refreshSubconsoles();
 
 
-    QMap<QString, TConsole*> mSubConsoleMap;
-    QMap<QString, TDockWidget*> mDockWidgetMap;
-    QMap<QString, TCommandLine*> mSubCommandLineMap;
-    QMap<QString, TTextBox*> mTextBoxMap;
-    QMap<QString, TLabel*> mLabelMap;
-    QMap<QString, TScrollBox*> mScrollBoxMap;
     mutable QMap<QString, QSize> mCachedWindowSizes;
     TBuffer mClipboard;
     // The log lifecycle lives in the core console model so a profile with no
@@ -186,6 +251,42 @@ signals:
 private:
     void createMapProgressDialog(const QString& title, const QString& label, const QString& cancelButtonText, int minimum, int maximum);
     void loadSystemSpellDictionary();
+    // Where reparentLabel() and reparentWindow() parent an element named as a
+    // setWindow() destination, shared so the two cannot disagree about what
+    // "main" means.
+    QWidget* parentWidgetFor(const QString& windowname) const;
+    // Where the three by-name-alone kinds are resolved to a widget, in the one
+    // order the core resolves a name that is more than one of them in.
+    QWidget* plainWindowWidget(const QString& name) const;
+    void registerLabelWidget(const QString& name, TLabel* pLabel);
+    void deregisterLabelWidget(TLabel* pLabel);
+
+    // The view's half of the scroll box and text box bookkeeping, paired with
+    // registerSubCommandLine()/deregisterSubCommandLine(). Every insertion into
+    // and removal from the three maps goes through these, so that the Host's
+    // window registry cannot fall out of step with them.
+    void registerScrollBox(const QString& name, TScrollBox* pScrollBox);
+    TScrollBox* deregisterScrollBox(const QString& name);
+    void registerTextBox(const QString& name, TTextBox* pTextBox);
+    TTextBox* deregisterTextBox(const QString& name);
+
+    // The view's half of the named-window bookkeeping; the core's half is the
+    // Host's window registry, which this class registers into and deregisters
+    // from wherever it adds to or takes from these maps. Private so that pairing
+    // cannot be broken from outside - reach a widget through labelWidget(),
+    // subConsoleWidget(), dockWidget(), subCommandLineWidget() or
+    // textBoxWidget().
+    QMap<QString, TLabel*> mLabelMap;
+    // QPointer values because a sub-console can die as a Qt child without this
+    // class hearing about it: a miniconsole created into a user window belongs
+    // to that window's dock, and deleting the window takes it along. The entry
+    // then reads back as null instead of as freed memory, which turns every
+    // lookup on the dead name into a miss and lets the name be used again.
+    QMap<QString, QPointer<TConsole>> mSubConsoleMap;
+    QMap<QString, TDockWidget*> mDockWidgetMap;
+    QMap<QString, TCommandLine*> mSubCommandLineMap;
+    QMap<QString, TTextBox*> mTextBoxMap;
+    QMap<QString, TScrollBox*> mScrollBoxMap;
 
     // Names the dictionary mpHunspell_system is built for. The build is put off
     // until the load has finished, so the profile load never reads the whole

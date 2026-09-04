@@ -62,7 +62,7 @@ private:
     QTemporaryDir mConfigDir;
     QByteArray mSavedXdgConfigHome;
 
-    TLabel* label() const { return mpHost->mpConsole->mLabelMap.value(mLabelName); }
+    TLabel* label() const { return mpHost->mpConsole->labelWidget(mLabelName); }
 
     // Where the label's only word of text sits, so a synthesised click lands on
     // the link rather than the empty space around it
