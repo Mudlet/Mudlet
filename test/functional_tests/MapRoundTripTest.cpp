@@ -255,9 +255,7 @@ private:
             return false;
         }
         QDataStream out(&file);
-        if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            out.setVersion(mudlet::scmQDataStreamFormat_5_12);
-        }
+        out.setVersion(QDataStream::Qt_5_12);
         if (!pMap->serialize(out, saveVersion)) {
             return false;
         }
@@ -275,6 +273,7 @@ private:
         const QByteArray raw = file.readAll();
         QByteArray needleBytes;
         QDataStream out(&needleBytes, QIODevice::WriteOnly);
+        out.setVersion(QDataStream::Qt_5_12);
         out << needle;
         // The length prefix stays in the needle so a key cannot match a longer key it is
         // a byte prefix of ("system.fallback_mapSymbolFont" vs. "...FontFudgeFactor"):

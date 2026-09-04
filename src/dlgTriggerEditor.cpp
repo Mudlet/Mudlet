@@ -7536,8 +7536,8 @@ void dlgTriggerEditor::updatePatternTabOrder()
         previous = next;
     };
 
-    addToChain(mpTriggersMainArea->toolButton_toggleExtraControls);
     addToChain(mpTriggersMainArea->lineEdit_trigger_command);
+    addToChain(mpTriggersMainArea->toolButton_toggleExtraControls);
 
     for (int i = 0; i < mVisiblePatternCount && i < mTriggerPatternEdit.size(); ++i) {
         auto* item = mTriggerPatternEdit.value(i, nullptr);
@@ -10906,10 +10906,10 @@ void dlgTriggerEditor::slot_toggleCentralDebugConsole()
 {
     mudlet::self()->attachDebugArea(mpHost->getName());
 
-    mudlet::smpDebugArea->setVisible(!mudlet::smDebugMode);
-    mudlet::smDebugMode = !mudlet::smDebugMode;
+    mudlet::smpDebugArea->setVisible(!TDebug::smDebugMode);
+    TDebug::smDebugMode = !TDebug::smDebugMode;
     mudlet::smpDebugArea->setWindowTitle(tr("Central Debug Console"));
-    if (mudlet::smDebugMode) {
+    if (TDebug::smDebugMode) {
         // If this is the first time the window is shown we want any previously
         // enqueued messages to be painted onto the central debug console:
         TDebug::flushMessageQueue();
@@ -13597,7 +13597,7 @@ void dlgTriggerEditor::slot_rightSplitterMoved(const int, const int)
     /*
      * With all widgets shown:              With some hidden:
      *  +--------------------------------+   +--------------------------------+
-     *  | name / control toggle /command |   | name / control toggle /command |
+     *  | name / command / toggle / id   |   | name / command / toggle / id   |
      *--+----------------------+---------+ --+----------------------+---------+
      *  |+--------------------+|         |   |+------------------------------+|
      *w_||                    ||         |   ||                              ||

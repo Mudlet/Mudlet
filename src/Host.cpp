@@ -3482,9 +3482,7 @@ QPair<bool, QString> Host::writeProfileData(const QString& item, const QString& 
     QSaveFile file(mudlet::getMudletPath(enums::profileDataItemPath, getName(), item));
     if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         QDataStream ofs(&file);
-        if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            ofs.setVersion(mudlet::scmQDataStreamFormat_5_12);
-        }
+        ofs.setVersion(QDataStream::Qt_5_12);
         ofs << what;
         if (!file.commit()) {
             qDebug() << "Host::writeProfileData: writing host data: " << file.errorString();
@@ -3505,9 +3503,7 @@ QString Host::readProfileData(const QString& item)
     QString ret;
     if (success) {
         QDataStream ifs(&file);
-        if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
-        }
+        ifs.setVersion(QDataStream::Qt_5_12);
         ifs >> ret;
         file.close();
     }

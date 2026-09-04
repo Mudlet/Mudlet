@@ -74,15 +74,15 @@ QString currentTimeStamp()
     static QString cachedFormat;
     static QString cachedStamp;
 
-    if (QDateTime::currentMSecsSinceEpoch() != cachedMSecs || cachedFormat != mudlet::smTimeStampFormat) {
+    if (QDateTime::currentMSecsSinceEpoch() != cachedMSecs || cachedFormat != TBuffer::smTimeStampFormat) {
         // The stamp is filed under the millisecond it was read in rather than
         // the one the check above read, which can be the one before it if the
         // clock ticks between the two. Filing it under the earlier one would
         // stamp the rest of that millisecond's lines a millisecond early.
         const QDateTime now = QDateTime::currentDateTime();
         cachedMSecs = now.toMSecsSinceEpoch();
-        cachedFormat = mudlet::smTimeStampFormat;
-        cachedStamp = now.time().toString(mudlet::smTimeStampFormat);
+        cachedFormat = TBuffer::smTimeStampFormat;
+        cachedStamp = now.time().toString(TBuffer::smTimeStampFormat);
     }
     return cachedStamp;
 }
@@ -1240,7 +1240,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
             } else {
                 qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - detected an invalid CSI sequence beginning with \"CSI"
                                              << localBuffer.substr(spanStart, spanEnd - spanStart).c_str() << " which Mudlet will ignore.";
-            } // End of (isAValidFinalByte) {}
+            } // End of the isAValidFinalByte test
 
             mGotCSI = false;
             // Step over the parameter string and the byte that ended it, unless
@@ -5507,7 +5507,7 @@ QString TBuffer::assembleLog(int fromLine, int toLine)
             // This only handles a single line of logged text at a time:
             linesToLog << bufferToHtml(mpHost->mIsLoggingTimestamps, i);
         } else {
-            linesToLog << ((mpHost->mIsLoggingTimestamps && !timeBuffer.at(i).isEmpty()) ? timeBuffer.at(i).left(mudlet::smTimeStampFormat.length()) : QString()) % lineBuffer.at(i) % QChar::LineFeed;
+            linesToLog << ((mpHost->mIsLoggingTimestamps && !timeBuffer.at(i).isEmpty()) ? timeBuffer.at(i).left(TBuffer::smTimeStampFormat.length()) : QString()) % lineBuffer.at(i) % QChar::LineFeed;
         }
     }
     return linesToLog.join(QString());
@@ -5582,7 +5582,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
             break;
         }
         // a blank timestamp indicates a wrapped line
-        lineBreaks = getWrapInfo(lineBuffer.at(firstRewrappedLine), timeBuffer.at(firstRewrappedLine) != mudlet::smBlankTimeStamp, maxWidth, indent, hangingIndent);
+        lineBreaks = getWrapInfo(lineBuffer.at(firstRewrappedLine), timeBuffer.at(firstRewrappedLine) != TBuffer::smBlankTimeStamp, maxWidth, indent, hangingIndent);
         if (!lineBreaks.isEmpty()) {
             break;
         }
@@ -5623,7 +5623,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         const bool isPrompt = promptBuffer[i];
         const QString lineText = lineBuffer[i];
         // a blank timestamp indicates a wrapped line
-        const bool isNewline = (time != mudlet::smBlankTimeStamp);
+        const bool isNewline = (time != TBuffer::smBlankTimeStamp);
         // The scan above computed this for the line it stopped on. It can also
         // stop before computing anything, but only on a line with no TChars
         // (which never reaches here) or with no text, and getWrapInfo() answers
@@ -5678,7 +5678,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
             if (w.isNewline) {
                 timeList.append(time);
             } else {
-                timeList.append(mudlet::smBlankTimeStamp);
+                timeList.append(TBuffer::smBlankTimeStamp);
             }
             queue.push(std::move(newBufferLine));
             promptList.append(isPrompt);
@@ -6354,7 +6354,7 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
         // Use the console's background so the timestamp blends in with the
         // rest of the text, as done in TTextEdit::layoutLine(...).
         const QColor timeStampBgColor{mpConsole ? mpConsole->getConsoleBgColor() : QColor(Qt::black)};
-        s.append(qsl("<span style=\"color: rgb(200,150,0); background: %1; \">%2").arg(timeStampBgColor.name(), timeBuffer.at(row).left(mudlet::smTimeStampFormat.length())));
+        s.append(qsl("<span style=\"color: rgb(200,150,0); background: %1; \">%2").arg(timeStampBgColor.name(), timeBuffer.at(row).left(TBuffer::smTimeStampFormat.length())));
         // Set the current idea of what the formatting is so we can spot if it
         // changes:
         currentFgColor = QColor(200, 150, 0);

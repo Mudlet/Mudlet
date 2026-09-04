@@ -124,6 +124,7 @@ set(EDITOR_GROUP_TEST_SOURCES
     EditorBannerViewSwitchTest.cpp
     EditorWindowPositionTest.cpp
     ScriptEventHandlerLifetimeTest.cpp
+    TriggerEditorDisclosureTest.cpp
     TriggerEditorTest.cpp
     VariableEditorWriteBackTest.cpp
 )
