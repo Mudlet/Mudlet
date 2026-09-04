@@ -5965,7 +5965,7 @@ void mudlet::slot_processEventLoopHackTimerRun()
 
 void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connect)
 {
-    Host* pHost = getHostManager().getHost(profile);
+    Host* pHost = mHostManager.getHost(profile);
     if (!pHost) {
         return;
     }
@@ -7592,7 +7592,7 @@ void mudlet::setAppearance(const enums::Appearance state, const bool& loading)
 
     refreshTabBarsAfterStyleChange();
 
-    getHostManager().changeAllHostColour(getActiveHost());
+    mHostManager.changeAllHostColour(getActiveHost());
     mAppearance = state;
     emit signal_appearanceChanged(state);
 }

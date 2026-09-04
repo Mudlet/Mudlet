@@ -24,6 +24,7 @@
 
 #include "TMedia.h"
 
+#include "HostManager.h"
 #include "TDebug.h"
 
 #include <QDir>
@@ -1536,25 +1537,25 @@ std::shared_ptr<TMediaPlayer> TMedia::getMediaPlayer(TMediaData& mediaData)
 // Dynamic limits for media players, based on host count
 int TMedia::getMaxUnprunedPlayers() const
 {
-    int hostCount = std::max(1, mudlet::self()->getHostManager().getHostCount());
+    int hostCount = std::max(1, HostManager::self()->getHostCount());
     return std::max(10, 25 / hostCount);
 }
 
 int TMedia::getMaxAllowedSoundPlayers() const
 {
-    int hostCount = std::max(1, mudlet::self()->getHostManager().getHostCount());
+    int hostCount = std::max(1, HostManager::self()->getHostCount());
     return std::max(16, 65 / hostCount);
 }
 
 int TMedia::getMaxAllowedMusicPlayers() const
 {
-    int hostCount = std::max(1, mudlet::self()->getHostManager().getHostCount());
+    int hostCount = std::max(1, HostManager::self()->getHostCount());
     return std::max(4, 20 / hostCount);
 }
 
 int TMedia::getMaxAllowedVideoPlayers() const
 {
-    int hostCount = std::max(1, mudlet::self()->getHostManager().getHostCount());
+    int hostCount = std::max(1, HostManager::self()->getHostCount());
     return std::max(2, 10 / hostCount);
 }
 

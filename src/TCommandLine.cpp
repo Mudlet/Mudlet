@@ -26,6 +26,7 @@
 
 #include "TEncodingHelper.h"
 #include "Host.h"
+#include "HostManager.h"
 #include "TConsole.h"
 #include "TMainConsole.h"
 #include "TTabBar.h"
@@ -1499,7 +1500,7 @@ void TCommandLine::clearBlacklist()
 
 void TCommandLine::slot_adjustAccessibleNames()
 {
-    const bool multipleProfilesActive = (mudlet::self()->getHostManager().getHostCount() > 1);
+    const bool multipleProfilesActive = (HostManager::self()->getHostCount() > 1);
     const QString hostName{mpHost ? mpHost->getName() : QString()};
     switch (mType) {
     case MainCommandLine:

@@ -121,12 +121,12 @@ private slots:
 
         QVERIFY(mSaveDir.isValid());
 
-        auto& hostManager = mudlet::self()->getHostManager();
-        QVERIFY2(hostManager.addHost(mSourceName, qsl("23"), QString(), QString()), "failed to create the source Host");
-        mpSource = hostManager.getHost(mSourceName);
+        auto* hostManager = HostManager::self();
+        QVERIFY2(hostManager->addHost(mSourceName, qsl("23"), QString(), QString()), "failed to create the source Host");
+        mpSource = hostManager->getHost(mSourceName);
         QVERIFY(mpSource);
-        QVERIFY2(hostManager.addHost(mTargetName, qsl("23"), QString(), QString()), "failed to create the target Host");
-        mpTarget = hostManager.getHost(mTargetName);
+        QVERIFY2(hostManager->addHost(mTargetName, qsl("23"), QString(), QString()), "failed to create the target Host");
+        mpTarget = hostManager->getHost(mTargetName);
         QVERIFY(mpTarget);
 
         buildSmallMap(mpSource);

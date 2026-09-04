@@ -95,7 +95,7 @@ private slots:
         QSignalSpy connectionSpy(&(host->mTelnet), &cTelnet::signal_connected);
         QVERIFY2(connectionSpy.wait(2000), "could not connect with the host");
 
-        mpHost = mudlet::self()->getHostManager().getHost(mHostname);
+        mpHost = HostManager::self()->getHost(mHostname);
         QVERIFY(mpHost);
         QVERIFY(mpHost->mpConsole);
     }

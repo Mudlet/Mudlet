@@ -209,7 +209,7 @@ private slots:
         QTimer::singleShot(0ms, qApp, [this, host]() {
             host->forceClose();
             mCloseAccepted = host->requestClose();
-            mudlet::self()->getHostManager().deleteHost(mProfileName);
+            HostManager::self()->deleteHost(mProfileName);
         });
 
         auto [ok, filename, error] = mpHost->saveProfile();

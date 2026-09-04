@@ -330,7 +330,7 @@ private slots:
 
         pSecondHost->forceClose();
         QVERIFY2(pSecondHost->requestClose(), "Closing the second profile was refused");
-        mudlet::self()->getHostManager().deleteHost(mSecondProfileName);
+        HostManager::self()->deleteHost(mSecondProfileName);
 
         QCOMPARE(mudlet::getQSettings()->value("script_editor_pos").toPoint(), left);
     }

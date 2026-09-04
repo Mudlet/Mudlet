@@ -28,6 +28,16 @@
 #include "mudlet.h"
 #include "TMap.h"
 
+HostManager::HostManager()
+{
+    smpSelf = this;
+}
+
+HostManager::~HostManager()
+{
+    smpSelf = nullptr;
+}
+
 void HostManager::deleteHost(const QString& hostname)
 {
     // make sure this is really an existing host
@@ -134,7 +144,7 @@ void HostManager::changeAllHostColour(const Host* pHost)
         return;
     }
     //change all main and subconsoles color
-    for (const QSharedPointer<Host> &host : mHostPool.values()) {
+    for (const QSharedPointer<Host>& host : mHostPool.values()) {
         host->mpConsole->changeColors();
         // Mapper also needs a refresh of its colours
         auto mapper = host->mpMap->mpMapper;

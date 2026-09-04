@@ -38,8 +38,8 @@ class HostManager
     {
     public:
         Iter(HostManager* mgr, bool top);
-        bool operator!= (const Iter& other) const;
-        bool operator== (const Iter& other) const;
+        bool operator!=(const Iter& other) const;
+        bool operator==(const Iter& other) const;
         Iter& operator++();
         QSharedPointer<Host> operator*();
 
@@ -49,7 +49,13 @@ class HostManager
 
 
 public:
-    HostManager() = default;
+    Q_DISABLE_COPY(HostManager)
+    HostManager();
+    ~HostManager();
+
+    // Held as a value member of the application object, so this is null before
+    // that object is built and again once it has been torn down.
+    static HostManager* self() { return smpSelf; }
 
     Host* getHost(const QString& hostname);
     bool addHost(const QString& name, const QString& port, const QString& login, const QString& pass);
@@ -63,6 +69,8 @@ public:
     bool hostLoaded(const QString& hostname) const;
 
 private:
+    inline static HostManager* smpSelf = nullptr;
+
     HostMap mHostPool;
 };
 
