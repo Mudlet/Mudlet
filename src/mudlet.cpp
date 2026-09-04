@@ -4068,7 +4068,7 @@ void mudlet::readLateSettings(const QSettings& settings)
 
     mEditorTextOptions = static_cast<QTextOption::Flags>(settings.value("editorTextOptions", QVariant(0)).toInt());
 
-    mShowMapAuditErrors = settings.value("reportMapIssuesToConsole", QVariant(false)).toBool();
+    TMap::smShowMapAuditErrors = settings.value("reportMapIssuesToConsole", QVariant(false)).toBool();
     mInvertMapZoom = settings.value("invertMapZoom", QVariant(false)).toBool(); // Default to false for modern (non-inverted) behavior
     mStorePasswordsSecurely = settings.value("storePasswordsSecurely", QVariant(true)).toBool();
     mShowTabConnectionIndicators = settings.value("showTabConnectionIndicators", QVariant(false)).toBool();
@@ -4280,7 +4280,7 @@ void mudlet::writeSettings()
     settings.setValue("maximized", static_cast<bool>(windowState() & Qt::WindowMaximized));
     settings.setValue("fullScreen", static_cast<bool>(windowState() & Qt::WindowFullScreen));
     settings.setValue("editorTextOptions", static_cast<int>(mEditorTextOptions));
-    settings.setValue("reportMapIssuesToConsole", mShowMapAuditErrors);
+    settings.setValue("reportMapIssuesToConsole", TMap::smShowMapAuditErrors);
     settings.setValue("invertMapZoom", mInvertMapZoom);
     settings.setValue("storePasswordsSecurely", mStorePasswordsSecurely);
     settings.setValue("showTabConnectionIndicators", mShowTabConnectionIndicators);
@@ -7502,8 +7502,8 @@ void mudlet::slot_passwordMigratedToSecureStorage(QKeychain::Job* job)
 
 void mudlet::setShowMapAuditErrors(const bool state)
 {
-    if (mShowMapAuditErrors != state) {
-        mShowMapAuditErrors = state;
+    if (TMap::smShowMapAuditErrors != state) {
+        TMap::smShowMapAuditErrors = state;
 
         emit signal_showMapAuditErrorsChanged(state);
     }
