@@ -26,11 +26,15 @@
 
 #include "utils.h"
 
+#include <QList>
 #include <QMap>
 #include <QPointer>
 #include <QString>
+#include <QtGlobal>
 
 #include <list>
+#include <tuple>
+#include <vector>
 
 class Host;
 class TScript;
@@ -74,6 +78,7 @@ public:
     std::tuple<QString, int, int, int> assembleReport();
 
     QList<TScript*> uninstallList;
+    bool hasPendingDeletes() const { return !uninstallList.isEmpty(); }
 
 
 private:

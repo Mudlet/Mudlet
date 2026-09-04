@@ -2321,4 +2321,45 @@ describe("Trigger processing", function()
         end)
 
     end)
+
+    -- The capture tables a trigger script is handed belong to that fire. A
+    -- script that keeps a reference to one - to compare against the next fire,
+    -- or to hand to a coroutine that runs later - has always been able to rely
+    -- on that, and multimatches is the one that catches a table being reused,
+    -- since a single-line trigger leaves it empty and an empty table is exactly
+    -- what looks safe to hand out again.
+    describe("capture table identity", function()
+        local triggerId
+
+        after_each(function()
+            if triggerId then
+                killTrigger(triggerId)
+                triggerId = nil
+            end
+        end)
+
+        it("should hand each fire its own capture tables", function()
+            local seenMatches = {}
+            local seenMultimatches = {}
+            triggerId = tempRegexTrigger("^CaptureIdentity(\\d+)$", function()
+                seenMatches[#seenMatches + 1] = matches
+                seenMultimatches[#seenMultimatches + 1] = multimatches
+            end)
+            assert.is_true(triggerId > 0, "the trigger was not created")
+
+            feedTriggers("\nCaptureIdentity1\n")
+            feedTriggers("\nCaptureIdentity2\n")
+
+            assert.are.equal(2, #seenMatches, "the trigger should have fired twice")
+            assert.is_true(not rawequal(seenMultimatches[1], seenMultimatches[2]),
+                "the second fire was handed the first fire's multimatches table")
+            assert.is_true(not rawequal(seenMatches[1], seenMatches[2]),
+                "the second fire was handed the first fire's matches table")
+            assert.are.equal("CaptureIdentity1", seenMatches[1][1],
+                "the first fire's full match was overwritten by the second fire")
+            assert.are.equal("1", seenMatches[1][2],
+                "the first fire's capture was overwritten by the second fire")
+        end)
+
+    end)
 end)
