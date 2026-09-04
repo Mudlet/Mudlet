@@ -20,7 +20,7 @@ else()
 endif()
 message(STATUS "============================")
 
-find_package(Qt6 COMPONENTS Core Widgets REQUIRED)
+find_package(Qt6 COMPONENTS Core Widgets Network REQUIRED)
 
 add_executable(MudletCrashReporter main.cpp)
 
@@ -43,57 +43,8 @@ elseif(UNIX)
     set_target_properties(MudletCrashReporter PROPERTIES BUILD_RPATH "$ORIGIN/lib")
 endif()
 
-add_dependencies(MudletCrashReporter sentry_with_transport)
-
-target_include_directories(MudletCrashReporter PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../3rdparty/sentry-native/install_with_transport/include
-     ${CMAKE_CURRENT_SOURCE_DIR}/../../3rdparty/sentry-native/src
-)
-
 target_compile_definitions(MudletCrashReporter PRIVATE
-    SENTRY_BUILD_STATIC
     SENTRY_DSN="${SENTRY_DSN}"
 )
 
-target_link_directories(MudletCrashReporter PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../3rdparty/sentry-native/install_with_transport/lib
-)
-
-set(MUDLET_CRASH_REPORTER_LIBS
-    Qt6::Core Qt6::Widgets
-    sentry
-    crashpad_client crashpad_handler_lib crashpad_minidump
-    crashpad_mpack crashpad_snapshot crashpad_tools crashpad_util
-    mini_chromium
-)
-
-if(WIN32)
-    list(APPEND MUDLET_CRASH_REPORTER_LIBS
-        crashpad_compat
-        ws2_32
-        shlwapi
-        winhttp
-        version
-        dbghelp
-        synchronization
-    )
-elseif(APPLE)
-    list(APPEND MUDLET_CRASH_REPORTER_LIBS
-        bsm
-        pthread
-        dl
-        z
-        curl
-    )
-elseif(UNIX)
-    list(APPEND MUDLET_CRASH_REPORTER_LIBS
-        crashpad_compat
-        unwind
-        pthread
-        dl
-        z
-        curl
-    )
-endif()
-
-target_link_libraries(MudletCrashReporter PRIVATE ${MUDLET_CRASH_REPORTER_LIBS})
+target_link_libraries(MudletCrashReporter PRIVATE Qt6::Core Qt6::Widgets Qt6::Network)

@@ -356,10 +356,8 @@ jobs:
       id: cache-sentry
       uses: actions/cache@v6
       with:
-        path: |
-          3rdparty/sentry-native/install_without_transport
-          3rdparty/sentry-native/install_with_transport
-        key: sentry-${{ runner.os }}-${{ runner.arch }}-${{ steps.sentry-hash.outputs.SENTRY_HASH }}
+        path: build-sentry
+        key: sentry-${{ matrix.os }}-${{ runner.arch }}-${{ matrix.compiler }}${{ matrix.gcc_compiler_version != '' && format('v{0}', matrix.gcc_compiler_version) || '' }}-${{ matrix.qt }}-${{ steps.sentry-hash.outputs.SENTRY_HASH }}
 
     - name: Build Mudlet
       uses: lukka/run-cmake@v3
