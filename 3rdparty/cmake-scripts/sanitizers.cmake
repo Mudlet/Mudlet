@@ -17,7 +17,7 @@
 
 # The most basic way to enable sanitizers is to simply call
 # `add_sanitizer_support` with the desired sanitizer names, whereupon it will
-# check for the availability and compatability of the combined flags and apply
+# check for the availability and compatibility of the combined flags and apply
 # to following compile targets:
 # ~~~
 # # apply address and leak sanitizers

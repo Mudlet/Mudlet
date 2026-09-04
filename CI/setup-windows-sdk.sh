@@ -141,6 +141,8 @@ while true; do
     "${MINGW_PACKAGE_PREFIX}-python" \
     "${MINGW_PACKAGE_PREFIX}-uasm" \
     "${MINGW_PACKAGE_PREFIX}-cmake" \
+    "${MINGW_PACKAGE_PREFIX}-compiler-rt" \
+    "${MINGW_PACKAGE_PREFIX}-cppcheck" \
     "${MINGW_PACKAGE_PREFIX}-jq"; then
       break
   fi

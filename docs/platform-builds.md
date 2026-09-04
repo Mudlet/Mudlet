@@ -17,10 +17,9 @@ cmake --build --preset macos-debug
 ```
 
 Run `cmake --list-presets` to see the presets available on your machine; alongside `macos-debug`
-there are `-nosan`, `-tsan` and `-ubsan` variants, a `macos-static-analysis` preset and a
-`macos-release` one carrying the flags CI ships to players. Variants build into
-`build-<preset-name>/` rather than `build/`, so several configurations can coexist without
-invalidating each other.
+there are `-asan`, `-tsan` and `-ubsan` variants and a `macos-static-analysis` preset. Variants
+build into `build-<preset-name>/` rather than `build/`, so several configurations can coexist
+without invalidating each other.
 
 The presets do not pin a Qt location, relying on CMake's default search path. If Qt is not found,
 pass it explicitly: `cmake --preset macos-debug -DCMAKE_PREFIX_PATH="$(brew --prefix qt6)"`.
@@ -53,45 +52,70 @@ cmake --preset windows-debug
 cmake --build --preset windows-debug
 ```
 
-Sanitizers are not enabled on Windows (`src/CMakeLists.txt` guards them with `if(NOT WIN32)`),
-so there is no `-nosan` variant. `windows-release` reads `MSYSTEM_PREFIX` the same way, adds
-`CMAKE_BUILD_TYPE=Release` to match `CI/build-mudlet-for-windows.sh` - which builds Release on
-every Windows run - and builds into `build-windows-release/`.
+Some sanitizers are available on Windows (Address and UndefinedBehaviour).
 
 ## Sanitizers and static analysis
 
-Sanitizers are enabled on every non-Windows build; `USE_SANITIZER` defaults to `address`, and a
-Release build type does not turn them off on its own - `<platform>-release` clears the variable
-explicitly. Use the `-tsan` / `-ubsan` / `-nosan` presets to change the choice, or pass a CMake
-list — semicolon-separated, not comma-separated — such as `-DUSE_SANITIZER="Address;Undefined"`.
-A comma-separated value is read as a single name, which silently skips the per-sanitizer options
-such as `-fno-omit-frame-pointer`.
+Sanitizers are available but not enabled on every build; the environmental variable
+`WITH_SANITIZERS` is the master switch (defaults to `NO`) - if it is set to `YES`
+the environmental variable `MUDLET_SANITIZERS` needs to be set to one (or more,
+separated by semi-colons) of the sanitizers to include.
 
-Usable names are `Address`, `Thread` and `Undefined` on macOS, plus `Memory` and `Leak` on Linux.
-`MemoryWithOrigins` appears in the `USE_SANITIZER` cache docstring but has no mapping declared in
-`src/cmake/EnableSanitizers.cmake`, so it always fails. An unavailable or incompatible selection
-raises a `SEND_ERROR`: configure finishes, but generation is blocked.
+Use the `-asan` / `-tsan` / `-ubsan` presets or pass values in the command line
+containing the call to `cmake`, e.g. `WITH_SANITIZIERS="YES" MUDLET_SANITIZERS="address;undefined" cmake ...`.
+Invalid sanitizers or combinations will be detected and cause `cmake` to generate
+an error. The default preset (without one of those suffixes) does not include
+any sanitizer; however the `CMakePresets.json` file that defines the possible
+options is likely to need to be reorganised further to properly provide presets
+for "Release" type builds.
 
-Static analysis (clang-tidy and cppcheck) runs during compilation with the
-`<platform>-static-analysis` presets, which set `ENABLE_STATIC_ANALYSIS=ON`. The two tools are
-independent — whichever is on `PATH` runs. A missing clang-tidy produces a CMake warning, but a
-missing cppcheck only emits a `STATUS` line, so read the configure output rather than assuming both
-are active.
+Usable names are `address`, and `undefined` on all three main supported OSes;
+plus 'thread' on macOS; plus `thread`, `memory` and`leak` on Linux. `memoryWithOrigins`
+and `type` appear in the CMake `cmake/EnableSanitizers.cmake` file; the former
+is derived from the parent `memory` sanitizer but both require all libraries
+- including "system" ones - to also be compiled with it, so it is not a trivial
+exercise to make use of them.
 
-Because IDEs read `CMakePresets.json` natively, selecting one of these presets in CLion, VS Code or
-Qt Creator is enough — no per-IDE sanitizer configuration is needed.
+Static analysis (clang-tidy and cppcheck) is available on all three platforms and
+they run during compilation with the `<platform>-static-analysis` presets, which
+set `ENABLE_STATIC_ANALYSIS=ON`. The two tools are independent — whichever is on
+`PATH` runs. If one of them is missing a CMake warning will be produced, but if
+both are absent when requested this will be elevated to an error and configuration
+will fail.
+
+Because IDEs read `CMakePresets.json` natively, selecting one of these presets
+in CLion, VS Code or Qt Creator is enough — no per-IDE sanitizer configuration
+is needed.
 
 ## Optional feature modules
 
-Six feature modules are declared through `include_optional_module` in `CMakeLists.txt`: the updater,
-fonts, 3D mapper, shader hot-reloading, memory tracking and the build-type splash screen. Each has a
-`USE_*` option and a `WITH_*` name, and they are **not** interchangeable — `cmake/IncludeOptionalModule.cmake`
-reads the `WITH_*` name from the **environment** only. So `-DWITH_UPDATER=NO` on the command line is
-accepted by CMake and silently ignored; use `-DUSE_UPDATER=OFF`, or set `WITH_UPDATER=NO` in the
-environment. Note that shader hot-reloading and memory tracking default to OFF, the rest to ON.
+Seven feature modules are declared through `include_optional_module` in
+`CMakeLists.txt`: the updater, fonts, 3D mapper, shader hot-reloading, memory
+tracking, the build-type splash screen and overall control of the use of
+sanitizers. Each has a `USE_*` CMake variable and a `WITH_*` environmental
+variable, and they are **not** interchangeable — `cmake/IncludeOptionalModule.cmake`
+reads the `WITH_*` value from the **environment** only. So `-DWITH_UPDATER=NO` on
+the command line is accepted by CMake as a CMake variable and silently ignored;
+use `-DUSE_UPDATER=OFF`, or preferable set `WITH_UPDATER=NO` in the environment.
+Note that shader hot-reloading, memory tracking and sanitizers default to OFF,
+the rest to ON.
 
-This applies only to those six. Other `WITH_*` names are ordinary options: `WITH_SENTRY` and
-`SENTRY_SEND_DEBUG` are declared with `option()` and are set on the command line as normal.
+This applies only to those seven. There are other `WITH_*` names (`WITH_CCACHE`
+and `WITH_SENTRY`) the former is used internally and the latter is currently
+(and confusingly) all of: an environmental variable, a CMake variable and also
+a compilation symbol seen by compilers. It is planned to resolve that into a
+`WITH_SENTRY`/`USE_SENTRY`/`INCLUDE_SENTRY` triplet.
+
+`SENTRY_SEND_DEBUG` is a CMake variable and declared with `option()` and is
+currently set on the command line. It may also change to a `WITH_XXXX`/`USE_XXXX`
+environmental/CMake variable pair in a future revision.
+
+There was previously a `WITH_OWN_QTKEYCHAIN` environmental variable that
+controlled the setting of the CMake `USE_OWN_QTKEYCHAIN` - which was used to
+determine whether the "QtKeyChain" library was built from source code (default
+to an affirmative) or sourced from the build system's packaged version. This was
+removed and `USE_OWN_QTKEYCHAIN` is now managed internally in an OS dependent
+manner.
 
 ## Debugging options
 
@@ -101,6 +125,9 @@ This applies only to those six. Other `WITH_*` names are ordinary options: `WITH
 - `DEBUG_UTF8_PROCESSING` - UTF-8 decoding messages
 - `DEBUG_SGR_PROCESSING` - ANSI color sequence debugging
 - `DEBUG_WINDOW_HANDLING` - UI window operations
-- And others for encoding, MXP, map autosave, etc.
+
+with others for encoding, MXP, map autosave, etc. Some additional ones may be
+found in individual class files, currently this is only: `DEBUG_DISCORD` and
+`DEBUG_RECORDING`.
 
 **Usage**: Uncomment the relevant `target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_XXX)` lines when debugging specific areas. **Important**: Do not commit uncommented debug lines to git.

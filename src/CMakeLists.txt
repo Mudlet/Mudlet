@@ -526,12 +526,6 @@ if(USE_3DMAPPER)
   list(APPEND mudlet_SRCS glwidget_integration.cpp)
 endif(USE_3DMAPPER)
 
-if(NOT WIN32)
-  include(cmake/EnableSanitizers.cmake)
-else()
-  message(STATUS "Sanitizers disabled on Windows")
-endif()
-
 find_package(Qt6 6.8.2 REQUIRED
     COMPONENTS Core
                Core5Compat
@@ -655,7 +649,7 @@ add_library(${LIB_MUDLET_TARGET} STATIC
 # target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_CSI_PROCESSING)
 #
 # * Produce qDebug() messages about the decoding of ANSI SGR sequences:
-#   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_SGR_PROCESSING)
+# target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_SGR_PROCESSING)
 #
 # * Produce qDebug() messages about the decoding of ANSI OSC sequences:
 # target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_OSC_PROCESSING)
@@ -675,7 +669,7 @@ add_library(${LIB_MUDLET_TARGET} STATIC
 #
 # * Enable player icon adjustment controls in the 3D mapper for debugging and
 #   alignment purposes - these are normally hidden in production builds:
-# target_compile_definitions(mudlet PRIVATE DEBUG_PLAYER_ICON_CONTROLS)
+# target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_PLAYER_ICON_CONTROLS)
 #
 # * Produce qDebug() messages about undo/redo operations in the trigger editor,
 #   including command execution, stack operations, and edbee text undo integration:
@@ -699,6 +693,21 @@ set_target_properties(${LIB_MUDLET_TARGET} PROPERTIES
 
 if(USE_FONTS)
   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_FONTS)
+endif()
+
+if(USE_SANITIZERS AND SANITIZERS_AS_STRING)
+  # This is ONLY used to include the Licence details for the Sanitizers - as
+  # such it only needs to/should be present for builds that "package" Mudlet
+  # i.e. installer builds (for MacOS and Windows) and AppImages (for Linux)
+  # all other builds will use "system-provided" sanitizer libraries and we do
+  # not then NEED to mention them in the "Third-party" libraries.
+  if(DEFINED ENV{CI} AND "$ENV{CI}" STREQUAL "true" )
+    target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_SANITIZERS)
+    message(STATUS "Including sanitizer licence details for a package build")
+  else()
+    message(STATUS "Not including sanitizer licence details as this seem to be a local build")
+  endif()
+  add_sanitizer_support("${SANITIZERS_SELECTED}")
 endif()
 
 if(UNIX)

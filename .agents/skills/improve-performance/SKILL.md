@@ -21,20 +21,15 @@ inline.
    profile load and startup time. "You pick" is also an answer: profile a busy session and
    take the top entry.
 2. **Build a benchmark-safe tree.** Never benchmark a sanitizer build - ASan roughly
-   halves text throughput - and the default is to have one, because
-   `src/cmake/EnableSanitizers.cmake` defaults `USE_SANITIZER` to `address`.
-   - Linux: `linux-debug-nosan` (plain `linux-debug` IS an ASan build).
-   - macOS: `macos-debug-nosan`, same trap with the same preset naming.
-   - Windows: `windows-debug` is already safe - `src/CMakeLists.txt` skips
-     `EnableSanitizers.cmake` entirely under `WIN32`, so no Windows build has one.
+   halves text throughput - use the plain `<platform>-debug`, and especially not
+   the `<platform>-debug-asan`.
 
-   Variant presets build into `build-<preset-name>/`, so the binary is
-   `build-linux-debug-nosan/src/mudlet`,
-   `build-macos-debug-nosan/src/mudlet.app/Contents/MacOS/mudlet` or
+   Variant presets build into `build-<suffix-name>/`, but the plain debug binary is
+   `build-debug/src/mudlet`,
+   `build-debug/src/mudlet.app/Contents/MacOS/mudlet` or
    `build/src/mudlet.exe`. Confirm rather than assume before quoting any number -
-   `grep USE_SANITIZER <build>/CMakeCache.txt` must print an empty value on Linux and
-   macOS and nothing at all on Windows. A whole A/B campaign has been published off two
-   ASan binaries because nobody checked.
+   `grep USE_SANITIZERS <build>/CMakeCache.txt` must print a `NO` or an empty value.
+   A whole A/B campaign has been published off two ASan binaries because nobody checked.
 3. **Establish a baseline** with an in-tree benchmark (below), or a small harness
    following the patterns below. Record the exact invocation - an unreproducible number is
    worthless.
@@ -44,9 +39,8 @@ inline.
    the microbenchmark.
 6. **Prove no behaviour change** - run the busted specs
    (`.claude/scripts/run-lua-tests.sh` on Linux, see below for elsewhere) and `ctest` -
-   then open a pull request with the
-   `open-pr` skill, quoting before/after numbers and the exact invocation so a reviewer
-   can reproduce them.
+   then open a pull request with the `open-pr` skill, quoting before/after numbers and
+   the exact invocation so a reviewer can reproduce them.
 
 ## Keep the numbers honest
 
@@ -193,7 +187,7 @@ Four live in `test/functional_tests/`, built alongside the functional tests into
 
   The binaries land in `<build>/test/functional_tests/` on every platform (`.exe` on
   Windows); the `VAR=value cmd` prefix form needs a shell that supports it, so on Windows
-  run them from the MSYS2 shell rather than cmd or PowerShell.
+  run them from the MSYS2 CLANG64 shell rather than cmd or PowerShell.
 
   `compare-perf-baseline.py` understands MapRenderBenchmark's output too.
 - `TelnetBenchmark` (small, medium and large payloads) is an ordinary grouped ctest case:

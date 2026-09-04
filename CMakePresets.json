@@ -9,23 +9,11 @@
     {
       "name": "base",
       "hidden": true,
-      "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
-      }
+      "generator": "Ninja"
     },
     {
-      "name": "variant",
+      "name": "on-macos",
       "hidden": true,
-      "inherits": "base",
-      "binaryDir": "${sourceDir}/build-${presetName}"
-    },
-    {
-      "name": "macos-debug",
-      "displayName": "macOS Debug (Ninja, AddressSanitizer)",
-      "inherits": "base",
       "condition": {
         "type": "equals",
         "lhs": "${hostSystemName}",
@@ -33,50 +21,8 @@
       }
     },
     {
-      "name": "macos-debug-nosan",
-      "displayName": "macOS Debug, no sanitizers (fastest build and run)",
-      "inherits": ["variant", "macos-debug"],
-      "cacheVariables": {
-        "USE_SANITIZER": ""
-      }
-    },
-    {
-      "name": "macos-debug-tsan",
-      "displayName": "macOS Debug, ThreadSanitizer",
-      "inherits": ["variant", "macos-debug"],
-      "cacheVariables": {
-        "USE_SANITIZER": "Thread"
-      }
-    },
-    {
-      "name": "macos-debug-ubsan",
-      "displayName": "macOS Debug, UndefinedBehaviorSanitizer",
-      "inherits": ["variant", "macos-debug"],
-      "cacheVariables": {
-        "USE_SANITIZER": "Undefined"
-      }
-    },
-    {
-      "name": "macos-static-analysis",
-      "displayName": "macOS Debug with clang-tidy and cppcheck",
-      "inherits": ["variant", "macos-debug"],
-      "cacheVariables": {
-        "ENABLE_STATIC_ANALYSIS": "ON"
-      }
-    },
-    {
-      "name": "macos-release",
-      "displayName": "macOS Release, no sanitizers (what CI ships to players)",
-      "inherits": ["variant", "macos-debug"],
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "USE_SANITIZER": ""
-      }
-    },
-    {
-      "name": "linux-debug",
-      "displayName": "Linux Debug (Ninja, AddressSanitizer)",
-      "inherits": "base",
+      "name": "on-linux",
+      "hidden": true,
       "condition": {
         "type": "equals",
         "lhs": "${hostSystemName}",
@@ -84,77 +30,123 @@
       }
     },
     {
-      "name": "linux-debug-nosan",
-      "displayName": "Linux Debug, no sanitizers (fastest build and run)",
-      "inherits": ["variant", "linux-debug"],
+      "name": "on-windows",
+      "hidden": true,
       "cacheVariables": {
-        "USE_SANITIZER": ""
+        "CMAKE_PREFIX_PATH": "$env{MSYSTEM_PREFIX}"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
       }
     },
     {
-      "name": "linux-debug-tsan",
-      "displayName": "Linux Debug, ThreadSanitizer",
-      "inherits": ["variant", "linux-debug"],
+      "name": "debug",
+      "binaryDir": "${sourceDir}/build",
+      "hidden": true,
+      "inherits": "base",
       "cacheVariables": {
-        "USE_SANITIZER": "Thread"
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_VERBOSE_MAKEFILE": "ON"
       }
     },
     {
-      "name": "linux-debug-ubsan",
-      "displayName": "Linux Debug, UndefinedBehaviorSanitizer",
-      "inherits": ["variant", "linux-debug"],
-      "cacheVariables": {
-        "USE_SANITIZER": "Undefined"
+      "name": "debug-asan",
+      "binaryDir": "${sourceDir}/build-asan",
+      "hidden": true,
+      "environment": {
+        "WITH_SANITIZERS": "YES",
+        "MUDLET_SANITIZERS": "address"
       }
     },
     {
-      "name": "linux-static-analysis",
-      "displayName": "Linux Debug with clang-tidy and cppcheck",
-      "inherits": ["variant", "linux-debug"],
+      "name": "debug-tsan",
+      "binaryDir": "${sourceDir}/build-tsan",
+      "hidden": true,
+      "environment": {
+        "WITH_SANITIZERS": "YES",
+        "MUDLET_SANITIZERS": "thread"
+      }
+    },
+    {
+      "name": "debug-ubsan",
+      "binaryDir": "${sourceDir}/build-ubsan",
+      "hidden": true,
+      "environment": {
+        "WITH_SANITIZERS": "YES",
+        "MUDLET_SANITIZERS": "undefined"
+      }
+    },
+    {
+      "name": "debug-lsan",
+      "binaryDir": "${sourceDir}/build-lsan",
+      "hidden": true,
+      "environment": {
+        "WITH_SANITIZERS": "YES",
+        "MUDLET_SANITIZERS": "leak"
+      }
+    },
+    {
+      "name": "debug-static-analysis",
+      "binaryDir": "${sourceDir}/build-static-analysis",
+      "hidden": true,
       "cacheVariables": {
         "ENABLE_STATIC_ANALYSIS": "ON"
       }
     },
     {
-      "name": "linux-lowspec",
-      "displayName": "Linux Debug for low-memory machines (Raspberry Pi and similar)",
-      "inherits": ["variant", "linux-debug"],
+      "name": "lowspec",
+      "binaryDir": "${sourceDir}/build-lowspec",
+      "hidden": true,
       "cacheVariables": {
-        "USE_SANITIZER": "",
-        "USE_UPDATER": "OFF",
-        "USE_3DMAPPER": "OFF"
-      }
-    },
-    {
-      "name": "linux-release",
-      "displayName": "Linux Release, no sanitizers (what CI ships to players)",
-      "inherits": ["variant", "linux-debug"],
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "USE_SANITIZER": ""
-      }
-    },
-    {
-      "name": "windows-debug",
-      "displayName": "Windows Debug (MSYS2, Ninja)",
-      "inherits": "base",
-      "condition": {
-        "type": "equals",
-        "lhs": "${hostSystemName}",
-        "rhs": "Windows"
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_VERBOSE_MAKEFILE": "ON"
       },
-      "cacheVariables": {
-        "CMAKE_PREFIX_PATH": "$env{MSYSTEM_PREFIX}"
+      "environment": {
+        "WITH_UPDATER": "NO",
+        "WITH_3DMAPPER": "NO"
       }
     },
     {
-      "name": "windows-release",
-      "displayName": "Windows Release (MSYS2, Ninja, what CI ships to players)",
-      "inherits": ["variant", "windows-debug"],
+      "name": "relWithDebInfo",
+      "binaryDir": "${sourceDir}/build-relwithdebinfo",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+      }
+    },
+    {
+      "name": "release",
+      "binaryDir": "${sourceDir}/build-release",
+      "hidden": true,
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release"
       }
-    }
+    },
+    { "name": "macos-debug", "displayName": "Debug (Ninja, No sanitizers, slower to build or run than release)", "inherits": ["on-macos", "debug"]},
+    { "name": "macos-debug-asan", "displayName": "Debug (Address Sanitizer)", "inherits": ["on-macos", "debug-asan", "debug"]},
+    { "name": "macos-debug-tsan", "displayName": "Debug (Thread Sanitizer)", "inherits": ["on-macos", "debug-tsan", "debug"]},
+    { "name": "macos-debug-ubsan", "displayName": "Debug (Undefined Behavor Sanitizer)", "inherits": ["on-macos", "debug-ubsan", "debug"]},
+    { "name": "macos-debug-static-analysis", "displayName": "Debug (With clang-tidy and cppcheck)", "inherits": ["on-macos", "debug-static-analysis", "debug"]},
+    { "name": "macos-relWithDebInfo", "displayName": "Release with debug information (No sanitizers, not as fast to build or run as release but debuggable)", "inherits": ["on-macos", "relWithDebInfo"]},
+    { "name": "macos-release", "displayName": "Release (No sanitizers, what CI ships to players)", "inherits": ["on-macos", "release"]},
+    { "name": "linux-debug", "displayName": "Debug (Ninja, No sanitizers)", "inherits": ["on-linux", "debug"]},
+    { "name": "linux-debug-asan", "displayName": "Debug (Address Sanitizer)", "inherits": ["on-linux", "debug-asan", "debug"]},
+    { "name": "linux-debug-tsan", "displayName": "Debug (Thread Sanitizer)", "inherits": ["on-linux", "debug-tsan", "debug"]},
+    { "name": "linux-debug-ubsan", "displayName": "Debug (Undefined Behavor Sanitizer)", "inherits": ["on-linux", "debug-ubsan", "debug"]},
+    { "name": "linux-debug-static-analysis", "displayName": "Debug (With clang-tidy and cppcheck)", "inherits": ["on-linux", "debug-static-analysis", "debug"]},
+    { "name": "linux-lowspec", "displayName": "Debug for low-memory machines (Raspberry Pi and similar)", "inherits": ["on-linux", "lowspec"]},
+    { "name": "linux-relWithDebInfo", "displayName": "Release with debug information (No sanitizers, not as fast to build or run as release but debuggable)", "inherits": ["on-linux", "relWithDebInfo"]},
+    { "name": "linux-release", "displayName": "Release (No sanitizers, what CI ships to players, fastest to build and run)", "inherits": ["on-linux", "release"]},
+    { "name": "windows-debug", "displayName": "Debug (Ninja, No sanitizers)", "inherits": ["on-windows", "debug"]},
+    { "name": "windows-debug-asan", "displayName": "Debug (Address Sanitizer)", "inherits": ["on-windows", "debug-asan", "debug"]},
+    { "name": "windows-debug-ubsan", "displayName": "Debug (Undefined Behavor Sanitizer)", "inherits": ["on-windows", "debug-ubsan", "debug"]},
+    { "name": "windows-debug-static-analysis", "displayName": "Debug (With clang-tidy and cppcheck)", "inherits": ["on-windows", "debug-static-analysis", "debug"]},
+    { "name": "windows-relWithDebInfo", "displayName": "Release with debug information (No sanitizers, not as fast to build or run as release but debuggable)", "inherits": ["on-windows", "relWithDebInfo"]},
+    { "name": "windows-release", "displayName": "Release (No sanitizers, what CI ships to players, fastest to build and run)", "inherits": ["on-windows", "release"]}
   ],
   "buildPresets": [
     {
@@ -175,42 +167,36 @@
         "rhs": "Linux"
       }
     },
+    {
+      "name": "on-windows",
+      "hidden": true,
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
     { "name": "macos-debug", "inherits": "on-macos", "configurePreset": "macos-debug" },
-    { "name": "macos-debug-nosan", "inherits": "on-macos", "configurePreset": "macos-debug-nosan" },
+    { "name": "macos-debug-asan", "inherits": "on-macos", "configurePreset": "macos-debug-asan" },
     { "name": "macos-debug-tsan", "inherits": "on-macos", "configurePreset": "macos-debug-tsan" },
     { "name": "macos-debug-ubsan", "inherits": "on-macos", "configurePreset": "macos-debug-ubsan" },
-    { "name": "macos-static-analysis", "inherits": "on-macos", "configurePreset": "macos-static-analysis" },
+    { "name": "macos-debug-static-analysis", "inherits": "on-macos", "configurePreset": "macos-debug-static-analysis" },
+    { "name": "macos-relWithDebInfo", "inherits": "on-macos", "configurePreset": "macos-relWithDebInfo" },
     { "name": "macos-release", "inherits": "on-macos", "configurePreset": "macos-release" },
     { "name": "linux-debug", "inherits": "on-linux", "configurePreset": "linux-debug" },
-    { "name": "linux-debug-nosan", "inherits": "on-linux", "configurePreset": "linux-debug-nosan" },
+    { "name": "linux-debug-asan", "inherits": "on-linux", "configurePreset": "linux-debug-asan" },
     { "name": "linux-debug-tsan", "inherits": "on-linux", "configurePreset": "linux-debug-tsan" },
     { "name": "linux-debug-ubsan", "inherits": "on-linux", "configurePreset": "linux-debug-ubsan" },
-    { "name": "linux-static-analysis", "inherits": "on-linux", "configurePreset": "linux-static-analysis" },
-    {
-      "name": "linux-lowspec",
-      "inherits": "on-linux",
-      "configurePreset": "linux-lowspec",
-      "jobs": 2
-    },
+    { "name": "linux-debug-static-analysis", "inherits": "on-linux", "configurePreset": "linux-debug-static-analysis" },
+    { "name": "linux-lowspec", "inherits": "on-linux", "configurePreset": "linux-lowspec", "jobs": 2 },
+    { "name": "linux-relWithDebInfo", "inherits": "on-linux", "configurePreset": "linux-relWithDebInfo" },
     { "name": "linux-release", "inherits": "on-linux", "configurePreset": "linux-release" },
-    {
-      "name": "windows-debug",
-      "configurePreset": "windows-debug",
-      "condition": {
-        "type": "equals",
-        "lhs": "${hostSystemName}",
-        "rhs": "Windows"
-      }
-    },
-    {
-      "name": "windows-release",
-      "configurePreset": "windows-release",
-      "condition": {
-        "type": "equals",
-        "lhs": "${hostSystemName}",
-        "rhs": "Windows"
-      }
-    }
+    { "name": "windows-debug", "inherits": "on-windows", "configurePreset": "windows-debug"},
+    { "name": "windows-debug-asan", "inherits": "on-windows", "configurePreset": "windows-debug-asan"},
+    { "name": "windows-debug-ubsan", "inherits": "on-windows", "configurePreset": "windows-debug-ubsan"},
+    { "name": "windows-debug-static-analysis", "inherits": "on-windows", "configurePreset": "windows-debug-static-analysis"},
+    { "name": "windows-relWithDebInfo", "inherits": "on-windows", "configurePreset": "windows-relWithDebInfo"},
+    { "name": "windows-release", "inherits": "on-windows", "configurePreset": "windows-release"}
   ],
   "testPresets": [
     {
@@ -239,39 +225,37 @@
         "lhs": "${hostSystemName}",
         "rhs": "Linux"
       }
+    } ,
+    {
+      "name": "on-windows",
+      "hidden": true,
+      "inherits": "test-defaults",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
     },
     { "name": "macos-debug", "inherits": "on-macos", "configurePreset": "macos-debug" },
-    { "name": "macos-debug-nosan", "inherits": "on-macos", "configurePreset": "macos-debug-nosan" },
+    { "name": "macos-debug-asan", "inherits": "on-macos", "configurePreset": "macos-debug-asan" },
     { "name": "macos-debug-tsan", "inherits": "on-macos", "configurePreset": "macos-debug-tsan" },
     { "name": "macos-debug-ubsan", "inherits": "on-macos", "configurePreset": "macos-debug-ubsan" },
-    { "name": "macos-static-analysis", "inherits": "on-macos", "configurePreset": "macos-static-analysis" },
+    { "name": "macos-debug-static-analysis", "inherits": "on-macos", "configurePreset": "macos-debug-static-analysis" },
+    { "name": "macos-relWithDebInfo", "inherits": "on-macos", "configurePreset": "macos-relWithDebInfo" },
     { "name": "macos-release", "inherits": "on-macos", "configurePreset": "macos-release" },
     { "name": "linux-debug", "inherits": "on-linux", "configurePreset": "linux-debug" },
-    { "name": "linux-debug-nosan", "inherits": "on-linux", "configurePreset": "linux-debug-nosan" },
+    { "name": "linux-debug-asan", "inherits": "on-linux", "configurePreset": "linux-debug-asan" },
     { "name": "linux-debug-tsan", "inherits": "on-linux", "configurePreset": "linux-debug-tsan" },
     { "name": "linux-debug-ubsan", "inherits": "on-linux", "configurePreset": "linux-debug-ubsan" },
-    { "name": "linux-static-analysis", "inherits": "on-linux", "configurePreset": "linux-static-analysis" },
+    { "name": "linux-debug-static-analysis", "inherits": "on-linux", "configurePreset": "linux-debug-static-analysis" },
     { "name": "linux-lowspec", "inherits": "on-linux", "configurePreset": "linux-lowspec" },
+    { "name": "linux-relWithDebInfo", "inherits": "on-linux", "configurePreset": "linux-relWithDebInfo" },
     { "name": "linux-release", "inherits": "on-linux", "configurePreset": "linux-release" },
-    {
-      "name": "windows-debug",
-      "inherits": "test-defaults",
-      "configurePreset": "windows-debug",
-      "condition": {
-        "type": "equals",
-        "lhs": "${hostSystemName}",
-        "rhs": "Windows"
-      }
-    },
-    {
-      "name": "windows-release",
-      "inherits": "test-defaults",
-      "configurePreset": "windows-release",
-      "condition": {
-        "type": "equals",
-        "lhs": "${hostSystemName}",
-        "rhs": "Windows"
-      }
-    }
+    { "name": "windows-debug", "inherits": "on-windows", "configurePreset": "windows-debug"},
+    { "name": "windows-debug-asan", "inherits": "on-windows", "configurePreset": "windows-debug-asan"},
+    { "name": "windows-debug-ubsan", "inherits": "on-windows", "configurePreset": "windows-debug-ubsan"},
+    { "name": "windows-debug-static-analysis", "inherits": "on-windows", "configurePreset": "windows-debug-static-analysis"},
+    { "name": "windows-relWithDebInfo", "inherits": "on-windows", "configurePreset": "windows-relWithDebInfo"},
+    { "name": "windows-release", "inherits": "on-windows", "configurePreset": "windows-release"}
   ]
 }

@@ -44,7 +44,7 @@ the SessionStart hook).
 **Measure on Linux.** The recipe below is gcc + gcov, and the ranking it produces is
 platform-independent - the code Mudlet compiles is very nearly the same everywhere, so
 there is nothing to gain from a second platform's numbers and quite a lot of yak-shaving
-to lose. If you are on macOS anyway, the same recipe works with `macos-debug-nosan`
+to lose. If you are on macOS anyway, the same recipe works with `macos-debug`
 provided gcovr is told to use clang's gcov shim
 (`gcovr --gcov-executable "llvm-cov gcov" ...`); mixing its output with a gcc run's is
 meaningless, so pick one and stay there. Windows is unexplored: MSYS2 has both compilers,
@@ -53,7 +53,7 @@ a baseline without first proving the `.gcda` files appear.
 
 ```bash
 # gcov instrumentation wants gcc, the Linux default. See build-mudlet for parallelism limits.
-cmake --preset linux-debug-nosan -B build-coverage \
+cmake --preset linux-debug -B build-coverage \
   -DCMAKE_C_FLAGS=--coverage -DCMAKE_CXX_FLAGS=--coverage \
   -DCMAKE_EXE_LINKER_FLAGS=--coverage
 cmake --build build-coverage

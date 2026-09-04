@@ -1,4 +1,4 @@
-if(NOT WIN32)
+if(USE_SANITIZERS)
     include(${CMAKE_SOURCE_DIR}/src/cmake/EnableSanitizers.cmake)
 endif()
 
@@ -270,7 +270,7 @@ set(leakCheckExcludedTests
 
 # Apple's ASan runtime has no LeakSanitizer, so detect_leaks is only meaningful
 # where the address or leak sanitizer is actually compiled in
-if(NOT APPLE AND "${USE_SANITIZER}" MATCHES "[Aa]ddress|[Ll]eak")
+if(NOT APPLE AND (("address" IN_LIST SANITIZERS_SELECTED) OR ("leak" IN_LIST SANITIZERS_SELECTED)))
     set(leakCheckAvailable TRUE)
 else()
     set(leakCheckAvailable FALSE)

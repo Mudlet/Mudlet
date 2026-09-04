@@ -7,7 +7,7 @@
 # one to the telnet fixture themselves.
 #
 # Usage: .claude/scripts/run-lua-tests.sh [path-to-mudlet-binary]
-# Defaults to the linux-debug-nosan build. A binary built in another worktree
+# Defaults to the linux-debug build. A binary built in another worktree
 # works too: src/mudlet-lua is read from disk at startup, so a change confined
 # to it needs no build of its own. Only the Lua is this worktree's - the C++,
 # and everything compiled into the binary's Qt resources (src/packages/*, and
@@ -21,7 +21,7 @@
 set -euo pipefail
 
 WS="$(cd "$(dirname "$0")/../.." && pwd)"
-BINARY="${1:-$WS/build-linux-debug-nosan/src/mudlet}"
+BINARY="${1:-$WS/build/src/mudlet}"
 TMP="$(mktemp -d /tmp/mudlet-luatests-XXXX)"
 
 [ -x "$BINARY" ] || { echo "no mudlet binary at $BINARY - build first"; exit 1; }

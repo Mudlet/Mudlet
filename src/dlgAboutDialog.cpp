@@ -1053,6 +1053,32 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                 "<p>END OF TERMS AND CONDITIONS</p>"));
 #endif // defined(INCLUDE_UPDATER)
 
+// There is a %1 placeholder that contains: "Name of Development Group, Name of Institution"
+#if defined(INCLUDE_SANITIZERS) || defined(DEBUG_SHOWALL)
+    QString NCSA_Open_Source_Body(
+            qsl("<h4>The University of Illinois/NCSA Open Source License</h4>"
+                           "<p>Permission is hereby granted, free of charge, to any person obtaining a copy "
+                           "of this software and associated documentation files (the \"Software\"), to deal "
+                           "with the Software without restriction, including without limitation the rights to "
+                           "use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of "
+                           "the Software, and to permit persons to whom the Software is furnished to do so, "
+                           "subject to the following conditions:</p>"
+                           "<ol><li>Redistributions of source code must retain the above copyright notice, "
+                           "this list of conditions and the following disclaimers.</li>"
+                           "<li>Redistributions in binary form must reproduce the above copyright notice, "
+                           "this list of conditions and the following disclaimers in the documentation and/or "
+                           "other materials provided with the distribution.</li>"
+                           "<li>Neither the names of %1, nor the names of its contributors may be used to "
+                           "endorse or promote products derived from this Software without specific prior "
+                           "written permission.</li></ol>"
+                           "<p>THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR "
+                           "IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS "
+                           "FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE CONTRIBUTORS "
+                           "OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER "
+                           "IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION "
+                           "WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH THE SOFTWARE.</p>"));
+#endif
+
     QString MIT_Body(
             qsl("<h4>The MIT License</h4>"
                            "<p>Permission is hereby granted, free of charge, to any person obtaining a copy "
@@ -1245,7 +1271,7 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                              "<h3>Copyright © 2018 Xavier Wang</h3>"));
 
     QString luaSql_Sqlite3Header(tr("<h2><u>LuaSql-Sqlite3 - Database connectivity for the Lua programming language (Sqlite3 component).</u></h2>"
-                                    "<h3>Copyright © 2003-2019, The Kepler Project</h3>"));
+                                    "<h3>Copyright © 2003-2019, The Kepler Project.</h3>"));
 
     QString lrexlib_pcre2Header(tr("<h2><u>Lrexlib-pcre2 -  Regular expression library binding (PCRE2 flavour).</u></h2>"
                                    "<h3>Copyright © Reuben Thomas 2000-2020<br>"
@@ -1269,7 +1295,7 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
 #if defined(INCLUDE_UPDATER) || defined(DEBUG_SHOWALL)
     QString DblsqdHeader(tr("<h2><u>Dblsqd (derived work)</u></h2>"
                             "<h3>Copyright © 2017 Philipp Medien</h3>"));
-#if defined(Q_OS_MACOS)
+#if defined(Q_OS_MACOS) || defined(DEBUG_SHOWALL)
     QString SparkleHeader(tr("<h2><u>Sparkle - macOS updater</u></h2>"
                              "<h3>Copyright © 2006-2013 Andy Matuschak.<br>"
                              "Copyright © 2009-2013 Elgato Systems GmbH.<br>"
@@ -1320,6 +1346,48 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                                "<h3>Model obtained from <a href=\"https://sketchfab.com/3d-models/sword-07463a2658e04d6ab8a42b5639a35d63\">Sketchfab</a><br>"
                                "Author: <a href=\"https://sketchfab.com/minghau\">minghauLoh</a><br>"
                                "Licensed under <a href=\"https://creativecommons.org/licenses/by/4.0/\">CC BY 4.0</a></h3>"));
+
+#if defined(INCLUDE_SANITIZERS) || defined(DEBUG_SHOWALL)
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_MACOS)
+    // Later version
+    QString sanitizersHeader(tr("<h2><u>Sanitizer libraries</u></h2>"
+                                "<h3>Copyright © the LLVM contributors.<br>"
+                                "All rights reserved.</h3>"));
+
+    QString LLVMException(qsl("<h4 style='text-align: center;'>---- LLVM Exceptions to the Apache 2.0 License ----</h4>"
+                              "<p>As an exception, if, as a result of your compiling your source code, portions "
+                              "of this Software are embedded into an Object form of such source code, you "
+                              "may redistribute such embedded portions in such Object form without complying "
+                              "with the conditions of Sections 4(a), 4(b) and 4(d) of the License.<p>"
+                              "<p>In addition, if you combine or link compiled forms of this Software with "
+                              "software that is licensed under the GPLv2 (\"Combined Software\") and if a "
+                              "court of competent jurisdiction determines that the patent provision (Section "
+                              "3), the indemnity provision (Section 9) or other Section of the License "
+                              "conflicts with the conditions of the GPLv2, you may retroactively and "
+                              "prospectively choose to deem waived or otherwise exclude such Section(s) of "
+                              "the License, but only in their entirety and only with respect to the Combined "
+                              "Software.<p>"
+                              "<p style='text-align: center; text-decoration: overline underline;'>Software from third parties included in the LLVM Project:</p>"
+                              "<p>The LLVM Project contains third party software which is under different license "
+                              "terms. All such code will be identified clearly using at least one of two "
+                              "mechanisms:"
+                              "<ol><li> It will be in a separate directory tree with its own `LICENSE.txt` or "
+                              "`LICENSE` file at the top containing the specific license and restrictions "
+                              "which apply to that software, or</li>"
+                              "<li> It will contain specific license and restriction terms at the top of every "
+                              "file.</li></ol><p>"
+                              "<p style='text-align: center; text-decoration: overline underline;'>Legacy LLVM License (<a href='https://llvm.org/docs/DeveloperPolicy.html#legacy'>https://llvm.org/docs/DeveloperPolicy.html#legacy</a>):</p>"
+                              "<p>The compiler_rt library is dual licensed under both the University of Illinois "
+                              "\"BSD-Like\" license and the MIT license.  As a user of this code you may choose "
+                              "to use it under either license.  As a contributor, you agree to allow your code "
+                              "to be used under both.<p>"));
+#elif defined(Q_OS_LINUX)
+    // Earlier version
+    QString sanitizersHeader(tr("<h2><u>libsanitizer libraries (libasan, liblsan, libtsan, libubsan)</u></h2>"
+                                "<h3>Copyright © 2009-2019 by the LLVM contributors.<br>"
+                                "All rights reserved.</h3>"));
+#endif
+#endif
 
 #if defined(INCLUDE_OPENSSL3) || defined(DEBUG_SHOWALL)
     QString openSSL3Header(tr("<h2><u>OpenSSL 3.x - Open Source Toolkit for Secure Transport Layer Security</u></h2>"
@@ -1390,7 +1458,6 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                                   .arg(UbuntuFontText));                       // 33 - Ubuntu Font Text - not translatable
     license_3rdParty_texts.append(qsl("<hr>%34")
                                   .arg(SILOpenFontText));                      // 34 - SIL Open Font Text - not translatable
-
 #endif // defined(INCLUDE_FONTS)
 
     license_3rdParty_texts.append(qsl("<hr><center><img src=\":/icons/Discord-Logo+Wordmark-Color_438x120px.png\"/></center><br>"
@@ -1420,17 +1487,37 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                                        MIT_Body));                             // 44 - Sentry body MIT - not translatable
 #endif
 
-    license_3rdParty_texts.append(qsl("<hr>%45")
-                                  .arg(swordModelHeader));                     // 45 - sword model attribution - translatable
-
-#if defined(INCLUDE_OPENSSL3) || defined(DEBUG_SHOWALL)
-    license_3rdParty_texts.append(qsl("<hr>%46%47")
-                                  .arg(openSSL3Header,                         // 46 - OpenSSL3 header - translatable
-                                       APACHE2_Body));                         // 47 - OpenSSL3 body APACHE2 - not translatable
+#if defined(INCLUDE_SANITIZERS) || defined(DEBUG_SHOWALL)
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_MACOS)
+    license_3rdParty_texts.append(qsl("<hr>%45%46<hr width=\"33%\">%47<hr width=\"33%\">%48<hr width=\"33%\">%49")
+                                  .arg(sanitizersHeader,                       // 45 - Sanitizers header (later) - translatable
+                                       APACHE2_Body,                           // 46 - Apache 2.0 body - not translatable
+                                       LLVMException,                          // 47 - LLVM exception - not translatable
+                                       NCSA_Open_Source_Body
+                                           .arg(QLatin1String("the LLVM Team, University of Illinois at Urbana Champaign")),
+                                                                               // 48 - NCSA_OS body - not translatable
+                                       MIT_Body));                             // 49 - MIT body - not translatable
+#elif defined(Q_OS_LINUX)
+    // 46, 47 and 49 not used here
+    license_3rdParty_texts.append(qsl("<hr>%45%48")
+                                  .arg(sanitizersHeader,                       // 45 - Sanitizers header (earlier) - translatable
+                                       NCSA_Open_Source_Body
+                                           .arg(QLatin1String("the LLVM Team, University of Illinois at Urbana Champaign"))));
+                                                                               // 48 - NCSA_OS body - not translatable
+#endif
 #endif
 
-    license_3rdParty_texts.append(qsl("<hr>%48")
-                                  .arg(speechBackendsHeader));                 // 48 - speech recognition backends - translatable
+    license_3rdParty_texts.append(qsl("<hr>%50")
+                                  .arg(swordModelHeader));                     // 50 - sword model attribution - translatable
+
+#if defined(INCLUDE_OPENSSL3) || defined(DEBUG_SHOWALL)
+    license_3rdParty_texts.append(qsl("<hr>%51%52")
+                                  .arg(openSSL3Header,                         // 51 - OpenSSL3 header - translatable
+                                       APACHE2_Body));                         // 52 - OpenSSL3 body APACHE2 - not translatable
+#endif
+
+    license_3rdParty_texts.append(qsl("<hr>%52")
+                                  .arg(speechBackendsHeader));                 // 52 - speech recognition backends - translatable
 
     license_3rdParty_texts.append(qsl("</body></html>"));
 

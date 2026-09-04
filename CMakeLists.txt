@@ -47,9 +47,12 @@ project(mudlet)
 # Gather non-compiled files for IDE visibility using glob patterns
 # Note: New files are picked up automatically on CMake reconfigure
 file(GLOB ROOT_FILES_LIST CONFIGURE_DEPENDS
+  .clang-format
   .clang-tidy
   .crowdin.yml
   .cursorrules
+  .git-blame-ignore-revs
+  .gitattributes
   .gitignore
   .gitmodules
   .imgbotconfig
@@ -59,8 +62,8 @@ file(GLOB ROOT_FILES_LIST CONFIGURE_DEPENDS
   COMPILE
   COPYING
   CPPLINT.cfg
-  dangerfile.js
   asan-suppressions.txt
+  dangerfile.js
   mudlet.desktop
   mudlet.png
   mudlet.svg
@@ -68,15 +71,16 @@ file(GLOB ROOT_FILES_LIST CONFIGURE_DEPENDS
 )
 
 file(GLOB_RECURSE OTHER_FILES_LIST CONFIGURE_DEPENDS
-  .github/**
-  .devcontainer/**
-  .vscode/**
+  .agents/**
   .claude/**
+  .devcontainer/**
+  .github/**
+  .signpath/**
+  .vscode/**
   3rdparty/discord/rpc/lib/*
   CI/**
   docker/**
   docs/**
-  .clang-format
   src/.gitignore
   src/mudlet-lua/**
 )
@@ -176,7 +180,6 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_UPDATER
                         SUPPORTED_SYSTEMS "Linux"
                                           "Windows"
                                           "Darwin")
-
 include_optional_module(ENVIRONMENT_VARIABLE WITH_FONTS
                         OPTION_VARIABLE USE_FONTS
                         READABLE_NAME "fonts")
@@ -194,8 +197,67 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_MEMORY_TRACKING
 include_optional_module(ENVIRONMENT_VARIABLE WITH_VARIABLE_SPLASH_SCREEN
                         OPTION_VARIABLE USE_VARIABLE_SPLASH_SCREEN
                         READABLE_NAME "build-type splash screen")
-
+include_optional_module(ENVIRONMENT_VARIABLE WITH_SANITIZERS
+                        OPTION_VARIABLE USE_SANITIZERS
+                        READABLE_NAME "sanitizers"
+                        DEFAULT OFF)
 find_package(Qt6 6.8.2 REQUIRED)
+
+# Fail LOUDLY if any old control variable for any sanitizer is seen
+if(DEFINED ENV{WITH_SANITIZER})
+  message(FATAL_ERROR "Environmental variable 'WITH_SANITIZER' seen, this is not supported, use "
+    "environmental variables 'WITH_SANITIZERS' set to 'YES' as a master switch "
+    "{defaults to 'NO' if not provided} and 'MUDLET_SANITIZERS' to the semicolon "
+    "separated list of sanitizers to include.\n"
+    "To fix this clear the unwanted environmental variable with 'unset WITH_SANITIZER' "
+    "{assuming a 'bash' shell}.")
+endif()
+
+if(DEFINED ENV{USE_SANITIZER})
+  message(FATAL_ERROR "Environmental variable 'USE_SANITIZER' seen, this is no longer supported, use "
+    "environmental variables 'WITH_SANITIZERS' set to 'YES' as a master switch "
+    "{defaults to 'NO' if not provided} and 'MUDLET_SANITIZERS' to the semicolon "
+    "separated list of sanitizers to include.\n"
+    "To fix this clear the unwanted environmental variable with 'unset USE_SANITIZER' "
+    "{assuming a 'bash' shell}.")
+endif()
+
+if(DEFINED USE_SANITIZER)
+  message(FATAL_ERROR "CMake variable 'USE_SANITIZER' seen, this is no longer supported, use "
+    "environmental variables 'WITH_SANITIZERS' set to 'YES' as a master switch "
+    "{defaults to 'NO' if not provided} and 'MUDLET_SANITIZERS' to the semicolon "
+    "separated list of sanitizers to include.\n"
+    "This build directory still holds the obsolete entry from an earlier configure "
+    "— to fix this clear it with 'cmake -U USE_SANITIZER -S . -B <builddir>' from "
+    "the top level of the local Mudlet git repository and replace '<builddir>' with "
+    "the sub-directory under there where the build is done; this should leave the "
+    "rest of your cache alone.")
+endif()
+
+if(WIN32 AND DEFINED ENV{MSYSTEM} AND NOT "$ENV{MSYSTEM}" STREQUAL "CLANG64" AND USE_SANITIZERS)
+  message(WARNING "Sanitizers are not available for the MSYS2 $ENV{MSYSTEM} environment in Windows, disabling them in build...")
+  unset(USE_SANITIZERS CACHE)
+endif()
+
+if(USE_SANITIZERS)
+  include(src/cmake/EnableSanitizers.cmake)
+  # The above script sets the SANITIZERS_REQUESTED, SANITIZERS_SELECTED,
+  # SANITIZERS_AS_STRING, UNRECOGNISED_AS_STRING variables and they become "members"
+  # of this file's scope - if there are any left in here then we have something we
+  # didn't grok:
+  if (SANITIZERS_REQUESTED)
+      message(FATAL_ERROR "Unknown or unhandled sanitizer(s) requested: '${UNRECOGNISED_AS_STRING}'!")
+  endif()
+
+  if (NOT SANITIZERS_SELECTED)
+    message(SEND_ERROR "Sanitizers enabled but none selected; either add them to the environment variable MUDLET_SANITIZERS or unset the WITH_SANITIZERS one.")
+  else()
+    message(STATUS "Compiling with the following sanitizer(s) enabled: ${SANITIZERS_AS_STRING}")
+  endif()
+
+else()
+  message(STATUS "Sanitizers disabled for this build.")
+endif()
 
 # Find Core5Compat for third-party libraries (communi, edbee-lib) that still need it
 find_package(Qt6 COMPONENTS Core5Compat REQUIRED)
@@ -209,12 +271,14 @@ option(BUILD_WITH_QT6 "" ON)
 include(InitGitSubmodule)
 
 git_submodule_init(
-  CHECK_FILE "3rdparty/edbee-lib/CMakeLists.txt" SUBMODULE_PATH
-  "3rdparty/edbee-lib" READABLE_NAME "edbee-lib editor widget")
+  CHECK_FILE "3rdparty/edbee-lib/CMakeLists.txt"
+  SUBMODULE_PATH "3rdparty/edbee-lib"
+  READABLE_NAME "edbee-lib editor widget")
 
-  git_submodule_init(
-    CHECK_FILE "3rdparty/qt-tags-widget/CMakeLists.txt" SUBMODULE_PATH
-    "3rdparty/qt-tags-widget" READABLE_NAME "qt-tags-widget widget")
+git_submodule_init(
+  CHECK_FILE "3rdparty/qt-tags-widget/CMakeLists.txt"
+  SUBMODULE_PATH "3rdparty/qt-tags-widget"
+  READABLE_NAME "qt-tags-widget widget")
 
 # TODO: On macOS, we need to build qtkeychain from source because Homebrew's
 # qtkeychain package is built against Homebrew's Qt, which is incompatible with

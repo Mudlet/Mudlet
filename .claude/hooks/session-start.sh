@@ -174,7 +174,7 @@ if [ -n "${CLAUDE_PROJECT_DIR:-}" ]; then
   # top-level set_alternate_linker() move merges, the flag only reaches the
   # main mudlet binary, afterwards every target).
   cd "${CLAUDE_PROJECT_DIR}"
-  cmake --preset linux-debug-nosan -DCMAKE_PREFIX_PATH="${QT_DIR}" -DUSE_ALTERNATE_LINKER=mold
+  cmake --preset linux-debug -DCMAKE_PREFIX_PATH="${QT_DIR}" -DUSE_ALTERNATE_LINKER=mold
 
   # Warm the compiler cache once per container image. CMakeLists.txt wires
   # ccache in automatically, so this one cold build (~20 min) makes every
@@ -184,6 +184,6 @@ if [ -n "${CLAUDE_PROJECT_DIR:-}" ]; then
   CACHE_KB="$(du -sk "${CCACHE_DIR_PATH}" 2>/dev/null | cut -f1 || echo 0)"
   if [ "${CACHE_KB:-0}" -lt 102400 ]; then
     echo "Cold ccache - running warm-up build..."
-    cmake --build --preset linux-debug-nosan
+    cmake --build --preset linux-debug
   fi
 fi

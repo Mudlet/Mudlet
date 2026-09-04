@@ -41,8 +41,8 @@ committed - because every push after the PR opens re-runs the automated reviewer
    | Prefix | Use for |
    | --- | --- |
    | `Fix: ` | bug fixes visible to users |
-   | `Improve: ` | enhancements to existing user-facing functionality |
    | `Add: ` | new user-facing features or capabilities |
+   | `Improve: ` | enhancements to existing user-facing functionality |
    | `Infra: ` | build system, CI, tooling, refactoring, and other non-player-visible changes |
 
    Distinguishing the last two: user-visible behavior change is `Improve`, everything internal is
@@ -55,7 +55,7 @@ committed - because every push after the PR opens re-runs the automated reviewer
    does not require the colon. Danger warns on overly long titles, so keep it brief.
 
    Write in American English, matching the rest of the project's user-facing text — "color" not
-   "colour", "standardize" not "standardise".
+   "colour", "standardize" not "standardise", "sanitize" not "sanitise".
 
    ```
    Fix: Profiles named "." or ".." no longer delete every profile when removed

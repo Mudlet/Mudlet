@@ -42,12 +42,11 @@
  * Note on the ...ContainersStayDisjoint cases: a regression there is a double
  * free, which has no post-condition to read back - the assertions below hold
  * either way and the run aborts instead. That is a real signal because the
- * functional tests always build with the address sanitizer on non-Windows
- * (test/functional_tests/CMakeLists.txt includes EnableSanitizers.cmake, whose
- * USE_SANITIZER defaults to "address"), but it does mean these four cases carry
- * no weight in a build with sanitizers switched off. Only AliasUnit and KeyUnit
- * ever lacked those disjointness guards; the trigger and timer cases are there
- * to keep the four units checked alike.
+ * functional tests should always be built with the address sanitizer, but it
+ * does mean these four cases carry no weight in a build with sanitizers
+ * switched off. The trigger and timer variants are pure regression guards: those
+ * two units already had the guards on development, and only AliasUnit and KeyUnit
+ * gain them here.
  *
  * Run with: ctest -R UnitDeferredDeleteTest -V
  */
