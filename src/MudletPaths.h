@@ -39,6 +39,10 @@
 class MudletPaths
 {
 public:
+    MudletPaths() = delete;
+    MudletPaths(const MudletPaths&) = delete;
+    MudletPaths& operator=(const MudletPaths&) = delete;
+
     // Answers with a path rooted at an empty string until setConfigPath() has run
     static QString getMudletPath(enums::mudletPathType mode, const QString& extra1 = QString(), const QString& extra2 = QString());
     static void setConfigPath(const QString& path);

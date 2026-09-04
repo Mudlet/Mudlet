@@ -75,7 +75,6 @@
 #include <QJsonObject>
 #include <QJsonValue>
 #include <QNetworkDiskCache>
-#include <QLibraryInfo>
 #include <QMediaDevices>
 #include <QMediaPlayer>
 #include <QMessageBox>

@@ -31,7 +31,7 @@
 #include <QtTest/QTest>
 
 #include "MudletPaths.h"
-#include "mudlet.h"
+#include "utils.h"
 
 // Free inline functions rather than a QObject on purpose: a header is not listed
 // in test/functional_tests/CMakeLists.txt, so nothing would run moc over it and
