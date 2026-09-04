@@ -2045,4 +2045,60 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       }, {x, y, width, height})
     end)
   end)
+  describe("Tests the functionality of Adjustable.Container:connectToBorder", function()
+    local containers
+    local bordersBefore
+
+    local function make(props)
+      props.autoLoad = false
+      props.autoSave = false
+      local container = Adjustable.Container:new(props)
+      containers[#containers + 1] = container
+      return container
+    end
+
+    before_each(function()
+      containers = {}
+      bordersBefore = {getBorderTop(), getBorderLeft()}
+    end)
+
+    after_each(function()
+      for index = #containers, 1, -1 do
+        local container = containers[index]
+        if container.attached then
+          container:detach()
+        end
+        container:delete()
+      end
+      containers = {}
+      setBorderTop(bordersBefore[1])
+      setBorderLeft(bordersBefore[2])
+    end)
+
+    -- The connected container's new size is worked out in pixels, so storing it
+    -- as one froze it at the window size it was connected at and it stopped
+    -- following the window from then on
+    it("leaves a connected container's size able to follow the window", function()
+      make({name = "gasConnectTop", x = "0%", y = "0%", width = "100%", height = "10%", attached = "top"})
+      local side = make({name = "gasConnectSide", x = "0%", y = "10%", width = "25%", height = "90%", attached = "left"})
+      local heightBefore = side:get_height()
+
+      side:connectToBorder("top")
+
+      assert.is_truthy(tostring(side.height):find("%%"),
+        "the height came back as " .. tostring(side.height) .. ", which cannot follow the window")
+      assert.is_true(math.abs(side:get_height() - heightBefore) <= 1,
+        "connecting to the border moved the bottom edge, it should only have made the height scalable")
+    end)
+
+    it("leaves a container that was sized absolutely absolute", function()
+      make({name = "gasConnectTopFixed", x = "0%", y = "0%", width = "100%", height = "10%", attached = "top"})
+      local side = make({name = "gasConnectSideFixed", x = "0%", y = "10%", width = "25%", height = 300, attached = "left"})
+
+      side:connectToBorder("top")
+
+      assert.is_falsy(tostring(side.height):find("%%"),
+        "an absolute height came back as " .. tostring(side.height) .. ", so it would start following the window")
+    end)
+  end)
 end)

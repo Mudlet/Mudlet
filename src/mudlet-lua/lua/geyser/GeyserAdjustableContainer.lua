@@ -56,6 +56,13 @@ local function relativeToParent(constraint)
     return string.find(constraint, "%%") ~= nil or string.find(constraint, "-") ~= nil
 end
 
+local function keepRelative(constraint, value, total)
+    if relativeToParent(constraint) then
+        return make_percent(value/total)
+    end
+    return value
+end
+
 -- Internal function: works out what a constraint measures in a given container,
 -- by letting Geyser compile it against that container rather than by parsing it
 -- @param self the Adjustable.Container itself
@@ -443,23 +450,24 @@ function Adjustable.Container:adjustConnectedContainers()
                 container:move(x, y)
                 container:resize(width, height)
             else
+                local winw, winh = getMainWindowSize()
                 if where == "right" then
-                    container:resize(self:get_x() - container:get_x(), nil)
+                    container:resize(keepRelative(container.width, self:get_x() - container:get_x(), winw), nil)
                 end
                 if where == "left" then
                     local right_x = container:get_x() + container:get_width()
                     local left_x = self:get_x() + self:get_width()
-                    container:move(left_x, nil)
-                    container:resize(right_x - container:get_x(), nil)
+                    container:move(make_percent(left_x/winw), nil)
+                    container:resize(keepRelative(container.width, right_x - left_x, winw), nil)
                 end
                 if where == "bottom" then
-                    container:resize(nil, self:get_y() - container:get_y())
+                    container:resize(nil, keepRelative(container.height, self:get_y() - container:get_y(), winh))
                 end
                 if where == "top" then
                     local bottom_y = container:get_y() + container:get_height()
                     local top_y = self:get_y() + self:get_height()
-                    container:move(nil, top_y)
-                    container:resize(nil, bottom_y - container:get_y())
+                    container:move(nil, make_percent(top_y/winh))
+                    container:resize(nil, keepRelative(container.height, bottom_y - top_y, winh))
                 end
             end
             container:adjustBorder()
