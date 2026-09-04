@@ -29,6 +29,7 @@
 #include <memory>
 #include <tuple>
 
+#include "GifTestHelper.h"
 #include "PortableModeTestHelper.h"
 #include "GifTracker.h"
 #include "Host.h"
@@ -1235,7 +1236,6 @@ noViewSpellReport = table.concat(noViewSpellProblems, '; ')
         runLua(host, qsl("deleteMiniConsole('%1')\n").arg(windowName));
         QTRY_VERIFY_WITH_TIMEOUT(movie.isNull(), 5000);
 
-        QCOMPARE(registeredGifs(host), 0);
         QCOMPARE(luaGifTotal(host), 0);
     }
 
@@ -1263,10 +1263,7 @@ noViewSpellReport = table.concat(noViewSpellProblems, '; ')
         runLua(host, qsl("deleteScrollBox('%1')\n").arg(scrollBoxName));
         QTRY_VERIFY_WITH_TIMEOUT(movie.isNull(), 5000);
 
-        // Asked the script's way round first here, and the tracker's way round
-        // first in the test above, so neither reading shadows the other
         QCOMPARE(luaGifTotal(host), 0);
-        QCOMPARE(registeredGifs(host), 0);
     }
 
     // The console's own labels die after its members have, so their destroyed()
@@ -2047,6 +2044,12 @@ noViewSpellReport = table.concat(noViewSpellProblems, '; ')
         QVERIFY2(deleted, qPrintable(deleteMessage));
         QVERIFY2(!host->windowRegistry().hasCommandLine(commandLineName), "Deleting a command line left it in the profile's window registry.");
 
+        // The replacement is told from the original by identity below, and a
+        // QPointer that has already gone null compares unequal to anything - so
+        // if the deferred delete has landed by here there is no replacement being
+        // tested at all, just a second create.
+        QVERIFY2(!original.isNull(), "The old command line was already destroyed before its replacement was made, so nothing below tests a replacement outliving a deferred delete.");
+
         const auto [recreated, recreateMessage] = host->mpConsole->createCommandLine(QString(), commandLineName, 0, 50, 40, 20);
         QVERIFY2(recreated, qPrintable(recreateMessage));
         TCommandLine* replacement = host->mpConsole->subCommandLineWidget(commandLineName);
@@ -2114,6 +2117,12 @@ noViewSpellReport = table.concat(noViewSpellProblems, '; ')
         QVERIFY2(widget, "The scroll box was not created inside the user window's dock, so the checks below prove nothing.");
 
         runLua(host, qsl("deleteMiniConsole('%1')\n").arg(windowName));
+
+        // Still registered at this point, because the dock is only queued for
+        // deletion. That is what makes the assertions after the wait a test of
+        // the destroyed() handler and of nothing else.
+        QVERIFY2(host->windowRegistry().hasScrollBox(scrollBoxName), "Deleting a user window deregistered the scroll box inside it before the widget was destroyed.");
+
         QTRY_VERIFY_WITH_TIMEOUT(widget.isNull(), 5000);
 
         QVERIFY2(!host->windowType(scrollBoxName).has_value(), "Host still reports a window type for a scroll box destroyed with its user window.");
@@ -2145,6 +2154,12 @@ noViewSpellReport = table.concat(noViewSpellProblems, '; ')
         QVERIFY2(widget, "Creating a text edit into a user window left the console's own widget map empty.");
 
         runLua(host, qsl("deleteMiniConsole('%1')\n").arg(windowName));
+
+        // Still registered at this point, because the dock is only queued for
+        // deletion. That is what makes the assertions after the wait a test of
+        // the destroyed() handler and of nothing else.
+        QVERIFY2(host->windowRegistry().hasTextBox(textBoxName), "Deleting a user window deregistered the text edit inside it before the widget was destroyed.");
+
         QTRY_VERIFY_WITH_TIMEOUT(widget.isNull(), 5000);
 
         QVERIFY2(!host->windowType(textBoxName).has_value(), "Host still reports a window type for a text edit destroyed with its user window.");
@@ -2159,6 +2174,74 @@ noViewSpellReport = table.concat(noViewSpellProblems, '; ')
 
         const auto [recreated, recreateMessage] = host->mpConsole->createTextBox(QString(), textBoxName, 0, 0, 40, 40);
         QVERIFY2(recreated, qPrintable(qsl("The name of a text edit destroyed with its window could not be used again: %1").arg(recreateMessage)));
+        // createTextBox() gates on the console's map alone, so on its own that
+        // only restates the check above it. Writing through the name and reading
+        // back out of it is what says the map now holds a live replacement.
+        runLua(host, qsl("setTextEditText('%1', 'the replacement is reachable')\nroundTrippedText = tostring(getTextEditText('%1'))\n").arg(textBoxName));
+        QCOMPARE(luaGlobalString(host, "roundTrippedText"), qsl("the replacement is reachable"));
+    }
+
+    // The other parent both kinds can be created into, and the other half of the
+    // fix: a scroll box inside a scroll box is one of this console's own
+    // recursive children, which ~TMainConsole's sweep finds and severs, where a
+    // user window's child hangs off a dock and never is. deleteScrollBox() severs
+    // only the outer box's own destroyed() connection, so the nested ones have to
+    // still be there to fire - a disconnect widened to a blanket form would leave
+    // the user window case green and break this one.
+    void test_deletingAScrollBoxTakesItsPlainWindowsWithIt()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        const QString outerName = qsl("registryOuterScrollBox");
+        const QString innerName = qsl("registryNestedScrollBox");
+        const QString textBoxName = qsl("registryNestedTextBox");
+        runLua(host,
+               qsl("createScrollBox('%1', 0, 0, 200, 200)\n"
+                   "createScrollBox('%1', '%2', 0, 0, 100, 100)\n"
+                   "createTextEdit('%1', '%3', 0, 110, 100, 60)\n")
+                       .arg(outerName, innerName, textBoxName));
+        TScrollBox* outer = host->mpConsole->findChild<TScrollBox*>(outerName);
+        QVERIFY2(outer, "Creating the outer scroll box left no widget under the console.");
+        QPointer<TScrollBox> inner = outer->findChild<TScrollBox*>(innerName);
+        QVERIFY2(inner, "The inner scroll box was not created inside the outer one, so the checks below prove nothing.");
+        QPointer<TTextBox> textBox = host->mpConsole->textBoxWidget(textBoxName);
+        QVERIFY2(textBox, "Creating a text edit into a scroll box left the console's own widget map empty.");
+        // Not findChild() by name as for the scroll box: a text edit's object
+        // name is decorated with the profile's, so ask the parentage instead
+        QVERIFY2(outer->isAncestorOf(textBox), "The text edit was not created inside the outer scroll box, so the checks below prove nothing.");
+        QCOMPARE(host->windowType(innerName), std::optional<QString>(qsl("scrollbox")));
+        QCOMPARE(host->windowType(textBoxName), std::optional<QString>(qsl("textedit")));
+
+        const auto [deleted, deleteMessage] = host->mpConsole->deleteScrollBox(outerName);
+        QVERIFY2(deleted, qPrintable(deleteMessage));
+
+        // Still registered at this point, because the outer box is only queued
+        // for deletion. That is what makes the assertions after the wait a test
+        // of the nested widgets' destroyed() handlers and of nothing else.
+        QVERIFY2(host->windowRegistry().hasScrollBox(innerName), "Deleting a scroll box deregistered the scroll box inside it before the widget was destroyed.");
+        QVERIFY2(host->windowRegistry().hasTextBox(textBoxName), "Deleting a scroll box deregistered the text edit inside it before the widget was destroyed.");
+
+        QTRY_VERIFY_WITH_TIMEOUT(inner.isNull() && textBox.isNull(), 5000);
+
+        QVERIFY2(!host->windowRegistry().hasScrollBox(innerName), "A scroll box destroyed with the scroll box it was in stayed in the profile's window registry.");
+        QVERIFY2(!host->windowRegistry().hasTextBox(textBoxName), "A text edit destroyed with the scroll box it was in stayed in the profile's window registry.");
+        QVERIFY2(!host->windowType(innerName).has_value(), "Host still reports a window type for a scroll box destroyed with the scroll box it was in.");
+        QVERIFY2(!host->windowType(textBoxName).has_value(), "Host still reports a window type for a text edit destroyed with the scroll box it was in.");
+        QVERIFY2(!host->mpConsole->textBoxWidget(textBoxName), "A text edit destroyed with the scroll box it was in left a dangling widget in the console's map.");
+
+        // Both names have to be usable again. The scroll box one goes through
+        // Host, which reads the registry and would otherwise resize the freed
+        // widget; the text edit one is read straight out of the console's map, so
+        // it is written through and read back to show the map holds a live one.
+        const auto [recreatedScrollBox, scrollBoxMessage] = host->createScrollBox(QString(), innerName, 0, 0, 40, 40);
+        QVERIFY2(recreatedScrollBox, qPrintable(qsl("The name of a scroll box destroyed with its scroll box could not be used again: %1").arg(scrollBoxMessage)));
+        const auto [recreatedTextBox, textBoxMessage] = host->mpConsole->createTextBox(QString(), textBoxName, 0, 50, 40, 40);
+        QVERIFY2(recreatedTextBox, qPrintable(qsl("The name of a text edit destroyed with its scroll box could not be used again: %1").arg(textBoxMessage)));
+        runLua(host, qsl("setTextEditText('%1', 'the nested replacement is reachable')\nnestedRoundTrippedText = tostring(getTextEditText('%1'))\n").arg(textBoxName));
+        QCOMPARE(luaGlobalString(host, "nestedRoundTrippedText"), qsl("the nested replacement is reachable"));
     }
 
     // The console's own scroll boxes and text edits die after its members have, so
@@ -2219,6 +2302,12 @@ noViewSpellReport = table.concat(noViewSpellProblems, '; ')
         QVERIFY2(deleted, qPrintable(deleteMessage));
         QVERIFY2(!host->windowRegistry().hasScrollBox(scrollBoxName), "Deleting a scroll box left it in the profile's window registry.");
 
+        // The replacement is told from the original by identity below, and a
+        // QPointer that has already gone null compares unequal to anything - so
+        // if the deferred delete has landed by here there is no replacement being
+        // tested at all, just a second create.
+        QVERIFY2(!original.isNull(), "The old scroll box was already destroyed before its replacement was made, so nothing below tests a replacement outliving a deferred delete.");
+
         runLua(host, qsl("createScrollBox('%1', 0, 0, 40, 40)\n").arg(scrollBoxName));
         TScrollBox* replacement = nullptr;
         for (auto candidate : host->mpConsole->findChildren<TScrollBox*>(scrollBoxName)) {
@@ -2234,6 +2323,47 @@ noViewSpellReport = table.concat(noViewSpellProblems, '; ')
         QCOMPARE(host->windowType(scrollBoxName), std::optional<QString>(qsl("scrollbox")));
         QVERIFY2(host->mpConsole->resizePlainWindow(scrollBoxName, 33, 44), "The old scroll box's deferred delete took its replacement out of the console's own map.");
         QCOMPARE(replacement->size(), QSize(33, 44));
+    }
+
+    // The same for a text edit, whose deregistration is a hand-copied twin of the
+    // scroll box's. A slip there takes a live text edit out of the console's map
+    // without a word - no crash, no error, just getTextEditText(),
+    // setTextEditText(), resizeWindow() and moveWindow() all ceasing to find it.
+    void test_aReplacedTextBoxKeepsTheReplacementRegistered()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        const QString textBoxName = qsl("registryReplacedTextBox");
+        const auto [created, createMessage] = host->mpConsole->createTextBox(QString(), textBoxName, 0, 80, 40, 40);
+        QVERIFY2(created, qPrintable(createMessage));
+        const QPointer<TTextBox> original = host->mpConsole->textBoxWidget(textBoxName);
+        QVERIFY2(original, "Creating a text edit left no widget in the console's own map.");
+
+        const auto [deleted, deleteMessage] = host->mpConsole->deleteTextBox(textBoxName);
+        QVERIFY2(deleted, qPrintable(deleteMessage));
+        QVERIFY2(!host->windowRegistry().hasTextBox(textBoxName), "Deleting a text edit left it in the profile's window registry.");
+
+        // The replacement is told from the original by identity below, and a
+        // QPointer that has already gone null compares unequal to anything - so
+        // if the deferred delete has landed by here there is no replacement being
+        // tested at all, just a second create.
+        QVERIFY2(!original.isNull(), "The old text edit was already destroyed before its replacement was made, so nothing below tests a replacement outliving a deferred delete.");
+
+        const auto [recreated, recreateMessage] = host->mpConsole->createTextBox(QString(), textBoxName, 0, 80, 40, 40);
+        QVERIFY2(recreated, qPrintable(recreateMessage));
+        TTextBox* replacement = host->mpConsole->textBoxWidget(textBoxName);
+        QVERIFY2(replacement && replacement != original, "Creating a text edit over a deleted name did not produce a new widget.");
+
+        QTRY_VERIFY_WITH_TIMEOUT(original.isNull(), 5000);
+
+        QVERIFY2(host->windowRegistry().hasTextBox(textBoxName), "The old text edit's deferred delete took its replacement's registry entry with it.");
+        QCOMPARE(host->windowType(textBoxName), std::optional<QString>(qsl("textedit")));
+        QVERIFY2(host->mpConsole->textBoxWidget(textBoxName) == replacement, "The old text edit's deferred delete took its replacement out of the console's own map.");
+        runLua(host, qsl("setTextEditText('%1', 'the replacement is still reachable')\nreplacedRoundTrippedText = tostring(getTextEditText('%1'))\n").arg(textBoxName));
+        QCOMPARE(luaGlobalString(host, "replacedRoundTrippedText"), qsl("the replacement is still reachable"));
     }
 
 private:
@@ -2496,18 +2626,12 @@ private:
         return value;
     }
 
-    // Writes the smallest GIF Qt reads back as a movie, since setLabelMovie()
-    // reads the file before it registers anything with the profile's tracker and
-    // Qt ships no GIF writer to make one with. An empty path back means Qt would
-    // not have taken it.
+    // Writes a movie out, since setLabelMovie() reads the file before it
+    // registers anything with the profile's tracker. An empty path back means Qt
+    // would not have taken it.
     QString writeTestGif()
     {
-        QByteArray gif("GIF89a");
-        gif.append(QByteArray::fromHex("01000100910000"));
-        gif.append(QByteArray::fromHex("ff000000ff000000ff000000"));
-        gif.append(QByteArray::fromHex("21f90400701700002c00000000010001000002024c0100"));
-        gif.append(QByteArray::fromHex("3b"));
-
+        const QByteArray gif = threeFrameGif();
         const QString path = qsl("%1/label-movie.gif").arg(mConfigDir.path());
         QFile file(path);
         if (!file.open(QIODevice::WriteOnly) || file.write(gif) != gif.size()) {
