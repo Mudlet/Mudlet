@@ -231,21 +231,28 @@ capability.
    says why through `sysSTTError` as well as in its return value. This holds
    when there is no engine at all: an implementation with nothing installed
    still raises the event, or a consumer written against events alone cannot
-   tell a missing engine from a quiet microphone. A refusal caused by the
-   script's own arguments is returned but not announced, since one package's
-   mistake is not news for every other package on the profile: a malformed
-   argument like `setSilenceTimeout(-1)`, or a path given to a backend that
-   loads no models at all. A path that simply is not there is *not* of that
-   kind and does speak - the model may have been deleted or the drive left
-   unmounted since a package saved it, which is the world changing rather than
-   the caller getting its own call wrong. So is a limit
-   the engine can never lift, which is a capability answer of rule 3's kind
-   rather than a fault: `setSensitivity` on a backend whose
-   `capabilities.sensitivityTuning` is false. Announced, it would fire on every
-   single start for a package that reapplies its saved settings whenever
-   speech begins. A call that fails on an engine which *can* do the thing is
-   an ordinary refusal and speaks, so the two must be told apart before the
-   attempt rather than guessed from its result.
+   tell a missing engine from a quiet microphone.
+
+   Two kinds are returned but **not** announced, because one package's mistake
+   is not news for every other package on the profile. One is a refusal the
+   script's own arguments caused: a malformed argument like
+   `setSilenceTimeout(-1)`, or a path handed to a backend that loads no models
+   at all. The other is a limit the engine can never lift - `setSensitivity` on
+   a backend whose `capabilities.sensitivityTuning` is false - which is a
+   capability answer of rule 3's kind rather than a fault; announced, it would
+   fire on every single start for a package that reapplies its saved settings
+   whenever speech begins.
+
+   A path that simply is not there **does** speak, and is deliberately not
+   counted among those: the model may have been deleted or the drive left
+   unmounted since a package saved the setting, which is the world changing
+   rather than the caller getting its own call wrong. That check also runs
+   before Mudlet knows which backend will answer, so a missing path speaks even
+   on a machine where only a model-less backend is available and the carve-out
+   above would otherwise have kept it quiet. A call that fails on an engine
+   which *can* do the thing likewise speaks, so that case and the permanent
+   limit have to be told apart before the attempt rather than guessed from its
+   result.
 3. **`setVocabulary`'s boolean is a capability answer**, not a success flag.
    Packages branch on it: `true` → engine handles vocabulary; `false` → apply
    client-side correction.
