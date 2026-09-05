@@ -456,6 +456,11 @@ private slots:
         QCOMPARE(MudletApp::getMudletPath(enums::profilesPath), qsl("%1/profiles").arg(target));
     }
 
+    // Paths get resolved on demand and corrected later; a settings store cannot,
+    // so it stays unavailable until setupConfig() settles the root. Has to run
+    // before the setupConfig() cases below, which settle it.
+    void test_getQSettingsIsNullBeforeSetupConfig() { QVERIFY(MudletApp::getQSettings() == nullptr); }
+
     // --- mudlet::setupConfig() end-to-end wiring ------------------------------
 
     void test_setupConfigUsesPreCreatedXdgTarget()
