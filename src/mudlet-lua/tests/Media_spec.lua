@@ -2129,12 +2129,103 @@ describe("Media playback effects with a generated sound file", function()
 
     -- The media protocol allows every numeric field as a JSON string and
     -- servers do send them that way, so a string has to be read as the number
-    -- it spells rather than leave the field on its default.
+    -- it spells rather than leave the field on its default. A full message of
+    -- them is read here for the loop count, which is what the two playbacks
+    -- below are; start, finish, priority and fade-out are each taken on their
+    -- own after this, and volume by the preload spec below them. Only fadein is
+    -- left to this: it ramps the player's own volume and nothing a Lua call or
+    -- event can see, so a message that is read without complaint is as far as a
+    -- spec can follow it.
     feedGmcp('Client.Media.Play {"name": "' .. soundFile .. '", "key": "busted-gmcp-strings", "volume": "70", "priority": "50", "loops": "2", "fadein": "0", "fadeout": "0", "start": "0", "finish": "0"}')
 
     waitForCount("sysMediaFinished", finished, 2)
     assert.equals(2, #started, gmcpRefused)
     assert.equals(2, #finished)
+  end)
+
+  it("a Client.Media.Play message reads a start position given as a string", function()
+    -- A start position has no effect in either form or on either path: the ten
+    -- second file asked to begin 9700ms in plays all ten seconds, whether the
+    -- position arrives as "9700", as 9700, or as playSoundFile{start = 9700}.
+    -- Until it does anything at all there is nothing for the string form of it
+    -- to show.
+    pending("Client.Media.Play and playSoundFile both ignore a start position")
+  end)
+
+  it("a Client.Media.Play message reads a finish position given as a string", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+
+    local finished, started = {}, {}
+    collect("sysMediaFinished", finished)
+    collect("sysMediaStarted", started)
+
+    -- the same ten second file cut off after 300ms, which a finish left on its
+    -- default would not be
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-finish", "finish": "300"}')
+
+    waitForCount("sysMediaFinished", finished, 1)
+    assert.equals(1, #started, gmcpRefused)
+    assert.equals(1, #finished, "a finish of 300 did not end the ten second file early")
+  end)
+
+  it("a Client.Media.Play message reads a priority given as a string", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+
+    local finished, started = {}, {}
+    collect("sysMediaFinished", finished)
+    collect("sysMediaStarted", started)
+
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-priority", "priority": "50"}')
+    waitForCount("sysMediaStarted", started, 1)
+    assert.equals(1, #started, gmcpRefused)
+
+    -- a stop reaches only what is playing below the priority it names, so this
+    -- one leaves the playback alone - a priority that was not read is no
+    -- priority at all, and would be stopped here
+    feedGmcp('Client.Media.Stop {"priority": 40}')
+    pumpEvents(500)
+    assert.equals(0, #finished, "a stop of a lower priority than the playback stopped it anyway")
+
+    -- and a stop from above it does end the playback, so it is the priority the
+    -- string spelled that decided both
+    feedGmcp('Client.Media.Stop {"priority": 60}')
+    waitForCount("sysMediaFinished", finished, 1)
+    assert.equals(1, #finished)
+  end)
+
+  it("a Client.Media.Play message reads a fade-out given as a string", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+
+    local finished, started = {}, {}
+    collect("sysMediaFinished", finished)
+    collect("sysMediaStarted", started)
+
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-fadeout", "fadeout": "300"}')
+    waitForCount("sysMediaStarted", started, 1)
+    assert.equals(1, #started, gmcpRefused)
+
+    -- a fading stop plays on for the fade the playback named, and for a flat
+    -- five seconds when it named none - so an unread fade-out is what the wait
+    -- below runs out on
+    feedGmcp('Client.Media.Stop {"fadeaway": true}')
+    local waitedMs = 0
+    while #finished == 0 and waitedMs < 2500 do
+      pumpEvents(50)
+      waitedMs = waitedMs + 50
+    end
+    assert.equals(1, #finished, "a fading stop did not use the 300ms fade-out the playback named")
   end)
 
   it("a Client.Media.Play message with a volume of zero preloads the file instead of playing it", function()
@@ -2181,21 +2272,25 @@ describe("Media playback effects with a generated sound file", function()
     os.remove(downloaded)
     onCleanup(function() os.remove(downloaded) end)
     stopGmcpMediaAfterwards()
-    -- The location is kept on the profile and no Lua call clears it, so it is
-    -- put back where the Client.Media.Load spec above leaves it - as an undo, so
-    -- a spec that fails part way through does not take the rest of the suite's
-    -- media location with it. Not feedGmcp(), for the reason given there.
+    -- The location is kept on the profile and no Lua call reads or clears it,
+    -- so the starting one is set here rather than inherited from whichever
+    -- url-carrying message ran last, and that known value is what the undo puts
+    -- back - as an undo, so a spec that fails part way through does not take the
+    -- rest of the suite's media location with it. Not feedGmcp() there, for the
+    -- reason given with it.
+    local startingLocation = fixtureUrl() .. "/media"
+    feedGmcp('Client.Media.Default {"url": "' .. startingLocation .. '"}')
     onCleanup(function()
-      feedTelnet('<T_IAC><T_SB><O_GMCP>Client.Media.Default {"url": "' .. fixtureUrl() .. '/media"}<T_IAC><T_SE>')
+      feedTelnet('<T_IAC><T_SB><O_GMCP>Client.Media.Default {"url": "' .. startingLocation .. '"}<T_IAC><T_SE>')
     end)
 
     local done = {}
     collect("sysDownloadDone", done)
 
-    -- The location the specs above leave behind is the fixture server's /media,
-    -- which answers only for a .wav: nothing there serves the text fixture, and
-    -- that is what makes the fetch below evidence of the default this sets
-    -- rather than of the one already in force.
+    -- The location just set is the fixture server's /media, which answers only
+    -- for a .wav: nothing there serves the text fixture, and that is what makes
+    -- the fetch below evidence of the default this sets rather than of the one
+    -- already in force.
     feedGmcp('Client.Media.Load {"name": "' .. fixtureFile .. '"}')
     pumpEvents(1000)
     assert.equals(0, #done, "the location in force already served the file, so the default below proves nothing")
