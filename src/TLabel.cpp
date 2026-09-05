@@ -95,6 +95,10 @@ TLabel::~TLabel()
     // itself going, with nobody taking it out of the map first.
     if (mpHost) {
         mpHost->windowRegistry().deregisterLabel(mName, mpModel.get());
+        // The tracker holds the movie raw and reads every entry it has to report
+        if (mpMovie) {
+            mpHost->getGifTracker()->unregisterGif(mpMovie);
+        }
     }
 
     if (mpMovie) {

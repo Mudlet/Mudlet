@@ -181,6 +181,8 @@ public:
     explicit Discord(QObject *parent = nullptr);
     ~Discord() override;
 
+    static Discord* self() { return smpSelf; }
+
     bool libraryLoaded();
     bool usingMudletsDiscordID(Host*) const;
     static QString getLoggedInUserName() { return smUserName; }
@@ -303,6 +305,8 @@ private:
     static QString smUserName;
     static QString smUserId;
     static QString smAvatar;
+
+    inline static Discord* smpSelf = nullptr;
 };
 
 #endif // DISCORD_H
