@@ -73,6 +73,9 @@ void TConsoleModel::toggleLogging(bool isMessageEnabled)
     if (!mLogToLogFile) {
         if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
             qWarning() << "TConsoleModel: failed to open autolog file for writing:" << file.errorString();
+            // A clicked checkable button has already flipped itself, so a start
+            // that goes nowhere still has to report the state it left behind
+            mpHost->raiseLoggingStateChanged(false);
             return;
         }
         QTextStream out(&file);
@@ -123,11 +126,13 @@ void TConsoleModel::toggleLogging(bool isMessageEnabled)
         if (mpHost->mIsCurrentLogFileInHtmlFormat) {
             if (!mLogFile.open(QIODevice::ReadWrite)) {
                 qWarning() << "TConsoleModel: failed to open log file for reading/writing:" << mLogFile.errorString();
+                mpHost->raiseLoggingStateChanged(false);
                 return;
             }
         } else {
             if (!mLogFile.open(QIODevice::Append)) {
                 qWarning() << "TConsoleModel: failed to open log file for appending:" << mLogFile.errorString();
+                mpHost->raiseLoggingStateChanged(false);
                 return;
             }
         }

@@ -20,11 +20,15 @@
 // Core code prints to the profile's main console through Host rather than
 // through the TMainConsole widget. Each Host forwarder is exercised on a live
 // profile and its effect read back off the main console's buffer; the telnet
-// message printer, the one caller of the coloured print, is driven through
-// Host::postMessage() so its prefix colouring is pinned as well.
+// message printer is driven through Host::postMessage() so its prefix
+// colouring is pinned as well, and the Lua error printers through the Lua
+// interpreter, since they read the buffer off the model to decide whether a
+// fresh line is needed first.
 
 #include <QDir>
+#include <QFile>
 #include <QTemporaryDir>
+#include <QToolButton>
 #include <QtTest/QtTest>
 
 #include <string>
@@ -57,6 +61,33 @@ private:
     const QString mLocalhost = qsl("localhost");
 
     TBuffer& buffer() { return mpHost->mainConsoleModel().buffer; }
+
+    bool runLua(const QString& script) { return mpHost->getLuaInterpreter()->compileAndExecuteScript(script); }
+
+    int lineContaining(const QString& needle)
+    {
+        for (int i = buffer().getLastLineNumber(); i >= 0; --i) {
+            if (buffer().line(i).contains(needle)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    // Every Lua error printer writes a "[  LUA  ]" header line and the error
+    // text under it, and has to start the header on a fresh line when the
+    // console is mid-line - which the set-up here leaves it.
+    void expectLuaErrorOnItsOwnLine(const QString& script, const QString& errorText)
+    {
+        mpHost->mEchoLuaErrors = true;
+        mpHost->printToMainConsole(qsl("mid-line"));
+        QVERIFY(runLua(script));
+
+        const int line = lineContaining(errorText);
+        QVERIFY2(line >= 2, qPrintable(qsl("no line carries '%1'").arg(errorText)));
+        QVERIFY2(buffer().line(line - 1).startsWith(qsl("[  LUA  ]")), qPrintable(buffer().line(line - 1)));
+        QCOMPARE(buffer().line(line - 2), qsl("mid-line"));
+    }
 
     // The buffer keeps an empty line ready after the last line feed, so what
     // was printed most recently is the last non-empty line.
@@ -120,6 +151,22 @@ private slots:
         mpServer = nullptr;
         QDir(profilePath).removeRecursively();
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
+    }
+
+    void cleanup()
+    {
+        if (!mpHost) {
+            return;
+        }
+        mpHost->mEchoLuaErrors = false;
+        mpHost->mLogDir.clear();
+        if (mpHost->mainConsoleModel().mLogToLogFile) {
+            mpHost->mainConsoleModel().toggleLogging(false);
+        }
+        // A test that failed mid-line must not glue the next test's text onto its own
+        if (!buffer().line(buffer().getLastLineNumber()).isEmpty()) {
+            mpHost->printToMainConsole(qsl("\n"));
+        }
     }
 
     void test_plainPrintLandsOnTheMainConsole()
@@ -191,6 +238,58 @@ private slots:
         mpHost->mpConsole->slot_toggleTimeStamps(false);
         QVERIFY(!mpHost->mainConsoleShowsTimeStamps());
     }
+
+    // startLogging() used to check and uncheck the toolbar button itself; the
+    // button now follows the model's state whichever way logging is toggled.
+    void test_luaStartLoggingDrivesTheLogButton()
+    {
+        QToolButton* button = mpHost->mpConsole->logButton;
+        QVERIFY(!button->isChecked());
+
+        QVERIFY(runLua(qsl("startLogging(true)")));
+        QVERIFY(mpHost->mainConsoleModel().mLogToLogFile);
+        QVERIFY2(button->isChecked(), "the log button did not follow logging being started from Lua");
+
+        QVERIFY(runLua(qsl("startLogging(false)")));
+        QVERIFY(!mpHost->mainConsoleModel().mLogToLogFile);
+        QVERIFY2(!button->isChecked(), "the log button did not follow logging being stopped from Lua");
+    }
+
+    // A click flips a checkable button before its slot runs, so a start that
+    // cannot open its file has to report the state it left behind.
+    void test_failedLogStartLeavesTheButtonUnchecked()
+    {
+        QFile blocker(qsl("%1/not-a-directory").arg(mConfigDir.path()));
+        QVERIFY(blocker.open(QIODevice::WriteOnly));
+        blocker.close();
+        mpHost->mLogDir = qsl("%1/logs").arg(blocker.fileName());
+
+        QToolButton* button = mpHost->mpConsole->logButton;
+        QVERIFY(!button->isChecked());
+        button->click();
+
+        QVERIFY(!mpHost->mainConsoleModel().mLogToLogFile);
+        QVERIFY2(!button->isChecked(), "the log button stayed checked although no log was started");
+    }
+
+    void test_luaErrorsArePrintedWithTheirColours()
+    {
+        mpHost->mEchoLuaErrors = true;
+        QVERIFY(runLua(qsl("printError('hcpt tinted error')")));
+
+        const int line = lineContaining(qsl("hcpt tinted error"));
+        QVERIFY(line >= 1);
+        QCOMPARE(buffer().buffer.at(line).front().foreground(), QColor(200, 50, 42));
+        const QString header = buffer().line(line - 1);
+        QVERIFY2(header.startsWith(qsl("[  LUA  ] - ERROR: ")), qPrintable(header));
+        QCOMPARE(buffer().buffer.at(line - 1).front().foreground(), QColor(80, 160, 255));
+    }
+
+    void test_printErrorStartsOnAFreshLine() { expectLuaErrorOnItsOwnLine(qsl("printError('hcpt errorc boom')"), qsl("hcpt errorc boom")); }
+
+    void test_scriptErrorStartsOnAFreshLine() { expectLuaErrorOnItsOwnLine(qsl("tempAlias('^hcpt-err$', [[error('hcpt alias boom')]])\nexpandAlias('hcpt-err', false)"), qsl("hcpt alias boom")); }
+
+    void test_handlerErrorStartsOnAFreshLine() { expectLuaErrorOnItsOwnLine(qsl("showHandlerError('hcpt-event', 'hcpt handler boom')"), qsl("hcpt handler boom")); }
 
     // cTelnet::postMessage() is what every "[ INFO ]  - ..." line goes through,
     // and it colours the prefix and the text after it separately.
