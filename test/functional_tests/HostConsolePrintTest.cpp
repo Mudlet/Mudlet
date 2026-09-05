@@ -104,6 +104,18 @@ private:
         return false;
     }
 
+    // The first line from lineNumber on that contains text - the buffer is shared
+    // by every case, so a search from its start could match an earlier print
+    QString lineContainingFrom(int lineNumber, const QString& text)
+    {
+        for (int i = lineNumber; i <= buffer().getLastLineNumber(); ++i) {
+            if (buffer().line(i).contains(text)) {
+                return buffer().line(i);
+            }
+        }
+        return QString();
+    }
+
     int lastTextLine()
     {
         for (int i = buffer().getLastLineNumber(); i >= 0; --i) {
@@ -279,18 +291,36 @@ private slots:
         QVERIFY(blocker.open(QIODevice::WriteOnly));
         blocker.close();
         mpHost->mLogDir = qsl("%1/logs").arg(blocker.fileName());
+        const QString savedNameFormat = mpHost->mLogFileNameFormat;
+        const QString savedName = mpHost->mLogFileName;
+        mpHost->mLogFileNameFormat.clear();
+        mpHost->mLogFileName = qsl("hcpt-failed-log");
 
         QToolButton* button = mpHost->mpConsole->logButton;
         QVERIFY(!button->isChecked());
+        // The report carries the whole path, so widen the wrap to read it back
+        // off one buffer line
+        buffer().setWrapAt(1000);
+        const int lineBefore = buffer().getLastLineNumber();
         button->click();
 
         QVERIFY(!mpHost->mainConsoleModel().mLogToLogFile);
         QVERIFY2(!button->isChecked(), "the log button stayed checked although no log was started");
+        // The log file name is settled only after the autolog sentinel has been
+        // written, so the start got as far as writing one before it failed
+        const QString logPath = qsl("%1/hcpt-failed-log.txt").arg(mpHost->mLogDir);
+        QCOMPARE(mpHost->mainConsoleModel().mLogFileName, logPath);
         QVERIFY2(!QFileInfo::exists(mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("autolog"))), "a failed log start left the autolog sentinel behind");
-        QVERIFY2(bufferContains(qsl("Could not start logging")), "the user was not told why logging did not start");
-        QVERIFY2(mpHost->mLuaInterpreter.compileAndExecuteScript(
-                         qsl("local ok, msg = startLogging(true); assert(ok == nil, 'startLogging reported success on a failed start'); assert(msg:find('could not be logged', 1, true), msg)")),
-                 "startLogging(true) did not report the failed start");
+        const QString report = lineContainingFrom(lineBefore, qsl("Could not start logging"));
+        QVERIFY2(!report.isEmpty(), "the user was not told why logging did not start");
+        const QString fileAndColon = qsl("\"%1\": ").arg(logPath);
+        QVERIFY2(report.contains(fileAndColon) && !report.section(fileAndColon, 1).trimmed().isEmpty(), qPrintable(qsl("the report does not name the file and the reason: %1").arg(report)));
+        QVERIFY2(mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("local ok, msg = startLogging(true); assert(ok == nil, 'startLogging reported success on a failed start'); assert(msg:find('could "
+                                                                     "not be logged', 1, true), msg); assert(msg:find('hcpt-failed-log.txt', 1, true), msg)")),
+                 "startLogging(true) did not report the failed start with its file");
+        mpHost->mLogFileNameFormat = savedNameFormat;
+        mpHost->mLogFileName = savedName;
+        buffer().setWrapAt(mpHost->mWrapAt);
     }
 
     void test_luaErrorsArePrintedWithTheirColours()
