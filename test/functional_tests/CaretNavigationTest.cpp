@@ -547,12 +547,23 @@ private slots:
     void test_activatingALinkMarksItVisited()
     {
         QVERIFY(runLua(qsl("echoLink('LINKTHREE', [[caretLinkThree = 'ran']], 'the third link')\necho('\\n')")));
-        QTest::qWait(50ms);
+        QTest::qWait(100ms);
         const int line = consoleBuffer().lineBuffer.indexOf(qsl("LINKTHREE"));
         QVERIFY2(line > 0, "the third link never reached the buffer");
         pane()->setCaretPosition(line, 0);
         const int linkIndex = consoleBuffer().getFocusedLink();
-        QVERIFY(linkIndex > 0);
+        // Reported in full because this has failed on macOS x86_64 alone and could
+        // not be reproduced elsewhere: the focused link is read out of the TChar
+        // grid, so which of the text and the grid disagreed is the whole diagnosis.
+        QVERIFY2(linkIndex > 0,
+                 qPrintable(qsl("no link focused at line %1 col 0; caret mode %2, text '%3' (%4 chars), grid row %5 cells, lineBuffer %6 lines, buffer %7 lines")
+                                    .arg(line)
+                                    .arg(mpHost->caretEnabled() ? qsl("on") : qsl("off"))
+                                    .arg(consoleBuffer().lineBuffer.at(line))
+                                    .arg(consoleBuffer().lineBuffer.at(line).length())
+                                    .arg(line < static_cast<int>(consoleBuffer().buffer.size()) ? QString::number(consoleBuffer().buffer.at(line).size()) : qsl("out of range"))
+                                    .arg(consoleBuffer().lineBuffer.size())
+                                    .arg(static_cast<int>(consoleBuffer().buffer.size()))));
         QVERIFY2(!consoleBuffer().isLinkVisited(linkIndex), "the link counts as visited before anything activated it");
 
         press(pane(), Qt::Key_Return);
