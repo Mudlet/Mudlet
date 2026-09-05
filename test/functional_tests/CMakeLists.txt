@@ -138,10 +138,12 @@ set(MAP_GROUP_TEST_SOURCES
     MapAreaSelectionTest.cpp
     MapCloseDuringImportTest.cpp
     MapDownloadTest.cpp
+    RoomExitsDialogTest.cpp
     MapLevelOfDetailTest.cpp
     MapOffscreenCustomLineTest.cpp
     MapFileStatsTest.cpp
     MapLockNoOpTest.cpp
+    RoomPropertiesDialogTest.cpp
     MapperButtonConfigTest.cpp
     MapProgressDialogSeamTest.cpp
     MapRoomGeometryTest.cpp
