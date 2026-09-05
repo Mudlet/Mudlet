@@ -39,6 +39,7 @@
 #include "MMCP.h"
 #include "MMCPServer.h"
 #include "mudlet.h"
+#include "MudletSettings.h"
 #include "TCommandLine.h"
 #include "TConsole.h"
 #include "TConsoleModel.h"
@@ -456,7 +457,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         profileShortcuts[entry] = std::make_unique<QKeySequence>(*mudlet::self()->mpShortcutsManager->getSequence(entry));
     }
 
-    auto settings = mudlet::self()->getQSettings();
+    auto settings = MudletSettings::getQSettings();
     const auto interval = settings->value("autosaveIntervalMinutes", 2).toInt();
     startMapAutosave(interval);
 

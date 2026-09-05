@@ -39,6 +39,7 @@
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
+#include "MudletSettings.h"
 
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)
@@ -116,8 +117,8 @@ private slots:
         // a settings file that already holds something is how mudletUsedBefore()
         // recognises an existing player, which keeps the first-run tour and the
         // starter UI package away from this profile
-        mudlet::getQSettings()->setValue(qsl("uiTourShown"), true);
-        mudlet::getQSettings()->sync();
+        MudletSettings::getQSettings()->setValue(qsl("uiTourShown"), true);
+        MudletSettings::getQSettings()->sync();
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);

@@ -32,6 +32,7 @@
 #include "TGameDetails.h"
 #include "XMLimport.h"
 #include "mudlet.h"
+#include "MudletSettings.h"
 #include "CredentialManager.h"
 #include "SecureStringUtils.h"
 #include "widgetutils.h"
@@ -178,7 +179,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
         // there is nothing to switch between
         mpTabBar->hide();
     } else {
-        auto& settings = *mudlet::self()->mpSettings;
+        auto& settings = *MudletSettings::getQSettings();
         int initialTab = scmMyGamesTab;
         if (settings.contains(qsl("connectionDialogActiveTab"))) {
             initialTab = settings.value(qsl("connectionDialogActiveTab")).toInt() == scmAllGamesTab ? scmAllGamesTab : scmMyGamesTab;
@@ -927,7 +928,7 @@ void dlgConnectionProfiles::continueProfileSave(QListWidgetItem* pItem, const QS
     slot_updateSslTslPort(newProfileSslTsl);
 
     // if this was a previously deleted profile, restore it
-    auto& settings = *mudlet::self()->mpSettings;
+    auto& settings = *MudletSettings::getQSettings();
     auto deletedDefaultMuds = settings.value(qsl("deletedDefaultMuds"), QStringList()).toStringList();
     if (deletedDefaultMuds.contains(newProfileName)) {
         deletedDefaultMuds.removeOne(newProfileName);
@@ -957,7 +958,7 @@ bool dlgConnectionProfiles::showingOnlyMyProfiles() const
 
 void dlgConnectionProfiles::slot_activeTabChanged(const int index)
 {
-    mudlet::self()->mpSettings->setValue(qsl("connectionDialogActiveTab"), index);
+    MudletSettings::getQSettings()->setValue(qsl("connectionDialogActiveTab"), index);
 
     const auto* pCurrentItem = listWidget_profiles->currentItem();
     const QString previousSelection = pCurrentItem ? pCurrentItem->data(csmNameRole).toString() : QString();
@@ -1162,7 +1163,7 @@ void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
     // it without profile data of its own, so nothing else would keep it away.
     // continueProfileSave() clears the entry on profile re-creation
     if (profile == scmSelfTestProfile) {
-        auto& settings = *mudlet::self()->mpSettings;
+        auto& settings = *MudletSettings::getQSettings();
         auto deletedDefaultMuds = settings.value(qsl("deletedDefaultMuds"), QStringList()).toStringList();
         if (!deletedDefaultMuds.contains(profile)) {
             deletedDefaultMuds.append(profile);
@@ -1570,7 +1571,7 @@ void dlgConnectionProfiles::fillout_form()
 
     const QStringList& onlyShownPredefinedProfiles{mudlet::self()->mOnlyShownPredefinedProfiles};
     const bool showOnlyMyProfiles = showingOnlyMyProfiles();
-    const auto deletedDefaultMuds = mudlet::self()->mpSettings->value(qsl("deletedDefaultMuds"), QStringList()).toStringList();
+    const auto deletedDefaultMuds = MudletSettings::getQSettings()->value(qsl("deletedDefaultMuds"), QStringList()).toStringList();
     if (onlyShownPredefinedProfiles.isEmpty()) {
         const auto defaultGames = TGameDetails::keys();
         // "My games" only lists games with profile data on disk; "All games"
@@ -1897,7 +1898,7 @@ void dlgConnectionProfiles::slot_setCustomIcon()
         return;
     }
 
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletSettings::getQSettings();
     QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
 
     const QString imageLocation = QFileDialog::getOpenFileName(this, tr("Select custom image for profile (should be 120x30)"), lastDir, tr("Images (%1)").arg(qsl("*.png *.gif *.jpg")));
@@ -2930,7 +2931,7 @@ void dlgConnectionProfiles::slot_loadPasswordAsync()
 
 void dlgConnectionProfiles::loadPasswordFromSettings(const QString& profile_name)
 {
-    auto& settings = *mudlet::self()->mpSettings;
+    auto& settings = *MudletSettings::getQSettings();
     settings.beginGroup(qsl("profiles/%1").arg(profile_name));
 
     // Get password and handle migration

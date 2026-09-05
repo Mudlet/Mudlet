@@ -28,6 +28,7 @@
 #include "CredentialManager.h"
 #include "GMCPAuthenticator.h"
 #include "Host.h"
+#include "MudletSettings.h"
 #include "TAction.h"
 #include "TAlias.h"
 #include "TConsole.h"
@@ -406,7 +407,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     languageSearchNames.removeDuplicates();
     comboBox_guiLanguage->setProperty(scmProp_searchKeywords, languageSearchNames.join(qsl(", ")));
 
-    auto currentLanguage = pMudlet->getInterfaceLanguage();
+    auto currentLanguage = MudletSettings::getInterfaceLanguage();
     int currentIndex = comboBox_guiLanguage->findData(currentLanguage);
     if (Q_LIKELY(currentIndex != -1)) {
         // The language code has been found in the UserData role for one of the
@@ -454,7 +455,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     rebuildTabOrder();
 
     setMinimumSize(780, 560);
-    const auto geometry = mudlet::getQSettings()->value(qsl("profilePreferencesGeometry")).toByteArray();
+    const auto geometry = MudletSettings::getQSettings()->value(qsl("profilePreferencesGeometry")).toByteArray();
     if (geometry.isEmpty() || !restoreGeometry(geometry)) {
         resize(1060, 760);
     }
@@ -880,7 +881,7 @@ void dlgProfilePreferences::buildShell()
 // Left null once dismissed, which every page takes in its stride
 void dlgProfilePreferences::buildMigrationBanner()
 {
-    if (mudlet::getQSettings()->value(qsl("settingsRedesignBannerSeen"), false).toBool()) {
+    if (MudletSettings::getQSettings()->value(qsl("settingsRedesignBannerSeen"), false).toBool()) {
         return;
     }
 
@@ -910,7 +911,7 @@ void dlgProfilePreferences::buildMigrationBanner()
     pBannerLayout->addLayout(pButtonRow);
 
     connect(pDismissButton, &QAbstractButton::clicked, this, [this]() {
-        mudlet::getQSettings()->setValue(qsl("settingsRedesignBannerSeen"), true);
+        MudletSettings::getQSettings()->setValue(qsl("settingsRedesignBannerSeen"), true);
         // Off the page and out of the member, so no later page switch brings it
         // back. Alive rather than deleted: the click is still being delivered.
         placeBannerOn(nullptr);
@@ -4180,7 +4181,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     mFORCE_MCCP_OFF->setChecked(pHost->mFORCE_NO_COMPRESSION);
     mFORCE_GA_OFF->setChecked(pHost->mFORCE_GA_OFF);
     mAlertOnNewData->setChecked(pHost->mAlertOnNewData);
-    telnetHandlerEnabled->setChecked(mudlet::getQSettings()->value("telnetHandlerEnabled", false).toBool());
+    telnetHandlerEnabled->setChecked(MudletSettings::getQSettings()->value("telnetHandlerEnabled", false).toBool());
     //encoding->setCurrentIndex( pHost->mEncoding );
     mFORCE_SAVE_ON_EXIT->setChecked(pHost->mFORCE_SAVE_ON_EXIT);
 
@@ -6002,7 +6003,7 @@ void dlgProfilePreferences::slot_loadMap()
 
     QFileDialog* dialog = new QFileDialog(this);
     dialog->setWindowTitle(tr("Load Mudlet map"));
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletSettings::getQSettings();
     QString lastDir = settings.value("lastFileDialogLocation", utils::getMudletPath(enums::profileHomePath, pHost->getName())).toString();
     dialog->setDirectory(lastDir);
     dialog->setNameFilter(loadExtensions.join(qsl(";;")));
@@ -6013,7 +6014,7 @@ void dlgProfilePreferences::slot_loadMap()
 
         auto fileName = dialog->selectedFiles().constFirst();
         loadMap(fileName);
-        QSettings& settings = *mudlet::getQSettings();
+        QSettings& settings = *MudletSettings::getQSettings();
         QString lastDir = QFileInfo(fileName).absolutePath();
         settings.setValue("lastFileDialogLocation", lastDir);
     });
@@ -6033,7 +6034,7 @@ void dlgProfilePreferences::slot_saveMap()
 
     QFileDialog* dialog = new QFileDialog(this);
     dialog->setWindowTitle(tr("Save Mudlet map"));
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletSettings::getQSettings();
     QString lastDir = settings.value("lastFileDialogLocation", utils::getMudletPath(enums::profileHomePath, pHost->getName())).toString();
     dialog->setDirectory(lastDir);
     dialog->setNameFilter(saveExtensions.join(qsl(";;")));
@@ -6055,7 +6056,7 @@ void dlgProfilePreferences::slot_saveMap()
 
         auto fileName = dialog->selectedFiles().constFirst();
 
-        QSettings& settings = *mudlet::getQSettings();
+        QSettings& settings = *MudletSettings::getQSettings();
         QString lastDir = QFileInfo(fileName).absolutePath();
         settings.setValue("lastFileDialogLocation", lastDir);
 
@@ -6308,7 +6309,7 @@ void dlgProfilePreferences::slot_setLogDir()
         return;
     }
 
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletSettings::getQSettings();
     QString lastDir = settings.value("lastFileDialogLocation", utils::getMudletPath(enums::profileHomePath, pHost->getName())).toString();
 
     /*
@@ -6624,7 +6625,7 @@ void dlgProfilePreferences::applyAll()
         }
 
         if (mSnapshot.dirty(telnetHandlerEnabled)) {
-            QSettings* settings = mudlet::getQSettings();
+            QSettings* settings = MudletSettings::getQSettings();
             if (settings->value("telnetHandlerEnabled", false).toBool() != telnetHandlerEnabled->isChecked()) {
                 settings->setValue("telnetHandlerEnabled", telnetHandlerEnabled->isChecked());
             }
@@ -7201,7 +7202,7 @@ void dlgProfilePreferences::maybeDownloadEditorThemes()
         return;
     }
 
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletSettings::getQSettings();
     const QString themesURL = settings.value("colorSublimeThemesURL", qsl("https://github.com/Colorsublime/Colorsublime-Themes/archive/master.zip")).toString();
     // a default update period is 24h
     // it would be nice to use C++14's numeric separator but Qt Creator still
@@ -8849,7 +8850,7 @@ void dlgProfilePreferences::closeEvent(QCloseEvent* event)
         pHost->saveProfile();
     }
 
-    mudlet::getQSettings()->setValue(qsl("profilePreferencesGeometry"), saveGeometry());
+    MudletSettings::getQSettings()->setValue(qsl("profilePreferencesGeometry"), saveGeometry());
 
     if (mpHost) {
         emit preferencesClosing(mpHost->getName());

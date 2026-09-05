@@ -48,6 +48,7 @@
 #include "dlgRoomExits.h"
 #include "dlgRoomProperties.h"
 #include "mudlet.h"
+#include "MudletSettings.h"
 #include "utils.h"
 #if defined(INCLUDE_3DMAPPER)
 #include "glwidget_integration.h"
@@ -5384,7 +5385,7 @@ void T2DMap::slot_loadMap()
         return;
     }
 
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletSettings::getQSettings();
     QString lastDir = settings.value("lastFileDialogLocation", utils::getMudletPath(enums::profileHomePath, mpHost->getName())).toString();
 
 
@@ -7336,7 +7337,7 @@ void T2DMap::slot_exportAreaToImage()
         areaName = mpMap->mpRoomDB->getAreaNamesMap().value(mAreaID, areaName);
     }
 
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletSettings::getQSettings();
     QString lastDir = settings.value("lastExportAreaImageDirectory", QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).toString();
 
     QString defaultFileName;

@@ -32,6 +32,7 @@
 #include <IrcUser>
 
 #include "mudlet.h"
+#include "MudletSettings.h"
 
 #include <QDesktopServices>
 #include <QScrollBar>
@@ -47,7 +48,7 @@ dlgIRC::dlgIRC(Host* pHost)
     setWindowIcon(QIcon(qsl(":/icons/mudlet_irc.png")));
 
     bool isIntOk = false;
-    mMessageBufferLimit = mudlet::self()->mpSettings->value("ircMessageBufferLimit", dlgIRC::DefaultMessageBufferLimit).toInt(&isIntOk);
+    mMessageBufferLimit = MudletSettings::getQSettings()->value("ircMessageBufferLimit", dlgIRC::DefaultMessageBufferLimit).toInt(&isIntOk);
     if (!isIntOk) {
         mMessageBufferLimit = dlgIRC::DefaultMessageBufferLimit;
     }
@@ -850,7 +851,7 @@ QPair<bool, QString> dlgIRC::writeIrcChannels(Host* pH, const QStringList& chann
 
 void dlgIRC::writeQSettings()
 {
-    if (mudlet::self()) {
-        mudlet::self()->mpSettings->setValue("ircMessageBufferLimit", mMessageBufferLimit);
+    if (auto* settings = MudletSettings::getQSettings()) {
+        settings->setValue("ircMessageBufferLimit", mMessageBufferLimit);
     }
 }

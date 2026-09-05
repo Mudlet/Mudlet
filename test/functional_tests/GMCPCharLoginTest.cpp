@@ -48,6 +48,7 @@
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
+#include "MudletSettings.h"
 
 #include "GroupedTest.h"
 
@@ -320,7 +321,7 @@ class ScopedAutoLoginDelays
 {
 public:
     ScopedAutoLoginDelays(int usernameMs, int passwordMs)
-    : mpSettings(mudlet::getQSettings())
+    : mpSettings(MudletSettings::getQSettings())
     , mSavedUsername(mpSettings->value(qsl("autoLoginUsernameDelay")))
     , mSavedPassword(mpSettings->value(qsl("autoLoginPasswordDelay")))
     {

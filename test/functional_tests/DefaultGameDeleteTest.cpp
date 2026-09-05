@@ -38,6 +38,7 @@
 #include "TGameDetails.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
+#include "MudletSettings.h"
 
 #include "GroupedTest.h"
 
@@ -157,7 +158,7 @@ private slots:
     // the catalog
     void test_legacyBlocklistedGameStillShownInAllGames()
     {
-        mudlet::self()->mpSettings->setValue(qsl("deletedDefaultMuds"), QStringList{mGame});
+        MudletSettings::getQSettings()->setValue(qsl("deletedDefaultMuds"), QStringList{mGame});
 
         auto* dlg = new dlgConnectionProfiles();
         dlg->show();
@@ -180,7 +181,7 @@ private slots:
     // stay dismissed once deleted
     void test_deletedSelfTestStaysHidden()
     {
-        mudlet::self()->mpSettings->setValue(qsl("deletedDefaultMuds"), QStringList{mSelfTest});
+        MudletSettings::getQSettings()->setValue(qsl("deletedDefaultMuds"), QStringList{mSelfTest});
 
         auto* dlg = new dlgConnectionProfiles();
         dlg->show();
@@ -204,7 +205,7 @@ private slots:
     // played the button would have nothing at all to do
     void test_removeIsNotOfferedForAGameWithoutProfileData()
     {
-        mudlet::self()->mpSettings->setValue(qsl("deletedDefaultMuds"), QStringList{});
+        MudletSettings::getQSettings()->setValue(qsl("deletedDefaultMuds"), QStringList{});
         QVERIFY(!QDir(utils::getMudletPath(enums::profileHomePath, mGame)).exists());
         QVERIFY(makeProfileOnDisk(mOtherGame));
 
@@ -253,7 +254,7 @@ private slots:
     // it does nothing but grow the settings file
     void test_removingAGameRecordsNothingAndSaysWhatItDid()
     {
-        mudlet::self()->mpSettings->setValue(qsl("deletedDefaultMuds"), QStringList{});
+        MudletSettings::getQSettings()->setValue(qsl("deletedDefaultMuds"), QStringList{});
         QVERIFY(makeProfileOnDisk(mGame));
         QVERIFY(makeProfileOnDisk(mOtherGame));
 
@@ -269,7 +270,8 @@ private slots:
 
         QVERIFY2(!QDir(utils::getMudletPath(enums::profileHomePath, mGame)).exists(), "profile data should be removed from disk");
         QVERIFY2(gameListed(dlg, mGame), "the catalog still offers the game, which is what makes the removal invisible");
-        QVERIFY2(!mudlet::self()->mpSettings->value(qsl("deletedDefaultMuds"), QStringList()).toStringList().contains(mGame), "a removed game must not be recorded in a list nothing reads for games");
+        QVERIFY2(!MudletSettings::getQSettings()->value(qsl("deletedDefaultMuds"), QStringList()).toStringList().contains(mGame),
+                 "a removed game must not be recorded in a list nothing reads for games");
         QVERIFY2(dlg->notificationArea->isVisibleTo(dlg), "the confirmation has to be on screen");
         QVERIFY2(dlg->notificationAreaIconLabelInformation->isVisibleTo(dlg), "a completed removal is news, not a warning");
         QVERIFY2(dlg->notificationAreaMessageBox->text().contains(mGame), "the removal has to be confirmed when the list cannot show it");
@@ -294,7 +296,7 @@ private slots:
     // recording: nothing else would keep it out of the list
     void test_removingTheSelfTestEntryIsStillRecorded()
     {
-        mudlet::self()->mpSettings->setValue(qsl("deletedDefaultMuds"), QStringList{});
+        MudletSettings::getQSettings()->setValue(qsl("deletedDefaultMuds"), QStringList{});
 
         auto* dlg = new dlgConnectionProfiles();
         dlg->show();
@@ -310,7 +312,7 @@ private slots:
         QVERIFY2(dlg->remove_profile_button->isEnabled(), "the self-test entry has to stay dismissable");
         dlg->slot_deleteProfile();
 
-        QVERIFY(mudlet::self()->mpSettings->value(qsl("deletedDefaultMuds"), QStringList()).toStringList().contains(mSelfTest));
+        QVERIFY(MudletSettings::getQSettings()->value(qsl("deletedDefaultMuds"), QStringList()).toStringList().contains(mSelfTest));
         QVERIFY2(!gameListed(dlg, mSelfTest), "a dismissed self-test entry must not come back");
 
         dlg->deleteLater();
@@ -321,7 +323,7 @@ private slots:
     // games" already gets it from TGameDetails, so it must not be listed twice
     void test_selfTestListedOnce()
     {
-        mudlet::self()->mpSettings->setValue(qsl("deletedDefaultMuds"), QStringList{});
+        MudletSettings::getQSettings()->setValue(qsl("deletedDefaultMuds"), QStringList{});
 
         auto* dlg = new dlgConnectionProfiles();
         dlg->show();
