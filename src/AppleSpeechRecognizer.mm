@@ -355,6 +355,10 @@ void AppleSpeechRecognizer::startListeningInternal()
     mLastPartialResult.clear();
     mRecentAudioLevel = 0.0f;
     mConsecutiveImmediateFailures = 0;
+    // Both say "this session", so both clear when one begins - not at
+    // initialize(), which a second listen on the same model never revisits
+    mBufferFailureReported = false;
+    mMidSessionFailureReported = false;
 
     if (!beginRecognitionTask()) {
         setState(State::Error);
@@ -560,6 +564,16 @@ void AppleSpeechRecognizer::handleTaskEnded(const QString& failure)
     // without this there was nothing anywhere to explain it.
     if (!failure.isEmpty()) {
         qWarning().noquote() << "AppleSpeechRecognizer: recognition task ended mid-session:" << failure;
+        // Said to the player once per session as well. The consecutive-failure
+        // escape below only trips on tasks that die immediately, so one that
+        // limps for a second and then dies, over and over, never reaches it -
+        // and the log line the comment above describes is not somewhere a
+        // player looks to find out why nothing is being transcribed.
+        if (!mMidSessionFailureReported) {
+            mMidSessionFailureReported = true;
+            //: Shown when macOS speech recognition stops during a listening session and is restarted; some speech may have been missed
+            emit errorOccurred(tr("macOS speech recognition stopped during this session and was restarted; some speech may have been missed."));
+        }
     }
     mConsecutiveImmediateFailures = diedImmediately ? mConsecutiveImmediateFailures + 1 : 0;
     if (mConsecutiveImmediateFailures >= scmMaxImmediateFailures) {
@@ -642,6 +656,17 @@ void AppleSpeechRecognizer::slot_pcmReady(const QByteArray& pcmData)
 
     AVAudioPCMBuffer* buffer = [[AVAudioPCMBuffer alloc] initWithPCMFormat:mpSession->format frameCapacity:frames];
     if (!buffer || !buffer.floatChannelData) {
+        // Not a dropped chunk but a dropped session: floatChannelData is a
+        // property of the format, so nil here is nil for every chunk that
+        // follows. Silence left the state saying listening and the audio level
+        // moving while nothing could ever be transcribed, which reads to the
+        // player as a microphone too quiet to hear them. Latched like sherpa's
+        // missing-result report, since this runs many times a second.
+        if (!mBufferFailureReported) {
+            mBufferFailureReported = true;
+            //: Shown when macOS speech recognition cannot accept the microphone audio in the format it is arriving in
+            emit errorOccurred(tr("The microphone audio could not be handed to macOS speech recognition, so nothing will be transcribed this session."));
+        }
         return;
     }
     buffer.frameLength = frames;

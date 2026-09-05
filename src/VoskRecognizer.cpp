@@ -497,9 +497,9 @@ void VoskRecognizer::doStartListening()
                 // VoskRecognizer::tr, not QObject::tr: the lambda is not a member, and
                 // the default context would file this identical string a second
                 // time for translators to translate twice
+                weakThis->setState(State::Error);
                 //: Shown when the player refuses Mudlet access to the microphone; the path names the macOS setting that grants it
                 emit weakThis->errorOccurred(VoskRecognizer::tr("Microphone permission denied. Please grant microphone access in System Settings > Privacy & Security > Microphone."));
-                weakThis->setState(State::Error);
             }
         });
         return;
@@ -507,12 +507,12 @@ void VoskRecognizer::doStartListening()
     case MacMicrophonePermission::AuthorizationStatus::Denied:
     case MacMicrophonePermission::AuthorizationStatus::Restricted:
         qWarning() << "VoskRecognizer: Microphone permission denied or restricted";
-        //: Shown when microphone access was refused earlier and has to be granted in system settings before speech will work
-        emit errorOccurred(tr("Microphone permission denied. Please grant microphone access in System Settings > Privacy & Security > Microphone."));
         // The same state a denial reaches when the dialog is answered now, as
         // docs/stt-api.md requires: a package driving its controls from state
         // would otherwise keep offering to listen on a machine that cannot
         setState(State::Error);
+        //: Shown when microphone access was refused earlier and has to be granted in system settings before speech will work
+        emit errorOccurred(tr("Microphone permission denied. Please grant microphone access in System Settings > Privacy & Security > Microphone."));
         return;
     case MacMicrophonePermission::AuthorizationStatus::Authorized:
         break;

@@ -243,15 +243,20 @@ public:
             // Already in effect and the last attempt succeeded; nothing to rebuild
             return VocabularyResult::Applied;
         }
+        // Counted rather than compared. applyVocabulary() can reach Lua -
+        // sherpa reloads the model to bias it, and setState() dispatches
+        // handlers inline - so a handler calling stt.setVocabulary() re-enters
+        // and completes a whole offer before the line after this one runs.
+        // Whichever offer finished last is the one the backend actually holds,
+        // and committing the outer verdict over it leaves the flag describing
+        // an attempt that is no longer the current one: the next identical
+        // offer is then short-circuited into Applied against a backend that
+        // refused it. Comparing word lists caught only the case where the
+        // inner offer differed; re-entering with the same words is the shape a
+        // package reapplying its own vocabulary produces, and slipped through.
+        const unsigned int offer = ++mVocabularyOffers;
         const VocabularyResult result = applyVocabulary(words);
-        // applyVocabulary() can reach Lua - sherpa reloads the model to bias
-        // it, and setState() dispatches handlers inline - so a handler calling
-        // stt.setVocabulary() re-enters and completes a whole offer of its own
-        // before this line runs. Committing the outer verdict then would leave
-        // the flag describing one word list and mVocabulary another, and the
-        // next identical offer short-circuits to Applied against a model that
-        // never received it: the exact desync the flag exists to prevent.
-        if (mVocabulary != words) {
+        if (mVocabularyOffers != offer) {
             return result;
         }
         // applyVocabulary()'s documented contract, checked rather than only
@@ -473,6 +478,9 @@ private:
     // Retained by setVocabulary() for every backend, so none has to remember
     // to keep words it could not use yet
     QStringList mVocabulary;
+    // Counts offers begun, so a frame can tell whether another one finished
+    // inside its own call to applyVocabulary() - see setVocabulary()
+    unsigned int mVocabularyOffers = 0;
 
     // Whether the words in mVocabulary are what the backend is currently
     // biased toward. A repeat offer short-circuits to Applied only when this
@@ -480,5 +488,10 @@ private:
     // chance, not agreement it never earned.
     bool mVocabularyApplied = false;
 };
+
+// Capabilities travels as a signal argument. Direct connections do not need
+// this, and today's only consumer is one - but a queued connection would fail
+// at runtime rather than at compile time, with nothing to point at.
+Q_DECLARE_METATYPE(SpeechRecognizer::Capabilities)
 
 #endif // MUDLET_SPEECHRECOGNIZER_H

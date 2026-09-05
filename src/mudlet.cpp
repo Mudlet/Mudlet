@@ -338,6 +338,14 @@ void mudlet::initSpeechRecognition(SpeechRecognizerFactory::Backend backend)
         // and mpSpeechRecognizer already names the replacement by now, so a
         // handler reached from either event would read the new engine while
         // being told about the dead one. The retirement is meant to be silent.
+        // Said before the disconnect, or not at all: an engine swap reached
+        // from stt.init() while a phrase was in flight takes that phrase with
+        // it, and rule 1 allows recognised speech to be dropped only by a path
+        // that reports. After the disconnect there is nothing left to say it
+        // through, which is the cost of retiring the engine quietly.
+        if (pRetiring->listening() || pRetiring->state() == SpeechRecognizer::State::Processing) {
+            raiseSpeechEvent(qsl("sysSTTError"), qsl("changing the speech engine stopped the listening session that was under way - anything said during it is lost"));
+        }
         pRetiring->disconnect();
         pRetiring->releaseResources();
         pRetiring->deleteLater();

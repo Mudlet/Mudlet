@@ -28,6 +28,7 @@
 #include <QFileInfo>
 
 #include <algorithm>
+#include <cstddef>
 #include <QPointer>
 #include <QTextStream>
 #include <QVarLengthArray>
@@ -507,6 +508,13 @@ bool SherpaRecognizer::loadModel(const QString& modelPath)
     const bool interruptedASession = (state() == State::Listening || state() == State::Processing);
     mpCapture->stop();
     if (interruptedASession) {
+        // Settled before the emit, as everywhere else here. The device is
+        // already stopped, so a sysSTTError handler reading stt.listening()
+        // would otherwise be told yes for a microphone that has gone - and
+        // calling stt.stop() on the strength of it reaches a decoder still
+        // alive, which finalises and delivers the very utterance this message
+        // is about to declare lost.
+        setState(State::Ready);
         // The caller asked to load a model, not to stop listening, and the
         // utterance in flight goes with the decoder. Reported rather than
         // dropped quietly: no finalResult() is coming, so silence here is

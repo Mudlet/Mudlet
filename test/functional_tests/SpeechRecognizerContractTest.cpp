@@ -1300,6 +1300,59 @@ private slots:
         QCOMPARE(recognizer.mApplyCalls, callsBefore + 1);
     }
 
+    // The invariant two commits on this branch are built on, and nothing was
+    // holding it: setState() reaches Lua inside the emitting frame, so a
+    // handler must see the state the emitter had already decided on. A
+    // QSignalSpy cannot check this - it records the signal after the fact and
+    // never sees what state() was during the call - so this connects a lambda
+    // and samples it there. Reachable with no engine library at all: loading a
+    // model without one is a refusal that both sets Error and says so.
+    void theStateIsSettledBeforeAFaultIsAnnounced()
+    {
+        SherpaRecognizer recognizer;
+        std::optional<SpeechRecognizer::State> stateDuringEmit;
+        connect(&recognizer, &SpeechRecognizer::errorOccurred, &recognizer, [&](const QString&) {
+            stateDuringEmit = recognizer.state();
+        });
+
+        QVERIFY(!recognizer.initialize(qsl("/nonexistent-model-directory")));
+
+        QVERIFY2(stateDuringEmit.has_value(), "a load with no engine library must say why");
+        QCOMPARE(*stateDuringEmit, SpeechRecognizer::State::Error);
+    }
+
+    // The reason is for a library that was found and could not be used. On a
+    // machine with none, it has to stay empty or noEngineMessage() reports
+    // "installed but could not be loaded" to someone who installed nothing,
+    // and suppresses the "looked in:" list that would tell them where to put
+    // it. This is CI's own state, so the case runs where it matters.
+    void noLibraryMeansNoLoadErrorToReport()
+    {
+        if (VoskRecognizer::libraryAvailable()) {
+            QSKIP("a libvosk is installed here, so the nothing-to-load case cannot be reached");
+        }
+        QVERIFY2(VoskRecognizer::libraryLoadError().isEmpty(),
+                 "a machine with no library reported one that could not be loaded");
+    }
+
+    // The guard compares the stored list against the offered one, so a
+    // handler re-entering with the words the outer call is already applying
+    // slips through it. Pinned as the known edge rather than left to be
+    // rediscovered: the inner attempt is the one that last reached the
+    // backend, and its verdict is what the flag should end up holding.
+    void aReentrantOfferOfTheSameWordsKeepsTheInnerVerdict()
+    {
+        ReentrantVocabularyRecognizer recognizer;
+        recognizer.mInnerWords = QStringList{qsl("same")};
+
+        recognizer.setVocabulary({qsl("same")});
+
+        const int callsBefore = recognizer.mApplyCalls;
+        recognizer.setVocabulary({qsl("same")});
+        QVERIFY2(recognizer.mApplyCalls > callsBefore,
+                 "an offer the backend last refused was answered from the flag instead of being retried");
+    }
+
     void aRejectedWordIsNotSilentlyDropped()
     {
         QStringList rejected;

@@ -192,6 +192,11 @@ private:
     // listening every time nobody spoke.
     QElapsedTimer mTaskLifetime;
     int mConsecutiveImmediateFailures = 0;
+    // Said once per listening session each: the audio format cannot change
+    // mid-session, and a task failing repeatedly would otherwise report on
+    // every restart
+    bool mBufferFailureReported = false;
+    bool mMidSessionFailureReported = false;
     static constexpr int scmMinTaskLifetimeMsec = 500;
     static constexpr int scmMaxImmediateFailures = 3;
 

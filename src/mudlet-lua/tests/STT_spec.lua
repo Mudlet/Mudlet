@@ -41,6 +41,11 @@ describe("stt bridge", function()
     end)
 
     it("is not listening or initialized before anything has been set up", function()
+      -- getInfo().backend is empty when no recognizer object exists, which is
+      -- not quite what initialized() asks - that is also false in Error, where
+      -- a recognizer does exist and does have a name. Nothing earlier in this
+      -- file builds one, so the two agree here, but the assertion below is
+      -- about the object rather than the state.
       if stt.initialized() then
         -- A previous spec or the player left a model loaded; the claim below
         -- only means anything from a clean start
@@ -221,7 +226,14 @@ describe("stt bridge", function()
       -- then could not start has no models directory in the picture at all -
       -- that backend installs nothing - so requiring the path there asserts a
       -- contract this refusal was never part of.
-      if err:find("no language model is installed", 1, true) then
+      local namesADirectory = err:find("no language model is installed", 1, true)
+      local isModelLessRefusal = err:find("failed to initialize model", 1, true)
+      -- Total on purpose. Matching a literal from the C++ and doing nothing
+      -- when it misses means rewording that message turns this into a silent
+      -- pass, which is the failure mode both harnesses have.
+      assert.is_truthy(namesADirectory or isModelLessRefusal,
+                       "unrecognised refusal, so neither branch below was checked: " .. err)
+      if namesADirectory then
         assert.is_truthy(err:find(stt.getModelPath(), 1, true), "the refusal should name the models directory, got: " .. tostring(err))
       end
     end)
