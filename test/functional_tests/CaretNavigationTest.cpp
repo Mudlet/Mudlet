@@ -239,6 +239,10 @@ private slots:
         if (mpHost->caretEnabled()) {
             mpHost->setCaretEnabled(false);
         }
+        // A case that moved focus can leave the change undelivered, and it would
+        // otherwise land during the next case - after its init() turned caret
+        // mode back on, so the pane's focusOutEvent turns it straight off again.
+        drainDeferredFocusChange();
     }
 
     // Nothing below runs at all unless caret mode is on: without it
@@ -550,6 +554,15 @@ private slots:
         QTest::qWait(100ms);
         const int line = consoleBuffer().lineBuffer.indexOf(qsl("LINKTHREE"));
         QVERIFY2(line > 0, "the third link never reached the buffer");
+        // Anything that takes focus off the pane while that wait runs turns caret
+        // mode off through focusOutEvent, and setCaretPosition() then returns
+        // before it focuses a link. Linux and Windows hold the focus with a
+        // keyboard grab that setCaretMode() does not do on macOS, which is why
+        // this only ever failed there. The caret is this case's precondition
+        // rather than its subject, so re-establish it instead of racing it.
+        if (!mpHost->caretEnabled()) {
+            mpHost->setCaretEnabled(true);
+        }
         pane()->setCaretPosition(line, 0);
         const int linkIndex = consoleBuffer().getFocusedLink();
         // Reported in full because this has failed on macOS x86_64 alone and could
