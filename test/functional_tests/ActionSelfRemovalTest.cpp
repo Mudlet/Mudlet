@@ -274,6 +274,37 @@ private slots:
         QVERIFY2(mudlet::self()->dockWidgetArea(floatingBar->mpToolBar) != Qt::NoDockWidgetArea, "The TToolBar should be docked on the main window");
     }
 
+    // The bars are the console's widgets now, so ActionUnit has to cope with being
+    // asked to rebuild them before a profile has one - Host::uninstallPackage()
+    // reaches updateAllToolbars() on that path. A floating root is the case that
+    // used to survive it: regenerateEasyButtonBars() skips those nodes, and before
+    // the bars moved to the console regenerateToolBars() only touched the main
+    // window, so neither half went near mpConsole.
+    void test_rebuildingToolbarsWithoutAConsoleBuildsNothing()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        auto* actionUnit = host->getActionUnit();
+
+        auto* floatingBar = new TAction(qsl("floatingBar"), host);
+        floatingBar->setIsFolder(true);
+        floatingBar->mLocation = 4;
+        floatingBar->mToolbarLastFloatingState = false;
+        floatingBar->setIsActive(true);
+        actionUnit->registerAction(floatingBar);
+
+        QPointer<TMainConsole> console = host->mpConsole;
+        host->mpConsole = nullptr;
+        actionUnit->updateAllToolbars();
+        host->mpConsole = console;
+
+        QVERIFY2(!floatingBar->mpToolBar, "No bar should have been built while the console was away");
+
+        actionUnit->updateAllToolbars();
+        QVERIFY2(floatingBar->mpToolBar, "The bar should be built once the console is back");
+    }
+
     // Starts a profile the way a user would via the GUI (mirrors the helper in
     // TFeedTriggersRecursionTest).
     void startProfile(const QString& hostname, const QString& address, const QString& port)
