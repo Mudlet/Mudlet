@@ -25,7 +25,7 @@
 //
 // The resource read is checked against the file rather than only for
 // self-consistency. An empty :/app-build.txt and an unregistered resource
-// collection are indistinguishable from build()'s side, and both read as an
+// collection are indistinguishable from buildSuffix()'s side, and both read as an
 // official release - which is the arm that turns the updater loose and picks
 // the release splash screen.
 
@@ -34,19 +34,19 @@
 #include <QUrl>
 #include <QtTest/QtTest>
 
-#include "MudletVersion.h"
+#include "MudletApp.h"
 #include "mudlet.h"
 #include "utils.h"
 
 #include "GroupedTest.h"
 
-class MudletVersionTest : public QObject
+class MudletAppVersionTest : public QObject
 {
     Q_OBJECT
 
 private:
     // Read straight off the resource, so the expectations below are not simply
-    // whatever MudletVersion happened to compute.
+    // whatever MudletApp happened to compute.
     static QString suffixFromResource()
     {
         QFile buildFile(qsl(":/app-build.txt"));
@@ -64,25 +64,25 @@ private slots:
         QFile buildFile(qsl(":/app-build.txt"));
         QVERIFY2(buildFile.open(QIODevice::ReadOnly | QIODevice::Text), qUtf8Printable(qsl("cannot open :/app-build.txt: %1").arg(buildFile.errorString())));
 
-        QCOMPARE(MudletVersion::build(), QString::fromUtf8(buildFile.readAll()).trimmed());
+        QCOMPARE(MudletApp::buildSuffix(), QString::fromUtf8(buildFile.readAll()).trimmed());
     }
 
     void scmVersionSpellsOutTheBuild()
     {
-        QCOMPARE(MudletVersion::scmVersion(), qsl("Mudlet ") + QString(APP_VERSION) + suffixFromResource());
-        QCOMPARE(MudletVersion::scmVersion(), qsl("Mudlet ") + QString(APP_VERSION) + MudletVersion::build());
+        QCOMPARE(MudletApp::scmVersion(), qsl("Mudlet ") + QString(APP_VERSION) + suffixFromResource());
+        QCOMPARE(MudletApp::scmVersion(), qsl("Mudlet ") + QString(APP_VERSION) + MudletApp::buildSuffix());
     }
 
     void flagsFollowTheBuild()
     {
         const QString suffix = suffixFromResource();
 
-        QCOMPARE(MudletVersion::release(), suffix.isEmpty());
-        QCOMPARE(MudletVersion::publicTest(), suffix.startsWith(qsl("-ptb")));
-        QCOMPARE(MudletVersion::development(), !MudletVersion::release() && !MudletVersion::publicTest());
+        QCOMPARE(MudletApp::release(), suffix.isEmpty());
+        QCOMPARE(MudletApp::publicTest(), suffix.startsWith(qsl("-ptb")));
+        QCOMPARE(MudletApp::development(), !MudletApp::release() && !MudletApp::publicTest());
 
         // Exactly one of the three, whatever this build turns out to be
-        const int matched = (MudletVersion::release() ? 1 : 0) + (MudletVersion::publicTest() ? 1 : 0) + (MudletVersion::development() ? 1 : 0);
+        const int matched = (MudletApp::release() ? 1 : 0) + (MudletApp::publicTest() ? 1 : 0) + (MudletApp::development() ? 1 : 0);
         QCOMPARE(matched, 1);
     }
 
@@ -90,13 +90,13 @@ private slots:
     {
         const QUrl url(qsl("https://www.mudlet.org/"));
         QNetworkRequest request(url);
-        MudletVersion::setNetworkRequestDefaults(url, request);
+        MudletApp::setNetworkRequestDefaults(url, request);
 
         QCOMPARE(request.rawHeader(QByteArray("User-Agent")), (qsl("Mozilla/5.0 (Mudlet/") + QString(APP_VERSION) + suffixFromResource() + qsl(")")).toUtf8());
         QCOMPARE(request.attribute(QNetworkRequest::RedirectPolicyAttribute).value<QNetworkRequest::RedirectPolicy>(), QNetworkRequest::NoLessSafeRedirectPolicy);
     }
 };
 
-MUDLET_GROUPED_TEST_MAIN(MudletVersionTest)
+MUDLET_GROUPED_TEST_MAIN(MudletAppVersionTest)
 
-#include "MudletVersionTest.moc"
+#include "MudletAppVersionTest.moc"

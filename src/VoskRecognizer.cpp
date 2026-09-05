@@ -19,8 +19,7 @@
 
 #include "VoskRecognizer.h"
 
-#include "MudletPaths.h"
-#include "MudletSettings.h"
+#include "MudletApp.h"
 #include "SpeechAudioCapture.h"
 #include "utils.h"
 
@@ -300,7 +299,7 @@ bool VoskRecognizer::resetLibraryLoadState()
 
 QString VoskRecognizer::userLibraryPath()
 {
-    return MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("vosk-lib"));
+    return MudletApp::getMudletPath(enums::mainDataItemPath, qsl("vosk-lib"));
 }
 
 QStringList VoskRecognizer::librarySearchPaths()
@@ -928,7 +927,7 @@ QString VoskRecognizer::defaultModelPath()
 
 QString VoskRecognizer::modelsDirectoryPath()
 {
-    return MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("vosk-models"));
+    return MudletApp::getMudletPath(enums::mainDataItemPath, qsl("vosk-models"));
 }
 
 QStringList VoskRecognizer::getInstalledModels()
@@ -996,7 +995,7 @@ QString VoskRecognizer::getBestAvailableModel()
     return bestModel;
 }
 
-// Every other setting Mudlet keeps goes through MudletSettings::getQSettings(), which
+// Every other setting Mudlet keeps goes through MudletApp::getQSettings(), which
 // is the located Mudlet.ini inside the config directory. A default-constructed
 // QSettings is a different store entirely - native format under the
 // organisation and application names, so ~/.config/Mudlet/Mudlet.conf on Linux
@@ -1006,7 +1005,7 @@ QString VoskRecognizer::getBestAvailableModel()
 // each other's choice of model.
 static QString selectedModelName()
 {
-    QSettings* pSettings = MudletSettings::getQSettings();
+    QSettings* pSettings = MudletApp::getQSettings();
     if (!pSettings) {
         return QString();
     }

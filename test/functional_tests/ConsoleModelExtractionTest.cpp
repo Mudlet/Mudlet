@@ -30,7 +30,7 @@
 #include <tuple>
 
 #include "GifTestHelper.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "GifTracker.h"
 #include "Host.h"
@@ -404,7 +404,7 @@ private slots:
         const QString stopAnnouncement = TMainConsole::tr("Logging has been stopped. Log file is %1");
         // The sentinel is what makes logging resume at the next launch
         // (Host::mLogStatus), so it has to appear and disappear with the log.
-        const QString sentinel = MudletPaths::getMudletPath(enums::profileDataItemPath, host->getName(), qsl("autolog"));
+        const QString sentinel = MudletApp::getMudletPath(enums::profileDataItemPath, host->getName(), qsl("autolog"));
         QVERIFY2(console->logButton->toolTip().contains(offerToStart), "The log button does not offer to start logging before one has been started.");
 
         // Through the toolbar button rather than toggleLogging() directly: that
@@ -510,7 +510,7 @@ private slots:
     void test_profileLoadFillsTheModelColoursWithNoView()
     {
         pinTheFixtureColoursAreNotTheDefaults();
-        const QString saveFolder = MudletPaths::getMudletPath(enums::profileXmlFilesPath, mColourHostname);
+        const QString saveFolder = MudletApp::getMudletPath(enums::profileXmlFilesPath, mColourHostname);
         QVERIFY2(QDir().mkpath(saveFolder), "Could not create the seeded profile's save directory.");
         const QString savePath = qsl("%1profileColours.xml").arg(saveFolder);
         writeProfileColourSave(savePath);
@@ -699,7 +699,7 @@ private slots:
     // a null pointer here.
     void test_spellDictionaryRoundTripsWithNoView()
     {
-        const QString saveFolder = MudletPaths::getMudletPath(enums::profileXmlFilesPath, mSpellHostname);
+        const QString saveFolder = MudletApp::getMudletPath(enums::profileXmlFilesPath, mSpellHostname);
         QVERIFY2(QDir().mkpath(saveFolder), "Could not create the seeded profile's save directory.");
         const QString savePath = qsl("%1profileSpellDic.xml").arg(saveFolder);
         writeProfileSave(savePath, qsl("      <mSpellDic>%1</mSpellDic>\n").arg(mProfileSpellDic));
@@ -2663,7 +2663,7 @@ private:
     // Utility function
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = MudletPaths::getMudletPath(enums::profileHomePath, profileName);
+        const QString path = MudletApp::getMudletPath(enums::profileHomePath, profileName);
         QDir dir(path);
         if (!dir.exists()) {
             return;

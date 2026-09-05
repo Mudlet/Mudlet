@@ -23,7 +23,7 @@
 #include "AliasUnit.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "TMainConsole.h"
@@ -61,7 +61,7 @@ private:
     // Their aliases are named differently so which half lost its items shows.
     QString writeHalf(const QString& folder, const QString& aliasName)
     {
-        const QString home = MudletPaths::getMudletPath(enums::profileHomePath, mpHostname);
+        const QString home = MudletApp::getMudletPath(enums::profileHomePath, mpHostname);
         const QString directory = qsl("%1/%2").arg(home, folder);
         if (!QDir().mkpath(directory)) {
             return QString();
@@ -112,8 +112,8 @@ private:
         }
     }
 
-    QString moduleHalfPath() const { return qsl("%1/as-module/%2.xml").arg(MudletPaths::getMudletPath(enums::profileHomePath, mpHostname), mDualName); }
-    QString packageHalfPath() const { return qsl("%1/as-package/%2.xml").arg(MudletPaths::getMudletPath(enums::profileHomePath, mpHostname), mDualName); }
+    QString moduleHalfPath() const { return qsl("%1/as-module/%2.xml").arg(MudletApp::getMudletPath(enums::profileHomePath, mpHostname), mDualName); }
+    QString packageHalfPath() const { return qsl("%1/as-package/%2.xml").arg(MudletApp::getMudletPath(enums::profileHomePath, mpHostname), mDualName); }
 
     // A profile up and running with both halves written out and neither of them
     // installed, so that a test can ask for either one first.
@@ -213,7 +213,7 @@ private slots:
         mpPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -379,7 +379,7 @@ private slots:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = MudletPaths::getMudletPath(enums::profileHomePath, profileName);
+        const QString path = MudletApp::getMudletPath(enums::profileHomePath, profileName);
         QDir dir(path);
         if (!dir.exists()) {
             return;

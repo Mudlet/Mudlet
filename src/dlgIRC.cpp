@@ -25,15 +25,13 @@
 
 #include "dlgIRC.h"
 #include "Host.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "ircmessageformatter.h"
 
 #include <IrcTextFormat>
 #include <IrcUser>
 
 #include "mudlet.h"
-#include "MudletSettings.h"
-#include "MudletVersion.h"
 
 #include <QDesktopServices>
 #include <QScrollBar>
@@ -43,13 +41,13 @@
 
 dlgIRC::dlgIRC(Host* pHost)
 : mpHost(pHost)
-, mRealName(MudletVersion::scmVersion())
+, mRealName(MudletApp::scmVersion())
 {
     setupUi(this);
     setWindowIcon(QIcon(qsl(":/icons/mudlet_irc.png")));
 
     bool isIntOk = false;
-    mMessageBufferLimit = MudletSettings::getQSettings()->value("ircMessageBufferLimit", dlgIRC::DefaultMessageBufferLimit).toInt(&isIntOk);
+    mMessageBufferLimit = MudletApp::getQSettings()->value("ircMessageBufferLimit", dlgIRC::DefaultMessageBufferLimit).toInt(&isIntOk);
     if (!isIntOk) {
         mMessageBufferLimit = dlgIRC::DefaultMessageBufferLimit;
     }
@@ -779,7 +777,7 @@ QString dlgIRC::readIrcPassword(Host* pH)
 
 QString dlgIRC::readAppDefaultIrcNick()
 {
-    QFile file(MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("irc_nick")));
+    QFile file(MudletApp::getMudletPath(enums::mainDataItemPath, qsl("irc_nick")));
     const bool opened = file.open(QIODevice::ReadOnly);
     QString rstr;
     if (opened) {
@@ -793,7 +791,7 @@ QString dlgIRC::readAppDefaultIrcNick()
 
 void dlgIRC::writeAppDefaultIrcNick(const QString& nick)
 {
-    QSaveFile file(MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("irc_nick")));
+    QSaveFile file(MudletApp::getMudletPath(enums::mainDataItemPath, qsl("irc_nick")));
     const bool opened = file.open(QIODevice::WriteOnly);
     if (opened) {
         QDataStream ofs(&file);
@@ -852,7 +850,7 @@ QPair<bool, QString> dlgIRC::writeIrcChannels(Host* pH, const QStringList& chann
 
 void dlgIRC::writeQSettings()
 {
-    if (auto* settings = MudletSettings::getQSettings()) {
+    if (auto* settings = MudletApp::getQSettings()) {
         settings->setValue("ircMessageBufferLimit", mMessageBufferLimit);
     }
 }

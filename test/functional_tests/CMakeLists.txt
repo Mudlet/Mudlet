@@ -110,7 +110,7 @@ set(TELNET_GROUP_TEST_SOURCES
     TelnetTlsPromptTest.cpp
     TOscTest.cpp
     MsdpMalformedDiagnosticTest.cpp
-    MudletVersionTest.cpp
+    MudletAppVersionTest.cpp
 )
 
 # Triggers and the other scriptable units, and what a running script does to them

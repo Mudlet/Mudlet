@@ -22,7 +22,7 @@
 #include "Host.h"
 #include "MMCPServer.h"
 #include "TEvent.h"
-#include "MudletVersion.h"
+#include "MudletApp.h"
 
 #include <QHostAddress>
 #include <QTcpSocket>
@@ -508,7 +508,7 @@ void MMCPClient::sendVersion()
 {
     QByteArray versionData;
     versionData.append(static_cast<char>(Version));
-    versionData.append(MudletVersion::scmVersion().toLatin1());
+    versionData.append(MudletApp::scmVersion().toLatin1());
     versionData.append(static_cast<char>(End));
     writeData(versionData);
 }

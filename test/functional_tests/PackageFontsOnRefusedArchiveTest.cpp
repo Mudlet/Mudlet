@@ -53,7 +53,7 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "TLuaInterpreter.h"
 #include "mudlet.h"
@@ -146,7 +146,7 @@ private:
         return zip_close(archive) == 0;
     }
 
-    QString packageFolder(const QString& packageName) const { return MudletPaths::getMudletPath(enums::profilePackagePath, mProfileName, packageName); }
+    QString packageFolder(const QString& packageName) const { return MudletApp::getMudletPath(enums::profilePackagePath, mProfileName, packageName); }
 
 private slots:
     void initTestCase()
@@ -172,7 +172,7 @@ private slots:
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
-        QVERIFY2(MudletPaths::getMudletPath(enums::profilesPath).startsWith(mConfigDir.path()), "test config dir redirection did not take effect");
+        QVERIFY2(MudletApp::getMudletPath(enums::profilesPath).startsWith(mConfigDir.path()), "test config dir redirection did not take effect");
 
         QVERIFY2(mudlet::self()->getHostManager().addHost(mProfileName, QString(), QString(), QString()), "failed to create the Host");
         mpHost = mudlet::self()->getHostManager().getHost(mProfileName);

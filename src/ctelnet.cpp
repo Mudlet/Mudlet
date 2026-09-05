@@ -31,7 +31,7 @@
 
 
 #include "Host.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "TBuffer.h"
 #include "TMxpProcessor.h"
 #include "TConsole.h"
@@ -50,8 +50,6 @@
 #include "dlgComposer.h"
 #include "dlgMapper.h"
 #include "mudlet.h"
-#include "MudletSettings.h"
-#include "MudletVersion.h"
 #if defined(INCLUDE_3DMAPPER)
 #include "glwidget_integration.h"
 #endif
@@ -143,8 +141,8 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
     // to set up the initial encoder
     encodingChanged("UTF-8");
     termType = qsl("Mudlet " APP_VERSION);
-    if (!MudletVersion::build().trimmed().isEmpty()) {
-        termType.append(MudletVersion::build());
+    if (!MudletApp::buildSuffix().trimmed().isEmpty()) {
+        termType.append(MudletApp::buildSuffix());
     }
 
     command = "";
@@ -840,7 +838,7 @@ void cTelnet::slot_send_login()
         sendData(mpHost->getLogin());
     }
     if (mpHost->hasAutoLoginCredentials()) {
-        QSettings& settings = *MudletSettings::getQSettings();
+        QSettings& settings = *MudletApp::getQSettings();
         bool passwordDelayOk = false;
         const int passwordDelayRaw = settings.value(qsl("autoLoginPasswordDelay"), AUTO_LOGIN_PASSWORD_DELAY_MS).toInt(&passwordDelayOk);
         const auto passwordDelay = qBound(0, passwordDelayOk ? passwordDelayRaw : AUTO_LOGIN_PASSWORD_DELAY_MS, AUTO_LOGIN_MAX_DELAY_MS);
@@ -941,7 +939,7 @@ void cTelnet::slot_socketConnected()
 #endif
     mpHost->mLuaInterpreter.call(qsl("onConnect"), QString());
     mConnectionTimer.start();
-    QSettings& settings = *MudletSettings::getQSettings();
+    QSettings& settings = *MudletApp::getQSettings();
     bool usernameDelayOk = false;
     const int usernameDelayRaw = settings.value(qsl("autoLoginUsernameDelay"), AUTO_LOGIN_USERNAME_DELAY_MS).toInt(&usernameDelayOk);
     const auto usernameDelay = qBound(0, usernameDelayOk ? usernameDelayRaw : AUTO_LOGIN_USERNAME_DELAY_MS, AUTO_LOGIN_MAX_DELAY_MS);
@@ -2195,7 +2193,7 @@ QString cTelnet::getNewEnvironClientVersion()
     static const auto allInvalidCharacters = QRegularExpression(qsl("[^A-Z,0-9,-,\\/]"));
     static const auto multipleHyphens = QRegularExpression(qsl("-{2,}"));
 
-    if (const auto build = MudletVersion::build(); !build.trimmed().isEmpty()) {
+    if (const auto build = MudletApp::buildSuffix(); !build.trimmed().isEmpty()) {
         clientVersion.append(build);
     }
 
@@ -2369,7 +2367,7 @@ QString cTelnet::getNewEnvironTLS()
 
 QString cTelnet::getNewEnvironLanguage()
 {
-    return MudletSettings::getInterfaceLanguage();
+    return MudletApp::getInterfaceLanguage();
 }
 
 QString cTelnet::getNewEnvironWordWrap()
@@ -3114,7 +3112,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             output += MSDP_VAR;
             output += "CLIENT_VERSION";
             output += MSDP_VAL;
-            output += encodeAndCookBytes(std::string(APP_VERSION) + MudletVersion::build().toUtf8().constData());
+            output += encodeAndCookBytes(std::string(APP_VERSION) + MudletApp::buildSuffix().toUtf8().constData());
             output += TN_IAC;
             output += TN_SE;
             socketOutRaw(output);
@@ -3146,7 +3144,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             output += TN_IAC;
             output += TN_SB;
             output += OPT_ATCP;
-            std::string atcpOptions = std::string("hello Mudlet ") + std::string(APP_VERSION) + MudletVersion::build().toUtf8().constData()
+            std::string atcpOptions = std::string("hello Mudlet ") + std::string(APP_VERSION) + MudletApp::buildSuffix().toUtf8().constData()
                                       + "\ncomposer 1\nchar_vitals 1\nroom_brief 1\nroom_exits 1\nmap_display 1\n";
             output += encodeAndCookBytes(atcpOptions);
             output += TN_IAC;
@@ -3177,8 +3175,8 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             output = TN_IAC;
             output += TN_SB;
             output += OPT_GMCP;
-            // MudletVersion::build() could, conceivably contain a non-ASCII character:
-            output += encodeAndCookBytes(std::string(R"(Core.Hello { "client": "Mudlet", "version": ")") + APP_VERSION + MudletVersion::build().toUtf8().constData() + std::string(R"("})"));
+            // MudletApp::buildSuffix() could, conceivably contain a non-ASCII character:
+            output += encodeAndCookBytes(std::string(R"(Core.Hello { "client": "Mudlet", "version": ")") + APP_VERSION + MudletApp::buildSuffix().toUtf8().constData() + std::string(R"("})"));
             output += TN_IAC;
             output += TN_SE;
             socketOutRaw(output);
@@ -3963,8 +3961,8 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 output += TN_IAC;
                 output += TN_SB;
                 output += OPT_ATCP;
-                // MudletVersion::build() *could* be a non-ASCII UTF-8 string:
-                std::string atcpOptions = std::string("hello Mudlet ") + std::string(APP_VERSION) + MudletVersion::build().toUtf8().constData()
+                // MudletApp::buildSuffix() *could* be a non-ASCII UTF-8 string:
+                std::string atcpOptions = std::string("hello Mudlet ") + std::string(APP_VERSION) + MudletApp::buildSuffix().toUtf8().constData()
                                           + "\ncomposer 1\nchar_vitals 1\nroom_brief 1\nroom_exits 1\nmap_display 1\n";
                 output += encodeAndCookBytes(atcpOptions);
                 output += TN_IAC;
@@ -4371,7 +4369,7 @@ void cTelnet::downloadAndInstallGUIPackage(const QString& packageName, const QSt
                    "(url='%2').")
                         .arg(packageName, url));
 
-    mServerPackage = MudletPaths::getMudletPath(enums::profileDataItemPath, mProfileName, fileName);
+    mServerPackage = MudletApp::getMudletPath(enums::profileDataItemPath, mProfileName, fileName);
     mpHost->updateProxySettings(mpDownloader);
 
     // Abort any in-flight predecessor while mpPackageDownloadReply still points
@@ -4383,7 +4381,7 @@ void cTelnet::downloadAndInstallGUIPackage(const QString& packageName, const QSt
     }
 
     auto request = QNetworkRequest(QUrl(url));
-    MudletVersion::setNetworkRequestDefaults(url, request);
+    MudletApp::setNetworkRequestDefaults(url, request);
     mpPackageDownloadReply = mpDownloader->get(request);
 
     connect(mpPackageDownloadReply, &QNetworkReply::downloadProgress, this, &cTelnet::slot_setDownloadProgress);

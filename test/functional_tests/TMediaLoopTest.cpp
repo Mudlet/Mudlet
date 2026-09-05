@@ -26,7 +26,7 @@
 
 #include <chrono>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -155,7 +155,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -1006,7 +1006,7 @@ private:
     // Writes a clip into the profile media directory, returning {} if that fails.
     QString writeClip(const QString& fileName, const QByteArray& contents = wavBytes(clipMs)) const
     {
-        const QString mediaPath = MudletPaths::getMudletPath(enums::profileMediaPath, mHostname);
+        const QString mediaPath = MudletApp::getMudletPath(enums::profileMediaPath, mHostname);
         if (!QDir().mkpath(mediaPath)) {
             QTest::qFail("Could not create the profile media directory.", __FILE__, __LINE__);
             return {};
@@ -1064,7 +1064,7 @@ private:
     // Utility function
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = MudletPaths::getMudletPath(enums::profileHomePath, profileName);
+        const QString path = MudletApp::getMudletPath(enums::profileHomePath, profileName);
         QDir dir(path);
 
         if (!dir.exists()) {

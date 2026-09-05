@@ -28,8 +28,7 @@
 #include "CredentialManager.h"
 #include "GMCPAuthenticator.h"
 #include "Host.h"
-#include "MudletPaths.h"
-#include "MudletSettings.h"
+#include "MudletApp.h"
 #include "TAction.h"
 #include "TAlias.h"
 #include "TConsole.h"
@@ -50,7 +49,6 @@
 #include "dlgTriggerEditor.h"
 #include "edbee/views/texteditorscrollarea.h"
 #include "MMCP.h"
-#include "MudletVersion.h"
 #include "widgetutils.h"
 #include "utils.h"
 
@@ -274,7 +272,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     mPopulating = false;
 
 #if defined(INCLUDE_UPDATER)
-    if (MudletVersion::development() && !qEnvironmentVariableIsSet("DEV_UPDATER")) {
+    if (MudletApp::development() && !qEnvironmentVariableIsSet("DEV_UPDATER")) {
         // tick the box and make it be "un-untickable" as automatic updates are
         // disabled in dev builds
         checkbox_noAutomaticUpdates->setChecked(true);
@@ -410,7 +408,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     languageSearchNames.removeDuplicates();
     comboBox_guiLanguage->setProperty(scmProp_searchKeywords, languageSearchNames.join(qsl(", ")));
 
-    auto currentLanguage = MudletSettings::getInterfaceLanguage();
+    auto currentLanguage = MudletApp::getInterfaceLanguage();
     int currentIndex = comboBox_guiLanguage->findData(currentLanguage);
     if (Q_LIKELY(currentIndex != -1)) {
         // The language code has been found in the UserData role for one of the
@@ -458,7 +456,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     rebuildTabOrder();
 
     setMinimumSize(780, 560);
-    const auto geometry = MudletSettings::getQSettings()->value(qsl("profilePreferencesGeometry")).toByteArray();
+    const auto geometry = MudletApp::getQSettings()->value(qsl("profilePreferencesGeometry")).toByteArray();
     if (geometry.isEmpty() || !restoreGeometry(geometry)) {
         resize(1060, 760);
     }
@@ -884,7 +882,7 @@ void dlgProfilePreferences::buildShell()
 // Left null once dismissed, which every page takes in its stride
 void dlgProfilePreferences::buildMigrationBanner()
 {
-    if (MudletSettings::getQSettings()->value(qsl("settingsRedesignBannerSeen"), false).toBool()) {
+    if (MudletApp::getQSettings()->value(qsl("settingsRedesignBannerSeen"), false).toBool()) {
         return;
     }
 
@@ -914,7 +912,7 @@ void dlgProfilePreferences::buildMigrationBanner()
     pBannerLayout->addLayout(pButtonRow);
 
     connect(pDismissButton, &QAbstractButton::clicked, this, [this]() {
-        MudletSettings::getQSettings()->setValue(qsl("settingsRedesignBannerSeen"), true);
+        MudletApp::getQSettings()->setValue(qsl("settingsRedesignBannerSeen"), true);
         // Off the page and out of the member, so no later page switch brings it
         // back. Alive rather than deleted: the click is still being delivered.
         placeBannerOn(nullptr);
@@ -3901,11 +3899,11 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     // Unfortunately OpenBSD does not ship a dictionary for THAT language which
     // prevents us using it to find any system ones
     const QString& currentDictionary = pHost->getSpellDic();
-    // This will also settle MudletPaths::usingMudletDictionaries():
-    const QString path = MudletPaths::getMudletPath(enums::hunspellDictionaryPath, currentDictionary);
+    // This will also settle MudletApp::usingMudletDictionaries():
+    const QString path = MudletApp::getMudletPath(enums::hunspellDictionaryPath, currentDictionary);
     // Tweak the label for the provided spelling dictionaries depending on where
     // they come from:
-    if (MudletPaths::usingMudletDictionaries()) {
+    if (MudletApp::usingMudletDictionaries()) {
         //: On Windows and MacOs, we have to bundle our own dictionaries with our application - and we also use them on *nix systems where we do not find the system ones
         checkBox_spellCheck->setText(tr("Enable spell check using Mudlet dictionary:"));
     } else {
@@ -4173,7 +4171,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     // pHost->mLogDir should be empty for the default location:
     mLogDirPath = pHost->mLogDir;
     lineEdit_logFileFolder->setText(mLogDirPath);
-    lineEdit_logFileFolder->setPlaceholderText(MudletPaths::getMudletPath(enums::profileReplayAndLogFilesPath, pHost->getName()));
+    lineEdit_logFileFolder->setPlaceholderText(MudletApp::getMudletPath(enums::profileReplayAndLogFilesPath, pHost->getName()));
     // set the cursor position to the end of the lineEdit's text property.
     lineEdit_logFileFolder->setCursorPosition(lineEdit_logFileFolder->text().length());
     // Enable the reset button if the current location is not the default one:
@@ -4184,7 +4182,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     mFORCE_MCCP_OFF->setChecked(pHost->mFORCE_NO_COMPRESSION);
     mFORCE_GA_OFF->setChecked(pHost->mFORCE_GA_OFF);
     mAlertOnNewData->setChecked(pHost->mAlertOnNewData);
-    telnetHandlerEnabled->setChecked(MudletSettings::getQSettings()->value("telnetHandlerEnabled", false).toBool());
+    telnetHandlerEnabled->setChecked(MudletApp::getQSettings()->value("telnetHandlerEnabled", false).toBool());
     //encoding->setCurrentIndex( pHost->mEncoding );
     mFORCE_SAVE_ON_EXIT->setChecked(pHost->mFORCE_SAVE_ON_EXIT);
 
@@ -4206,7 +4204,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     // load profiles into mappers "copy map to profile" combobox
     // this feature should work seamlessly both for online and offline profiles
-    const QStringList profileList = QDir(MudletPaths::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Time); // sort by profile "hotness"
+    const QStringList profileList = QDir(MudletApp::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Time); // sort by profile "hotness"
     pushButton_chooseProfiles->setEnabled(false);
     pushButton_copyMap->setEnabled(false);
     if (!mpMenu) {
@@ -5869,7 +5867,7 @@ void dlgProfilePreferences::fillOutMapHistory()
         }
     }
     const QRegularExpression mapSaveRegularExpression{qsl("(\\d+)\\-(\\d+)\\-(\\d+)#(\\d+)\\-(\\d+)\\-(\\d+)(?:map)?\\.(dat|xml|json)"), QRegularExpression::CaseInsensitiveOption};
-    QDir mapSaveDir(MudletPaths::getMudletPath(enums::profileMapsPath, profile_name).append(QLatin1Char('/')));
+    QDir mapSaveDir(MudletApp::getMudletPath(enums::profileMapsPath, profile_name).append(QLatin1Char('/')));
     mapSaveDir.setSorting(QDir::Time);
     const QStringList mapSaveEntries = mapSaveDir.entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
     for (const auto& entry : mapSaveEntries) {
@@ -6006,8 +6004,8 @@ void dlgProfilePreferences::slot_loadMap()
 
     QFileDialog* dialog = new QFileDialog(this);
     dialog->setWindowTitle(tr("Load Mudlet map"));
-    QSettings& settings = *MudletSettings::getQSettings();
-    QString lastDir = settings.value("lastFileDialogLocation", MudletPaths::getMudletPath(enums::profileHomePath, pHost->getName())).toString();
+    QSettings& settings = *MudletApp::getQSettings();
+    QString lastDir = settings.value("lastFileDialogLocation", MudletApp::getMudletPath(enums::profileHomePath, pHost->getName())).toString();
     dialog->setDirectory(lastDir);
     dialog->setNameFilter(loadExtensions.join(qsl(";;")));
     connect(dialog, &QDialog::finished, this, [=, this](int result) {
@@ -6017,7 +6015,7 @@ void dlgProfilePreferences::slot_loadMap()
 
         auto fileName = dialog->selectedFiles().constFirst();
         loadMap(fileName);
-        QSettings& settings = *MudletSettings::getQSettings();
+        QSettings& settings = *MudletApp::getQSettings();
         QString lastDir = QFileInfo(fileName).absolutePath();
         settings.setValue("lastFileDialogLocation", lastDir);
     });
@@ -6037,8 +6035,8 @@ void dlgProfilePreferences::slot_saveMap()
 
     QFileDialog* dialog = new QFileDialog(this);
     dialog->setWindowTitle(tr("Save Mudlet map"));
-    QSettings& settings = *MudletSettings::getQSettings();
-    QString lastDir = settings.value("lastFileDialogLocation", MudletPaths::getMudletPath(enums::profileHomePath, pHost->getName())).toString();
+    QSettings& settings = *MudletApp::getQSettings();
+    QString lastDir = settings.value("lastFileDialogLocation", MudletApp::getMudletPath(enums::profileHomePath, pHost->getName())).toString();
     dialog->setDirectory(lastDir);
     dialog->setNameFilter(saveExtensions.join(qsl(";;")));
     dialog->setAcceptMode(QFileDialog::AcceptSave);
@@ -6059,7 +6057,7 @@ void dlgProfilePreferences::slot_saveMap()
 
         auto fileName = dialog->selectedFiles().constFirst();
 
-        QSettings& settings = *MudletSettings::getQSettings();
+        QSettings& settings = *MudletApp::getQSettings();
         QString lastDir = QFileInfo(fileName).absolutePath();
         settings.setValue("lastFileDialogLocation", lastDir);
 
@@ -6094,9 +6092,9 @@ void dlgProfilePreferences::slot_saveMap()
 
 QString dlgProfilePreferences::mapSaveLoadDirectory(Host* pHost)
 {
-    const QString mapsPath = MudletPaths::getMudletPath(enums::profileMapsPath, pHost->getName());
+    const QString mapsPath = MudletApp::getMudletPath(enums::profileMapsPath, pHost->getName());
     const QDir mapsDir = QDir(mapsPath);
-    return mapsDir.exists() ? mapsPath : MudletPaths::getMudletPath(enums::profileHomePath, pHost->getName());
+    return mapsDir.exists() ? mapsPath : MudletApp::getMudletPath(enums::profileHomePath, pHost->getName());
 }
 
 void dlgProfilePreferences::slot_hideActionLabel()
@@ -6150,7 +6148,7 @@ void dlgProfilePreferences::slot_copyMap()
 
             // Check for the destination directory for the other profiles
             const QDir toProfileDir;
-            const QString toProfileDirPathString = MudletPaths::getMudletPath(enums::profileHomePath, pHost->getName());
+            const QString toProfileDirPathString = MudletApp::getMudletPath(enums::profileHomePath, pHost->getName());
             if (!toProfileDir.exists(toProfileDirPathString)) {
                 if (!toProfileDir.mkpath(toProfileDirPathString)) {
                     const QString errMsg = tr("[ ERROR ] - Unable to use or create directory to store map for other profile \"%1\".\n"
@@ -6251,7 +6249,7 @@ void dlgProfilePreferences::slot_copyMap()
     // we just saved!
     QString thisProfileLatestMapPathFileName;
     QFile thisProfileLatestMapFile;
-    const QString sourceMapFolder(MudletPaths::getMudletPath(enums::profileMapsPath, pHost->getName()));
+    const QString sourceMapFolder(MudletApp::getMudletPath(enums::profileMapsPath, pHost->getName()));
     const QStringList mProfileList = QDir(sourceMapFolder).entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
     for (unsigned int i = 0, total = mProfileList.size(); i < total; ++i) {
         thisProfileLatestMapPathFileName = mProfileList.at(i);
@@ -6281,7 +6279,7 @@ void dlgProfilePreferences::slot_copyMap()
                                // Just in case is needed to make the above message
                                // show up when saving big maps
 
-        if (!thisProfileLatestMapFile.copy(MudletPaths::getMudletPath(enums::profileMapPathFileName, otherHostName, thisProfileLatestMapPathFileName))) {
+        if (!thisProfileLatestMapFile.copy(MudletApp::getMudletPath(enums::profileMapPathFileName, otherHostName, thisProfileLatestMapPathFileName))) {
             label_mapFileActionResult->setText(tr("Could not copy the map to %1 - unable to copy the new map file over.").arg(otherHostName));
             QTimer::singleShot(10s, this, &dlgProfilePreferences::slot_hideActionLabel);
             continue; // Try again with next profile
@@ -6312,8 +6310,8 @@ void dlgProfilePreferences::slot_setLogDir()
         return;
     }
 
-    QSettings& settings = *MudletSettings::getQSettings();
-    QString lastDir = settings.value("lastFileDialogLocation", MudletPaths::getMudletPath(enums::profileHomePath, pHost->getName())).toString();
+    QSettings& settings = *MudletApp::getQSettings();
+    QString lastDir = settings.value("lastFileDialogLocation", MudletApp::getMudletPath(enums::profileHomePath, pHost->getName())).toString();
 
     /*
      * To show the files even though we are looking for a directory so that the
@@ -6342,7 +6340,7 @@ void dlgProfilePreferences::slot_setLogDir()
         // Disable pushButton_resetLogDir and clear
         // lineEdit_logFileFolder if the directory is set to the
         // default path
-        if (currentLogDir == MudletPaths::getMudletPath(enums::profileReplayAndLogFilesPath, pHost->getName())) {
+        if (currentLogDir == MudletApp::getMudletPath(enums::profileReplayAndLogFilesPath, pHost->getName())) {
             // clear mLogDirPath, which sets the directory where logs are saved
             // to Mudlet's default log path.
             mLogDirPath.clear();
@@ -6628,7 +6626,7 @@ void dlgProfilePreferences::applyAll()
         }
 
         if (mSnapshot.dirty(telnetHandlerEnabled)) {
-            QSettings* settings = MudletSettings::getQSettings();
+            QSettings* settings = MudletApp::getQSettings();
             if (settings->value("telnetHandlerEnabled", false).toBool() != telnetHandlerEnabled->isChecked()) {
                 settings->setValue("telnetHandlerEnabled", telnetHandlerEnabled->isChecked());
             }
@@ -6903,7 +6901,7 @@ void dlgProfilePreferences::applyAll()
     }
 
 #if defined(INCLUDE_UPDATER)
-    if (mSnapshot.dirty(checkbox_noAutomaticUpdates) && (MudletVersion::release() || MudletVersion::publicTest() || qEnvironmentVariableIsSet("DEV_UPDATER"))) {
+    if (mSnapshot.dirty(checkbox_noAutomaticUpdates) && (MudletApp::release() || MudletApp::publicTest() || qEnvironmentVariableIsSet("DEV_UPDATER"))) {
         pMudlet->pUpdater->setAutomaticUpdates(!checkbox_noAutomaticUpdates->isChecked());
     }
 #endif
@@ -7205,7 +7203,7 @@ void dlgProfilePreferences::maybeDownloadEditorThemes()
         return;
     }
 
-    QSettings& settings = *MudletSettings::getQSettings();
+    QSettings& settings = *MudletApp::getQSettings();
     const QString themesURL = settings.value("colorSublimeThemesURL", qsl("https://github.com/Colorsublime/Colorsublime-Themes/archive/master.zip")).toString();
     // a default update period is 24h
     // it would be nice to use C++14's numeric separator but Qt Creator still
@@ -7216,7 +7214,7 @@ void dlgProfilePreferences::maybeDownloadEditorThemes()
     settings.setValue("colorSublimeThemesURL", themesURL);
     settings.setValue("themesUpdatePeriod", themesUpdatePeriod);
 
-    auto themesAge = QFileInfo(MudletPaths::getMudletPath(enums::editorWidgetThemeJsonFile)).lastModified().toUTC();
+    auto themesAge = QFileInfo(MudletApp::getMudletPath(enums::editorWidgetThemeJsonFile)).lastModified().toUTC();
 
     // A test visiting the Editor category is otherwise one file modification
     // time away from a live fetch that fails slowly rather than red
@@ -7237,7 +7235,7 @@ void dlgProfilePreferences::maybeDownloadEditorThemes()
 
     const QUrl url(themesURL);
     QNetworkRequest request(url);
-    request.setRawHeader(QByteArray("User-Agent"), QByteArray(qsl("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, MudletVersion::build()).toUtf8().constData()));
+    request.setRawHeader(QByteArray("User-Agent"), QByteArray(qsl("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, MudletApp::buildSuffix()).toUtf8().constData()));
     // github uses redirects
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
     // load from cache if possible
@@ -7279,7 +7277,7 @@ void dlgProfilePreferences::maybeDownloadEditorThemes()
                         }
 
                         // perform unzipping in a worker thread so as not to freeze the UI
-                        auto future = QtConcurrent::run(mudlet::unzip, tempThemesArchive->fileName(), MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("edbee/")), temporaryDir.path());
+                        auto future = QtConcurrent::run(mudlet::unzip, tempThemesArchive->fileName(), MudletApp::getMudletPath(enums::mainDataItemPath, qsl("edbee/")), temporaryDir.path());
                         auto watcher = new QFutureWatcher<bool>(this);
                         connect(watcher, &QFutureWatcher<bool>::finished, this, [=, this]() {
                             if (future.result()) {
@@ -7302,7 +7300,7 @@ void dlgProfilePreferences::maybeDownloadEditorThemes()
 // selection combobox with them
 void dlgProfilePreferences::populateThemesList()
 {
-    QFile themesFile(MudletPaths::getMudletPath(enums::editorWidgetThemeJsonFile));
+    QFile themesFile(MudletApp::getMudletPath(enums::editorWidgetThemeJsonFile));
     QList<std::pair<QString, QString>> sortedThemes;
     QJsonArray unsortedThemes;
 
@@ -8851,7 +8849,7 @@ void dlgProfilePreferences::closeEvent(QCloseEvent* event)
         pHost->saveProfile();
     }
 
-    MudletSettings::getQSettings()->setValue(qsl("profilePreferencesGeometry"), saveGeometry());
+    MudletApp::getQSettings()->setValue(qsl("profilePreferencesGeometry"), saveGeometry());
 
     if (mpHost) {
         emit preferencesClosing(mpHost->getName());

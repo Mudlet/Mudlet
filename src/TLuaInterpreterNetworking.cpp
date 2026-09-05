@@ -51,7 +51,7 @@
 #include "dlgTriggerEditor.h"
 #include "mapInfoContributorManager.h"
 #include "mudlet.h"
-#include "MudletVersion.h"
+#include "MudletApp.h"
 #if defined(INCLUDE_3DMAPPER)
 #include "glwidget_integration.h"
 #endif
@@ -138,7 +138,7 @@ int TLuaInterpreter::downloadFile(lua_State* L)
     }
 
     QNetworkRequest request = QNetworkRequest(url);
-    MudletVersion::setNetworkRequestDefaults(url, request);
+    MudletApp::setNetworkRequestDefaults(url, request);
 
     host.updateProxySettings(host.mLuaInterpreter.mpFileDownloader);
     QNetworkReply* reply = host.mLuaInterpreter.mpFileDownloader->get(request);
@@ -730,7 +730,7 @@ int TLuaInterpreter::getHTTP(lua_State* L)
     }
 
     QNetworkRequest request = QNetworkRequest(url);
-    MudletVersion::setNetworkRequestDefaults(url, request);
+    MudletApp::setNetworkRequestDefaults(url, request);
     applyHttpHeaders(L, 2, request);
 
     host.updateProxySettings(host.mLuaInterpreter.mpFileDownloader);
@@ -772,7 +772,7 @@ int TLuaInterpreter::deleteHTTP(lua_State* L)
     }
 
     QNetworkRequest request = QNetworkRequest(url);
-    MudletVersion::setNetworkRequestDefaults(url, request);
+    MudletApp::setNetworkRequestDefaults(url, request);
     applyHttpHeaders(L, 2, request);
 
     host.updateProxySettings(host.mLuaInterpreter.mpFileDownloader);

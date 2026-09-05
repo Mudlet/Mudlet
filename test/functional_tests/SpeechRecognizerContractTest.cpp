@@ -48,12 +48,11 @@
 #include <QSignalSpy>
 #include <QTemporaryDir>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "MudletInstanceCoordinator.h"
 #include "VoskRecognizer.h"
 #include "mudlet.h"
-#include "MudletSettings.h"
 
 #include "GroupedTest.h"
 
@@ -90,7 +89,7 @@ private slots:
         QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
         qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
 
-        // VoskRecognizer's path helpers go through MudletPaths::getMudletPath(),
+        // VoskRecognizer's path helpers go through MudletApp::getMudletPath(),
         // which dereferences mudlet::self()
         mudlet::start();
         mudlet::self()->setupConfig();
@@ -308,7 +307,7 @@ private slots:
         QVERIFY(QDir().mkpath(qsl("%1/vosk-model-small-en-us-0.15/am").arg(modelsDir)));
         QVERIFY(QDir().mkpath(qsl("%1/vosk-model-small-fr-0.22/am").arg(modelsDir)));
 
-        auto* pSettings = MudletSettings::getQSettings();
+        auto* pSettings = MudletApp::getQSettings();
         QVERIFY(pSettings);
         pSettings->beginGroup(qsl("SpeechRecognition"));
         pSettings->remove(qsl("selectedModel"));

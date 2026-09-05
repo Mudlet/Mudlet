@@ -19,8 +19,7 @@
  ***************************************************************************/
 
 #include "CredentialManager.h"
-#include "MudletPaths.h"
-#include "MudletVersion.h"
+#include "MudletApp.h"
 #include "SecureStringUtils.h"
 #include "utils.h"
 
@@ -67,11 +66,11 @@ QString credentialFilePath(const QString& profileComponent, const QString& keyCo
 }
 
 // The length the old scheme cut a path component to. Its own constant rather than
-// the limit MudletPaths::sanitizeForPath() applies: that one is free to change, while
+// the limit MudletApp::sanitizeForPath() applies: that one is free to change, while
 // this records what is already written on disk and so can never change.
 constexpr int scmLegacyMaxPathComponentLength = 50;
 
-// How MudletPaths::sanitizeForPath() built a path component before it started keeping
+// How MudletApp::sanitizeForPath() built a path component before it started keeping
 // shortened names distinct, kept so that credentials filed under the old name can
 // still be found. Same role as generateLegacyServiceName() plays for the keychain.
 QString legacyPathComponent(const QString& input)
@@ -207,7 +206,7 @@ bool CredentialManager::isOperationValid() const
 
 bool CredentialManager::isPortableModeActive() const
 {
-    return MudletPaths::resolveConfigRoot(MudletPaths::executableDir()).portable;
+    return MudletApp::resolveConfigRoot(MudletApp::executableDir()).portable;
 }
 
 bool CredentialManager::shouldUseKeychain(const QString& profileName) const
@@ -390,7 +389,7 @@ void CredentialManager::attemptCollidingMigration(const QString& profileName, co
             const QVersionNumber collidingFormatVersion = QVersionNumber(4, 20, 1);
 
             // Dev/test/PTB builds represent the "next release", so bump version for comparison
-            const QString buildSuffix = MudletVersion::build();
+            const QString buildSuffix = MudletApp::buildSuffix();
             if (buildSuffix.startsWith(qsl("-dev")) || buildSuffix.startsWith(qsl("-test")) || buildSuffix.startsWith(qsl("-ptb"))) {
                 appVersion = QVersionNumber(appVersion.majorVersion(), appVersion.minorVersion(), appVersion.microVersion() + 1);
             }
@@ -1411,7 +1410,7 @@ QString CredentialManager::generateFilePath(const QString& profileName, const QS
         return QString();
     }
 
-    return credentialFilePath(MudletPaths::sanitizeForPath(profileName), MudletPaths::sanitizeForPath(key));
+    return credentialFilePath(MudletApp::sanitizeForPath(profileName), MudletApp::sanitizeForPath(key));
 }
 
 // Where a credential was filed while both path components were simply truncated to 50

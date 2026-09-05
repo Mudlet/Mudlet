@@ -772,7 +772,7 @@ private:
     QString mTimeFormat;
     enums::controlsVisibility mToolbarVisibility = enums::visibleNever;
     QList<QPointer<QTranslator>> mTranslatorsLoadedList;
-    // An encapsulation of MudletSettings::getInterfaceLanguage() in a form
+    // An encapsulation of MudletApp::getInterfaceLanguage() in a form
     // that Qt uses to hold all the details:
     QLocale mUserLocale;
     QMap<Host*, QToolBar*> mUserToolbarMap;

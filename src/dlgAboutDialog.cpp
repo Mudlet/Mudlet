@@ -27,7 +27,7 @@
 #include "dlgAboutDialog.h"
 
 #include "mudlet.h"
-#include "MudletVersion.h"
+#include "MudletApp.h"
 
 #include <QPainter>
 #include <QTextLayout>
@@ -42,13 +42,13 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent)
 {
     setupUi(this);
 
-    QImage splashImage = mudlet::getSplashScreen(MudletVersion::release(), MudletVersion::publicTest());
+    QImage splashImage = mudlet::getSplashScreen(MudletApp::release(), MudletApp::publicTest());
 
     { // Brace code using painter to ensure it is freed at right time...
         QPainter painter(&splashImage);
 
         unsigned fontSize = 16;
-        QString sourceVersionText = QString("Version: " + qsl(APP_VERSION) + MudletVersion::build());
+        QString sourceVersionText = QString("Version: " + qsl(APP_VERSION) + MudletApp::buildSuffix());
 
         bool isWithinSpace = false;
         while (!isWithinSpace) {
@@ -1524,7 +1524,7 @@ QString dlgAboutDialog::createBuildInfo() const
                    "</table>")
                 .arg(tr("Technical information:"),  // %1
                      tr("Version"),                 // %2
-                     MudletVersion::scmVersion(),   // %3
+                     MudletApp::scmVersion(),       // %3
                      tr("OS"),                      // %4
                      QSysInfo::prettyProductName(), // %5
                      tr("CPU (64-bits)"),           // %6 - We only support 64-bit now on Windows but retain what we
@@ -1552,7 +1552,7 @@ QString dlgAboutDialog::createBuildInfo() const
                "</table>")
             .arg(tr("Technical information:"),  // %1
                  tr("Version"),                 // %2
-                 MudletVersion::scmVersion(),   // %3
+                 MudletApp::scmVersion(),       // %3
                  tr("OS"),                      // %4
                  QSysInfo::prettyProductName(), // %5
                  tr("CPU (64-bits)"),           // %6 - We only support 64-bit now on Windows but retain what we
@@ -1575,7 +1575,7 @@ QString dlgAboutDialog::createBuildInfo() const
                    "</table>")
                 .arg(tr("Technical information:"),  // %1
                      tr("Version"),                 // %2
-                     MudletVersion::scmVersion(),   // %3
+                     MudletApp::scmVersion(),       // %3
                      tr("OS"),                      // %4
                      QSysInfo::prettyProductName(), // %5
                      //: This is shown for all other OSes than Windows.
@@ -1603,7 +1603,7 @@ the usual case.*/
                "</table>")
             .arg(tr("Technical information:"),  // %1
                  tr("Version"),                 // %2
-                 MudletVersion::scmVersion(),   // %3
+                 MudletApp::scmVersion(),       // %3
                  tr("OS"),                      // %4
                  QSysInfo::prettyProductName(), // %5
                  //: This is shown for all other OSes than Windows.

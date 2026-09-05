@@ -51,7 +51,7 @@
 #include <QWheelEvent>
 #include <cmath>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "SettingsTestHelper.h"
@@ -60,7 +60,6 @@
 #include "TelnetServerStub.h"
 #include "dlgProfilePreferences.h"
 #include "mudlet.h"
-#include "MudletSettings.h"
 
 #include "GroupedTest.h"
 
@@ -163,7 +162,7 @@ private:
     // MUDLET_TEST_NO_THEME_DOWNLOAD is what keeps that page off the network.
     static void writeEditorThemesFile(const QDateTime& modified)
     {
-        const QString file = MudletPaths::getMudletPath(enums::editorWidgetThemeJsonFile);
+        const QString file = MudletApp::getMudletPath(enums::editorWidgetThemeJsonFile);
         QVERIFY(QDir().mkpath(QFileInfo(file).absolutePath()));
         QFile themes(file);
         QVERIFY(themes.open(QIODevice::WriteOnly | QIODevice::Truncate));
@@ -255,7 +254,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -441,7 +440,7 @@ private slots:
     // on every walk past the Editor page.
     void test_theEditorThemeRefreshRunsOnTheFirstVisitOnly()
     {
-        QSettings* pSettings = MudletSettings::getQSettings();
+        QSettings* pSettings = MudletApp::getQSettings();
         pSettings->remove(qsl("colorSublimeThemesURL"));
         QVERIFY2(!pSettings->contains(qsl("colorSublimeThemesURL")), "the marker this case reads was still set before the first visit");
 
@@ -524,12 +523,12 @@ private slots:
     // network: a live fetch of github.com fails slowly rather than red
     void test_theThemeDownloadHookKeepsTheEditorPageOffTheNetwork()
     {
-        QSettings* pSettings = MudletSettings::getQSettings();
+        QSettings* pSettings = MudletApp::getQSettings();
         const QVariant savedUrl = pSettings->value(qsl("colorSublimeThemesURL"));
         // So that a run where the hook does not hold reaches nothing real
         pSettings->setValue(qsl("colorSublimeThemesURL"), qsl("file:///nonexistent/themes.zip"));
 
-        const QString file = MudletPaths::getMudletPath(enums::editorWidgetThemeJsonFile);
+        const QString file = MudletApp::getMudletPath(enums::editorWidgetThemeJsonFile);
         QVERIFY2(QFileInfo(file).lastModified() < QDateTime::currentDateTime().addDays(-1),
                  "the themes file is younger than the update period, so its own freshness would keep this page off the network and the hook would prove nothing");
 
@@ -578,7 +577,7 @@ private slots:
 
         BracketingTranslator translator;
         QCoreApplication::installTranslator(&translator);
-        mpPreferences->slot_guiLanguageChanged(MudletSettings::getInterfaceLanguage());
+        mpPreferences->slot_guiLanguageChanged(MudletApp::getInterfaceLanguage());
         QCoreApplication::removeTranslator(&translator);
         QCoreApplication::processEvents();
 
@@ -597,7 +596,7 @@ private slots:
 
         BracketingTranslator translator;
         QCoreApplication::installTranslator(&translator);
-        mpPreferences->slot_guiLanguageChanged(MudletSettings::getInterfaceLanguage());
+        mpPreferences->slot_guiLanguageChanged(MudletApp::getInterfaceLanguage());
         // Read before the translator goes, so that a failure here cannot leave
         // it installed for the cases that follow
         const QString category = sidebar()->item(rowOf(qsl("general")))->text();
@@ -1220,7 +1219,7 @@ private slots:
         auto* pGerman = new QTranslator(qApp);
         QVERIFY2(pGerman->load(qsl("mudlet_de_DE"), qsl(":/lang")), "no German translation in the binary's resources, so nothing here would lengthen a string");
         QVERIFY(qApp->installTranslator(pGerman));
-        mpPreferences->slot_guiLanguageChanged(MudletSettings::getInterfaceLanguage());
+        mpPreferences->slot_guiLanguageChanged(MudletApp::getInterfaceLanguage());
         qApp->processEvents();
         // Read before the translator goes, so a failure cannot leave it
         // installed for the cases that follow

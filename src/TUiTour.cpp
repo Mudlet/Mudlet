@@ -23,7 +23,7 @@
 #include "TCommandLine.h"
 #include "TMainConsole.h"
 #include "mudlet.h"
-#include "MudletSettings.h"
+#include "MudletApp.h"
 
 #include <QFrame>
 #include <QGuiApplication>
@@ -75,12 +75,12 @@ bool TUiTour::shouldShowOnFirstProfile()
     if (mudlet::self()->experiencedMudletPlayer()) {
         return false;
     }
-    return !MudletSettings::getQSettings()->value(settingsKeyTourShown, false).toBool();
+    return !MudletApp::getQSettings()->value(settingsKeyTourShown, false).toBool();
 }
 
 void TUiTour::rememberShown()
 {
-    auto* settings = MudletSettings::getQSettings();
+    auto* settings = MudletApp::getQSettings();
     settings->setValue(settingsKeyTourShown, true);
     settings->sync();
 }

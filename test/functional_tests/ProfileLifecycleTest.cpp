@@ -36,7 +36,7 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -49,7 +49,6 @@
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
-#include "MudletSettings.h"
 
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)
@@ -135,8 +134,8 @@ private:
     // constructor reads both back out of the profile's data files.
     bool provisionProfileOnDisk(const QString& profileName) const
     {
-        return QDir().mkpath(MudletPaths::getMudletPath(enums::profileHomePath, profileName)) && MudletPaths::writeProfileData(profileName, qsl("url"), mLocalhost).first
-               && MudletPaths::writeProfileData(profileName, qsl("port"), mPort).first;
+        return QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, profileName)) && MudletApp::writeProfileData(profileName, qsl("url"), mLocalhost).first
+               && MudletApp::writeProfileData(profileName, qsl("port"), mPort).first;
     }
 
     // Returns the Lua error, or a null QString when the chunk ran
@@ -299,14 +298,14 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         // Written before init(), which is where a config with no keys at all
         // gets stamped as a first launch. A settings file that already holds
         // something is how mudletUsedBefore() recognises an existing player, so
         // this both suppresses the first-run UI tour and keeps the starter UI
         // package out of every profile these tests open.
-        MudletSettings::getQSettings()->setValue(qsl("uiTourShown"), true);
-        MudletSettings::getQSettings()->sync();
+        MudletApp::getQSettings()->setValue(qsl("uiTourShown"), true);
+        MudletApp::getQSettings()->sync();
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -338,7 +337,7 @@ private slots:
 
     void test_loadProfileRefusesAProfileThatDoesNotExist()
     {
-        QVERIFY2(!QDir(MudletPaths::getMudletPath(enums::profileHomePath, mAbsentProfile)).exists(), "the profile this test needs to be absent exists");
+        QVERIFY2(!QDir(MudletApp::getMudletPath(enums::profileHomePath, mAbsentProfile)).exists(), "the profile this test needs to be absent exists");
 
         const LuaOutcome outcome = callLua(mpFirstHost, qsl("loadProfile('%1')").arg(mAbsentProfile));
 

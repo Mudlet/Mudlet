@@ -49,7 +49,7 @@
 #include <QSpinBox>
 #include <QToolButton>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "SettingsTestHelper.h"
@@ -59,7 +59,6 @@
 #include "TelnetServerStub.h"
 #include "dlgProfilePreferences.h"
 #include "mudlet.h"
-#include "MudletSettings.h"
 
 #include "GroupedTest.h"
 
@@ -105,7 +104,7 @@ private:
     // MUDLET_TEST_NO_THEME_DOWNLOAD rather than this file's freshness.
     static void writeEditorThemesFile(const QByteArray& contents)
     {
-        const QString file = MudletPaths::getMudletPath(enums::editorWidgetThemeJsonFile);
+        const QString file = MudletApp::getMudletPath(enums::editorWidgetThemeJsonFile);
         QVERIFY(QDir().mkpath(QFileInfo(file).absolutePath()));
         QFile themes(file);
         QVERIFY(themes.open(QIODevice::WriteOnly | QIODevice::Truncate));
@@ -159,7 +158,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -431,7 +430,7 @@ private slots:
     void test_anExternalGlobalSettingSurvivesAnUnrelatedEdit()
     {
         openPreferences();
-        QSettings* pSettings = MudletSettings::getQSettings();
+        QSettings* pSettings = MudletApp::getQSettings();
         const bool shown = mpPreferences->telnetHandlerEnabled->isChecked();
         // what another profile's settings dialog, or a hand-edited Mudlet.ini,
         // leaves behind

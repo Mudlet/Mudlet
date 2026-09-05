@@ -23,7 +23,7 @@
 
 #include "dlgNotepad.h"
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "Host.h"
 #include "utils.h"
 
@@ -317,8 +317,8 @@ QPlainTextEdit* dlgNotepad::currentTextEdit() const
 
 void dlgNotepad::save()
 {
-    const QString directoryPath = MudletPaths::getMudletPath(enums::profileHomePath, mpHost->getName());
-    const QString fileName = MudletPaths::getMudletPath(enums::profileDataItemPath, mpHost->getName(), jsonNotesFileName);
+    const QString directoryPath = MudletApp::getMudletPath(enums::profileHomePath, mpHost->getName());
+    const QString fileName = MudletApp::getMudletPath(enums::profileDataItemPath, mpHost->getName(), jsonNotesFileName);
 
     const QDir dir;
     if (!dir.exists(directoryPath)) {
@@ -359,11 +359,11 @@ void dlgNotepad::save()
 
 bool dlgNotepad::migrateOldNotesFile()
 {
-    QString oldFileName = MudletPaths::getMudletPath(enums::profileDataItemPath, mpHost->getName(), utf8EncodedNotesFileName);
+    QString oldFileName = MudletApp::getMudletPath(enums::profileDataItemPath, mpHost->getName(), utf8EncodedNotesFileName);
     bool useUtf8 = true;
 
     if (!QFile::exists(oldFileName)) {
-        oldFileName = MudletPaths::getMudletPath(enums::profileDataItemPath, mpHost->getName(), local8BitEncodedNotesFileName);
+        oldFileName = MudletApp::getMudletPath(enums::profileDataItemPath, mpHost->getName(), local8BitEncodedNotesFileName);
         useUtf8 = false;
 
         if (!QFile::exists(oldFileName)) {
@@ -393,7 +393,7 @@ bool dlgNotepad::migrateOldNotesFile()
 
 void dlgNotepad::restore()
 {
-    const QString fileName = MudletPaths::getMudletPath(enums::profileDataItemPath, mpHost->getName(), jsonNotesFileName);
+    const QString fileName = MudletApp::getMudletPath(enums::profileDataItemPath, mpHost->getName(), jsonNotesFileName);
 
     if (QFile::exists(fileName)) {
         QFile file(fileName);

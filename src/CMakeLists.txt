@@ -106,10 +106,8 @@ set(mudlet_SRCS
     MMCPClient.cpp
     MMCPServer.cpp
     mudlet.cpp
-    MudletSettings.cpp
+    MudletApp.cpp
     MudletInstanceCoordinator.cpp
-    MudletPaths.cpp
-    MudletVersion.cpp
     MxpTag.cpp
     OAuthClientFlow.cpp
     PackageItemDelegate.cpp
@@ -362,10 +360,8 @@ set(mudlet_HDRS
     MMCPClient.h
     MMCPServer.h
     mudlet.h
-    MudletSettings.h
+    MudletApp.h
     MudletInstanceCoordinator.h
-    MudletPaths.h
-    MudletVersion.h
     MxpTag.h
     OAuthClientFlow.h
     PackageItemDelegate.h

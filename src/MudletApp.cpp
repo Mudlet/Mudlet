@@ -25,7 +25,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 
 #include "TGameDetails.h"
 #include "utils.h"
@@ -38,14 +38,21 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QLibraryInfo>
+#include <QNetworkRequest>
+#include <QPointer>
 #include <QProcessEnvironment>
 #include <QRegularExpression>
 #include <QSaveFile>
+#include <QSettings>
+#include <QSslConfiguration>
 #include <QTextStream>
+#include <QUrl>
 
 namespace {
 QString configRoot;
 bool mudletDictionariesInUse = false;
+QPointer<QSettings> smpSettings;
+QString smInterfaceLanguage;
 
 constexpr int maxPathComponentLength = 50;
 constexpr int pathComponentDigestLength = 16;
@@ -67,7 +74,7 @@ ConfigDirClaim configDirClaim(const QString& dir)
     if (!QDir(dir).exists()) {
         return ConfigDirClaim::absent;
     }
-    if (MudletPaths::configDirHoldsProfiles(dir)) {
+    if (MudletApp::configDirHoldsProfiles(dir)) {
         return ConfigDirClaim::profiles;
     }
     if (QFileInfo::exists(qsl("%1/Mudlet.ini").arg(dir))) {
@@ -117,7 +124,7 @@ QString readMarkerFile(const QString& path)
 }
 } // namespace
 
-QString MudletPaths::executableDir()
+QString MudletApp::executableDir()
 {
     const QProcessEnvironment systemEnvironment = QProcessEnvironment::systemEnvironment();
     if (systemEnvironment.contains(qsl("APPIMAGE"))) {
@@ -126,7 +133,7 @@ QString MudletPaths::executableDir()
     return QCoreApplication::applicationDirPath();
 }
 
-MudletPaths::ConfigDirResolution MudletPaths::resolveConfigRoot(const QString& execDir)
+MudletApp::ConfigDirResolution MudletApp::resolveConfigRoot(const QString& execDir)
 {
     const QString confDirDefault = qsl("%1/.config/mudlet").arg(QDir::homePath());
     const QString markerExecDir = qsl("%1/portable.txt").arg(execDir);
@@ -144,7 +151,7 @@ MudletPaths::ConfigDirResolution MudletPaths::resolveConfigRoot(const QString& e
     return xdgConfigDir(confDirDefault);
 }
 
-MudletPaths::ConfigDirResolution MudletPaths::xdgConfigDir(const QString& legacyDefault)
+MudletApp::ConfigDirResolution MudletApp::xdgConfigDir(const QString& legacyDefault)
 {
     const QString xdgConfigHome = qEnvironmentVariable("XDG_CONFIG_HOME");
     // The XDG base-dir spec requires an absolute path; a relative (or empty)
@@ -161,7 +168,7 @@ MudletPaths::ConfigDirResolution MudletPaths::xdgConfigDir(const QString& legacy
     return {.path = xdgTarget, .shadowedProfilesPath = shadowing ? legacyDefault : QString()};
 }
 
-bool MudletPaths::configDirHoldsProfiles(const QString& dir)
+bool MudletApp::configDirHoldsProfiles(const QString& dir)
 {
     if (!QDir(dir).exists()) {
         return false;
@@ -177,17 +184,17 @@ bool MudletPaths::configDirHoldsProfiles(const QString& dir)
     return !QFileInfo(profiles.path()).isReadable() || !profiles.entryList(QDir::Dirs | QDir::NoDotAndDotDot).isEmpty();
 }
 
-void MudletPaths::setConfigPath(const QString& path)
+void MudletApp::setConfigPath(const QString& path)
 {
     configRoot = path;
 }
 
-bool MudletPaths::usingMudletDictionaries()
+bool MudletApp::usingMudletDictionaries()
 {
     return mudletDictionariesInUse;
 }
 
-QString MudletPaths::sanitizeForPath(const QString& input)
+QString MudletApp::sanitizeForPath(const QString& input)
 {
     static const auto fileSystemUnsafeChars = QRegularExpression(qsl(R"REGEX([/\\:*?"<>|])REGEX"));
     QString sanitized = input;
@@ -199,7 +206,7 @@ QString MudletPaths::sanitizeForPath(const QString& input)
     return sanitized;
 }
 
-QString MudletPaths::getMudletPath(const enums::mudletPathType mode, const QString& extra1, const QString& extra2)
+QString MudletApp::getMudletPath(const enums::mudletPathType mode, const QString& extra1, const QString& extra2)
 {
     if (configRoot.isEmpty()) {
         configRoot = resolveConfigRoot(executableDir()).path;
@@ -411,9 +418,9 @@ QString MudletPaths::getMudletPath(const enums::mudletPathType mode, const QStri
     return QString();
 }
 
-QString MudletPaths::readProfileData(const QString& profile, const QString& item)
+QString MudletApp::readProfileData(const QString& profile, const QString& item)
 {
-    QFile file(MudletPaths::getMudletPath(enums::profileDataItemPath, profile, item));
+    QFile file(MudletApp::getMudletPath(enums::profileDataItemPath, profile, item));
     if (!file.exists()) {
         return QString();
     }
@@ -432,22 +439,22 @@ QString MudletPaths::readProfileData(const QString& profile, const QString& item
     return ret;
 }
 
-QPair<bool, QString> MudletPaths::writeProfileData(const QString& profile, const QString& item, const QString& what)
+QPair<bool, QString> MudletApp::writeProfileData(const QString& profile, const QString& item, const QString& what)
 {
     const QDir profileDir;
-    const QString profileHomePath = MudletPaths::getMudletPath(enums::profileHomePath, profile);
+    const QString profileHomePath = MudletApp::getMudletPath(enums::profileHomePath, profile);
     if (!QDir(profileHomePath).exists() && !profileDir.mkpath(profileHomePath)) {
-        qDebug().noquote().nospace() << "MudletPaths::writeProfileData(...) ERROR - could not create profile directory: \"" << profileHomePath << "\"";
+        qDebug().noquote().nospace() << "MudletApp::writeProfileData(...) ERROR - could not create profile directory: \"" << profileHomePath << "\"";
         return qMakePair(false, qsl("Could not create profile directory: %1").arg(profileHomePath));
     }
 
-    QSaveFile file(MudletPaths::getMudletPath(enums::profileDataItemPath, profile, item));
+    QSaveFile file(MudletApp::getMudletPath(enums::profileDataItemPath, profile, item));
     if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         QDataStream ofs(&file);
         ofs.setVersion(QDataStream::Qt_5_12);
         ofs << what;
         if (!file.commit()) {
-            qDebug().noquote().nospace() << "MudletPaths::writeProfileData(...) ERROR - writing profile: \"" << profile << "\", item: \"" << item << "\", reason: \"" << file.errorString() << "\".";
+            qDebug().noquote().nospace() << "MudletApp::writeProfileData(...) ERROR - writing profile: \"" << profile << "\", item: \"" << item << "\", reason: \"" << file.errorString() << "\".";
         }
     }
 
@@ -458,13 +465,13 @@ QPair<bool, QString> MudletPaths::writeProfileData(const QString& profile, const
     return qMakePair(false, file.errorString());
 }
 
-QString MudletPaths::getCanonicalProfileName(const QString& profileName)
+QString MudletApp::getCanonicalProfileName(const QString& profileName)
 {
     if (profileName.isEmpty()) {
         return QString();
     }
 
-    const QStringList profiles = QDir(MudletPaths::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    const QStringList profiles = QDir(MudletApp::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
     for (const auto& profile : profiles) {
         if (profile.compare(profileName, Qt::CaseInsensitive) == 0) {
             return profile;
@@ -477,4 +484,87 @@ QString MudletPaths::getCanonicalProfileName(const QString& profileName)
     }
 
     return QString();
+}
+
+QSettings* MudletApp::getQSettings()
+{
+    if (smpSettings) {
+        return smpSettings;
+    }
+    const QString root = MudletApp::getMudletPath(enums::mainPath);
+    // Callers guard on null until setupConfig() has settled the root; a root of
+    // "" would otherwise put the file at /Mudlet.ini
+    if (root.isEmpty()) {
+        return nullptr;
+    }
+    // parented to the application, not the main window: the window deletes
+    // itself on close and the Updater keeps using this QSettings past that point.
+    smpSettings = new QSettings(qsl("%1/Mudlet.ini").arg(root), QSettings::IniFormat, QCoreApplication::instance());
+    return smpSettings;
+}
+
+void MudletApp::resetSettings()
+{
+    delete smpSettings;
+}
+
+const QString& MudletApp::getInterfaceLanguage()
+{
+    return smInterfaceLanguage;
+}
+
+void MudletApp::setInterfaceLanguage(const QString& language)
+{
+    smInterfaceLanguage = language;
+}
+
+const QString& MudletApp::buildSuffix()
+{
+    // Deliberately not a namespace-scope constant: the Qt resource system is
+    // only registered once main() runs, so reading the file any earlier would
+    // silently yield an empty string and make every build look like a release.
+    static const QString appBuild = [] {
+        QFile gitShaFile(qsl(":/app-build.txt"));
+        if (!gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            qWarning() << "MudletApp::buildSuffix() failed to open app-build.txt for reading:" << gitShaFile.errorString();
+            return QString();
+        }
+        return QString::fromUtf8(gitShaFile.readAll()).trimmed();
+    }();
+    return appBuild;
+}
+
+const QString& MudletApp::scmVersion()
+{
+    static const QString version = qsl("Mudlet ") + QString(APP_VERSION) + buildSuffix();
+    return version;
+}
+
+bool MudletApp::release()
+{
+    return buildSuffix().isEmpty();
+}
+
+bool MudletApp::publicTest()
+{
+    return buildSuffix().startsWith(qsl("-ptb"));
+}
+
+bool MudletApp::development()
+{
+    return !release() && !publicTest();
+}
+
+// Enable redirects and HTTPS support for a given url
+void MudletApp::setNetworkRequestDefaults(const QUrl& url, QNetworkRequest& request)
+{
+    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
+
+    request.setRawHeader(QByteArray("User-Agent"), qsl("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, buildSuffix()).toUtf8());
+#if !defined(QT_NO_SSL)
+    if (url.scheme() == qsl("https")) {
+        const QSslConfiguration config(QSslConfiguration::defaultConfiguration());
+        request.setSslConfiguration(config);
+    }
+#endif
 }

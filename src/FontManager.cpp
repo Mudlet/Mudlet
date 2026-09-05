@@ -21,7 +21,7 @@
 
 
 #include "FontManager.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "utils.h"
 
 #include <QDir>
@@ -31,7 +31,7 @@
 
 void FontManager::addFonts()
 {
-    const QDir dir(MudletPaths::getMudletPath(enums::mainFontsPath));
+    const QDir dir(MudletApp::getMudletPath(enums::mainFontsPath));
 
     if (!dir.exists()) {
         return;

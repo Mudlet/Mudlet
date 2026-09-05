@@ -19,7 +19,7 @@
 
 #include "SentryWrapper.h"
 
-#include "MudletVersion.h"
+#include "MudletApp.h"
 #include "utils.h"
 
 #ifdef WITH_SENTRY
@@ -59,7 +59,7 @@ void initSentry()
         return;
     }
 
-    const std::string release = qsl("mudlet@%1%2").arg(APP_VERSION, MudletVersion::build()).toStdString();
+    const std::string release = qsl("mudlet@%1%2").arg(APP_VERSION, MudletApp::buildSuffix()).toStdString();
 
     sentry_options_set_database_path(options, path.toUtf8().constData());
     sentry_options_set_release(options, release.c_str());

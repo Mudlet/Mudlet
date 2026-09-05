@@ -30,7 +30,7 @@
 
 #include <QtTest/QtTest>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "MudletInstanceCoordinator.h"
 #include "dlgConnectionProfiles.h"
@@ -47,12 +47,12 @@ private:
     QByteArray mSavedXdg;
     const QString mKeeper = qsl("QA Keeper");
 
-    QString profilePath(const QString& profile) const { return MudletPaths::getMudletPath(enums::profileHomePath, profile); }
+    QString profilePath(const QString& profile) const { return MudletApp::getMudletPath(enums::profileHomePath, profile); }
 
     void makeProfileWithSavedGame(const QString& profile) const
     {
-        QVERIFY(QDir().mkpath(MudletPaths::getMudletPath(enums::profileXmlFilesPath, profile)));
-        QFile savedGame(qsl("%1/%2.xml").arg(MudletPaths::getMudletPath(enums::profileXmlFilesPath, profile), profile));
+        QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileXmlFilesPath, profile)));
+        QFile savedGame(qsl("%1/%2.xml").arg(MudletApp::getMudletPath(enums::profileXmlFilesPath, profile), profile));
         QVERIFY(savedGame.open(QIODevice::WriteOnly));
         savedGame.write("<MudletPackage></MudletPackage>");
         savedGame.close();
@@ -146,14 +146,14 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
 
         makeProfileWithSavedGame(mKeeper);
-        MudletPaths::writeProfileData(mKeeper, qsl("url"), qsl("mudlet.org"));
-        MudletPaths::writeProfileData(mKeeper, qsl("port"), qsl("23"));
+        MudletApp::writeProfileData(mKeeper, qsl("url"), qsl("mudlet.org"));
+        MudletApp::writeProfileData(mKeeper, qsl("port"), qsl("23"));
     }
 
     void cleanupTestCase()
@@ -171,9 +171,9 @@ private slots:
         QVERIFY2(confirmation(dlg), "removal went ahead without asking");
         confirmRemovalOf(dlg, qsl("."));
 
-        QVERIFY2(QDir(MudletPaths::getMudletPath(enums::profilesPath)).exists(), "the profiles directory was deleted");
+        QVERIFY2(QDir(MudletApp::getMudletPath(enums::profilesPath)).exists(), "the profiles directory was deleted");
         QVERIFY2(QDir(profilePath(mKeeper)).exists(), "an unrelated profile was deleted");
-        QVERIFY2(QFile::exists(qsl("%1/%2.xml").arg(MudletPaths::getMudletPath(enums::profileXmlFilesPath, mKeeper), mKeeper)), "an unrelated profile's saved game was deleted");
+        QVERIFY2(QFile::exists(qsl("%1/%2.xml").arg(MudletApp::getMudletPath(enums::profileXmlFilesPath, mKeeper), mKeeper)), "an unrelated profile's saved game was deleted");
         QVERIFY2(!dlg->notificationAreaMessageBox->text().isEmpty(), "the refusal was not reported to the user");
 
         closeDialog(dlg);
@@ -188,8 +188,8 @@ private slots:
         QVERIFY2(confirmation(dlg), "removal went ahead without asking");
         confirmRemovalOf(dlg, qsl(".."));
 
-        QVERIFY2(QDir(MudletPaths::getMudletPath(enums::mainPath)).exists(), "Mudlet's configuration directory was deleted");
-        QVERIFY2(QDir(MudletPaths::getMudletPath(enums::profilesPath)).exists(), "the profiles directory was deleted");
+        QVERIFY2(QDir(MudletApp::getMudletPath(enums::mainPath)).exists(), "Mudlet's configuration directory was deleted");
+        QVERIFY2(QDir(MudletApp::getMudletPath(enums::profilesPath)).exists(), "the profiles directory was deleted");
         QVERIFY2(QDir(profilePath(mKeeper)).exists(), "an unrelated profile was deleted");
         QVERIFY2(!dlg->notificationAreaMessageBox->text().isEmpty(), "the refusal was not reported to the user");
 
@@ -198,7 +198,7 @@ private slots:
 
     void test_onlyDirectChildrenOfTheProfilesDirectoryAreProfiles()
     {
-        const QString profilesPath = MudletPaths::getMudletPath(enums::profilesPath);
+        const QString profilesPath = MudletApp::getMudletPath(enums::profilesPath);
 
         QCOMPARE(dlgConnectionProfiles::profileFolderPath(profilesPath, mKeeper), qsl("%1/%2").arg(profilesPath, mKeeper));
         QVERIFY(dlgConnectionProfiles::profileFolderPath(profilesPath, qsl(".")).isEmpty());
@@ -214,8 +214,8 @@ private slots:
     void test_profileWithOnlyAMapIsConfirmedBeforeRemoval()
     {
         const QString mapped = qsl("QA Mapped");
-        QVERIFY(QDir().mkpath(MudletPaths::getMudletPath(enums::profileMapsPath, mapped)));
-        QVERIFY(!QDir(MudletPaths::getMudletPath(enums::profileXmlFilesPath, mapped)).exists());
+        QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileMapsPath, mapped)));
+        QVERIFY(!QDir(MudletApp::getMudletPath(enums::profileXmlFilesPath, mapped)).exists());
 
         auto* dlg = openDialog();
         selectProfile(dlg, mapped);
@@ -233,8 +233,8 @@ private slots:
     {
         const QString unplayed = qsl("QA Unplayed");
         QVERIFY(QDir().mkpath(profilePath(unplayed)));
-        MudletPaths::writeProfileData(unplayed, qsl("url"), qsl("mudlet.org"));
-        MudletPaths::writeProfileData(unplayed, qsl("port"), qsl("23"));
+        MudletApp::writeProfileData(unplayed, qsl("url"), qsl("mudlet.org"));
+        MudletApp::writeProfileData(unplayed, qsl("port"), qsl("23"));
 
         auto* dlg = openDialog();
         selectProfile(dlg, unplayed);
@@ -301,7 +301,7 @@ private slots:
     {
         const QString secretive = qsl("QA Secretive");
         QVERIFY(QDir().mkpath(profilePath(secretive)));
-        MudletPaths::writeProfileData(secretive, qsl("password"), qsl("hunter2"));
+        MudletApp::writeProfileData(secretive, qsl("password"), qsl("hunter2"));
         QVERIFY(QDir(profilePath(secretive)).entryList(QDir::Dirs | QDir::Hidden | QDir::NoDotAndDotDot).isEmpty());
 
         auto* dlg = openDialog();
@@ -321,8 +321,8 @@ private slots:
     {
         const QString named = qsl("QA Named");
         QVERIFY(QDir().mkpath(profilePath(named)));
-        MudletPaths::writeProfileData(named, qsl("url"), qsl("mudlet.org"));
-        MudletPaths::writeProfileData(named, qsl("login"), qsl("Aurelius"));
+        MudletApp::writeProfileData(named, qsl("url"), qsl("mudlet.org"));
+        MudletApp::writeProfileData(named, qsl("login"), qsl("Aurelius"));
 
         auto* dlg = openDialog();
         selectProfile(dlg, named);
@@ -457,8 +457,8 @@ private slots:
         const QString awkward = qsl("QA..Dots");
         QVERIFY(!dlgConnectionProfiles::profileNameUsableAsIs(awkward));
         makeProfileWithSavedGame(awkward);
-        MudletPaths::writeProfileData(awkward, qsl("url"), qsl("mudlet.org"));
-        MudletPaths::writeProfileData(awkward, qsl("port"), qsl("23"));
+        MudletApp::writeProfileData(awkward, qsl("url"), qsl("mudlet.org"));
+        MudletApp::writeProfileData(awkward, qsl("port"), qsl("23"));
 
         auto* dlg = openDialog();
         selectProfile(dlg, awkward);

@@ -20,14 +20,14 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 
 // A portable.txt beside the executable - or beside the AppImage, when running
 // from one - or in ~/.config/mudlet relocates the config root, so a test that
 // would otherwise touch the real one has to skip
 inline bool portableMarkerPresent()
 {
-    return MudletPaths::resolveConfigRoot(MudletPaths::executableDir()).portable;
+    return MudletApp::resolveConfigRoot(MudletApp::executableDir()).portable;
 }
 
 #endif // MUDLET_PORTABLEMODETESTHELPER_H

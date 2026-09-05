@@ -43,7 +43,7 @@
 #include <chrono>
 #include <memory>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -111,7 +111,7 @@ private slots:
         mudlet::self()->setupConfig();
         // QtTest does not run cleanup() when init() fails, so a bare QCOMPARE
         // here would strand the singleton.
-        if (MudletPaths::getMudletPath(enums::mainPath) != qsl("%1/mudlet").arg(mConfigDir.path())) {
+        if (MudletApp::getMudletPath(enums::mainPath) != qsl("%1/mudlet").arg(mConfigDir.path())) {
             delete mudlet::self();
             delete mpServer;
             mpServer = nullptr;
@@ -130,7 +130,7 @@ private slots:
         if (mudlet::self()) {
             // Mudlet writes the profile out as it shuts down, so removing the
             // directory first only has it recreated.
-            const QString profileDir = MudletPaths::getMudletPath(enums::profileHomePath, mHostname);
+            const QString profileDir = MudletApp::getMudletPath(enums::profileHomePath, mHostname);
             delete mudlet::self();
             QDir(profileDir).removeRecursively();
         }
@@ -355,7 +355,7 @@ private:
 
     void deleteProfileDirectory()
     {
-        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, mHostname));
+        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, mHostname));
         if (dir.exists()) {
             dir.removeRecursively();
         }
