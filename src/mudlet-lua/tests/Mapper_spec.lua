@@ -1237,13 +1237,21 @@ describe("Tests mapper functions against a shared fixture", function()
       -- TRoom::setExit(), which nothing but the stub connector reaches, stores
       -- each direction in a member of its own, so one pair per direction is
       -- what catches a direction wired to the wrong member
+      local made = {}
+      -- one finally for the whole loop: busted keeps only the last function
+      -- handed to it, so registering one per iteration would clean up the last
+      -- pair alone
+      finally(function()
+        for _, id in ipairs(made) do deleteRoom(id) end
+      end)
       for _, pair in ipairs(reverses) do
         local direction, reverse = pair[1], pair[2]
         local a, b = stubPair(direction, reverse)
+        made[#made + 1] = a
+        made[#made + 1] = b
         assert.is_true(connectExitStub(a, b, direction), direction)
         assert.are.equal(b, getRoomExits(a)[direction], direction)
         assert.are.equal(a, getRoomExits(b)[reverse], reverse)
-        deleteRoom(a); deleteRoom(b)
       end
     end)
 
@@ -2469,11 +2477,26 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.is_string(err)
     end)
 
+    -- centerview() only asks for the move: TMap::updateArea() defers the repaint
+    -- that takes the mapper to the new area onto a zero timer, so the
+    -- no-argument getMapZoom() keeps answering with the old area until the
+    -- event loop gets a turn. Waiting for the value rather than for a fixed
+    -- pause keeps a loaded machine from reading the old area and calling it a
+    -- regression; a wrong implementation still fails, on the timeout.
+    local function zoomAfterAreaSwitch(expected)
+      local waitedMs = 0
+      while getMapZoom() ~= expected and waitedMs < 5000 do
+        pumpEvents(5)
+        waitedMs = waitedMs + 5
+      end
+      return getMapZoom()
+    end
+
     it("getMapZoom with no area at all reports the area the mapper is showing", function()
       local before = getMapZoom(areaBeta)
       finally(function()
         centerview(rA1)
-        pumpEvents(200)
+        zoomAfterAreaSwitch(getMapZoom(areaAlpha))
         setMapZoom(before, areaBeta)
       end)
       assert.are_not.equal(11, before)
@@ -2484,9 +2507,7 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.are_not.equal(11, getMapZoom())
 
       assert.is_true(centerview(rB1))
-      -- the mapper follows centerview through a queued area switch
-      pumpEvents(200)
-      assert.are.equal(11, getMapZoom())
+      assert.are.equal(11, zoomAfterAreaSwitch(11))
     end)
   end)
 
