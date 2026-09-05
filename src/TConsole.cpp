@@ -64,6 +64,10 @@
 using namespace std::chrono_literals;
 
 namespace {
+// The gap the layout leaves between the text panes and the vertical scroll bar.
+// Anything predicting how wide the panes come out has to take it off too.
+constexpr int scrollBarSpacing = 1;
+
 double relativeLuminance(const QColor& color)
 {
     const auto channel = [](const double value) {
@@ -364,7 +368,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     layoutLayer->addWidget(splitter);
     layoutLayer->addWidget(mpScrollBar);
     layoutLayer->setContentsMargins(0, 0, 0, 0);
-    layoutLayer->setSpacing(1); // not closer, otherwise there could be performance problems when displaying
+    layoutLayer->setSpacing(scrollBarSpacing); // not closer, otherwise there could be performance problems when displaying
 
     vLayoutLayer->addLayout(layoutLayer);
     vLayoutLayer->addWidget(mpHScrollBar);
@@ -818,28 +822,29 @@ void TConsole::resizeEvent(QResizeEvent* event)
 
     // Sync Host dimensions on resize so wraps and NAWS reflect the current pane width.
     if ((mType & MainConsole) && !mpHost.isNull() && mUpperPane && !mUpperPane->visibleRegion().isEmpty()) {
-        const int paneWidthPx = mUpperPane->visibleRegion().boundingRect().width();
-        auto syncHost = [paneWidthPx](Host* host, const QWidget* paneForFont) {
-            if (!host || !paneForFont) {
+        auto syncHost = [](Host* host, const QWidget* pane, const int paneWidthPx) {
+            if (!host || !pane || paneWidthPx < 0) {
                 return;
             }
-            const int fontWidth = QFontMetrics(paneForFont->font()).averageCharWidth();
+            const int fontWidth = QFontMetrics(pane->font()).averageCharWidth();
             if (fontWidth <= 0) {
                 return;
             }
             const int cols = qMax(40, paneWidthPx / fontWidth);
-            if (cols > 0 && cols != host->mScreenWidth) {
+            if (cols != host->mScreenWidth) {
                 host->setScreenDimensions(cols, host->mScreenHeight);
                 QTimer::singleShot(0ms, host, &Host::updateDisplayDimensions);
             }
         };
 
-        syncHost(mpHost.data(), mUpperPane);
+        syncHost(mpHost.data(), mUpperPane, mUpperPane->visibleRegion().boundingRect().width());
 
         // Detached profiles have their own pixel width; only propagate from a main-window console.
         mudlet* const app = mudlet::self();
         const bool inMainWindow = app && !app->getDetachedWindows().contains(mpHost->getName());
         if (inMainWindow) {
+            const QWidget* container = parentWidget();
+            const int containerWidth = container ? container->width() : width();
             for (const auto& otherHostPtr : app->getHostManager()) {
                 Host* otherHost = otherHostPtr.data();
                 if (!otherHost || otherHost == mpHost.data()) {
@@ -852,11 +857,13 @@ void TConsole::resizeEvent(QResizeEvent* event)
                 if (!otherHost->mpConsole || !otherHost->mpConsole->mUpperPane) {
                     continue;
                 }
-                // Visible siblings (multi-view) handle their own resizeEvent.
-                if (!otherHost->mpConsole->mUpperPane->visibleRegion().isEmpty()) {
+                // Only a console put away by a tab switch. One that is merely
+                // sharing the container - multi-view, or a splitter share not
+                // handed out yet - is on screen and sizes itself.
+                if (!otherHost->mpConsole->isHidden()) {
                     continue;
                 }
-                syncHost(otherHost, otherHost->mpConsole->mUpperPane);
+                syncHost(otherHost, otherHost->mpConsole->mUpperPane, otherHost->mpConsole->upperPaneWidthFor(containerWidth));
             }
         }
     }
@@ -2538,12 +2545,37 @@ void TConsole::slot_searchBufferDown()
     print(qsl("%1\n").arg(tr("No search results, sorry!")));
 }
 
+// How wide this console's upper pane comes out when the main window gives the
+// console containerWidth pixels. Deselecting a tab resizes its console to
+// nothing and leaves the panes inside at whatever they last happened to be, so
+// a console in the background cannot simply be measured - but what it will get
+// is not a mystery either, since every main-window console shares a container
+// and only differs in what it takes out of it.
+int TConsole::upperPaneWidthFor(const int containerWidth) const
+{
+    // Each term mirrors what resizeEvent() does with the width it is given, in
+    // the same order, so that the two cannot drift apart.
+    int paneWidth = containerWidth - (mpLeftToolBar->width() + mpRightToolBar->width());
+    if (!mpHost.isNull()) {
+        // The host's borders rather than mBorders: that copy is only refreshed
+        // when the console lays out, so for one that has been in the background
+        // across a setBorderLeft() it is the width it is coming back from.
+        const QMargins borders = mpHost->borders();
+        paneWidth -= borders.left() + borders.right();
+    }
+    if (!mpScrollBar->isHidden()) {
+        paneWidth -= mpScrollBar->width() + scrollBarSpacing;
+    }
+    return qMax(0, paneWidth);
+}
+
 QSize TConsole::getMainWindowSize() const
 {
-    if (isHidden() && mLastMeasuredSize.isValid()) {
-        return mLastMeasuredSize;
-    }
-    const QSize consoleSize = size();
+    // A console put away by a tab switch is resized to nothing while the panes
+    // inside it keep whatever geometry they last had, so it cannot be measured -
+    // but it is going back into the container it came out of, and that can be.
+    const bool predicted = mType == MainConsole && isHidden() && parentWidget();
+    const QSize consoleSize = predicted ? parentWidget()->size() : size();
     const int toolbarWidth = mpLeftToolBar->width() + mpRightToolBar->width();
     const int toolbarHeight = mpTopToolBar->height();
     const int commandLineHeight = mpCommandLine->height();
@@ -2563,7 +2595,9 @@ QSize TConsole::getMainWindowSize() const
         return mLastMeasuredSize.isValid() ? mLastMeasuredSize : mainWindowSize;
     }
 
-    mLastMeasuredSize = mainWindowSize;
+    if (!predicted) {
+        mLastMeasuredSize = mainWindowSize;
+    }
     return mainWindowSize;
 }
 

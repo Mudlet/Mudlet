@@ -321,6 +321,8 @@ public:
     void selectCurrentLine();
     // Returns the size of the main buffer area (excluding the command line and toolbars).
     QSize getMainWindowSize() const;
+    // MainConsole only - it charges the profile's own main window borders
+    int upperPaneWidthFor(const int containerWidth) const;
     ConsoleType getType() const { return mType; }
     virtual void setProfileName(const QString&);
     // In the next function the first element in the return is an
