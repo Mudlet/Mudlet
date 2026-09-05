@@ -95,6 +95,58 @@ static bool isMain(const QString& name)
     return false;
 }
 
+// Mudlet's own colour names live in the Lua "color_table" global as {r, g, b};
+// the names QColor knows are the SVG ones, a different set with different
+// spellings. Returns an invalid colour when the name is not in the table.
+static QColor colorFromColorTable(lua_State* L, const QString& name)
+{
+    lua_getfield(L, LUA_GLOBALSINDEX, "color_table");
+    if (!lua_istable(L, -1)) {
+        lua_pop(L, 1);
+        return QColor();
+    }
+
+    // A plain lookup would answer for fewer names than Geyser does: the table
+    // holds 137 lower_case keys and 88 CamelCase ones, and names like
+    // "LightGoldenrod" have no other spelling in it. Geyser.Color.find_color_name
+    // lower-cases what it is asked for and drops the underscores from it, then
+    // compares that against every key lower-cased - so "alice_blue" finds
+    // "AliceBlue". Matching the same way keeps the global and the Geyser wrapper
+    // resolving the same names.
+    const QString wanted = name.toLower().remove(QLatin1Char('_'));
+    QColor found;
+    lua_pushnil(L);
+    while (lua_next(L, -2)) {
+        // lua_tostring() converts a number key in place, which breaks lua_next()
+        if (lua_type(L, -2) != LUA_TSTRING || QString::fromUtf8(lua_tostring(L, -2)).toLower() != wanted) {
+            lua_pop(L, 1);
+            continue;
+        }
+
+        if (lua_istable(L, -1)) {
+            int components[3] = {0, 0, 0};
+            bool complete = true;
+            for (int i = 0; i < 3; ++i) {
+                lua_rawgeti(L, -1, i + 1);
+                if (lua_isnumber(L, -1)) {
+                    components[i] = static_cast<int>(lua_tointeger(L, -1));
+                } else {
+                    complete = false;
+                }
+                lua_pop(L, 1);
+            }
+            if (complete) {
+                found = QColor(components[0], components[1], components[2]);
+            }
+        }
+        lua_pop(L, 2);
+        break;
+    }
+    lua_pop(L, 1);
+
+    return found;
+}
+
 #define WINDOW_NAME(ARG_L, ARG_pos)                                                                                                                                                                    \
     ({                                                                                                                                                                                                 \
         int pos_ = (ARG_pos);                                                                                                                                                                          \
@@ -2821,7 +2873,7 @@ int TLuaInterpreter::setBackgroundImage(lua_State* L)
             // the console name is already validated above, so this is about the image
             return warnArgumentValue(L, __func__, qsl("could not use '%1' as a full window background image").arg(imgPath));
         }
-        return warnArgumentValue(L, __func__, qsl("console or label '%1' not found").arg(windowName));
+        return warnArgumentValue(L, __func__, qsl("console or label '%1' not found, or '%2' could not be loaded as an image").arg(windowName, imgPath));
     }
 
     lua_pushboolean(L, true);
@@ -3375,9 +3427,13 @@ int TLuaInterpreter::setSvgTint(lua_State* L)
     QColor color;
     if (lua_type(L, 2) == LUA_TSTRING) {
         const QString colorStr = getVerifiedString(L, __func__, 2, "color string");
-        color = QColor(colorStr);
+        color = colorFromColorTable(L, colorStr);
         if (!color.isValid()) {
-            return warnArgumentValue(L, __func__, qsl("'%1' is not a valid color").arg(colorStr));
+            color = QColor(colorStr);
+        }
+        if (!color.isValid()) {
+            return warnArgumentValue(
+                    L, __func__, qsl("'%1' is not a valid color - use a Mudlet color name like 'alice_blue', an SVG color name like 'aliceblue', or a '#rrggbb' hex value").arg(colorStr));
         }
     } else {
         const int r = getVerifiedInt(L, __func__, 2, "red value 0-255");

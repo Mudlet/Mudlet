@@ -30,6 +30,7 @@
 #include <QColor>
 #include <QLabel>
 #include <QMovie>
+#include <QPixmap>
 #include <QPointer>
 #include <QSet>
 #include <QString>
@@ -64,12 +65,15 @@ public:
     void leaveEvent(QEvent*) override;
     void enterEvent(TEnterEvent*) override;
     void resizeEvent(QResizeEvent* event) override;
+    void paintEvent(QPaintEvent* event) override;
     void changeEvent(QEvent* event) override;
     void setClickThrough(bool clickthrough);
     void setBackgroundColor(const QColor& color);
     void setLinkStyle(const QString& linkColor, const QString& linkVisitedColor, bool underline = true);
     void resetLinkStyle();
     void clearVisitedLinks();
+    bool setBackgroundImage(const QString& path);
+    void resetBackgroundImage();
     bool setSvgImage(const QString& path);
     void clearSvgImage();
     void setSvgTint(const QColor& color);
@@ -89,7 +93,6 @@ public:
     int mLeaveFunction = 0;
     QMovie* mpMovie = nullptr;
     QSvgRenderer* mpSvgRenderer = nullptr;
-    QString mSvgImagePath;
     QColor mSvgTintColor;
     double mSvgRotation = 0.0;
     double mSvgShearX = 0.0;
@@ -102,10 +105,12 @@ public:
 
 private:
     QPixmap renderSvgPixmap(const QSize& size) const;
+    void refreshSvg();
     void releaseFunc(const int existingFunction, const int newFunction);
     void applyBackgroundColor();
 
     QColor mBackgroundColor;
+    QPixmap mSvgPixmapCache;
 
 private slots:
     void slot_linkActivated(const QString& link);

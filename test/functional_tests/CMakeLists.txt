@@ -43,6 +43,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     HyperlinkModelSplitTest.cpp
     LabelAnchorInteractionTest.cpp
     LabelMovieRefusalTest.cpp
+    LabelSvgBackgroundTest.cpp
     MainConsoleSelectionTest.cpp
     TabDetachThresholdTest.cpp
     DetachedWindowDiscordButtonTest.cpp

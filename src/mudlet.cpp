@@ -3849,7 +3849,7 @@ void mudlet::hideEvent(QHideEvent* event)
 
 std::optional<QSize> mudlet::getImageSize(const QString& imageLocation)
 {
-    if (imageLocation.endsWith(qsl(".svg"), Qt::CaseInsensitive) || imageLocation.endsWith(qsl(".svgz"), Qt::CaseInsensitive)) {
+    if (utils::svgFileName(imageLocation)) {
         QSvgRenderer renderer(imageLocation);
         if (renderer.isValid()) {
             return renderer.defaultSize();

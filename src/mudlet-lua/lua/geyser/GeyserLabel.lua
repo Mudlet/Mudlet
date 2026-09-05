@@ -494,6 +494,13 @@ function Geyser.Label:clear()
 end
 
 --- Sets a background image for this label.
+-- A .svg or .svgz file is drawn as a layer behind the label's text or movie,
+-- scaled to fit the label while keeping its proportions and re-rendered crisply
+-- on every resize - see setSvgTint, setSvgRotation and setSvgShear.
+-- It fills the area inside the label's border, and is not clipped to a
+-- border-radius, so a rounded label shows the SVG square in its corners.
+-- Any other image type is drawn at its own size as the label's content, in place
+-- of any text the label is showing.
 -- @param imageFileName The image to use for a background image.
 function Geyser.Label:setBackgroundImage (imageFileName)
   setBackgroundImage(self.name, imageFileName)
@@ -501,7 +508,8 @@ function Geyser.Label:setBackgroundImage (imageFileName)
 end
 
 --- Sets a tint color on the label's SVG background image.
--- All opaque pixels in the SVG are replaced with the specified color.
+-- Every visible pixel of the SVG takes the given color and keeps its own
+-- transparency, so a multi-color SVG becomes a single-color silhouette.
 -- Only works when the label has an SVG background set via setBackgroundImage.
 -- Accepts any color format supported by Geyser.Color.parse:
 -- RGB integers (r, g, b), hex string ("#ff0000"), or named color ("red").
@@ -521,6 +529,9 @@ end
 
 --- Sets the rotation angle for the label's SVG background image.
 -- The SVG is rotated around its center; label text and background are unaffected.
+-- Content rotated beyond the label's edges is clipped, so a square image loses
+-- its corners at 45 degrees - a circular design, or padding inside the SVG,
+-- avoids that.
 -- @param angle Rotation angle in degrees (positive = clockwise).
 function Geyser.Label:setSvgRotation (angle)
   setSvgRotation(self.name, angle)
@@ -533,6 +544,7 @@ end
 
 --- Sets the shear (skew) for the label's SVG background image.
 -- The SVG is sheared around its center; label text and background are unaffected.
+-- As with rotation, content sheared outside the label is clipped.
 -- @param shearX Horizontal shear factor.
 -- @param shearY Vertical shear factor.
 function Geyser.Label:setSvgShear (shearX, shearY)

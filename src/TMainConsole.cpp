@@ -882,12 +882,7 @@ bool TMainConsole::setBackgroundImage(const QString& name, const QString& path)
 {
     auto pL = mLabelMap.value(name);
     if (pL) {
-        pL->clearSvgImage();
-        if (path.endsWith(qsl(".svg"), Qt::CaseInsensitive) || path.endsWith(qsl(".svgz"), Qt::CaseInsensitive)) {
-            return pL->setSvgImage(path);
-        }
-        pL->setPixmap(QPixmap(path));
-        return true;
+        return pL->setBackgroundImage(path);
     }
     return false;
 }

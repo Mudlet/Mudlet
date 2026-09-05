@@ -5046,12 +5046,7 @@ bool Host::setBackgroundImage(const QString& name, QString& imgPath, int mode, b
 
     auto pL = mpConsole->mLabelMap.value(name);
     if (pL) {
-        pL->clearSvgImage();
-        if (imgPath.endsWith(qsl(".svg"), Qt::CaseInsensitive) || imgPath.endsWith(qsl(".svgz"), Qt::CaseInsensitive)) {
-            return pL->setSvgImage(imgPath);
-        }
-        pL->setPixmap(QPixmap(imgPath));
-        return true;
+        return pL->setBackgroundImage(imgPath);
     }
 
     auto pC = mpConsole->mSubConsoleMap.value(name);
@@ -5079,8 +5074,7 @@ bool Host::resetBackgroundImage(const QString& name, bool fullWindow)
 
     auto pL = mpConsole->mLabelMap.value(name);
     if (pL) {
-        pL->clearSvgImage();
-        pL->clear();
+        pL->resetBackgroundImage();
         return true;
     }
 

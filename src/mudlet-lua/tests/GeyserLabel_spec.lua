@@ -128,6 +128,26 @@ describe("Tests functionality of Geyser.Label", function()
         assert.is_true(result)
       end)
 
+      it("should accept a Mudlet color name", function()
+        local result = setSvgTint(testLabel, "alice_blue")
+        assert.is_true(result)
+      end)
+
+      it("should accept an SVG color name", function()
+        local result = setSvgTint(testLabel, "aliceblue")
+        assert.is_true(result)
+      end)
+
+      it("should accept a Mudlet color name regardless of case", function()
+        local result = setSvgTint(testLabel, "Alice_Blue")
+        assert.is_true(result)
+      end)
+
+      it("should accept a CamelCase Mudlet color name QColor does not know", function()
+        local result = setSvgTint(testLabel, "LightGoldenrod")
+        assert.is_true(result)
+      end)
+
       it("should return nil for invalid color string", function()
         local result, err = setSvgTint(testLabel, "notacolor")
         assert.is_nil(result)
