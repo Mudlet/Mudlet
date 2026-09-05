@@ -28,8 +28,12 @@
 #include "mudlet.h"
 
 #include <QDesktopServices>
+#include <QFile>
+#include <QPainter>
 #include <QRegularExpression>
+#include <QSvgRenderer>
 #include <QTextCursor>
+#include <QTextDocumentFragment>
 #include <QTimer>
 #include <QUrl>
 #include <QtEvents>
@@ -72,6 +76,10 @@ TLabel::TLabel(Host* pH, const QString& name, QWidget* pW)
 , mWheelFunction(mpModel->mWheelFunction)
 , mEnterFunction(mpModel->mEnterFunction)
 , mLeaveFunction(mpModel->mLeaveFunction)
+, mSvgTintColor(mpModel->mSvgTintColor)
+, mSvgRotation(mpModel->mSvgRotation)
+, mSvgShearX(mpModel->mSvgShearX)
+, mSvgShearY(mpModel->mSvgShearY)
 , mLinkColor(mpModel->mLinkColor)
 , mLinkVisitedColor(mpModel->mLinkVisitedColor)
 , mLinkUnderline(mpModel->mLinkUnderline)
@@ -182,8 +190,10 @@ void TLabel::setText(const QString& text)
             }
         }
 
+        stopMovie();
         QLabel::setText(styledText);
     } else {
+        stopMovie();
         QLabel::setText(text);
     }
 }
@@ -292,6 +302,263 @@ void TLabel::resizeEvent(QResizeEvent* event)
     QWidget::resizeEvent(event);
 }
 
+// The SVG is a layer of its own rather than the label's content, because QLabel
+// keeps text, a pixmap and a movie in a single slot where each replaces the last.
+// Qt paints a QFrame's palette and stylesheet backgrounds before it delivers the
+// paint event, so drawing here puts the SVG over the label's background colour
+// and under whatever the label is showing.
+void TLabel::paintEvent(QPaintEvent* event)
+{
+    // QLabel draws its content inside contentsRect(), so the layer belongs there
+    // too rather than over a stylesheet border or in its padding
+    if (const QRect area = contentsRect(); mpSvgRenderer && !area.isEmpty()) {
+        // the cache has to be compared in device pixels with the rounding the
+        // render uses, or a fractional ratio leaves the test never matching and
+        // the document re-rendered on every paint
+        const qreal dpr = devicePixelRatioF();
+        if (mSvgPixmapCache.size() != area.size() * dpr || !qFuzzyCompare(mSvgPixmapCache.devicePixelRatio(), dpr)) {
+            mSvgPixmapCache = renderSvgPixmap(area.size());
+        }
+        QPainter painter(this);
+        painter.drawPixmap(area.topLeft(), mSvgPixmapCache);
+    }
+
+    QLabel::paintEvent(event);
+}
+
+// QLabel takes its hint from the text, pixmap or movie in its content slot, and
+// the SVG is none of those - it is a layer of this class's own, which QLabel's
+// hint cannot see. Geyser's autoAdjustSize() sizes a label from the hint, so a
+// label showing nothing but an SVG has to answer with the document plus the same
+// extras QLabel would add around a raster of that size. A label that does carry
+// content keeps QLabel's answer, because the SVG scales to fit whatever size the
+// content asks for and its own size says nothing. Geyser.Label:new always echoes
+// an empty rich-text div, so what counts as visible text is what the document
+// renders rather than whether the string is empty.
+QSize TLabel::sizeHint() const
+{
+    if (!mpSvgRenderer) {
+        return QLabel::sizeHint();
+    }
+
+    const bool showsContent = !pixmap().isNull() || movie() || !QTextDocumentFragment::fromHtml(text()).toPlainText().trimmed().isEmpty();
+    const QSize documentSize = mpSvgRenderer->defaultSize();
+    // a document without width, height or viewBox has no size to offer
+    if (showsContent || documentSize.isEmpty()) {
+        return QLabel::sizeHint();
+    }
+    return documentSize.grownBy(contentsMargins()) + QSize(2 * margin(), 2 * margin());
+}
+
+// QPixmap and QImage read a file by its content, so a raster saved under a .svg
+// name has always displayed. This only asks whether the renderer is worth trying:
+// the renderer itself is the authority on what is an SVG.
+bool TLabel::svgCandidate(const QString& path)
+{
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) {
+        return false;
+    }
+    const QByteArray head = file.read(64);
+    if (head.startsWith(QByteArrayLiteral("\x1f\x8b"))) {
+        return true;
+    }
+
+    qsizetype at = 0;
+    bool utf16 = false;
+    if (head.startsWith(QByteArrayLiteral("\xef\xbb\xbf"))) {
+        at = 3;
+    } else if (head.startsWith(QByteArrayLiteral("\xff\xfe")) || head.startsWith(QByteArrayLiteral("\xfe\xff"))) {
+        at = 2;
+        utf16 = true;
+    }
+    for (; at < head.size(); ++at) {
+        const char byte = head.at(at);
+        // in UTF-16 every ASCII character is half of a code unit whose other half
+        // is a NUL, whichever way round the byte order mark put them
+        if (utf16 && byte == '\0') {
+            continue;
+        }
+        if (byte == ' ' || byte == '\t' || byte == '\n' || byte == '\r' || byte == '\f' || byte == '\v') {
+            continue;
+        }
+        return byte == '<';
+    }
+    return false;
+}
+
+bool TLabel::loadSvg(QSvgRenderer& renderer, const QString& path)
+{
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) {
+        return false;
+    }
+
+    // QSvgRenderer inflates a gzipped document by its content on the QByteArray
+    // overload, but only by a .svgz or .svg.gz name on the path one
+    if (file.peek(2) == QByteArrayLiteral("\x1f\x8b")) {
+        renderer.load(file.readAll());
+    } else {
+        file.close();
+        // the path overload resolves a relative href inside the document against
+        // the directory the document sits in
+        renderer.load(path);
+    }
+    return renderer.isValid();
+}
+
+bool TLabel::setBackgroundImage(const QString& path)
+{
+    if (svgCandidate(path) && setSvgImage(path)) {
+        return true;
+    }
+
+    // the label keeps what it is showing when the file is not an image at all,
+    // and the caller's error message is then the truth
+    const QPixmap raster(path);
+    if (raster.isNull()) {
+        return false;
+    }
+
+    clearSvgImage();
+    stopMovie();
+    setPixmap(raster);
+    return true;
+}
+
+bool TLabel::setSvgImage(const QString& path)
+{
+    // the new document has to prove readable before the current one goes, or a
+    // mistyped path takes the SVG down with it
+    auto* renderer = new QSvgRenderer(this);
+    if (!loadSvg(*renderer, path)) {
+        delete renderer;
+        return false;
+    }
+
+    // the tint and the transforms belong to the label rather than to the document,
+    // so they carry over to the new image - and one set before any SVG arrived
+    // applies as soon as it does
+    delete mpSvgRenderer;
+    mpSvgRenderer = renderer;
+    // a raster background is the label's content, so it would otherwise stay on
+    // top of the new SVG layer - text and movies are left alone
+    if (!pixmap().isNull()) {
+        QLabel::clear();
+    }
+    refreshSvg();
+    updateGeometry();
+    return true;
+}
+
+void TLabel::resetBackgroundImage()
+{
+    // the SVG layer and whatever image sits in QLabel's content slot go together;
+    // text is not an image and stays
+    clearSvgImage();
+    if (!pixmap().isNull() || movie()) {
+        stopMovie();
+        clear();
+    }
+}
+
+void TLabel::stopMovie()
+{
+    if (auto* pMovie = movie()) {
+        // the Host hangs on to this movie to reuse it, so an unstopped one would
+        // go on decoding frames for a label that no longer shows it
+        pMovie->stop();
+    }
+}
+
+QPixmap TLabel::renderSvgPixmap(const QSize& size) const
+{
+    const qreal dpr = devicePixelRatioF();
+    QPixmap svgPixmap(size * dpr);
+    svgPixmap.fill(Qt::transparent);
+    QPainter painter(&svgPixmap);
+
+    if (!qFuzzyIsNull(mSvgRotation) || !qFuzzyIsNull(mSvgShearX) || !qFuzzyIsNull(mSvgShearY)) {
+        const qreal cx = svgPixmap.width() / 2.0;
+        const qreal cy = svgPixmap.height() / 2.0;
+        painter.translate(cx, cy);
+        painter.rotate(mSvgRotation);
+        painter.shear(mSvgShearX, mSvgShearY);
+        painter.translate(-cx, -cy);
+    }
+
+    // QSvgRenderer honours its aspect ratio mode only for a document with an
+    // explicit viewBox, so the fit is done here
+    QRectF targetRect(svgPixmap.rect());
+    if (const QSizeF documentSize(mpSvgRenderer->defaultSize()); !documentSize.isEmpty()) {
+        const QSizeF fitted = documentSize.scaled(QSizeF(svgPixmap.size()), Qt::KeepAspectRatio);
+        targetRect = QRectF(QPointF((svgPixmap.width() - fitted.width()) / 2.0, (svgPixmap.height() - fitted.height()) / 2.0), fitted);
+    }
+    mpSvgRenderer->render(&painter, targetRect);
+
+    if (mSvgTintColor.isValid()) {
+        painter.resetTransform();
+        painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
+        painter.fillRect(svgPixmap.rect(), mSvgTintColor);
+    }
+
+    painter.end();
+    svgPixmap.setDevicePixelRatio(dpr);
+    return svgPixmap;
+}
+
+// the tint and the transforms are the label's, not the document's, so only their
+// own reset functions clear them
+void TLabel::clearSvgImage()
+{
+    if (!mpSvgRenderer) {
+        return;
+    }
+    delete mpSvgRenderer;
+    mpSvgRenderer = nullptr;
+    refreshSvg();
+    // the size hint answered from the document while there was one
+    updateGeometry();
+}
+
+void TLabel::refreshSvg()
+{
+    mSvgPixmapCache = QPixmap();
+    update();
+}
+
+void TLabel::setSvgTint(const QColor& color)
+{
+    mSvgTintColor = color;
+    refreshSvg();
+}
+
+void TLabel::clearSvgTint()
+{
+    mSvgTintColor = QColor();
+    refreshSvg();
+}
+
+void TLabel::setSvgRotation(double angle)
+{
+    mSvgRotation = angle;
+    refreshSvg();
+}
+
+void TLabel::setSvgShear(double shearX, double shearY)
+{
+    mSvgShearX = shearX;
+    mSvgShearY = shearY;
+    refreshSvg();
+}
+
+void TLabel::resetSvgTransform()
+{
+    mSvgRotation = 0.0;
+    mSvgShearX = 0.0;
+    mSvgShearY = 0.0;
+    refreshSvg();
+}
 
 void TLabel::setClickThrough(bool clickthrough)
 {

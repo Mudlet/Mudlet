@@ -114,6 +114,13 @@ public:
     std::optional<QColor> getLabelBackgroundColor(const QString& name) const;
     bool setLabelBackgroundImage(const QString& name, const QString& path);
     bool resetLabelBackgroundImage(const QString& name);
+    bool setLabelSvgTint(const QString& name, const QColor& color);
+    bool resetLabelSvgTint(const QString& name);
+    bool setLabelSvgRotation(const QString& name, double angle);
+    bool resetLabelSvgRotation(const QString& name);
+    bool setLabelSvgShear(const QString& name, double shearX, double shearY);
+    bool resetLabelSvgShear(const QString& name);
+    bool resetLabelSvgTransform(const QString& name);
     std::optional<QRect> getLabelGeometry(const QString& name) const;
     std::optional<bool> getLabelVisible(const QString& name) const;
     // For callers that need the widget itself. An accessor rather than the open
