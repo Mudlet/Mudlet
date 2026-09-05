@@ -6137,8 +6137,13 @@ describe("Main window size and saved layout", function()
     assert.is_true(tallHeight <= smallHeight + 300)
   end)
 
-  it("a main window that loses more than half its width is reported at the width it has", function()
+  it("a main window that loses width is reported at the width it has", function()
     if not resizableWindowAvailable() then
+      return
+    end
+    local charWidth = calcFontSize("main")
+    if not charWidth or charWidth <= 0 then
+      pending("the main console's character width is not readable on this display")
       return
     end
     finally(restoreMainWindowSize)
@@ -6152,18 +6157,27 @@ describe("Main window size and saved layout", function()
     local narrowWidth = getMainWindowSize()
     local narrowColumns = getColumnCount("main")
 
-    -- the main window has a minimum width of its own, so how narrow it really
-    -- became is read off the column count rather than assumed; that and
-    -- getMainWindowSize() have to tell the same story
-    if narrowColumns * 2 >= wideColumns then
-      pending("this display would not take the main window below half its width")
+    -- the main window has a minimum width of its own, so how much narrower it
+    -- really became is read off the column count rather than assumed - that
+    -- keeps the check independent of the function under test
+    if narrowColumns >= wideColumns then
+      pending("this display would not narrow the main window at all")
       return
     end
-    -- the console holds fewer than half the columns it did, so the width it
-    -- reports has to have more than halved with them; merely falling would also
-    -- be true of a size that only got part of the way down
-    assert.is_true(narrowWidth * 2 < wideWidth,
-      ("getMainWindowSize reported %d, down from %d, while the console went from %d to %d columns"):format(narrowWidth, wideWidth, wideColumns, narrowColumns))
+    -- getMainWindowSize() takes only the toolbars off the console area, while
+    -- the column count is of the text pane inside it - shorter again by the
+    -- scrollbar and by any border set. That gap is a fixed number of pixels
+    -- rather than a share of the width, so the two report different fractions
+    -- of one resize and neither can gate the other: comparing them as ratios is
+    -- what made this fail intermittently, on 84 -> 31 columns for 1312 -> 704
+    -- pixels. Subtracting cancels the fixed part, so the pixels the console
+    -- lost have to match the pixels the pane lost - within a fifth, because
+    -- calcFontSize rounds the average character width to a whole number.
+    local paneLost = (wideColumns - narrowColumns) * charWidth
+    local reportedLost = wideWidth - narrowWidth
+    assert.is_true(reportedLost >= paneLost * 0.8,
+      ("getMainWindowSize reported %d, down from %d - a loss of %d pixels, while the console lost %d of its %d columns, which is %d pixels at %d pixels per column")
+        :format(narrowWidth, wideWidth, reportedLost, wideColumns - narrowColumns, wideColumns, paneLost, charWidth))
   end)
 
   it("the main window can be put back the size it was", function()
