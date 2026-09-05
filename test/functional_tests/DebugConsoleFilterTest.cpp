@@ -548,10 +548,10 @@ private slots:
         TDebug::setEnabledCategories(TDebug::csmAllCategories);
 
         TDebug::setPaused(true);
-        const QTime before = QTime::currentTime();
+        const QDateTime before = QDateTime::currentDateTime();
         TDebug(Qt::blue, Qt::black, TDebug::Category::TriggerMatch) << "held first\n" >> nullptr;
         TDebug(Qt::blue, Qt::black, TDebug::Category::TriggerMatch) << "held second\n" >> nullptr;
-        const QTime after = QTime::currentTime();
+        const QDateTime after = QDateTime::currentDateTime();
         QVERIFY2(sink.lines.isEmpty(), "A line arriving while paused reached the sink");
         QCOMPARE(TDebug::pausedMessageCount(), 2);
 
@@ -564,9 +564,15 @@ private slots:
         QVERIFY2(sink.lines.at(0).text.contains(qsl("held first")), qPrintable(sink.lines.at(0).text));
         QVERIFY2(sink.lines.at(1).text.contains(qsl("held second")), qPrintable(sink.lines.at(1).text));
         for (const auto& line : sink.lines) {
-            const QTime stamped = QTime::fromString(line.timeStamp, TBuffer::smTimeStampFormat);
-            QVERIFY2(stamped.isValid(), qPrintable(qsl("Replayed line carried no usable time stamp: '%1'").arg(line.timeStamp)));
-            const QString window = qsl("%1- %2").arg(before.toString(TBuffer::smTimeStampFormat), after.toString(TBuffer::smTimeStampFormat));
+            const QTime stampedTime = QTime::fromString(line.timeStamp, TBuffer::smTimeStampFormat);
+            QVERIFY2(stampedTime.isValid(), qPrintable(qsl("Replayed line carried no usable time stamp: '%1'").arg(line.timeStamp)));
+            // The stamp carries no date, so a window that straddles midnight has
+            // to read a small stamp as the next day rather than as the past:
+            QDateTime stamped(before.date(), stampedTime);
+            if (stamped < before) {
+                stamped = stamped.addDays(1);
+            }
+            const QString window = qsl("%1- %2").arg(before.time().toString(TBuffer::smTimeStampFormat), after.time().toString(TBuffer::smTimeStampFormat));
             QVERIFY2(before <= stamped && stamped <= after, qPrintable(qsl("Replayed line was stamped %1, outside its arrival window %2").arg(line.timeStamp, window)));
         }
     }
