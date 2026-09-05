@@ -28,14 +28,26 @@
 #include "mudlet.h"
 #include "TMap.h"
 
+#include <QDebug>
+
 HostManager::HostManager()
 {
+    // One instance is the contract, and every self()-> call site takes it on
+    // trust. A second one silently repointing the accessor - and nulling it
+    // again when it went out of scope, while the first was still in use - would
+    // surface as a null deref far from whatever built it.
+    if (smpSelf) {
+        qWarning() << "HostManager::HostManager() WARNING - a HostManager already exists, so self() keeps pointing at that one.";
+        return;
+    }
     smpSelf = this;
 }
 
 HostManager::~HostManager()
 {
-    smpSelf = nullptr;
+    if (smpSelf == this) {
+        smpSelf = nullptr;
+    }
 }
 
 void HostManager::deleteHost(const QString& hostname)
