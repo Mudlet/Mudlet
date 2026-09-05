@@ -31,6 +31,15 @@
 // the helpers would serialise on it and the whole design would be a mutex with
 // extra steps; every target Mudlet ships to has a lock-free 64-bit RMW.
 static_assert(std::atomic<uint64_t>::is_always_lock_free);
+// A parked helper sleeps in std::atomic::wait. Before libc++ 22 that was, on
+// Windows, a loop of sleeps that re-checked the word rather than a kernel wait,
+// which would have every helper waking every 8ms for as long as Mudlet ran;
+// refuse the toolchain rather than ship that.
+#if defined(Q_OS_WIN) && defined(_LIBCPP_VERSION)
+static_assert(_LIBCPP_VERSION >= 220000, "TriggerMatchPool needs libc++ 22 or newer on Windows: older ones poll in std::atomic::wait");
+#endif
+
+TriggerMatchPool* TriggerMatchPool::smpInstance = nullptr;
 
 namespace {
 // Tells the core this is a spin-wait, so it can slow the loop down and hand
@@ -107,8 +116,16 @@ TriggerMatchPool& TriggerMatchPool::instance()
     return pool;
 }
 
+void TriggerMatchPool::shutdown()
+{
+    if (smpInstance) {
+        smpInstance->stopHelpers();
+    }
+}
+
 TriggerMatchPool::TriggerMatchPool()
 {
+    smpInstance = this;
     const int cores = std::max(1, QThread::idealThreadCount());
     // Half the machine, capped: past four the tail of the fork-join grows
     // faster than the share of work each extra thread takes away. Zero is how
@@ -150,6 +167,15 @@ TriggerMatchPool::TriggerMatchPool()
             workerLoop(slot);
         }));
         thread->setObjectName(qsl("TriggerMatch-%1").arg(slot));
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+        // The caller spin-waits for the chunk this thread has claimed, and a
+        // spin on an atomic gets none of the priority boost the kernel gives a
+        // lock, so a helper scheduled below the main thread can be descheduled
+        // underneath it - on Apple Silicon possibly onto an efficiency core.
+        // High is the main thread's class on macOS (user-interactive) and no
+        // power throttling on Windows.
+        thread->setServiceLevel(QThread::QualityOfService::High);
+#endif
         thread->start();
         if (!thread->isRunning()) {
             // Qt has already warned. The pool works with however many helpers
@@ -163,17 +189,42 @@ TriggerMatchPool::TriggerMatchPool()
 
 TriggerMatchPool::~TriggerMatchPool()
 {
-    mStop.store(true, std::memory_order_relaxed);
-    {
-        const std::lock_guard<std::mutex> lock(mMutex);
-        mCondition.notify_all();
-    }
-    for (const auto& thread : mThreads) {
-        thread->wait();
-    }
+    // For a process that never called shutdown().
+    stopHelpers();
     for (auto* scratch : mScratch) {
         pcre2_match_data_free(scratch);
     }
+    smpInstance = nullptr;
+}
+
+void TriggerMatchPool::stopHelpers()
+{
+    if (mThreads.empty()) {
+        return;
+    }
+    mStop.store(true, std::memory_order_relaxed);
+    // An empty batch is what wakes a parked helper; it has nothing to claim.
+    // The flag can be relaxed because every helper reads the cursor with
+    // acquire on its way round the loop - in wait(), at the top of the spin
+    // or in a claim - and that pairs with the store in publish(), so the flag
+    // is in view by the time the loop checks it.
+    publish(0);
+    for (const auto& thread : mThreads) {
+        thread->wait();
+    }
+    mThreads.clear();
+}
+
+// With nobody asleep the notify is a waiter-count check, no syscall. The store
+// is seq_cst rather than release so that it cannot pass the library's read of
+// that count: a helper that has just registered as a waiter and is about to
+// sleep on the old word must be woken, and release plus a later load is the
+// one ordering x86 does not keep. One xchg per batch buys that on every
+// library path rather than only the proxy one a 64-bit word takes today.
+void TriggerMatchPool::publish(const int chunkCount)
+{
+    mCursor.store(packCursor(++mEpoch, chunkCount));
+    mCursor.notify_all();
 }
 
 // Claims chunks until the batch runs out, and returns the epoch its last claim
@@ -207,7 +258,8 @@ void TriggerMatchPool::workerLoop(const int slot)
         if (mStop.load(std::memory_order_relaxed)) {
             return;
         }
-        if (epochOf(mCursor.load(std::memory_order_acquire)) != seen) {
+        const uint64_t cursor = mCursor.load(std::memory_order_acquire);
+        if (epochOf(cursor) != seen) {
             seen = runChunks(slot);
             idleSince = std::chrono::steady_clock::now();
             pauses = 0;
@@ -221,25 +273,12 @@ void TriggerMatchPool::workerLoop(const int slot)
         if (std::chrono::steady_clock::now() - idleSince < mSpinBudget) {
             continue;
         }
-        park(seen);
+        // Sleeps until a publish changes the word from the one just read. A
+        // claim that moved it in between - each participant makes at most one
+        // on a batch that is already over - returns at once instead; the loop
+        // then reads the same epoch and comes back here.
+        mCursor.wait(cursor, std::memory_order_acquire);
     }
-}
-
-void TriggerMatchPool::park(const uint32_t seen)
-{
-    std::unique_lock<std::mutex> lock(mMutex);
-    // Sequentially consistent, as are the store and load in prescan() that
-    // pair with these: this is a store-buffering handshake, and it only works
-    // if at least one side sees the other's store. Weaker orderings let both
-    // loads return stale values, which parks this helper through a batch
-    // nobody notifies it about. The caller never waits for a parked helper,
-    // so that costs a batch's parallelism rather than a hang - but the
-    // seq_cst is far cheaper than that.
-    mParked.fetch_add(1, std::memory_order_seq_cst);
-    mCondition.wait(lock, [this, seen] {
-        return epochOf(mCursor.load(std::memory_order_seq_cst)) != seen || mStop.load(std::memory_order_relaxed);
-    });
-    mParked.fetch_sub(1, std::memory_order_release);
 }
 
 bool TriggerMatchPool::prescan(TTrigger* const* triggers, const int count, const quint32 passId, const char* subject, const int subjectLength, const QString& haystack)
@@ -260,11 +299,7 @@ bool TriggerMatchPool::prescan(TTrigger* const* triggers, const int count, const
     mJob.haystack = &haystack;
 
     mDone.store(0, std::memory_order_relaxed);
-    mCursor.store(packCursor(++mEpoch, chunkCount), std::memory_order_seq_cst);
-    if (mParked.load(std::memory_order_seq_cst) > 0) {
-        const std::lock_guard<std::mutex> lock(mMutex);
-        mCondition.notify_all();
-    }
+    publish(chunkCount);
 
     runChunks(0);
 

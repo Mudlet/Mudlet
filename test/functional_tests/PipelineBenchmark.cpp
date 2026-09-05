@@ -679,7 +679,13 @@ private slots:
         qInfo().nospace() << "Corpus: " << mCorpusLines << " lines, " << mCorpusBytes << " bytes";
     }
 
-    void cleanupTestCase() { mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg); }
+    void cleanupTestCase()
+    {
+        // A QTEST_MAIN binary, so nothing else joins the helpers before the
+        // QApplication goes.
+        TriggerMatchPool::shutdown();
+        mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
+    }
 
     void init()
     {

@@ -33,6 +33,7 @@
 #include "HostManager.h"
 #include "mudlet.h"
 #include "MudletInstanceCoordinator.h"
+#include "TriggerMatchPool.h"
 #include <chrono>
 #include <QCheckBox>
 #include <QCommandLineParser>
@@ -1140,6 +1141,10 @@ int main(int argc, char* argv[])
     // with some OS's choice of wait cursor - you might wish to temporarily disable
     // the earlier setOverrideCursor() line and this one.
     int result = app->exec();
+
+    // Joins the match helpers while the QApplication still exists; see
+    // TriggerMatchPool::shutdown().
+    TriggerMatchPool::shutdown();
 
     // Explicitly delete QApplication BEFORE main() returns to ensure Qt cleanup
     // happens before __cxa_finalize_ranges runs static destructors. This prevents

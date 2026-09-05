@@ -45,6 +45,11 @@ check it is a real MSYS2 shell rather than Git for Windows' bash carrying an inh
 `CI/build-mudlet-for-windows.sh` exit with an error on any other `MSYSTEM`, including the
 `CLANGARM64` environment native to ARM64 hosts.
 
+The toolchain has to be current enough to carry libc++ 22: the trigger match pool sleeps its helper
+threads in `std::atomic::wait`, which older libc++ builds implement on Windows as a polling loop, and
+`src/TriggerMatchPool.cpp` refuses them at compile time with a message saying so. `pacman -Syu`
+brings MSYS2 up to date.
+
 The `windows-debug` preset reads `MSYSTEM_PREFIX`, which MSYS2 sets in each of its shells, so the
 preset follows whichever environment is provisioned:
 

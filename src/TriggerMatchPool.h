@@ -22,11 +22,9 @@
 
 #include <atomic>
 #include <chrono>
-#include <condition_variable>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
-#include <mutex>
 #include <vector>
 
 #include <QString>
@@ -51,11 +49,22 @@ struct pcre2_real_match_data_8;
 // Between lines the helpers spin rather than sleep, because a wake-up costs
 // more than the microsecond or two of matching it would hand over; the budget
 // is a duration rather than an iteration count because one PAUSE instruction
-// is a couple of cycles on some cores and well over a hundred on others.
+// is a couple of cycles on some cores and well over a hundred on others. Past
+// the budget a helper sleeps in std::atomic::wait on the cursor word, so
+// publishing a batch is one store and one notify, and there is no lock
+// anywhere.
 class TriggerMatchPool
 {
 public:
     static TriggerMatchPool& instance();
+
+    // Stops the helpers and waits for them, for good: the pool declines every
+    // batch afterwards. main() calls this once the event loop has returned and
+    // before it deletes the application, so the threads go while Qt is still
+    // whole instead of in a static destructor after it. Main thread only, with
+    // no prescan in flight. Reached through smpInstance rather than instance(),
+    // which would construct a pool nobody used just to stop it.
+    static void shutdown();
 
     TriggerMatchPool(const TriggerMatchPool&) = delete;
     TriggerMatchPool& operator=(const TriggerMatchPool&) = delete;
@@ -87,9 +96,12 @@ private:
     TriggerMatchPool();
     ~TriggerMatchPool();
 
+    void publish(int chunkCount);
+    void stopHelpers();
     void workerLoop(int slot);
     uint32_t runChunks(int slot);
-    void park(uint32_t seen);
+
+    static TriggerMatchPool* smpInstance;
 
     struct Job
     {
@@ -111,7 +123,7 @@ private:
     static constexpr std::size_t scmCacheLine = 128;
 
     // Read by every helper on every spin and written only in the constructor,
-    // or for mStop once at exit, so this line is never invalidated.
+    // or for mStop once in stopHelpers(), so this line is never invalidated.
     int mThreshold = 0;
     int mFloodChunkLines = 0;
     std::chrono::steady_clock::duration mSpinBudget{};
@@ -134,14 +146,9 @@ private:
     // batch, the claim belongs to: a thread that turns up after a batch is
     // over gets an index past its count and touches nothing. Epoch 0 is the
     // value before any batch, which is why helpers start with seen == 0 and
-    // prescan() pre-increments.
+    // publish() pre-increments.
     alignas(scmCacheLine) std::atomic<uint64_t> mCursor{0};
     alignas(scmCacheLine) std::atomic<int> mDone{0};
-    // The park handshake, written only when a helper goes to sleep or the
-    // caller wakes one, so the spinners' reads above stay cache hits.
-    alignas(scmCacheLine) std::atomic<int> mParked{0};
-    std::mutex mMutex;
-    std::condition_variable mCondition;
 };
 
 #endif // MUDLET_TRIGGERMATCHPOOL_H
