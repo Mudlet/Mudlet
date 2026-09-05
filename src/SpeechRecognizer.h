@@ -200,6 +200,12 @@ public:
         Unsupported, // This backend cannot use vocabulary - correct client-side
         Failed       // It can, and this attempt did not work
     };
+    // A backend answering Failed reports why through errorOccurred() itself,
+    // on every path that can reach it. The caller sees one enum value for
+    // several different problems and cannot describe any of them, so anything
+    // it emitted instead would be vague enough to be worth less than nothing
+    // beside the specific message a backend that already spoke had emitted.
+
     Q_ENUM(VocabularyResult)
 
     // Supply vocabulary for biasing or grammar constraint.
@@ -409,7 +415,10 @@ signals:
     void stateChanged(SpeechRecognizer::State newState);
 
     // Emitted when what the backend can do changes, which is when a model is
-    // loaded or replaced. Without it a consumer that read the capabilities
+    // loaded, replaced, or released - releasing counts, because a capability
+    // hung off the loaded model goes away with it, and a backend whose
+    // capabilities hang off the library alone will simply find nothing changed
+    // and stay quiet. Without it a consumer that read the capabilities
     // once - the obvious thing to do - would go on believing them after they
     // stopped being true.
     void capabilitiesChanged(SpeechRecognizer::Capabilities newCapabilities);

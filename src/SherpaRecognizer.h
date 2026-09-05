@@ -108,6 +108,12 @@ public:
 
     // Reset library load state to allow re-checking (e.g., after installation)
     static bool resetLibraryLoadState();
+    // Why the library would not load, when it was found but could not be used
+    // - a missing dependency of its own, most often. Empty when it loaded, and
+    // when nothing was there to load in the first place. Kept because it is
+    // the only string that distinguishes "not installed" from "installed and
+    // broken", and those send a reader to entirely different places.
+    static QString libraryLoadError() { return sLibraryLoadError; }
 
     // Get the list of paths where the sherpa-onnx library is searched
     static QStringList librarySearchPaths();
@@ -233,6 +239,7 @@ private:
     static QLibrary sSherpaLibrary;
     static bool sLibraryLoaded;
     static bool sLibraryLoadAttempted;
+    static QString sLibraryLoadError;
 
     // sherpa-onnx C API function pointers
     using create_recognizer_fn = const SherpaOnnxOnlineRecognizer* (*)(const SherpaOnnxOnlineRecognizerConfig*);

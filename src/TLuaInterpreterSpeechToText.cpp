@@ -110,6 +110,14 @@ static QString noEngineMessage()
     if (VoskRecognizer::libraryUnloadedByRequest()) {
         return qsl("the speech engine library was unloaded on request - call stt.reloadLibrary() before using speech recognition again");
     }
+    // A library that is present but will not load - a dependency of its own
+    // missing, most often - was reported as "not installed", naming the very
+    // path the file is sitting at. The loader's own reason is the one string
+    // that says what is actually wrong, and it used to go only to a qWarning
+    // nobody reading the error would see.
+    if (const QString reason = SherpaRecognizer::libraryLoadError(); !reason.isEmpty()) {
+        return qsl("the speech engine library is installed but could not be loaded: %1").arg(reason);
+    }
     return qsl("the speech engine library is not installed, so speech recognition cannot be used - looked in: %1").arg(speechLibrarySearchPaths().join(qsl(", ")));
 }
 
@@ -950,17 +958,11 @@ int TLuaInterpreter::sttSetVocabulary(lua_State* L)
         return warnArgumentValue(L, "stt.setVocabulary", message);
     }
 
-    // The Lua answer stays a boolean, as documented: applied or not. A
-    // backend that could have applied these words and did not is a fault
-    // rather than a limitation, so it also says so where faults are reported -
-    // otherwise the caller quietly falls back to correcting results itself and
-    // never learns the engine had a problem.
+    // The Lua answer stays a boolean, as documented: applied or not. Nothing is
+    // emitted here. A Failed backend has already said why, in terms naming the
+    // actual fault, and adding a second event restated it with a vaguer one -
+    // two sysSTTError for one problem, the useful one first.
     const auto outcome = pRecognizer->setVocabulary(words);
-    if (outcome == SpeechRecognizer::VocabularyResult::Failed) {
-        //: Shown when the speech engine could have used the game's vocabulary but failed to
-        emit pRecognizer->errorOccurred(tr("Speech recognition could not apply the supplied vocabulary."));
-    }
-
     lua_pushboolean(L, outcome == SpeechRecognizer::VocabularyResult::Applied);
     return 1;
 }
@@ -1020,6 +1022,15 @@ int TLuaInterpreter::sttReloadLibrary(lua_State* L)
     // libraryAvailable() below would skip the probe and answer from cache -
     // reporting a successful reload of a module that was never released
     if (!VoskRecognizer::resetLibraryLoadState()) {
+        return warnArgumentValue(L, "stt.reloadLibrary", "the speech recognition library is still mapped and could not be released, so detection could not be re-run", true);
+    }
+    // sherpa latches its own "already looked" flag, and resetting only Vosk's
+    // left a first sherpa install invisible until Mudlet restarted - which is
+    // the restart this call exists to avoid. Safe to reach here only because
+    // the guard above refused while any native handle was live: this nulls the
+    // function pointers that destroyStream() and releaseSherpaResources() test
+    // before freeing, so handles outliving it could never be freed at all.
+    if (!SherpaRecognizer::resetLibraryLoadState()) {
         return warnArgumentValue(L, "stt.reloadLibrary", "the speech recognition library is still mapped and could not be released, so detection could not be re-run", true);
     }
     // Lift the latch stt.unloadLibrary() set, since asking for a reload is

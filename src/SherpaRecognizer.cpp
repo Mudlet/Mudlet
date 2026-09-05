@@ -26,6 +26,8 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+
+#include <algorithm>
 #include <QPointer>
 #include <QTextStream>
 #include <QVarLengthArray>
@@ -140,6 +142,7 @@ struct SherpaOnnxOnlineRecognizerResult
 QLibrary SherpaRecognizer::sSherpaLibrary;
 bool SherpaRecognizer::sLibraryLoaded = false;
 bool SherpaRecognizer::sLibraryLoadAttempted = false;
+QString SherpaRecognizer::sLibraryLoadError;
 
 SherpaRecognizer::create_recognizer_fn SherpaRecognizer::s_createOnlineRecognizer = nullptr;
 SherpaRecognizer::destroy_recognizer_fn SherpaRecognizer::s_destroyOnlineRecognizer = nullptr;
@@ -245,9 +248,22 @@ bool SherpaRecognizer::loadSherpaLibrary()
     }
 
     if (!sSherpaLibrary.isLoaded()) {
+        // Only when something was actually there: QLibrary reports a failure
+        // for a name that matched no file at all, and calling that "installed
+        // but broken" sends the reader looking for a fault in a file they do
+        // not have.
+        // Held in a local: librarySearchPaths() returns by value, so calling it
+        // once per iterator built two separate temporaries and walked from one
+        // into the other, both destroyed by the time any_of ran.
+        const QStringList searchPaths = librarySearchPaths();
+        const bool anythingToLoad = std::any_of(searchPaths.cbegin(), searchPaths.cend(), [](const QString& path) {
+            return QFileInfo::exists(path);
+        });
+        sLibraryLoadError = anythingToLoad ? sSherpaLibrary.errorString() : QString();
         qWarning() << "SherpaRecognizer: Failed to load sherpa-onnx library:" << sSherpaLibrary.errorString();
         return false;
     }
+    sLibraryLoadError.clear();
 
     // Resolve function pointers
     s_createOnlineRecognizer = reinterpret_cast<create_recognizer_fn>(sSherpaLibrary.resolve("SherpaOnnxCreateOnlineRecognizer"));
@@ -306,6 +322,7 @@ bool SherpaRecognizer::resetLibraryLoadState()
 
     sLibraryLoaded = false;
     sLibraryLoadAttempted = false;
+    sLibraryLoadError.clear();
 
     s_createOnlineRecognizer = nullptr;
     s_destroyOnlineRecognizer = nullptr;
@@ -1005,6 +1022,14 @@ SpeechRecognizer::VocabularyResult SherpaRecognizer::applyVocabulary(const QStri
     // they wait for the next load. Failed rather than Applied: they are not in
     // effect yet, and a caller told otherwise would stop correcting results
     // itself while nothing was biasing them.
+    //
+    // Said here because the other Failed above has already been explained by
+    // loadModel(), in terms naming what actually went wrong. A caller cannot
+    // tell the two apart from the return value, so each has to speak for
+    // itself - and this one is the reason a bare "could not apply" used to be
+    // emitted for both, restating the specific message with a vaguer one.
+    //: Shown when words offered to the speech engine cannot take effect until it next loads a model, because it is in the middle of an utterance
+    emit errorOccurred(tr("Speech recognition is mid-utterance, so the supplied vocabulary is kept and takes effect at the next model load."));
     return VocabularyResult::Failed;
 }
 
@@ -1036,7 +1061,12 @@ bool SherpaRecognizer::setSensitivity(Sensitivity sensitivity)
 
 bool SherpaRecognizer::setLanguage(const QString& languageCode)
 {
-    if (mCurrentLanguage == languageCode) {
+    // currentLanguage(), not mCurrentLanguage: the member outlives the
+    // recognizer that gave it meaning, so after releaseResources() this
+    // shortcut answered true for a language nothing was set to - with
+    // currentLanguage() reporting empty in the same breath. The accessor is
+    // gated on a live recognizer, so it can only agree here.
+    if (!currentLanguage().isEmpty() && currentLanguage() == languageCode) {
         return true;
     }
 
