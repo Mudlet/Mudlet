@@ -100,9 +100,8 @@ private:
         return count;
     }
 
-    bool waitForTextInBuffer(const QString& text, const int timeoutMs = 5000)
+    bool waitForTextInBuffer(TMainConsole* console, const QString& text, const int timeoutMs = 5000)
     {
-        TMainConsole* console = mudlet::self()->getActiveHost()->mpConsole;
         return QTest::qWaitFor(
                 [console, &text]() {
                     return lineHolding(console, text) > -1;
@@ -112,21 +111,25 @@ private:
 
     TMainConsole* startSearchableProfile()
     {
-        startProfile(mHostname, mLocalhost, mPort);
-        auto* host = mudlet::self()->getActiveHost();
+        Host* host = startProfile(mHostname, mLocalhost, mPort);
+        if (!host) {
+            return nullptr;
+        }
         TMainConsole* console = host->mpConsole;
 
         // Room for the longest fixture line, so that what the assertions below
         // count as one line cannot be wrapped into two:
         console->setWrapAt(200);
         mpServer->sendRaw(searchableText().toUtf8());
-        if (!waitForTextInBuffer(qsl("nothing else moves."))) {
+        if (!waitForTextInBuffer(console, qsl("nothing else moves."))) {
             return nullptr;
         }
         return console;
     }
 
-    void startProfile(const QString& hostname, const QString& address, const QString& port)
+    // Reports what went wrong and hands back nothing, so the caller's own
+    // assertion ends the test instead of the null host doing it.
+    Host* startProfile(const QString& hostname, const QString& address, const QString& port)
     {
         QTimer::singleShot(0, qApp, [hostname, address, port]() {
             const auto dialog = []() {
@@ -178,17 +181,21 @@ private:
 
         QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
         if (!spy.wait(5000)) {
-            QFAIL("Profile took too long to load.");
+            qWarning() << "Profile took too long to load.";
+            return nullptr;
         }
         auto* host = mudlet::self()->getActiveHost();
         if (!host) {
-            QFAIL("No active host available for the test.");
+            qWarning() << "No active host available for the test.";
+            return nullptr;
         }
 
         QSignalSpy spy2(&(host->mTelnet), &cTelnet::signal_connected);
         if (!spy2.wait(2000)) {
-            QFAIL("Could not connect with the host.");
+            qWarning() << "Could not connect with the host.";
+            return nullptr;
         }
+        return host;
     }
 
     void deleteProfileDirectory(const QString& profileName) { deleteDirectory(mudlet::getMudletPath(enums::profileHomePath, profileName)); }
@@ -246,7 +253,7 @@ private slots:
     void test_aNewSearchStartsAtTheEndAndMarksEveryHitOnTheLineItStopsOn()
     {
         auto* console = startSearchableProfile();
-        QVERIFY2(console, "the fixture text never reached the buffer");
+        QVERIFY2(console, "the profile never started, or the fixture text never reached its buffer - see the warning above");
 
         const int laterLine = lineHolding(console, qsl("GORBASH stirs"));
         const int earlierLine = lineHolding(console, qsl("gorbash sleeps"));
@@ -265,7 +272,7 @@ private slots:
     void test_searchingAgainStepsToTheMatchAboveTheOneItIsOn()
     {
         auto* console = startSearchableProfile();
-        QVERIFY2(console, "the fixture text never reached the buffer");
+        QVERIFY2(console, "the profile never started, or the fixture text never reached its buffer - see the warning above");
 
         const int laterLine = lineHolding(console, qsl("GORBASH stirs"));
         const int earlierLine = lineHolding(console, qsl("gorbash sleeps"));
@@ -282,7 +289,7 @@ private slots:
     void test_searchingDownComesBackTowardsTheEndOfTheBuffer()
     {
         auto* console = startSearchableProfile();
-        QVERIFY2(console, "the fixture text never reached the buffer");
+        QVERIFY2(console, "the profile never started, or the fixture text never reached its buffer - see the warning above");
 
         const int laterLine = lineHolding(console, qsl("GORBASH stirs"));
         const int earlierLine = lineHolding(console, qsl("gorbash sleeps"));
@@ -301,7 +308,7 @@ private slots:
     void test_searchingDownWithNothingBelowTheCurrentLineDoesNothing()
     {
         auto* console = startSearchableProfile();
-        QVERIFY2(console, "the fixture text never reached the buffer");
+        QVERIFY2(console, "the profile never started, or the fixture text never reached its buffer - see the warning above");
 
         console->mpBufferSearchBox->setText(qsl("gorbash"));
         console->slot_searchBufferDown();
@@ -314,7 +321,7 @@ private slots:
     void test_theCaseSensitiveOptionSkipsALineThatOnlyMatchesWithoutIt()
     {
         auto* console = startSearchableProfile();
-        QVERIFY2(console, "the fixture text never reached the buffer");
+        QVERIFY2(console, "the profile never started, or the fixture text never reached its buffer - see the warning above");
 
         const int laterLine = lineHolding(console, qsl("GORBASH stirs"));
         const int earlierLine = lineHolding(console, qsl("gorbash sleeps"));
@@ -336,7 +343,7 @@ private slots:
     void test_aNewTermClearsWhatTheOldOneMarkedAndStartsOver()
     {
         auto* console = startSearchableProfile();
-        QVERIFY2(console, "the fixture text never reached the buffer");
+        QVERIFY2(console, "the profile never started, or the fixture text never reached its buffer - see the warning above");
 
         const int laterLine = lineHolding(console, qsl("GORBASH stirs"));
         const int dustyLine = lineHolding(console, qsl("a dusty road"));
@@ -357,7 +364,7 @@ private slots:
     void test_aTermThatIsNowhereInTheBufferSaysSo()
     {
         auto* console = startSearchableProfile();
-        QVERIFY2(console, "the fixture text never reached the buffer");
+        QVERIFY2(console, "the profile never started, or the fixture text never reached its buffer - see the warning above");
 
         console->mpBufferSearchBox->setText(qsl("dragonfruit"));
         console->slot_searchBufferUp();
@@ -371,7 +378,7 @@ private slots:
     void test_anEmptyTermIsNotSearchedFor()
     {
         auto* console = startSearchableProfile();
-        QVERIFY2(console, "the fixture text never reached the buffer");
+        QVERIFY2(console, "the profile never started, or the fixture text never reached its buffer - see the warning above");
 
         console->mpBufferSearchBox->setText(QString());
         console->slot_searchBufferUp();
@@ -385,8 +392,8 @@ private slots:
     // are left on the text with nothing on screen to say why.
     void test_hidingTheFindBarClearsWhatTheSearchMarked()
     {
-        startProfile(mHostname, mLocalhost, mPort);
-        auto* host = mudlet::self()->getActiveHost();
+        Host* host = startProfile(mHostname, mLocalhost, mPort);
+        QVERIFY2(host, "the profile never started");
         mudlet::self()->attachDebugArea(host->getName());
 
         auto* console = mudlet::smpDebugConsole.data();
