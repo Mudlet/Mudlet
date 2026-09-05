@@ -259,6 +259,91 @@ describe("Alias processing", function()
 
     end)
 
+    describe("alias captures", function()
+
+        after_each(function()
+            _G.AliasSpec = nil
+        end)
+
+        it("puts a named group's capture in the matches table under its name", function()
+            _G.AliasSpec = {}
+            local id = tempAlias([[^named_alias (?<who>\w+) with (?<what>\w+)$]], [==[
+                _G.AliasSpec.whole = matches[1]
+                _G.AliasSpec.who = matches["who"]
+                _G.AliasSpec.what = matches["what"]
+            ]==])
+            finally(function() killAlias(id) end)
+
+            expandAlias("named_alias orc with sword", false)
+
+            assert.are.equal("named_alias orc with sword", _G.AliasSpec.whole, "the alias should have matched at all")
+            assert.are.equal("orc", _G.AliasSpec.who)
+            assert.are.equal("sword", _G.AliasSpec.what)
+        end)
+
+        it("leaves out a named group that took no part in the match", function()
+            _G.AliasSpec = {}
+            local id = tempAlias([[^named_alias_alt (?:(?<left>aaa)|(?<right>bbb))$]], [==[
+                _G.AliasSpec.left = matches["left"]
+                _G.AliasSpec.right = matches["right"]
+            ]==])
+            finally(function() killAlias(id) end)
+
+            expandAlias("named_alias_alt bbb", false)
+
+            assert.are.equal("bbb", _G.AliasSpec.right, "the branch that matched should be named in the matches table")
+            assert.is_nil(_G.AliasSpec.left, "a group on the branch that did not match has no capture to offer")
+        end)
+
+        it("gives an empty string for a group that matched no characters", function()
+            _G.AliasSpec = {}
+            local id = tempAlias([[^empty_capture_alias(\d*)$]], [==[
+                _G.AliasSpec.whole = matches[1]
+                _G.AliasSpec.digits = matches[2]
+            ]==])
+            finally(function() killAlias(id) end)
+
+            expandAlias("empty_capture_alias", false)
+
+            assert.are.equal("empty_capture_alias", _G.AliasSpec.whole, "the alias should have matched at all")
+            assert.are.equal("", _G.AliasSpec.digits, "a group that matched nothing is still a capture")
+        end)
+
+        it("does not fire an alias whose pattern failed to compile", function()
+            _G.AliasSpec = {good = 0, bad = 0}
+            local goodId = tempAlias([[^bad_alias_pattern$]], [==[_G.AliasSpec.good = _G.AliasSpec.good + 1]==])
+            local badId = tempAlias([[^bad_alias_pattern($]], [==[_G.AliasSpec.bad = _G.AliasSpec.bad + 1]==])
+            -- busted keeps only the last finally(), so this undoes everything at once
+            finally(function()
+                killAlias(goodId)
+                killAlias(badId)
+            end)
+            assert.is_true(badId > 0, "an uncompilable pattern still makes an alias, so that it can be seen and repaired")
+
+            expandAlias("bad_alias_pattern", false)
+
+            assert.are.equal(1, _G.AliasSpec.good, "the control alias shows the command does reach the alias engine")
+            assert.are.equal(0, _G.AliasSpec.bad, "an alias whose regex did not compile must not fire")
+        end)
+
+        it("does not fire an alias with an empty pattern", function()
+            _G.AliasSpec = {empty = 0, control = 0}
+            local emptyId = tempAlias("", [==[_G.AliasSpec.empty = _G.AliasSpec.empty + 1]==])
+            local controlId = tempAlias([[^empty_pattern_alias$]], [==[_G.AliasSpec.control = _G.AliasSpec.control + 1]==])
+            finally(function()
+                killAlias(emptyId)
+                killAlias(controlId)
+            end)
+            assert.is_true(emptyId > 0, "an empty pattern still makes an alias, so that it can be seen and repaired")
+
+            expandAlias("empty_pattern_alias", false)
+
+            assert.are.equal(1, _G.AliasSpec.control, "the control alias shows the command does reach the alias engine")
+            assert.are.equal(0, _G.AliasSpec.empty, "an empty pattern would otherwise match every command typed")
+        end)
+
+    end)
+
     describe("permAlias argument validation", function()
 
         it("errors when the lua code (argument 4) is not a string", function()

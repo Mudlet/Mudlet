@@ -159,3 +159,11 @@ end)
 ```
 
 If you have tests which it makes sense to have but would not logically fall into a describe block like this specific one, that is fine, but we use the format of the describe message as part of our method for gathering some code coverage metrics so we would like to try and include one describe for each function tested, in addition to any other logical groups of tests necessary. See existing test files for examples and ask on Discord is you still need help.
+
+### Cleaning up
+
+Around 4000 tests run in one process, so anything a test creates - a trigger, an alias, a
+window, a room, a global - has to be undone even when an assertion fails partway through.
+`finally()` is the tool for that, but busted keeps only **one** callback per `it()`: a
+second `finally()` silently replaces the first, and the cleanup it was holding never runs.
+Do all of a test's cleanup in a single `finally()`.
