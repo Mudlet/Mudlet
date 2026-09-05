@@ -38,6 +38,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QLibraryInfo>
+#include <QMutex>
 #include <QNetworkRequest>
 #include <QPointer>
 #include <QProcessEnvironment>
@@ -49,7 +50,24 @@
 #include <QUrl>
 
 namespace {
+QMutex configRootMutex;
 QString configRoot;
+bool configRootSettled = false;
+
+QString currentConfigRoot()
+{
+    QMutexLocker locker(&configRootMutex);
+    if (configRoot.isEmpty()) {
+        configRoot = MudletApp::resolveConfigRoot(MudletApp::executableDir()).path;
+    }
+    return configRoot;
+}
+
+bool configPathSettled()
+{
+    QMutexLocker locker(&configRootMutex);
+    return configRootSettled;
+}
 bool mudletDictionariesInUse = false;
 QPointer<QSettings> smpSettings;
 QString smInterfaceLanguage;
@@ -151,6 +169,11 @@ MudletApp::ConfigDirResolution MudletApp::resolveConfigRoot(const QString& execD
     return xdgConfigDir(confDirDefault);
 }
 
+bool MudletApp::portableModeActive(const QString& execDir)
+{
+    return QFileInfo(qsl("%1/portable.txt").arg(execDir)).isFile() || QFileInfo(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath())).isFile();
+}
+
 MudletApp::ConfigDirResolution MudletApp::xdgConfigDir(const QString& legacyDefault)
 {
     const QString xdgConfigHome = qEnvironmentVariable("XDG_CONFIG_HOME");
@@ -186,7 +209,9 @@ bool MudletApp::configDirHoldsProfiles(const QString& dir)
 
 void MudletApp::setConfigPath(const QString& path)
 {
+    QMutexLocker locker(&configRootMutex);
     configRoot = path;
+    configRootSettled = true;
 }
 
 bool MudletApp::usingMudletDictionaries()
@@ -208,10 +233,7 @@ QString MudletApp::sanitizeForPath(const QString& input)
 
 QString MudletApp::getMudletPath(const enums::mudletPathType mode, const QString& extra1, const QString& extra2)
 {
-    if (configRoot.isEmpty()) {
-        configRoot = resolveConfigRoot(executableDir()).path;
-    }
-    const QString confPath = configRoot;
+    const QString confPath = currentConfigRoot();
     switch (mode) {
     case enums::mainPath:
         // The root of all mudlet data for the user - does not end in a '/'
@@ -491,12 +513,13 @@ QSettings* MudletApp::getQSettings()
     if (smpSettings) {
         return smpSettings;
     }
-    const QString root = MudletApp::getMudletPath(enums::mainPath);
-    // Callers guard on null until setupConfig() has settled the root; a root of
-    // "" would otherwise put the file at /Mudlet.ini
-    if (root.isEmpty()) {
+    // Null until setupConfig() has validated a root and passed it to
+    // setConfigPath(): a store built on a self-resolved root would pin every
+    // later reader to a Mudlet.ini the startup checks never saw.
+    if (!configPathSettled()) {
         return nullptr;
     }
+    const QString root = MudletApp::getMudletPath(enums::mainPath);
     // parented to the application, not the main window: the window deletes
     // itself on close and the Updater keeps using this QSettings past that point.
     smpSettings = new QSettings(qsl("%1/Mudlet.ini").arg(root), QSettings::IniFormat, QCoreApplication::instance());

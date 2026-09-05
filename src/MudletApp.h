@@ -71,6 +71,10 @@ public:
     // share it.
     static ConfigDirResolution resolveConfigRoot(const QString& execDir);
 
+    // Only looks for the two markers, so it is cheap enough to ask on every
+    // password load and save
+    static bool portableModeActive(const QString& execDir);
+
     // The XDG leg on its own: $XDG_CONFIG_HOME/mudlet takes a tie with
     // legacyDefault so that a fresh install lands there
     static ConfigDirResolution xdgConfigDir(const QString& legacyDefault);

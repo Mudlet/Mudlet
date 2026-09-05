@@ -206,7 +206,7 @@ bool CredentialManager::isOperationValid() const
 
 bool CredentialManager::isPortableModeActive() const
 {
-    return MudletApp::resolveConfigRoot(MudletApp::executableDir()).portable;
+    return MudletApp::portableModeActive(MudletApp::executableDir());
 }
 
 bool CredentialManager::shouldUseKeychain(const QString& profileName) const
