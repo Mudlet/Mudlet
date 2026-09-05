@@ -146,12 +146,17 @@ private:
         pRoom->setDoor(mSpecialExitCommand, 1);
     }
 
+    // Mirrors of ExitsTreeWidget's private column enumeration are only safe while
+    // the table still has the columns they name. A QCOMPARE only stands in a
+    // function that returns nothing, which is why this is one rather than a line
+    // in openDialogOn() below - and a Q_ASSERT there, which a build without
+    // debug drops, would let the mirrors drift unnoticed.
+    void verifySpecialExitColumnCount(dlgRoomExits* pDlg) { QCOMPARE(pDlg->specialExits->columnCount(), scmSpecialExitColumnCount); }
+
     dlgRoomExits* openDialogOn(const int roomId)
     {
         mpDialog = new dlgRoomExits(mpHost, roomId);
-        // Mirrors of ExitsTreeWidget's private column enumeration are only safe
-        // while the table still has the columns they name
-        Q_ASSERT(mpDialog->specialExits->columnCount() == scmSpecialExitColumnCount);
+        verifySpecialExitColumnCount(mpDialog);
         // The dialog installs two item delegates it does not own (see the
         // specialExitDelegatesOutliveTheDialog case), so deleting the dialog is
         // not enough to get rid of them

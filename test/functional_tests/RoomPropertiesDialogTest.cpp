@@ -52,6 +52,8 @@
 
 #include "GroupedTest.h"
 
+#include <algorithm>
+
 // What the dialog shows in place of a value the selection does not agree on.
 // dlgRoomProperties keeps it as a private tr() string, and no translator is
 // installed in a test run, so the source string is what appears.
@@ -80,6 +82,7 @@ struct EmittedProperties
     QColor newBorderColor;
     bool changeBorderThickness = false;
     int newBorderThickness = 0;
+    QList<int> roomIds;
 };
 
 class RoomPropertiesDialogTest : public QObject
@@ -185,8 +188,13 @@ private:
                        QColor newBorderColor,
                        bool changeBorderThickness,
                        int newBorderThickness,
-                       QSet<TRoom*>) {
+                       QSet<TRoom*> rooms) {
                     ++mEmitted.emitCount;
+                    mEmitted.roomIds.clear();
+                    for (const TRoom* pRoom : rooms) {
+                        mEmitted.roomIds.append(pRoom->getId());
+                    }
+                    std::sort(mEmitted.roomIds.begin(), mEmitted.roomIds.end());
                     mEmitted.changeName = changeName;
                     mEmitted.newName = newName;
                     mEmitted.changeRoomColor = changeRoomColor;
@@ -324,6 +332,9 @@ private slots:
         pDlg->accept();
 
         QCOMPARE(mEmitted.emitCount, 1);
+        // the set decides which rooms the save applies to, so an emit that
+        // changes nothing still has to name the selection it was opened on
+        QCOMPARE(mEmitted.roomIds, QList<int>({scmFirstRoom, scmSecondRoom}));
         QVERIFY2(!mEmitted.changeName, "the name placeholder was taken for a new name");
         QVERIFY2(!mEmitted.changeSymbol, "the symbol placeholder was taken for a new symbol");
         QVERIFY2(!mEmitted.changeWeight, "the weight placeholder was taken for a new weight");
@@ -348,6 +359,7 @@ private slots:
         pDlg->accept();
 
         QCOMPARE(mEmitted.emitCount, 1);
+        QCOMPARE(mEmitted.roomIds, QList<int>({scmFirstRoom}));
         QVERIFY(mEmitted.changeName);
         QCOMPARE(mEmitted.newName, qsl("Old Armoury"));
         QVERIFY(mEmitted.changeSymbol);
