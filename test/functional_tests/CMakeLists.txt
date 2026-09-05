@@ -37,12 +37,14 @@ set(WINDOW_GROUP_TEST_SOURCES
     CopyAsImageTest.cpp
     DebugConsoleFilterTest.cpp
     FrontendRefreshSeamTest.cpp
+    CommandLineKeyHandlingTest.cpp
     DetachedWindowMenuShortcutsTest.cpp
     FramePacingTest.cpp
     GlyphOverflowTest.cpp
     HyperlinkModelSplitTest.cpp
     LabelAnchorInteractionTest.cpp
     LabelMovieRefusalTest.cpp
+    CaretNavigationTest.cpp
     MainConsoleSelectionTest.cpp
     TabDetachThresholdTest.cpp
     DetachedWindowDiscordButtonTest.cpp
@@ -58,6 +60,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     PastedLinkStateTest.cpp
     ProfileSwitchMiniconsoleTest.cpp
     RecolouredLineCacheTest.cpp
+    TextEditAccessibleInterfaceTest.cpp
     TrackedLinkTrimTest.cpp
     ProfileSwitchShortcutTest.cpp
     SubCommandLineLifetimeTest.cpp
@@ -69,6 +72,7 @@ set(WINDOW_GROUP_TEST_SOURCES
 
 # Profiles: their config dir, their folders, and loading, saving and deleting them
 set(PROFILE_GROUP_TEST_SOURCES
+    CloseDuringProfileLoadTest.cpp
     ConfigDirOverrideTest.cpp
     ConnectionDialogCrashTest.cpp
     ConnectionDialogFocusTest.cpp
@@ -109,6 +113,7 @@ set(TELNET_GROUP_TEST_SOURCES
 
 # Triggers and the other scriptable units, and what a running script does to them
 set(TRIGGER_GROUP_TEST_SOURCES
+    CaptureGroupParkingTest.cpp
     BigramFilterTest.cpp
     CorruptTriggerPatternsTest.cpp
     MultilineTriggerReentrancyTest.cpp

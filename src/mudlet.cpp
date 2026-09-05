@@ -80,6 +80,7 @@
 #include <QMediaPlayer>
 #include <QMessageBox>
 #include <QPoint>
+#include <QScopeGuard>
 #include <QScreen>
 #include <QScrollBar>
 #include <QSettings>
@@ -3869,6 +3870,15 @@ void mudlet::closeEvent(QCloseEvent* event)
 {
     qDebug() << "mudlet::closeEvent(...) INFO - called!";
 
+    if (mProfileLoadsInProgress > 0) {
+        // A profile load pumps the event loop part-way through, and accepting
+        // here would delete every Host underneath the load still using one of
+        // them. Hold the close until it returns.
+        mCloseRequestedDuringProfileLoad = true;
+        event->ignore();
+        return;
+    }
+
     QStringList hostsToDestroy;
     bool abortClose = false;
     // Due to the way that Hosts are stored we cannot do a closeHost(hostName)
@@ -3940,6 +3950,19 @@ void mudlet::closeEvent(QCloseEvent* event)
     // pass the event on so dblsqd can perform an update
     // if automatic updates have been disabled
     event->accept();
+}
+
+void mudlet::endProfileLoad()
+{
+    if (--mProfileLoadsInProgress > 0 || !mCloseRequestedDuringProfileLoad) {
+        return;
+    }
+    mCloseRequestedDuringProfileLoad = false;
+    // Queued: the load's caller is still on the stack, holding a Host this
+    // close deletes
+    QTimer::singleShot(0, this, [this]() {
+        close();
+    });
 }
 
 void mudlet::forceClose()
@@ -4068,7 +4091,7 @@ void mudlet::readLateSettings(const QSettings& settings)
 
     mEditorTextOptions = static_cast<QTextOption::Flags>(settings.value("editorTextOptions", QVariant(0)).toInt());
 
-    mShowMapAuditErrors = settings.value("reportMapIssuesToConsole", QVariant(false)).toBool();
+    TMap::smShowMapAuditErrors = settings.value("reportMapIssuesToConsole", QVariant(false)).toBool();
     mInvertMapZoom = settings.value("invertMapZoom", QVariant(false)).toBool(); // Default to false for modern (non-inverted) behavior
     mStorePasswordsSecurely = settings.value("storePasswordsSecurely", QVariant(true)).toBool();
     mShowTabConnectionIndicators = settings.value("showTabConnectionIndicators", QVariant(false)).toBool();
@@ -4280,7 +4303,7 @@ void mudlet::writeSettings()
     settings.setValue("maximized", static_cast<bool>(windowState() & Qt::WindowMaximized));
     settings.setValue("fullScreen", static_cast<bool>(windowState() & Qt::WindowFullScreen));
     settings.setValue("editorTextOptions", static_cast<int>(mEditorTextOptions));
-    settings.setValue("reportMapIssuesToConsole", mShowMapAuditErrors);
+    settings.setValue("reportMapIssuesToConsole", TMap::smShowMapAuditErrors);
     settings.setValue("invertMapZoom", mInvertMapZoom);
     settings.setValue("storePasswordsSecurely", mStorePasswordsSecurely);
     settings.setValue("showTabConnectionIndicators", mShowTabConnectionIndicators);
@@ -5607,6 +5630,10 @@ void mudlet::deleteProfileData(const QString& profile, const QString& item)
 
 void mudlet::startAutoLogin(const QStringList& cliProfiles, const bool offline)
 {
+    ++mProfileLoadsInProgress;
+    const auto loadScope = qScopeGuard([this] {
+        endProfileLoad();
+    });
     QElapsedTimer timer;
     timer.start();
 
@@ -5773,6 +5800,10 @@ void mudlet::doAutoLogin(const QString& profile_name, const bool offline)
         return;
     }
 
+    ++mProfileLoadsInProgress;
+    const auto loadScope = qScopeGuard([this] {
+        endProfileLoad();
+    });
     loadProfile(profile_name, !offline);
 
     slot_connectionDialogueFinished(profile_name, !offline);
@@ -5969,6 +6000,10 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
     if (!pHost) {
         return;
     }
+    ++mProfileLoadsInProgress;
+    const auto loadScope = qScopeGuard([this] {
+        endProfileLoad();
+    });
     pHost->mIsProfileLoadingSequence = true;
     // The Host instance gets its TMainConsole here:
     addConsoleForNewHost(pHost);
@@ -7112,6 +7147,10 @@ void mudlet::showChangelogIfUpdated()
 
 Host* mudlet::loadProfile(const QString& profile_name, const bool playOnline, const QString& saveFileName)
 {
+    ++mProfileLoadsInProgress;
+    const auto loadScope = qScopeGuard([this] {
+        endProfileLoad();
+    });
     Host* pHost = mHostManager.getHost(profile_name);
     if (pHost) {
         if (playOnline) {
@@ -7502,8 +7541,8 @@ void mudlet::slot_passwordMigratedToSecureStorage(QKeychain::Job* job)
 
 void mudlet::setShowMapAuditErrors(const bool state)
 {
-    if (mShowMapAuditErrors != state) {
-        mShowMapAuditErrors = state;
+    if (TMap::smShowMapAuditErrors != state) {
+        TMap::smShowMapAuditErrors = state;
 
         emit signal_showMapAuditErrorsChanged(state);
     }
