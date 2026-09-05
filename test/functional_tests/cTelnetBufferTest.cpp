@@ -40,6 +40,7 @@
  * Run with: ctest -R cTelnetBufferTest -V
  */
 
+#include <QFile>
 #include <QFileInfo>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
@@ -49,6 +50,10 @@
 #include <chrono>
 #include <cstring>
 #include <memory>
+
+#if defined(Q_OS_LINUX)
+#include <sys/resource.h>
+#endif
 
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
@@ -92,6 +97,30 @@ private:
         }
         return false;
     }
+
+#if defined(Q_OS_LINUX)
+    // Bytes between the top of the main thread's stack mapping and this frame,
+    // which is the distance the kernel holds against RLIMIT_STACK when the
+    // stack grows. The frame address rather than a local's: under
+    // AddressSanitizer a local can live on the fake stack, off in the heap.
+    static qint64 mainThreadStackInUse()
+    {
+        QFile maps(qsl("/proc/self/maps"));
+        if (!maps.open(QIODevice::ReadOnly)) {
+            return -1;
+        }
+        const auto here = reinterpret_cast<quintptr>(__builtin_frame_address(0));
+        for (const QByteArray& line : maps.readAll().split('\n')) {
+            if (!line.endsWith("[stack]")) {
+                continue;
+            }
+            const QByteArray range = line.left(line.indexOf(' '));
+            const quintptr top = range.mid(range.indexOf('-') + 1).toULongLong(nullptr, 16);
+            return static_cast<qint64>(top - here);
+        }
+        return -1;
+    }
+#endif
 
 private slots:
     void initTestCase()
@@ -146,7 +175,11 @@ private slots:
         QCOMPARE(mpHost->mTelnet.mDecompressionRecursionDepth, 0);
     }
 
-    void cleanup() { QCOMPARE(mpHost->mTelnet.mDecompressionRecursionDepth, 0); }
+    void cleanup()
+    {
+        QCOMPARE(mpHost->mTelnet.mDecompressionRecursionDepth, 0);
+        QVERIFY(!mpHost->mTelnet.mNeedDecompression);
+    }
 
     // The regression test for #1065. processSocketData() is handed `payloadSize`
     // bytes inside a buffer that has two spare bytes after them. It may write
@@ -312,6 +345,64 @@ private slots:
                                             .arg(wasRefused ? qsl("dropped") : qsl("processed"))));
             }
         }
+    }
+
+    // Windows builds give the main thread 1 MB of stack, and a compressed read
+    // that inflates past one output buffer drains the rest by re-entering
+    // processSocketData(), so an eight-level drain must not cost a 100 KB frame
+    // per level. Linux enforces RLIMIT_STACK as the main thread grows and
+    // exposes the mapping in /proc, so here the drain gets 700 KB of growth and
+    // a per-level frame overflows it. Elsewhere the drain runs against the real
+    // limit, which eight levels fit in, so Linux is the arm that bites.
+    void deepDecompressionDrainDoesNotGrowTheStack()
+    {
+#if defined(Q_OS_LINUX)
+        rlimit original{};
+        QCOMPARE(getrlimit(RLIMIT_STACK, &original), 0);
+        const auto restoreLimit = qScopeGuard([original] {
+            setrlimit(RLIMIT_STACK, &original);
+        });
+        const qint64 inUse = mainThreadStackInUse();
+        QVERIFY2(inUse > 0, "could not read the main thread's stack mapping");
+        rlimit ceiling = original;
+        ceiling.rlim_cur = static_cast<rlim_t>(inUse) + 700 * 1024;
+        if (original.rlim_max != RLIM_INFINITY && ceiling.rlim_cur > original.rlim_max) {
+            QSKIP("the hard stack limit is below the ceiling this test needs");
+        }
+        QCOMPARE(setrlimit(RLIMIT_STACK, &ceiling), 0);
+#endif
+        // A drain that stops short leaves decompression switched on, and the
+        // tests that follow would then be inflated as zlib data
+        const auto resetDecompression = qScopeGuard([this] {
+            if (mpHost->mTelnet.mNeedDecompression) {
+                inflateEnd(&mpHost->mTelnet.mZstream);
+                mpHost->mTelnet.mNeedDecompression = false;
+                mpHost->mTelnet.initStreamDecompressor();
+            }
+        });
+        // Eight output buffers' worth, stopping just short of filling the last
+        // so the stream ends inside the eighth level and leaves decompression
+        // switched off for the tests that follow.
+        constexpr qsizetype outputBufferSize = 100000; // BUFFER_SIZE in ctelnet.cpp
+        const QByteArray line = QByteArray("mccp drain ").append(87, 'x').append("\r\n");
+        QByteArray text;
+        text.reserve(8 * outputBufferSize);
+        while (text.size() + line.size() <= 8 * outputBufferSize - 10) {
+            text.append(line);
+        }
+        // qCompress() prefixes the zlib stream with the source length
+        const QByteArray compressed = qCompress(text, 9).mid(4);
+        // One socket read's worth, as readPendingSocketData() hands over
+        QVERIFY(compressed.size() < outputBufferSize);
+        QByteArray backing = compressed;
+        backing.append(scmTerminatorSlot);
+
+        mpHost->mTelnet.mNeedDecompression = true;
+        mpHost->mTelnet.initStreamDecompressor();
+        mpHost->mTelnet.processSocketData(backing.data(), static_cast<int>(compressed.size()), true);
+
+        QVERIFY2(!mpHost->mTelnet.mNeedDecompression, "the compressed stream's end was not reached, so the drain stopped short");
+        QVERIFY(bufferContains(qsl("mccp drain")));
     }
 
     // Declared last on purpose: on the unfixed code this trips AddressSanitizer,

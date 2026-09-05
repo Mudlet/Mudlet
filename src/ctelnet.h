@@ -253,16 +253,16 @@ public:
         processSocketData(data.data(), data.size(), true);
     }
     int loopbackProcessingDepth() const { return mLoopbackProcessingDepth; }
-    // Each nested processSocketData() puts ~100KB of buffers on the stack, so a
-    // self-feeding feedTelnet() loop overflows a 1MB (Windows) stack in only ~8
-    // levels - hence a much lower cap than TriggerUnit::scmMaxProcessingDepth.
+    // Every feedTelnet() level nests inside processSocketData(), so it also
+    // counts against scmMaxDecompressionRecursion; keep this below it, or a
+    // runaway loop reports as dropped data instead of the trigger-named Lua error.
     inline static const int scmMaxLoopbackProcessingDepth = 5;
-    // How many times processSocketData() may re-enter itself to drain data left
-    // over after a decompression pass (compressed input that did not fit in one
+    // How deep processSocketData() may nest (the outermost call counts as one)
+    // while draining data left over after a decompression pass (compressed input that did not fit in one
     // output buffer, or plain data following the compressed stream). Each level
-    // puts ~100 KB (out_buffer) on the stack, so this also caps decompressed
-    // output at ~scmMaxDecompressionRecursion * BUFFER_SIZE per socket read,
-    // which bounds a decompression bomb.
+    // inflates at most one output buffer, so this caps decompressed output at
+    // ~scmMaxDecompressionRecursion * BUFFER_SIZE per socket read, which bounds
+    // a decompression bomb.
     inline static const int scmMaxDecompressionRecursion = 8;
     void cancelLoginTimers();
     void terminateConnection();
