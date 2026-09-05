@@ -58,6 +58,7 @@ public:
     void resetMainConsole();
     void closeEvent(QCloseEvent*) override;
     TConsole* createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height);
+    TConsole* createSubConsole(const QString& name, QWidget* parent);
     bool createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height);
     bool raiseWindow(const QString& name);
     bool lowerWindow(const QString& name);

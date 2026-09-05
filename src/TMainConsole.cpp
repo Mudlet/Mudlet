@@ -582,6 +582,17 @@ TConsole* TMainConsole::createMiniConsole(const QString& windowname, const QStri
     return nullptr;
 }
 
+TConsole* TMainConsole::createSubConsole(const QString& name, QWidget* parent)
+{
+    auto* pC = new TConsole(mpHost, name, SubConsole, parent);
+    pC->setObjectName(name);
+    const auto& hostCommandLine = mpHost->mpConsole->mpCommandLine;
+    pC->setFocusProxy(hostCommandLine);
+    pC->mUpperPane->setFocusProxy(hostCommandLine);
+    pC->mLowerPane->setFocusProxy(hostCommandLine);
+    return pC;
+}
+
 TToolBar* TMainConsole::createToolBar(TAction* pAction, const QString& name)
 {
     return new TToolBar(mpHost, pAction, name, mudlet::self());

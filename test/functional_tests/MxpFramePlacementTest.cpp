@@ -29,6 +29,7 @@
 #include "MudletInstanceCoordinator.h"
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
+#include "TTextEdit.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
@@ -403,6 +404,33 @@ private slots:
     // behind that resize the main window out from under whatever runs next, so
     // add new tests above this one rather than below it. For the same reason the
     // expectation is evaluated at assert time rather than captured up front.
+    // All three frame layouts get their console from
+    // TMainConsole::createSubConsole(), parented inside the frame (never on
+    // mpMainFrame, where createMiniConsole would flash it) and wired with the
+    // same name and command-line focus proxies createMiniConsole gives out. A
+    // titled frame takes the tabbed layout, an untitled one the borderless
+    // layout, and DOCK plus ALIGN=client becomes a tab inside the titled one.
+    void test_frameConsolesAreBuiltInsideTheirFrame()
+    {
+        QVERIFY(createFrame(qsl("titled"), qsl("right"), qsl("300px"), qsl("100%"), {{qsl("TITLE"), qsl("Titled")}}));
+        QVERIFY(createFrame(qsl("plain"), qsl("left"), qsl("120px"), qsl("100%")));
+        QVERIFY(createFrame(qsl("tab"), qsl("client"), qsl("100%"), qsl("100%"), {{qsl("DOCK"), qsl("titled")}}));
+        const TMxpFrame* titled = mpHost->mMxpFrameManager.getFrame(qsl("titled"));
+        QVERIFY2(titled && titled->tabWidget, "A titled frame should have taken the tabbed layout");
+
+        QWidget* commandLine = mpHost->mpConsole->mpCommandLine;
+        QVERIFY(commandLine);
+        for (const QString& name : {qsl("titled"), qsl("plain"), qsl("tab")}) {
+            const TMxpFrame* frame = mpHost->mMxpFrameManager.getFrame(name);
+            QVERIFY2(frame && frame->widget && frame->console, qPrintable(qsl("Frame %1 should have a widget and a console").arg(name)));
+            QVERIFY2(frame->widget->isAncestorOf(frame->console), qPrintable(qsl("The console of %1 should live inside its frame widget").arg(name)));
+            QCOMPARE(frame->console->objectName(), name);
+            QCOMPARE(frame->console->focusProxy(), commandLine);
+            QCOMPARE(frame->console->mUpperPane->focusProxy(), commandLine);
+            QCOMPARE(frame->console->mLowerPane->focusProxy(), commandLine);
+        }
+    }
+
     void test_rightFrameKeepsClearOfAnAttachedAdjustableContainer()
     {
         runLua(qsl("panel = Adjustable.Container:new({name = 'mxpTestPanel', x = '-25%', y = 0, width = '25%', height = '100%', autoSave = false, autoLoad = false})\n"
