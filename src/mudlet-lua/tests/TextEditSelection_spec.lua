@@ -95,16 +95,22 @@ describe("Tests selection against lines it does not fit", function()
       assert.equals("bravo", (getSelection(window)))
     end)
 
-    it("rejects a start past the end of the line", function()
-      moveCursor(window, 0, 2)
-      assert.is_false(selectSection(window, 5, 1))
-    end)
-
-    it("rejects a length that runs off the end of the line", function()
+    it("rejects a start past the end of the line without disturbing the selection", function()
       moveCursor(window, 0, 2)
       assert.is_true(selectSection(window, 0, 4))
       assert.equals("echo", (getSelection(window)))
+
+      assert.is_false(selectSection(window, 5, 1))
+      assert.equals("echo", (getSelection(window)))
+    end)
+
+    it("rejects a length that runs off the end of the line without disturbing the selection", function()
+      moveCursor(window, 0, 2)
+      assert.is_true(selectSection(window, 0, 4))
+      assert.equals("echo", (getSelection(window)))
+
       assert.is_false(selectSection(window, 2, 3))
+      assert.equals("echo", (getSelection(window)))
     end)
   end)
 
