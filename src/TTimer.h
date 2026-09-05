@@ -86,8 +86,7 @@ public:
         return false;
     }
     // Offset timers do not work correctly with the isAncestorsActive() base method
-    bool shouldAncestorsBeActive() const
-    {
+    bool shouldAncestorsBeActive() const {
         TTimer* node(mpParent);
         while (node) {
             if (node->isOffsetTimer() ? !node->shouldBeActive() : !node->isActive()) {
@@ -105,6 +104,7 @@ public:
     void setID(int) override;
     QString packageName(TTimer* pTimer);
     QString moduleName(TTimer* pTimer);
+
 
 
     // specifies whenever the payload is Lua code as a string
@@ -136,8 +136,14 @@ inline QDebug& operator<<(QDebug& debug, const TTimer* timer)
 {
     QDebugStateSaver saver(debug);
     Q_UNUSED(saver)
-    debug.nospace() << "TTimer(" << "name= " << timer->getName() << " time= " << timer->getTime() << " command= " << timer->getCommand()
-                    << " script is in= " << (timer->mRegisteredAnonymousLuaFunction ? "string" : "Lua function") << " script= " << timer->getScript() << " repeating= " << timer->mRepeating << ")";
+    debug.nospace() << "TTimer("
+                    << "name= " << timer->getName()
+                    << " time= " << timer->getTime()
+                    << " command= " << timer->getCommand()
+                    << " script is in= " << (timer->mRegisteredAnonymousLuaFunction ? "string" : "Lua function")
+                    << " script= " << timer->getScript()
+                    << " repeating= " << timer->mRepeating
+                    << ")";
     return debug;
 }
 #endif // QT_NO_DEBUG_STREAM

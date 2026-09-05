@@ -6489,7 +6489,7 @@ describe("Toolbar buttons", function()
     end)
 
     it("getButtonState with no arguments answers the console's own button state", function()
-      -- with no arguments this answers TConsole::mButtonState, which is 1 or 2
+      -- with no arguments this answers TConsoleModel::mButtonState, which is 1 or 2
       -- rather than the boolean the named form answers, and which only a real
       -- click on a push-down button writes - setButtonState never touches it
       local before = getButtonState()

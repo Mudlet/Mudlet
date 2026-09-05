@@ -94,9 +94,9 @@ struct TConsoleModel
     int mEngineCursor = -1;
     QPoint mUserCursor;
     bool mIsPromptLine = false;
-    // 1 = unclicked/up, 2 = clicked/down, 0 is not valid: the state of the
-    // last push-down action pressed on one of the profile's toolbars, read
-    // back by getButtonState() with no arguments
+    // 1 = up, 2 = down, 0 is not valid: the state of the toolbar button pressed
+    // most recently (a plain button sets it back to 1), read back by
+    // getButtonState() with no arguments
     int mButtonState = 1;
 
     // The OSC 8 hyperlink managers. Concealing and revealing rewrite this

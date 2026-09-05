@@ -288,10 +288,11 @@ public:
     TConsoleModel* mainConsoleModelOrNull() { return mpMainConsoleModel.get(); }
     std::shared_ptr<TConsoleModel> sharedMainConsoleModel();
     // How a colorizer trigger recolors the line it matched: select a run of
-    // the current line, paint it, then put the console's own format back.
-    // The selection state still lives on the view.
+    // the current line, paint it, then put the console's own format back. The
+    // selection is a TConsole member, so these dereference mpConsole and the
+    // callers check it first.
     void deselectMainConsole();
-    void selectMainConsoleSection(int from, int length);
+    bool selectMainConsoleSection(int from, int length);
     void setMainConsoleFgColor(const QColor& color);
     void setMainConsoleBgColor(const QColor& color);
     void resetMainConsoleFormat();

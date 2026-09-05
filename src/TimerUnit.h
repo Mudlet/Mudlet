@@ -98,13 +98,6 @@ public:
     QSet<TTimer*> mCleanupSet;
     bool hasPendingDeletes() const { return !mCleanupSet.isEmpty() || !uninstallList.isEmpty(); }
 
-    // This will contain all the QTimers associated with the TTimer instances
-    // it is needed so that should mpHost be renamed we can update them to have
-    // the correct name (which is needed when they fire so the mudlet class
-    // knows when profile they belong to and where to find the TTimer that they
-    // are part of):
-    QSet<QTimer*> mQTimerSet;
-
 private:
     TimerUnit() = default;
 

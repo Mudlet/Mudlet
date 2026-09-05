@@ -80,8 +80,8 @@
 #include <QSettings>
 #include <QTemporaryFile>
 #include <QTextStream>
-#include <QTimer>
 #include <QThread>
+#include <QTimer>
 #include <zip.h>
 #include <memory>
 
@@ -2061,9 +2061,9 @@ void Host::deselectMainConsole()
     mpConsole->deselect();
 }
 
-void Host::selectMainConsoleSection(int from, int length)
+bool Host::selectMainConsoleSection(int from, int length)
 {
-    mpConsole->selectSection(from, length);
+    return mpConsole->selectSection(from, length);
 }
 
 void Host::setMainConsoleFgColor(const QColor& color)
@@ -2195,8 +2195,6 @@ void Host::incomingStreamProcessor(const QString& data, int line)
     mScriptUnit.doCleanup();
 }
 
-// Every registered TTimer's QTimer fires in here; the TTimer is looked up
-// again by the id stored on the QTimer, as it may have gone in the meantime
 void Host::slot_timerFires()
 {
     QTimer* pQT = qobject_cast<QTimer*>(sender());

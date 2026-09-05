@@ -18,7 +18,7 @@
  ***************************************************************************/
 
 /*
- * The scriptable units reach the main console only through their Host: a
+ * The scriptable units reach the main console through their Host: a
  * timer's QTimer fires into Host::slot_timerFires(), a colorizer trigger
  * recolors the current line through the Host's selection forwarders and a
  * push-down action records its state on the main console's model. Each case
@@ -39,6 +39,7 @@
 #include "TBuffer.h"
 #include "TConsoleModel.h"
 #include "TLuaInterpreter.h"
+#include "TMainConsole.h"
 #include "TTimer.h"
 #include "TTrigger.h"
 #include "TimerUnit.h"
@@ -176,17 +177,55 @@ private slots:
         pTrigger->setIsActive(true);
         QVERIFY(mpHost->getTriggerUnit()->registerTrigger(pTrigger));
 
-        runLua(qsl("feedTriggers('before urh paint me after\\n')"));
+        const QString needle = qsl("urh paint me");
+        runLua(qsl("feedTriggers('before %1 after\\n')").arg(needle));
 
-        const int line = lineContaining(qsl("urh paint me"));
+        const int line = lineContaining(needle);
         QVERIFY2(line >= 0, "the fed line never reached the main console buffer");
-        const int start = buffer().line(line).indexOf(qsl("urh paint me"));
+        const int start = buffer().line(line).indexOf(needle);
+        QVERIFY(start > 0);
+        const int end = start + needle.size() - 1;
         const auto& chars = buffer().buffer.at(line);
         QCOMPARE(chars.at(start).foreground(), fg);
         QCOMPARE(chars.at(start).background(), bg);
-        QCOMPARE(chars.at(start + 11).foreground(), fg);
-        QVERIFY2(chars.at(start - 1).foreground() != fg, "the color spilled outside the match");
-        QVERIFY2(chars.at(start + 12).foreground() != fg, "the color spilled outside the match");
+        QCOMPARE(chars.at(end).foreground(), fg);
+        QCOMPARE(chars.at(end).background(), bg);
+        QVERIFY2(chars.at(start - 1).foreground() != fg && chars.at(start - 1).background() != bg, "the color spilled in front of the match");
+        QVERIFY2(chars.at(end + 1).foreground() != fg && chars.at(end + 1).background() != bg, "the color spilled past the match");
+
+        // The console's own format has to be back for whatever prints next
+        runLua(qsl("echo('urh plain')"));
+        const int plainLine = lineContaining(qsl("urh plain"));
+        QVERIFY(plainLine > line);
+        const auto& plain = buffer().buffer.at(plainLine).front();
+        QVERIFY2(plain.foreground() != fg && plain.background() != bg, "the trigger's colors leaked into the next print");
+
+        delete pTrigger;
+    }
+
+    // The regex path colors the capture groups rather than the whole match, and
+    // a transparent background leaves the line's own background alone
+    void test_colorizerRegexTriggerColorsOnlyTheCaptureGroup()
+    {
+        const QColor fg(78, 90, 12);
+        auto* pTrigger = new TTrigger(qsl("urh-regex"), QStringList{qsl("urh (tint) me")}, QList<int>{REGEX_PERL}, false, mpHost);
+        pTrigger->setIsColorizerTrigger(true);
+        pTrigger->setColorizerFgColor(fg);
+        pTrigger->setColorizerBgColor(QColorConstants::Transparent);
+        pTrigger->setIsActive(true);
+        QVERIFY(mpHost->getTriggerUnit()->registerTrigger(pTrigger));
+
+        runLua(qsl("feedTriggers('before urh tint me after\\n')"));
+
+        const int line = lineContaining(qsl("urh tint me"));
+        QVERIFY2(line >= 0, "the fed line never reached the main console buffer");
+        const int group = buffer().line(line).indexOf(qsl("tint"));
+        const auto& chars = buffer().buffer.at(line);
+        QCOMPARE(chars.at(group).foreground(), fg);
+        QCOMPARE(chars.at(group + 3).foreground(), fg);
+        QCOMPARE(chars.at(group).background(), chars.at(group - 1).background());
+        QVERIFY2(chars.at(group - 1).foreground() != fg, "the whole match was colored, not just the group");
+        QVERIFY2(chars.at(group + 4).foreground() != fg, "the whole match was colored, not just the group");
 
         delete pTrigger;
     }
@@ -197,6 +236,9 @@ private slots:
         pAction->setIsPushDownButton(true);
         pAction->setIsActive(true);
         QVERIFY(mpHost->getActionUnit()->registerAction(pAction));
+        // The toolbar widgets still write the console's copy, which has to be
+        // the model's field
+        QCOMPARE(&mpHost->mpConsole->mButtonState, &mpHost->mainConsoleModel().mButtonState);
 
         pAction->mButtonState = true;
         pAction->execute();

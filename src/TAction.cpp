@@ -162,8 +162,7 @@ void TAction::execute()
         }
     }
 
-    // Moved this to be before the testing/compilation of the script so that
-    // the "command"s still work even if the script doesn't!
+    // Recorded before the compile step below, which returns early on failure
     mpHost->mainConsoleModel().mButtonState = (mButtonState ? 2 : 1);
 
     if (mNeedsToBeCompiled) {

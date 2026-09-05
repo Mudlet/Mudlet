@@ -34,7 +34,6 @@
 #include "TMedia.h"
 #include "TMediaData.h"
 #include "TriggerUnit.h"
-#include "TMainConsole.h"
 #include <QByteArray>
 #include <QChar>
 #include <QDebug>

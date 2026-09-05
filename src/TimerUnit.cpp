@@ -269,6 +269,8 @@ bool TimerUnit::registerTimer(TTimer* pT)
     return true;
 }
 
+// Resolves the TTimer by the id stored on the QTimer rather than a captured
+// pointer: it may have been deleted since the timeout was queued
 void TimerUnit::timerFired(QTimer* pQTimer)
 {
     const int id = pQTimer->property(TTimer::scmProperty_TTimerId).toInt();
