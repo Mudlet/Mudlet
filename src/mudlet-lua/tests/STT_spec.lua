@@ -355,7 +355,12 @@ describe("stt bridge", function()
 
       local unloaded, unloadError = stt.unloadLibrary()
       assert.is_true(unloaded, "unloading with nothing in use should succeed, got: " .. tostring(unloadError))
-      if hadLibrary then
+      -- The latch is about the library. Availability is not only about the
+      -- library on a Mac, where the built-in backend needs none and keeps
+      -- stt.available() true however completely Vosk's module is released -
+      -- so asserting it goes false there asks unloadLibrary() for something it
+      -- cannot deliver and was never meant to.
+      if hadLibrary and getOS() ~= "mac" then
         -- the latch is the whole point: without it the next read-shaped call
         -- maps the module straight back in and the file the caller meant to
         -- replace is locked again

@@ -1051,13 +1051,18 @@ int TLuaInterpreter::sttReloadLibrary(lua_State* L)
     // Both latches were reset above, so the answer is whether speech can be had
     // at all now - not whether Vosk in particular can. A player who installed
     // sherpa-onnx and called this got false for a re-detect that had worked.
-    // Both asked, and neither short-circuited: with || the sherpa probe ran
+    // Both probed, and neither short-circuited: with || the sherpa probe ran
     // only when Vosk was absent, so whether reloadLibrary left sherpa's module
     // mapped depended on whether an unrelated engine happened to be installed.
     // Re-detect means re-detect, for each of them, every time.
-    const bool voskAvailable = VoskRecognizer::libraryAvailable();
-    const bool sherpaAvailable = SherpaRecognizer::sherpaAvailable();
-    const bool available = voskAvailable || sherpaAvailable;
+    VoskRecognizer::libraryAvailable();
+    SherpaRecognizer::sherpaAvailable();
+    // And the answer is the same question stt.available() answers - whether
+    // speech can be had at all - rather than whether a library in particular
+    // turned up. On a Mac the built-in backend needs none, so a caller told
+    // "false" here after a successful re-detect would have concluded speech
+    // was unavailable while stt.available() said otherwise.
+    const bool available = speechEngineAvailable();
     announceSpeechCapabilities(pMudlet);
     lua_pushboolean(L, available);
     return 1;
