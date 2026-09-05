@@ -1221,6 +1221,50 @@ QString TMedia::setupMediaAbsolutePathFileName(TMediaData& mediaData)
     return absolutePathFileName;
 }
 
+// A start position can only be applied once the media is loaded, seekable and playing, which on a
+// backend that loads asynchronously is several signals after play() was called - seeking any
+// earlier is dropped without a word and the track plays from its beginning (#10459). Hooked to
+// both signals that can complete that set, so whichever arrives last performs the seek.
+void TMedia::seekToMediaStart(const std::shared_ptr<TMediaPlayer>& player)
+{
+    QMediaPlayer* mediaPlayer = player->mediaPlayer();
+
+    if (!mediaPlayer->isSeekable() || mediaPlayer->playbackState() != QMediaPlayer::PlayingState) {
+        return;
+    }
+
+    const QMediaPlayer::MediaStatus mediaStatus = mediaPlayer->mediaStatus();
+
+    if (mediaStatus != QMediaPlayer::LoadedMedia && mediaStatus != QMediaPlayer::BufferingMedia && mediaStatus != QMediaPlayer::BufferedMedia) {
+        return;
+    }
+
+    const int startPosition = player->mediaData().mediaStart();
+
+    if (startPosition <= TMediaData::MediaStartDefault) {
+        return;
+    }
+
+    // Seeking to or past the end leaves the player playing at its last frame forever - no
+    // EndOfMedia, so nothing releases the source or sends sysMediaFinished, and the profile runs
+    // out of players. A server is free to send a start longer than the track, so play it from the
+    // beginning instead, which is what an unseekable start did before.
+    const qint64 duration = mediaPlayer->duration();
+
+    if (duration > 0 && startPosition >= duration) {
+        return;
+    }
+
+    // Both signals fire again as the track buffers, and the position is what says the seek has
+    // already been made: without this a track would be dragged back to its start position each
+    // time one of them arrived.
+    if (mediaPlayer->position() >= startPosition) {
+        return;
+    }
+
+    mediaPlayer->setPosition(startPosition);
+}
+
 void TMedia::connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player)
 {
     if (!player || !player->mediaPlayer()) {
@@ -1232,11 +1276,9 @@ void TMedia::connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player)
 
     // Seekable changed connection
     disconnect(player->mediaPlayer(), &QMediaPlayer::seekableChanged, nullptr, nullptr);
-    connect(player->mediaPlayer(), &QMediaPlayer::seekableChanged, this, [weakPlayer](bool seekable) {
+    connect(player->mediaPlayer(), &QMediaPlayer::seekableChanged, this, [weakPlayer](bool) {
         if (auto lockedPlayer = weakPlayer.lock()) { // Ensure the player is still valid
-            if (seekable) {
-                lockedPlayer->mediaPlayer()->setPosition(lockedPlayer->mediaData().mediaStart());
-            }
+            seekToMediaStart(lockedPlayer);
         }
     });
 
@@ -1244,6 +1286,8 @@ void TMedia::connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player)
     disconnect(player->mediaPlayer(), &QMediaPlayer::mediaStatusChanged, nullptr, nullptr);
     connect(player->mediaPlayer(), &QMediaPlayer::mediaStatusChanged, this, [this, weakPlayer](QMediaPlayer::MediaStatus mediaStatus) {
         if (auto lockedPlayer = weakPlayer.lock()) {
+            seekToMediaStart(lockedPlayer);
+
             if (mediaStatus == QMediaPlayer::EndOfMedia) {
                 if (lockedPlayer->playlist() && !lockedPlayer->playlist()->isEmpty()) {
                     QUrl nextMedia = lockedPlayer->playlist()->next();
