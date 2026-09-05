@@ -321,8 +321,9 @@ public:
     void selectCurrentLine();
     // Returns the size of the main buffer area (excluding the command line and toolbars).
     QSize getMainWindowSize() const;
-    // MainConsole only - it charges the profile's own main window borders
-    int upperPaneWidthFor(const int containerWidth) const;
+    // For a MainConsole put away by a tab switch, which no resize event reaches:
+    // works out the size it will come back to and has NAWS report it
+    void syncHiddenScreenDimensions();
     ConsoleType getType() const { return mType; }
     virtual void setProfileName(const QString&);
     // In the next function the first element in the return is an
@@ -496,6 +497,11 @@ private slots:
 private:
     void createFindBar();
     void positionFindBar();
+    // MainConsole only - they take off the profile's own main window borders.
+    // The height is -1 when it cannot be known.
+    int upperPaneWidthFor(const int containerWidth) const;
+    int upperPaneHeightFor(const int containerHeight) const;
+    void syncHostScreenDimensions(const int paneWidthPx, const int paneHeightPx);
     void createSearchOptionIcon();
     void raiseFontChangeEvent();
     void restoreCommandSearchSettings();
