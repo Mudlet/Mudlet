@@ -387,6 +387,8 @@ private slots:
         QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
+        // The context menu items are found by their text.
+        mudlet::self()->setInterfaceLanguage(qsl("en_US"));
         mudlet::self()->setStorePasswordsSecurely(false);
         mudlet::self()->mSkipDefaultPackageInstall = true;
         deleteProfileDirectory();
