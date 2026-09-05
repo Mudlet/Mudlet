@@ -33,6 +33,7 @@
  * Run with: ctest -R MapAreaReassignmentTest -V
  */
 
+#include <QDataStream>
 #include <QFileInfo>
 #include <QtTest/QtTest>
 
