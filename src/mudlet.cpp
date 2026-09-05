@@ -58,6 +58,7 @@
 #include "dlgPackageManager.h"
 #include "dlgProfilePreferences.h"
 #include "dlgTriggerEditor.h"
+#include "edbee/edbee.h"
 #include "MMCPServer.h"
 #include "widgetutils.h"
 
