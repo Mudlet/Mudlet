@@ -35,6 +35,24 @@ describe("Trigger processing", function()
         return waitUntil(function() return installPackage("") == nil end, 5000)
     end
 
+    -- The self-test profile is kept between runs, so a package under a fixture's
+    -- name can be one an interrupted run left installed rather than the fixture
+    -- in this checkout. Both fixtures are removed before they are installed for
+    -- that reason, and their teardowns remove them the same way.
+    local function removePackage(packageName)
+        local reason
+        for _ = 1, 3 do
+            if not packageInstalled(packageName) then
+                break
+            end
+            waitForProfileSaveToPass()
+            local _, message = uninstallPackage(packageName)
+            reason = message or reason
+            pumpEvents(200)
+        end
+        return not packageInstalled(packageName), reason
+    end
+
     -- Test for nested trigger processing with self-deletion
     -- This verifies the fix that uses mProcessingDepth counter instead of a bool flag
     -- (same fix as for aliases - see Alias_spec.lua for detailed explanation)
@@ -2244,6 +2262,7 @@ describe("Trigger processing", function()
             previousEncoding = getServerEncoding()
             assert.is_true(setServerEncoding("UTF-8"), "the profile has to be able to carry the multibyte capture below")
             _G.ColorFilterSpec = {}
+            removePackage(packageName)
             local reason
             for _ = 1, 3 do
                 if packageInstalled(packageName) then
@@ -2261,17 +2280,8 @@ describe("Trigger processing", function()
             if previousEncoding then
                 setServerEncoding(previousEncoding)
             end
-            local reason
-            for _ = 1, 3 do
-                if not packageInstalled(packageName) then
-                    break
-                end
-                waitForProfileSaveToPass()
-                local _, message = uninstallPackage(packageName)
-                reason = message or reason
-                pumpEvents(200)
-            end
-            assert.is_false(packageInstalled(packageName), "the " .. packageName .. " fixture was left behind: " .. tostring(reason))
+            local gone, reason = removePackage(packageName)
+            assert.is_true(gone, "the " .. packageName .. " fixture was left behind: " .. tostring(reason))
             _G.ColorFilterSpec = nil
         end)
 
@@ -2345,6 +2355,7 @@ describe("Trigger processing", function()
 
         setup(function()
             _G.TriggerKindsSpec = {}
+            removePackage(packageName)
             local reason
             for _ = 1, 3 do
                 if packageInstalled(packageName) then
@@ -2359,17 +2370,8 @@ describe("Trigger processing", function()
         end)
 
         teardown(function()
-            local reason
-            for _ = 1, 3 do
-                if not packageInstalled(packageName) then
-                    break
-                end
-                waitForProfileSaveToPass()
-                local _, message = uninstallPackage(packageName)
-                reason = message or reason
-                pumpEvents(200)
-            end
-            assert.is_false(packageInstalled(packageName), "the " .. packageName .. " fixture was left behind: " .. tostring(reason))
+            local gone, reason = removePackage(packageName)
+            assert.is_true(gone, "the " .. packageName .. " fixture was left behind: " .. tostring(reason))
             _G.TriggerKindsSpec = nil
         end)
 

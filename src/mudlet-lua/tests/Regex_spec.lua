@@ -508,13 +508,16 @@ describe("PCRE regex cases with tempRegexTrigger", function()
         local id = tempRegexTrigger(pattern, function()
             snapshot = {left = matches["left"], right = matches["right"], whole = matches[1]}
         end, 1)
+        -- killed from here rather than after the assertions: a trigger that
+        -- never fired is what the first of them catches, and a kill they skip
+        -- leaves it live for the specs that follow
+        finally(function() killTrigger(id) end)
 
         feedTriggers("\nalt bbb\n")
 
         assert.are.equal("alt bbb", snapshot.whole, "the trigger should have matched at all")
         assert.are.equal("bbb", snapshot.right)
         assert.is_nil(snapshot.left)
-        killTrigger(id)
     end)
 
     -- no match
