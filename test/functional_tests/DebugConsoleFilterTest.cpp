@@ -599,6 +599,38 @@ private slots:
         QTRY_VERIFY2(!mudlet::smpDebugConsole, "Closing the debug area did not destroy its console");
 
         QVERIFY2(!TDebug::sink(), "The Central Debug Console was destroyed but is still installed as the sink");
+
+        // ...and lines written afterwards wait for the next console instead
+        // of going to the old one:
+        TDebug::setEnabledCategories(TDebug::csmAllCategories);
+        TDebug(Qt::blue, Qt::black, TDebug::Category::TriggerMatch) << "after the console went\n" >> nullptr;
+        RecordingDebugSink late;
+        TDebug::setSink(&late);
+        TDebug::flushMessageQueue();
+        QCOMPARE(late.lines.size(), 1);
+        QVERIFY2(late.lines.at(0).text.contains(qsl("after the console went")), qPrintable(late.lines.at(0).text));
+    }
+
+    void test_announcingFiltersNamesBothKindsAndNeverQueues()
+    {
+        RecordingDebugSink sink;
+        installSink(sink);
+        TDebug::setEnabledCategories({TDebug::Category::TriggerMatch});
+        TDebug::setItemFilter(qsl("Combat trigger"));
+
+        TDebug::announceFilters();
+        QCOMPARE(sink.lines.size(), 2);
+        QVERIFY2(sink.lines.at(0).text.contains(qsl("kind(s) of message are hidden")), qPrintable(sink.lines.at(0).text));
+        QVERIFY2(sink.lines.at(1).text.contains(qsl("Showing only messages about \"Combat trigger\"")), qPrintable(sink.lines.at(1).text));
+
+        // The notice is re-issued every time the console opens, so with no
+        // console it must not pile up for the next one:
+        TDebug::setSink(nullptr);
+        TDebug::announceFilters();
+        RecordingDebugSink late;
+        TDebug::setSink(&late);
+        TDebug::flushMessageQueue();
+        QVERIFY2(late.lines.isEmpty(), qPrintable(late.lines.isEmpty() ? QString() : late.lines.at(0).text));
     }
 
     // The find bar floats over the console rather than sitting in a layout, so

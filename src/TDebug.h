@@ -109,7 +109,16 @@ public:
         virtual void printDebugLine(const QString& text, const QColor& foreground, const QColor& background, const QString& timeStamp) = 0;
 
     protected:
-        ~Sink() = default;
+        // Nothing owns a sink through this interface - the Central Debug
+        // Console belongs to its widget parent - so deleting through it is a
+        // compile error. Clearing the pointer here is only a backstop: a
+        // console emits from inside its own teardown, so it detaches earlier.
+        ~Sink()
+        {
+            if (smpSink == this) {
+                smpSink = nullptr;
+            }
+        }
     };
 
     static void setSink(Sink* pSink) { smpSink = pSink; }
