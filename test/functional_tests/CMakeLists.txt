@@ -102,6 +102,7 @@ set(TELNET_GROUP_TEST_SOURCES
     CrashTestHookTest.cpp
     TelnetConnectFailureTest.cpp
     TelnetConnectLookupRaceTest.cpp
+    TelnetIacEscapingTest.cpp
     TelnetNewEnvironTest.cpp
     TelnetOptionsReportTest.cpp
     TelnetReconnectStateTest.cpp

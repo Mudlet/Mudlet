@@ -515,26 +515,13 @@ int TLuaInterpreter::sendTelnetChannel102(lua_State* L)
                 L, __func__, qsl("invalid message of length %1 supplied, it should be two bytes (may use lua \\### for each byte where ### is a number between 1 and 254)").arg(msg.length()));
     }
 
-    std::string output;
-    output += TN_IAC;
-    output += TN_SB;
-    output += OPT_102;
-    output += msg;
-    output += TN_IAC;
-    output += TN_SE;
-
     Host& host = getHostFromLua(L);
     if (!host.mTelnet.isChannel102Enabled()) {
         return warnArgumentValue(L, __func__, "unable to send message as the 102 subchannel support has not been enabled by the game server");
     }
-    // We have already validated output to contain a 2 byte payload so we
-    // should not need to worry about the "encoding" in this use of
-    // socketOutRaw(...) - with the exception of handling any occurrence of
-    // 0xFF as either of the bytes to send - however Aardwolf does not use
-    // *THAT* value so, though it is probably okay to not worry about the
-    // need to "escape" it to get it through the telnet protocol unscathed
-    // it is trivial to fix:
-    output = mudlet::replaceString(output, "\xff", "\xff\xff");
+    // The payload is two raw bytes, so it needs no encoding conversion - only the
+    // IAC escaping buildChannel102Message() applies to it
+    std::string output = cTelnet::buildChannel102Message(msg);
     host.mTelnet.socketOutRaw(output);
     lua_pushboolean(L, true);
     return 1;
