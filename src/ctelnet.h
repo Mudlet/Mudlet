@@ -224,6 +224,7 @@ public:
 #endif
     QByteArray decodeBytes(const char*);
     std::string encodeAndCookBytes(const std::string&);
+    static std::string escapeIac(std::string data);
     bool isNewEnvironEnabled() const { return enableNewEnviron; }
     bool isCHARSETEnabled() const { return enableCHARSET; }
     bool isATCPEnabled() const { return enableATCP; }

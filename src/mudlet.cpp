@@ -7272,16 +7272,6 @@ QStringList mudlet::getAvailableFonts()
     return QFontDatabase::families(QFontDatabase::Any);
 }
 
-std::string mudlet::replaceString(std::string subject, const std::string& search, const std::string& replace)
-{
-    size_t pos = 0;
-    while ((pos = subject.find(search, pos)) != std::string::npos) {
-        subject.replace(pos, search.length(), replace);
-        pos += replace.length();
-    }
-    return subject;
-}
-
 // Helper function to check if current version is >= specified version
 // Returns true if current version is >= minVersion, false otherwise
 bool mudlet::isVersionAtLeast(const QString& minVersion)

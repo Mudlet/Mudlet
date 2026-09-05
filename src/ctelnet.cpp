@@ -1596,7 +1596,7 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent, con
         // outData is using the selected Mud Server encoding here:
         // we need to cook any byte values from the encoding process that are
         // 0xff (assuming that there are no Telnet protocol sequences in here):
-        outData = mudlet::replaceString(outData, "\xff", "\xff\xff");
+        outData = escapeIac(outData);
 
         // Character-at-a-time detection: a genuine character-at-a-time server keeps
         // ECHO (with SGA) active across every submitted line, whereas a server that
@@ -5923,9 +5923,21 @@ std::string cTelnet::encodeAndCookBytes(const std::string& data)
 {
     if (!mEncoding.isEmpty() && mEncoding != "ASCII") {
         // Convert from UTF8 std::string to QString, then encode to Mud Server encoding
-        return mudlet::replaceString(TEncodingHelper::encode(QString::fromStdString(data), mEncoding).toStdString(), "\xff", "\xff\xff");
+        return escapeIac(TEncodingHelper::encode(QString::fromStdString(data), mEncoding).toStdString());
     }
-    return mudlet::replaceString(data, "\xff", "\xff\xff");
+    return escapeIac(data);
+}
+
+// A lone 0xff byte in outbound data would be read as the start of a telnet
+// command by the Server, so each one has to be sent doubled:
+std::string cTelnet::escapeIac(std::string data)
+{
+    auto position = data.find(TN_IAC);
+    while (position != std::string::npos) {
+        data.insert(position, 1, TN_IAC);
+        position = data.find(TN_IAC, position + 2);
+    }
+    return data;
 }
 
 void cTelnet::setPostingTimeout(const int timeout)
