@@ -32,8 +32,10 @@
  * Run with: ctest -R MapMouseInteractionTest -V
  */
 
+#include <QAction>
 #include <QCursor>
 #include <QFileInfo>
+#include <QMenu>
 #include <QMouseEvent>
 #include <QPixmap>
 #include <QSignalSpy>
@@ -88,6 +90,7 @@ private:
     // The 3x3 block buildMap() lays out, a unit apart, with the player in the
     // middle of it.
     static constexpr int kNorthRoomId = 2;
+    static constexpr int kNorthEastRoomId = 3;
     static constexpr int kWestRoomId = 4;
     static constexpr int kPlayerRoomId = 5;
     static constexpr int kEastRoomId = 6;
@@ -256,6 +259,91 @@ private:
     // Longer than the hold that makes a release end the pan rather than leave it running.
     void holdTheButton() const { QTest::qWait(400); }
 
+    // A custom line north out of the east room, to the two points the tests
+    // click on and drag. Its first segment runs from the room itself up
+    // through the north-east room to the first point, and the second between
+    // the two points, clear of every room.
+    static constexpr int kLineRoomId = kEastRoomId;
+    inline static const QString kLineExit = qsl("n");
+    static QList<QPointF> lineAsDrawn() { return {QPointF(1.0, 3.0), QPointF(1.0, 4.0)}; }
+
+    TRoom* addLineToTheEastRoom() const
+    {
+        TRoom* pRoom = map()->mpRoomDB->getRoom(kLineRoomId);
+        if (!pRoom) {
+            return nullptr;
+        }
+        pRoom->customLines[kLineExit] = lineAsDrawn();
+        pRoom->customLinesColor[kLineExit] = QColor(0, 255, 128);
+        pRoom->customLinesStyle[kLineExit] = Qt::SolidLine;
+        pRoom->customLinesArrow[kLineExit] = false;
+        pRoom->calcRoomDimensions();
+        return pRoom;
+    }
+
+    QList<QPointF> linePoints() const { return map()->mpRoomDB->getRoom(kLineRoomId)->customLines.value(kLineExit); }
+
+    // What the custom line dialog leaves behind once an exit has been picked
+    // for a new line: an empty line to click points into.
+    TRoom* startDrawingALine(const int fromRoomId, const QString& exit) const
+    {
+        TRoom* pRoom = map()->mpRoomDB->getRoom(fromRoomId);
+        if (!pRoom) {
+            return nullptr;
+        }
+        pRoom->customLines[exit] = QList<QPointF>();
+        pRoom->customLinesColor[exit] = QColor(255, 0, 0);
+        pRoom->customLinesStyle[exit] = Qt::SolidLine;
+        pRoom->customLinesArrow[exit] = true;
+        pRoom->indexCustomLines();
+        mp2dMap->mCustomLinesRoomFrom = fromRoomId;
+        mp2dMap->mCustomLinesRoomExit = exit;
+        return pRoom;
+    }
+
+    void rightClickAt(const QPoint& position) const
+    {
+        sendMouse(QEvent::MouseButtonPress, position, Qt::RightButton, Qt::RightButton, Qt::NoModifier);
+        sendMouse(QEvent::MouseButtonRelease, position, Qt::RightButton, Qt::NoButton, Qt::NoModifier);
+    }
+
+    // The context menu item with this text, from the menu the last right click
+    // put up - or nothing, if there is no menu or no such item.
+    QAction* contextMenuItem(const QString& text) const
+    {
+        if (!mp2dMap->mActiveContextMenu) {
+            return nullptr;
+        }
+        for (QAction* pAction : mp2dMap->mActiveContextMenu->actions()) {
+            if (pAction->text() == text) {
+                return pAction;
+            }
+        }
+        return nullptr;
+    }
+
+    void closeContextMenu() const
+    {
+        if (mp2dMap->mActiveContextMenu) {
+            mp2dMap->mActiveContextMenu->close();
+        }
+    }
+
+    // Picks the item the way a user does: the action fires and the menu goes
+    // away. While a menu is up the map closes it over any click and re-posts
+    // the click, so a case that clicks again after triggering an action on
+    // its own would never see that click land.
+    bool pickContextMenuItem(const QString& text) const
+    {
+        QAction* pAction = contextMenuItem(text);
+        if (!pAction || !pAction->isEnabled()) {
+            return false;
+        }
+        pAction->trigger();
+        closeContextMenu();
+        return true;
+    }
+
 private slots:
     void initTestCase()
     {
@@ -308,9 +396,22 @@ private slots:
     // on its timer, and it would carry on into the next case.
     void cleanup()
     {
-        if (mp2dMap) {
-            mp2dMap->mMiddleMousePanHandler->cancel();
+        if (!mp2dMap) {
+            return;
         }
+        mp2dMap->mMiddleMousePanHandler->cancel();
+        closeContextMenu();
+        // A click sent while a menu was up is re-posted by the map, and would
+        // land in whichever later case first spins the event loop.
+        QCoreApplication::removePostedEvents(mp2dMap, QEvent::MouseButtonPress);
+        QCoreApplication::removePostedEvents(mp2dMap, QEvent::MouseButtonRelease);
+        mp2dMap->slot_setSnapCustomLinePointsToGrid(false);
+        mp2dMap->mCustomLinesRoomFrom = 0;
+        mp2dMap->mCustomLinesRoomTo = 0;
+        mp2dMap->mCustomLinesRoomExit.clear();
+        mp2dMap->mCustomLineSelectedRoom = 0;
+        mp2dMap->mCustomLineSelectedExit.clear();
+        mp2dMap->mCustomLineSelectedPoint = -1;
     }
 
     // The view is centred on where the player is, so the middle of the widget
@@ -762,6 +863,336 @@ private slots:
         holdTheButton();
         middleReleaseAt(viewCentre() + QPoint(60, 0));
         QVERIFY(!panning());
+    }
+
+
+    // ---------------------------------------------------------------------
+    // Custom exit lines: clicking points into a new one, and picking up and
+    // reshaping one that is already drawn.
+    // ---------------------------------------------------------------------
+
+    void test_clickingWhileDrawingACustomLineAddsAPointThere()
+    {
+        buildMap();
+        showMapper(false);
+        TRoom* pRoom = startDrawingALine(kPlayerRoomId, qsl("e"));
+        QVERIFY(pRoom);
+
+        clickAt(pointUnitsFromCentre(0.5, 0.5));
+        clickAt(pointUnitsFromCentre(1.5, 0.5));
+
+        const QList<QPointF> expected{QPointF(0.5, 0.5), QPointF(1.5, 0.5)};
+        QCOMPARE(pRoom->customLines.value(qsl("e")), expected);
+    }
+
+    // The line is being drawn, so a click that lands on a room is a point on
+    // the line and not a room being picked.
+    void test_aClickOnARoomWhileDrawingAddsAPointRatherThanSelectingIt()
+    {
+        buildMap();
+        showMapper(false);
+        TRoom* pRoom = startDrawingALine(kPlayerRoomId, qsl("e"));
+        QVERIFY(pRoom);
+
+        clickAt(pointUnitsFromCentre(1, 0));
+
+        QCOMPARE(pRoom->customLines.value(qsl("e")), QList<QPointF>{QPointF(1.0, 0.0)});
+        QVERIFY2(mp2dMap->mMultiSelectionSet.isEmpty(), "the room under the click was selected instead of taking a point");
+    }
+
+    void test_pointsLandOnTheHalfGridWhileSnappingIsOn()
+    {
+        buildMap();
+        showMapper(false);
+        TRoom* pRoom = startDrawingALine(kPlayerRoomId, qsl("e"));
+        QVERIFY(pRoom);
+        mp2dMap->slot_setSnapCustomLinePointsToGrid(true);
+
+        // 7 pixels east and 3 north is 0.35 by 0.15 of a unit: nearer the half
+        // line on one axis and the whole one on the other.
+        clickAt(viewCentre() + QPoint(7, -3));
+
+        QCOMPARE(pRoom->customLines.value(qsl("e")), QList<QPointF>{QPointF(0.5, 0.0)});
+    }
+
+    void test_aRightClickWhileDrawingOffersToUndoTheLastPoint()
+    {
+        buildMap();
+        showMapper(false);
+        TRoom* pRoom = startDrawingALine(kPlayerRoomId, qsl("e"));
+        QVERIFY(pRoom);
+        clickAt(pointUnitsFromCentre(0.5, 0.5));
+        clickAt(pointUnitsFromCentre(1.5, 0.5));
+
+        rightClickAt(pointUnitsFromCentre(2, 0.5));
+        QVERIFY2(pickContextMenuItem(qsl("Undo")), "a right click while drawing did not put up a menu with Undo on it");
+
+        QCOMPARE(pRoom->customLines.value(qsl("e")), QList<QPointF>{QPointF(0.5, 0.5)});
+        QVERIFY2(mp2dMap->mCustomLinesRoomFrom == kPlayerRoomId, "undoing a point ended the drawing");
+    }
+
+    void test_finishingFromTheMenuEndsTheDrawingAndKeepsTheLine()
+    {
+        buildMap();
+        showMapper(false);
+        TRoom* pRoom = startDrawingALine(kPlayerRoomId, qsl("e"));
+        QVERIFY(pRoom);
+        clickAt(pointUnitsFromCentre(0.5, 0.5));
+
+        rightClickAt(pointUnitsFromCentre(2, 0.5));
+        QVERIFY2(pickContextMenuItem(qsl("Finish")), "a right click while drawing did not put up a menu with Finish on it");
+
+        QCOMPARE(mp2dMap->mCustomLinesRoomFrom, 0);
+        QCOMPARE(pRoom->customLines.value(qsl("e")), QList<QPointF>{QPointF(0.5, 0.5)});
+        // and a click is a click again, not another point
+        clickAt(pointUnitsFromCentre(1.5, 0.5));
+        QCOMPARE(pRoom->customLines.value(qsl("e")).size(), 1);
+    }
+
+    // Turning snapping on pulls the points already drawn onto the grid, and
+    // turning it off again puts them back where they were clicked.
+    void test_snappingFromTheMenuMovesThePointsAlreadyDrawnAndUnsnappingRestoresThem()
+    {
+        buildMap();
+        showMapper(false);
+        TRoom* pRoom = startDrawingALine(kPlayerRoomId, qsl("e"));
+        QVERIFY(pRoom);
+        clickAt(viewCentre() + QPoint(7, -3));
+        const QList<QPointF> asClicked = pRoom->customLines.value(qsl("e"));
+        QCOMPARE(asClicked.size(), 1);
+        QVERIFY2((asClicked.first() - QPointF(0.35, 0.15)).manhattanLength() < 0.001, "the point should be where the click landed, off the grid");
+
+        rightClickAt(pointUnitsFromCentre(2, 0.5));
+        QAction* pSnap = contextMenuItem(qsl("Snap points to grid"));
+        QVERIFY2(pSnap, "a right click while drawing did not put up a menu with snapping on it");
+        pSnap->setChecked(true);
+        QCOMPARE(pRoom->customLines.value(qsl("e")), QList<QPointF>{QPointF(0.5, 0.0)});
+
+        pSnap->setChecked(false);
+        QCOMPARE(pRoom->customLines.value(qsl("e")), asClicked);
+        closeContextMenu();
+    }
+
+    void test_clickingOnACustomLineSelectsIt()
+    {
+        buildMap();
+        QVERIFY(addLineToTheEastRoom());
+        showMapper(false);
+
+        clickAt(pointUnitsFromCentre(1, 2));
+
+        QCOMPARE(mp2dMap->mCustomLineSelectedRoom, kLineRoomId);
+        QCOMPARE(mp2dMap->mCustomLineSelectedExit, kLineExit);
+        QCOMPARE(mp2dMap->mCustomLineSelectedPoint, -1);
+    }
+
+    // A click that misses every line by more than a whisker drops whatever
+    // line was selected.
+    void test_clickingClearOfEveryCustomLineDropsTheSelectedOne()
+    {
+        buildMap();
+        QVERIFY(addLineToTheEastRoom());
+        showMapper(false);
+        clickAt(pointUnitsFromCentre(1, 2));
+        QCOMPARE(mp2dMap->mCustomLineSelectedRoom, kLineRoomId);
+
+        clickAt(pointUnitsFromCentre(1.5, 2));
+
+        QCOMPARE(mp2dMap->mCustomLineSelectedRoom, 0);
+        QVERIFY(mp2dMap->mCustomLineSelectedExit.isEmpty());
+    }
+
+    void test_aCustomLineCannotBeSelectedWhileViewing()
+    {
+        buildMap();
+        QVERIFY(addLineToTheEastRoom());
+        showMapper(true);
+
+        clickAt(pointUnitsFromCentre(1, 2));
+
+        QCOMPARE(mp2dMap->mCustomLineSelectedRoom, 0);
+    }
+
+    // While any rooms are selected the clicks are theirs, so a line cannot be
+    // picked up until they are dropped.
+    void test_aCustomLineIsLeftAloneWhileRoomsAreSelected()
+    {
+        buildMap();
+        QVERIFY(addLineToTheEastRoom());
+        showMapper(false);
+        clickAt(pointUnitsFromCentre(-1, 0));
+        QCOMPARE(mp2dMap->mMultiSelectionSet, QSet<int>{kWestRoomId});
+
+        clickAt(pointUnitsFromCentre(1, 2));
+
+        QCOMPARE(mp2dMap->mCustomLineSelectedRoom, 0);
+    }
+
+    // Once the line is selected its points can be picked up and dragged, which
+    // is how a line is reshaped after it was drawn.
+    void test_draggingAPointOfTheSelectedLineMovesIt()
+    {
+        buildMap();
+        QVERIFY(addLineToTheEastRoom());
+        showMapper(false);
+        clickAt(pointUnitsFromCentre(1, 2));
+        map()->resetUnsaved();
+
+        dragFromTo(pointUnitsFromCentre(1, 3), pointUnitsFromCentre(2, 3));
+
+        const QList<QPointF> expected{QPointF(2.0, 3.0), QPointF(1.0, 4.0)};
+        QCOMPARE(linePoints(), expected);
+        QVERIFY2(map()->isUnsaved(), "moving a point did not mark the map as needing a save");
+    }
+
+    void test_draggingAPointWithSnappingOnLandsItOnTheHalfGrid()
+    {
+        buildMap();
+        QVERIFY(addLineToTheEastRoom());
+        showMapper(false);
+        clickAt(pointUnitsFromCentre(1, 2));
+        mp2dMap->slot_setSnapCustomLinePointsToGrid(true);
+
+        // 27 pixels east and 63 north is 1.35 by 3.15 of a unit
+        dragFromTo(pointUnitsFromCentre(1, 3), viewCentre() + QPoint(27, -63));
+
+        const QList<QPointF> expected{QPointF(1.5, 3.0), QPointF(1.0, 4.0)};
+        QCOMPARE(linePoints(), expected);
+    }
+
+    // The first press on a line only selects it, so a drag that starts on a
+    // point of a line that was not selected yet leaves the point alone.
+    void test_aPointCannotBeDraggedUntilItsLineIsSelected()
+    {
+        buildMap();
+        QVERIFY(addLineToTheEastRoom());
+        showMapper(false);
+
+        dragFromTo(pointUnitsFromCentre(1, 4), pointUnitsFromCentre(2, 4));
+
+        QCOMPARE(mp2dMap->mCustomLineSelectedRoom, kLineRoomId);
+        QCOMPARE(linePoints(), lineAsDrawn());
+    }
+
+    void test_theMenuOnASelectedLineCanDeleteIt()
+    {
+        buildMap();
+        TRoom* pRoom = addLineToTheEastRoom();
+        QVERIFY(pRoom);
+        showMapper(false);
+        clickAt(pointUnitsFromCentre(1, 2));
+
+        rightClickAt(pointUnitsFromCentre(1, 2));
+        QVERIFY2(pickContextMenuItem(qsl("Delete line")), "a right click on the selected line did not put up a menu with Delete line on it");
+
+        QVERIFY2(!pRoom->customLines.contains(kLineExit), "the line is still there");
+        QVERIFY2(!pRoom->customLinesColor.contains(kLineExit), "the line's colour outlived it");
+        QCOMPARE(mp2dMap->mCustomLineSelectedRoom, 0);
+    }
+
+    void test_theMenuOnASelectedPointCanRemoveIt()
+    {
+        buildMap();
+        QVERIFY(addLineToTheEastRoom());
+        showMapper(false);
+        clickAt(pointUnitsFromCentre(1, 2));
+        clickAt(pointUnitsFromCentre(1, 4));
+        QCOMPARE(mp2dMap->mCustomLineSelectedPoint, 1);
+
+        rightClickAt(pointUnitsFromCentre(1, 4));
+        QVERIFY2(pickContextMenuItem(qsl("Remove point")), "a right click on the selected point did not put up a menu with Remove point on it");
+
+        QCOMPARE(linePoints(), QList<QPointF>{QPointF(1.0, 3.0)});
+        QCOMPARE(mp2dMap->mCustomLineSelectedPoint, 0);
+    }
+
+    // Adding a point splits the segment that leads to the selected point, so
+    // that stretch of the line can then be bent.
+    void test_theMenuOnASelectedPointCanAddOneHalfwayBackAlongTheLine()
+    {
+        buildMap();
+        QVERIFY(addLineToTheEastRoom());
+        showMapper(false);
+        clickAt(pointUnitsFromCentre(1, 2));
+        clickAt(pointUnitsFromCentre(1, 4));
+        QCOMPARE(mp2dMap->mCustomLineSelectedPoint, 1);
+
+        rightClickAt(pointUnitsFromCentre(1, 4));
+        QVERIFY2(pickContextMenuItem(qsl("Add point")), "a right click on the selected point did not put up a menu with Add point on it");
+
+        const QList<QPointF> expected{QPointF(1.0, 3.0), QPointF(1.0, 3.5), QPointF(1.0, 4.0)};
+        QCOMPARE(linePoints(), expected);
+        QCOMPARE(mp2dMap->mCustomLineSelectedPoint, 2);
+    }
+
+    // The line starts from the edge of the room on the side its exit leaves
+    // by, so a point added before the first one goes halfway back to there.
+    void test_addingAPointBeforeTheFirstOneGoesHalfwayBackToTheRoomsEdge()
+    {
+        buildMap();
+        QVERIFY(addLineToTheEastRoom());
+        showMapper(false);
+        clickAt(pointUnitsFromCentre(1, 2));
+        clickAt(pointUnitsFromCentre(1, 3));
+        QCOMPARE(mp2dMap->mCustomLineSelectedPoint, 0);
+
+        rightClickAt(pointUnitsFromCentre(1, 3));
+        QVERIFY(pickContextMenuItem(qsl("Add point")));
+
+        const QList<QPointF> expected{QPointF(1.0, 1.75), QPointF(1.0, 3.0), QPointF(1.0, 4.0)};
+        QCOMPARE(linePoints(), expected);
+        QCOMPARE(mp2dMap->mCustomLineSelectedPoint, 1);
+    }
+
+    // A line's last point is meant to end on the room its exit leads to, and
+    // the menu can put it there without the user having to aim.
+    void test_theMenuCanMoveTheLastPointOntoTheRoomTheExitLeadsTo()
+    {
+        buildMap();
+        TRoom* pRoom = addLineToTheEastRoom();
+        QVERIFY(pRoom);
+        QVERIFY(pRoom->setExit(kNorthEastRoomId, DIR_NORTH));
+        showMapper(false);
+        clickAt(pointUnitsFromCentre(1, 2));
+
+        rightClickAt(pointUnitsFromCentre(1, 2));
+        QAction* pMove = contextMenuItem(qsl("Move last point to target room"));
+        QVERIFY2(pMove, "a right click on the selected line did not put up a menu with the move on it");
+        QVERIFY2(pMove->isEnabled(), "the move is greyed out for a line whose exit leads somewhere");
+        QVERIFY(pickContextMenuItem(qsl("Move last point to target room")));
+
+        const QList<QPointF> expected{QPointF(1.0, 3.0), QPointF(1.0, 1.0)};
+        QCOMPARE(linePoints(), expected);
+    }
+
+    // The same item is on the menu while a line is still being drawn.
+    void test_theMenuWhileDrawingCanMoveTheLastPointOntoTheRoomTheExitLeadsTo()
+    {
+        buildMap();
+        showMapper(false);
+        TRoom* pRoom = startDrawingALine(kPlayerRoomId, qsl("e"));
+        QVERIFY(pRoom);
+        QVERIFY(pRoom->setExit(kEastRoomId, DIR_EAST));
+        clickAt(pointUnitsFromCentre(0.5, 0.5));
+
+        rightClickAt(pointUnitsFromCentre(2, 0.5));
+        QVERIFY2(pickContextMenuItem(qsl("Move last point to target room")), "the move is missing or greyed out while drawing a line whose exit leads somewhere");
+
+        QCOMPARE(pRoom->customLines.value(qsl("e")), QList<QPointF>{QPointF(1.0, 0.0)});
+        QCOMPARE(mp2dMap->mCustomLinesRoomFrom, kPlayerRoomId);
+    }
+
+    void test_theLastPointCannotBeMovedOntoARoomTheExitDoesNotLeadTo()
+    {
+        buildMap();
+        QVERIFY(addLineToTheEastRoom());
+        showMapper(false);
+        clickAt(pointUnitsFromCentre(1, 2));
+
+        rightClickAt(pointUnitsFromCentre(1, 2));
+        QAction* pMove = contextMenuItem(qsl("Move last point to target room"));
+        QVERIFY(pMove);
+        QVERIFY2(!pMove->isEnabled(), "the move is offered for a line whose exit leads nowhere");
     }
 };
 
