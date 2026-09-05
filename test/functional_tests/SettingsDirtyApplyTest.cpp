@@ -59,6 +59,7 @@
 #include "TelnetServerStub.h"
 #include "dlgProfilePreferences.h"
 #include "mudlet.h"
+#include "MudletSettings.h"
 
 #include "GroupedTest.h"
 
@@ -430,7 +431,7 @@ private slots:
     void test_anExternalGlobalSettingSurvivesAnUnrelatedEdit()
     {
         openPreferences();
-        QSettings* pSettings = mudlet::getQSettings();
+        QSettings* pSettings = MudletSettings::getQSettings();
         const bool shown = mpPreferences->telnetHandlerEnabled->isChecked();
         // what another profile's settings dialog, or a hand-edited Mudlet.ini,
         // leaves behind

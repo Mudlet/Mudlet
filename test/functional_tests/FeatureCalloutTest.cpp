@@ -26,6 +26,7 @@
 #include "TFeatureCallout.h"
 #include "enums.h"
 #include "mudlet.h"
+#include "MudletSettings.h"
 
 #include "GroupedTest.h"
 
@@ -53,9 +54,9 @@ private:
 
     QString shownCountKey() const { return qsl("whatsNew/%1/shownCount").arg(mFeatureId); }
 
-    bool dismissed() const { return mudlet::getQSettings()->value(dismissedKey(), false).toBool(); }
+    bool dismissed() const { return MudletSettings::getQSettings()->value(dismissedKey(), false).toBool(); }
 
-    int shownCount() const { return mudlet::getQSettings()->value(shownCountKey(), 0).toInt(); }
+    int shownCount() const { return MudletSettings::getQSettings()->value(shownCountKey(), 0).toInt(); }
 
     int anchorCentre() const { return mpAnchor->mapToGlobal(QPoint(mpAnchor->width() / 2, 0)).x(); }
 
@@ -94,8 +95,8 @@ private slots:
 
     void init()
     {
-        mudlet::getQSettings()->remove(dismissedKey());
-        mudlet::getQSettings()->remove(shownCountKey());
+        MudletSettings::getQSettings()->remove(dismissedKey());
+        MudletSettings::getQSettings()->remove(shownCountKey());
         mpWindow = new QWidget;
         mpWindow->resize(400, 300);
         mpWindow->move(80, 80);

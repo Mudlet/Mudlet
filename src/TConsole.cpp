@@ -42,6 +42,7 @@
 #include "TTextEdit.h"
 #include "dlgMapper.h"
 #include "mudlet.h"
+#include "MudletSettings.h"
 
 #include <QAccessibleInterface>
 #include <QAccessibleWidget>
@@ -3289,7 +3290,7 @@ void TConsole::slot_saveCommandSearchSettings()
         return;
     }
 
-    QSettings* pQSettings = mudlet::getQSettings();
+    QSettings* pQSettings = MudletSettings::getQSettings();
     if (!pQSettings) {
         return;
     }
@@ -3303,7 +3304,7 @@ void TConsole::restoreCommandSearchSettings()
         return;
     }
 
-    QSettings* pQSettings = mudlet::getQSettings();
+    QSettings* pQSettings = MudletSettings::getQSettings();
     if (!pQSettings) {
         return;
     }

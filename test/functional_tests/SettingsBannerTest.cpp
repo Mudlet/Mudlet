@@ -49,6 +49,7 @@
 #include "TelnetServerStub.h"
 #include "dlgProfilePreferences.h"
 #include "mudlet.h"
+#include "MudletSettings.h"
 
 #include "GroupedTest.h"
 
@@ -142,13 +143,13 @@ private slots:
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
     }
 
-    void init() { mudlet::getQSettings()->remove(mBannerSeenKey); }
+    void init() { MudletSettings::getQSettings()->remove(mBannerSeenKey); }
 
     void cleanup()
     {
         delete mpPreferences;
         mpPreferences = nullptr;
-        mudlet::getQSettings()->remove(mBannerSeenKey);
+        MudletSettings::getQSettings()->remove(mBannerSeenKey);
     }
 
     // The rest of this file writes and reads a key that decides whether a real
@@ -156,7 +157,7 @@ private slots:
     // developer's own settings file
     void test_theBannerFlagIsReadFromThisTestsOwnSettings()
     {
-        const QString settingsFile = mudlet::getQSettings()->fileName();
+        const QString settingsFile = MudletSettings::getQSettings()->fileName();
         QVERIFY2(settingsFile.startsWith(mConfigDir.path()), qPrintable(qsl("the settings this test writes are in %1, not under its temporary config root %2").arg(settingsFile, mConfigDir.path())));
         QCOMPARE(settingsFile, qsl("%1/mudlet/Mudlet.ini").arg(mConfigDir.path()));
     }
@@ -203,7 +204,7 @@ private slots:
         pDismiss->click();
 
         QVERIFY2(pBanner->isHidden(), "dismissing the banner left it on screen");
-        QVERIFY2(mudlet::getQSettings()->value(mBannerSeenKey, false).toBool(), "dismissing the banner did not record that it had been seen");
+        QVERIFY2(MudletSettings::getQSettings()->value(mBannerSeenKey, false).toBool(), "dismissing the banner did not record that it had been seen");
     }
 
     // One "Got it" is meant to be the end of it everywhere, not just on the
@@ -226,7 +227,7 @@ private slots:
 
     void test_aLaterDialogDoesNotShowTheBanner()
     {
-        mudlet::getQSettings()->setValue(mBannerSeenKey, true);
+        MudletSettings::getQSettings()->setValue(mBannerSeenKey, true);
         openPreferences();
 
         QVERIFY2(!banner(), "the migration banner came back after it had been dismissed");

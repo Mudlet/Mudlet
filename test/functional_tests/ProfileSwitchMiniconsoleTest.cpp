@@ -60,6 +60,7 @@
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
+#include "MudletSettings.h"
 
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)
@@ -209,8 +210,8 @@ private slots:
         mudlet::start();
         mudlet::self()->setupConfig();
         QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
-        mudlet::getQSettings()->setValue(qsl("uiTourShown"), true);
-        mudlet::getQSettings()->sync();
+        MudletSettings::getQSettings()->setValue(qsl("uiTourShown"), true);
+        MudletSettings::getQSettings()->sync();
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);

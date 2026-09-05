@@ -60,6 +60,7 @@
 #include "TelnetServerStub.h"
 #include "dlgProfilePreferences.h"
 #include "mudlet.h"
+#include "MudletSettings.h"
 
 #include "GroupedTest.h"
 
@@ -440,7 +441,7 @@ private slots:
     // on every walk past the Editor page.
     void test_theEditorThemeRefreshRunsOnTheFirstVisitOnly()
     {
-        QSettings* pSettings = mudlet::getQSettings();
+        QSettings* pSettings = MudletSettings::getQSettings();
         pSettings->remove(qsl("colorSublimeThemesURL"));
         QVERIFY2(!pSettings->contains(qsl("colorSublimeThemesURL")), "the marker this case reads was still set before the first visit");
 
@@ -523,7 +524,7 @@ private slots:
     // network: a live fetch of github.com fails slowly rather than red
     void test_theThemeDownloadHookKeepsTheEditorPageOffTheNetwork()
     {
-        QSettings* pSettings = mudlet::getQSettings();
+        QSettings* pSettings = MudletSettings::getQSettings();
         const QVariant savedUrl = pSettings->value(qsl("colorSublimeThemesURL"));
         // So that a run where the hook does not hold reaches nothing real
         pSettings->setValue(qsl("colorSublimeThemesURL"), qsl("file:///nonexistent/themes.zip"));
@@ -577,7 +578,7 @@ private slots:
 
         BracketingTranslator translator;
         QCoreApplication::installTranslator(&translator);
-        mpPreferences->slot_guiLanguageChanged(mudlet::self()->getInterfaceLanguage());
+        mpPreferences->slot_guiLanguageChanged(MudletSettings::getInterfaceLanguage());
         QCoreApplication::removeTranslator(&translator);
         QCoreApplication::processEvents();
 
@@ -596,7 +597,7 @@ private slots:
 
         BracketingTranslator translator;
         QCoreApplication::installTranslator(&translator);
-        mpPreferences->slot_guiLanguageChanged(mudlet::self()->getInterfaceLanguage());
+        mpPreferences->slot_guiLanguageChanged(MudletSettings::getInterfaceLanguage());
         // Read before the translator goes, so that a failure here cannot leave
         // it installed for the cases that follow
         const QString category = sidebar()->item(rowOf(qsl("general")))->text();
@@ -1219,7 +1220,7 @@ private slots:
         auto* pGerman = new QTranslator(qApp);
         QVERIFY2(pGerman->load(qsl("mudlet_de_DE"), qsl(":/lang")), "no German translation in the binary's resources, so nothing here would lengthen a string");
         QVERIFY(qApp->installTranslator(pGerman));
-        mpPreferences->slot_guiLanguageChanged(mudlet::self()->getInterfaceLanguage());
+        mpPreferences->slot_guiLanguageChanged(MudletSettings::getInterfaceLanguage());
         qApp->processEvents();
         // Read before the translator goes, so a failure cannot leave it
         // installed for the cases that follow

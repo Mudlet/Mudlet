@@ -106,6 +106,7 @@ set(mudlet_SRCS
     MMCPClient.cpp
     MMCPServer.cpp
     mudlet.cpp
+    MudletSettings.cpp
     MudletInstanceCoordinator.cpp
     MudletPaths.cpp
     MxpTag.cpp
@@ -360,6 +361,7 @@ set(mudlet_HDRS
     MMCPClient.h
     MMCPServer.h
     mudlet.h
+    MudletSettings.h
     MudletInstanceCoordinator.h
     MudletPaths.h
     MxpTag.h

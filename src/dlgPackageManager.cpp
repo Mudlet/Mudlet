@@ -25,6 +25,7 @@
 
 #include "MudletPaths.h"
 #include "mudlet.h"
+#include "MudletSettings.h"
 
 #include <QCloseEvent>
 #include <QFileDialog>
@@ -319,7 +320,7 @@ void dlgPackageManager::setupNavigationButtons()
 
 void dlgPackageManager::slot_installPackageFromFile()
 {
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletSettings::getQSettings();
     QString lastDir = settings.value(qsl("lastFileDialogLocation"), QDir::homePath()).toString();
 
     //: Package manager - import packages from file dialog (multi-select enabled)

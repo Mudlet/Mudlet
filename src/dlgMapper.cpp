@@ -32,6 +32,7 @@
 #include "TRoomDB.h"
 #include "mapInfoContributorManager.h"
 #include "mudlet.h"
+#include "MudletSettings.h"
 
 #include <QElapsedTimer>
 #include <QEvent>
@@ -340,7 +341,7 @@ void dlgMapper::loadMapFromFile()
     auto* dialog = new QFileDialog(this);
     //: Title of the file dialog used to pick a map file to load.
     dialog->setWindowTitle(tr("Load Mudlet map"));
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletSettings::getQSettings();
     const QString lastDir = settings.value(qsl("lastFileDialogLocation"), MudletPaths::getMudletPath(enums::profileHomePath, mpHost->getName())).toString();
     dialog->setDirectory(lastDir);
     dialog->setNameFilter(filters.join(qsl(";;")));
@@ -369,7 +370,7 @@ void dlgMapper::loadMapFromFile()
         if (success) {
             pHost->mpMap->audit();
             mEmptyStateDismissed = true;
-            mudlet::getQSettings()->setValue(qsl("lastFileDialogLocation"), QFileInfo(fileName).absolutePath());
+            MudletSettings::getQSettings()->setValue(qsl("lastFileDialogLocation"), QFileInfo(fileName).absolutePath());
         }
         updateEmptyStateOverlay();
     });

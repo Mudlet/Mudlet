@@ -27,6 +27,7 @@
 
 
 #include "mudlet.h"
+#include "MudletSettings.h"
 
 #include "AltFocusMenuBarDisable.h"
 #include "CredentialManager.h"
@@ -974,8 +975,8 @@ static bool anyProfilesExist(const QString& profilesPath);
 void mudlet::init()
 {
     smFirstLaunch = !anyProfilesExist(MudletPaths::getMudletPath(enums::profilesPath));
-    // Must be after setupConfig() created mpSettings and before anything of this run is written
-    rememberFirstLaunch(*mpSettings, MudletPaths::getMudletPath(enums::profilesPath), QDateTime::currentDateTime());
+    // Must be after setupConfig() has settled the config root and before anything of this run is written
+    rememberFirstLaunch(*MudletSettings::getQSettings(), MudletPaths::getMudletPath(enums::profilesPath), QDateTime::currentDateTime());
 
     QFile gitShaFile(":/app-build.txt");
     if (!gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
@@ -1000,7 +1001,7 @@ void mudlet::init()
     // another window.
     mApplicationActive = qGuiApp->applicationState() == Qt::ApplicationActive;
     connect(qGuiApp, &QGuiApplication::applicationStateChanged, this, &mudlet::slot_applicationStateChanged);
-    readEarlySettings(*mpSettings);
+    readEarlySettings(*MudletSettings::getQSettings());
 
     if (mShowIconsOnMenuCheckedState != Qt::PartiallyChecked) {
         // If the setting is not the "tri-state" one then force the setting,
@@ -1015,7 +1016,7 @@ void mudlet::init()
 
     scanForMudletTranslations(qsl(":/lang"));
     scanForQtTranslations(MudletPaths::getMudletPath(enums::qtTranslationsPath));
-    loadTranslators(mInterfaceLanguage);
+    loadTranslators(MudletSettings::getInterfaceLanguage());
 
     // Cannot assign a value in the constructor list as it requires the
     // translations to be loaded first:
@@ -1544,7 +1545,7 @@ void mudlet::init()
         //: Name of the keyboard shortcut that switches to the numbered profile tab, %1 is that number (1 to 9)
         mpShortcutsManager->registerShortcut(qsl("Switch to profile %1").arg(i + 1), tr("Switch to profile %1").arg(i + 1), &mKeySequencesSwitchToProfile[i]);
     }
-    readLateSettings(*mpSettings);
+    readLateSettings(*MudletSettings::getQSettings());
     // The previous line will set an option used in the slot method:
     connect(mpMainToolBar, &QToolBar::visibilityChanged, this, &mudlet::slot_handleToolbarVisibilityChanged);
     connect(mpMainToolBar->toggleViewAction(), &QAction::triggered, this, &mudlet::slot_toolbarToggleActionTriggered);
@@ -1568,7 +1569,7 @@ void mudlet::init()
     // shows its "an update is ready" dialog only after the last window closes,
     // so it must outlive the main window - parent it to the application, not to
     // the window that is about to be destroyed:
-    pUpdater = new Updater(qApp, mpSettings, !releaseVersion);
+    pUpdater = new Updater(qApp, MudletSettings::getQSettings(), !releaseVersion);
     connect(pUpdater, &Updater::signal_updateAvailable, this, &mudlet::slot_updateAvailable);
     connect(pUpdater, &Updater::signal_updateCheckFailed, this, &mudlet::slot_updateCheckFailed);
     connect(dactionUpdate, &QAction::triggered, this, &mudlet::slot_manualUpdateCheck);
@@ -1695,20 +1696,9 @@ void mudlet::setupConfig()
     }
     qDebug() << "mudlet::setupConfig() INFO:" << "using config dir:" << confPath;
     MudletPaths::setConfigPath(confPath);
-
-    // parented to the application, not this window: the window deletes itself
-    // on close and the Updater keeps using this QSettings past that point.
-    // Which is also why setupConfig() must not run again once init() has
-    // created the Updater - the delete below would dangle its pointer.
-    delete mpSettings;
-    mpSettings = new QSettings(qsl("%1/Mudlet.ini").arg(confPath), QSettings::IniFormat, qApp);
-}
-
-// This is a static wrapper for singleton instance method
-// Should only be called after mudlet has been initialised
-/*static*/ QSettings* mudlet::getQSettings()
-{
-    return self()->mpSettings;
+    // setupConfig() must not run again once init() has created the Updater,
+    // which keeps using the settings object this discards
+    MudletSettings::reset();
 }
 
 void mudlet::initEdbee()
@@ -3994,18 +3984,18 @@ void mudlet::readEarlySettings(const QSettings& settings)
         mAppearance = static_cast<enums::Appearance>(appearance);
     }
 
-    mInterfaceLanguage = settings.value("interfaceLanguage", autodetectPreferredLanguage()).toString();
-    mUserLocale = QLocale(mInterfaceLanguage);
+    MudletSettings::setInterfaceLanguage(settings.value("interfaceLanguage", autodetectPreferredLanguage()).toString());
+    mUserLocale = QLocale(MudletSettings::getInterfaceLanguage());
     if (mUserLocale == QLocale::c()) {
-        qWarning().nospace().noquote() << "mudlet::readEarlySettings(...) WARNING - Unable to convert language code \"" << mInterfaceLanguage
+        qWarning().nospace().noquote() << "mudlet::readEarlySettings(...) WARNING - Unable to convert language code \"" << MudletSettings::getInterfaceLanguage()
                                        << "\" to a recognised locale, reverting to the POSIX 'C' one.";
         return;
     }
 
     // #if QT_VERSION < QT_VERSION_CHECK(6, 2, 0)
-    //     qDebug().nospace().noquote() << "mudlet::readEarlySettings(...) INFO - Using language code \"" << mInterfaceLanguage << "\" to switch to \"" << QLocale::languageToString(mUserLocale.language()) << " (" << QLocale::countryToString(mUserLocale.country()) << ")\" locale.";
+    //     qDebug().nospace().noquote() << "mudlet::readEarlySettings(...) INFO - Using language code \"" << MudletSettings::getInterfaceLanguage() << "\" to switch to \"" << QLocale::languageToString(mUserLocale.language()) << " (" << QLocale::countryToString(mUserLocale.country()) << ")\" locale.";
     // #else
-    //     qDebug().nospace().noquote() << "mudlet::readEarlySettings(...) INFO - Using language code \"" << mInterfaceLanguage << "\" to switch to \"" << QLocale::languageToString(mUserLocale.language()) << " (" << QLocale::territoryToString(mUserLocale.territory()) << ")\" locale.";
+    //     qDebug().nospace().noquote() << "mudlet::readEarlySettings(...) INFO - Using language code \"" << MudletSettings::getInterfaceLanguage() << "\" to switch to \"" << QLocale::languageToString(mUserLocale.language()) << " (" << QLocale::territoryToString(mUserLocale.territory()) << ")\" locale.";
     // #endif
 }
 
@@ -4037,7 +4027,7 @@ void mudlet::readLateSettings(const QSettings& settings)
         setToolBarVisibility(enums::visibleOnlyWithoutLoadedProfile);
         // Write only the corrected value — calling writeSettings() here would
         // persist all not-yet-read settings at their defaults, clobbering user data
-        QSettings& correctionSettings = *getQSettings();
+        QSettings& correctionSettings = *MudletSettings::getQSettings();
         correctionSettings.setValue("toolBarVisibility", static_cast<int>(mToolbarVisibility));
         correctionSettings.sync();
         if (correctionSettings.status() != QSettings::NoError) {
@@ -4243,7 +4233,7 @@ bool mudlet::isControlsVisible() const
 
 void mudlet::writeSettings()
 {
-    QSettings& settings = *getQSettings();
+    QSettings& settings = *MudletSettings::getQSettings();
     settings.setValue("pos", pos());
     settings.setValue("size", size());
     settings.setValue("mainiconsize", mToolbarIconSize);
@@ -4266,7 +4256,7 @@ void mudlet::writeSettings()
     settings.setValue("showTabConnectionIndicators", mShowTabConnectionIndicators);
     settings.setValue("showIconsInMenus", mShowIconsOnMenuCheckedState);
     settings.setValue("copyAsImageTimeout", mCopyAsImageTimeout);
-    settings.setValue("interfaceLanguage", mInterfaceLanguage);
+    settings.setValue("interfaceLanguage", MudletSettings::getInterfaceLanguage());
     // 'darkTheme' value was only used during PTBs, remove it to reduce confusion in the future
     settings.remove("darkTheme");
     settings.setValue("appearance", mAppearance);
@@ -5514,7 +5504,7 @@ void mudlet::slot_replay()
         return;
     }
 
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletSettings::getQSettings();
     QString lastDir = settings.value("lastFileDialogLocation", MudletPaths::getMudletPath(enums::profileHomePath, pHost->getName())).toString();
 
 
@@ -7368,9 +7358,9 @@ void mudlet::refreshTabBarsAfterStyleChange()
 
 void mudlet::setInterfaceLanguage(const QString& languageCode)
 {
-    if (mInterfaceLanguage != languageCode) {
-        mInterfaceLanguage = languageCode;
-        mUserLocale = QLocale(mInterfaceLanguage);
+    if (MudletSettings::getInterfaceLanguage() != languageCode) {
+        MudletSettings::setInterfaceLanguage(languageCode);
+        mUserLocale = QLocale(MudletSettings::getInterfaceLanguage());
         if (mUserLocale == QLocale::c()) {
             qWarning().nospace().noquote() << "mudlet::setInterfaceLanguage(\"" << languageCode
                                            << "\") WARNING - Unable to convert given language code to a recognised locale, reverting to the POSIX 'C' one.";
@@ -8445,7 +8435,7 @@ bool mudlet::experiencedMudletPlayer()
         return cachedResult.value();
     }
 
-    const auto* settings = getQSettings();
+    const auto* settings = MudletSettings::getQSettings();
     if (!settings) {
         // Not cached: a guess, and caching it would pin every gate for the process
         qWarning() << "mudlet::experiencedMudletPlayer() WARNING - called before setupConfig(), so assuming an experienced player and showing no first-run guidance.";

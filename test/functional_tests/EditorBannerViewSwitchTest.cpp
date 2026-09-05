@@ -44,6 +44,7 @@
 #include "dlgSystemMessageArea.h"
 #include "dlgTriggerEditor.h"
 #include "mudlet.h"
+#include "MudletSettings.h"
 
 #include "GroupedTest.h"
 
@@ -78,7 +79,7 @@ private:
     // belonging to a real profile is touched)
     void clearBannerSettings()
     {
-        QSettings* settings = mudlet::getQSettings();
+        QSettings* settings = MudletSettings::getQSettings();
         settings->remove(qsl("Editor/banner_permanently_hidden/profiles/%1").arg(mProfileName));
     }
 
@@ -154,8 +155,8 @@ private slots:
         mpHost = nullptr;
         delete mpServer;
         mpServer = nullptr;
-        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
-        // getQSettings() dereferences the instance rather than checking it
+        // Null when initTestCase skipped or failed ahead of mudlet::start(), so
+        // there are no settings to clear either
         if (mudlet::self()) {
             clearBannerSettings();
             deleteProfileDirectory(mProfileName);

@@ -53,6 +53,7 @@
 #include "MudletInstanceCoordinator.h"
 #include "VoskRecognizer.h"
 #include "mudlet.h"
+#include "MudletSettings.h"
 
 #include "GroupedTest.h"
 
@@ -307,7 +308,7 @@ private slots:
         QVERIFY(QDir().mkpath(qsl("%1/vosk-model-small-en-us-0.15/am").arg(modelsDir)));
         QVERIFY(QDir().mkpath(qsl("%1/vosk-model-small-fr-0.22/am").arg(modelsDir)));
 
-        auto* pSettings = mudlet::getQSettings();
+        auto* pSettings = MudletSettings::getQSettings();
         QVERIFY(pSettings);
         pSettings->beginGroup(qsl("SpeechRecognition"));
         pSettings->remove(qsl("selectedModel"));

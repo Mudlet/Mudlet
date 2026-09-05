@@ -38,6 +38,7 @@
 #include "PortableModeTestHelper.h"
 #include "MudletInstanceCoordinator.h"
 #include "mudlet.h"
+#include "MudletSettings.h"
 
 #include "GroupedTest.h"
 
@@ -294,15 +295,15 @@ private slots:
         mudlet::start();
         mudlet::self()->setupConfig();
         QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), configDir);
-        QVERIFY2(mudlet::getQSettings()->allKeys().isEmpty(), "a fresh config dir must start out with an empty Mudlet.ini - something wrote settings before init()");
+        QVERIFY2(MudletSettings::getQSettings()->allKeys().isEmpty(), "a fresh config dir must start out with an empty Mudlet.ini - something wrote settings before init()");
         QVERIFY2(QDir(MudletPaths::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot).isEmpty(),
                  "the opt-in profiles/ dir has to be empty, or this is not a fresh install");
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
 
         mudlet::self()->init();
 
-        QVERIFY2(mudlet::getQSettings()->contains(mKey), "init() must record the first launch date");
-        QCOMPARE(QDateTime::fromString(mudlet::getQSettings()->value(mKey).toString(), Qt::ISODate).isValid(), true);
+        QVERIFY2(MudletSettings::getQSettings()->contains(mKey), "init() must record the first launch date");
+        QCOMPARE(QDateTime::fromString(MudletSettings::getQSettings()->value(mKey).toString(), Qt::ISODate).isValid(), true);
     }
 
     // Pins the key and profiles path experiencedMudletPlayer() picks for itself,
@@ -314,7 +315,7 @@ private slots:
             QSKIP("portable.txt present - setupConfig() takes the portable branch");
         }
         QVERIFY(mudlet::self());
-        auto* settings = mudlet::getQSettings();
+        auto* settings = MudletSettings::getQSettings();
         QVERIFY(settings);
         settings->remove(mKey);
         QVERIFY(!makeProfile(MudletPaths::getMudletPath(enums::mainPath), qsl("Achaea")).isEmpty());

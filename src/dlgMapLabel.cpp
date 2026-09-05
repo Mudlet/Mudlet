@@ -19,7 +19,7 @@
  ***************************************************************************/
 
 #include "dlgMapLabel.h"
-#include "mudlet.h"
+#include "MudletSettings.h"
 #include "utils.h"
 #include <QColorDialog>
 #include <QFileDialog>
@@ -69,7 +69,7 @@ dlgMapLabel::dlgMapLabel(QWidget* pParentWidget)
     //: Tooltip for font display in map label dialog
     lineEdit_font->setToolTip(tr("Font size is automatically calculated to fit the label"));
 
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletSettings::getQSettings();
     fgColor = settings.value("fgColorDialogMapLabel", fgColor).value<QColor>();
     bgColor = settings.value("bgColorDialogMapLabel", bgColor).value<QColor>();
     outlineColor = settings.value("outlineColorDialogMapLabel", outlineColor).value<QColor>();
@@ -89,7 +89,7 @@ QString dlgMapLabel::getImagePath()
 
 void dlgMapLabel::slot_pickFgColor()
 {
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletSettings::getQSettings();
     fgColorDialog = new QColorDialog(this);
     fgColorDialog->setCurrentColor(settings.value("fgColorDialogMapLabel", fgColor).value<QColor>());
     fgColorDialog->setAttribute(Qt::WA_DeleteOnClose);
@@ -112,7 +112,7 @@ void dlgMapLabel::slot_pickFgColor()
 
 void dlgMapLabel::slot_pickBgColor()
 {
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletSettings::getQSettings();
     bgColorDialog = new QColorDialog(this);
     bgColorDialog->setCurrentColor(settings.value("bgColorDialogMapLabel", bgColor).value<QColor>());
     bgColorDialog->setAttribute(Qt::WA_DeleteOnClose);
@@ -135,7 +135,7 @@ void dlgMapLabel::slot_pickBgColor()
 
 void dlgMapLabel::slot_pickOutlineColor()
 {
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletSettings::getQSettings();
     outlineColorDialog = new QColorDialog(this);
     outlineColorDialog->setCurrentColor(settings.value("outlineColorDialogMapLabel", outlineColor).value<QColor>());
     outlineColorDialog->setAttribute(Qt::WA_DeleteOnClose);
@@ -181,7 +181,7 @@ void dlgMapLabel::slot_pickFile()
 {
     //: 2D Mapper create label file dialog title
 
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletSettings::getQSettings();
     QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
 
     imagePath = QFileDialog::getOpenFileName(nullptr, tr("Select image"), lastDir);

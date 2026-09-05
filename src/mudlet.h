@@ -114,7 +114,6 @@ public:
     mudlet();
     ~mudlet() override;
 
-    static QSettings* getQSettings();
     // From https://stackoverflow.com/a/14678964/4805858 an answer to:
     // "How to find and replace string?" by "Czarek Tomczak":
     static bool loadEdbeeTheme(const QString& themeName, const QString& themeFile);
@@ -231,7 +230,6 @@ public:
     const QMap<QString, QPointer<TDetachedWindow>>& getDetachedWindows() const { return mDetachedWindows; }
     QDockWidget* getMainWindowDockWidget(const QString& mapKey) const { return mMainWindowDockWidgetMap.value(mapKey); }
     std::optional<QSize> getImageSize(const QString&);
-    const QString& getInterfaceLanguage() const { return mInterfaceLanguage; }
     int64_t getPhysicalMemoryTotal();
     const QLocale& getUserLocale() const { return mUserLocale; }
     QSet<QString> getWordSet();
@@ -411,7 +409,6 @@ public:
     // Flag to prevent connection dialog from opening during telnet:// URI processing
     bool mProcessingTelnetUri = false;
     QToolBar* mpMainToolBar = nullptr;
-    QPointer<QSettings> mpSettings;
     QPointer<ShortcutsManager> mpShortcutsManager;
     TTabBar* mpTabBar = nullptr;
     int mReplaySpeed = 1;
@@ -655,7 +652,6 @@ private:
     // Has default form of "en_US" but can be just an ISO language code e.g. "fr" for french,
     // without a country designation. Replaces xx in "mudlet_xx.qm" to provide the translation
     // file for GUI translation
-    QString mInterfaceLanguage;
     QKeySequence mKeySequenceCloseProfile;
     QKeySequence mKeySequenceConnect;
     QKeySequence mKeySequenceDisconnect;
@@ -785,8 +781,8 @@ private:
     QString mTimeFormat;
     enums::controlsVisibility mToolbarVisibility = enums::visibleNever;
     QList<QPointer<QTranslator>> mTranslatorsLoadedList;
-    // An encapsulation of the mInterfaceLanguage in a form that Qt uses to
-    // hold all the details:
+    // An encapsulation of MudletSettings::getInterfaceLanguage() in a form
+    // that Qt uses to hold all the details:
     QLocale mUserLocale;
     QMap<Host*, QToolBar*> mUserToolbarMap;
     // The collection of words in what mpHunspell_sharedDictionary points to:

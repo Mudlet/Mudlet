@@ -53,6 +53,7 @@
 #include "TMedia.h"
 #include "TelnetServerStub.h"
 #include "mudlet.h"
+#include "MudletSettings.h"
 #include "utils.h"
 
 #include "GroupedTest.h"
@@ -152,8 +153,8 @@ private slots:
         mudlet::start();
         mudlet::self()->setupConfig();
         QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
-        mudlet::getQSettings()->setValue(qsl("uiTourShown"), true);
-        mudlet::getQSettings()->sync();
+        MudletSettings::getQSettings()->setValue(qsl("uiTourShown"), true);
+        MudletSettings::getQSettings()->sync();
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);

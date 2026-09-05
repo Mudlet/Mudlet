@@ -47,6 +47,7 @@
 #include "ctelnet.h"
 #include "dlgTriggerEditor.h"
 #include "mudlet.h"
+#include "MudletSettings.h"
 
 #include "GroupedTest.h"
 
@@ -281,7 +282,7 @@ private slots:
     // middle of the screen rather than left wherever the window system drops it
     void testTheFirstEverEditorIsCentred()
     {
-        mudlet::getQSettings()->remove("script_editor_pos");
+        MudletSettings::getQSettings()->remove("script_editor_pos");
         delete mpHost->mpEditorDialog.data();
 
         mpEditor = reopenEditor();
@@ -299,7 +300,7 @@ private slots:
         const QPoint left = offCentrePoint() + QPoint(29, 31);
         placeEditorAtAndClose(mpEditor, left);
         const QSize leftSize = mpEditor->size();
-        QCOMPARE(mudlet::getQSettings()->value("script_editor_pos").toPoint(), left);
+        QCOMPARE(MudletSettings::getQSettings()->value("script_editor_pos").toPoint(), left);
 
         delete mpHost->mpEditorDialog.data();
         QVERIFY(mpHost->mpEditorDialog.isNull());
@@ -332,7 +333,7 @@ private slots:
         QVERIFY2(pSecondHost->requestClose(), "Closing the second profile was refused");
         mudlet::self()->getHostManager().deleteHost(mSecondProfileName);
 
-        QCOMPARE(mudlet::getQSettings()->value("script_editor_pos").toPoint(), left);
+        QCOMPARE(MudletSettings::getQSettings()->value("script_editor_pos").toPoint(), left);
     }
 
     // A detached profile window reaches the editor by a route of its own that
