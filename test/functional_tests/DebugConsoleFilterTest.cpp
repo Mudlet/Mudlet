@@ -39,6 +39,34 @@
 // follow the message they belong to, and that pausing holds messages back
 // rather than losing them. The console's own controls are covered here too,
 // since bringing one up needs the same running profile.
+//
+// Where a line ends up is a separate contract: TDebug hands it to whatever
+// TDebug::Sink is installed, and the Central Debug Console is one implementation
+// of that. The sink cases below read lines back through a stand-in instead.
+namespace {
+class RecordingDebugSink : public TDebug::Sink
+{
+public:
+    struct Line
+    {
+        QString text;
+        QColor foreground;
+        QColor background;
+        QString timeStamp;
+    };
+    QList<Line> lines;
+
+    ~RecordingDebugSink()
+    {
+        if (TDebug::sink() == this) {
+            TDebug::setSink(nullptr);
+        }
+    }
+
+    void printDebugLine(const QString& text, const QColor& foreground, const QColor& background, const QString& timeStamp) override { lines.append(Line{text, foreground, background, timeStamp}); }
+};
+} // namespace
+
 class DebugConsoleFilterTest : public QObject
 {
     Q_OBJECT
@@ -474,6 +502,99 @@ private slots:
         QVERIFY2(!debugBufferContains(qsl("about to be discarded")), "A discarded message was replayed on resume");
     }
 
+    void test_lineReachesTheSinkOnceWithItsColours()
+    {
+        RecordingDebugSink sink;
+        installSink(sink);
+        TDebug::setEnabledCategories(TDebug::csmAllCategories);
+
+        TDebug(Qt::red, Qt::yellow, TDebug::Category::TriggerMatch) << "one line\n" >> nullptr;
+
+        QCOMPARE(sink.lines.size(), 1);
+        QVERIFY2(sink.lines.at(0).text.endsWith(qsl("one line\n")), qPrintable(sink.lines.at(0).text));
+        QCOMPARE(sink.lines.at(0).foreground, QColor(Qt::red));
+        QCOMPARE(sink.lines.at(0).background, QColor(Qt::yellow));
+        QVERIFY2(sink.lines.at(0).timeStamp.isEmpty(), "A line shown as it arrived was handed a time stamp to replay");
+    }
+
+    // A profile can start, and say so, before anyone has opened the console.
+    // Those lines are kept, and the first one to find a sink brings them out
+    // ahead of itself in the order they came.
+    void test_linesWrittenWithoutASinkAreReplayedInOrderOnceOneIsInstalled()
+    {
+        RecordingDebugSink sink;
+        installSink(sink);
+        TDebug::setEnabledCategories(TDebug::csmAllCategories);
+        TDebug::setSink(nullptr);
+
+        TDebug(Qt::blue, Qt::black, TDebug::Category::TriggerMatch) << "first with no sink\n" >> nullptr;
+        TDebug(Qt::blue, Qt::black, TDebug::Category::TriggerMatch) << "second with no sink\n" >> nullptr;
+
+        TDebug::setSink(&sink);
+        TDebug(Qt::blue, Qt::black, TDebug::Category::TriggerMatch) << "first with a sink\n" >> nullptr;
+
+        QCOMPARE(sink.lines.size(), 3);
+        QVERIFY2(sink.lines.at(0).text.contains(qsl("first with no sink")), qPrintable(sink.lines.at(0).text));
+        QVERIFY2(sink.lines.at(1).text.contains(qsl("second with no sink")), qPrintable(sink.lines.at(1).text));
+        QVERIFY2(sink.lines.at(2).text.contains(qsl("first with a sink")), qPrintable(sink.lines.at(2).text));
+    }
+
+    // Resuming hands each held line to the sink stamped with the time it
+    // arrived, not the time it was let through.
+    void test_resumingHandsHeldLinesToTheSinkWithTheirArrivalTimes()
+    {
+        RecordingDebugSink sink;
+        installSink(sink);
+        TDebug::setEnabledCategories(TDebug::csmAllCategories);
+
+        TDebug::setPaused(true);
+        const QTime before = QTime::currentTime();
+        TDebug(Qt::blue, Qt::black, TDebug::Category::TriggerMatch) << "held first\n" >> nullptr;
+        TDebug(Qt::blue, Qt::black, TDebug::Category::TriggerMatch) << "held second\n" >> nullptr;
+        const QTime after = QTime::currentTime();
+        QVERIFY2(sink.lines.isEmpty(), "A line arriving while paused reached the sink");
+        QCOMPARE(TDebug::pausedMessageCount(), 2);
+
+        // Long enough that a stamp taken on resume cannot land inside the
+        // arrival window:
+        QTest::qWait(100);
+        TDebug::setPaused(false);
+
+        QCOMPARE(sink.lines.size(), 2);
+        QVERIFY2(sink.lines.at(0).text.contains(qsl("held first")), qPrintable(sink.lines.at(0).text));
+        QVERIFY2(sink.lines.at(1).text.contains(qsl("held second")), qPrintable(sink.lines.at(1).text));
+        for (const auto& line : sink.lines) {
+            const QTime stamped = QTime::fromString(line.timeStamp, TBuffer::smTimeStampFormat);
+            QVERIFY2(stamped.isValid(), qPrintable(qsl("Replayed line carried no usable time stamp: '%1'").arg(line.timeStamp)));
+            const QString window = qsl("%1- %2").arg(before.toString(TBuffer::smTimeStampFormat), after.toString(TBuffer::smTimeStampFormat));
+            QVERIFY2(before <= stamped && stamped <= after, qPrintable(qsl("Replayed line was stamped %1, outside its arrival window %2").arg(line.timeStamp, window)));
+        }
+    }
+
+    // Opening the Central Debug Console makes it the sink...
+    void test_centralDebugConsoleIsInstalledAsTheSink()
+    {
+        startDebuggingProfile();
+
+        QVERIFY(mudlet::smpDebugConsole);
+        QCOMPARE(TDebug::sink(), static_cast<TDebug::Sink*>(mudlet::smpDebugConsole.data()));
+    }
+
+    // ...and destroying it takes it back out, so nothing is left pointing at a
+    // console that has gone. Closing its window is what destroys it, both when
+    // the profile it belongs to closes and when Mudlet does.
+    void test_destroyingTheCentralDebugConsoleDetachesTheSink()
+    {
+        startDebuggingProfile();
+        QVERIFY(TDebug::sink());
+
+        mudlet::smpDebugArea->setAttribute(Qt::WA_DeleteOnClose);
+        mudlet::smpDebugArea->close();
+        QTRY_VERIFY2(!mudlet::smpDebugConsole, "Closing the debug area did not destroy its console");
+
+        QVERIFY2(!TDebug::sink(), "The Central Debug Console was destroyed but is still installed as the sink");
+    }
+
     // The find bar floats over the console rather than sitting in a layout, so
     // nothing but the console itself keeps it in the corner and inside the
     // window.
@@ -527,8 +648,14 @@ private slots:
         // A profile muted by a test that failed part way through would
         // otherwise silence whatever runs next:
         TDebug::enableAllHosts();
+        TDebug::setSink(nullptr);
         TDebug::smDebugMode = false;
 
+        // The debug area has no parent and only the profile-close and
+        // application-close paths take it down, neither of which deleting
+        // mudlet runs - so a console left here would outlive its Host and
+        // make attachDebugArea() a no-op for the next method:
+        delete mudlet::smpDebugArea.data();
         delete mpServer;
         mpServer = nullptr;
         deleteProfileDirectory(mHostname);
@@ -550,6 +677,16 @@ private:
         TDebug::flushMessageQueue();
         mudlet::smpDebugConsole->clear();
         return host;
+    }
+
+    // Installs the stand-in and drains into it whatever earlier methods left
+    // queued while no console existed, so a test only sees the lines it wrote
+    // itself.
+    void installSink(RecordingDebugSink& sink)
+    {
+        TDebug::setSink(&sink);
+        TDebug::flushMessageQueue();
+        sink.lines.clear();
     }
 
     QString joinedDebugBuffer()

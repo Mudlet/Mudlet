@@ -96,7 +96,28 @@ public:
     // guard, so they appear whatever this is set to:
     inline static bool smDebugMode = false;
 
+    // Where the composed lines end up. The GUI installs the Central Debug
+    // Console; with nothing installed, lines queue as they do before that
+    // console exists. TDebug keeps a raw pointer to the sink and a closing
+    // profile emits lines from inside teardown, so an implementation has to
+    // detach itself before any of it is torn down:
+    class Sink
+    {
+    public:
+        // timeStamp is empty for a line shown as it arrives, and the arrival
+        // time for one replayed after being held back:
+        virtual void printDebugLine(const QString& text, const QColor& foreground, const QColor& background, const QString& timeStamp) = 0;
+
+    protected:
+        ~Sink() = default;
+    };
+
+    static void setSink(Sink* pSink) { smpSink = pSink; }
+    static Sink* sink() { return smpSink; }
+
 private:
+    inline static Sink* smpSink = nullptr;
+
     // A shared map that is uses to put a short identifier on each debug message
     // - the first value is used to create a table to display on changes and the
     // second value is the short identifier used:
