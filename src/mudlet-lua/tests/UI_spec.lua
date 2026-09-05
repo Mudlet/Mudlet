@@ -6141,12 +6141,31 @@ describe("Main window size and saved layout", function()
     if not resizableWindowAvailable() then
       return
     end
+    -- getColumnCount() divides the pane by the font's average character width,
+    -- while calcFontSize() reports the width of a "W". Those are the same
+    -- number only on a fixed-pitch font: measured on DejaVu Sans, the "W" came
+    -- back 19 pixels wide against a 9.5 pixel average, so the pane would look
+    -- to have lost twice the pixels it did. Pinning Mudlet's own bundled
+    -- monospace font for the duration keeps the two metrics comparable.
+    local fixedPitchFont = "Bitstream Vera Sans Mono"
+    local originalFont = getFont("main")
+    finally(function()
+      if originalFont then
+        setFont("main", originalFont)
+      end
+      restoreMainWindowSize()
+    end)
+    if not setFont("main", fixedPitchFont) or getFont("main") ~= fixedPitchFont then
+      pending("the bundled fixed-pitch font is not available on this display")
+      return
+    end
+    pumpEvents(200)
+
     local charWidth = calcFontSize("main")
     if not charWidth or charWidth <= 0 then
       pending("the main console's character width is not readable on this display")
       return
     end
-    finally(restoreMainWindowSize)
     setMainWindowSize(1600, 700)
     pumpEvents(200)
     local wideWidth = getMainWindowSize()
@@ -6171,13 +6190,14 @@ describe("Main window size and saved layout", function()
     -- of one resize and neither can gate the other: comparing them as ratios is
     -- what made this fail intermittently, on 84 -> 31 columns for 1312 -> 704
     -- pixels. Subtracting cancels the fixed part, so the pixels the console
-    -- lost have to match the pixels the pane lost - within a fifth, because
-    -- calcFontSize rounds the average character width to a whole number.
+    -- lost have to match the pixels the pane lost, loosely enough to absorb
+    -- calcFontSize rounding the character width to a whole number.
     local paneLost = (wideColumns - narrowColumns) * charWidth
     local reportedLost = wideWidth - narrowWidth
-    assert.is_true(reportedLost >= paneLost * 0.8,
-      ("getMainWindowSize reported %d, down from %d - a loss of %d pixels, while the console lost %d of its %d columns, which is %d pixels at %d pixels per column")
-        :format(narrowWidth, wideWidth, reportedLost, wideColumns - narrowColumns, wideColumns, paneLost, charWidth))
+    local detail = ("getMainWindowSize reported %d, down from %d - a loss of %d pixels, while the console lost %d of its %d columns, which is %d pixels at %d pixels per column")
+      :format(narrowWidth, wideWidth, reportedLost, wideColumns - narrowColumns, wideColumns, paneLost, charWidth)
+    assert.is_true(reportedLost >= paneLost * 0.8, detail)
+    assert.is_true(reportedLost <= paneLost * 1.5, detail)
   end)
 
   it("the main window can be put back the size it was", function()
