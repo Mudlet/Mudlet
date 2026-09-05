@@ -300,16 +300,6 @@ bool TChar::operator==(const TChar& other)
     return mLinkIndex == other.mLinkIndex && mFgColor == other.mFgColor && mBgColor == other.mBgColor && mFlags == other.mFlags;
 }
 
-// Copy constructor - because it is clearing the Selected flag it is NOT a
-// default copy constructor:
-TChar::TChar(const TChar& copy)
-: mFgColor(copy.mFgColor)
-, mBgColor(copy.mBgColor)
-, mFlags(copy.mFlags & ~Selected)
-, mLinkIndex(copy.mLinkIndex)
-{
-}
-
 quint8 TChar::alternateFont() const
 {
     // As this is the most likely case check it first:

@@ -153,8 +153,16 @@ public:
     explicit TChar(TConsole* pC = nullptr);
     // Another non-default constructor:
     TChar(const QColor& foreground, const QColor& background, const TChar::AttributeFlags flags = TChar::None, const int linkIndex = 0);
-    // User defined copy-constructor:
-    TChar(const TChar&);
+    // User defined copy-constructor, defined here because filling a run of
+    // text with its format and copying out a finished line both go through it
+    // once per character:
+    TChar(const TChar& copy)
+    : mFgColor(copy.mFgColor)
+    , mBgColor(copy.mBgColor)
+    , mFlags(copy.mFlags & ~Selected)
+    , mLinkIndex(copy.mLinkIndex)
+    {
+    }
     // Under the rule of three, because we have a user defined copy-constructor,
     // we should also have a destructor and an assignment operator but they can,
     // in this case, be default ones:
