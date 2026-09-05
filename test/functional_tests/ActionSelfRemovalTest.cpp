@@ -29,9 +29,11 @@
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TAction.h"
+#include "TEasyButtonBar.h"
 #include "TFlipButton.h"
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
+#include "TToolBar.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
@@ -233,6 +235,74 @@ private slots:
         QApplication::processEvents();
         QVERIFY2(bufferContains(qsl("Package install failed")), qPrintable(qsl("The failure must reach the profile's message area, but the buffer held: \"%1\"").arg(joinedBuffer())));
         QVERIFY2(bufferContains(reason), qPrintable(qsl("The message must carry the reason \"%1\", but the buffer held: \"%2\"").arg(reason, joinedBuffer())));
+    }
+
+    // ActionUnit only decides which bar an action gets; TMainConsole builds and
+    // places the widgets. A top-bar and a left-bar TEasyButtonBar have to end up
+    // in the console's matching side toolbar (the left one is what proves the
+    // attach step, since every TEasyButtonBar starts life on the top bar), and a
+    // floating TToolBar has to be docked on the main window.
+    void test_toolbarsArePlacedByTheMainConsole()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        auto* actionUnit = host->getActionUnit();
+
+        auto makeRoot = [&](const QString& name, int location) {
+            auto* root = new TAction(name, host);
+            root->setIsFolder(true);
+            root->mLocation = location;
+            root->mToolbarLastFloatingState = false;
+            root->setIsActive(true);
+            actionUnit->registerAction(root);
+            return root;
+        };
+        auto* topBar = makeRoot(qsl("topBar"), 0);
+        auto* leftBar = makeRoot(qsl("leftBar"), 2);
+        auto* floatingBar = makeRoot(qsl("floatingBar"), 4);
+
+        actionUnit->updateAllToolbars();
+
+        TMainConsole* console = host->mpConsole;
+        QVERIFY2(topBar->mpEasyButtonBar, "The top-bar action should have been given a TEasyButtonBar");
+        QCOMPARE(topBar->mpEasyButtonBar->parentWidget(), console->mpTopToolBar);
+        QVERIFY2(leftBar->mpEasyButtonBar, "The left-bar action should have been given a TEasyButtonBar");
+        QCOMPARE(leftBar->mpEasyButtonBar->parentWidget(), console->mpLeftToolBar);
+        QVERIFY2(floatingBar->mpToolBar, "The floating action should have been given a TToolBar");
+        QCOMPARE(floatingBar->mpToolBar->parentWidget(), static_cast<QWidget*>(mudlet::self()));
+        QVERIFY2(mudlet::self()->dockWidgetArea(floatingBar->mpToolBar) != Qt::NoDockWidgetArea, "The TToolBar should be docked on the main window");
+    }
+
+    // The bars are the console's widgets now, so ActionUnit has to cope with being
+    // asked to rebuild them before a profile has one - Host::uninstallPackage()
+    // reaches updateAllToolbars() on that path. A floating root is the case that
+    // used to survive it: regenerateEasyButtonBars() skips those nodes, and before
+    // the bars moved to the console regenerateToolBars() only touched the main
+    // window, so neither half went near mpConsole.
+    void test_rebuildingToolbarsWithoutAConsoleBuildsNothing()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        auto* actionUnit = host->getActionUnit();
+
+        auto* floatingBar = new TAction(qsl("floatingBar"), host);
+        floatingBar->setIsFolder(true);
+        floatingBar->mLocation = 4;
+        floatingBar->mToolbarLastFloatingState = false;
+        floatingBar->setIsActive(true);
+        actionUnit->registerAction(floatingBar);
+
+        QPointer<TMainConsole> console = host->mpConsole;
+        host->mpConsole = nullptr;
+        actionUnit->updateAllToolbars();
+        host->mpConsole = console;
+
+        QVERIFY2(!floatingBar->mpToolBar, "No bar should have been built while the console was away");
+
+        actionUnit->updateAllToolbars();
+        QVERIFY2(floatingBar->mpToolBar, "The bar should be built once the console is back");
     }
 
     // Starts a profile the way a user would via the GUI (mirrors the helper in
