@@ -69,6 +69,13 @@ xvfb-run -a ./build/src/mudlet --profile "Mudlet self-test" --mirror --offline
 A failure writes a marker file (`/tmp/busted-tests-failed` on Linux/macOS) so the
 caller can detect it.
 
+On a **Wayland** desktop, prefix that with `QT_QPA_PLATFORM=xcb GDK_BACKEND=x11`.
+Xvfb is an X server and neither toolkit targets it by itself there: Qt takes the
+wayland plugin over `xvfb-run`'s `DISPLAY`, and the GTK3 platform theme Qt loads
+under GNOME calls `gtk_init()`, which exits the process when it cannot open a
+display - so the run dies before Mudlet starts, with exit code 1, nothing on
+stdout and no marker file.
+
 `--offline` opens the profile without connecting to its game server, which is
 what lets a spec use `feedTelnet()` - that function only injects while the telnet
 socket is unconnected. Specs that rely on it fail without the flag, so keep it on
