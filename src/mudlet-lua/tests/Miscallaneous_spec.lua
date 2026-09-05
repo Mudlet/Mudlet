@@ -1497,15 +1497,18 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           return
         end
         local replay = getMudletHomeDir() .. "/mudlet-spec-gmcp-replay.dat"
+        -- the gmcp table is the profile's, so whatever was under this key before
+        -- goes back afterwards
+        local previousReplay = gmcp.Replay
+        gmcp.Replay = nil
         finally(function()
           os.remove(replay)
-          gmcp.Replay = nil
+          gmcp.Replay = previousReplay
         end)
         -- IAC SB <GMCP> ... IAC SE, which only the telnet state machine can pick
         -- out of the stream - played back as text it would just be printed
         writeFile(replay, chunk(10, "\255\250\201Replay.Marker {\"note\":\"seen\"}\255\240mudlet-spec-gmcp-replay-line\r\n"))
         local mark = getLastLineNumber("main")
-        assert.is_nil(gmcp.Replay)
 
         assert.is_true(loadReplay(replay))
 
