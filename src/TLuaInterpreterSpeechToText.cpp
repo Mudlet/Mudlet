@@ -269,36 +269,6 @@ static QString engineNotInstalledMessage(const SpeechRecognizerFactory::Backend 
     return qsl("this model needs the %1 speech engine, whose library is not installed - looked in: %2").arg(speechBackendLabel(backend), paths.join(qsl(", ")));
 }
 
-// Whether a startListening() request was accepted. The call returns nothing
-// and can refuse - a phrase still being processed, a microphone that will not
-// open, permission denied - so the state afterwards is what says whether
-// anything is going to happen. Starting means accepted but not yet listening,
-// because something outside the process has still to answer; the outcome
-// arrives through sysSTTStateChanged rather than from this call.
-//
-// Judged against the state before the call, because Listening is not the only
-// state a start that happened can leave behind: SpeechRecognizer::startListening()
-// documents Ready-on-return as legitimate, since a handler that stops on the
-// listening state change - the ordinary push-to-talk shape - runs inside this
-// frame and lands back on Ready, or on Processing where the backend finalises
-// asynchronously. Testing for Listening alone reported those starts as
-// refusals, naming a sysSTTError that path never raises.
-static bool speechStartAccepted(const SpeechRecognizer* pRecognizer, const SpeechRecognizer::State stateBefore)
-{
-    if (pRecognizer->listening() || pRecognizer->starting()) {
-        return true;
-    }
-    // Only Ready may begin a start, so anything else was refused outright -
-    // and the base leaves the state exactly as it found it when it refuses
-    if (stateBefore != SpeechRecognizer::State::Ready) {
-        return false;
-    }
-    // Started, and already finished or handed off inside this frame. Error is
-    // the one outcome that is not a start: a backend that could not open the
-    // microphone moves there and says why.
-    return pRecognizer->state() != SpeechRecognizer::State::Error;
-}
-
 // stt.init([modelPath])
 // Initialize speech recognition with a language model.
 // modelPath is optional - falls back to SpeechRecognizerFactory::defaultModelPath().
@@ -489,9 +459,7 @@ int TLuaInterpreter::sttStart(lua_State* L)
         return 1;
     }
 
-    const SpeechRecognizer::State stateBeforeStart = pRecognizer->state();
-    pRecognizer->startListening();
-    if (!speechStartAccepted(pRecognizer, stateBeforeStart)) {
+    if (pRecognizer->startListening() == SpeechRecognizer::StartResult::Refused) {
         // The recognizer has already said why through sysSTTError; what
         // matters here is not telling the caller that recording began
         return warnArgumentValue(L, funcName, "could not start listening - the sysSTTError event carries the reason");
@@ -571,9 +539,7 @@ int TLuaInterpreter::sttToggle(lua_State* L)
         pRecognizer->stopListening();
         lua_pushboolean(L, false);
     } else {
-        const SpeechRecognizer::State stateBeforeStart = pRecognizer->state();
-        pRecognizer->startListening();
-        if (!speechStartAccepted(pRecognizer, stateBeforeStart)) {
+        if (pRecognizer->startListening() == SpeechRecognizer::StartResult::Refused) {
             return warnArgumentValue(L, funcName, "could not start listening - the sysSTTError event carries the reason");
         }
         lua_pushboolean(L, true);

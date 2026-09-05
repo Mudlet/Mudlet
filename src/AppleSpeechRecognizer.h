@@ -91,7 +91,6 @@ public:
 
     float audioLevel() const override { return listening() ? mRecentAudioLevel : 0.0f; }
     bool hasLiveNativeResources() const override;
-    void releaseResources() override;
 
     // Always empty, and never anything else: a package that gates its setup on
     // a model path must not be sent off to install a model that does not exist
@@ -130,6 +129,7 @@ public:
 protected:
     VocabularyResult applyVocabulary(const QStringList& words) override;
 
+    void doReleaseResources() override;
     void doStartListening() override;
     void doStopListening() override;
     void doCancel() override;

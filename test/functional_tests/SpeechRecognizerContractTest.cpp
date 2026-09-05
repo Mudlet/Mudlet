@@ -1353,6 +1353,31 @@ private slots:
                  "an offer the backend last refused was answered from the flag instead of being retried");
     }
 
+    // The outcome startListening() now returns, in place of the before/after
+    // state heuristic the Lua layer used to run. The case that heuristic kept
+    // getting wrong is the last one: a handler stopping on the state change -
+    // push-to-talk - lands back on Ready inside the call, which is a session
+    // that started and finished, not a refusal.
+    void aStartSaysWhichOfTheThreeThingsHappened()
+    {
+        PendingStartStubRecognizer parksInStarting;
+        parksInStarting.initialize(QString());
+        QCOMPARE(parksInStarting.startListening(), SpeechRecognizer::StartResult::Pending);
+
+        PendingStartStubRecognizer neverInitialised;
+        QCOMPARE(neverInitialised.startListening(), SpeechRecognizer::StartResult::Refused);
+
+        PendingStartStubRecognizer stopsOnItsOwnStateChange;
+        stopsOnItsOwnStateChange.initialize(QString());
+        connect(&stopsOnItsOwnStateChange, &SpeechRecognizer::stateChanged, &stopsOnItsOwnStateChange,
+                [&](SpeechRecognizer::State newState) {
+                    if (newState == SpeechRecognizer::State::Starting) {
+                        stopsOnItsOwnStateChange.stopListening();
+                    }
+                });
+        QCOMPARE(stopsOnItsOwnStateChange.startListening(), SpeechRecognizer::StartResult::Started);
+    }
+
     void aRejectedWordIsNotSilentlyDropped()
     {
         QStringList rejected;

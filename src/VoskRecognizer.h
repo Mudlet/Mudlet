@@ -90,7 +90,6 @@ public:
 
     float audioLevel() const override { return listening() ? mRecentAudioLevel : 0.0f; }
     bool hasLiveNativeResources() const override { return mVoskModel || mVoskRecognizer; }
-    void releaseResources() override;
     // Both read through the live model handle rather than answering from a
     // remembered string. getInfo() documents modelPath as "the model actually
     // loaded (empty when none)" and a package reads it to decide whether setup
@@ -115,11 +114,6 @@ public:
     // Whether the Vosk library can be used, loading it on the first ask
     static bool libraryAvailable();
 
-    // Re-read capabilities and emit capabilitiesChanged() if they moved. Called
-    // when a model loads, and again when the library is unloaded or reloaded
-    // underneath this instance - wordResults follows a symbol from it, so that
-    // is the other moment what this backend can do genuinely changes.
-    void announceCapabilitiesIfChanged();
 
     // Whether stt.unloadLibrary() has latched the library out, so a refusal can
     // say that rather than "not installed"
@@ -192,6 +186,7 @@ protected:
     // SpeechRecognizer declares these protected: a holder of a concrete
     // VoskRecognizer* must go through startListening()/stopListening()/
     // cancel() like every other caller, not reach around the state machine.
+    void doReleaseResources() override;
     void doStartListening() override;
     void doStopListening() override;
     void doCancel() override;
@@ -256,10 +251,6 @@ private:
     // read-shaped call may map the library back in behind the caller's back
     static bool sLibraryUnloadedByRequest;
 
-    // What capabilities() last reported, so a change is announced once rather
-    // than on every read. wordResults follows a symbol that only resolves when
-    // the library loads, so it genuinely changes during initialize().
-    Capabilities mAnnouncedCapabilities;
 
     // Vosk API function pointers
     using vosk_model_new_fn = VoskModel* (*)(const char*);

@@ -153,11 +153,6 @@ VoskRecognizer::VoskRecognizer(QObject* parent)
 : SpeechRecognizer(parent)
 , mpCapture(new SpeechAudioCapture(this))
 {
-    // The answer for an engine with nothing loaded, which is not the all-false
-    // default: onDevice is unconditionally true here. Left unseeded, the first
-    // announceCapabilitiesIfChanged() reports a change nothing made - see the
-    // same seeding in SherpaRecognizer's constructor.
-    mAnnouncedCapabilities = VoskRecognizer::capabilities();
     connect(mpCapture, &SpeechAudioCapture::pcm, this, &VoskRecognizer::slot_pcmReady);
     connect(mpCapture, &SpeechAudioCapture::captureError, this, &VoskRecognizer::slot_captureError);
     // A silence timeout ends the utterance the way the user stopping would:
@@ -283,13 +278,6 @@ bool VoskRecognizer::libraryAvailable()
     return sLibraryLoaded;
 }
 
-void VoskRecognizer::announceCapabilitiesIfChanged()
-{
-    if (const Capabilities current = capabilities(); !(current == mAnnouncedCapabilities)) {
-        mAnnouncedCapabilities = current;
-        emit capabilitiesChanged(current);
-    }
-}
 
 bool VoskRecognizer::resetLibraryLoadState()
 {
@@ -824,14 +812,13 @@ void VoskRecognizer::releaseVoskResources()
     }
 }
 
-void VoskRecognizer::releaseResources()
+void VoskRecognizer::doReleaseResources()
 {
     // Same reason as initialize(): the device has to go before the decoder,
     // or a caller is left with a live microphone it has no call to close
     mpCapture->stop();
     releaseVoskResources();
     mModelPath.clear();
-    setState(State::Uninitialized);
 }
 
 bool VoskRecognizer::setLanguage(const QString& languageCode)

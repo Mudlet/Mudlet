@@ -163,9 +163,6 @@ SherpaRecognizer::SherpaRecognizer(QObject* parent)
 : SpeechRecognizer(parent)
 , mpCapture(new SpeechAudioCapture(this))
 {
-    // The answer for an engine with nothing loaded, which is not the all-false
-    // default - see mAnnouncedCapabilities in the header for why that matters.
-    mAnnouncedCapabilities = SherpaRecognizer::capabilities();
     connect(mpCapture, &SpeechAudioCapture::pcm, this, &SherpaRecognizer::slot_pcmReady);
     connect(mpCapture, &SpeechAudioCapture::captureError, this, &SherpaRecognizer::slot_captureError);
     // A silence timeout ends the utterance the way the user stopping would:
@@ -596,11 +593,15 @@ bool SherpaRecognizer::loadModel(const QString& modelPath)
     // asking for the other. The buffers must outlive the create call below,
     // which copies out of them.
     const QByteArray bpeVocabUtf8 = mBpeVocabPath.toUtf8();
+    // Matched to the model's own units in both directions. A word in the wrong
+    // case tokenises into pieces the model never scores, so the bias silently
+    // does nothing - the failure this whole block exists to avoid. Only the
+    // upper direction had been written, which happens to be the one the single
+    // biasable model here needs; a lower-case-unit model carrying a bpe.vocab
+    // would have been given "Zugg" and quietly ignored it.
     QStringList biasWords = usableHotwords(vocabulary(), nullptr);
-    if (mUppercaseTokens) {
-        for (QString& word : biasWords) {
-            word = word.toUpper();
-        }
+    for (QString& word : biasWords) {
+        word = mUppercaseTokens ? word.toUpper() : word.toLower();
     }
     const QByteArray hotwordsUtf8 = biasWords.join(QLatin1Char('\n')).toUtf8();
 
@@ -612,17 +613,28 @@ bool SherpaRecognizer::loadModel(const QString& modelPath)
             config->decoding_method = "modified_beam_search";
             config->hotwords_buf = hotwordsUtf8.constData();
             config->hotwords_buf_size = hotwordsUtf8.size();
-            // Zero is a real score, not an unset one. The config block is
-            // zeroed so that a newer library's appended fields read as zero and
-            // it substitutes its own defaults - which works for the pointers,
-            // where null means "unset", and not for this float, where the
-            // library honours the zero and boosts every hotword by nothing.
-            // Measured: 300 words applied, and recognition byte-identical to
-            // no biasing at all, down to the same mishearings.
+            // Measured, on the one installed model that can bias at all
+            // (streaming-zipformer-en, whose bpe.vocab is what makes biasing
+            // possible), decoding one recording at a sweep of values:
             //
-            // 1.5 is the value sherpa-onnx uses throughout its own examples and
-            // command line, so it is their number rather than one invented here.
-            config->hotwords_score = 1.5f;
+            //   0, 0.5, 1.5, 2, 3   no effect - output identical to no biasing
+            //   4 .. 10             the biased word is recognised, rest intact
+            //   20                  the word is inserted where it was not said
+            //
+            // So the library's own default, and the 1.5 its examples use, sit
+            // below the threshold where biasing does anything - which is what
+            // "300 words applied, and recognition byte-identical to no biasing
+            // at all" was recording. Not that zero was honoured as zero: zero
+            // and 1.5 behave identically, so whether the library substitutes
+            // its default for zero cannot be told from here and does not
+            // matter, because neither value biases anything.
+            //
+            // 5 is one step above the threshold and a quarter of the value
+            // that began inserting words nobody said. Worth re-measuring on a
+            // real recording rather than synthesised speech, and on any model
+            // added later: this is one model's number, and the only one that
+            // could be measured.
+            config->hotwords_score = 5.0f;
         }
     }
 
@@ -669,13 +681,6 @@ bool SherpaRecognizer::loadModel(const QString& modelPath)
     return true;
 }
 
-void SherpaRecognizer::announceCapabilitiesIfChanged()
-{
-    if (const Capabilities current = capabilities(); !(current == mAnnouncedCapabilities)) {
-        mAnnouncedCapabilities = current;
-        emit capabilitiesChanged(current);
-    }
-}
 
 bool SherpaRecognizer::initialize(const QString& modelPath)
 {
@@ -1012,7 +1017,7 @@ void SherpaRecognizer::releaseSherpaResources()
     }
 }
 
-void SherpaRecognizer::releaseResources()
+void SherpaRecognizer::doReleaseResources()
 {
     // Same reason loadModel() stops it before reloading: the device has to go
     // before the decoder, or a caller is left with a live microphone it has no
@@ -1023,8 +1028,6 @@ void SherpaRecognizer::releaseResources()
     // gone, but these are cleared too rather than leaning on that gate alone
     mSupportsBiasing = false;
     mBpeVocabPath.clear();
-    setState(State::Uninitialized);
-    announceCapabilitiesIfChanged();
 }
 
 SpeechRecognizer::VocabularyResult SherpaRecognizer::applyVocabulary(const QStringList& words)

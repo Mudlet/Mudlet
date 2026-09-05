@@ -158,7 +158,11 @@ that a package should not assume one behaves like another:
   returns `false` — reported through `sysSTTError` as a failure this attempt
   made, not as "this backend can't", since it can — and takes effect only at
   the model's next load, whether that is a later `setVocabulary()` call made
-  once back in `ready`, or the next `stt.init()`. A word sherpa-onnx's hotword
+  once back in `ready`, or the next `stt.init()`. Words are matched to the
+  model's own sub-word units case-wise before they are offered — upper for a
+  model whose tokens are upper, lower for one whose tokens are lower — because
+  a word in the wrong case tokenises into pieces the model never scores and the
+  bias then silently does nothing. A word sherpa-onnx's hotword
   format cannot represent is left out of the biasing rather than passed
   through: an entry whose tokens open with `:` or `#`, which that format reads
   as a score, and an entry with nothing in it. Those are named in a

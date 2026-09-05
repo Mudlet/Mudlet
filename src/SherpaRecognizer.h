@@ -86,7 +86,6 @@ public:
 
     float audioLevel() const override { return listening() ? mRecentAudioLevel : 0.0f; }
     bool hasLiveNativeResources() const override { return mRecognizer || mStream; }
-    void releaseResources() override;
     // Gated on the live handle rather than answering from a remembered
     // string, the way VoskRecognizer::modelPath() is and for the same reason
     // (see its comment): a package reads this to decide whether setup already
@@ -144,6 +143,7 @@ protected:
     // SpeechRecognizer declares these protected: a holder of a concrete
     // SherpaRecognizer* must go through startListening()/stopListening()/
     // cancel() like every other caller, not reach around the state machine.
+    void doReleaseResources() override;
     void doStartListening() override;
     void doStopListening() override;
     void doCancel() override;
@@ -184,11 +184,6 @@ private:
     // Find an installed model path for a given language code
     QString findModelPathForLanguage(const QString& languageCode) const;
 
-    // Re-read capabilities() and emit capabilitiesChanged() only when the
-    // answer actually moved, the way VoskRecognizer::announceCapabilitiesIfChanged()
-    // does: a consumer told docs/stt-api.md's promise to re-read rather than
-    // cache capabilities should not also see a signal fire for no change.
-    void announceCapabilitiesIfChanged();
 
     // Member variables
     QString mModelPath;
@@ -215,15 +210,6 @@ private:
     // case biasing words have to be given in to match them
     bool mUppercaseTokens = false;
 
-    // What capabilities() last reported, so announceCapabilitiesIfChanged()
-    // can tell a real change from a re-read of the same answer. Seeded in the
-    // constructor from capabilities() itself rather than left at the all-false
-    // default: several of this engine's answers do not depend on a model, so
-    // an unseeded record differs from the very first real answer and announces
-    // a change nothing made - reachable by calling releaseResources() on a
-    // recognizer that never loaded a thing. Seeded from the function rather
-    // than a matching literal so that adding a capability cannot forget it.
-    Capabilities mAnnouncedCapabilities;
 
     // Consecutive silent audio chunks, used to tell a genuine lull from the
     // moment speech is starting. Chunks arrive every 50ms.

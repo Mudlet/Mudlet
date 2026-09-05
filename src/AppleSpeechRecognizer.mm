@@ -154,7 +154,7 @@ bool AppleSpeechRecognizer::hasLiveNativeResources() const
     return mpSession->recognizer != nil || mpSession->task != nil;
 }
 
-void AppleSpeechRecognizer::releaseResources()
+void AppleSpeechRecognizer::doReleaseResources()
 {
     mpCapture->stop();
     cancelTask();
@@ -163,7 +163,6 @@ void AppleSpeechRecognizer::releaseResources()
     // rather than a resource, and the next initialize() should honour it.
     mLastPartialResult.clear();
     mRecentAudioLevel = 0.0f;
-    setState(State::Uninitialized);
 }
 
 QString AppleSpeechRecognizer::backendVersion() const

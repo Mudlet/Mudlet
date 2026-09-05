@@ -73,8 +73,24 @@ public:
     // same for every engine, and each backend had grown its own copy - one of
     // which had drifted into moving to Error on a refusal. A backend
     // implements doStartListening() and inherits the rules.
-    void startListening()
+    // What a start request came to. Returned rather than inferred: the Lua
+    // layer used to reconstruct this from a before/after state pair, because
+    // this function answered nothing - a heuristic that carried two
+    // corrections and still could not tell a start whose handler landed in
+    // Error from a start that was refused outright.
+    enum class StartResult {
+        Refused, // Not begun, and the state is exactly as it was found
+        Pending, // Accepted; a continuation decides it, reported as a state change
+        Started  // Audio is flowing, or was and has already finished
+    };
+    Q_ENUM(StartResult)
+
+    StartResult startListening()
     {
+        if (state() == State::Listening || state() == State::Starting) {
+            // Asking twice is not a refusal; the first request stands
+            return state() == State::Starting ? StartResult::Pending : StartResult::Started;
+        }
         if (state() != State::Ready) {
             // Every refusal but "already listening" and "already starting"
             // reports why: this returns void, so silence reads to the caller
@@ -98,17 +114,21 @@ public:
                 //: Shown when speech recognition is asked to listen while still transcribing the previous phrase
                 emit errorOccurred(tr("Speech recognition is still processing the previous phrase."));
             }
-            return;
+            return StartResult::Refused;
         }
         doStartListening();
-        // Deliberately not asserted here, though the rule below is real. A
-        // backend reaches Listening through setState(), which raises
-        // sysSTTStateChanged into Lua synchronously, and a handler that stops
-        // on that event - "stop after the first phrase", the ordinary
-        // push-to-talk shape - runs doStopListening() and lands back on Ready
-        // before this frame resumes. Ready on return is therefore a legitimate
-        // outcome as well as the symptom of a backend that did nothing, and
-        // nothing here can separate the two.
+        // Error is the only outcome that is not a start. A backend reaches
+        // Listening through setState(), which raises sysSTTStateChanged into
+        // Lua synchronously, and a handler that stops on that event - "stop
+        // after the first phrase", the ordinary push-to-talk shape - runs
+        // doStopListening() and lands back on Ready before this frame resumes.
+        // Ready on return is therefore a started session that has already
+        // finished, indistinguishable from a backend that did nothing, and
+        // reporting it as a refusal was the bug this return value removes.
+        if (state() == State::Error) {
+            return StartResult::Refused;
+        }
+        return state() == State::Starting ? StartResult::Pending : StartResult::Started;
     }
 
     // Finalises the pending utterance, emitting finalResult() with whatever
@@ -199,6 +219,31 @@ public:
     bool supportsWordResults() const { return capabilities().wordResults; }
     bool supportsSensitivityTuning() const { return capabilities().sensitivityTuning; }
     bool onDevice() const { return capabilities().onDevice; }
+
+    // Announce the capabilities if they have moved since anyone was last told,
+    // and say nothing if they have not. Lives here rather than in each backend
+    // because both copies of it were identical, and because the part that is
+    // easy to get wrong is invisible: the record starts as whatever
+    // capabilities() answered the first time it was asked, not all-false. Both
+    // backends had to seed it in their constructors to avoid announcing a
+    // change nothing had made, one of them did not, and the test that should
+    // have caught that asserted the bug instead. Seeded on first use here, so
+    // a backend cannot forget.
+    void announceCapabilitiesIfChanged()
+    {
+        const Capabilities current = capabilities();
+        if (!mCapabilitiesEverAnswered) {
+            mCapabilitiesEverAnswered = true;
+            mAnnouncedCapabilities = current;
+            return;
+        }
+        if (current == mAnnouncedCapabilities) {
+            return;
+        }
+        mAnnouncedCapabilities = current;
+        emit capabilitiesChanged(current);
+    }
+
 
     // What became of a vocabulary offered to the engine. Three outcomes, not
     // two: a backend that cannot use vocabulary at all is a different matter
@@ -305,7 +350,19 @@ public:
 
     // Release any native resources held by the backend and return to an
     // uninitialized state. Default is a no-op for backends holding nothing.
-    virtual void releaseResources() {}
+    // Give back whatever the engine is holding, without discarding the engine
+    // object itself. Non-virtual for the same reason startListening() is: the
+    // two steps after the backend's own work were written out three times, and
+    // one of the three forgot to announce - so a backend whose capabilities
+    // follow the loaded model went on claiming one it had just released.
+    void releaseResources()
+    {
+        doReleaseResources();
+        setState(State::Uninitialized);
+        // After the state, so a handler reached by either event sees both the
+        // state and the capabilities of an engine that has already let go
+        announceCapabilitiesIfChanged();
+    }
 
     // Path of the model the backend is currently working from. Empty when the
     // backend has never been given one, or has no concept of a model on disk.
@@ -404,6 +461,13 @@ protected:
     // right call instead of setVocabulary(vocabulary()).
     void noteVocabularyApplied() { mVocabularyApplied = true; }
 
+    // A backend's own half of releaseResources(): free what it holds and stop
+    // its capture device, in that order - the device has to go before the
+    // decoder, or a caller is left with a live microphone and nothing to close
+    // it with. The state and the capability announcement are the base's, and a
+    // backend must not set either itself.
+    virtual void doReleaseResources() {}
+
     // The engine's half of the three above, reached only once the state rules
     // above have allowed entry: a backend never re-checks the state to decide
     // whether one of these may begin.
@@ -477,6 +541,8 @@ private:
 
     // Retained by setVocabulary() for every backend, so none has to remember
     // to keep words it could not use yet
+    Capabilities mAnnouncedCapabilities;
+    bool mCapabilitiesEverAnswered = false;
     QStringList mVocabulary;
     // Counts offers begun, so a frame can tell whether another one finished
     // inside its own call to applyVocabulary() - see setVocabulary()
