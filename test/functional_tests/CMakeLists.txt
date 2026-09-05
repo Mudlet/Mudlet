@@ -67,6 +67,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     WindowBackgroundTest.cpp
     WindowLayoutSaveTest.cpp
     WindowStateGettersTest.cpp
+    ConsoleSearchBarTest.cpp
     WrapLineRewrapTest.cpp
 )
 
@@ -523,6 +524,9 @@ set_tests_properties(FrontendRefreshSeamTest PROPERTIES TIMEOUT 300)
 # HyperlinkModelSplitTest creates a fresh profile per test method, and one of
 # them waits out a deliberately long OSC 8 reveal delay, so it needs a longer timeout
 set_tests_properties(HyperlinkModelSplitTest PROPERTIES TIMEOUT 300)
+
+# ConsoleSearchBarTest creates a fresh profile per test method, so it needs a longer timeout
+set_tests_properties(ConsoleSearchBarTest PROPERTIES TIMEOUT 300)
 
 # NarrowWindowWrapTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(NarrowWindowWrapTest PROPERTIES TIMEOUT 300)
