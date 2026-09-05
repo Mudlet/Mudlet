@@ -512,6 +512,23 @@ private slots:
         QVERIFY(console->buffer.lineBuffer.constLast().isEmpty());
     }
 
+    // Declared last: without the clamp this aborts, taking the rest of the run
+    // with it. The Lua setter refuses a negative now, so the indent is written
+    // from C++ to reach wrapLine()'s clamp at all.
+    void test_aNegativeIndentIndentsByNothing()
+    {
+        auto* console = consoleWithWrapWidth(4);
+        QVERIFY(console);
+        console->setIndentCount(-2);
+        console->setHangingIndentCount(-3);
+
+        echo(qsl("abcdefghijklmnopqrstuvwxyz\\n"));
+
+        QCOMPARE(textIgnoringIndentation(console), qsl("abcdefghijklmnopqrstuvwxyz"));
+        const QString firstLine = console->buffer.line(0);
+        QVERIFY2(!firstLine.startsWith(qsl(" ")), qPrintable(qsl("a negative indent padded the line: '%1'").arg(firstLine)));
+    }
+
 private:
     void runLua(const QString& script)
     {
