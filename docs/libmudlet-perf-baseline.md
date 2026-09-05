@@ -97,6 +97,22 @@ On a machine with other functional-test runs (e.g. parallel worktrees) wrap the
 command in `flock /tmp/mudlet-functional-tests.lock ...` so stub ports and the
 shared config directory do not collide.
 
+Two environment variables reshape the workload for one-off experiments:
+
+- `MUDLET_BENCH_LINES=<n>` generates a corpus of `n` lines instead of the fixed
+  one, for seeing what a burst of, say, 250000 lines does to throughput and
+  memory (the scrollback caps at 100000 lines, so past that the buffer is
+  shrinking as it fills).
+- `MUDLET_BENCH_CHUNK_BYTES=<n>` feeds the corpus in reads of up to `n` bytes,
+  the way a socket delivers it, instead of as one burst. The cuts land mid-line
+  as real reads do.
+
+A run with either set reports `corpus_version 0`, so the compare script refuses
+to set it against a standard run. A chunked run also reports `bench_chunk_bytes`,
+and the script refuses two experimental runs whose line count or read size
+differ, so such runs compare only with a like-for-like run. A knob that is set
+to anything but a positive whole number fails the run rather than being ignored.
+
 Results are printed one per line as `METRIC <name> <value>`, so runs can be
 diffed mechanically (the values below are illustrative, not a target):
 
@@ -333,8 +349,9 @@ is another reason to read these only as relative, same-config references.
 - Always compare **same machine, same build configuration**. The functional-test
   build turns AddressSanitizer on for non-Windows; comparing an ASan build to a
   release build, or across hardware, is meaningless.
-- The whole corpus is fed as one `loopbackTest()` packet per pass rather than in
-  network-sized chunks; this measures processing cost, not socket delivery.
+- By default the whole corpus is fed as one `loopbackTest()` packet per pass
+  rather than in network-sized chunks; this measures processing cost, not socket
+  delivery. `MUDLET_BENCH_CHUNK_BYTES` feeds it in reads instead.
 - Always compare full-binary runs: `peak_rss_kb` (VmHWM) is process-wide and
   monotonic, so filtering to individual test slots changes what it means.
 - All benchmark triggers sit at the root of the trigger tree; real profiles nest

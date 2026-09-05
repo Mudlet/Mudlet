@@ -102,6 +102,8 @@ private:
     // Both phases feed these identical bytes, so text and trigger numbers are
     // directly comparable.
     QByteArray mCorpus;
+    // The corpus cut into reads when MUDLET_BENCH_CHUNK_BYTES is set:
+    QList<QByteArray> mChunks;
     int mCorpusLines = 0;
     qint64 mCorpusBytes = 0;
     double mTextBestPassSeconds = 0.0;
@@ -476,10 +478,32 @@ private:
         for (int i = 0; i < passes; ++i) {
             QElapsedTimer timer;
             timer.start();
-            host->mTelnet.loopbackTest(mCorpus);
+            if (mChunks.isEmpty()) {
+                host->mTelnet.loopbackTest(mCorpus);
+            } else {
+                for (QByteArray& chunk : mChunks) {
+                    host->mTelnet.loopbackTest(chunk);
+                }
+            }
             best = std::min(best, timer.nsecsElapsed() / 1.0e9);
         }
         return best;
+    }
+
+    // A knob that is set but not a positive whole number fails the run rather
+    // than being ignored, as ignoring it would stamp the run as a standard one.
+    static int positiveKnob(const char* name)
+    {
+        if (!qEnvironmentVariableIsSet(name)) {
+            return 0;
+        }
+        bool ok = false;
+        const int value = qEnvironmentVariable(name).toInt(&ok);
+        if (!ok || value <= 0) {
+            QTest::qFail(qPrintable(qsl("%1=\"%2\" is not a positive whole number").arg(QString::fromLatin1(name), qEnvironmentVariable(name))), __FILE__, __LINE__);
+            return 0;
+        }
+        return value;
     }
 
     static void emitMetric(const char* name, double value)
@@ -562,15 +586,41 @@ private slots:
         // whatever the environment or Lua startup leaves LC_NUMERIC at.
         std::setlocale(LC_NUMERIC, "C");
         initializeQRCResources();
-        mCorpus = generateCorpus(kCorpusLines, mCorpusLines);
+        // MUDLET_BENCH_LINES feeds a corpus of that many lines instead of the
+        // fixed one and MUDLET_BENCH_CHUNK_BYTES feeds it in reads of that size
+        // rather than one burst. Either makes a different workload from the
+        // standard one, so corpus_version is reported as 0 and the compare
+        // script refuses to set such a run against a standard run.
+        const int requestedLines = positiveKnob("MUDLET_BENCH_LINES");
+        const int chunkBytes = positiveKnob("MUDLET_BENCH_CHUNK_BYTES");
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        const bool linesOverridden = requestedLines > 0;
+        const bool chunked = chunkBytes > 0;
+
+        mCorpus = generateCorpus(linesOverridden ? requestedLines : kCorpusLines, mCorpusLines);
         mCorpusBytes = mCorpus.size();
-        QCOMPARE(mCorpusLines, kCorpusLines);
-        QCOMPARE(mCorpusBytes, kCorpusBytesForVersion);
+        if (linesOverridden) {
+            QCOMPARE(mCorpusLines, requestedLines);
+        } else {
+            QCOMPARE(mCorpusLines, kCorpusLines);
+            QCOMPARE(mCorpusBytes, kCorpusBytesForVersion);
+        }
+        if (chunked) {
+            for (qsizetype offset = 0; offset < mCorpus.size(); offset += chunkBytes) {
+                mChunks.append(mCorpus.mid(offset, chunkBytes));
+            }
+            qInfo().nospace() << "Feeding in " << mChunks.size() << " reads of up to " << chunkBytes << " bytes";
+        }
         // Invariants, emitted here so they are present regardless of which bench
         // slots run: the compare script rejects an ASan-vs-release comparison,
-        // and a comparison across two different corpora.
+        // and a comparison across two different corpora or workloads.
         emitMetric("build_asan", static_cast<qint64>(BENCH_BUILD_ASAN));
-        emitMetric("corpus_version", static_cast<qint64>(kCorpusVersion));
+        emitMetric("corpus_version", static_cast<qint64>((linesOverridden || chunked) ? 0 : kCorpusVersion));
+        if (chunked) {
+            emitMetric("bench_chunk_bytes", static_cast<qint64>(chunkBytes));
+        }
         qInfo().nospace() << "Corpus: " << mCorpusLines << " lines, " << mCorpusBytes << " bytes";
     }
 
