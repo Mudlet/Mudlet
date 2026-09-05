@@ -31,6 +31,7 @@
 #include <IrcUser>
 
 #include "mudlet.h"
+#include "MudletVersion.h"
 
 #include <QDesktopServices>
 #include <QScrollBar>
@@ -40,7 +41,7 @@
 
 dlgIRC::dlgIRC(Host* pHost)
 : mpHost(pHost)
-, mRealName(mudlet::self()->scmVersion)
+, mRealName(MudletVersion::scmVersion())
 {
     setupUi(this);
     setWindowIcon(QIcon(qsl(":/icons/mudlet_irc.png")));

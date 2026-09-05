@@ -47,6 +47,7 @@
 #include "dlgTriggerEditor.h"
 #include "edbee/views/texteditorscrollarea.h"
 #include "MMCP.h"
+#include "MudletVersion.h"
 #include "widgetutils.h"
 #include "utils.h"
 
@@ -270,7 +271,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     mPopulating = false;
 
 #if defined(INCLUDE_UPDATER)
-    if (mudlet::self()->developmentVersion && !qEnvironmentVariableIsSet("DEV_UPDATER")) {
+    if (MudletVersion::development() && !qEnvironmentVariableIsSet("DEV_UPDATER")) {
         // tick the box and make it be "un-untickable" as automatic updates are
         // disabled in dev builds
         checkbox_noAutomaticUpdates->setChecked(true);
@@ -6899,7 +6900,7 @@ void dlgProfilePreferences::applyAll()
     }
 
 #if defined(INCLUDE_UPDATER)
-    if (mSnapshot.dirty(checkbox_noAutomaticUpdates) && (pMudlet->releaseVersion || pMudlet->publicTestVersion || qEnvironmentVariableIsSet("DEV_UPDATER"))) {
+    if (mSnapshot.dirty(checkbox_noAutomaticUpdates) && (MudletVersion::release() || MudletVersion::publicTest() || qEnvironmentVariableIsSet("DEV_UPDATER"))) {
         pMudlet->pUpdater->setAutomaticUpdates(!checkbox_noAutomaticUpdates->isChecked());
     }
 #endif
@@ -7233,7 +7234,7 @@ void dlgProfilePreferences::maybeDownloadEditorThemes()
 
     const QUrl url(themesURL);
     QNetworkRequest request(url);
-    request.setRawHeader(QByteArray("User-Agent"), QByteArray(qsl("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, mudlet::self()->mAppBuild).toUtf8().constData()));
+    request.setRawHeader(QByteArray("User-Agent"), QByteArray(qsl("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, MudletVersion::build()).toUtf8().constData()));
     // github uses redirects
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
     // load from cache if possible

@@ -33,6 +33,7 @@
 #include "HostManager.h"
 #include "mudlet.h"
 #include "MudletInstanceCoordinator.h"
+#include "MudletVersion.h"
 #include <chrono>
 #include <QCheckBox>
 #include <QCommandLineParser>
@@ -348,24 +349,15 @@ int main(int argc, char* argv[])
     app->setOverrideCursor(QCursor(Qt::WaitCursor));
     app->setOrganizationName(qsl("Mudlet"));
 
-    QFile gitShaFile(":/app-build.txt");
-    if (!gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        qWarning() << "main: failed to open app-build.txt for reading:" << gitShaFile.errorString();
-    }
-    const QString appBuild = QString::fromUtf8(gitShaFile.readAll()).trimmed();
-
-    const bool releaseVersion = appBuild.isEmpty();
-    const bool publicTestVersion = appBuild.startsWith("-ptb");
-
-    if (publicTestVersion) {
+    if (MudletVersion::publicTest()) {
         app->setApplicationName(qsl("Mudlet Public Test Build"));
     } else {
         app->setApplicationName(qsl("Mudlet"));
     }
-    if (releaseVersion) {
+    if (MudletVersion::release()) {
         app->setApplicationVersion(APP_VERSION);
     } else {
-        app->setApplicationVersion(QString(APP_VERSION) + appBuild);
+        app->setApplicationVersion(QString(APP_VERSION) + MudletVersion::build());
     }
 
     // The first QSslSocket in the process - every profile's cTelnet holds two -
@@ -540,9 +532,9 @@ int main(int argc, char* argv[])
         texts << appendLF.arg(QCoreApplication::translate("main",
                                                           "%1 %2%3 (with debug symbols, without optimisations)",
                                                           "%1 is the name of the application like mudlet or Mudlet.exe, %2 is the version number like 3.20 and %3 is a build suffix like -dev")
-                                      .arg(QLatin1String(APP_TARGET), QLatin1String(APP_VERSION), appBuild));
+                                      .arg(QLatin1String(APP_TARGET), QLatin1String(APP_VERSION), MudletVersion::build()));
 #else  // ! defined(QT_DEBUG)
-        texts << QString::fromStdString(APP_TARGET " " APP_VERSION " " + appBuild.toStdString() + " \n");
+        texts << QString::fromStdString(APP_TARGET " " APP_VERSION " " + MudletVersion::build().toStdString() + " \n");
 #endif // ! defined(QT_DEBUG)
         texts << appendLF.arg(QCoreApplication::translate("main", "Qt libraries %1 (compilation) %2 (runtime)", "%1 and %2 are version numbers").arg(QLatin1String(QT_VERSION_STR), qVersion()));
         // PLACEMARKER: Date-stamp needing annual update
@@ -650,12 +642,12 @@ int main(int argc, char* argv[])
     const QStringList onlyProfiles = parser.values(onlyPredefinedProfileToShow);
     const bool offlineProfiles = parser.isSet(openOffline);
     const bool showSplash = parser.isSet(showSplashscreen);
-    QImage splashImage = mudlet::getSplashScreen(releaseVersion, publicTestVersion);
+    QImage splashImage = mudlet::getSplashScreen(MudletVersion::release(), MudletVersion::publicTest());
 
     if (showSplash) {
         QPainter painter(&splashImage);
         unsigned fontSize = 16;
-        const QString sourceVersionText = QString(QCoreApplication::translate("main", "Version: %1").arg(APP_VERSION + appBuild));
+        const QString sourceVersionText = QString(QCoreApplication::translate("main", "Version: %1").arg(APP_VERSION + MudletVersion::build()));
 
         bool isWithinSpace = false;
         while (!isWithinSpace) {

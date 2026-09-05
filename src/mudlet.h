@@ -122,20 +122,12 @@ public:
     static bool loadLuaFunctionList();
     static std::string replaceString(std::string subject, const std::string& search, const std::string& replace);
     static mudlet* self();
-    static void setNetworkRequestDefaults(const QUrl& url, QNetworkRequest& request);
     // This method allows better debugging when mudlet::self() is called inappropriately.
     static void start();
     static bool unzip(const QString& archivePath, const QString& destination, const QDir& tmpDir);
     static QImage getSplashScreen(bool releaseVersion, bool testVersion);
 
 
-    QString mAppBuild;
-    // final, official release
-    bool releaseVersion;
-    // unofficial "nightly" build - still a type of a release
-    bool publicTestVersion;
-    // used by developers in everyday coding:
-    bool developmentVersion;
     // "scmMudletXmlDefaultVersion" number represents a major (integer part) and minor
     // (1000ths, range 0 to 999) that is used as a "version" attribute number when
     // writing the <MudletPackage ...> element of all (but maps if I ever get around
@@ -170,7 +162,6 @@ public:
     // translations done high enough will get a gold star to hide the last few percent
     // as well as encourage translators to maintain it
     static const int scmTranslationGoldStar = 95;
-    QString scmVersion;
     QString confPath;
     // These have to be "inline" to satisfy the ODR (One Definition Rule):
     inline static bool smFirstLaunch = false;

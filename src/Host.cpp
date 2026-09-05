@@ -38,6 +38,7 @@
 #include "MMCP.h"
 #include "MMCPServer.h"
 #include "mudlet.h"
+#include "MudletVersion.h"
 #include "TCommandLine.h"
 #include "TConsole.h"
 #include "TConsoleModel.h"
@@ -393,7 +394,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         }
     }
 
-    if (mudlet::self()->publicTestVersion) {
+    if (MudletVersion::publicTest()) {
         thankForUsingPTB();
     }
 
