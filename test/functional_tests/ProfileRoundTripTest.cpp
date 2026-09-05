@@ -495,6 +495,11 @@ private slots:
             return;
         }
 
+        // Host attributes ride the same XML. Both are set off their defaults so
+        // an import that leaves them alone cannot pass.
+        mpSource->setSearchOptions(enums::EditorSearchOptionCaseSensitive | enums::EditorSearchOptionWholeWord);
+        mpSource->setShowIdsInEditor(true);
+
         auto [saved, xmlPath, saveError] = mpSource->saveProfile(mSaveDir.path(), qsl("roundtrip"));
         QVERIFY2(saved, qPrintable(saveError));
         mpSource->waitForProfileSave();
@@ -528,6 +533,14 @@ private slots:
             delete mudlet::self();
         }
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
+    }
+
+    // The editor search options are a Host-owned enum now; the XML carries the
+    // raw value, so every renumbering would come back as a different setting
+    void test_editorSettingsRoundTrip()
+    {
+        QCOMPARE(mpTarget->mSearchOptions, enums::EditorSearchOptions(enums::EditorSearchOptionCaseSensitive | enums::EditorSearchOptionWholeWord));
+        QVERIFY(mpTarget->showIdsInEditor());
     }
 
     void test_triggersRoundTrip()
