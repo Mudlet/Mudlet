@@ -2149,7 +2149,7 @@ describe("Media playback effects with a generated sound file", function()
     -- position arrives as "9700", as 9700, or as playSoundFile{start = 9700}.
     -- Until it does anything at all there is nothing for the string form of it
     -- to show.
-    pending("Client.Media.Play and playSoundFile both ignore a start position")
+    pending("Client.Media.Play and playSoundFile both ignore a start position (#10459)")
   end)
 
   it("a Client.Media.Play message reads a finish position given as a string", function()
