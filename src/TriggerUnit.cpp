@@ -136,10 +136,11 @@ void TriggerUnit::addTriggerRootNode(TTrigger* pT, int parentPosition, int child
     if (!pT->getID()) {
         pT->setID(getNewID());
     }
-    mRootNodeSnapshotStale = true;
     if ((parentPosition == -1) || (childPosition >= static_cast<int>(mTriggerRootNodeList.size()))) {
         mTriggerRootNodeList.push_back(pT);
+        markRootNodeAppended(pT);
     } else {
+        markRootNodeListReordered();
         // insert item at proper position
         int cnt = 0;
         for (auto it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it++) {
@@ -170,7 +171,7 @@ void TriggerUnit::reParentTrigger(int childID, int oldParentID, int newParentID,
     if (pOldParent) {
         pOldParent->popChild(pChild);
     } else {
-        mRootNodeSnapshotStale = true;
+        markRootNodeRemoved(pChild);
         mTriggerRootNodeList.remove(pChild);
     }
 
@@ -210,7 +211,7 @@ void TriggerUnit::removeTriggerRootNode(TTrigger* pT)
     // so a collision needs no coincidence)
     mLookupTable.remove(pT->getName(), pT);
     mTriggerMap.remove(pT->getID());
-    mRootNodeSnapshotStale = true;
+    markRootNodeRemoved(pT);
     mTriggerRootNodeList.remove(pT);
 }
 
@@ -326,7 +327,7 @@ void TriggerUnit::reorderTriggersAfterPackageImport()
             tempList.push_back(trigger);
         }
     }
-    mRootNodeSnapshotStale = true;
+    markRootNodeListReordered();
     for (auto& trigger : tempList) {
         mTriggerRootNodeList.remove(trigger);
     }
@@ -401,6 +402,97 @@ void TriggerUnit::stopSameLineCreationLoop(const int chainId)
                                 .arg(triggerName, created));
 }
 
+void TriggerUnit::markPrescanStale(TTrigger* pT)
+{
+    mRootNodeSnapshotStale = true;
+    if (mRootNodeSnapshotNeedsRebuild || !pT) {
+        return;
+    }
+    // A trigger with no position is either a child, which the index never files,
+    // or a root node still queued for appending, which will be filed from its
+    // current state anyway.
+    const int position = pT->rootSnapshotPosition();
+    if (position >= 0) {
+        mRootNodesRefiled.push_back(position);
+    }
+}
+
+void TriggerUnit::markRootNodeAppended(TTrigger* pT)
+{
+    mRootNodeSnapshotStale = true;
+    if (!mRootNodeSnapshotNeedsRebuild) {
+        mRootNodesAppended.push_back(pT);
+    }
+}
+
+void TriggerUnit::markRootNodeRemoved(TTrigger* pT)
+{
+    mRootNodeSnapshotStale = true;
+    const int position = pT->rootSnapshotPosition();
+    // Cleared even when the snapshot is being rebuilt anyway: a stale position
+    // left on a trigger that is registered again later would have the next
+    // removal empty somebody else's slot.
+    pT->setRootSnapshotPosition(-1);
+    if (mRootNodeSnapshotNeedsRebuild) {
+        return;
+    }
+    if (position >= 0) {
+        mRootNodesRemoved.push_back(position);
+        return;
+    }
+    // No position and nothing queued means it was never in the root list, so
+    // the removal below it is a no-op and the snapshot already agrees.
+    const auto queued = std::find(mRootNodesAppended.begin(), mRootNodesAppended.end(), pT);
+    if (queued != mRootNodesAppended.end()) {
+        mRootNodesAppended.erase(queued);
+    }
+}
+
+// Brings the snapshot the next pass will pin back in step with the root list.
+// Arming or killing a trigger only ever appends or empties a position, so that
+// is patched in place; a rebuild is for the changes that move existing triggers,
+// and to reclaim the holes the removals leave behind.
+void TriggerUnit::refreshRootNodeSnapshot()
+{
+    const bool canPatch = mpRootNodeSnapshot && mpRootNodeSnapshot.use_count() == 1 && !mRootNodeSnapshotNeedsRebuild && !mpRootNodeSnapshot->mPrescan.shouldRebuild();
+    if (canPatch) {
+        RootNodeSnapshot& snapshot = *mpRootNodeSnapshot;
+        for (const int position : mRootNodesRemoved) {
+            snapshot.mNodes[position] = nullptr;
+            snapshot.mPrescan.removeSlot(position);
+        }
+        for (const int position : mRootNodesRefiled) {
+            if (TTrigger* pT = snapshot.mNodes[position]) {
+                snapshot.mPrescan.refileSlot(position, pT->prescanGrams());
+            }
+        }
+        for (TTrigger* pT : mRootNodesAppended) {
+            pT->setRootSnapshotPosition(static_cast<int>(snapshot.mNodes.size()));
+            snapshot.mNodes.push_back(pT);
+            snapshot.mPrescan.appendSlot(pT->prescanGrams());
+        }
+    } else {
+        // Only a snapshot an outer pass has pinned has to be left alone and
+        // replaced; refilling the vector an earlier pass built keeps a rebuild
+        // down to no allocation.
+        if (mpRootNodeSnapshot.use_count() != 1) {
+            mpRootNodeSnapshot = std::make_shared<RootNodeSnapshot>();
+        }
+        RootNodeSnapshot& snapshot = *mpRootNodeSnapshot;
+        snapshot.mNodes.assign(mTriggerRootNodeList.cbegin(), mTriggerRootNodeList.cend());
+        const int rootCount = static_cast<int>(snapshot.mNodes.size());
+        for (int position = 0; position < rootCount; ++position) {
+            snapshot.mNodes[position]->setRootSnapshotPosition(position);
+        }
+        snapshot.mPrescan.rebuild(snapshot.mNodes);
+    }
+    mRootNodesAppended.clear();
+    mRootNodesRemoved.clear();
+    mRootNodesRefiled.clear();
+    mRootNodeSnapshotNeedsRebuild = false;
+    mRootNodeSnapshotStale = false;
+}
+
 void TriggerUnit::processDataStream(const QString& data, int line)
 {
     if (data.isEmpty()) {
@@ -468,16 +560,7 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     // Pinned for the length of this pass rather than copied: a mutation
     // replaces the shared snapshot instead of editing the pinned one.
     if (mRootNodeSnapshotStale) {
-        // Refilling the vector an earlier pass built keeps a profile whose
-        // triggers churn - a one-shot tempTrigger() invalidates the snapshot
-        // every time it fires - down to no allocation per line as well. Only a
-        // snapshot an outer pass has pinned has to be left alone and replaced.
-        if (mpRootNodeSnapshot.use_count() != 1) {
-            mpRootNodeSnapshot = std::make_shared<RootNodeSnapshot>();
-        }
-        mpRootNodeSnapshot->mNodes.assign(mTriggerRootNodeList.cbegin(), mTriggerRootNodeList.cend());
-        mpRootNodeSnapshot->mPrescan.rebuild(mpRootNodeSnapshot->mNodes);
-        mRootNodeSnapshotStale = false;
+        refreshRootNodeSnapshot();
     }
     const auto pinnedSnapshot = mpRootNodeSnapshot;
     const std::vector<TTrigger*>& pinnedNodeList = pinnedSnapshot->mNodes;
@@ -513,15 +596,17 @@ void TriggerUnit::processDataStream(const QString& data, int line)
                 }
                 position = candidates[nextCandidate++];
             }
+            // A hole is a trigger the snapshot has outlived - see
+            // refreshRootNodeSnapshot()
             TTrigger* trigger = pinnedNodeList[position];
-            if (!trigger->isActive()) {
+            if (!trigger || !trigger->isActive()) {
                 continue;
             }
             trigger->match(subject, subjectLength, data, line);
         }
     } else {
         for (auto trigger : pinnedNodeList) {
-            if (!trigger->isActive()) {
+            if (!trigger || !trigger->isActive()) {
                 continue;
             }
             trigger->match(subject, subjectLength, data, line);

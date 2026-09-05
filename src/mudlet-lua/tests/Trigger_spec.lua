@@ -2568,5 +2568,83 @@ describe("Trigger processing", function()
             feedTriggers("\ndoomed_pattern and survivor_pattern\n")
             assert.are.equal(1, _G.TrigSpec.count, "killing one trigger disturbed which others a line reached")
         end)
+
+        -- The index follows an arming or a killing rather than being built
+        -- again, and reclaims what the killings leave behind once enough have
+        -- accumulated. These four are what say the bookkeeping stayed honest
+        -- across that, since a slot pointing at the wrong trigger still
+        -- produces a plausible-looking candidate list.
+        it("keeps firing while triggers are armed and killed on every line", function()
+            track(tempTrigger("steady_pattern", function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end))
+            track(tempTrigger("churn_pattern", function()
+                killTrigger(tempTrigger("throwaway_pattern", function() end))
+            end))
+            for _ = 1, 200 do
+                feedTriggers("\nsteady_pattern and churn_pattern\n")
+            end
+            assert.are.equal(200, _G.TrigSpec.count, "a trigger stopped being offered lines once others churned around it")
+        end)
+
+        it("still fires a trigger armed after many others were killed", function()
+            local doomed = {}
+            for i = 1, 60 do
+                doomed[i] = tempTrigger("doomedchurn" .. i .. "pattern", function() _G.TrigSpec.count = _G.TrigSpec.count + 100 end)
+            end
+            for _, id in ipairs(doomed) do killTrigger(id) end
+            feedTriggers("\nnothing of interest here\n")
+            track(tempTrigger("latecomer_pattern", function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end))
+            feedTriggers("\nlatecomer_pattern arrives\n")
+            assert.are.equal(1, _G.TrigSpec.count, "a trigger armed into a slot freed by an earlier killing was not offered the line")
+        end)
+
+        it("goes on matching once killings drop the set below the filtering threshold", function()
+            track(tempTrigger("remainder_pattern", function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end))
+            for _, id in ipairs(fillerIds) do killTrigger(id) end
+            fillerIds = {}
+            feedTriggers("\nremainder_pattern survives\n")
+            assert.are.equal(1, _G.TrigSpec.count, "emptying the set out from under the filter lost a trigger")
+        end)
+
+        -- A pattern shorter than the longest n-gram is filed under one of its
+        -- own length rather than being left out of the index, so these say the
+        -- shorter lengths reach their triggers at all. Below two characters
+        -- there is nothing to file, and such a trigger is offered every line.
+        it("fires a short substring trigger among many long ones", function()
+            track(tempTrigger("orc", function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = "3" end))
+            track(tempTrigger("gold", function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = "4" end))
+            track(tempTrigger("HP", function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = "2" end))
+            track(tempTrigger("x", function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = "1" end))
+            feedTriggers("\nan orc drops gold, HP: 40, x marks it\n")
+            assert.are.same({"3", "4", "2", "1"}, _G.TrigSpec.seen, "a short pattern was not offered a line that contains it")
+        end)
+
+        it("does not offer a short pattern a line without it", function()
+            track(tempTrigger("orc", function() _G.TrigSpec.count = _G.TrigSpec.count + 100 end))
+            track(tempTrigger("gold", function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end))
+            feedTriggers("\na pile of gold and nothing else\n")
+            assert.are.equal(1, _G.TrigSpec.count, "a short pattern fired on a line that does not contain it")
+        end)
+
+        -- One trigger holding both a short and a long pattern has to be reached
+        -- by either, which means it is filed at two different gram lengths.
+        -- Patterns of different lengths are filed under n-grams of different
+        -- lengths, so a line has to be walked at each length in use for both to
+        -- be reached from the same pass.
+        it("reaches triggers of several pattern lengths on one line", function()
+            track(tempTrigger("orc", function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = "short" end))
+            track(tempTrigger("a_much_longer_pattern", function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = "long" end))
+            feedTriggers("\nan orc guards a_much_longer_pattern\n")
+            assert.are.same({"short", "long"}, _G.TrigSpec.seen, "a line did not reach triggers of both pattern lengths")
+        end)
+
+        it("keeps creation order after killings have left gaps", function()
+            _G.TrigSpec.seen = {}
+            local doomed = tempTrigger("gapmaker_pattern", function() end)
+            track(tempTrigger("orderfirst_pattern", function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = "first" end))
+            killTrigger(doomed)
+            track(tempTrigger("ordersecond_pattern", function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = "second" end))
+            feedTriggers("\nordersecond_pattern then orderfirst_pattern\n")
+            assert.are.same({"first", "second"}, _G.TrigSpec.seen, "a gap left by a killed trigger reordered the ones around it")
+        end)
     end)
 end)

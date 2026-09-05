@@ -435,7 +435,7 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
 // one of those leaves the trigger unfilterable and it keeps seeing every line.
 void TTrigger::rebuildPrescanGrams()
 {
-    std::vector<quint32> grams;
+    std::vector<quint64> grams;
     grams.reserve(mPatterns.size());
     for (int i = 0; i < mPatterns.size(); ++i) {
         const int kind = mPatternKinds.at(i);
@@ -443,7 +443,7 @@ void TTrigger::rebuildPrescanGrams()
             grams.clear();
             break;
         }
-        const quint32 gram = TTriggerPrescan::patternGram(mPatterns.at(i));
+        const quint64 gram = TTriggerPrescan::patternGram(mPatterns.at(i));
         if (!gram) {
             grams.clear();
             break;
@@ -463,15 +463,15 @@ void TTrigger::invalidatePrescan(const bool nowFiresWithoutMatching)
             if (nowFiresWithoutMatching) {
                 unit->markRootUnfilterable();
             } else {
-                unit->markPrescanStale();
+                unit->markPrescanStale(this);
             }
         }
     }
 }
 
-const std::vector<quint32>& TTrigger::prescanGrams() const
+const std::vector<quint64>& TTrigger::prescanGrams() const
 {
-    static const std::vector<quint32> unfilterable;
+    static const std::vector<quint64> unfilterable;
     // A line trigger fires on a line count rather than on text, a multiline one
     // has to see every line to advance its state, and a trigger still counting
     // down its stay-open fires without matching at all.

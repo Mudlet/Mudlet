@@ -123,8 +123,13 @@ public:
     void unmarkAsNew();
     // Empty when the trigger cannot be decided from the line's text alone, in
     // which case TTriggerPrescan offers it every line.
-    const std::vector<quint32>& prescanGrams() const;
+    const std::vector<quint64>& prescanGrams() const;
     void invalidatePrescan(bool nowFiresWithoutMatching = false);
+    // Where TriggerUnit's root-node snapshot holds this trigger, or -1 when it
+    // holds it nowhere - it is not a root node, or the snapshot has yet to be
+    // told about it. Owned by TriggerUnit; nothing else may set it.
+    int rootSnapshotPosition() const { return mRootSnapshotPosition; }
+    void setRootSnapshotPosition(const int position) { mRootSnapshotPosition = position; }
 
     bool isMultiline() const { return mIsMultiline; }
     int getTriggerType() const { return mTriggerType; }
@@ -185,7 +190,8 @@ public:
     QPointer<Host> mpHost;
     QString mName;
     QStringList mPatterns;
-    std::vector<quint32> mPrescanGrams;
+    std::vector<quint64> mPrescanGrams;
+    int mRootSnapshotPosition = -1;
     bool exportItem = true;
     bool mModuleMasterFolder = false;
     // specifies whenever the payload is Lua code as a string

@@ -80,16 +80,16 @@ public:
     int getNewID();
     QMultiMap<QString, TTrigger*> mLookupTable;
     void markCleanup(TTrigger* pT);
-    // Called by anything that changes whether a trigger can be ruled out of a
+    // Called by anything that changes whether one trigger can be ruled out of a
     // line by its text alone.
-    void markPrescanStale() { mRootNodeSnapshotStale = true; }
+    void markPrescanStale(TTrigger* pT);
     // As above, but for the changes that make a trigger fire without matching
     // text. Those have to reach the line already being processed, whose
     // candidate list was settled before the change - see processDataStream().
     void markRootUnfilterable()
     {
         ++mUnfilterableEpoch;
-        mRootNodeSnapshotStale = true;
+        markRootNodeListReordered();
     }
     void doCleanup();
     void uninstall(const QString&);
@@ -147,6 +147,16 @@ private:
     void removeTrigger(TTrigger*);
     void startOrExtendSameLineChain(TTrigger* pT);
     void stopSameLineCreationLoop(const int chainId);
+    void markRootNodeAppended(TTrigger* pT);
+    void markRootNodeRemoved(TTrigger* pT);
+    // For the changes that move existing triggers around, which the snapshot
+    // and its index can only follow by being built again.
+    void markRootNodeListReordered()
+    {
+        mRootNodeSnapshotStale = true;
+        mRootNodeSnapshotNeedsRebuild = true;
+    }
+    void refreshRootNodeSnapshot();
 
     QPointer<Host> mpHost;
     // Storage processDataStream() lends out for the UTF-8 form of the line it is
@@ -174,6 +184,15 @@ private:
     };
     std::shared_ptr<RootNodeSnapshot> mpRootNodeSnapshot;
     bool mRootNodeSnapshotStale = true;
+    bool mRootNodeSnapshotNeedsRebuild = true;
+    // What the snapshot has yet to be told about, so that the ordinary churn of
+    // a script arming and killing temporary triggers costs the snapshot one
+    // entry each rather than a rebuild per line. Removals and refilings name a
+    // position because the trigger they refer to may be freed before the next
+    // line reads them; positions outlive it, and a removed one is never reused.
+    std::vector<TTrigger*> mRootNodesAppended;
+    std::vector<int> mRootNodesRemoved;
+    std::vector<int> mRootNodesRefiled;
     std::vector<int> mCandidateScratch;
     std::vector<int> mCandidates;
     quint32 mUnfilterableEpoch = 0;

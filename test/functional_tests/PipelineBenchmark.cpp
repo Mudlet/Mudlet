@@ -386,6 +386,34 @@ private:
     // capture path (the cost we want) but TTrigger::execute() returns before any
     // Lua runs - keeping Lua execution and buffer pollution out of the timed path.
     // Prompt triggers are omitted: they need a GA signal a loopback feed cannot send.
+    // The root list changing while text arrives is what a real profile does -
+    // any script that arms or kills a temporary trigger - and it is what decides
+    // whether the prescan index can be maintained rather than rebuilt. One
+    // trigger that matches every line and churns one temporary trigger per line
+    // is the worst case of that, so it is the arm to measure the index against.
+    int installChurnTrigger(Host* host, bool& allOk)
+    {
+        if (qgetenv("MUDLET_BENCH_CHURN").isEmpty()) {
+            return 0;
+        }
+        auto* pT = new TTrigger(qsl("bench_churn"), {qsl("e")}, {REGEX_SUBSTRING}, false, host);
+        pT->setIsFolder(false);
+        pT->setTemporary(false);
+        pT->setIsActive(true);
+        allOk = pT->registerTrigger() && allOk;
+        // The kill is held back a few lines so that the arming has been applied
+        // to the index before the killing reaches it. Arming and killing on the
+        // same line is the commoner shape, but the two cancel out before the
+        // index sees either, so it measures nothing about maintaining one.
+        allOk = pT->setScript(qsl("__bench_churn_n = (__bench_churn_n or 0) + 1 "
+                                  "__bench_churn_q = __bench_churn_q or {} "
+                                  "__bench_churn_q[#__bench_churn_q + 1] = tempTrigger('__bench_churn__', '--') "
+                                  "if #__bench_churn_q > 8 then killTrigger(table.remove(__bench_churn_q, 1)) end"))
+                && allOk;
+        allOk = pT->state() && allOk;
+        return 1;
+    }
+
     int installTriggerSet(Host* host, bool& allOk)
     {
         int n = 0;
@@ -414,7 +442,7 @@ private:
                 allOk = pT->state() && allOk;
                 ++n;
             }
-            return n;
+            return n + installChurnTrigger(host, allOk);
         }
 
         auto addKind = [&](const QStringList& patterns, int kind, bool multiline) {
@@ -496,7 +524,7 @@ private:
         addKind({qsl("The (\\w+) hits you"), qsl("damage")}, REGEX_PERL, true);
         addKind({qsl("(\\w+) tells you"), qsl("tower")}, REGEX_PERL, true);
 
-        return n;
+        return n + installChurnTrigger(host, allOk);
     }
 
     double feedCorpusBestPass(Host* host, int passes)
@@ -704,6 +732,17 @@ private slots:
         QByteArray probe{"__bench_sentinel__\r\n"};
         host->mTelnet.loopbackTest(probe);
         QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(benchSentinelFired)")), "sentinel trigger did not fire - the trigger engine is not seeing pipeline data");
+
+        // Both arms of a churn measurement have to have churned the same amount,
+        // or a cheaper number only means the root list stopped moving.
+        if (!qgetenv("MUDLET_BENCH_CHURN").isEmpty()) {
+            lua_State* L = host->getLuaInterpreter()->getLuaGlobalState();
+            lua_getglobal(L, "__bench_churn_n");
+            const qint64 churnFires = static_cast<qint64>(lua_tonumber(L, -1));
+            lua_pop(L, 1);
+            QVERIFY2(churnFires > 1000, "the churn trigger did not arm and kill anything - the measurement would compare two static indexes");
+            emitMetric("churn_fires", churnFires);
+        }
 
         emitMetric("trigger_count", static_cast<qint64>(triggerCount));
         emitMetric("trigger_lines_per_sec", mCorpusLines / seconds);
