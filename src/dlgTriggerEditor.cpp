@@ -57,6 +57,7 @@
 #include "widgetutils.h"
 #include "utils.h"
 #include "edbee/models/textdocumentscopes.h"
+#include "edbee/views/components/texteditorautocompletecomponent.h"
 
 #include <QApplication>
 #include <QCheckBox>
@@ -68,10 +69,12 @@
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QIcon>
+#include <QKeyEvent>
 #include <QLabel>
 #include <QMessageBox>
 #include <QMetaEnum>
 #include <QPalette>
+#include <QScopedValueRollback>
 #include <QScrollBar>
 #include <QSettings>
 #include <QShortcut>
@@ -401,6 +404,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mpSourceEditorEdbee = mpSourceEditorArea->edbeeEditorWidget;
     mpSourceEditorEdbee->setAutoScrollMargin(20);
     mpSourceEditorEdbee->setPlaceholderText(tr("-- add your Lua code here"));
+    configureSourceEditorAutocompleteFocus();
     mpSourceEditorEdbeeDocument = mpSourceEditorEdbee->textDocument();
 
     // Update the status bar on changes
@@ -12667,6 +12671,38 @@ void dlgTriggerEditor::slot_profileSaveAsAction()
 
 bool dlgTriggerEditor::eventFilter(QObject* watched, QEvent* event)
 {
+    if (!mForwardingSourceEditorAutocompleteKey && mpSourceEditorEdbee
+        && watched == mpSourceEditorEdbee->textEditorComponent()
+        && event->type() == QEvent::KeyPress && mpSourceEditorAutocompleteList
+        && mpSourceEditorAutocompleteList->isVisible()) {
+        auto* keyEvent = static_cast<QKeyEvent*>(event);
+        switch (keyEvent->key()) {
+        case Qt::Key_Up:
+        case Qt::Key_Down:
+        case Qt::Key_PageUp:
+        case Qt::Key_PageDown:
+        case Qt::Key_Enter:
+        case Qt::Key_Return:
+        case Qt::Key_Tab:
+        case Qt::Key_Escape: {
+            QKeyEvent forwardedEvent(keyEvent->type(), keyEvent->key(), keyEvent->modifiers(), keyEvent->text(),
+                                     keyEvent->isAutoRepeat(), keyEvent->count());
+            QScopedValueRollback<bool> forwardingGuard(mForwardingSourceEditorAutocompleteKey, true);
+            QCoreApplication::sendEvent(mpSourceEditorAutocompleteList, &forwardedEvent);
+            return true;
+        }
+        default:
+            break;
+        }
+    }
+
+    if (watched == mpSourceEditorAutocompleteList && event->type() == QEvent::FocusIn) {
+        if (mpSourceEditorEdbee && mpSourceEditorEdbee->textEditorComponent()) {
+            mpSourceEditorEdbee->textEditorComponent()->setFocus(Qt::OtherFocusReason);
+            return true;
+        }
+    }
+
     if (mIsGrabKey) {
         if (event->type() == QEvent::KeyPress) {
             auto* keyEvent = static_cast<QKeyEvent*>(event);
@@ -12706,6 +12742,38 @@ bool dlgTriggerEditor::eventFilter(QObject* watched, QEvent* event)
     }
 
     return QMainWindow::eventFilter(watched, event);
+}
+
+void dlgTriggerEditor::configureSourceEditorAutocompleteFocus()
+{
+    if (!mpSourceEditorEdbee || !mpSourceEditorEdbee->autoCompleteComponent()) {
+        return;
+    }
+
+    auto* autocompleteList = mpSourceEditorEdbee->autoCompleteComponent()->listWidget();
+    if (!autocompleteList) {
+        return;
+    }
+
+    autocompleteList->setFocusPolicy(Qt::NoFocus);
+    autocompleteList->setAttribute(Qt::WA_ShowWithoutActivating);
+
+    if (auto* popupMenu = autocompleteList->parentWidget()) {
+        popupMenu->setFocusPolicy(Qt::NoFocus);
+        popupMenu->setAttribute(Qt::WA_ShowWithoutActivating);
+    }
+
+    if (auto* textEditorComponent = mpSourceEditorEdbee->textEditorComponent()) {
+        textEditorComponent->installEventFilter(this);
+    }
+
+    if (mpSourceEditorAutocompleteList != autocompleteList) {
+        if (mpSourceEditorAutocompleteList) {
+            mpSourceEditorAutocompleteList->removeEventFilter(this);
+        }
+        mpSourceEditorAutocompleteList = autocompleteList;
+        mpSourceEditorAutocompleteList->installEventFilter(this);
+    }
 }
 
 bool dlgTriggerEditor::event(QEvent* event)
