@@ -515,21 +515,13 @@ int TLuaInterpreter::sendTelnetChannel102(lua_State* L)
                 L, __func__, qsl("invalid message of length %1 supplied, it should be two bytes (may use lua \\### for each byte where ### is a number between 1 and 254)").arg(msg.length()));
     }
 
-    std::string output;
-    output += TN_IAC;
-    output += TN_SB;
-    output += OPT_102;
-    output += cTelnet::escapeIac(msg);
-    output += TN_IAC;
-    output += TN_SE;
-
     Host& host = getHostFromLua(L);
     if (!host.mTelnet.isChannel102Enabled()) {
         return warnArgumentValue(L, __func__, "unable to send message as the 102 subchannel support has not been enabled by the game server");
     }
-    // socketOutRaw() sends the bytes as they are, and only the payload may be
-    // escaped: a doubled IAC in the SB/SE framing turns the subnegotiation into
-    // a literal 0xFF followed by text.
+    // The payload is two raw bytes, so it needs no encoding conversion - only the
+    // IAC escaping buildChannel102Message() applies to it
+    std::string output = cTelnet::buildChannel102Message(msg);
     host.mTelnet.socketOutRaw(output);
     lua_pushboolean(L, true);
     return 1;

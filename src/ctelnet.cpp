@@ -5941,6 +5941,21 @@ std::string cTelnet::escapeIac(std::string data)
     return data;
 }
 
+std::string cTelnet::buildChannel102Message(const std::string& payload)
+{
+    std::string message;
+    message += TN_IAC;
+    message += TN_SB;
+    message += OPT_102;
+    // Only the payload is escaped. Doubling the framing IAC bytes as well would
+    // make the server read a literal 0xFF data byte followed by the rest of the
+    // subnegotiation as raw text, rather than a 102 subnegotiation at all.
+    message += escapeIac(payload);
+    message += TN_IAC;
+    message += TN_SE;
+    return message;
+}
+
 void cTelnet::setPostingTimeout(const int timeout)
 {
     if (mTimeOut != timeout) {

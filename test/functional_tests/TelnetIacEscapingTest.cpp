@@ -80,6 +80,22 @@ private slots:
         QCOMPARE(asBytes(cTelnet::escapeIac(input)), asBytes(expected));
         QCOMPARE(cTelnet::escapeIac(input).size(), expected.size());
     }
+
+    // The framing bytes of a subnegotiation are telnet commands, so escaping the
+    // finished message instead of its payload doubles the leading IAC and the
+    // server reads a literal 0xFF followed by raw text - no 102 subnegotiation
+    // reaches it at all.
+    void framesTheChannel102PayloadWithoutEscapingTheFraming()
+    {
+        const std::string expected = std::string() + iac + '\xfa' + '\x66' + "ab" + iac + '\xf0';
+        QCOMPARE(asBytes(cTelnet::buildChannel102Message("ab")), asBytes(expected));
+    }
+
+    void escapesAnIacInsideTheChannel102Payload()
+    {
+        const std::string expected = std::string() + iac + '\xfa' + '\x66' + iac + iac + 'b' + iac + '\xf0';
+        QCOMPARE(asBytes(cTelnet::buildChannel102Message(std::string() + iac + 'b')), asBytes(expected));
+    }
 };
 
 #include "TelnetIacEscapingTest.moc"
