@@ -151,6 +151,7 @@ set(MAP_GROUP_TEST_SOURCES
     MapRoomGeometryTest.cpp
     MapRoundTripTest.cpp
     MapSymbolFontTest.cpp
+    RoomExitsDeletedEditItemTest.cpp
 )
 
 # Packages and modules: installing them, saving them and removing them
