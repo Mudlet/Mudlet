@@ -22,6 +22,7 @@
 #include "TMedia.h"
 #include "TConsole.h"
 #include "TLinkStore.h"
+#include "MudletApp.h"
 
 #include <QSet>
 #include <QStack>
@@ -31,7 +32,7 @@ static const QString PLACEHOLDER_TEXT = QLatin1String("&text;");
 
 QString TMxpMudlet::getVersion()
 {
-    return mudlet::self()->scmVersion;
+    return MudletApp::scmVersion();
 }
 
 void TMxpMudlet::sendToServer(QString& str)

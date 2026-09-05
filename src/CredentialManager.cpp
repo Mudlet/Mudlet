@@ -19,6 +19,7 @@
  ***************************************************************************/
 
 #include "CredentialManager.h"
+#include "MudletApp.h"
 #include "SecureStringUtils.h"
 #include "utils.h"
 
@@ -29,7 +30,6 @@
 #include <QFileInfo>
 #include <QSaveFile>
 #include <QDataStream>
-#include <QProcessEnvironment>
 #include <QRegularExpression>
 #include <QCryptographicHash>
 #include <QStandardPaths>
@@ -66,11 +66,11 @@ QString credentialFilePath(const QString& profileComponent, const QString& keyCo
 }
 
 // The length the old scheme cut a path component to. Its own constant rather than
-// utils::scmMaxPathComponentLength: that one is free to change, while this records what
-// is already written on disk and so can never change.
+// the limit MudletApp::sanitizeForPath() applies: that one is free to change, while
+// this records what is already written on disk and so can never change.
 constexpr int scmLegacyMaxPathComponentLength = 50;
 
-// How utils::sanitizeForPath() built a path component before it started keeping
+// How MudletApp::sanitizeForPath() built a path component before it started keeping
 // shortened names distinct, kept so that credentials filed under the old name can
 // still be found. Same role as generateLegacyServiceName() plays for the keychain.
 QString legacyPathComponent(const QString& input)
@@ -206,32 +206,7 @@ bool CredentialManager::isOperationValid() const
 
 bool CredentialManager::isPortableModeActive() const
 {
-    // Ideally, this should be supplied by mudlet instance rather than
-    // duplicating logic here. However, including mudlet.h creates circular dependencies.
-    // Consider refactoring to get portable mode status from a shared utility or
-    // through dependency injection.
-
-    // Detect portable mode by checking for portable.txt markers
-    // This uses the same logic as mudlet::setupConfig()
-
-    QString confDirDefault = qsl("%1/.config/mudlet").arg(QDir::homePath());
-
-    // Find executable directory (same logic as findExecutableDir in mudlet.cpp)
-    QString execDir;
-    QProcessEnvironment systemEnvironment = QProcessEnvironment::systemEnvironment();
-
-    if (systemEnvironment.contains(qsl("APPIMAGE"))) {
-        QString appimgPath = systemEnvironment.value(qsl("APPIMAGE"), QString());
-        execDir = QFileInfo(appimgPath).dir().path();
-    } else {
-        execDir = QCoreApplication::applicationDirPath();
-    }
-
-    QString markerExecDir = qsl("%1/portable.txt").arg(execDir);
-    QString markerHomeDir = qsl("%1/portable.txt").arg(confDirDefault);
-
-    // Check if either portable.txt marker exists
-    return QFileInfo(markerExecDir).isFile() || QFileInfo(markerHomeDir).isFile();
+    return MudletApp::portableModeActive(MudletApp::executableDir());
 }
 
 bool CredentialManager::shouldUseKeychain(const QString& profileName) const
@@ -414,14 +389,9 @@ void CredentialManager::attemptCollidingMigration(const QString& profileName, co
             const QVersionNumber collidingFormatVersion = QVersionNumber(4, 20, 1);
 
             // Dev/test/PTB builds represent the "next release", so bump version for comparison
-            QFile buildFile(qsl(":/app-build.txt"));
-
-            if (buildFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-                const QString buildSuffix = QString::fromUtf8(buildFile.readAll()).trimmed();
-
-                if (buildSuffix.startsWith(qsl("-dev")) || buildSuffix.startsWith(qsl("-test")) || buildSuffix.startsWith(qsl("-ptb"))) {
-                    appVersion = QVersionNumber(appVersion.majorVersion(), appVersion.minorVersion(), appVersion.microVersion() + 1);
-                }
+            const QString buildSuffix = MudletApp::buildSuffix();
+            if (buildSuffix.startsWith(qsl("-dev")) || buildSuffix.startsWith(qsl("-test")) || buildSuffix.startsWith(qsl("-ptb"))) {
+                appVersion = QVersionNumber(appVersion.majorVersion(), appVersion.minorVersion(), appVersion.microVersion() + 1);
             }
 
             if (appVersion > collidingFormatVersion) {
@@ -1440,7 +1410,7 @@ QString CredentialManager::generateFilePath(const QString& profileName, const QS
         return QString();
     }
 
-    return credentialFilePath(utils::sanitizeForPath(profileName), utils::sanitizeForPath(key));
+    return credentialFilePath(MudletApp::sanitizeForPath(profileName), MudletApp::sanitizeForPath(key));
 }
 
 // Where a credential was filed while both path components were simply truncated to 50

@@ -25,6 +25,7 @@
 
 #include "dlgIRC.h"
 #include "Host.h"
+#include "MudletApp.h"
 #include "ircmessageformatter.h"
 
 #include <IrcTextFormat>
@@ -40,13 +41,13 @@
 
 dlgIRC::dlgIRC(Host* pHost)
 : mpHost(pHost)
-, mRealName(mudlet::self()->scmVersion)
+, mRealName(MudletApp::scmVersion())
 {
     setupUi(this);
     setWindowIcon(QIcon(qsl(":/icons/mudlet_irc.png")));
 
     bool isIntOk = false;
-    mMessageBufferLimit = mudlet::self()->mpSettings->value("ircMessageBufferLimit", dlgIRC::DefaultMessageBufferLimit).toInt(&isIntOk);
+    mMessageBufferLimit = MudletApp::getQSettings()->value("ircMessageBufferLimit", dlgIRC::DefaultMessageBufferLimit).toInt(&isIntOk);
     if (!isIntOk) {
         mMessageBufferLimit = dlgIRC::DefaultMessageBufferLimit;
     }
@@ -776,7 +777,7 @@ QString dlgIRC::readIrcPassword(Host* pH)
 
 QString dlgIRC::readAppDefaultIrcNick()
 {
-    QFile file(mudlet::getMudletPath(enums::mainDataItemPath, qsl("irc_nick")));
+    QFile file(MudletApp::getMudletPath(enums::mainDataItemPath, qsl("irc_nick")));
     const bool opened = file.open(QIODevice::ReadOnly);
     QString rstr;
     if (opened) {
@@ -790,7 +791,7 @@ QString dlgIRC::readAppDefaultIrcNick()
 
 void dlgIRC::writeAppDefaultIrcNick(const QString& nick)
 {
-    QSaveFile file(mudlet::getMudletPath(enums::mainDataItemPath, qsl("irc_nick")));
+    QSaveFile file(MudletApp::getMudletPath(enums::mainDataItemPath, qsl("irc_nick")));
     const bool opened = file.open(QIODevice::WriteOnly);
     if (opened) {
         QDataStream ofs(&file);
@@ -849,7 +850,7 @@ QPair<bool, QString> dlgIRC::writeIrcChannels(Host* pH, const QStringList& chann
 
 void dlgIRC::writeQSettings()
 {
-    if (mudlet::self()) {
-        mudlet::self()->mpSettings->setValue("ircMessageBufferLimit", mMessageBufferLimit);
+    if (auto* settings = MudletApp::getQSettings()) {
+        settings->setValue("ircMessageBufferLimit", mMessageBufferLimit);
     }
 }

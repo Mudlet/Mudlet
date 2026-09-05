@@ -44,6 +44,7 @@
 #include <chrono>
 
 #include "Host.h"
+#include "MudletApp.h"
 #include "MudletInstanceCoordinator.h"
 #include "ProfileTestHelper.h"
 #include "TBuffer.h"
@@ -159,11 +160,11 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
-        QDir(mudlet::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
+        QDir(MudletApp::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
 
         mpHost = TestProfile::create(mHostname, mLocalhost, QString::number(mpServer->serverPort()));
         QVERIFY2(mpHost, "Could not create the test profile - see the warning above for the step that timed out.");
@@ -217,7 +218,7 @@ private slots:
         // Null when initTestCase skipped or failed ahead of mudlet::start(), and
         // getMudletPath() dereferences the instance rather than checking it
         if (mudlet::self()) {
-            QDir(mudlet::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
+            QDir(MudletApp::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
             delete mudlet::self();
         }
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);

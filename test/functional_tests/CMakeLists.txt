@@ -89,7 +89,8 @@ set(PROFILE_GROUP_TEST_SOURCES
     XMLexportVariablesTest.cpp
 )
 
-# Telnet, and the protocols and escape sequences carried over it
+# Telnet, and the protocols and escape sequences carried over it, and the
+# version identity Mudlet announces over them
 set(TELNET_GROUP_TEST_SOURCES
     CsiCursorForwardTest.cpp
     cTelnetBufferTest.cpp
@@ -109,6 +110,7 @@ set(TELNET_GROUP_TEST_SOURCES
     TelnetTlsPromptTest.cpp
     TOscTest.cpp
     MsdpMalformedDiagnosticTest.cpp
+    MudletAppVersionTest.cpp
 )
 
 # Triggers and the other scriptable units, and what a running script does to them

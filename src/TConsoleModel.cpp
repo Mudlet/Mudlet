@@ -22,6 +22,7 @@
 #include "TConsoleModel.h"
 
 #include "Host.h"
+#include "MudletApp.h"
 #include "mudlet.h"
 
 #include <QCoreApplication>
@@ -67,7 +68,7 @@ void TConsoleModel::toggleLogging(bool isMessageEnabled)
         return;
     }
 
-    const auto loggingPath = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("autolog"));
+    const auto loggingPath = MudletApp::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("autolog"));
     QFile file(loggingPath);
     const QDateTime logDateTime = QDateTime::currentDateTime();
     if (!mLogToLogFile) {
@@ -82,7 +83,7 @@ void TConsoleModel::toggleLogging(bool isMessageEnabled)
         QString logFileName;
         // If no log directory is set, default to Mudlet's replay and log files path
         if (mpHost->mLogDir == nullptr || mpHost->mLogDir.isEmpty()) {
-            directoryLogFile = mudlet::getMudletPath(enums::profileReplayAndLogFilesPath, mpHost->getName());
+            directoryLogFile = MudletApp::getMudletPath(enums::profileReplayAndLogFilesPath, mpHost->getName());
         } else {
             directoryLogFile = mpHost->mLogDir;
         }
@@ -170,7 +171,7 @@ void TConsoleModel::toggleLogging(bool isMessageEnabled)
             logStream << "  <meta http-equiv='content-type' content='text/html; charset=utf-8'>";
             // put the charset as early as possible as the parser MUST restart when it
             // switches away from the ASCII default
-            logStream << "  <meta name='generator' content='" << QCoreApplication::translate("TMainConsole", "Mudlet MUD Client version: %1%2").arg(APP_VERSION, mudlet::self()->mAppBuild) << "'>\n";
+            logStream << "  <meta name='generator' content='" << QCoreApplication::translate("TMainConsole", "Mudlet MUD Client version: %1%2").arg(APP_VERSION, MudletApp::buildSuffix()) << "'>\n";
             // Nice to identify what made the file!
             logStream << "  <title>" << QCoreApplication::translate("TMainConsole", "Mudlet, log from %1 profile").arg(mpHost->getName()) << "</title>\n";
             // Web-page title

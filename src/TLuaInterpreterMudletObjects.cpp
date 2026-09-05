@@ -28,6 +28,7 @@
 // mudlet-object specific functions of TLuaInterpreter, split out separately
 // for convenience and to keep TLuaInterpreter.cpp size reasonable
 
+#include "MudletApp.h"
 #include "TLuaInterpreter.h"
 
 #include "EAction.h"
@@ -937,7 +938,7 @@ int TLuaInterpreter::invokeFileDialog(lua_State* L)
     }
 
     Host& host = getHostFromLua(L);
-    QString location = mudlet::getMudletPath(enums::profileHomePath, host.getName());
+    QString location = MudletApp::getMudletPath(enums::profileHomePath, host.getName());
     const bool luaDir = lua_toboolean(L, 1);
     const QString title{lua_tostring(L, 2)};
 
@@ -3081,7 +3082,7 @@ int TLuaInterpreter::tempTrigger(lua_State* L)
 int TLuaInterpreter::getProfiles(lua_State* L)
 {
     auto& hostManager = mudlet::self()->getHostManager();
-    const QStringList profiles = QDir(mudlet::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    const QStringList profiles = QDir(MudletApp::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
 
     lua_newtable(L);
 
@@ -3089,9 +3090,9 @@ int TLuaInterpreter::getProfiles(lua_State* L)
         lua_pushstring(L, profile.toUtf8().constData());
         lua_newtable(L);
 
-        QString url = mudlet::self()->readProfileData(profile, qsl("url"));
-        QString port = mudlet::self()->readProfileData(profile, qsl("port"));
-        QString description = mudlet::self()->readProfileData(profile, qsl("description"));
+        QString url = MudletApp::readProfileData(profile, qsl("url"));
+        QString port = MudletApp::readProfileData(profile, qsl("port"));
+        QString description = MudletApp::readProfileData(profile, qsl("description"));
 
         // if url/port haven't been written to disk yet (which is what happens
         // when a default profile is opened for the first time), fetch this data from game details
@@ -3164,7 +3165,7 @@ int TLuaInterpreter::loadProfile(lua_State* L)
         return 2;
     }
 
-    const QString profileName = mudlet::self()->getCanonicalProfileName(requestedName);
+    const QString profileName = MudletApp::getCanonicalProfileName(requestedName);
     if (profileName.isEmpty()) {
         lua_pushnil(L);
         lua_pushfstring(L, "loadProfile: profile '%s' does not exist", requestedName.toUtf8().constData());
@@ -3204,7 +3205,7 @@ int TLuaInterpreter::closeProfile(lua_State* L)
         requestedName = getVerifiedString(L, __func__, 1, "profile name");
     }
 
-    const QString profileName = mudlet::self()->getCanonicalProfileName(requestedName);
+    const QString profileName = MudletApp::getCanonicalProfileName(requestedName);
     if (profileName.isEmpty()) {
         lua_pushnil(L);
         lua_pushfstring(L, "closeProfile: profile '%s' does not exist", requestedName.toUtf8().constData());

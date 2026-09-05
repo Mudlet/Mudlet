@@ -35,6 +35,7 @@
 #include <QScrollArea>
 #include <QSignalSpy>
 
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "SettingsTestHelper.h"
@@ -121,7 +122,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -136,8 +137,7 @@ private slots:
         mpHost = nullptr;
         delete mpServer;
         mpServer = nullptr;
-        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
-        // getMudletPath() dereferences the instance rather than checking it
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
             deleteProfileDirectory(mProfileName);
             delete mudlet::self();
@@ -308,7 +308,7 @@ private slots:
         const bool analyzerBefore = mpHost->mEnableTextAnalyzer;
         mpHost->mFORCE_SAVE_ON_EXIT = true;
 
-        const QString saveDirPath = mudlet::getMudletPath(enums::profileXmlFilesPath, mProfileName);
+        const QString saveDirPath = MudletApp::getMudletPath(enums::profileXmlFilesPath, mProfileName);
         QDir saveDir(saveDirPath);
         QVERIFY(QDir().mkpath(saveDirPath));
         for (const QString& file : saveDir.entryList({qsl("*.xml")}, QDir::Files)) {
