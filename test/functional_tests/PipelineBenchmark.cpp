@@ -36,6 +36,18 @@
  * -DREGISTER_PERF_BENCHMARK=ON to also get it under ctest:
  *   QT_QPA_PLATFORM=offscreen ./PipelineBenchmark
  *
+ * Two knobs for sweeping the trigger engine, both read from the environment
+ * and both refused unless they parse as a positive integer:
+ *   MUDLET_BENCH_TRIGGERS=<n>     install n triggers instead of one copy of
+ *                                 the set in installTriggerSet() - the set is
+ *                                 repeated or cut short, and it is interleaved
+ *                                 by kind so any prefix keeps the same mix
+ *   MUDLET_BENCH_CHUNK_LINES=<n>  feed the corpus n lines at a time instead of
+ *                                 as one chunk, which is what decides whether
+ *                                 TriggerUnit treats it as a flood
+ * Either changes what is being measured, so compare-perf-baseline.py refuses a
+ * comparison across two runs that set them differently.
+ *
  * Companion for the live-GUI display/echo path is the Stressinator display
  * package; see docs/libmudlet-perf-baseline.md.
  */
@@ -76,6 +88,7 @@
 #include "TTextEdit.h"
 #include "TTrigger.h"
 #include "TelnetServerStub.h"
+#include "TriggerMatchPool.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
@@ -102,6 +115,8 @@ private:
     // Both phases feed these identical bytes, so text and trigger numbers are
     // directly comparable.
     QByteArray mCorpus;
+    QByteArrayList mFeedChunks;
+    int mWantedTriggers = 0;
     int mCorpusLines = 0;
     qint64 mCorpusBytes = 0;
     double mTextBestPassSeconds = 0.0;
@@ -378,6 +393,15 @@ private:
         return out;
     }
 
+    struct BenchTrigger
+    {
+        QStringList patterns;
+        int kind = REGEX_SUBSTRING;
+        bool multiline = false;
+        // A colour trigger on this foreground when non-negative.
+        int ansiFg = -1;
+    };
+
     // A realistic ~four-dozen always-active trigger mix. Some patterns never
     // match, so the miss path is costed too. Lua-code matchers are excluded and
     // every trigger carries an empty script, so a match runs the full regex +
@@ -386,42 +410,14 @@ private:
     // Prompt triggers are omitted: they need a GA signal a loopback feed cannot send.
     int installTriggerSet(Host* host, bool& allOk)
     {
-        int n = 0;
-
-        auto addKind = [&](const QStringList& patterns, int kind, bool multiline) {
-            QList<int> kinds;
-            kinds.reserve(patterns.size());
-            for (int i = 0; i < patterns.size(); ++i) {
-                kinds << kind;
-            }
-            auto* pT = new TTrigger(qsl("bench_%1").arg(n), patterns, kinds, multiline, host);
-            pT->setIsFolder(false);
-            pT->setTemporary(false);
-            pT->setConditionLineDelta(5);
-            pT->setIsActive(true);
-            allOk = pT->registerTrigger() && allOk;
-            allOk = pT->setScript(QString()) && allOk;
-            allOk = pT->state() && allOk;
-            ++n;
-        };
-
-        auto addColor = [&](int ansiFg, int ansiBg) {
-            auto* pT = new TTrigger(nullptr, host);
-            pT->setIsFolder(false);
-            pT->setTemporary(false);
-            allOk = pT->setupTmpColorTrigger(ansiFg, ansiBg) && allOk;
-            pT->setIsActive(true);
-            allOk = pT->registerTrigger() && allOk;
-            allOk = pT->setScript(QString()) && allOk;
-            allOk = pT->state() && allOk;
-            pT->setName(qsl("bench_%1").arg(n));
-            ++n;
-        };
-
+        QList<QList<BenchTrigger>> groups;
+        QList<BenchTrigger> group;
         for (const QString& s :
              {qsl("forest"), qsl("orc"), qsl("gold"), qsl("experience"), qsl("sword"), qsl("tower"), qsl("damage"), qsl("coins"), qsl("café"), qsl("Square"), qsl("dragon"), qsl("teleport")}) {
-            addKind({s}, REGEX_SUBSTRING, false);
+            group << BenchTrigger{{s}, REGEX_SUBSTRING};
         }
+        groups << group;
+        group.clear();
 
         for (const QString& r : {qsl("^(\\w+) tells you '(.+)'$"),
                                  qsl("You gain (\\d+) experience"),
@@ -435,12 +431,16 @@ private:
                                  qsl("^\\[(\\d{2}):(\\d{2})\\]"),
                                  qsl("reaches level (\\d+)"),
                                  qsl("(\\w+) arrives from the (\\w+)")}) {
-            addKind({r}, REGEX_PERL, false);
+            group << BenchTrigger{{r}, REGEX_PERL};
         }
+        groups << group;
+        group.clear();
 
         for (const QString& s : {qsl("You are"), qsl("The"), qsl("HP:"), qsl("You gain")}) {
-            addKind({s}, REGEX_BEGIN_OF_LINE_SUBSTRING, false);
+            group << BenchTrigger{{s}, REGEX_BEGIN_OF_LINE_SUBSTRING};
         }
+        groups << group;
+        group.clear();
 
         // Exact-match patterns cost the whole line on every call, so they are
         // costed at the same count as the substring group.
@@ -456,16 +456,69 @@ private:
                                  qsl("You are hidden."),
                                  qsl("A cool breeze blows."),
                                  qsl("You cannot go that way.")}) {
-            addKind({s}, REGEX_EXACT_MATCH, false);
+            group << BenchTrigger{{s}, REGEX_EXACT_MATCH};
+        }
+        groups << group;
+        group.clear();
+
+        for (const int fg : {1, 2, 3, 6}) {
+            group << BenchTrigger{{}, REGEX_SUBSTRING, false, fg};
+        }
+        groups << group;
+        group.clear();
+
+        group << BenchTrigger{{qsl("The (\\w+) hits you"), qsl("damage")}, REGEX_PERL, true};
+        group << BenchTrigger{{qsl("(\\w+) tells you"), qsl("tower")}, REGEX_PERL, true};
+        groups << group;
+
+        // Round-robin over the kinds, so a MUDLET_BENCH_TRIGGERS cut anywhere
+        // keeps the mix instead of turning into all substrings.
+        QList<BenchTrigger> order;
+        for (int i = 0;; ++i) {
+            bool more = false;
+            for (const QList<BenchTrigger>& kind : groups) {
+                if (i < kind.size()) {
+                    order << kind.at(i);
+                    more = true;
+                }
+            }
+            if (!more) {
+                break;
+            }
         }
 
-        addColor(1, TTrigger::scmIgnored);
-        addColor(2, TTrigger::scmIgnored);
-        addColor(3, TTrigger::scmIgnored);
-        addColor(6, TTrigger::scmIgnored);
-
-        addKind({qsl("The (\\w+) hits you"), qsl("damage")}, REGEX_PERL, true);
-        addKind({qsl("(\\w+) tells you"), qsl("tower")}, REGEX_PERL, true);
+        int n = 0;
+        const bool capped = mWantedTriggers > 0;
+        do {
+            for (const BenchTrigger& spec : order) {
+                if (capped && n >= mWantedTriggers) {
+                    break;
+                }
+                TTrigger* pT = nullptr;
+                if (spec.ansiFg >= 0) {
+                    pT = new TTrigger(nullptr, host);
+                    pT->setIsFolder(false);
+                    pT->setTemporary(false);
+                    allOk = pT->setupTmpColorTrigger(spec.ansiFg, TTrigger::scmIgnored) && allOk;
+                    pT->setName(qsl("bench_%1").arg(n));
+                } else {
+                    QList<int> kinds;
+                    kinds.reserve(spec.patterns.size());
+                    for (int i = 0; i < spec.patterns.size(); ++i) {
+                        kinds << spec.kind;
+                    }
+                    pT = new TTrigger(qsl("bench_%1").arg(n), spec.patterns, kinds, spec.multiline, host);
+                    pT->setIsFolder(false);
+                    pT->setTemporary(false);
+                    pT->setConditionLineDelta(5);
+                }
+                pT->setIsActive(true);
+                allOk = pT->registerTrigger() && allOk;
+                allOk = pT->setScript(QString()) && allOk;
+                allOk = pT->state() && allOk;
+                ++n;
+            }
+        } while (capped && n < mWantedTriggers);
 
         return n;
     }
@@ -476,10 +529,48 @@ private:
         for (int i = 0; i < passes; ++i) {
             QElapsedTimer timer;
             timer.start();
-            host->mTelnet.loopbackTest(mCorpus);
+            for (QByteArray& chunk : mFeedChunks) {
+                host->mTelnet.loopbackTest(chunk);
+            }
             best = std::min(best, timer.nsecsElapsed() / 1.0e9);
         }
         return best;
+    }
+
+    // Breaks only at line ends, so no line straddles two chunks. A non-positive
+    // count is the default: the whole corpus as one piece.
+    static QByteArrayList splitCorpus(const QByteArray& corpus, int linesPerChunk)
+    {
+        if (linesPerChunk <= 0) {
+            return {corpus};
+        }
+        QByteArrayList chunks;
+        qsizetype start = 0;
+        while (start < corpus.size()) {
+            qsizetype end = start;
+            for (int line = 0; line < linesPerChunk && end < corpus.size(); ++line) {
+                const qsizetype newline = corpus.indexOf('\n', end);
+                end = newline < 0 ? corpus.size() : newline + 1;
+            }
+            chunks << corpus.mid(start, end - start);
+            start = end;
+        }
+        return chunks;
+    }
+
+    // Unset reads as 0. A knob that is set has to parse as a positive integer,
+    // because a typo that quietly measures the default workload is exactly
+    // the kind of comparison the compare script exists to refuse.
+    static int benchKnob(const char* name, bool& ok)
+    {
+        ok = true;
+        if (!qEnvironmentVariableIsSet(name)) {
+            return 0;
+        }
+        bool parsed = false;
+        const int value = qEnvironmentVariableIntValue(name, &parsed);
+        ok = parsed && value > 0;
+        return value;
     }
 
     static void emitMetric(const char* name, double value)
@@ -566,6 +657,20 @@ private slots:
         mCorpusBytes = mCorpus.size();
         QCOMPARE(mCorpusLines, kCorpusLines);
         QCOMPARE(mCorpusBytes, kCorpusBytesForVersion);
+        bool ok = false;
+        mWantedTriggers = benchKnob("MUDLET_BENCH_TRIGGERS", ok);
+        QVERIFY2(ok, "MUDLET_BENCH_TRIGGERS is set but is not a positive integer");
+        const int chunkLines = benchKnob("MUDLET_BENCH_CHUNK_LINES", ok);
+        QVERIFY2(ok, "MUDLET_BENCH_CHUNK_LINES is set but is not a positive integer");
+        mFeedChunks = splitCorpus(mCorpus, chunkLines);
+        qint64 fedBytes = 0;
+        for (const QByteArray& chunk : mFeedChunks) {
+            fedBytes += chunk.size();
+        }
+        QCOMPARE(fedBytes, mCorpusBytes);
+        // The value that took effect: a chunk size past the corpus is one chunk,
+        // the same workload as unset, and has to compare as such.
+        emitMetric("feed_chunk_lines", static_cast<qint64>(mFeedChunks.size() == 1 ? 0 : chunkLines));
         // Invariants, emitted here so they are present regardless of which bench
         // slots run: the compare script rejects an ASan-vs-release comparison,
         // and a comparison across two different corpora.
@@ -659,7 +764,9 @@ private slots:
         QVERIFY2(rootTriggers == triggerCount,
                  qPrintable(qsl("installed %1 root triggers but %2 are running - something else registered triggers on this profile").arg(triggerCount).arg(rootTriggers)));
 
+        const quint64 prescansBefore = TriggerMatchPool::instance().prescanCount();
         const double seconds = feedCorpusBestPass(host, kFeedPasses);
+        const quint64 prescans = TriggerMatchPool::instance().prescanCount() - prescansBefore;
         const int bufferedLines = host->mpConsole->buffer.getLastLineNumber();
         QVERIFY2(bufferedLines > 1000, qPrintable(qsl("console buffer only holds %1 lines - the pipeline did not process the corpus").arg(bufferedLines)));
 
@@ -677,6 +784,10 @@ private slots:
         QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(benchSentinelFired)")), "sentinel trigger did not fire - the trigger engine is not seeing pipeline data");
 
         emitMetric("trigger_count", static_cast<qint64>(triggerCount));
+        // Whether the parallel prescan took part, so a sweep across its gates
+        // can be read off the dump rather than inferred from the timings.
+        emitMetric("prescan_workers", static_cast<qint64>(TriggerMatchPool::instance().workerCount()));
+        emitMetric("trigger_prescans", static_cast<qint64>(prescans));
         emitMetric("trigger_lines_per_sec", mCorpusLines / seconds);
         emitMetric("trigger_mb_per_sec", (mCorpusBytes / 1.0e6) / seconds);
         emitMetric("trigger_best_pass_ms", seconds * 1000.0);

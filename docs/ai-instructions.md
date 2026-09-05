@@ -97,7 +97,7 @@ Minimize `#include` directives to reduce build times:
 - Don't copy includes from similar files without checking if they're needed
 
 ## Key architecture points
-Mudlet is single-threaded - all profiles, triggers, and the Lua engine run on the main thread. The only exception is networking, which is automatically handled in the background by Qt.
+Mudlet is single-threaded - all profiles, triggers, and the Lua engine run on the main thread. There are two exceptions: networking, which Qt handles in the background, and `TriggerMatchPool` (`src/TriggerMatchPool.h`), which during a flood of incoming text asks a few helper threads which triggers *cannot* match a line before the main thread walks them. Everything reachable from `TTrigger::prescanMayFire()` must stay a pure function of the trigger and the line - no counters, no logging, no Lua, nothing that writes - because it runs on those threads; the main thread still runs every trigger that fires, in order. Its tuning knobs (`MUDLET_MATCH_THREADS`, `MUDLET_MATCH_THRESHOLD`, `MUDLET_MATCH_FLOOD_LINES`, `MUDLET_MATCH_SPIN_US`) are documented in `docs/platform-builds.md`.
 
 `Host` (`src/Host.h`) is the per-profile session object: it owns the Lua interpreter, the trigger units and the console. The name reads like "server", but it is the profile.
 

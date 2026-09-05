@@ -21,7 +21,9 @@
  ***************************************************************************/
 
 #include <atomic>
+#include <chrono>
 #include <condition_variable>
+#include <cstdint>
 #include <mutex>
 #include <thread>
 #include <vector>
@@ -38,11 +40,16 @@ struct pcre2_real_match_data_8;
 // thread; everything with an effect - captures, colouring, Lua - still happens
 // on the main thread in the original order.
 //
-// The threads spin for a short while before parking, because the fork-join has
-// to cost less than the work it distributes: a line's worth of matching is only
-// a microsecond or two, and a condition-variable wake-up alone is more than
-// that. Text arrives in bursts of many lines, so spinning covers the gap
-// between consecutive lines of one burst and the threads park between bursts.
+// The calling thread takes chunks of the batch like any helper, and it only
+// ever waits for a chunk a helper has actually claimed. A helper that is asleep
+// when a batch is published is simply absent from it: the caller sends one
+// notify and carries on, and the helper wakes in its own time and joins
+// whichever batch is current when it gets there - usually the next line's. So
+// the first line of a burst costs the caller a notify, never a wake-up.
+// Between lines the helpers spin rather than sleep, because a wake-up costs
+// more than the microsecond or two of matching it would hand over; the budget
+// is a duration rather than an iteration count because one PAUSE instruction
+// is a couple of cycles on some cores and well over a hundred on others.
 class TriggerMatchPool
 {
 public:
@@ -54,7 +61,8 @@ public:
     // Records on each trigger, under this pass id, whether it may fire on this
     // line. Returns false when it declined the batch (too few triggers to be
     // worth distributing, or no worker threads), in which case nothing was
-    // written and the caller runs its ordinary sequential pass.
+    // written and the caller runs its ordinary sequential pass. One caller at
+    // a time: the batch lives in the pool until this returns.
     bool prescan(TTrigger* const* triggers, int count, quint32 passId, const char* subject, int subjectLength, const QString& haystack);
 
     // Below this many triggers the fork-join costs more than it saves.
@@ -77,13 +85,15 @@ private:
     TriggerMatchPool();
     ~TriggerMatchPool();
 
-    void workerLoop(int slot, uint64_t startEpoch);
-    void runChunks(int slot);
+    void workerLoop(int slot);
+    uint32_t runChunks(int slot);
+    void park(uint32_t seen);
 
     struct Job
     {
         TTrigger* const* triggers = nullptr;
         int count = 0;
+        int chunkSize = 0;
         quint32 passId = 0;
         const char* subject = nullptr;
         int subjectLength = 0;
@@ -94,20 +104,29 @@ private:
     std::vector<pcre2_real_match_data_8*> mScratch;
     std::vector<std::thread> mThreads;
 
+    // Written by the caller before it publishes a batch, read by whoever
+    // claims a chunk of that batch. Never read by a thread that has not first
+    // claimed a chunk of it, which is what keeps the reads race-free.
     Job mJob;
-    alignas(64) std::atomic<uint64_t> mEpoch{0};
-    alignas(64) std::atomic<int> mNextChunk{0};
-    alignas(64) std::atomic<int> mRemaining{0};
+    // Epoch, chunk count and next chunk index in one word, so a single
+    // fetch_add both claims a chunk and says which batch, and how large a
+    // batch, the claim belongs to: a thread that turns up after a batch is
+    // over gets an index past its count and touches nothing. Epoch 0 is the
+    // value before any batch, which is why helpers start with seen == 0 and
+    // prescan() pre-increments.
+    alignas(64) std::atomic<uint64_t> mCursor{0};
+    alignas(64) std::atomic<int> mDone{0};
     alignas(64) std::atomic<int> mParked{0};
     std::atomic<bool> mStop{false};
     std::mutex mMutex;
     std::condition_variable mCondition;
 
     quint64 mPrescanCount = 0;
+    // Main thread only; published to the helpers inside mCursor.
+    uint32_t mEpoch = 0;
     int mThreshold = 0;
     int mFloodChunkLines = 0;
-    qint64 mSpinBudget = 0;
-    int mChunkSize = 0;
+    std::chrono::steady_clock::duration mSpinBudget{};
 };
 
 #endif // MUDLET_TRIGGERMATCHPOOL_H

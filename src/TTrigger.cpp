@@ -1179,14 +1179,19 @@ bool TTrigger::prescanMayFire(const char* haystackC, const int haystackCLength, 
     }
     for (int patternNumber = 0; patternNumber < size; patternNumber++) {
         switch (mPatternKinds.at(patternNumber)) {
-        case REGEX_SUBSTRING:
+        case REGEX_SUBSTRING: {
             if (patternNumber >= static_cast<int>(mSubstringMatchers.size()) || !mSubstringMatchers[patternNumber]) {
                 return true;
             }
-            if (mSubstringMatchers[patternNumber]->indexIn(haystack) != -1) {
+            // unique_ptr's operator-> hands out a non-const matcher even from a
+            // const member, so bind a const reference to keep the compiler
+            // checking that this helper-thread path stays read-only.
+            const QStringMatcher& matcher = *mSubstringMatchers[patternNumber];
+            if (matcher.indexIn(haystack) != -1) {
                 return true;
             }
             break;
+        }
 
         case REGEX_PERL: {
             if (patternNumber >= static_cast<int>(mRegexes.size())) {

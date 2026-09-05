@@ -1,7 +1,7 @@
 -- A line arriving on its own and the same line arriving in the middle of a
 -- burst do not take the same path through the trigger engine. A chunk carrying
 -- MUDLET_MATCH_FLOOD_LINES lines or more (8 by default), in a profile with
--- MUDLET_MATCH_THRESHOLD pattern-bearing triggers or more (24), opens the
+-- MUDLET_MATCH_THRESHOLD pattern-bearing triggers or more (32), opens the
 -- parallel prescan in TriggerMatchPool: worker threads decide up front which
 -- triggers cannot match the line, and TTrigger::match() then skips those.
 --
@@ -15,6 +15,11 @@
 -- burst reached the pool is reported under MUDLET_TEST_MODE only. Without
 -- either there is nothing here worth running, and these report as pending
 -- rather than passing on a comparison that never happened.
+--
+-- Worth running under more than the defaults - see "Runtime tuning" in
+-- docs/platform-builds.md. MUDLET_MATCH_SPIN_US=0 matters most here: the lines
+-- these specs feed arrive far enough apart that a parked helper meets every
+-- one of them cold, which is the path a warm burst never touches.
 describe("trigger matching under a flood", function()
 
     -- Enough pattern-bearing triggers to clear the prescan's threshold without
