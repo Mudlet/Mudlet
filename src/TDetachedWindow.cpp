@@ -34,6 +34,7 @@
 #include "dlgNotepad.h"
 #include "dlgPackageManager.h"
 #include "dlgModuleManager.h"
+#include "dlgTriggerEditor.h"
 #include <QVBoxLayout>
 #include <QMenuBar>
 #include <QAction>

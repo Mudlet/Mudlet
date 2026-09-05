@@ -41,6 +41,7 @@
 #include <QElapsedTimer>
 #include <QHash>
 #include <QKeySequence>
+#include <QDockWidget>
 #include <QMainWindow>
 #include <QMap>
 #include <QPointer>

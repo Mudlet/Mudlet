@@ -35,6 +35,7 @@
 
 #include <QAbstractTextDocumentLayout>
 #include <QKeyEvent>
+#include <QLineEdit>
 #include <QPainter>
 #include <QRegularExpression>
 #include <QScrollBar>

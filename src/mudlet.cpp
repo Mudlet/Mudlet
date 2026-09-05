@@ -57,6 +57,7 @@
 #include "dlgPackageExporter.h"
 #include "dlgPackageManager.h"
 #include "dlgProfilePreferences.h"
+#include "dlgTriggerEditor.h"
 #include "MMCPServer.h"
 #include "widgetutils.h"
 

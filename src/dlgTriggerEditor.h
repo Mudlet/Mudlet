@@ -46,6 +46,7 @@
 #include "dlgTimersMainArea.h"
 #include "dlgTriggersMainArea.h"
 #include "dlgVarsMainArea.h"
+#include "enums.h"
 #include "SingleLineTextEdit.h"
 #include "EditorUndoStack.h"
 
@@ -166,21 +167,9 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
     };
 
 public:
-    // This needs to be public so that the options can be used from the Host class:
-    enum SearchOption {
-        // Unset:
-        SearchOptionNone = 0x0,
-        SearchOptionCaseSensitive = 0x1,
-        SearchOptionIncludeVariables = 0x2,
-        SearchOptionWholeWord = 0x4 /*,
-        SearchOptionRegExp = 0x8 */
-    };
-
     Q_DISABLE_COPY(dlgTriggerEditor)
     dlgTriggerEditor(Host*);
     ~dlgTriggerEditor();
-
-    Q_DECLARE_FLAGS(SearchOptions, SearchOption)
 
     void closeEvent(QCloseEvent* event) override;
     void focusInEvent(QFocusEvent*) override;
@@ -237,7 +226,7 @@ public:
     void delete_timer();
     void delete_trigger();
     void delete_variable();
-    void setSearchOptions(const SearchOptions);
+    void setSearchOptions(const enums::EditorSearchOptions);
     void setEditorShowBidi(const bool);
     void showCurrentTriggerItem();
     void hideSystemMessageArea();
@@ -677,7 +666,7 @@ private:
     QAction* mAddGroup = nullptr;
     QAction* mSaveItem = nullptr;
 
-    SearchOptions mSearchOptions = SearchOptionNone;
+    enums::EditorSearchOptions mSearchOptions = enums::EditorSearchOptionNone;
     QSplitter* searchSplitter;
 
     // This has a menu which the following QActions are inserted into:
@@ -831,7 +820,5 @@ private:
     QString descNewItem;
     QString descPackageItem;
 };
-
-Q_DECLARE_OPERATORS_FOR_FLAGS(dlgTriggerEditor::SearchOptions)
 
 #endif // MUDLET_DLGTRIGGEREDITOR_H
