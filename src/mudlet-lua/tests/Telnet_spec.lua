@@ -860,8 +860,15 @@ describe("Tests the encodings Mudlet carries its own tables for", function()
   end
 
   -- what an MSSP variable carrying these raw bytes arrives as, once cTelnet has
-  -- transcoded the message out of the game's encoding
+  -- transcoded the message out of the game's encoding. Cleared first: the table
+  -- keeps whatever the last message put there, so a feed that is accepted but
+  -- delivers no MSSP update would otherwise be answered with the previous
+  -- encoding's reading - and two of the encodings below expect the same
+  -- character, so that would pass.
   local function msspValueOf(bytes)
+    if mssp then
+      mssp.TELNETENCPROBE = nil
+    end
     feed("<T_IAC><T_SB><O_MSSP><01>TELNETENCPROBE<02>" .. bytes .. "<T_IAC><T_SE>")
     return mssp and mssp.TELNETENCPROBE
   end
