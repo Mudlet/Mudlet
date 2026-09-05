@@ -3421,7 +3421,7 @@ bool TLuaInterpreter::compileAndExecuteScript(const QString& code)
             e = "Lua error:";
             e += lua_tostring(L, -1);
         }
-        if (mudlet::smDebugMode) {
+        if (TDebug::smDebugMode) {
             qDebug() << "LUA ERROR: code did not compile: ERROR:" << e.c_str();
         }
         const QString _n = "error in Lua code";
@@ -3469,7 +3469,7 @@ QString TLuaInterpreter::formatLuaCode(const QString& code)
             e = "Lua error:";
             e += lua_tostring(L, 1);
         }
-        if (mudlet::smDebugMode) {
+        if (TDebug::smDebugMode) {
             qDebug() << "LUA ERROR: code did not compile: ERROR:" << e.c_str();
         }
         const QString objectName = "error in Lua code";
@@ -3493,7 +3493,8 @@ bool TLuaInterpreter::compile(const QString& code, QString& errorMsg, const QStr
     // caller's and has to be left exactly as it was found:
     const int callerStackTop = lua_gettop(L);
 
-    const int error = (luaL_loadbuffer(L, code.toUtf8().constData(), strlen(code.toUtf8().constData()), name.toUtf8().constData()) || lua_pcall(L, 0, 0, 0));
+    const QByteArray utf8Code = code.toUtf8();
+    const int error = (luaL_loadbuffer(L, utf8Code.constData(), utf8Code.size(), name.toUtf8().constData()) || lua_pcall(L, 0, 0, 0));
 
     if (error) {
         // The error object is on the top of the stack. Absolute slot 1 - which
@@ -3556,7 +3557,8 @@ bool TLuaInterpreter::reportInvalidLuaCodeParam(lua_State* L, const char* functi
 std::pair<bool, QString> TLuaInterpreter::validLuaCode(const QString& code)
 {
     lua_State* L = pGlobalLua;
-    const int error = luaL_loadbuffer(L, code.toUtf8().constData(), strlen(code.toUtf8().constData()), code.toUtf8().data());
+    const QByteArray utf8Code = code.toUtf8();
+    const int error = luaL_loadbuffer(L, utf8Code.constData(), utf8Code.size(), utf8Code.constData());
     const int topElementIndex = lua_gettop(L);
     QString e = "invalid Lua code: ";
     if (error) {
@@ -3619,13 +3621,20 @@ void TLuaInterpreter::clearCaptureGroups()
     if (mSpareCaptureGroupList.empty()) {
         mSpareCaptureGroupList.swap(mCaptureGroupList);
         mSpareCaptureGroupPosList.swap(mCaptureGroupPosList);
-        // A match-all pattern over a hostile line would otherwise leave the
-        // parked buffers at that high water mark for the rest of the session.
-        // Past the cap the cost is the allocation this parking exists to save,
-        // never unbounded memory.
+        // A match-all trigger's /g loop accumulates every match on the line into
+        // one capture list, so what it parks scales with matches per line rather
+        // than with the pattern's group count. Past the cap the cost is the
+        // allocation this parking exists to save, never unbounded memory.
         if (mSpareCaptureGroupList.size() > scmMaxParkedCaptures) {
             mSpareCaptureGroupList.resize(scmMaxParkedCaptures);
             mSpareCaptureGroupPosList.resize(scmMaxParkedCaptures);
+        }
+        // resize() down destroys the elements past the cap but keeps capacity()
+        if (mSpareCaptureGroupList.capacity() > scmMaxParkedCaptureSlack) {
+            mSpareCaptureGroupList.shrink_to_fit();
+        }
+        if (mSpareCaptureGroupPosList.capacity() > scmMaxParkedCaptureSlack) {
+            mSpareCaptureGroupPosList.shrink_to_fit();
         }
         for (auto& capture : mSpareCaptureGroupList) {
             if (capture.capacity() > scmMaxParkedCaptureBytes) {
@@ -3942,7 +3951,7 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
         const QString _n = "JSON decoder error:";
         const QString _f = "json_to_value";
         logError(e, _n, _f);
-        if (mudlet::smDebugMode) {
+        if (TDebug::smDebugMode) {
             TDebug(Qt::white, Qt::red, TDebug::Category::Error) << "\n " << e.c_str() << "\n" >> &host;
         }
         // the variable did not change, so raising its arrival events would hand
@@ -4412,7 +4421,7 @@ void TLuaInterpreter::delete_luafunction(const QString& name)
     if (lua_isfunction(L, -1)) {
         lua_pushnil(L);
         lua_setglobal(L, name.toUtf8().constData());
-    } else if (mudlet::smDebugMode) {
+    } else if (TDebug::smDebugMode) {
         qWarning() << "LUA: ERROR deleting " << name << ", it is not a function as expected";
     }
     lua_settop(L, callerStackTop);

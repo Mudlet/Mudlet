@@ -25,7 +25,7 @@
 #include "Host.h"
 #include "TArea.h"
 #include "T2DMap.h"
-#include "mudlet.h"
+#include "TMap.h"
 
 #include <QElapsedTimer>
 #include <QRegularExpression>
@@ -667,7 +667,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
             itRoom.next();
             TRoom* pR = itRoom.value();
             if (!pR) {
-                if (mudlet::self()->showMapAuditErrors()) {
+                if (TMap::smShowMapAuditErrors) {
                     const QString warnMsg = tr("[ WARN ]  - Problem with data structure associated with room id: %1 - that\n"
                                                "room's data has been lost so the id is now being deleted.  This\n"
                                                "suggests serious problems with the currently running version of\n"
@@ -724,7 +724,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
         }
 
         if (!areas.contains(usedAreaId)) {
-            if (mudlet::self()->showMapAuditErrors()) {
+            if (TMap::smShowMapAuditErrors) {
                 const QString warnMsg = tr("[ ALERT ] - Area with id: %1 expected but not found, will be created.").arg(usedAreaId);
                 mpMap->postMessage(warnMsg);
             }
@@ -756,7 +756,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
     // * WILL NOT be in TRoomDB::areas - as that is the source of the error this
     // bit of the task being addressed here is fixing
     if (!missingAreasNeeded.isEmpty()) {
-        if (mudlet::self()->showMapAuditErrors()) {
+        if (TMap::smShowMapAuditErrors) {
             const QString alertMsg = tr("[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.\n"
                                         "Look for further messages related to the rooms that are supposed\n"
                                         "to be in this/these area(s)...",
@@ -772,7 +772,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
                                       true);
 
         QString infoMsg;
-        if (mudlet::self()->showMapAuditErrors()) {
+        if (TMap::smShowMapAuditErrors) {
             infoMsg = tr("[ INFO ]  - The missing area(s) are now called:\n"
                          "(ID) ==> \"name\"",
                          "Making use of %n to allow quantity dependent message form 8-) !",
@@ -798,7 +798,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
         // in the debugger a little clearer...
         missingAreasNeeded.clear();
 
-        if (mudlet::self()->showMapAuditErrors()) {
+        if (TMap::smShowMapAuditErrors) {
             mpMap->postMessage(infoMsg);
         }
         mpMap->appendErrorMsg(infoMsg, true);
@@ -807,7 +807,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
     // START OF TASK 5.1
     // Now process problem areaIds
     if (!areaRemapping.isEmpty()) {
-        if (mudlet::self()->showMapAuditErrors()) {
+        if (TMap::smShowMapAuditErrors) {
             const QString alertMsg = tr("[ ALERT ] - Bad, (less than +1 and not the reserved -1) area ids found (count: %1)\n"
                                         "in map, now working out what new id numbers to use...")
                                              .arg(areaRemapping.count());
@@ -819,7 +819,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
                               true);
 
         QString infoMsg;
-        if (mudlet::self()->showMapAuditErrors()) {
+        if (TMap::smShowMapAuditErrors) {
             infoMsg = tr("[ INFO ]  - The renumbered area ids will be:\n"
                          "Old ==> New");
         }
@@ -834,7 +834,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
             } while (areas.contains(++replacementAreaId));
             // Insert replacement value into hash
             itRemappedArea.setValue(replacementAreaId);
-            if (mudlet::self()->showMapAuditErrors()) {
+            if (TMap::smShowMapAuditErrors) {
                 infoMsg.append(qsl("\n%1 ==> %2").arg(QString::number(faultyAreaId), QString::number(replacementAreaId)));
             }
 
@@ -871,11 +871,11 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
 
             pA->mIsDirty = true;
         }
-        if (mudlet::self()->showMapAuditErrors()) {
+        if (TMap::smShowMapAuditErrors) {
             mpMap->postMessage(infoMsg);
         }
     } else {
-        if (mudlet::self()->showMapAuditErrors()) {
+        if (TMap::smShowMapAuditErrors) {
             const QString infoMsg = tr("[ INFO ]  - Area id numbering is satisfactory.");
             mpMap->postMessage(infoMsg);
         }
@@ -886,7 +886,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
 
     // Now complete TASK 1 - find the new room Ids to use
     if (!roomRemapping.isEmpty()) {
-        if (mudlet::self()->showMapAuditErrors()) {
+        if (TMap::smShowMapAuditErrors) {
             const QString alertMsg = tr("[ ALERT ] - Bad, (less than +1) room ids found (count: %1) in map, now working\n"
                                         "out what new id numbers to use.")
                                              .arg(roomRemapping.count());
@@ -898,7 +898,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
                               true);
 
         QString infoMsg;
-        if (mudlet::self()->showMapAuditErrors()) {
+        if (TMap::smShowMapAuditErrors) {
             infoMsg = qsl("%1\n").arg(tr("[ INFO ]  - The renumbered rooms will be:"));
         }
         QMutableHashIterator<int, int> itRenumberedRoomId(roomRemapping);
@@ -911,14 +911,14 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
 
             itRenumberedRoomId.setValue(newRoomId); // Update the QHash
             validUsedRoomIds.insert(newRoomId);
-            if (mudlet::self()->showMapAuditErrors()) {
+            if (TMap::smShowMapAuditErrors) {
                 infoMsg.append(qsl("%1 ==> %2").arg(QString::number(itRenumberedRoomId.key()), QString::number(itRenumberedRoomId.value())));
             }
 
             mpMap->appendRoomErrorMsg(itRenumberedRoomId.key(), tr("[ INFO ]  - This room with the bad id was renumbered to: %1.").arg(itRenumberedRoomId.value()), true);
             mpMap->appendRoomErrorMsg(itRenumberedRoomId.value(), tr("[ INFO ]  - This room was renumbered from the bad id: %1.").arg(itRenumberedRoomId.key()), true);
         }
-        if (mudlet::self()->showMapAuditErrors()) {
+        if (TMap::smShowMapAuditErrors) {
             mpMap->postMessage(infoMsg);
         }
 
@@ -951,7 +951,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
             rooms.insert(newRoomId, pR);
         }
     } else {
-        if (mudlet::self()->showMapAuditErrors()) {
+        if (TMap::smShowMapAuditErrors) {
             const QString infoMsg = tr("[ INFO ]  - Room id numbering is satisfactory.");
             mpMap->postMessage(infoMsg);
         }
@@ -974,7 +974,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
             // that is persistent:
             QSet<int> _set{pR->exitStubs.begin(), pR->exitStubs.end()};
             if (_set.count() < _listCount) {
-                if (mudlet::self()->showMapAuditErrors()) {
+                if (TMap::smShowMapAuditErrors) {
                     const QString infoMsg = tr("[ INFO ]  - Duplicate exit stub identifiers found in room id: %1, this is an\n"
                                                "anomaly but has been cleaned up easily.")
                                                     .arg(itRoom.key());
@@ -988,7 +988,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
             _listCount = pR->exitLocks.count();
             _set = QSet<int>{pR->exitLocks.begin(), pR->exitLocks.end()};
             if (_set.count() < _listCount) {
-                if (mudlet::self()->showMapAuditErrors()) {
+                if (TMap::smShowMapAuditErrors) {
                     const QString infoMsg = tr("[ INFO ]  - Duplicate exit lock identifiers found in room id: %1, this is an\n"
                                                "anomaly but has been cleaned up easily.")
                                                     .arg(itRoom.key());
@@ -1072,7 +1072,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
                                                       .arg(itArea.key()),
                                               true);
                 }
-                if (mudlet::self()->showMapAuditErrors()) {
+                if (TMap::smShowMapAuditErrors) {
                     const QString infoMsg = tr("[ INFO ]  - In area with id: %1 there were %2 rooms missing from those it\n"
                                                "should be recording as possessing, they were:\n%3\nthey have been added.")
                                                     .arg(itArea.key())
@@ -1107,7 +1107,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
                                                       .arg(itArea.key()),
                                               true);
                 }
-                if (mudlet::self()->showMapAuditErrors()) {
+                if (TMap::smShowMapAuditErrors) {
                     const QString infoMsg = tr("[ INFO ]  - In area with id: %1 there were %2 extra rooms compared to those it\n"
                                                "should be recording as possessing, they were:\n%3\nthey have been removed.")
                                                     .arg(itArea.key())
