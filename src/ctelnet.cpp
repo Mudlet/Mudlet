@@ -973,10 +973,10 @@ void cTelnet::slot_socketDisconnected()
     }
 
     postData();
-    if (auto* pModel = mpHost->mainConsoleModelOrNull()) {
+    if (mpHost->mpConsole) {
         // A line held back for server-wrap undoing is complete now that the
         // connection is gone - commit it before the disconnect messages:
-        pModel->buffer.flushPendingServerWrapJoin();
+        mpHost->mainConsoleModel().buffer.flushPendingServerWrapJoin();
     }
 
     emit signal_disconnected(mpHost);
@@ -4988,8 +4988,8 @@ void cTelnet::postMessage(QString msg)
                 if (!body.empty()) {
                     mpHost->printToMainConsole(body.join('\n').append('\n'), QColor(255, 50, 50), mpHost->mBgColor); // Red-ish
                 }
-            } else {                                                                                        // Unrecognised but still in a "[ something ] -  message..." format
-                mpHost->printToMainConsole(prefix, QColor(190, 50, 50), mpHost->mBgColor);                  // Foreground red, background bright grey
+            } else {                                                                                          // Unrecognised but still in a "[ something ] -  message..." format
+                mpHost->printToMainConsole(prefix, QColor(190, 50, 50), mpHost->mBgColor);                    // Foreground red, background bright grey
                 mpHost->printToMainConsole(firstLineTail.append('\n'), QColor(50, 50, 50), mpHost->mBgColor); //Foreground dark grey, background bright grey
                 for (int _i = 0; _i < body.size(); ++_i) {
                     QString temp = body.at(_i);
@@ -5000,7 +5000,7 @@ void cTelnet::postMessage(QString msg)
                     mpHost->printToMainConsole(body.join('\n').append('\n'), QColor(50, 50, 50), mpHost->mBgColor); //Foreground dark grey, background bright grey
                 }
             }
-        } else {                                                                                             // No prefix found
+        } else {                                                                                               // No prefix found
             mpHost->printToMainConsole(body.join('\n').append('\n'), QColor(190, 190, 190), mpHost->mBgColor); //Foreground bright grey
         }
         messageStack.removeFirst();
@@ -5256,12 +5256,13 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
 
 bool cTelnet::startReplayRecording(const QString& fileName)
 {
-    mReplayFile.setFileName(fileName);
-    if (!mReplayFile.open(QIODevice::WriteOnly)) {
+    if (mRecordReplay) {
         return false;
     }
-    mReplayStream.setVersion(QDataStream::Qt_5_12);
-    mReplayStream.setDevice(&mReplayFile);
+    mpReplayFile = std::make_unique<QSaveFile>(fileName);
+    if (!mpReplayFile->open(QIODevice::WriteOnly)) {
+        return false;
+    }
     mRecordLastChunkMSecTimeOffset = 0;
     mRecordingChunkTimer.start();
     mRecordingChunkCount = 0;
@@ -5272,7 +5273,17 @@ bool cTelnet::startReplayRecording(const QString& fileName)
 bool cTelnet::stopReplayRecording()
 {
     mRecordReplay = false;
-    return mReplayFile.commit();
+    return mpReplayFile && mpReplayFile->commit();
+}
+
+QString cTelnet::replayRecordingFileName() const
+{
+    return mpReplayFile ? mpReplayFile->fileName() : QString();
+}
+
+QString cTelnet::replayRecordingErrorString() const
+{
+    return mpReplayFile ? mpReplayFile->errorString() : QString();
 }
 
 bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
@@ -5576,9 +5587,11 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
         // previous QTime::elapsed() which returns a int (effectively a
         // qint32):
         qint32 recordingChunkInterval = static_cast<qint32>(mRecordingChunkTimer.elapsed()) - mRecordLastChunkMSecTimeOffset;
-        mReplayStream << recordingChunkInterval; // 4 bytes
-        mReplayStream << datalen;                // 4 bytes
-        mReplayStream.writeRawData(buffer, datalen);
+        QDataStream replayStream(mpReplayFile.get());
+        replayStream.setVersion(QDataStream::Qt_5_12);
+        replayStream << recordingChunkInterval; // 4 bytes
+        replayStream << datalen;                // 4 bytes
+        replayStream.writeRawData(buffer, datalen);
 #if defined(DEBUG_RECORDING)
         qDebug().noquote().nospace() << "cTelnet::processSocketData(...) INFO - recording chunk: " << mRecordingChunkCount << " is " << datalen
                                      << " bytes and has an interval of: " << recordingChunkInterval << " mSecond since the previous chunk.";

@@ -233,6 +233,9 @@ private slots:
         QVERIFY(telnet.recordingReplay());
         const QString fileName = telnet.replayRecordingFileName();
         QVERIFY(!fileName.isEmpty());
+        QVERIFY(!telnet.startReplayRecording(fileName % qsl(".second")));
+        QCOMPARE(telnet.replayRecordingFileName(), fileName);
+        QVERIFY(telnet.recordingReplay());
 
         const QByteArray sent{"recorded line\r\n"};
         mpServer->sendRaw(sent);

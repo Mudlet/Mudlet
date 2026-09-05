@@ -32,12 +32,10 @@
 #include <winsock2.h>
 #endif
 
-#include <QDataStream>
 #include <QElapsedTimer>
 #include <QHostAddress>
 #include <QHostInfo>
 #include <QPointer>
-#include <QSaveFile>
 #include <QScopeGuard>
 #include <QStringList>
 #if defined(QT_NO_SSL)
@@ -52,6 +50,7 @@
 
 #include <bitset>
 #include <iostream>
+#include <memory>
 #include <queue>
 #include <string>
 #include <utility>
@@ -73,6 +72,7 @@
 #endif
 
 class QJsonDocument;
+class QSaveFile;
 class QJsonObject;
 class QNetworkAccessManager;
 class QNetworkReply;
@@ -209,8 +209,8 @@ public:
     bool recordingReplay() const { return mRecordReplay; }
     bool startReplayRecording(const QString& fileName);
     bool stopReplayRecording();
-    QString replayRecordingFileName() const { return mReplayFile.fileName(); }
-    QString replayRecordingErrorString() const { return mReplayFile.errorString(); }
+    QString replayRecordingFileName() const;
+    QString replayRecordingErrorString() const;
     bool loadReplay(const QString&, QString* pErrMsg = nullptr);
     void loadReplayChunk();
     bool isReplaying() { return loadingReplay; }
@@ -566,8 +566,7 @@ private:
     QElapsedTimer mConnectionTimer;
     qint32 mRecordLastChunkMSecTimeOffset = 0;
     int mRecordingChunkCount = 0;
-    QSaveFile mReplayFile;
-    QDataStream mReplayStream;
+    std::unique_ptr<QSaveFile> mpReplayFile;
     bool mRecordReplay = false;
     int mCycleCountMTTS = 0;
     QSet<QString> newEnvironVariablesSent;
