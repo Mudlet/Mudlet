@@ -5656,9 +5656,6 @@ void mudlet::startAutoLogin(const QStringList& cliProfiles, const bool offline)
             }
         }
         if (!hostName.isEmpty()) {
-            if (mCloseRequestedDuringProfileLoad) {
-                return;
-            }
             QElapsedTimer timer;
             timer.start();
             doAutoLogin(hostName, offline);
@@ -5671,9 +5668,6 @@ void mudlet::startAutoLogin(const QStringList& cliProfiles, const bool offline)
     for (auto& hostName : hostList) {
         const QString val = readProfileData(hostName, qsl("autologin"));
         if (val.toInt() == Qt::Checked) {
-            if (mCloseRequestedDuringProfileLoad) {
-                return;
-            }
             QElapsedTimer timer;
             timer.start();
             doAutoLogin(hostName, offline);

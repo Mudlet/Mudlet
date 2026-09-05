@@ -119,7 +119,7 @@ private slots:
     // Already null when the case let the window close; a failed case leaves it
     void cleanup() { delete mudlet::self(); }
 
-    void test_aCloseDuringAutoLoginWaitsForTheLoadAndSkipsTheNextProfile()
+    void test_aCloseDuringAutoLoginWaitsForEveryProfileToLoad()
     {
         QVERIFY(provisionProfileOnDisk(mProfileName));
         QVERIFY(provisionProfileOnDisk(mSecondProfileName));
@@ -128,7 +128,7 @@ private slots:
         mWindow->startAutoLogin({mProfileName, mSecondProfileName}, true);
 
         QVERIFY2(mWindow, "the main window was deleted underneath the profile load");
-        QVERIFY2(!mWindow->getHostManager().getHost(mSecondProfileName), "another profile was started after the close was asked for");
+        QVERIFY2(mWindow->getHostManager().getHost(mSecondProfileName), "the close cut the auto-login batch short");
         verifyTheCloseWasHeldAndThenHappened();
     }
 
