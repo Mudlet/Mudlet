@@ -40,6 +40,9 @@ QString IrcMessageFormatter::formatMessage(IrcMessage* message, bool isForLua)
     case IrcMessage::Join:
         formatted = formatJoinMessage(static_cast<IrcJoinMessage*>(message), isForLua);
         break;
+    case IrcMessage::Kick:
+        formatted = formatKickMessage(static_cast<IrcKickMessage*>(message), isForLua);
+        break;
     case IrcMessage::Mode:
         formatted = formatModeMessage(static_cast<IrcModeMessage*>(message), isForLua);
         break;
@@ -270,7 +273,7 @@ QString IrcMessageFormatter::formatNumericMessage(IrcNumericMessage* message, bo
         } else {
             content = IrcTextFormat().toHtml(info);
         }
-        return QObject::tr("[INFO] %1").arg(info);
+        return QObject::tr("[INFO] %1").arg(content);
     }
 
     switch (message->code()) {
