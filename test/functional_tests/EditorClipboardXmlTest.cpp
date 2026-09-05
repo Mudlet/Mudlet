@@ -97,6 +97,18 @@ private:
         }
     }
 
+    // The rebuild doCleanReset() asks for is only queued, so it is over when the
+    // items planted behind the editor's back are in its trees - which is what
+    // this waits for, rather than for a length of time the machine gets to
+    // decide the meaning of.
+    bool waitForTreeToHold(EditorViewType view, const QString& name) const
+    {
+        QTreeWidget* tree = treeFor(view);
+        return tree != nullptr && QTest::qWaitFor([tree, &name]() {
+                   return !tree->findItems(name, Qt::MatchCaseSensitive | Qt::MatchFixedString | Qt::MatchRecursive, 0).isEmpty();
+               });
+    }
+
     void showView(EditorViewType view)
     {
         switch (view) {
@@ -228,9 +240,9 @@ private slots:
         populateProfile();
         // The editor built its trees while the profile loaded, so items added
         // behind its back only appear after the rebuild that Host asks for when
-        // a package is installed - and that rebuild is only queued
+        // a package is installed
         mpEditor->doCleanReset();
-        QTest::qWait(100ms);
+        QVERIFY2(waitForTreeToHold(EditorViewType::cmTriggerView, qsl("qaClipTrigger")), "the editor never rebuilt its trees around the items this test planted");
     }
 
     void cleanupTestCase()

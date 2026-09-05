@@ -78,6 +78,17 @@ private:
         return found.isEmpty() ? nullptr : found.first();
     }
 
+    // The rebuild doCleanReset() asks for is only queued, so it is over when the
+    // items planted behind the editor's back are in its trees - which is what
+    // this waits for, rather than for a length of time the machine gets to
+    // decide the meaning of.
+    bool waitForTreeToHold(const QString& name) const
+    {
+        return QTest::qWaitFor([this, &name]() {
+            return itemNamed(mpEditor->treeWidget_triggers, name) != nullptr;
+        });
+    }
+
     // The reparenting only runs while the tree believes a drag is in flight,
     // and a synthetic QDropEvent cannot stand in for one: QAbstractItemView's
     // internal-move handling needs event->source() to be the view itself, which
@@ -160,9 +171,9 @@ private slots:
         populateProfile();
         // The editor built its trees while the profile loaded, so items added
         // behind its back only appear after the rebuild Host asks for when a
-        // package is installed - and that rebuild is only queued
+        // package is installed
         mpEditor->doCleanReset();
-        QTest::qWait(100ms);
+        QVERIFY2(waitForTreeToHold(qsl("qaMoveTrigger")), "the editor never rebuilt its trees around the items this test planted");
     }
 
     void cleanupTestCase()
@@ -264,14 +275,21 @@ private slots:
         mpEditor->slot_showTriggers();
         auto* tree = mpEditor->treeWidget_triggers;
         QTreeWidgetItem* folderItem = itemNamed(tree, qsl("qaMoveTriggerFolder"));
-        QTreeWidgetItem* triggerItem = folderItem->child(0);
-        QVERIFY(triggerItem);
+        QTreeWidgetItem* triggerItem = itemNamed(tree, qsl("qaMoveTrigger"));
+        QVERIFY(folderItem && triggerItem);
+        // The row has to start this case inside the folder, and a drag is the
+        // only way to put it there with the unit agreeing - the drop case above
+        // leaves it there, but this one cannot be left needing that to have run
+        if (triggerItem->parent() != folderItem) {
+            moveOntoFolder(tree, triggerItem, folderItem);
+        }
+        QCOMPARE(triggerItem->parent(), folderItem);
         TTrigger* pTrigger = mpHost->getTriggerUnit()->getTrigger(triggerItem->data(0, Qt::UserRole).toInt());
         QVERIFY(pTrigger);
         TTrigger* parentBefore = pTrigger->getParent();
 
         QSignalSpy movedSpy(tree, &TTreeWidget::itemMoved);
-        folderItem->takeChild(0);
+        folderItem->takeChild(folderItem->indexOfChild(triggerItem));
         mpEditor->mpTriggerBaseItem->insertChild(0, triggerItem);
 
         QCOMPARE(movedSpy.count(), 0);

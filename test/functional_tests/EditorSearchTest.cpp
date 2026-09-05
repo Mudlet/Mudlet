@@ -105,6 +105,17 @@ private:
         return found;
     }
 
+    // The rebuild doCleanReset() asks for is only queued, so it is over when the
+    // items planted behind the editor's back are in its trees - which is what
+    // this waits for, rather than for a length of time the machine gets to
+    // decide the meaning of.
+    bool waitForTreeToHold(const QString& name) const
+    {
+        return QTest::qWaitFor([this, &name]() {
+            return !mpEditor->treeWidget_triggers->findItems(name, Qt::MatchCaseSensitive | Qt::MatchFixedString | Qt::MatchRecursive, 0).isEmpty();
+        });
+    }
+
     QTreeWidgetItem* topLevelResultFor(const QString& itemType) const
     {
         auto* results = mpEditor->treeWidget_searchResults;
@@ -209,7 +220,7 @@ private slots:
         // behind its back are only in them after the same rebuild that Host
         // does when a package is installed
         mpEditor->doCleanReset();
-        QTest::qWait(100ms); // doCleanReset only queues the rebuild
+        QVERIFY2(waitForTreeToHold(qsl("qaSearchTrigger")), "the editor never rebuilt its trees around the items this test planted");
         mpEditor->setSearchOptions(dlgTriggerEditor::SearchOptionNone);
     }
 
