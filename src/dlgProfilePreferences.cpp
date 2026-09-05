@@ -3788,7 +3788,7 @@ void dlgProfilePreferences::populateApplicationSettings()
     checkBox_showSpacesAndTabs->setChecked(pMudlet->mEditorTextOptions & QTextOption::ShowTabsAndSpaces);
     checkBox_showLineFeedsAndParagraphs->setChecked(pMudlet->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
 
-    checkBox_reportMapIssuesOnScreen->setChecked(pMudlet->showMapAuditErrors());
+    checkBox_reportMapIssuesOnScreen->setChecked(TMap::smShowMapAuditErrors);
     checkBox_showIconsOnMenus->setCheckState(pMudlet->mShowIconsOnMenuCheckedState);
 
     MainIconSize->setValue(pMudlet->mToolbarIconSize);
@@ -5939,7 +5939,7 @@ void dlgProfilePreferences::loadMap(const QString& fileName)
 
     // Ensure the setting is already made as the TConsole::loadMap(...) uses
     // the set value:
-    const bool showAuditErrors = mudlet::self()->showMapAuditErrors();
+    const bool showAuditErrors = TMap::smShowMapAuditErrors;
     mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
 
     bool success = false;
@@ -6067,7 +6067,7 @@ void dlgProfilePreferences::slot_saveMap()
         // show up when saving big maps
 
         // Ensure the setting is already made as the saveMap(...) uses the set value
-        const bool showAuditErrors = mudlet::self()->showMapAuditErrors();
+        const bool showAuditErrors = TMap::smShowMapAuditErrors;
         mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
 
         bool success = false;
@@ -6180,7 +6180,7 @@ void dlgProfilePreferences::slot_copyMap()
 
     // Ensure the setting is already made as the value could be used in the
     // code following after
-    const bool savedOldAuditErrorsToConsoleEnabledSetting = mudlet::self()->showMapAuditErrors();
+    const bool savedOldAuditErrorsToConsoleEnabledSetting = TMap::smShowMapAuditErrors;
     mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
 
     // We now KNOW there are places where the destination profiles will/have
