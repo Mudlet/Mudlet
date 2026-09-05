@@ -186,6 +186,8 @@ protected:
     // SpeechRecognizer declares these protected: a holder of a concrete
     // VoskRecognizer* must go through startListening()/stopListening()/
     // cancel() like every other caller, not reach around the state machine.
+    // doReleaseResources() is protected for its own reason: releaseResources()
+    // on the base does the state and the announcement around it.
     void doReleaseResources() override;
     void doStartListening() override;
     void doStopListening() override;

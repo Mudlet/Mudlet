@@ -64,6 +64,9 @@ AppleSpeechRecognizer::AppleSpeechRecognizer(QObject* parent)
 , mpSession(new AppleSpeechSession)
 , mpCapture(new SpeechAudioCapture(this))
 {
+    // While this engine still holds nothing, so the first real change is a
+    // change from here rather than from the base's all-false default
+    seedAnnouncedCapabilities();
     mpSession->format = [[AVAudioFormat alloc] initWithCommonFormat:AVAudioPCMFormatFloat32
                                                          sampleRate:static_cast<double>(SpeechAudioCapture::scmSampleRate)
                                                            channels:1
@@ -538,7 +541,7 @@ void AppleSpeechRecognizer::handleTaskEnded(const QString& failure)
         // Ready rather than Error even so. The stop itself succeeded and the
         // recognizer is as usable as it was before; Error would make a package
         // reload a model that never stopped working. Settled before the emit,
-        // as everywhere in this file: a handler that starts listening on the
+        // as on every path here that sets a state: a handler starting on the
         // error would otherwise have its new session stamped back to Ready.
         setState(State::Ready);
         if (!failure.isEmpty()) {
@@ -567,11 +570,14 @@ void AppleSpeechRecognizer::handleTaskEnded(const QString& failure)
         // escape below only trips on tasks that die immediately, so one that
         // limps for a second and then dies, over and over, never reaches it -
         // and the log line the comment above describes is not somewhere a
-        // player looks to find out why nothing is being transcribed.
+        // player looks to find out why nothing is being transcribed. It does
+        // not promise a restart: the two branches below can refuse one, and
+        // "was restarted" followed by "could not be restarted" is worse than
+        // saying only what is certain.
         if (!mMidSessionFailureReported) {
             mMidSessionFailureReported = true;
-            //: Shown when macOS speech recognition stops during a listening session and is restarted; some speech may have been missed
-            emit errorOccurred(tr("macOS speech recognition stopped during this session and was restarted; some speech may have been missed."));
+            //: Shown when macOS speech recognition stops part-way through a listening session; some speech may have been missed
+            emit errorOccurred(tr("macOS speech recognition stopped during this session; some speech may have been missed."));
         }
     }
     mConsecutiveImmediateFailures = diedImmediately ? mConsecutiveImmediateFailures + 1 : 0;
@@ -615,7 +621,7 @@ void AppleSpeechRecognizer::doStopListening()
         // from, so waiting for ever would take the recognizer with it.
         cancelTask();
         setState(State::Ready);
-        // Settled first, then said, as everywhere in this file: a handler that
+        // Settled first, then said, as on every path here that sets a state: a handler that
         // reacts to the loss by starting again would otherwise have its new
         // session stamped back to Ready. The consumer still learns the
         // difference that matters - processing followed by ready with no
@@ -655,12 +661,15 @@ void AppleSpeechRecognizer::slot_pcmReady(const QByteArray& pcmData)
 
     AVAudioPCMBuffer* buffer = [[AVAudioPCMBuffer alloc] initWithPCMFormat:mpSession->format frameCapacity:frames];
     if (!buffer || !buffer.floatChannelData) {
-        // Not a dropped chunk but a dropped session: floatChannelData is a
-        // property of the format, so nil here is nil for every chunk that
-        // follows. Silence left the state saying listening and the audio level
-        // moving while nothing could ever be transcribed, which reads to the
-        // player as a microphone too quiet to hear them. Latched like sherpa's
-        // missing-result report, since this runs many times a second.
+        // A dropped chunk, and usually a dropped session with it: the second
+        // half of this test is a property of the format, which is built once
+        // in the constructor and never rebuilt, so nil there is nil for every
+        // chunk this object will ever see. Silence left the state saying
+        // listening and the audio level moving while nothing could ever be
+        // transcribed, which reads to the player as a microphone too quiet to
+        // hear them. Latched per session because that is the unit the message
+        // speaks about, and because a one-off allocation failure - the first
+        // half - is not worth a second telling either.
         if (!mBufferFailureReported) {
             mBufferFailureReported = true;
             //: Shown when macOS speech recognition cannot accept the microphone audio in the format it is arriving in

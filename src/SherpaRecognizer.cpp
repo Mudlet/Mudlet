@@ -163,6 +163,9 @@ SherpaRecognizer::SherpaRecognizer(QObject* parent)
 : SpeechRecognizer(parent)
 , mpCapture(new SpeechAudioCapture(this))
 {
+    // While this engine still holds nothing, so the first real change is a
+    // change from here rather than from the base's all-false default
+    seedAnnouncedCapabilities();
     connect(mpCapture, &SpeechAudioCapture::pcm, this, &SherpaRecognizer::slot_pcmReady);
     connect(mpCapture, &SpeechAudioCapture::captureError, this, &SherpaRecognizer::slot_captureError);
     // A silence timeout ends the utterance the way the user stopping would:
@@ -381,11 +384,16 @@ QString SherpaRecognizer::backendVersion() const
 // trained on upper-cased text do, and a biasing word given in the other case
 // tokenises into something the decoder never scores, so the bias silently
 // does nothing. Decided from the model's own token list rather than assumed.
-static bool tokensAreUppercase(const QString& tokensPath)
+// Which case the model's own sub-word units are written in, or Unknown when
+// the file will not open or the two are too close to call. A majority vote is
+// enough to tell an all-upper vocab from an all-lower one, which is the split
+// that actually occurs; anything nearer than that is a truecase vocab, where
+// the right answer is to leave the caller's words alone.
+SherpaRecognizer::TokenCase SherpaRecognizer::tokensCase(const QString& tokensPath)
 {
     QFile tokensFile(tokensPath);
     if (!tokensFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        return false;
+        return TokenCase::Unknown;
     }
 
     int upper = 0;
@@ -402,7 +410,18 @@ static bool tokensAreUppercase(const QString& tokensPath)
         }
     }
 
-    return upper > lower;
+    if (upper + lower == 0) {
+        return TokenCase::Unknown;
+    }
+    // Nine to one either way. The two models this was measured against sit at
+    // 495/502 and 106/1045, so a real answer is never close to the line.
+    if (upper >= (upper + lower) * 9 / 10) {
+        return TokenCase::Upper;
+    }
+    if (lower >= (upper + lower) * 9 / 10) {
+        return TokenCase::Lower;
+    }
+    return TokenCase::Unknown;
 }
 
 // sherpa-onnx reads the hotwords buffer as one phrase per line and treats a
@@ -505,7 +524,7 @@ bool SherpaRecognizer::loadModel(const QString& modelPath)
     const bool interruptedASession = (state() == State::Listening || state() == State::Processing);
     mpCapture->stop();
     if (interruptedASession) {
-        // Settled before the emit, as everywhere else here. The device is
+        // Settled before the emit, as on every path here that sets a state. The device is
         // already stopped, so a sysSTTError handler reading stt.listening()
         // would otherwise be told yes for a microphone that has gone - and
         // calling stt.stop() on the strength of it reaches a decoder still
@@ -535,7 +554,7 @@ bool SherpaRecognizer::loadModel(const QString& modelPath)
         qInfo().noquote() << "SherpaRecognizer: model has bpe.model but no bpe.vocab, so recognition cannot be biased toward a vocabulary;"
                           << "generate bpe.vocab from bpe.model (piece and score per line) to enable it";
     }
-    mUppercaseTokens = tokensAreUppercase(tokensPath);
+    mTokenCase = tokensCase(tokensPath);
 
     qInfo().noquote() << "SherpaRecognizer: Loading model from:" << modelPath;
 
@@ -593,15 +612,25 @@ bool SherpaRecognizer::loadModel(const QString& modelPath)
     // asking for the other. The buffers must outlive the create call below,
     // which copies out of them.
     const QByteArray bpeVocabUtf8 = mBpeVocabPath.toUtf8();
-    // Matched to the model's own units in both directions. A word in the wrong
-    // case tokenises into pieces the model never scores, so the bias silently
-    // does nothing - the failure this whole block exists to avoid. Only the
-    // upper direction had been written, which happens to be the one the single
-    // biasable model here needs; a lower-case-unit model carrying a bpe.vocab
-    // would have been given "Zugg" and quietly ignored it.
+    // Matched to the model's own units where those units have a case, and left
+    // alone where the answer is not known. A word in the wrong case tokenises
+    // into pieces the model never scores, so the bias silently does nothing -
+    // but forcing a case on a guess produces that same silence, and does it to
+    // a word the caller had written correctly. tokensAreUppercase() is a
+    // majority vote that also answers "not upper" for a truecase model and for
+    // a tokens file it could not open, so only a clear answer acts.
     QStringList biasWords = usableHotwords(vocabulary(), nullptr);
     for (QString& word : biasWords) {
-        word = mUppercaseTokens ? word.toUpper() : word.toLower();
+        switch (mTokenCase) {
+        case TokenCase::Upper:
+            word = word.toUpper();
+            break;
+        case TokenCase::Lower:
+            word = word.toLower();
+            break;
+        case TokenCase::Unknown:
+            break;
+        }
     }
     const QByteArray hotwordsUtf8 = biasWords.join(QLatin1Char('\n')).toUtf8();
 
@@ -615,25 +644,29 @@ bool SherpaRecognizer::loadModel(const QString& modelPath)
             config->hotwords_buf_size = hotwordsUtf8.size();
             // Measured, on the one installed model that can bias at all
             // (streaming-zipformer-en, whose bpe.vocab is what makes biasing
-            // possible), decoding one recording at a sweep of values:
+            // possible): one synthesised recording, one target word, one
+            // decode per value.
             //
             //   0, 0.5, 1.5, 2, 3   no effect - output identical to no biasing
             //   4 .. 10             the biased word is recognised, rest intact
             //   20                  the word is inserted where it was not said
             //
-            // So the library's own default, and the 1.5 its examples use, sit
-            // below the threshold where biasing does anything - which is what
-            // "300 words applied, and recognition byte-identical to no biasing
-            // at all" was recording. Not that zero was honoured as zero: zero
-            // and 1.5 behave identically, so whether the library substitutes
-            // its default for zero cannot be told from here and does not
-            // matter, because neither value biases anything.
+            // sherpa-onnx's own default is 1.5, and 1.5 was measured directly:
+            // it sits below the threshold where biasing does anything. That is
+            // what "300 words applied, and recognition byte-identical to no
+            // biasing at all" was recording. The earlier reading here - that
+            // the library honoured a zero and boosted by nothing, so naming
+            // 1.5 would fix it - cannot be right, because zero and 1.5 measure
+            // the same. Whether zero is replaced by the default is invisible
+            // from outside and does not matter; neither value biases anything.
             //
             // 5 is one step above the threshold and a quarter of the value
-            // that began inserting words nobody said. Worth re-measuring on a
-            // real recording rather than synthesised speech, and on any model
-            // added later: this is one model's number, and the only one that
-            // could be measured.
+            // that began inserting words nobody said. Both edges came from a
+            // single word in a single utterance, and insertion pressure is not
+            // the same with a three-word list as with the three hundred a real
+            // game vocabulary carries - so treat 20 as "damage was seen
+            // somewhere above 10", not as a bound. Worth re-measuring on a real
+            // recording, with a real vocabulary, and on any model added later.
             config->hotwords_score = 5.0f;
         }
     }

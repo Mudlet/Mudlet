@@ -159,10 +159,13 @@ that a package should not assume one behaves like another:
   made, not as "this backend can't", since it can — and takes effect only at
   the model's next load, whether that is a later `setVocabulary()` call made
   once back in `ready`, or the next `stt.init()`. Words are matched to the
-  model's own sub-word units case-wise before they are offered — upper for a
-  model whose tokens are upper, lower for one whose tokens are lower — because
-  a word in the wrong case tokenises into pieces the model never scores and the
-  bias then silently does nothing. A word sherpa-onnx's hotword
+  model's own sub-word units case-wise before they are offered, where that case
+  is clear — a model whose units are overwhelmingly upper gets upper, one whose
+  units are overwhelmingly lower gets lower, and anything less one-sided than
+  that (a truecase vocabulary, say) is left exactly as you wrote it. A word in
+  the wrong case tokenises into pieces the model never scores and the bias then
+  silently does nothing, which is as true of a case this guessed at as of one
+  you got wrong. A word sherpa-onnx's hotword
   format cannot represent is left out of the biasing rather than passed
   through: an entry whose tokens open with `:` or `#`, which that format reads
   as a score, and an entry with nothing in it. Those are named in a

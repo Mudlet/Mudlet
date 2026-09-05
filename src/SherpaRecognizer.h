@@ -143,6 +143,8 @@ protected:
     // SpeechRecognizer declares these protected: a holder of a concrete
     // SherpaRecognizer* must go through startListening()/stopListening()/
     // cancel() like every other caller, not reach around the state machine.
+    // doReleaseResources() is protected for its own reason: releaseResources()
+    // on the base does the state and the announcement around it.
     void doReleaseResources() override;
     void doStartListening() override;
     void doStopListening() override;
@@ -208,7 +210,13 @@ private:
     bool mSupportsBiasing = false;
     // Whether this model's units are written in upper case, which decides the
     // case biasing words have to be given in to match them
-    bool mUppercaseTokens = false;
+    // Three answers, because there are three: a model whose units are upper, one
+    // whose units are lower, and one this cannot tell about - a truecase vocab,
+    // or a tokens file that would not open. Forcing a case on the third silently
+    // unmatches a word the caller had already written correctly.
+    enum class TokenCase { Unknown, Upper, Lower };
+    static TokenCase tokensCase(const QString& tokensPath);
+    TokenCase mTokenCase = TokenCase::Unknown;
 
 
     // Consecutive silent audio chunks, used to tell a genuine lull from the

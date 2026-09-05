@@ -41,11 +41,6 @@ describe("stt bridge", function()
     end)
 
     it("is not listening or initialized before anything has been set up", function()
-      -- getInfo().backend is empty when no recognizer object exists, which is
-      -- not quite what initialized() asks - that is also false in Error, where
-      -- a recognizer does exist and does have a name. Nothing earlier in this
-      -- file builds one, so the two agree here, but the assertion below is
-      -- about the object rather than the state.
       if stt.initialized() then
         -- A previous spec or the player left a model loaded; the claim below
         -- only means anything from a clean start
@@ -115,6 +110,12 @@ describe("stt bridge", function()
       -- this key names whichever engine is loaded rather than a fixed value.
       local backend = stt.getInfo().backend
       assert.is_string(backend)
+      -- The gate is not quite the question. backend is empty when no recognizer
+      -- object exists; initialized() is also false in Error, where one does
+      -- exist and does have a name. Nothing earlier in this file builds one, so
+      -- the two agree here - but that is an ordering the file does not state,
+      -- and a case added above this one that leaves a recognizer in Error would
+      -- send it down the wrong branch.
       if stt.initialized() then
         assert.is_truthy(backend == "Vosk" or backend == "sherpa-onnx" or backend == "Apple Speech",
                          "backend should name an engine this build has, got: " .. backend)

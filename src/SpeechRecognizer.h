@@ -93,8 +93,8 @@ public:
         }
         if (state() != State::Ready) {
             // Every refusal but "already listening" and "already starting"
-            // reports why: this returns void, so silence reads to the caller
-            // as a successful start. The state is left alone - a refusal is
+            // reports why: the return value says only that a start was
+            // refused, never which of these it was. The state is left alone - a refusal is
             // not a fault, and docs/stt-api.md says a refusal may arrive
             // without a state change.
             //
@@ -222,21 +222,20 @@ public:
 
     // Announce the capabilities if they have moved since anyone was last told,
     // and say nothing if they have not. Lives here rather than in each backend
-    // because both copies of it were identical, and because the part that is
-    // easy to get wrong is invisible: the record starts as whatever
-    // capabilities() answered the first time it was asked, not all-false. Both
-    // backends had to seed it in their constructors to avoid announcing a
-    // change nothing had made, one of them did not, and the test that should
-    // have caught that asserted the bug instead. Seeded on first use here, so
-    // a backend cannot forget.
+    // because both copies were identical.
+    //
+    // The record has to be seeded with what this backend answers holding
+    // nothing - see seedAnnouncedCapabilities(), which every backend calls
+    // when it is built. Seeding it lazily on the first call instead looks
+    // tidier and is worse: the first call is the announce *after* a model has
+    // loaded, so the one change consumers are told to watch for was swallowed
+    // rather than sent. That was written here and caught only by adding the
+    // case that watches the positive direction. Both failures are held now: a
+    // backend that forgets to seed emits a signal nothing earned, and one that
+    // swallows a real change fails the other case.
     void announceCapabilitiesIfChanged()
     {
         const Capabilities current = capabilities();
-        if (!mCapabilitiesEverAnswered) {
-            mCapabilitiesEverAnswered = true;
-            mAnnouncedCapabilities = current;
-            return;
-        }
         if (current == mAnnouncedCapabilities) {
             return;
         }
@@ -292,9 +291,9 @@ public:
         // sherpa reloads the model to bias it, and setState() dispatches
         // handlers inline - so a handler calling stt.setVocabulary() re-enters
         // and completes a whole offer before the line after this one runs.
-        // Whichever offer finished last is the one the backend actually holds,
-        // and committing the outer verdict over it leaves the flag describing
-        // an attempt that is no longer the current one: the next identical
+        // The inner offer is the one that last reached the backend, so its
+        // verdict is what the flag must keep; committing the outer verdict over
+        // it leaves the flag describing an attempt that is not the current one: the next identical
         // offer is then short-circuited into Applied against a backend that
         // refused it. Comparing word lists caught only the case where the
         // inner offer differed; re-entering with the same words is the shape a
@@ -338,8 +337,8 @@ public:
     bool initialized() const { return state() != State::Uninitialized && state() != State::Error; }
     // Waiting on the permission that decides a start, and nothing else - a
     // recognizer that is already listening answers false. Callers wanting "a
-    // start is outstanding or has landed" have to ask for both, the way
-    // speechStartAccepted() does.
+    // start is outstanding or has landed" ask for both - or better, read what
+    // startListening() returns, which says which of the two it was.
     bool starting() const { return state() == State::Starting; }
 
     // Whether the backend currently holds live native resources (e.g. handles
@@ -353,8 +352,9 @@ public:
     // Give back whatever the engine is holding, without discarding the engine
     // object itself. Non-virtual for the same reason startListening() is: the
     // two steps after the backend's own work were written out three times, and
-    // one of the three forgot to announce - so a backend whose capabilities
-    // follow the loaded model went on claiming one it had just released.
+    // two of the three left the announcement off. It happened to harm nobody -
+    // the one backend whose capabilities follow its loaded model was the one
+    // that announced - so this is a trap removed rather than a bug fixed.
     void releaseResources()
     {
         doReleaseResources();
@@ -445,6 +445,13 @@ protected:
         return VocabularyResult::Failed;
     }
 
+    // Called by a backend at the end of its constructor, while it still holds
+    // nothing: records what capabilities() answers then, so the first real
+    // change is a difference from that rather than from an all-false default
+    // this class cannot ask for - capabilities() is virtual, and from the base
+    // constructor it would answer the base's own all-false.
+    void seedAnnouncedCapabilities() { mAnnouncedCapabilities = capabilities(); }
+
     // Corrects mVocabularyApplied when a backend changes what is applied
     // outside setVocabulary() - see applyVocabulary()'s comment. Kept minimal
     // on purpose: it only clears the flag. Reapplication needs this call
@@ -461,8 +468,8 @@ protected:
     // right call instead of setVocabulary(vocabulary()).
     void noteVocabularyApplied() { mVocabularyApplied = true; }
 
-    // A backend's own half of releaseResources(): free what it holds and stop
-    // its capture device, in that order - the device has to go before the
+    // A backend's own half of releaseResources(): stop its capture device and
+    // then free what it holds, in that order - the device has to go before the
     // decoder, or a caller is left with a live microphone and nothing to close
     // it with. The state and the capability announcement are the base's, and a
     // backend must not set either itself.
@@ -487,12 +494,12 @@ protected:
     // doStartListening() must also leave the recognizer in a terminal state,
     // itself or through its continuation, before the request is done: Listening
     // once audio is flowing, Starting while a continuation is still pending, or
-    // Error on failure. Error is the only one the Lua layer reads as a refused
-    // start - see speechStartAccepted() - so a backend that fails must reach
+    // Error on failure. Error is the only one startListening() turns into
+    // StartResult::Refused, so a backend that fails must reach
     // it rather than simply returning. Ready on return is not a failure: a
     // handler stopping on the sysSTTStateChanged this raises lands back there
     // inside the same frame, which is the ordinary push-to-talk shape, and is
-    // why the check above this one is deliberately not asserted.
+    // why Ready on return is read as a start rather than a refusal.
     virtual void doStartListening() = 0;
     virtual void doStopListening() = 0;
     virtual void doCancel() = 0;
@@ -541,8 +548,10 @@ private:
 
     // Retained by setVocabulary() for every backend, so none has to remember
     // to keep words it could not use yet
+    // What capabilities() last reported, so announceCapabilitiesIfChanged()
+    // can tell a real change from a re-read of the same answer
     Capabilities mAnnouncedCapabilities;
-    bool mCapabilitiesEverAnswered = false;
+
     QStringList mVocabulary;
     // Counts offers begun, so a frame can tell whether another one finished
     // inside its own call to applyVocabulary() - see setVocabulary()

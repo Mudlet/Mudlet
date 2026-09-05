@@ -793,16 +793,23 @@ int TLuaInterpreter::sttClose(lua_State* L)
         if (pRecognizer) {
             if (pRecognizer->listening()) {
                 pRecognizer->cancel();
-            } else if (pRecognizer->state() == SpeechRecognizer::State::Processing) {
-                // listening() is false in Processing, so this fell straight
-                // through to releaseResources() and the phrase being decoded
-                // went with the engine - no sysSTTResult, no sysSTTError, and
-                // nothing to tell it apart from the player never speaking.
-                // docs/stt-api.md rule 1 allows exactly one way to drop
-                // recognised speech, which is to report it.
+            }
+            // Noted before the release, said after it. The test has to run
+            // while the state still shows Processing, but the report must not:
+            // reportSpeechRefusal reaches Lua inside this frame, and a handler
+            // answering "phrase lost" by restarting would be refused by the
+            // base for still processing - a second, false error about a phrase
+            // that had just been declared gone.
+            const bool lostAPhraseBeingTranscribed = !pRecognizer->listening() && pRecognizer->state() == SpeechRecognizer::State::Processing;
+            pRecognizer->releaseResources();
+            // listening() is false in Processing, so this used to fall straight
+            // through and the phrase being decoded went with the engine - no
+            // sysSTTResult, no sysSTTError, and nothing to tell it apart from
+            // the player never speaking. docs/stt-api.md rule 1 allows exactly
+            // one way to drop recognised speech, which is to report it.
+            if (lostAPhraseBeingTranscribed) {
                 reportSpeechRefusal(qsl("speech recognition was closed while the last phrase was still being transcribed, so that phrase is lost"));
             }
-            pRecognizer->releaseResources();
         }
     }
 
@@ -1042,7 +1049,13 @@ int TLuaInterpreter::sttReloadLibrary(lua_State* L)
     // Both latches were reset above, so the answer is whether speech can be had
     // at all now - not whether Vosk in particular can. A player who installed
     // sherpa-onnx and called this got false for a re-detect that had worked.
-    const bool available = VoskRecognizer::libraryAvailable() || SherpaRecognizer::sherpaAvailable();
+    // Both asked, and neither short-circuited: with || the sherpa probe ran
+    // only when Vosk was absent, so whether reloadLibrary left sherpa's module
+    // mapped depended on whether an unrelated engine happened to be installed.
+    // Re-detect means re-detect, for each of them, every time.
+    const bool voskAvailable = VoskRecognizer::libraryAvailable();
+    const bool sherpaAvailable = SherpaRecognizer::sherpaAvailable();
+    const bool available = voskAvailable || sherpaAvailable;
     announceSpeechCapabilities(pMudlet);
     lua_pushboolean(L, available);
     return 1;

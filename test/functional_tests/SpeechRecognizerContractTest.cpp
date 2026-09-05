@@ -176,6 +176,37 @@ public:
     using SherpaRecognizer::applyVocabulary;
 };
 
+// Capabilities that can actually move, which no real backend's can without a
+// library or a loaded model - and which is why the positive direction of the
+// announcement went untested through three review rounds.
+class MovableCapabilitiesRecognizer : public SpeechRecognizer
+{
+    Q_OBJECT
+
+public:
+    Capabilities capabilities() const override
+    {
+        Capabilities answer;
+        answer.biasing = mCanBias;
+        answer.onDevice = true;
+        return answer;
+    }
+    bool initialize(const QString&) override { return true; }
+    QString currentLanguage() const override { return QString(); }
+    bool setLanguage(const QString&) override { return true; }
+    QString backendName() const override { return qsl("MovableStub"); }
+    QString backendVersion() const override { return qsl("1.0"); }
+    bool setSensitivity(Sensitivity) override { return true; }
+    Sensitivity sensitivity() const override { return Sensitivity::Default; }
+
+    bool mCanBias = false;
+
+protected:
+    void doStartListening() override {}
+    void doStopListening() override {}
+    void doCancel() override {}
+};
+
 class ReentrantVocabularyRecognizer : public SpeechRecognizer
 {
     Q_OBJECT
@@ -401,11 +432,12 @@ private slots:
 
     // Capabilities are documented as re-readable rather than cacheable, so a
     // real change has to be announced - and nothing else may be. This holds
-    // the second half for Vosk, the way the sherpa case further down holds it
-    // for that backend: two constructors, two copies of the seeding, so both
-    // need saying. What neither holds is the positive direction, which needs a
-    // capability that can actually move, and every one of them follows either
-    // a resolved library symbol or a loaded model.
+    // the second half for Vosk, and the sherpa case further down holds it for
+    // that backend: the announcement lives in the base now, but each backend
+    // still has to seed it when it is built, so each is worth its own case.
+    // The positive direction is held by aCapabilityThatMovesIsAnnounced, on a
+    // stub - no real backend's capabilities can move without a library or a
+    // loaded model, which is how that direction went untested for so long.
     void theFirstCapabilityReadAnnouncesNothing()
     {
         VoskRecognizer recognizer;
@@ -413,10 +445,10 @@ private slots:
         QVERIFY(spy.isValid());
 
         // Nothing has moved since construction, so nothing is announced. This
-        // used to require the opposite - the record was left at the all-false
-        // default while capabilities() answers onDevice = true, so the first
-        // call always "changed" - and the case pinned that in rather than
-        // catching it, which is the shape a test asserting a bug takes.
+        // once required the opposite, when the record was left at the all-false
+        // default while capabilities() answers onDevice = true: the first call
+        // always "changed", and this case pinned that in rather than catching
+        // it, which is the shape a test asserting a bug takes.
         recognizer.announceCapabilitiesIfChanged();
         QCOMPARE(spy.count(), 0);
         recognizer.announceCapabilitiesIfChanged();
@@ -1376,6 +1408,25 @@ private slots:
                     }
                 });
         QCOMPARE(stopsOnItsOwnStateChange.startListening(), SpeechRecognizer::StartResult::Started);
+    }
+
+    // The other half of the announcement contract. Everything else only holds
+    // that nothing is said when nothing moved - so a change that is swallowed
+    // entirely, which is the worse failure, went uncaught.
+    void aCapabilityThatMovesIsAnnounced()
+    {
+        MovableCapabilitiesRecognizer recognizer;
+        QSignalSpy changes(&recognizer, &SpeechRecognizer::capabilitiesChanged);
+        QVERIFY(changes.isValid());
+
+        // What a model load does: the answer moves, and the consumer that
+        // docs/stt-api.md tells to re-read on the signal has to get one.
+        recognizer.mCanBias = true;
+        recognizer.announceCapabilitiesIfChanged();
+        QCOMPARE(changes.count(), 1);
+
+        recognizer.announceCapabilitiesIfChanged();
+        QCOMPARE(changes.count(), 1);
     }
 
     void aRejectedWordIsNotSilentlyDropped()
