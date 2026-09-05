@@ -123,6 +123,7 @@ set(EDITOR_GROUP_TEST_SOURCES
     EdbeeReinitTest.cpp
     EditorBannerViewSwitchTest.cpp
     EditorWindowPositionTest.cpp
+    MissingEditorThemeTest.cpp
     ScriptEventHandlerLifetimeTest.cpp
     TriggerEditorDisclosureTest.cpp
     TriggerEditorTest.cpp
