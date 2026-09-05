@@ -94,7 +94,19 @@ private:
 
     static void type(TCommandLine* pCommandLine, const QString& text) { QTest::keyClicks(pCommandLine, text); }
 
-    static void press(TCommandLine* pCommandLine, const Qt::Key key, const Qt::KeyboardModifiers modifiers = Qt::NoModifier) { QTest::keyClick(pCommandLine, key, modifiers); }
+    // Real macOS arrow keys arrive with the keypad modifier set, and TCommandLine's
+    // Up/Down handlers only recognise them there when it is present, so a synthesised
+    // event has to carry it too or the key falls through to the editor.
+    static void press(TCommandLine* pCommandLine, const Qt::Key key, const Qt::KeyboardModifiers modifiers = Qt::NoModifier)
+    {
+        Qt::KeyboardModifiers sentModifiers = modifiers;
+#if defined(Q_OS_MACOS)
+        if (key == Qt::Key_Up || key == Qt::Key_Down) {
+            sentModifiers |= Qt::KeypadModifier;
+        }
+#endif
+        QTest::keyClick(pCommandLine, key, sentModifiers);
+    }
 
     static QString selection(const TCommandLine* pCommandLine) { return pCommandLine->textCursor().selectedText(); }
 
