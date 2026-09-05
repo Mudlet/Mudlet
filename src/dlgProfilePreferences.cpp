@@ -263,6 +263,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
 
     mPopulating = true;
     if (pHost) {
+        connect(pHost, &Host::signal_profileStyleSheetChanged, this, &dlgProfilePreferences::setStyleSheet);
         initWithHost(pHost);
     } else {
         disableHostDetails();
