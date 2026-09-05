@@ -71,8 +71,7 @@ ConfigDirResolution xdgConfigDir(const QString& legacyDefault);
 bool configDirHoldsProfiles(const QString& dir);
 
 // Resolves the config root itself on first use; setConfigPath() replaces it,
-// which is how setupConfig() installs the root it has validated and how tests
-// point Mudlet at a scratch directory
+// which is how setupConfig() installs the root it has validated
 QString getMudletPath(enums::mudletPathType mode, const QString& extra1 = QString(), const QString& extra2 = QString());
 void setConfigPath(const QString& path);
 

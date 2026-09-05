@@ -93,14 +93,12 @@ QString configDirIdentity(const QString& dir)
     return canonical.isEmpty() ? QDir::cleanPath(dir) : canonical;
 }
 
-// Makes a relative path absolute against base; an absolute or empty path is
-// returned as it came
 QString pathResolveRelative(const QString& path, const QString& base)
 {
     if (path.isEmpty() || QDir::isAbsolutePath(path)) {
         return path;
     }
-    return QDir::cleanPath(base + "/" + path);
+    return QDir::cleanPath(qsl("%1/%2").arg(base, path));
 }
 
 QString readMarkerFile(const QString& path)
