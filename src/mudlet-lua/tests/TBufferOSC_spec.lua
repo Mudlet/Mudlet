@@ -403,7 +403,11 @@ describe("Tests TBuffer OSC sequence handling", function()
     -- and shows as text, which TBuffer.cpp calls a limitation rather than intent.
     it("should consume the parameters of a sequence with an intermediate byte", function()
       assert.is_true(feedTriggers("CSIINT1(\027[1 pX)CSIINT1\n"))
-      assert.equals("CSIINT1(pX)CSIINT1", findRecentLine("CSIINT1"))
+      local payload = findRecentLine("CSIINT1"):match("^CSIINT1%((.*)%)CSIINT1$")
+      -- the parameters and the intermediate byte going is what this holds. The
+      -- leftover final byte is the limitation, not the intent, so both readings
+      -- pass and swallowing it one day does not have to come with a red spec.
+      assert.is_truthy(payload == "pX" or payload == "X", tostring(payload))
     end)
 
     -- The only case where the intermediate byte is also the last byte, so the
@@ -423,18 +427,22 @@ describe("Tests TBuffer OSC sequence handling", function()
     -- length, so a discard and a parse can be told apart by the colour - either
     -- way nothing of the sequence reaches the screen
     local function paddedGreen(length)
-      return string.rep("0;", (length - 2) / 2) .. "32"
+      local oddPadding = length % 2 == 1 and ";" or ""
+      return string.rep("0;", math.floor((length - 2) / 2)) .. oddPadding .. "32"
     end
 
-    it("should still act on a parameter string just under the length cap", function()
-      assert.is_true(feedTriggers("\027[0mCSICAP1(\027[" .. paddedGreen(lengthCap - 2) .. "mgreen\027[0m)CSICAP1\n"))
+    -- The two lengths either side of the cap, rather than a comfortable margin
+    -- on each side: the check is ">= MAX_CSI_SEQUENCE_LENGTH" on the parameter
+    -- string alone, and only these two tell that apart from a ">".
+    it("should still act on a parameter string one byte under the length cap", function()
+      assert.is_true(feedTriggers("\027[0mCSICAP1(\027[" .. paddedGreen(lengthCap - 1) .. "mgreen\027[0m)CSICAP1\n"))
       assert.equals("CSICAP1(green)CSICAP1", findRecentLine("CSICAP1"))
       assert.is_true(feedTriggers("\027[0mCSICAP2(green)CSICAP2\n"))
       assert.are_not.same(foregroundOf("CSICAP1", "green"), foregroundOf("CSICAP2", "green"))
     end)
 
-    it("should discard a parameter string that runs past the length cap", function()
-      assert.is_true(feedTriggers("\027[0mCSICAP3(\027[" .. paddedGreen(lengthCap + 2) .. "mgreen\027[0m)CSICAP3\n"))
+    it("should discard a parameter string that is exactly the length cap", function()
+      assert.is_true(feedTriggers("\027[0mCSICAP3(\027[" .. paddedGreen(lengthCap) .. "mgreen\027[0m)CSICAP3\n"))
       assert.equals("CSICAP3(green)CSICAP3", findRecentLine("CSICAP3"))
       assert.is_true(feedTriggers("\027[0mCSICAP4(green)CSICAP4\n"))
       assert.are.same(foregroundOf("CSICAP3", "green"), foregroundOf("CSICAP4", "green"))
