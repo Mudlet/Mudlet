@@ -24,6 +24,7 @@
 #include "TRoom.h"
 #include "TRoomDB.h"
 
+#include <algorithm>
 #include <cmath>
 
 CustomLineSession::CustomLineSession(T2DMap& mapWidget)
@@ -257,19 +258,30 @@ void CustomLineSession::restoreOriginalLineIfNeeded()
         return;
     }
 
-    if (*points == mOriginalLine->points) {
-        mOriginalLine.reset();
+    // Only the points snapping moved go back, and only while they are still
+    // where it put them: a point added or dragged since then is where the
+    // user wanted it.
+    bool changed = false;
+    const auto shared = std::min(points->size(), mOriginalLine->points.size());
+    for (qsizetype index = 0; index < shared; ++index) {
+        const QPointF& original = mOriginalLine->points.at(index);
+        QPointF& point = (*points)[index];
+        if (point != original && point == snapPointToGrid(original)) {
+            point = original;
+            changed = true;
+        }
+    }
+
+    mOriginalLine.reset();
+    if (!changed) {
         return;
     }
 
-    *points = mOriginalLine->points;
     room->calcRoomDimensions();
     mMapWidget.repaint();
     if (mMapWidget.mpMap) {
         mMapWidget.mpMap->setUnsaved(__func__);
     }
-
-    mOriginalLine.reset();
 }
 
 std::optional<int> CustomLineSession::resolveCustomLineTargetRoomId(const TRoom& room, const QString& exitKey) const
