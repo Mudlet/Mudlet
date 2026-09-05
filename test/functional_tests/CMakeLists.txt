@@ -98,6 +98,7 @@ set(TELNET_GROUP_TEST_SOURCES
     TelnetAtcpMspTest.cpp
     TelnetLargeBurstTest.cpp
     TelnetLatencyMeasurementTest.cpp
+    TelnetLatePasswordTest.cpp
     TelnetBenchmark.cpp
     TelnetCharsetNegotiationTest.cpp
     CrashTestHookTest.cpp

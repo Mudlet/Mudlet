@@ -4176,6 +4176,10 @@ void Host::loadSecuredPassword()
     credManager->retrievePassword(getName(), "character", [this, safeCredManager = QPointer<CredentialManager>(credManager)](bool success, const QString& password, const QString& errorMessage) {
         if (success && !password.isEmpty()) {
             setPass(password);
+            // The auto-login is timer based, so a password this slow (the user answering the
+            // keychain prompt after the game had reached its password prompt) has already missed
+            // its turn. The telnet side knows whether the game is still waiting for it:
+            mTelnet.sendOutstandingAutoLoginPassword();
             QString passwordCopy = password; // Make a copy for secure clearing
             SecureStringUtils::secureStringClear(passwordCopy);
         } else if (!success && !errorMessage.isEmpty()) {

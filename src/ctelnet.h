@@ -265,6 +265,10 @@ public:
     // which bounds a decompression bomb.
     inline static const int scmMaxDecompressionRecursion = 8;
     void cancelLoginTimers();
+    // Called when a password turns up after the auto-login already reached the password step -
+    // a keychain read the user only answered by then. Sends it only while the game is provably
+    // still waiting at that prompt, see the definition.
+    void sendOutstandingAutoLoginPassword();
     void terminateConnection();
     bool currentlySecure() const
     {
@@ -554,6 +558,16 @@ private:
 
     QTimer* mTimerLogin = nullptr;
     QTimer* mTimerPass = nullptr;
+    // Set when the auto-login reached the password step with no password in hand, which is where
+    // an unanswered keychain prompt leaves it. It is the record of the game sitting at its
+    // password prompt that sendOutstandingAutoLoginPassword() needs to decide whether a password
+    // arriving later may still be typed for the player. Per-connection, so reset() clears it.
+    bool mAutoLoginPasswordOutstanding = false;
+    QElapsedTimer mAutoLoginPasswordOutstandingSince;
+    // Bytes read from the socket this connection, and how many had been read when the mark above
+    // was set. A server that has sent nothing since is still at the same prompt.
+    qint64 mReceivedDataCount = 0;
+    qint64 mReceivedDataCountAtOutstanding = 0;
     QTimer* mTimerPasswordModeTimeout = nullptr;
     QTimer* mTimerFailedConnectionRetry = nullptr;
     QElapsedTimer mRecordingChunkTimer;
