@@ -1458,6 +1458,18 @@ private slots:
         QCOMPARE(pRoom->y(), 0);
         QVERIFY2(!mp2dMap->mMapViewOnly, "a brand new map should open ready to edit");
     }
+
+    void test_creatingAMapFromTheMenuWhileAlreadyEditingStaysInEditing()
+    {
+        buildMap();
+        showMapper(false);
+        map()->mapClear();
+        rightClickAt(viewCentre());
+        QVERIFY(pickContextMenuItem(qsl("Create new map")));
+
+        QCOMPARE(map()->mpRoomDB->size(), 1);
+        QVERIFY2(!mp2dMap->mMapViewOnly, "creating a map flipped the mapper into viewing mode");
+    }
 };
 
 #include "MapMouseInteractionTest.moc"
