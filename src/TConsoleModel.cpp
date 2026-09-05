@@ -24,6 +24,7 @@
 #include "Host.h"
 #include "MudletPaths.h"
 #include "mudlet.h"
+#include "MudletVersion.h"
 
 #include <QCoreApplication>
 #include <QDateTime>
@@ -171,7 +172,7 @@ void TConsoleModel::toggleLogging(bool isMessageEnabled)
             logStream << "  <meta http-equiv='content-type' content='text/html; charset=utf-8'>";
             // put the charset as early as possible as the parser MUST restart when it
             // switches away from the ASCII default
-            logStream << "  <meta name='generator' content='" << QCoreApplication::translate("TMainConsole", "Mudlet MUD Client version: %1%2").arg(APP_VERSION, mudlet::self()->mAppBuild) << "'>\n";
+            logStream << "  <meta name='generator' content='" << QCoreApplication::translate("TMainConsole", "Mudlet MUD Client version: %1%2").arg(APP_VERSION, MudletVersion::build()) << "'>\n";
             // Nice to identify what made the file!
             logStream << "  <title>" << QCoreApplication::translate("TMainConsole", "Mudlet, log from %1 profile").arg(mpHost->getName()) << "</title>\n";
             // Web-page title

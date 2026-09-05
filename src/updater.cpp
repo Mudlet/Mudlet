@@ -20,6 +20,7 @@
 #include "updater.h"
 #include "MudletPaths.h"
 #include "mudlet.h"
+#include "MudletVersion.h"
 #include "updater/Feed.h"
 #include "updater/UpdateDialog.h"
 
@@ -363,7 +364,7 @@ void Updater::setupPlatformUpdater()
     // Setup to automatically download the new release when an update is available
     connect(feed.get(), &dblsqd::Feed::ready, this, [=, this]() {
         auto* pMudlet = mudlet::self();
-        if (!pMudlet || pMudlet->developmentVersion) {
+        if (!pMudlet || MudletVersion::development()) {
             return;
         }
 
@@ -797,7 +798,7 @@ bool Updater::shouldShowChangelog()
     return false;
 #endif
 
-    if (mudlet::self()->developmentVersion || !updateAutomatically()) {
+    if (MudletVersion::development() || !updateAutomatically()) {
         return false;
     }
 

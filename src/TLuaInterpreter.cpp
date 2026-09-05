@@ -54,6 +54,7 @@
 #include "dlgTriggerEditor.h"
 #include "mudlet.h"
 #include "MudletSettings.h"
+#include "MudletVersion.h"
 #if defined(INCLUDE_3DMAPPER)
 #include "glwidget_integration.h"
 #endif
@@ -2650,7 +2651,7 @@ int TLuaInterpreter::getMudletVersion(lua_State* L)
     // report back instead of raising - see checkStringArg()
     const int results = [&L, functionName = __func__]() -> int {
         QByteArray version = QByteArray(APP_VERSION).trimmed();
-        const QByteArray build = mudlet::self()->mAppBuild.trimmed().toLocal8Bit();
+        const QByteArray build = MudletVersion::build().trimmed().toLocal8Bit();
 
         QList<QByteArray> const versionData = version.split('.');
         if (versionData.size() != 3) {
@@ -2733,7 +2734,7 @@ int TLuaInterpreter::getMudletVersion(lua_State* L)
             lua_pushinteger(L, revision);
             lua_settable(L, -3);
             lua_pushstring(L, "build");
-            lua_pushstring(L, mudlet::self()->mAppBuild.trimmed().toUtf8().constData());
+            lua_pushstring(L, MudletVersion::build().trimmed().toUtf8().constData());
             lua_settable(L, -3);
         } else { // NOLINT(readability-else-after-return)
             lua_pushstring(L,
@@ -5242,7 +5243,7 @@ int TLuaInterpreter::performHttpRequest(lua_State* L, const char* functionName, 
     }
 
     QNetworkRequest request = QNetworkRequest(url);
-    mudlet::self()->setNetworkRequestDefaults(url, request);
+    MudletVersion::setNetworkRequestDefaults(url, request);
     applyHttpHeaders(L, pos + 3, request);
 
     QByteArray fileToUpload;

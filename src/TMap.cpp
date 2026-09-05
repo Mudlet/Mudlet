@@ -37,6 +37,7 @@
 #include "TLuaInterpreter.h"
 #include "mapInfoContributorManager.h"
 #include "mudlet.h"
+#include "MudletVersion.h"
 
 #include <QBuffer>
 #include <QDataStream>
@@ -2161,7 +2162,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
     }
 
     if (otherProfileVersion > mDefaultVersion) {
-        if (mudlet::self()->releaseVersion || mudlet::self()->publicTestVersion) {
+        if (MudletVersion::release() || MudletVersion::publicTest()) {
             // This is a release/public test version - should not support any map file versions higher that it was built for
             if (fileVersion) {
                 *fileVersion = otherProfileVersion;
@@ -2754,7 +2755,7 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
 
     QNetworkRequest request = QNetworkRequest(url);
     pHost->updateProxySettings(mpNetworkAccessManager);
-    mudlet::self()->setNetworkRequestDefaults(url, request);
+    MudletVersion::setNetworkRequestDefaults(url, request);
 
     mExpectedFileSize = 4000000;
 

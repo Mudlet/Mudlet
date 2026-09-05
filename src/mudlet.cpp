@@ -38,6 +38,7 @@
 #include "TDebugFilterBar.h"
 #include "MudletInstanceCoordinator.h"
 #include "MudletPaths.h"
+#include "MudletVersion.h"
 #include "SpeechRecognizer.h"
 #include "SpeechRecognizerFactory.h"
 #include "TDetachedWindow.h"
@@ -87,7 +88,6 @@
 #include <QSettings>
 #include <QShortcut>
 #include <QSplitter>
-#include <QSslConfiguration>
 #include <QStyleFactory>
 #include <QStyleHints>
 #include <QTableWidget>
@@ -978,19 +978,6 @@ void mudlet::init()
     // Must be after setupConfig() has settled the config root and before anything of this run is written
     rememberFirstLaunch(*MudletSettings::getQSettings(), MudletPaths::getMudletPath(enums::profilesPath), QDateTime::currentDateTime());
 
-    QFile gitShaFile(":/app-build.txt");
-    if (!gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        qWarning() << "mudlet: failed to open app-build.txt for reading:" << gitShaFile.errorString();
-    }
-    const QString gitSha = QString::fromUtf8(gitShaFile.readAll()).trimmed();
-
-    mAppBuild = gitSha;
-    releaseVersion = mAppBuild.isEmpty();
-    publicTestVersion = mAppBuild.startsWith("-ptb");
-    developmentVersion = !releaseVersion && !publicTestVersion;
-
-    scmVersion = qsl("Mudlet ") + QString(APP_VERSION) + gitSha;
-
     mShowIconsOnMenuOriginally = !qApp->testAttribute(Qt::AA_DontShowIconsInMenus);
 
     // Scripts that care whether the player is looking at Mudlet at all - a
@@ -1046,12 +1033,12 @@ void mudlet::init()
 
     setAttribute(Qt::WA_DeleteOnClose);
     const QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    setWindowTitle(scmVersion);
-    if (releaseVersion) {
+    setWindowTitle(MudletVersion::scmVersion());
+    if (MudletVersion::release()) {
         setWindowIcon(QIcon(qsl(":/icons/mudlet.png")));
-    } else if (publicTestVersion) {
+    } else if (MudletVersion::publicTest()) {
         setWindowIcon(QIcon(qsl(":/icons/mudlet_ptb_256px.png")));
-    } else { // developmentVersion
+    } else { // a development build
         setWindowIcon(QIcon(qsl(":/icons/mudlet_dev_256px.png")));
     }
     mpMainToolBar = new QToolBar(this);
@@ -1315,7 +1302,7 @@ void mudlet::init()
     mpMainToolBar->widgetForAction(mpActionMultiView)->setObjectName(mpActionMultiView->objectName());
 
 #if defined(INCLUDE_UPDATER)
-    if (publicTestVersion) {
+    if (MudletVersion::publicTest()) {
         mpActionReportIssue = new QAction(tr("Report issue"), this);
         const QStringList issueReportIcons{"face-uncertain.png", "face-surprise.png", "face-smile.png", "face-sad.png", "face-plain.png"};
         auto randomIcon = QRandomGenerator::global()->bounded(issueReportIcons.size());
@@ -1420,15 +1407,15 @@ void mudlet::init()
 #if defined(INCLUDE_UPDATER)
     // Show the update option if the code is present AND if this is a
     // release OR a public test version, or if you're specifically trying to test Sparkle.
-    dactionUpdate->setVisible(releaseVersion || publicTestVersion || qEnvironmentVariableIsSet("DEV_UPDATER"));
-    dactionChangelog->setVisible(releaseVersion || publicTestVersion || qEnvironmentVariableIsSet("DEV_UPDATER"));
+    dactionUpdate->setVisible(MudletVersion::release() || MudletVersion::publicTest() || qEnvironmentVariableIsSet("DEV_UPDATER"));
+    dactionChangelog->setVisible(MudletVersion::release() || MudletVersion::publicTest() || qEnvironmentVariableIsSet("DEV_UPDATER"));
 
     // Show the report issue option if the updater code is present (as it is
     // less likely to be for: {Linux} distribution packaged versions of Mudlet
     // - or people hacking their own versions and neither of those types are
     // going to want the updater to change things for them) AND only for a
     // public test version:
-    if (publicTestVersion) {
+    if (MudletVersion::publicTest()) {
         dactionReportIssue->setVisible(true);
         connect(mpActionReportIssue.data(), &QAction::triggered, this, &mudlet::slot_reportIssue);
         connect(dactionReportIssue, &QAction::triggered, this, &mudlet::slot_reportIssue);
@@ -1569,7 +1556,7 @@ void mudlet::init()
     // shows its "an update is ready" dialog only after the last window closes,
     // so it must outlive the main window - parent it to the application, not to
     // the window that is about to be destroyed:
-    pUpdater = new Updater(qApp, MudletSettings::getQSettings(), !releaseVersion);
+    pUpdater = new Updater(qApp, MudletSettings::getQSettings(), !MudletVersion::release());
     connect(pUpdater, &Updater::signal_updateAvailable, this, &mudlet::slot_updateAvailable);
     connect(pUpdater, &Updater::signal_updateCheckFailed, this, &mudlet::slot_updateCheckFailed);
     connect(dactionUpdate, &QAction::triggered, this, &mudlet::slot_manualUpdateCheck);
@@ -3527,10 +3514,10 @@ void mudlet::updateMainWindowTitle()
 
     // Set window title based on whether we have an active profile in the main window
     if (!mainWindowActiveProfileName.isEmpty()) {
-        setWindowTitle(qsl("%1 - %2").arg(mainWindowActiveProfileName, scmVersion));
+        setWindowTitle(qsl("%1 - %2").arg(mainWindowActiveProfileName, MudletVersion::scmVersion()));
     } else {
         // No active profiles in main window, show just the version
-        setWindowTitle(scmVersion);
+        setWindowTitle(MudletVersion::scmVersion());
     }
 }
 
@@ -6710,7 +6697,7 @@ bool mudlet::loadEdbeeTheme(const QString& themeName, const QString& themeFile)
 #if defined(INCLUDE_UPDATER)
 void mudlet::checkUpdatesOnStart()
 {
-    if (!qEnvironmentVariableIsSet("MUDLET_TEST_MODE") && (releaseVersion || publicTestVersion || qEnvironmentVariableIsSet("DEV_UPDATER"))) {
+    if (!qEnvironmentVariableIsSet("MUDLET_TEST_MODE") && (MudletVersion::release() || MudletVersion::publicTest() || qEnvironmentVariableIsSet("DEV_UPDATER"))) {
         // Doesn't check for updates during test runs.
         // Otherwise, try and create an updater (which checks for updates online) if
         // this is a release/public test version, or if you are testing Sparkle (env flag set).
@@ -7878,20 +7865,6 @@ void mudlet::sanitizeUtf8Path(QString& originalLocation, const QString& fileName
 }
 #endif
 
-// Enable redirects and HTTPS support for a given url
-void mudlet::setNetworkRequestDefaults(const QUrl& url, QNetworkRequest& request)
-{
-    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
-
-    request.setRawHeader(QByteArray("User-Agent"), QByteArray(qsl("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, mudlet::self()->mAppBuild).toUtf8().constData()));
-#if !defined(QT_NO_SSL)
-    if (url.scheme() == qsl("https")) {
-        const QSslConfiguration config(QSslConfiguration::defaultConfiguration());
-        request.setSslConfiguration(config);
-    }
-#endif
-}
-
 void mudlet::activateProfile(Host* pHost)
 {
     QMap<QString, int> hostNameToTabMap;
@@ -8567,7 +8540,7 @@ void mudlet::closeHostOfClosedDetachedWindow(const QString& profileName)
             if (!mHostManager.getHostCount() && !mIsGoingDown) {
                 disableToolbarButtons();
                 slot_showConnectionDialog();
-                setWindowTitle(scmVersion);
+                setWindowTitle(MudletVersion::scmVersion());
             }
         });
     }
@@ -9131,7 +9104,7 @@ void mudlet::moveProfileFromMainToDetachedWindow(const QString& profileName, int
     if (mpTabBar->count() == 0 && mHostManager.getHostCount() == 0 && !mIsGoingDown) {
         disableToolbarButtons();
         slot_showConnectionDialog();
-        setWindowTitle(scmVersion);
+        setWindowTitle(MudletVersion::scmVersion());
     }
 
     // Update toolbar for the moved profile in the target window

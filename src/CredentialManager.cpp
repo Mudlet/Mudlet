@@ -20,6 +20,7 @@
 
 #include "CredentialManager.h"
 #include "MudletPaths.h"
+#include "MudletVersion.h"
 #include "SecureStringUtils.h"
 #include "utils.h"
 
@@ -389,14 +390,9 @@ void CredentialManager::attemptCollidingMigration(const QString& profileName, co
             const QVersionNumber collidingFormatVersion = QVersionNumber(4, 20, 1);
 
             // Dev/test/PTB builds represent the "next release", so bump version for comparison
-            QFile buildFile(qsl(":/app-build.txt"));
-
-            if (buildFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-                const QString buildSuffix = QString::fromUtf8(buildFile.readAll()).trimmed();
-
-                if (buildSuffix.startsWith(qsl("-dev")) || buildSuffix.startsWith(qsl("-test")) || buildSuffix.startsWith(qsl("-ptb"))) {
-                    appVersion = QVersionNumber(appVersion.majorVersion(), appVersion.minorVersion(), appVersion.microVersion() + 1);
-                }
+            const QString buildSuffix = MudletVersion::build();
+            if (buildSuffix.startsWith(qsl("-dev")) || buildSuffix.startsWith(qsl("-test")) || buildSuffix.startsWith(qsl("-ptb"))) {
+                appVersion = QVersionNumber(appVersion.majorVersion(), appVersion.minorVersion(), appVersion.microVersion() + 1);
             }
 
             if (appVersion > collidingFormatVersion) {
