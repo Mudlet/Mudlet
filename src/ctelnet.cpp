@@ -109,6 +109,24 @@ constexpr auto NETWORK_LATENCY_TIMEOUT = 10s;
 
 constexpr size_t BUFFER_SIZE = 100000L;
 
+// Where the run of ordinary text starting at buffer[from] ends: the index of
+// the first byte after it that processSocketData() handles on its own (the
+// start of a telnet command, a carriage return, a NUL or a bell), or `to` if
+// the run reaches that far. buffer[from] must not be one of those bytes, as
+// the caller steps back one from the result before its loop steps forward.
+static int textRunEnd(const char* buffer, const int from, const int to)
+{
+    int i = from;
+    while (i < to) {
+        const char ch = buffer[i];
+        if (ch == TN_IAC || ch == '\r' || ch == '\0' || ch == TN_BELL) {
+            break;
+        }
+        ++i;
+    }
+    return i;
+}
+
 // Upper bound on a single telnet subnegotiation (IAC SB ... IAC SE). Real ones
 // (GMCP/MSDP/ATCP/...) are far smaller; this only guards against a server that
 // opens an IAC SB and never sends IAC SE, which would otherwise grow the
@@ -5749,16 +5767,17 @@ Some data loss is likely - please mention this problem to the game admins.)",
                 //this could have set receivedGA to true; we'll handle that later
                 command = "";
             }
-        } else {
-            if (ch == TN_BELL) {
-                // detected here rather than in TTextEdit so it fires once per
-                // received bell, not on every screen refresh
-                emit signal_bell();
-            }
-
-            if (ch != '\r' && ch != '\0') {
-                cleandata += ch;
-            }
+        } else if (ch == TN_BELL) {
+            // detected here rather than in TTextEdit so it fires once per
+            // received bell, not on every screen refresh
+            emit signal_bell();
+            cleandata += ch;
+        } else if (ch != '\r' && ch != '\0') {
+            // Nearly all of a read is text that goes straight through, so it
+            // goes across a run at a time rather than a byte at a time:
+            const int runEnd = textRunEnd(buffer, i, datalen);
+            cleandata.append(buffer + i, runEnd - i);
+            i = runEnd - 1;
         }
     MAIN_LOOP_END:;
         if (recvdGA) {
