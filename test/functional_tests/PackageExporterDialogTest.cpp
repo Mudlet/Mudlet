@@ -105,6 +105,13 @@ private:
         return packageName;
     }
 
+    // A package name nothing else on the machine is exporting under. Every
+    // export stages its work in <TempLocation>/mudlet/<package name>, which is
+    // shared with every other Mudlet on the machine and wiped and rebuilt at
+    // the start of each export, so two runs of this test using the same names
+    // would delete each other's staging trees mid-zip.
+    QString packageNamed(const QString& stem) { return notePackageName(qsl("%1-%2").arg(stem).arg(QCoreApplication::applicationPid())); }
+
     void openExporter()
     {
         delete mpExporter;
@@ -569,7 +576,7 @@ private slots:
     // before it writes anything rather than shipping one.
     void test_exportRefusesWhenNothingIsSelected()
     {
-        const QString packageName = notePackageName(qsl("exporter-empty-selection"));
+        const QString packageName = packageNamed(qsl("exporter-empty-selection"));
         makeTrigger(qsl("exporter unselected trigger"), nullptr);
         openExporter();
 
@@ -586,7 +593,7 @@ private slots:
     // the ones it was not do not.
     void test_anExportedPackageBringsItsCheckedItemsBackWhenInstalled()
     {
-        const QString packageName = qsl("exporter-round-trip");
+        const QString packageName = packageNamed(qsl("exporter-round-trip"));
         auto* folder = makeTrigger(qsl("exporter kept folder"), nullptr, true);
         makeTrigger(qsl("exporter kept trigger"), folder);
         auto* dropped = makeTrigger(qsl("exporter dropped trigger"), nullptr);
@@ -633,7 +640,7 @@ private slots:
     // dragged along with a folder the user did not ask for.
     void test_aCheckedChildIsExportedWithoutItsUncheckedFolder()
     {
-        const QString packageName = qsl("exporter-child-only");
+        const QString packageName = packageNamed(qsl("exporter-child-only"));
         auto* folder = makeTrigger(qsl("exporter unchecked folder"), nullptr, true);
         makeTrigger(qsl("exporter checked child"), folder);
 
@@ -658,7 +665,7 @@ private slots:
     // no scheme never opens in a browser, so one is put in front of it.
     void test_thePackageMetadataRoundTripsThroughItsConfigFile()
     {
-        const QString packageName = qsl("exporter-metadata");
+        const QString packageName = packageNamed(qsl("exporter-metadata"));
         mpHost->mInstalledPackages << qsl("exporter-dependency");
         makeTrigger(qsl("exporter metadata trigger"), nullptr);
 
@@ -698,7 +705,7 @@ private slots:
     // normalisation above cannot be a blanket prefix.
     void test_aHelpUrlThatAlreadyHasASchemeIsLeftAlone()
     {
-        const QString packageName = qsl("exporter-help-url");
+        const QString packageName = packageNamed(qsl("exporter-help-url"));
         makeTrigger(qsl("exporter help url trigger"), nullptr);
 
         openExporter();
@@ -717,7 +724,7 @@ private slots:
     // rather than what was written.
     void test_theDescriptionIsTakenFromTheEditorWhenFocusLeavesIt()
     {
-        const QString packageName = qsl("exporter-description");
+        const QString packageName = packageNamed(qsl("exporter-description"));
         const QString typed = qsl("Typed straight into the description box.");
         makeTrigger(qsl("exporter description trigger"), nullptr);
 
@@ -755,7 +762,7 @@ private slots:
     // the package - a folder of them keeps its shape.
     void test_assetFilesAndFoldersAreCarriedIntoThePackage()
     {
-        const QString packageName = qsl("exporter-assets");
+        const QString packageName = packageNamed(qsl("exporter-assets"));
         makeTrigger(qsl("exporter asset trigger"), nullptr);
 
         const QString assetSource = qsl("%1/asset-source").arg(mExportDir);
@@ -782,7 +789,7 @@ private slots:
     // export and says which one, rather than shipping a package without it.
     void test_anAssetThatIsNoLongerThereStopsTheExport()
     {
-        const QString packageName = notePackageName(qsl("exporter-missing-asset"));
+        const QString packageName = packageNamed(qsl("exporter-missing-asset"));
         makeTrigger(qsl("exporter missing asset trigger"), nullptr);
 
         openExporter();
@@ -804,8 +811,7 @@ private slots:
     // opens it, so answering no after that point is no answer at all.
     void test_decliningTheOverwritePromptLeavesTheExistingFileAlone()
     {
-        const QString packageName = qsl("exporter-overwrite");
-        notePackageName(packageName);
+        const QString packageName = packageNamed(qsl("exporter-overwrite"));
         makeTrigger(qsl("exporter overwrite trigger"), nullptr);
         const QByteArray sentinel("not a package at all");
         QVERIFY(writeTextFile(packagePath(packageName), QString::fromUtf8(sentinel)));
@@ -876,7 +882,7 @@ private slots:
         QCOMPARE(itemNamed(triggersTop(), qsl("exporter outsider"))->checkState(0), Qt::Unchecked);
 
         // the icon the package declared is carried into whatever is exported next
-        const QString rebuiltName = qsl("exporter-rebuilt");
+        const QString rebuiltName = packageNamed(qsl("exporter-rebuilt"));
         QVERIFY2(runExport(rebuiltName), "the export never finished");
         settleSaves();
         auto [installed, reason] = mpHost->installPackage(packagePath(rebuiltName), enums::PackageModuleType::Package);
@@ -923,7 +929,7 @@ private slots:
     // folder and installs what it made rather than leaving a file behind.
     void test_moduleCreationModeSavesToTheProfileAndInstallsWhatItMade()
     {
-        const QString moduleName = notePackageName(qsl("exporter-module"));
+        const QString moduleName = packageNamed(qsl("exporter-module"));
         makeTrigger(qsl("exporter module trigger"), nullptr);
 
         openExporter();
