@@ -19,6 +19,7 @@
 
 #include "MudletSettings.h"
 
+#include "MudletPaths.h"
 #include "utils.h"
 
 #include <QCoreApplication>
@@ -35,7 +36,7 @@ QSettings* MudletSettings::getQSettings()
     if (smpSettings) {
         return smpSettings;
     }
-    const QString configRoot = utils::getMudletPath(enums::mainPath);
+    const QString configRoot = MudletPaths::getMudletPath(enums::mainPath);
     // Callers guard on null until setupConfig() has settled the root; a root of
     // "" would otherwise put the file at /Mudlet.ini
     if (configRoot.isEmpty()) {

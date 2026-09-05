@@ -48,7 +48,7 @@
 #include <QSignalSpy>
 #include <QTemporaryDir>
 
-#include "utils.h"
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "MudletInstanceCoordinator.h"
 #include "VoskRecognizer.h"
@@ -90,7 +90,7 @@ private slots:
         QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
         qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
 
-        // VoskRecognizer's path helpers go through utils::getMudletPath(),
+        // VoskRecognizer's path helpers go through MudletPaths::getMudletPath(),
         // which dereferences mudlet::self()
         mudlet::start();
         mudlet::self()->setupConfig();

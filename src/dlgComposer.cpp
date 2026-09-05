@@ -25,11 +25,11 @@
 
 
 #include "Host.h"
+#include "MudletPaths.h"
 #include "TBuffer.h"
 #include "TEncodingHelper.h"
 #include "TMainConsole.h"
 #include "mudlet.h"
-#include "utils.h"
 
 #include <QKeyEvent>
 #include <QMenu>
@@ -297,7 +297,7 @@ void dlgComposer::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
         //: Context menu action to remove a word from the user's personal dictionary
         action_removeWord = new QAction(tr("Remove from user dictionary"));
         action_removeWord->setEnabled(false);
-        if (utils::usingMudletDictionaries()) {
+        if (MudletPaths::usingMudletDictionaries()) {
             /*:
             This separator line in the spell-check context menu divides suggestions
             from the user's personal dictionary (above) and Mudlet's built-in dictionary (below).

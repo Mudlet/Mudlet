@@ -25,6 +25,7 @@
 #include "ui_dlgPackageExporter.h"
 
 #include "Host.h"
+#include "MudletPaths.h"
 #include "MudletSettings.h"
 #include "TAction.h"
 #include "TAlias.h"
@@ -32,7 +33,6 @@
 #include "TScript.h"
 #include "TTimer.h"
 #include "TTrigger.h"
-#include "utils.h"
 #include "XMLexport.h"
 
 #include <QtConcurrentRun>
@@ -535,7 +535,7 @@ void dlgPackageExporter::slot_packageChanged(int index)
         }
     }
 
-    const QString packagePath{utils::getMudletPath(enums::profileHomePath, mpHost->getName())};
+    const QString packagePath{MudletPaths::getMudletPath(enums::profileHomePath, mpHost->getName())};
     //fill package metadata
     mPackageIconPath.clear();
     QMap<QString, QString> const packageInfo = mpHost->mPackageInfo.value(packageName);
@@ -693,7 +693,7 @@ bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
             //during package creation it uses the profile folder. But once the package is created it will use
             //profile folder/packagename
             QString plainText{mPlainDescription};
-            const QString profilePath{utils::getMudletPath(enums::profileHomePath, mpHost->getName())};
+            const QString profilePath{MudletPaths::getMudletPath(enums::profileHomePath, mpHost->getName())};
             //$packagePath will be replaced by the resource path if an existing package is selected
             if (ui->packageList->currentIndex() != 0) {
                 const QString packageName = ui->packageList->currentText();
@@ -867,7 +867,7 @@ void dlgPackageExporter::slot_exportPackage()
     // if packageName changed allow to create a new package in the same path
     if (mIsModuleCreationMode) {
         // Modules default to the profile directory unless the user picked a save location
-        const QString moduleDir = mPackagePath.isEmpty() ? utils::getMudletPath(enums::profileHomePath, mpHost->getName()) : mPackagePath;
+        const QString moduleDir = mPackagePath.isEmpty() ? MudletPaths::getMudletPath(enums::profileHomePath, mpHost->getName()) : mPackagePath;
         mPackagePathFileName = qsl("%1/%2.mpackage").arg(moduleDir, mPackageName);
     } else {
         mPackagePathFileName = qsl("%1/%2.mpackage").arg(getActualPath(), mPackageName);

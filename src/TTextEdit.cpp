@@ -46,6 +46,7 @@
 #include <cmath>
 #include <QtEvents>
 #include <QtGlobal>
+#include <QtMath>
 #include <QAccessible>
 #include <QAccessibleTextCursorEvent>
 #include <QAccessibleTextInsertEvent>
@@ -78,7 +79,6 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 , mEnableBlinkText(pH->getEnableBlinkText())
 , mMouseWheelRemainder()
 {
-    mLastClickTimer.start();
     Q_ASSERT_X(mpHost, "TTextEdit::TTextEdit(...)", "mpHost is a nullptr");
     Q_ASSERT_X(mSearchHighlightFgColor != mSearchHighlightBgColor, "TTextEdit::TTextEdit(...)", "search highlight foreground and background colors must not be the same");
     setFont(mpHost->getDisplayFont());
@@ -1231,7 +1231,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     // the bottom cell - descenders and underscores do at many font sizes - has
     // somewhere to go instead of being cut off by the edge of the pixmap.
     const int pixmapHeight = (mScreenHeight + 1) * mFontHeight;
-    const QSize surfaceSize(static_cast<int>(mScreenWidth * mFontWidth * dpr), static_cast<int>(pixmapHeight * dpr));
+    const QSize surfaceSize = smallestEnclosingSurfaceSize(mScreenWidth, mFontWidth, pixmapHeight, dpr);
     // Building a pane-sized pixmap costs the same whether one line changed or
     // all of them did, so it is only done when there is no buffer to reuse -
     // the pane changed size or resolution, or nothing has been painted yet.
@@ -1274,7 +1274,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
         mScrollVector = 0;
         noScroll = true;
     }
-    if ((r.height() < rect().height()) && (lineOffset > 0) && (mScreenWidth * mFontWidth * dpr <= mScreenMap.width()) && (pixmapHeight * dpr <= mScreenMap.height())) {
+    if ((r.height() < rect().height()) && (lineOffset > 0) && (mScreenMap.width() >= surfaceSize.width()) && (mScreenMap.height() >= surfaceSize.height())) {
         p.drawPixmap(0, 0, mScreenMap);
         reusedCachedScreenContent = true;
         from = y_top;
@@ -1432,6 +1432,11 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
             mIsBlinkClientRegistered = false;
         }
     }
+}
+
+QSize TTextEdit::smallestEnclosingSurfaceSize(const int screenWidth, const int fontWidth, const int pixmapHeight, const qreal devicePixelRatio)
+{
+    return QSize(qCeil(screenWidth * fontWidth * devicePixelRatio), qCeil(pixmapHeight * devicePixelRatio));
 }
 
 bool TTextEdit::shouldRegisterBlinkClient(const bool enableBlinkText, const bool hasBlinkingContentInRedrawnRegion, const bool isBlinkClientRegistered, const bool reusedCachedScreenContent)
@@ -2134,7 +2139,9 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             forceUpdate();
         }
         mSelectedRegion = QRegion(0, 0, 0, 0);
-        if (mLastClickTimer.elapsed() < 300) {
+        // Invalid until the first click, so a click soon after the console
+        // appears does not count as the second half of a double-click:
+        if (mLastClickTimer.isValid() && mLastClickTimer.elapsed() < 300) {
             mMouseTracking = true;
             mMouseTrackLevel++;
             if (mMouseTrackLevel > 3) {
@@ -2951,7 +2958,7 @@ void TTextEdit::showEvent(QShowEvent* event)
 {
     updateScreenView();
     mScrollVector = 0;
-    repaint();
+    update();
     QWidget::showEvent(event);
 }
 

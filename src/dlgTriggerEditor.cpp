@@ -29,6 +29,7 @@
 
 #include "Host.h"
 #include "LuaInterface.h"
+#include "MudletPaths.h"
 #include "TConsole.h"
 #include "TDebug.h"
 #include "TEasyButtonBar.h"
@@ -3970,51 +3971,51 @@ void dlgTriggerEditor::activeToggle_trigger()
         if (pT->isActive()) {
             itemDescription = descActiveFilterChain;
             if (pT->ancestorsActive()) {
-                icon.addPixmap(QPixmap(qsl(":/icons/filter.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/filter.png"));
             } else {
-                icon.addPixmap(QPixmap(qsl(":/icons/filter-grey.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/filter-grey.png"));
                 itemDescription = descInactiveParent.arg(itemDescription);
             }
         } else {
             itemDescription = descInactiveFilterChain;
             if (pT->ancestorsActive()) {
-                icon.addPixmap(QPixmap(qsl(":/icons/filter-locked.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/filter-locked.png"));
             } else {
-                icon.addPixmap(QPixmap(qsl(":/icons/filter-grey-locked.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/filter-grey-locked.png"));
             }
         }
     } else if (pT->isFolder()) {
         if (pT->isActive()) {
             itemDescription = descActiveFolder;
             if (pT->ancestorsActive()) {
-                icon.addPixmap(QPixmap(qsl(":/icons/folder-blue.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/folder-blue.png"));
             } else {
-                icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/folder-grey.png"));
                 itemDescription = descInactiveParent.arg(itemDescription);
             }
         } else {
             itemDescription = descInactiveFolder;
             if (pT->ancestorsActive()) {
-                icon.addPixmap(QPixmap(qsl(":/icons/folder-blue-locked.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/folder-blue-locked.png"));
             } else {
-                icon.addPixmap(QPixmap(qsl(":/icons/folder-grey-locked.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/folder-grey-locked.png"));
             }
         }
     } else {
         if (pT->isActive()) {
             itemDescription = descActive;
             if (pT->ancestorsActive()) {
-                icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
             } else {
-                icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
                 itemDescription = descInactiveParent.arg(itemDescription);
             }
         } else {
             itemDescription = descInactive;
             if (pT->ancestorsActive()) {
-                icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
             } else {
-                icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox-grey.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/tag_checkbox-grey.png"));
             }
         }
     }
@@ -4024,7 +4025,7 @@ void dlgTriggerEditor::activeToggle_trigger()
         showError(tr(R"(<p>Unable to activate "<tt>%1</tt>": %2</p>
                      <p><i>You will need to reactivate this after the problem has been corrected.</i></p>)")
                           .arg(pT->getName().toHtmlEscaped(), pT->getError()));
-        icon.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
+        icon = cachedIcon(qsl(":/icons/tools-report-bug.png"));
         itemDescription = descError;
     }
     pItem->setIcon(0, icon);
@@ -4159,59 +4160,59 @@ void dlgTriggerEditor::children_icon_triggers(QTreeWidgetItem* pWidgetItemParent
                 if (pT->isActive()) {
                     itemDescription = descActiveFilterChain;
                     if (pT->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/filter.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/filter.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/filter-grey.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/filter-grey.png"));
                         itemDescription = descInactiveParent.arg(itemDescription);
                     }
                 } else {
                     itemDescription = descInactiveFilterChain;
                     if (pT->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/filter-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/filter-locked.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/filter-grey-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/filter-grey-locked.png"));
                     }
                 }
             } else if (pT->isFolder()) {
                 if (pT->isActive()) {
                     itemDescription = descActiveFolder;
                     if (pT->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-blue.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-blue.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-grey.png"));
                         itemDescription = descInactiveParent.arg(itemDescription);
                     }
                 } else {
                     itemDescription = descInactiveFolder;
                     if (pT->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-blue-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-blue-locked.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-grey-locked.png"));
                     }
                 }
             } else {
                 if (pT->isActive()) {
                     itemDescription = descActive;
                     if (pT->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
                         itemDescription = descInactiveParent.arg(itemDescription);
                     }
 
                 } else {
                     itemDescription = descInactive;
                     if (pT->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox-grey.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox-grey.png"));
                     }
                 }
             }
             pItem->setIcon(0, icon);
         } else {
             QIcon iconError;
-            iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
+            iconError = cachedIcon(qsl(":/icons/tools-report-bug.png"));
             itemDescription = descError;
             pItem->setIcon(0, iconError);
             showError(pT->getError());
@@ -4260,24 +4261,24 @@ void dlgTriggerEditor::activeToggle_timer()
             itemDescription = descActiveFolder;
             if (pT->ancestorsActive()) {
                 if (!pT->mPackageName.isEmpty()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/folder-brown.png"));
                 } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-green.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/folder-green.png"));
                 }
             } else {
-                icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/folder-grey.png"));
                 itemDescription = descInactiveParent.arg(itemDescription);
             }
         } else {
             itemDescription = descInactiveFolder;
             if (pT->ancestorsActive()) {
                 if (!pT->mPackageName.isEmpty()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/folder-brown-locked.png"));
                 } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-green-locked.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/folder-green-locked.png"));
                 }
             } else {
-                icon.addPixmap(QPixmap(qsl(":/icons/folder-grey-locked.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/folder-grey-locked.png"));
             }
         }
     } else {
@@ -4287,18 +4288,18 @@ void dlgTriggerEditor::activeToggle_timer()
                 pT->enableTimer(pT->getID());
                 itemDescription = descActiveOffsetTimer;
                 if (pT->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-on.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/offsettimer-on.png"));
                 } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-on-grey.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/offsettimer-on-grey.png"));
                     itemDescription = descInactiveParent.arg(itemDescription);
                 }
             } else {
                 pT->disableTimer(pT->getID());
                 itemDescription = descInactiveOffsetTimer;
                 if (pT->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-off.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/offsettimer-off.png"));
                 } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-off-grey.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/offsettimer-off-grey.png"));
                 }
             }
         } else {
@@ -4306,14 +4307,14 @@ void dlgTriggerEditor::activeToggle_timer()
                 pT->enableTimer(pT->getID());
                 itemDescription = descActive;
                 if (pT->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
                 } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
                     itemDescription = descInactiveParent.arg(itemDescription);
                 }
             } else {
                 pT->disableTimer(pT->getID());
-                icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
                 itemDescription = descInactive;
             }
         }
@@ -4324,7 +4325,7 @@ void dlgTriggerEditor::activeToggle_timer()
         showError(tr(R"(<p><b>Unable to activate "<tt>%1</tt>": %2.</b></p>
                      <p><i>You will need to reactivate this after the problem has been corrected.</i></p>)")
                           .arg(pT->getName().toHtmlEscaped(), pT->getError()));
-        icon.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
+        icon = cachedIcon(qsl(":/icons/tools-report-bug.png"));
         itemDescription = descError;
     }
     pItem->setIcon(0, icon);
@@ -4362,16 +4363,16 @@ void dlgTriggerEditor::children_icon_timer(QTreeWidgetItem* pWidgetItemParent)
                 itemDescription = (itemActive ? descActiveFolder : descInactiveFolder);
                 if (itemActive) {
                     if (pT->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-green.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-green.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-grey.png"));
                         itemDescription = descInactiveParent.arg(itemDescription);
                     }
                 } else {
                     if (pT->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-green-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-green-locked.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-grey-locked.png"));
                     }
                 }
             } else {
@@ -4379,17 +4380,17 @@ void dlgTriggerEditor::children_icon_timer(QTreeWidgetItem* pWidgetItemParent)
                     if (pT->shouldBeActive()) {
                         itemDescription = descActiveOffsetTimer;
                         if (pT->ancestorsActive()) {
-                            icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-on.png")), QIcon::Normal, QIcon::Off);
+                            icon = cachedIcon(qsl(":/icons/offsettimer-on.png"));
                         } else {
-                            icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-on-grey.png")), QIcon::Normal, QIcon::Off);
+                            icon = cachedIcon(qsl(":/icons/offsettimer-on-grey.png"));
                             itemDescription = descInactiveParent.arg(itemDescription);
                         }
                     } else {
                         itemDescription = descInactiveOffsetTimer;
                         if (pT->ancestorsActive()) {
-                            icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-off.png")), QIcon::Normal, QIcon::Off);
+                            icon = cachedIcon(qsl(":/icons/offsettimer-off.png"));
                         } else {
-                            icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-off-grey.png")), QIcon::Normal, QIcon::Off);
+                            icon = cachedIcon(qsl(":/icons/offsettimer-off-grey.png"));
                             itemDescription = descInactiveParent.arg(itemDescription);
                         }
                     }
@@ -4397,17 +4398,17 @@ void dlgTriggerEditor::children_icon_timer(QTreeWidgetItem* pWidgetItemParent)
                     if (itemActive) {
                         itemDescription = descActive;
                         if (pT->ancestorsActive()) {
-                            icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                            icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
                         } else {
-                            icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                            icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
                             itemDescription = descInactiveParent.arg(itemDescription);
                         }
                     } else {
                         itemDescription = descInactive;
                         if (pT->ancestorsActive()) {
-                            icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                            icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
                         } else {
-                            icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox-grey.png")), QIcon::Normal, QIcon::Off);
+                            icon = cachedIcon(qsl(":/icons/tag_checkbox-grey.png"));
                         }
                     }
                 }
@@ -4415,7 +4416,7 @@ void dlgTriggerEditor::children_icon_timer(QTreeWidgetItem* pWidgetItemParent)
             pItem->setIcon(0, icon);
         } else {
             QIcon iconError;
-            iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
+            iconError = cachedIcon(qsl(":/icons/tools-report-bug.png"));
             itemDescription = descError;
             pItem->setIcon(0, iconError);
             showError(pT->getError());
@@ -4446,23 +4447,23 @@ void dlgTriggerEditor::activeToggle_alias()
 
     if (pT->isFolder()) {
         if (pT->isActive()) {
-            icon.addPixmap(QPixmap(qsl(":/icons/folder-violet.png")), QIcon::Normal, QIcon::Off);
+            icon = cachedIcon(qsl(":/icons/folder-violet.png"));
             itemDescription = descActiveFolder;
         } else {
-            icon.addPixmap(QPixmap(qsl(":/icons/folder-violet-locked.png")), QIcon::Normal, QIcon::Off);
+            icon = cachedIcon(qsl(":/icons/folder-violet-locked.png"));
             itemDescription = descInactiveFolder;
         }
     } else {
         if (pT->isActive()) {
             itemDescription = descActive;
             if (pT->ancestorsActive()) {
-                icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
             } else {
-                icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
                 itemDescription = descInactiveParent.arg(itemDescription);
             }
         } else {
-            icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+            icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
             itemDescription = descInactive;
         }
     }
@@ -4472,7 +4473,7 @@ void dlgTriggerEditor::activeToggle_alias()
         showError(tr(R"(<p><b>Unable to activate "<tt>%1</tt>"; %2.</b></p>
                      <p><i>You will need to reactivate this after the problem has been corrected.</i></p>)")
                           .arg(pT->getName().toHtmlEscaped(), pT->getError()));
-        icon.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
+        icon = cachedIcon(qsl(":/icons/tools-report-bug.png"));
         itemDescription = descError;
     }
     pItem->setIcon(0, icon);
@@ -4508,42 +4509,42 @@ void dlgTriggerEditor::children_icon_alias(QTreeWidgetItem* pWidgetItemParent)
                 if (pT->isActive()) {
                     itemDescription = descActiveFolder;
                     if (pT->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-violet.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-violet.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-grey.png"));
                         itemDescription = descInactiveParent.arg(itemDescription);
                     }
                 } else {
                     itemDescription = descInactiveFolder;
                     if (pT->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-violet-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-violet-locked.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-grey-locked.png"));
                     }
                 }
             } else {
                 if (pT->isActive()) {
                     itemDescription = descActive;
                     if (pT->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
                         itemDescription = descInactiveParent.arg(itemDescription);
                     }
 
                 } else {
                     itemDescription = descInactive;
                     if (pT->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox-grey.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox-grey.png"));
                     }
                 }
             }
             pItem->setIcon(0, icon);
         } else {
             QIcon iconError;
-            iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
+            iconError = cachedIcon(qsl(":/icons/tools-report-bug.png"));
             itemDescription = descError;
             pItem->setIcon(0, iconError);
             showError(pT->getError());
@@ -4575,23 +4576,23 @@ void dlgTriggerEditor::activeToggle_script()
 
     if (pT->isFolder()) {
         if (pT->isActive()) {
-            icon.addPixmap(QPixmap(qsl(":/icons/folder-orange.png")), QIcon::Normal, QIcon::Off);
+            icon = cachedIcon(qsl(":/icons/folder-orange.png"));
             itemDescription = descActiveFolder;
         } else {
-            icon.addPixmap(QPixmap(qsl(":/icons/folder-orange-locked.png")), QIcon::Normal, QIcon::Off);
+            icon = cachedIcon(qsl(":/icons/folder-orange-locked.png"));
             itemDescription = descInactiveFolder;
         }
     } else {
         if (pT->isActive()) {
             itemDescription = descActive;
             if (pT->ancestorsActive()) {
-                icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
             } else {
-                icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
                 itemDescription = descInactiveParent.arg(itemDescription);
             }
         } else {
-            icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+            icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
             itemDescription = descInactive;
         }
     }
@@ -4601,7 +4602,7 @@ void dlgTriggerEditor::activeToggle_script()
         showError(tr(R"(<p><b>Unable to activate "<tt>%1</tt>"; %2.</b></p>
                      <p><i>You will need to reactivate this after the problem has been corrected.</i></p>)")
                           .arg(pT->getName().toHtmlEscaped(), pT->getError()));
-        icon.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
+        icon = cachedIcon(qsl(":/icons/tools-report-bug.png"));
         itemDescription = descError;
     }
     pItem->setIcon(0, icon);
@@ -4636,41 +4637,41 @@ void dlgTriggerEditor::children_icon_script(QTreeWidgetItem* pWidgetItemParent)
                 if (pT->isActive()) {
                     itemDescription = descActiveFolder;
                     if (pT->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-orange.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-orange.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-grey.png"));
                         itemDescription = descInactiveParent.arg(itemDescription);
                     }
                 } else {
                     itemDescription = descInactiveFolder;
                     if (pT->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-orange-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-orange-locked.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-grey-locked.png"));
                     }
                 }
             } else {
                 if (pT->isActive()) {
                     itemDescription = descActive;
                     if (pT->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
                         itemDescription = descInactiveParent.arg(itemDescription);
                     }
                 } else {
                     itemDescription = descInactive;
                     if (pT->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox-grey.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox-grey.png"));
                     }
                 }
             }
             pItem->setIcon(0, icon);
         } else {
             QIcon iconError;
-            iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
+            iconError = cachedIcon(qsl(":/icons/tools-report-bug.png"));
             itemDescription = descError;
             pItem->setIcon(0, iconError);
             showError(pT->getError());
@@ -4717,44 +4718,44 @@ void dlgTriggerEditor::activeToggle_action()
             // the item is a package/module as those are not expected to have any parents to
             // be inactive.
             if (itemActive) {
-                icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/folder-grey.png"));
                 itemDescription = descInactiveParent.arg(itemDescription);
             } else {
-                icon.addPixmap(QPixmap(qsl(":/icons/folder-grey-locked.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/folder-grey-locked.png"));
             }
         } else if (!pT->mPackageName.isEmpty()) {
             // Has a package name - is a module or package master folder
             if (itemActive) {
-                icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/folder-brown.png"));
             } else {
-                icon.addPixmap(QPixmap(qsl(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/folder-brown-locked.png"));
             }
         } else if (!pT->getParent() || !pT->getParent()->mPackageName.isEmpty()) {
             // Does not have a parent or the parent has a package name - is a toolbar
             if (itemActive) {
-                icon.addPixmap(QPixmap(qsl(":/icons/folder-yellow.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/folder-yellow.png"));
             } else {
-                icon.addPixmap(QPixmap(qsl(":/icons/folder-yellow-locked.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/folder-yellow-locked.png"));
             }
         } else {
             // Must be a menu
             if (itemActive) {
-                icon.addPixmap(QPixmap(qsl(":/icons/folder-cyan.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/folder-cyan.png"));
             } else {
-                icon.addPixmap(QPixmap(qsl(":/icons/folder-cyan-locked.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/folder-cyan-locked.png"));
             }
         }
     } else {
         if (itemActive) {
             itemDescription = descActive;
             if (pT->ancestorsActive()) {
-                icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
             } else {
-                icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
                 itemDescription = descInactiveParent.arg(itemDescription);
             }
         } else {
-            icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+            icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
             itemDescription = descInactive;
         }
     }
@@ -4764,7 +4765,7 @@ void dlgTriggerEditor::activeToggle_action()
         showError(tr(R"(<p><b>Unable to activate "<tt>%1</tt>"; %2.</b></p>
                      <p><i>You will need to reactivate this after the problem has been corrected.</i></p>)")
                           .arg(pT->getName().toHtmlEscaped(), pT->getError()));
-        icon.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
+        icon = cachedIcon(qsl(":/icons/tools-report-bug.png"));
         itemDescription = descError;
     }
     pItem->setIcon(0, icon);
@@ -4804,57 +4805,57 @@ void dlgTriggerEditor::children_icon_action(QTreeWidgetItem* pWidgetItemParent)
                     // Has a package name - is a module or package master
                     // folder
                     if (pT->isActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-brown.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-brown-locked.png"));
                     }
                 } else if (!pT->ancestorsActive()) {
                     if (pT->isActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-grey.png"));
                         itemDescription = descInactiveParent.arg(itemDescription);
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-grey-locked.png"));
                     }
                 } else if (!pT->getParent() || !pT->getParent()->mPackageName.isEmpty()) {
                     // Does not have a parent or the parent has a package name
                     // so the parent is a module or package master folder - so
                     // this is a toolbar:
                     if (pT->isActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-yellow.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-yellow.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-yellow-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-yellow-locked.png"));
                     }
                 } else {
                     // Must be a menu
                     if (pT->isActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-cyan.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-cyan.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-cyan-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-cyan-locked.png"));
                     }
                 }
             } else {
                 if (pT->isActive()) {
                     itemDescription = descActive;
                     if (pT->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
                         itemDescription = descInactiveParent.arg(itemDescription);
                     }
 
                 } else {
                     itemDescription = descInactive;
                     if (pT->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox-grey.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox-grey.png"));
                     }
                 }
             }
             pItem->setIcon(0, icon);
         } else {
             QIcon iconError;
-            iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
+            iconError = cachedIcon(qsl(":/icons/tools-report-bug.png"));
             itemDescription = descError;
             pItem->setIcon(0, iconError);
             showError(pT->getError());
@@ -4888,34 +4889,34 @@ void dlgTriggerEditor::activeToggle_key()
         if (pT->isActive()) {
             itemDescription = descActiveFolder;
             if (pT->ancestorsActive()) {
-                icon.addPixmap(QPixmap(qsl(":/icons/folder-pink.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/folder-pink.png"));
             } else {
-                icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/folder-grey.png"));
                 itemDescription = descInactiveParent.arg(itemDescription);
             }
         } else {
             itemDescription = descInactiveFolder;
             if (pT->ancestorsActive()) {
-                icon.addPixmap(QPixmap(qsl(":/icons/folder-pink-locked.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/folder-pink-locked.png"));
             } else {
-                icon.addPixmap(QPixmap(qsl(":/icons/folder-grey-locked.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/folder-grey-locked.png"));
             }
         }
     } else {
         if (pT->isActive()) {
             itemDescription = descActive;
             if (pT->ancestorsActive()) {
-                icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
             } else {
-                icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
                 itemDescription = descInactiveParent.arg(itemDescription);
             }
         } else {
             itemDescription = descInactive;
             if (pT->ancestorsActive()) {
-                icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
             } else {
-                icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox-grey.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/tag_checkbox-grey.png"));
             }
         }
     }
@@ -4925,7 +4926,7 @@ void dlgTriggerEditor::activeToggle_key()
         pItem->setText(0, pT->getName());
     } else {
         QIcon iconError;
-        iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
+        iconError = cachedIcon(qsl(":/icons/tools-report-bug.png"));
         itemDescription = descError;
         pItem->setIcon(0, iconError);
     }
@@ -4936,7 +4937,7 @@ void dlgTriggerEditor::activeToggle_key()
         showError(tr(R"(<p><b>Unable to activate "<tt>%1</tt>"; %2.</b></p>
                      <p><i>You will need to reactivate this after the problem has been corrected.</i></p>)")
                           .arg(pT->getName().toHtmlEscaped(), pT->getError()));
-        icon.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
+        icon = cachedIcon(qsl(":/icons/tools-report-bug.png"));
         itemDescription = descError;
     }
 
@@ -4969,42 +4970,42 @@ void dlgTriggerEditor::children_icon_key(QTreeWidgetItem* pWidgetItemParent)
                 if (pT->isActive()) {
                     itemDescription = descActiveFolder;
                     if (pT->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-pink.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-pink.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-grey.png"));
                         itemDescription = descInactiveParent.arg(itemDescription);
                     }
                 } else {
                     itemDescription = descInactiveFolder;
                     if (pT->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-pink-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-pink-locked.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-grey-locked.png"));
                     }
                 }
             } else {
                 if (pT->isActive()) {
                     itemDescription = descActive;
                     if (pT->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
                         itemDescription = descInactiveParent.arg(itemDescription);
                     }
 
                 } else {
                     itemDescription = descInactive;
                     if (pT->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox-grey.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox-grey.png"));
                     }
                 }
             }
             pItem->setIcon(0, icon);
         } else {
             QIcon iconError;
-            iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
+            iconError = cachedIcon(qsl(":/icons/tools-report-bug.png"));
             itemDescription = descError;
             pItem->setIcon(0, iconError);
             showError(pT->getError());
@@ -5966,17 +5967,17 @@ void dlgTriggerEditor::saveTrigger()
             if (pT->isActive()) {
                 itemDescription = descActiveFilterChain;
                 if (pT->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/filter.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/filter.png"));
                 } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/filter-grey.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/filter-grey.png"));
                     itemDescription = descInactiveParent.arg(itemDescription);
                 }
             } else {
                 itemDescription = descInactiveFilterChain;
                 if (pT->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/filter-locked.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/filter-locked.png"));
                 } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/filter-grey-locked.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/filter-grey-locked.png"));
                 }
             }
         } else if (pT->isFolder()) {
@@ -5984,46 +5985,46 @@ void dlgTriggerEditor::saveTrigger()
                 if (pT->isActive()) {
                     itemDescription = descActiveFolder;
                     if (pT->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-brown.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-grey.png"));
                         itemDescription = descInactiveParent.arg(itemDescription);
                     }
                 } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/folder-brown-locked.png"));
                     itemDescription = descInactiveFolder;
                 }
             } else if (pT->isActive()) {
                 itemDescription = descActiveFolder;
                 if (pT->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-blue.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/folder-blue.png"));
                 } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/folder-grey.png"));
                     itemDescription = descInactiveParent.arg(itemDescription);
                 }
             } else {
                 itemDescription = descInactiveFolder;
                 if (pT->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-blue-locked.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/folder-blue-locked.png"));
                 } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-grey-locked.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/folder-grey-locked.png"));
                 }
             }
         } else {
             if (pT->isActive()) {
                 itemDescription = descActive;
                 if (pT->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
                 } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
                     itemDescription = descInactiveParent.arg(itemDescription);
                 }
             } else {
                 itemDescription = descInactive;
                 if (pT->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
                 } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox-grey.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/tag_checkbox-grey.png"));
                 }
             }
         }
@@ -6035,27 +6036,27 @@ void dlgTriggerEditor::saveTrigger()
                     if (pT->shouldBeActive()) {
                         itemDescription = descActiveFolder;
                         if (pT->ancestorsActive()) {
-                            icon.addPixmap(QPixmap(qsl(":/icons/folder-blue.png")), QIcon::Normal, QIcon::Off);
+                            icon = cachedIcon(qsl(":/icons/folder-blue.png"));
                         } else {
-                            icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                            icon = cachedIcon(qsl(":/icons/folder-grey.png"));
                             itemDescription = descInactiveParent.arg(itemDescription);
                         }
                     } else {
                         itemDescription = descInactiveFolder;
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-blue-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-blue-locked.png"));
                     }
                 } else {
                     if (pT->shouldBeActive()) {
                         itemDescription = descActive;
                         if (pT->ancestorsActive()) {
-                            icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                            icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
                         } else {
-                            icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                            icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
                             itemDescription = descInactiveParent.arg(itemDescription);
                         }
                     } else {
                         itemDescription = descInactive;
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
                     }
                 }
                 pItem->setIcon(0, icon);
@@ -6072,7 +6073,7 @@ void dlgTriggerEditor::saveTrigger()
         } else {
             QIcon iconError;
             pItem->setText(0, name);
-            iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
+            iconError = cachedIcon(qsl(":/icons/tools-report-bug.png"));
             itemDescription = descError;
             pItem->setIcon(0, iconError);
             pT->setIsActive(false);
@@ -6138,30 +6139,30 @@ void dlgTriggerEditor::saveTimer()
                 if (pT->isActive()) {
                     itemDescription = descActiveFolder;
                     if (pT->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-brown.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-grey.png"));
                         itemDescription = descInactiveParent.arg(itemDescription);
                     }
                 } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/folder-brown-locked.png"));
                     itemDescription = descInactiveFolder;
                 }
             } else {
                 if (pT->shouldBeActive()) {
                     itemDescription = descActiveFolder;
                     if (pT->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-green.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-green.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-grey.png"));
                         itemDescription = descInactiveParent.arg(itemDescription);
                     }
                 } else {
                     itemDescription = descInactiveFolder;
                     if (pT->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-green-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-green-locked.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-grey-locked.png"));
                     }
                 }
             }
@@ -6169,35 +6170,35 @@ void dlgTriggerEditor::saveTimer()
             if (pT->shouldBeActive()) {
                 itemDescription = descActiveOffsetTimer;
                 if (pT->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-on.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/offsettimer-on.png"));
                 } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-on-grey.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/offsettimer-on-grey.png"));
                     itemDescription = descInactiveParent.arg(itemDescription);
                 }
             } else {
                 itemDescription = descInactiveOffsetTimer;
                 if (pT->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-off.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/offsettimer-off.png"));
                 } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-off-grey.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/offsettimer-off-grey.png"));
                 }
             }
         } else {
             if (pT->shouldBeActive()) {
                 itemDescription = descActive;
                 if (pT->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
                 } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
                     itemDescription = descInactiveParent.arg(itemDescription);
                 }
                 pT->setIsActive(true);
             } else {
                 itemDescription = descInactive;
                 if (pT->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
                 } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox-grey.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/tag_checkbox-grey.png"));
                 }
             }
         }
@@ -6211,7 +6212,7 @@ void dlgTriggerEditor::saveTimer()
 
         } else {
             QIcon iconError;
-            iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
+            iconError = cachedIcon(qsl(":/icons/tools-report-bug.png"));
             itemDescription = descError;
             pItem->setIcon(0, iconError);
             pItem->setText(0, name);
@@ -6290,27 +6291,27 @@ void dlgTriggerEditor::saveAlias()
                     if (pT->shouldBeActive()) {
                         itemDescription = descActiveFolder;
                         if (pT->ancestorsActive()) {
-                            icon.addPixmap(QPixmap(qsl(":/icons/folder-violet.png")), QIcon::Normal, QIcon::Off);
+                            icon = cachedIcon(qsl(":/icons/folder-violet.png"));
                         } else {
-                            icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                            icon = cachedIcon(qsl(":/icons/folder-grey.png"));
                             itemDescription = descInactiveParent.arg(itemDescription);
                         }
                     } else {
                         itemDescription = descInactiveFolder;
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-violet-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-violet-locked.png"));
                     }
                 } else {
                     if (pT->shouldBeActive()) {
                         itemDescription = descActive;
                         if (pT->ancestorsActive()) {
-                            icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                            icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
                         } else {
-                            icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                            icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
                             itemDescription = descInactiveParent.arg(itemDescription);
                         }
                     } else {
                         itemDescription = descInactive;
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
                     }
                 }
                 pItem->setIcon(0, icon);
@@ -6326,7 +6327,7 @@ void dlgTriggerEditor::saveAlias()
             }
         } else {
             QIcon iconError;
-            iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
+            iconError = cachedIcon(qsl(":/icons/tools-report-bug.png"));
             itemDescription = descError;
             pItem->setIcon(0, iconError);
             pItem->setText(0, name);
@@ -6374,46 +6375,46 @@ void dlgTriggerEditor::computeAliasIcon(TAlias* pT, QIcon& icon, QString& itemDe
             if (pT->isActive()) {
                 itemDescription = descActiveFolder;
                 if (pT->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/folder-brown.png"));
                 } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/folder-grey.png"));
                     itemDescription = descInactiveParent.arg(itemDescription);
                 }
             } else {
-                icon.addPixmap(QPixmap(qsl(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/folder-brown-locked.png"));
                 itemDescription = descInactiveFolder;
             }
         } else if (pT->isActive()) {
             itemDescription = descActiveFolder;
             if (pT->ancestorsActive()) {
-                icon.addPixmap(QPixmap(qsl(":/icons/folder-violet.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/folder-violet.png"));
             } else {
-                icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/folder-grey.png"));
                 itemDescription = descInactiveParent.arg(itemDescription);
             }
         } else {
             itemDescription = descInactiveFolder;
             if (pT->ancestorsActive()) {
-                icon.addPixmap(QPixmap(qsl(":/icons/folder-violet-locked.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/folder-violet-locked.png"));
             } else {
-                icon.addPixmap(QPixmap(qsl(":/icons/folder-grey-locked.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/folder-grey-locked.png"));
             }
         }
     } else {
         if (pT->isActive()) {
             itemDescription = descActive;
             if (pT->ancestorsActive()) {
-                icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
             } else {
-                icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
                 itemDescription = descInactiveParent.arg(itemDescription);
             }
         } else {
             itemDescription = descInactive;
             if (pT->ancestorsActive()) {
-                icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
             } else {
-                icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox-grey.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/tag_checkbox-grey.png"));
             }
         }
     }
@@ -6441,7 +6442,7 @@ void dlgTriggerEditor::setAliasNormalIcon(QTreeWidgetItem* pItem, TAlias* pT)
 void dlgTriggerEditor::showAliasError(QTreeWidgetItem* pItem, const QString& name, const QString& error)
 {
     QIcon iconError;
-    iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
+    iconError = cachedIcon(qsl(":/icons/tools-report-bug.png"));
     pItem->setIcon(0, iconError);
     pItem->setText(0, name);
     pItem->setData(0, Qt::AccessibleDescriptionRole, descError);
@@ -6541,33 +6542,33 @@ void dlgTriggerEditor::saveAction()
             if (!pA->mPackageName.isEmpty()) {
                 // Has a package name so is a module master folder
                 if (itemActive) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/folder-brown.png"));
                 } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/folder-brown-locked.png"));
                 }
             } else if (!pA->getParent() || !pA->getParent()->mPackageName.isEmpty()) {
                 // No parent or it has a parent with a package name so is a toolbar
                 if (itemActive) {
                     if (pA->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-yellow.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-yellow.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-grey.png"));
                         itemDescription = descInactiveParent.arg(itemDescription);
                     }
                 } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-yellow-locked.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/folder-yellow-locked.png"));
                 }
             } else {
                 // Else must be a menu
                 if (itemActive) {
                     if (pA->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-cyan.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-cyan.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-grey.png"));
                         itemDescription = descInactiveParent.arg(itemDescription);
                     }
                 } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-cyan-locked.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/folder-cyan-locked.png"));
                 }
             }
         } else {
@@ -6575,13 +6576,13 @@ void dlgTriggerEditor::saveAction()
             if (itemActive) {
                 itemDescription = descActive;
                 if (pA->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
                 } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
                     itemDescription = descInactiveParent.arg(itemDescription);
                 }
             } else {
-                icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
                 itemDescription = descInactive;
             }
         }
@@ -6593,7 +6594,7 @@ void dlgTriggerEditor::saveAction()
             pItem->setText(0, name);
         } else {
             QIcon iconError;
-            iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
+            iconError = cachedIcon(qsl(":/icons/tools-report-bug.png"));
             itemDescription = descError;
             pItem->setIcon(0, iconError);
             pItem->setText(0, name);
@@ -6720,37 +6721,37 @@ void dlgTriggerEditor::saveScript()
         if (!pT->mPackageName.isEmpty()) {
             if (itemActive) {
                 if (pT->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/folder-brown.png"));
                 } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/folder-grey.png"));
                     itemDescription = descInactiveParent.arg(itemDescription);
                 }
             } else {
-                icon.addPixmap(QPixmap(qsl(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/folder-brown-locked.png"));
             }
         } else {
             if (itemActive) {
                 if (pT->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-orange.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/folder-orange.png"));
                 } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/folder-grey.png"));
                     itemDescription = descInactiveParent.arg(itemDescription);
                 }
             } else {
-                icon.addPixmap(QPixmap(qsl(":/icons/folder-orange-locked.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/folder-orange-locked.png"));
             }
         }
     } else {
         if (itemActive) {
             itemDescription = descActive;
             if (pT->ancestorsActive()) {
-                icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
             } else {
-                icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
                 itemDescription = descInactiveParent.arg(itemDescription);
             }
         } else {
-            icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+            icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
             itemDescription = descInactive;
         }
     }
@@ -6768,23 +6769,23 @@ void dlgTriggerEditor::saveScript()
             if (pT->isFolder()) {
                 itemDescription = descActiveFolder;
                 if (pT->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-orange.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/folder-orange.png"));
                 } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/folder-grey.png"));
                     itemDescription = descInactiveParent.arg(itemDescription);
                 }
             } else {
                 if (pT->shouldBeActive()) {
                     itemDescription = descActive;
                     if (pT->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
                         itemDescription = descInactiveParent.arg(itemDescription);
                     }
                 } else {
                     itemDescription = descInactive;
-                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
                 }
             }
             pItem->setIcon(0, icon);
@@ -6801,7 +6802,7 @@ void dlgTriggerEditor::saveScript()
 
     } else {
         QIcon iconError;
-        iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
+        iconError = cachedIcon(qsl(":/icons/tools-report-bug.png"));
         itemDescription = descError;
         pItem->setIcon(0, iconError);
         pItem->setText(0, name);
@@ -7139,13 +7140,13 @@ void dlgTriggerEditor::saveVar()
     QIcon icon;
     switch (variable->getValueType()) {
     case 5:
-        icon.addPixmap(QPixmap(qsl(":/icons/table.png")), QIcon::Normal, QIcon::Off);
+        icon = cachedIcon(qsl(":/icons/table.png"));
         break;
     case 6:
-        icon.addPixmap(QPixmap(qsl(":/icons/function.png")), QIcon::Normal, QIcon::Off);
+        icon = cachedIcon(qsl(":/icons/function.png"));
         break;
     default:
-        icon.addPixmap(QPixmap(qsl(":/icons/variable.png")), QIcon::Normal, QIcon::Off);
+        icon = cachedIcon(qsl(":/icons/variable.png"));
         break;
     }
     pItem->setIcon(0, icon);
@@ -7199,44 +7200,44 @@ void dlgTriggerEditor::saveKey()
             if (!pT->mPackageName.isEmpty()) {
                 if (itemActive) {
                     if (pT->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-brown.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-grey.png"));
                         itemDescription = descInactiveParent.arg(itemDescription);
                     }
                 } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/folder-brown-locked.png"));
                 }
             } else if (itemActive) {
                 if (pT->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-pink.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/folder-pink.png"));
                 } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/folder-grey.png"));
                     itemDescription = descInactiveParent.arg(itemDescription);
                 }
             } else {
                 itemDescription = descInactiveFolder;
                 if (pT->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-pink-locked.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/folder-pink-locked.png"));
                 } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-grey-locked.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/folder-grey-locked.png"));
                 }
             }
         } else {
             if (itemActive) {
                 itemDescription = descActive;
                 if (pT->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
                 } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
                     itemDescription = descInactiveParent.arg(itemDescription);
                 }
             } else {
                 itemDescription = descInactive;
                 if (pT->ancestorsActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
                 } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox-grey.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/tag_checkbox-grey.png"));
                 }
             }
         }
@@ -7248,27 +7249,27 @@ void dlgTriggerEditor::saveKey()
                     if (pT->shouldBeActive()) {
                         itemDescription = descActiveFolder;
                         if (pT->ancestorsActive()) {
-                            icon.addPixmap(QPixmap(qsl(":/icons/folder-pink.png")), QIcon::Normal, QIcon::Off);
+                            icon = cachedIcon(qsl(":/icons/folder-pink.png"));
                         } else {
-                            icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                            icon = cachedIcon(qsl(":/icons/folder-grey.png"));
                             itemDescription = descInactiveParent.arg(itemDescription);
                         }
                     } else {
                         itemDescription = descInactiveFolder;
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-pink-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-pink-locked.png"));
                     }
                 } else {
                     if (pT->shouldBeActive()) {
                         itemDescription = descActive;
                         if (pT->ancestorsActive()) {
-                            icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                            icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
                         } else {
-                            icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                            icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
                             itemDescription = descInactiveParent.arg(itemDescription);
                         }
                     } else {
                         itemDescription = descInactive;
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
                     }
                 }
                 pItem->setIcon(0, icon);
@@ -7283,7 +7284,7 @@ void dlgTriggerEditor::saveKey()
             }
         } else {
             QIcon iconError;
-            iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
+            iconError = cachedIcon(qsl(":/icons/tools-report-bug.png"));
             itemDescription = descError;
             pItem->setIcon(0, iconError);
             pItem->setText(0, name);
@@ -7537,8 +7538,8 @@ void dlgTriggerEditor::updatePatternTabOrder()
         previous = next;
     };
 
-    addToChain(mpTriggersMainArea->toolButton_toggleExtraControls);
     addToChain(mpTriggersMainArea->lineEdit_trigger_command);
+    addToChain(mpTriggersMainArea->toolButton_toggleExtraControls);
 
     for (int i = 0; i < mVisiblePatternCount && i < mTriggerPatternEdit.size(); ++i) {
         auto* item = mTriggerPatternEdit.value(i, nullptr);
@@ -8304,7 +8305,7 @@ void dlgTriggerEditor::slot_variableSelected(QTreeWidgetItem* pItem)
     case LUA_TBOOLEAN:
         mpSourceEditorArea->show();
         mpSourceEditorEdbee->setEnabled(true);
-        icon.addPixmap(QPixmap(qsl(":/icons/variable.png")), QIcon::Normal, QIcon::Off);
+        icon = cachedIcon(qsl(":/icons/variable.png"));
         // index 3 = "boolean"
         mpVarsMainArea->comboBox_variable_value_type->setCurrentIndex(3);
         mpVarsMainArea->comboBox_variable_value_type->setEnabled(true);
@@ -8312,7 +8313,7 @@ void dlgTriggerEditor::slot_variableSelected(QTreeWidgetItem* pItem)
     case LUA_TNUMBER:
         mpSourceEditorArea->show();
         mpSourceEditorEdbee->setEnabled(true);
-        icon.addPixmap(QPixmap(qsl(":/icons/variable.png")), QIcon::Normal, QIcon::Off);
+        icon = cachedIcon(qsl(":/icons/variable.png"));
         // index 2 = "number"
         mpVarsMainArea->comboBox_variable_value_type->setCurrentIndex(2);
         mpVarsMainArea->comboBox_variable_value_type->setEnabled(true);
@@ -8320,7 +8321,7 @@ void dlgTriggerEditor::slot_variableSelected(QTreeWidgetItem* pItem)
     case LUA_TSTRING:
         mpSourceEditorArea->show();
         mpSourceEditorEdbee->setEnabled(true);
-        icon.addPixmap(QPixmap(qsl(":/icons/variable.png")), QIcon::Normal, QIcon::Off);
+        icon = cachedIcon(qsl(":/icons/variable.png"));
         // index 1 = "string"
         mpVarsMainArea->comboBox_variable_value_type->setCurrentIndex(1);
         mpVarsMainArea->comboBox_variable_value_type->setEnabled(true);
@@ -8332,14 +8333,14 @@ void dlgTriggerEditor::slot_variableSelected(QTreeWidgetItem* pItem)
         mpVarsMainArea->comboBox_variable_value_type->setEnabled(!(pItem->childCount() > 0));
         // index 4 = "table"
         mpVarsMainArea->comboBox_variable_value_type->setCurrentIndex(4);
-        icon.addPixmap(QPixmap(qsl(":/icons/table.png")), QIcon::Normal, QIcon::Off);
+        icon = cachedIcon(qsl(":/icons/table.png"));
         break;
     case LUA_TFUNCTION:
         mpSourceEditorArea->hide();
         mpSourceEditorEdbee->setEnabled(false);
         mpVarsMainArea->comboBox_variable_value_type->setCurrentIndex(5);
         mpVarsMainArea->comboBox_variable_value_type->setEnabled(false);
-        icon.addPixmap(QPixmap(qsl(":/icons/function.png")), QIcon::Normal, QIcon::Off);
+        icon = cachedIcon(qsl(":/icons/function.png"));
         break;
     case LUA_TLIGHTUSERDATA:
         [[fallthrough]];
@@ -8746,6 +8747,15 @@ void dlgTriggerEditor::slot_timerSelected(QTreeWidgetItem* pItem)
     mBlockPropertySave = false;
 }
 
+const QIcon& dlgTriggerEditor::cachedIcon(const QString& path) const
+{
+    auto it = mIconCache.find(path);
+    if (it == mIconCache.end()) {
+        it = mIconCache.insert(path, QIcon(QPixmap(path)));
+    }
+    return *it;
+}
+
 void dlgTriggerEditor::fillout_form()
 {
     mCurrentView = EditorViewType::cmUnknownView;
@@ -8837,50 +8847,50 @@ void dlgTriggerEditor::populateKeys()
                 if (!key->mPackageName.isEmpty()) {
                     if (key->isActive()) {
                         if (key->ancestorsActive()) {
-                            icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
+                            icon = cachedIcon(qsl(":/icons/folder-brown.png"));
                         } else {
-                            icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                            icon = cachedIcon(qsl(":/icons/folder-grey.png"));
                             itemDescription = descInactiveParent.arg(itemDescription);
                         }
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-brown-locked.png"));
                     }
                 } else if (key->isActive()) {
                     if (key->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-pink.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-pink.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-grey.png"));
                         itemDescription = descInactiveParent.arg(itemDescription);
                     }
                 } else {
                     if (key->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-pink-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-pink-locked.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-grey-locked.png"));
                     }
                 }
             } else {
                 if (key->isActive()) {
                     itemDescription = descActive;
                     if (key->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
                         itemDescription = descInactiveParent.arg(itemDescription);
                     }
                 } else {
                     itemDescription = descInactive;
                     if (key->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox-grey.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox-grey.png"));
                     }
                 }
             }
             pItem->setIcon(0, icon);
         } else {
             QIcon iconError;
-            iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
+            iconError = cachedIcon(qsl(":/icons/tools-report-bug.png"));
             itemDescription = descError;
             pItem->setIcon(0, iconError);
             showError(key->getError());
@@ -8915,55 +8925,55 @@ void dlgTriggerEditor::populateActions()
                 if (!action->mPackageName.isEmpty()) {
                     if (itemActive) {
                         if (action->ancestorsActive()) {
-                            icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
+                            icon = cachedIcon(qsl(":/icons/folder-brown.png"));
                         } else {
-                            icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                            icon = cachedIcon(qsl(":/icons/folder-grey.png"));
                             itemDescription = descInactiveParent.arg(itemDescription);
                         }
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-brown-locked.png"));
                     }
                 } else if (!action->getParent() || !action->getParent()->mPackageName.isEmpty()) {
                     if (itemActive) {
                         if (action->ancestorsActive()) {
-                            icon.addPixmap(QPixmap(qsl(":/icons/folder-yellow.png")), QIcon::Normal, QIcon::Off);
+                            icon = cachedIcon(qsl(":/icons/folder-yellow.png"));
                         } else {
-                            icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                            icon = cachedIcon(qsl(":/icons/folder-grey.png"));
                             itemDescription = descInactiveParent.arg(itemDescription);
                         }
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-yellow-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-yellow-locked.png"));
                     }
                 } else {
                     if (itemActive) {
                         if (action->ancestorsActive()) {
-                            icon.addPixmap(QPixmap(qsl(":/icons/folder-cyan.png")), QIcon::Normal, QIcon::Off);
+                            icon = cachedIcon(qsl(":/icons/folder-cyan.png"));
                         } else {
-                            icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                            icon = cachedIcon(qsl(":/icons/folder-grey.png"));
                             itemDescription = descInactiveParent.arg(itemDescription);
                         }
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-cyan-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-cyan-locked.png"));
                     }
                 }
             } else {
                 if (itemActive) {
                     itemDescription = descActive;
                     if (action->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
                         itemDescription = descInactiveParent.arg(itemDescription);
                     }
                 } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
                     itemDescription = descInactive;
                 }
             }
             pItem->setIcon(0, icon);
         } else {
             QIcon iconError;
-            iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
+            iconError = cachedIcon(qsl(":/icons/tools-report-bug.png"));
             itemDescription = descError;
             pItem->setIcon(0, iconError);
             showError(action->getError());
@@ -8999,50 +9009,50 @@ void dlgTriggerEditor::populateAliases()
                 if (!alias->mPackageName.isEmpty()) {
                     if (itemActive) {
                         if (alias->ancestorsActive()) {
-                            icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
+                            icon = cachedIcon(qsl(":/icons/folder-brown.png"));
                         } else {
-                            icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                            icon = cachedIcon(qsl(":/icons/folder-grey.png"));
                             itemDescription = descInactiveParent.arg(itemDescription);
                         }
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-brown-locked.png"));
                     }
                 } else if (itemActive) {
                     if (alias->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-violet.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-violet.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-grey.png"));
                         itemDescription = descInactiveParent.arg(itemDescription);
                     }
                 } else {
                     if (alias->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-violet-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-violet-locked.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-grey-locked.png"));
                     }
                 }
             } else {
                 if (alias->isActive()) {
                     itemDescription = descActive;
                     if (alias->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
                         itemDescription = descInactiveParent.arg(itemDescription);
                     }
                 } else {
                     itemDescription = descInactive;
                     if (alias->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox-grey.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox-grey.png"));
                     }
                 }
             }
             pItem->setIcon(0, icon);
         } else {
             QIcon iconError;
-            iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
+            iconError = cachedIcon(qsl(":/icons/tools-report-bug.png"));
             itemDescription = descError;
             pItem->setIcon(0, iconError);
             showError(alias->getError());
@@ -9074,30 +9084,30 @@ void dlgTriggerEditor::populateScripts()
                 itemDescription = (itemActive ? descActiveFolder : descInactiveFolder);
                 if (!script->mPackageName.isEmpty()) {
                     if (itemActive) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-brown.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-brown-locked.png"));
                     }
                 } else {
                     if (itemActive) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-orange.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-orange.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-orange-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-orange-locked.png"));
                     }
                 }
             } else {
                 if (script->isActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
                     itemDescription = descActive;
                 } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
                     itemDescription = descInactive;
                 }
             }
             pItem->setIcon(0, icon);
         } else {
             QIcon iconError;
-            iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
+            iconError = cachedIcon(qsl(":/icons/tools-report-bug.png"));
             itemDescription = descError;
             pItem->setIcon(0, iconError);
             showError(script->getError());
@@ -9131,23 +9141,23 @@ void dlgTriggerEditor::populateTimers()
                 itemDescription = (itemActive ? descActiveFolder : descInactiveFolder);
                 if (!timer->mPackageName.isEmpty()) {
                     if (itemActive) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-brown.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-brown-locked.png"));
                     }
                 } else {
                     if (timer->shouldBeActive()) {
                         if (timer->ancestorsActive()) {
-                            icon.addPixmap(QPixmap(qsl(":/icons/folder-green.png")), QIcon::Normal, QIcon::Off);
+                            icon = cachedIcon(qsl(":/icons/folder-green.png"));
                         } else {
-                            icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                            icon = cachedIcon(qsl(":/icons/folder-grey.png"));
                             itemDescription = descInactiveParent.arg(itemDescription);
                         }
                     } else {
                         if (timer->ancestorsActive()) {
-                            icon.addPixmap(QPixmap(qsl(":/icons/folder-green-locked.png")), QIcon::Normal, QIcon::Off);
+                            icon = cachedIcon(qsl(":/icons/folder-green-locked.png"));
                         } else {
-                            icon.addPixmap(QPixmap(qsl(":/icons/folder-grey-locked.png")), QIcon::Normal, QIcon::Off);
+                            icon = cachedIcon(qsl(":/icons/folder-grey-locked.png"));
                         }
                     }
                 }
@@ -9156,30 +9166,30 @@ void dlgTriggerEditor::populateTimers()
                     if (timer->shouldBeActive()) {
                         itemDescription = descActiveOffsetTimer;
                         if (timer->ancestorsActive()) {
-                            icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-on.png")), QIcon::Normal, QIcon::Off);
+                            icon = cachedIcon(qsl(":/icons/offsettimer-on.png"));
                         } else {
-                            icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-on-grey.png")), QIcon::Normal, QIcon::Off);
+                            icon = cachedIcon(qsl(":/icons/offsettimer-on-grey.png"));
                             itemDescription = descInactiveParent.arg(itemDescription);
                         }
                     } else {
                         itemDescription = descInactiveOffsetTimer;
                         if (timer->ancestorsActive()) {
-                            icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-off.png")), QIcon::Normal, QIcon::Off);
+                            icon = cachedIcon(qsl(":/icons/offsettimer-off.png"));
                         } else {
-                            icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-off-grey.png")), QIcon::Normal, QIcon::Off);
+                            icon = cachedIcon(qsl(":/icons/offsettimer-off-grey.png"));
                         }
                     }
                 } else {
                     if (timer->shouldBeActive()) {
                         itemDescription = descActive;
                         if (timer->ancestorsActive()) {
-                            icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                            icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
                         } else {
-                            icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                            icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
                             itemDescription = descInactiveParent.arg(itemDescription);
                         }
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
                         itemDescription = descInactive;
                     }
                 }
@@ -9187,7 +9197,7 @@ void dlgTriggerEditor::populateTimers()
             pItem->setIcon(0, icon);
         } else {
             QIcon iconError;
-            iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
+            iconError = cachedIcon(qsl(":/icons/tools-report-bug.png"));
             itemDescription = descError;
             pItem->setIcon(0, iconError);
             showError(timer->getError());
@@ -9221,63 +9231,63 @@ void dlgTriggerEditor::populateTriggers()
                 if (itemActive) {
                     itemDescription = descActiveFilterChain;
                     if (trigger->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/filter.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/filter.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/filter-grey.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/filter-grey.png"));
                         itemDescription = descInactiveParent.arg(itemDescription);
                     }
                 } else {
                     itemDescription = descInactiveFilterChain;
                     if (trigger->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/filter-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/filter-locked.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/filter-grey-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/filter-grey-locked.png"));
                     }
                 }
             } else if (trigger->isFolder()) {
                 itemDescription = (itemActive ? descActiveFolder : descInactiveFolder);
                 if (!trigger->mPackageName.isEmpty()) {
                     if (itemActive) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-brown.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-brown-locked.png"));
                     }
                 } else if (itemActive) {
                     if (trigger->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-blue.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-blue.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-grey.png"));
                         itemDescription = descInactiveParent.arg(itemDescription);
                     }
                 } else {
                     if (trigger->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-blue-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-blue-locked.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-grey-locked.png"));
                     }
                 }
             } else {
                 if (itemActive) {
                     itemDescription = descActive;
                     if (trigger->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
                         itemDescription = descInactiveParent.arg(itemDescription);
                     }
                 } else {
                     itemDescription = descInactive;
                     if (trigger->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox-grey.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox-grey.png"));
                     }
                 }
             }
             pItem->setIcon(0, icon);
         } else {
             QIcon iconError;
-            iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
+            iconError = cachedIcon(qsl(":/icons/tools-report-bug.png"));
             itemDescription = descError;
             pItem->setIcon(0, iconError);
             showError(trigger->getError());
@@ -9329,51 +9339,51 @@ void dlgTriggerEditor::expand_child_triggers(TTrigger* pTriggerParent, QTreeWidg
                 if (trigger->isActive()) {
                     itemDescription = descActiveFilterChain;
                     if (trigger->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/filter.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/filter.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/filter-grey.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/filter-grey.png"));
                         itemDescription = descInactiveParent.arg(itemDescription);
                     }
                 } else {
                     itemDescription = descInactiveFilterChain;
                     if (trigger->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/filter-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/filter-locked.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/filter-grey-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/filter-grey-locked.png"));
                     }
                 }
             } else if (trigger->isFolder()) {
                 if (trigger->isActive()) {
                     itemDescription = descActiveFolder;
                     if (trigger->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-blue.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-blue.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-grey.png"));
                         itemDescription = descInactiveParent.arg(itemDescription);
                     }
                 } else {
                     itemDescription = descInactiveFolder;
                     if (trigger->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-blue-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-blue-locked.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-grey-locked.png"));
                     }
                 }
             } else {
                 if (trigger->isActive()) {
                     itemDescription = descActive;
                     if (trigger->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
                         itemDescription = descInactiveParent.arg(itemDescription);
                     }
                 } else {
                     itemDescription = descInactive;
                     if (trigger->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox-grey.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox-grey.png"));
                     }
                 }
             }
@@ -9381,7 +9391,7 @@ void dlgTriggerEditor::expand_child_triggers(TTrigger* pTriggerParent, QTreeWidg
             pItem->setIcon(0, icon);
         } else {
             QIcon iconError;
-            iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
+            iconError = cachedIcon(qsl(":/icons/tools-report-bug.png"));
             itemDescription = descError;
             pItem->setIcon(0, iconError);
             showError(trigger->getError());
@@ -9414,41 +9424,41 @@ void dlgTriggerEditor::expand_child_key(TKey* pTriggerParent, QTreeWidgetItem* p
                 if (key->isActive()) {
                     itemDescription = descActiveFolder;
                     if (key->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-pink.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-pink.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-grey.png"));
                         itemDescription = descInactiveParent.arg(itemDescription);
                     }
                 } else {
                     itemDescription = descInactiveFolder;
                     if (key->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-pink-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-pink-locked.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-grey-locked.png"));
                     }
                 }
             } else {
                 if (key->isActive()) {
                     itemDescription = descActive;
                     if (key->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
                         itemDescription = descInactiveParent.arg(itemDescription);
                     }
                 } else {
                     itemDescription = descInactive;
                     if (key->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox-grey.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox-grey.png"));
                     }
                 }
             }
             pItem->setIcon(0, icon);
         } else {
             QIcon iconError;
-            iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
+            iconError = cachedIcon(qsl(":/icons/tools-report-bug.png"));
             itemDescription = descError;
             pItem->setIcon(0, iconError);
             showError(key->getError());
@@ -9482,33 +9492,33 @@ void dlgTriggerEditor::expand_child_scripts(TScript* pTriggerParent, QTreeWidget
                 if (script->isActive()) {
                     itemDescription = descActiveFolder;
                     if (script->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-orange.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-orange.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-grey.png"));
                         itemDescription = descInactiveParent.arg(itemDescription);
                     }
                 } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-orange-locked.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/folder-orange-locked.png"));
                     itemDescription = descInactiveFolder;
                 }
             } else {
                 if (script->isActive()) {
                     itemDescription = descActive;
                     if (script->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
                         itemDescription = descInactiveParent.arg(itemDescription);
                     }
                 } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
                     itemDescription = descInactive;
                 }
             }
             pItem->setIcon(0, icon);
         } else {
             QIcon iconError;
-            iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
+            iconError = cachedIcon(qsl(":/icons/tools-report-bug.png"));
             itemDescription = descError;
             pItem->setIcon(0, iconError);
             showError(script->getError());
@@ -9541,41 +9551,41 @@ void dlgTriggerEditor::expand_child_alias(TAlias* pTriggerParent, QTreeWidgetIte
                 if (alias->isActive()) {
                     itemDescription = descActiveFolder;
                     if (alias->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-violet.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-violet.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-grey.png"));
                         itemDescription = descInactiveParent.arg(itemDescription);
                     }
                 } else {
                     itemDescription = descInactiveFolder;
                     if (alias->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-violet-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-violet-locked.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-grey-locked.png"));
                     }
                 }
             } else {
                 if (alias->isActive()) {
                     itemDescription = descActive;
                     if (alias->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
                         itemDescription = descInactiveParent.arg(itemDescription);
                     }
                 } else {
                     itemDescription = descInactive;
                     if (alias->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox-grey.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/tag_checkbox-grey.png"));
                     }
                 }
             }
             pItem->setIcon(0, icon);
         } else {
             QIcon iconError;
-            iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
+            iconError = cachedIcon(qsl(":/icons/tools-report-bug.png"));
             itemDescription = descError;
             pItem->setIcon(0, iconError);
             showError(alias->getError());
@@ -9608,35 +9618,35 @@ void dlgTriggerEditor::expand_child_action(TAction* pTriggerParent, QTreeWidgetI
                 // Must have a parent (or would not be IN this method) and the
                 // parent has a package name - this is a toolbar
                 if (action->isActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-yellow.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/folder-yellow.png"));
                     itemDescription = descActiveFolder;
                 } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-yellow-locked.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/folder-yellow-locked.png"));
                     itemDescription = descInactiveFolder;
                 }
             } else if (action->isFolder()) {
                 // Is a folder and is not a toolbar - this is a menu
                 if (action->isActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-cyan.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/folder-cyan.png"));
                     itemDescription = descActiveFolder;
                 } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/folder-cyan-locked.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/folder-cyan-locked.png"));
                     itemDescription = descInactiveFolder;
                 }
             } else {
                 // Is a button
                 if (action->isActive()) {
-                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
                     itemDescription = descActive;
                 } else {
-                    icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                    icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
                     itemDescription = descInactive;
                 }
             }
             pItem->setIcon(0, icon);
         } else {
             QIcon iconError;
-            iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
+            iconError = cachedIcon(qsl(":/icons/tools-report-bug.png"));
             itemDescription = descError;
             pItem->setIcon(0, iconError);
             showError(action->getError());
@@ -9668,18 +9678,18 @@ void dlgTriggerEditor::expand_child_timers(TTimer* pTimerParent, QTreeWidgetItem
             if (timer->isFolder()) {
                 if (timer->shouldBeActive()) {
                     if (timer->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-green.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-green.png"));
                         itemDescription = descActiveFolder;
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-grey.png"));
                         itemDescription = descInactiveParent.arg(itemDescription);
                     }
                 } else {
                     itemDescription = descInactiveFolder;
                     if (timer->ancestorsActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-green-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-green-locked.png"));
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/folder-grey-locked.png")), QIcon::Normal, QIcon::Off);
+                        icon = cachedIcon(qsl(":/icons/folder-grey-locked.png"));
                     }
                 }
             } else {
@@ -9687,34 +9697,34 @@ void dlgTriggerEditor::expand_child_timers(TTimer* pTimerParent, QTreeWidgetItem
                     if (timer->shouldBeActive()) {
                         itemDescription = descActiveOffsetTimer;
                         if (timer->ancestorsActive()) {
-                            icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-on.png")), QIcon::Normal, QIcon::Off);
+                            icon = cachedIcon(qsl(":/icons/offsettimer-on.png"));
                         } else {
-                            icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-on-grey.png")), QIcon::Normal, QIcon::Off);
+                            icon = cachedIcon(qsl(":/icons/offsettimer-on-grey.png"));
                             itemDescription = descInactiveParent.arg(itemDescription);
                         }
                     } else {
                         itemDescription = descInactiveOffsetTimer;
                         if (timer->ancestorsActive()) {
-                            icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-off.png")), QIcon::Normal, QIcon::Off);
+                            icon = cachedIcon(qsl(":/icons/offsettimer-off.png"));
                         } else {
-                            icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-off-grey.png")), QIcon::Normal, QIcon::Off);
+                            icon = cachedIcon(qsl(":/icons/offsettimer-off-grey.png"));
                         }
                     }
                 } else {
                     if (timer->shouldBeActive()) {
                         itemDescription = descActive;
                         if (timer->ancestorsActive()) {
-                            icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                            icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
                         } else {
-                            icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
+                            icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
                             itemDescription = descInactiveParent.arg(itemDescription);
                         }
                     } else {
                         itemDescription = descInactive;
                         if (timer->ancestorsActive()) {
-                            icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                            icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
                         } else {
-                            icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox-grey.png")), QIcon::Normal, QIcon::Off);
+                            icon = cachedIcon(qsl(":/icons/tag_checkbox-grey.png"));
                         }
                     }
                 }
@@ -9722,7 +9732,7 @@ void dlgTriggerEditor::expand_child_timers(TTimer* pTimerParent, QTreeWidgetItem
             pItem->setIcon(0, icon);
         } else {
             QIcon iconError;
-            iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
+            iconError = cachedIcon(qsl(":/icons/tools-report-bug.png"));
             itemDescription = descError;
             pItem->setIcon(0, iconError);
             showError(timer->getError());
@@ -10490,7 +10500,7 @@ QString dlgTriggerEditor::profileSettingsPrefix() const
         return QString();
     }
 
-    const QString sanitized = utils::sanitizeForPath(profileName);
+    const QString sanitized = MudletPaths::sanitizeForPath(profileName);
     if (sanitized.isEmpty()) {
         return QString();
     }
@@ -13589,7 +13599,7 @@ void dlgTriggerEditor::slot_rightSplitterMoved(const int, const int)
     /*
      * With all widgets shown:              With some hidden:
      *  +--------------------------------+   +--------------------------------+
-     *  | name / control toggle /command |   | name / control toggle /command |
+     *  | name / command / toggle / id   |   | name / command / toggle / id   |
      *--+----------------------+---------+ --+----------------------+---------+
      *  |+--------------------+|         |   |+------------------------------+|
      *w_||                    ||         |   ||                              ||

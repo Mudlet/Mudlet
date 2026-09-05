@@ -49,7 +49,7 @@
 
 #include <QTemporaryDir>
 
-#include "utils.h"
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "Host.h"
 #include "HostManager.h"
@@ -238,7 +238,7 @@ private slots:
         if (portableMarkerPresent()) {
             QSKIP("portable.txt marker present - config dir cannot be redirected for this test");
         }
-        QVERIFY2(utils::getMudletPath(enums::profilesPath).startsWith(mConfigDir.path()), "test config dir redirection did not take effect");
+        QVERIFY2(MudletPaths::getMudletPath(enums::profilesPath).startsWith(mConfigDir.path()), "test config dir redirection did not take effect");
     }
 
     void cleanupTestCase()
@@ -249,7 +249,7 @@ private slots:
 
     void test_aTriggerWithMismatchedPatternListsDoesNotCrashTheLoad()
     {
-        const QString folder = utils::getMudletPath(enums::profileXmlFilesPath, mProfileName);
+        const QString folder = MudletPaths::getMudletPath(enums::profileXmlFilesPath, mProfileName);
         QVERIFY(QDir().mkpath(folder));
         {
             QFile xmlFile(qsl("%1/2020-01-01#00-00-00.xml").arg(folder));
@@ -361,7 +361,7 @@ private:
         return pTrigger->match(utf8.constData(), utf8.size(), line, -1);
     }
 
-    // match_substring() indexes mSubstringMatchers by pattern number and
+    // match_substring() indexes mSubstringPatterns by pattern number and
     // dereferences the entry without a bounds or null check, so it relies on one
     // entry per pattern, holding a matcher for exactly the substring kinds.
     // Answers rather than asserting: a QVERIFY here would return from this
@@ -370,13 +370,13 @@ private:
     {
         const QStringList patterns = pTrigger->getPatternsList();
         const QList<int> kinds = pTrigger->getRegexCodePropertyList();
-        if (static_cast<int>(pTrigger->mSubstringMatchers.size()) != patterns.size()) {
+        if (static_cast<int>(pTrigger->mSubstringPatterns.size()) != patterns.size()) {
             return qsl("trigger '%1' holds %2 pattern(s) but %3 matcher slot(s)")
-                    .arg(pTrigger->getName(), QString::number(patterns.size()), QString::number(pTrigger->mSubstringMatchers.size()));
+                    .arg(pTrigger->getName(), QString::number(patterns.size()), QString::number(pTrigger->mSubstringPatterns.size()));
         }
         for (int i = 0; i < patterns.size(); ++i) {
             const bool wantMatcher = kinds.at(i) == REGEX_SUBSTRING;
-            const bool haveMatcher = pTrigger->mSubstringMatchers[i] != nullptr;
+            const bool haveMatcher = pTrigger->mSubstringPatterns[i].matcher != nullptr;
             if (haveMatcher != wantMatcher) {
                 return qsl("trigger '%1' pattern %2 is kind %3 but %4 a matcher")
                         .arg(pTrigger->getName(), QString::number(i), QString::number(kinds.at(i)), haveMatcher ? qsl("has") : qsl("lacks"));

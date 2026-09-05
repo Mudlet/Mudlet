@@ -27,7 +27,7 @@
 #include "TConsole.h"
 
 
-#include "utils.h"
+#include "MudletPaths.h"
 #include "ctelnet.h"
 #include "Host.h"
 #include "TCommandLine.h"
@@ -46,7 +46,9 @@
 
 #include <QAccessibleInterface>
 #include <QAccessibleWidget>
+#include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -1088,7 +1090,7 @@ void TConsole::slot_toggleReplayRecording()
     }
     mRecordReplay = !mRecordReplay;
     if (mRecordReplay) {
-        const QString directoryLogFile = utils::getMudletPath(enums::profileReplayAndLogFilesPath, mProfileName);
+        const QString directoryLogFile = MudletPaths::getMudletPath(enums::profileReplayAndLogFilesPath, mProfileName);
         const QString mLogFileName = qsl("%1/%2.dat").arg(directoryLogFile, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
         const QDir dirLogFile;
         if (!dirLogFile.exists(directoryLogFile)) {
@@ -3252,7 +3254,7 @@ void TConsole::slot_toggleTimeStamps(const bool state)
             // QAbstractButton::toggled one
             timeStampButton->setChecked(state);
         }
-        const auto filePath = utils::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("autotimestamp"));
+        const auto filePath = MudletPaths::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("autotimestamp"));
         QSaveFile file(filePath);
         if (state) {
             if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {

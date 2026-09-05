@@ -38,7 +38,7 @@
 #include <QScrollArea>
 #include <QStackedWidget>
 
-#include "utils.h"
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "SettingsTestHelper.h"
@@ -77,7 +77,7 @@ private:
     // MUDLET_TEST_NO_THEME_DOWNLOAD rather than anything about this file.
     static void writeEditorThemesFile()
     {
-        const QString file = utils::getMudletPath(enums::editorWidgetThemeJsonFile);
+        const QString file = MudletPaths::getMudletPath(enums::editorWidgetThemeJsonFile);
         QVERIFY(QDir().mkpath(QFileInfo(file).absolutePath()));
         QFile themes(file);
         QVERIFY(themes.open(QIODevice::WriteOnly | QIODevice::Truncate));
@@ -143,7 +143,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(utils::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);

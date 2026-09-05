@@ -53,12 +53,12 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
 #include "TTextBox.h"
 #include "mudlet.h"
-#include "utils.h"
 
 #include "GroupedTest.h"
 
@@ -229,7 +229,7 @@ private:
 
     bool writeProfileSave(const QString& profileName, const QString& fontFamily, const QString& moduleName = QString(), const QString& modulePath = QString())
     {
-        const QString folder = utils::getMudletPath(enums::profileXmlFilesPath, profileName);
+        const QString folder = MudletPaths::getMudletPath(enums::profileXmlFilesPath, profileName);
         if (!QDir().mkpath(folder)) {
             return false;
         }
@@ -309,7 +309,7 @@ private slots:
         if (portableMarkerPresent()) {
             QSKIP("portable.txt marker present - config dir cannot be redirected for this test");
         }
-        QVERIFY2(utils::getMudletPath(enums::profilesPath).startsWith(mConfigDir.path()), "test config dir redirection did not take effect");
+        QVERIFY2(MudletPaths::getMudletPath(enums::profilesPath).startsWith(mConfigDir.path()), "test config dir redirection did not take effect");
 
         QVERIFY(mudlet::self()->getHostManager().addHost(mProfileName, QString(), QString(), QString()));
         mpHost = mudlet::self()->getHostManager().getHost(mProfileName);

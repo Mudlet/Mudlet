@@ -109,6 +109,7 @@ set(TELNET_GROUP_TEST_SOURCES
 
 # Triggers and the other scriptable units, and what a running script does to them
 set(TRIGGER_GROUP_TEST_SOURCES
+    BigramFilterTest.cpp
     CorruptTriggerPatternsTest.cpp
     MultilineTriggerReentrancyTest.cpp
     SetScriptCallbackTest.cpp
@@ -124,6 +125,7 @@ set(EDITOR_GROUP_TEST_SOURCES
     EditorBannerViewSwitchTest.cpp
     EditorWindowPositionTest.cpp
     ScriptEventHandlerLifetimeTest.cpp
+    TriggerEditorDisclosureTest.cpp
     TriggerEditorTest.cpp
     VariableEditorWriteBackTest.cpp
 )

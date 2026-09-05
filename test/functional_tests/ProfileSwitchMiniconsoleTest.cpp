@@ -47,7 +47,7 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
-#include "utils.h"
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "Host.h"
 #include "HostManager.h"
@@ -100,7 +100,7 @@ private:
 
     bool provisionProfileOnDisk(const QString& profileName) const
     {
-        return QDir().mkpath(utils::getMudletPath(enums::profileHomePath, profileName)) && mudlet::self()->writeProfileData(profileName, qsl("url"), mLocalhost).first
+        return QDir().mkpath(MudletPaths::getMudletPath(enums::profileHomePath, profileName)) && mudlet::self()->writeProfileData(profileName, qsl("url"), mLocalhost).first
                && mudlet::self()->writeProfileData(profileName, qsl("port"), mPort).first;
     }
 
@@ -209,7 +209,7 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(utils::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         MudletSettings::getQSettings()->setValue(qsl("uiTourShown"), true);
         MudletSettings::getQSettings()->sync();
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
