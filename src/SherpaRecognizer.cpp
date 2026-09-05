@@ -642,31 +642,35 @@ bool SherpaRecognizer::loadModel(const QString& modelPath)
             config->decoding_method = "modified_beam_search";
             config->hotwords_buf = hotwordsUtf8.constData();
             config->hotwords_buf_size = hotwordsUtf8.size();
-            // Measured on the one installed model that can bias at all
-            // (streaming-zipformer-en, whose bpe.vocab is what makes biasing
-            // possible), decoding one recording at a sweep of values. Twice:
-            // once with three words, and again with a three-hundred word list
-            // of the shape a game vocabulary actually has. The sizes disagree,
-            // and the larger one is the one that matters:
+            // Measured against a real recording - eight spoken game commands,
+            // decoded once and scored at a sweep of values, with a
+            // three-hundred word catalog of the shape a game actually sends.
+            // The model is the one installed here that can bias at all
+            // (streaming-zipformer-en, whose bpe.vocab is what allows it):
             //
-            //   score   3 words                 300 words
-            //   0-1.5   nothing changes         easier words already corrected
-            //   5       the hard word too       the hard word too, nothing else
-            //   10      still clean             words inserted that nobody said
-            //   20      insertions begin        several per phrase
+            //   0-1.5   4/8 phrases exact, 5 word errors - nothing gained
+            //   2       5/8, 3 errors
+            //   2.5-4.5 6/8, 2 errors            <- flat across this whole band
+            //   5       5/8, 3 errors
+            //   6       2/8, 8 errors
+            //   8       2/8, 18 errors in 16 words - inventing, not hearing
             //
-            // So biasing does work at the library's own default of 1.5 - the
-            // three-word run only made it look inert because the one word in
-            // it needed more than that. And the room above is much narrower
-            // than a small list suggests: insertion pressure rises with the
-            // size of the vocabulary, so the ceiling falls as the list grows.
+            // At the plateau it turns "YET HEART" into "get heartwood" and
+            // "TILL IRON PELT" into "kill ironpelt", and moves "ZAMBI" to
+            // "ZOMBI"; it never rescues "KILL NO" for "kill gnome". Biasing
+            // more than halves the word errors, which is what it is for.
             //
-            // 5 sits above what a hard word needs and below where a realistic
-            // list starts inventing, with about a factor of two either side.
-            // Worth re-measuring on a real recording rather than synthesised
-            // speech, and on any model added later: this is one model, one
-            // voice, and one decode per value.
-            config->hotwords_score = 5.0f;
+            // 3.5 is the middle of the plateau. The edges are close on both
+            // sides and the far side is a cliff rather than a slope - 6 is
+            // already worse than not biasing at all - so the midpoint is worth
+            // more than another tenth of accuracy would be.
+            //
+            // Synthesised speech disagrees with all of this: it put the
+            // plateau higher and the cliff further away, which is why an
+            // earlier revision of this comment said 5. tools/bench in the
+            // MudletSTT package is what produced the numbers above; one voice,
+            // one recording, one model, so re-measure when any of those change.
+            config->hotwords_score = 3.5f;
         }
     }
 
