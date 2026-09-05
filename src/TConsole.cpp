@@ -1997,6 +1997,10 @@ bool TConsole::selectSection(int from, int to)
     if (from < 0) {
         return false;
     }
+    // a negative length would put the selection's end before its start
+    if (to < 0) {
+        return false;
+    }
     if (mUserCursor.y() >= static_cast<int>(buffer.buffer.size())) {
         return false;
     }
