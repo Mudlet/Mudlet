@@ -1310,11 +1310,13 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                             "All rights reserved.</h3>"));
 #endif
 
-    //: Credits the speech recognition library Mudlet can load. It is not bundled - the user installs it - so this names it rather than reproducing its licence
+    //: Credits the speech recognition libraries Mudlet can load. None are bundled - the user installs them - so this names them rather than reproducing their licences
     QString speechBackendsHeader(tr("<h2><u>Speech recognition backends</u></h2>"
-                                    "<h3>Mudlet can drive <a href=\"https://alphacephei.com/vosk\">Vosk</a> (Apache 2.0).<br>"
-                                    "It does not ship with Mudlet: you install it yourself, and its licence travels "
-                                    "with the files you download.</h3>"));
+                                    "<h3>Mudlet can drive <a href=\"https://alphacephei.com/vosk\">Vosk</a> (Apache 2.0), "
+                                    "<a href=\"https://github.com/k2-fsa/sherpa-onnx\">sherpa-onnx</a> (Apache 2.0), and the "
+                                    "<a href=\"https://onnxruntime.ai\">ONNX Runtime</a> (MIT) it runs on.<br>"
+                                    "None of them ship with Mudlet: you install them yourself, and each one's licence "
+                                    "travels with the files you download.</h3>"));
 
     QString swordModelHeader(tr("<h2><u>Sword 3D Model</u></h2>"
                                "<h3>Model obtained from <a href=\"https://sketchfab.com/3d-models/sword-07463a2658e04d6ab8a42b5639a35d63\">Sketchfab</a><br>"

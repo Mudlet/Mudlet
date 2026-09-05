@@ -32,30 +32,255 @@
  * found the defects in the first place. Verified by reverting each fix and
  * watching the case go red, which is also the limit worth stating: with no
  * library, initialize() refuses at its first guard, so nothing below that guard
- * is reachable from any test here. That is why modelPath() and currentLanguage()
- * read the live model handle rather than a remembered string - the answer is
- * then true from paths a test cannot reach, instead of resting on where an
- * assignment happens to sit.
+ * is reachable. That is why modelPath() and currentLanguage() read the live
+ * model handle rather than a remembered string - the answer is then true from
+ * paths CI cannot reach, instead of resting on where an assignment happens to
+ * sit. aReleasedModelIsNoLongerNamed() is the one case that does go below the
+ * guard, and it skips wherever no library loads: run it against a real libvosk,
+ * or against a stand-in exporting the ten symbols loadVoskLibrary() resolves,
+ * to see dropping that gate go red.
  *
  * Run with: ctest -R SpeechRecognizerContractTest -V
  */
 
 #include <QtTest/QtTest>
 
+#include <QFile>
 #include <QJsonArray>
 #include <QJsonObject>
+#include <QPointer>
+#include <QScopeGuard>
 #include <QSettings>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 
 #include "PortableModeTestHelper.h"
 #include "MudletInstanceCoordinator.h"
+#include "SherpaRecognizer.h"
+#include "SpeechRecognizer.h"
+#include "SpeechRecognizerFactory.h"
+#include "TLuaInterpreter.h"
 #include "VoskRecognizer.h"
 #include "mudlet.h"
 
+#if defined(Q_OS_MACOS)
+#include "AppleSpeechRecognizer.h"
+#endif
+
 #include "GroupedTest.h"
 
+#include <memory>
 #include <optional>
+
+extern "C" {
+#if defined(INCLUDE_VERSIONED_LUA_HEADERS)
+#include <lua5.1/lauxlib.h>
+#include <lua5.1/lua.h>
+#else
+#include <lauxlib.h>
+#include <lua.h>
+#endif
+}
+
+namespace {
+
+// Minimal stand-in for a backend that can bias. No in-tree backend can yet -
+// VoskRecognizer hardcodes biasing/grammar to false - so setVocabulary()'s
+// short-circuit around a failed applyVocabulary() has nothing else to run
+// against. Only the pure virtuals need real bodies; capabilities() and
+// applyVocabulary() are the two calls the test actually cares about.
+class BiasingStubRecognizer : public SpeechRecognizer
+{
+public:
+    Capabilities capabilities() const override
+    {
+        Capabilities can;
+        can.biasing = mBiasingSupported;
+        return can;
+    }
+
+    bool initialize(const QString&) override { return true; }
+    QString currentLanguage() const override { return QString(); }
+    bool setLanguage(const QString&) override { return true; }
+    QString backendName() const override { return qsl("BiasingStub"); }
+    QString backendVersion() const override { return qsl("1.0"); }
+    bool setSensitivity(Sensitivity) override { return true; }
+    Sensitivity sensitivity() const override { return Sensitivity::Default; }
+
+    // Test-controlled outcome and call count, so the fix's short-circuit can
+    // be proven both ways: it must not skip a re-apply while the backend is
+    // still failing, and it must skip one once the backend has succeeded.
+    VocabularyResult mNextApplyResult = VocabularyResult::Failed;
+    int mApplyCallCount = 0;
+
+    // Flipped off to prove a backend with neither biasing nor grammar is
+    // never asked to apply anything at all, not merely told Unsupported.
+    bool mBiasingSupported = true;
+
+protected:
+    void doStartListening() override {}
+    void doStopListening() override {}
+    void doCancel() override {}
+
+    VocabularyResult applyVocabulary(const QStringList& words) override
+    {
+        Q_UNUSED(words)
+        ++mApplyCallCount;
+        return mNextApplyResult;
+    }
+};
+
+// A backend whose start does not complete inside the call, the way one
+// waiting on a permission dialog does not. Nothing in tree can be held in
+// Starting from a test - Vosk reaches it only behind a real microphone
+// permission prompt - so the base class's rules for that state need a backend
+// whose start parks there on demand.
+// Claims biasing and overrides nothing, which is the wiring mistake the base's
+// default applyVocabulary() has to answer for rather than fail silently.
+class ClaimsBiasingButImplementsNothingRecognizer : public SpeechRecognizer
+{
+    Q_OBJECT
+
+public:
+    Capabilities capabilities() const override
+    {
+        Capabilities answer;
+        answer.biasing = true;
+        return answer;
+    }
+    bool initialize(const QString&) override { return true; }
+    QString currentLanguage() const override { return QString(); }
+    bool setLanguage(const QString&) override { return true; }
+    QString backendName() const override { return qsl("ClaimsBiasingStub"); }
+    QString backendVersion() const override { return qsl("1.0"); }
+    bool setSensitivity(Sensitivity) override { return true; }
+    Sensitivity sensitivity() const override { return Sensitivity::Default; }
+
+protected:
+    void doStartListening() override {}
+    void doStopListening() override {}
+    void doCancel() override {}
+};
+
+// Re-enters setVocabulary() from applyVocabulary() once, standing in for the
+// Lua handler that does it for real: sherpa reloads its model to apply words, the
+// reload calls setState(), and setState() dispatches handlers inline.
+// applyVocabulary() is protected and, for the branch below, touches nothing
+// native - it decides before the state check that would need a live decoder.
+// Exposing it is the only way to reach that branch with no library installed.
+class ExposedSherpaRecognizer : public SherpaRecognizer
+{
+    Q_OBJECT
+
+public:
+    using SherpaRecognizer::applyVocabulary;
+};
+
+// Capabilities that can actually move, which no real backend's can without a
+// library or a loaded model - and which is why the positive direction of the
+// announcement went untested through three review rounds.
+class MovableCapabilitiesRecognizer : public SpeechRecognizer
+{
+    Q_OBJECT
+
+public:
+    Capabilities capabilities() const override
+    {
+        Capabilities answer;
+        answer.biasing = mCanBias;
+        answer.onDevice = true;
+        return answer;
+    }
+    bool initialize(const QString&) override { return true; }
+    QString currentLanguage() const override { return QString(); }
+    bool setLanguage(const QString&) override { return true; }
+    QString backendName() const override { return qsl("MovableStub"); }
+    QString backendVersion() const override { return qsl("1.0"); }
+    bool setSensitivity(Sensitivity) override { return true; }
+    Sensitivity sensitivity() const override { return Sensitivity::Default; }
+
+    bool mCanBias = false;
+
+protected:
+    void doStartListening() override {}
+    void doStopListening() override {}
+    void doCancel() override {}
+};
+
+class ReentrantVocabularyRecognizer : public SpeechRecognizer
+{
+    Q_OBJECT
+
+public:
+    Capabilities capabilities() const override
+    {
+        Capabilities answer;
+        answer.biasing = true;
+        return answer;
+    }
+    bool initialize(const QString&) override { return true; }
+    QString currentLanguage() const override { return QString(); }
+    bool setLanguage(const QString&) override { return true; }
+    QString backendName() const override { return qsl("ReentrantStub"); }
+    QString backendVersion() const override { return qsl("1.0"); }
+    bool setSensitivity(Sensitivity) override { return true; }
+    Sensitivity sensitivity() const override { return Sensitivity::Default; }
+
+    QStringList mInnerWords;
+    int mApplyCalls = 0;
+
+protected:
+    VocabularyResult applyVocabulary(const QStringList& words) override
+    {
+        ++mApplyCalls;
+        if (!mHasReentered && !mInnerWords.isEmpty()) {
+            mHasReentered = true;
+            // The inner offer fails; the outer one is about to succeed
+            setVocabulary(mInnerWords);
+            return VocabularyResult::Applied;
+        }
+        return VocabularyResult::Failed;
+    }
+    void doStartListening() override {}
+    void doStopListening() override {}
+    void doCancel() override {}
+
+private:
+    bool mHasReentered = false;
+};
+
+class PendingStartStubRecognizer : public SpeechRecognizer
+{
+public:
+    // Ready is what startListening() requires, and there is no model to load
+    // to get there
+    bool initialize(const QString&) override
+    {
+        setState(State::Ready);
+        return true;
+    }
+    QString currentLanguage() const override { return QString(); }
+    bool setLanguage(const QString&) override { return true; }
+    QString backendName() const override { return qsl("PendingStartStub"); }
+    QString backendVersion() const override { return qsl("1.0"); }
+    bool setSensitivity(Sensitivity) override { return true; }
+    Sensitivity sensitivity() const override { return Sensitivity::Default; }
+
+    int mStopCallCount = 0;
+    int mCancelCallCount = 0;
+
+    // setState() is protected, and the guard inside it is a rule of the base
+    // rather than of any backend, so there is no other way to ask a recognizer
+    // to repeat a state it is already in
+    using SpeechRecognizer::setState;
+
+protected:
+    void doStartListening() override { setState(State::Starting); }
+    void doStopListening() override { ++mStopCallCount; }
+    void doCancel() override { ++mCancelCallCount; }
+};
+
+} // namespace
 
 class SpeechRecognizerContractTest : public QObject
 {
@@ -205,23 +430,214 @@ private slots:
         QVERIFY2(message.contains(qsl("reloadLibrary")), qPrintable(qsl("the refusal did not name what lifts the latch: %1").arg(message)));
     }
 
-    // Documented as re-readable rather than cacheable, which needs the change
-    // to be announced at all - and announced once, not on every read.
-    void capabilityChangesAreAnnouncedOnce()
+    // Capabilities are documented as re-readable rather than cacheable, so a
+    // real change has to be announced - and nothing else may be. This holds
+    // the second half for Vosk, and the sherpa case further down holds it for
+    // that backend: the announcement lives in the base now, but each backend
+    // still has to seed it when it is built, so each is worth its own case.
+    // The positive direction is held by aCapabilityThatMovesIsAnnounced, on a
+    // stub - no real backend's capabilities can move without a library or a
+    // loaded model, which is how that direction went untested for so long.
+    void theFirstCapabilityReadAnnouncesNothing()
     {
         VoskRecognizer recognizer;
         QSignalSpy spy(&recognizer, &SpeechRecognizer::capabilitiesChanged);
         QVERIFY(spy.isValid());
 
+        // Nothing has moved since construction, so nothing is announced. This
+        // once required the opposite, when the record was left at the all-false
+        // default while capabilities() answers onDevice = true: the first call
+        // always "changed", and this case pinned that in rather than catching
+        // it, which is the shape a test asserting a bug takes.
         recognizer.announceCapabilitiesIfChanged();
-        QCOMPARE(spy.count(), 1);
+        QCOMPARE(spy.count(), 0);
         recognizer.announceCapabilitiesIfChanged();
-        QCOMPARE(spy.count(), 1);
+        QCOMPARE(spy.count(), 0);
+    }
+
+    // docs/stt-api.md: "refusal messages can arrive without a state change".
+    // A start refused for want of a model is a refusal, not a fault - the
+    // recognizer is exactly as usable afterwards as before, so moving it to
+    // Error told a package driving its controls from state to offer a reload
+    // of a model that was never loaded. The rule lives in the base class so
+    // every backend refuses the same way, and this pins it there.
+    void aRefusedStartLeavesTheStateAlone()
+    {
+        VoskRecognizer recognizer;
+        QSignalSpy errors(&recognizer, &SpeechRecognizer::errorOccurred);
+        QSignalSpy states(&recognizer, &SpeechRecognizer::stateChanged);
+        QVERIFY(errors.isValid());
+        QVERIFY(states.isValid());
+
+        QCOMPARE(recognizer.state(), SpeechRecognizer::State::Uninitialized);
+        recognizer.startListening();
+        QCOMPARE(errors.count(), 1);
+        QVERIFY2(states.isEmpty(), "a refusal is not a fault, so it must not announce a state change");
+        QCOMPARE(recognizer.state(), SpeechRecognizer::State::Uninitialized);
+
+        // Nothing is listening, so there is nothing to stop or abandon, and
+        // neither call may say anything about it
+        recognizer.stopListening();
+        recognizer.cancel();
+        QCOMPARE(errors.count(), 1);
+        QVERIFY(states.isEmpty());
+    }
+
+    // A start that has not completed is still a start, and stopping one has to
+    // withdraw it: leaving the request pending means answering the permission
+    // dialog later opens the microphone after the caller asked to stop. The
+    // base class routes Starting through cancel() for exactly that, and
+    // nothing pinned it - the word did not appear in this file at all, so the
+    // branch could be deleted with every case still green.
+    void stoppingAPendingStartWithdrawsIt()
+    {
+        PendingStartStubRecognizer recognizer;
+        QSignalSpy states(&recognizer, &SpeechRecognizer::stateChanged);
+        QVERIFY(states.isValid());
+
+        QVERIFY(recognizer.initialize(QString()));
+        QCOMPARE(recognizer.state(), SpeechRecognizer::State::Ready);
+
+        recognizer.startListening();
+        QCOMPARE(recognizer.state(), SpeechRecognizer::State::Starting);
+
+        recognizer.stopListening();
+        QVERIFY2(recognizer.state() == SpeechRecognizer::State::Ready, "a stop while still Starting left the request pending, so answering the permission dialog would open the microphone anyway");
+
+        // Withdrawn by the base itself, which is why the header tells a
+        // backend's own continuation to re-check state() rather than wait for
+        // a doCancel() that never comes
+        QCOMPARE(recognizer.mCancelCallCount, 0);
+        // Nothing was captured, so there is nothing to finalise either
+        QCOMPARE(recognizer.mStopCallCount, 0);
+
+        // Announced, not merely arrived at: Ready, Starting, Ready
+        QCOMPARE(states.count(), 3);
+        QCOMPARE(states.at(2).at(0).value<SpeechRecognizer::State>(), SpeechRecognizer::State::Ready);
+    }
+
+    // modelPath() and currentLanguage() are gated on the live model handle
+    // rather than reading remembered strings, so a released model cannot still
+    // be named - releaseResources() clears mModelPath but nothing clears the
+    // language, and the gate is the whole of what keeps that honest.
+    //
+    // Needs a library and a model it accepts, which CI has neither of: with no
+    // libvosk, initialize() refuses at its first guard and no handle is ever
+    // taken, so there is nothing for a release to have to hide. Where they are
+    // installed - a developer machine, or a run with a stand-in library on the
+    // search path - this is the case that catches the gate being dropped.
+    void aReleasedModelIsNoLongerNamed()
+    {
+        // A model directory of this case's own, rather than whatever happens
+        // to be installed: the library is what decides whether this can run,
+        // and depending on a downloaded model as well would narrow that to
+        // almost nowhere. Taken away again at the end, since
+        // listModelsSpansEveryModelBasedEngine() counts what is on disk.
+        const QString modelPath = qsl("%1/vosk-model-contract-test").arg(VoskRecognizer::modelsDirectoryPath());
+        QVERIFY(QDir().mkpath(qsl("%1/am").arg(modelPath)));
+        auto removeModelDir = qScopeGuard([modelPath]() {
+            QDir(modelPath).removeRecursively();
+        });
+
+        VoskRecognizer recognizer;
+        if (!recognizer.initialize(modelPath)) {
+            QSKIP("no Vosk library that loads a model here, so no live model handle can be taken to release");
+        }
+
+        QVERIFY2(!recognizer.modelPath().isEmpty(), "a loaded model must be named");
+        QVERIFY2(!recognizer.currentLanguage().isEmpty(), "a loaded model must report the language it was read as");
+        QVERIFY(recognizer.hasLiveNativeResources());
+
+        recognizer.releaseResources();
+        QCOMPARE(recognizer.state(), SpeechRecognizer::State::Uninitialized);
+        QVERIFY2(!recognizer.hasLiveNativeResources(), "releaseResources() left native handles behind");
+        QVERIFY2(recognizer.modelPath().isEmpty(), "a model path survived the model it describes");
+        QVERIFY2(recognizer.currentLanguage().isEmpty(), "a language survived the model it was read from");
+    }
+
+    // Which models can be biased is only known once one is loaded, so words a
+    // package offers while an unbiasable model is loaded - or before any is -
+    // would be lost, and a later switch to a model that can bias would compile
+    // in nothing. The base class keeps them for every backend, so none has to
+    // remember to. Vosk cannot bias at all, which is what makes it the right
+    // backend to prove the words survive an Unsupported answer.
+    void wordsOfferedToABackendThatCannotUseThemAreStillKept()
+    {
+        VoskRecognizer recognizer;
+        QVERIFY2(!recognizer.supportsBiasing() && !recognizer.supportsGrammar(), "this case needs a backend that cannot take vocabulary");
+
+        const QStringList words{qsl("kill"), qsl("look"), qsl("inventory")};
+        QCOMPARE(recognizer.setVocabulary(words), SpeechRecognizer::VocabularyResult::Unsupported);
+        QCOMPARE(recognizer.vocabulary(), words);
+
+        // Offered again unchanged: still Unsupported here, and still held
+        QCOMPARE(recognizer.setVocabulary(words), SpeechRecognizer::VocabularyResult::Unsupported);
+        QCOMPARE(recognizer.vocabulary(), words);
+    }
+
+    // setVocabulary()'s short-circuit for an unchanged offer must answer
+    // Applied only when the last actual attempt succeeded - not merely
+    // because the words match what was offered before. A backend that keeps
+    // answering Failed for the same words must be asked again, not agreed
+    // with, and once it does succeed a further unchanged offer must not
+    // trigger a redundant re-apply.
+    void aFailedApplyIsNotShortCircuitedIntoApplied()
+    {
+        BiasingStubRecognizer recognizer;
+        QVERIFY2(recognizer.supportsBiasing(), "this case needs a backend that can bias");
+
+        const QStringList words{qsl("kill"), qsl("look"), qsl("inventory")};
+
+        recognizer.mNextApplyResult = SpeechRecognizer::VocabularyResult::Failed;
+        QCOMPARE(recognizer.setVocabulary(words), SpeechRecognizer::VocabularyResult::Failed);
+        QCOMPARE(recognizer.mApplyCallCount, 1);
+
+        // Same words offered again while still failing: must not be agreed
+        // with as if they were in effect
+        QCOMPARE(recognizer.setVocabulary(words), SpeechRecognizer::VocabularyResult::Failed);
+        QCOMPARE(recognizer.mApplyCallCount, 2);
+
+        // The backend recovers; the same words now succeed
+        recognizer.mNextApplyResult = SpeechRecognizer::VocabularyResult::Applied;
+        QCOMPARE(recognizer.setVocabulary(words), SpeechRecognizer::VocabularyResult::Applied);
+        QCOMPARE(recognizer.mApplyCallCount, 3);
+
+        // Offered again unchanged: short-circuits now, so no redundant re-apply
+        QCOMPARE(recognizer.setVocabulary(words), SpeechRecognizer::VocabularyResult::Applied);
+        QCOMPARE(recognizer.mApplyCallCount, 3);
+
+        // A different word list must still re-apply even though the last
+        // attempt succeeded - the short-circuit is for an unchanged offer,
+        // not for a backend that is currently in a good mood
+        const QStringList otherWords{qsl("cast"), qsl("quaff")};
+        QCOMPARE(recognizer.setVocabulary(otherWords), SpeechRecognizer::VocabularyResult::Applied);
+        QCOMPARE(recognizer.mApplyCallCount, 4);
+    }
+
+    // setVocabulary() must not call through to a backend that has said it can
+    // do nothing with vocabulary - Unsupported has to mean the words were
+    // never handed over, not merely that nothing came back from doing so.
+    void unsupportedVocabularyNeverReachesTheBackend()
+    {
+        BiasingStubRecognizer recognizer;
+        recognizer.mBiasingSupported = false;
+        QVERIFY2(!recognizer.supportsBiasing() && !recognizer.supportsGrammar(), "this case needs a backend that cannot take vocabulary");
+
+        const QStringList words{qsl("kill"), qsl("look"), qsl("inventory")};
+        QCOMPARE(recognizer.setVocabulary(words), SpeechRecognizer::VocabularyResult::Unsupported);
+        QCOMPARE(recognizer.mApplyCallCount, 0);
     }
 
     // Reported as the place to install a model into, so it has to be a place
     // that exists. A made-up default named a directory the user never created,
     // and the "install a model" message was unreachable behind it.
+    //
+    // Only asserts anything on a machine with a Vosk model installed:
+    // VoskRecognizer::defaultModelPath() has no made-up fallback any more - that
+    // absence is the fix - so on a clean CI machine it is empty and this returns
+    // without checking anything. Kept because it is the one place the regression
+    // would be caught, and it is caught on any developer machine set up to use
+    // the feature at all.
     void theDefaultModelPathIsAModelOrNothing()
     {
         const QString defaultPath = VoskRecognizer::defaultModelPath();
@@ -355,6 +771,670 @@ private slots:
 
         QVERIFY2(!VoskRecognizer::loneFillerWordWasNotSpoken(qsl("dragon"), none), "a word that is not a filler word was discarded");
         QVERIFY2(!VoskRecognizer::loneFillerWordWasNotSpoken(qsl("i attack"), none), "a phrase was discarded as though it were a lone filler word");
+    }
+
+    // The model directory chooses the engine, so stt.init(path) needs no
+    // second argument and a package that installed one engine's models never
+    // has to name it. A layout that matches nothing is Auto rather than a
+    // guess: guessing wrong loads a decoder against the wrong graph and fails
+    // deep inside the library instead of here.
+    void theModelDirectoryChoosesTheEngine()
+    {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+
+        // A Vosk model is a directory holding an "am" subdirectory
+        const QString voskDir = qsl("%1/vosk-model-small-en-us-0.15").arg(dir.path());
+        QVERIFY(QDir().mkpath(qsl("%1/am").arg(voskDir)));
+        QCOMPARE(SpeechRecognizerFactory::backendForModelDir(voskDir), SpeechRecognizerFactory::Backend::Vosk);
+
+        // A sherpa streaming transducer model is three .onnx files plus tokens.txt
+        const QString sherpaDir = qsl("%1/sherpa-onnx-streaming-zipformer-en").arg(dir.path());
+        QVERIFY(QDir().mkpath(sherpaDir));
+        for (const QString& name : {qsl("encoder.onnx"), qsl("decoder.onnx"), qsl("joiner.onnx"), qsl("tokens.txt")}) {
+            QFile file(qsl("%1/%2").arg(sherpaDir, name));
+            QVERIFY(file.open(QIODevice::WriteOnly));
+            file.close();
+        }
+        QCOMPARE(SpeechRecognizerFactory::backendForModelDir(sherpaDir), SpeechRecognizerFactory::Backend::Sherpa);
+
+        const QString emptyDir = qsl("%1/nothing-in-here").arg(dir.path());
+        QVERIFY(QDir().mkpath(emptyDir));
+        QCOMPARE(SpeechRecognizerFactory::backendForModelDir(emptyDir), SpeechRecognizerFactory::Backend::Auto);
+    }
+
+    // Round-trips through the settings string, because a backend chosen by the
+    // player is written to Mudlet.ini and read back on the next run: an
+    // identifier that does not survive the trip silently reverts their choice.
+    void aBackendIdentifierSurvivesTheRoundTrip()
+    {
+        // Platform included deliberately: it is the value stt.availableBackends()
+        // returns on macOS, and leaving it out let backendIdentifier(Platform)
+        // answer "vosk" with the suite still green.
+        for (const auto backend : {SpeechRecognizerFactory::Backend::Vosk, SpeechRecognizerFactory::Backend::Sherpa,
+                                   SpeechRecognizerFactory::Backend::Platform}) {
+            const QString identifier = SpeechRecognizerFactory::backendIdentifier(backend);
+            QVERIFY2(!identifier.isEmpty(), "a backend the player can choose needs a name to store");
+            QCOMPARE(SpeechRecognizerFactory::backendFromIdentifier(identifier), backend);
+        }
+        QCOMPARE(SpeechRecognizerFactory::backendFromIdentifier(qsl("not-an-engine")), SpeechRecognizerFactory::Backend::Auto);
+    }
+
+    // sherpa reports biasing only when the loaded model can actually be
+    // biased, which needs bpe.vocab - the text "piece score" file, NOT the
+    // bpe.model binary that model packages ship. Claiming biasing without it
+    // makes setVocabulary() answer Applied over a decoder that scores nothing.
+    void sherpaClaimsNoBiasingBeforeAModelIsLoaded()
+    {
+        SherpaRecognizer recognizer;
+        QCOMPARE(recognizer.state(), SpeechRecognizer::State::Uninitialized);
+        QVERIFY2(!recognizer.capabilities().biasing, "biasing is a property of the loaded model, and none is loaded");
+        QCOMPARE(recognizer.setVocabulary({qsl("kill"), qsl("look")}), SpeechRecognizer::VocabularyResult::Unsupported);
+        QVERIFY2(recognizer.vocabulary().size() == 2, "the words must be kept for a model that can bias later");
+    }
+
+    // capabilities().biasing and modelPath() must answer from the live handle,
+    // not from mSupportsBiasing/mModelPath alone: both are set by loadModel()
+    // before the recognizer handle exists, and mModelPath survives
+    // releaseResources() untouched, so without the gate modelPath() would go on
+    // naming a model that is no longer loaded. releaseResources() does clear
+    // mSupportsBiasing and mBpeVocabPath - SherpaRecognizer.h says it keeps
+    // those redundant with the gate on purpose rather than leaning on it
+    // alone - so biasing is held to the same answer from two directions. This pins the gate on a recognizer that never
+    // successfully loaded a model at all - the strongest case reachable
+    // without the sherpa-onnx library actually installed, since only a real,
+    // successful load ever sets mSupportsBiasing true or mModelPath non-empty
+    // in the first place. The load-then-release case this cannot reach was
+    // verified by hand against the real sherpa-onnx library and a model
+    // carrying a real bpe.vocab.
+    void sherpaCapabilitiesAndModelPathClearOnRelease()
+    {
+        SherpaRecognizer recognizer;
+        QVERIFY(recognizer.modelPath().isEmpty());
+        QVERIFY(recognizer.currentLanguage().isEmpty());
+        QVERIFY2(!recognizer.capabilities().biasing, "biasing was claimed with no model ever loaded");
+
+        // Fails at the very first guard (no library here) without ever
+        // touching mModelPath/mSupportsBiasing - releaseResources() must still
+        // leave a consistent, empty answer rather than assume it has anything to undo
+        QVERIFY(!recognizer.initialize(qsl("/definitely/not/a/model/path/for/testing")));
+        recognizer.releaseResources();
+
+        QCOMPARE(recognizer.state(), SpeechRecognizer::State::Uninitialized);
+        QVERIFY2(recognizer.modelPath().isEmpty(), "a model path survived releaseResources()");
+        QVERIFY2(recognizer.currentLanguage().isEmpty(), "a language survived releaseResources()");
+        QVERIFY2(!recognizer.capabilities().biasing, "biasing was still claimed after releaseResources()");
+        QVERIFY2(!recognizer.hasLiveNativeResources(), "releaseResources() left native handles behind");
+    }
+
+    // Apple's recognizer needs no download and no model, so unlike Vosk and
+    // sherpa it is available on any Mac as soon as the user has granted speech
+    // permission. What it must never do is claim a capability it cannot honour:
+    // recognition is forced on-device, so onDevice is true and audio never
+    // reaches Apple; contextualStrings gives real biasing; and the per-segment
+    // confidence and timestamps make wordResults honest.
+    void theAppleBackendClaimsOnlyWhatTheFrameworkGives()
+    {
+#if defined(Q_OS_MACOS)
+        AppleSpeechRecognizer recognizer;
+        const auto can = recognizer.capabilities();
+        QVERIFY2(can.onDevice, "recognition is forced on-device, so this must not under-report");
+        QVERIFY2(can.biasing, "contextualStrings is what carries a package's vocabulary");
+        QVERIFY2(can.wordResults, "SFTranscriptionSegment carries confidence and timings");
+        QVERIFY2(!can.grammar, "there is no grammar-constraint API to back this claim");
+
+        // No model on disk to name, ever - a package gating setup on a model
+        // path must not be told to go and install one
+        QCOMPARE(recognizer.modelPath(), QString());
+        QCOMPARE(recognizer.state(), SpeechRecognizer::State::Uninitialized);
+#else
+        QCOMPARE(SpeechRecognizerFactory::backendAvailable(SpeechRecognizerFactory::Backend::Platform), false);
+#endif
+    }
+
+    // gap 1: backendForModelDir() used to be dead code - grep found no caller
+    // outside a test - so stt.init(path) picked an engine by install
+    // preference (Auto) rather than by what the directory actually is. With
+    // nothing installed, create(Auto) and create(<a specific backend>) are
+    // both null, so nullptr alone cannot tell "Auto picked nothing" from "the
+    // right engine was asked for and wasn't there". create() names an
+    // unavailable *specific* backend in a warning but says nothing for Auto's
+    // own empty-list case, and that asymmetry is what makes the warning the
+    // one externally observable proof that backendForModelDir()'s answer is
+    // what actually reached create(), rather than Auto's install-preference
+    // order (which would try sherpa first on a mixed-install machine - the
+    // exact bug this fix closes).
+    void modelDirectorySelectsTheEngineCreateAttempts()
+    {
+        if (VoskRecognizer::libraryAvailable()) {
+            QSKIP("libvosk is installed here, so create(Vosk) would succeed rather than warn");
+        }
+
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString voskDir = qsl("%1/vosk-model-small-en-us-0.15").arg(dir.path());
+        QVERIFY(QDir().mkpath(qsl("%1/am").arg(voskDir)));
+
+        const auto backend = SpeechRecognizerFactory::backendForModelDir(voskDir);
+        QCOMPARE(backend, SpeechRecognizerFactory::Backend::Vosk);
+
+        QTest::ignoreMessage(QtWarningMsg, "SpeechRecognizerFactory: Vosk backend requested but not available");
+        QVERIFY2(!SpeechRecognizerFactory::create(backend, nullptr), "a backend requested by name must still refuse when its library is not installed");
+    }
+
+    // gap 1's other half: stt.init()'s new caller, mudlet::initSpeechRecognition(),
+    // must actually forward the backend it is given rather than falling back
+    // to its old hardcoded Auto. Same warning-message proof as above, this
+    // time through the real call site.
+    void initSpeechRecognitionForwardsAnExplicitBackend()
+    {
+        if (VoskRecognizer::libraryAvailable()) {
+            QSKIP("libvosk is installed here, so create(Vosk) would succeed rather than warn");
+        }
+        QVERIFY2(!mudlet::self()->speechRecognizer(), "an earlier case in this file left a live recognizer behind");
+
+        QTest::ignoreMessage(QtWarningMsg, "SpeechRecognizerFactory: Vosk backend requested but not available");
+        mudlet::self()->initSpeechRecognition(SpeechRecognizerFactory::Backend::Vosk);
+        QVERIFY2(!mudlet::self()->speechRecognizer(), "an unavailable backend must not have been silently swapped for Auto's own choice");
+    }
+
+    // gap 2: stt.init() with no argument must be able to reach the built-in
+    // macOS backend, which needs neither a library nor a model on disk.
+    // *When* to prefer it over a model-based engine is a decision inside
+    // TLuaInterpreter::sttInit() with no entry point below Lua, so it is
+    // proven where CLAUDE.md says a Lua-reachable behaviour belongs: in
+    // STT_spec.lua's "names where a model belongs when none is installed, or
+    // succeeds via a model-less backend" case, not duplicated here. What this
+    // pins is the primitive that decision depends on - that the backend it
+    // selects on macOS actually accepts stt.init() with no model path.
+    void theModelLessBackendInitializesWithNoModelPath()
+    {
+#if defined(Q_OS_MACOS)
+        if (!SpeechRecognizerFactory::backendAvailable(SpeechRecognizerFactory::Backend::Platform)) {
+            QSKIP("no system speech recognizer available for this locale on this machine");
+        }
+
+        std::unique_ptr<SpeechRecognizer> recognizer(SpeechRecognizerFactory::create(SpeechRecognizerFactory::Backend::Platform, nullptr));
+        QVERIFY2(recognizer.get(), "the built-in macOS backend must be creatable directly, even though availableBackends() omits it");
+        QVERIFY2(recognizer->initialize(QString()), "the model-less backend must accept stt.init() with no path at all");
+        QCOMPARE(recognizer->state(), SpeechRecognizer::State::Ready);
+#else
+        // Shape-check on every other platform: there is no model-less backend
+        // to reach yet, so there is nothing more this case can prove here.
+        QCOMPARE(SpeechRecognizerFactory::backendAvailable(SpeechRecognizerFactory::Backend::Platform), false);
+#endif
+    }
+
+    // gap 3: stt.available() and getInfo().available used to answer for Vosk
+    // alone, so a sherpa-only or Apple-only install was told nothing was
+    // there even though speech recognition genuinely works. Called directly
+    // against a bare lua_State - none of these reads touch a Host or a
+    // profile, so building one would add weight without adding coverage.
+    void availabilityIsNotVoskOnly()
+    {
+        lua_State* L = luaL_newstate();
+        QVERIFY(L);
+        auto closeState = qScopeGuard([L]() {
+            lua_close(L);
+        });
+
+        // Read once, then asserted against a stated expectation rather than
+        // against production's own expression: computing the expected value
+        // the same way stt.available() computes it made this mirror the
+        // binding instead of checking it, and a revert to "Vosk alone" stayed
+        // green because both sides moved together.
+        TLuaInterpreter::sttIsAvailable(L);
+        const bool available = lua_toboolean(L, -1);
+        lua_pop(L, 1);
+
+        TLuaInterpreter::sttGetInfo(L);
+        QVERIFY(lua_istable(L, -1));
+        lua_getfield(L, -1, "available");
+        QCOMPARE(static_cast<bool>(lua_toboolean(L, -1)), available);
+        lua_pop(L, 1);
+
+        lua_getfield(L, -1, "searchPaths");
+        QVERIFY2(lua_istable(L, -1), "searchPaths must always be a table, engine installed or not");
+        lua_pop(L, 2); // searchPaths, then the getInfo() table
+
+        const bool voskInstalled = SpeechRecognizerFactory::backendAvailable(SpeechRecognizerFactory::Backend::Vosk);
+        const bool sherpaInstalled = SpeechRecognizerFactory::backendAvailable(SpeechRecognizerFactory::Backend::Sherpa);
+        const bool platformInstalled = SpeechRecognizerFactory::backendAvailable(SpeechRecognizerFactory::Backend::Platform);
+
+        if (!sherpaInstalled && !platformInstalled) {
+            // Nothing here can tell a Vosk-only answer from a correct one:
+            // with Vosk the only candidate, both say the same thing. Stated
+            // rather than quietly passing, since a green that proves nothing
+            // is what this case was rewritten to stop.
+            QCOMPARE(available, voskInstalled);
+            QSKIP("only Vosk could answer on this machine, so this cannot tell a Vosk-only availability answer from a correct one");
+        }
+        if (voskInstalled) {
+            QCOMPARE(available, true);
+            QSKIP("libvosk is installed here as well, so a Vosk-only answer would also be true");
+        }
+
+        // A non-Vosk engine is installed and Vosk is not: speech recognition
+        // genuinely works on this machine, and the only way to answer false is
+        // to have asked Vosk alone.
+        QVERIFY2(available, "a sherpa-onnx or built-in backend is installed here, so availability must not be answered from Vosk alone");
+    }
+
+    // gap 3: with no model-based engine installed at all, stt.getModelPath()
+    // and stt.getLibraryPath() must still name a real, checkable place - the
+    // same default they always answered before sherpa existed. The branch
+    // that answers with sherpa's own paths once a SherpaRecognizer is
+    // actually loaded needs the real library to exercise and cannot be proven
+    // here - said plainly rather than writing a case that would pass either way.
+    void installPathsDefaultToVoskWithNothingLoaded()
+    {
+        if (VoskRecognizer::libraryAvailable() || SherpaRecognizer::sherpaAvailable()) {
+            QSKIP("a model-based engine is installed here, so the default this case pins does not apply");
+        }
+        QVERIFY2(!mudlet::self()->speechRecognizer(), "a live recognizer would make these answer for it instead of the default");
+
+        lua_State* L = luaL_newstate();
+        QVERIFY(L);
+        auto closeState = qScopeGuard([L]() {
+            lua_close(L);
+        });
+
+        TLuaInterpreter::sttGetModelPath(L);
+        QCOMPARE(QString::fromUtf8(lua_tostring(L, -1)), VoskRecognizer::modelsDirectoryPath());
+        lua_pop(L, 1);
+
+        TLuaInterpreter::sttGetLibraryPath(L);
+        QCOMPARE(QString::fromUtf8(lua_tostring(L, -1)), VoskRecognizer::userLibraryPath());
+        lua_pop(L, 1);
+    }
+
+    // gap 3: stt.listModels() must show what is on disk for every model-based
+    // engine, not only Vosk's directory - a downloaded sherpa model has to
+    // stay visible even with nothing loaded. Unlike the two cases above, this
+    // needs no library at all: getInstalledModels() only reads directory
+    // layouts, so it is provable in full without installing anything.
+    void listModelsSpansEveryModelBasedEngine()
+    {
+        const QString voskModelsDir = VoskRecognizer::modelsDirectoryPath();
+        const QString sherpaModelsDir = SherpaRecognizer::modelsDirectoryPath();
+        const QString voskModel = qsl("contract-test-vosk-model");
+        const QString sherpaModel = qsl("contract-test-sherpa-model");
+
+        QVERIFY(QDir().mkpath(qsl("%1/%2/am").arg(voskModelsDir, voskModel)));
+        QVERIFY(QDir().mkpath(qsl("%1/%2").arg(sherpaModelsDir, sherpaModel)));
+        for (const QString& name : {qsl("encoder.onnx"), qsl("decoder.onnx"), qsl("joiner.onnx"), qsl("tokens.txt")}) {
+            QFile file(qsl("%1/%2/%3").arg(sherpaModelsDir, sherpaModel, name));
+            QVERIFY(file.open(QIODevice::WriteOnly));
+            file.close();
+        }
+        auto cleanup = qScopeGuard([&]() {
+            QDir(qsl("%1/%2").arg(voskModelsDir, voskModel)).removeRecursively();
+            QDir(qsl("%1/%2").arg(sherpaModelsDir, sherpaModel)).removeRecursively();
+        });
+
+        lua_State* L = luaL_newstate();
+        QVERIFY(L);
+        auto closeState = qScopeGuard([L]() {
+            lua_close(L);
+        });
+
+        TLuaInterpreter::sttListModels(L);
+        QVERIFY(lua_istable(L, -1));
+        const int tableIdx = lua_gettop(L);
+
+        QStringList names;
+        for (int i = 1;; ++i) {
+            lua_rawgeti(L, tableIdx, i);
+            if (lua_isnil(L, -1)) {
+                lua_pop(L, 1);
+                break;
+            }
+            lua_getfield(L, -1, "name");
+            names << QString::fromUtf8(lua_tostring(L, -1));
+            lua_pop(L, 2); // name, then the {name,path} table - leaves the array slot behind
+        }
+
+        QVERIFY2(names.contains(voskModel), "a Vosk model on disk was not listed");
+        QVERIFY2(names.contains(sherpaModel), "a sherpa model on disk was not listed - listModels must not be Vosk-only");
+    }
+
+    // Last in the file on purpose: alone among the cases here, these two
+    // leave a recognizer built on mudlet::self() for the rest of the
+    // process - keeping one is the behaviour they exist to prove - and
+    // several cases above open by asserting the bridge is empty.
+    // Live testing found that mudlet::initSpeechRecognition() returned
+    // immediately whenever mpSpeechRecognizer was already built, so
+    // stt.close() followed by stt.init() naming a different engine kept
+    // feeding models to the first engine the session ever built. Fixing that
+    // brought the opposite risk with it, so the two rules that must NOT
+    // rebuild are pinned here.
+    //
+    // Runs on macOS only, and only where the system speech recognizer is
+    // available for the machine's locale: the built-in macOS backend is the
+    // one backend this file can build with no library and no model installed,
+    // and without it there is nothing to hold on to. Everywhere else this
+    // asserts that no such backend exists and skips.
+    void initSpeechRecognitionKeepsTheBackendOnAutoAndOnTheSameBackend()
+    {
+#if defined(Q_OS_MACOS)
+        if (!SpeechRecognizerFactory::backendAvailable(SpeechRecognizerFactory::Backend::Platform)) {
+            QSKIP("no system speech recognizer available for this locale on this machine");
+        }
+        QVERIFY2(!mudlet::self()->speechRecognizer(), "an earlier case in this file left a live recognizer behind");
+
+        mudlet::self()->initSpeechRecognition(SpeechRecognizerFactory::Backend::Platform);
+        const QPointer<SpeechRecognizer> firstRecognizer = mudlet::self()->speechRecognizer();
+        QVERIFY2(firstRecognizer, "the built-in macOS backend must have been built");
+
+        // Auto, and the backend already in place, must both leave it alone -
+        // several call sites pass one of these on every setter call, and
+        // rebuilding on either would tear down a working recognizer under a
+        // caller who never asked to switch engines.
+        mudlet::self()->initSpeechRecognition(SpeechRecognizerFactory::Backend::Auto);
+        QCOMPARE(mudlet::self()->speechRecognizer(), firstRecognizer.data());
+        mudlet::self()->initSpeechRecognition(SpeechRecognizerFactory::Backend::Platform);
+        QCOMPARE(mudlet::self()->speechRecognizer(), firstRecognizer.data());
+#else
+        QCOMPARE(SpeechRecognizerFactory::backendAvailable(SpeechRecognizerFactory::Backend::Platform), false);
+        QSKIP("no backend on this platform can be built without an engine library, so this cannot be exercised here");
+#endif
+    }
+
+    // sttInit() derives the backend from the model directory's own layout, so
+    // naming a sherpa-onnx model on a Vosk-only machine resolves to a backend
+    // that cannot be built. Tearing the old engine down before finding that
+    // out cost the player a loaded, working model for a mistyped path - so the
+    // replacement is built first, and a failure leaves what is there untouched.
+    //
+    // Runs on macOS only, needs the system speech recognizer available for the
+    // machine's locale, and additionally skips wherever libvosk is installed,
+    // since then the request below would succeed and there would be no failed
+    // replacement to observe. On a developer machine with Vosk set up it never
+    // executes; CI, which installs neither, is where it does its work.
+    void initSpeechRecognitionKeepsAWorkingBackendWhenTheReplacementCannotBeBuilt()
+    {
+#if defined(Q_OS_MACOS)
+        if (!SpeechRecognizerFactory::backendAvailable(SpeechRecognizerFactory::Backend::Platform)) {
+            QSKIP("no system speech recognizer available for this locale on this machine");
+        }
+        if (VoskRecognizer::libraryAvailable()) {
+            QSKIP("libvosk is installed here, so requesting it below would succeed instead of failing the way this case needs");
+        }
+
+        // Reaches the case above's recognizer when that one ran, and builds one
+        // otherwise, so this does not depend on the order the slots run in
+        mudlet::self()->initSpeechRecognition(SpeechRecognizerFactory::Backend::Platform);
+        const QPointer<SpeechRecognizer> workingRecognizer = mudlet::self()->speechRecognizer();
+        QVERIFY2(workingRecognizer, "the built-in macOS backend must have been built");
+
+        QTest::ignoreMessage(QtWarningMsg, "SpeechRecognizerFactory: Vosk backend requested but not available");
+        mudlet::self()->initSpeechRecognition(SpeechRecognizerFactory::Backend::Vosk);
+
+        QVERIFY2(mudlet::self()->speechRecognizer(), "a replacement that could not be built left the bridge with no engine at all");
+        QCOMPARE(mudlet::self()->speechRecognizer(), workingRecognizer.data());
+
+        // Not merely still pointed at: an engine retired the way the swap path
+        // retires one is deleteLater()d, so the destruction only lands on an
+        // event loop turn. Take one, then check the object is still there.
+        QTest::qWait(1);
+        QVERIFY2(!workingRecognizer.isNull(), "the working backend was torn down for a replacement that never arrived");
+        QCOMPARE(mudlet::self()->speechRecognizer(), workingRecognizer.data());
+#else
+        QCOMPARE(SpeechRecognizerFactory::backendAvailable(SpeechRecognizerFactory::Backend::Platform), false);
+        QSKIP("no backend on this platform can be built without an engine library, so this cannot be exercised here");
+#endif
+    }
+
+    // sherpa-onnx's hotword parser calls std::stof on whatever follows a
+    // leading ':' or '#' with nothing guarding it, and reaches an unguarded
+    // substr(1) for an entry that tokenises to nothing. Mudlet is built
+    // without exceptions, so either one ends the process - and the words come
+    // from stt.setVocabulary(), which takes whatever a package or a player
+    // typed. No in-tree test can load a real sherpa library to reach the
+    // parser, so the filter that keeps those inputs away from it is tested
+    // directly instead.
+    void aVocabularyCannotCarryHotwordSyntaxIntoTheParser()
+    {
+        QStringList rejected;
+        const QStringList usable = SherpaRecognizer::usableHotwords(
+                {qsl("kill goblin"), qsl("heal :self"), qsl("#north"), qsl("look")}, &rejected);
+
+        QCOMPARE(usable, QStringList({qsl("kill goblin"), qsl("look")}));
+        QCOMPARE(rejected, QStringList({qsl("heal :self"), qsl("#north")}));
+    }
+
+    void anEntryWithNothingInItIsRejected()
+    {
+        QStringList rejected;
+        const QStringList usable = SherpaRecognizer::usableHotwords({QString(), qsl("   "), qsl("go")}, &rejected);
+
+        QCOMPARE(usable, QStringList({qsl("go")}));
+        QCOMPARE(rejected.size(), 2);
+    }
+
+    // The buffer is line-delimited, so a newline inside one entry would forge
+    // another - including an empty one, which is itself unparseable.
+    void anEmbeddedNewlineCannotForgeASecondEntry()
+    {
+        const QStringList usable = SherpaRecognizer::usableHotwords({qsl("kill\ngoblin")});
+
+        QCOMPARE(usable, QStringList({qsl("kill goblin")}));
+    }
+
+    // capabilities() answers onDevice = true for this engine whether or not a
+    // model is loaded, so a record of "what was last announced" left at the
+    // all-false default differs from the very first real answer and reports a
+    // change nothing made. No sherpa library is needed to see it: releasing a
+    // recognizer that never loaded anything is enough.
+    void releasingAnEngineThatLoadedNothingAnnouncesNoCapabilityChange()
+    {
+        SherpaRecognizer recognizer;
+        QSignalSpy capabilityChanges(&recognizer, &SpeechRecognizer::capabilitiesChanged);
+
+        recognizer.releaseResources();
+
+        QCOMPARE(capabilityChanges.count(), 0);
+    }
+
+    // "Cannot ever" and "did not this time" both left setSensitivity() false,
+    // and the bridge read every false as the first - so sherpa-onnx, whose
+    // false means a model rebuild failed, told packages to stop asking about
+    // something transient. The two are separated before the call now, so the
+    // capability has to be right per backend.
+    void anEngineSaysWhetherSensitivityCanBeTunedAtAll()
+    {
+        SherpaRecognizer sherpa;
+        QVERIFY2(sherpa.supportsSensitivityTuning(),
+                 "sherpa-onnx bakes its own endpoint rules, so a refusal from it is this attempt failing, not a limit");
+
+#if defined(Q_OS_MACOS)
+        AppleSpeechRecognizer apple;
+        QVERIFY2(!apple.supportsSensitivityTuning(),
+                 "the built-in macOS backend decides its own endpointing and exposes nothing to tune");
+#endif
+    }
+
+    // setState() announces only a state that differs, so no consumer sees a
+    // stateChanged that changed nothing. Nothing held that: every case reached
+    // the state it wanted in one move, so the repeated transition the guard
+    // exists for never happened, and deleting the guard left the suite green.
+    void aStateAlreadyHeldIsNotAnnouncedAgain()
+    {
+        PendingStartStubRecognizer recognizer;
+        recognizer.initialize(QString());
+
+        QSignalSpy stateChanges(&recognizer, &SpeechRecognizer::stateChanged);
+        QVERIFY(stateChanges.isValid());
+
+        recognizer.setState(SpeechRecognizer::State::Ready);
+        QCOMPARE(stateChanges.count(), 0);
+
+        recognizer.setState(SpeechRecognizer::State::Listening);
+        QCOMPARE(stateChanges.count(), 1);
+        recognizer.setState(SpeechRecognizer::State::Listening);
+        QCOMPARE(stateChanges.count(), 1);
+    }
+
+    // usableHotwords() drops what sherpa's parser would throw on, and a list
+    // that is entirely such entries leaves nothing to bias with. Reloading the
+    // decoder for it and answering Applied told a package the engine had taken
+    // words it had not, and that boolean is what packages read to decide
+    // whether to keep correcting results themselves.
+    void aVocabularyLeftEmptyByFilteringIsNotReportedAsApplied()
+    {
+        ExposedSherpaRecognizer recognizer;
+        QSignalSpy errors(&recognizer, &SpeechRecognizer::errorOccurred);
+        QVERIFY(errors.isValid());
+
+        QCOMPARE(recognizer.applyVocabulary({qsl(":1.5"), qsl("#2")}), SpeechRecognizer::VocabularyResult::Failed);
+
+        // One event, not two. Both the fixed and unfixed code answer Failed
+        // from here - without the guard by falling through to the "not idle"
+        // tail - so the return value alone cannot tell them apart. The count
+        // can: the guard returns on the rejection notice alone, where the tail
+        // adds a second event about a state that is not what went wrong.
+        QCOMPARE(errors.count(), 1);
+    }
+
+    // A backend that claims biasing and never implements applyVocabulary()
+    // reaches the base's default. The contract says every Failed explains
+    // itself; silence here reaches Lua as false, which stt.setVocabulary
+    // documents to the player as "this backend cannot use vocabulary" - a
+    // wiring mistake wearing the words of a deliberate capability answer.
+    void aBackendClaimingBiasingWithNoImplementationSaysSo()
+    {
+        ClaimsBiasingButImplementsNothingRecognizer recognizer;
+        QSignalSpy errors(&recognizer, &SpeechRecognizer::errorOccurred);
+        QVERIFY(errors.isValid());
+
+        QCOMPARE(recognizer.setVocabulary({qsl("aardwolf")}), SpeechRecognizer::VocabularyResult::Failed);
+        QCOMPARE(errors.count(), 1);
+    }
+
+    // setVocabulary() commits its verdict after applyVocabulary() returns, and
+    // applyVocabulary() can reach Lua. A handler that offers different words
+    // completes a whole call first, so the outer frame's verdict lands on the
+    // inner frame's word list: the flag says applied, the list is the one that
+    // failed, and the next identical offer short-circuits into Applied against
+    // a backend that never took it.
+    void aReentrantVocabularyOfferIsNotOverwrittenByTheOuterVerdict()
+    {
+        ReentrantVocabularyRecognizer recognizer;
+        recognizer.mInnerWords = QStringList{qsl("inner")};
+
+        recognizer.setVocabulary({qsl("outer")});
+        QCOMPARE(recognizer.vocabulary(), QStringList({qsl("inner")}));
+
+        // The inner words failed, so offering them again must reach the
+        // backend rather than being answered from the flag.
+        const int callsBefore = recognizer.mApplyCalls;
+        QCOMPARE(recognizer.setVocabulary({qsl("inner")}), SpeechRecognizer::VocabularyResult::Failed);
+        QCOMPARE(recognizer.mApplyCalls, callsBefore + 1);
+    }
+
+    // The invariant two commits on this branch are built on, and nothing was
+    // holding it: setState() reaches Lua inside the emitting frame, so a
+    // handler must see the state the emitter had already decided on. A
+    // QSignalSpy cannot check this - it records the signal after the fact and
+    // never sees what state() was during the call - so this connects a lambda
+    // and samples it there. Reachable with no engine library at all: loading a
+    // model without one is a refusal that both sets Error and says so.
+    void theStateIsSettledBeforeAFaultIsAnnounced()
+    {
+        SherpaRecognizer recognizer;
+        std::optional<SpeechRecognizer::State> stateDuringEmit;
+        connect(&recognizer, &SpeechRecognizer::errorOccurred, &recognizer, [&](const QString&) {
+            stateDuringEmit = recognizer.state();
+        });
+
+        QVERIFY(!recognizer.initialize(qsl("/nonexistent-model-directory")));
+
+        QVERIFY2(stateDuringEmit.has_value(), "a load with no engine library must say why");
+        QCOMPARE(*stateDuringEmit, SpeechRecognizer::State::Error);
+    }
+
+    // The reason is for a library that was found and could not be used. On a
+    // machine with none, it has to stay empty or noEngineMessage() reports
+    // "installed but could not be loaded" to someone who installed nothing,
+    // and suppresses the "looked in:" list that would tell them where to put
+    // it. This is CI's own state, so the case runs where it matters.
+    void noLibraryMeansNoLoadErrorToReport()
+    {
+        if (VoskRecognizer::libraryAvailable()) {
+            QSKIP("a libvosk is installed here, so the nothing-to-load case cannot be reached");
+        }
+        QVERIFY2(VoskRecognizer::libraryLoadError().isEmpty(),
+                 "a machine with no library reported one that could not be loaded");
+    }
+
+    // The guard compares the stored list against the offered one, so a
+    // handler re-entering with the words the outer call is already applying
+    // slips through it. Pinned as the known edge rather than left to be
+    // rediscovered: the inner attempt is the one that last reached the
+    // backend, and its verdict is what the flag should end up holding.
+    void aReentrantOfferOfTheSameWordsKeepsTheInnerVerdict()
+    {
+        ReentrantVocabularyRecognizer recognizer;
+        recognizer.mInnerWords = QStringList{qsl("same")};
+
+        recognizer.setVocabulary({qsl("same")});
+
+        const int callsBefore = recognizer.mApplyCalls;
+        recognizer.setVocabulary({qsl("same")});
+        QVERIFY2(recognizer.mApplyCalls > callsBefore,
+                 "an offer the backend last refused was answered from the flag instead of being retried");
+    }
+
+    // The outcome startListening() now returns, in place of the before/after
+    // state heuristic the Lua layer used to run. The case that heuristic kept
+    // getting wrong is the last one: a handler stopping on the state change -
+    // push-to-talk - lands back on Ready inside the call, which is a session
+    // that started and finished, not a refusal.
+    void aStartSaysWhichOfTheThreeThingsHappened()
+    {
+        PendingStartStubRecognizer parksInStarting;
+        parksInStarting.initialize(QString());
+        QCOMPARE(parksInStarting.startListening(), SpeechRecognizer::StartResult::Pending);
+
+        PendingStartStubRecognizer neverInitialised;
+        QCOMPARE(neverInitialised.startListening(), SpeechRecognizer::StartResult::Refused);
+
+        PendingStartStubRecognizer stopsOnItsOwnStateChange;
+        stopsOnItsOwnStateChange.initialize(QString());
+        connect(&stopsOnItsOwnStateChange, &SpeechRecognizer::stateChanged, &stopsOnItsOwnStateChange,
+                [&](SpeechRecognizer::State newState) {
+                    if (newState == SpeechRecognizer::State::Starting) {
+                        stopsOnItsOwnStateChange.stopListening();
+                    }
+                });
+        QCOMPARE(stopsOnItsOwnStateChange.startListening(), SpeechRecognizer::StartResult::Started);
+    }
+
+    // The other half of the announcement contract. Everything else only holds
+    // that nothing is said when nothing moved - so a change that is swallowed
+    // entirely, which is the worse failure, went uncaught.
+    void aCapabilityThatMovesIsAnnounced()
+    {
+        MovableCapabilitiesRecognizer recognizer;
+        QSignalSpy changes(&recognizer, &SpeechRecognizer::capabilitiesChanged);
+        QVERIFY(changes.isValid());
+
+        // What a model load does: the answer moves, and the consumer that
+        // docs/stt-api.md tells to re-read on the signal has to get one.
+        recognizer.mCanBias = true;
+        recognizer.announceCapabilitiesIfChanged();
+        QCOMPARE(changes.count(), 1);
+
+        recognizer.announceCapabilitiesIfChanged();
+        QCOMPARE(changes.count(), 1);
+    }
+
+    void aRejectedWordIsNotSilentlyDropped()
+    {
+        QStringList rejected;
+        SherpaRecognizer::usableHotwords({qsl(":1.5")}, &rejected);
+
+        QCOMPARE(rejected, QStringList({qsl(":1.5")}));
     }
 };
 

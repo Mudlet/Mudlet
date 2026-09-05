@@ -28,6 +28,8 @@
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Mudlet listens to your microphone only while a script asks it to, so speech recognition can turn what you say into commands. Audio is processed on this Mac and is never sent anywhere.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Mudlet uses macOS speech recognition to turn what you say into commands, and only while a script asks it to. Recognition is forced to run on this Mac, so the audio is never sent to Apple.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
