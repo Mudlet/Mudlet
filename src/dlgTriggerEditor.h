@@ -110,6 +110,7 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
     friend class dlgTriggerEditorUndoRedoTest;
     friend class EditorBannerViewSwitchTest;
     friend class ScriptEventHandlerLifetimeTest;
+    friend class TriggerEditorDisclosureTest;
     friend class VariableEditorWriteBackTest;
 
     enum SearchDataRole {
@@ -721,6 +722,11 @@ private:
 
     // keeps track of the dialog reset being queued
     bool mCleanResetQueued = false;
+
+    // One QIcon per resource path: a tree of thousands of items would otherwise
+    // decode the same handful of PNGs once per item, every time it is rebuilt
+    const QIcon& cachedIcon(const QString& path) const;
+    mutable QHash<QString, QIcon> mIconCache;
 
     // tracks whether the initial profile load has completed (to avoid clearing undo stack on refreshes)
     bool mInitialLoadDone = false;

@@ -25,6 +25,7 @@
  * Run with: ctest -R ConnectionDialogCrashTest -V
  */
 
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "MudletInstanceCoordinator.h"
 #include "dlgConnectionProfiles.h"
@@ -132,8 +133,8 @@ private:
     // reports instead of QVERIFYing: a QVERIFY here would only leave the helper
     bool makeProfileFolder(const QString& name) const
     {
-        return QDir().mkpath(mudlet::getMudletPath(enums::profileHomePath, name)) && utils::writeProfileData(name, qsl("url"), mProfileUrl).first
-               && utils::writeProfileData(name, qsl("port"), mProfilePort).first;
+        return QDir().mkpath(MudletPaths::getMudletPath(enums::profileHomePath, name)) && MudletPaths::writeProfileData(name, qsl("url"), mProfileUrl).first
+               && MudletPaths::writeProfileData(name, qsl("port"), mProfilePort).first;
     }
 
 private slots:
@@ -150,7 +151,7 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QVERIFY(mudlet::getMudletPath(enums::profilesPath).startsWith(mXdgDir.path()));
+        QVERIFY(MudletPaths::getMudletPath(enums::profilesPath).startsWith(mXdgDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -252,7 +253,7 @@ private slots:
         QVERIFY2(dialog, "No connection dialog to test against");
 
         QVERIFY(makeProfileFolder(mProfileName));
-        QDir(mudlet::getMudletPath(enums::profileHomePath, mCopyName)).removeRecursively();
+        QDir(MudletPaths::getMudletPath(enums::profileHomePath, mCopyName)).removeRecursively();
 
         auto* tabBar = gamesTabBar(dialog);
         QVERIFY(tabBar);
@@ -284,7 +285,7 @@ private slots:
                          15000),
                  "The copy never completed");
 
-        QVERIFY2(QDir(mudlet::getMudletPath(enums::profileHomePath, mCopyName)).exists(), "The copy has no folder on disk");
+        QVERIFY2(QDir(MudletPaths::getMudletPath(enums::profileHomePath, mCopyName)).exists(), "The copy has no folder on disk");
         QCOMPARE(dialog->readProfileData(mCopyName, qsl("url")), mProfileUrl);
         QCOMPARE(dialog->readProfileData(mCopyName, qsl("port")), mProfilePort);
         QVERIFY2(!dialog->findData(*dialog->listWidget_profiles, mCopyName, dlgConnectionProfiles::csmNameRole).isEmpty(), "The copy is not listed in the games list");
@@ -295,8 +296,8 @@ private slots:
         QVERIFY2(pCurrentItem, "Nothing is selected after the copy finished");
         QCOMPARE(pCurrentItem->data(dlgConnectionProfiles::csmNameRole).toString(), mCopyName);
 
-        QDir(mudlet::getMudletPath(enums::profileHomePath, mCopyName)).removeRecursively();
-        QDir(mudlet::getMudletPath(enums::profileHomePath, mProfileName)).removeRecursively();
+        QDir(MudletPaths::getMudletPath(enums::profileHomePath, mCopyName)).removeRecursively();
+        QDir(MudletPaths::getMudletPath(enums::profileHomePath, mProfileName)).removeRecursively();
         dialog->fillout_form();
         QTest::qWait(100ms);
     }
@@ -308,7 +309,7 @@ private slots:
         QVERIFY2(dialog, "No connection dialog to test against");
 
         QVERIFY(makeProfileFolder(mQuietProfileName));
-        QDir(mudlet::getMudletPath(enums::profileHomePath, mQuietCopyName)).removeRecursively();
+        QDir(MudletPaths::getMudletPath(enums::profileHomePath, mQuietCopyName)).removeRecursively();
 
         auto* tabBar = gamesTabBar(dialog);
         QVERIFY(tabBar);
@@ -339,7 +340,7 @@ private slots:
                          15000),
                  "The copy never completed");
 
-        QVERIFY2(QDir(mudlet::getMudletPath(enums::profileHomePath, mQuietCopyName)).exists(), "The copy has no folder on disk");
+        QVERIFY2(QDir(MudletPaths::getMudletPath(enums::profileHomePath, mQuietCopyName)).exists(), "The copy has no folder on disk");
         QCOMPARE(dialog->readProfileData(mQuietCopyName, qsl("url")), mProfileUrl);
         QCOMPARE(dialog->readProfileData(mQuietCopyName, qsl("port")), mProfilePort);
         auto* pCurrentItem = dialog->listWidget_profiles->currentItem();
@@ -347,8 +348,8 @@ private slots:
         QCOMPARE(pCurrentItem->data(dlgConnectionProfiles::csmNameRole).toString(), mQuietCopyName);
         QVERIFY2(pCurrentItem->data(scmTestMarkerRole).toBool(), "The list was rebuilt after all - this test no longer covers the undisturbed branch");
 
-        QDir(mudlet::getMudletPath(enums::profileHomePath, mQuietCopyName)).removeRecursively();
-        QDir(mudlet::getMudletPath(enums::profileHomePath, mQuietProfileName)).removeRecursively();
+        QDir(MudletPaths::getMudletPath(enums::profileHomePath, mQuietCopyName)).removeRecursively();
+        QDir(MudletPaths::getMudletPath(enums::profileHomePath, mQuietProfileName)).removeRecursively();
         dialog->fillout_form();
         QTest::qWait(100ms);
     }

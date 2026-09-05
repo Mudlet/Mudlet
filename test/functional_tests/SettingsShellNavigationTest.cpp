@@ -51,6 +51,7 @@
 #include <QWheelEvent>
 #include <cmath>
 
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "SettingsTestHelper.h"
@@ -161,7 +162,7 @@ private:
     // MUDLET_TEST_NO_THEME_DOWNLOAD is what keeps that page off the network.
     static void writeEditorThemesFile(const QDateTime& modified)
     {
-        const QString file = mudlet::getMudletPath(enums::editorWidgetThemeJsonFile);
+        const QString file = MudletPaths::getMudletPath(enums::editorWidgetThemeJsonFile);
         QVERIFY(QDir().mkpath(QFileInfo(file).absolutePath()));
         QFile themes(file);
         QVERIFY(themes.open(QIODevice::WriteOnly | QIODevice::Truncate));
@@ -253,7 +254,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -271,8 +272,7 @@ private slots:
         mpHost = nullptr;
         delete mpServer;
         mpServer = nullptr;
-        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
-        // getMudletPath() dereferences the instance rather than checking it
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
             deleteProfileDirectory(mProfileName);
             delete mudlet::self();
@@ -528,7 +528,7 @@ private slots:
         // So that a run where the hook does not hold reaches nothing real
         pSettings->setValue(qsl("colorSublimeThemesURL"), qsl("file:///nonexistent/themes.zip"));
 
-        const QString file = mudlet::getMudletPath(enums::editorWidgetThemeJsonFile);
+        const QString file = MudletPaths::getMudletPath(enums::editorWidgetThemeJsonFile);
         QVERIFY2(QFileInfo(file).lastModified() < QDateTime::currentDateTime().addDays(-1),
                  "the themes file is younger than the update period, so its own freshness would keep this page off the network and the hook would prove nothing");
 
@@ -577,7 +577,7 @@ private slots:
 
         BracketingTranslator translator;
         QCoreApplication::installTranslator(&translator);
-        mpPreferences->slot_guiLanguageChanged(utils::getInterfaceLanguage());
+        mpPreferences->slot_guiLanguageChanged(mudlet::self()->getInterfaceLanguage());
         QCoreApplication::removeTranslator(&translator);
         QCoreApplication::processEvents();
 
@@ -596,7 +596,7 @@ private slots:
 
         BracketingTranslator translator;
         QCoreApplication::installTranslator(&translator);
-        mpPreferences->slot_guiLanguageChanged(utils::getInterfaceLanguage());
+        mpPreferences->slot_guiLanguageChanged(mudlet::self()->getInterfaceLanguage());
         // Read before the translator goes, so that a failure here cannot leave
         // it installed for the cases that follow
         const QString category = sidebar()->item(rowOf(qsl("general")))->text();
@@ -1219,7 +1219,7 @@ private slots:
         auto* pGerman = new QTranslator(qApp);
         QVERIFY2(pGerman->load(qsl("mudlet_de_DE"), qsl(":/lang")), "no German translation in the binary's resources, so nothing here would lengthen a string");
         QVERIFY(qApp->installTranslator(pGerman));
-        mpPreferences->slot_guiLanguageChanged(utils::getInterfaceLanguage());
+        mpPreferences->slot_guiLanguageChanged(mudlet::self()->getInterfaceLanguage());
         qApp->processEvents();
         // Read before the translator goes, so a failure cannot leave it
         // installed for the cases that follow

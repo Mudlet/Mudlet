@@ -107,6 +107,7 @@ set(mudlet_SRCS
     MMCPServer.cpp
     mudlet.cpp
     MudletInstanceCoordinator.cpp
+    MudletPaths.cpp
     MxpTag.cpp
     OAuthClientFlow.cpp
     PackageItemDelegate.cpp
@@ -222,7 +223,6 @@ set(mudlet_SRCS
     TUiTour.cpp
     TVar.cpp
     UntrustedText.cpp
-    utils.cpp
     VarUnit.cpp
     VoskRecognizer.cpp
     WideComboBox.cpp
@@ -361,6 +361,7 @@ set(mudlet_HDRS
     MMCPServer.h
     mudlet.h
     MudletInstanceCoordinator.h
+    MudletPaths.h
     MxpTag.h
     OAuthClientFlow.h
     PackageItemDelegate.h

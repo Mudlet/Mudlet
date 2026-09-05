@@ -25,6 +25,7 @@
 
 #include "Host.h"
 
+#include "MudletPaths.h"
 #include "dlgIRC.h"
 #include "dlgMapper.h"
 #include "dlgModuleManager.h"
@@ -298,16 +299,16 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     // plain text or HTML is immediately resumed on profile loading. Do not
     // confuse it with the "autologin" item, which controls whether the profile
     // is automatically started when the Mudlet application is run!
-    mLogStatus = QFile::exists(mudlet::getMudletPath(enums::profileDataItemPath, mHostName, qsl("autolog")));
+    mLogStatus = QFile::exists(MudletPaths::getMudletPath(enums::profileDataItemPath, mHostName, qsl("autolog")));
     // "autotimestamp" determines if profile loads with timestamps enabled
-    mTimeStampStatus = QFile::exists(mudlet::getMudletPath(enums::profileDataItemPath, mHostName, qsl("autotimestamp")));
+    mTimeStampStatus = QFile::exists(MudletPaths::getMudletPath(enums::profileDataItemPath, mHostName, qsl("autotimestamp")));
     mLuaInterface.reset(new LuaInterface(this->getLuaInterpreter()->getLuaGlobalState()));
 
     // Copy across the details needed for the "color_table":
     mLuaInterpreter.updateAnsi16ColorsInTable();
     mLuaInterpreter.updateExtendedAnsiColorsInTable();
 
-    const QString directoryLogFile = mudlet::getMudletPath(enums::profileDataItemPath, mHostName, qsl("log"));
+    const QString directoryLogFile = MudletPaths::getMudletPath(enums::profileDataItemPath, mHostName, qsl("log"));
     const QString logFileName = qsl("%1/errors.txt").arg(directoryLogFile);
     const QDir dirLogFile;
     if (!dirLogFile.exists(directoryLogFile)) {
@@ -657,7 +658,7 @@ void Host::autoSaveMap()
 #if defined(DEBUG_MAPAUTOSAVE)
             qDebug().nospace().noquote() << "Host::autoSaveMap() INFO - map auto save initiated at:" << nowString << ".";
 #endif
-            if (!mpConsole->saveMap(mudlet::getMudletPath(enums::profileMapPathFileName, mHostName, qsl("autosave.dat")))) {
+            if (!mpConsole->saveMap(MudletPaths::getMudletPath(enums::profileMapPathFileName, mHostName, qsl("autosave.dat")))) {
                 mpMap->setSaveError(true);
             } else {
                 mpMap->setSaveError(false);
@@ -673,7 +674,7 @@ void Host::autoSaveMap()
 void Host::loadPackageInfo()
 {
     for (const auto& package : std::as_const(mInstalledPackages)) {
-        const QDir dir(mudlet::self()->getMudletPath(enums::profilePackagePath, getName(), package));
+        const QDir dir(MudletPaths::getMudletPath(enums::profilePackagePath, getName(), package));
         if (dir.exists(qsl("config.lua"))) {
             getPackageConfig(dir.absoluteFilePath(qsl("config.lua")));
         }
@@ -713,7 +714,7 @@ QList<Host::ModuleWriteJob> Host::prepareModuleSaves(bool backup)
     // state nor the Host, which may well be destroyed before the task even starts.
     QList<ModuleWriteJob> jobs;
     mModulesToSync.clear();
-    const QString backupPath = backup ? mudlet::getMudletPath(enums::moduleBackupsPath) : QString();
+    const QString backupPath = backup ? MudletPaths::getMudletPath(enums::moduleBackupsPath) : QString();
     QMapIterator<QString, QStringList> it(modulesToWrite);
     while (it.hasNext()) {
         it.next();
@@ -727,12 +728,12 @@ QList<Host::ModuleWriteJob> Host::prepareModuleSaves(bool backup)
 
         QString xmlFilename = filename;
         if (filename.endsWith(qsl("mpackage"), Qt::CaseInsensitive) || filename.endsWith(qsl("zip"), Qt::CaseInsensitive)) {
-            xmlFilename = mudlet::getMudletPath(enums::profilePackagePathFileName, mHostName, moduleName);
+            xmlFilename = MudletPaths::getMudletPath(enums::profilePackagePathFileName, mHostName, moduleName);
             // The write below goes into this folder, so it has to exist before the
             // write and not - as it used to - after it: a module whose unpacked folder
             // the user has removed would otherwise fail to write, and then have its
             // now-stale XML dropped from its archive without a replacement going in.
-            const QString packagePath = mudlet::getMudletPath(enums::profilePackagePath, mHostName, moduleName);
+            const QString packagePath = MudletPaths::getMudletPath(enums::profilePackagePath, mHostName, moduleName);
             if (auto packageDir = QDir(packagePath); !packageDir.exists()) {
                 packageDir.mkpath(packagePath);
             }
@@ -887,7 +888,7 @@ void Host::reloadModule(const QString& syncModuleName, const QString& syncingFro
         if (moduleName == syncModuleName) {
             if (!syncingFromHost.isEmpty() && (fileName.endsWith(qsl(".zip"), Qt::CaseInsensitive) || fileName.endsWith(qsl(".mpackage"), Qt::CaseInsensitive))) {
                 uninstallPackage(moduleName, enums::PackageModuleType::ModuleSync);
-                fileName = mudlet::getMudletPath(enums::profilePackagePathFileName, syncingFromHost, moduleName);
+                fileName = MudletPaths::getMudletPath(enums::profilePackagePathFileName, syncingFromHost, moduleName);
                 installPackage(fileName, enums::PackageModuleType::ModuleSync);
                 QStringList moduleEntry;
                 moduleEntry << moduleLocation;
@@ -1062,7 +1063,7 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
 {
     QString directory_xml;
     if (saveFolder.isEmpty()) {
-        directory_xml = mudlet::getMudletPath(enums::profileXmlFilesPath, getName());
+        directory_xml = MudletPaths::getMudletPath(enums::profileXmlFilesPath, getName());
     } else {
         directory_xml = saveFolder;
     }
@@ -1097,6 +1098,12 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
         qDebug().noquote().nospace() << "Host::saveProfile(...) INFO - called with no saveFolder or saveName arguments for profile '" << mHostName
                                      << "' so assuming it is an end of session save and the TCommandLines' histories need saving...";
         emit signal_saveCommandLinesHistory();
+    }
+    // The event loop flushes profile.ini, so a write there only shows up as
+    // having failed later - by the time the profile is next saved:
+    if (mpProfileIni && mpProfileIni->status() == QSettings::AccessError) {
+        qWarning().nospace().noquote()
+                << "Host::saveProfile(...) ERROR - the profile's \"profile.ini\" file could not be written, the command lines' history settings and the notepad's window state may be lost.";
     }
 
     auto writer = std::make_shared<XMLexport>(this);
@@ -2596,14 +2603,14 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     }
     QFile file2;
     if (packageUnpacksAFolder(fileName)) {
-        const QString _home = mudlet::getMudletPath(enums::profileHomePath, getName());
+        const QString _home = MudletPaths::getMudletPath(enums::profileHomePath, getName());
         // Unpacking into a folder the other half of this name owns would write over
         // its files, and the rename below would then carry that folder off under
         // whatever the manifest asked for. An archive whose name is already spoken
         // for is unpacked beside it instead, and moved into place only once its
         // manifest has been read and the name it really wants turns out to be free.
-        const QString _dest = crossKindRefusalOnTheFileName.isEmpty() ? mudlet::getMudletPath(enums::profilePackagePath, getName(), packageName)
-                                                                      : mudlet::getMudletPath(enums::profilePackagePath, getName(), packageName + qsl(".mudlet-installing"));
+        const QString _dest = crossKindRefusalOnTheFileName.isEmpty() ? MudletPaths::getMudletPath(enums::profilePackagePath, getName(), packageName)
+                                                                      : MudletPaths::getMudletPath(enums::profilePackagePath, getName(), packageName + qsl(".mudlet-installing"));
         // home directory for the PROFILE
         const QDir _tmpDir(_home);
         // directory to store the expanded archive file contents
@@ -3166,7 +3173,7 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
 
     getActionUnit()->updateAllToolbars();
 
-    const QString dest = mudlet::getMudletPath(enums::profilePackagePath, getName(), packageName);
+    const QString dest = MudletPaths::getMudletPath(enums::profilePackagePath, getName(), packageName);
     removeDir(dest, dest);
 
     // The fonts this package brought went out with it, so a display font that
@@ -3371,31 +3378,28 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule, QString*
     return noManifest(qsl("%1: %2").arg(QString::fromStdString(reason), QString::fromStdString(e)));
 }
 
-// writeProfileIniData(...) and readProfileIniData(...) might eventually
-// replace writeProfileData(...) and readProfileData(...) but for now are just
-// used to store some information about one or more TCommandLine's mHistoryData:
-bool Host::writeProfileIniData(const QString& item, const QString& what)
+// profile.ini holds the command lines' history settings and the notepad's
+// window state. Opened once per Host; setName() drops it because the path
+// carries the name:
+QSettings& Host::profileIni()
 {
-    QSettings settings(mudlet::getMudletPath(enums::profileDataItemPath, getName(), qsl("profile.ini")), QSettings::IniFormat);
-    settings.setValue(item, what);
-    settings.sync();
-    switch (settings.status()) {
-    case QSettings::NoError:
-        return true;
-    case QSettings::FormatError:
-        qWarning().nospace().noquote() << "Host::writeProfileIniData(\"" << item << "\", \"" << what << "\") ERROR - failed to save this detail, reason: \"Format error\".";
-        return false;
-    case QSettings::AccessError:
-        qWarning().nospace().noquote() << "Host::writeProfileIniData(\"" << item << "\", \"" << what << "\") ERROR - failed to save this detail, reason: \"Access error\".";
-        return false;
+    if (!mpProfileIni) {
+        mpProfileIni = new QSettings(MudletPaths::getMudletPath(enums::profileDataItemPath, getName(), qsl("profile.ini")), QSettings::IniFormat, this);
+        if (mpProfileIni->status() == QSettings::FormatError) {
+            qWarning().nospace().noquote() << "Host::profileIni() ERROR - the profile's \"profile.ini\" file could not be parsed, the settings it held will be replaced.";
+        }
     }
-    Q_UNREACHABLE();
+    return *mpProfileIni;
+}
+
+void Host::writeProfileIniData(const QString& item, const QString& what)
+{
+    profileIni().setValue(item, what);
 }
 
 QString Host::readProfileIniData(const QString& item)
 {
-    QSettings settings(mudlet::getMudletPath(enums::profileDataItemPath, getName(), qsl("profile.ini")), QSettings::IniFormat);
-    return settings.value(item).toString();
+    return profileIni().value(item).toString();
 }
 
 // This function retrieves command line history settings based on the given
@@ -3476,7 +3480,7 @@ void Host::setCmdLineSettings(const TCommandLine::CommandLineType type, const bo
 // host name argument...
 QPair<bool, QString> Host::writeProfileData(const QString& item, const QString& what)
 {
-    QSaveFile file(mudlet::getMudletPath(enums::profileDataItemPath, getName(), item));
+    QSaveFile file(MudletPaths::getMudletPath(enums::profileDataItemPath, getName(), item));
     if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         QDataStream ofs(&file);
         ofs.setVersion(QDataStream::Qt_5_12);
@@ -3495,7 +3499,7 @@ QPair<bool, QString> Host::writeProfileData(const QString& item, const QString& 
 // Similar to the above, a convenience for reading profile data for this host.
 QString Host::readProfileData(const QString& item)
 {
-    QFile file(mudlet::getMudletPath(enums::profileDataItemPath, getName(), item));
+    QFile file(MudletPaths::getMudletPath(enums::profileDataItemPath, getName(), item));
     const bool success = file.open(QIODevice::ReadOnly);
     QString ret;
     if (success) {
@@ -3512,7 +3516,7 @@ QString Host::readProfileData(const QString& item)
 // does not install font system-wide
 void Host::installPackageFonts(const QString& packageName)
 {
-    auto packagePath = mudlet::getMudletPath(enums::profilePackagePath, getName(), packageName);
+    auto packagePath = MudletPaths::getMudletPath(enums::profilePackagePath, getName(), packageName);
 
     QDirIterator it(packagePath, QDirIterator::Subdirectories);
     while (it.hasNext()) {
@@ -4101,6 +4105,12 @@ void Host::setName(const QString& name)
     }
 
     mHostName = name;
+
+    if (mpProfileIni) {
+        // Flushes on the way out; the next use reopens it under the new name:
+        delete mpProfileIni;
+        mpProfileIni = nullptr;
+    }
 
     mTelnet.mProfileName = name;
     if (mpMap) {

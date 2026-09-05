@@ -31,6 +31,7 @@
 
 #include "EAction.h"
 #include "Host.h"
+#include "MudletPaths.h"
 #include "TAlias.h"
 #include "TCommandLine.h"
 #include "TConsole.h"
@@ -1687,7 +1688,7 @@ int TLuaInterpreter::showUnzipProgress(lua_State* L)
 int TLuaInterpreter::getMudletHomeDir(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    const QString nativeHomeDirectory = mudlet::getMudletPath(enums::profileHomePath, host.getName());
+    const QString nativeHomeDirectory = MudletPaths::getMudletPath(enums::profileHomePath, host.getName());
     lua_pushstring(L, nativeHomeDirectory.toUtf8().constData());
     return 1;
 }
@@ -3493,7 +3494,8 @@ bool TLuaInterpreter::compile(const QString& code, QString& errorMsg, const QStr
     // caller's and has to be left exactly as it was found:
     const int callerStackTop = lua_gettop(L);
 
-    const int error = (luaL_loadbuffer(L, code.toUtf8().constData(), strlen(code.toUtf8().constData()), name.toUtf8().constData()) || lua_pcall(L, 0, 0, 0));
+    const QByteArray utf8Code = code.toUtf8();
+    const int error = (luaL_loadbuffer(L, utf8Code.constData(), utf8Code.size(), name.toUtf8().constData()) || lua_pcall(L, 0, 0, 0));
 
     if (error) {
         // The error object is on the top of the stack. Absolute slot 1 - which
@@ -3556,7 +3558,8 @@ bool TLuaInterpreter::reportInvalidLuaCodeParam(lua_State* L, const char* functi
 std::pair<bool, QString> TLuaInterpreter::validLuaCode(const QString& code)
 {
     lua_State* L = pGlobalLua;
-    const int error = luaL_loadbuffer(L, code.toUtf8().constData(), strlen(code.toUtf8().constData()), code.toUtf8().data());
+    const QByteArray utf8Code = code.toUtf8();
+    const int error = luaL_loadbuffer(L, utf8Code.constData(), utf8Code.size(), utf8Code.constData());
     const int topElementIndex = lua_gettop(L);
     QString e = "invalid Lua code: ";
     if (error) {
@@ -6239,7 +6242,7 @@ void TLuaInterpreter::initLuaGlobals()
     QStringList additionalLuaPaths;
     QStringList additionalCPaths;
     const auto appPath{QCoreApplication::applicationDirPath()};
-    const auto profilePath{mudlet::getMudletPath(enums::profileHomePath, hostName)};
+    const auto profilePath{MudletPaths::getMudletPath(enums::profileHomePath, hostName)};
 
     // Allow for modules or libraries placed in the profile root directory:
     additionalLuaPaths << qsl("%1/?.lua").arg(profilePath);
@@ -6426,9 +6429,9 @@ void TLuaInterpreter::setupLanguageData()
     lua_setfield(L, -2, "d");
 
     // finalize language-specific directions table
-    lua_setfield(L, -2, utils::getInterfaceLanguage().toUtf8().constData());
+    lua_setfield(L, -2, mudlet::self()->getInterfaceLanguage().toUtf8().constData());
 
-    lua_pushstring(L, utils::getInterfaceLanguage().toUtf8().constData());
+    lua_pushstring(L, mudlet::self()->getInterfaceLanguage().toUtf8().constData());
     lua_setfield(L, -2, "interfacelanguage");
 
     lua_setfield(L, -2, "translations");
@@ -7501,13 +7504,13 @@ int TLuaInterpreter::getProfileInformation(lua_State* L)
             lua_pushstring(L, "getProfileInformation: profile name cannot be empty");
             return 2;
         }
-        const QString profileName = utils::getCanonicalProfileName(requestedName);
+        const QString profileName = MudletPaths::getCanonicalProfileName(requestedName);
         if (profileName.isEmpty()) {
             lua_pushnil(L);
             lua_pushfstring(L, "getProfileInformation: profile '%s' does not exist", requestedName.toUtf8().constData());
             return 2;
         }
-        info = utils::readProfileData(profileName, qsl("description"));
+        info = MudletPaths::readProfileData(profileName, qsl("description"));
         break;
     }
     }
@@ -7518,15 +7521,15 @@ int TLuaInterpreter::getProfileInformation(lua_State* L)
 
 // No documentation available in wiki - internal function
 // The folder a profile name resolves to, or an empty string if there is no such
-// profile. For writers, and so stricter than utils::getCanonicalProfileName(),
+// profile. For writers, and so stricter than MudletPaths::getCanonicalProfileName(),
 // which also resolves a game Mudlet ships with that has never been opened:
 // writeProfileData() creates whatever folder it is handed, so writing under such
 // a name would turn that game into a profile of its own. Readers want the looser
 // call.
 static QString canonicalProfileFolder(const QString& profileName)
 {
-    const QString folder = utils::getCanonicalProfileName(profileName);
-    if (folder.isEmpty() || !QDir(mudlet::getMudletPath(enums::profileHomePath, folder)).exists()) {
+    const QString folder = MudletPaths::getCanonicalProfileName(profileName);
+    if (folder.isEmpty() || !QDir(MudletPaths::getMudletPath(enums::profileHomePath, folder)).exists()) {
         return QString();
     }
     return folder;
@@ -7558,7 +7561,7 @@ int TLuaInterpreter::setProfileInformation(lua_State* L)
         text = lua_tostring(L, 2);
     }
 
-    const QPair<bool, QString> result = utils::writeProfileData(profileName, qsl("description"), text);
+    const QPair<bool, QString> result = MudletPaths::writeProfileData(profileName, qsl("description"), text);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second);
     }
@@ -7592,7 +7595,7 @@ int TLuaInterpreter::clearProfileInformation(lua_State* L)
         }
     }
 
-    const QPair<bool, QString> result = utils::writeProfileData(profileName, qsl("description"), desc);
+    const QPair<bool, QString> result = MudletPaths::writeProfileData(profileName, qsl("description"), desc);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second);
     }
@@ -8749,7 +8752,7 @@ int TLuaInterpreter::getConfig(lua_State* L)
                  const auto logDir = host.mLogDir;
 
                  if (logDir == nullptr || logDir.isEmpty()) {
-                     lua_pushstring(L, mudlet::getMudletPath(enums::profileReplayAndLogFilesPath, getHostFromLua(L).getName()).toUtf8().constData());
+                     lua_pushstring(L, MudletPaths::getMudletPath(enums::profileReplayAndLogFilesPath, getHostFromLua(L).getName()).toUtf8().constData());
                  } else {
                      lua_pushstring(L, host.mLogDir.toUtf8().constData());
                  }

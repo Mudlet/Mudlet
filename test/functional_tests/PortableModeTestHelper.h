@@ -20,29 +20,14 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <QCoreApplication>
-#include <QDir>
-#include <QFileInfo>
-#include <QProcessEnvironment>
+#include "MudletPaths.h"
 
-#include "utils.h"
-
-// setupConfig() in mudlet.cpp consults portable.txt next to the executable
-// before it consults XDG_CONFIG_HOME - but under an AppImage it looks beside
-// the AppImage itself rather than the extracted binary, since findExecutableDir()
-// prefers $APPIMAGE over QCoreApplication::applicationDirPath() there. A test
-// that only checks applicationDirPath() misses a portable.txt an AppImage run
-// would still honor, and ends up running against the real portable config
-// instead of skipping - mirror findExecutableDir()'s resolution here rather
-// than QCoreApplication::applicationDirPath() alone.
+// A portable.txt beside the executable - or beside the AppImage, when running
+// from one - or in ~/.config/mudlet relocates the config root, so a test that
+// would otherwise touch the real one has to skip
 inline bool portableMarkerPresent()
 {
-    QString execDir = QCoreApplication::applicationDirPath();
-    const QProcessEnvironment systemEnvironment = QProcessEnvironment::systemEnvironment();
-    if (systemEnvironment.contains(qsl("APPIMAGE"))) {
-        execDir = QFileInfo(systemEnvironment.value(qsl("APPIMAGE"))).dir().path();
-    }
-    return QFileInfo::exists(qsl("%1/portable.txt").arg(execDir)) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
+    return MudletPaths::resolveConfigRoot(MudletPaths::executableDir()).portable;
 }
 
 #endif // MUDLET_PORTABLEMODETESTHELPER_H
