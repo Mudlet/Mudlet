@@ -25,8 +25,17 @@
 
 #include <QDir>
 #include <QFile>
+#include <QPointer>
+#include <QScopeGuard>
+#include <QSignalSpy>
 #include <QStandardPaths>
 #include <QTemporaryDir>
+
+#if defined(INCLUDE_OWN_QT6_KEYCHAIN)
+#include <qtkeychain/keychain.h>
+#else
+#include <qt6keychain/keychain.h>
+#endif
 
 // Hermetic unit tests: MUDLET_TEST_MODE forces encrypted file storage so these run
 // deterministically on every platform without touching a system keychain. The real
@@ -66,6 +75,9 @@ private slots:
     void testCredentialExistsWithoutHandingOverTheSecret();
     void testAsyncEmptyArgumentsAreReportedThroughTheCallback();
     void testAsyncApiRefusesTheKeysTheStaticApiRefuses();
+    void testATimedOutKeychainJobIsLeftToFinishOnItsOwn();
+    void testDestroyingTheManagerLeavesAnInFlightKeychainJobAlive();
+    void testAMigrationJobOutlivesTheManager();
     void cleanupTestCase();
 
 private:
@@ -780,4 +792,92 @@ void CredentialManagerTest::cleanupTestCase()
 }
 
 #include "CredentialManagerTest.moc"
+
+// The libsecret and macOS backends call back into the job when the store
+// answers, and a keyring prompt can sit unanswered past the operation timeout.
+// Neither the timeout nor the manager going away may free a job that has not
+// finished.
+void CredentialManagerTest::testATimedOutKeychainJobIsLeftToFinishOnItsOwn()
+{
+    CredentialManager manager;
+    QPointer<QKeychain::Job> job = new QKeychain::ReadPasswordJob(qsl("Mudlet-test"), &manager);
+    job->setAutoDelete(false);
+    manager.mCurrentJob = job;
+    bool reported = false;
+    manager.mCurrentRetrievalCallback = [&reported](bool success, const QString&, const QString&) {
+        reported = !success;
+    };
+
+    QSignalSpy finished(job, &QKeychain::Job::finished);
+
+    manager.handleTimeout();
+    QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+
+    QVERIFY(reported);
+    QVERIFY2(job, "the timed-out job was deleted while the keychain could still call back into it");
+    QVERIFY2(job->autoDelete(), "a job cut loose has to delete itself when it finishes");
+    QVERIFY2(!job->parent(), "a job cut loose must not die with the manager");
+    QVERIFY(!manager.mCurrentJob);
+    // The executor's own connection to finished() has to survive the detach
+    emit job->finished(job);
+    QCOMPARE(finished.count(), 1);
+    delete job;
+}
+
+void CredentialManagerTest::testDestroyingTheManagerLeavesAnInFlightKeychainJobAlive()
+{
+    auto* manager = new CredentialManager;
+    QPointer<QKeychain::Job> job = new QKeychain::ReadPasswordJob(qsl("Mudlet-test"), manager);
+    job->setAutoDelete(false);
+    manager->mCurrentJob = job;
+
+    delete manager;
+    QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+
+    QVERIFY2(job, "the job was deleted with the manager while the keychain could still call back into it");
+    QVERIFY(job->autoDelete());
+    delete job;
+}
+
+// A job the manager does not track (the migration and legacy-format reads and
+// deletes) has nothing to detach it, so it must never be the manager's child.
+// Job::start() only queues doStart(); swallowing that call keeps the backend
+// out of the test.
+void CredentialManagerTest::testAMigrationJobOutlivesTheManager()
+{
+    class DoStartCatcher : public QObject
+    {
+    public:
+        QPointer<QKeychain::Job> job;
+
+    protected:
+        bool eventFilter(QObject* watched, QEvent* event) override
+        {
+            if (event->type() != QEvent::MetaCall) {
+                return false;
+            }
+            auto* keychainJob = qobject_cast<QKeychain::Job*>(watched);
+            if (!keychainJob) {
+                return false;
+            }
+            job = keychainJob;
+            return true;
+        }
+    } catcher;
+    qApp->installEventFilter(&catcher);
+    const auto removeCatcher = qScopeGuard([&catcher]() {
+        qApp->removeEventFilter(&catcher);
+    });
+
+    auto* manager = new CredentialManager;
+    manager->attemptOldFormatMigration(qsl("Mudlet-test"), qsl("password"), qsl("test-profile"), nullptr);
+    delete manager;
+    QCoreApplication::sendPostedEvents(nullptr, QEvent::MetaCall);
+
+    QVERIFY2(catcher.job, "the migration job died with the manager while the keychain could still call back into it");
+    QVERIFY(catcher.job->autoDelete());
+    QVERIFY(!catcher.job->parent());
+    delete catcher.job;
+}
+
 QTEST_MAIN(CredentialManagerTest)

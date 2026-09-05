@@ -58,6 +58,7 @@ class Job;
 class CredentialManager : public QObject
 {
     Q_OBJECT
+    friend class CredentialManagerTest;
 
 public:
     explicit CredentialManager(QObject* parent = nullptr);

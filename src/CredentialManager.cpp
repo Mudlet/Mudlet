@@ -163,13 +163,16 @@ void CredentialManager::cleanupCurrentOperation()
     cleanupTimeout();
 
     if (mCurrentJob) {
-        // If we're destroying or shutting down, avoid disconnect calls that might crash
-        if (!mShuttingDown && !QCoreApplication::closingDown()) {
-            // Safe to disconnect during normal operation
-            mCurrentJob->disconnect();
-        }
-
-        mCurrentJob->deleteLater();
+        // A job still here may not have finished, and the backend will still
+        // call back into it, so it cannot be freed yet. Cut it loose to delete
+        // itself when it finishes, keeping the executor's connections to it:
+        // qtkeychain runs jobs one at a time and its executor waits on this
+        // one's finished(). One whose finished() has already fired but whose
+        // queued handler has not run leaks instead (autoDelete is checked at
+        // emit time), which beats freeing one the backend still holds.
+        disconnect(mCurrentJob, nullptr, this, nullptr);
+        mCurrentJob->setParent(nullptr);
+        mCurrentJob->setAutoDelete(true);
         mCurrentJob = nullptr;
     }
 
@@ -503,9 +506,12 @@ void CredentialManager::attemptOldFormatMigration(const QString& service, const 
     const QString lookupService = service;
 #endif
 
-    auto* oldFormatJob = new QKeychain::ReadPasswordJob(lookupService, this);
+    // No parent: nothing detaches this untracked job before the manager dies
+    // the way cleanupCurrentOperation() does for mCurrentJob, and the backend
+    // will still call back into it
+    auto* oldFormatJob = new QKeychain::ReadPasswordJob(lookupService);
     oldFormatJob->setKey(account); // Old format used account as key
-    oldFormatJob->setAutoDelete(false);
+    oldFormatJob->setAutoDelete(true);
 
     connect(oldFormatJob, &QKeychain::ReadPasswordJob::finished, this, [this, oldFormatJob, service, lookupService, account, profileName, callback]() {
         bool found = (oldFormatJob->error() == QKeychain::NoError);
@@ -515,10 +521,10 @@ void CredentialManager::attemptOldFormatMigration(const QString& service, const 
             qDebug() << "CredentialManager: Found password in old format, migrating to new format";
 
             // Store in new format (key=service) for future use
-            auto* migrateJob = new QKeychain::WritePasswordJob(service, this);
+            auto* migrateJob = new QKeychain::WritePasswordJob(service);
             migrateJob->setKey(service); // New format
             migrateJob->setTextData(password);
-            migrateJob->setAutoDelete(false);
+            migrateJob->setAutoDelete(true);
 
             connect(migrateJob, &QKeychain::WritePasswordJob::finished, this, [migrateJob, service, lookupService, account, password, callback]() {
                 if (migrateJob->error() == QKeychain::NoError) {
@@ -546,7 +552,6 @@ void CredentialManager::attemptOldFormatMigration(const QString& service, const 
                 if (callback) {
                     callback(true, password, QString());
                 }
-                migrateJob->deleteLater();
             });
 
             migrateJob->start();
@@ -567,8 +572,6 @@ void CredentialManager::attemptOldFormatMigration(const QString& service, const 
                 fallbackFileRetrieval(profileName, account, callback);
             }
         }
-
-        oldFormatJob->deleteLater();
     });
 
     oldFormatJob->start();
@@ -589,9 +592,9 @@ void CredentialManager::attemptCompatNamingMigration(const QString& service, con
     qDebug() << "CredentialManager: Linked qtkeychain version:" << QTKEYCHAIN_LINKED_VERSION;
 #endif
 
-    auto* compatJob = new QKeychain::ReadPasswordJob(QString(), this);
+    auto* compatJob = new QKeychain::ReadPasswordJob(QString());
     compatJob->setKey(service);
-    compatJob->setAutoDelete(false);
+    compatJob->setAutoDelete(true);
 
     connect(compatJob, &QKeychain::ReadPasswordJob::finished, this, [this, compatJob, service, account, profileName, callback]() {
         const bool found = (compatJob->error() == QKeychain::NoError);
@@ -602,10 +605,10 @@ void CredentialManager::attemptCompatNamingMigration(const QString& service, con
 
             // Re-store through a normal write (key == service) so the entry lands under the
             // naming scheme of the linked qtkeychain version
-            auto* migrateJob = new QKeychain::WritePasswordJob(service, this);
+            auto* migrateJob = new QKeychain::WritePasswordJob(service);
             migrateJob->setKey(service);
             migrateJob->setTextData(password);
-            migrateJob->setAutoDelete(false);
+            migrateJob->setAutoDelete(true);
 
             connect(migrateJob, &QKeychain::WritePasswordJob::finished, this, [migrateJob, service, password, callback]() {
                 if (migrateJob->error() == QKeychain::NoError) {
@@ -642,7 +645,6 @@ void CredentialManager::attemptCompatNamingMigration(const QString& service, con
                 if (callback) {
                     callback(true, password, QString());
                 }
-                migrateJob->deleteLater();
             });
 
             migrateJob->start();
@@ -658,8 +660,6 @@ void CredentialManager::attemptCompatNamingMigration(const QString& service, con
             }
             attemptOldFormatMigration(service, account, profileName, callback);
         }
-
-        compatJob->deleteLater();
     });
 
     compatJob->start();
@@ -1544,9 +1544,9 @@ void CredentialManager::checkLegacyKeychainFormat(const QString& profileName, st
     // Legacy format used service="Mudlet profile" and key=profileName
     const QString legacyService = qsl("Mudlet profile");
 
-    auto* readJob = new QKeychain::ReadPasswordJob(legacyService, this);
+    auto* readJob = new QKeychain::ReadPasswordJob(legacyService);
     readJob->setKey(profileName);
-    readJob->setAutoDelete(false);
+    readJob->setAutoDelete(true);
 
     connect(readJob, &QKeychain::ReadPasswordJob::finished, this, [readJob, callback, profileName]() {
         bool success = (readJob->error() == QKeychain::NoError);
@@ -1559,7 +1559,6 @@ void CredentialManager::checkLegacyKeychainFormat(const QString& profileName, st
         }
 
         callback(success, password);
-        readJob->deleteLater();
     });
 
     readJob->start();
@@ -1574,9 +1573,9 @@ void CredentialManager::deleteLegacyKeychainEntry(const QString& profileName)
     // Legacy format used service="Mudlet profile" and key=profileName
     const QString legacyService = qsl("Mudlet profile");
 
-    auto* deleteJob = new QKeychain::DeletePasswordJob(legacyService, this);
+    auto* deleteJob = new QKeychain::DeletePasswordJob(legacyService);
     deleteJob->setKey(profileName);
-    deleteJob->setAutoDelete(false);
+    deleteJob->setAutoDelete(true);
 
     connect(deleteJob, &QKeychain::DeletePasswordJob::finished, this, [deleteJob, profileName]() {
         if (deleteJob->error() == QKeychain::NoError) {
@@ -1584,8 +1583,6 @@ void CredentialManager::deleteLegacyKeychainEntry(const QString& profileName)
         } else {
             qDebug() << "CredentialManager: Failed to delete legacy entry for profile" << profileName << ":" << deleteJob->errorString();
         }
-
-        deleteJob->deleteLater();
     });
 
     deleteJob->start();
