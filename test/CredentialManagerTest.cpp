@@ -77,6 +77,8 @@ private slots:
     void testAsyncApiRefusesTheKeysTheStaticApiRefuses();
     void testATimedOutKeychainJobIsLeftToFinishOnItsOwn();
     void testDestroyingTheManagerLeavesAnInFlightKeychainJobAlive();
+    void testAFinishedJobWhoseHandlerHasNotRunDiesWithTheManager();
+    void testAHandlerRunningAfterItsFinishedJobWasFreedDoesNothing();
     void testAMigrationJobOutlivesTheManager();
     void cleanupTestCase();
 
@@ -793,6 +795,28 @@ void CredentialManagerTest::cleanupTestCase()
 
 #include "CredentialManagerTest.moc"
 
+// Job::start() only queues doStart(); swallowing that call keeps the backend
+// out of the test.
+class DoStartCatcher : public QObject
+{
+public:
+    QPointer<QKeychain::Job> job;
+
+protected:
+    bool eventFilter(QObject* watched, QEvent* event) override
+    {
+        if (event->type() != QEvent::MetaCall) {
+            return false;
+        }
+        auto* keychainJob = qobject_cast<QKeychain::Job*>(watched);
+        if (!keychainJob) {
+            return false;
+        }
+        job = keychainJob;
+        return true;
+    }
+};
+
 // The libsecret and macOS backends call back into the job when the store
 // answers, and a keyring prompt can sit unanswered past the operation timeout.
 // Neither the timeout nor the manager going away may free a job that has not
@@ -801,8 +825,7 @@ void CredentialManagerTest::testATimedOutKeychainJobIsLeftToFinishOnItsOwn()
 {
     CredentialManager manager;
     QPointer<QKeychain::Job> job = new QKeychain::ReadPasswordJob(qsl("Mudlet-test"), &manager);
-    job->setAutoDelete(false);
-    manager.mCurrentJob = job;
+    manager.trackCurrentJob(job);
     bool reported = false;
     manager.mCurrentRetrievalCallback = [&reported](bool success, const QString&, const QString&) {
         reported = !success;
@@ -828,8 +851,7 @@ void CredentialManagerTest::testDestroyingTheManagerLeavesAnInFlightKeychainJobA
 {
     auto* manager = new CredentialManager;
     QPointer<QKeychain::Job> job = new QKeychain::ReadPasswordJob(qsl("Mudlet-test"), manager);
-    job->setAutoDelete(false);
-    manager->mCurrentJob = job;
+    manager->trackCurrentJob(job);
 
     delete manager;
     QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
@@ -839,31 +861,57 @@ void CredentialManagerTest::testDestroyingTheManagerLeavesAnInFlightKeychainJobA
     delete job;
 }
 
+// The result handlers are queued, so finished() can fire and the manager die
+// before the handler runs. The backend is done with such a job, and nothing
+// else is left to delete it.
+void CredentialManagerTest::testAFinishedJobWhoseHandlerHasNotRunDiesWithTheManager()
+{
+    auto* manager = new CredentialManager;
+    QPointer<QKeychain::Job> job = new QKeychain::ReadPasswordJob(qsl("Mudlet-test"), manager);
+    manager->trackCurrentJob(job);
+    emit job->finished(job);
+
+    delete manager;
+    QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+
+    QVERIFY2(!job, "a job the keychain had answered leaked when the manager died");
+}
+
+// A DeferredDelete-only flush frees the job cleanupCurrentOperation() let go
+// of before its queued handler runs.
+void CredentialManagerTest::testAHandlerRunningAfterItsFinishedJobWasFreedDoesNothing()
+{
+    DoStartCatcher catcher;
+    qApp->installEventFilter(&catcher);
+    const auto removeCatcher = qScopeGuard([&catcher]() {
+        qApp->removeEventFilter(&catcher);
+    });
+
+    CredentialManager manager;
+    int reports = 0;
+    manager.retrieveCredential(qsl("Mudlet-test"), qsl("password"), qsl("test-profile"), [&reports](bool, const QString&, const QString&) {
+        ++reports;
+    });
+    QCoreApplication::sendPostedEvents(nullptr, QEvent::MetaCall);
+    QVERIFY(catcher.job);
+    QPointer<QKeychain::Job> job = catcher.job;
+
+    emit job->finished(job);
+    manager.handleTimeout();
+    QCOMPARE(reports, 1);
+    QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    QVERIFY2(!job, "the finished job was not freed by the flush");
+
+    QTest::failOnWarning(QRegularExpression(qsl("Ignoring keychain callback")));
+    QCoreApplication::sendPostedEvents();
+    QCOMPARE(reports, 1);
+}
+
 // A job the manager does not track (the migration and legacy-format reads and
 // deletes) has nothing to detach it, so it must never be the manager's child.
-// Job::start() only queues doStart(); swallowing that call keeps the backend
-// out of the test.
 void CredentialManagerTest::testAMigrationJobOutlivesTheManager()
 {
-    class DoStartCatcher : public QObject
-    {
-    public:
-        QPointer<QKeychain::Job> job;
-
-    protected:
-        bool eventFilter(QObject* watched, QEvent* event) override
-        {
-            if (event->type() != QEvent::MetaCall) {
-                return false;
-            }
-            auto* keychainJob = qobject_cast<QKeychain::Job*>(watched);
-            if (!keychainJob) {
-                return false;
-            }
-            job = keychainJob;
-            return true;
-        }
-    } catcher;
+    DoStartCatcher catcher;
     qApp->installEventFilter(&catcher);
     const auto removeCatcher = qScopeGuard([&catcher]() {
         qApp->removeEventFilter(&catcher);
