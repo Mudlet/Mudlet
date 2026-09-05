@@ -160,6 +160,7 @@ set(PACKAGE_GROUP_TEST_SOURCES
     DualPackageModuleTest.cpp
     ModuleManagerListingTest.cpp
     ModuleSaveTeardownTest.cpp
+    PackageExporterDialogTest.cpp
     PackageFontsOnRefusedArchiveTest.cpp
     PackageManagerRemovalTest.cpp
     PackageRemovalSaveTeardownTest.cpp
@@ -499,6 +500,10 @@ set_tests_properties(SettingsAppearanceTest
 # adds up to a couple of minutes across the cases, so a shorter timeout would
 # turn a readable failure into a silent ctest kill
 set_tests_properties(PackageRepositoryDownloadTest PROPERTIES TIMEOUT 300)
+
+# PackageExporterDialogTest creates a fresh profile per test method and several of
+# its methods export and then install a package, so it needs a longer timeout
+set_tests_properties(PackageExporterDialogTest PROPERTIES TIMEOUT 300)
 
 # HostWidgetDecouplingTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(HostWidgetDecouplingTest PROPERTIES TIMEOUT 300)
