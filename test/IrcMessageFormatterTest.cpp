@@ -119,6 +119,41 @@ private slots:
         QVERIFY2(html.contains(QStringLiteral("&lt;b")), qPrintable(html));
     }
 
+    // communi escapes & and < for the window before it strips the formatting
+    // codes, and the plain text it hands back for a script still has those
+    // entities in it - so they have to be undone, on every path that reaches Lua
+    void lua_getsTheTextAsItWasSent_data()
+    {
+        QTest::addColumn<QByteArray>("raw");
+        QTest::addColumn<QString>("expected");
+
+        QTest::newRow("information numeric") << QByteArrayLiteral(":server 002 me :Fish & Chips <here>") << QStringLiteral("[INFO] Fish & Chips <here>");
+        QTest::newRow("error numeric") << QByteArrayLiteral(":server 401 me nick :Fish & Chips <here>") << QStringLiteral("[ERROR] nick Fish & Chips <here>");
+        QTest::newRow("other numeric") << QByteArrayLiteral(":server 333 me #mudlet :Fish & Chips <here>") << QStringLiteral("[333] #mudlet Fish & Chips <here>");
+        QTest::newRow("channel message") << QByteArrayLiteral(":bob!u@h PRIVMSG #mudlet :Fish & Chips <here>") << QStringLiteral("Fish & Chips <here>");
+        QTest::newRow("action") << QByteArrayLiteral(":bob!u@h PRIVMSG #mudlet :\001ACTION likes Fish & Chips <here>\001") << QStringLiteral("* bob likes Fish & Chips <here>");
+        QTest::newRow("notice") << QByteArrayLiteral(":bob!u@h NOTICE #mudlet :Fish & Chips <here>") << QStringLiteral("Fish & Chips <here>");
+        // Somebody typing an entity by hand must see it come out as typed
+        QTest::newRow("a literal entity survives") << QByteArrayLiteral(":bob!u@h PRIVMSG #mudlet :&amp; &lt; &amp;lt;") << QStringLiteral("&amp; &lt; &amp;lt;");
+        // The formatting codes are still stripped, which is why the plain text
+        // comes from communi in the first place
+        QTest::newRow("formatting codes are still stripped") << QByteArrayLiteral(":bob!u@h PRIVMSG #mudlet :\002Fish\002 & \00304Chips\003 <here>") << QStringLiteral("Fish & Chips <here>");
+    }
+
+    void lua_getsTheTextAsItWasSent()
+    {
+        QFETCH(QByteArray, raw);
+        QFETCH(QString, expected);
+        QCOMPARE(forLua(raw), expected);
+    }
+
+    // The same characters still have to be escaped on their way into the window
+    void window_stillEscapesWhatLuaGetsRaw()
+    {
+        const QString html = forWindow(":bob!u@h PRIVMSG #mudlet :Fish & Chips <here>");
+        QVERIFY2(html.contains(QStringLiteral("Fish &amp; Chips &lt;here>")), qPrintable(html));
+    }
+
     void numeric_errorCodesAreMarkedAsErrors() { QCOMPARE(forLua(":server 401 me nosuchnick :No such nick"), QStringLiteral("[ERROR] nosuchnick No such nick")); }
 
     // The error colour has to be picked from the numeric's own code, since a
@@ -158,6 +193,23 @@ private slots:
         auto* message = new IrcMotdMessage(&mConnection);
         message->setParameters({QStringLiteral("me"), QStringLiteral("first line"), QStringLiteral("second line")});
         QCOMPARE(IrcMessageFormatter::formatMessage(message, true), QStringLiteral("[MOTD] first line\n[MOTD] second line\n"));
+    }
+
+    // A topic reply is composed by communi from the 332 numeric, so it has to
+    // be built by hand here
+    void topic_replyReachesLuaAsItWasSent()
+    {
+        auto* message = new IrcTopicMessage(&mConnection);
+        message->setCommand(QString::number(Irc::RPL_TOPIC));
+        message->setParameters({QStringLiteral("#mudlet"), QStringLiteral("Fish & Chips <here>")});
+        QCOMPARE(IrcMessageFormatter::formatMessage(message, true), QStringLiteral("[TOPIC] Fish & Chips <here>"));
+    }
+
+    void motd_reachesLuaAsItWasSent()
+    {
+        auto* message = new IrcMotdMessage(&mConnection);
+        message->setParameters({QStringLiteral("me"), QStringLiteral("Fish & Chips <here>")});
+        QCOMPARE(IrcMessageFormatter::formatMessage(message, true), QStringLiteral("[MOTD] Fish & Chips <here>\n"));
     }
 
     void motd_breaksItsLinesWithMarkupForTheWindow()

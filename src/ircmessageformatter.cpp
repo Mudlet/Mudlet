@@ -23,6 +23,15 @@
 
 #include <IrcTextFormat>
 
+// communi escapes & and < before it strips the IRC formatting codes, and hands
+// out the plain text with those entities still in it; a script wants the text
+// the way it was sent. Only those two are escaped, and &lt; is undone first so
+// that a literal "&lt;" (which came through as "&amp;lt;") survives the trip.
+static QString plainTextForLua(const QString& text)
+{
+    return IrcTextFormat().toPlainText(text).replace(QStringLiteral("&lt;"), QStringLiteral("<")).replace(QStringLiteral("&amp;"), QStringLiteral("&"));
+}
+
 QString IrcMessageFormatter::formatMessage(IrcMessage* message, bool isForLua)
 {
     QString formatted;
@@ -134,7 +143,7 @@ QString IrcMessageFormatter::formatAwayMessage(IrcAwayMessage* message, bool isF
 {
     QString content;
     if (isForLua) {
-        content = IrcTextFormat().toPlainText(message->content());
+        content = plainTextForLua(message->content());
     } else {
         content = IrcTextFormat().toHtml(message->content());
     }
@@ -190,7 +199,7 @@ QString IrcMessageFormatter::formatMotdMessage(IrcMotdMessage* message, bool isF
         QString content, lineEnd;
         if (isForLua) {
             lineEnd = "\n";
-            content = IrcTextFormat().toPlainText(line);
+            content = plainTextForLua(line);
         } else {
             lineEnd = "<br />\n";
             content = IrcTextFormat().toHtml(line);
@@ -248,7 +257,7 @@ QString IrcMessageFormatter::formatNoticeMessage(IrcNoticeMessage* message, bool
     if (message->isPrivate()) {
         QString content;
         if (isForLua) {
-            content = IrcTextFormat().toPlainText(message->content());
+            content = plainTextForLua(message->content());
         } else {
             content = IrcTextFormat().toHtml(message->content());
         }
@@ -257,7 +266,7 @@ QString IrcMessageFormatter::formatNoticeMessage(IrcNoticeMessage* message, bool
 
     if (isForLua) {
         // lua only needs the message text.
-        return IrcTextFormat().toPlainText(message->content());
+        return plainTextForLua(message->content());
     }
     const QString content = IrcTextFormat().toHtml(message->content());
     return QObject::tr("&lt;%1%2&gt; [%3] %4").arg(message->nick(), pfx, message->target(), content);
@@ -269,7 +278,7 @@ QString IrcMessageFormatter::formatNumericMessage(IrcNumericMessage* message, bo
         const QString info = QStringList(message->parameters().mid(1)).join(" ");
         QString content;
         if (isForLua) {
-            content = IrcTextFormat().toPlainText(info);
+            content = plainTextForLua(info);
         } else {
             content = IrcTextFormat().toHtml(info);
         }
@@ -296,7 +305,7 @@ QString IrcMessageFormatter::formatNumericMessage(IrcNumericMessage* message, bo
         const QString info = QStringList(message->parameters().mid(1)).join(" ");
         QString content;
         if (isForLua) {
-            content = IrcTextFormat().toPlainText(info);
+            content = plainTextForLua(info);
         } else {
             content = IrcTextFormat().toHtml(info);
         }
@@ -306,7 +315,7 @@ QString IrcMessageFormatter::formatNumericMessage(IrcNumericMessage* message, bo
         const QString info = QStringList(message->parameters().mid(1)).join(" ");
         QString content;
         if (isForLua) {
-            content = IrcTextFormat().toPlainText(info);
+            content = plainTextForLua(info);
         } else {
             content = IrcTextFormat().toHtml(info);
         }
@@ -315,7 +324,7 @@ QString IrcMessageFormatter::formatNumericMessage(IrcNumericMessage* message, bo
     const QString info = QStringList(message->parameters().mid(1)).join(" ");
     QString content;
     if (isForLua) {
-        content = IrcTextFormat().toPlainText(info);
+        content = plainTextForLua(info);
     } else {
         content = IrcTextFormat().toHtml(info);
     }
@@ -351,7 +360,7 @@ QString IrcMessageFormatter::formatPrivateMessage(IrcPrivateMessage* message, bo
 {
     QString content;
     if (isForLua) {
-        content = IrcTextFormat().toPlainText(message->content());
+        content = plainTextForLua(message->content());
     } else {
         content = IrcTextFormat().toHtml(message->content());
     }
@@ -384,7 +393,7 @@ QString IrcMessageFormatter::formatTopicMessage(IrcTopicMessage* message, bool i
 
         QString topic;
         if (isForLua) {
-            topic = IrcTextFormat().toPlainText(message->topic());
+            topic = plainTextForLua(message->topic());
         } else {
             topic = IrcTextFormat().toHtml(message->topic());
         }
