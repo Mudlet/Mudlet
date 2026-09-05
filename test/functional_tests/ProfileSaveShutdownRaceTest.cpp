@@ -44,6 +44,7 @@
 #include <QTemporaryDir>
 #include <chrono>
 
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -92,7 +93,7 @@ private:
 
     static void deleteProfileDirectory(const QString& profileName)
     {
-        QDir dir(mudlet::getMudletPath(enums::profileHomePath, profileName));
+        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, profileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }
@@ -103,7 +104,7 @@ private:
     // they were taken, so the last in name order is the newest.
     static bool lastSavedProfileContains(const QString& profileName, const QString& needle)
     {
-        const QDir directory(mudlet::getMudletPath(enums::profileXmlFilesPath, profileName));
+        const QDir directory(MudletPaths::getMudletPath(enums::profileXmlFilesPath, profileName));
         const QStringList saved = directory.entryList(QStringList{qsl("*.xml")}, QDir::Files, QDir::Name);
         if (saved.isEmpty()) {
             return false;
@@ -162,8 +163,7 @@ private slots:
         mpHost = nullptr;
         delete mpServer;
         mpServer = nullptr;
-        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
-        // getMudletPath() dereferences the instance rather than checking it
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
             deleteProfileDirectory(mProfileName);
             delete mudlet::self();
@@ -230,7 +230,7 @@ private slots:
         QVERIFY2(lastSavedProfileContains(mProfileName, mKeptPackage), "The save the quit waited for reached no profile on disk");
         // Read as text: a QSettings would answer from the QConfFile cache that
         // every instance for this path shares, disk or no disk.
-        QFile ini(mudlet::getMudletPath(enums::profileDataItemPath, mProfileName, qsl("profile.ini")));
+        QFile ini(MudletPaths::getMudletPath(enums::profileDataItemPath, mProfileName, qsl("profile.ini")));
         QVERIFY2(ini.open(QFile::ReadOnly | QFile::Text), "profile.ini was never written");
         QVERIFY2(QString::fromUtf8(ini.readAll()).contains(qsl("FlushedAtClose=yes")), "A profile.ini setting stored as the profile closed never reached the disk");
     }
