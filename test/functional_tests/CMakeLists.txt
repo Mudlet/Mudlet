@@ -155,6 +155,7 @@ set(PACKAGE_GROUP_TEST_SOURCES
     DualPackageModuleTest.cpp
     ModuleManagerListingTest.cpp
     ModuleSaveTeardownTest.cpp
+    PackageDownloadDialogRestyleTest.cpp
     PackageFontsOnRefusedArchiveTest.cpp
     PackageManagerRemovalTest.cpp
     PackageRemovalSaveTeardownTest.cpp
