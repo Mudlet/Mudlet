@@ -242,13 +242,31 @@ private:
     // Long enough for the pan's 16ms timer to tick a good few times.
     void letThePanRun() const { QTest::qWait(150); }
 
+    // How far east the view moves per tick of the pan's timer. The event loop
+    // does not get round to the same number of ticks in every window, so the
+    // distance over a window is only comparable between two of them per tick.
+    qreal eastwardPanPerTick() const
+    {
+        QSignalSpy ticks(&mp2dMap->mMiddleMousePanHandler->mTimer, &QTimer::timeout);
+        mp2dMap->mMapCenterX = 0.0;
+        letThePanRun();
+        return ticks.isEmpty() ? 0.0 : mp2dMap->mMapCenterX / ticks.count();
+    }
+
     // A pan that is still running would follow the pointer parked east of the
     // middle, so a view that stays put is one whose pan has really stopped -
     // the pointer coming back on its own only says the cursor was reset.
     void verifyNothingPansAnyMore() const
     {
+        QVERIFY2(!mp2dMap->mMiddleMousePanHandler->isActive(), "the pan is still running");
         mp2dMap->mMapCenterX = 0.0;
-        QCursor::setPos(mp2dMap->mapToGlobal(viewCentre() + QPoint(60, 0)));
+        const QPoint east = mp2dMap->mapToGlobal(viewCentre() + QPoint(60, 0));
+        QCursor::setPos(east);
+        // Where the pointer cannot be parked there is nothing for a leftover
+        // pan to follow, and the handler's word above has to do.
+        if (QCursor::pos() != east) {
+            return;
+        }
         letThePanRun();
         QVERIFY2(qFuzzyIsNull(mp2dMap->mMapCenterX), "the map is still panning");
     }
@@ -651,15 +669,13 @@ private slots:
 
         middlePressAt(viewCentre());
         middleMoveTo(viewCentre() + QPoint(30, 0));
-        letThePanRun();
-        const qreal nearby = mp2dMap->mMapCenterX;
+        const qreal nearby = eastwardPanPerTick();
 
-        mp2dMap->mMapCenterX = 0.0;
         middleMoveTo(viewCentre() + QPoint(150, 0));
-        letThePanRun();
-        const qreal farAway = mp2dMap->mMapCenterX;
+        const qreal farAway = eastwardPanPerTick();
 
-        QVERIFY2(farAway > nearby * 2, qPrintable(qsl("30px off moved the view %1, 150px off moved it %2").arg(nearby).arg(farAway)));
+        QVERIFY(nearby > 0.0);
+        QVERIFY2(farAway > nearby * 2, qPrintable(qsl("30px off moved the view %1 a tick, 150px off moved it %2").arg(nearby).arg(farAway)));
 
         holdTheButton();
         middleReleaseAt(viewCentre() + QPoint(150, 0));
@@ -674,16 +690,13 @@ private slots:
 
         middlePressAt(viewCentre());
         middleMoveTo(viewCentre() + QPoint(500, 0));
-        letThePanRun();
-        const qreal atFiveHundred = mp2dMap->mMapCenterX;
+        const qreal atFiveHundred = eastwardPanPerTick();
 
-        mp2dMap->mMapCenterX = 0.0;
         middleMoveTo(viewCentre() + QPoint(1500, 0));
-        letThePanRun();
-        const qreal atFifteenHundred = mp2dMap->mMapCenterX;
+        const qreal atFifteenHundred = eastwardPanPerTick();
 
         QVERIFY(atFiveHundred > 0.0);
-        QVERIFY2(atFifteenHundred < atFiveHundred * 1.5, qPrintable(qsl("500px off moved the view %1, 1500px off moved it %2").arg(atFiveHundred).arg(atFifteenHundred)));
+        QCOMPARE(atFifteenHundred, atFiveHundred);
 
         holdTheButton();
         middleReleaseAt(viewCentre() + QPoint(1500, 0));

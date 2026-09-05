@@ -44,6 +44,8 @@ public:
     bool isPressActive() const { return mPressActive; }
 
 private:
+    friend class MapMouseInteractionTest;
+
     void beginPan(const QPointF& widgetPosition, bool fromPress);
     void updatePointer(const QPointF& widgetPosition);
     void finishPress();
