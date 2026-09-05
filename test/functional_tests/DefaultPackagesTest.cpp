@@ -42,6 +42,7 @@
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "mudlet.h"
+#include "MudletArchive.h"
 
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)
@@ -247,10 +248,10 @@ private slots:
 
             QTemporaryDir unpacked;
             QVERIFY(unpacked.isValid());
-            // mudlet::unzip() joins the destination and the entry name as-is,
+            // MudletArchive::unzip() joins the destination and the entry name as-is,
             // so the trailing slash is what keeps the files inside the folder:
             const QString destination = qsl("%1/").arg(unpacked.path());
-            QVERIFY2(mudlet::unzip(onDisk.fileName(), destination, QDir(unpacked.path())), qPrintable(qsl("%1 could not be unzipped").arg(archive)));
+            QVERIFY2(MudletArchive::unzip(onDisk.fileName(), destination, QDir(unpacked.path())), qPrintable(qsl("%1 could not be unzipped").arg(archive)));
 
             const QDir contents(unpacked.path());
             QVERIFY2(contents.exists(qsl("config.lua")), qPrintable(qsl("%1 carries no config.lua, so it would install without any metadata").arg(archive)));
@@ -292,7 +293,7 @@ private slots:
             QTemporaryDir unpacked;
             QVERIFY(unpacked.isValid());
             const QString destination = qsl("%1/").arg(unpacked.path());
-            QVERIFY(mudlet::unzip(onDisk.fileName(), destination, QDir(unpacked.path())));
+            QVERIFY(MudletArchive::unzip(onDisk.fileName(), destination, QDir(unpacked.path())));
 
             // the installer imports every *.xml and *.trigger it finds in an
             // archive, so compile the scripts in all of them rather than assuming

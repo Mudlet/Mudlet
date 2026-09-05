@@ -45,9 +45,9 @@ and the baseline are regenerated in each libmudlet PR, so drift shows up in the 
 
 | Metric | Count |
 | --- | ---: |
-| Source files in `mudlet_core` | 421 |
+| Source files in `mudlet_core` | 423 |
 | Files depending on Qt Widgets | 149 |
-| Clean files | 272 |
+| Clean files | 274 |
 | Committed baseline | 149 |
 
 ## Offending files
@@ -207,7 +207,7 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `HostManager.cpp` | 0 | 1 | QApplication |
 | `modern_glwidget.h` | 0 | 1 | QWidget |
 
-## Clean files (272)
+## Clean files (274)
 
 <details>
 <summary>Files with no Qt Widgets dependency</summary>
@@ -285,6 +285,8 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 - `MMCPClient.h`
 - `MMCPServer.cpp`
 - `MMCPServer.h`
+- `MudletArchive.cpp`
+- `MudletArchive.h`
 - `MudletInstanceCoordinator.cpp`
 - `MudletInstanceCoordinator.h`
 - `MxpTag.cpp`

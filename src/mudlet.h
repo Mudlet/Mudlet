@@ -61,7 +61,6 @@
 class QAction;
 class QCloseEvent;
 class QDateTime;
-class QDir;
 class QKeyEvent;
 class QMediaDevices;
 class QMediaPlayer;
@@ -122,7 +121,6 @@ public:
     static void setNetworkRequestDefaults(const QUrl& url, QNetworkRequest& request);
     // This method allows better debugging when mudlet::self() is called inappropriately.
     static void start();
-    static bool unzip(const QString& archivePath, const QString& destination, const QDir& tmpDir);
     static QImage getSplashScreen(bool releaseVersion, bool testVersion);
 
 
@@ -231,7 +229,6 @@ public:
     QDockWidget* getMainWindowDockWidget(const QString& mapKey) const { return mMainWindowDockWidgetMap.value(mapKey); }
     std::optional<QSize> getImageSize(const QString&);
     const QString& getInterfaceLanguage() const { return mInterfaceLanguage; }
-    int64_t getPhysicalMemoryTotal();
     const QLocale& getUserLocale() const { return mUserLocale; }
     QSet<QString> getWordSet();
     bool inDarkMode() const { return mDarkMode; }

@@ -25,7 +25,6 @@
 
 #include "Host.h"
 #include "LuaLiteral.h"
-#include "mudlet.h"
 #include "TConsole.h"
 #include "TConsoleModel.h"
 #include "TEvent.h"
@@ -58,9 +57,106 @@
 #include <utility>
 #include <chrono>
 
+// for system physical memory info
+#if defined(Q_OS_WINDOWS)
+#include <Windows.h>
+#include <Psapi.h>
+#elif defined(Q_OS_MACOS)
+#include <sys/param.h>
+#include <sys/sysctl.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <array>
+#elif defined(Q_OS_HURD)
+#include <errno.h>
+#include <unistd.h>
+#elif defined(Q_OS_OPENBSD)
+// OpenBSD doesn't have a sysinfo.h
+#include <sys/sysctl.h>
+#include <unistd.h>
+#elif defined(Q_OS_UNIX)
+// Including both GNU/Linux and FreeBSD
+#include <sys/resource.h>
+#include <sys/sysinfo.h>
+#include <sys/types.h>
+#include <unistd.h>
+#else
+// Any other OS?
+#endif
+
 using namespace std::chrono_literals;
 
 namespace {
+
+// credit to https://github.com/DigitalInBlue/Celero/blob/master/src/Memory.cpp
+int64_t physicalMemoryTotal()
+{
+#if defined(Q_OS_WINDOWS)
+    MEMORYSTATUSEX memInfo;
+    memInfo.dwLength = sizeof(MEMORYSTATUSEX);
+    GlobalMemoryStatusEx(&memInfo);
+    return static_cast<int64_t>(memInfo.ullTotalPhys);
+#elif defined(Q_OS_HURD)
+    // GNU/Hurd does not have a sysinfo struct  yet:
+    errno = 0;
+    int64_t pageSize = sysconf(_SC_PAGESIZE);
+    if (pageSize < 0) {
+        if (errno) {
+            qDebug().nospace().noquote() << "physicalMemoryTotal() WARNING - error returned from sysconf(_SC_PAGESIZE); errno: " << errno;
+        } else {
+            qDebug().nospace().noquote() << "physicalMemoryTotal() WARNING - indeterminent limit returned from sysconf(_SC_PAGESIZE).";
+        }
+        return -1;
+    }
+    int64_t pageCount = sysconf(_SC_PHYS_PAGES);
+    if (pageCount < 0) {
+        if (errno) {
+            qDebug().nospace().noquote() << "physicalMemoryTotal() WARNING - error returned from sysconf(_SC_PHYS_PAGES); errno: " << errno;
+        } else {
+            qDebug().nospace().noquote() << "physicalMemoryTotal() WARNING - indeterminent limit returned from sysconf(_SC_PHYS_PAGES).";
+        }
+        return -1;
+    }
+    return pageSize * pageCount;
+#elif defined(Q_OS_MACOS)
+    int mib[2];
+    mib[0] = CTL_HW;
+    mib[1] = HW_MEMSIZE;
+
+    int64_t memInfo{0};
+    auto len = sizeof(memInfo);
+
+    if (!sysctl(mib, 2, &memInfo, &len, nullptr, 0)) {
+        return memInfo;
+    }
+
+    return -1;
+#elif defined(Q_OS_OPENBSD)
+    // Very similar to MacOS but uses a different second level name
+    int mib[2];
+    mib[0] = CTL_HW;
+    mib[1] = HW_PHYSMEM64; // Or do we really want HW_USERMEM64?
+
+    int64_t memInfo{0};
+    auto len = sizeof(memInfo);
+
+    if (!sysctl(mib, 2, &memInfo, &len, nullptr, 0)) {
+        return memInfo;
+    }
+
+    return -1;
+#elif defined(Q_OS_UNIX)
+    // Including both GNU/Linux and FreeBSD:
+    // Prefer sysctl() over sysconf() except sysctl() HW_REALMEM and HW_PHYSMEM
+    // return static_cast<int64_t>(sysconf(_SC_PHYS_PAGES)) * static_cast<int64_t>(sysconf(_SC_PAGE_SIZE));
+    struct sysinfo memInfo;
+    sysinfo(&memInfo);
+    int64_t const total = memInfo.totalram;
+    return total * static_cast<int64_t>(memInfo.mem_unit);
+#else
+    return -1;
+#endif
+}
 
 // Every line appended to a buffer is stamped with the time it arrived, and
 // QTime::currentTime() consults the timezone database on each call - which on
@@ -652,11 +748,11 @@ void TBuffer::setBufferSize(int requestedLinesLimit, int batch)
 // naive calculation to get a reasonable limit for a maximum buffer size
 int TBuffer::getMaxBufferSize()
 {
-    const int64_t physicalMemoryTotal = mudlet::self()->getPhysicalMemoryTotal();
+    const int64_t memoryTotal = physicalMemoryTotal();
     // Mudlet is 32bit mainly on Windows, see where the practical limit for a process 2GB:
     // https://docs.microsoft.com/en-us/windows/win32/memory/memory-limits-for-windows-releases#memory-and-address-space-limits
     // 64bit: set to 80% of what is available to us, swap not included
-    const int64_t maxProcessMemoryBytes = (QSysInfo::WordSize == 32) ? 1600_MB : (physicalMemoryTotal * 0.80);
+    const int64_t maxProcessMemoryBytes = (QSysInfo::WordSize == 32) ? 1600_MB : (memoryTotal * 0.80);
     auto maxLines = (maxProcessMemoryBytes / TCHAR_IN_BYTES) / mpHost->mWrapAt;
     // now we've calculated how many lines can we fit in 80% of memory, ignoring memory use for other things like triggers/aliases, Lua scripts, etc
     // so shave that down by 20%
