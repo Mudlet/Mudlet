@@ -6137,14 +6137,14 @@ describe("Main window size and saved layout", function()
     assert.is_true(tallHeight <= smallHeight + 300)
   end)
 
-  -- Everything getColumnCount("main") is made of, read together with the
-  -- size, so a column count that disagrees with the width says which of them
-  -- moved: the font, the borders or the pane itself.
+  -- What Lua can see of getColumnCount("main")'s inputs, read with the size,
+  -- so a column count that disagrees with the width says which of them moved:
+  -- the font, the user borders, or by elimination the pane itself.
   local function mainConsoleGeometry()
     local width, height = getMainWindowSize()
     local fontName = getFont("main")
     local fontSize = getFontSize("main")
-    local charWidth, charHeight = calcFontSize(fontSize, fontName)
+    local charWidth, charHeight = calcFontSize("main")
     local attached = {}
     if Adjustable and Adjustable.Container and Adjustable.Container.Attached then
       for side, containers in pairs(Adjustable.Container.Attached) do
@@ -6164,23 +6164,34 @@ describe("Main window size and saved layout", function()
 
   local function describeGeometry(geometry)
     local pixelsPerColumn = geometry.columns > 0 and geometry.width / geometry.columns or 0
-    return ("%dx%d px, %dx%d cells (%.1f px per column), font %s %d (%dx%d px per cell), borders left %d right %d top %d bottom %d, attached containers: %s"):format(
+    return ("%dx%d px, %dx%d cells (%.1f window px per column), font %s %d (%dx%d px per cell), borders left %d right %d top %d bottom %d, attached containers: %s"):format(
       geometry.width, geometry.height, geometry.columns, geometry.rows, pixelsPerColumn,
       geometry.fontName, geometry.fontSize, geometry.charWidth, geometry.charHeight,
       geometry.borders.left, geometry.borders.right, geometry.borders.top, geometry.borders.bottom,
       #geometry.attached > 0 and table.concat(geometry.attached, " ") or "none")
   end
 
-  -- Width and column count at intervals after a reading, to show a
-  -- disagreement between the two either clearing or staying put.
-  local function traceSettling()
-    local samples = {}
-    for _ = 1, 10 do
+  -- A container attached to a border - the starter interface keeps one on the
+  -- right - reserves its border again from a 0.2 s timer after every resize,
+  -- so the column count goes on moving for that long after the size has
+  -- settled. Read once nothing has moved for twice that.
+  local function settledMainConsoleGeometry()
+    local geometry = mainConsoleGeometry()
+    local unchangedForMs = 0
+    for _ = 1, 40 do
       pumpEvents(50)
-      local width = getMainWindowSize()
-      samples[#samples + 1] = ("%d/%d"):format(width, getColumnCount("main"))
+      local latest = mainConsoleGeometry()
+      if latest.width == geometry.width and latest.columns == geometry.columns then
+        unchangedForMs = unchangedForMs + 50
+        if unchangedForMs >= 400 then
+          return latest
+        end
+      else
+        unchangedForMs = 0
+      end
+      geometry = latest
     end
-    return table.concat(samples, " ")
+    return geometry
   end
 
   it("a main window that loses more than half its width is reported at the width it has", function()
@@ -6189,16 +6200,11 @@ describe("Main window size and saved layout", function()
     end
     finally(restoreMainWindowSize)
     setMainWindowSize(1600, 700)
-    pumpEvents(200)
-    local wide = mainConsoleGeometry()
+    local wide = settledMainConsoleGeometry()
 
     setMainWindowSize(300, 700)
-    pumpEvents(200)
-    local narrow = mainConsoleGeometry()
-    -- after both readings, so it cannot change their timing
-    local settling = traceSettling()
-    local report = ("\n  wide:     %s\n  narrow:   %s\n  settling: %s"):format(
-      describeGeometry(wide), describeGeometry(narrow), settling)
+    local narrow = settledMainConsoleGeometry()
+    local report = ("\n  wide:   %s\n  narrow: %s"):format(describeGeometry(wide), describeGeometry(narrow))
 
     -- the main window has a minimum width of its own, so how narrow it really
     -- became is read off the column count rather than assumed; that and
