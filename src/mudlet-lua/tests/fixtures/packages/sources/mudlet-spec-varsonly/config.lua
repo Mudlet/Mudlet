@@ -1,0 +1,5 @@
+mpackage = [[mudlet-spec-varsonly]]
+author = [[Mudlet test suite]]
+title = [[A module that installs nothing into the six item units]]
+version = [[1.0]]
+description = [[Holds a variable and nothing else, so every unit an uninstall clears stays empty while the module is installed and running.]]

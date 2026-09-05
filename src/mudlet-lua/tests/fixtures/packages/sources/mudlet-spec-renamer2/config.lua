@@ -1,0 +1,5 @@
+mpackage = [[mudlet-spec-renamed]]
+author = [[Mudlet test suite]]
+title = [[Second fixture that renames itself onto mudlet-spec-renamed, for Package_spec.lua]]
+version = [[9.9]]
+description = [[Same installed name as mudlet-spec-renamer but different details, so a spec can tell whether an install that was refused after config.lua was read still overwrote the details of the one that refused it.]]

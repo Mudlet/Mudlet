@@ -123,6 +123,7 @@ public:
     inline static const qsizetype scmMaxSameLineCreationsPerLine = 20000;
 
     QList<TTrigger*> uninstallList;
+    bool hasPendingDeletes() const { return !mCleanupSet.isEmpty() || !uninstallList.isEmpty(); }
 
 private:
     TriggerUnit() = default;
@@ -163,6 +164,9 @@ private:
     int statsPatternsActive = 0;
     // Counter for nested processing; cleanup deferred until 0
     int mProcessingDepth = 0;
+    // How many substring patterns asked about the previous line, which decides
+    // whether summarising this one is worth it - see TBigramFilter
+    int mSubstringQuestionsOnTheLastLine = 0;
     const QString* mpCurrentExecutingTriggerName = nullptr;
     // Root triggers registered while processDataStream() is running, so each
     // pass can match the ones created during it against the line being

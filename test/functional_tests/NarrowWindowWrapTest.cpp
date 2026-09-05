@@ -323,7 +323,7 @@ private:
     TConsole* createTestMiniConsole()
     {
         runLua(qsl("createMiniConsole('%1', 0, 0, 300, 300)").arg(mMiniConsole));
-        return mudlet::self()->getActiveHost()->mpConsole->mSubConsoleMap.value(mMiniConsole);
+        return mudlet::self()->getActiveHost()->mpConsole->subConsoleWidget(mMiniConsole);
     }
 
     void startProfile()

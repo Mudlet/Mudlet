@@ -347,7 +347,7 @@ private:
             QTest::qFail(qPrintable(message), __FILE__, __LINE__);
             return false;
         }
-        pLabel = mpHost->mpConsole->mLabelMap.value(name);
+        pLabel = mpHost->mpConsole->labelWidget(name);
         if (!pLabel) {
             QTest::qFail(qPrintable(qsl("createLabel() reported success but no label called '%1' is in the console's label map").arg(name)), __FILE__, __LINE__);
             return false;
