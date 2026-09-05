@@ -26,18 +26,25 @@
 
 #include "utils.h"
 
+#include <QCoreApplication>
+#include <QList>
+#include <QMap>
 #include <QMultiMap>
 #include <QPointer>
 #include <QSet>
 #include <QString>
 
 #include <list>
+#include <tuple>
+#include <vector>
 
 class Host;
 class TAlias;
 
 class AliasUnit
 {
+    Q_DECLARE_TR_FUNCTIONS(AliasUnit) // Needed so we can use tr() even though AliasUnit is NOT derived from QObject
+
     friend class XMLexport;
     friend class XMLimport;
 
@@ -68,10 +75,14 @@ public:
     void markCleanup(TAlias* pT);
     void doCleanup();
     int processingDepth() const { return mProcessingDepth; }
+    // Each nested alias expansion is a C++ stack frame; past this depth the
+    // command goes to the game unexpanded.
+    inline static const int scmMaxProcessingDepth = 50;
 
     QMultiMap<QString, TAlias*> mLookupTable;
     QSet<TAlias*> mCleanupSet;
     QList<TAlias*> uninstallList;
+    bool hasPendingDeletes() const { return !mCleanupSet.isEmpty() || !uninstallList.isEmpty(); }
 
 
 private:

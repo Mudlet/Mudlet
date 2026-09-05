@@ -35,9 +35,12 @@ describe("Tests UI functions", function()
       setWindowWrap("testconsole", 100)
     end)
 
-    -- clear miniconsole before each test
+    -- clear miniconsole before each test. The user cursor outlives clearWindow(),
+    -- so put it back where output lands or a case that moved it changes what the
+    -- next one reads
     before_each(function()
       clearWindow("testconsole")
+      moveCursorEnd("testconsole")
     end)
 
     teardown(function()
@@ -66,6 +69,32 @@ describe("Tests UI functions", function()
       assert.are.equal(testdecho, copy2decho("testconsole"))
     end)
 
+    -- #4175: selectString() only searches the current line and answers -1 for
+    -- text that is not on it, which is truthy in Lua - so the "string not found"
+    -- error never fired and characters were taken from whichever line the cursor
+    -- was on. A multiline trigger reaches this whenever it copies an earlier
+    -- line's multimatches, since it fires with the cursor on the last one.
+    it("Should not copy the current line when asked for text that is not on it", function()
+      decho("testconsole", "<0,255,0>copy4175first<r>\n")
+      decho("testconsole", "<255,0,0>copy4175second and longer<r>\n")
+
+      assert.is_true(moveCursor("testconsole", 0, 1))
+      assert.are.equal(-1, selectString("testconsole", "copy4175first", 1))
+
+      assert.is_true(moveCursor("testconsole", 0, 1))
+      assert.are.equal("", copy2decho("testconsole", "copy4175first"))
+    end)
+
+    -- a request longer than the line is also "not on this line", and used to be
+    -- answered with the whole line by an off-by-one that happened to come out
+    -- right - which is a different wrong answer from the fragment above
+    it("Should return nothing when asked for text longer than the current line", function()
+      decho("testconsole", "<0,255,0>dup dup<r>\n")
+
+      assert.are.equal(-1, selectString("testconsole", "dup dup dup dup", 1))
+      assert.are.equal("", copy2decho("testconsole", "dup dup dup dup"))
+    end)
+
     -- TODO: https://github.com/Mudlet/Mudlet/issues/5589
     -- it("Should copy2decho text with italics, bold, and underline", function()
     --   local testdecho = "separate: <i>italic</i>, <b>bold</b>, <u>underline</u>. all together: <i>italic<b>bold<u>underline<r>"
@@ -84,9 +113,12 @@ describe("Tests UI functions", function()
       setWindowWrap("testconsole", 100)
     end)
 
-    -- clear miniconsole before each test
+    -- clear miniconsole before each test. The user cursor outlives clearWindow(),
+    -- so put it back where output lands or a case that moved it changes what the
+    -- next one reads
     before_each(function()
       clearWindow("testconsole")
+      moveCursorEnd("testconsole")
     end)
 
     it("Should copy colored English text", function()
@@ -201,6 +233,23 @@ describe("Tests UI functions", function()
       assert.is_true(deleteCommandLine("testDeleteCmdLine"))
       -- Verify command line no longer exists
       assert.is_nil(windowType("testDeleteCmdLine"))
+    end)
+
+    -- Deleting one command line walks the whole set of them looking for the
+    -- widget that is going, so a second one has to come through untouched.
+    it("Should leave another command line alone when deleting one", function()
+      createCommandLine("testDeleteCmdLineGoing", 10, 10, 100, 30)
+      createCommandLine("testDeleteCmdLineStaying", 10, 50, 100, 30)
+      assert.is_true(deleteCommandLine("testDeleteCmdLineGoing"))
+      assert.is_nil(windowType("testDeleteCmdLineGoing"))
+      -- the survivor is still a command line in every way, not just by name
+      assert.are.equal("commandline", windowType("testDeleteCmdLineStaying"))
+      assert.are.same({10, 50, 100, 30}, {getWindowGeometry("testDeleteCmdLineStaying")})
+      hideWindow("testDeleteCmdLineStaying")
+      assert.is_false(windowVisible("testDeleteCmdLineStaying"))
+      showWindow("testDeleteCmdLineStaying")
+      assert.is_true(windowVisible("testDeleteCmdLineStaying"))
+      assert.is_true(deleteCommandLine("testDeleteCmdLineStaying"))
     end)
 
     it("Should delete a scrollbox", function()
@@ -2030,6 +2079,8 @@ describe("Tests UI functions", function()
         "You exclaim, 'finally!'",
         "Bob yells, 'help!'",
         "You shout, 'hello'",
+        "Bob chats, 'hello everyone'",
+        'You chat, "test."',
         "[newbie] Ann: how do I get out of here?",
         "(gossip) Ann: anyone around?",
         "< chat | Ann: anyone around?",
@@ -2040,6 +2091,7 @@ describe("Tests UI functions", function()
       local notChatLines = {
         "You are standing in a dark forest.",
         "The orc hits you for 14 damage!",
+        "You chat with the innkeeper.",
         "[combat] 100/120 hp",
         "(12) something that is not a channel",
       }
@@ -2123,6 +2175,41 @@ describe("Tests UI functions", function()
       BaseUI.standAside("sysServerGuiInstalled", "SomeGameUI")
       BaseUI.serverGuiRemoved("sysUninstallPackage", "SomethingElse")
       assert.are.equal("SomeGameUI", BaseUI.settings.standingAside)
+    end)
+
+    -- a game with its own interface can decline this one up front, by sending
+    -- Client.GUI {"baseui": false}. C++ raises the same event for that, naming no
+    -- package, so this is the shape the decline arrives in
+    it("should stand aside when the game declines without naming a package", function()
+      BaseUI.standAside("sysServerGuiInstalled")
+      assert.is_not_nil(BaseUI.settings.standingAside)
+      assert.is_true(BaseUI.dormant())
+    end)
+
+    it("should retire its capture triggers on a decline, so no game data builds the dock", function()
+      BaseUI.standAside("sysServerGuiInstalled")
+      assert.is_false(BaseUI.chatTriggersArmed())
+      assert.is_nil(next(BaseUI.vitalsTriggerIds))
+      BaseUI.armChatTriggers()
+      BaseUI.createVitalsTriggers()
+      assert.is_false(BaseUI.chatTriggersArmed())
+      assert.is_nil(next(BaseUI.vitalsTriggerIds))
+    end)
+
+    -- the marker a nameless stand-aside stores must never match a real package,
+    -- or that package's uninstall would be read as the game changing its mind
+    it("should stay aside on a decline when a package is uninstalled", function()
+      BaseUI.standAside("sysServerGuiInstalled")
+      local marker = BaseUI.settings.standingAside
+      BaseUI.serverGuiRemoved("sysUninstallPackage", "SomeGameUI")
+      assert.are.equal(marker, BaseUI.settings.standingAside)
+    end)
+
+    it("should come back after a decline when the player asks for it", function()
+      BaseUI.standAside("sysServerGuiInstalled")
+      BaseUI.show()
+      assert.is_nil(BaseUI.settings.standingAside)
+      assert.is_false(BaseUI.dormant())
     end)
   end)
 
@@ -3623,6 +3710,22 @@ describe("Window and label state", function()
       assert.are.equal("scrollbox", windowType(scrollBox))
     end)
 
+    -- A scroll box, a command line and a text edit each have a name space of
+    -- their own, so one name can be more than one of them at a time. Every
+    -- by-name lookup then answers with the scroll box until it is gone.
+    it("resolves a name that is both a scroll box and a text edit as the scroll box", function()
+      local shared = name("wlsSharedName")
+      createScrollBox(shared, 10, 20, 120, 90)
+      createTextEdit(shared, 30, 40, 160, 110)
+      assert.are.equal("scrollbox", windowType(shared))
+      assert.are.same({10, 20, 120, 90}, {getWindowGeometry(shared)})
+      deleteScrollBox(shared)
+      assert.are.equal("textedit", windowType(shared))
+      assert.are.same({30, 40, 160, 110}, {getWindowGeometry(shared)})
+      deleteTextEdit(shared)
+      assert.is_nil(windowType(shared))
+    end)
+
     it("openUserWindow reports the window as a userwindow and is repeatable", function()
       assert.are.equal("userwindow", windowType(userWindow))
       -- re-opening an already open user window re-shows the same dock rather
@@ -4856,6 +4959,18 @@ describe("Window and label state", function()
       local x, y, w, h = getWindowGeometry(label)
       assert.are.same({3, 4, 100, 50}, {x, y, w, h})
       assert.is_true(windowVisible(label))
+    end)
+
+    it("moves an element into a scroll box, which is a parent window as much as a user window is", function()
+      local scrollBox = name("wlsReparentScrollBox")
+      createScrollBox(scrollBox, 30, 40, 150, 120)
+      assert.is_true(setWindow(scrollBox, label, 5, 6, true))
+      -- the coordinates are the scroll box's own, not the main window's
+      assert.are.same({5, 6, 100, 50}, {getWindowGeometry(label)})
+      assert.is_true(windowVisible(label))
+      -- put the label back before the box goes, or it dies as its child
+      setWindow("main", label, 11, 22, true)
+      deleteScrollBox(scrollBox)
     end)
 
     it("moves an element back to the main window", function()
@@ -6875,5 +6990,450 @@ describe("Labels inside a user window", function()
     local ok, err = pcall(createLabel, userWindow, "labelBadWidth" .. suffix, 0, 0, "wide", 10, 1)
     assert.is_false(ok)
     assert.is_truthy(tostring(err):find("createLabel: bad argument #5 type (label width", 1, true))
+  end)
+end)
+
+-- A console that has been told not to scroll has nowhere to put text that runs
+-- past its bottom row, so Mudlet announces the overrun with
+-- sysWindowOverflowEvent instead of letting the lines disappear unremarked.
+describe("sysWindowOverflowEvent", function()
+  local suffix = ("-%d-%d"):format(os.time(), math.random(100000))
+  local console = "overflowConsole" .. suffix
+  local seen, handler
+
+  before_each(function()
+    createMiniConsole("main", console, 0, 0, 400, 120)
+    seen = {}
+    handler = registerAnonymousEventHandler("sysWindowOverflowEvent", function(_, window, overflow)
+      seen[#seen + 1] = {window = window, overflow = overflow}
+    end)
+  end)
+
+  after_each(function()
+    killAnonymousEventHandler(handler)
+    deleteMiniConsole(console)
+  end)
+
+  local function overflowsFor(name)
+    local counts = {}
+    for _, event in ipairs(seen) do
+      if event.window == name then
+        counts[#counts + 1] = event.overflow
+      end
+    end
+    return counts
+  end
+
+  it("says nothing while the console is still allowed to scroll", function()
+    local rows = getRowCount(console)
+    assert.is_true(rows > 0, "the console has no rows to overflow")
+    for line = 1, rows + 5 do
+      echo(console, ("scrollable %d\n"):format(line))
+    end
+    assert.are.same({}, overflowsFor(console))
+  end)
+
+  it("names the console and how many lines are past the bottom of it", function()
+    local rows = getRowCount(console)
+    assert.is_true(disableScrolling(console))
+    for line = 1, rows + 3 do
+      echo(console, ("overflowing %d\n"):format(line))
+    end
+    -- one further line is past the bottom with every echo after the console
+    -- filled up, and the count is a number rather than the text it is built from
+    assert.are.same({1, 2, 3, 4}, overflowsFor(console))
+    assert.are.equal("number", type(seen[1].overflow))
+  end)
+
+  it("goes quiet again when the console is allowed to scroll once more", function()
+    local rows = getRowCount(console)
+    assert.is_true(disableScrolling(console))
+    for line = 1, rows + 3 do
+      echo(console, ("first fill %d\n"):format(line))
+    end
+    assert.is_true(#overflowsFor(console) > 0, "nothing overflowed while scrolling was off")
+    local announced = #overflowsFor(console)
+    assert.is_true(enableScrolling(console))
+    for line = 1, rows + 3 do
+      echo(console, ("second fill %d\n"):format(line))
+    end
+    assert.are.equal(announced, #overflowsFor(console))
+  end)
+
+  it("never fires for the main window, which cannot be told to stop scrolling", function()
+    -- filled here rather than trusting what earlier specs left behind: a fresh
+    -- profile's main window holds one line against thirty-odd rows, and there
+    -- is nothing to announce until the text runs past the bottom of it
+    local rows = getRowCount("main")
+    for line = 1, rows + 5 do
+      echo(("main overflow probe %d\n"):format(line))
+    end
+    assert.is_true(getLineCount("main") > rows)
+    assert.are.same({}, overflowsFor("main"))
+  end)
+end)
+
+describe("A user window driven from Lua", function()
+  -- user windows cannot be deleted from Lua, only hidden, so the name is
+  -- unique per run
+  local suffix = ("-%d-%d"):format(os.time(), math.random(100000))
+  local userWindow = "drivenUserWindow" .. suffix
+
+  setup(function()
+    -- loadLayout is off so a saved layout cannot move the window under us
+    openUserWindow(userWindow, false)
+  end)
+
+  teardown(function()
+    disableCommandLine(userWindow)
+    enableScrolling(userWindow)
+    hideWindow(userWindow)
+  end)
+
+  it("takes a command line of its own that the command line functions then drive", function()
+    finally(function() disableCommandLine(userWindow) end)
+    assert.is_true(enableCommandLine(userWindow))
+    printCmdLine(userWindow, "walk north")
+    assert.are.equal("walk north", getCmdLine(userWindow))
+    clearCmdLine(userWindow)
+    assert.are.equal("", getCmdLine(userWindow))
+  end)
+
+  it("leaves the main command line alone while it has one of its own", function()
+    finally(function()
+      disableCommandLine(userWindow)
+      clearCmdLine("main")
+    end)
+    assert.is_true(enableCommandLine(userWindow))
+    printCmdLine(userWindow, "in the user window")
+    printCmdLine("main", "in the main window")
+    assert.are.equal("in the user window", getCmdLine(userWindow))
+    assert.are.equal("in the main window", getCmdLine("main"))
+    -- taking the user window's command line away must not take the main one's
+    -- text with it
+    assert.is_true(disableCommandLine(userWindow))
+    assert.are.equal("in the main window", getCmdLine("main"))
+  end)
+
+  it("holds a miniconsole that can take a command line of its own", function()
+    local nested = "nestedConsole" .. suffix
+    finally(function()
+      disableCommandLine(nested)
+      deleteMiniConsole(nested)
+    end)
+    createMiniConsole(userWindow, nested, 0, 0, 200, 80)
+    assert.are.equal("miniconsole", windowType(nested))
+    assert.is_true(enableCommandLine(nested))
+    printCmdLine(nested, "nested text")
+    assert.are.equal("nested text", getCmdLine(nested))
+    -- taking the command line away only hides it, so what was typed into it is
+    -- still there to be read back
+    assert.is_true(disableCommandLine(nested))
+    assert.are.equal("nested text", getCmdLine(nested))
+  end)
+
+  it("announces sysWindowOverflowEvent when it is not allowed to scroll", function()
+    local seen = {}
+    local handler = registerAnonymousEventHandler("sysWindowOverflowEvent", function(_, window, overflow)
+      if window == userWindow then
+        seen[#seen + 1] = overflow
+      end
+    end)
+    finally(function()
+      killAnonymousEventHandler(handler)
+      enableScrolling(userWindow)
+      clearUserWindow(userWindow)
+    end)
+    resizeWindow(userWindow, 300, 120)
+    local rows = getRowCount(userWindow)
+    assert.is_true(rows > 0, "the user window has no rows to overflow")
+    assert.is_true(disableScrolling(userWindow))
+    for line = 1, rows + 2 do
+      echo(userWindow, ("user window overflow %d\n"):format(line))
+    end
+    assert.are.same({1, 2, 3}, seen)
+  end)
+
+  it("is emptied by clearUserWindow", function()
+    echo(userWindow, "something to clear away\n")
+    assert.is_true(getLineCount(userWindow) > 0)
+    clearUserWindow(userWindow)
+    assert.are.equal(0, getLineCount(userWindow))
+  end)
+
+  it("is hidden by closeUserWindow and comes back with showWindow", function()
+    finally(function() showWindow(userWindow) end)
+    assert.is_true(windowVisible(userWindow))
+    closeUserWindow(userWindow)
+    assert.is_false(windowVisible(userWindow))
+    -- it is hidden, not destroyed - the name still answers as a user window
+    assert.are.equal("userwindow", windowType(userWindow))
+    assert.is_true(showWindow(userWindow))
+    assert.is_true(windowVisible(userWindow))
+  end)
+end)
+
+describe("closeUserWindow on things that are not user windows", function()
+  local suffix = ("-%d-%d"):format(os.time(), math.random(100000))
+
+  it("hides a miniconsole, which is the other kind of console it knows", function()
+    local console = "closeMiniConsole" .. suffix
+    finally(function() deleteMiniConsole(console) end)
+    createMiniConsole("main", console, 0, 0, 200, 60)
+    assert.is_true(windowVisible(console))
+    closeUserWindow(console)
+    assert.is_false(windowVisible(console))
+  end)
+
+  it("is deaf to a label, which hideWindow would have hidden", function()
+    local label = "closeLabel" .. suffix
+    finally(function() deleteLabel(label) end)
+    createLabel("main", label, 0, 0, 40, 20, 1)
+    assert.is_true(windowVisible(label))
+    closeUserWindow(label)
+    assert.is_true(windowVisible(label))
+    hideWindow(label)
+    assert.is_false(windowVisible(label))
+  end)
+end)
+
+describe("Colour getters on a console with nothing in it", function()
+  local suffix = ("-%d-%d"):format(os.time(), math.random(100000))
+  local console = "emptyColourConsole" .. suffix
+
+  before_each(function()
+    createMiniConsole("main", console, 0, 0, 200, 60)
+  end)
+
+  after_each(function()
+    deleteMiniConsole(console)
+  end)
+
+  it("getFgColor answers with nothing at all until a line has been echoed", function()
+    assert.are.equal(0, getLineCount(console))
+    assert.are.equal(0, select("#", getFgColor(console)))
+    echo(console, "now there is something\n")
+    assert.are.equal(3, select("#", getFgColor(console)))
+  end)
+
+  it("getBgColor answers with nothing at all until a line has been echoed", function()
+    assert.are.equal(0, getLineCount(console))
+    assert.are.equal(0, select("#", getBgColor(console)))
+    echo(console, "now there is something\n")
+    assert.are.equal(3, select("#", getBgColor(console)))
+  end)
+
+  it("both answer with nothing once the line they were pointed at is cleared away", function()
+    echo(console, "one\ntwo\nthree\n")
+    moveCursor(console, 0, 2)
+    selectCurrentLine(console)
+    assert.are.equal(3, select("#", getFgColor(console)))
+    assert.are.equal(3, select("#", getBgColor(console)))
+    -- the selection is left pointing past the end of an emptied buffer, which
+    -- the getters have to notice before they read a line that is no longer there
+    clearWindow(console)
+    assert.are.equal(0, getLineCount(console))
+    assert.are.equal(0, select("#", getFgColor(console)))
+    assert.are.equal(0, select("#", getBgColor(console)))
+  end)
+end)
+
+-- Mudlet numbers the ANSI palette with the light variant of a colour ahead of
+-- the plain one - 1 is light black and 2 is black - so every pair below is what
+-- an off-by-one in that ordering would get wrong.
+describe("isAnsiFgColor and isAnsiBgColor over the whole palette", function()
+  local suffix = ("-%d-%d"):format(os.time(), math.random(100000))
+
+  local foregrounds = {
+    {sgr = 90, index = 1}, {sgr = 30, index = 2},
+    {sgr = 91, index = 3}, {sgr = 31, index = 4},
+    {sgr = 92, index = 5}, {sgr = 32, index = 6},
+    {sgr = 93, index = 7}, {sgr = 33, index = 8},
+    {sgr = 94, index = 9}, {sgr = 34, index = 10},
+    {sgr = 95, index = 11}, {sgr = 35, index = 12},
+    {sgr = 96, index = 13}, {sgr = 36, index = 14},
+    {sgr = 97, index = 15}, {sgr = 37, index = 16},
+  }
+
+  local backgrounds = {
+    {sgr = 100, index = 1}, {sgr = 40, index = 2},
+    {sgr = 101, index = 3}, {sgr = 41, index = 4},
+    {sgr = 102, index = 5}, {sgr = 42, index = 6},
+    {sgr = 103, index = 7}, {sgr = 43, index = 8},
+    {sgr = 104, index = 9}, {sgr = 44, index = 10},
+    {sgr = 105, index = 11}, {sgr = 45, index = 12},
+    {sgr = 106, index = 13}, {sgr = 46, index = 14},
+    {sgr = 107, index = 15}, {sgr = 47, index = 16},
+  }
+
+  -- the light variant of a colour and the plain one sit next to each other, so
+  -- the neighbour is the answer an off-by-one would give instead
+  local function neighbour(index)
+    return index % 2 == 1 and index + 1 or index - 1
+  end
+
+  teardown(function()
+    deselect()
+    moveCursorEnd()
+  end)
+
+  local function selectColoured(sgr, word)
+    feedTriggers(("\27[%dm%s\27[0m\n"):format(sgr, word))
+    -- a failed search deselects, which would leave the getters reading the
+    -- start of the buffer and answering about a colour nobody asked for
+    assert.is_true(selectString(word, 1) >= 0, ("could not find %s again"):format(word))
+  end
+
+  it("answers for every ANSI foreground colour, light variants first", function()
+    for _, entry in ipairs(foregrounds) do
+      local word = ("ansiFg%d%s"):format(entry.sgr, suffix)
+      selectColoured(entry.sgr, word)
+      assert.is_true(isAnsiFgColor(entry.index), ("SGR %d is not ANSI colour %d"):format(entry.sgr, entry.index))
+      assert.is_false(isAnsiFgColor(neighbour(entry.index)),
+        ("SGR %d also answers to ANSI colour %d"):format(entry.sgr, neighbour(entry.index)))
+      deselect()
+    end
+  end)
+
+  it("answers for every ANSI background colour, light variants first", function()
+    for _, entry in ipairs(backgrounds) do
+      local word = ("ansiBg%d%s"):format(entry.sgr, suffix)
+      selectColoured(entry.sgr, word)
+      assert.is_true(isAnsiBgColor(entry.index), ("SGR %d is not ANSI colour %d"):format(entry.sgr, entry.index))
+      assert.is_false(isAnsiBgColor(neighbour(entry.index)),
+        ("SGR %d also answers to ANSI colour %d"):format(entry.sgr, neighbour(entry.index)))
+      deselect()
+    end
+  end)
+
+  it("does not confuse a foreground colour with the background behind it", function()
+    local word = "ansiFgNotBg" .. suffix
+    selectColoured(31, word)
+    assert.is_true(isAnsiFgColor(4))
+    assert.is_false(isAnsiBgColor(4))
+    deselect()
+  end)
+end)
+
+describe("Selecting on lines a selection cannot be made over", function()
+  local suffix = ("-%d-%d"):format(os.time(), math.random(100000))
+  local console = "selectEdgeConsole" .. suffix
+
+  before_each(function()
+    createMiniConsole("main", console, 0, 0, 300, 100)
+    echo(console, "a line with words on it\n")
+    echo(console, "\n")
+  end)
+
+  after_each(function()
+    deleteMiniConsole(console)
+  end)
+
+  it("selectString answers -1 on an empty line", function()
+    moveCursor(console, 0, 0)
+    assert.is_true(selectString(console, "words", 1) >= 0)
+    moveCursor(console, 0, 1)
+    assert.are.equal(-1, selectString(console, "words", 1))
+  end)
+
+  it("selectSection refuses a negative start", function()
+    moveCursor(console, 0, 0)
+    assert.is_true(selectSection(console, 0, 5))
+    assert.is_false(selectSection(console, -1, 5))
+  end)
+end)
+
+describe("insertLink with a line break in it", function()
+  local suffix = ("-%d-%d"):format(os.time(), math.random(100000))
+  local console = "linkBreakConsole" .. suffix
+
+  local function lineAt(index)
+    moveCursor(console, 0, index)
+    selectCurrentLine(console)
+    return getCurrentLine(console)
+  end
+
+  before_each(function()
+    createMiniConsole("main", console, 0, 0, 400, 120)
+  end)
+
+  after_each(function()
+    deleteMiniConsole(console)
+  end)
+
+  it("splits the line it was inserted into at the break", function()
+    echo(console, "anchor line here\n")
+    assert.are.equal(1, getLineCount(console))
+    moveCursor(console, 3, 0)
+    assert.is_true(insertLink(console, "one\ntwo", "echo('clicked')", "a hint", true))
+    assert.are.equal(2, getLineCount(console))
+    assert.are.equal("ancone", lineAt(0))
+    assert.are.equal("twohor line here", lineAt(1))
+  end)
+end)
+
+describe("Argument checks on the user window functions", function()
+  local suffix = ("-%d-%d"):format(os.time(), math.random(100000))
+
+  local function errorFrom(...)
+    local ok, err = pcall(...)
+    assert.is_false(ok)
+    return tostring(err)
+  end
+
+  it("openUserWindow hard-errors on every argument it cannot use", function()
+    local name = "argCheckUserWindow" .. suffix
+    -- the double space after the colon is a typo (#10418) and is pinned as-is;
+    -- fixing it means updating this string in the same change
+    assert.are.equal("openUserWindow:  bad argument #1 type (name as string expected, got table!)",
+      errorFrom(openUserWindow, {}))
+    assert.are.equal("openUserWindow: bad argument #2 type (loadLayout as boolean is optional, got string!)",
+      errorFrom(openUserWindow, name, "yes"))
+    assert.are.equal("openUserWindow: bad argument #3 type (autoDock as boolean is optional, got string!)",
+      errorFrom(openUserWindow, name, true, "yes"))
+    assert.are.equal("openUserWindow: bad argument #4 type (area as string expected, got number!)",
+      errorFrom(openUserWindow, name, true, true, 5))
+    -- none of those refusals may have opened the window anyway
+    assert.is_nil(windowType(name))
+  end)
+
+  it("setUserWindowTitle hard-errors on a name or title that is not text", function()
+    assert.are.equal("setUserWindowTitle: bad argument #1 type (name as string expected, got table!)",
+      errorFrom(setUserWindowTitle, {}))
+    assert.are.equal("setUserWindowTitle: bad argument #2 type (title as string is optional, got table!)",
+      errorFrom(setUserWindowTitle, "argCheckTitle" .. suffix, {}))
+  end)
+
+  it("setUserWindowStyleSheet hard-errors on a name or stylesheet that is not text", function()
+    assert.are.equal("setUserWindowStyleSheet: bad argument #1 type (userwindow name as string expected, got table!)",
+      errorFrom(setUserWindowStyleSheet, {}, ""))
+    assert.are.equal("setUserWindowStyleSheet: bad argument #2 type (StyleSheet as string expected, got table!)",
+      errorFrom(setUserWindowStyleSheet, "argCheckSheet" .. suffix, {}))
+  end)
+
+  it("setWindow and wrapLine hard-error on a name that is not text", function()
+    assert.are.equal("setWindow: bad argument #2 type (element name as string expected, got table!)",
+      errorFrom(setWindow, "main", {}))
+    assert.are.equal("wrapLine: bad argument #1 type (window name as string expected, got table!)",
+      errorFrom(wrapLine, {}, 1))
+  end)
+
+  it("resetBackgroundImage only resets a full window background on the main console", function()
+    local console = "resetBackgroundConsole" .. suffix
+    finally(function() deleteMiniConsole(console) end)
+    createMiniConsole("main", console, 0, 0, 200, 60)
+    -- the console's own background still resets, it is only the full window
+    -- one that has nowhere to go on a miniconsole
+    assert.is_true(resetBackgroundImage(console, false))
+    local ok, err = resetBackgroundImage(console, true)
+    assert.is_nil(ok)
+    assert.are.equal("the full window background can only be reset on the main console", err)
+  end)
+
+  it("resetBackgroundImage refuses a console name nothing answers to", function()
+    local absent = "resetBackgroundAbsent" .. suffix
+    local ok, err = resetBackgroundImage(absent, false)
+    assert.is_nil(ok)
+    assert.are.equal(("console '%s' not found"):format(absent), err)
   end)
 end)

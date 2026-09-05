@@ -309,6 +309,79 @@ private slots:
         QVERIFY2(pHealthy, "undamaged trigger from the same save is missing");
         QCOMPARE(pHealthy->getPatternsList(), QStringList{qsl("^survivor$")});
         QCOMPARE(pHealthy->getRegexCodePropertyList(), QList<int>{REGEX_PERL});
+
+        // A repaired trigger still matches on the defaulted kind. Its substring
+        // pattern sits at index 1, behind a perl one, so a per-pattern structure
+        // that fell out of step with the pattern list - or was indexed by
+        // anything other than the pattern's own index - reaches the wrong entry
+        // here rather than the one this pattern owns.
+        QVERIFY2(matches(pMissingKinds, qsl("before ^the pattern without one$ after")),
+                 "the substring pattern the repair defaulted, at index 1 of a mixed-kind trigger, stopped matching");
+        QVERIFY2(!matches(pMissingKinds, qsl("nothing either pattern of this trigger asks for")),
+                 "a mixed-kind trigger matched a line holding neither of its patterns");
+
+        // The undamaged neighbour is a perl pattern at index 0, so it pins that
+        // the substring path above did not simply match everything.
+        QVERIFY2(matches(pHealthy, qsl("survivor")), "the undamaged perl trigger stopped matching");
+
+        // Every trigger the save produced, damaged or not, has to satisfy the
+        // invariant match_substring() dereferences on:
+        for (TTrigger* pTrigger : {pFolder, pChild, pColorTrigger, pMissingKinds, pSurplusKinds, pHealthy}) {
+            const QString violation = matcherInvariantViolation(pTrigger);
+            QVERIFY2(violation.isEmpty(), qPrintable(violation));
+        }
+
+        // Loading a save only reaches setRegexCodeList(). setupTmpColorTrigger()
+        // - the tempColorTrigger() path - grows the pattern list on its own, and
+        // is the other place the invariant has to be maintained.
+        auto* pTempColour = new TTrigger(nullptr, pHost);
+        pTempColour->setIsActive(true);
+        pTempColour->registerTrigger();
+        QVERIFY2(pTempColour->setupTmpColorTrigger(TTrigger::scmIgnored, 2), "the temporary colour trigger refused to set itself up");
+        QCOMPARE(pTempColour->getPatternsList().size(), 1);
+        const QString tempViolation = matcherInvariantViolation(pTempColour);
+        QVERIFY2(tempViolation.isEmpty(), qPrintable(tempViolation));
+
+        // and a second call appends again, so the two lists have to move together
+        // more than once
+        QVERIFY(pTempColour->setupTmpColorTrigger(3, TTrigger::scmIgnored));
+        QCOMPARE(pTempColour->getPatternsList().size(), 2);
+        const QString secondViolation = matcherInvariantViolation(pTempColour);
+        QVERIFY2(secondViolation.isEmpty(), qPrintable(secondViolation));
+        QVERIFY2(!matches(pHealthy, qsl("survivor with more after it")), "the perl pattern's anchors stopped being honoured");
+    }
+
+private:
+    // TTrigger::match() takes the line as both UTF-8 bytes and a QString, the
+    // way TriggerUnit::processDataStream() hands it over.
+    static bool matches(TTrigger* pTrigger, const QString& line)
+    {
+        const QByteArray utf8 = line.toUtf8();
+        return pTrigger->match(utf8.constData(), utf8.size(), line, -1);
+    }
+
+    // match_substring() indexes mSubstringPatterns by pattern number and
+    // dereferences the entry without a bounds or null check, so it relies on one
+    // entry per pattern, holding a matcher for exactly the substring kinds.
+    // Answers rather than asserting: a QVERIFY here would return from this
+    // helper and let the slot run on, burying the failure.
+    static QString matcherInvariantViolation(TTrigger* pTrigger)
+    {
+        const QStringList patterns = pTrigger->getPatternsList();
+        const QList<int> kinds = pTrigger->getRegexCodePropertyList();
+        if (static_cast<int>(pTrigger->mSubstringPatterns.size()) != patterns.size()) {
+            return qsl("trigger '%1' holds %2 pattern(s) but %3 matcher slot(s)")
+                    .arg(pTrigger->getName(), QString::number(patterns.size()), QString::number(pTrigger->mSubstringPatterns.size()));
+        }
+        for (int i = 0; i < patterns.size(); ++i) {
+            const bool wantMatcher = kinds.at(i) == REGEX_SUBSTRING;
+            const bool haveMatcher = pTrigger->mSubstringPatterns[i].matcher != nullptr;
+            if (haveMatcher != wantMatcher) {
+                return qsl("trigger '%1' pattern %2 is kind %3 but %4 a matcher")
+                        .arg(pTrigger->getName(), QString::number(i), QString::number(kinds.at(i)), haveMatcher ? qsl("has") : qsl("lacks"));
+            }
+        }
+        return {};
     }
 };
 

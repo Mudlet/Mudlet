@@ -31,9 +31,11 @@
 #include "LuaInterface.h"
 #include "TGameDetails.h"
 #include "XMLimport.h"
+#include "discord.h"
 #include "mudlet.h"
 #include "CredentialManager.h"
 #include "SecureStringUtils.h"
+#include "widgetutils.h"
 #include "utils.h"
 
 #include <QtConcurrentRun>
@@ -167,6 +169,10 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     mpTabBar->setAccessibleDescription(tr("Switch between showing only your own games and all of the games Mudlet knows about."));
     verticalLayout_gamesList->insertWidget(0, mpTabBar);
     setTabOrder(mpTabBar, listWidget_profiles);
+    // that also takes the games list out of the head of the focus chain, so
+    // without this the profile name field opens focused - where typing a game's
+    // name renames a profile instead of picking that game
+    listWidget_profiles->setFocus();
 
     if (!mudlet::self()->mOnlyShownPredefinedProfiles.isEmpty()) {
         // dedicated single-game builds only ever show their own game(s), so
@@ -425,7 +431,7 @@ dlgConnectionProfiles::~dlgConnectionProfiles()
     // ~QDialog hides the dialog once this destructor is done, and the profile
     // name field reacts to losing the focus by emitting editingFinished() into
     // slot_saveName() when this object is no longer a valid receiver (#9574)
-    utils::disconnectChildSignals(this);
+    widgetutils::disconnectChildSignals(this);
 
     if (mPasswordSaveTimer) {
         mPasswordSaveTimer->stop();
@@ -444,7 +450,8 @@ dlgConnectionProfiles::~dlgConnectionProfiles()
 
 // Restores the widgets that the first-launch tutorial invitation hides, so
 // every path out of the invitation (Skip button, New profile) leaves the
-// dialog in its regular state:
+// dialog in its regular state - bar the keyboard focus, which hiding those
+// widgets scatters and each caller has to claim for itself:
 void dlgConnectionProfiles::dismissTutorialInvitation()
 {
     mTutorialDismissed = true;
@@ -472,6 +479,9 @@ void dlgConnectionProfiles::slot_skipToGamesList()
     if (!items.isEmpty()) {
         listWidget_profiles->setCurrentItem(items.first());
     }
+    // dismissTutorialInvitation() hides whichever widget the invitation left
+    // holding the focus, which hands it on down the chain to the name field
+    listWidget_profiles->setFocus();
 }
 
 // the dialog can be accepted by pressing Enter on an qlineedit; this is a safeguard against it
@@ -1267,9 +1277,7 @@ QString dlgConnectionProfiles::readProfileData(const QString& profile, const QSt
     QString ret;
     if (success) {
         QDataStream ifs(&file);
-        if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
-        }
+        ifs.setVersion(QDataStream::Qt_5_12);
         ifs >> ret;
         file.close();
     }
@@ -1285,9 +1293,7 @@ QPair<bool, QString> dlgConnectionProfiles::writeProfileData(const QString& prof
     QSaveFile file(mudlet::getMudletPath(enums::profileDataItemPath, profile, item));
     if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         QDataStream ofs(&file);
-        if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            ofs.setVersion(mudlet::scmQDataStreamFormat_5_12);
-        }
+        ofs.setVersion(QDataStream::Qt_5_12);
         ofs << what;
         if (!file.commit()) {
             qDebug().noquote().nospace() << "dlgConnectionProfiles::writeProfileData(...) ERROR - writing profile: \"" << profile << "\", item: \"" << item << "\", reason: \"" << file.errorString()
@@ -1677,7 +1683,7 @@ void dlgConnectionProfiles::fillout_form()
     // Dedicated single-game builds go straight to their game's profile instead
     // of the Mudlet tutorial invitation, and someone with a history of using
     // Mudlet gets the games list rather than a beginner's invitation - the same
-    // call the UI tour and the starter UI make:
+    // call the UI tour makes:
     if (firstMudletLaunch && noSavedProfiles && !mTutorialDismissed && onlyShownPredefinedProfiles.isEmpty() && !mudlet::self()->experiencedMudletPlayer()) {
         // Hide the profile list and show only the tutorial-focused welcome
         widget_topLeft->hide();
@@ -2342,7 +2348,7 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
         pHost->setAutoReconnect(auto_reconnect->isChecked());
 
         // This also writes the value out to the profile's base directory:
-        mudlet::self()->mDiscord.setApplicationID(pHost, mDiscordApplicationId);
+        Discord::self()->setApplicationID(pHost, mDiscordApplicationId);
     }
 
     emit signal_load_profile(profile_name, alsoConnect);

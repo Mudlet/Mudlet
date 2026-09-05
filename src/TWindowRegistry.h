@@ -1,0 +1,166 @@
+#ifndef MUDLET_TWINDOWREGISTRY_H
+#define MUDLET_TWINDOWREGISTRY_H
+
+/***************************************************************************
+ *   Copyright (C) 2026 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
+
+#include <QMap>
+#include <QSet>
+#include <QString>
+#include <QStringList>
+
+#include <optional>
+
+class TConsoleModel;
+class TLabelModel;
+
+// The profile's index of its named windows, owned by Host. It answers "is there
+// a window called X, what kind is it, and what is its model" - questions only
+// the view's widget maps can answer today, and none of them can once the core
+// builds without Qt Widgets (#8681).
+//
+// Entries are NON-OWNING. A named window's model is owned by the view object it
+// belongs to (a TLabelModel by its TLabel, a TConsoleModel by its TConsole), so
+// it is the view that has to keep the registry in step: register where it
+// creates the widget, deregister where it destroys it. TMainConsole's own
+// QMap<QString, TLabel*>, QMap<QString, TConsole*> and the like stay as the
+// view's half of that pair, and remain its only way to reach a widget by name.
+// Kinds with no core-side state at all are indexed by name alone - see the dock
+// widget and scroll box comments below.
+class TWindowRegistry
+{
+public:
+    // What a sub-console name was created as. The view's TConsole::ConsoleType
+    // is a widget-side flag set, so the kind is recorded here at registration
+    // instead. Other covers a console that is none of the three kinds a
+    // sub-console can be, which leaves Host::windowType() - rather than
+    // registration - to decide what an impossible type means.
+    enum class SubConsoleKind { MiniConsole, UserWindow, Buffer, Other };
+
+    void registerLabel(const QString& name, TLabelModel* pModel) { mLabels.insert(name, pModel); }
+
+    // Identity-checked because a label outlives its removal from the view's map:
+    // TMainConsole::deleteLabel() takes the entry and defers the delete, so the
+    // same name can be registered again before the old TLabel's destructor runs.
+    // Naming the model that is going stops it evicting its replacement.
+    void deregisterLabel(const QString& name, const TLabelModel* pModel)
+    {
+        if (mLabels.value(name) == pModel) {
+            mLabels.remove(name);
+        }
+    }
+
+    bool hasLabel(const QString& name) const { return mLabels.contains(name); }
+    TLabelModel* labelModel(const QString& name) { return mLabels.value(name); }
+    const TLabelModel* labelModel(const QString& name) const { return mLabels.value(name); }
+
+    void registerSubConsole(const QString& name, TConsoleModel* pModel, const SubConsoleKind kind) { mSubConsoles.insert(name, {pModel, kind}); }
+
+    // Identity-checked for the same reason deregisterLabel() is: every path that
+    // destroys a sub-console defers the delete, so ~TConsole can run after the
+    // name has been given to a replacement.
+    void deregisterSubConsole(const QString& name, const TConsoleModel* pModel)
+    {
+        if (mSubConsoles.value(name).pModel == pModel) {
+            mSubConsoles.remove(name);
+        }
+    }
+
+    bool hasSubConsole(const QString& name) const { return mSubConsoles.contains(name); }
+    TConsoleModel* subConsoleModel(const QString& name) const { return mSubConsoles.value(name).pModel; }
+
+    std::optional<SubConsoleKind> subConsoleKind(const QString& name) const
+    {
+        const auto it = mSubConsoles.constFind(name);
+        if (it == mSubConsoles.constEnd()) {
+            return {};
+        }
+        return {it->kind};
+    }
+
+    // A detached snapshot, which is what makes it safe to act on each name in
+    // turn even when acting on a name removes its entry mid-walk -
+    // Host::closeChildren() closes every sub-console.
+    QStringList subConsoleNames() const { return QStringList(mSubConsoles.keys()); }
+
+    // Dock widgets are indexed by name alone. Everything core asks of one is
+    // whether the name has a dock, which is what tells a user window apart from
+    // a miniconsole; the rest - geometry, floating state, stylesheet, the
+    // layoutChanged property - is widget state with no core-side meaning, so
+    // there is nothing for a model to hold and no widget pointer to keep here.
+    void registerDockWidget(const QString& name) { mDockWidgets.insert(name); }
+
+    // Not identity-checked, unlike the two above: nothing deregisters a dock
+    // from its own destructor, so every removal is the view taking the entry out
+    // of its map at the same moment, and there is no window in which a stale
+    // deregistration could evict a replacement.
+    void deregisterDockWidget(const QString& name) { mDockWidgets.remove(name); }
+
+    bool hasDockWidget(const QString& name) const { return mDockWidgets.contains(name); }
+
+    // Scroll boxes, command lines and text boxes are indexed by name alone, for
+    // the reason dock widgets are: core asks nothing of one beyond whether the
+    // name exists and what kind it is. Every operation on the widget itself -
+    // show, hide, move, resize, read back its geometry - is a plain QWidget call
+    // the view makes, and the state behind it (a text box's text, a command
+    // line's action function, which the widget's own key handler is the sole
+    // reader of) is never read core-side. So there is nothing for a model to
+    // hold.
+    //
+    // Three sets rather than one map because the three name spaces are
+    // independent: nothing stops the same name being a scroll box and a text box
+    // at once, and where that happens both Host and the view resolve it in the
+    // order these are declared in.
+    void registerScrollBox(const QString& name) { mScrollBoxes.insert(name); }
+    void deregisterScrollBox(const QString& name) { mScrollBoxes.remove(name); }
+    bool hasScrollBox(const QString& name) const { return mScrollBoxes.contains(name); }
+
+    void registerCommandLine(const QString& name) { mCommandLines.insert(name); }
+
+    // None of these three is identity-checked, unlike labels and sub-consoles:
+    // every removal is the view taking a name out of its own map at the same
+    // moment, and there is no window in which a stale deregistration could evict
+    // a replacement. All three do get dropped from the view's map by a destroyed()
+    // handler, but that drops them by widget identity and so only ever names a
+    // name the dying widget still holds.
+    void deregisterCommandLine(const QString& name) { mCommandLines.remove(name); }
+    bool hasCommandLine(const QString& name) const { return mCommandLines.contains(name); }
+
+    void registerTextBox(const QString& name) { mTextBoxes.insert(name); }
+    void deregisterTextBox(const QString& name) { mTextBoxes.remove(name); }
+    bool hasTextBox(const QString& name) const { return mTextBoxes.contains(name); }
+
+    bool hasPlainWindow(const QString& name) const { return hasScrollBox(name) || hasCommandLine(name) || hasTextBox(name); }
+
+private:
+    struct SubConsoleEntry
+    {
+        TConsoleModel* pModel = nullptr;
+        SubConsoleKind kind = SubConsoleKind::Other;
+    };
+
+    QMap<QString, TLabelModel*> mLabels;
+    QMap<QString, SubConsoleEntry> mSubConsoles;
+    QSet<QString> mDockWidgets;
+    QSet<QString> mScrollBoxes;
+    QSet<QString> mCommandLines;
+    QSet<QString> mTextBoxes;
+};
+
+#endif // MUDLET_TWINDOWREGISTRY_H

@@ -1,9 +1,10 @@
 #!/bin/bash
 # Runs the busted Lua specs the way CI's "(Linux) Run Lua tests" step does:
-# starts the HTTP, Discord IPC and MMCP peer fixtures, then drives the built
-# Mudlet through the "Mudlet self-test" profile under xvfb. --offline stops the
-# profile connecting to its game server, which is also what leaves the telnet
-# socket in the state feedTelnet() needs.
+# starts the HTTP, Discord IPC, MMCP peer and telnet fixtures, then drives the
+# built Mudlet through the "Mudlet self-test" profile under xvfb. --offline stops
+# the profile connecting to its game server, which is also what leaves the telnet
+# socket in the state feedTelnet() needs; the specs that do need a connection open
+# one to the telnet fixture themselves.
 #
 # Usage: .claude/scripts/run-lua-tests.sh [path-to-mudlet-binary]
 # Defaults to the linux-debug-nosan build. A binary built in another worktree
@@ -122,6 +123,15 @@ FIXTURE_PIDS+=($!)
 for _ in $(seq 1 50); do [ -s "$peer_dir/port" ] && break; sleep 0.1; done
 [ -s "$peer_dir/port" ] || { echo "mmcp fixture failed"; cat "$TMP/mmcp.log"; exit 1; }
 
+# 4. silent recording game server (ephemeral port); never negotiates, so specs
+# see the connected-but-unnegotiated state.
+telnet_dir="$TMP/telnet-server"
+mkdir -p "$telnet_dir"
+MUDLET_TEST_TELNET_DIR="$telnet_dir" nohup python3 "$WS/CI/telnet-fixture-server.py" > "$TMP/telnet.log" 2>&1 &
+FIXTURE_PIDS+=($!)
+for _ in $(seq 1 50); do [ -s "$telnet_dir/port" ] && break; sleep 0.1; done
+[ -s "$telnet_dir/port" ] || { echo "telnet fixture failed"; cat "$TMP/telnet.log"; exit 1; }
+
 # absolute rock paths, resolved against the real HOME before it is replaced
 eval "$(luarocks path --local --lua-version 5.1)"
 export LUA_PATH LUA_CPATH
@@ -137,11 +147,23 @@ export MUDLET_TEST_MODE=1
 export MUDLET_TEST_REQUIRE_TTS_MOCK=1
 export MUDLET_TEST_REQUIRE_HTTP_FIXTURE=1
 export MUDLET_TEST_REQUIRE_MMCP_PEER=1
+export MUDLET_TEST_REQUIRE_TELNET_FIXTURE=1
 export MUDLET_TEST_REQUIRE_MEDIA=1
 export MUDLET_TEST_REQUIRE_DISCORD=1
 export MUDLET_TEST_HTTP_PORT="$HTTP_PORT"
 export MUDLET_TEST_MMCP_DIR="$peer_dir"
+export MUDLET_TEST_TELNET_DIR="$telnet_dir"
 export XDG_RUNTIME_DIR="${MUDLET_TEST_DISCORD_RUNTIME_DIR:-$runtime_dir}"
+# Xvfb is an X server, so both toolkits have to target X11 - on a Wayland desktop
+# neither picks it by itself, and the GTK3 platform theme Qt loads under GNOME
+# calls gtk_init(), which exits the process when it cannot open a display.
+export QT_QPA_PLATFORM=xcb
+# Replacing XDG_RUNTIME_DIR above also hides the desktop's Wayland socket. Where
+# Qt loads its GTK platform theme, GDK then finds no display it is willing to
+# open and gtk_init() exits the process during QApplication construction - status
+# 1, before Mudlet prints a line. The run is under an X server either way, so name
+# the backend GDK should have picked; it is a no-op without that theme plugin.
+export GDK_BACKEND=x11
 export LD_LIBRARY_PATH="$WS/3rdparty/discord/rpc/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 export DBUS_SESSION_BUS_ADDRESS='disabled:'
 export TESTS_DIRECTORY="${TESTS_DIRECTORY:-$WS/src/mudlet-lua/tests}"

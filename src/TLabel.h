@@ -25,6 +25,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "TLabelModel.h"
 #include "utils.h"
 
 #include <QColor>
@@ -36,6 +37,8 @@
 #include <QString>
 #include <QVideoWidget>
 
+#include <memory>
+
 class Host;
 class QMouseEvent;
 class QSvgRenderer;
@@ -44,19 +47,16 @@ class TLabel : public QLabel
 {
     Q_OBJECT
 
+    // Declared ahead of every other member: the references below are initialised
+    // from it, so it has to be constructed first.
+    std::unique_ptr<TLabelModel> mpModel;
+
 public:
     Q_DISABLE_COPY(TLabel)
     explicit TLabel(Host*, const QString&, QWidget* pW = nullptr);
     ~TLabel();
 
     void setText(const QString& text);
-    void setClick(const int func);
-    void setDoubleClick(const int func);
-    void setRelease(const int func);
-    void setMove(const int func);
-    void setWheel(const int func);
-    void setEnter(const int func);
-    void setLeave(const int func);
     void mousePressEvent(QMouseEvent*) override;
     void mouseDoubleClickEvent(QMouseEvent*) override;
     void mouseReleaseEvent(QMouseEvent*) override;
@@ -84,36 +84,40 @@ public:
     void setSvgRotation(double angle);
     void setSvgShear(double shearX, double shearY);
     void resetSvgTransform();
+    TLabelModel& model() { return *mpModel; }
 
-    QPointer<Host> mpHost;
-    QString mName;
-    int mClickFunction = 0;
-    int mDoubleClickFunction = 0;
-    int mReleaseFunction = 0;
-    int mMoveFunction = 0;
-    int mWheelFunction = 0;
-    int mEnterFunction = 0;
-    int mLeaveFunction = 0;
+    // The members below are references aliasing the model above. They stand for
+    // the label's identity, callback registry indexes, link colouring and
+    // background colour, which live in the core TLabelModel this label owns and
+    // the profile's TWindowRegistry indexes by name.
+    QPointer<Host>& mpHost;
+    QString& mName;
+    int& mClickFunction;
+    int& mDoubleClickFunction;
+    int& mReleaseFunction;
+    int& mMoveFunction;
+    int& mWheelFunction;
+    int& mEnterFunction;
+    int& mLeaveFunction;
     QMovie* mpMovie = nullptr;
     QSvgRenderer* mpSvgRenderer = nullptr;
-    QColor mSvgTintColor;
-    double mSvgRotation = 0.0;
-    double mSvgShearX = 0.0;
-    double mSvgShearY = 0.0;
+    QColor& mSvgTintColor;
+    double& mSvgRotation;
+    double& mSvgShearX;
+    double& mSvgShearY;
     QVideoWidget* mpVideoWidget = nullptr;
-    QString mLinkColor;          // Store link color for inline style injection
-    QString mLinkVisitedColor;   // Store visited color for inline style injection
-    bool mLinkUnderline = true;  // Store underline preference
-    QSet<QString> mVisitedLinks; // Track which link URLs have been clicked
+    QString& mLinkColor;
+    QString& mLinkVisitedColor;
+    bool& mLinkUnderline;
+    QSet<QString>& mVisitedLinks;
 
 private:
     QPixmap renderSvgPixmap(const QSize& size) const;
     void refreshSvg();
     void stopMovie();
-    void releaseFunc(const int existingFunction, const int newFunction);
     void applyBackgroundColor();
 
-    QColor mBackgroundColor;
+    QColor& mBackgroundColor;
     QPixmap mSvgPixmapCache;
 
 private slots:

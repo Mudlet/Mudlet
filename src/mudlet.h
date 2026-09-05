@@ -47,7 +47,6 @@
 #include <QSystemTrayIcon>
 #include <QTextOption>
 #include <QTime>
-#include <QVersionNumber>
 
 #if defined(INCLUDE_OWN_QT6_KEYCHAIN)
 #include <qtkeychain/keychain.h>
@@ -168,20 +167,12 @@ public:
     //          the XML format used to store it - prior to this embedding such
     //          codes would break or destroy the script that used it.
     inline static const QString scmMudletXmlDefaultVersion = QString::number(1.001f, 'f', 3);
-    // A constant equivalent to QDataStream::Qt_5_12 needed in several places
-    // which can't be pulled from Qt as it is not going to be defined for older
-    // versions:
-    static const int scmQDataStreamFormat_5_12 = 18;
-    // The Qt runtime version is needed in various places but as it is a constant
-    // during the application run it is easiest to define it as one once:
-    inline static const QVersionNumber scmRunTimeQtVersion = QVersionNumber::fromString(QLatin1String(qVersion()));
     // translations done high enough will get a gold star to hide the last few percent
     // as well as encourage translators to maintain it
     static const int scmTranslationGoldStar = 95;
     QString scmVersion;
     QString confPath;
     // These have to be "inline" to satisfy the ODR (One Definition Rule):
-    inline static bool smDebugMode = false;
     inline static bool smFirstLaunch = false;
     inline static QVariantHash smLuaFunctionNames;
     inline static QPointer<TConsole> smpDebugConsole;
@@ -191,11 +182,6 @@ public:
     inline static bool smMirrorToStdOut = false;
     // adjust Mudlet settings to match Steam's requirements
     inline static bool smSteamMode = false;
-    // This may need to be localised, it represents the format of the timestamp
-    inline static QString smTimeStampFormat = qsl("hh:mm:ss.zzz ");
-    // If localised this should be set to the same format and length as the
-    // smTimeStampFormat:
-    inline static QString smBlankTimeStamp = qsl("------------ ");
 
 
     void showEvent(QShowEvent*) override;
@@ -286,6 +272,7 @@ public:
     QPair<bool, bool> removeWordFromSet(const QString&);
     QString readProfileData(const QString& profile, const QString& item);
     void refreshTabBar();
+    void refreshTabBarsAfterStyleChange();
     // Used by a profile to tell the mudlet class
     // to tell other profiles to reload the updated
     // maps (via signal_profileMapReloadRequested(...))
@@ -316,11 +303,11 @@ public:
     void setInvertMapZoom(const bool);
     void setShowTabConnectionIndicators(const bool);
     void setupPreInstallPackages(const QString&, const QString&);
+    void watchAudioOutputDevices();
     void setToolBarIconSize(int);
     void setToolBarVisibility(enums::controlsVisibility);
     void showChangelogIfUpdated();
     void slot_showConnectionDialog();
-    bool showMapAuditErrors() const { return mShowMapAuditErrors; }
     bool invertMapZoom() const { return mInvertMapZoom; }
     bool showTabConnectionIndicators() const { return mShowTabConnectionIndicators; }
     // Addon toolbar button management
@@ -382,7 +369,7 @@ public:
     bool showCharacterModeWarning();
     void showedCharacterModeWarning();
     // True if the player has used Mudlet long enough not to need the tutorial
-    // tips, the interface tour or the starter UI. Memoised.
+    // tips or the interface tour. Memoised.
     bool experiencedMudletPlayer();
     // The two below are public only so they can be tested
     static void rememberFirstLaunch(QSettings& settings, const QString& profilesPath, const QDateTime& now);
@@ -638,6 +625,7 @@ private:
     void closeHost(const QString&);
     int getDictionaryWordCount(const QString& dictionaryPath);
     void goingDown() { mIsGoingDown = true; }
+    void endProfileLoad();
     void initEdbee();
     void installModulesList(Host*, QStringList);
     void loadMaps();
@@ -698,6 +686,9 @@ private:
     QKeySequence mKeySequencePreviousProfile;
     std::array<QKeySequence, 9> mKeySequencesSwitchToProfile;
     bool mIsGoingDown = false;
+    // A depth, not a flag: the guarded load entry points call one another
+    int mProfileLoadsInProgress = 0;
+    bool mCloseRequestedDuringProfileLoad = false;
     // Whether multi-view is in effect:
     enums::controlsVisibility mMenuBarVisibility = enums::visibleAlways;
     // Used to ensure that mudlet::slot_updateShortcuts() only runs once each
@@ -795,7 +786,6 @@ private:
     QWidget* mpWidget_profileContainer = nullptr;
     // read-only value to see if the interface is light or dark. To set the value,
     // use setAppearance instead
-    bool mShowMapAuditErrors = false;
     bool mInvertMapZoom = false; // true = old behavior (inverted), false = modern behavior (non-inverted)
     QSplitter* mpSplitter_profileContainer = nullptr;
     bool mStorePasswordsSecurely = true;

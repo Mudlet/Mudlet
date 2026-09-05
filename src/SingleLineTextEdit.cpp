@@ -70,10 +70,16 @@ void SingleLineTextEdit::insertFromMimeData(const QMimeData* source)
     }
 }
 
-// remove selection when focus is lost
+// Like QLineEdit: deselect when focus moves to another widget, but not when a
+// popup or another window merely borrows it - the context menu's own Copy runs
+// after this FocusOut
 void SingleLineTextEdit::focusOutEvent(QFocusEvent* event)
 {
     QPlainTextEdit::focusOutEvent(event);
+    const Qt::FocusReason reason = event->reason();
+    if (reason == Qt::ActiveWindowFocusReason || reason == Qt::PopupFocusReason) {
+        return;
+    }
     QTextCursor cursor = textCursor();
     cursor.clearSelection();
     setTextCursor(cursor);

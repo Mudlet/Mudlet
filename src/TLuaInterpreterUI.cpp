@@ -32,6 +32,8 @@
 #include <QClipboard>
 #include <QGuiApplication>
 
+#include <iterator>
+
 #include "EAction.h"
 #include "Host.h"
 #include "TArea.h"
@@ -196,7 +198,7 @@ static QColor colorFromColorTable(lua_State* L, const QString& name)
     ({                                                                                                                                                                                                 \
         const QString& name_ = (ARG_name);                                                                                                                                                             \
         auto console_ = getHostFromLua(ARG_L).mpConsole;                                                                                                                                               \
-        auto cmdLine_ = !console_ ? nullptr : (isMain(name_) ? &*console_->mpCommandLine : console_->mSubCommandLineMap.value(name_));                                                                 \
+        auto cmdLine_ = !console_ ? nullptr : (isMain(name_) ? &*console_->mpCommandLine : console_->subCommandLineWidget(name_));                                                                     \
         if (!cmdLine_) {                                                                                                                                                                               \
             lua_pushnil(ARG_L);                                                                                                                                                                        \
             lua_pushfstring(ARG_L, bad_cmdline_value, name_.toUtf8().constData());                                                                                                                     \
@@ -209,7 +211,7 @@ static QColor colorFromColorTable(lua_State* L, const QString& name)
     ({                                                                                                                                                                                                 \
         const QString& name_ = (ARG_name);                                                                                                                                                             \
         auto console_ = getHostFromLua(ARG_L).mpConsole;                                                                                                                                               \
-        auto label_ = console_ ? console_->mLabelMap.value(name_) : nullptr;                                                                                                                           \
+        auto label_ = console_ ? console_->labelWidget(name_) : nullptr;                                                                                                                               \
         if (!label_) {                                                                                                                                                                                 \
             lua_pushnil(ARG_L);                                                                                                                                                                        \
             lua_pushfstring(ARG_L, bad_label_value, name_.toUtf8().constData());                                                                                                                       \
@@ -704,7 +706,7 @@ int TLuaInterpreter::getTextEditText(lua_State* L)
     const QString textEditName = getVerifiedString(L, __func__, 1, "text edit name");
 
     const Host& host = getHostFromLua(L);
-    auto pT = host.mpConsole ? host.mpConsole->mTextBoxMap.value(textEditName) : nullptr;
+    auto pT = host.mpConsole ? host.mpConsole->textBoxWidget(textEditName) : nullptr;
     if (!pT) {
         return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
     }
@@ -723,7 +725,7 @@ int TLuaInterpreter::setTextEditText(lua_State* L)
     const QString textEditName{lua_tostring(L, 1)};
 
     const Host& host = getHostFromLua(L);
-    auto pT = host.mpConsole ? host.mpConsole->mTextBoxMap.value(textEditName) : nullptr;
+    auto pT = host.mpConsole ? host.mpConsole->textBoxWidget(textEditName) : nullptr;
     if (!pT) {
         return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
     }
@@ -739,7 +741,7 @@ int TLuaInterpreter::clearTextEdit(lua_State* L)
     const QString textEditName = getVerifiedString(L, __func__, 1, "text edit name");
 
     const Host& host = getHostFromLua(L);
-    auto pT = host.mpConsole ? host.mpConsole->mTextBoxMap.value(textEditName) : nullptr;
+    auto pT = host.mpConsole ? host.mpConsole->textBoxWidget(textEditName) : nullptr;
     if (!pT) {
         return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
     }
@@ -759,7 +761,7 @@ int TLuaInterpreter::setTextEditReadOnly(lua_State* L)
     const QString textEditName{lua_tostring(L, 1)};
 
     const Host& host = getHostFromLua(L);
-    auto pT = host.mpConsole ? host.mpConsole->mTextBoxMap.value(textEditName) : nullptr;
+    auto pT = host.mpConsole ? host.mpConsole->textBoxWidget(textEditName) : nullptr;
     if (!pT) {
         return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
     }
@@ -779,7 +781,7 @@ int TLuaInterpreter::setTextEditPlaceholder(lua_State* L)
     const QString textEditName{lua_tostring(L, 1)};
 
     const Host& host = getHostFromLua(L);
-    auto pT = host.mpConsole ? host.mpConsole->mTextBoxMap.value(textEditName) : nullptr;
+    auto pT = host.mpConsole ? host.mpConsole->textBoxWidget(textEditName) : nullptr;
     if (!pT) {
         return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
     }
@@ -799,7 +801,7 @@ int TLuaInterpreter::setTextEditStyleSheet(lua_State* L)
     const QString textEditName{lua_tostring(L, 1)};
 
     const Host& host = getHostFromLua(L);
-    auto pT = host.mpConsole ? host.mpConsole->mTextBoxMap.value(textEditName) : nullptr;
+    auto pT = host.mpConsole ? host.mpConsole->textBoxWidget(textEditName) : nullptr;
     if (!pT) {
         return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
     }
@@ -819,7 +821,7 @@ int TLuaInterpreter::setTextEditFont(lua_State* L)
     const QString textEditName{lua_tostring(L, 1)};
 
     const Host& host = getHostFromLua(L);
-    auto pT = host.mpConsole ? host.mpConsole->mTextBoxMap.value(textEditName) : nullptr;
+    auto pT = host.mpConsole ? host.mpConsole->textBoxWidget(textEditName) : nullptr;
     if (!pT) {
         return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
     }
@@ -848,7 +850,7 @@ int TLuaInterpreter::setTextEditFontSize(lua_State* L)
     const QString textEditName{lua_tostring(L, 1)};
 
     const Host& host = getHostFromLua(L);
-    auto pT = host.mpConsole ? host.mpConsole->mTextBoxMap.value(textEditName) : nullptr;
+    auto pT = host.mpConsole ? host.mpConsole->textBoxWidget(textEditName) : nullptr;
     if (!pT) {
         return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
     }
@@ -870,7 +872,7 @@ int TLuaInterpreter::setTextEditTabMovesFocus(lua_State* L)
     const QString textEditName{lua_tostring(L, 1)};
 
     const Host& host = getHostFromLua(L);
-    auto pT = host.mpConsole ? host.mpConsole->mTextBoxMap.value(textEditName) : nullptr;
+    auto pT = host.mpConsole ? host.mpConsole->textBoxWidget(textEditName) : nullptr;
     if (!pT) {
         return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
     }
@@ -1452,7 +1454,7 @@ int TLuaInterpreter::getFont(lua_State* L)
     auto console = CONSOLE_NIL(L, windowName);
     if (!console) {
         if (host.mpConsole) {
-            if (TLabel* pLabel = host.mpConsole->mLabelMap.value(windowName)) {
+            if (TLabel* pLabel = host.mpConsole->labelWidget(windowName)) {
                 lua_pushstring(L, actualFontFamily(pLabel->font()).toUtf8().constData());
                 return 1;
             }
@@ -2588,26 +2590,10 @@ int TLuaInterpreter::selectCaptureGroup(lua_State* L)
         }
         // We want capture groups to start with 1 instead of 0 so predecrement
         // luaNumOfMatch :
-        if (--captureGroup < static_cast<int>(host.getLuaInterpreter()->mCaptureGroupList.size())) {
-            auto iti = pL->mCaptureGroupPosList.begin();
-            auto its = pL->mCaptureGroupList.begin();
-            begin = *iti;
-            std::string& s = *its;
-
-            for (int i = 0; iti != pL->mCaptureGroupPosList.end(); ++iti, ++i) {
-                begin = *iti;
-                if (i >= captureGroup) {
-                    break;
-                }
-            }
-            for (int i = 0; its != pL->mCaptureGroupList.end(); ++its, ++i) {
-                s = *its;
-                if (i >= captureGroup) {
-                    break;
-                }
-            }
-
-            length = QString::fromStdString(s).size();
+        if (--captureGroup < static_cast<int>(pL->mCaptureGroupList.size())) {
+            const auto offset = static_cast<std::size_t>(captureGroup);
+            begin = pL->mCaptureGroupPosList[offset];
+            length = QString::fromStdString(pL->mCaptureGroupList[offset]).size();
             if (TDebug::wants(TDebug::Category::Selection)) {
                 TDebug(Qt::white, Qt::red, TDebug::Category::Selection) << "selectCaptureGroup(" << begin << ", " << length << ")\n" >> &host;
             }
@@ -2750,6 +2736,7 @@ int TLuaInterpreter::setAppStyleSheet(lua_State* L)
     event.mArgumentList.append(host.getName());
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     qApp->setStyleSheet(styleSheet);
+    mudlet::self()->refreshTabBarsAfterStyleChange();
     mudlet::self()->getHostManager().postInterHostEvent(nullptr, event, true);
     lua_pushboolean(L, true);
     return 1;
@@ -3232,7 +3219,7 @@ int TLuaInterpreter::setFont(lua_State* L)
     auto console = CONSOLE_NIL(L, targetName);
     if (!console) {
         if (host.mpConsole) {
-            if (TLabel* pLabel = host.mpConsole->mLabelMap.value(targetName)) {
+            if (TLabel* pLabel = host.mpConsole->labelWidget(targetName)) {
                 QFont labelFont = host.createFontWithSettings(effectiveFontName, pLabel->font().pointSize());
                 if (fontWeight != QFont::Normal) {
                     labelFont.setWeight(fontWeight);

@@ -24,10 +24,21 @@
 #include "TimerUnit.h"
 
 
+#include "Host.h"
+#include "Tree.h"
 #include "mudlet.h"
 #include "TTimer.h"
+#include "utils.h"
+
+#include <QLatin1String>
+#include <QMutableSetIterator>
+#include <QSetIterator>
+#include <QStringList>
+#include <QTimer>
+#include <QVariant>
 
 #include <functional>
+#include <utility>
 
 /* We need an explicit constructor in this file as the Host class is forward
  * declared in the header file and it is problematic to define any dereferencing
@@ -462,6 +473,12 @@ void TimerUnit::doCleanup()
         return;
     }
 
+    // Called once per unit for every line of game text, and next to never has
+    // anything queued, so skip setting up the flush below.
+    if (!hasPendingDeletes()) {
+        return;
+    }
+
     QSet<TTimer*> deletedTimers;
     QMutableSetIterator<TTimer*> itTimer(mCleanupSet);
     while (itTimer.hasNext()) {
@@ -472,6 +489,10 @@ void TimerUnit::doCleanup()
         deletedTimers.insert(pTimer);
         delete pTimer;
     }
+    // Not a no-op: the drain above frees no buckets, so without this every later
+    // flush re-scans an array sized for the largest batch the set has ever held.
+    // squeeze() keeps whatever the drain left behind; clear() would drop it.
+    mCleanupSet.squeeze();
     // Flush the deletes uninstall() deferred (#9337). uninstallList is ordered
     // children-before-parents and each ~Tree unlinks from its parent, so deleting
     // children first empties the parent's child list (no double free); the seen

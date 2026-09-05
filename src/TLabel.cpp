@@ -66,8 +66,25 @@ static bool containsAnchorTag(const QString& text)
 
 TLabel::TLabel(Host* pH, const QString& name, QWidget* pW)
 : QLabel(pW)
-, mpHost(pH)
-, mName(name)
+, mpModel(std::make_unique<TLabelModel>(pH, name))
+, mpHost(mpModel->mpHost)
+, mName(mpModel->mName)
+, mClickFunction(mpModel->mClickFunction)
+, mDoubleClickFunction(mpModel->mDoubleClickFunction)
+, mReleaseFunction(mpModel->mReleaseFunction)
+, mMoveFunction(mpModel->mMoveFunction)
+, mWheelFunction(mpModel->mWheelFunction)
+, mEnterFunction(mpModel->mEnterFunction)
+, mLeaveFunction(mpModel->mLeaveFunction)
+, mSvgTintColor(mpModel->mSvgTintColor)
+, mSvgRotation(mpModel->mSvgRotation)
+, mSvgShearX(mpModel->mSvgShearX)
+, mSvgShearY(mpModel->mSvgShearY)
+, mLinkColor(mpModel->mLinkColor)
+, mLinkVisitedColor(mpModel->mLinkVisitedColor)
+, mLinkUnderline(mpModel->mLinkUnderline)
+, mVisitedLinks(mpModel->mVisitedLinks)
+, mBackgroundColor(mpModel->mBackgroundColor)
 {
     setMouseTracking(true);
     setObjectName(qsl("label_%1_%2").arg(pH->getName(), mName));
@@ -81,12 +98,14 @@ TLabel::TLabel(Host* pH, const QString& name, QWidget* pW)
 
 TLabel::~TLabel()
 {
+    // The backstop against a stale entry: TMainConsole deregisters where it
+    // destroys a label, but a label can also die as a child of a console that is
+    // itself going, with nobody taking it out of the map first.
     if (mpHost) {
-        auto* interpreter = mpHost->getLuaInterpreter();
-        for (const int funcRef : {mClickFunction, mDoubleClickFunction, mReleaseFunction, mMoveFunction, mWheelFunction, mEnterFunction, mLeaveFunction}) {
-            if (funcRef) {
-                interpreter->freeLuaRegistryIndex(funcRef);
-            }
+        mpHost->windowRegistry().deregisterLabel(mName, mpModel.get());
+        // The tracker holds the movie raw and reads every entry it has to report
+        if (mpMovie) {
+            mpHost->getGifTracker()->unregisterGif(mpMovie);
         }
     }
 
@@ -177,48 +196,6 @@ void TLabel::setText(const QString& text)
         stopMovie();
         QLabel::setText(text);
     }
-}
-
-void TLabel::setClick(const int func)
-{
-    releaseFunc(mClickFunction, func);
-    mClickFunction = func;
-}
-
-void TLabel::setDoubleClick(const int func)
-{
-    releaseFunc(mDoubleClickFunction, func);
-    mDoubleClickFunction = func;
-}
-
-void TLabel::setRelease(const int func)
-{
-    releaseFunc(mReleaseFunction, func);
-    mReleaseFunction = func;
-}
-
-void TLabel::setMove(const int func)
-{
-    releaseFunc(mMoveFunction, func);
-    mMoveFunction = func;
-}
-
-void TLabel::setWheel(const int func)
-{
-    releaseFunc(mWheelFunction, func);
-    mWheelFunction = func;
-}
-
-void TLabel::setEnter(const int func)
-{
-    releaseFunc(mEnterFunction, func);
-    mEnterFunction = func;
-}
-
-void TLabel::setLeave(const int func)
-{
-    releaseFunc(mLeaveFunction, func);
-    mLeaveFunction = func;
 }
 
 void TLabel::mousePressEvent(QMouseEvent* event)
@@ -581,15 +558,6 @@ void TLabel::resetSvgTransform()
     mSvgShearX = 0.0;
     mSvgShearY = 0.0;
     refreshSvg();
-}
-
-// This function deferences previous functions in the Lua registry.
-// This allows the functions to be safely overwritten.
-void TLabel::releaseFunc(const int existingFunction, const int newFunction)
-{
-    if (newFunction != existingFunction) {
-        mpHost->getLuaInterpreter()->freeLuaRegistryIndex(existingFunction);
-    }
 }
 
 void TLabel::setClickThrough(bool clickthrough)

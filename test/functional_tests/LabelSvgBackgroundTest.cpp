@@ -138,7 +138,7 @@ private:
         return shot.pixelColor((QPointF(logical) * shot.devicePixelRatio()).toPoint());
     }
 
-    TLabel* target() const { return mpHost->mpConsole->mLabelMap.value(qsl("svgTarget")); }
+    TLabel* target() const { return mpHost->mpConsole->labelWidget(qsl("svgTarget")); }
 
     void createTarget(int width, int height)
     {
