@@ -32,6 +32,7 @@
  * Run with: ctest -R MapMouseInteractionTest -V
  */
 
+#include <QCursor>
 #include <QFileInfo>
 #include <QMouseEvent>
 #include <QPixmap>
@@ -43,6 +44,7 @@
 #include "MudletInstanceCoordinator.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
+#include "MiddleMousePanHandler.h"
 #include "T2DMap.h"
 #include "TArea.h"
 #include "TMap.h"
@@ -225,6 +227,35 @@ private:
         releaseAt(position, modifiers);
     }
 
+    // The middle button pans on its own timer: the map keeps drifting away from
+    // where the button went down for as long as the mouse is held off it.
+    void middlePressAt(const QPoint& position) const { sendMouse(QEvent::MouseButtonPress, position, Qt::MiddleButton, Qt::MiddleButton, Qt::NoModifier); }
+
+    void middleMoveTo(const QPoint& position) const { sendMouse(QEvent::MouseMove, position, Qt::NoButton, Qt::MiddleButton, Qt::NoModifier); }
+
+    void middleReleaseAt(const QPoint& position) const { sendMouse(QEvent::MouseButtonRelease, position, Qt::MiddleButton, Qt::NoButton, Qt::NoModifier); }
+
+    // The pan hides the pointer while it runs and puts it back when it stops,
+    // which is the one thing about it a user can see without the map moving.
+    bool panning() const { return mp2dMap->testAttribute(Qt::WA_SetCursor) && mp2dMap->cursor().shape() == Qt::BlankCursor; }
+
+    // Long enough for the pan's 16ms timer to tick a good few times.
+    void letThePanRun() const { QTest::qWait(150); }
+
+    // A pan that is still running would follow the pointer parked east of the
+    // middle, so a view that stays put is one whose pan has really stopped -
+    // the pointer coming back on its own only says the cursor was reset.
+    void verifyNothingPansAnyMore() const
+    {
+        mp2dMap->mMapCenterX = 0.0;
+        QCursor::setPos(mp2dMap->mapToGlobal(viewCentre() + QPoint(60, 0)));
+        letThePanRun();
+        QVERIFY2(qFuzzyIsNull(mp2dMap->mMapCenterX), "the map is still panning");
+    }
+
+    // Longer than the hold that makes a release end the pan rather than leave it running.
+    void holdTheButton() const { QTest::qWait(400); }
+
 private slots:
     void initTestCase()
     {
@@ -271,6 +302,15 @@ private slots:
             delete mudlet::self();
         }
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
+    }
+
+    // A case that fails partway through a middle-button pan leaves it running
+    // on its timer, and it would carry on into the next case.
+    void cleanup()
+    {
+        if (mp2dMap) {
+            mp2dMap->mMiddleMousePanHandler->cancel();
+        }
     }
 
     // The view is centred on where the player is, so the middle of the widget
@@ -538,6 +578,190 @@ private slots:
         QVERIFY(pEastRoom);
         QCOMPARE(pEastRoom->x(), 1);
         QCOMPARE(pEastRoom->y(), 0);
+    }
+
+    // ---------------------------------------------------------------------
+    // The middle button pans the map on a timer, away from where it went down.
+    // ---------------------------------------------------------------------
+
+    void test_holdingTheMiddleButtonOffToOneSidePansTheMapThatWay()
+    {
+        buildMap();
+        showMapper(true);
+
+        middlePressAt(viewCentre());
+        QVERIFY2(panning(), "the pointer should be hidden while the pan runs");
+        middleMoveTo(viewCentre() + QPoint(60, 0));
+        letThePanRun();
+
+        QVERIFY2(mp2dMap->mMapCenterX > 0.0, "holding the mouse east of the press should carry the view east");
+        QCOMPARE(mp2dMap->mMapCenterY, 0.0);
+
+        const qreal afterOneWindow = mp2dMap->mMapCenterX;
+        letThePanRun();
+        QVERIFY2(mp2dMap->mMapCenterX > afterOneWindow, "the view should keep moving for as long as the mouse is held off the spot");
+
+        holdTheButton();
+        middleReleaseAt(viewCentre() + QPoint(60, 0));
+        QVERIFY2(!panning(), "releasing after a hold should end the pan and put the pointer back");
+        verifyNothingPansAnyMore();
+    }
+
+    void test_theMiddleButtonPansVerticallyToo()
+    {
+        buildMap();
+        showMapper(true);
+
+        middlePressAt(viewCentre());
+        middleMoveTo(viewCentre() + QPoint(0, 60));
+        letThePanRun();
+
+        QCOMPARE(mp2dMap->mMapCenterX, 0.0);
+        // The Alt-drag case above pins down that a negative centre Y is the view
+        // over the north room, so south of the press is a positive one.
+        QVERIFY2(mp2dMap->mMapCenterY > 0.0, "holding the mouse south of the press should carry the view south");
+
+        holdTheButton();
+        middleReleaseAt(viewCentre() + QPoint(0, 60));
+    }
+
+    // A hand is never perfectly still, so the pan does not start until the
+    // mouse is clearly off the spot it went down on.
+    void test_theMiddleButtonDoesNotPanForAWobble()
+    {
+        buildMap();
+        showMapper(true);
+
+        middlePressAt(viewCentre());
+        QVERIFY2(panning(), "the pan should be armed from the press, even before the mouse moves");
+        middleMoveTo(viewCentre() + QPoint(5, 5));
+        letThePanRun();
+
+        QCOMPARE(mp2dMap->mMapCenterX, 0.0);
+        QCOMPARE(mp2dMap->mMapCenterY, 0.0);
+
+        holdTheButton();
+        middleReleaseAt(viewCentre() + QPoint(5, 5));
+    }
+
+    void test_theFurtherTheMouseIsHeldTheFasterTheMapPans()
+    {
+        buildMap();
+        showMapper(true);
+
+        middlePressAt(viewCentre());
+        middleMoveTo(viewCentre() + QPoint(30, 0));
+        letThePanRun();
+        const qreal nearby = mp2dMap->mMapCenterX;
+
+        mp2dMap->mMapCenterX = 0.0;
+        middleMoveTo(viewCentre() + QPoint(150, 0));
+        letThePanRun();
+        const qreal farAway = mp2dMap->mMapCenterX;
+
+        QVERIFY2(farAway > nearby * 2, qPrintable(qsl("30px off moved the view %1, 150px off moved it %2").arg(nearby).arg(farAway)));
+
+        holdTheButton();
+        middleReleaseAt(viewCentre() + QPoint(150, 0));
+    }
+
+    // The speed tops out well inside the widget, so flinging the mouse to the
+    // far edge does not send the map flying.
+    void test_thePanStopsGettingFasterOnceTheMouseIsFarEnoughAway()
+    {
+        buildMap();
+        showMapper(true);
+
+        middlePressAt(viewCentre());
+        middleMoveTo(viewCentre() + QPoint(500, 0));
+        letThePanRun();
+        const qreal atFiveHundred = mp2dMap->mMapCenterX;
+
+        mp2dMap->mMapCenterX = 0.0;
+        middleMoveTo(viewCentre() + QPoint(1500, 0));
+        letThePanRun();
+        const qreal atFifteenHundred = mp2dMap->mMapCenterX;
+
+        QVERIFY(atFiveHundred > 0.0);
+        QVERIFY2(atFifteenHundred < atFiveHundred * 1.5, qPrintable(qsl("500px off moved the view %1, 1500px off moved it %2").arg(atFiveHundred).arg(atFifteenHundred)));
+
+        holdTheButton();
+        middleReleaseAt(viewCentre() + QPoint(1500, 0));
+    }
+
+    // A click, as opposed to a hold, leaves the pan running hands-free until
+    // another button press stops it.
+    void test_aQuickMiddleClickLeavesThePanRunningUntilAnyButtonIsPressed()
+    {
+        buildMap();
+        showMapper(true);
+
+        middlePressAt(viewCentre());
+        middleReleaseAt(viewCentre());
+        QVERIFY2(panning(), "a quick click should leave the pan running");
+
+        // With no button down there are no move events to follow, so the pan
+        // reads the pointer's position for itself.
+        const QPoint east = mp2dMap->mapToGlobal(viewCentre() + QPoint(60, 0));
+        QCursor::setPos(east);
+        if (QCursor::pos() != east) {
+            QSKIP("this platform does not let a test move the pointer, so there is nothing for a hands-free pan to follow");
+        }
+        letThePanRun();
+        QVERIFY2(mp2dMap->mMapCenterX > 0.0, "a hands-free pan should follow the pointer east of where the click was");
+
+        clickAt(viewCentre());
+        verifyNothingPansAnyMore();
+    }
+
+    void test_aSecondMiddlePressEndsAHandsFreePan()
+    {
+        buildMap();
+        showMapper(true);
+
+        middlePressAt(viewCentre());
+        middleReleaseAt(viewCentre());
+        QVERIFY(panning());
+
+        middlePressAt(viewCentre());
+        QVERIFY2(!panning(), "the middle button should stop the pan it started");
+        middleReleaseAt(viewCentre());
+        QVERIFY2(!panning(), "letting go of the button that stopped the pan should not start it again");
+        verifyNothingPansAnyMore();
+    }
+
+    // The press that ends a hands-free pan is not swallowed: it still does
+    // whatever it would have done on a map that was standing still.
+    void test_aDragThatEndsAHandsFreePanStillPansByTheDrag()
+    {
+        buildMap();
+        showMapper(true);
+
+        middlePressAt(viewCentre());
+        middleReleaseAt(viewCentre());
+        QVERIFY(panning());
+
+        dragFromTo(viewCentre(), viewCentre() + QPoint(qRound(kPixelsPerMapUnit), 0));
+        QCOMPARE(mp2dMap->mMapCenterX, -1.0);
+        verifyNothingPansAnyMore();
+    }
+
+    // Editing does not need the middle button for anything else, so it pans
+    // there too.
+    void test_theMiddleButtonPansWhileEditingToo()
+    {
+        buildMap();
+        showMapper(false);
+
+        middlePressAt(viewCentre());
+        middleMoveTo(viewCentre() + QPoint(60, 0));
+        letThePanRun();
+
+        QVERIFY(mp2dMap->mMapCenterX > 0.0);
+
+        holdTheButton();
+        middleReleaseAt(viewCentre() + QPoint(60, 0));
+        QVERIFY(!panning());
     }
 };
 
