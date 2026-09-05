@@ -174,7 +174,7 @@ private slots:
         auto [loaded, loadMessage] = mpHost->setMovie(mLabelName, mGifPath);
         QVERIFY2(loaded, qPrintable(loadMessage));
 
-        TLabel* pLabel = mpHost->mpConsole->mLabelMap.value(mLabelName);
+        TLabel* pLabel = mpHost->mpConsole->labelWidget(mLabelName);
         QVERIFY(pLabel);
         QVERIFY(pLabel->mpMovie);
         QVERIFY2(pLabel->mpMovie->isValid(), "the label did not end up with a movie it can play");

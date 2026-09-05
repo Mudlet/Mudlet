@@ -85,6 +85,7 @@ public:
     std::pair<bool, QString> hideToolBar(const QString&);
 
     QList<TAction*> uninstallList;
+    bool hasPendingDeletes() const { return !uninstallList.isEmpty(); }
 
 private:
     ActionUnit() = default;

@@ -96,6 +96,7 @@ public:
     QMultiMap<QString, TTimer*> mLookupTable;
     QList<TTimer*> uninstallList;
     QSet<TTimer*> mCleanupSet;
+    bool hasPendingDeletes() const { return !mCleanupSet.isEmpty() || !uninstallList.isEmpty(); }
 
     // This will contain all the QTimers associated with the TTimer instances
     // it is needed so that should mpHost be renamed we can update them to have
