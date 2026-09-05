@@ -642,31 +642,30 @@ bool SherpaRecognizer::loadModel(const QString& modelPath)
             config->decoding_method = "modified_beam_search";
             config->hotwords_buf = hotwordsUtf8.constData();
             config->hotwords_buf_size = hotwordsUtf8.size();
-            // Measured, on the one installed model that can bias at all
+            // Measured on the one installed model that can bias at all
             // (streaming-zipformer-en, whose bpe.vocab is what makes biasing
-            // possible): one synthesised recording, one target word, one
-            // decode per value.
+            // possible), decoding one recording at a sweep of values. Twice:
+            // once with three words, and again with a three-hundred word list
+            // of the shape a game vocabulary actually has. The sizes disagree,
+            // and the larger one is the one that matters:
             //
-            //   0, 0.5, 1.5, 2, 3   no effect - output identical to no biasing
-            //   4 .. 10             the biased word is recognised, rest intact
-            //   20                  the word is inserted where it was not said
+            //   score   3 words                 300 words
+            //   0-1.5   nothing changes         easier words already corrected
+            //   5       the hard word too       the hard word too, nothing else
+            //   10      still clean             words inserted that nobody said
+            //   20      insertions begin        several per phrase
             //
-            // sherpa-onnx's own default is 1.5, and 1.5 was measured directly:
-            // it sits below the threshold where biasing does anything. That is
-            // what "300 words applied, and recognition byte-identical to no
-            // biasing at all" was recording. The earlier reading here - that
-            // the library honoured a zero and boosted by nothing, so naming
-            // 1.5 would fix it - cannot be right, because zero and 1.5 measure
-            // the same. Whether zero is replaced by the default is invisible
-            // from outside and does not matter; neither value biases anything.
+            // So biasing does work at the library's own default of 1.5 - the
+            // three-word run only made it look inert because the one word in
+            // it needed more than that. And the room above is much narrower
+            // than a small list suggests: insertion pressure rises with the
+            // size of the vocabulary, so the ceiling falls as the list grows.
             //
-            // 5 is one step above the threshold and a quarter of the value
-            // that began inserting words nobody said. Both edges came from a
-            // single word in a single utterance, and insertion pressure is not
-            // the same with a three-word list as with the three hundred a real
-            // game vocabulary carries - so treat 20 as "damage was seen
-            // somewhere above 10", not as a bound. Worth re-measuring on a real
-            // recording, with a real vocabulary, and on any model added later.
+            // 5 sits above what a hard word needs and below where a realistic
+            // list starts inventing, with about a factor of two either side.
+            // Worth re-measuring on a real recording rather than synthesised
+            // speech, and on any model added later: this is one model, one
+            // voice, and one decode per value.
             config->hotwords_score = 5.0f;
         }
     }
