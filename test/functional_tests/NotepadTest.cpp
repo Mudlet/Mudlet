@@ -21,7 +21,9 @@
 #include <QLineEdit>
 #include <QPlainTextEdit>
 #include <QTabWidget>
+#include <QSignalSpy>
 #include <QTemporaryDir>
+#include <QTimer>
 #include <QToolButton>
 #include <QtTest/QtTest>
 #include <chrono>
@@ -313,14 +315,22 @@ private slots:
         editAt(notepad.data(), 0)->setPlainText(qsl("north\nlook\nsouth\neast"));
 
         QVERIFY(QMetaObject::invokeMethod(notepad.data(), "slot_sendAll"));
-        QVERIFY2(waitForServerToReceive("north"), "the first line of the note never reached the game");
 
+        // Stop on the tick that sends the first line rather than on its arrival
+        // at the game, so the stop lands at the start of the 300ms the notepad
+        // leaves before the next line instead of some way into it.
+        auto* sendTimer = notepad->findChild<QTimer*>();
+        QVERIFY2(sendTimer, "the notepad has no timer pacing the lines it sends");
+        QSignalSpy firstLineSent(sendTimer, &QTimer::timeout);
+        QVERIFY2(firstLineSent.wait(5000), "the notepad never got round to sending the first line");
         QVERIFY(QMetaObject::invokeMethod(notepad.data(), "slot_stopSending"));
 
+        QVERIFY2(waitForServerToReceive("north"), "the line already on its way when sending was stopped never reached the game");
         // Comfortably longer than the 300ms the notepad leaves between lines,
         // so the rest would have arrived by now had stopping not taken:
         QTest::qWait(1200ms);
-        QVERIFY2(!mpServer->received().contains("south"), "a line after the one being sent arrived anyway");
+        QVERIFY2(!mpServer->received().contains("look"), "the next line arrived after sending was stopped");
+        QVERIFY2(!mpServer->received().contains("south"), "a line after the next one arrived after sending was stopped");
         QVERIFY2(!mpServer->received().contains("east"), "the last line arrived after sending was stopped");
     }
 
