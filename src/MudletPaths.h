@@ -30,6 +30,7 @@
 
 #include "enums.h"
 
+#include <QPair>
 #include <QString>
 
 // Every on-disk location Mudlet reads or writes, derived from one config root:
@@ -86,6 +87,16 @@ bool usingMudletDictionaries();
 // plain truncation made two long profile names share - and overwrite - one
 // stored password.
 QString sanitizeForPath(const QString& input);
+
+QString readProfileData(const QString& profile, const QString& item);
+
+// Creates the profile's directory when it is not there yet, so a write for a
+// profile that does not exist brings one into being
+QPair<bool, QString> writeProfileData(const QString& profile, const QString& item, const QString& what);
+
+// The on-disk spelling of a profile named in any case, or an empty string if
+// neither an existing profile nor a predefined game goes by that name
+QString getCanonicalProfileName(const QString& profileName);
 
 } // namespace MudletPaths
 

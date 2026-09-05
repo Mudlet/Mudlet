@@ -27,10 +27,12 @@
 
 #include "MudletPaths.h"
 
+#include "TGameDetails.h"
 #include "utils.h"
 
 #include <QCoreApplication>
 #include <QCryptographicHash>
+#include <QDataStream>
 #include <QDebug>
 #include <QDir>
 #include <QFile>
@@ -38,6 +40,7 @@
 #include <QLibraryInfo>
 #include <QProcessEnvironment>
 #include <QRegularExpression>
+#include <QSaveFile>
 #include <QTextStream>
 
 namespace {
@@ -405,5 +408,73 @@ QString MudletPaths::getMudletPath(const enums::mudletPathType mode, const QStri
 #endif
     }
     Q_UNREACHABLE();
+    return QString();
+}
+
+QString MudletPaths::readProfileData(const QString& profile, const QString& item)
+{
+    QFile file(MudletPaths::getMudletPath(enums::profileDataItemPath, profile, item));
+    if (!file.exists()) {
+        return QString();
+    }
+
+    if (!file.open(QIODevice::ReadOnly)) {
+        qWarning() << "mudlet: failed to open profile data file for reading:" << file.fileName() << file.errorString();
+        return QString();
+    }
+
+    QDataStream ifs(&file);
+    ifs.setVersion(QDataStream::Qt_5_12);
+    QString ret;
+
+    ifs >> ret;
+    file.close();
+    return ret;
+}
+
+QPair<bool, QString> MudletPaths::writeProfileData(const QString& profile, const QString& item, const QString& what)
+{
+    const QDir profileDir;
+    const QString profileHomePath = MudletPaths::getMudletPath(enums::profileHomePath, profile);
+    if (!QDir(profileHomePath).exists() && !profileDir.mkpath(profileHomePath)) {
+        qDebug().noquote().nospace() << "MudletPaths::writeProfileData(...) ERROR - could not create profile directory: \"" << profileHomePath << "\"";
+        return qMakePair(false, qsl("Could not create profile directory: %1").arg(profileHomePath));
+    }
+
+    QSaveFile file(MudletPaths::getMudletPath(enums::profileDataItemPath, profile, item));
+    if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
+        QDataStream ofs(&file);
+        ofs.setVersion(QDataStream::Qt_5_12);
+        ofs << what;
+        if (!file.commit()) {
+            qDebug().noquote().nospace() << "MudletPaths::writeProfileData(...) ERROR - writing profile: \"" << profile << "\", item: \"" << item << "\", reason: \"" << file.errorString() << "\".";
+        }
+    }
+
+    if (file.error() == QFile::NoError) {
+        return qMakePair(true, QString());
+    }
+
+    return qMakePair(false, file.errorString());
+}
+
+QString MudletPaths::getCanonicalProfileName(const QString& profileName)
+{
+    if (profileName.isEmpty()) {
+        return QString();
+    }
+
+    const QStringList profiles = QDir(MudletPaths::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    for (const auto& profile : profiles) {
+        if (profile.compare(profileName, Qt::CaseInsensitive) == 0) {
+            return profile;
+        }
+    }
+
+    const auto it = TGameDetails::findGame(profileName, Qt::CaseInsensitive);
+    if (it != TGameDetails::scmDefaultGames.constEnd()) {
+        return it->name;
+    }
+
     return QString();
 }
