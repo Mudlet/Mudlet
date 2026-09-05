@@ -4170,7 +4170,10 @@ void Host::loadSecuredPassword()
     // Use async API for QtKeychain integration with file fallback
     auto* credManager = new CredentialManager(this);
 
-    credManager->retrievePassword(getName(), "character", [this, credManager](bool success, const QString& password, const QString& errorMessage) {
+    // A keychain read that timed out can still be answered afterwards, which calls this back a
+    // second time - by then the manager below has been deleted, and this profile is what keeps
+    // the late answer deliverable at all, so the password it brings is set as any other would be
+    credManager->retrievePassword(getName(), "character", [this, safeCredManager = QPointer<CredentialManager>(credManager)](bool success, const QString& password, const QString& errorMessage) {
         if (success && !password.isEmpty()) {
             setPass(password);
             QString passwordCopy = password; // Make a copy for secure clearing
@@ -4180,7 +4183,9 @@ void Host::loadSecuredPassword()
         }
 
         // Clean up the credential manager
-        credManager->deleteLater();
+        if (safeCredManager) {
+            safeCredManager->deleteLater();
+        }
     });
 }
 
