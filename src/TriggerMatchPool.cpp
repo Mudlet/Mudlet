@@ -20,22 +20,32 @@
 #include "TriggerMatchPool.h"
 
 #include "TTrigger.h"
+#include "utils.h"
 
 #include <QDebug>
 #include <QThread>
 
 #include <algorithm>
 
-#if defined(__x86_64__) || defined(__i386__)
-#include <immintrin.h>
-#define MUDLET_CPU_RELAX() _mm_pause()
-#elif defined(__aarch64__) || defined(__arm__)
-#define MUDLET_CPU_RELAX() asm volatile("yield" ::: "memory")
-#else
-#define MUDLET_CPU_RELAX() ((void)0)
-#endif
+// A claim is one fetch_add on a 64-bit word. If that had to go through a lock
+// the helpers would serialise on it and the whole design would be a mutex with
+// extra steps; every target Mudlet ships to has a lock-free 64-bit RMW.
+static_assert(std::atomic<uint64_t>::is_always_lock_free);
 
 namespace {
+// Tells the core this is a spin-wait, so it can slow the loop down and hand
+// resources to a sibling hyperthread: PAUSE on x86, YIELD on AArch64. Every
+// compiler Mudlet ships with takes GNU inline assembly. Anything else spins
+// bare, which is only slower.
+inline void cpuRelax()
+{
+#if defined(__x86_64__) || defined(__i386__)
+    __asm__ __volatile__("pause" ::: "memory");
+#elif defined(__aarch64__)
+    __asm__ __volatile__("yield" ::: "memory");
+#endif
+}
+
 // The cursor is epoch:32 | chunk count:16 | next chunk:16.
 constexpr uint64_t kEpochShift = 32;
 constexpr uint64_t kCountShift = 16;
@@ -133,9 +143,21 @@ TriggerMatchPool::TriggerMatchPool()
     }
     mThreads.reserve(wanted - 1);
     for (int slot = 1; slot < wanted; ++slot) {
-        mThreads.emplace_back([this, slot] {
+        // A QThread rather than a std::thread for the name alone: it reaches
+        // the OS on all three platforms (Windows since Qt 6.8, which is the
+        // floor), so a profiler or a crash report shows which thread this is.
+        std::unique_ptr<QThread> thread(QThread::create([this, slot] {
             workerLoop(slot);
-        });
+        }));
+        thread->setObjectName(qsl("TriggerMatch-%1").arg(slot));
+        thread->start();
+        if (!thread->isRunning()) {
+            // Qt has already warned. The pool works with however many helpers
+            // did start, as the caller claims every chunk nobody else does;
+            // what must not happen is a dead slot counting as a worker.
+            break;
+        }
+        mThreads.push_back(std::move(thread));
     }
 }
 
@@ -146,8 +168,8 @@ TriggerMatchPool::~TriggerMatchPool()
         const std::lock_guard<std::mutex> lock(mMutex);
         mCondition.notify_all();
     }
-    for (auto& thread : mThreads) {
-        thread.join();
+    for (const auto& thread : mThreads) {
+        thread->wait();
     }
     for (auto* scratch : mScratch) {
         pcre2_match_data_free(scratch);
@@ -191,7 +213,7 @@ void TriggerMatchPool::workerLoop(const int slot)
             pauses = 0;
             continue;
         }
-        MUDLET_CPU_RELAX();
+        cpuRelax();
         if (++pauses < kPausesPerClockCheck) {
             continue;
         }
@@ -251,7 +273,7 @@ bool TriggerMatchPool::prescan(TTrigger* const* triggers, const int count, const
     int pauses = 0;
     std::chrono::steady_clock::time_point yieldAt{};
     while (mDone.load(std::memory_order_acquire) != chunkCount) {
-        MUDLET_CPU_RELAX();
+        cpuRelax();
         if (++pauses < kPausesPerClockCheck) {
             continue;
         }
@@ -264,7 +286,7 @@ bool TriggerMatchPool::prescan(TTrigger* const* triggers, const int count, const
         }
     }
     while (mDone.load(std::memory_order_acquire) != chunkCount) {
-        std::this_thread::yield();
+        QThread::yieldCurrentThread();
     }
     Q_ASSERT(chunkIndexOf(mCursor.load(std::memory_order_relaxed)) >= chunkCount);
     return true;

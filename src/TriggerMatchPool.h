@@ -23,13 +23,15 @@
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
+#include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <mutex>
-#include <thread>
 #include <vector>
 
 #include <QString>
 
+class QThread;
 class TTrigger;
 struct pcre2_real_match_data_8;
 
@@ -100,33 +102,46 @@ private:
         const QString* haystack = nullptr;
     };
 
+    // What the words the threads contend on are kept apart by. 128 rather than
+    // the 64 most x86 parts report: Apple Silicon's L2 lines are 128 bytes,
+    // and Intel's spatial prefetcher pulls 64-byte lines in as 128-byte pairs,
+    // so two words 64 apart still travel together. Not
+    // std::hardware_destructive_interference_size, which GCC puts at 64 on
+    // x86 and libc++ does not define.
+    static constexpr std::size_t scmCacheLine = 128;
+
+    // Read by every helper on every spin and written only in the constructor,
+    // or for mStop once at exit, so this line is never invalidated.
+    int mThreshold = 0;
+    int mFloodChunkLines = 0;
+    std::chrono::steady_clock::duration mSpinBudget{};
+    std::atomic<bool> mStop{false};
     // One per worker plus one for the calling thread, which takes a share too.
     std::vector<pcre2_real_match_data_8*> mScratch;
-    std::vector<std::thread> mThreads;
+    std::vector<std::unique_ptr<QThread>> mThreads;
 
     // Written by the caller before it publishes a batch, read by whoever
     // claims a chunk of that batch. Never read by a thread that has not first
     // claimed a chunk of it, which is what keeps the reads race-free.
-    Job mJob;
+    alignas(scmCacheLine) Job mJob;
+    // Main thread only, written alongside mJob and so on its line; mEpoch is
+    // published to the helpers inside mCursor.
+    quint64 mPrescanCount = 0;
+    uint32_t mEpoch = 0;
+
     // Epoch, chunk count and next chunk index in one word, so a single
     // fetch_add both claims a chunk and says which batch, and how large a
     // batch, the claim belongs to: a thread that turns up after a batch is
     // over gets an index past its count and touches nothing. Epoch 0 is the
     // value before any batch, which is why helpers start with seen == 0 and
     // prescan() pre-increments.
-    alignas(64) std::atomic<uint64_t> mCursor{0};
-    alignas(64) std::atomic<int> mDone{0};
-    alignas(64) std::atomic<int> mParked{0};
-    std::atomic<bool> mStop{false};
+    alignas(scmCacheLine) std::atomic<uint64_t> mCursor{0};
+    alignas(scmCacheLine) std::atomic<int> mDone{0};
+    // The park handshake, written only when a helper goes to sleep or the
+    // caller wakes one, so the spinners' reads above stay cache hits.
+    alignas(scmCacheLine) std::atomic<int> mParked{0};
     std::mutex mMutex;
     std::condition_variable mCondition;
-
-    quint64 mPrescanCount = 0;
-    // Main thread only; published to the helpers inside mCursor.
-    uint32_t mEpoch = 0;
-    int mThreshold = 0;
-    int mFloodChunkLines = 0;
-    std::chrono::steady_clock::duration mSpinBudget{};
 };
 
 #endif // MUDLET_TRIGGERMATCHPOOL_H
