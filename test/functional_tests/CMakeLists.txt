@@ -143,6 +143,7 @@ set(MAP_GROUP_TEST_SOURCES
     MapCloseDuringImportTest.cpp
     MapDownloadTest.cpp
     MapLevelOfDetailTest.cpp
+    MapMouseInteractionTest.cpp
     MapOffscreenCustomLineTest.cpp
     MapFileStatsTest.cpp
     MapLockNoOpTest.cpp
