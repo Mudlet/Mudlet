@@ -718,31 +718,59 @@ private slots:
     // the six the console is drawn with, not just the ones the buttons show
     void test_resettingTheColoursPutsBackEveryOneOfThem()
     {
-        const QColor priorRed = mpHost->mRed;
-        const QColor priorLightWhite = mpHost->mLightWhite;
-        const QColor priorFg = mpHost->mFgColor;
-        const QColor priorCommandLineFg = mpHost->mCommandLineFgColor;
-        restoreLater([=, this]() {
-            mpHost->mRed = priorRed;
-            mpHost->mLightWhite = priorLightWhite;
-            mpHost->mFgColor = priorFg;
-            mpHost->mCommandLineFgColor = priorCommandLineFg;
+        struct ColorReset
+        {
+            const char* name;
+            QColor* pColor;
+            QColor expected;
+        };
+        // slot_resetColors() assigns each of these on its own, so a colour left
+        // out of the list below is one nothing here would notice going missing
+        const QVector<ColorReset> resets = {{"mCommandLineFgColor", &mpHost->mCommandLineFgColor, QColor(Qt::darkGray)},
+                                            {"mCommandLineBgColor", &mpHost->mCommandLineBgColor, QColor(Qt::black)},
+                                            {"mCommandFgColor", &mpHost->mCommandFgColor, QColor(113, 113, 0)},
+                                            {"mCommandBgColor", &mpHost->mCommandBgColor, QColor(Qt::black)},
+                                            {"mFgColor", &mpHost->mFgColor, QColor(Qt::lightGray)},
+                                            {"mBgColor", &mpHost->mBgColor, QColor(Qt::black)},
+                                            {"mBlack", &mpHost->mBlack, QColor(Qt::black)},
+                                            {"mLightBlack", &mpHost->mLightBlack, QColor(Qt::darkGray)},
+                                            {"mRed", &mpHost->mRed, QColor(Qt::darkRed)},
+                                            {"mLightRed", &mpHost->mLightRed, QColor(Qt::red)},
+                                            {"mGreen", &mpHost->mGreen, QColor(Qt::darkGreen)},
+                                            {"mLightGreen", &mpHost->mLightGreen, QColor(Qt::green)},
+                                            {"mBlue", &mpHost->mBlue, QColor(Qt::darkBlue)},
+                                            {"mLightBlue", &mpHost->mLightBlue, QColor(Qt::blue)},
+                                            {"mYellow", &mpHost->mYellow, QColor(Qt::darkYellow)},
+                                            {"mLightYellow", &mpHost->mLightYellow, QColor(Qt::yellow)},
+                                            {"mCyan", &mpHost->mCyan, QColor(Qt::darkCyan)},
+                                            {"mLightCyan", &mpHost->mLightCyan, QColor(Qt::cyan)},
+                                            {"mMagenta", &mpHost->mMagenta, QColor(Qt::darkMagenta)},
+                                            {"mLightMagenta", &mpHost->mLightMagenta, QColor(Qt::magenta)},
+                                            {"mWhite", &mpHost->mWhite, QColor(Qt::lightGray)},
+                                            {"mLightWhite", &mpHost->mLightWhite, QColor(Qt::white)}};
+
+        QVector<QColor> priorColors;
+        for (const ColorReset& reset : resets) {
+            priorColors.append(*reset.pColor);
+        }
+        restoreLater([resets, priorColors]() {
+            for (int i = 0; i < resets.size(); ++i) {
+                *resets.at(i).pColor = priorColors.at(i);
+            }
         });
 
         openPreferences();
         const QColor wrong(17, 34, 51);
-        QVERIFY(mpHost->mRed != wrong);
-        mpHost->mRed = wrong;
-        mpHost->mLightWhite = wrong;
-        mpHost->mFgColor = wrong;
-        mpHost->mCommandLineFgColor = wrong;
+        for (const ColorReset& reset : resets) {
+            QVERIFY2(reset.expected != wrong, reset.name);
+            *reset.pColor = wrong;
+        }
 
         mpPreferences->slot_resetColors();
 
-        QCOMPARE(mpHost->mRed, QColor(Qt::darkRed));
-        QCOMPARE(mpHost->mLightWhite, QColor(Qt::white));
-        QCOMPARE(mpHost->mFgColor, QColor(Qt::lightGray));
-        QCOMPARE(mpHost->mCommandLineFgColor, QColor(Qt::darkGray));
+        for (const ColorReset& reset : resets) {
+            QVERIFY2(*reset.pColor == reset.expected, reset.name);
+        }
     }
 };
 
