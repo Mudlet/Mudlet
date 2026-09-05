@@ -232,6 +232,7 @@ public slots:
     // =>"Copy Map" in another profile to inform a list of
     // profiles - asynchronously - to load in an updated map
     void slot_reloadMap(QList<QString>);
+    void slot_warmSystemSpellDictionary();
 
 
 private slots:
@@ -239,7 +240,6 @@ private slots:
     // owns everything else about it.
     void slot_loggingAnnouncement(const bool isLogging, const QString& logFileName);
     void slot_loggingStateChanged(const bool isLogging);
-    void slot_warmSystemSpellDictionary();
 
 
 signals:

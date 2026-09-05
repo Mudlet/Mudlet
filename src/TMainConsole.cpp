@@ -99,7 +99,6 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
     connect(mudlet::self(), &mudlet::signal_profileMapReloadRequested, this, &TMainConsole::slot_reloadMap, Qt::UniqueConnection);
     connect(this, &TMainConsole::signal_newDataAlert, mudlet::self(), &mudlet::slot_newDataOnHost, Qt::UniqueConnection);
 
-    // Load up the spelling dictionary from the system:
     setSystemSpellDictionary(mpHost->getSpellDic());
     // Reading it costs tens of milliseconds, so it is not read here - but
     // leaving it for the first spell-check would put that wait in front of the
@@ -1845,7 +1844,7 @@ void TMainConsole::slot_warmSystemSpellDictionary()
 {
     // spellCheck() and spellSuggestWord() do not consult this flag, so the
     // lazy getter still serves a script in a profile that has spell check off:
-    if (mpHost->mEnableSpellCheck) {
+    if (mpHost && mpHost->mEnableSpellCheck) {
         getHunspellHandle_system();
     }
 }
