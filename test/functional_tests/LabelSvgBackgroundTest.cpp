@@ -27,6 +27,7 @@
 
 #include <QMovie>
 #include <QSignalSpy>
+#include <QStringConverter>
 #include <QSvgRenderer>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
@@ -64,6 +65,11 @@ private:
     QString mBrokenSvgPath;
     QString mPngPath;
     QString mGifPath;
+    QString mHalvesSvgPath;
+    QString mCircleSvgPath;
+    QString mDecoySvgPath;
+    QString mHiddenPngPath;
+    QString mUtf16SvgPath;
 
     // the backdrop sits under every target label, in a colour nothing else on
     // screen uses, so that "the label painted nothing here" is unmistakable
@@ -78,6 +84,28 @@ private:
     static QByteArray squareSvg()
     {
         return QByteArray("<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 10 10\" width=\"10\" height=\"10\"><rect width=\"10\" height=\"10\" fill=\"#ff0000\"/></svg>");
+    }
+
+    // left half red, right half blue: a document that tells a rotation or a shear
+    // apart from no transform at all
+    static QByteArray halvesSvg()
+    {
+        return QByteArray("<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 10 10\" width=\"10\" height=\"10\"><rect width=\"5\" height=\"10\" fill=\"#ff0000\"/>"
+                          "<rect x=\"5\" width=\"5\" height=\"10\" fill=\"#0000ff\"/></svg>");
+    }
+
+    // transparent corners, so a tint that ignores the alpha shows up there
+    static QByteArray circleSvg()
+    {
+        return QByteArray("<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 10 10\" width=\"10\" height=\"10\"><circle cx=\"5\" cy=\"5\" r=\"4\" fill=\"#ff0000\"/></svg>");
+    }
+
+    // the same document in UTF-16 with a byte order mark: the '<' is no longer the
+    // first byte, and there is a NUL between every pair of characters
+    static QByteArray utf16Svg()
+    {
+        QStringEncoder encoder(QStringConverter::Utf16, QStringConverter::Flag::WriteBom);
+        return QByteArray(encoder(QString::fromUtf8(squareSvg())));
     }
 
     // three frames and a 60 second frame delay, so the animation never advances
@@ -137,14 +165,29 @@ private slots:
         mBrokenSvgPath = qsl("%1/broken.svg").arg(mFixtureDir.path());
         mPngPath = qsl("%1/square.png").arg(mFixtureDir.path());
         mGifPath = qsl("%1/movie.gif").arg(mFixtureDir.path());
+        mHalvesSvgPath = qsl("%1/halves.svg").arg(mFixtureDir.path());
+        mCircleSvgPath = qsl("%1/circle.svg").arg(mFixtureDir.path());
+        mDecoySvgPath = qsl("%1/decoy.svg").arg(mFixtureDir.path());
+        mHiddenPngPath = qsl("%1/hidden.png").arg(mFixtureDir.path());
+        mUtf16SvgPath = qsl("%1/utf16.svg").arg(mFixtureDir.path());
         QVERIFY(writeFixture(mSvgPath, squareSvg()));
         QVERIFY(writeFixture(mBrokenSvgPath, QByteArray("this is not svg")));
         QVERIFY(writeFixture(mGifPath, threeFrameGif()));
+        QVERIFY(writeFixture(mHalvesSvgPath, halvesSvg()));
+        QVERIFY(writeFixture(mCircleSvgPath, circleSvg()));
+        QVERIFY(writeFixture(mHiddenPngPath, squareSvg()));
+        QVERIFY(writeFixture(mUtf16SvgPath, utf16Svg()));
         QImage raster(10, 10, QImage::Format_ARGB32);
         raster.fill(QColor(0, 255, 0));
         QVERIFY(raster.save(mPngPath, "PNG"));
+        // the same PNG bytes under a name that says SVG
+        QVERIFY(raster.save(mDecoySvgPath, "PNG"));
         QVERIFY2(QSvgRenderer(mSvgPath).isValid(), "the generated fixture is not an SVG Qt can read");
+        QVERIFY2(QSvgRenderer(mHalvesSvgPath).isValid(), "the two-colour fixture is not an SVG Qt can read");
+        QVERIFY2(QSvgRenderer(mCircleSvgPath).isValid(), "the circle fixture is not an SVG Qt can read");
+        QVERIFY2(QSvgRenderer(mUtf16SvgPath).isValid(), "the UTF-16 fixture is not an SVG Qt can read");
         QVERIFY2(!QSvgRenderer(mBrokenSvgPath).isValid(), "the fixture meant to be unreadable parses as an SVG");
+        QVERIFY2(!QSvgRenderer(mDecoySvgPath).isValid(), "the raster fixture written under a .svg name parses as an SVG");
         QVERIFY2(QMovie(mGifPath).isValid(), "the generated fixture is not a movie Qt can read");
 
         mpServer = new TelnetServerStub(qApp);
@@ -337,6 +380,201 @@ private slots:
         setLabelImage(mSvgPath);
 
         QVERIFY2(pLabel->pixmap().isNull(), "the raster image is still the label's content, sitting on top of the SVG layer");
+        QCOMPARE(paintedColour(QPoint(50, 50)), svgColour());
+    }
+
+    void test_tintSetBeforeTheImageApplies()
+    {
+        createTarget(100, 100);
+        runLua(qsl("setSvgTint('svgTarget', 0, 0, 255)"));
+
+        setLabelImage(mSvgPath);
+
+        QCOMPARE(paintedColour(QPoint(50, 50)), QColor(0, 0, 255));
+    }
+
+    void test_tintSurvivesAnImageReplacement()
+    {
+        createTarget(100, 100);
+        setLabelImage(mSvgPath);
+        runLua(qsl("setSvgTint('svgTarget', 0, 0, 255)"));
+        QCOMPARE(paintedColour(QPoint(50, 50)), QColor(0, 0, 255));
+
+        TLabel* pLabel = target();
+        QVERIFY(pLabel);
+        const QSvgRenderer* before = pLabel->mpSvgRenderer;
+        setLabelImage(mCircleSvgPath);
+
+        QVERIFY2(pLabel->mpSvgRenderer != before, "the second document never replaced the first");
+        QCOMPARE(paintedColour(QPoint(50, 50)), QColor(0, 0, 255));
+    }
+
+    void test_resetBackgroundImageRemovesAMovie()
+    {
+        createTarget(100, 100);
+        auto [loaded, message] = mpHost->setMovie(qsl("svgTarget"), mGifPath);
+        QVERIFY2(loaded, qPrintable(message));
+        TLabel* pLabel = target();
+        QVERIFY(pLabel);
+        QVERIFY(pLabel->movie());
+
+        runLua(qsl("resetBackgroundImage('svgTarget')"));
+
+        QVERIFY2(!pLabel->movie(), "the movie is still on the label, and nothing else in the API takes one off");
+    }
+
+    // QPixmap reads an image by its content, so a raster under a .svg name used to
+    // display and has to keep doing so
+    void test_aRasterNamedSvgDisplays()
+    {
+        createTarget(100, 100);
+        setLabelImage(mDecoySvgPath);
+
+        TLabel* pLabel = target();
+        QVERIFY(pLabel);
+        QVERIFY2(!pLabel->pixmap().isNull(), "the raster written under a .svg name never reached the label");
+        QCOMPARE(pLabel->pixmap().size(), QSize(10, 10));
+        // the default alignment is AlignLeft | AlignVCenter, so a 10x10 raster in a
+        // 100x100 label covers x 0-9, y 45-54
+        QCOMPARE(paintedColour(QPoint(5, 50)), QColor(0, 255, 0));
+    }
+
+    void test_anSvgNamedPngIsDrawnAsALayer()
+    {
+        createTarget(100, 100);
+        setLabelImage(mHiddenPngPath);
+
+        TLabel* pLabel = target();
+        QVERIFY(pLabel);
+        QVERIFY2(pLabel->mpSvgRenderer, "the SVG written under a .png name did not take the SVG path");
+        QCOMPARE(paintedColour(QPoint(50, 50)), svgColour());
+    }
+
+    void test_rotationTurnsTheDocument()
+    {
+        createTarget(100, 100);
+        setLabelImage(mHalvesSvgPath);
+        QCOMPARE(paintedColour(QPoint(25, 50)), QColor(255, 0, 0));
+        QCOMPARE(paintedColour(QPoint(75, 50)), QColor(0, 0, 255));
+
+        runLua(qsl("setSvgRotation('svgTarget', 90)"));
+
+        // a positive angle turns clockwise, so the left half of the document ends
+        // up along the top
+        QCOMPARE(paintedColour(QPoint(50, 25)), QColor(255, 0, 0));
+        QCOMPARE(paintedColour(QPoint(50, 75)), QColor(0, 0, 255));
+    }
+
+    void test_shearSlantsTheDocument()
+    {
+        createTarget(100, 100);
+        setLabelImage(mHalvesSvgPath);
+        QCOMPARE(paintedColour(QPoint(60, 90)), QColor(0, 0, 255));
+
+        runLua(qsl("setSvgShear('svgTarget', 1, 0)"));
+
+        // sheared about the centre, the point (x, y) shows what the document has at
+        // x - shearX * (y - 50), so (60, 90) reads the document's x = 20
+        QCOMPARE(paintedColour(QPoint(60, 90)), QColor(255, 0, 0));
+    }
+
+    // the tint recolours what the document drew and keeps its alpha, so a
+    // transparent corner stays transparent
+    void test_tintKeepsTransparencyOutsideTheDocument()
+    {
+        createTarget(100, 100);
+        runLua(qsl("setBackgroundColor('svgTarget', 0, 0, 0, 0)"));
+        setLabelImage(mCircleSvgPath);
+
+        runLua(qsl("setSvgTint('svgTarget', 0, 0, 255)"));
+
+        QCOMPARE(paintedColour(QPoint(50, 50)), QColor(0, 0, 255));
+        QCOMPARE(paintedColour(QPoint(5, 5)), backdropColour());
+    }
+
+    void test_colourNamesResolveToTheirTableValues()
+    {
+        createTarget(100, 100);
+        setLabelImage(mSvgPath);
+
+        runLua(qsl("setSvgTint('svgTarget', 'alice_blue')"));
+        QCOMPARE(paintedColour(QPoint(50, 50)), QColor(240, 248, 255));
+
+        runLua(qsl("setSvgTint('svgTarget', 'LightGoldenrod')"));
+        QCOMPARE(paintedColour(QPoint(50, 50)), QColor(238, 221, 130));
+    }
+
+    // the SVG layer and QLabel's content slot are two places an image can sit, and
+    // one call empties both
+    void test_resetBackgroundImageRemovesTheSvgAndTheMovieTogether()
+    {
+        createTarget(100, 100);
+        setLabelImage(mSvgPath);
+        auto [loaded, message] = mpHost->setMovie(qsl("svgTarget"), mGifPath);
+        QVERIFY2(loaded, qPrintable(message));
+        TLabel* pLabel = target();
+        QVERIFY(pLabel);
+        QVERIFY(pLabel->movie());
+        QVERIFY(pLabel->mpSvgRenderer);
+
+        runLua(qsl("resetBackgroundImage('svgTarget')"));
+
+        QVERIFY2(!pLabel->movie(), "the movie is still on the label");
+        QVERIFY2(!pLabel->mpSvgRenderer, "the SVG layer is still on the label");
+        QVERIFY2(paintedColour(QPoint(50, 50)) != svgColour(), "the SVG is still on screen after being reset");
+    }
+
+    void test_tintSurvivesARasterInBetween()
+    {
+        createTarget(100, 100);
+        setLabelImage(mSvgPath);
+        runLua(qsl("setSvgTint('svgTarget', 0, 0, 255)"));
+
+        setLabelImage(mPngPath);
+        setLabelImage(mSvgPath);
+
+        QCOMPARE(paintedColour(QPoint(50, 50)), QColor(0, 0, 255));
+    }
+
+    void test_tintSurvivesResetBackgroundImage()
+    {
+        createTarget(100, 100);
+        setLabelImage(mSvgPath);
+        runLua(qsl("setSvgTint('svgTarget', 0, 0, 255)"));
+
+        runLua(qsl("resetBackgroundImage('svgTarget')"));
+        setLabelImage(mSvgPath);
+
+        QCOMPARE(paintedColour(QPoint(50, 50)), QColor(0, 0, 255));
+    }
+
+    // the Host hangs on to the label's movie to reuse it, so one left running
+    // would go on decoding frames for a label that no longer shows it
+    void test_aRasterOverAMovieStopsTheMovie()
+    {
+        createTarget(100, 100);
+        auto [loaded, message] = mpHost->setMovie(qsl("svgTarget"), mGifPath);
+        QVERIFY2(loaded, qPrintable(message));
+        TLabel* pLabel = target();
+        QVERIFY(pLabel);
+        QVERIFY(pLabel->mpMovie);
+
+        setLabelImage(mPngPath);
+
+        QCOMPARE(pLabel->mpMovie->state(), QMovie::NotRunning);
+        QVERIFY2(!pLabel->movie(), "the movie is still the label's content, on top of the raster");
+    }
+
+    // the '<' is not the first byte of a document that opens with a byte order
+    // mark, and every character is followed by a NUL
+    void test_aUtf16SvgIsDrawnAsALayer()
+    {
+        createTarget(100, 100);
+        setLabelImage(mUtf16SvgPath);
+
+        TLabel* pLabel = target();
+        QVERIFY(pLabel);
+        QVERIFY2(pLabel->mpSvgRenderer, "the UTF-16 document did not take the SVG path");
         QCOMPARE(paintedColour(QPoint(50, 50)), svgColour());
     }
 };

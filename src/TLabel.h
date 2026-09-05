@@ -67,6 +67,7 @@ public:
     void resizeEvent(QResizeEvent* event) override;
     void paintEvent(QPaintEvent* event) override;
     void changeEvent(QEvent* event) override;
+    QSize sizeHint() const override;
     void setClickThrough(bool clickthrough);
     void setBackgroundColor(const QColor& color);
     void setLinkStyle(const QString& linkColor, const QString& linkVisitedColor, bool underline = true);
@@ -76,6 +77,8 @@ public:
     void resetBackgroundImage();
     bool setSvgImage(const QString& path);
     void clearSvgImage();
+    static bool svgCandidate(const QString& path);
+    static bool loadSvg(QSvgRenderer& renderer, const QString& path);
     void setSvgTint(const QColor& color);
     void clearSvgTint();
     void setSvgRotation(double angle);
@@ -106,6 +109,7 @@ public:
 private:
     QPixmap renderSvgPixmap(const QSize& size) const;
     void refreshSvg();
+    void stopMovie();
     void releaseFunc(const int existingFunction, const int newFunction);
     void applyBackgroundColor();
 

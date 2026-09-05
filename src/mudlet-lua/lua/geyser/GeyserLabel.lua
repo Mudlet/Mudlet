@@ -494,37 +494,54 @@ function Geyser.Label:clear()
 end
 
 --- Sets a background image for this label.
--- A .svg or .svgz file is drawn as a layer behind the label's text or movie,
--- scaled to fit the label while keeping its proportions and re-rendered crisply
--- on every resize - see setSvgTint, setSvgRotation and setSvgShear.
+-- An SVG file is drawn as a layer behind the label's text or movie, scaled to fit
+-- the label while keeping its proportions and re-rendered crisply on every resize
+-- - see setSvgTint, setSvgRotation and setSvgShear.
 -- It fills the area inside the label's border, and is not clipped to a
 -- border-radius, so a rounded label shows the SVG square in its corners.
 -- Any other image type is drawn at its own size as the label's content, in place
--- of any text the label is showing.
+-- of any text the label is showing. Which of the two it is comes from the file's
+-- content rather than from its name.
+-- resetBackgroundImage takes off the SVG layer, a raster image and a movie in one
+-- call, and leaves the label's text where it is.
+-- Returns true, or nil and an error message when the file cannot be read.
 -- @param imageFileName The image to use for a background image.
 function Geyser.Label:setBackgroundImage (imageFileName)
-  setBackgroundImage(self.name, imageFileName)
+  local ok, err = setBackgroundImage(self.name, imageFileName)
   self:autoAdjustSize()
+  return ok, err
 end
 
 --- Sets a tint color on the label's SVG background image.
 -- Every visible pixel of the SVG takes the given color and keeps its own
 -- transparency, so a multi-color SVG becomes a single-color silhouette.
--- Only works when the label has an SVG background set via setBackgroundImage.
+-- The tint is a property of the label, not of the document: it can be set before
+-- any SVG is there and applies as soon as one arrives, and no image operation
+-- changes it - it is kept until resetSvgTint is called.
 -- Accepts any color format supported by Geyser.Color.parse:
 -- RGB integers (r, g, b), hex string ("#ff0000"), or named color ("red").
+-- Returns true, or nil and an error message when the color cannot be read.
 -- @param r The red component (0-255), or a color string (e.g. "#ff0000", "red").
 -- @param g The green component (0-255). Omit when using a color string.
 -- @param b The blue component (0-255). Omit when using a color string.
 function Geyser.Label:setSvgTint (r, g, b)
-  local red, green, blue = Geyser.Color.parse(r, g, b)
-  setSvgTint(self.name, red, green, blue)
+  -- Geyser.Color.parse returns nil for a component a short hex string like "#ff"
+  -- has no digits for, and raises rather than returning it for the one after that
+  local parsed, red, green, blue = pcall(Geyser.Color.parse, r, g, b)
+  if not (parsed and red and green and blue) then
+    if type(r) == "string" then
+      -- the global resolves colour names itself and explains what it cannot
+      return setSvgTint(self.name, r)
+    end
+    return nil, "setSvgTint: could not parse the colour given"
+  end
+  return setSvgTint(self.name, red, green, blue)
 end
 
 --- Resets the tint color on the label's SVG background image,
 -- restoring the original SVG colors.
 function Geyser.Label:resetSvgTint ()
-  resetSvgTint(self.name)
+  return resetSvgTint(self.name)
 end
 
 --- Sets the rotation angle for the label's SVG background image.
@@ -532,33 +549,39 @@ end
 -- Content rotated beyond the label's edges is clipped, so a square image loses
 -- its corners at 45 degrees - a circular design, or padding inside the SVG,
 -- avoids that.
+-- Like the tint, the angle is a property of the label: it can be set before any
+-- SVG is there and applies as soon as one arrives, and no image operation changes
+-- it - it is kept until resetSvgRotation or resetSvgTransform is called.
 -- @param angle Rotation angle in degrees (positive = clockwise).
 function Geyser.Label:setSvgRotation (angle)
-  setSvgRotation(self.name, angle)
+  return setSvgRotation(self.name, angle)
 end
 
 --- Resets the SVG background image rotation to 0 degrees.
 function Geyser.Label:resetSvgRotation ()
-  resetSvgRotation(self.name)
+  return resetSvgRotation(self.name)
 end
 
 --- Sets the shear (skew) for the label's SVG background image.
 -- The SVG is sheared around its center; label text and background are unaffected.
 -- As with rotation, content sheared outside the label is clipped.
+-- Like the tint, the shear is a property of the label: it can be set before any
+-- SVG is there and applies as soon as one arrives, and no image operation changes
+-- it - it is kept until resetSvgShear or resetSvgTransform is called.
 -- @param shearX Horizontal shear factor.
 -- @param shearY Vertical shear factor.
 function Geyser.Label:setSvgShear (shearX, shearY)
-  setSvgShear(self.name, shearX, shearY)
+  return setSvgShear(self.name, shearX, shearY)
 end
 
 --- Resets the SVG background image shear to (0, 0).
 function Geyser.Label:resetSvgShear ()
-  resetSvgShear(self.name)
+  return resetSvgShear(self.name)
 end
 
 --- Resets all SVG transforms (rotation and shear) but preserves tint.
 function Geyser.Label:resetSvgTransform ()
-  resetSvgTransform(self.name)
+  return resetSvgTransform(self.name)
 end
 
 --- Sets a tiled background image for this label.

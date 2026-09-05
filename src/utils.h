@@ -104,11 +104,6 @@ public:
     // qsl all over the place:
     static QString richText(const QString& text) { return qsl("<p>%1</p>").arg(text); }
 
-    // .svg and .svgz are the two spellings QSvgRenderer reads, and the file name
-    // is all there is to go on before an image is handed to the SVG or the
-    // raster path.
-    static bool svgFileName(const QString& path) { return path.endsWith(qsl(".svg"), Qt::CaseInsensitive) || path.endsWith(qsl(".svgz"), Qt::CaseInsensitive); }
-
     // Call this in the destructor of a window class that connects any of its
     // own widgets to its own slots - keep it first, so that nothing else the
     // destructor does can deliver a child's signal either.

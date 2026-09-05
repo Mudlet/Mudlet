@@ -3488,6 +3488,11 @@ int TLuaInterpreter::setSvgRotation(lua_State* L)
         return lua_error(L);
     }
     const double angle = getVerifiedDouble(L, __func__, 2, "angle");
+    // NaN and the infinities reach QTransform as a transform that maps the whole
+    // document nowhere, leaving the SVG invisible until the rotation is reset
+    if (!qIsFinite(angle)) {
+        return warnArgumentValue(L, __func__, qsl("angle must be a finite number"));
+    }
     const QString labelName{lua_tostring(L, 1)};
     Host& host = getHostFromLua(L);
 
@@ -3521,6 +3526,14 @@ int TLuaInterpreter::setSvgShear(lua_State* L)
     }
     const double shearX = getVerifiedDouble(L, __func__, 2, "shearX");
     const double shearY = getVerifiedDouble(L, __func__, 3, "shearY");
+    // as with the rotation, a non-finite factor takes the SVG off screen rather
+    // than slanting it
+    if (!qIsFinite(shearX)) {
+        return warnArgumentValue(L, __func__, qsl("shearX must be a finite number"));
+    }
+    if (!qIsFinite(shearY)) {
+        return warnArgumentValue(L, __func__, qsl("shearY must be a finite number"));
+    }
     const QString labelName{lua_tostring(L, 1)};
     Host& host = getHostFromLua(L);
 
