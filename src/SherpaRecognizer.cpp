@@ -162,10 +162,8 @@ SherpaRecognizer::SherpaRecognizer(QObject* parent)
 : SpeechRecognizer(parent)
 , mpCapture(new SpeechAudioCapture(this))
 {
-    // Explicitly qualified: this is the answer for an engine with nothing
-    // loaded, and it must be this class's, not the base's all-false one.
-    // Explicitly qualified: this is the answer for an engine with nothing
-    // loaded, and it must be this class's, not the base's all-false one.
+    // The answer for an engine with nothing loaded, which is not the all-false
+    // default - see mAnnouncedCapabilities in the header for why that matters.
     mAnnouncedCapabilities = SherpaRecognizer::capabilities();
     connect(mpCapture, &SpeechAudioCapture::pcm, this, &SherpaRecognizer::slot_pcmReady);
     connect(mpCapture, &SpeechAudioCapture::captureError, this, &SherpaRecognizer::slot_captureError);
@@ -439,17 +437,6 @@ bool SherpaRecognizer::loadModel(const QString& modelPath)
     // microphone again because both check listening() first. The recording
     // light stayed on for the rest of the session.
     // VoskRecognizer::initialize() carries the same guard for the same reason.
-    const bool interruptedASession = (state() == State::Listening || state() == State::Processing);
-    mpCapture->stop();
-    if (interruptedASession) {
-        // The caller asked to load a model, not to stop listening, and the
-        // utterance in flight goes with the decoder. Reported rather than
-        // dropped quietly: no finalResult() is coming, so silence here is
-        // indistinguishable from the player never having said anything.
-        //: Shown when loading a speech model ends a listening session that was already under way, losing what was being said
-        emit errorOccurred(tr("Loading a speech model stopped the listening session that was under way - anything said during it is lost."));
-    }
-
     if (!loadSherpaLibrary()) {
         setState(State::Error);
         //: Shown when speech recognition is asked to load a model but the recognition library itself is not installed
@@ -463,14 +450,13 @@ bool SherpaRecognizer::loadModel(const QString& modelPath)
     // false and left the session with no decoder, no model path and Error.
     const auto refuseLoad = [this]() {
         if (mRecognizer) {
-            // Untouched decoder, and the microphone was stopped above, so this
-            // is exactly an idle loaded engine. Error would end the session as
-            // surely as freeing the decoder did, since initialized() is false
-            // in Error and Lua could not start again without reloading.
-            setState(State::Ready);
-        } else {
-            setState(State::Error);
+            // Nothing has been touched yet - not the decoder, not the device -
+            // so the session carries on exactly as it was, mid-utterance
+            // included. Even Ready would be wrong here: it would end a live
+            // session for a call that never reached anything native.
+            return;
         }
+        setState(State::Error);
     };
 
     const QDir modelDir(modelPath);
@@ -499,10 +485,24 @@ bool SherpaRecognizer::loadModel(const QString& modelPath)
     const QString tokensPath = modelDir.exists(qsl("tokens.txt")) ? modelDir.filePath(qsl("tokens.txt")) : QString();
 
     if (encoderPath.isEmpty() || decoderPath.isEmpty() || joinerPath.isEmpty() || tokensPath.isEmpty()) {
-        //: Shown when a model directory exists but does not contain the files a sherpa-onnx streaming model needs; %1 is that directory
         refuseLoad();
+        //: Shown when a model directory exists but does not contain the files a sherpa-onnx streaming model needs; %1 is that directory
         emit errorOccurred(tr("Not a sherpa-onnx streaming model (needs tokens.txt and encoder/decoder/joiner .onnx files): %1").arg(modelPath));
         return false;
+    }
+
+    // Past this point the load is committed, so this is where the device goes
+    // and the previous session ends - not at the top, where a refusal that
+    // never reached anything native was still taking the microphone with it.
+    const bool interruptedASession = (state() == State::Listening || state() == State::Processing);
+    mpCapture->stop();
+    if (interruptedASession) {
+        // The caller asked to load a model, not to stop listening, and the
+        // utterance in flight goes with the decoder. Reported rather than
+        // dropped quietly: no finalResult() is coming, so silence here is
+        // indistinguishable from the player never having said anything.
+        //: Shown when loading a speech model ends a listening session that was already under way, losing what was being said
+        emit errorOccurred(tr("Loading a speech model stopped the listening session that was under way - anything said during it is lost."));
     }
 
     releaseSherpaResources();
@@ -994,7 +994,7 @@ void SherpaRecognizer::releaseResources()
 SpeechRecognizer::VocabularyResult SherpaRecognizer::applyVocabulary(const QStringList& words)
 {
     QStringList rejected;
-    usableHotwords(words, &rejected);
+    const QStringList usable = usableHotwords(words, &rejected);
     if (!rejected.isEmpty()) {
         // Said here rather than in loadModel(), which reuses the stored list on
         // every reload and would repeat this each time.
@@ -1014,6 +1014,13 @@ SpeechRecognizer::VocabularyResult SherpaRecognizer::applyVocabulary(const QStri
     // no effect, and once did something worse: an earlier version of that
     // wrapper wrote the bookkeeping fix by calling back into setVocabulary(),
     // which reached this function again and recursed without terminating.
+    // Nothing survived the filter, so a reload would rebuild the decoder with
+    // no biasing at all and then answer Applied for it. Packages branch on that
+    // boolean to decide whether to keep correcting results themselves.
+    if (usable.isEmpty() && !words.isEmpty()) {
+        return VocabularyResult::Failed;
+    }
+
     if (state() == State::Ready && !mModelPath.isEmpty()) {
         return loadModel(mModelPath) ? VocabularyResult::Applied : VocabularyResult::Failed;
     }

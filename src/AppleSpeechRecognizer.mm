@@ -96,8 +96,13 @@ bool AppleSpeechRecognizer::initialize(const QString& modelPath)
     // without moving to Error - a caller's mistaken argument leaves the engine
     // exactly as usable as it was.
     if (!modelPath.isEmpty()) {
-        //: Shown when a script hands the built-in macOS speech recognition a model folder, which it has no use for; %1 is that folder
-        emit errorOccurred(tr("The built-in macOS speech recognition uses no model files, so it cannot load '%1' - call stt.init() with no argument to use it.").arg(modelPath));
+        // Returned, not raised. This hits both of rule 2's carve-outs at once:
+        // it is a limit this engine can never lift, and it is the caller's own
+        // argument that is wrong. Announced, a package that saves a model path
+        // and offers it on every profile load would raise sysSTTError at every
+        // other package on the profile, for ever, over something that will
+        // never change. sttInit() has the message in its return value.
+        qWarning().noquote() << "AppleSpeechRecognizer: refused a model path; this backend loads none:" << modelPath;
         return false;
     }
 

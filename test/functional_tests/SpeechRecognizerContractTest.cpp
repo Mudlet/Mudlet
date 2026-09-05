@@ -324,10 +324,15 @@ private slots:
         QSignalSpy spy(&recognizer, &SpeechRecognizer::capabilitiesChanged);
         QVERIFY(spy.isValid());
 
+        // Nothing has moved since construction, so nothing is announced. This
+        // used to require the opposite - the record was left at the all-false
+        // default while capabilities() answers onDevice = true, so the first
+        // call always "changed" - and the case pinned that in rather than
+        // catching it, which is the shape a test asserting a bug takes.
         recognizer.announceCapabilitiesIfChanged();
-        QCOMPARE(spy.count(), 1);
+        QCOMPARE(spy.count(), 0);
         recognizer.announceCapabilitiesIfChanged();
-        QCOMPARE(spy.count(), 1);
+        QCOMPARE(spy.count(), 0);
     }
 
     // docs/stt-api.md: "refusal messages can arrive without a state change".

@@ -66,11 +66,11 @@ public:
     bool initialize(const QString& modelPath) override;
     void setSilenceTimeout(int msec) override;
     int silenceTimeout() const override;
-    // Vosk delivers per-word confidence and timing; it has no biasing, and
-    // grammar constraint (vosk_recognizer_new_grm) is not wired up yet, so
-    // only word results are claimed
-    // Word detail is the one thing this engine offers beyond plain text: it
-    // cannot be biased, takes no grammar, and decodes on this machine.
+    // Vosk delivers per-word confidence and timing, and can be tuned for
+    // end-of-speech; it has no biasing, and grammar constraint
+    // (vosk_recognizer_new_grm) is not wired up yet. Both of the claimed
+    // abilities follow a resolved library symbol, so an older or partial
+    // libvosk answers false for either.
     Capabilities capabilities() const override
     {
         Capabilities answer;

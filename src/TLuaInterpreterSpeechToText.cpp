@@ -406,8 +406,18 @@ int TLuaInterpreter::sttInit(lua_State* L)
         return warnArgumentValue(L, funcName, message);
     }
 
+    // A backend that loads no models can only be given a path by mistake, and
+    // it is the caller's own argument - so it is answered here, in the return
+    // value, rather than raised at every other package on the profile. Reached
+    // when the directory matches no engine's layout: that leaves the backend at
+    // Auto, and the built-in one is what answered.
+    if (!useModelLessBackend && !modelPath.isEmpty() && loadedSpeechBackend(pRecognizer) == SpeechRecognizerFactory::Backend::Platform) {
+        return warnArgumentValue(L, funcName, qsl("%1 uses no model files, so it cannot load '%2' - call stt.init() with no argument to use it").arg(pRecognizer->backendName(), modelPath));
+    }
+
     if (!pRecognizer->initialize(modelPath)) {
-        // initialize() has already said what went wrong through sysSTTError
+        // Whatever went wrong reached sysSTTError from the backend, except the
+        // model-less case answered just above, which never gets this far
         return warnArgumentValue(L, funcName, qsl("failed to initialize model from: %1").arg(modelPath));
     }
 

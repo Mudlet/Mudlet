@@ -150,6 +150,11 @@ VoskRecognizer::VoskRecognizer(QObject* parent)
 : SpeechRecognizer(parent)
 , mpCapture(new SpeechAudioCapture(this))
 {
+    // The answer for an engine with nothing loaded, which is not the all-false
+    // default: onDevice is unconditionally true here. Left unseeded, the first
+    // announceCapabilitiesIfChanged() reports a change nothing made - see the
+    // same seeding in SherpaRecognizer's constructor.
+    mAnnouncedCapabilities = VoskRecognizer::capabilities();
     connect(mpCapture, &SpeechAudioCapture::pcm, this, &VoskRecognizer::slot_pcmReady);
     connect(mpCapture, &SpeechAudioCapture::captureError, this, &VoskRecognizer::slot_captureError);
     // A silence timeout ends the utterance the way the user stopping would:

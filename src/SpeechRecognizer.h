@@ -276,8 +276,10 @@ public:
     bool listening() const { return state() == State::Listening; }
     bool ready() const { return state() == State::Ready; }
     bool initialized() const { return state() != State::Uninitialized && state() != State::Error; }
-    // Asked to listen and not yet refused: either already listening, or still
-    // waiting on the permission that decides it
+    // Waiting on the permission that decides a start, and nothing else - a
+    // recognizer that is already listening answers false. Callers wanting "a
+    // start is outstanding or has landed" have to ask for both, the way
+    // speechStartAccepted() does.
     bool starting() const { return state() == State::Starting; }
 
     // Whether the backend currently holds live native resources (e.g. handles
@@ -350,11 +352,13 @@ protected:
     // bias holds, and the next identical offer is wrongly short-circuited into
     // Applied against a model that was never given the words.
     //
-    // Worth knowing which of these is actually exercised: every backend in the
-    // tree takes the noteVocabularyApplied() branch, sherpa explicitly so and
-    // with its reasons at the call site. The setVocabulary(vocabulary()) route
-    // described above has no user yet, so it is reasoning rather than
-    // something the tests hold to.
+    // Worth knowing which of these is actually exercised. Only sherpa reaches
+    // either hook, and it takes noteVocabularyApplied(), with its reasons at
+    // the call site. Vosk supports no vocabulary at all, and the built-in
+    // macOS backend rebuilds the bias into each request, so it answers Applied
+    // without either hook - a third route none of this describes. The
+    // setVocabulary(vocabulary()) one has no user at all, so it is reasoning
+    // rather than something the tests hold to.
     virtual VocabularyResult applyVocabulary(const QStringList& words)
     {
         Q_UNUSED(words)

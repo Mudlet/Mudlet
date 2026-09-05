@@ -288,6 +288,12 @@ void mudlet::initSpeechRecognition(SpeechRecognizerFactory::Backend backend)
         capabilities.insert(qsl("biasing"), newCapabilities.biasing);
         capabilities.insert(qsl("grammar"), newCapabilities.grammar);
         capabilities.insert(qsl("words"), newCapabilities.wordResults);
+        // Carried like the rest: docs/stt-api.md promises this event the same
+        // keys as getInfo().capabilities, and a package rebuilding from the
+        // event would otherwise read a missing key as "this engine never can"
+        // - on Vosk, exactly the flag that moves when the library is unloaded
+        // or reloaded, which is one of the moments this fires.
+        capabilities.insert(qsl("sensitivityTuning"), newCapabilities.sensitivityTuning);
         capabilities.insert(qsl("onDevice"), newCapabilities.onDevice);
         raiseSpeechEvent(qsl("sysSTTCapabilitiesChanged"), QString::fromUtf8(QJsonDocument(capabilities).toJson(QJsonDocument::Compact)));
     });
@@ -327,8 +333,13 @@ void mudlet::initSpeechRecognition(SpeechRecognizerFactory::Backend backend)
     SpeechRecognizer* pRetiring = mpSpeechRecognizer;
     mpSpeechRecognizer = pReplacement;
     if (pRetiring) {
-        pRetiring->releaseResources();
+        // Disconnected first: releaseResources() sets the state and, on a
+        // backend whose capabilities follow the model, announces the change -
+        // and mpSpeechRecognizer already names the replacement by now, so a
+        // handler reached from either event would read the new engine while
+        // being told about the dead one. The retirement is meant to be silent.
         pRetiring->disconnect();
+        pRetiring->releaseResources();
         pRetiring->deleteLater();
     }
 }
