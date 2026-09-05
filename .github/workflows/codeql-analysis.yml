@@ -55,7 +55,7 @@ jobs:
         arch: win64_mingw73
         # uncached for the same reason as the step below
         cache: false
-        modules: qt5compat qtmultimedia
+        modules: qt5compat qtmultimedia qtwebsockets qthttpserver
 
     - name: (Linux/macOS) Install Qt
       uses: jurplel/install-qt-action@v4
@@ -71,7 +71,7 @@ jobs:
         # least-recently-used, and a dropped branch ccache is a 20 minute cold
         # rebuild rather than a 30 second download.
         cache: false
-        modules: qt5compat qtmultimedia
+        modules: qt5compat qtmultimedia qtwebsockets qthttpserver
 
     - name: Restore Boost cache
       uses: actions/cache@v6
@@ -168,6 +168,11 @@ jobs:
         NINJA_STATUS: '[%f/%t %o/sec] '
         # ninja's default of cores + 2 exhausts this runner's memory
         CMAKE_BUILD_PARALLEL_LEVEL: 3
+        # An environment variable rather than a -D: CMake reads this one through
+        # include_optional_module(), which only ever consults the environment.
+        # Without it the one feature that opens a port and runs arbitrary Lua
+        # would be compiled out and so absent from the CodeQL database.
+        WITH_MCPSERVER: "ON"
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v4.37.8
