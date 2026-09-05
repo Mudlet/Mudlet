@@ -552,22 +552,14 @@ TConsole* TMainConsole::createMiniConsole(const QString& windowname, const QStri
     auto pC = mSubConsoleMap.value(name);
     auto pS = mScrollBoxMap.value(windowname);
     if (!pC) {
+        QWidget* parent = mpMainFrame;
         if (pS) {
-            pC = new TConsole(mpHost, name, SubConsole, pS->widget());
+            parent = pS->widget();
         } else if (pW) {
-            pC = new TConsole(mpHost, name, SubConsole, pW->widget());
-        } else {
-            pC = new TConsole(mpHost, name, SubConsole, mpMainFrame);
+            parent = pW->widget();
         }
-        if (!pC) {
-            return nullptr;
-        }
+        pC = createSubConsole(name, parent);
         registerSubConsole(name, pC);
-        pC->setObjectName(name);
-        const auto& hostCommandLine = mpHost->mpConsole->mpCommandLine;
-        pC->setFocusProxy(hostCommandLine);
-        pC->mUpperPane->setFocusProxy(hostCommandLine);
-        pC->mLowerPane->setFocusProxy(hostCommandLine);
         pC->resize(width, height);
         pC->mOldX = x;
         pC->mOldY = y;

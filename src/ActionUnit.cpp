@@ -246,14 +246,17 @@ void ActionUnit::reParentAction(int childID, int oldParentID, int newParentID, i
     pChild->setDataChanged();
 
     if ((!pOldParent) && (pNewParent)) {
-        if (pChild->mpEasyButtonBar) {
-            mpHost->mpConsole->detachEasyButtonBar(pChild->mpEasyButtonBar, pChild->mLocation);
+        // The bars are the console's widgets; a profile with no view has none to take down
+        TMainConsole* pConsole = mpHost->mpConsole;
+        if (!pConsole) {
+            return;
         }
-        if (pChild->mpToolBar) {
-            if (pChild->mLocation == 4) {
-                pChild->mpToolBar->setFloating(false);
-                mpHost->mpConsole->undockToolBar(pChild->mpToolBar);
-            }
+        if (pChild->mpEasyButtonBar) {
+            pConsole->detachEasyButtonBar(pChild->mpEasyButtonBar, pChild->mLocation);
+        }
+        if (pChild->mpToolBar && pChild->mLocation == 4) {
+            pChild->mpToolBar->setFloating(false);
+            pConsole->undockToolBar(pChild->mpToolBar);
         }
     }
 }
@@ -316,13 +319,12 @@ void ActionUnit::unregisterAction(TAction* pT)
         updateAllToolbars();
         return;
     }
-    if (pT->mpEasyButtonBar && pT->mPackageName.isEmpty()) {
-        mpHost->mpConsole->detachEasyButtonBar(pT->mpEasyButtonBar, pT->mLocation);
-        if (pT->mLocation == 4) {
-            if (pT->mpToolBar) {
-                pT->mpToolBar->setFloating(false);
-                mpHost->mpConsole->undockToolBar(pT->mpToolBar);
-            }
+    TMainConsole* pConsole = mpHost->mpConsole;
+    if (pConsole && pT->mpEasyButtonBar && pT->mPackageName.isEmpty()) {
+        pConsole->detachEasyButtonBar(pT->mpEasyButtonBar, pT->mLocation);
+        if (pT->mLocation == 4 && pT->mpToolBar) {
+            pT->mpToolBar->setFloating(false);
+            pConsole->undockToolBar(pT->mpToolBar);
         }
     }
     removeAction(pT);
@@ -716,8 +718,8 @@ void ActionUnit::constructToolbar(TAction* pA, TEasyButtonBar* pTB)
 
 void ActionUnit::updateAllToolbars()
 {
-    // Package removal and XML import get here while the console can be between
-    // windows: moveProfileFromDetachedToMainWindow() pumps events with it detached
+    // The bars are the console's widgets, so a profile with no view has nothing
+    // to build; the regenerate paths below reach the console only through here
     if (!mpHost->mpConsole) {
         return;
     }

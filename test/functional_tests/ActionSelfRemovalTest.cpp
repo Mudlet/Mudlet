@@ -275,11 +275,11 @@ private slots:
     }
 
     // The bars are the console's widgets now, so ActionUnit has to cope with being
-    // asked to rebuild them before a profile has one - Host::uninstallPackage()
-    // reaches updateAllToolbars() on that path. A floating root is the case that
-    // used to survive it: regenerateEasyButtonBars() skips those nodes, and before
-    // the bars moved to the console regenerateToolBars() only touched the main
-    // window, so neither half went near mpConsole.
+    // asked to rebuild them for a profile that has no console - the view is
+    // optional. A floating root is the case that used to survive it:
+    // regenerateEasyButtonBars() skips those nodes, and before the bars moved to
+    // the console regenerateToolBars() only touched the main window, so neither
+    // half went near mpConsole.
     void test_rebuildingToolbarsWithoutAConsoleBuildsNothing()
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
@@ -303,6 +303,36 @@ private slots:
 
         actionUnit->updateAllToolbars();
         QVERIFY2(floatingBar->mpToolBar, "The bar should be built once the console is back");
+    }
+
+    // Removing a docked bar's action reaches the console to take the bar down.
+    // With no console there is nothing to take it down from, so the removal has
+    // to leave the widget alone rather than reach through a null pointer.
+    void test_removingADockedBarActionWithoutAConsoleLeavesTheBarAlone()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        auto* actionUnit = host->getActionUnit();
+
+        auto* leftBar = new TAction(qsl("leftBar"), host);
+        leftBar->setIsFolder(true);
+        leftBar->mLocation = 2;
+        leftBar->mToolbarLastFloatingState = false;
+        leftBar->setIsActive(true);
+        actionUnit->registerAction(leftBar);
+        actionUnit->updateAllToolbars();
+        QVERIFY2(leftBar->mpEasyButtonBar, "The left-bar action should have been given a TEasyButtonBar");
+        QPointer<TEasyButtonBar> bar = leftBar->mpEasyButtonBar;
+
+        QPointer<TMainConsole> console = host->mpConsole;
+        host->mpConsole = nullptr;
+        delete leftBar;
+        host->mpConsole = console;
+
+        QVERIFY2(bar, "The bar belongs to the console and has to outlive its action");
+        QVERIFY2(bar->isHidden(), "The action hides its bar on the way out");
+        QCOMPARE(bar->parentWidget(), console->mpLeftToolBar);
     }
 
     // Starts a profile the way a user would via the GUI (mirrors the helper in
