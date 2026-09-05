@@ -64,6 +64,12 @@ private:
         return ini.open(QIODevice::WriteOnly);
     }
 
+    bool writeMarker(const QString& execDir, const QByteArray& content) const
+    {
+        QFile marker(qsl("%1/portable.txt").arg(execDir));
+        return marker.open(QIODevice::WriteOnly) && marker.write(content) == content.size();
+    }
+
 private slots:
     void initTestCase()
     {
@@ -380,12 +386,6 @@ private slots:
     }
 
     // --- MudletApp::resolveConfigRoot() portable.txt precedence ----------------
-
-    bool writeMarker(const QString& execDir, const QByteArray& content) const
-    {
-        QFile marker(qsl("%1/portable.txt").arg(execDir));
-        return marker.open(QIODevice::WriteOnly) && marker.write(content) == content.size();
-    }
 
     void test_resolveConfigRootEmptyMarkerFallsBackToPortableSubdir()
     {
