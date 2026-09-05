@@ -1,6 +1,6 @@
--- Negative wrap indents, which used to abort Mudlet: wrapLine() discarded an
--- indent wider than the wrap column, but let a negative one reach a
--- vector::insert() that takes an unsigned count, throwing std::length_error.
+-- Negative wrap indents. These setters used to accept one and pass it to
+-- TBuffer::wrapLine(), which threw std::length_error once a line wrapped; that
+-- clamp is covered by WrapLineRewrapTest, as they now refuse before reaching it.
 
 describe("Wrap indents with a negative value", function()
   local win = "wrapIndentBoundsTest"
@@ -13,32 +13,36 @@ describe("Wrap indents with a negative value", function()
     deleteMiniConsole(win)
   end)
 
-  -- both setters return nothing on success, so the reason string is what tells
-  -- a refusal apart, not the first return
   it("refuses a negative wrap indent, with a reason", function()
-    local _, reason = setWindowWrapIndent(win, -2)
+    local ok, reason = setWindowWrapIndent(win, -2)
+    assert.is_nil(ok)
     assert.is_string(reason)
     assert.is_truthy(reason:find("-2", 1, true))
   end)
 
   it("refuses a negative hanging indent, with a reason", function()
-    local _, reason = setWindowWrapHangingIndent(win, -3)
+    local ok, reason = setWindowWrapHangingIndent(win, -3)
+    assert.is_nil(ok)
     assert.is_string(reason)
     assert.is_truthy(reason:find("-3", 1, true))
   end)
 
-  it("keeps accepting a valid indent", function()
-    local _, reason = setWindowWrapIndent(win, 2)
-    assert.is_nil(reason)
-    local _, hangingReason = setWindowWrapHangingIndent(win, 0)
-    assert.is_nil(hangingReason)
+  it("reports success, so a caller can tell the two apart", function()
+    assert.is_true(setWindowWrapIndent(win, 2))
+    assert.is_true(setWindowWrapHangingIndent(win, 0))
   end)
 
-  it("still wraps a line after a negative indent was refused", function()
-    setWindowWrapIndent(win, -2)
-    setWindowWrapHangingIndent(win, -3)
-    setWindowWrap(win, 4)
-    echo(win, "some text that needs to wrap several times over\n")
-    assert.is_true(getLineCount(win) > 1)
+  -- the indent already in force surviving is what tells a refusal apart from
+  -- quietly applying 0
+  it("leaves the previous indent in force when a negative is refused", function()
+    setWindowWrap(win, 20)
+    assert.is_true(setWindowWrapIndent(win, 5))
+    local _, reason = setWindowWrapIndent(win, -2)
+    assert.is_string(reason)
+
+    clearWindow(win)
+    moveCursor(win, 0, 0)
+    echo(win, string.rep("a", 30) .. "\n")
+    assert.equals(string.rep(" ", 5) .. string.rep("a", 15), getLines(win, 0, 1)[1])
   end)
 end)

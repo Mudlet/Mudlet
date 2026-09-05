@@ -237,26 +237,6 @@ private slots:
         QCOMPARE(textIgnoringIndentation(console), qsl("abcdefghijklmnopqrstuvwxyz"));
     }
 
-    // setWindowWrapIndent() refuses a negative indent, but a profile can still
-    // carry one into the console, and there wrapLine()'s own clamp is the only
-    // defence: the insert() that applies the indent takes an unsigned count, so
-    // a negative one asked for a huge allocation and threw std::length_error as
-    // soon as a line wrapped. Setting it on the console rather than through Lua
-    // is what a loaded profile does.
-    void test_aNegativeIndentIndentsByNothing()
-    {
-        auto* console = consoleWithWrapWidth(4);
-        QVERIFY(console);
-        console->setIndentCount(-2);
-        console->setHangingIndentCount(-3);
-
-        echo(qsl("abcdefghijklmnopqrstuvwxyz\\n"));
-
-        QCOMPARE(textIgnoringIndentation(console), qsl("abcdefghijklmnopqrstuvwxyz"));
-        const QString firstLine = console->buffer.line(0);
-        QVERIFY2(!firstLine.startsWith(qsl(" ")), qPrintable(qsl("a negative indent padded the line: '%1'").arg(firstLine)));
-    }
-
     // The spaces the wrapping pads a line out with take the colour of the
     // character they precede. That is only distinguishable from any other
     // character of the line being rewrapped when the line changes colour part
@@ -530,6 +510,23 @@ private slots:
         QVERIFY2(!console->buffer.promptBuffer.at(0), "the prompt flag was not cleared once the command was echoed onto it");
         QCOMPARE(console->buffer.lineBuffer.size(), 2);
         QVERIFY(console->buffer.lineBuffer.constLast().isEmpty());
+    }
+
+    // Declared last: without the clamp this aborts, taking the rest of the run
+    // with it. The Lua setter refuses a negative now, so the indent is written
+    // from C++ to reach wrapLine()'s clamp at all.
+    void test_aNegativeIndentIndentsByNothing()
+    {
+        auto* console = consoleWithWrapWidth(4);
+        QVERIFY(console);
+        console->setIndentCount(-2);
+        console->setHangingIndentCount(-3);
+
+        echo(qsl("abcdefghijklmnopqrstuvwxyz\\n"));
+
+        QCOMPARE(textIgnoringIndentation(console), qsl("abcdefghijklmnopqrstuvwxyz"));
+        const QString firstLine = console->buffer.line(0);
+        QVERIFY2(!firstLine.startsWith(qsl(" ")), qPrintable(qsl("a negative indent padded the line: '%1'").arg(firstLine)));
     }
 
 private:
