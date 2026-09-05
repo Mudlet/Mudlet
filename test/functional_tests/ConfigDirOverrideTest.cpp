@@ -440,8 +440,7 @@ private slots:
     // --- MudletPaths::getMudletPath() before setupConfig() ----------------------
 
     // Engine code asks for paths before the main window has run setupConfig(),
-    // and headless code without one ever doing so. Those calls used to get
-    // paths rooted at an empty string.
+    // and headless code without one ever doing so
     void test_getMudletPathResolvesTheRootItselfBeforeSetupConfig()
     {
         if (portableMarkerPresent()) {

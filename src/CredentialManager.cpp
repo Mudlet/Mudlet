@@ -30,7 +30,6 @@
 #include <QFileInfo>
 #include <QSaveFile>
 #include <QDataStream>
-#include <QProcessEnvironment>
 #include <QRegularExpression>
 #include <QCryptographicHash>
 #include <QStandardPaths>

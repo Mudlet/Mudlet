@@ -488,11 +488,12 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     // Entries below this index were added by outer (nested-feedTriggers) passes
     // and are already part of this pass's snapshot.
     const qsizetype firstNodeAddedThisPass = mRootNodesAddedWhileProcessing.size();
+    const TBigramFilter lineBigrams(data, mSubstringQuestionsOnTheLastLine);
     for (auto trigger : *pinnedNodeList) {
         if (!trigger->isActive()) {
             continue;
         }
-        trigger->match(subject, subjectLength, data, line);
+        trigger->match(subject, subjectLength, data, line, 0, &lineBigrams);
     }
     // A match here can register more triggers, which also get a shot at the
     // current line - so the list grows in front of the loop, and a trigger that
@@ -517,8 +518,9 @@ void TriggerUnit::processDataStream(const QString& data, int line)
             stopSameLineCreationLoop(trigger->sameLineChainId());
             continue;
         }
-        trigger->match(subject, subjectLength, data, line);
+        trigger->match(subject, subjectLength, data, line, 0, &lineBigrams);
     }
+    mSubstringQuestionsOnTheLastLine = lineBigrams.questionsAsked();
 }
 
 void TriggerUnit::compileAll()
