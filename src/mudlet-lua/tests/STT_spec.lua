@@ -229,6 +229,27 @@ describe("stt bridge", function()
       assert.is_nil(ok, "an unknown sensitivity should be refused, not guessed at")
       assert.is_string(err)
     end)
+
+    -- toggle() is the one entry point a keybinding is usually wired to, so its
+    -- refusal has to reach the same place start()'s does: a player mashing a
+    -- key with nothing installed otherwise gets silence.
+    it("refuses to toggle before a model is loaded, and announces why", function()
+      if stt.initialized() then return end
+      local seen
+      local handler = registerAnonymousEventHandler("sysSTTError", function(_, message) seen = message end)
+      finally(function() killAnonymousEventHandler(handler) end)
+
+      local ok, err = stt.toggle()
+      assert.is_nil(ok, "toggling with nothing initialized should refuse rather than start")
+      assert.is_string(err)
+      assert.are.equal(err, seen, "the refusal was returned to the caller but never announced")
+      assert.is_false(stt.listening(), "a refused toggle must leave nothing listening")
+    end)
+
+    it("raises on a vocabulary that is not a table", function()
+      assert.has_error(function() stt.setVocabulary("kill") end)
+      assert.has_error(function() stt.setVocabulary(nil) end)
+    end)
   end)
 
   describe("safe when nothing is set up", function()
@@ -293,6 +314,29 @@ describe("stt bridge", function()
       else
         assert.is_nil(ok, "with no engine there is nothing to give the words to")
       end
+    end)
+
+    -- unloadLibrary() latches the library out so the file can be replaced;
+    -- nothing but reloadLibrary() lifts that latch, so a spec that unloads and
+    -- walks away would leave every later stt spec looking at a machine with no
+    -- engine on it
+    it("unloads the engine library on request and hands it back on reload", function()
+      if stt.initialized() or stt.listening() then return end
+      local hadLibrary = stt.available()
+      finally(function() stt.reloadLibrary() end)
+
+      assert.is_true(stt.unloadLibrary(), "unloading with nothing in use should succeed")
+      if hadLibrary then
+        -- the latch is the whole point: without it the next read-shaped call
+        -- maps the module straight back in and the file the caller meant to
+        -- replace is locked again
+        assert.is_false(stt.available(), "the library was mapped straight back in")
+        assert.is_false(stt.getInfo().available, "getInfo re-probed past the unload latch")
+      end
+
+      local reloaded = stt.reloadLibrary()
+      assert.are.equal(hadLibrary, reloaded, "reloadLibrary did not hand back the library that was there before")
+      assert.are.equal(reloaded, stt.available(), "reloadLibrary reports whether the library is available now")
     end)
   end)
 

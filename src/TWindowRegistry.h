@@ -134,12 +134,11 @@ public:
     void registerCommandLine(const QString& name) { mCommandLines.insert(name); }
 
     // None of these three is identity-checked, unlike labels and sub-consoles:
-    // no widget of these kinds deregisters itself from its own destructor, so
-    // every removal is the view taking the name out of its map at the same
+    // every removal is the view taking a name out of its own map at the same
     // moment, and there is no window in which a stale deregistration could evict
-    // a replacement. A command line does get dropped from the view's map by its
-    // destroyed() handler, but that drops it by widget identity and so only ever
-    // names a name the dying command line still holds.
+    // a replacement. All three do get dropped from the view's map by a destroyed()
+    // handler, but that drops them by widget identity and so only ever names a
+    // name the dying widget still holds.
     void deregisterCommandLine(const QString& name) { mCommandLines.remove(name); }
     bool hasCommandLine(const QString& name) const { return mCommandLines.contains(name); }
 

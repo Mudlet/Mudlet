@@ -57,7 +57,7 @@ SpeechRecognizer* SpeechRecognizerFactory::create(Backend backend, QObject* pare
         return new SherpaRecognizer(parent);
 
     case Backend::Whisper:
-        // Future: return new WhisperRecognizer(parent);
+        // The Whisper backend has no implementation yet
         return nullptr;
 
     case Backend::Platform:
@@ -191,7 +191,7 @@ QString SpeechRecognizerFactory::defaultModelPath(Backend backend)
         return SherpaRecognizer::defaultModelPath();
 
     case Backend::Whisper:
-        // Future: return WhisperRecognizer::defaultModelPath();
+        // The Whisper backend has no implementation yet
         return QString();
 
     case Backend::Platform:

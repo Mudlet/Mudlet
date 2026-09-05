@@ -55,6 +55,7 @@
 #include <QSizePolicy>
 #include <QTextBoundaryFinder>
 #include <QTextCodec>
+#include <QTimer>
 #include <QPainter>
 #include <QVideoWidget>
 
@@ -100,6 +101,11 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
 
     // Load up the spelling dictionary from the system:
     setSystemSpellDictionary(mpHost->getSpellDic());
+    // Reading it costs tens of milliseconds, so it is not read here - but
+    // leaving it for the first spell-check would put that wait in front of the
+    // first word typed, so a queued connection has the event loop do it once
+    // the profile has finished loading:
+    connect(mudlet::self(), &mudlet::signal_profileLoaded, this, &TMainConsole::slot_warmSystemSpellDictionary, Qt::QueuedConnection);
 
     // Load up the spelling dictionary for the profile - needs to handle the
     // absence of files for the first run in a new profile or from an older
@@ -112,24 +118,29 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
 
 TMainConsole::~TMainConsole()
 {
-    // There is one window in which a command line's destroyed() handler is unsafe:
-    // after this console's members - mSubCommandLineMap among them - have been
-    // destroyed, but before ~QObject severs incoming connections. The only command
-    // lines that can be destroyed inside it are the ones QWidget::~QWidget deletes,
-    // i.e. this console's own children, so sweeping those is enough. Command lines
-    // created into a user window belong to a TDockWidget reparented onto the main
-    // window instead, and can only die after ~QObject has already dropped the
-    // connection. Children rather than map entries, because deleteCommandLine() and
-    // resetMainConsole() drop the entry while the widget lives on until its
-    // deferred delete is delivered.
+    // There is one window in which these widgets' destroyed() handlers are unsafe:
+    // after this console's members - the maps they write to among them - have been
+    // destroyed, but before ~QObject severs incoming connections. The only ones that
+    // can be destroyed inside it are the ones QWidget::~QWidget deletes, i.e. this
+    // console's own children, so sweeping those is enough. One created into a user
+    // window belongs to a TDockWidget reparented onto the main window instead, and
+    // can only die after ~QObject has already dropped the connection. Children rather
+    // than map entries, because deleteCommandLine() and resetMainConsole() drop the
+    // entry while the widget lives on until its deferred delete is delivered.
     for (auto commandLine : findChildren<TCommandLine*>()) {
         disconnect(commandLine, &QObject::destroyed, this, nullptr);
     }
+    for (auto scrollBox : findChildren<TScrollBox*>()) {
+        disconnect(scrollBox, &QObject::destroyed, this, nullptr);
+    }
+    for (auto textBox : findChildren<TTextBox*>()) {
+        disconnect(textBox, &QObject::destroyed, this, nullptr);
+    }
 
     // A label and a sub-console take themselves out of the registry from their own
-    // destructor; none of the three kinds here does. A scroll box and a text box never
-    // deregister themselves, and for the command lines that are this console's own
-    // children the handler that would have done it was disconnected just above. A dock
+    // destructor; none of the three kinds here does. For the ones that are this
+    // console's own children the handler that would have done it was disconnected just
+    // above, and the rest die after ~QObject has dropped the connection. A dock
     // widget has no destructor either but needs no sweep: one only ever exists beside a
     // user window's sub-console, and closing the profile closes every sub-console before
     // the console goes, which takes the dock out through TConsole::closeEvent(). Quitting
@@ -425,24 +436,58 @@ void TMainConsole::registerScrollBox(const QString& name, TScrollBox* pScrollBox
 {
     mScrollBoxMap[name] = pScrollBox;
     mpHost->windowRegistry().registerScrollBox(name);
+
+    // A scroll box created into a user window dies as that window's child with
+    // deleteScrollBox() never called, and this map holds no QPointers
+    connect(pScrollBox, &QObject::destroyed, this, [this, pScrollBox]() {
+        deregisterScrollBox(pScrollBox);
+    });
 }
 
-TScrollBox* TMainConsole::deregisterScrollBox(const QString& name)
+void TMainConsole::deregisterScrollBox(TScrollBox* pScrollBox)
 {
-    mpHost->windowRegistry().deregisterScrollBox(name);
-    return mScrollBoxMap.take(name);
+    // This is the only destroyed() connection made from a scroll box to this
+    // console, so severing all of them is severing just that one.
+    disconnect(pScrollBox, &QObject::destroyed, this, nullptr);
+    // By value, not by name: a replacement may already hold the name
+    mScrollBoxMap.removeIf([this, pScrollBox](const auto& it) {
+        if (it.value() != pScrollBox) {
+            return false;
+        }
+        // Quitting destroys every Host before the deferred deletes of the widgets
+        // a user window holds, leaving no registry to take the name out of
+        if (mpHost) {
+            mpHost->windowRegistry().deregisterScrollBox(it.key());
+        }
+        return true;
+    });
 }
 
 void TMainConsole::registerTextBox(const QString& name, TTextBox* pTextBox)
 {
     mTextBoxMap[name] = pTextBox;
     mpHost->windowRegistry().registerTextBox(name);
+
+    // As for a scroll box, and every by-name getter reads this map straight through
+    connect(pTextBox, &QObject::destroyed, this, [this, pTextBox]() {
+        deregisterTextBox(pTextBox);
+    });
 }
 
-TTextBox* TMainConsole::deregisterTextBox(const QString& name)
+void TMainConsole::deregisterTextBox(TTextBox* pTextBox)
 {
-    mpHost->windowRegistry().deregisterTextBox(name);
-    return mTextBoxMap.take(name);
+    // This is the only destroyed() connection made from a text edit to this
+    // console, so severing all of them is severing just that one.
+    disconnect(pTextBox, &QObject::destroyed, this, nullptr);
+    mTextBoxMap.removeIf([this, pTextBox](const auto& it) {
+        if (it.value() != pTextBox) {
+            return false;
+        }
+        if (mpHost) {
+            mpHost->windowRegistry().deregisterTextBox(it.key());
+        }
+        return true;
+    });
 }
 
 void TMainConsole::resetMainConsole()
@@ -483,18 +528,16 @@ void TMainConsole::resetMainConsole()
         label->deleteLater();
     }
 
-    const QStringList scrollBoxNames = mScrollBoxMap.keys();
-    for (const QString& scrollBoxName : scrollBoxNames) {
-        if (auto pScrollBox = deregisterScrollBox(scrollBoxName)) {
-            pScrollBox->deleteLater();
-        }
+    const QList<TScrollBox*> scrollBoxes = mScrollBoxMap.values();
+    for (auto scrollBox : scrollBoxes) {
+        deregisterScrollBox(scrollBox);
+        scrollBox->deleteLater();
     }
 
-    const QStringList textBoxNames = mTextBoxMap.keys();
-    for (const QString& textBoxName : textBoxNames) {
-        if (auto pTextBox = deregisterTextBox(textBoxName)) {
-            pTextBox->deleteLater();
-        }
+    const QList<TTextBox*> textBoxes = mTextBoxMap.values();
+    for (auto textBox : textBoxes) {
+        deregisterTextBox(textBox);
+        textBox->deleteLater();
     }
 }
 
@@ -717,8 +760,9 @@ std::pair<bool, QString> TMainConsole::deleteTextBox(const QString& name)
         return {false, QLatin1String("a text edit cannot have an empty string as its name")};
     }
 
-    auto pTextBox = deregisterTextBox(name);
+    auto pTextBox = mTextBoxMap.value(name);
     if (pTextBox) {
+        deregisterTextBox(pTextBox);
         pTextBox->deleteLater();
 
         TEvent mudletEvent{};
@@ -739,8 +783,9 @@ std::pair<bool, QString> TMainConsole::deleteScrollBox(const QString& name)
         return {false, QLatin1String("a scrollbox cannot have an empty string as its name")};
     }
 
-    auto pScrollBox = deregisterScrollBox(name);
+    auto pScrollBox = mScrollBoxMap.value(name);
     if (pScrollBox) {
+        deregisterScrollBox(pScrollBox);
         // Using deleteLater() rather than delete as it seems a safer option
         // given that this item is likely to be linked to some events and
         // suchlike:
@@ -1813,34 +1858,71 @@ QPair<bool, QString> TMainConsole::removeWordFromSet(const QString& word)
 
 void TMainConsole::setSystemSpellDictionary(const QString& newDict)
 {
-    if (newDict.isEmpty() || mLoadedSystemDictionary == newDict) {
+    if (newDict.isEmpty() || mSystemDictionary == newDict) {
         return;
     }
 
-    mLoadedSystemDictionary = newDict;
-
-    // Everywhere but macOS getMudletPath() probes for "<name>.aff" to settle
-    // which directory wins, so it has to get the same name the files are then
-    // loaded by.
-    const QString path = mudlet::getMudletPath(enums::hunspellDictionaryPath, newDict);
-    QString spell_aff = qsl("%1%2.aff").arg(path, newDict);
-    QString spell_dic = qsl("%1%2.dic").arg(path, newDict);
+    mSystemDictionary = newDict;
 
     if (mpHunspell_system) {
         Hunspell_destroy(mpHunspell_system);
+        mpHunspell_system = nullptr;
+        mHunspellCodecName_system.clear();
     }
+
+    // A dictionary picked in the preferences leaves the handle cold, and only
+    // another profile being opened would emit signal_profileLoaded to warm it
+    // again - so read the new one here instead of in front of the next word
+    // typed. During a profile load the handle is warmed once at the end, after
+    // the profile's own choice of dictionary has been read from its XML.
+    if (!mpHost->mIsProfileLoadingSequence) {
+        QTimer::singleShot(0, this, &TMainConsole::slot_warmSystemSpellDictionary);
+    }
+}
+
+void TMainConsole::slot_warmSystemSpellDictionary()
+{
+    // spellCheck() and spellSuggestWord() do not consult this flag, so the
+    // lazy getter still serves a script in a profile that has spell check off:
+    if (mpHost->mEnableSpellCheck) {
+        getHunspellHandle_system();
+    }
+}
+
+Hunhandle* TMainConsole::getHunspellHandle_system()
+{
+    if (!mpHunspell_system && !mSystemDictionary.isEmpty()) {
+        loadSystemSpellDictionary();
+    }
+    return mpHunspell_system;
+}
+
+const QByteArray& TMainConsole::getHunspellCodecName_system()
+{
+    getHunspellHandle_system();
+    return mHunspellCodecName_system;
+}
+
+void TMainConsole::loadSystemSpellDictionary()
+{
+    // Everywhere but macOS getMudletPath() probes for "<name>.aff" to settle
+    // which directory wins, so it has to get the same name the files are then
+    // loaded by.
+    const QString path = mudlet::getMudletPath(enums::hunspellDictionaryPath, mSystemDictionary);
+    QString spell_aff = qsl("%1%2.aff").arg(path, mSystemDictionary);
+    QString spell_dic = qsl("%1%2.dic").arg(path, mSystemDictionary);
 
 #if defined(Q_OS_WINDOWS)
     // strip non-ASCII characters from the path because hunspell can't handle them
     // when compiled with MinGW 7.3.0
-    mudlet::self()->sanitizeUtf8Path(spell_aff, qsl("%1.aff").arg(newDict));
-    mudlet::self()->sanitizeUtf8Path(spell_dic, qsl("%1.dic").arg(newDict));
+    mudlet::self()->sanitizeUtf8Path(spell_aff, qsl("%1.aff").arg(mSystemDictionary));
+    mudlet::self()->sanitizeUtf8Path(spell_dic, qsl("%1.dic").arg(mSystemDictionary));
 #endif
 
     mpHunspell_system = Hunspell_create(spell_aff.toUtf8().constData(), spell_dic.toUtf8().constData());
     if (mpHunspell_system) {
         mHunspellCodecName_system = QByteArray(Hunspell_get_dic_encoding(mpHunspell_system));
-        qDebug().noquote().nospace() << "TMainConsole::setSystemSpellDictionary(\"" << newDict << "\") INFO - System Hunspell dictionary loaded for profile, it uses a \""
+        qDebug().noquote().nospace() << "TMainConsole::loadSystemSpellDictionary() INFO - System Hunspell dictionary \"" << mSystemDictionary << "\" loaded for profile, it uses a \""
                                      << Hunspell_get_dic_encoding(mpHunspell_system) << "\" encoding...";
     }
 }
@@ -2082,9 +2164,7 @@ bool TMainConsole::saveMap(const QString& location, int saveVersion)
     }
 
     QDataStream out(&file_map);
-    if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-        out.setVersion(mudlet::scmQDataStreamFormat_5_12);
-    }
+    out.setVersion(QDataStream::Qt_5_12);
 
     bool saved = mpHost->mpMap->serialize(out, saveVersion);
     if (saved && !file_map.commit()) {

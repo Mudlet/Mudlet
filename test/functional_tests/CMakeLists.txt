@@ -37,12 +37,14 @@ set(WINDOW_GROUP_TEST_SOURCES
     CopyAsImageTest.cpp
     DebugConsoleFilterTest.cpp
     FrontendRefreshSeamTest.cpp
+    CommandLineKeyHandlingTest.cpp
     DetachedWindowMenuShortcutsTest.cpp
     FramePacingTest.cpp
     GlyphOverflowTest.cpp
     HyperlinkModelSplitTest.cpp
     LabelAnchorInteractionTest.cpp
     LabelMovieRefusalTest.cpp
+    CaretNavigationTest.cpp
     MainConsoleSelectionTest.cpp
     TabDetachThresholdTest.cpp
     DetachedWindowDiscordButtonTest.cpp
@@ -58,6 +60,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     PastedLinkStateTest.cpp
     ProfileSwitchMiniconsoleTest.cpp
     RecolouredLineCacheTest.cpp
+    TextEditAccessibleInterfaceTest.cpp
     TrackedLinkTrimTest.cpp
     ProfileSwitchShortcutTest.cpp
     SubCommandLineLifetimeTest.cpp
@@ -69,6 +72,7 @@ set(WINDOW_GROUP_TEST_SOURCES
 
 # Profiles: their config dir, their folders, and loading, saving and deleting them
 set(PROFILE_GROUP_TEST_SOURCES
+    CloseDuringProfileLoadTest.cpp
     ConfigDirOverrideTest.cpp
     ConnectionDialogCrashTest.cpp
     ConnectionDialogFocusTest.cpp
@@ -109,6 +113,8 @@ set(TELNET_GROUP_TEST_SOURCES
 
 # Triggers and the other scriptable units, and what a running script does to them
 set(TRIGGER_GROUP_TEST_SOURCES
+    CaptureGroupParkingTest.cpp
+    BigramFilterTest.cpp
     CorruptTriggerPatternsTest.cpp
     MultilineTriggerReentrancyTest.cpp
     SetScriptCallbackTest.cpp
@@ -124,6 +130,7 @@ set(EDITOR_GROUP_TEST_SOURCES
     EditorBannerViewSwitchTest.cpp
     EditorWindowPositionTest.cpp
     ScriptEventHandlerLifetimeTest.cpp
+    TriggerEditorDisclosureTest.cpp
     TriggerEditorTest.cpp
     VariableEditorWriteBackTest.cpp
 )
@@ -153,6 +160,7 @@ set(PACKAGE_GROUP_TEST_SOURCES
     DualPackageModuleTest.cpp
     ModuleManagerListingTest.cpp
     ModuleSaveTeardownTest.cpp
+    PackageExporterDialogTest.cpp
     PackageFontsOnRefusedArchiveTest.cpp
     PackageManagerRemovalTest.cpp
     PackageRemovalSaveTeardownTest.cpp
@@ -492,6 +500,10 @@ set_tests_properties(SettingsAppearanceTest
 # adds up to a couple of minutes across the cases, so a shorter timeout would
 # turn a readable failure into a silent ctest kill
 set_tests_properties(PackageRepositoryDownloadTest PROPERTIES TIMEOUT 300)
+
+# PackageExporterDialogTest creates a fresh profile per test method and several of
+# its methods export and then install a package, so it needs a longer timeout
+set_tests_properties(PackageExporterDialogTest PROPERTIES TIMEOUT 300)
 
 # HostWidgetDecouplingTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(HostWidgetDecouplingTest PROPERTIES TIMEOUT 300)
