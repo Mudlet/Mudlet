@@ -5553,6 +5553,12 @@ void Host::setFocusOnHostActiveCommandLine()
 
     // Lambda to set focus on command line
     auto setCommandLineFocus = [this]() {
+        // The view can be gone by the time this runs while the Host lives on
+        if (!mpConsole) {
+            mFocusTimerRunning = false;
+            return;
+        }
+
         auto pCommandLine = activeCommandLine();
         TCommandLine* targetCommandLine = nullptr;
 
@@ -5574,16 +5580,20 @@ void Host::setFocusOnHostActiveCommandLine()
             targetCommandLine->setFocus(Qt::OtherFocusReason);
 
             // For Steam Deck and other environments where focus might be unreliable,
-            // add additional focus attempts with slight delays
-            QTimer::singleShot(10ms, this, [targetCommandLine]() {
-                if (targetCommandLine && !targetCommandLine->hasFocus()) {
-                    targetCommandLine->setFocus(Qt::OtherFocusReason);
+            // add additional focus attempts with slight delays. The command line
+            // can be destroyed before they fire - a user window closing, or the
+            // view going down while the Host stays - and a raw pointer would then
+            // be read off freed memory, so they hold it by QPointer
+            const QPointer<TCommandLine> pTarget(targetCommandLine);
+            QTimer::singleShot(10ms, this, [pTarget]() {
+                if (pTarget && !pTarget->hasFocus()) {
+                    pTarget->setFocus(Qt::OtherFocusReason);
                 }
             });
 
-            QTimer::singleShot(50ms, this, [targetCommandLine]() {
-                if (targetCommandLine && !targetCommandLine->hasFocus()) {
-                    targetCommandLine->setFocus(Qt::OtherFocusReason);
+            QTimer::singleShot(50ms, this, [pTarget]() {
+                if (pTarget && !pTarget->hasFocus()) {
+                    pTarget->setFocus(Qt::OtherFocusReason);
                 }
             });
         }
