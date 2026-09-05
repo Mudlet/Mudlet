@@ -77,7 +77,7 @@ public:
         // Unconditional: the endpoint rules are this engine's own, baked in at
         // creation. setSensitivity() returning false here means the reload it
         // needed failed, not that tuning is beyond it.
-        answer.sensitivity = true;
+        answer.sensitivityTuning = true;
         answer.onDevice = true;
         return answer;
     }

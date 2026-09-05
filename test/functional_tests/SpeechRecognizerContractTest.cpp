@@ -1119,12 +1119,12 @@ private slots:
     void anEngineSaysWhetherSensitivityCanBeTunedAtAll()
     {
         SherpaRecognizer sherpa;
-        QVERIFY2(sherpa.supportsSensitivity(),
+        QVERIFY2(sherpa.supportsSensitivityTuning(),
                  "sherpa-onnx bakes its own endpoint rules, so a refusal from it is this attempt failing, not a limit");
 
 #if defined(Q_OS_MACOS)
         AppleSpeechRecognizer apple;
-        QVERIFY2(!apple.supportsSensitivity(),
+        QVERIFY2(!apple.supportsSensitivityTuning(),
                  "the built-in macOS backend decides its own endpointing and exposes nothing to tune");
 #endif
     }

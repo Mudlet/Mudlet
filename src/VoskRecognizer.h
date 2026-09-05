@@ -83,7 +83,7 @@ public:
         // endpointer symbol cannot be tuned at all, and setEndpointerMode()
         // refuses rather than remembering a request the engine never got. That
         // is a property of the installed library, not of the attempt.
-        answer.sensitivity = (s_vosk_recognizer_set_endpointer_mode != nullptr);
+        answer.sensitivityTuning = (s_vosk_recognizer_set_endpointer_mode != nullptr);
         answer.onDevice = true;
         return answer;
     }

@@ -692,8 +692,8 @@ int TLuaInterpreter::sttGetInfo(lua_State* L)
     lua_pushstring(L, "words");
     lua_pushboolean(L, pRecognizer && pRecognizer->supportsWordResults());
     lua_settable(L, -3);
-    lua_pushstring(L, "sensitivity");
-    lua_pushboolean(L, pRecognizer && pRecognizer->supportsSensitivity());
+    lua_pushstring(L, "sensitivityTuning");
+    lua_pushboolean(L, pRecognizer && pRecognizer->supportsSensitivityTuning());
     lua_settable(L, -3);
     lua_pushstring(L, "onDevice");
     lua_pushboolean(L, pRecognizer && pRecognizer->onDevice());
@@ -886,7 +886,7 @@ int TLuaInterpreter::sttSetSensitivity(lua_State* L)
     // asking, which is right for an engine that never can and wrong for one
     // whose reload happened to fail. Only the engine knows which it is, and
     // only capabilities() can say so before the attempt.
-    if (!pRecognizer->supportsSensitivity()) {
+    if (!pRecognizer->supportsSensitivityTuning()) {
         // Names the engine rather than blaming "this build of the speech
         // engine": for an older libvosk without the endpointer symbol that
         // was true, but the built-in macOS backend can never tune

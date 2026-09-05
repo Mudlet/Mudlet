@@ -170,13 +170,16 @@ public:
         bool grammar = false;
         // Results carry per-word confidence and timing (wordsResult signal)
         bool wordResults = false;
-        // End-of-speech detection can be tuned by setSensitivity(). False is
+        // End-of-speech detection can be tuned by setSensitivity(). Named apart
+        // from getInfo()'s top-level "sensitivity", which is the mode string
+        // currently in force - one says which setting, the other whether the
+        // setting can be changed at all. False is
         // not "this attempt failed" but "this engine never can" - the built-in
         // macOS backend decides its own endpointing, and a libvosk without the
         // endpointer symbol cannot be reached. Without this, a caller could
         // not tell those apart from an engine that can tune and failed once,
         // and would stop asking about something merely transient.
-        bool sensitivity = false;
+        bool sensitivityTuning = false;
         // Audio is processed locally. False is the honest default: a backend
         // that has not said otherwise has not promised recordings stay on this
         // machine, and inheriting that promise by omission is the one way this
@@ -194,7 +197,7 @@ public:
     bool supportsBiasing() const { return capabilities().biasing; }
     bool supportsGrammar() const { return capabilities().grammar; }
     bool supportsWordResults() const { return capabilities().wordResults; }
-    bool supportsSensitivity() const { return capabilities().sensitivity; }
+    bool supportsSensitivityTuning() const { return capabilities().sensitivityTuning; }
     bool onDevice() const { return capabilities().onDevice; }
 
     // What became of a vocabulary offered to the engine. Three outcomes, not
