@@ -233,10 +233,12 @@ capability.
    still raises the event, or a consumer written against events alone cannot
    tell a missing engine from a quiet microphone. A refusal caused by the
    script's own arguments is returned but not announced, since one package's
-   mistake is not news for every other package on the profile - `stt.init()`
-   given a path that does not exist, or given any path at all to a backend
-   that loads none, are both of that kind, and a package offering a saved
-   setting on every profile load would otherwise report one on every start. So is a limit
+   mistake is not news for every other package on the profile: a malformed
+   argument like `setSilenceTimeout(-1)`, or a path given to a backend that
+   loads no models at all. A path that simply is not there is *not* of that
+   kind and does speak - the model may have been deleted or the drive left
+   unmounted since a package saved it, which is the world changing rather than
+   the caller getting its own call wrong. So is a limit
    the engine can never lift, which is a capability answer of rule 3's kind
    rather than a fault: `setSensitivity` on a backend whose
    `capabilities.sensitivityTuning` is false. Announced, it would fire on every

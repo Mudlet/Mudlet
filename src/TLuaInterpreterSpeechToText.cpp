@@ -352,14 +352,16 @@ int TLuaInterpreter::sttInit(lua_State* L)
     }
 
     if (!useModelLessBackend && !QDir(modelPath).exists()) {
-        // Returned, not raised. A path that is not there is the caller's own
-        // argument, which is rule 2's first carve-out - and it is the same
-        // shape as the model-less refusal below, which does not raise either:
-        // a package holding a saved path whose model has since been removed
-        // offers it again on every profile load, so announcing it puts a
-        // recurring error in front of every other package on the profile over
-        // one package's stale setting.
-        return warnArgumentValue(L, funcName, qsl("model path does not exist: %1").arg(modelPath));
+        // Raised as well as returned, and deliberately not treated as rule 2's
+        // argument carve-out. A malformed argument - setSilenceTimeout(-1) - is
+        // the script getting its own call wrong, and STT_spec pins that as
+        // silent. A path that is not there is usually the world changing under
+        // a package that was right when it saved it: the model was deleted, or
+        // the drive is not mounted. That is worth telling a consumer driving
+        // the bridge from events, and STT_spec pins this one as announced.
+        const QString message = qsl("model path does not exist: %1").arg(modelPath);
+        reportSpeechRefusal(message);
+        return warnArgumentValue(L, funcName, message);
     }
 
     pMudlet->initSpeechRecognition(backend);
