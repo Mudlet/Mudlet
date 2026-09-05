@@ -238,9 +238,11 @@ describe("Tests the tags MXP handles", function()
     it("answers a VERSION tag with the client name and its version", function()
       local sent = replyTo("<VERSION>")
       assert.are.equal(1, #sent, table.concat(sent, " | "))
-      local version = sent[1]:match("^\27%[1z<VERSION MXP=1%.0 CLIENT=Mudlet VERSION=(.+)>$")
+      -- nothing but the version may follow: once a style has been named (the
+      -- last spec of this file) every later answer carries it, and this must
+      -- notice if that ever runs first
+      local version = sent[1]:match("^\27%[1z<VERSION MXP=1%.0 CLIENT=Mudlet VERSION=([^%s>]+)>$")
       assert.is_not_nil(version, sent[1])
-      assert.is_true(#version > 0)
     end)
 
     it("lists what it supports for a SUPPORT tag that names nothing", function()
@@ -284,7 +286,10 @@ describe("Tests the tags MXP handles", function()
     end)
 
     -- Last of the file: an MXP style is set for good, and a game that asked for
-    -- one gets it back on every later answer.
+    -- one gets it back on every later answer. Nothing takes it back off - the
+    -- parser drops an empty attribute, so <VERSION ""> is just <VERSION> - and
+    -- it is only ever read back into a VERSION answer, which only this file asks
+    -- for.
     it("answers nothing to a VERSION tag that names a style, and carries it afterwards", function()
       assert.are.equal(0, #replyTo("<VERSION mxpTagsSpecStyle>"))
 
