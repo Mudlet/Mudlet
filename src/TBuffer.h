@@ -43,7 +43,6 @@
 #include <QVarLengthArray>
 #include <QVector>
 
-#include <cstring>
 #include <deque>
 #include <memory>
 #include <string>
@@ -76,22 +75,6 @@ public:
     }
 };
 
-// Only two RGB colors compare as a plain comparison of the front of the object,
-// which can be inlined here rather than made as a call into Qt. HSV, HSL and
-// ExtendedRgb all compare approximately - HSV counts hue 0 and hue 36000 as the
-// same red - so those are left to QColor::operator==(). Every color a trigger
-// actually sees is RGB, which makes the fast path the predicted one.
-constexpr size_t COLOR_COMPARED_BYTES = sizeof(QColor::Spec) + 5 * sizeof(ushort);
-static_assert(sizeof(QColor) == 16 && COLOR_COMPARED_BYTES == 14, "QColor is no longer a spec word followed by five component words - use QColor::operator==() instead of sameColor()");
-
-inline bool sameColor(const QColor& left, const QColor& right)
-{
-    if (Q_LIKELY(left.spec() == QColor::Rgb && right.spec() == QColor::Rgb)) {
-        return std::memcmp(&left, &right, COLOR_COMPARED_BYTES) == 0;
-    }
-    return left == right;
-}
-
 class TChar
 {
     friend class TBuffer;
@@ -114,9 +97,9 @@ public:
         UnderlineWavy = 0x400000,     // 0000 0000 0100 0000 0000 0000 0000 0000
         UnderlineDotted = 0x800000,   // 0000 0000 1000 0000 0000 0000 0000 0000
         UnderlineDashed = 0x1000000,  // 0000 0001 0000 0000 0000 0000 0000 0000
-        // NOT a replacement for TCHAR_INVERSE, that is now covered by the
-        // separate isSelected bool but they must be EX-ORed at the point of
-        // painting the Character
+        // NOT a replacement for TCHAR_INVERSE, that is now the Selected flag
+        // below, but they must be EX-ORed at the point of painting the
+        // Character
         Reverse = 0x20,               // 0000 0000 0000 0000 0000 0000 0010 0000
         // Flashing less than 150 times a minute:
         Blink = 0x40,                 // 0000 0000 0000 0000 0000 0000 0100 0000
@@ -155,7 +138,11 @@ public:
         // and has been given a highlight to indicate that:
         Found = 0x100000,             // 0000 0000 0001 0000 0000 0000 0000 0000
         // Replaces TCHAR_ECHO 16
-        Echo = 0x200000               // 0000 0000 0010 0000 0000 0000 0000 0000
+        Echo = 0x200000,              // 0000 0000 0010 0000 0000 0000 0000 0000
+        // Part of the text selection in the console showing it. Not a display
+        // attribute (it is outside TestMask) and it does not survive copying
+        // the character - see the copy constructor:
+        Selected = 0x2000000          // 0000 0010 0000 0000 0000 0000 0000 0000
     };
     // clang-format on
     Q_DECLARE_FLAGS(AttributeFlags, AttributeFlag)
@@ -185,25 +172,29 @@ public:
     bool operator==(const TChar&);
     void setColors(const QColor& newForeGroundColor, const QColor& newBackGroundColor)
     {
-        mFgColor = newForeGroundColor;
-        mBgColor = newBackGroundColor;
+        mFgColor = newForeGroundColor.rgba();
+        mBgColor = newBackGroundColor.rgba();
     }
     // Only considers the flags within TestMask - so not Echo or Found:
     void setAllDisplayAttributes(const AttributeFlags newDisplayAttributes) { mFlags = (mFlags & ~TestMask) | (newDisplayAttributes & TestMask); }
-    void setForeground(const QColor& newColor) { mFgColor = newColor; }
-    void setBackground(const QColor& newColor) { mBgColor = newColor; }
+    void setForeground(const QColor& newColor) { mFgColor = newColor.rgba(); }
+    void setBackground(const QColor& newColor) { mBgColor = newColor.rgba(); }
     void setTextFormat(const QColor& newFgColor, const QColor& newBgColor, const AttributeFlags newDisplayAttributes)
     {
         setColors(newFgColor, newBgColor);
         setAllDisplayAttributes(newDisplayAttributes);
     }
 
-    const QColor& foreground() const { return mFgColor; }
-    const QColor& background() const { return mBgColor; }
+    QColor foreground() const { return QColor::fromRgba(mFgColor); }
+    QColor background() const { return QColor::fromRgba(mBgColor); }
+    // The stored form of the colors, for comparing against another color
+    // without building a QColor to do it:
+    QRgb foregroundRgba() const { return mFgColor; }
+    QRgb backgroundRgba() const { return mBgColor; }
     AttributeFlags allDisplayAttributes() const { return mFlags & TestMask; }
-    void select() { mIsSelected = true; }
-    void deselect() { mIsSelected = false; }
-    bool isSelected() const { return mIsSelected; }
+    void select() { mFlags |= Selected; }
+    void deselect() { mFlags &= ~Selected; }
+    bool isSelected() const { return mFlags & Selected; }
     int linkIndex() const { return mLinkIndex; }
     bool isBold() const { return mFlags & Bold; }
     bool isItalic() const { return mFlags & Italic; }
@@ -302,11 +293,12 @@ public:
     }
 
 private:
-    QColor mFgColor;
-    QColor mBgColor;
+    // Every line of scrollback holds one of these per character, so the colors
+    // are kept as ARGB values rather than as a pair of 16-byte QColors. The
+    // colors the text pipeline sees are all 8-bit RGB, which QRgb holds exactly.
+    QRgb mFgColor = 0;
+    QRgb mBgColor = 0;
     AttributeFlags mFlags = None;
-    // Kept as a separate flag because it must often be handled separately
-    bool mIsSelected = false;
     int mLinkIndex = 0;
     // Note: Decoration colors (underline/overline/strikeout) are stored in TLinkStore
     // for memory efficiency - they are looked up via linkIndex() at render time.
@@ -315,6 +307,7 @@ Q_DECLARE_OPERATORS_FOR_FLAGS(TChar::AttributeFlags)
 // std::vector only relocates by moving if the move cannot throw; otherwise it
 // falls back to the copy-constructor, which deselects.
 static_assert(std::is_nothrow_move_constructible_v<TChar>);
+static_assert(sizeof(TChar) == 16, "TChar has grown - every character of every buffered line is one of these");
 
 
 class TBuffer
