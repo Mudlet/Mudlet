@@ -156,6 +156,7 @@ private:
         // to be put back down before the next one runs.
         mp2dMap->mLabelHighlighted = false;
         mp2dMap->mMoveLabel = false;
+        mp2dMap->mMultiSelection = false;
         area()->set2DMapZoom(kZoom);
         renderFrame();
         QCOMPARE(mp2dMap->mMapViewOnly, viewOnly);
@@ -217,6 +218,12 @@ private:
     }
 
     void releaseAt(const QPoint& position, const Qt::KeyboardModifiers modifiers = Qt::NoModifier) const { sendMouse(QEvent::MouseButtonRelease, position, Qt::LeftButton, Qt::NoButton, modifiers); }
+
+    void clickAt(const QPoint& position, const Qt::KeyboardModifiers modifiers = Qt::NoModifier) const
+    {
+        pressAt(position, modifiers);
+        releaseAt(position, modifiers);
+    }
 
 private slots:
     void initTestCase()
@@ -380,8 +387,7 @@ private slots:
         buildMap();
         showMapper(false);
 
-        pressAt(pointUnitsFromCentre(1, 0));
-        releaseAt(pointUnitsFromCentre(1, 0));
+        clickAt(pointUnitsFromCentre(1, 0));
 
         QCOMPARE(mp2dMap->mMultiSelectionSet, QSet<int>{kEastRoomId});
     }
@@ -419,12 +425,10 @@ private slots:
         buildMap();
         showMapper(false);
 
-        pressAt(pointUnitsFromCentre(-1, 0));
-        releaseAt(pointUnitsFromCentre(-1, 0));
+        clickAt(pointUnitsFromCentre(-1, 0));
         QCOMPARE(mp2dMap->mMultiSelectionSet, QSet<int>{kWestRoomId});
 
-        pressAt(pointUnitsFromCentre(1, 0), Qt::ShiftModifier);
-        releaseAt(pointUnitsFromCentre(1, 0), Qt::ShiftModifier);
+        clickAt(pointUnitsFromCentre(1, 0), Qt::ShiftModifier);
 
         const QSet<int> expected{kWestRoomId, kEastRoomId};
         QCOMPARE(mp2dMap->mMultiSelectionSet, expected);
@@ -466,11 +470,11 @@ private slots:
         const QSizeF clickSize(40, 20);
         const int labelId = addLabel(where, clickSize);
 
-        pressAt(pointOnLabel(where, clickSize));
+        clickAt(pointOnLabel(where, clickSize));
         QVERIFY2(mp2dMap->mLabelHighlighted, "clicking a label did not pick it up");
         QVERIFY(area()->mMapLabels.value(labelId).highlight);
 
-        pressAt(pointOnLabel(where, clickSize));
+        clickAt(pointOnLabel(where, clickSize));
         QVERIFY2(!mp2dMap->mLabelHighlighted, "clicking a picked up label did not put it down");
         QVERIFY(!area()->mMapLabels.value(labelId).highlight);
     }
@@ -484,10 +488,10 @@ private slots:
         const QSizeF clickSize(40, 20);
         addLabel(where, clickSize);
 
-        pressAt(pointOnLabel(where, clickSize));
+        clickAt(pointOnLabel(where, clickSize));
         QVERIFY(mp2dMap->mLabelHighlighted);
 
-        pressAt(pointUnitsFromCentre(-3, -3));
+        clickAt(pointUnitsFromCentre(-3, -3));
         QVERIFY2(!mp2dMap->mLabelHighlighted, "a click away from the label left it picked up");
     }
 
@@ -500,7 +504,7 @@ private slots:
         const QSizeF clickSize(40, 20);
         const int labelId = addLabel(where, clickSize);
 
-        pressAt(pointOnLabel(QVector3D(where.x(), where.y(), 0), clickSize));
+        clickAt(pointOnLabel(QVector3D(where.x(), where.y(), 0), clickSize));
 
         QVERIFY2(!mp2dMap->mLabelHighlighted, "a label a level up was picked up");
         QVERIFY(!area()->mMapLabels.value(labelId).highlight);
@@ -515,7 +519,7 @@ private slots:
         const QSizeF clickSize(40, 20);
         const int labelId = addLabel(where, clickSize);
 
-        pressAt(pointOnLabel(where, clickSize));
+        clickAt(pointOnLabel(where, clickSize));
 
         QVERIFY2(!mp2dMap->mLabelHighlighted, "a label was picked up while the map was locked for viewing");
         QVERIFY(!area()->mMapLabels.value(labelId).highlight);
