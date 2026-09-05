@@ -31,13 +31,11 @@
 #include "TConsoleModel.h"
 #include "TPrintSink.h"
 
-#include <QDataStream>
 #include <QElapsedTimer>
 #include <QFont>
 #include <QIcon>
 #include <QPixmap>
 #include <QPointer>
-#include <QSaveFile>
 #include <QWidget>
 
 #include <hunspell/hunspell.h>
@@ -420,9 +418,6 @@ public:
     QScrollBar* mpHScrollBar = nullptr;
 
     QElapsedTimer mProcessingTimer;
-    bool mRecordReplay = false;
-    QSaveFile mReplayFile;
-    QDataStream mReplayStream;
 
     bool mTriggerEngineMode = false;
 

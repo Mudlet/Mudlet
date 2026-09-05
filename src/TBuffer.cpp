@@ -2275,7 +2275,7 @@ void TBuffer::startServerWrapFlushTimer()
             mpHost->mpConsole->mTriggerEngineMode = true;
             flushPendingServerWrapJoin();
             mpHost->mpConsole->mTriggerEngineMode = false;
-            mpHost->mpConsole->finalize();
+            mpHost->finalizeMainConsole();
         });
     }
     mpServerWrapFlushTimer->start();
@@ -2377,7 +2377,7 @@ void TBuffer::processMxpWatchdogCallback()
                 }
                 commitLine('\r', unusedBufferPosition);
                 hostGuard->mMxpProcessor.getMxpTagBuilder().reset();
-                hostGuard->mpConsole->finalize();
+                hostGuard->finalizeMainConsole();
             });
         }
         mWatchdogPhase = WatchdogPhase::None;

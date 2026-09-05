@@ -42,6 +42,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     FramePacingTest.cpp
     GlyphOverflowTest.cpp
     HyperlinkModelSplitTest.cpp
+    HostConsolePrintTest.cpp
     LabelAnchorInteractionTest.cpp
     LabelMovieRefusalTest.cpp
     CaretNavigationTest.cpp

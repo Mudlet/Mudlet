@@ -32,10 +32,12 @@
 #include <winsock2.h>
 #endif
 
+#include <QDataStream>
 #include <QElapsedTimer>
 #include <QHostAddress>
 #include <QHostInfo>
 #include <QPointer>
+#include <QSaveFile>
 #include <QScopeGuard>
 #include <QStringList>
 #if defined(QT_NO_SSL)
@@ -204,7 +206,11 @@ public:
     void set_USE_IRE_DRIVER_BUGFIX(bool b) { mUSE_IRE_DRIVER_BUGFIX = b; }
     void cacheHostSettings();
     void setDontReconnect(bool b) { mDontReconnect = b; }
-    void recordReplay();
+    bool recordingReplay() const { return mRecordReplay; }
+    bool startReplayRecording(const QString& fileName);
+    bool stopReplayRecording();
+    QString replayRecordingFileName() const { return mReplayFile.fileName(); }
+    QString replayRecordingErrorString() const { return mReplayFile.errorString(); }
     bool loadReplay(const QString&, QString* pErrMsg = nullptr);
     void loadReplayChunk();
     bool isReplaying() { return loadingReplay; }
@@ -560,6 +566,9 @@ private:
     QElapsedTimer mConnectionTimer;
     qint32 mRecordLastChunkMSecTimeOffset = 0;
     int mRecordingChunkCount = 0;
+    QSaveFile mReplayFile;
+    QDataStream mReplayStream;
+    bool mRecordReplay = false;
     int mCycleCountMTTS = 0;
     QSet<QString> newEnvironVariablesSent;
     bool mReplayHasFaultyFormat = false;
