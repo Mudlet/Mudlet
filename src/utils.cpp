@@ -64,9 +64,6 @@ bool utils::unzip(const QString& archivePath, const QString& destination, const 
         if (!zip_stat_index(archive, static_cast<zip_uint64_t>(i), 0, &zs)) {
             const QString entryInArchive(zs.name);
             const QString pathInArchive(entryInArchive.section(qsl("/"), 0, -2));
-            // TODO: We are supposed to validate the fields (except the
-            // "valid" one itself) in zs before using them:
-            // i.e. check that zs.name is valid ( zs.valid & ZIP_STAT_NAME )
             if (entryInArchive.endsWith(QLatin1Char('/'))) {
                 if (!directoriesNeededMap.contains(pathInArchive)) {
                     directoriesNeededMap.insert(pathInArchive, pathInArchive);
@@ -99,7 +96,6 @@ bool utils::unzip(const QString& archivePath, const QString& destination, const 
         zip_stat_index(archive, static_cast<zip_uint64_t>(i), 0, &zs);
         const QString entryInArchive(zs.name);
         if (!entryInArchive.endsWith(QLatin1Char('/'))) {
-            // TODO: check that zs.size is valid ( zs.valid & ZIP_STAT_SIZE )
             zf = zip_fopen_index(archive, static_cast<zip_uint64_t>(i), 0);
             if (!zf) {
                 zip_close(archive);
