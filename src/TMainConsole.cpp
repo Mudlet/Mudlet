@@ -2352,9 +2352,12 @@ void TMainConsole::showPackageDownloadProgress(const QString& title, const QStri
     // reconnect re-sends Client.GUI). QProgressDialog::close() emits canceled(),
     // so closing the superseded dialog while it is still wired to
     // slot_cancelPackageDownload() would abort the download this new dialog is
-    // about to track; detach it before closing.
+    // about to track; detach that connection before closing. Only that one: a
+    // wildcard disconnect() also severs the destroyed() hook Qt's style sheet
+    // support uses to evict a widget from its caches, so the closed dialog stays
+    // cached and the next setAppStyleSheet() walks a freed widget.
     if (mpPackageDownloadProgressDialog) {
-        mpPackageDownloadProgressDialog->disconnect();
+        disconnect(mpPackageDownloadProgressDialog, &QProgressDialog::canceled, &pHost->mTelnet, &cTelnet::slot_cancelPackageDownload);
         mpPackageDownloadProgressDialog->close();
     }
     // placeholder range; reset by the first download-progress update

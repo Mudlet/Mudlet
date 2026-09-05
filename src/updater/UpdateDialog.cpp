@@ -437,7 +437,8 @@ void UpdateDialog::resetUi()
                   << mUi->checkAutoDownload << mUi->buttonCancel << mUi->buttonCancelLoading << mUi->buttonConfirm << mUi->buttonInstall;
     for (auto* widget : hiddenWidgets) {
         widget->hide();
-        widget->disconnect();
+        // Not a wildcard disconnect(): that also severs Qt's style sheet destroyed() hook
+        widget->disconnect(this);
     }
     // Re-establish the changelog link handler broken by disconnect() above
     connect(mUi->labelChangelog, &QTextBrowser::anchorClicked, this, &UpdateDialog::onLinkActivated);
