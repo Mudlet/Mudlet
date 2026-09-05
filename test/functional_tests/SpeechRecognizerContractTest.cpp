@@ -135,6 +135,78 @@ protected:
 // Starting from a test - Vosk reaches it only behind a real microphone
 // permission prompt - so the base class's rules for that state need a backend
 // whose start parks there on demand.
+// Claims biasing and overrides nothing, which is the wiring mistake the base's
+// default applyVocabulary() has to answer for rather than fail silently.
+class ClaimsBiasingButImplementsNothingRecognizer : public SpeechRecognizer
+{
+    Q_OBJECT
+
+public:
+    Capabilities capabilities() const override
+    {
+        Capabilities answer;
+        answer.biasing = true;
+        return answer;
+    }
+    bool initialize(const QString&) override { return true; }
+    QString currentLanguage() const override { return QString(); }
+    bool setLanguage(const QString&) override { return true; }
+    QString backendName() const override { return qsl("ClaimsBiasingStub"); }
+    QString backendVersion() const override { return qsl("1.0"); }
+    bool setSensitivity(Sensitivity) override { return true; }
+    Sensitivity sensitivity() const override { return Sensitivity::Default; }
+
+protected:
+    void doStartListening() override {}
+    void doStopListening() override {}
+    void doCancel() override {}
+};
+
+// applyVocabulary() re-enters setVocabulary() once, standing in for the Lua
+// handler that does it for real: sherpa reloads its model to apply words, the
+// reload calls setState(), and setState() dispatches handlers inline.
+class ReentrantVocabularyRecognizer : public SpeechRecognizer
+{
+    Q_OBJECT
+
+public:
+    Capabilities capabilities() const override
+    {
+        Capabilities answer;
+        answer.biasing = true;
+        return answer;
+    }
+    bool initialize(const QString&) override { return true; }
+    QString currentLanguage() const override { return QString(); }
+    bool setLanguage(const QString&) override { return true; }
+    QString backendName() const override { return qsl("ReentrantStub"); }
+    QString backendVersion() const override { return qsl("1.0"); }
+    bool setSensitivity(Sensitivity) override { return true; }
+    Sensitivity sensitivity() const override { return Sensitivity::Default; }
+
+    QStringList mInnerWords;
+    int mApplyCalls = 0;
+
+protected:
+    VocabularyResult applyVocabulary(const QStringList& words) override
+    {
+        ++mApplyCalls;
+        if (!mHasReentered && !mInnerWords.isEmpty()) {
+            mHasReentered = true;
+            // The inner offer fails; the outer one is about to succeed
+            setVocabulary(mInnerWords);
+            return VocabularyResult::Applied;
+        }
+        return VocabularyResult::Failed;
+    }
+    void doStartListening() override {}
+    void doStopListening() override {}
+    void doCancel() override {}
+
+private:
+    bool mHasReentered = false;
+};
+
 class PendingStartStubRecognizer : public SpeechRecognizer
 {
 public:
@@ -1153,6 +1225,56 @@ private slots:
         QCOMPARE(stateChanges.count(), 1);
         recognizer.setState(SpeechRecognizer::State::Listening);
         QCOMPARE(stateChanges.count(), 1);
+    }
+
+    // usableHotwords() drops what sherpa's parser would throw on, and a list
+    // that is entirely such entries leaves nothing to bias with. Reloading the
+    // decoder for it and answering Applied told a package the engine had taken
+    // words it had not, and that boolean is what packages read to decide
+    // whether to keep correcting results themselves.
+    void aVocabularyLeftEmptyByFilteringIsNotReportedAsApplied()
+    {
+        QStringList rejected;
+        const QStringList usable = SherpaRecognizer::usableHotwords({qsl(":1.5"), qsl("#2"), QString()}, &rejected);
+
+        QCOMPARE(usable.count(), 0);
+        QCOMPARE(rejected.count(), 3);
+    }
+
+    // A backend that claims biasing and never implements applyVocabulary()
+    // reaches the base's default. The contract says every Failed explains
+    // itself; silence here reaches Lua as false, which stt.setVocabulary
+    // documents to the player as "this backend cannot use vocabulary" - a
+    // wiring mistake wearing the words of a deliberate capability answer.
+    void aBackendClaimingBiasingWithNoImplementationSaysSo()
+    {
+        ClaimsBiasingButImplementsNothingRecognizer recognizer;
+        QSignalSpy errors(&recognizer, &SpeechRecognizer::errorOccurred);
+        QVERIFY(errors.isValid());
+
+        QCOMPARE(recognizer.setVocabulary({qsl("aardwolf")}), SpeechRecognizer::VocabularyResult::Failed);
+        QCOMPARE(errors.count(), 1);
+    }
+
+    // setVocabulary() commits its verdict after applyVocabulary() returns, and
+    // applyVocabulary() can reach Lua. A handler that offers different words
+    // completes a whole call first, so the outer frame's verdict lands on the
+    // inner frame's word list: the flag says applied, the list is the one that
+    // failed, and the next identical offer short-circuits into Applied against
+    // a backend that never took it.
+    void aReentrantVocabularyOfferIsNotOverwrittenByTheOuterVerdict()
+    {
+        ReentrantVocabularyRecognizer recognizer;
+        recognizer.mInnerWords = QStringList{qsl("inner")};
+
+        recognizer.setVocabulary({qsl("outer")});
+        QCOMPARE(recognizer.vocabulary(), QStringList({qsl("inner")}));
+
+        // The inner words failed, so offering them again must reach the
+        // backend rather than being answered from the flag.
+        const int callsBefore = recognizer.mApplyCalls;
+        QCOMPARE(recognizer.setVocabulary({qsl("inner")}), SpeechRecognizer::VocabularyResult::Failed);
+        QCOMPARE(recognizer.mApplyCalls, callsBefore + 1);
     }
 
     void aRejectedWordIsNotSilentlyDropped()

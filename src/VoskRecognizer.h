@@ -131,6 +131,10 @@ public:
     // unloadLibrary() latches "stay unloaded"; reloadLibrary() lifts it. Both
     // go through resetLibraryLoadState(), which does the unmapping itself.
     static bool resetLibraryLoadState();
+    // Why the library would not load or could not be used, when one was found.
+    // Empty when it loaded and when nothing was there - the same contract as
+    // SherpaRecognizer::libraryLoadError(), so noEngineMessage() can ask both.
+    static QString libraryLoadError() { return sLibraryLoadError; }
     static void unloadLibraryByRequest(bool unloaded) { sLibraryUnloadedByRequest = unloaded; }
 
     static QStringList librarySearchPaths();
@@ -246,6 +250,7 @@ private:
     // Vosk library and function pointers (for dynamic loading)
     static QLibrary sVoskLibrary;
     static bool sLibraryLoaded;
+    static QString sLibraryLoadError;
     static bool sLibraryLoadAttempted;
     // Set by unloadLibrary(), cleared by reloadLibrary(): while it stands, no
     // read-shaped call may map the library back in behind the caller's back

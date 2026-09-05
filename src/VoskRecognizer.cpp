@@ -23,6 +23,7 @@
 #include "mudlet.h"
 
 #include <QDir>
+#include <QFileInfo>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -31,6 +32,7 @@
 #include <QSettings>
 #include <QtMath>
 
+#include <algorithm>
 #include <optional>
 
 #if defined(Q_OS_MACOS)
@@ -39,6 +41,7 @@
 
 QLibrary VoskRecognizer::sVoskLibrary;
 bool VoskRecognizer::sLibraryLoaded = false;
+QString VoskRecognizer::sLibraryLoadError;
 bool VoskRecognizer::sLibraryLoadAttempted = false;
 bool VoskRecognizer::sLibraryUnloadedByRequest = false;
 
@@ -209,6 +212,14 @@ bool VoskRecognizer::loadVoskLibrary()
     }
 
     if (!sVoskLibrary.isLoaded()) {
+        // Only when a file was actually found: QLibrary reports a failure for a
+        // name that matched nothing at all, and calling that "installed but
+        // broken" sends the reader after a file they do not have.
+        const QStringList searchPaths = librarySearchPaths();
+        const bool anythingToLoad = std::any_of(searchPaths.cbegin(), searchPaths.cend(), [](const QString& path) {
+            return QFileInfo::exists(path);
+        });
+        sLibraryLoadError = anythingToLoad ? sVoskLibrary.errorString() : QString();
         qWarning() << "VoskRecognizer: Failed to load Vosk library:" << sVoskLibrary.errorString();
         return false;
     }
@@ -230,6 +241,7 @@ bool VoskRecognizer::loadVoskLibrary()
 
     if (!s_vosk_model_new || !s_vosk_model_free || !s_vosk_recognizer_new || !s_vosk_recognizer_free || !s_vosk_recognizer_accept_waveform || !s_vosk_recognizer_result
         || !s_vosk_recognizer_partial_result || !s_vosk_recognizer_final_result) {
+        sLibraryLoadError = tr("the library was found but does not export the functions this version of Mudlet needs");
         qWarning() << "VoskRecognizer: Failed to resolve required Vosk functions";
         // Unloading on its own would leave the pointers that did resolve aiming
         // into a library that is no longer mapped
@@ -241,6 +253,7 @@ bool VoskRecognizer::loadVoskLibrary()
     }
 
     sLibraryLoaded = true;
+    sLibraryLoadError.clear();
 
     // Vosk is silenced because it writes Kaldi's decoding chatter to stderr on
     // every utterance, which is not Mudlet's output to spend. MUDLET_STT_VOSK_LOG
@@ -284,6 +297,7 @@ bool VoskRecognizer::resetLibraryLoadState()
 
     // Reset state flags to allow fresh detection
     sLibraryLoaded = false;
+    sLibraryLoadError.clear();
     sLibraryLoadAttempted = false;
 
     s_vosk_model_new = nullptr;

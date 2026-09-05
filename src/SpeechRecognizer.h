@@ -244,6 +244,16 @@ public:
             return VocabularyResult::Applied;
         }
         const VocabularyResult result = applyVocabulary(words);
+        // applyVocabulary() can reach Lua - sherpa reloads the model to bias
+        // it, and setState() dispatches handlers inline - so a handler calling
+        // stt.setVocabulary() re-enters and completes a whole offer of its own
+        // before this line runs. Committing the outer verdict then would leave
+        // the flag describing one word list and mVocabulary another, and the
+        // next identical offer short-circuits to Applied against a model that
+        // never received it: the exact desync the flag exists to prevent.
+        if (mVocabulary != words) {
+            return result;
+        }
         // applyVocabulary()'s documented contract, checked rather than only
         // written down: the capability test above has already ruled the third
         // case out, so a backend answering Unsupported here would be claiming
@@ -362,6 +372,14 @@ protected:
     virtual VocabularyResult applyVocabulary(const QStringList& words)
     {
         Q_UNUSED(words)
+        // Reached only by a backend that claims biasing or grammar in
+        // capabilities() and then does not implement this - and the contract
+        // above says every Failed explains itself. Without this the caller
+        // gets false and total silence, which stt.setVocabulary documents to
+        // the player as "this backend cannot use vocabulary": a wiring mistake
+        // wearing the words of a deliberate capability answer.
+        //: Shown when a speech engine claims it can use a vocabulary but has no way to apply one, which is a fault in the engine rather than anything the player did
+        emit errorOccurred(tr("This speech engine claims it can use a vocabulary but does not implement one."));
         return VocabularyResult::Failed;
     }
 

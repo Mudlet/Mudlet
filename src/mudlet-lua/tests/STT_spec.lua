@@ -73,6 +73,7 @@ describe("stt bridge", function()
       assert.is_boolean(info.capabilities.biasing)
       assert.is_boolean(info.capabilities.grammar)
       assert.is_boolean(info.capabilities.words)
+      assert.is_boolean(info.capabilities.sensitivityTuning)
       assert.is_boolean(info.capabilities.onDevice)
       assert.is_number(info.silenceTimeout, "0 while disabled, not absent")
       assert.is_number(info.audioLevel)
@@ -109,9 +110,15 @@ describe("stt bridge", function()
       -- this key names whichever engine is loaded rather than a fixed value.
       local backend = stt.getInfo().backend
       assert.is_string(backend)
-      if backend ~= "" then
+      if stt.initialized() then
         assert.is_truthy(backend == "Vosk" or backend == "sherpa-onnx" or backend == "Apple Speech",
                          "backend should name an engine this build has, got: " .. backend)
+      else
+        -- Asserted rather than skipped: with no engine built this is the whole
+        -- contract, and CI runs with none. Allowing "" *or* "Vosk" - as this
+        -- did - meant reverting the fix that stopped it guessing "Vosk" left
+        -- the spec green, which is the one case it exists to catch.
+        assert.are.equal("", backend, "backend names an engine before one is built")
       end
     end)
   end)
@@ -208,7 +215,15 @@ describe("stt bridge", function()
 
       assert.is_nil(ok, "init with no model installed should fail")
       assert.is_string(err)
-      assert.is_truthy(err:find(stt.getModelPath(), 1, true), "the refusal should name the models directory, got: " .. tostring(err))
+      -- Two different refusals reach here, and only one has a directory to
+      -- name. A machine with a model-based engine and no model must name where
+      -- one belongs. A Mac whose built-in recogniser made available() true and
+      -- then could not start has no models directory in the picture at all -
+      -- that backend installs nothing - so requiring the path there asserts a
+      -- contract this refusal was never part of.
+      if err:find("no language model is installed", 1, true) then
+        assert.is_truthy(err:find(stt.getModelPath(), 1, true), "the refusal should name the models directory, got: " .. tostring(err))
+      end
     end)
 
     it("refuses to start before a model is loaded", function()

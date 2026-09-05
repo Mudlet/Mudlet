@@ -289,6 +289,12 @@ bool SherpaRecognizer::loadSherpaLibrary()
         // resetLibraryLoadState() clears this to allow a fresh probe; a library
         // whose symbols are missing is not worth re-probing on every call
         sLibraryLoadAttempted = true;
+        // And it clears the reason with it. Set after, not before: without
+        // this, a library that is present and loads but exports the wrong
+        // symbols falls through to "not installed - looked in: <the very path
+        // it is sitting at>", which is the message the reason exists to
+        // replace, one branch further down than where that was fixed.
+        sLibraryLoadError = tr("the library was found but does not export the functions this version of Mudlet needs");
         return false;
     }
 
@@ -781,8 +787,11 @@ void SherpaRecognizer::startListeningInternal()
     mMissingResultReported = false;
 
     // mpCapture emits its own translated captureError before returning false,
-    // which slot_captureError() has already turned into errorOccurred - only
-    // the state transition is left to do here
+    // and slot_captureError() has already turned that into errorOccurred and
+    // set Error - synchronously, on the same thread, before start() returns.
+    // So the setState below is a no-op and destroyStream() is the real work:
+    // without it the stream outlives the failed start and
+    // hasLiveNativeResources() stays true.
     if (!mpCapture->start()) {
         destroyStream();
         setState(State::Error);
@@ -889,6 +898,14 @@ void SherpaRecognizer::slot_pcmReady(const QByteArray& pcmData)
         mMissingResultReported = true;
         //: Shown when the speech engine accepted a phrase and then returned no transcription for it
         emit errorOccurred(tr("The speech engine returned no result for what it just heard."));
+        // That emit reached Lua inside this frame, and a sysSTTError handler
+        // calling stt.close() runs cancel() and releaseResources() before it
+        // returns - which frees the stream and the recognizer this function
+        // went on to hand to the library below. doStopListening() re-checks
+        // its own precondition after emitting for the same reason.
+        if (!mRecognizer || !mStream) {
+            return;
+        }
     }
 
     // The endpointer trips on any silence rule, including trailing silence
@@ -927,8 +944,10 @@ void SherpaRecognizer::slot_pcmReady(const QByteArray& pcmData)
 
 void SherpaRecognizer::slot_captureError(const QString& message)
 {
-    // The capture component has already torn its device down; the recognizer
-    // just surfaces the fault and leaves Listening
+    // The capture component has already torn its device down, so the state and
+    // the report are all that is left. Not always from Listening: a capture
+    // that fails to start reaches this from Ready or Starting, inside
+    // startListeningInternal().
     setState(State::Error);
     emit errorOccurred(message);
 }
@@ -1025,8 +1044,10 @@ SpeechRecognizer::VocabularyResult SherpaRecognizer::applyVocabulary(const QStri
         return loadModel(mModelPath) ? VocabularyResult::Applied : VocabularyResult::Failed;
     }
 
-    // Mid-session the phrase being spoken matters more than the new words, so
-    // they wait for the next load. Failed rather than Applied: they are not in
+    // Anything but idle: mid-session the phrase being spoken matters more than
+    // the new words, and from Starting or Error there is nothing to rebuild
+    // into. Either way they wait for the next load - the message says "not
+    // idle" rather than "mid-utterance" because it is reached from all three. Failed rather than Applied: they are not in
     // effect yet, and a caller told otherwise would stop correcting results
     // itself while nothing was biasing them.
     //
@@ -1035,17 +1056,20 @@ SpeechRecognizer::VocabularyResult SherpaRecognizer::applyVocabulary(const QStri
     // tell the two apart from the return value, so each has to speak for
     // itself - and this one is the reason a bare "could not apply" used to be
     // emitted for both, restating the specific message with a vaguer one.
-    //: Shown when words offered to the speech engine cannot take effect until it next loads a model, because it is in the middle of an utterance
-    emit errorOccurred(tr("Speech recognition is mid-utterance, so the supplied vocabulary is kept and takes effect at the next model load."));
+    //: Shown when words offered to the speech engine cannot take effect until it next loads a model
+    emit errorOccurred(tr("Speech recognition is not idle, so the supplied vocabulary is kept and takes effect at the next model load."));
     return VocabularyResult::Failed;
 }
 
 bool SherpaRecognizer::setSensitivity(Sensitivity sensitivity)
 {
     // This engine builds its endpoint rules itself rather than asking the
-    // library for a mode, so there is no symbol that can be missing here and
-    // the answer is always yes - unlike the Vosk backend, which refuses when
-    // its libvosk cannot be tuned
+    // library for a mode, so there is no symbol that can be missing and no
+    // mode it cannot tune - unlike the Vosk backend, whose libvosk may lack
+    // the endpointer entirely. That is what capabilities().sensitivityTuning
+    // reports. It is not the same as always succeeding: the rules are baked in
+    // when the recognizer is built, so applying them means a reload, and this
+    // returns that reload's answer.
     if (mSensitivity == sensitivity) {
         return true;
     }
@@ -1063,6 +1087,20 @@ bool SherpaRecognizer::setSensitivity(Sensitivity sensitivity)
     if (state() == State::Ready && !mModelPath.isEmpty()) {
         return initialize(mModelPath);
     }
+
+    // A live decoder that could not be rebuilt still holds the rules it was
+    // built with, so answering true here reported a mode the engine is not
+    // using - readback agrees, engine disagrees, the pair the comment above
+    // says this bool exists to prevent. The value is kept for the next load,
+    // the way a vocabulary offered mid-utterance is, and says so.
+    if (mRecognizer) {
+        //: Shown when a change to speech sensitivity cannot take effect until the engine next loads a model
+        emit errorOccurred(tr("Speech recognition is busy, so the new sensitivity is kept and takes effect at the next model load."));
+        return false;
+    }
+
+    // Nothing is loaded, so there is no decoder to disagree with: the value is
+    // simply what the next model will be built with.
     return true;
 }
 

@@ -114,15 +114,15 @@ bool AppleSpeechRecognizer::initialize(const QString& modelPath)
 
     SFSpeechRecognizer* recognizer = recognizerForLanguage(mCurrentLanguage);
     if (!recognizer) {
+        setState(State::Error);
         //: Shown when macOS has no speech recognition for the chosen language; %1 is a language code such as en-US
         emit errorOccurred(tr("macOS has no speech recognition for the language '%1'.").arg(mCurrentLanguage.isEmpty() ? QString::fromNSString([NSLocale currentLocale].localeIdentifier) : mCurrentLanguage));
-        setState(State::Error);
         return false;
     }
     if (!recognizer.available) {
+        setState(State::Error);
         //: Shown when the macOS speech recognizer exists but the system reports it as unusable right now
         emit errorOccurred(tr("The macOS speech recognizer is not available at the moment. It becomes available once macOS has finished preparing the language it needs."));
-        setState(State::Error);
         return false;
     }
 
@@ -256,12 +256,12 @@ void AppleSpeechRecognizer::doStartListening()
                 }
                 if (status != SFSpeechRecognizerAuthorizationStatusAuthorized) {
                     qWarning() << "AppleSpeechRecognizer: speech recognition authorization denied";
+                    weakThis->setState(State::Error);
                     // AppleSpeechRecognizer::tr, not QObject::tr: the block is
                     // not a member, and the default context would file this
                     // identical string a second time for translators
                     //: Shown when the player refuses Mudlet permission to use macOS speech recognition; the path names the setting that grants it
                     emit weakThis->errorOccurred(AppleSpeechRecognizer::tr("Speech recognition permission denied. Please allow it in System Settings > Privacy & Security > Speech Recognition."));
-                    weakThis->setState(State::Error);
                     return;
                 }
                 weakThis->requestMicrophoneThenStart();
@@ -307,9 +307,9 @@ void AppleSpeechRecognizer::requestMicrophoneThenStart()
             }
             if (!granted) {
                 qWarning() << "AppleSpeechRecognizer: microphone permission denied by user";
+                weakThis->setState(State::Error);
                 //: Shown when the player refuses Mudlet access to the microphone; the path names the macOS setting that grants it
                 emit weakThis->errorOccurred(AppleSpeechRecognizer::tr("Microphone permission denied. Please grant microphone access in System Settings > Privacy & Security > Microphone."));
-                weakThis->setState(State::Error);
                 return;
             }
             weakThis->startListeningInternal();
@@ -319,9 +319,9 @@ void AppleSpeechRecognizer::requestMicrophoneThenStart()
     case MacMicrophonePermission::AuthorizationStatus::Denied:
     case MacMicrophonePermission::AuthorizationStatus::Restricted:
         qWarning() << "AppleSpeechRecognizer: microphone permission denied or restricted";
+        setState(State::Error);
         //: Shown when microphone access was refused earlier and has to be granted in system settings before speech will work
         emit errorOccurred(tr("Microphone permission denied. Please grant microphone access in System Settings > Privacy & Security > Microphone."));
-        setState(State::Error);
         return;
     case MacMicrophonePermission::AuthorizationStatus::Authorized:
         break;
@@ -333,9 +333,9 @@ void AppleSpeechRecognizer::requestMicrophoneThenStart()
 void AppleSpeechRecognizer::startListeningInternal()
 {
     if (!mpSession->recognizer) {
+        setState(State::Error);
         //: Shown when speech recognition could not be prepared for listening
         emit errorOccurred(tr("Failed to initialize speech recognition"));
-        setState(State::Error);
         return;
     }
 
@@ -346,9 +346,9 @@ void AppleSpeechRecognizer::startListeningInternal()
     // audio go to Apple - which is precisely what this backend promises not
     // to do.
     if (!mpSession->recognizer.supportsOnDeviceRecognition) {
+        setState(State::Error);
         //: Shown when macOS cannot recognise this language without sending the audio to Apple, which Mudlet will not do; %1 is a language code such as en-US
         emit errorOccurred(tr("macOS cannot recognise '%1' on this Mac without sending the audio to Apple, so Mudlet will not listen. Add the language in System Settings > Keyboard > Dictation to have macOS download it.").arg(mCurrentLanguage));
-        setState(State::Error);
         return;
     }
 
@@ -357,9 +357,9 @@ void AppleSpeechRecognizer::startListeningInternal()
     mConsecutiveImmediateFailures = 0;
 
     if (!beginRecognitionTask()) {
+        setState(State::Error);
         //: Shown when speech recognition could not be prepared for listening
         emit errorOccurred(tr("Failed to initialize speech recognition"));
-        setState(State::Error);
         return;
     }
 
@@ -532,13 +532,15 @@ void AppleSpeechRecognizer::handleTaskEnded(const QString& failure)
         // final result, and there is no way from out here to tell "nothing was
         // said" from "a phrase was recognised and then lost", so staying quiet
         // would let the second one look like the first.
+        // Ready rather than Error even so. The stop itself succeeded and the
+        // recognizer is as usable as it was before; Error would make a package
+        // reload a model that never stopped working. Settled before the emit,
+        // like every other pair here: a handler that starts listening on the
+        // error would otherwise have its new session stamped back to Ready.
+        setState(State::Ready);
         if (!failure.isEmpty()) {
             emit errorOccurred(failure);
         }
-        // Ready rather than Error even so. The stop itself succeeded and the
-        // recognizer is as usable as it was before; Error would make a package
-        // reload a model that never stopped working.
-        setState(State::Ready);
         return;
     }
 
@@ -562,16 +564,16 @@ void AppleSpeechRecognizer::handleTaskEnded(const QString& failure)
     mConsecutiveImmediateFailures = diedImmediately ? mConsecutiveImmediateFailures + 1 : 0;
     if (mConsecutiveImmediateFailures >= scmMaxImmediateFailures) {
         mpCapture->stop();
-        emit errorOccurred(failure);
         setState(State::Error);
+        emit errorOccurred(failure);
         return;
     }
 
     if (!beginRecognitionTask()) {
         mpCapture->stop();
+        setState(State::Error);
         //: Shown when macOS speech recognition stopped part-way through listening and could not be restarted
         emit errorOccurred(tr("Speech recognition stopped and could not be restarted."));
-        setState(State::Error);
     }
 }
 
@@ -599,12 +601,12 @@ void AppleSpeechRecognizer::doStopListening()
         // Nothing came back. Processing is not a state anything can be started
         // from, so waiting for ever would take the recognizer with it.
         cancelTask();
+        setState(State::Ready);
         // Said out loud before settling: from Lua this is processing followed
         // by ready with no result in between, which is exactly what a phrase
         // nobody spoke looks like - and here a phrase was spoken and lost.
         //: Shown when macOS speech recognition was asked for the last phrase and never answered
         emit errorOccurred(tr("macOS speech recognition did not return the last phrase in time; it has been lost."));
-        setState(State::Ready);
     });
 }
 
@@ -652,10 +654,12 @@ void AppleSpeechRecognizer::slot_pcmReady(const QByteArray& pcmData)
 
 void AppleSpeechRecognizer::slot_captureError(const QString& message)
 {
-    // The capture component has already torn its device down; the recognizer
-    // just surfaces the fault and leaves Listening
-    emit errorOccurred(message);
     setState(State::Error);
+    // The capture component has already torn its device down, so the state and
+    // the report are all that is left. Not always from Listening: a capture
+    // that fails to start reaches this from Ready or Starting, inside
+    // startListeningInternal().
+    emit errorOccurred(message);
 }
 
 float AppleSpeechRecognizer::calculateAudioLevel(const QByteArray& data) const

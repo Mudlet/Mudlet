@@ -115,8 +115,13 @@ static QString noEngineMessage()
     // path the file is sitting at. The loader's own reason is the one string
     // that says what is actually wrong, and it used to go only to a qWarning
     // nobody reading the error would see.
-    if (const QString reason = SherpaRecognizer::libraryLoadError(); !reason.isEmpty()) {
-        return qsl("the speech engine library is installed but could not be loaded: %1").arg(reason);
+    // Either engine may have found a file it could not use. Asked of both, or
+    // a broken libvosk still reads as "not installed" while sherpa's says so -
+    // the same defect, fixed for one engine and not the other.
+    for (const QString& reason : {SherpaRecognizer::libraryLoadError(), VoskRecognizer::libraryLoadError()}) {
+        if (!reason.isEmpty()) {
+            return qsl("the speech engine library is installed but could not be loaded: %1").arg(reason);
+        }
     }
     return qsl("the speech engine library is not installed, so speech recognition cannot be used - looked in: %1").arg(speechLibrarySearchPaths().join(qsl(", ")));
 }
@@ -1046,7 +1051,10 @@ int TLuaInterpreter::sttReloadLibrary(lua_State* L)
     // Lift the latch stt.unloadLibrary() set, since asking for a reload is
     // exactly the caller saying they are done replacing the file
     VoskRecognizer::unloadLibraryByRequest(false);
-    const bool available = VoskRecognizer::libraryAvailable();
+    // Both latches were reset above, so the answer is whether speech can be had
+    // at all now - not whether Vosk in particular can. A player who installed
+    // sherpa-onnx and called this got false for a re-detect that had worked.
+    const bool available = VoskRecognizer::libraryAvailable() || SherpaRecognizer::sherpaAvailable();
     announceSpeechCapabilities(pMudlet);
     lua_pushboolean(L, available);
     return 1;
