@@ -102,8 +102,11 @@ private slots:
             environment.insert(qsl("MUDLET_TEST_MODE"), qsl("1"));
             // The application deliberately never deletes its QApplication on
             // this path, and Qt's CA store stays loaded for the process
-            // lifetime, so a leak check here would only ever report those
-            environment.insert(qsl("ASAN_OPTIONS"), qsl("detect_leaks=0"));
+            // lifetime, so a leak check here would only ever report those.
+            // Appended rather than replacing what ctest set, since the runtime
+            // takes the last setting of a flag and the earlier ones stay.
+            const QString inheritedSanitizerOptions = environment.value(qsl("ASAN_OPTIONS"));
+            environment.insert(qsl("ASAN_OPTIONS"), inheritedSanitizerOptions.isEmpty() ? qsl("detect_leaks=0") : qsl("%1:detect_leaks=0").arg(inheritedSanitizerOptions));
 
             QProcess mudlet;
             mudlet.setProcessEnvironment(environment);
