@@ -121,6 +121,7 @@ set(TRIGGER_GROUP_TEST_SOURCES
     TFeedTriggersRecursionTest.cpp
     UnitDeferredDeleteTest.cpp
     UnitProcessingDepthTest.cpp
+    UnitsReachHostTest.cpp
 )
 
 # The script editor, and the trigger, variable and script forms it hosts

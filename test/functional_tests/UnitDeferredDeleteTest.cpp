@@ -833,7 +833,7 @@ private slots:
     // inactive timers would let this one fire again.
     //
     // The two calls below are exactly what TTimer::execute() does, rather than a
-    // real wait: mudlet::slot_timerFires() runs doCleanup() as soon as execute()
+    // real wait: TimerUnit::timerFired() runs doCleanup() as soon as execute()
     // returns, so a fired one-shot is freed before a test could look at it.
     void test_timerEnableByNameCannotReviveASpentOneShot()
     {

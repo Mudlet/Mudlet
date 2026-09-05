@@ -47,10 +47,10 @@ class QTimer;
 // still on the call stack - a timer script calling uninstallPackage() on its own
 // package would otherwise free the very TTimer execute() is running on. Deferred
 // items are flushed by doCleanup() once no timer script is executing - primarily
-// by mudlet::slot_timerFires() right after it finishes with the fired timer, so
+// by timerFired() right after it finishes with the fired timer, so
 // the "uninstalled" objects do not outlive the event loop iteration. This
 // complements the guard in TTimer::execute() and the re-verification of timer
-// existence after execute() in mudlet::slot_timerFires().
+// existence after execute() in timerFired().
 class TimerUnit
 {
     friend class XMLexport;
@@ -74,6 +74,7 @@ public:
     int remainingTime(const int id) const;
     bool registerTimer(TTimer* pT);
     void unregisterTimer(TTimer* pT);
+    void timerFired(QTimer* pQTimer);
     void reParentTimer(int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1);
     void reParentTimer(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position = 0);
     void stopAllTriggers();
@@ -90,7 +91,6 @@ public:
     int getNewID();
     void uninstall(const QString&);
     void _uninstall(TTimer* pChild, const QString& packageName);
-    void changeHostName(const QString&);
 
 
     QMultiMap<QString, TTimer*> mLookupTable;
