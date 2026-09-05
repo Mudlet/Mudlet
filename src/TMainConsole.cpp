@@ -586,10 +586,9 @@ TConsole* TMainConsole::createSubConsole(const QString& name, QWidget* parent)
 {
     auto* pC = new TConsole(mpHost, name, SubConsole, parent);
     pC->setObjectName(name);
-    const auto& hostCommandLine = mpHost->mpConsole->mpCommandLine;
-    pC->setFocusProxy(hostCommandLine);
-    pC->mUpperPane->setFocusProxy(hostCommandLine);
-    pC->mLowerPane->setFocusProxy(hostCommandLine);
+    pC->setFocusProxy(mpCommandLine);
+    pC->mUpperPane->setFocusProxy(mpCommandLine);
+    pC->mLowerPane->setFocusProxy(mpCommandLine);
     return pC;
 }
 

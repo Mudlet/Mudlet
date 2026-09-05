@@ -399,11 +399,6 @@ private slots:
         QCOMPARE(mpHost->borders().right(), 300);
     }
 
-    // How the base UI reserves its space, so this is #9698 as reported. Declared
-    // last on purpose: an adjustable container leaves deferred timers of its own
-    // behind that resize the main window out from under whatever runs next, so
-    // add new tests above this one rather than below it. For the same reason the
-    // expectation is evaluated at assert time rather than captured up front.
     // All three frame layouts get their console from
     // TMainConsole::createSubConsole(), parented inside the frame (never on
     // mpMainFrame, where createMiniConsole would flash it) and wired with the
@@ -431,6 +426,11 @@ private slots:
         }
     }
 
+    // How the base UI reserves its space, so this is #9698 as reported. Declared
+    // last on purpose: an adjustable container leaves deferred timers of its own
+    // behind that resize the main window out from under whatever runs next, so
+    // add new tests above this one rather than below it. For the same reason the
+    // expectation is evaluated at assert time rather than captured up front.
     void test_rightFrameKeepsClearOfAnAttachedAdjustableContainer()
     {
         runLua(qsl("panel = Adjustable.Container:new({name = 'mxpTestPanel', x = '-25%', y = 0, width = '25%', height = '100%', autoSave = false, autoLoad = false})\n"

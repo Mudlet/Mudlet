@@ -716,6 +716,11 @@ void ActionUnit::constructToolbar(TAction* pA, TEasyButtonBar* pTB)
 
 void ActionUnit::updateAllToolbars()
 {
+    // Package removal and XML import get here while the console can be between
+    // windows: moveProfileFromDetachedToMainWindow() pumps events with it detached
+    if (!mpHost->mpConsole) {
+        return;
+    }
     regenerateToolBars();
     regenerateEasyButtonBars();
 }
