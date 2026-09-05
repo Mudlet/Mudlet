@@ -38,6 +38,7 @@
 #include "VarUnit.h"
 #include "mudlet.h"
 
+#include <QSaveFile>
 #include <QRegularExpression>
 #include <QVersionNumber>
 #include <QtConcurrentRun>

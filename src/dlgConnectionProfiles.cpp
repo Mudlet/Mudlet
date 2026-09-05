@@ -38,6 +38,8 @@
 #include "widgetutils.h"
 #include "utils.h"
 
+#include <QDataStream>
+#include <QSaveFile>
 #include <QtConcurrentRun>
 #include <QtMath>
 #include <QtUiTools>
