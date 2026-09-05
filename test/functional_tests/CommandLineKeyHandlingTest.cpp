@@ -526,11 +526,33 @@ private slots:
         QCOMPARE(pCommandLine->toPlainText(), qsl("qzxbrachiosaurus "));
     }
 
-    // Typing a space accepts the completion and starts a new one, so the next
-    // Tab offers the first match again rather than carrying on cycling. Which of
-    // the two matches comes first is not part of the promise, so the test takes
-    // whichever Tab offered and asks for that one back.
-    void test_aSpaceStartsTheCompletionOver()
+    // Typing a space accepts the completion. A Tab straight after it must not
+    // carry on cycling through the matches and swap the accepted word for the
+    // other one - which is what it would do if the space left the cycle where
+    // it was, since a space is the one key that goes past the typing tracker.
+    // Which of the two matches comes first is not part of the promise, so the
+    // test takes whichever Tab offered.
+    void test_aSpaceAcceptsTheCompletionSoTabNoLongerCyclesIt()
+    {
+        mpHost->mpConsole->print(qsl("qzxobstreperous qzxobfuscatory\n"));
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+
+        type(pCommandLine, qsl("qzxob"));
+        press(pCommandLine, Qt::Key_Tab);
+        const QString first = pCommandLine->toPlainText();
+        QVERIFY2(first == qsl("qzxobstreperous") || first == qsl("qzxobfuscatory"), qPrintable(qsl("Tab completed to '%1' rather than to either of the words in the buffer").arg(first)));
+
+        press(pCommandLine, Qt::Key_Space);
+        press(pCommandLine, Qt::Key_Tab);
+
+        QCOMPARE(pCommandLine->toPlainText(), first + QChar::Space);
+    }
+
+    // Once a completion has been accepted, a fresh part-word typed after it
+    // starts a new completion from the first match rather than carrying on
+    // from wherever the last one was.
+    void test_aNewPartWordStartsTheCompletionOver()
     {
         mpHost->mpConsole->print(qsl("qzxobstreperous qzxobfuscatory\n"));
         TCommandLine* pCommandLine = freshCommandLine();
