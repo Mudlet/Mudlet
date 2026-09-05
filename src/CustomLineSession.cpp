@@ -260,16 +260,30 @@ void CustomLineSession::restoreOriginalLineIfNeeded()
 
     // Only the points snapping moved go back, and only while they are still
     // where it put them: a point added or dragged since then is where the
-    // user wanted it.
-    bool changed = false;
-    const auto shared = std::min(points->size(), mOriginalLine->points.size());
-    for (qsizetype index = 0; index < shared; ++index) {
-        const QPointF& original = mOriginalLine->points.at(index);
-        QPointF& point = (*points)[index];
-        if (point != original && point == snapPointToGrid(original)) {
-            point = original;
-            changed = true;
+    // user wanted it. Adding or removing a point shifts the ones after it
+    // along, so the points are paired up by position rather than by index.
+    // The points snapping left alone claim their originals first, so a point
+    // it moved onto one of them is not mistaken for it.
+    QList<QPointF> unclaimed = mOriginalLine->points;
+    QList<qsizetype> moved;
+    for (qsizetype index = 0; index < points->size(); ++index) {
+        if (!unclaimed.removeOne(points->at(index))) {
+            moved.append(index);
         }
+    }
+
+    bool changed = false;
+    for (const qsizetype index : moved) {
+        QPointF& point = (*points)[index];
+        auto original = std::find_if(unclaimed.begin(), unclaimed.end(), [&](const QPointF& candidate) {
+            return snapPointToGrid(candidate) == point;
+        });
+        if (original == unclaimed.end()) {
+            continue;
+        }
+        point = *original;
+        unclaimed.erase(original);
+        changed = true;
     }
 
     mOriginalLine.reset();
