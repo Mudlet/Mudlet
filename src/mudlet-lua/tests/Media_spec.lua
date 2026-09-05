@@ -771,6 +771,65 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(0, #getPlayingSounds())
   end)
 
+  it("a start position begins playback part way into the file", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local finished = {}
+    collect("sysMediaFinished", finished)
+
+    writeSoundFiles()
+    assert.is_true(playSoundFile({name = longSoundFile, start = 9700, key = "busted-started-late"}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+
+    -- 300ms of the ten second file is left after the start position, so a
+    -- finish inside waitForCount's five seconds is the seek having taken
+    -- effect: a start position that was ignored plays all ten.
+    waitForCount("sysMediaFinished", finished, 1)
+    assert.equals(1, #finished)
+    assert.equals("busted-started-late", finished[1].key)
+    assert.equals(0, #getPlayingSounds())
+  end)
+
+  it("a start position and a finish position play the window between them", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local finished = {}
+    collect("sysMediaFinished", finished)
+
+    writeSoundFiles()
+    -- The finish position is measured from the start of the file rather than
+    -- from the start position, so this is 400ms of playing from 5000ms in.
+    assert.is_true(playSoundFile({name = longSoundFile, start = 5000, finish = 5400, key = "busted-window"}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+
+    waitForCount("sysMediaFinished", finished, 1)
+    assert.equals(1, #finished)
+    assert.equals("busted-window", finished[1].key)
+    assert.equals(0, #getPlayingSounds())
+  end)
+
+  it("a start position past the end of the file plays the file instead of hanging", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local finished = {}
+    collect("sysMediaFinished", finished)
+
+    writeSoundFiles()
+    -- Seeking to or past the end leaves the player sitting at its last frame with no
+    -- end-of-media, so nothing would ever release it or send sysMediaFinished. A server
+    -- is free to name a start longer than the track, so an out of range one is dropped.
+    assert.is_true(playSoundFile({name = soundFile, start = 60000, key = "busted-start-past-end"}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+
+    waitForCount("sysMediaFinished", finished, 1)
+    assert.equals(1, #finished)
+    assert.equals("busted-start-past-end", finished[1].key)
+    assert.equals(0, #getPlayingSounds())
+  end)
+
   it("a sysMediaFinished handler that starts a sound leaves the caller's own request playing", function()
     if mediaPlaybackUnavailable() then
       return
@@ -1576,6 +1635,33 @@ describe("Media playback effects with a generated sound file", function()
     waitForCount("sysMediaFinished", finished, 1)
     assert.equals(1, #finished)
     assert.equals("busted-gmcp-music", finished[1].key)
+  end)
+
+  it("a Client.Media.Play message begins playback at the start position it names", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local finished = {}
+    collect("sysMediaFinished", finished)
+
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+
+    -- Once as a number and once as the string the protocol also allows, since
+    -- the two are read by different branches of the same field parser. Both
+    -- leave 300ms of the ten second file to play, so a finish inside
+    -- waitForCount's five seconds is the seek having taken effect.
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "start": 9700, "key": "busted-gmcp-start-number"}')
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)), gmcpRefused)
+    waitForCount("sysMediaFinished", finished, 1)
+    assert.equals(1, #finished)
+    assert.equals("busted-gmcp-start-number", finished[1].key)
+
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "start": "9700", "key": "busted-gmcp-start-string"}')
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)), gmcpRefused)
+    waitForCount("sysMediaFinished", finished, 2)
+    assert.equals(2, #finished)
+    assert.equals("busted-gmcp-start-string", finished[2].key)
   end)
 
   it("a Client.Media.Stop message ends what a Client.Media.Play started", function()
