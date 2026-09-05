@@ -1698,8 +1698,16 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       local function nested(itemType)
         if not nestedItems[itemType] then
           local groupName = "mudletSpecAncestorGroup" .. itemType
-          assert.is_true(permGroup(groupName, groupType[itemType]), "could not create the " .. itemType .. " group")
-          local id = createChild[itemType]("mudletSpecAncestorChild" .. itemType, groupName)
+          local childName = "mudletSpecAncestorChild" .. itemType
+          -- The profile these run in is saved on exit and reused by the next
+          -- run, so a second run finds the first run's items still there. They
+          -- cannot be deleted from Lua, and creating them again just stacks up
+          -- another copy under the same name, so reuse what is already there.
+          local id = findItems(childName, itemType)[1]
+          if not id then
+            assert.is_true(permGroup(groupName, groupType[itemType]), "could not create the " .. itemType .. " group")
+            id = createChild[itemType](childName, groupName)
+          end
           assert.is_true(type(id) == "number" and id > 0, "could not nest a " .. itemType .. " in " .. groupName)
           nestedItems[itemType] = {id = id, group = groupName}
         end
@@ -1815,7 +1823,10 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         if exists(toolbar, "button") == 0 then
           assert.is_true(tempButtonToolbar(toolbar, 0, 0) > 0)
         end
-        local buttonId = tempButton(toolbar, "mudletSpecAncestorButton", 0)
+        -- the toolbar and its button are saved with the profile, so a reused
+        -- profile already has both and tempButton() refuses the duplicate name
+        local buttonId = findItems("mudletSpecAncestorButton", "button")[1]
+            or tempButton(toolbar, "mudletSpecAncestorButton", 0)
         assert.is_true(type(buttonId) == "number" and buttonId > 0, "could not put a button on " .. toolbar)
 
         assertNamesTheGroup(ancestors(buttonId, "button"), toolbar)
