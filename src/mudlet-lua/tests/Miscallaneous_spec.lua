@@ -608,6 +608,87 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         end)
       end)
 
+      -- Host keeps profile.ini open and lets QSettings write it out on the next
+      -- pass through the event loop instead of syncing every write, so what a
+      -- command line stores has to reach the disk without anyone asking for a
+      -- save, and two command lines created in the same pass must not be handed
+      -- the same history file.
+      describe("Tests that the command line settings reach the profile's profile.ini", function()
+        local function iniValue(key)
+          local file = io.open(getMudletHomeDir() .. "/profile.ini", "r")
+          if not file then
+            return nil
+          end
+          local ini = file:read("*a")
+          file:close()
+          -- QSettings stores CommandLines/Group/name as "Group\name=" under a
+          -- [CommandLines] header; the name can hold pattern characters, so
+          -- find it as plain text
+          local start = ini:find(key .. "=", 1, true)
+          if not start then
+            return nil
+          end
+          return ini:match("=([^\r\n]*)", start)
+        end
+
+        it("gives each command line its own history file and writes the mapping out within one pass of the event loop", function()
+          if not testMode then
+            pending("only test mode can pump the event loop")
+            return
+          end
+          local first, second = "mudlet-spec-ini-first", "mudlet-spec-ini-second"
+          finally(function()
+            deleteCommandLine(first)
+            deleteCommandLine(second)
+          end)
+          createCommandLine(first, 10, 10, 120, 30)
+          createCommandLine(second, 10, 50, 120, 30)
+          pumpEvents(50)
+
+          local firstFile = iniValue("NameMapping\\" .. first)
+          local secondFile = iniValue("NameMapping\\" .. second)
+          assert.is_string(firstFile, "the first command line's history file mapping never reached profile.ini")
+          assert.is_string(secondFile, "the second command line's history file mapping never reached profile.ini")
+          assert.are_not.equals(firstFile, secondFile)
+        end)
+
+        it("writes a changed history saving setting out with the end of session save", function()
+          if not testMode then
+            pending("only test mode can pump the event loop")
+            return
+          end
+          local commandLine = "mudlet-spec-ini-save-history"
+          -- setSaveCommandHistory() refuses while the profile-wide history size is zero
+          local savedLines = getConfig("commandLineHistorySaveSize")
+          finally(function()
+            setConfig("commandLineHistorySaveSize", savedLines)
+            deleteCommandLine(commandLine)
+          end)
+          setConfig("commandLineHistorySaveSize", 10)
+          createCommandLine(commandLine, 10, 10, 120, 30)
+          -- a new command line starts from whatever the last run left in the
+          -- file, so flipping that is what makes this a fresh write every time
+          local flipped = not getSaveCommandHistory(commandLine)
+          assert.is_true(setSaveCommandHistory(commandLine, flipped))
+
+          -- The setting only leaves the command line on
+          -- Host::signal_saveCommandLinesHistory, which saveProfile() emits when
+          -- given no arguments. A save another spec started can still be running,
+          -- and saveProfile() answers nil until it finishes.
+          local saved, message
+          for _ = 1, 100 do
+            saved, message = saveProfile()
+            if saved then
+              break
+            end
+            pumpEvents(50)
+          end
+          assert.is_true(saved, tostring(message))
+          pumpEvents(50)
+          assert.equals(tostring(flipped), iniValue("SaveHistory\\" .. commandLine))
+        end)
+      end)
+
       -- The command lines only hear that the session is ending through
       -- Host::signal_saveCommandLinesHistory, which Host::saveProfile() emits
       -- only when given neither a folder nor a name, and nothing else writes
@@ -1458,11 +1539,36 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.equals(0, select('#', setMergeTables("MudletSpec.NeverAModule", "MudletSpec.NeverAnother")))
       end)
 
+      -- the merge only happens as GMCP arrives from a server, so feed a real
+      -- subnegotiation rather than filling the gmcp table directly
+      local function feedGmcp(message)
+        local ok, err = feedTelnet("<T_IAC><T_SB><O_GMCP>" .. message .. "<T_IAC><T_SE>")
+        assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(err))
+      end
+
       it("merges the keys it was given into an incoming GMCP table", function()
-        -- The merge only happens as GMCP or MSDP arrives from a server. Now
-        -- that specs run offline, feedTelnet() can deliver a GMCP
-        -- subnegotiation itself, so this is writable - just not written yet.
-        pending("feeding the profile a GMCP subnegotiation is not written yet")
+        -- gmcp outlives the spec and a merge key can never be taken off again,
+        -- so own the module outright rather than assume an untouched session
+        gmcp.MudletSpec = nil
+        finally(function() gmcp.MudletSpec = nil end)
+        setMergeTables("MudletSpec.Merged")
+
+        feedGmcp('MudletSpec.Merged {"hp": 10, "mp": 20}')
+        feedGmcp('MudletSpec.Merged {"hp": 5}')
+
+        assert.equals(5, gmcp.MudletSpec.Merged.hp)
+        assert.equals(20, gmcp.MudletSpec.Merged.mp, "the partial update replaced the table instead of merging into it")
+      end)
+
+      it("leaves a module it was not given to be replaced wholesale", function()
+        gmcp.MudletSpec = nil
+        finally(function() gmcp.MudletSpec = nil end)
+
+        feedGmcp('MudletSpec.Replaced {"hp": 10, "mp": 20}')
+        feedGmcp('MudletSpec.Replaced {"hp": 5}')
+
+        assert.equals(5, gmcp.MudletSpec.Replaced.hp)
+        assert.is_nil(gmcp.MudletSpec.Replaced.mp, "an unregistered module merged instead of being replaced")
       end)
     end)
 

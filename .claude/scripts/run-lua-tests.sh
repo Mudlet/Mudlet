@@ -158,6 +158,11 @@ export XDG_RUNTIME_DIR="${MUDLET_TEST_DISCORD_RUNTIME_DIR:-$runtime_dir}"
 # neither picks it by itself, and the GTK3 platform theme Qt loads under GNOME
 # calls gtk_init(), which exits the process when it cannot open a display.
 export QT_QPA_PLATFORM=xcb
+# Replacing XDG_RUNTIME_DIR above also hides the desktop's Wayland socket. Where
+# Qt loads its GTK platform theme, GDK then finds no display it is willing to
+# open and gtk_init() exits the process during QApplication construction - status
+# 1, before Mudlet prints a line. The run is under an X server either way, so name
+# the backend GDK should have picked; it is a no-op without that theme plugin.
 export GDK_BACKEND=x11
 export LD_LIBRARY_PATH="$WS/3rdparty/discord/rpc/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 export DBUS_SESSION_BUS_ADDRESS='disabled:'

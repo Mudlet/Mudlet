@@ -211,6 +211,108 @@ describe("Trigger processing", function()
             assert.is_true(highlighted, "Highlighting trigger should have run")
         end)
 
+        it("should capture the whole line when every character shares one color", function()
+            _G.uniformColorMatches = {}
+            -- ANSI 2 = green foreground, -1 = any background
+            local colorTrigger = tempAnsiColorTrigger(2, -1,
+                [[table.insert(_G.uniformColorMatches, matches[1])]])
+
+            feedTriggers("\n\27[32mevery character here is green\27[0m\n")
+
+            killTrigger(colorTrigger)
+            local captured = _G.uniformColorMatches
+            _G.uniformColorMatches = nil
+
+            assert.are.equal(1, #captured, "A single-colored line should produce one match")
+            assert.are.equal("every character here is green", captured[1])
+        end)
+
+        it("should capture only the colored run on a line of mixed colors", function()
+            _G.mixedColorMatches = {}
+            local colorTrigger = tempAnsiColorTrigger(2, -1,
+                [[table.insert(_G.mixedColorMatches, matches[1])]])
+
+            feedTriggers("\nplain \27[32mgreen\27[0m plain\n")
+
+            killTrigger(colorTrigger)
+            local captured = _G.mixedColorMatches
+            _G.mixedColorMatches = nil
+
+            assert.are.equal(1, #captured, "Only the green run should have matched")
+            assert.are.equal("green", captured[1])
+        end)
+
+        it("should not match a line that is uniformly a different color", function()
+            _G.otherColorMatches = {}
+            local colorTrigger = tempAnsiColorTrigger(2, -1,
+                [[table.insert(_G.otherColorMatches, matches[1])]])
+
+            feedTriggers("\n\27[31mevery character here is red\27[0m\n")
+
+            killTrigger(colorTrigger)
+            local captured = _G.otherColorMatches
+            _G.otherColorMatches = nil
+
+            assert.are.equal(0, #captured, "A red line should not match a green color trigger")
+        end)
+
+        it("re-reads a line's colors after a trigger inserts text into it", function()
+            _G.uniformInsertMatches = {}
+            local inserted = false
+
+            -- reads the line while it is still all green, so the answer is
+            -- already worked out by the time the insert changes it
+            local beforeTrigger = tempAnsiColorTrigger(2, -1,
+                [[table.insert(_G.uniformInsertMatches, matches[1])]])
+            local insertTrigger = tempRegexTrigger("^greengreen$", function()
+                moveCursor(5, getLineNumber())
+                cinsertText("<red>PLAIN")
+                resetFormat()
+                inserted = true
+            end)
+            local afterTrigger = tempAnsiColorTrigger(2, -1,
+                [[table.insert(_G.uniformInsertMatches, matches[1])]])
+
+            feedTriggers("\n\27[32mgreengreen\27[0m\n")
+
+            killTrigger(beforeTrigger)
+            killTrigger(insertTrigger)
+            killTrigger(afterTrigger)
+            local captured = _G.uniformInsertMatches
+            _G.uniformInsertMatches = nil
+
+            assert.is_true(inserted, "the inserting trigger should have run")
+            assert.are.equal(2, #captured, "got: [" .. table.concat(captured, "][") .. "]")
+            assert.are.equal("greengreen", captured[1], "before the insert every character of the line is green")
+            assert.are.equal("green", captured[2], "the inserted text is not green, so it must not be swept into the capture")
+        end)
+
+        it("judges a line's colors from the snapshot, not from a recolored buffer", function()
+            _G.uniformRecolorMatches = {}
+            local recolored = false
+
+            local recolorTrigger = tempRegexTrigger("^plain green$", function()
+                if selectString("plain green", 1) > -1 then
+                    setFgColor(255, 0, 0)
+                    recolored = true
+                end
+                resetFormat()
+            end)
+            local colorTrigger = tempAnsiColorTrigger(2, -1,
+                [[table.insert(_G.uniformRecolorMatches, matches[1])]])
+
+            feedTriggers("\nplain \27[32mgreen\27[0m\n")
+
+            killTrigger(recolorTrigger)
+            killTrigger(colorTrigger)
+            local captured = _G.uniformRecolorMatches
+            _G.uniformRecolorMatches = nil
+
+            assert.is_true(recolored, "the recoloring trigger should have run")
+            assert.are.equal(1, #captured, "recoloring the whole line red must not make it match green")
+            assert.are.equal("green", captured[1])
+        end)
+
         it("should keep the outer line's original colors across a nested feedTriggers", function()
             _G.innerSnapshotMatches = {}
             _G.outerSnapshotMatches = {}
@@ -240,6 +342,69 @@ describe("Trigger processing", function()
 
             assert.is_true(innerMatched, "Inner pass should match the inner line's original colors")
             assert.is_true(outerMatched, "Outer pass should still match its original colors after the nested pass")
+        end)
+
+        it("judges a nested line's colors on its own, not on the outer line's", function()
+            _G.nestedOwnColorMatches = {}
+
+            -- runs before the feeder, so the outer line is read - and found to
+            -- be all one color - before the nested line is ever processed
+            local colorTrigger = tempAnsiColorTrigger(2, -1,
+                [[table.insert(_G.nestedOwnColorMatches, matches[1])]])
+            local feeder = tempRegexTrigger("^OUTERALLGREEN$", function()
+                feedTriggers("\n\27[32mINNERGREEN\27[0m plaintail\n")
+            end)
+
+            feedTriggers("\n\27[32mOUTERALLGREEN\27[0m\n")
+
+            killTrigger(colorTrigger)
+            killTrigger(feeder)
+            local captured = _G.nestedOwnColorMatches
+            _G.nestedOwnColorMatches = nil
+
+            assert.are.equal(2, #captured, "got: [" .. table.concat(captured, "][") .. "]")
+            assert.are.equal("OUTERALLGREEN", captured[1])
+            assert.are.equal("INNERGREEN", captured[2], "the nested line is only green up to its tail, whatever the outer line was")
+        end)
+
+        it("judges the outer line's colors on its own after a nested feedTriggers", function()
+            _G.nestedOuterColorMatches = {}
+
+            local feeder = tempRegexTrigger("^GREENSTART plaintail$", function()
+                feedTriggers("\n\27[32mINNERALLGREEN\27[0m\n")
+            end)
+            -- runs after the feeder, so it reads the outer line only once the
+            -- nested pass has been and gone
+            local colorTrigger = tempAnsiColorTrigger(2, -1,
+                [[table.insert(_G.nestedOuterColorMatches, matches[1])]])
+
+            feedTriggers("\n\27[32mGREENSTART\27[0m plaintail\n")
+
+            killTrigger(feeder)
+            killTrigger(colorTrigger)
+            local captured = _G.nestedOuterColorMatches
+            _G.nestedOuterColorMatches = nil
+
+            assert.are.equal(2, #captured, "got: [" .. table.concat(captured, "][") .. "]")
+            assert.are.equal("INNERALLGREEN", captured[1])
+            assert.are.equal("GREENSTART", captured[2], "the outer line is only green up to its tail, whatever the nested line was")
+        end)
+
+        it("should capture only the colored run when a line varies by background alone", function()
+            _G.backgroundRunMatches = {}
+            -- ANSI 44 = blue background; the foreground is never set, so it is
+            -- the same on every character and only the background varies
+            local colorTrigger = tempAnsiColorTrigger(-1, 4,
+                [[table.insert(_G.backgroundRunMatches, matches[1])]])
+
+            feedTriggers("\n\27[44mBLUEBG\27[0m plain\n")
+
+            killTrigger(colorTrigger)
+            local captured = _G.backgroundRunMatches
+            _G.backgroundRunMatches = nil
+
+            assert.are.equal(1, #captured, "got: [" .. table.concat(captured, "][") .. "]")
+            assert.are.equal("BLUEBG", captured[1])
         end)
 
         -- A trigger script that calls feedTriggers() re-enters trigger processing.
@@ -341,6 +506,134 @@ describe("Trigger processing", function()
 
             assert.are.equal("Marker payload", selected,
                 "the match should still be selectable after text was inserted before it")
+        end)
+
+        -- Editing a line that a trigger pass is still running over shifts every
+        -- character after the edit, so the retained original colors have to be
+        -- rebased. Without that, a later color trigger matches at the pre-edit
+        -- offsets and captures a span of text that was never that color.
+        -- The green run is recolored first so that the originals are actually
+        -- retained: with nothing retained the live line answers correctly on its
+        -- own and the rebase is not what is under test.
+        it("should match original colors at their new offsets after text is inserted", function()
+            _G.insertShiftMatches = {}
+
+            local inserter = tempRegexTrigger("^AAAABBBB$", function()
+                if selectString("BBBB", 1) > -1 then
+                    setFgColor(0, 0, 255)
+                end
+                resetFormat()
+                moveCursor(0, getLineNumber())
+                insertText("ZZZZ")
+            end)
+            -- ANSI 1 = red foreground, -1 = ignore the background
+            local colorTrigger = tempAnsiColorTrigger(1, -1,
+                [[table.insert(_G.insertShiftMatches, matches[1])]])
+
+            -- SGR 31 = red foreground, 32 = green foreground
+            feedTriggers("\n\27[31mAAAA\27[32mBBBB\27[0m\n")
+
+            local matchedShifted = contains(_G.insertShiftMatches, "AAAA")
+            local matchedStale = contains(_G.insertShiftMatches, "ZZZZ")
+            killTrigger(inserter)
+            killTrigger(colorTrigger)
+            _G.insertShiftMatches = nil
+
+            assert.is_true(matchedShifted, "The red run should be matched where the insert moved it to")
+            assert.is_false(matchedStale, "The inserted text must not be matched as though it were the red run")
+        end)
+
+        -- An empty replacement is the deletion path, and it returns from
+        -- insertInLine() before that function's own rebase, so replaceInLine()'s
+        -- is the only one covering it.
+        it("should match original colors at their new offsets after part of the line is deleted", function()
+            _G.deleteShiftMatches = {}
+
+            local deleter = tempRegexTrigger("^CCCCDDDD$", function()
+                if selectString("DDDD", 1) > -1 then
+                    setFgColor(0, 0, 255)
+                end
+                resetFormat()
+                if selectString("CC", 1) > -1 then
+                    replace("")
+                end
+                resetFormat()
+            end)
+            local colorTrigger = tempAnsiColorTrigger(1, -1,
+                [[table.insert(_G.deleteShiftMatches, matches[1])]])
+
+            feedTriggers("\n\27[31mCCCC\27[32mDDDD\27[0m\n")
+
+            local matchedShifted = contains(_G.deleteShiftMatches, "CC")
+            local matchedStale = contains(_G.deleteShiftMatches, "CCDD")
+            killTrigger(deleter)
+            killTrigger(colorTrigger)
+            _G.deleteShiftMatches = nil
+
+            assert.is_true(matchedShifted, "The red run left behind should be matched at its new length")
+            assert.is_false(matchedStale, "The green text pulled left must not be matched as red")
+        end)
+
+        -- A nested pass takes the retained originals over for its own line, so
+        -- the enclosing line's have to be retained before that happens. A recolor
+        -- made from inside the nested pass is the only way to reach that window.
+        it("should keep the outer line's original colors when a nested pass recolors it", function()
+            _G.nestedRecolorMatches = {}
+            _G.nestedRecolorLine = nil
+
+            -- fires first in the outer pass, so it is created first
+            local feeder = tempRegexTrigger("^OuterRecolorLine$", function()
+                _G.nestedRecolorLine = getLineNumber()
+                feedTriggers("\nNestedRecolorInner\n")
+            end)
+            -- matches only the fed line, so it runs inside the nested pass
+            local recolorer = tempRegexTrigger("^NestedRecolorInner$", function()
+                moveCursor(0, _G.nestedRecolorLine)
+                if selectString("OuterRecolorLine", 1) > -1 then
+                    setFgColor(0, 0, 255)
+                end
+                deselect()
+                resetFormat()
+            end)
+            -- ANSI 7 = white foreground, 0 = black background, as the line arrived
+            local colorTrigger = tempAnsiColorTrigger(7, 0,
+                [[table.insert(_G.nestedRecolorMatches, matches[1])]])
+
+            feedTriggers("\n\27[37;40mOuterRecolorLine\27[0m\n")
+
+            local outerMatched = contains(_G.nestedRecolorMatches, "OuterRecolorLine")
+            killTrigger(feeder)
+            killTrigger(recolorer)
+            killTrigger(colorTrigger)
+            _G.nestedRecolorMatches = nil
+            _G.nestedRecolorLine = nil
+
+            assert.is_true(outerMatched,
+                "the outer pass must still see the colors the game sent, not the ones a nested pass painted on")
+        end)
+
+        -- wrapLine() rebuilds the line out of the buffer, so calling it on the
+        -- line being processed swaps out the very characters the pass is matching
+        -- against.
+        it("should keep the original colors when a trigger wraps the line being processed", function()
+            _G.wrapPassMatches = {}
+            -- longer than the console's wrap width, so the line really is split
+            local longLine = string.rep("WRAPME AAAA BBBB CCCC DDDD ", 8)
+
+            local wrapper = tempRegexTrigger("^WRAPME", function()
+                wrapLine("main", getLineNumber())
+            end)
+            local colorTrigger = tempAnsiColorTrigger(1, -1,
+                [[table.insert(_G.wrapPassMatches, matches[1])]])
+
+            feedTriggers("\n\27[31m" .. longLine .. "\27[0m\n")
+
+            local matchedAny = #_G.wrapPassMatches > 0
+            killTrigger(wrapper)
+            killTrigger(colorTrigger)
+            _G.wrapPassMatches = nil
+
+            assert.is_true(matchedAny, "the red text should still be matched after the line was wrapped")
         end)
 
     end)
@@ -651,6 +944,96 @@ describe("Trigger processing", function()
 
         it("tempLineTrigger requires numeric line arguments", function()
             assert.has_error(function() tempLineTrigger("start", 2, [[]]) end)
+        end)
+
+    end)
+
+    describe("substring pattern matching", function()
+
+        local line = "ab café the quick brown fox jumps over the lazy dog. 🐉"
+
+        -- Mudlet only summarises a line's character pairs once a profile has
+        -- enough substring patterns for the summary to pay for itself. These
+        -- match nothing and exist only to carry a profile well past that
+        -- threshold, so that raising it later cannot quietly move these specs
+        -- off the summarised path they are written to cover.
+        local function installBallast()
+            local ids = {}
+            for i = 1, 20 do
+                ids[i] = tempTrigger("SpecBigramBallast" .. i, function() end)
+            end
+            return ids
+        end
+
+        local function killAll(ids)
+            for _, id in ipairs(ids) do
+                disableTrigger(id)
+                killTrigger(id)
+            end
+        end
+
+        -- Whether to summarise a line is judged from the line before it, so the
+        -- line is fed twice and only the second pass counted.
+        local function hitsFor(needles)
+            local hits = {}
+            local ids = installBallast()
+            for _, needle in ipairs(needles) do
+                hits[needle] = 0
+                ids[#ids + 1] = tempTrigger(needle, function()
+                    hits[needle] = hits[needle] + 1
+                end)
+            end
+
+            feedTriggers("\n" .. line .. "\n")
+            for _, needle in ipairs(needles) do
+                hits[needle] = 0
+            end
+            feedTriggers("\n" .. line .. "\n")
+
+            killAll(ids)
+            return hits
+        end
+
+        it("matches substrings of every shape that occur in the line", function()
+            local needles = {"a", "ab", "café", "é the", "🐉", "the quick", "brown fox", "over the lazy", "dog."}
+            local hits = hitsFor(needles)
+            for _, needle in ipairs(needles) do
+                assert.are.equal(1, hits[needle], "'" .. needle .. "' occurs in the line and should have matched")
+            end
+        end)
+
+        it("does not match text the line only appears to contain", function()
+            -- each of these is built from characters, and "quick the" from
+            -- character pairs, that the line itself does have
+            local needles = {"ZZ", "Fox", "cafe", "quick the", "abé", "dog.."}
+            local hits = hitsFor(needles)
+            for _, needle in ipairs(needles) do
+                assert.are.equal(0, hits[needle], "'" .. needle .. "' does not occur in the line and should not have matched")
+            end
+        end)
+
+        it("matches a capture the filtering parent carried over from an earlier line", function()
+            _G.TrigBigramCarried = 0
+            local code = [==[ ]==]
+            -- enough plain substring triggers that the profile summarises its
+            -- lines at all, which is the condition this spec is about
+            local ballast = installBallast()
+            feedTriggers("warming the line summary\n")
+
+            tempComplexRegexTrigger("SpecBigramParent", [[^first (\w+)$]], code, 1, 0, 0, 1, 0, 0, 0, 0, 0, 3)
+            tempComplexRegexTrigger("SpecBigramParent", [[^second (\w+)$]], code, 1, 0, 0, 1, 0, 0, 0, 0, 0, 3)
+            permSubstringTrigger("SpecBigramChild", "SpecBigramParent", {"zebra"},
+                                 [==[_G.TrigBigramCarried = _G.TrigBigramCarried + 1]==])
+
+            feedTriggers("first zebra\n")
+            feedTriggers("second wombat\n")
+
+            local fires = _G.TrigBigramCarried
+            killTrigger("SpecBigramChild")
+            killTrigger("SpecBigramParent")
+            killAll(ballast)
+            _G.TrigBigramCarried = nil
+            assert.are.equal(1, fires, "the child searches its parent's capture, which need not come from the line that completed the match")
         end)
 
     end)

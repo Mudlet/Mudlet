@@ -905,6 +905,48 @@ describe("Tests the module accessors", function()
   end)
 end)
 
+-- From format 1.001 on a control character in a script is stored as U+FFFC
+-- followed by the matching control picture, and XMLimport only runs its
+-- decoding scans over a script that holds a U+FFFC at all.
+describe("Tests installing a package whose scripts hold encoded control characters", function()
+  local name = "mudlet-spec-control-chars"
+  local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+  local encoded = "\239\191\188\226\144\129" -- U+FFFC U+2401: how \1 is stored
+  local bare = "\226\144\129" -- U+2401 on its own
+
+  setup(function()
+    local file = io.open(xml, "wb")
+    assert.is_not_nil(file, "could not write " .. xml)
+    file:write(table.concat({
+      '<?xml version="1.0" encoding="UTF-8"?>',
+      '<!DOCTYPE MudletPackage>',
+      '<MudletPackage version="1.001">',
+      '<ScriptPackage>',
+      '<Script isActive="yes" isFolder="no"><name>mudletSpecEncodedControl</name><packageName></packageName>',
+      '<script>mudletSpecEncodedControl = "' .. encoded .. '"</script><eventHandlerList/></Script>',
+      '<Script isActive="yes" isFolder="no"><name>mudletSpecBareControlPicture</name><packageName></packageName>',
+      '<script>mudletSpecBareControlPicture = "' .. bare .. '"</script><eventHandlerList/></Script>',
+      '</ScriptPackage>',
+      '</MudletPackage>',
+    }, "\n"))
+    file:close()
+    installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package " .. name)
+  end)
+
+  teardown(function()
+    removeFixturePackage(name)
+    os.remove(xml)
+  end)
+
+  it("decodes a U+FFFC followed by a control picture back into the control character", function()
+    assert.equals('mudletSpecEncodedControl = "\1"', getScript("mudletSpecEncodedControl"))
+  end)
+
+  it("leaves a control picture with no U+FFFC before it as it is", function()
+    assert.equals('mudletSpecBareControlPicture = "' .. bare .. '"', getScript("mudletSpecBareControlPicture"))
+  end)
+end)
+
 describe("Tests the functionality of reloadModule", function()
   it("raises a Lua error when called with no arguments", function()
     assertArgError(function() reloadModule() end, "reloadModule: bad argument #1 type")
