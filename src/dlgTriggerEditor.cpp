@@ -2374,12 +2374,12 @@ void dlgTriggerEditor::slot_searchMudletItems(const int index)
     searchTimers(s);
     searchKeys(s);
 
-    if (mSearchOptions & SearchOptionIncludeVariables) {
+    if (mSearchOptions & enums::EditorSearchOptionIncludeVariables) {
         searchVariables(s);
     }
 
     mpSourceEditorEdbee->controller()->textSearcher()->setSearchTerm(s);
-    mpSourceEditorEdbee->controller()->textSearcher()->setCaseSensitive(mSearchOptions & SearchOptionCaseSensitive);
+    mpSourceEditorEdbee->controller()->textSearcher()->setCaseSensitive(mSearchOptions & enums::EditorSearchOptionCaseSensitive);
 
     treeWidget_searchResults->setUpdatesEnabled(true);
 
@@ -13271,35 +13271,35 @@ void dlgTriggerEditor::createSearchOptionIcon()
     QIcon newIcon;
     switch (mSearchOptions) {
     // Each combination must be handled here
-    case SearchOptionCaseSensitive | SearchOptionIncludeVariables | SearchOptionWholeWord:
+    case enums::EditorSearchOptionCaseSensitive | enums::EditorSearchOptionIncludeVariables | enums::EditorSearchOptionWholeWord:
         newIcon.addPixmap(QPixmap(":/icons/searchOptions-caseSensitive+withVariables+wholeWords.png"));
         break;
 
-    case SearchOptionIncludeVariables | SearchOptionWholeWord:
+    case enums::EditorSearchOptionIncludeVariables | enums::EditorSearchOptionWholeWord:
         newIcon.addPixmap(QPixmap(":/icons/searchOptions-withVariables+wholeWords.png"));
         break;
 
-    case SearchOptionCaseSensitive | SearchOptionWholeWord:
+    case enums::EditorSearchOptionCaseSensitive | enums::EditorSearchOptionWholeWord:
         newIcon.addPixmap(QPixmap(":/icons/searchOptions-caseSensitive+wholeWords.png"));
         break;
 
-    case SearchOptionWholeWord:
+    case enums::EditorSearchOptionWholeWord:
         newIcon.addPixmap(QPixmap(":/icons/searchOptions-wholeWords.png"));
         break;
 
-    case SearchOptionCaseSensitive | SearchOptionIncludeVariables:
+    case enums::EditorSearchOptionCaseSensitive | enums::EditorSearchOptionIncludeVariables:
         newIcon.addPixmap(QPixmap(":/icons/searchOptions-caseSensitive+withVariables.png"));
         break;
 
-    case SearchOptionIncludeVariables:
+    case enums::EditorSearchOptionIncludeVariables:
         newIcon.addPixmap(QPixmap(":/icons/searchOptions-withVariables.png"));
         break;
 
-    case SearchOptionCaseSensitive:
+    case enums::EditorSearchOptionCaseSensitive:
         newIcon.addPixmap(QPixmap(":/icons/searchOptions-caseSensitive.png"));
         break;
 
-    case SearchOptionNone:
+    case enums::EditorSearchOptionNone:
         // Use the grey icon as that is appropriate for the "No options set" case
         newIcon.addPixmap(QPixmap(":/icons/searchOptions-none.png"));
         break;
@@ -13321,9 +13321,9 @@ int dlgTriggerEditor::findSearchMatch(const QString& haystack, const QString& ne
         return -1;
     }
 
-    if (mSearchOptions & SearchOptionWholeWord) {
+    if (mSearchOptions & enums::EditorSearchOptionWholeWord) {
         QRegularExpression::PatternOptions options = QRegularExpression::NoPatternOption;
-        if (!(mSearchOptions & SearchOptionCaseSensitive)) {
+        if (!(mSearchOptions & enums::EditorSearchOptionCaseSensitive)) {
             options |= QRegularExpression::CaseInsensitiveOption;
         }
         QRegularExpression regex(qsl("\\b%1\\b").arg(QRegularExpression::escape(needle)), options);
@@ -13334,7 +13334,7 @@ int dlgTriggerEditor::findSearchMatch(const QString& haystack, const QString& ne
         return -1;
     }
 
-    return haystack.indexOf(needle, from, (mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive);
+    return haystack.indexOf(needle, from, (mSearchOptions & enums::EditorSearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive);
 }
 
 bool dlgTriggerEditor::containsSearchMatch(const QString& haystack, const QString& needle) const
@@ -13344,8 +13344,8 @@ bool dlgTriggerEditor::containsSearchMatch(const QString& haystack, const QStrin
 
 void dlgTriggerEditor::slot_toggleSearchCaseSensitivity(const bool state)
 {
-    if ((mSearchOptions & SearchOptionCaseSensitive) != state) {
-        mSearchOptions = (mSearchOptions & ~(SearchOptionCaseSensitive)) | (state ? SearchOptionCaseSensitive : SearchOptionNone);
+    if ((mSearchOptions & enums::EditorSearchOptionCaseSensitive) != state) {
+        mSearchOptions = (mSearchOptions & ~(enums::EditorSearchOptionCaseSensitive)) | (state ? enums::EditorSearchOptionCaseSensitive : enums::EditorSearchOptionNone);
         createSearchOptionIcon();
         mpHost->mSearchOptions = mSearchOptions;
     }
@@ -13353,8 +13353,8 @@ void dlgTriggerEditor::slot_toggleSearchCaseSensitivity(const bool state)
 
 void dlgTriggerEditor::slot_toggleSearchIncludeVariables(const bool state)
 {
-    if ((mSearchOptions & SearchOptionIncludeVariables) != state) {
-        mSearchOptions = (mSearchOptions & ~(SearchOptionIncludeVariables)) | (state ? SearchOptionIncludeVariables : SearchOptionNone);
+    if ((mSearchOptions & enums::EditorSearchOptionIncludeVariables) != state) {
+        mSearchOptions = (mSearchOptions & ~(enums::EditorSearchOptionIncludeVariables)) | (state ? enums::EditorSearchOptionIncludeVariables : enums::EditorSearchOptionNone);
         createSearchOptionIcon();
         mpHost->mSearchOptions = mSearchOptions;
     }
@@ -13362,8 +13362,8 @@ void dlgTriggerEditor::slot_toggleSearchIncludeVariables(const bool state)
 
 void dlgTriggerEditor::slot_toggleSearchWholeWord(const bool state)
 {
-    if ((mSearchOptions & SearchOptionWholeWord) != state) {
-        mSearchOptions = (mSearchOptions & ~(SearchOptionWholeWord)) | (state ? SearchOptionWholeWord : SearchOptionNone);
+    if ((mSearchOptions & enums::EditorSearchOptionWholeWord) != state) {
+        mSearchOptions = (mSearchOptions & ~(enums::EditorSearchOptionWholeWord)) | (state ? enums::EditorSearchOptionWholeWord : enums::EditorSearchOptionNone);
         createSearchOptionIcon();
         mpHost->mSearchOptions = mSearchOptions;
     }
@@ -13656,12 +13656,12 @@ void dlgTriggerEditor::slot_rightSplitterMoved(const int, const int)
 // here to the parent Host instance, whereas the slots that change the
 // individual options DO also notify that Host instance about the changes they
 // make:
-void dlgTriggerEditor::setSearchOptions(const SearchOptions optionsState)
+void dlgTriggerEditor::setSearchOptions(const enums::EditorSearchOptions optionsState)
 {
     mSearchOptions = optionsState;
-    mpAction_searchCaseSensitive->setChecked(optionsState & SearchOptionCaseSensitive);
-    mpAction_searchIncludeVariables->setChecked(optionsState & SearchOptionIncludeVariables);
-    mpAction_searchWholeWord->setChecked(optionsState & SearchOptionWholeWord);
+    mpAction_searchCaseSensitive->setChecked(optionsState & enums::EditorSearchOptionCaseSensitive);
+    mpAction_searchIncludeVariables->setChecked(optionsState & enums::EditorSearchOptionIncludeVariables);
+    mpAction_searchWholeWord->setChecked(optionsState & enums::EditorSearchOptionWholeWord);
     createSearchOptionIcon();
 }
 

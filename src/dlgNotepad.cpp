@@ -43,6 +43,7 @@
 #include <QPlainTextEdit>
 #include <QSaveFile>
 #include <QShortcut>
+#include <QTabBar>
 #include <QStringConverter>
 #include <QTextDocument>
 #include <QTextStream>

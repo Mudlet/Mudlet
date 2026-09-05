@@ -41,6 +41,18 @@ public:
     };
     Q_DECLARE_FLAGS(controlsVisibility, controlsVisibilityFlag)
 
+    enum EditorSearchOption {
+        EditorSearchOptionNone = 0x0,
+        EditorSearchOptionCaseSensitive = 0x1,
+        EditorSearchOptionIncludeVariables = 0x2,
+        EditorSearchOptionWholeWord = 0x4 /*,
+        EditorSearchOptionRegExp = 0x8 */
+    };
+    Q_DECLARE_FLAGS(EditorSearchOptions, EditorSearchOption)
+
+    enum BufferSearchOption { BufferSearchOptionNone = 0x0, BufferSearchOptionCaseSensitive = 0x1 };
+    Q_DECLARE_FLAGS(BufferSearchOptions, BufferSearchOption)
+
     enum class PackageModuleType {
         Package = 0,         // Regular package installation
         ModuleFromUI = 1,    // First-time module installation via UI
@@ -134,5 +146,7 @@ public:
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(enums::controlsVisibility)
+Q_DECLARE_OPERATORS_FOR_FLAGS(enums::EditorSearchOptions)
+Q_DECLARE_OPERATORS_FOR_FLAGS(enums::BufferSearchOptions)
 
 #endif //ENUMS_H

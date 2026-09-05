@@ -40,7 +40,7 @@
 #include "TVar.h"
 #include "VarUnit.h"
 #include "mudlet.h"
-#include "dlgTriggerEditor.h"
+#include "enums.h"
 
 #include <QBuffer>
 #include <QClipboard>
@@ -1024,7 +1024,7 @@ void XMLimport::readHost(Host* pHost)
     }
 
     if (attributes().hasAttribute(QLatin1String("EditorSearchOptions"))) {
-        pHost->setSearchOptions(static_cast<dlgTriggerEditor::SearchOptions>(attributes().value(qsl("EditorSearchOptions")).toInt()));
+        pHost->setSearchOptions(static_cast<enums::EditorSearchOptions>(attributes().value(qsl("EditorSearchOptions")).toInt()));
     }
 
     pHost->setDebugShowAllProblemCodepoints(attributes().value(qsl("DebugShowAllProblemCodepoints")) == YES);
