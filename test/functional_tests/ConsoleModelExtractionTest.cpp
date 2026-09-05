@@ -33,6 +33,7 @@
 #include "PortableModeTestHelper.h"
 #include "GifTracker.h"
 #include "Host.h"
+#include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "TCommandLine.h"
 #include "TConsoleModel.h"
@@ -1943,7 +1944,7 @@ noViewSpellReport = table.concat(noViewSpellProblems, '; ')
         const QString sentinel = qsl("QWidget#MainDisplay{background-color: rgba(0,0,0,0);}");
         widget->mpMainDisplay->setStyleSheet(sentinel);
 
-        mudlet::self()->getHostManager().changeAllHostColour(host);
+        HostManager::self()->changeAllHostColour(host);
 
         QVERIFY2(widget->mpMainDisplay->styleSheet() != sentinel, "Changing every host's colours did not reach the miniconsole.");
         QVERIFY2(widget->mpMainDisplay->styleSheet().contains(qsl("12,34,56")),

@@ -29,6 +29,7 @@
 
 #include "ctelnet.h"
 #include "Host.h"
+#include "HostManager.h"
 #include "TCommandLine.h"
 #include "TDebug.h"
 #include "TDockWidget.h"
@@ -840,7 +841,7 @@ void TConsole::resizeEvent(QResizeEvent* event)
         mudlet* const app = mudlet::self();
         const bool inMainWindow = app && !app->getDetachedWindows().contains(mpHost->getName());
         if (inMainWindow) {
-            for (const auto& otherHostPtr : app->getHostManager()) {
+            for (const auto& otherHostPtr : *HostManager::self()) {
                 Host* otherHost = otherHostPtr.data();
                 if (!otherHost || otherHost == mpHost.data()) {
                     continue;
@@ -2778,7 +2779,7 @@ void TConsole::mousePressEvent(QMouseEvent* event)
 
 void TConsole::slot_adjustAccessibleNames()
 {
-    const bool multipleProfilesActive = (mudlet::self()->getHostManager().getHostCount() > 1);
+    const bool multipleProfilesActive = (HostManager::self()->getHostCount() > 1);
     switch (mType) {
     case CentralDebugConsole:
         setAccessibleName(tr("Debug Console."));

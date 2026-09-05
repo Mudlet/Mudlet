@@ -213,8 +213,8 @@ private slots:
     void cleanup()
     {
         for (const QString& profileName : {qsl("HostChildTeardown-NoCloseChildren"), qsl("HostChildTeardown-CloseChildren")}) {
-            if (mudlet::self()->getHostManager().getHost(profileName)) {
-                mudlet::self()->getHostManager().deleteHost(profileName);
+            if (HostManager::self()->getHost(profileName)) {
+                HostManager::self()->deleteHost(profileName);
             }
             deleteProfileDirectory(profileName);
         }
@@ -268,7 +268,7 @@ private slots:
 
         const QPointer<Host> hostGuard(pHost);
         pHost = nullptr;
-        mudlet::self()->getHostManager().deleteHost(profileName);
+        HostManager::self()->deleteHost(profileName);
         QVERIFY2(hostGuard.isNull(), "The Host outlived deleteHost(), so ~Host() never ran");
 
         const QStringList leftBehind = windowsLeftBehind(windows);
@@ -299,7 +299,7 @@ private slots:
         // not give one either, which is what leaves the deferred deletes pending
         const QPointer<Host> hostGuard(pHost);
         pHost = nullptr;
-        mudlet::self()->getHostManager().deleteHost(profileName);
+        HostManager::self()->deleteHost(profileName);
         QVERIFY2(hostGuard.isNull(), "The Host outlived deleteHost(), so ~Host() never ran");
 
         // checked before the event loop gets a turn, so that the deletes

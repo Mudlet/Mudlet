@@ -200,6 +200,7 @@ set(SETTINGS_GROUP_TEST_SOURCES
 set(TEARDOWN_GROUP_TEST_SOURCES
     DialogTeardownTest.cpp
     HostChildTeardownTest.cpp
+    HostManagerAccessorTest.cpp
     HostWidgetDecouplingTest.cpp
 )
 
