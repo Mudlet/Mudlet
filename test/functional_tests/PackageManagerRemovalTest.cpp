@@ -145,7 +145,36 @@ private slots:
         host->waitForProfileSave();
     }
 
+    // A package taken away by a script leaves the listing with it: the dialog
+    // hears Host::signal_packageListChanged itself, so no row stays behind to
+    // offer a removal that can only be refused.
+    void test_aPackageUninstalledElsewhereLeavesTheListing()
+    {
+        auto* host = startProfile();
+        QVERIFY2(host, "Could not start the profile");
+
+        host->mInstalledPackages << qsl("listing-a") << qsl("listing-b") << qsl("listing-c");
+        auto* manager = new dlgPackageManager(nullptr, host);
+        QCOMPARE(rowNames(manager).filter(qsl("listing-")), QStringList({qsl("listing-a"), qsl("listing-b"), qsl("listing-c")}));
+
+        QVERIFY2(host->uninstallPackage(qsl("listing-b"), enums::PackageModuleType::Package), "The seeded package could not be uninstalled");
+        QVERIFY2(!host->mInstalledPackages.contains(qsl("listing-b")), "The package was answered yes but is still listed by the profile");
+
+        QCOMPARE(rowNames(manager).filter(qsl("listing-")), QStringList({qsl("listing-a"), qsl("listing-c")}));
+        delete manager;
+        host->waitForProfileSave();
+    }
+
 private:
+    QStringList rowNames(dlgPackageManager* manager) const
+    {
+        QStringList names;
+        for (int row = 0; row < manager->packageList->count(); ++row) {
+            names << manager->packageList->item(row)->text();
+        }
+        return names;
+    }
+
     Host* startProfile()
     {
         auto host = TestProfile::create(mpHostname, mpLocalhost, mpPort);

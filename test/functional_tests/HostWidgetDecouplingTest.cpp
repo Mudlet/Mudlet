@@ -27,6 +27,8 @@
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TMainConsole.h"
+#include "TTrigger.h"
+#include "TriggerUnit.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
@@ -453,6 +455,35 @@ private slots:
 
         QCOMPARE(host->getEditorShowBidi(), !before);
         QCOMPARE(sourceEditor->config()->renderBidiContolCharacters(), !before);
+    }
+
+    // installPackage() and uninstallPackage() used to reach into the editor to
+    // rebuild its trees; the editor now hears signal_editorCleanResetRequested.
+    // A trigger registered behind the editor's back tells a rebuild from none:
+    // only a clean reset reads the units again.
+    void test_packageChangesRepopulateTheEditor()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        auto* editor = host->mpEditorDialog.data();
+        QVERIFY2(editor, "The profile came up without its editor dialog.");
+        QVERIFY2(editor->mpTriggerBaseItem, "The editor has no trigger tree root.");
+        const int shown = editor->mpTriggerBaseItem->childCount();
+
+        auto* trigger = new TTrigger(nullptr, host);
+        trigger->setName(qsl("registered behind the editor"));
+        QVERIFY(host->getTriggerUnit()->registerTrigger(trigger));
+        QCOMPARE(editor->mpTriggerBaseItem->childCount(), shown);
+
+        host->mInstalledPackages << qsl("reset-probe");
+        QVERIFY2(host->uninstallPackage(qsl("reset-probe"), enums::PackageModuleType::Package), "The seeded package could not be uninstalled");
+        // doCleanReset() defers the rebuild to the next event loop turn
+        QTest::qWait(50);
+
+        QVERIFY2(editor->mpTriggerBaseItem, "The rebuilt editor has no trigger tree root.");
+        QCOMPARE(editor->mpTriggerBaseItem->childCount(), shown + 1);
+        host->waitForProfileSave();
     }
 
     void cleanup()
