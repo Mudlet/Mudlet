@@ -1082,17 +1082,27 @@ int TLuaInterpreter::sttUnloadLibrary(lua_State* L)
             reportSpeechRefusal(qsl("cannot unload the speech recognition library while it is in use, close speech recognition first"));
             return warnArgumentValue(L, __func__, qsl("cannot unload the speech recognition library while it is in use, close speech recognition first"), true);
         }
-        // Only Vosk's loader is wired to this call, so with another engine
-        // loaded there is nothing here that can release its library. Saying
-        // true would be the plainest lie the bridge tells: the module stays
-        // mapped, stt.available() still answers true, and on Windows the file
-        // the caller meant to replace is still locked.
-        if (pRecognizer && !qobject_cast<VoskRecognizer*>(pRecognizer)) {
-            return warnArgumentValue(L,
-                                     __func__,
-                                     qsl("stt.unloadLibrary() acts on the Vosk library alone today, and the engine loaded is %1 - its library stays mapped, so quit Mudlet to replace it")
-                                             .arg(pRecognizer->backendName()),
-                                     true);
+        // Only Vosk's loader is wired to this call, so an engine that has a
+        // library of its own which this cannot release has to refuse: saying
+        // true would be the plainest lie the bridge tells, with the module
+        // still mapped, stt.available() still answering true, and on Windows
+        // the file the caller meant to replace still locked.
+        //
+        // The built-in macOS backend is not one of those. It has no library at
+        // all, so unloading Vosk's is exactly as possible with it loaded as
+        // without - and refusing there told a caller their file was locked by
+        // an engine that maps nothing. It is also the engine that exists by
+        // default on a Mac the moment anything builds one, which made the
+        // refusal the normal answer rather than the exceptional one.
+        if (pRecognizer && !qobject_cast<VoskRecognizer*>(pRecognizer) && loadedSpeechBackend(pRecognizer) != SpeechRecognizerFactory::Backend::Platform) {
+            const QString message = qsl("stt.unloadLibrary() acts on the Vosk library alone today, and the engine loaded is %1 - its library stays mapped, so quit Mudlet to replace it")
+                                            .arg(pRecognizer->backendName());
+            // Raised as well as returned, like the other refusals here: which
+            // engine is loaded is not the caller's argument, and a consumer
+            // driving an install flow from events alone would otherwise see a
+            // false it could not attribute to anything.
+            reportSpeechRefusal(message);
+            return warnArgumentValue(L, __func__, message, true);
         }
     }
 

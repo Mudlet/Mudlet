@@ -353,7 +353,8 @@ describe("stt bridge", function()
       local hadLibrary = stt.available()
       finally(function() stt.reloadLibrary() end)
 
-      assert.is_true(stt.unloadLibrary(), "unloading with nothing in use should succeed")
+      local unloaded, unloadError = stt.unloadLibrary()
+      assert.is_true(unloaded, "unloading with nothing in use should succeed, got: " .. tostring(unloadError))
       if hadLibrary then
         -- the latch is the whole point: without it the next read-shaped call
         -- maps the module straight back in and the file the caller meant to

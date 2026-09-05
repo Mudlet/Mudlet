@@ -246,10 +246,10 @@ capability.
    A path that simply is not there **does** speak, and is deliberately not
    counted among those: the model may have been deleted or the drive left
    unmounted since a package saved the setting, which is the world changing
-   rather than the caller getting its own call wrong. That check also runs
-   before Mudlet knows which backend will answer, so a missing path speaks even
-   on a machine where only a model-less backend is available and the carve-out
-   above would otherwise have kept it quiet. A call that fails on an engine
+   rather than the caller getting its own call wrong. It is the path being
+   absent that decides this, not which backend would have read it: a missing
+   path speaks even on a machine where only a model-less backend is available,
+   where the carve-out above would have kept a path that existed quiet. A call that fails on an engine
    which *can* do the thing likewise speaks, so that case and the permanent
    limit have to be told apart before the attempt rather than guessed from its
    result.
