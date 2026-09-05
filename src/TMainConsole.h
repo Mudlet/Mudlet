@@ -267,9 +267,9 @@ private:
     // and removal from the three maps goes through these, so that the Host's
     // window registry cannot fall out of step with them.
     void registerScrollBox(const QString& name, TScrollBox* pScrollBox);
-    TScrollBox* deregisterScrollBox(const QString& name);
+    void deregisterScrollBox(TScrollBox* pScrollBox);
     void registerTextBox(const QString& name, TTextBox* pTextBox);
-    TTextBox* deregisterTextBox(const QString& name);
+    void deregisterTextBox(TTextBox* pTextBox);
 
     // The view's half of the named-window bookkeeping; the core's half is the
     // Host's window registry, which this class registers into and deregisters
