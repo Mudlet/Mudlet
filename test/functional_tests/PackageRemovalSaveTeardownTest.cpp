@@ -49,6 +49,7 @@
 #include <chrono>
 #include <zip.h>
 
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -80,19 +81,22 @@ private:
 
     static void deleteProfileDirectory(const QString& profileName)
     {
-        QDir dir(mudlet::getMudletPath(enums::profileHomePath, profileName));
+        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, profileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }
     }
 
-    static QStringList savedProfileFiles(const QString& profileName) { return QDir(mudlet::getMudletPath(enums::profileXmlFilesPath, profileName)).entryList(QStringList{qsl("*.xml")}, QDir::Files); }
+    static QStringList savedProfileFiles(const QString& profileName)
+    {
+        return QDir(MudletPaths::getMudletPath(enums::profileXmlFilesPath, profileName)).entryList(QStringList{qsl("*.xml")}, QDir::Files);
+    }
 
     // Whether needle appears in the profile that was saved last - what actually
     // landed on disk, rather than what a save signal says was attempted.
     static bool lastSavedProfileContains(const QString& profileName, const QString& needle)
     {
-        const QDir directory(mudlet::getMudletPath(enums::profileXmlFilesPath, profileName));
+        const QDir directory(MudletPaths::getMudletPath(enums::profileXmlFilesPath, profileName));
         const QStringList saved = directory.entryList(QStringList{qsl("*.xml")}, QDir::Files, QDir::Name);
         if (saved.isEmpty()) {
             return false;
@@ -187,7 +191,7 @@ private:
         return zip_close(archive) == 0;
     }
 
-    QString profileFilePath(const QString& relativePath) const { return qsl("%1/%2").arg(mudlet::getMudletPath(enums::profileHomePath, mProfileName), relativePath); }
+    QString profileFilePath(const QString& relativePath) const { return qsl("%1/%2").arg(MudletPaths::getMudletPath(enums::profileHomePath, mProfileName), relativePath); }
 
 private slots:
     void initTestCase()
@@ -223,8 +227,7 @@ private slots:
         mpHost = nullptr;
         delete mpServer;
         mpServer = nullptr;
-        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
-        // getMudletPath() dereferences the instance rather than checking it
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
             deleteProfileDirectory(mProfileName);
             delete mudlet::self();
@@ -275,7 +278,7 @@ private slots:
         QVERIFY2(writeConfigOnlyArchive(archivePath, qsl("..")), "Could not write the test archive");
 
         mpHost->waitForProfileSave(); // an install during a save is postponed and answered with a bare true
-        const QString profileHome = mudlet::getMudletPath(enums::profileHomePath, mProfileName);
+        const QString profileHome = MudletPaths::getMudletPath(enums::profileHomePath, mProfileName);
         const QString profilesDirectory = QFileInfo(profileHome).absolutePath();
 
         auto [ok, message] = mpHost->installPackage(archivePath, enums::PackageModuleType::Package, true);

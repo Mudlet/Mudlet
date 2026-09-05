@@ -38,6 +38,7 @@
 #include <QToolButton>
 
 #include "MudletInstanceCoordinator.h"
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "TelnetServerStub.h"
@@ -64,7 +65,7 @@ private:
   const QString mLocalhost = qsl("localhost");
 
   void deleteProfileDirectory(const QString &profileName) {
-    QDir dir(mudlet::getMudletPath(enums::profileHomePath, profileName));
+    QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, profileName));
     if (dir.exists()) {
       dir.removeRecursively();
     }
