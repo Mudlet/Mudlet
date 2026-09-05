@@ -7774,7 +7774,13 @@ bool mudlet::overwriteDictionaryFile(const QString& dictionaryPath, const QStrin
     }
 
     QTextStream ds(&dict);
-    ds << qMax(0, wl.count());
+    // hunspell refuses to load a dictionary that declares no words - 1.7.3
+    // fails it with "missing or bad word count" - yet Hunspell_create() still
+    // hands back a non-null handle for that failed load, so a caller cannot
+    // tell it got an unusable dictionary. The count on this first line only
+    // sizes hunspell's hash table and it reads words until EOF regardless, so
+    // claiming one word when the personal dictionary is empty costs nothing:
+    ds << qMax(1, wl.count());
     if (!wl.isEmpty()) {
         ds << QChar(QChar::LineFeed);
         ds << wl.join(QChar::LineFeed).toUtf8();
