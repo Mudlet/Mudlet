@@ -86,7 +86,6 @@ public:
     // Resolves the config root itself on first use; setConfigPath() replaces it,
     // which is how setupConfig() installs the root it has validated
     static QString getMudletPath(enums::mudletPathType mode, const QString& extra1 = QString(), const QString& extra2 = QString());
-    static void setConfigPath(const QString& path);
 
     // Whether the main dictionary files are the ones bundled with Mudlet (true) or
     // ones provided by the system (false). Settled as a side effect of resolving
@@ -112,9 +111,7 @@ public:
 
     // The persistent application settings in Mudlet.ini under the config root
     static QSettings* getQSettings();
-    static void resetSettings();
     static const QString& getInterfaceLanguage();
-    static void setInterfaceLanguage(const QString& language);
 
     // Which build of Mudlet this is, and how it names itself to the outside world.
 
@@ -126,6 +123,15 @@ public:
     static bool publicTest();
     static bool development();
     static void setNetworkRequestDefaults(const QUrl& url, QNetworkRequest& request);
+
+private:
+    // The main window alone changes these: setupConfig() installs the root it has
+    // validated and restarts the settings store under it, and the language follows
+    // the preferences dialog through mudlet::setInterfaceLanguage()
+    friend class mudlet;
+    static void setConfigPath(const QString& path);
+    static void resetSettings();
+    static void setInterfaceLanguage(const QString& language);
 };
 
 #endif // MUDLET_MUDLETAPP_H

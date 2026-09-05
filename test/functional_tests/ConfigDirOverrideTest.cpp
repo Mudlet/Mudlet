@@ -70,10 +70,29 @@ private:
         return marker.open(QIODevice::WriteOnly) && marker.write(content) == content.size();
     }
 
+    MudletApp::ConfigDirResolution resolveWithHome(const QString& home, const QString& execDir) const
+    {
+        const QByteArray saved = qgetenv("HOME");
+        qputenv("HOME", home.toUtf8());
+        const auto resolution = MudletApp::resolveConfigRoot(execDir);
+        saved.isNull() ? qunsetenv("HOME") : qputenv("HOME", saved);
+        return resolution;
+    }
+
+    QString settingsFileName() const
+    {
+        auto* settings = MudletApp::getQSettings();
+        return settings ? settings->fileName() : QString();
+    }
+
 private slots:
     void initTestCase()
     {
         mudlet::start();
+        // Paths get resolved on demand and corrected later; a settings store
+        // cannot, so it stays unavailable until setupConfig() settles the root.
+        // Checked here, ahead of every case, so no later case can settle it first.
+        QVERIFY2(MudletApp::getQSettings() == nullptr, "a settings store exists before setupConfig() has settled the config root");
         mSavedXdg = qgetenv("XDG_CONFIG_HOME");
     }
 
@@ -437,6 +456,75 @@ private slots:
         QCOMPARE(r.path, mudletUnder(xdg.path()));
     }
 
+    // The marker in ~/.config/mudlet reads like the one beside the executable:
+    // an empty file names the portable/ directory beside the executable. A bare
+    // empty root here would file every profile under the filesystem root.
+    void test_resolveConfigRootEmptyHomeMarkerFallsBackToPortableSubdir()
+    {
+#ifdef Q_OS_WIN
+        QSKIP("QDir::homePath() does not follow HOME on Windows");
+#endif
+        QTemporaryDir home;
+        QTemporaryDir exec;
+        QVERIFY(home.isValid() && exec.isValid());
+        const QString markerDir = qsl("%1/.config/mudlet").arg(home.path());
+        QVERIFY(QDir().mkpath(markerDir));
+        QVERIFY(writeMarker(markerDir, ""));
+
+        const auto r = resolveWithHome(home.path(), exec.path());
+        QVERIFY(r.portable);
+        QCOMPARE(r.path, QDir::cleanPath(qsl("%1/portable").arg(exec.path())));
+    }
+
+    void test_resolveConfigRootHomeMarkerPathIsUsedAsIs()
+    {
+#ifdef Q_OS_WIN
+        QSKIP("QDir::homePath() does not follow HOME on Windows");
+#endif
+        QTemporaryDir home;
+        QTemporaryDir exec;
+        QVERIFY(home.isValid() && exec.isValid());
+        const QString markerDir = qsl("%1/.config/mudlet").arg(home.path());
+        QVERIFY(QDir().mkpath(markerDir));
+        const QString target = QDir::cleanPath(qsl("%1/elsewhere").arg(QDir::tempPath()));
+        QVERIFY(writeMarker(markerDir, target.toUtf8()));
+
+        const auto r = resolveWithHome(home.path(), exec.path());
+        QVERIFY(r.portable);
+        QCOMPARE(r.path, target);
+    }
+
+    // CredentialManager picks the keychain or a file on portableModeActive(), so
+    // it has to agree with the marker resolveConfigRoot() honours
+    void test_portableModeActiveFollowsTheMarker()
+    {
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - portable mode is on whatever the exec dir holds");
+        }
+        QTemporaryDir exec;
+        QVERIFY(exec.isValid());
+        QVERIFY(!MudletApp::portableModeActive(exec.path()));
+        QVERIFY(!MudletApp::resolveConfigRoot(exec.path()).portable);
+
+        QVERIFY(writeMarker(exec.path(), ""));
+        QVERIFY(MudletApp::portableModeActive(exec.path()));
+        QVERIFY(MudletApp::resolveConfigRoot(exec.path()).portable);
+    }
+
+    // --- MudletApp::sanitizeForPath() -----------------------------------------
+
+    // Stored passwords are filed under the result, so two long names must not
+    // shorten to the same thing
+    void test_sanitizeForPathKeepsLongNamesDistinct()
+    {
+        const QString a(60, QLatin1Char('a'));
+        const QString b = a.left(59) + QLatin1Char('b');
+        QVERIFY(MudletApp::sanitizeForPath(a) != MudletApp::sanitizeForPath(b));
+        QVERIFY(MudletApp::sanitizeForPath(a).length() <= 50);
+        QCOMPARE(MudletApp::sanitizeForPath(qsl("a/b:c")), qsl("a_b_c"));
+        QCOMPARE(MudletApp::sanitizeForPath(qsl("short")), qsl("short"));
+    }
+
     // --- MudletApp::getMudletPath() before setupConfig() ----------------------
 
     // Engine code asks for paths before the main window has run setupConfig(),
@@ -456,11 +544,6 @@ private slots:
         QCOMPARE(MudletApp::getMudletPath(enums::profilesPath), qsl("%1/profiles").arg(target));
     }
 
-    // Paths get resolved on demand and corrected later; a settings store cannot,
-    // so it stays unavailable until setupConfig() settles the root. Has to run
-    // before the setupConfig() cases below, which settle it.
-    void test_getQSettingsIsNullBeforeSetupConfig() { QVERIFY(MudletApp::getQSettings() == nullptr); }
-
     // --- mudlet::setupConfig() end-to-end wiring ------------------------------
 
     void test_setupConfigUsesPreCreatedXdgTarget()
@@ -476,6 +559,7 @@ private slots:
 
         mudlet::self()->setupConfig();
         QCOMPARE(MudletApp::getMudletPath(enums::mainPath), target);
+        QCOMPARE(settingsFileName(), qsl("%1/Mudlet.ini").arg(target));
     }
 
     // The warning is all that tells an affected user where their other profiles went.
@@ -507,6 +591,7 @@ private slots:
         qunsetenv("XDG_CONFIG_HOME");
         mudlet::self()->setupConfig();
         QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/.config/mudlet").arg(QDir::homePath()));
+        QCOMPARE(settingsFileName(), qsl("%1/.config/mudlet/Mudlet.ini").arg(QDir::homePath()));
     }
 };
 

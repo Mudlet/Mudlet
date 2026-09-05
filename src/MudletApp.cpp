@@ -156,15 +156,15 @@ MudletApp::ConfigDirResolution MudletApp::resolveConfigRoot(const QString& execD
     const QString confDirDefault = qsl("%1/.config/mudlet").arg(QDir::homePath());
     const QString markerExecDir = qsl("%1/portable.txt").arg(execDir);
     const QString markerHomeDir = qsl("%1/portable.txt").arg(confDirDefault);
-    if (QFileInfo(markerExecDir).isFile()) {
-        QString portPath = readMarkerFile(markerExecDir);
+    for (const QString& marker : {markerExecDir, markerHomeDir}) {
+        if (!QFileInfo(marker).isFile()) {
+            continue;
+        }
+        QString portPath = readMarkerFile(marker);
         if (portPath.isEmpty()) {
             portPath = qsl("./portable"); // fallback value for empty portable.txt
         }
         return {.path = pathResolveRelative(QDir::cleanPath(portPath), execDir), .portable = true};
-    }
-    if (QFileInfo(markerHomeDir).isFile()) {
-        return {.path = pathResolveRelative(QDir::cleanPath(readMarkerFile(markerHomeDir)), execDir), .portable = true};
     }
     return xdgConfigDir(confDirDefault);
 }
