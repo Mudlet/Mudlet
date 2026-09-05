@@ -28,7 +28,11 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include <QAction>
 #include <QClipboard>
+#include <QContextMenuEvent>
+#include <QMenu>
+#include <QScopeGuard>
 
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
@@ -148,6 +152,67 @@ private slots:
     QVERIFY2(!copied.contains(middleDot),
              "Copied text should not contain middle dot formatting marks");
     QCOMPARE(copied, qsl("  ^pattern$  "));
+  }
+
+  // Opening the context menu sends the focused editor a FocusOut with
+  // Qt::PopupFocusReason, so a focus-out that drops the selection leaves the
+  // menu's own Copy entry with nothing to copy (#10330)
+  void test_copyFromPatternEditorContextMenu() {
+    SingleLineTextEdit edit;
+    edit.setPlainText(qsl("^pattern$"));
+    edit.show();
+    edit.activateWindow();
+    QVERIFY(QTest::qWaitForWindowActive(&edit));
+    edit.setFocus();
+    QTRY_VERIFY(edit.hasFocus());
+    edit.selectAll();
+
+    QClipboard *clipboard = QGuiApplication::clipboard();
+    QVERIFY(clipboard);
+    clipboard->setText(qsl("previous clipboard contents"));
+
+    // Qt only sends that FocusOut for the first popup, and a menu left open
+    // past a failed assertion would outlive the test
+    QVERIFY2(!QApplication::activePopupWidget(), "a popup was already open");
+    const auto closePopup = qScopeGuard([] {
+      if (auto *popup = QApplication::activePopupWidget()) {
+        popup->close();
+      }
+    });
+
+    const QPoint pos(5, 5);
+    QContextMenuEvent contextMenuEvent(QContextMenuEvent::Mouse, pos,
+                                       edit.viewport()->mapToGlobal(pos));
+    QApplication::sendEvent(edit.viewport(), &contextMenuEvent);
+
+    auto *menu = qobject_cast<QMenu *>(QApplication::activePopupWidget());
+    QVERIFY2(menu, "right-clicking the pattern editor did not open its context menu");
+    auto *copyAction = menu->findChild<QAction *>(qsl("edit-copy"));
+    QVERIFY2(copyAction, "the context menu has no Copy entry named edit-copy");
+    copyAction->trigger();
+
+    QCOMPARE(clipboard->text(), qsl("^pattern$"));
+  }
+
+  // The deselect on focus-out exists so a pattern line does not keep showing a
+  // stale selection once another line is being edited, so it has to survive
+  // only the reasons that give focus straight back
+  void test_patternEditorDeselectsOnlyWhenFocusMovesOn() {
+    SingleLineTextEdit edit;
+    edit.setPlainText(qsl("^pattern$"));
+    edit.selectAll();
+
+    QFocusEvent popupFocusOut(QEvent::FocusOut, Qt::PopupFocusReason);
+    QApplication::sendEvent(&edit, &popupFocusOut);
+    QVERIFY2(edit.textCursor().hasSelection(), "a popup taking focus dropped the selection");
+
+    QFocusEvent windowFocusOut(QEvent::FocusOut, Qt::ActiveWindowFocusReason);
+    QApplication::sendEvent(&edit, &windowFocusOut);
+    QVERIFY2(edit.textCursor().hasSelection(), "switching windows dropped the selection");
+
+    QFocusEvent tabFocusOut(QEvent::FocusOut, Qt::TabFocusReason);
+    QApplication::sendEvent(&edit, &tabFocusOut);
+    QVERIFY2(!edit.textCursor().hasSelection(), "focus moving to another widget kept the selection");
   }
 };
 
