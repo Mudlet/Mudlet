@@ -48,7 +48,6 @@
 #include "dlgTriggerEditor.h"
 #include "edbee/views/texteditorscrollarea.h"
 #include "MMCP.h"
-#include "MudletArchive.h"
 #include "widgetutils.h"
 #include "utils.h"
 
@@ -7277,7 +7276,7 @@ void dlgProfilePreferences::maybeDownloadEditorThemes()
                         }
 
                         // perform unzipping in a worker thread so as not to freeze the UI
-                        auto future = QtConcurrent::run(MudletArchive::unzip, tempThemesArchive->fileName(), mudlet::getMudletPath(enums::mainDataItemPath, qsl("edbee/")), temporaryDir.path());
+                        auto future = QtConcurrent::run(utils::unzip, tempThemesArchive->fileName(), mudlet::getMudletPath(enums::mainDataItemPath, qsl("edbee/")), temporaryDir.path());
                         auto watcher = new QFutureWatcher<bool>(this);
                         connect(watcher, &QFutureWatcher<bool>::finished, this, [=, this]() {
                             if (future.result()) {

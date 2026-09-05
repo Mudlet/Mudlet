@@ -39,7 +39,6 @@
 #include "MMCP.h"
 #include "MMCPServer.h"
 #include "mudlet.h"
-#include "MudletArchive.h"
 #include "TCommandLine.h"
 #include "TConsole.h"
 #include "TConsoleModel.h"
@@ -55,6 +54,7 @@
 #include "TScript.h"
 #include "TTextEdit.h"
 #include "TToolBar.h"
+#include "utils.h"
 #include "VarUnit.h"
 #include "XMLexport.h"
 #include "XMLimport.h"
@@ -2658,7 +2658,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             showedUnpackingDialog = true;
         }
 
-        auto unzipSuccessful = MudletArchive::unzip(actualFileName, _dest, _tmpDir);
+        auto unzipSuccessful = utils::unzip(actualFileName, _dest, _tmpDir);
 
         if (showedUnpackingDialog) {
             emit signal_hideUnpackingProgress();

@@ -19,8 +19,6 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "MudletArchive.h"
-
 #include "utils.h"
 
 #include <QDebug>
@@ -38,7 +36,7 @@
 #error Mudlet requires a version of libzip of at least 1.0
 #endif
 
-bool MudletArchive::unzip(const QString& archivePath, const QString& destination, const QDir& tmpDir)
+bool utils::unzip(const QString& archivePath, const QString& destination, const QDir& tmpDir)
 {
     int err = 0;
     //from: https://gist.github.com/mobius/1759816
@@ -49,7 +47,7 @@ bool MudletArchive::unzip(const QString& archivePath, const QString& destination
     if (!archive) {
         zip_error_t error;
         zip_error_init_with_code(&error, err);
-        qWarning().noquote().nospace() << "MudletArchive::unzip(\"" << archivePath << "\", \"" << destination << "\", \"" << tmpDir.absolutePath() << "\") WARNING - failed to unzip file, error: \""
+        qWarning().noquote().nospace() << "utils::unzip(\"" << archivePath << "\", \"" << destination << "\", \"" << tmpDir.absolutePath() << "\") WARNING - failed to unzip file, error: \""
                                        << zip_error_strerror(&error) << "\"";
         zip_error_fini(&error);
         return false;
@@ -144,7 +142,7 @@ bool MudletArchive::unzip(const QString& archivePath, const QString& destination
     err = zip_close(archive);
     if (err) {
         zip_error_t* error = zip_get_error(archive);
-        qWarning().noquote().nospace() << "MudletArchive::unzip(\"" << archivePath << "\", \"" << destination << "\", \"" << tmpDir.absolutePath() << "\") Warning - " << zip_error_strerror(error);
+        qWarning().noquote().nospace() << "utils::unzip(\"" << archivePath << "\", \"" << destination << "\", \"" << tmpDir.absolutePath() << "\") Warning - " << zip_error_strerror(error);
         zip_error_fini(error);
         zip_discard(archive);
         return false;
