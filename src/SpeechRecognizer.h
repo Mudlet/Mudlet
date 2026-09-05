@@ -81,6 +81,13 @@ public:
             // as a successful start. The state is left alone - a refusal is
             // not a fault, and docs/stt-api.md says a refusal may arrive
             // without a state change.
+            //
+            // The first two are unreachable from Lua as things stand:
+            // sttStart() and sttToggle() both refuse on !initialized() first,
+            // which is exactly Uninitialized-or-Error, and answer in their own
+            // words. Kept for a direct C++ caller, and because a bridge that
+            // stopped pre-gating would need them - but nothing translated here
+            // reaches a player through those two paths today.
             if (state() == State::Uninitialized) {
                 //: Shown when speech recognition is asked to listen before a language model is loaded
                 emit errorOccurred(tr("Recognizer not initialized. Call initialize() first."));
@@ -339,6 +346,12 @@ protected:
     // clearAppliedVocabulary() itself - otherwise the flag still says the old
     // bias holds, and the next identical offer is wrongly short-circuited into
     // Applied against a model that was never given the words.
+    //
+    // Worth knowing which of these is actually exercised: every backend in the
+    // tree takes the noteVocabularyApplied() branch, sherpa explicitly so and
+    // with its reasons at the call site. The setVocabulary(vocabulary()) route
+    // described above has no user yet, so it is reasoning rather than
+    // something the tests hold to.
     virtual VocabularyResult applyVocabulary(const QStringList& words)
     {
         Q_UNUSED(words)
@@ -380,8 +393,12 @@ protected:
     // doStartListening() must also leave the recognizer in a terminal state,
     // itself or through its continuation, before the request is done: Listening
     // once audio is flowing, Starting while a continuation is still pending, or
-    // Error/Ready on failure. Ending while still Ready reports a failed start
-    // to the Lua layer over an engine that may in fact be running.
+    // Error on failure. Error is the only one the Lua layer reads as a refused
+    // start - see speechStartAccepted() - so a backend that fails must reach
+    // it rather than simply returning. Ready on return is not a failure: a
+    // handler stopping on the sysSTTStateChanged this raises lands back there
+    // inside the same frame, which is the ordinary push-to-talk shape, and is
+    // why the check above this one is deliberately not asserted.
     virtual void doStartListening() = 0;
     virtual void doStopListening() = 0;
     virtual void doCancel() = 0;

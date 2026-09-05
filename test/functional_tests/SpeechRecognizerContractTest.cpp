@@ -155,6 +155,11 @@ public:
     int mStopCallCount = 0;
     int mCancelCallCount = 0;
 
+    // setState() is protected, and the guard inside it is a rule of the base
+    // rather than of any backend, so there is no other way to ask a recognizer
+    // to repeat a state it is already in
+    using SpeechRecognizer::setState;
+
 protected:
     void doStartListening() override { setState(State::Starting); }
     void doStopListening() override { ++mStopCallCount; }
@@ -678,7 +683,11 @@ private slots:
     // identifier that does not survive the trip silently reverts their choice.
     void aBackendIdentifierSurvivesTheRoundTrip()
     {
-        for (const auto backend : {SpeechRecognizerFactory::Backend::Vosk, SpeechRecognizerFactory::Backend::Sherpa}) {
+        // Platform included deliberately: it is the value stt.availableBackends()
+        // returns on macOS, and leaving it out let backendIdentifier(Platform)
+        // answer "vosk" with the suite still green.
+        for (const auto backend : {SpeechRecognizerFactory::Backend::Vosk, SpeechRecognizerFactory::Backend::Sherpa,
+                                   SpeechRecognizerFactory::Backend::Platform}) {
             const QString identifier = SpeechRecognizerFactory::backendIdentifier(backend);
             QVERIFY2(!identifier.isEmpty(), "a backend the player can choose needs a name to store");
             QCOMPARE(SpeechRecognizerFactory::backendFromIdentifier(identifier), backend);
@@ -1118,6 +1127,27 @@ private slots:
         QVERIFY2(!apple.supportsSensitivity(),
                  "the built-in macOS backend decides its own endpointing and exposes nothing to tune");
 #endif
+    }
+
+    // setState() announces only a state that differs, so no consumer sees a
+    // stateChanged that changed nothing. Nothing held that: every case reached
+    // the state it wanted in one move, so the repeated transition the guard
+    // exists for never happened, and deleting the guard left the suite green.
+    void aStateAlreadyHeldIsNotAnnouncedAgain()
+    {
+        PendingStartStubRecognizer recognizer;
+        recognizer.initialize(QString());
+
+        QSignalSpy stateChanges(&recognizer, &SpeechRecognizer::stateChanged);
+        QVERIFY(stateChanges.isValid());
+
+        recognizer.setState(SpeechRecognizer::State::Ready);
+        QCOMPARE(stateChanges.count(), 0);
+
+        recognizer.setState(SpeechRecognizer::State::Listening);
+        QCOMPARE(stateChanges.count(), 1);
+        recognizer.setState(SpeechRecognizer::State::Listening);
+        QCOMPARE(stateChanges.count(), 1);
     }
 
     void aRejectedWordIsNotSilentlyDropped()

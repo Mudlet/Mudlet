@@ -63,9 +63,11 @@ public:
     // model's own sub-word vocabulary, so the same engine can bias one model
     // and not the next. Gated on mRecognizer, not just on mSupportsBiasing/
     // mBpeVocabPath: those are set once a model directory is found to carry
-    // bpe.vocab, before the recognizer is actually created, and releasing the
-    // recognizer does not clear them - so without the gate this would go on
-    // claiming biasing for a model that is no longer loaded. Announced through
+    // bpe.vocab, before the recognizer is actually created, and only one of
+    // the two release paths clears them - releaseResources() does,
+    // releaseSherpaResources() alone does not, which is the path loadModel()
+    // takes when swapping models. Without the gate this would go on claiming
+    // biasing for a model that is no longer loaded. Announced through
     // capabilitiesChanged() when this answer changes, because a consumer that
     // read them once would otherwise not know.
     Capabilities capabilities() const override
@@ -127,7 +129,11 @@ public:
     // Get list of installed models (directory names)
     static QStringList getInstalledModels();
 
-    // Get the default model path for the current platform
+    // The first installed model in directory order, or empty when none is
+    // installed. Nothing platform-conditional about it, and unlike Vosk there
+    // is no "selected model" setting for it to honour - which is why
+    // stt.init() with no argument pins the engine to whichever backend's model
+    // it actually found rather than assuming a preference order.
     static QString defaultModelPath();
 
     // Whether the directory holds a sherpa-onnx streaming transducer model
@@ -192,9 +198,11 @@ private:
 
     // Words to bias recognition toward, and the model's sub-word vocabulary
     // they are tokenised with. Both are needed before biasing can be claimed.
-    // Reset on release alongside mRecognizer - capabilities() also gates on
-    // mRecognizer, so this and that are kept redundant on purpose rather than
-    // relying on the gate alone.
+    // Cleared by releaseResources() alongside mRecognizer, redundantly with
+    // the mRecognizer gate in capabilities() rather than relying on it alone.
+    // Not cleared by releaseSherpaResources() on its own, which loadModel()
+    // calls mid-swap and then sets both again from the new model before
+    // anything reads them - so the gate is what makes the window safe.
     QString mBpeVocabPath;
     bool mSupportsBiasing = false;
     // Whether this model's units are written in upper case, which decides the

@@ -61,9 +61,11 @@ public:
     explicit AppleSpeechRecognizer(QObject* parent = nullptr);
     ~AppleSpeechRecognizer() override;
 
-    // The path is accepted and ignored: this engine has no model on disk, and
-    // taking the argument anyway keeps one stt.init() call working across
-    // every backend.
+    // Takes the argument so one stt.init() call works across every backend,
+    // but only an empty one succeeds: this engine has no model on disk, and
+    // answering true for a path it never read would tell a caller their model
+    // had loaded. A non-empty path is refused, with an error naming it and
+    // pointing at stt.init() with no argument, and nothing is torn down.
     bool initialize(const QString& modelPath) override;
 
     // Fixed for the engine rather than read from a model, so unlike the other
@@ -113,9 +115,16 @@ public:
     bool setSensitivity(Sensitivity sensitivity) override;
     Sensitivity sensitivity() const override { return Sensitivity::Default; }
 
-    // Whether the system recognizer exists and is usable for the current
-    // locale. Deliberately not gated on authorisation: a player who has not
-    // been asked yet still has a working backend.
+    // Whether the system has a recognizer for the current locale and reports
+    // it available. Deliberately not gated on authorisation: a player who has
+    // not been asked yet still has a working backend.
+    //
+    // Not the whole story, and deliberately so: it does not consult
+    // supportsOnDeviceRecognition, which is what startListening() actually
+    // requires, since this backend will not send audio to Apple. A Mac can
+    // therefore pass this gate and still refuse at stt.start(), naming the
+    // language and how to install it - the right place to say that, because
+    // it depends on the language chosen rather than on the engine existing.
     static bool speechAvailable();
 
 protected:
