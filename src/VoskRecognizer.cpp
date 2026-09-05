@@ -241,7 +241,6 @@ bool VoskRecognizer::loadVoskLibrary()
 
     if (!s_vosk_model_new || !s_vosk_model_free || !s_vosk_recognizer_new || !s_vosk_recognizer_free || !s_vosk_recognizer_accept_waveform || !s_vosk_recognizer_result
         || !s_vosk_recognizer_partial_result || !s_vosk_recognizer_final_result) {
-        sLibraryLoadError = tr("the library was found but does not export the functions this version of Mudlet needs");
         qWarning() << "VoskRecognizer: Failed to resolve required Vosk functions";
         // Unloading on its own would leave the pointers that did resolve aiming
         // into a library that is no longer mapped
@@ -249,6 +248,13 @@ bool VoskRecognizer::loadVoskLibrary()
         // resetLibraryLoadState() clears this to allow a fresh probe; a library
         // whose symbols are missing is not worth re-probing on every call
         sLibraryLoadAttempted = true;
+        // And it clears the reason with it, so this is set after rather than
+        // before - the same ordering SherpaRecognizer uses, and for the same
+        // reason: set first, it is wiped and a library that is present but
+        // unusable falls through to "not installed", naming the very file the
+        // player is looking at.
+        //: Shown when a speech engine library was found but is too old or incomplete to use; the player needs a different build rather than an install
+        sLibraryLoadError = tr("the library was found but does not export the functions this version of Mudlet needs");
         return false;
     }
 

@@ -194,6 +194,12 @@ private:
     QString mModelPath;
     QString mCurrentLanguage;
     Sensitivity mSensitivity = Sensitivity::Default;
+    // Whether mSensitivity is the value the loaded decoder was actually built
+    // with, as against merely the value asked for. The pair mirrors
+    // mVocabulary/mVocabularyApplied in the base, and for the same reason: the
+    // request is kept for the next load either way, so without this a refused
+    // change short-circuits the next identical request into a yes.
+    bool mSensitivityApplied = true;
     QString mLastPartialResult;
 
     // Words to bias recognition toward, and the model's sub-word vocabulary

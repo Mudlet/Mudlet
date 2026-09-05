@@ -55,17 +55,19 @@ returning `false` with a message, `listModels` returning `{}`.
 | `stt.getLibraryPath()` | string | User-writable directory the engine library is installed into, resolved the same way as `stt.getModelPath()`. |
 | `stt.listModels()` | table | Array of `{name, path}` for installed models, across **every** model-based engine at once — not only whichever is currently loaded. Deliberately works without the engine library, so downloaded models stay visible. |
 | `stt.getPlatformKey()` | string \| `nil` | Platform/architecture key for selecting an engine build (`"macos"`, `"windows-x64"`, `"windows-x86"`, `"linux-x86_64"`, `"linux-aarch64"`); `nil` when no published build exists. |
-| `stt.reloadLibrary()` | boolean \| `false, error` | Re-run engine detection after an install, for **both** dynamically-loaded engines: it resets each one's "already looked" latch and releases the mapped module, which on Windows is what lets the file be replaced. Refuses while the recognizer is in use or holds live native resources, and answers whether speech is available at all afterwards — not whether Vosk in particular is. |
+| `stt.reloadLibrary()` | boolean \| `false, error` | Re-run engine detection after an install, for **both** dynamically-loaded engines: it resets each one's "already looked" latch, releases the mapped module and probes again, so a newly installed engine is found without restarting Mudlet. It does *not* leave anything unmapped — re-detection means loading — so this is not the call for freeing a file you want to overwrite. Refuses while the recognizer is in use or holds live native resources, and answers whether speech is available at all afterwards, not whether Vosk in particular is. |
 | `stt.unloadLibrary()` | `true` \| `false, error` | Unload the engine so its file can be deleted (Windows cannot delete a mapped module). Same refusal rules, plus one of its own: with any engine other than Vosk loaded it refuses rather than reporting an unload it cannot perform. **Vosk only** — see below. |
 
 **Known limitation: `unloadLibrary` acts on Vosk alone.** Desktop Mudlet's
 dynamically-loaded backends are Vosk and sherpa-onnx. `reloadLibrary` covers
-both — it resets each latch and unmaps each module — so replacing an installed
-sherpa-onnx library on Windows does *not* require quitting Mudlet. `unloadLibrary`
-is the one that is still Vosk-only: with any other engine loaded it refuses
-rather than reporting an unload it cannot perform. Until it is made
-engine-aware, a package that wants sherpa-onnx's file released has to reach it
-through `reloadLibrary`.
+both, so a sherpa-onnx install is found without restarting — but it re-probes
+as it finishes, which maps the library straight back in. Leaving a module
+unmapped is `unloadLibrary`'s job, and that one is still Vosk-only: with any
+other engine loaded it refuses rather than reporting an unload it cannot
+perform. So replacing an installed sherpa-onnx library on Windows, where the
+loader will not let a mapped file be overwritten, still requires quitting
+Mudlet. Until `unloadLibrary` is made engine-aware there is no way around
+that.
 The built-in macOS backend loads no library at all, so neither call has
 anything to act on for it — but neither is a no-op either. Both refuse while
 the recognizer is listening, is initialized, or holds live native resources —
@@ -119,13 +121,12 @@ right now.
 | `onDevice` | Audio is processed on this machine and never leaves it. An implementation backed by a remote service MUST report `false`. |
 
 Desktop Mudlet's Vosk backend reports `{biasing = false, grammar = false,
-words = true, sensitivityTuning, onDevice = true}` (the first two and
-`sensitivityTuning` each following a resolved library symbol), where `sensitivityTuning` follows the
-endpointer symbol the same way `words` follows the word-level one, and `words`
-is `true` only while the
-library's word-level symbol resolves — an older or partial libvosk without it
-reports `false` rather than promising a `sysSTTWords` that would never arrive,
-and unloading or reloading the library changes the answer, announced through
+words, sensitivityTuning, onDevice = true}`. `biasing` and `grammar` are always
+`false` there. The other two each follow a symbol resolving in the installed
+libvosk — `words` the word-level one, `sensitivityTuning` the endpointer — so an
+older or partial library reports `false` rather than promising a `sysSTTWords`
+that never arrives, or a sensitivity the engine cannot be told about. Unloading
+or reloading the library changes both answers, announced through
 `sysSTTCapabilitiesChanged`. Its sherpa-onnx backend reports `{biasing,
 grammar = false, words = false, sensitivityTuning = true, onDevice = true}`,
 where `sensitivityTuning` is unconditional — the endpoint rules are its own, so a

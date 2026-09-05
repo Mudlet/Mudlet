@@ -294,6 +294,7 @@ bool SherpaRecognizer::loadSherpaLibrary()
         // symbols falls through to "not installed - looked in: <the very path
         // it is sitting at>", which is the message the reason exists to
         // replace, one branch further down than where that was fixed.
+        //: Shown when a speech engine library was found but is too old or incomplete to use; the player needs a different build rather than an install
         sLibraryLoadError = tr("the library was found but does not export the functions this version of Mudlet needs");
         return false;
     }
@@ -304,11 +305,13 @@ bool SherpaRecognizer::loadSherpaLibrary()
 
 bool SherpaRecognizer::sherpaAvailable()
 {
-    // No equivalent of Vosk's "unloaded on request" latch here, because
-    // stt.unloadLibrary()/stt.reloadLibrary() are wired to the Vosk loader
-    // alone - see the limitation recorded in docs/stt-api.md. Nothing can put
-    // this backend's library into that state, so there is nothing to check
-    // for before probing.
+    // No equivalent of Vosk's "unloaded on request" latch here. stt.reloadLibrary()
+    // does reset this backend's latch, but it means re-detect rather than
+    // stay-unloaded, so probing again right afterwards is what it asked for.
+    // stt.unloadLibrary() is the call that wants a module to stay unmapped and
+    // it is still Vosk-only - see the limitation in docs/stt-api.md - so
+    // nothing can put this backend into a deliberately-unloaded state to check
+    // for here.
     if (!sLibraryLoadAttempted) {
         loadSherpaLibrary();
     }
@@ -437,12 +440,6 @@ QStringList SherpaRecognizer::usableHotwords(const QStringList& words, QStringLi
 
 bool SherpaRecognizer::loadModel(const QString& modelPath)
 {
-    // Loading a model over a running session would free the decoder while the
-    // device stayed open: audio kept arriving with nothing to decode it, the
-    // state said Ready, and neither stop() nor close() could reach the
-    // microphone again because both check listening() first. The recording
-    // light stayed on for the rest of the session.
-    // VoskRecognizer::initialize() carries the same guard for the same reason.
     if (!loadSherpaLibrary()) {
         setState(State::Error);
         //: Shown when speech recognition is asked to load a model but the recognition library itself is not installed
@@ -500,6 +497,13 @@ bool SherpaRecognizer::loadModel(const QString& modelPath)
     // Past this point the load is committed, so this is where the device goes
     // and the previous session ends - not at the top, where a refusal that
     // never reached anything native was still taking the microphone with it.
+    //
+    // The stop itself is what keeps a reload from freeing the decoder while
+    // the device stays open: audio would keep arriving with nothing to decode
+    // it, the state would say Ready, and neither stop() nor close() could
+    // reach the microphone again because both check listening() first - the
+    // recording light stayed on for the rest of the session.
+    // VoskRecognizer::initialize() carries the same guard for the same reason.
     const bool interruptedASession = (state() == State::Listening || state() == State::Processing);
     mpCapture->stop();
     if (interruptedASession) {
@@ -642,6 +646,11 @@ bool SherpaRecognizer::loadModel(const QString& modelPath)
     } else {
         mCurrentLanguage = qsl("unknown");
     }
+
+    // The decoder was just built from mSensitivity, so whatever was asked for
+    // is now the rule in force - including a request an earlier refusal kept
+    // but could not apply.
+    mSensitivityApplied = true;
 
     // Whether this engine can bias was just decided by the model that loaded,
     // so anyone who read the capabilities before now may be holding a stale
@@ -1018,7 +1027,9 @@ SpeechRecognizer::VocabularyResult SherpaRecognizer::applyVocabulary(const QStri
         // Said here rather than in loadModel(), which reuses the stored list on
         // every reload and would repeat this each time.
         //: Shown when some words cannot be used to bias speech recognition and were left out; %1 is the list of those words
-        emit errorOccurred(tr("These words cannot be used for speech biasing and were ignored: %1").arg(rejected.join(qsl(", "))));
+        const QString ignored = tr("These words cannot be used for speech biasing and were ignored: %1").arg(rejected.join(qsl(", ")));
+        //: Added to the message above when every supplied word was unusable, so no biasing happened at all
+        emit errorOccurred(usable.isEmpty() ? tr("%1 - that was all of them, so nothing is biasing recognition.").arg(ignored) : ignored);
     }
     // The base has already stored these and established that this model can be
     // biased and that they differ from what is in effect.
@@ -1070,11 +1081,16 @@ bool SherpaRecognizer::setSensitivity(Sensitivity sensitivity)
     // reports. It is not the same as always succeeding: the rules are baked in
     // when the recognizer is built, so applying them means a reload, and this
     // returns that reload's answer.
-    if (mSensitivity == sensitivity) {
+    // Kept whatever the answer, the way an offered vocabulary is: it is what
+    // the next model will be built with. Whether it is in effect *now* is the
+    // separate question, and only that one may short-circuit - committing the
+    // value and then refusing left the next identical request answering yes
+    // for a decoder still running the old rules.
+    const bool changed = (mSensitivity != sensitivity);
+    mSensitivity = sensitivity;
+    if (!changed && mSensitivityApplied) {
         return true;
     }
-
-    mSensitivity = sensitivity;
 
     // The endpoint rules are baked into the recognizer at creation, so a
     // loaded model is reloaded for the change to take effect. Only when idle:
@@ -1085,7 +1101,8 @@ bool SherpaRecognizer::setSensitivity(Sensitivity sensitivity)
     // readback-agrees-engine-disagrees pair SpeechRecognizer.h says this bool
     // exists to prevent.
     if (state() == State::Ready && !mModelPath.isEmpty()) {
-        return initialize(mModelPath);
+        mSensitivityApplied = initialize(mModelPath);
+        return mSensitivityApplied;
     }
 
     // A live decoder that could not be rebuilt still holds the rules it was
@@ -1093,9 +1110,13 @@ bool SherpaRecognizer::setSensitivity(Sensitivity sensitivity)
     // using - readback agrees, engine disagrees, the pair the comment above
     // says this bool exists to prevent. The value is kept for the next load,
     // the way a vocabulary offered mid-utterance is, and says so.
+    // A decoder exists but could not be rebuilt for this - listening, mid
+    // phrase, or sitting in Error with its handles still alive. "Not idle"
+    // rather than "busy", because Error is neither.
     if (mRecognizer) {
+        mSensitivityApplied = false;
         //: Shown when a change to speech sensitivity cannot take effect until the engine next loads a model
-        emit errorOccurred(tr("Speech recognition is busy, so the new sensitivity is kept and takes effect at the next model load."));
+        emit errorOccurred(tr("Speech recognition is not idle, so the new sensitivity is kept and takes effect at the next model load."));
         return false;
     }
 

@@ -162,9 +162,20 @@ protected:
     void doCancel() override {}
 };
 
-// applyVocabulary() re-enters setVocabulary() once, standing in for the Lua
-// handler that does it for real: sherpa reloads its model to apply words, the
+// Re-enters setVocabulary() from applyVocabulary() once, standing in for the
+// Lua handler that does it for real: sherpa reloads its model to apply words, the
 // reload calls setState(), and setState() dispatches handlers inline.
+// applyVocabulary() is protected and, for the branch below, touches nothing
+// native - it decides before the state check that would need a live decoder.
+// Exposing it is the only way to reach that branch with no library installed.
+class ExposedSherpaRecognizer : public SherpaRecognizer
+{
+    Q_OBJECT
+
+public:
+    using SherpaRecognizer::applyVocabulary;
+};
+
 class ReentrantVocabularyRecognizer : public SpeechRecognizer
 {
     Q_OBJECT
@@ -388,9 +399,14 @@ private slots:
         QVERIFY2(message.contains(qsl("reloadLibrary")), qPrintable(qsl("the refusal did not name what lifts the latch: %1").arg(message)));
     }
 
-    // Documented as re-readable rather than cacheable, which needs the change
-    // to be announced at all - and announced once, not on every read.
-    void capabilityChangesAreAnnouncedOnce()
+    // Capabilities are documented as re-readable rather than cacheable, so a
+    // real change has to be announced - and nothing else may be. This holds
+    // the second half for Vosk, the way the sherpa case further down holds it
+    // for that backend: two constructors, two copies of the seeding, so both
+    // need saying. What neither holds is the positive direction, which needs a
+    // capability that can actually move, and every one of them follows either
+    // a resolved library symbol or a loaded model.
+    void theFirstCapabilityReadAnnouncesNothing()
     {
         VoskRecognizer recognizer;
         QSignalSpy spy(&recognizer, &SpeechRecognizer::capabilitiesChanged);
@@ -1234,11 +1250,18 @@ private slots:
     // whether to keep correcting results themselves.
     void aVocabularyLeftEmptyByFilteringIsNotReportedAsApplied()
     {
-        QStringList rejected;
-        const QStringList usable = SherpaRecognizer::usableHotwords({qsl(":1.5"), qsl("#2"), QString()}, &rejected);
+        ExposedSherpaRecognizer recognizer;
+        QSignalSpy errors(&recognizer, &SpeechRecognizer::errorOccurred);
+        QVERIFY(errors.isValid());
 
-        QCOMPARE(usable.count(), 0);
-        QCOMPARE(rejected.count(), 3);
+        QCOMPARE(recognizer.applyVocabulary({qsl(":1.5"), qsl("#2")}), SpeechRecognizer::VocabularyResult::Failed);
+
+        // One event, not two. Both the fixed and unfixed code answer Failed
+        // from here - without the guard by falling through to the "not idle"
+        // tail - so the return value alone cannot tell them apart. The count
+        // can: the guard returns on the rejection notice alone, where the tail
+        // adds a second event about a state that is not what went wrong.
+        QCOMPARE(errors.count(), 1);
     }
 
     // A backend that claims biasing and never implements applyVocabulary()

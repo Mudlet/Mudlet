@@ -272,12 +272,12 @@ void AppleSpeechRecognizer::doStartListening()
     case SFSpeechRecognizerAuthorizationStatusDenied:
     case SFSpeechRecognizerAuthorizationStatusRestricted:
         qWarning() << "AppleSpeechRecognizer: speech recognition authorization denied or restricted";
-        //: Shown when macOS speech recognition was refused earlier and has to be allowed in system settings before speech will work
-        emit errorOccurred(tr("Speech recognition permission denied. Please allow it in System Settings > Privacy & Security > Speech Recognition."));
         // The same state the denial reaches when the dialog is answered now,
         // as docs/stt-api.md requires: a package driving its controls from
         // state would otherwise keep offering to listen on a machine that cannot
         setState(State::Error);
+        //: Shown when macOS speech recognition was refused earlier and has to be allowed in system settings before speech will work
+        emit errorOccurred(tr("Speech recognition permission denied. Please allow it in System Settings > Privacy & Security > Speech Recognition."));
         return;
     case SFSpeechRecognizerAuthorizationStatusAuthorized:
         break;
@@ -535,7 +535,7 @@ void AppleSpeechRecognizer::handleTaskEnded(const QString& failure)
         // Ready rather than Error even so. The stop itself succeeded and the
         // recognizer is as usable as it was before; Error would make a package
         // reload a model that never stopped working. Settled before the emit,
-        // like every other pair here: a handler that starts listening on the
+        // as everywhere in this file: a handler that starts listening on the
         // error would otherwise have its new session stamped back to Ready.
         setState(State::Ready);
         if (!failure.isEmpty()) {
@@ -602,9 +602,12 @@ void AppleSpeechRecognizer::doStopListening()
         // from, so waiting for ever would take the recognizer with it.
         cancelTask();
         setState(State::Ready);
-        // Said out loud before settling: from Lua this is processing followed
-        // by ready with no result in between, which is exactly what a phrase
-        // nobody spoke looks like - and here a phrase was spoken and lost.
+        // Settled first, then said, as everywhere in this file: a handler that
+        // reacts to the loss by starting again would otherwise have its new
+        // session stamped back to Ready. The consumer still learns the
+        // difference that matters - processing followed by ready with no
+        // result is what a phrase nobody spoke looks like, and the error that
+        // follows says a phrase was spoken and lost.
         //: Shown when macOS speech recognition was asked for the last phrase and never answered
         emit errorOccurred(tr("macOS speech recognition did not return the last phrase in time; it has been lost."));
     });
