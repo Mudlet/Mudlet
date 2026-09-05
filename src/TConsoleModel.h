@@ -70,6 +70,7 @@ struct TConsoleModel
     // filename format) is profile-wide, so it only acts on the Host's own main
     // model and returns for any other.
     void toggleLogging(bool isMessageEnabled);
+    void reportFailedLogStart(const QString& path, const QString& reason);
 
     // The count is the distance between the two arguments, not the difference
     // between an inclusive pair, so lines(n, n) is empty rather than one line.

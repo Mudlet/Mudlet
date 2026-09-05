@@ -42,6 +42,7 @@
 #include "ProfileTestHelper.h"
 #include "TBuffer.h"
 #include "TConsoleModel.h"
+#include "TLuaInterpreter.h"
 #include "TMainConsole.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
@@ -287,7 +288,8 @@ private slots:
         QVERIFY2(!button->isChecked(), "the log button stayed checked although no log was started");
         QVERIFY2(!QFileInfo::exists(mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("autolog"))), "a failed log start left the autolog sentinel behind");
         QVERIFY2(bufferContains(qsl("Could not start logging")), "the user was not told why logging did not start");
-        QVERIFY2(mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("local ok, msg = startLogging(true); assert(ok == nil, 'startLogging reported success on a failed start'); assert(msg:find('could not be logged', 1, true), msg)")),
+        QVERIFY2(mpHost->mLuaInterpreter.compileAndExecuteScript(
+                         qsl("local ok, msg = startLogging(true); assert(ok == nil, 'startLogging reported success on a failed start'); assert(msg:find('could not be logged', 1, true), msg)")),
                  "startLogging(true) did not report the failed start");
     }
 
