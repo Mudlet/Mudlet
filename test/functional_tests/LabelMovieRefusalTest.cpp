@@ -31,6 +31,7 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include "GifTestHelper.h"
 #include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "Host.h"
@@ -65,19 +66,6 @@ private:
     QByteArray mSavedXdgConfigHome;
     QString mGifPath;
     QString mNotAGifPath;
-
-    // three frames so the count is a distinctive thing to compare, and a 60
-    // second frame delay so the animation never advances between two reads
-    static QByteArray threeFrameGif()
-    {
-        QByteArray gif("GIF89a");
-        gif.append(QByteArray::fromHex("01000100910000"));
-        gif.append(QByteArray::fromHex("ff000000ff000000ff000000"));
-        const QByteArray frame = QByteArray::fromHex("21f90400701700002c00000000010001000002024c0100");
-        gif.append(frame).append(frame).append(frame);
-        gif.append(QByteArray::fromHex("3b"));
-        return gif;
-    }
 
     static bool writeFixture(const QString& path, const QByteArray& contents)
     {
