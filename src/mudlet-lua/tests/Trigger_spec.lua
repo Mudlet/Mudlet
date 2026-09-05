@@ -9,6 +9,32 @@ describe("Trigger processing", function()
         return false
     end
 
+    -- Both of the package fixtures below are installed at run time, and while a
+    -- profile save is running an uninstall is refused outright and an install is
+    -- postponed, so both are asked again until they take. A postponed install
+    -- answers even a path it would otherwise refuse with a bare true, which is
+    -- how a spec can tell a save is still going - at the price of one console
+    -- error line per probe when the save ends and the empty path is retried.
+    local function packageInstalled(packageName)
+        return contains(getPackages(), packageName)
+    end
+
+    local function waitUntil(condition, milliseconds)
+        local waited = 0
+        while waited < milliseconds do
+            if condition() then
+                return true
+            end
+            pumpEvents(50)
+            waited = waited + 50
+        end
+        return condition() and true or false
+    end
+
+    local function waitForProfileSaveToPass()
+        return waitUntil(function() return installPackage("") == nil end, 5000)
+    end
+
     -- Test for nested trigger processing with self-deletion
     -- This verifies the fix that uses mProcessingDepth counter instead of a bool flag
     -- (same fix as for aliases - see Alias_spec.lua for detailed explanation)
@@ -1112,6 +1138,40 @@ describe("Trigger processing", function()
             assert.is_equal(1, count, "a trigger set to expire after 1 fire must not be renewed by the caller's stack")
         end)
 
+        -- a script that returns true is asking for one more fire, so the
+        -- expiring trigger only goes when it stops asking
+        it("renews the expiry count while the script returns true", function()
+            _G.TrigSpecExpire = {count = 0}
+            local id = tempTrigger("expire_renewed", [[
+                _G.TrigSpecExpire.count = _G.TrigSpecExpire.count + 1
+                return _G.TrigSpecExpire.count < 3
+            ]], 1)
+            assert.is_number(id)
+            finally(function() if type(id) == "number" and id > 0 then killTrigger(id) end end)
+
+            for _ = 1, 5 do
+                feedTriggers("\nexpire_renewed\n")
+            end
+
+            assert.are.equal(3, _G.TrigSpecExpire.count, "a trigger set to expire after one fire should be renewed for as long as it returns true")
+        end)
+
+        it("renews the expiry count of a function body that returns true", function()
+            _G.TrigSpecExpire = {count = 0}
+            local id = tempTrigger("expire_renewed_fn", function()
+                _G.TrigSpecExpire.count = _G.TrigSpecExpire.count + 1
+                return _G.TrigSpecExpire.count < 2
+            end, 1)
+            assert.is_number(id)
+            finally(function() if type(id) == "number" and id > 0 then killTrigger(id) end end)
+
+            for _ = 1, 5 do
+                feedTriggers("\nexpire_renewed_fn\n")
+            end
+
+            assert.are.equal(2, _G.TrigSpecExpire.count, "a callback body should renew the expiry count the same way a script one does")
+        end)
+
     end)
 
     describe("tempColorTrigger legacy colour remap", function()
@@ -1230,6 +1290,168 @@ describe("Trigger processing", function()
             assert.has_error(function()
                 tempComplexRegexTrigger("SpecComplexBad", "^x$", [[]], 0, -1, -1, 0, "no", -1, -1, 0, 0, 0)
             end)
+        end)
+
+    end)
+
+    -- A highlight trigger recolours what it matched; tempComplexRegexTrigger's
+    -- arguments 9 and 10 are the colours. When the pattern has capture groups
+    -- the whole match is deliberately skipped so that only the groups are
+    -- recoloured.
+    describe("highlighting triggers", function()
+
+        local defaultForeground = {192, 192, 192}
+
+        local function coloursOf(lineNumber, text)
+            moveCursor(0, lineNumber)
+            assert.is_true(selectString(text, 1) >= 0, "'" .. text .. "' should be on line " .. tostring(lineNumber))
+            local colours = {foreground = {getFgColor()}, background = {getBgColor()}}
+            deselect()
+            return colours
+        end
+
+        after_each(function()
+            deselect()
+            _G.TrigHighlight = nil
+        end)
+
+        it("recolours the whole match when the pattern has no capture groups", function()
+            feedTriggers("highlight_none control\n")
+            local before = coloursOf(getLineNumber(), "highlight_none")
+            assert.are.same(defaultForeground, before.foreground, "the text has to start out uncoloured for the highlight to mean anything")
+            assert.are_not.same(color_table.blue, before.background, "the background has to start out unhighlighted too")
+
+            _G.TrigHighlight = {}
+            tempComplexRegexTrigger("SpecHighlightWhole", [[^highlight_none control$]],
+                [==[_G.TrigHighlight.line = getLineNumber()]==],
+                0, 0, 0, 0, 0, "red", "blue", 0, 0, 0)
+            finally(function() killTrigger("SpecHighlightWhole") end)
+            feedTriggers("highlight_none control\n")
+
+            local line = _G.TrigHighlight.line
+            assert.is_number(line, "the highlight trigger should have fired")
+            local after = coloursOf(line, "highlight_none")
+            assert.are.same(color_table.red, after.foreground)
+            assert.are.same(color_table.blue, after.background)
+        end)
+
+        it("recolours only the capture groups when the pattern has them", function()
+            feedTriggers("highlight_groups aaa and bbb\n")
+            local before = coloursOf(getLineNumber(), "aaa")
+            assert.are.same(defaultForeground, before.foreground, "the text has to start out uncoloured for the highlight to mean anything")
+
+            _G.TrigHighlight = {}
+            tempComplexRegexTrigger("SpecHighlightGroups", [[^highlight_groups (\w+) and (\w+)$]],
+                [==[_G.TrigHighlight.line = getLineNumber()]==],
+                0, 0, 0, 0, 0, "red", "blue", 0, 0, 0)
+            finally(function() killTrigger("SpecHighlightGroups") end)
+            feedTriggers("highlight_groups aaa and bbb\n")
+
+            local line = _G.TrigHighlight.line
+            assert.is_number(line, "the highlight trigger should have fired")
+            assert.are.same(color_table.red, coloursOf(line, "aaa").foreground)
+            assert.are.same(color_table.red, coloursOf(line, "bbb").foreground)
+            assert.are.same(defaultForeground, coloursOf(line, "highlight_groups").foreground,
+                            "the whole match is skipped when the pattern has capture groups")
+        end)
+
+    end)
+
+    -- A colour trigger's pattern is a pair of ANSI colour numbers rather than
+    -- text. tempComplexRegexTrigger makes one when arguments 5 and 6 are not
+    -- numbers - their values are then unused, the pattern carries the colours -
+    -- and it is the only route to one that also highlights what it matched.
+    describe("colour pattern triggers", function()
+
+        after_each(function()
+            deselect()
+            _G.TrigColourPattern = nil
+        end)
+
+        it("matches the coloured run and highlights only that run", function()
+            _G.TrigColourPattern = {}
+            tempComplexRegexTrigger("SpecColourPatternHighlight", "ANSI_COLORS_F{002}_B{IGNORE}",
+                [==[_G.TrigColourPattern.line = getLineNumber(); _G.TrigColourPattern.match = matches[1]]==],
+                0, "fg", "bg", 0, 0, "red", "blue", 0, 0, 0)
+            finally(function() killTrigger("SpecColourPatternHighlight") end)
+            feedTriggers("colour_pattern plain \27[32mgreenrun\27[0m plain\n")
+
+            local line = _G.TrigColourPattern.line
+            assert.is_number(line, "a colour trigger should fire on the colour its pattern names")
+            assert.are.equal("greenrun", _G.TrigColourPattern.match, "the capture should be the coloured run, not the whole line")
+
+            moveCursor(0, line)
+            assert.is_true(selectString("greenrun", 1) >= 0)
+            local highlighted = {getFgColor()}
+            deselect()
+            assert.is_true(selectString("colour_pattern", 1) >= 0)
+            local untouched = {getFgColor()}
+            deselect()
+            assert.are.same(color_table.red, highlighted, "the matched run should carry the highlight colour")
+            assert.are_not.same(color_table.red, untouched, "text outside the coloured run should keep its own colour")
+        end)
+
+        it("never fires when both colours are set to ignore", function()
+            _G.TrigColourPattern = {fires = 0, control = 0}
+            local id = tempComplexRegexTrigger("SpecColourPatternIgnored", "ANSI_COLORS_F{IGNORE}_B{IGNORE}",
+                [==[_G.TrigColourPattern.fires = _G.TrigColourPattern.fires + 1]==],
+                0, "fg", "bg", 0, 0, 0, 0, 0, 0, 0)
+            tempComplexRegexTrigger("SpecColourPatternControl", "ANSI_COLORS_F{002}_B{IGNORE}",
+                [==[_G.TrigColourPattern.control = _G.TrigColourPattern.control + 1]==],
+                0, "fg", "bg", 0, 0, 0, 0, 0, 0, 0)
+            finally(function()
+                killTrigger("SpecColourPatternIgnored")
+                killTrigger("SpecColourPatternControl")
+            end)
+            assert.is_true(id > 0, "the trigger is still created so that it can be seen and repaired")
+
+            feedTriggers("colour_pattern_ignored \27[32mgreenrun\27[0m\n")
+
+            assert.are.equal(1, _G.TrigColourPattern.control, "the control trigger shows a coloured run does reach the colour pattern engine")
+            assert.are.equal(0, _G.TrigColourPattern.fires, "a colour pattern that ignores both colours has nothing to match")
+        end)
+
+    end)
+
+    describe("patterns that fail to compile", function()
+
+        it("does not fire a trigger whose perl pattern failed to compile", function()
+            _G.TrigBadPattern = {good = 0, bad = 0}
+            local goodId = tempRegexTrigger([[^bad_pattern_line$]], [==[_G.TrigBadPattern.good = _G.TrigBadPattern.good + 1]==])
+            local badId = tempRegexTrigger([[^bad_pattern_line($]], [==[_G.TrigBadPattern.bad = _G.TrigBadPattern.bad + 1]==])
+            -- busted keeps only the last finally(), so this undoes everything at once
+            finally(function()
+                killTrigger(goodId)
+                killTrigger(badId)
+                _G.TrigBadPattern = nil
+            end)
+            assert.is_true(badId > 0, "an uncompilable pattern still makes a trigger, so that it can be seen and repaired")
+
+            feedTriggers("bad_pattern_line\n")
+
+            assert.are.equal(1, _G.TrigBadPattern.good, "the control trigger shows the line does reach the trigger engine")
+            assert.are.equal(0, _G.TrigBadPattern.bad, "a trigger whose regex did not compile must not fire")
+        end)
+
+    end)
+
+    describe("sound triggers", function()
+
+        -- a sound trigger asks the media player for its file before running its
+        -- own script, so a file that is not there must not swallow the script
+        it("runs its script even when the sound file is missing", function()
+            _G.TrigSound = {fired = false}
+            tempComplexRegexTrigger("SpecSoundMissingFile", [[^sound_trigger_line$]],
+                [==[_G.TrigSound.fired = true]==],
+                0, 0, 0, 0, 0, 0, 0, "no-such-sound-file-for-specs.wav", 0, 0)
+            finally(function()
+                killTrigger("SpecSoundMissingFile")
+                _G.TrigSound = nil
+            end)
+
+            feedTriggers("sound_trigger_line\n")
+
+            assert.is_true(_G.TrigSound.fired, "a missing sound file should not stop the trigger's script")
         end)
 
     end)
@@ -1564,6 +1786,29 @@ describe("Trigger processing", function()
             -- returns nothing; success is simply not raising
             local ok = pcall(setTriggerStayOpen, "main", 0)
             assert.is_true(ok, "setTriggerStayOpen with valid arguments should not error")
+        end)
+
+        -- these fires come from the stay-open window rather than from a match:
+        -- the trigger's pattern is in none of the lines fed here
+        it("fires a trigger on the following lines without a match", function()
+            _G.TrigStayOpen = 0
+            local id = tempTrigger("stay_open_pattern", [==[_G.TrigStayOpen = _G.TrigStayOpen + 1]==])
+            finally(function()
+                killTrigger(id)
+                _G.TrigStayOpen = nil
+            end)
+
+            feedTriggers("stay_open_unrelated\n")
+            feedTriggers("stay_open_unrelated\n")
+            assert.are.equal(0, _G.TrigStayOpen, "a trigger does not fire on lines its pattern is not in")
+
+            setTriggerStayOpen(tostring(id), 2)
+            feedTriggers("stay_open_unrelated\n")
+            feedTriggers("stay_open_unrelated\n")
+            assert.are.equal(2, _G.TrigStayOpen, "a trigger held open for two lines should fire on both of them")
+
+            feedTriggers("stay_open_unrelated\n")
+            assert.are.equal(2, _G.TrigStayOpen, "and stop once the window has run out")
         end)
 
     end)
@@ -1940,6 +2185,33 @@ describe("Trigger processing", function()
             assert.are.equal(3, fires, "fireLength should keep the trigger firing on the lines after it completed")
         end)
 
+        it("carries each line's named captures into multimatches", function()
+            _G.MLNamed = {}
+            local code = [==[
+                _G.MLNamed.positional = multimatches[1][2]
+                _G.MLNamed.first = multimatches[1]["alpha"]
+                _G.MLNamed.second = multimatches[2]["beta"]
+                _G.MLNamed.absent = multimatches[1]["beta"]
+            ]==]
+            tempComplexRegexTrigger("SpecMLNamed", [[^named one (?<alpha>\w+)$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3)
+            tempComplexRegexTrigger("SpecMLNamed", [[^named two (?<beta>\w+)$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3)
+
+            feedTriggers("named one aaa\n")
+            feedTriggers("named two bbb\n")
+
+            local named = _G.MLNamed
+            killTrigger("SpecMLNamed")
+            _G.MLNamed = nil
+            assert.are.equal("aaa", named.positional, "the state should have completed at all")
+            assert.are.equal("aaa", named.first, "a name from the first line should reach that line's multimatches entry")
+            assert.are.equal("bbb", named.second, "a name from the second line should reach that line's multimatches entry")
+            assert.is_nil(named.absent, "each line only carries the names its own pattern defined")
+        end)
+
+        it("carries named captures into multimatches when the trigger has an expiry count", function()
+            pending("a multiline trigger given an expiry count loses its named captures, Mudlet issue #10403: TLuaInterpreter::callMultiReturnBool() does not fill multimatches[k][name]")
+        end)
+
     end)
 
     -- A colour-pattern trigger that is the child of a filter parent ("only pass
@@ -1963,37 +2235,6 @@ describe("Trigger processing", function()
             return
         end
 
-        local function packageInstalled()
-            for _, entry in ipairs(getPackages()) do
-                if entry == packageName then
-                    return true
-                end
-            end
-            return false
-        end
-
-        local function waitUntil(condition, milliseconds)
-            local waited = 0
-            while waited < milliseconds do
-                if condition() then
-                    return true
-                end
-                pumpEvents(50)
-                waited = waited + 50
-            end
-            return condition() and true or false
-        end
-
-        -- Uninstalling queues an asynchronous profile save, and while a save is
-        -- running an uninstall is refused outright and an install is postponed,
-        -- so both are asked again until they take. A postponed install answers
-        -- even a path it would otherwise refuse with a bare true, which is how a
-        -- spec can tell a save is still going - at the price of one console
-        -- error line per probe when the save ends and the empty path is retried.
-        local function waitForProfileSaveToPass()
-            return waitUntil(function() return installPackage("") == nil end, 5000)
-        end
-
         local previousEncoding
 
         setup(function()
@@ -2005,7 +2246,7 @@ describe("Trigger processing", function()
             _G.ColorFilterSpec = {}
             local reason
             for _ = 1, 3 do
-                if packageInstalled() then
+                if packageInstalled(packageName) then
                     break
                 end
                 waitForProfileSaveToPass()
@@ -2013,7 +2254,7 @@ describe("Trigger processing", function()
                 reason = message or reason
                 pumpEvents(200)
             end
-            assert.is_true(packageInstalled(), "could not install the " .. packageName .. " fixture: " .. tostring(reason))
+            assert.is_true(packageInstalled(packageName), "could not install the " .. packageName .. " fixture: " .. tostring(reason))
         end)
 
         teardown(function()
@@ -2022,7 +2263,7 @@ describe("Trigger processing", function()
             end
             local reason
             for _ = 1, 3 do
-                if not packageInstalled() then
+                if not packageInstalled(packageName) then
                     break
                 end
                 waitForProfileSaveToPass()
@@ -2030,7 +2271,7 @@ describe("Trigger processing", function()
                 reason = message or reason
                 pumpEvents(200)
             end
-            assert.is_false(packageInstalled(), "the " .. packageName .. " fixture was left behind: " .. tostring(reason))
+            assert.is_false(packageInstalled(packageName), "the " .. packageName .. " fixture was left behind: " .. tostring(reason))
             _G.ColorFilterSpec = nil
         end)
 
@@ -2078,6 +2319,210 @@ describe("Trigger processing", function()
             -- bytes would stop the child short of its anchor.
             feed("Цель: 🐉 Оружие: меч\n")
             assert.are.equal("меч", _G.ColorFilterSpec.perlChildWeapon)
+        end)
+
+    end)
+
+    -- The pattern kinds and options below have no Lua API that reaches them:
+    -- only a package can carry a substring, exact or start-of-line trigger that
+    -- also recolours what it matched, a substring trigger with "match all"
+    -- turned on, a lua code condition, a line spacer, or a trigger that sends a
+    -- command of its own. They all sit in one fixture, disabled, and each spec
+    -- enables just the one it is about.
+    describe("trigger kinds that only a package can carry", function()
+
+        local packageName = "mudlet-spec-triggerkinds"
+        local specDirectory = debug.getinfo(1, "S").source:match("^@(.*)[/\\]")
+        assert(specDirectory, "Trigger_spec.lua has to be run from a file so that it can find its fixtures")
+        local fixture = specDirectory .. "/fixtures/packages/sources/" .. packageName .. "/" .. packageName .. ".xml"
+
+        if not os.getenv("MUDLET_TEST_MODE") then
+            it("needs test mode", function()
+                pending("installing the trigger-kinds fixture needs MUDLET_TEST_MODE (pumpEvents() does nothing without it)")
+            end)
+            return
+        end
+
+        setup(function()
+            _G.TriggerKindsSpec = {}
+            local reason
+            for _ = 1, 3 do
+                if packageInstalled(packageName) then
+                    break
+                end
+                waitForProfileSaveToPass()
+                local _, message = installPackage(fixture)
+                reason = message or reason
+                pumpEvents(200)
+            end
+            assert.is_true(packageInstalled(packageName), "could not install the " .. packageName .. " fixture: " .. tostring(reason))
+        end)
+
+        teardown(function()
+            local reason
+            for _ = 1, 3 do
+                if not packageInstalled(packageName) then
+                    break
+                end
+                waitForProfileSaveToPass()
+                local _, message = uninstallPackage(packageName)
+                reason = message or reason
+                pumpEvents(200)
+            end
+            assert.is_false(packageInstalled(packageName), "the " .. packageName .. " fixture was left behind: " .. tostring(reason))
+            _G.TriggerKindsSpec = nil
+        end)
+
+        before_each(function()
+            _G.TriggerKindsSpec = {}
+        end)
+
+        -- every trigger in the fixture is saved disabled, so nothing it carries
+        -- can fire in the thousands of specs that run after these
+        local function withTrigger(name, body)
+            -- busted keeps only the last finally() a test registers, so a body
+            -- that needs cleanup of its own hands it over rather than
+            -- registering another
+            local ownCleanup
+            enableTrigger(packageName .. " " .. name)
+            finally(function()
+                if ownCleanup then
+                    ownCleanup()
+                end
+                disableTrigger(packageName .. " " .. name)
+                deselect()
+            end)
+            body(function(cleanup) ownCleanup = cleanup end)
+        end
+
+        it("collects every occurrence of a match-all substring pattern", function()
+            withTrigger("matchall three", function()
+                feedTriggers("tkabc only once\n")
+                assert.are.equal(1, _G.TriggerKindsSpec.matchAllThree, "a line with one occurrence gives one capture")
+
+                feedTriggers("tkabc tkabx tzzzc tkabc\n")
+                local line = getLineNumber()
+                assert.are.equal(2, _G.TriggerKindsSpec.matchAllThree, "match all should capture both occurrences")
+
+                -- "tkabx" shares the needle's first characters and "tzzzc" its
+                -- first and last, so a search that stopped comparing properly
+                -- would colour one of them too
+                moveCursor(0, line)
+                assert.is_true(selectString("tkabc", 2) >= 0)
+                local second = {getFgColor()}
+                deselect()
+                assert.is_true(selectString("tzzzc", 1) >= 0)
+                local nearMiss = {getFgColor()}
+                deselect()
+                assert.are.same(color_table.red, second, "the second occurrence should be recoloured as well as the first")
+                assert.are.same({192, 192, 192}, nearMiss, "text that only looks like the needle must be left alone")
+            end)
+        end)
+
+        it("collects every occurrence of a two character needle", function()
+            withTrigger("matchall two", function()
+                feedTriggers("qwerty qxerty qw\n")
+                assert.are.equal(2, _G.TriggerKindsSpec.matchAllTwo,
+                                 "a needle with nothing between its first and last character still has to match")
+            end)
+        end)
+
+        it("collects every occurrence of a single character needle", function()
+            withTrigger("matchall one", function()
+                feedTriggers("wxwxw\n")
+                assert.are.equal(3, _G.TriggerKindsSpec.matchAllOne)
+            end)
+        end)
+
+        it("recolours an exact match and ignores a longer line", function()
+            withTrigger("colourise exact", function()
+                feedTriggers("tkexact line trailing\n")
+                assert.is_nil(_G.TriggerKindsSpec.exactFired, "an exact match trigger should not fire on a line that only starts with its pattern")
+
+                feedTriggers("tkexact line\n")
+                local line = getLineNumber()
+                assert.is_true(_G.TriggerKindsSpec.exactFired)
+
+                moveCursor(0, line)
+                assert.is_true(selectString("tkexact", 1) >= 0)
+                local foreground = {getFgColor()}
+                deselect()
+                assert.are.same(color_table.red, foreground, "an exact match trigger should recolour the line it matched")
+            end)
+        end)
+
+        it("recolours a start of line match and ignores the same text later on", function()
+            withTrigger("colourise start", function()
+                feedTriggers("not at tkstart\n")
+                assert.is_nil(_G.TriggerKindsSpec.startFired, "a start of line trigger should not fire on its text elsewhere in the line")
+
+                feedTriggers("tkstart of the line\n")
+                local line = getLineNumber()
+                assert.is_true(_G.TriggerKindsSpec.startFired)
+
+                moveCursor(0, line)
+                assert.is_true(selectString("tkstart", 1) >= 0)
+                local matched = {getFgColor()}
+                deselect()
+                assert.is_true(selectString("line", 1) >= 0)
+                local rest = {getFgColor()}
+                deselect()
+                assert.are.same(color_table.red, matched, "the matched text should be recoloured")
+                assert.are.same({192, 192, 192}, rest, "only the pattern itself is the match, not the whole line")
+            end)
+        end)
+
+        it("fires a lua code condition only while it returns true", function()
+            withTrigger("lua condition", function()
+                _G.TriggerKindsSpec.allow = false
+                feedTriggers("tkcondition here\n")
+                assert.is_nil(_G.TriggerKindsSpec.luaConditionFired, "a condition returning false should not fire the trigger")
+
+                _G.TriggerKindsSpec.allow = true
+                feedTriggers("tkcondition here\n")
+                assert.are.equal(1, _G.TriggerKindsSpec.luaConditionFired, "a condition returning true should fire the trigger")
+
+                feedTriggers("nothing to see\n")
+                assert.are.equal(1, _G.TriggerKindsSpec.luaConditionFired, "the condition reads the line, so an unrelated line should not fire it")
+            end)
+        end)
+
+        it("completes a multiline trigger through a line spacer", function()
+            withTrigger("line spacer", function()
+                feedTriggers("tkspacer start\n")
+                feedTriggers("tkspacer end\n")
+                assert.is_nil(_G.TriggerKindsSpec.spacerFired, "the end line arrived before the spacer had counted its lines")
+
+                -- let the state above run past its line delta before starting a new one
+                for i = 1, 8 do
+                    feedTriggers("spacer flush " .. i .. "\n")
+                end
+                assert.is_nil(_G.TriggerKindsSpec.spacerFired)
+
+                feedTriggers("tkspacer start\n")
+                feedTriggers("spacer gap one\n")
+                feedTriggers("spacer gap two\n")
+                feedTriggers("tkspacer end\n")
+                assert.are.equal(1, _G.TriggerKindsSpec.spacerFired, "the end line should complete the state once the spacer has counted its lines")
+
+                for i = 1, 8 do
+                    feedTriggers("spacer settle " .. i .. "\n")
+                end
+                assert.are.equal(1, _G.TriggerKindsSpec.spacerFired, "no second state should be left waiting behind it")
+            end)
+        end)
+
+        it("sends the command a trigger carries", function()
+            withTrigger("command", function(cleanup)
+                local aliasId = tempAlias("^tkcommand sent$", [==[_G.TriggerKindsSpec.commandSeen = true]==])
+                cleanup(function() killAlias(aliasId) end)
+
+                feedTriggers("tkcommand nothing\n")
+                assert.is_nil(_G.TriggerKindsSpec.commandSeen, "the trigger did not match, so nothing should have been sent")
+
+                feedTriggers("tkcommand trigger\n")
+                assert.is_true(_G.TriggerKindsSpec.commandSeen, "a trigger's command should be sent the way a typed one is")
+            end)
         end)
 
     end)
