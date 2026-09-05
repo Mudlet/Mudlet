@@ -9837,6 +9837,11 @@ void mudlet::moveProfileFromDetachedToMainWindow(const QString& profileName, TDe
     updateMainWindowTitle();
 }
 
+QDockWidget* mudlet::getMainWindowDockWidget(const QString& mapKey) const
+{
+    return mMainWindowDockWidgetMap.value(mapKey);
+}
+
 void mudlet::updateMainWindowDockWidgetVisibilityForProfile(const QString& profileName)
 {
     // Clear the current map dock widget reference first
