@@ -23,7 +23,10 @@
 // message printer, the one caller of the coloured print, is driven through
 // Host::postMessage() so its prefix colouring is pinned as well.
 
+#include <QDataStream>
 #include <QDir>
+#include <QFile>
+#include <QFileInfo>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -60,6 +63,16 @@ private:
 
     // The buffer keeps an empty line ready after the last line feed, so what
     // was printed most recently is the last non-empty line.
+    bool bufferContains(const QString& text)
+    {
+        for (int i = 0; i <= buffer().getLastLineNumber(); ++i) {
+            if (buffer().line(i).contains(text)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     int lastTextLine()
     {
         for (int i = buffer().getLastLineNumber(); i >= 0; --i) {
@@ -129,6 +142,7 @@ private slots:
         const int line = lastTextLine();
         QVERIFY(line >= 0);
         QCOMPARE(buffer().line(line), qsl("plain text"));
+        QCOMPARE(buffer().mCursorY, buffer().size());
     }
 
     void test_colouredPrintKeepsItsColours()
@@ -143,6 +157,7 @@ private slots:
         const std::vector<TChar>& chars = buffer().buffer.at(line);
         QCOMPARE(chars.front().foreground(), fg);
         QCOMPARE(chars.front().background(), bg);
+        QCOMPARE(buffer().mCursorY, buffer().size());
     }
 
     void test_systemMessageIsLabelledAndColoured()
@@ -155,6 +170,7 @@ private slots:
         QVERIFY2(text.endsWith(qsl("careful")), qPrintable(text));
         QVERIFY2(text != qsl("careful"), "the system message label is missing");
         QCOMPARE(buffer().buffer.at(line).front().foreground(), mpHost->mpConsole->mSystemMessageFgColor);
+        QCOMPARE(buffer().mCursorY, buffer().size());
     }
 
     void test_serverTextRunsThroughTheDisplayPipeline()
@@ -204,6 +220,51 @@ private slots:
         const std::vector<TChar>& chars = buffer().buffer.at(line);
         QCOMPARE(chars.front().foreground(), QColor(0, 150, 190));
         QCOMPARE(chars.back().foreground(), QColor(0, 160, 0));
+    }
+
+    // Recording is only reachable from the console's button and the menu, so
+    // the file is read back here rather than replayed: the replay timer would
+    // need MUDLET_TEST_MODE, and the bytes are what a user loses if the stream
+    // is never wired to the file.
+    void test_replayRecordingWritesWhatTheGameSent()
+    {
+        cTelnet& telnet = mpHost->mTelnet;
+        mpHost->mpConsole->slot_toggleReplayRecording();
+        QVERIFY(telnet.recordingReplay());
+        const QString fileName = telnet.replayRecordingFileName();
+        QVERIFY(!fileName.isEmpty());
+
+        const QByteArray sent{"recorded line\r\n"};
+        mpServer->sendRaw(sent);
+        QTRY_VERIFY(bufferContains(qsl("recorded line")));
+
+        mpHost->mpConsole->slot_toggleReplayRecording();
+        QVERIFY(!telnet.recordingReplay());
+        QVERIFY2(QFileInfo::exists(fileName), qPrintable(fileName));
+
+        QFile replay(fileName);
+        QVERIFY(replay.open(QIODevice::ReadOnly));
+        QDataStream in(&replay);
+        in.setVersion(QDataStream::Qt_5_12);
+        QByteArray recorded;
+        while (!in.atEnd()) {
+            qint32 interval = 0;
+            qint32 length = 0;
+            in >> interval >> length;
+            QVERIFY(length >= 0);
+            QByteArray chunk(length, '\0');
+            QCOMPARE(in.readRawData(chunk.data(), length), length);
+            recorded += chunk;
+        }
+        QVERIFY2(recorded.contains(sent), recorded.constData());
+    }
+
+    void test_replayRecordingRefusesAnUnwritablePath()
+    {
+        cTelnet& telnet = mpHost->mTelnet;
+        QVERIFY(!telnet.startReplayRecording(qsl("/nonexistent/directory/replay.dat")));
+        QVERIFY(!telnet.recordingReplay());
+        QVERIFY(!telnet.replayRecordingErrorString().isEmpty());
     }
 };
 
