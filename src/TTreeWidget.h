@@ -23,10 +23,13 @@
  ***************************************************************************/
 
 
+#include <QMap>
 #include <QPointer>
 #include <QTreeWidget>
 
 class Host;
+class TVar;
+class VarUnit;
 
 enum class TreeType {
     None,
@@ -62,6 +65,18 @@ public:
     void beginInsertRows(const QModelIndex& parent, int first, int last);
     void getAllChildren(QTreeWidgetItem*, QList<QTreeWidgetItem*>&);
 
+    // The Variables view's rows and the variables behind them. The rows are
+    // this widget's own children, so the bookkeeping dies with them.
+    void buildVariableRows(VarUnit* pVarUnit, QTreeWidgetItem* pParent, TVar* pVariable, bool showHidden);
+    void clearVariableRows();
+    TVar* variableForRow(VarUnit* pVarUnit, QTreeWidgetItem* pItem) const;
+    TVar* newVariableForRow(VarUnit* pVarUnit, QTreeWidgetItem* pItem) const;
+    void setVariableForRow(VarUnit* pVarUnit, QTreeWidgetItem* pItem, TVar* pVariable);
+    void setNewVariableForRow(VarUnit* pVarUnit, QTreeWidgetItem* pItem, TVar* pVariable);
+    void forgetRow(QTreeWidgetItem* pItem);
+    void forgetNewVariableForRow(QTreeWidgetItem* pItem);
+    bool rowCanBeSaved(VarUnit* pVarUnit, QTreeWidgetItem* pItem) const;
+
     void updateTriggerIcon(QTreeWidgetItem* pItem, int triggerID);
     void updateTriggerIconsRecursively(QTreeWidgetItem* pItem);
     QTreeWidgetItem* findItemByTriggerID(QTreeWidgetItem* pParent, int triggerID);
@@ -79,6 +94,10 @@ private:
         int oldPosition;
     };
 
+    void addVariableRows(VarUnit* pVarUnit, QTreeWidgetItem* pParent, TVar* pVariable, bool showHidden);
+    bool rowsStandForCurrentVariables(VarUnit* pVarUnit) const;
+    void adoptVariableTree(VarUnit* pVarUnit);
+
     bool mIsDropAction;
     QPointer<Host> mpHost;
     QList<MoveInfo> mPendingMoves;  // Stores info for all items being moved
@@ -86,6 +105,9 @@ private:
     int mOldPosition;  // Deprecated: kept for compatibility, will be removed
     int mChildID;      // Deprecated: kept for compatibility, will be removed
     TreeType mTreeType = TreeType::None;
+    QMap<QTreeWidgetItem*, TVar*> mVariableForRow;
+    QMap<QTreeWidgetItem*, TVar*> mNewVariableForRow;
+    quint64 mVariablesGeneration = 0;
     // CHECK: Should this actually be a: QPersistentModelIndex ?
     QModelIndex mClickedItem;
 };

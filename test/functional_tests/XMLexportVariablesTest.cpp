@@ -46,6 +46,7 @@
 #include "LuaInterface.h"
 #include "MudletInstanceCoordinator.h"
 #include "TelnetServerStub.h"
+#include "TTreeWidget.h"
 #include "VarUnit.h"
 #include "XMLexport.h"
 #include "XMLimport.h"
@@ -970,11 +971,11 @@ private slots:
         // then has no node in it to be written from
         QVERIFY2(!xml.contains(qsl("seed member value")), "a member a script removed while the Variables view was open must not be saved back");
 
-        auto* pVariablesTree = mpEditor->findChild<QTreeWidget*>(qsl("treeWidget_variables"));
+        auto* pVariablesTree = mpEditor->findChild<TTreeWidget*>(qsl("treeWidget_variables"));
         QVERIFY2(pVariablesTree, "the editor has no variables tree widget");
         QTreeWidgetItem* pBaseItem = pVariablesTree->topLevelItem(0);
         QVERIFY2(pBaseItem && pBaseItem->childCount() > 0, "the Variables view did not populate");
-        QVERIFY2(vu->getWVar(pBaseItem->child(0)), "a save taken with the Variables view on screen must leave its items resolving to their variables");
+        QVERIFY2(pVariablesTree->variableForRow(vu, pBaseItem->child(0)), "a save taken with the Variables view on screen must leave its items resolving to their variables");
 
         vu->savedVars.remove(qsl("varsViewTable"));
         vu->savedVars.remove(qsl("varsViewTable.seedMember"));
@@ -1003,27 +1004,27 @@ private slots:
     }
 
     // The other side: a save must not pull the tree out from under the editor.
-    // Its tree widget and search results resolve items through VarUnit's
-    // item -> TVar map, which rebuilding the shared tree empties.
+    // Its tree widget and search results resolve items through the tree
+    // widget's own row -> TVar map.
     void test_variablesEditorItemMappingSurvivesExport()
     {
         QVERIFY2(showEditorOnVariablesView(), "the script editor could not be opened on the Variables view");
         mpEditor->repopulateVars();
 
         VarUnit* vu = mpHost->getLuaInterface()->getVarUnit();
-        auto* pVariablesTree = mpEditor->findChild<QTreeWidget*>(qsl("treeWidget_variables"));
+        auto* pVariablesTree = mpEditor->findChild<TTreeWidget*>(qsl("treeWidget_variables"));
         QVERIFY2(pVariablesTree, "the editor has no variables tree widget");
         QTreeWidgetItem* pBaseItem = pVariablesTree->topLevelItem(0);
         QVERIFY2(pBaseItem && pBaseItem->childCount() > 0, "the Variables view did not populate");
         QTreeWidgetItem* pVariableItem = pBaseItem->child(0);
-        TVar* pMappedBefore = vu->getWVar(pVariableItem);
+        TVar* pMappedBefore = pVariablesTree->variableForRow(vu, pVariableItem);
         QVERIFY2(pMappedBefore, "the Variables view's items should resolve to a variable");
 
         // any save does it: the Save Profile button, the autosave, a package change
         mpEditor->slot_showTriggers();
         QVERIFY(!exportProfileXml().isEmpty());
 
-        QVERIFY2(vu->getWVar(pVariableItem) == pMappedBefore, "a profile save must leave the Variables editor's items resolving to their variables");
+        QVERIFY2(pVariablesTree->variableForRow(vu, pVariableItem) == pMappedBefore, "a profile save must leave the Variables editor's items resolving to their variables");
     }
 
     // What the user actually cares about: the data is there again next session.
