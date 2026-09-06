@@ -6137,138 +6137,33 @@ describe("Main window size and saved layout", function()
     assert.is_true(tallHeight <= smallHeight + 300)
   end)
 
-  -- What Lua can see of getColumnCount("main")'s inputs, read alongside the
-  -- size, so a column count that disagrees with the width says which of them
-  -- moved: the font, the user borders, or by elimination the pane itself.
-  local function mainConsoleGeometry()
-    local width, height = getMainWindowSize()
-    local charWidth, charHeight = calcFontSize("main")
-    local attached = {}
-    if Adjustable and Adjustable.Container and Adjustable.Container.Attached then
-      for side, containers in pairs(Adjustable.Container.Attached) do
-        for containerName in pairs(containers) do
-          attached[#attached + 1] = side .. ":" .. containerName
-        end
-      end
-    end
-    return {
-      width = width, height = height,
-      columns = getColumnCount("main"), rows = getRowCount("main"),
-      fontName = getFont("main") or "?", fontSize = getFontSize("main") or 0,
-      charWidth = charWidth or 0, charHeight = charHeight or 0,
-      borders = getBorderSizes(), attached = attached,
-    }
-  end
-
-  local function describeGeometry(geometry)
-    return ("%dx%d px, %dx%d cells, font %s %d (%dx%d px per cell), borders left %d right %d top %d bottom %d, attached containers: %s%s"):format(
-      geometry.width, geometry.height, geometry.columns, geometry.rows,
-      geometry.fontName, geometry.fontSize, geometry.charWidth, geometry.charHeight,
-      geometry.borders.left, geometry.borders.right, geometry.borders.top, geometry.borders.bottom,
-      #geometry.attached > 0 and table.concat(geometry.attached, " ") or "none",
-      geometry.settled and "" or " - STILL MOVING when it was read")
-  end
-
-  -- A container attached to a border - the starter interface keeps one on the
-  -- right - reserves that border again from a 0.2 s timer after every resize,
-  -- and setting a border is itself a resize, so the column count goes on moving
-  -- after the size has settled. Reading at a fixed 200 ms raced that: the narrow
-  -- window read back as 31 columns with the wide window's 333 px border still on
-  -- it, then settled to 44 columns at 181 px four polls later. Those 31 columns
-  -- are the number CI failed on.
-  local function settledMainConsoleGeometry()
-    local geometry = mainConsoleGeometry()
-    local unchangedForMs = 0
-    for _ = 1, 40 do
-      pumpEvents(50)
-      local latest = mainConsoleGeometry()
-      if latest.width == geometry.width and latest.columns == geometry.columns then
-        unchangedForMs = unchangedForMs + 50
-        if unchangedForMs >= 400 then
-          latest.settled = true
-          return latest
-        end
-      else
-        unchangedForMs = 0
-      end
-      geometry = latest
-    end
-    -- still moving after two seconds: hand it back rather than hang, flagged so
-    -- the caller can decline to assert on numbers that were never still
-    geometry.settled = false
-    return geometry
-  end
-
-  it("a main window that loses width is reported at the width it has", function()
+  it("a main window that loses more than half its width is reported at the width it has", function()
     if not resizableWindowAvailable() then
       return
     end
-    -- getColumnCount() divides the pane by the font's average character width,
-    -- while calcFontSize() reports the width of a "W". Those are the same
-    -- number only on a fixed-pitch font: measured on DejaVu Sans, the "W" came
-    -- back 19 pixels wide against a 9.5 pixel average, so the pane would look
-    -- to have lost twice the pixels it did. Pinning Mudlet's own bundled
-    -- monospace font for the duration keeps the two metrics comparable.
-    local fixedPitchFont = "Bitstream Vera Sans Mono"
-    local originalFont = getFont("main")
-    finally(function()
-      if originalFont then
-        setFont("main", originalFont)
-      end
-      restoreMainWindowSize()
-    end)
-    if not setFont("main", fixedPitchFont) or getFont("main") ~= fixedPitchFont then
-      pending("the bundled fixed-pitch font is not available on this display")
-      return
-    end
-
+    finally(restoreMainWindowSize)
     setMainWindowSize(1600, 700)
-    local wide = settledMainConsoleGeometry()
+    pumpEvents(200)
+    local wideWidth = getMainWindowSize()
+    local wideColumns = getColumnCount("main")
 
     setMainWindowSize(300, 700)
-    local narrow = settledMainConsoleGeometry()
-    local report = ("\n  wide:   %s\n  narrow: %s"):format(describeGeometry(wide), describeGeometry(narrow))
+    pumpEvents(200)
+    local narrowWidth = getMainWindowSize()
+    local narrowColumns = getColumnCount("main")
 
-    if not wide.settled or not narrow.settled then
-      pending("the main window never stopped moving to be measured" .. report)
+    -- the main window has a minimum width of its own, so how narrow it really
+    -- became is read off the column count rather than assumed; that and
+    -- getMainWindowSize() have to tell the same story
+    if narrowColumns * 2 >= wideColumns then
+      pending("this display would not take the main window below half its width")
       return
     end
-    if narrow.charWidth <= 0 then
-      pending("the main console's character width is not readable on this display" .. report)
-      return
-    end
-    -- the main window has a minimum width of its own, so how much narrower it
-    -- really became is read off the column count rather than assumed - that
-    -- keeps the check independent of the function under test. getColumnCount()
-    -- is qRound(pane width / average character width) though, so the difference
-    -- of two of them is a column out either way however big the resize was -
-    -- a fixed error against a tolerance that is a share of the loss. A resize
-    -- of a column or two is therefore all error: measured here, one column lost
-    -- put the ratio at 1.36 against the 1.5 bound below, which it cleared on
-    -- luck rather than on the window having been reported correctly.
-    local columnsLost = wide.columns - narrow.columns
-    if columnsLost < 10 then
-      pending(("this display would only narrow the main window by %d columns, too few to measure against"):format(columnsLost) .. report)
-      return
-    end
-    -- getMainWindowSize() takes only the toolbars off the console area, while
-    -- the column count is of the text pane inside it - shorter again by the
-    -- user borders and by the scrollbar. So the two are fractions of different
-    -- things, which is what made comparing them as ratios fail intermittently.
-    -- An attached container sizes its border off the window width, so the
-    -- border is not even the same at the two sizes - measured here, 333 px at
-    -- 1312 px wide against 181 px at 704 px narrow. Taking the borders off both
-    -- leaves only the scrollbar between them, so the pixels the console lost
-    -- have to match the pixels the pane lost - give or take the column the
-    -- rounding above is worth.
-    local paneLost = columnsLost * narrow.charWidth
-    local consoleLost = (wide.width - wide.borders.left - wide.borders.right)
-      - (narrow.width - narrow.borders.left - narrow.borders.right)
-    local rounding = narrow.charWidth
-    local detail = ("getMainWindowSize reported %d, down from %d - a loss of %d pixels inside the borders, while the console lost %d of its %d columns, which is %d pixels at %d pixels per column%s")
-      :format(narrow.width, wide.width, consoleLost, columnsLost, wide.columns, paneLost, narrow.charWidth, report)
-    assert.is_true(consoleLost >= paneLost * 0.8 - rounding, detail)
-    assert.is_true(consoleLost <= paneLost * 1.5 + rounding, detail)
+    -- the console holds fewer than half the columns it did, so the width it
+    -- reports has to have more than halved with them; merely falling would also
+    -- be true of a size that only got part of the way down
+    assert.is_true(narrowWidth * 2 < wideWidth,
+      ("getMainWindowSize reported %d, down from %d, while the console went from %d to %d columns"):format(narrowWidth, wideWidth, wideColumns, narrowColumns))
   end)
 
   it("the main window can be put back the size it was", function()

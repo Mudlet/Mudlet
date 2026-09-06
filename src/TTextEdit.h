@@ -134,7 +134,6 @@ public:
     friend class FramePacingTest;
     friend class FrontendRefreshSeamTest;
     friend class MainConsoleSelectionTest;
-    friend class ScrollLostOnPartialRepaintTest;
     friend class TTextEditBlinkTest;
     static bool shouldRegisterBlinkClient(bool enableBlinkText, bool hasBlinkingContentInRedrawnRegion, bool isBlinkClientRegistered, bool reusedCachedScreenContent);
     static QSize smallestEnclosingSurfaceSize(int screenWidth, int fontWidth, int pixmapHeight, qreal devicePixelRatio);
