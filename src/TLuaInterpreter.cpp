@@ -32,7 +32,6 @@
 #include "EAction.h"
 #include "Host.h"
 #include "TAlias.h"
-#include "TCommandLine.h"
 #include "TConsole.h"
 #include "TDebug.h"
 #include "TEvent.h"
@@ -62,6 +61,7 @@
 #include <QCollator>
 #include <QCoreApplication>
 #include <QDesktopServices>
+#include <QGuiApplication>
 #include <QSettings>
 #if defined(Q_OS_MACOS)
 // Only used for this OS:
