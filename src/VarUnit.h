@@ -27,14 +27,11 @@
 
 #include <QCoreApplication>
 #include <QHash>
-#include <QMap>
 #include <QSet>
 #include <QStringList>
 
 
 class TVar;
-
-class QTreeWidgetItem;
 
 struct lua_State;
 
@@ -49,20 +46,18 @@ public:
     QStringList varName(TVar*);
     QStringList shortVarName(TVar*);
     bool varExists(TVar*);
-    bool shouldSave(QTreeWidgetItem*);
     bool shouldSave(TVar*);
     void addVariable(TVar*);
-    void addTempVar(QTreeWidgetItem*, TVar*);
-    void removeTempVar(QTreeWidgetItem*);
     void removeVariable(TVar*);
     void setBase(TVar*);
     TVar* getBase();
     void clear();
-    void buildVarTree(QTreeWidgetItem*, TVar*, bool);
-    TVar* getWVar(QTreeWidgetItem*);
-    TVar* getTVar(QTreeWidgetItem*);
-    void addTreeItem(QTreeWidgetItem*, TVar*);
-    void removeTreeItem(QTreeWidgetItem*);
+    // Identifies the variable tree currently held. Anything holding TVar
+    // pointers can tell they are stale by comparing this against what it
+    // recorded when it took them. Unique across VarUnits as well as across
+    // clear()s, so a freshly made one cannot be mistaken for the tree a caller
+    // last saw - resetting a profile builds both a new VarUnit and a new tree.
+    quint64 treeGeneration() const { return mTreeGeneration; }
     void addSavedVar(TVar*);
     void removeSavedVar(TVar*);
     void addHidden(TVar*, int);
@@ -104,12 +99,10 @@ private:
     void forgetHiddenTableAddress(const void* table);
     void releaseAnchorSlot(int slot);
     bool hiddenTableStillAlive(const void* table) const;
+    static quint64 nextTreeGeneration();
+    quint64 mTreeGeneration = nextTreeGeneration();
     std::unique_ptr<TVar> base;
     QSet<QString> variableSet;
-    // ?? variables
-    QMap<QTreeWidgetItem*, TVar*> wVars;
-    // temporary variables
-    QMap<QTreeWidgetItem*, TVar*> tVars;
     QSet<const void*> mPointers;
     // what un-hiding a name has to hand back to hiddenTables
     QHash<QString, const void*> mHiddenTableByName;

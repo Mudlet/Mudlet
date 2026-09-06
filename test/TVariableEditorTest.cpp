@@ -118,7 +118,7 @@ private:
                                "keptTable = {member = 'kept'}"));
         interface->getVars(false);
         auto* rootItem = new QTreeWidgetItem(&tree, QStringList() << QStringLiteral("Variables"));
-        interface->getVarUnit()->buildVarTree(rootItem, interface->getVarUnit()->getBase(), false);
+        tree.buildVariableRows(interface->getVarUnit(), rootItem, interface->getVarUnit()->getBase(), false);
         return rootItem;
     }
 
@@ -1467,7 +1467,7 @@ private slots:
     // The 10,000 item limit and the parent checkbox (#9957)
     // ========================================================================
 
-    // Both overloads of shouldSave() answer for the same variable, so a row of
+    // VarUnit::shouldSave() and TTreeWidget::rowCanBeSaved() answer for the same variable, so a row of
     // the Variables view standing for an oversized table has to be refused the
     // same way the table itself is.
     void testWidgetRowOfAnOversizedTableIsRefusedTheSameWayTheTableIs()
@@ -1483,15 +1483,15 @@ private slots:
         QVERIFY(bigItem);
         QVERIFY(keptItem);
 
-        QVERIFY2(!vu->shouldSave(vu->getWVar(bigItem)), "a table of 10001 members is over the limit");
-        QVERIFY2(!vu->shouldSave(bigItem), "and so is the row standing for it");
-        QVERIFY2(vu->shouldSave(keptItem), "while the row of a small table is still saveable");
+        QVERIFY2(!vu->shouldSave(tree.variableForRow(vu, bigItem)), "a table of 10001 members is over the limit");
+        QVERIFY2(!tree.rowCanBeSaved(vu, bigItem), "and so is the row standing for it");
+        QVERIFY2(tree.rowCanBeSaved(vu, keptItem), "while the row of a small table is still saveable");
     }
 
     // Ticking a row hands the tick to every row beneath it, an oversized table
     // among them: Qt's tristate cascade writes the check state whether or not
     // the child's ItemIsUserCheckable flag was taken away, which is what
-    // buildVarTree() does to a table over the limit. The sweep that runs after
+    // buildVariableRows() does to a table over the limit. The sweep that runs after
     // the tick is what has to take it back off again, or the table goes into
     // savedVars and from there into the profile.
     void testOversizedTableTickedThroughItsParentEndsUntickedAndUnsaved()
@@ -1518,7 +1518,7 @@ private slots:
         tree.getAllChildren(holderItem, sweep);
         tree.getAllChildren(keptItem, sweep);
         for (QTreeWidgetItem* item : sweep) {
-            if (!vu->shouldSave(item)) {
+            if (!tree.rowCanBeSaved(vu, item)) {
                 item->setCheckState(0, Qt::Unchecked);
             }
         }
@@ -1529,7 +1529,7 @@ private slots:
         // and what dlgTriggerEditor::slot_variableChanged() does with what is
         // left ticked - savedVars is what a profile save reads
         for (QTreeWidgetItem* item : sweep) {
-            TVar* var = vu->getWVar(item);
+            TVar* var = tree.variableForRow(vu, item);
             if (var && item->checkState(0) != Qt::Unchecked) {
                 vu->addSavedVar(var);
             }
@@ -1557,7 +1557,7 @@ private slots:
         TTreeWidget tree(nullptr);
         auto* rootItem = new QTreeWidgetItem(&tree, QStringList() << qsl("Variables"));
         VarUnit* vu = interface->getVarUnit();
-        vu->buildVarTree(rootItem, vu->getBase(), false);
+        tree.buildVariableRows(vu, rootItem, vu->getBase(), false);
 
         QTreeWidgetItem* dottedItem = childItemNamed(rootItem, qsl("dotHolderTable.member"));
         QVERIFY2(dottedItem, "the global has to have a row of its own in the Variables view");
@@ -1574,7 +1574,7 @@ private slots:
         TTreeWidget tree(nullptr);
         auto* rootItem = new QTreeWidgetItem(&tree, QStringList() << qsl("Variables"));
         VarUnit* vu = interface->getVarUnit();
-        vu->buildVarTree(rootItem, vu->getBase(), false);
+        tree.buildVariableRows(vu, rootItem, vu->getBase(), false);
 
         QTreeWidgetItem* dottedItem = childItemNamed(rootItem, qsl("greyed.global"));
         QVERIFY(dottedItem);
@@ -1585,6 +1585,162 @@ private slots:
         QTreeWidgetItem* plainItem = childItemNamed(rootItem, qsl("plainSaveable"));
         QVERIFY(plainItem);
         QVERIFY2(plainItem->flags() & Qt::ItemIsUserCheckable, "an ordinary global is still tickable");
+    }
+
+    // ========================================================================
+    // Rows outliving the variables they stand for
+    // ========================================================================
+
+    // Resetting a profile builds a fresh variable tree and frees every TVar
+    // without the editor hearing about it, leaving its rows standing for
+    // variables that are gone. A row has to answer with nothing then, the way it
+    // did when this bookkeeping lived on the tree that was thrown away with them.
+    void testRowsStopResolvingOnceTheVariableTreeIsRebuilt()
+    {
+        execLua(qsl("rebuiltName = 'value'"));
+        interface->getVars(false);
+
+        TTreeWidget tree(nullptr);
+        auto* rootItem = new QTreeWidgetItem(&tree, QStringList() << qsl("Variables"));
+        VarUnit* vu = interface->getVarUnit();
+        tree.buildVariableRows(vu, rootItem, vu->getBase(), false);
+
+        QTreeWidgetItem* item = childItemNamed(rootItem, qsl("rebuiltName"));
+        QVERIFY2(item, "the row has to be there before the tree is rebuilt");
+        QVERIFY2(tree.variableForRow(vu, item), "and it has to resolve to its variable");
+
+        // a row of the other kind: one holding a variable being added, which
+        // saveVar() reads back to turn into a real one
+        auto* pendingItem = new QTreeWidgetItem(rootItem, QStringList() << qsl("pendingName"));
+        auto* pendingVar = new TVar(vu->getBase());
+        tree.setNewVariableForRow(vu, pendingItem, pendingVar);
+        QVERIFY2(tree.newVariableForRow(vu, pendingItem), "the pending row has to resolve before the rebuild");
+
+        interface->getVars(false); // frees every TVar the rows were built from
+        VarUnit* rebuilt = interface->getVarUnit();
+        QCOMPARE(rebuilt, vu); // the rebuild reuses the VarUnit, so its address says nothing
+
+        QVERIFY2(!tree.variableForRow(rebuilt, item), "a row left over from a freed variable must resolve to nothing");
+        QVERIFY2(!tree.newVariableForRow(rebuilt, pendingItem), "and so must a row waiting on a variable being added");
+        QVERIFY2(!tree.rowCanBeSaved(rebuilt, item), "a row resolving to nothing cannot be saved either");
+    }
+
+    // Resetting a profile goes further and builds a whole new VarUnit beside the
+    // new tree. Its count of trees starts afresh, so rows can only tell they are
+    // stale if no two trees ever answer to the same number.
+    void testRowsStopResolvingAgainstAVariableUnitBuiltAfterThem()
+    {
+        execLua(qsl("replacedName = 'value'"));
+        interface->getVars(false);
+
+        TTreeWidget tree(nullptr);
+        auto* rootItem = new QTreeWidgetItem(&tree, QStringList() << qsl("Variables"));
+        VarUnit* vu = interface->getVarUnit();
+        tree.buildVariableRows(vu, rootItem, vu->getBase(), false);
+
+        QTreeWidgetItem* item = childItemNamed(rootItem, qsl("replacedName"));
+        QVERIFY2(item, "the row has to be there before the profile is reset");
+
+        interface = std::make_unique<LuaInterface>(L); // as Host::resetProfile() does
+        interface->getVars(true);                      // ...followed by hideMudletsVariables()
+        VarUnit* replacement = interface->getVarUnit();
+
+        QVERIFY2(replacement != vu, "the reset has to have built a VarUnit of its own");
+        QVERIFY2(!tree.variableForRow(replacement, item), "a row from the VarUnit that was thrown away must resolve to nothing");
+        QVERIFY2(!tree.rowCanBeSaved(replacement, item), "and it cannot be saved either");
+    }
+
+    // ...and a variable added after that reset still reaches saveVar(), which
+    // reads the row back to turn it into a real variable. The rows the reset
+    // stranded make way for it rather than staying to answer in its place.
+    void testAVariableAddedAfterAResetStillResolves()
+    {
+        execLua(qsl("strandedName = 'value'"));
+        interface->getVars(false);
+
+        TTreeWidget tree(nullptr);
+        auto* rootItem = new QTreeWidgetItem(&tree, QStringList() << qsl("Variables"));
+        VarUnit* vu = interface->getVarUnit();
+        tree.buildVariableRows(vu, rootItem, vu->getBase(), false);
+        QTreeWidgetItem* strandedItem = childItemNamed(rootItem, qsl("strandedName"));
+        QVERIFY(strandedItem);
+
+        interface = std::make_unique<LuaInterface>(L); // as Host::resetProfile() does
+        interface->getVars(true);
+        VarUnit* replacement = interface->getVarUnit();
+
+        auto* addedItem = new QTreeWidgetItem(rootItem, QStringList() << qsl("addedName"));
+        auto* addedVar = new TVar(replacement->getBase());
+        tree.setNewVariableForRow(replacement, addedItem, addedVar);
+
+        QCOMPARE(tree.newVariableForRow(replacement, addedItem), addedVar);
+        QVERIFY2(!tree.variableForRow(replacement, strandedItem), "while the row the reset stranded still stands for nothing");
+    }
+
+    // The stamp buildVariableRows() puts on the widget says "these rows stand
+    // for this tree". Rows left from the tree before would be covered by that
+    // stamp too, and start answering with variables the reset has freed, so the
+    // rebuild drops them itself rather than trusting its caller to.
+    void testRebuildingTheRowsDropsTheOnesTheOldTreeLeft()
+    {
+        execLua(qsl("strandedName = 'value'"));
+        interface->getVars(false);
+
+        TTreeWidget tree(nullptr);
+        auto* rootItem = new QTreeWidgetItem(&tree, QStringList() << qsl("Variables"));
+        VarUnit* vu = interface->getVarUnit();
+        tree.buildVariableRows(vu, rootItem, vu->getBase(), false);
+        QTreeWidgetItem* strandedItem = childItemNamed(rootItem, qsl("strandedName"));
+        QVERIFY2(strandedItem && tree.variableForRow(vu, strandedItem), "the row has to resolve before the tree is replaced");
+
+        interface = std::make_unique<LuaInterface>(L); // as Host::resetProfile() does
+        interface->getVars(true);
+        VarUnit* replacement = interface->getVarUnit();
+
+        // deliberately without the clearVariableRows() repopulateVars() does:
+        auto* rebuiltRoot = new QTreeWidgetItem(&tree, QStringList() << qsl("Variables"));
+        tree.buildVariableRows(replacement, rebuiltRoot, replacement->getBase(), false);
+
+        QVERIFY2(!tree.variableForRow(replacement, strandedItem), "a row from the tree that was replaced must resolve to nothing");
+    }
+
+    // clearVariableRows() is what repopulateVars() leans on before it rebuilds
+    // the view, so it has to drop the rows on its own rather than leave them for
+    // the staleness check to hide.
+    void testClearingTheRowsDropsThemWhileTheTreeIsStillCurrent()
+    {
+        execLua(qsl("clearedName = 'value'"));
+        interface->getVars(false);
+
+        TTreeWidget tree(nullptr);
+        auto* rootItem = new QTreeWidgetItem(&tree, QStringList() << qsl("Variables"));
+        VarUnit* vu = interface->getVarUnit();
+        tree.buildVariableRows(vu, rootItem, vu->getBase(), false);
+
+        QTreeWidgetItem* item = childItemNamed(rootItem, qsl("clearedName"));
+        QVERIFY2(item && tree.variableForRow(vu, item), "the row has to resolve before it is cleared");
+
+        tree.clearVariableRows();
+
+        QCOMPARE(vu->treeGeneration(), interface->getVarUnit()->treeGeneration()); // the tree is untouched
+        QVERIFY2(!tree.variableForRow(vu, item), "a cleared row must resolve to nothing");
+    }
+
+    // The root row is the view's own heading rather than a variable, so nothing
+    // stands behind it - which is what lets a move onto it read as "no target"
+    // instead of as a target of the wrong type.
+    void testTheRootRowResolvesToNoVariable()
+    {
+        execLua(qsl("rootNeighbour = 'value'"));
+        interface->getVars(false);
+
+        TTreeWidget tree(nullptr);
+        auto* rootItem = new QTreeWidgetItem(&tree, QStringList() << qsl("Variables"));
+        VarUnit* vu = interface->getVarUnit();
+        tree.buildVariableRows(vu, rootItem, vu->getBase(), false);
+
+        QVERIFY2(childItemNamed(rootItem, qsl("rootNeighbour")), "the walk has to have built rows below the root");
+        QVERIFY2(!tree.variableForRow(vu, rootItem), "the root row stands for no variable");
     }
 
     // ========================================================================

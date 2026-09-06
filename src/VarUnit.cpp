@@ -27,7 +27,6 @@
 
 #include <QDebug>
 #include <QLocale>
-#include <QTreeWidgetItem>
 
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)
@@ -258,19 +257,6 @@ void VarUnit::clearPointers()
     mPointers.clear();
 }
 
-// The same question as the TVar overload below, asked of the row in the
-// Variables view standing for that variable - so it has to give the same answer.
-// It used to leave out the size limit, and Qt's tristate cascade ticks a child
-// whose ItemIsUserCheckable flag buildVarTree() stripped, so a table over the
-// limit reached by ticking its parent stayed ticked, went into savedVars and was
-// written into the profile (#9957).
-bool VarUnit::shouldSave(QTreeWidgetItem* pWidgetItem)
-{
-    TVar* var = getWVar(pWidgetItem);
-
-    return var && shouldSave(var);
-}
-
 bool VarUnit::shouldSave(TVar* var)
 {
     if (var->getValueType() == 6 || var->isReference()) {
@@ -337,90 +323,6 @@ QString VarUnit::getUnsaveableReason(TVar* var)
     }
 
     return QString();
-}
-
-void VarUnit::buildVarTree(QTreeWidgetItem* p, TVar* var, bool showHidden)
-{
-    QList<QTreeWidgetItem*> cList;
-    QListIterator<TVar*> it(var->getChildren(true));
-    while (it.hasNext()) {
-        TVar* child = it.next();
-        if (showHidden || !isHidden(child)) {
-            QStringList s1;
-            s1 << child->getName();
-            auto pItem = new QTreeWidgetItem(s1);
-            pItem->setText(0, child->getName());
-            pItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsAutoTristate | Qt::ItemIsUserCheckable);
-            pItem->setToolTip(0, utils::richText(tr("Checked variables will be saved and loaded with your profile.")));
-            pItem->setCheckState(0, Qt::Unchecked);
-            if (isSaved(child)) {
-                pItem->setCheckState(0, Qt::Checked);
-            }
-            if (!shouldSave(child)) {
-                pItem->setFlags(pItem->flags() & ~(Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsUserCheckable));
-                pItem->setForeground(0, QBrush(QColor("grey")));
-                const QString reason = getUnsaveableReason(child);
-                pItem->setToolTip(0, reason.isEmpty() ? QString() : utils::richText(reason));
-            }
-            pItem->setData(0, Qt::UserRole, child->getValueType());
-            QIcon icon;
-            switch (child->getValueType()) {
-            case 5:
-                icon.addPixmap(QPixmap(qsl(":/icons/table.png")), QIcon::Normal, QIcon::Off);
-                break;
-            case 6:
-                icon.addPixmap(QPixmap(qsl(":/icons/function.png")), QIcon::Normal, QIcon::Off);
-                break;
-            default:
-                icon.addPixmap(QPixmap(qsl(":/icons/variable.png")), QIcon::Normal, QIcon::Off);
-                break;
-            }
-            pItem->setIcon(0, icon);
-            wVars.insert(pItem, child);
-            cList.append(pItem);
-            if (child->getValueType() == 5) {
-                buildVarTree(pItem, child, showHidden);
-            }
-        }
-    }
-    p->addChildren(cList);
-}
-
-void VarUnit::addTreeItem(QTreeWidgetItem* p, TVar* var)
-{
-    wVars.insert(p, var);
-}
-
-void VarUnit::removeTreeItem(QTreeWidgetItem* p)
-{
-    wVars.remove(p);
-    tVars.remove(p);
-}
-
-void VarUnit::addTempVar(QTreeWidgetItem* p, TVar* var)
-{
-    tVars.insert(p, var);
-}
-
-void VarUnit::removeTempVar(QTreeWidgetItem* p)
-{
-    tVars.remove(p);
-}
-
-TVar* VarUnit::getTVar(QTreeWidgetItem* p)
-{
-    if (tVars.contains(p)) {
-        return tVars[p];
-    }
-    return nullptr;
-}
-
-TVar* VarUnit::getWVar(QTreeWidgetItem* p)
-{
-    if (wVars.contains(p)) {
-        return wVars[p];
-    }
-    return nullptr;
 }
 
 QStringList VarUnit::varName(TVar* var)
@@ -610,11 +512,16 @@ void VarUnit::setBase(TVar* pVariable)
     base.reset(pVariable);
 }
 
+quint64 VarUnit::nextTreeGeneration()
+{
+    static quint64 counter = 0;
+    return ++counter;
+}
+
 void VarUnit::clear()
 {
+    mTreeGeneration = nextTreeGeneration();
     base.reset();
-    tVars.clear();
-    wVars.clear();
     variableSet.clear();
     mPointers.clear();
 }

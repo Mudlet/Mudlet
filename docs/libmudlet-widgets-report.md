@@ -46,9 +46,9 @@ and the baseline are regenerated in each libmudlet PR, so drift shows up in the 
 | Metric | Count |
 | --- | ---: |
 | Source files in `mudlet_core` | 421 |
-| Files depending on Qt Widgets | 143 |
-| Clean files | 278 |
-| Committed baseline | 143 |
+| Files depending on Qt Widgets | 141 |
+| Clean files | 280 |
+| Committed baseline | 141 |
 
 ## Offending files
 
@@ -72,10 +72,10 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `dlgRoomProperties.cpp` | 2 | 51 | QColorDialog, QMenu, QWidget, QDialog, QLineEdit, QComboBox, QAbstractButton, QSpinBox, QListWidgetItem, QVBoxLayout, QSizePolicy, QListWidget, QListView, QHBoxLayout, QPushButton |
 | `dlgMapper.cpp` | 11 | 41 | QApplication, QFileDialog, QFrame, QLabel, QListWidget, QMenu, QMessageBox, QProgressBar, QProgressDialog, QPushButton, QVBoxLayout, QWidget, QAbstractButton, QToolButton, QComboBox, QDialog, QSizePolicy |
 | `dlgRoomExits.h` | 2 | 49 | QDialog, QStyledItemDelegate, QCheckBox, QWidget, QStyleOptionViewItem, QLineEdit, QTreeWidgetItem, QRadioButton, QSpinBox |
+| `TTreeWidget.cpp` | 2 | 49 | QHeaderView, QToolTip, QWidget, QTreeWidget, QAbstractItemView, QTreeWidgetItem, QStyle |
 | `TMainConsole.cpp` | 8 | 40 | QDialog, QDockWidget, QLabel, QLineEdit, QMessageBox, QProgressDialog, QScrollBar, QSizePolicy, QWidget, QApplication |
 | `dlgPackageManager.cpp` | 3 | 42 | QFileDialog, QMessageBox, QProgressDialog, QWidget, QDialog, QLineEdit, QListWidget, QAbstractButton, QListWidgetItem, QButtonGroup |
 | `dlgNotepad.cpp` | 8 | 36 | QApplication, QHBoxLayout, QInputDialog, QLabel, QLineEdit, QMenu, QPlainTextEdit, QToolButton, QWidget, QTabWidget, QMainWindow, QTextEdit |
-| `TTreeWidget.cpp` | 2 | 38 | QHeaderView, QToolTip, QWidget, QTreeWidget, QAbstractItemView, QTreeWidgetItem, QStyle |
 | `updater/UpdateDialog.cpp` | 6 | 34 | QAbstractButton, QApplication, QLabel, QMessageBox, QTextBrowser, QToolButton, QWidget, QDialog, QPushButton, QCheckBox |
 | `mudlet.h` | 2 | 36 | QMainWindow, QSystemTrayIcon, QMenu, QLabel, QListWidget, QPushButton, QSplitter, QTableWidget, QTableWidgetItem, QTextEdit, QToolButton, QDockWidget, QToolBar, QWidget, QHBoxLayout |
 | `TMxpFrameManager.cpp` | 4 | 34 | QFrame, QMainWindow, QSizePolicy, QVBoxLayout, QTabWidget, QWidget |
@@ -91,6 +91,7 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `TCommandLine.cpp` | 2 | 22 | QScrollBar, QToolButton, QWidget, QPlainTextEdit, QFrame, QApplication, QMenu |
 | `TDetachedWindow.h` | 7 | 16 | QMainWindow, QVBoxLayout, QToolBar, QToolButton, QLabel, QStackedWidget, QDockWidget, QMenu |
 | `T2DMap.h` | 2 | 19 | QTreeWidget, QWidget, QCheckBox, QComboBox, QListWidgetItem, QPushButton, QTreeWidgetItem, QMenu, QDialog |
+| `TTreeWidget.h` | 1 | 20 | QTreeWidget, QWidget, QTreeWidgetItem |
 | `dlgTriggerPatternEdit.cpp` | 8 | 11 | QAbstractButton, QAbstractItemView, QAbstractScrollArea, QAbstractSpinBox, QPlainTextEdit, QComboBox, QLineEdit, QWidget |
 | `widgetutils.h` | 2 | 17 | QApplication, QWidget |
 | `TEasyButtonBar.cpp` | 1 | 17 | QGridLayout, QWidget, QVBoxLayout, QSizePolicy, QAbstractButton, QPushButton |
@@ -108,10 +109,7 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `TUiTour.h` | 1 | 11 | QWidget, QFrame, QLabel, QPushButton |
 | `updater.cpp` | 2 | 10 | QMessageBox, QPushButton, QApplication, QAbstractButton |
 | `updater/UpdateDialog.h` | 1 | 10 | QDialog, QAbstractButton, QLabel, QWidget |
-| `VarUnit.cpp` | 1 | 10 | QTreeWidgetItem |
-| `VarUnit.h` | 0 | 11 | QTreeWidgetItem |
 | `TMapView.h` | 3 | 7 | QComboBox, QToolButton, QWidget |
-| `TTreeWidget.h` | 1 | 9 | QTreeWidget, QWidget, QTreeWidgetItem |
 | `dlgMapLabel.h` | 1 | 8 | QDialog, QColorDialog, QFontDialog, QWidget |
 | `PackageItemDelegate.cpp` | 1 | 8 | QApplication, QStyledItemDelegate, QStyleOptionViewItem, QStyle |
 | `AltFocusMenuBarDisable.cpp` | 0 | 8 | QProxyStyle, QStyleFactory, QStyleOption, QWidget, QStyleHintReturn, QStyle |
@@ -201,7 +199,7 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `glwidget_integration.cpp` | 0 | 1 | QWidget |
 | `modern_glwidget.h` | 0 | 1 | QWidget |
 
-## Clean files (278)
+## Clean files (280)
 
 <details>
 <summary>Files with no Qt Widgets dependency</summary>
@@ -477,6 +475,8 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 - `updater/SemVer.cpp`
 - `updater/SemVer.h`
 - `utils.h`
+- `VarUnit.cpp`
+- `VarUnit.h`
 - `VoskRecognizer.cpp`
 - `VoskRecognizer.h`
 - `widechar_width.h`
