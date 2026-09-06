@@ -28,8 +28,9 @@
 #include "MudletApp.h"
 #include "TBuffer.h"
 #include "TEncodingHelper.h"
-#include "TMainConsole.h"
 #include "mudlet.h"
+
+#include <hunspell/hunspell.h>
 
 #include <QKeyEvent>
 #include <QMenu>
@@ -141,7 +142,7 @@ void dlgComposer::spellCheckWord(QTextCursor& c)
         return;
     }
 
-    Hunhandle* systemDictionaryHandle = mpHost->mpConsole->getHunspellHandle_system();
+    Hunhandle* systemDictionaryHandle = mpHost->spellChecker().systemHandle();
     if (!systemDictionaryHandle) {
         return;
     }
@@ -161,7 +162,7 @@ void dlgComposer::spellCheckWord(QTextCursor& c)
 
     // The dictionary used from "the system" may not be UTF-8 encoded so we
     // will need to transform the UTF-16BE "QString" to the appropriate encoding:
-    const QByteArray codecName = mpHost->mpConsole->getHunspellCodecName_system();
+    const QByteArray codecName = mpHost->spellChecker().systemCodecName();
     if (codecName.isEmpty()) {
         f.setFontUnderline(false);
         c.setCharFormat(f);
@@ -170,7 +171,7 @@ void dlgComposer::spellCheckWord(QTextCursor& c)
 
     const QByteArray encodedText = TEncodingHelper::encode(spellCheckedWord, codecName);
     if (!Hunspell_spell(systemDictionaryHandle, encodedText.constData())) {
-        Hunhandle* userDictionaryhandle = mpHost->mpConsole->getHunspellHandle_user();
+        Hunhandle* userDictionaryhandle = mpHost->spellChecker().userHandle();
         if (userDictionaryhandle) {
             // The per-profile/shared dictionary is always UTF-8 encoded - so
             // we can use QString::toUtf8() directly to get the bytes needed:
@@ -253,9 +254,9 @@ void dlgComposer::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
         return;
     }
 
-    auto codecName = mpHost->mpConsole->getHunspellCodecName_system();
-    auto handle_system = mpHost->mpConsole->getHunspellHandle_system();
-    auto handle_profile = mpHost->mpConsole->getHunspellHandle_user();
+    auto codecName = mpHost->spellChecker().systemCodecName();
+    auto handle_system = mpHost->spellChecker().systemHandle();
+    auto handle_profile = mpHost->spellChecker().userHandle();
     bool haveAddOption = false;
     bool haveRemoveOption = false;
     bool wordIsMisspelled = false;
@@ -380,8 +381,7 @@ void dlgComposer::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
 
         } else {
             QAction* pA = nullptr;
-            auto mainConsole = mpHost->mpConsole;
-            if (mainConsole->isUsingSharedDictionary()) {
+            if (mpHost->spellChecker().usingSharedDictionary()) {
                 //: Shown when the spell-checker has no suggestions from the shared user dictionary for the misspelled word in the composer
                 pA = new QAction(tr("no suggestions (shared)"));
             } else {
@@ -433,7 +433,7 @@ void dlgComposer::slot_addWord()
         return;
     }
 
-    mpHost->mpConsole->addWordToSet(mSpellCheckedWord);
+    mpHost->spellChecker().addWord(mSpellCheckedWord);
     // Redo spell check to update underlining
     recheckWholeLine();
 }
@@ -444,7 +444,7 @@ void dlgComposer::slot_removeWord()
         return;
     }
 
-    mpHost->mpConsole->removeWordFromSet(mSpellCheckedWord);
+    mpHost->spellChecker().removeWord(mSpellCheckedWord);
     // Redo spell check to update underlining
     recheckWholeLine();
 }
@@ -466,11 +466,11 @@ void dlgComposer::slot_popupMenu()
     c.removeSelectedText();
     c.insertText(t);
     c.clearSelection();
-    auto systemDictionaryHandle = mpHost->mpConsole->getHunspellHandle_system();
+    auto systemDictionaryHandle = mpHost->spellChecker().systemHandle();
     if (systemDictionaryHandle) {
-        Hunspell_free_list(mpHost->mpConsole->getHunspellHandle_system(), &mpSystemSuggestionsList, mSystemDictionarySuggestionsCount);
+        Hunspell_free_list(mpHost->spellChecker().systemHandle(), &mpSystemSuggestionsList, mSystemDictionarySuggestionsCount);
     }
-    auto userDictionaryHandle = mpHost->mpConsole->getHunspellHandle_user();
+    auto userDictionaryHandle = mpHost->spellChecker().userHandle();
     if (userDictionaryHandle) {
         Hunspell_free_list(userDictionaryHandle, &mpUserSuggestionsList, mUserDictionarySuggestionsCount);
     }
