@@ -88,16 +88,17 @@ private:
         return (std::max(a, b) + 0.05) / (std::min(a, b) + 0.05);
     }
 
-    // The groove is deliberately left unpainted, so a screen grab would only prove
-    // that whatever sits behind the console is visible.
-    QImage renderScrollBarOn(const QColor& background)
+    // Pre-filled because the console background is painted by an ancestor: rendering
+    // the bar on its own would otherwise leave whatever it does not cover undefined.
+    static QImage renderWidget(QWidget* pWidget, const QColor& background)
     {
-        QScrollBar* pScrollBar = mpHost->mpConsole->mpScrollBar;
-        QImage shot(pScrollBar->size(), QImage::Format_RGB32);
+        QImage shot(pWidget->size(), QImage::Format_RGB32);
         shot.fill(background);
-        pScrollBar->render(&shot, QPoint(), QRegion(), QWidget::DrawChildren);
+        pWidget->render(&shot, QPoint(), QRegion(), QWidget::DrawChildren);
         return shot;
     }
+
+    QImage renderScrollBarOn(const QColor& background) { return renderWidget(mpHost->mpConsole->mpScrollBar, background); }
 
     // Sampled at the middle of the handle so a stray antialiased edge cannot stand
     // in for it.
@@ -112,6 +113,10 @@ private:
 
         return contrastRatio(renderScrollBarOn(background).pixelColor(handle.center()), background);
     }
+
+    // Kept in step with ConsoleScrollBarStyle in TConsole.cpp by hand: the style lives
+    // in an anonymous namespace, so the name cannot be shared.
+    static constexpr const char* csHandleColorProperty = "mudletScrollBarHandleColor";
 
     static QRect handleRect(QScrollBar* pScrollBar)
     {
@@ -186,7 +191,8 @@ private slots:
         fillConsoleSoTheHandleHasSomewhereToSit();
 
         // The console keeps its own style, so this only reaches the scroll bar
-        // if the fix is absent:
+        // if the fix is absent. Never put back, which is safe only because every
+        // case in a grouped test binary runs in its own process.
         qApp->setStyle(new ColourSchemeOnlyScrollBarStyle);
         QTest::qWait(50ms);
     }
@@ -215,11 +221,14 @@ private slots:
     {
         const QColor background(255, 255, 255);
         const qreal contrast = handleContrastOn(background);
-        QVERIFY2(contrast >= 3.0, qPrintable(qsl("handle contrast against a white console was only %1:1").arg(contrast, 0, 'f', 2)));
+        // A higher bar than the other backgrounds: black at 45% alpha over white is
+        // #8d8d8d, which already clears 3:1, so only a stricter bound can fail here.
+        QVERIFY2(contrast >= 4.5, qPrintable(qsl("handle contrast against a white console was only %1:1").arg(contrast, 0, 'f', 2)));
     }
 
     // The hardest background to sit on - neither a white nor a black handle has much
-    // room, so too transparent a handle shows up here first.
+    // room, so an over-transparent handle, or one blended over the base style's own
+    // handle instead of over the console, shows up here first.
     void test_handleStandsOutOnAMidGreyConsole()
     {
         const QColor background(127, 127, 127);
@@ -234,6 +243,58 @@ private slots:
         const QColor background(0, 0, 255);
         const qreal contrast = handleContrastOn(background);
         QVERIFY2(contrast >= 3.0, qPrintable(qsl("handle contrast against a blue console was only %1:1").arg(contrast, 0, 'f', 2)));
+    }
+
+    // The debug console paints its own black background rather than the desktop
+    // theme's, so it has the same problem and takes the same handle.
+    void test_handleStandsOutOnTheDebugConsole()
+    {
+        mudlet::self()->attachDebugArea(mHostname);
+        QVERIFY(!mudlet::smpDebugConsole.isNull());
+        mudlet::smpDebugArea->show();
+        QTest::qWait(100ms);
+
+        QScrollBar* pScrollBar = mudlet::smpDebugConsole->mpScrollBar;
+        pScrollBar->setRange(0, 100);
+        pScrollBar->setPageStep(10);
+        pScrollBar->setValue(50);
+
+        const QColor background = mudlet::smpDebugConsole->getConsoleBgColor();
+        const QRect handle = handleRect(pScrollBar);
+        QVERIFY(!handle.isEmpty());
+
+        const qreal contrast = contrastRatio(renderWidget(pScrollBar, background).pixelColor(handle.center()), background);
+        mudlet::smpDebugArea->hide();
+        QVERIFY2(contrast >= 3.0, qPrintable(qsl("handle contrast against the debug console's %1 background was only %2:1").arg(background.name(), QString::number(contrast, 'f', 2))));
+    }
+
+    // The handle is inset on the axis it is thin on, so the two orientations take
+    // opposite arms - swapping them leaves a handle that fills the bar's width.
+    void test_theHorizontalHandleIsInsetFromTheLongEdges()
+    {
+        QScrollBar* pScrollBar = mpHost->mpConsole->mpHScrollBar;
+        pScrollBar->show();
+        QTest::qWait(50ms);
+        pScrollBar->setRange(0, 100);
+        pScrollBar->setPageStep(10);
+        pScrollBar->setValue(50);
+
+        // Only the handle changes between two renders that differ solely in the handle
+        // colour, so the pixels that differ are exactly the ones Mudlet drew.
+        const QVariant handleColor = pScrollBar->property(csHandleColorProperty);
+        const QImage painted = renderWidget(pScrollBar, Qt::black);
+        pScrollBar->setProperty(csHandleColorProperty, QColor(255, 0, 0, 200));
+        const QImage recoloured = renderWidget(pScrollBar, Qt::black);
+        pScrollBar->setProperty(csHandleColorProperty, handleColor);
+
+        int drawnOnTheTopEdge = 0;
+        int drawnInTheMiddle = 0;
+        for (int x = 0; x < painted.width(); ++x) {
+            drawnOnTheTopEdge += (painted.pixelColor(x, 0) != recoloured.pixelColor(x, 0)) ? 1 : 0;
+            drawnInTheMiddle += (painted.pixelColor(x, painted.height() / 2) != recoloured.pixelColor(x, painted.height() / 2)) ? 1 : 0;
+        }
+        QVERIFY2(drawnInTheMiddle > 0, "nothing was drawn along the middle of the horizontal scroll bar");
+        QVERIFY2(drawnOnTheTopEdge == 0, qPrintable(qsl("%1 pixels were drawn on the horizontal scroll bar's top edge, which should be groove").arg(drawnOnTheTopEdge)));
     }
 
     // A background image is painted on MainDisplay, an ancestor of the scroll bar,
@@ -259,12 +320,13 @@ private slots:
         }
         QVERIFY(pDisplay != pScrollBar);
 
-        QImage shot(pDisplay->size(), QImage::Format_RGB32);
-        shot.fill(Qt::magenta);
-        pDisplay->render(&shot, QPoint(), QRegion(), QWidget::DrawChildren);
+        const QImage shot = renderWidget(pDisplay, Qt::magenta);
 
         const QRect handle = handleRect(pScrollBar).translated(pScrollBar->mapTo(pDisplay, QPoint()));
-        const QColor image = shot.pixelColor(handle.center().x(), handle.top() - 6);
+        // Measured against the image and not against the groove: a base style that
+        // paints an opaque groove hides the image on that platform, but one that
+        // leaves it clear - as Windows 11 does - puts the image right behind the handle.
+        const QColor image = shot.pixelColor(pDisplay->width() / 2, pDisplay->height() / 2);
         int standingOut = 0;
         for (int y = handle.top(); y <= handle.bottom(); ++y) {
             for (int x = handle.left(); x <= handle.right(); ++x) {

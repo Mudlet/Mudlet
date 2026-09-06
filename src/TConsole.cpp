@@ -111,24 +111,35 @@ public:
             return;
         }
 
+        // The groove, the arrows and the hover feedback stay the base style's work, but
+        // its handle is masked out: ours is alpha blended, so it would take its colour
+        // from that handle instead of from the console it was measured against.
+        QStyleOptionSlider baseOption(*pSlider);
+        baseOption.subControls &= ~SC_ScrollBarSlider;
+        QProxyStyle::drawComplexControl(control, &baseOption, pPainter, pWidget);
+
+        // QCommonStyle hands back a full-length handle when there is nothing to
+        // scroll, which would paint a bar down the whole console.
         if (pSlider->minimum >= pSlider->maximum) {
             return;
         }
 
         const QRect handle = subControlRect(CC_ScrollBar, pOption, SC_ScrollBarSlider, pWidget);
-        const int inset = 3;
+        // Centres a 9 pixel handle in the 15 pixel bar the console pins.
+        constexpr int inset = 3;
+        constexpr int cornerRadius = 4;
         const QRectF handleRect = (pSlider->orientation == Qt::Vertical) ? QRectF(handle).adjusted(inset, 0, -inset, 0) : QRectF(handle).adjusted(0, inset, 0, -inset);
 
-        // Outlined in the opposite colour because a background image is painted on
-        // an ancestor and shows through the groove: the fill alone can land on
-        // anything, but fill and outline cannot both blend into the same surface.
+        // Outlined in the opposite colour because a background image on an ancestor shows
+        // through the groove: a fill alone can land on a matching image, a fill and its
+        // outline cannot both blend into one surface.
         const QColor outlineColor(255 - handleColor.red(), 255 - handleColor.green(), 255 - handleColor.blue(), handleColor.alpha());
 
         pPainter->save();
         pPainter->setRenderHint(QPainter::Antialiasing);
         pPainter->setPen(QPen(outlineColor, 1));
         pPainter->setBrush(handleColor);
-        pPainter->drawRoundedRect(handleRect.adjusted(0.5, 0.5, -0.5, -0.5), 4, 4);
+        pPainter->drawRoundedRect(handleRect.adjusted(0.5, 0.5, -0.5, -0.5), cornerRadius, cornerRadius);
         pPainter->restore();
     }
 };
