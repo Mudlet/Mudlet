@@ -28,6 +28,7 @@
 #include "TCommandLine.h"
 #include "TDebug.h"
 #include "TDockWidget.h"
+#include "TEasyButtonBar.h"
 #include "TEvent.h"
 #include "THyperlinkVisibilityManager.h"
 #include "TLabel.h"
@@ -37,6 +38,7 @@
 #include "TScrollBox.h"
 #include "TTextBox.h"
 #include "TTextEdit.h"
+#include "TToolBar.h"
 #include "dlgMapper.h"
 #include "mudlet.h"
 #include "GifTracker.h"
@@ -45,6 +47,7 @@
 #include <QDockWidget>
 #include <QIcon>
 #include <QLabel>
+#include <QLayout>
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QMimeData>
@@ -549,22 +552,14 @@ TConsole* TMainConsole::createMiniConsole(const QString& windowname, const QStri
     auto pC = mSubConsoleMap.value(name);
     auto pS = mScrollBoxMap.value(windowname);
     if (!pC) {
+        QWidget* parent = mpMainFrame;
         if (pS) {
-            pC = new TConsole(mpHost, name, SubConsole, pS->widget());
+            parent = pS->widget();
         } else if (pW) {
-            pC = new TConsole(mpHost, name, SubConsole, pW->widget());
-        } else {
-            pC = new TConsole(mpHost, name, SubConsole, mpMainFrame);
+            parent = pW->widget();
         }
-        if (!pC) {
-            return nullptr;
-        }
+        pC = createSubConsole(name, parent);
         registerSubConsole(name, pC);
-        pC->setObjectName(name);
-        const auto& hostCommandLine = mpHost->mpConsole->mpCommandLine;
-        pC->setFocusProxy(hostCommandLine);
-        pC->mUpperPane->setFocusProxy(hostCommandLine);
-        pC->mLowerPane->setFocusProxy(hostCommandLine);
         pC->resize(width, height);
         pC->mOldX = x;
         pC->mOldY = y;
@@ -577,6 +572,68 @@ TConsole* TMainConsole::createMiniConsole(const QString& windowname, const QStri
         return pC;
     }
     return nullptr;
+}
+
+TConsole* TMainConsole::createSubConsole(const QString& name, QWidget* parent)
+{
+    auto* pC = new TConsole(mpHost, name, SubConsole, parent);
+    pC->setObjectName(name);
+    pC->setFocusProxy(mpCommandLine);
+    pC->mUpperPane->setFocusProxy(mpCommandLine);
+    pC->mLowerPane->setFocusProxy(mpCommandLine);
+    return pC;
+}
+
+TToolBar* TMainConsole::createToolBar(TAction* pAction, const QString& name)
+{
+    return new TToolBar(mpHost, pAction, name, mudlet::self());
+}
+
+TEasyButtonBar* TMainConsole::createEasyButtonBar(TAction* pRootAction, const QString& name)
+{
+    auto* pBar = new TEasyButtonBar(pRootAction, name, mpTopToolBar);
+    mpTopToolBar->layout()->addWidget(pBar);
+    return pBar;
+}
+
+void TMainConsole::attachEasyButtonBar(TEasyButtonBar* pBar, int location)
+{
+    switch (location) {
+    case 0:
+        mpTopToolBar->layout()->addWidget(pBar);
+        break;
+    case 2:
+        mpLeftToolBar->layout()->addWidget(pBar);
+        break;
+    case 3:
+        mpRightToolBar->layout()->addWidget(pBar);
+        break;
+    }
+}
+
+void TMainConsole::detachEasyButtonBar(TEasyButtonBar* pBar, int location)
+{
+    switch (location) {
+    case 0:
+        mpTopToolBar->layout()->removeWidget(pBar);
+        break;
+    case 2:
+        mpLeftToolBar->layout()->removeWidget(pBar);
+        break;
+    case 3:
+        mpRightToolBar->layout()->removeWidget(pBar);
+        break;
+    }
+}
+
+void TMainConsole::dockToolBar(TToolBar* pToolBar, Qt::DockWidgetArea area)
+{
+    mudlet::self()->addDockWidget(area, pToolBar);
+}
+
+void TMainConsole::undockToolBar(TToolBar* pToolBar)
+{
+    mudlet::self()->removeDockWidget(pToolBar);
 }
 
 // This is a scrollBox overlaid on to the main console
