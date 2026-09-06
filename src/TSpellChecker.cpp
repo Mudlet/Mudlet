@@ -300,6 +300,9 @@ QPair<bool, QString> TSpellChecker::addWord(const QString& word)
     }
 
     if (useSharedDictionary) {
+        if (!sharedDictionary()) {
+            return qMakePair(false, qsl("the shared dictionary could not be opened, so \"%1\" was not added").arg(word));
+        }
         if (addWordToShared(word)) {
             result.first = true;
         } else {
@@ -308,9 +311,14 @@ QPair<bool, QString> TSpellChecker::addWord(const QString& word)
         return result;
     }
 
+    auto* handle = userHandle();
+    if (!handle) {
+        return qMakePair(false, qsl("the profile dictionary could not be opened, so \"%1\" was not added").arg(word));
+    }
+
     // The return value from this function is unclear - it does not seem to
     // indicate anything useful
-    Hunspell_add(userHandle(), word.toUtf8().constData());
+    Hunspell_add(handle, word.toUtf8().constData());
     if (!mWordSet_profile.contains(word)) {
         mWordSet_profile.insert(word);
         qDebug().noquote().nospace() << "TSpellChecker::addWord(\"" << word << "\") INFO - word added to profile mWordSet.";
@@ -334,6 +342,9 @@ QPair<bool, QString> TSpellChecker::removeWord(const QString& word)
     }
 
     if (useSharedDictionary) {
+        if (!sharedDictionary()) {
+            return qMakePair(false, qsl("the shared dictionary could not be opened, so \"%1\" was not removed").arg(word));
+        }
         if (removeWordFromShared(word)) {
             result.first = true;
         } else {
@@ -342,9 +353,14 @@ QPair<bool, QString> TSpellChecker::removeWord(const QString& word)
         return result;
     }
 
+    auto* handle = userHandle();
+    if (!handle) {
+        return qMakePair(false, qsl("the profile dictionary could not be opened, so \"%1\" was not removed").arg(word));
+    }
+
     // The return value from this function is unclear - it does not seem to
     // indicate anything useful
-    Hunspell_remove(userHandle(), word.toUtf8().constData());
+    Hunspell_remove(handle, word.toUtf8().constData());
     if (mWordSet_profile.remove(word)) {
         qDebug().noquote().nospace() << "TSpellChecker::removeWord(\"" << word << "\") INFO - word removed from profile mWordSet.";
         result.first = true;
@@ -396,8 +412,8 @@ QPair<bool, QString> TSpellChecker::removeWord(const QString& word)
     smWordSet_shared = QSet<QString>(wordList.begin(), wordList.end());
 
 #if defined(Q_OS_WINDOWS)
-    sanitizeUtf8Path(affixPath, qsl("profile.dic"));
-    sanitizeUtf8Path(dictionaryPath, qsl("profile.aff"));
+    sanitizeUtf8Path(dictionaryPath, qsl("mudlet.dic"));
+    sanitizeUtf8Path(affixPath, qsl("mudlet.aff"));
 #endif
     smpHunspell_sharedDictionary = Hunspell_create(affixPath.toUtf8().constData(), dictionaryPath.toUtf8().constData());
     return smpHunspell_sharedDictionary;
@@ -417,8 +433,13 @@ QPair<bool, QString> TSpellChecker::removeWord(const QString& word)
 
 /*static*/ bool TSpellChecker::addWordToShared(const QString& word)
 {
+    auto* handle = sharedDictionary();
+    if (!handle) {
+        return false;
+    }
+
     bool isAdded = false;
-    Hunspell_add(sharedDictionary(), word.toUtf8().constData());
+    Hunspell_add(handle, word.toUtf8().constData());
     if (!smWordSet_shared.contains(word)) {
         smWordSet_shared.insert(word);
         qDebug().noquote().nospace() << "TSpellChecker::addWordToShared(\"" << word << "\") INFO - word added to shared mWordSet.";
@@ -429,8 +450,13 @@ QPair<bool, QString> TSpellChecker::removeWord(const QString& word)
 
 /*static*/ bool TSpellChecker::removeWordFromShared(const QString& word)
 {
+    auto* handle = sharedDictionary();
+    if (!handle) {
+        return false;
+    }
+
     bool isRemoved = false;
-    Hunspell_remove(sharedDictionary(), word.toUtf8().constData());
+    Hunspell_remove(handle, word.toUtf8().constData());
     if (smWordSet_shared.remove(word)) {
         qDebug().noquote().nospace() << "TSpellChecker::removeWordFromShared(\"" << word << "\") INFO - word removed from shared mWordSet.";
         isRemoved = true;

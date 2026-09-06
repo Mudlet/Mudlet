@@ -7351,6 +7351,10 @@ int TLuaInterpreter::spellCheckWord(lua_State* L)
     QByteArray encodedText;
     if (useUserDictionary) {
         handle = host.spellChecker().userHandle();
+        if (!handle) {
+            return warnArgumentValue(L, __func__, "the profile dictionary could not be opened so is unable to check your word");
+        }
+
         encodedText = text.toUtf8();
     } else {
         handle = host.spellChecker().systemHandle();
@@ -7391,6 +7395,10 @@ int TLuaInterpreter::spellSuggestWord(lua_State* L)
     QByteArray encodedText;
     if (useUserDictionary) {
         handle = host.spellChecker().userHandle();
+        if (!handle) {
+            return warnArgumentValue(L, __func__, "the profile dictionary could not be opened so is unable to make suggestions for your word");
+        }
+
         encodedText = text.toUtf8();
     } else {
         handle = host.spellChecker().systemHandle();
@@ -7405,7 +7413,7 @@ int TLuaInterpreter::spellSuggestWord(lua_State* L)
     for (size_t i = 0; i < wordCount; ++i) {
         lua_pushnumber(L, i + 1);
         QString suggestion;
-        if (hasUserDictionary) {
+        if (useUserDictionary) {
             suggestion = QString::fromUtf8(wordList[i]);
         } else {
             suggestion = TEncodingHelper::decode(QByteArray(wordList[i]), host.spellChecker().systemCodecName());
