@@ -208,6 +208,7 @@ set(SETTINGS_GROUP_TEST_SOURCES
 
 # Teardown: who owns a profile's dialogs and windows, and what becomes of them when it closes
 set(TEARDOWN_GROUP_TEST_SOURCES
+    AppStartupTeardownTest.cpp
     DialogTeardownTest.cpp
     HostChildTeardownTest.cpp
     HostWidgetDecouplingTest.cpp
@@ -331,6 +332,14 @@ add_grouped_test_binary(functional_starterui_tests ${STARTERUI_GROUP_TEST_SOURCE
 add_grouped_test_binary(functional_teardown_tests ${TEARDOWN_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_media_tests ${MEDIA_GROUP_TEST_SOURCES})
 
+# AppStartupTeardownTest runs the shipped application instead of linking it, so it
+# needs that binary's path and needs it built by the time ctest runs. Naming the
+# target literally is deliberate: EXE_MUDLET_TARGET is a plain variable local to
+# src/CMakeLists.txt, so a rename there fails generation here rather than quietly
+# depending on nothing.
+add_dependencies(functional_teardown_tests mudlet_executable)
+target_compile_definitions(functional_teardown_tests PRIVATE MUDLET_APP_BINARY="$<TARGET_FILE:mudlet_executable>")
+
 # Every list's cases, so a grouped test's properties are the solo ones verbatim
 foreach(test_name ${allFunctionalTestNames})
     if(leakCheckAvailable AND NOT test_name IN_LIST leakCheckExcludedTests)
@@ -387,6 +396,10 @@ endforeach()
 # ResetProfileTest creates a full profile per test method, so it needs a longer
 # timeout than the default 60s
 set_tests_properties(ResetProfileTest PROPERTIES TIMEOUT 300)
+
+# AppStartupTeardownTest starts the whole application eight times over, and a
+# sanitiser build spends seconds on each of those start-ups
+set_tests_properties(AppStartupTeardownTest PROPERTIES TIMEOUT 300)
 
 # Undo/redo tests need a longer timeout due to large batch operations
 set_tests_properties(dlgTriggerEditorUndoRedoTest PROPERTIES TIMEOUT 300)
