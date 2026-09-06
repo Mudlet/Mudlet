@@ -116,6 +116,7 @@ class dlgRoomExits : public QDialog, public Ui::room_exits
 {
     Q_OBJECT
     friend class RoomIdLineEditDelegate;
+    friend class RoomExitsDeletedEditItemTest;
 
 public:
     Q_DISABLE_COPY(dlgRoomExits)
@@ -146,6 +147,7 @@ public slots:
     void slot_addSpecialExit();
     void slot_editSpecialExit(QTreeWidgetItem*, int);
     void slot_endEditSpecialExits();
+    void slot_specialExitRowsAboutToBeRemoved(const QModelIndex&, int, int);
     void slot_ne_textEdited(const QString&);
     void slot_n_textEdited(const QString&);
     void slot_nw_textEdited(const QString&);
