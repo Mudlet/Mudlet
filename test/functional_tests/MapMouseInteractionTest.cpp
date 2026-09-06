@@ -60,6 +60,7 @@
 #include "TRoomDB.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
+#include "dlgMapLabel.h"
 #include "dlgMapper.h"
 #include "mudlet.h"
 
@@ -99,6 +100,9 @@ private:
     static constexpr int kWestRoomId = 4;
     static constexpr int kPlayerRoomId = 5;
     static constexpr int kEastRoomId = 6;
+
+    static inline const QVector3D kLabelPosition{2, 0, 0};
+    static inline const QSizeF kLabelClickSize{40, 20};
     static constexpr int kSouthRoomId = 8;
 
     void deleteProfileDirectory() const
@@ -166,6 +170,7 @@ private:
         // to be put back down before the next one runs.
         mp2dMap->mLabelHighlighted = false;
         mp2dMap->mMoveLabel = false;
+        mp2dMap->mSizeLabel = false;
         mp2dMap->mMultiSelection = false;
         area()->set2DMapZoom(kZoom);
         renderFrame();
@@ -204,6 +209,22 @@ private:
         const int id = area()->mMapLabels.isEmpty() ? 0 : area()->mMapLabels.lastKey() + 1;
         area()->mMapLabels.insert(id, label);
         return id;
+    }
+
+    // A label clear of the rooms on the level being shown.
+    int addTestLabel() const { return addLabel(kLabelPosition, kLabelClickSize); }
+    QPoint pointOnTestLabel() const { return pointOnLabel(kLabelPosition, kLabelClickSize); }
+
+    // Picks Create label from the menu and drags the box out from its top
+    // right corner to its bottom left, the one direction that lands the label
+    // exactly on the box's corner: dragged out upwards it lands a box-height
+    // below, and dragged out rightwards a pixel off.
+    void dragOutALabelBox() const
+    {
+        rightClickAt(pointUnitsFromCentre(-2, -2));
+        QVERIFY(pickContextMenuItem(qsl("Create label...")));
+        QVERIFY(mp2dMap->mSizeLabel);
+        dragFromTo(pointUnitsFromCentre(-2, 5), pointUnitsFromCentre(-5, 3));
     }
 
     void sendMouse(const QEvent::Type type, const QPoint& position, const Qt::MouseButton button, const Qt::MouseButtons buttons, const Qt::KeyboardModifiers modifiers) const
@@ -484,6 +505,11 @@ private slots:
         mp2dMap->setMouseTracking(false);
         mp2dMap->mPick = false;
         mp2dMap->mStartSpeedWalk = false;
+        // Cancelling the label dialog removes the label from the area it was
+        // made in, so it has to go before the next test throws that area away.
+        if (mp2dMap->mpDlgMapLabel) {
+            mp2dMap->mpDlgMapLabel->close();
+        }
         runLua(qsl("mudlet.custom_speedwalk = nil\ndoSpeedWalk = nil"));
         mpHost->mpConsole->discardAll();
         mp2dMap->mCustomLinesRoomFrom = 0;
@@ -687,15 +713,13 @@ private slots:
     {
         buildMap();
         showMapper(false);
-        const QVector3D where(2, 0, 0);
-        const QSizeF clickSize(40, 20);
-        const int labelId = addLabel(where, clickSize);
+        const int labelId = addTestLabel();
 
-        clickAt(pointOnLabel(where, clickSize));
+        clickAt(pointOnTestLabel());
         QVERIFY2(mp2dMap->mLabelHighlighted, "clicking a label did not pick it up");
         QVERIFY(area()->mMapLabels.value(labelId).highlight);
 
-        clickAt(pointOnLabel(where, clickSize));
+        clickAt(pointOnTestLabel());
         QVERIFY2(!mp2dMap->mLabelHighlighted, "clicking a picked up label did not put it down");
         QVERIFY(!area()->mMapLabels.value(labelId).highlight);
     }
@@ -705,11 +729,9 @@ private slots:
     {
         buildMap();
         showMapper(false);
-        const QVector3D where(2, 0, 0);
-        const QSizeF clickSize(40, 20);
-        addLabel(where, clickSize);
+        addTestLabel();
 
-        clickAt(pointOnLabel(where, clickSize));
+        clickAt(pointOnTestLabel());
         QVERIFY(mp2dMap->mLabelHighlighted);
 
         clickAt(pointUnitsFromCentre(-3, -3));
@@ -721,11 +743,9 @@ private slots:
     {
         buildMap();
         showMapper(false);
-        const QVector3D where(2, 0, 1);
-        const QSizeF clickSize(40, 20);
-        const int labelId = addLabel(where, clickSize);
+        const int labelId = addLabel(QVector3D(kLabelPosition.x(), kLabelPosition.y(), 1), kLabelClickSize);
 
-        clickAt(pointOnLabel(QVector3D(where.x(), where.y(), 0), clickSize));
+        clickAt(pointOnTestLabel());
 
         QVERIFY2(!mp2dMap->mLabelHighlighted, "a label a level up was picked up");
         QVERIFY(!area()->mMapLabels.value(labelId).highlight);
@@ -736,11 +756,9 @@ private slots:
     {
         buildMap();
         showMapper(true);
-        const QVector3D where(2, 0, 0);
-        const QSizeF clickSize(40, 20);
-        const int labelId = addLabel(where, clickSize);
+        const int labelId = addTestLabel();
 
-        clickAt(pointOnLabel(where, clickSize));
+        clickAt(pointOnTestLabel());
 
         QVERIFY2(!mp2dMap->mLabelHighlighted, "a label was picked up while the map was locked for viewing");
         QVERIFY(!area()->mMapLabels.value(labelId).highlight);
@@ -1698,6 +1716,139 @@ private slots:
 
         QVERIFY(runLua(qsl("assert(not walked, 'doSpeedWalk was called for a double-click on nothing')")));
         QVERIFY(!consoleText().contains(qsl("Cannot find a path")));
+    }
+
+    // A right click on a label is about the label, not the rooms: it drops
+    // whatever rooms were selected and offers the label's own items.
+    void test_rightClickingALabelDropsTheRoomSelectionAndOffersTheLabelItems()
+    {
+        buildMap();
+        showMapper(false);
+        const int labelId = addTestLabel();
+        clickAt(pointUnitsFromCentre(-1, 0));
+        QCOMPARE(mp2dMap->mMultiSelectionSet, QSet<int>{kWestRoomId});
+
+        rightClickAt(pointOnTestLabel());
+
+        QVERIFY(mp2dMap->mLabelHighlighted);
+        QVERIFY(area()->mMapLabels.value(labelId).highlight);
+        QVERIFY(mp2dMap->mMultiSelectionSet.isEmpty());
+        QVERIFY(contextMenuItem(qsl("Move")));
+        QVERIFY(contextMenuItem(qsl("Delete")));
+        QVERIFY2(!contextMenuItem(qsl("Configure areas...")), "the room menu came up over the label");
+    }
+
+    void test_deleteFromTheLabelMenuRemovesIt()
+    {
+        buildMap();
+        showMapper(false);
+        const int labelId = addTestLabel();
+        map()->resetUnsaved();
+        rightClickAt(pointOnTestLabel());
+
+        QVERIFY(pickContextMenuItem(qsl("Delete")));
+
+        QVERIFY(!area()->mMapLabels.contains(labelId));
+        QVERIFY(map()->isUnsaved());
+    }
+
+    // Move from the label's menu works like Move for rooms: the label follows
+    // the pointer with no button held until a click puts it down, and since a
+    // label is part of the map, moving one leaves the map needing a save.
+    void test_moveFromTheLabelMenuCarriesItWithThePointerUntilAClick()
+    {
+        buildMap();
+        showMapper(false);
+        const int labelId = addTestLabel();
+        rightClickAt(pointOnTestLabel());
+        QVERIFY(pickContextMenuItem(qsl("Move")));
+        QVERIFY(mp2dMap->mMoveLabel);
+        QVERIFY2(!mp2dMap->mHelpMsg.isEmpty(), "the map does not say how to finish the move");
+        map()->resetUnsaved();
+
+        hoverTo(pointUnitsFromCentre(-2, 1));
+        QCOMPARE(area()->mMapLabels.value(labelId).pos, QVector3D(-2, 1, 0));
+        QVERIFY2(map()->isUnsaved(), "moving a label did not leave the map needing a save");
+
+        clickAt(pointUnitsFromCentre(-2, 1));
+        QVERIFY2(!mp2dMap->mMoveLabel, "a click did not put the label down");
+        QVERIFY(!mp2dMap->mLabelHighlighted);
+        QVERIFY(!area()->mMapLabels.value(labelId).highlight);
+        QVERIFY(mp2dMap->mHelpMsg.isEmpty());
+        hoverTo(pointUnitsFromCentre(3, 3));
+        QCOMPARE(area()->mMapLabels.value(labelId).pos, QVector3D(-2, 1, 0));
+    }
+
+    // A temporary label, the kind a script puts up and never saves, moves the
+    // same way but is not worth a save.
+    void test_movingATemporaryLabelLeavesTheMapSaved()
+    {
+        buildMap();
+        showMapper(false);
+        const int labelId = addTestLabel();
+        area()->mMapLabels[labelId].temporary = true;
+        rightClickAt(pointOnTestLabel());
+        QVERIFY(pickContextMenuItem(qsl("Move")));
+        map()->resetUnsaved();
+
+        hoverTo(pointUnitsFromCentre(-2, 1));
+
+        QCOMPARE(area()->mMapLabels.value(labelId).pos, QVector3D(-2, 1, 0));
+        QVERIFY(!map()->isUnsaved());
+    }
+
+    // A right click away from a picked-up label puts it down, and the click
+    // then goes on to do what it does on empty space: put up the room menu.
+    void test_rightClickingAwayFromALabelPutsItDownAndOffersTheRoomMenu()
+    {
+        buildMap();
+        showMapper(false);
+        const int labelId = addTestLabel();
+        clickAt(pointOnTestLabel());
+        QVERIFY(mp2dMap->mLabelHighlighted);
+
+        rightClickAt(pointUnitsFromCentre(-2, -2));
+
+        QVERIFY(!mp2dMap->mLabelHighlighted);
+        QVERIFY(!area()->mMapLabels.value(labelId).highlight);
+        QVERIFY(contextMenuItem(qsl("Create new room here")));
+        QVERIFY2(!contextMenuItem(qsl("Delete")), "the label menu came up instead of the room menu");
+    }
+
+    // The box dragged out after picking Create label is where the label goes,
+    // and the dialog that comes up for its text is showing a label in that
+    // box before anything has been typed. Cancelling the dialog takes the
+    // label away again.
+    void test_createLabelFromTheMenuPutsTheLabelInTheBoxDraggedOut()
+    {
+        buildMap();
+        showMapper(false);
+
+        dragOutALabelBox();
+
+        QVERIFY(!mp2dMap->mSizeLabel);
+        QCOMPARE(area()->mMapLabels.size(), 1);
+        QCOMPARE(area()->mMapLabels.first().pos, QVector3D(-5, 5, 0));
+        QVERIFY2(mp2dMap->mpDlgMapLabel, "no dialog came up to fill the label in");
+
+        mp2dMap->mpDlgMapLabel->close();
+        QVERIFY2(area()->mMapLabels.isEmpty(), "cancelling the dialog left the label on the map");
+    }
+
+    // Dragging the box out is what puts the label on the map and marks it
+    // unsaved; saving the dialog just has to leave both as they are.
+    void test_savingTheLabelDialogKeepsTheLabel()
+    {
+        buildMap();
+        showMapper(false);
+        map()->resetUnsaved();
+        dragOutALabelBox();
+        QVERIFY(mp2dMap->mpDlgMapLabel);
+
+        mp2dMap->mpDlgMapLabel->accept();
+
+        QCOMPARE(area()->mMapLabels.size(), 1);
+        QVERIFY(map()->isUnsaved());
     }
 };
 
