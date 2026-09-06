@@ -58,6 +58,7 @@ public:
     bool isFloatAndDockable() const;
     int getCurrentShownAreaIndex();
     void setFont(const QFont&);
+    void refreshColours();
     void recreate3DWidget();
 
     void showMapProgress(const QString& label, bool cancelable);

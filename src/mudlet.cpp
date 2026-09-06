@@ -8495,6 +8495,11 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl, const QString& prof
 }
 
 
+void mudlet::alertUser(int milliseconds)
+{
+    QApplication::alert(this, milliseconds);
+}
+
 void mudlet::announce(const QString& text, const QString& processing, bool isPlain)
 {
     QString textToAnnounce;

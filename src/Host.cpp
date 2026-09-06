@@ -4873,6 +4873,19 @@ std::optional<QRect> Host::mapWidgetGeometry() const
     return mpConsole->mapWidgetGeometry();
 }
 
+void Host::refreshColours()
+{
+    if (!mpConsole) {
+        return;
+    }
+
+    mpConsole->changeColors();
+    mpMap->refreshMapperColours();
+    for (const QString& subConsoleName : windowRegistry().subConsoleNames()) {
+        mpConsole->changeSubConsoleColors(subConsoleName);
+    }
+}
+
 std::pair<bool, QString> Host::closeMapWidget()
 {
     if (!mpConsole) {

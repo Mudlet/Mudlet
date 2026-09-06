@@ -198,6 +198,7 @@ public:
     QPair<bool, bool> addWordToSet(const QString&);
     void adjustMenuBarVisibility();
     void adjustToolBarVisibility();
+    void alertUser(int milliseconds);
     void announce(const QString& text, const QString& processing = QString(), bool isPlain = false);
     void attachDebugArea(const QString&);
     void checkUpdatesOnStart();
