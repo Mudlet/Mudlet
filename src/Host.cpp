@@ -401,7 +401,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     if (mudlet::self()->smFirstLaunch) {
         QTimer::singleShot(0ms, this, [this]() {
             if (mpConsole) {
-                mpConsole->mpCommandLine->setPlaceholderText(tr("Text to send to the game"));
+                mpConsole->setCommandLinePlaceholderText(tr("Text to send to the game"));
             }
         });
     }
@@ -4116,14 +4116,7 @@ void Host::setUserDictionaryOptions(const bool _useDictionary, const bool useSha
     // been disabled the spell checking code won't run we need to clear any
     // highlights in the TCommandLine instance that may have been present when
     // spell checking is turned on or off:
-    if (isSpellCheckingEnabled) {
-        // Now enabled - so recheck the whole command line with whichever
-        // dictionaries are active:
-        mpConsole->mpCommandLine->recheckWholeLine();
-    } else {
-        // Or it is now disabled so clear any spelling marks:
-        mpConsole->mpCommandLine->clearMarksOnWholeLine();
-    }
+    mpConsole->updateCommandLineSpellCheck(isSpellCheckingEnabled);
 }
 
 // This does not take care of any QMaps or other containers that the mudlet
@@ -5528,11 +5521,7 @@ void Host::setFocusOnHostActiveCommandLine()
             pCommandLine->console()->repaint();
             targetCommandLine = pCommandLine;
         } else {
-            mpConsole->mpCommandLine->activateWindow();
-            mpConsole->show();
-            mpConsole->raise();
-            mpConsole->repaint();
-            targetCommandLine = mpConsole->mpCommandLine;
+            targetCommandLine = mpConsole->raiseCommandLine();
         }
 
         if (targetCommandLine) {
@@ -5672,14 +5661,12 @@ void Host::editorThemeChanged()
 
 void Host::sendCmdLine(const QString& cmd)
 {
-    if (!mpConsole || !mpConsole->mpCommandLine) {
+    if (!mpConsole) {
         qWarning() << "Host::sendCmdLine(...) ERROR - No active command line available.";
         return;
     }
 
-    // Set the command in the active command line
-    mpConsole->mpCommandLine->setPlainText(cmd);
-    mpConsole->mpCommandLine->selectAll();
+    mpConsole->setCommandLineText(cmd);
 }
 
 void Host::setRemoteEchoingActive(bool active)
