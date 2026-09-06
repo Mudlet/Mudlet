@@ -46,9 +46,9 @@ and the baseline are regenerated in each libmudlet PR, so drift shows up in the 
 | Metric | Count |
 | --- | ---: |
 | Source files in `mudlet_core` | 421 |
-| Files depending on Qt Widgets | 141 |
-| Clean files | 280 |
-| Committed baseline | 141 |
+| Files depending on Qt Widgets | 140 |
+| Clean files | 281 |
+| Committed baseline | 140 |
 
 ## Offending files
 
@@ -90,10 +90,10 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `TUiTour.cpp` | 8 | 21 | QFrame, QHBoxLayout, QLabel, QMenu, QMenuBar, QPushButton, QToolBar, QVBoxLayout, QWidget |
 | `TCommandLine.cpp` | 2 | 22 | QScrollBar, QToolButton, QWidget, QPlainTextEdit, QFrame, QApplication, QMenu |
 | `TDetachedWindow.h` | 7 | 16 | QMainWindow, QVBoxLayout, QToolBar, QToolButton, QLabel, QStackedWidget, QDockWidget, QMenu |
+| `widgetutils.h` | 3 | 19 | QApplication, QFileDialog, QWidget |
 | `T2DMap.h` | 2 | 19 | QTreeWidget, QWidget, QCheckBox, QComboBox, QListWidgetItem, QPushButton, QTreeWidgetItem, QMenu, QDialog |
 | `TTreeWidget.h` | 1 | 20 | QTreeWidget, QWidget, QTreeWidgetItem |
 | `dlgTriggerPatternEdit.cpp` | 8 | 11 | QAbstractButton, QAbstractItemView, QAbstractScrollArea, QAbstractSpinBox, QPlainTextEdit, QComboBox, QLineEdit, QWidget |
-| `widgetutils.h` | 2 | 17 | QApplication, QWidget |
 | `TEasyButtonBar.cpp` | 1 | 17 | QGridLayout, QWidget, QVBoxLayout, QSizePolicy, QAbstractButton, QPushButton |
 | `TFlipButton.cpp` | 3 | 15 | QMenu, QStyleOptionButton, QStylePainter, QPushButton, QSizePolicy, QStyle |
 | `TToolBar.cpp` | 0 | 18 | QWidget, QDockWidget, QGridLayout, QSizePolicy, QAbstractButton, QPushButton |
@@ -127,7 +127,6 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `TCommandLine.h` | 2 | 4 | QPlainTextEdit, QToolButton, QWidget, QMenu |
 | `TEasyButtonBar.h` | 1 | 5 | QWidget, QGridLayout |
 | `TToolBar.h` | 1 | 5 | QDockWidget, QGridLayout, QWidget |
-| `ActionUnit.cpp` | 3 | 2 | QDockWidget, QLayout, QWidget |
 | `dlgActionMainArea.cpp` | 0 | 5 | QWidget, QLineEdit, QSpinBox, QComboBox |
 | `dlgModuleManager.h` | 1 | 4 | QDialog, QWidget, QTableWidgetItem |
 | `PackageItemDelegate.h` | 2 | 3 | QStyledItemDelegate, QStyleOptionViewItem |
@@ -162,7 +161,6 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `TAccessibleTextEdit.cpp` | 0 | 3 | QAccessibleWidget |
 | `TFlipButton.h` | 1 | 2 | QPushButton, QStyleOptionButton |
 | `TLabel.h` | 1 | 2 | QLabel, QWidget |
-| `TLuaInterpreterMudletObjects.cpp` | 1 | 2 | QFileDialog |
 | `TSplitter.cpp` | 0 | 3 | QWidget, QSplitter, QSplitterHandle |
 | `TTextBox.cpp` | 0 | 3 | QWidget, QPlainTextEdit, QFrame |
 | `TTextBox.h` | 1 | 2 | QPlainTextEdit, QWidget |
@@ -193,13 +191,14 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `TMapViewManager.h` | 1 | 1 | QDockWidget |
 | `TSplitterHandle.cpp` | 0 | 2 | QSplitterHandle, QSplitter |
 | `TSplitterHandle.h` | 1 | 1 | QSplitterHandle |
+| `ActionUnit.cpp` | 1 | 0 | QLayout |
 | `dlgIRC.h` | 0 | 1 | QMainWindow |
 | `glwidget.cpp` | 0 | 1 | QWidget |
 | `glwidget.h` | 0 | 1 | QWidget |
 | `glwidget_integration.cpp` | 0 | 1 | QWidget |
 | `modern_glwidget.h` | 0 | 1 | QWidget |
 
-## Clean files (280)
+## Clean files (281)
 
 <details>
 <summary>Files with no Qt Widgets dependency</summary>
@@ -370,6 +369,7 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 - `TLuaInterpreterMapper.cpp`
 - `TLuaInterpreterMedia.cpp`
 - `TLuaInterpreterMMCP.cpp`
+- `TLuaInterpreterMudletObjects.cpp`
 - `TLuaInterpreterNetworking.cpp`
 - `TLuaInterpreterSpeechToText.cpp`
 - `TLuaInterpreterTextToSpeech.cpp`
