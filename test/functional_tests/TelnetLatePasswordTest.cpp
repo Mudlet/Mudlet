@@ -246,9 +246,36 @@ private slots:
         QVERIFY2(waitForReceivedText(csLoginLine + csPasswordLine), "the late password was not sent to the still-masked prompt");
     }
 
-    // P2: no ECHO negotiation at all, and the server has said nothing since the password step -
-    // it is still sitting on the prompt it printed.
-    void testLatePasswordIsSentAtAQuietPrompt()
+    // P2: the mask is still on, and a command the player's own package turned down never reached
+    // the prompt - so nothing has taken it over and the password is still what the game wants.
+    void testADeniedCommandLeavesTheLatePasswordArmed()
+    {
+        const ScopedAutoLoginDelays delays(csUsernameDelayMs, csPasswordDelayMs);
+        Host* host = connectWithLoginAndNoPassword();
+        QVERIFY(host);
+
+        mpServer->sendRaw(csPasswordPrompt + csMaskOn);
+        QVERIFY2(waitForMasking(host, true), "the client never entered password-masking mode");
+        waitOutThePasswordStep();
+        QCOMPARE(mpServer->receivedText(), csLoginLine);
+
+        QVERIFY2(host->mLuaInterpreter.compileAndExecuteScript(qsl("registerAnonymousEventHandler(\"sysDataSendRequest\", function() denyCurrentSend() end)")),
+                 "the denying event handler could not be registered, so this test cannot cover a denied command");
+        host->send(qsl("look"));
+        // Nothing to wait for, so give a send that should not happen the same margin as one that
+        // should before concluding it did not:
+        QTest::qWait(500);
+        QCOMPARE(mpServer->receivedText(), csLoginLine);
+
+        deliverLatePassword(host);
+        QVERIFY2(waitForReceivedText(csLoginLine + csPasswordLine), "a command the game never saw disarmed the late password");
+    }
+
+    // ---- Nothing proves the prompt is still waiting ------------------------
+
+    // N0: no ECHO negotiation at all, so there is no proof the prompt on screen is still the
+    // password one - "the server has said nothing since" would fit any question it had asked.
+    void testLatePasswordIsNotSentAtAQuietPrompt()
     {
         const ScopedAutoLoginDelays delays(csUsernameDelayMs, csPasswordDelayMs);
         Host* host = connectWithLoginAndNoPassword();
@@ -261,10 +288,9 @@ private slots:
         QVERIFY(!host->isRemoteEchoingActive());
 
         deliverLatePassword(host);
-        QVERIFY2(waitForReceivedText(csLoginLine + csPasswordLine), "the late password was not sent to the quiet prompt");
+        QVERIFY2(waitForConsoleContains(host, qsl("moved on from its password prompt")), "the player was not told why the password was not sent");
+        QCOMPARE(mpServer->receivedText(), csLoginLine);
     }
-
-    // ---- The game has moved on ---------------------------------------------
 
     // N1: the mask was released and the game printed something else, so whatever is reading input
     // now is not the password prompt.
@@ -310,11 +336,53 @@ private slots:
         QCOMPARE(mpServer->receivedText(), csLoginLine + csCommandLine);
     }
 
+    // N3: GMCP Char.Login took the login over, which cancels the login timers - the auto-login has
+    // no prompt of its own left, so the password goes nowhere and there is nothing to explain.
+    void testLatePasswordIsNotSentAfterTheLoginTimersWereCancelled()
+    {
+        const ScopedAutoLoginDelays delays(csUsernameDelayMs, csPasswordDelayMs);
+        Host* host = connectWithLoginAndNoPassword();
+        QVERIFY(host);
+
+        mpServer->sendRaw(csPasswordPrompt + csMaskOn);
+        QVERIFY2(waitForMasking(host, true), "the client never entered password-masking mode");
+        waitOutThePasswordStep();
+        QCOMPARE(mpServer->receivedText(), csLoginLine);
+
+        host->mTelnet.cancelLoginTimers();
+
+        deliverLatePassword(host);
+        QTest::qWait(500);
+        QCOMPARE(mpServer->receivedText(), csLoginLine);
+        QVERIFY2(!consoleContains(host, qsl("moved on from its password prompt")), "a login Mudlet is not driving was told about a password it never owed");
+    }
+
+    // N4: a profile with a login and no password at all - nothing is on its way, so the password
+    // step is never armed and a password set by hand later has no claim on the prompt.
+    void testALoginOnlyProfileNeverArmsThePasswordStep()
+    {
+        const ScopedAutoLoginDelays delays(csUsernameDelayMs, csPasswordDelayMs);
+        Host* host = connectWithLoginAndNoPassword(false);
+        QVERIFY(host);
+
+        mpServer->sendRaw(csPasswordPrompt + csMaskOn);
+        QVERIFY2(waitForMasking(host, true), "the client never entered password-masking mode");
+        waitOutThePasswordStep();
+        QCOMPARE(mpServer->receivedText(), csLoginLine);
+
+        deliverLatePassword(host);
+        QTest::qWait(500);
+        QCOMPARE(mpServer->receivedText(), csLoginLine);
+        QVERIFY2(!consoleContains(host, qsl("moved on from its password prompt")), "a profile that never had a password waiting was told one arrived too late");
+    }
+
 private:
     // Drives the dialog to create and connect the profile, then hands it a login but no password -
     // the state an unanswered keychain read leaves a profile in. Returns with the game's stub
-    // holding the login line, which is where each case takes over.
-    Host* connectWithLoginAndNoPassword()
+    // holding the login line, which is where each case takes over. securedPasswordPending is what
+    // a keychain read still in flight sets, and what arms the auto-login's password step; false
+    // gives a profile that has no password anywhere.
+    Host* connectWithLoginAndNoPassword(bool securedPasswordPending = true)
     {
         Host* host = TestProfile::create(mHostname, qsl("localhost"), mPort, 20s);
         if (!host) {
@@ -323,6 +391,7 @@ private:
         }
         host->setLogin(qsl("player"));
         host->setPass(QString());
+        host->setSecuredPasswordPending(securedPasswordPending);
 
         if (!waitForReceivedText(csLoginLine, 15000)) {
             qWarning() << "The auto-login never sent the login line - the stub has:" << mpServer->receivedText();
@@ -364,20 +433,25 @@ private:
     // The console wraps a printed line at its width, so the text is stitched back together and its
     // whitespace normalised before matching - a phrase must not stop being found because the line
     // it sits on happened to be broken part way through it.
-    static bool waitForConsoleContains(Host* host, const QString& substring, int timeoutMs = 4000)
+    static bool consoleContains(Host* host, const QString& substring)
     {
         if (!host || !host->mpConsole) {
             return false;
         }
         auto& buffer = host->mpConsole->buffer;
+        QString all;
+        for (int i = 0; i <= buffer.getLastLineNumber(); ++i) {
+            all.append(buffer.line(i));
+            all.append(QChar::Space);
+        }
+        return all.simplified().contains(substring);
+    }
+
+    static bool waitForConsoleContains(Host* host, const QString& substring, int timeoutMs = 4000)
+    {
         return QTest::qWaitFor(
-                [&]() {
-                    QString all;
-                    for (int i = 0; i <= buffer.getLastLineNumber(); ++i) {
-                        all.append(buffer.line(i));
-                        all.append(QChar::Space);
-                    }
-                    return all.simplified().contains(substring);
+                [host, &substring]() {
+                    return consoleContains(host, substring);
                 },
                 timeoutMs);
     }

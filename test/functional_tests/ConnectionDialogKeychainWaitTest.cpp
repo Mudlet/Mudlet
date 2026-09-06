@@ -105,6 +105,55 @@ private slots:
         QVERIFY2(dlg->isVisible(), "The existing dialog was left hidden, so the Connect button does nothing for the rest of the session");
     }
 
+    // A read that timed out can still be answered afterwards, and by then the load it was holding
+    // up has run without it: that second answer may fill an empty password field and nothing else.
+    void test_aLateKeychainAnswerTouchesNothingButAnEmptyPasswordField()
+    {
+        // A dialog of its own: completing the queued load at the end closes whichever dialog it
+        // runs on, and the shared one is what the case below needs. Never shown, so no keychain
+        // read of its own is ever started.
+        auto* dlg = new dlgConnectionProfiles(mudlet::self());
+
+        // the late answer only considers a field whose profile is still the selected one, so the
+        // list needs the entry that state is about - set behind the signals, which would otherwise
+        // run the whole profile-selected handler
+        {
+            const QSignalBlocker blocker(dlg->listWidget_profiles);
+            auto* profileItem = new QListWidgetItem(mProfileName, dlg->listWidget_profiles);
+            profileItem->setData(dlgConnectionProfiles::csmNameRole, mProfileName);
+            dlg->listWidget_profiles->setCurrentItem(profileItem);
+        }
+        {
+            const QSignalBlocker blocker(dlg->character_password_entry);
+            dlg->character_password_entry->setText(qsl("typed-while-waiting"));
+        }
+
+        dlg->mKeychainOperationInProgress = true;
+        dlg->mPendingProfileLoad = mProfileName;
+        dlg->mPendingConnect = true;
+        dlg->showKeychainWait();
+
+        dlg->passwordRetrieved(mProfileName, true, qsl("from-the-keychain"), QString(), true);
+
+        QCOMPARE(dlg->character_password_entry->text(), qsl("typed-while-waiting"));
+        QVERIFY2(dlg->mKeychainOperationInProgress, "the late answer cleared the flag belonging to the read that is actually in flight");
+        QCOMPARE(dlg->mPendingProfileLoad, mProfileName);
+        QVERIFY2(dlg->mPendingConnect, "the late answer dropped the queued connection");
+        QVERIFY2(dlg->mKeychainWaitShown, "the late answer ended a wait that is still going on");
+
+        // and the read in flight, answering properly, still completes the queued load. loadProfile()
+        // returns at once on an empty profile name, which keeps this from starting a real profile
+        QVERIFY(dlg->profile_name_entry->text().isEmpty());
+        dlg->passwordRetrieved(mProfileName, true, qsl("from-the-keychain"), QString(), false);
+
+        QVERIFY2(!dlg->mKeychainOperationInProgress, "the answered read left its flag set");
+        QVERIFY2(dlg->mPendingProfileLoad.isEmpty(), "the queued load was left queued");
+        QVERIFY2(!dlg->mKeychainWaitShown, "the dialog is still in its waiting-for-the-keychain state");
+        QCOMPARE(dlg->character_password_entry->text(), qsl("from-the-keychain"));
+
+        dlg->deleteLater();
+    }
+
     // Must stay last: the queued load closes the dialog the other tests need.
     void test_pendingKeychainReadKeepsTheDialogUp()
     {

@@ -59,8 +59,8 @@ bool keychainDeleteSucceeded(QKeychain::Error error)
 // its storage having gone wrong
 const auto scmInvalidKeyNameError = qsl("Key name is not valid for credential storage");
 
-// What an operation that ran out of time reports; the retrieval chain reacts to the timeout
-// itself rather than to this wording, which only reaches the user-facing log
+// What an operation that ran out of time reports. It is also how a caller tells that failure
+// apart from the rest, through CredentialManager::timedOut()
 const auto scmOperationTimedOutError = qsl("Operation timed out");
 
 // QStandardPaths automatically handles portable mode configuration paths
@@ -109,13 +109,14 @@ CredentialManager::~CredentialManager()
     cleanupCurrentOperation();
 }
 
+bool CredentialManager::timedOut(const QString& errorMessage)
+{
+    return errorMessage == scmOperationTimedOutError;
+}
+
 void CredentialManager::setupTimeout()
 {
     cleanupTimeout(); // Clean up any existing timer
-
-    // Every operation starts by arming this timer, so this is where the previous operation's
-    // verdict stops applying
-    mLastOperationTimedOut = false;
 
     mTimeoutTimer = new QTimer(this);
     mTimeoutTimer->setSingleShot(true);
@@ -144,6 +145,19 @@ void CredentialManager::cleanupTimeout()
 
 void CredentialManager::handleTimeout()
 {
+    // Every job's finished handler is a queued connection with this manager as its receiver, so a
+    // job that answered in the same turn of the event loop that this timer fired in has its call
+    // already posted here and not yet run. Delivering those first is what keeps detachTimedOutRead()
+    // below from disconnecting a handler for a signal that has already been emitted, which would
+    // leave the answer with nowhere to go.
+    const QPointer<QKeychain::Job> timedOutJob = mCurrentJob;
+    QCoreApplication::sendPostedEvents(this, QEvent::MetaCall);
+    if (timedOutJob.isNull() || mCurrentJob != timedOutJob) {
+        // That answer completed the operation this timer was watching - and may have started
+        // another one, which has a timeout of its own and must not be torn down here
+        return;
+    }
+
     qWarning() << "CredentialManager: Operation timed out";
 
     // A read whose system prompt is still on screen will be answered eventually, so give that job
@@ -161,10 +175,6 @@ void CredentialManager::handleTimeout()
     // Clean up the timed-out operation before invoking the callback,
     // since the callback may start a new operation
     cleanupCurrentOperation();
-
-    // Set after the cleanup above, which arms nothing, and before the callback, which is what
-    // reads it to decide whether asking the keychain again is worth another timeout
-    mLastOperationTimedOut = true;
 
     if (callback) {
         callback(false, scmOperationTimedOutError);
@@ -424,7 +434,7 @@ void CredentialManager::retrievePassword(const QString& profileName, const QStri
             retrieveCredential(legacyService, key, profileName, [this, profileName, key, legacyService, callback](bool oldSuccess, const QString& oldPassword, const QString& oldError) {
                 if (oldSuccess && !oldPassword.isEmpty()) {
                     attemptCollidingMigration(profileName, key, legacyService, oldPassword, callback);
-                } else if (mLastOperationTimedOut) {
+                } else if (timedOut(oldError)) {
                     fallbackFileRetrieval(profileName, key, callback);
                 } else {
                     if (!key.compare(qsl("password")) || !key.compare(qsl("character"))) {
@@ -442,7 +452,7 @@ void CredentialManager::retrievePassword(const QString& profileName, const QStri
                     // Move so ownership of the secret buffer threads through to the final callback.
                     callback(true, std::move(keychainPassword), QString());
                 }
-            } else if (mLastOperationTimedOut) {
+            } else if (timedOut(keychainError)) {
                 // The keychain is waiting on the user, not on us: every further read would spend
                 // another timeout and raise another prompt before failing the same way
                 fallbackFileRetrieval(profileName, key, callback);

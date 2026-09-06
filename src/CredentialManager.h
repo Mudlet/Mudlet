@@ -83,6 +83,11 @@ public:
     // retrieved value), so callers such as UI code need not materialize the secret just to test presence.
     void credentialExists(const QString& profileName, const QString& key, std::function<void(bool exists)> callback);
 
+    // Whether a reported failure was the operation running out of time rather than the keychain
+    // answering. A keychain that has not answered within OPERATION_TIMEOUT_MS is waiting on the
+    // user, so the answer it owes can still arrive - unlike every other failure, which is final.
+    static bool timedOut(const QString& errorMessage);
+
     // Static fallback methods (for migration and test cleanup - uses encrypted file storage)
     static bool storeCredential(const QString& profileName, const QString& key, const QString& credential);
     static QString retrieveCredential(const QString& profileName, const QString& key);
@@ -156,11 +161,6 @@ private:
     // The retrievePassword() callback the chain in flight belongs to, kept so that a keychain
     // answer arriving after the timeout still has somewhere to go
     CredentialRetrievalCallback mLateAnswerCallback;
-
-    // Whether the operation that just failed did so by timing out. A keychain that has not
-    // answered within OPERATION_TIMEOUT_MS is waiting on the user, so the chain stops asking it
-    // rather than spending another timeout - and raising another prompt - on every fallback.
-    bool mLastOperationTimedOut = false;
 
     // Destruction flag to prevent operations during cleanup
     bool mShuttingDown = false;

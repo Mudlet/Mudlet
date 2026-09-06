@@ -564,10 +564,6 @@ private:
     // arriving later may still be typed for the player. Per-connection, so reset() clears it.
     bool mAutoLoginPasswordOutstanding = false;
     QElapsedTimer mAutoLoginPasswordOutstandingSince;
-    // Bytes read from the socket this connection, and how many had been read when the mark above
-    // was set. A server that has sent nothing since is still at the same prompt.
-    qint64 mReceivedDataCount = 0;
-    qint64 mReceivedDataCountAtOutstanding = 0;
     QTimer* mTimerPasswordModeTimeout = nullptr;
     QTimer* mTimerFailedConnectionRetry = nullptr;
     QElapsedTimer mRecordingChunkTimer;

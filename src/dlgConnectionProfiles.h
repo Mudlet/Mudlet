@@ -162,6 +162,12 @@ private:
     // Runs the load that Connect or Offline queued while the keychain was busy, and reports
     // whether there was one - the dialog is on its way out when there was
     bool completePendingProfileLoad(const QString& profileName);
+    // Drops a queued load that nothing is going to complete, and gives the dialog its buttons back
+    void abandonPendingProfileLoad();
+    // What a keychain read answers with. A read that timed out can still be answered afterwards,
+    // and lateAnswer marks that second call: by then the load this dialog was holding has long
+    // since run, so all such an answer may still do is fill a password field left empty.
+    void passwordRetrieved(const QString& profileName, bool success, const QString& password, const QString& errorMessage, bool lateAnswer);
     void revealConnectionDetails();
     bool showingOnlyMyProfiles() const;
 
