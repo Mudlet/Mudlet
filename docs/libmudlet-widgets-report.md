@@ -46,9 +46,9 @@ and the baseline are regenerated in each libmudlet PR, so drift shows up in the 
 | Metric | Count |
 | --- | ---: |
 | Source files in `mudlet_core` | 421 |
-| Files depending on Qt Widgets | 145 |
-| Clean files | 276 |
-| Committed baseline | 145 |
+| Files depending on Qt Widgets | 143 |
+| Clean files | 278 |
+| Committed baseline | 143 |
 
 ## Offending files
 
@@ -132,7 +132,6 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `ActionUnit.cpp` | 3 | 2 | QDockWidget, QLayout, QWidget |
 | `dlgActionMainArea.cpp` | 0 | 5 | QWidget, QLineEdit, QSpinBox, QComboBox |
 | `dlgModuleManager.h` | 1 | 4 | QDialog, QWidget, QTableWidgetItem |
-| `LuaInterface.h` | 0 | 5 | QTreeWidgetItem |
 | `PackageItemDelegate.h` | 2 | 3 | QStyledItemDelegate, QStyleOptionViewItem |
 | `TAccessibleConsole.h` | 1 | 4 | QAccessibleWidget, QWidget |
 | `TFeatureCallout.h` | 1 | 4 | QWidget |
@@ -145,7 +144,6 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `dlgRoomProperties.h` | 1 | 3 | QListWidget, QDialog, QWidget, QListWidgetItem |
 | `dlgScriptsMainArea.cpp` | 0 | 4 | QWidget, QLineEdit |
 | `exitstreewidget.cpp` | 0 | 4 | QWidget, QTreeWidget, QAbstractItemView, QTreeWidgetItem |
-| `LuaInterface.cpp` | 0 | 4 | QTreeWidgetItem |
 | `RoomContextMenuHandler.cpp` | 1 | 3 | QMenu |
 | `TAction.h` | 0 | 4 | QMenu |
 | `TMapViewManager.cpp` | 0 | 4 | QDockWidget |
@@ -203,7 +201,7 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `glwidget_integration.cpp` | 0 | 1 | QWidget |
 | `modern_glwidget.h` | 0 | 1 | QWidget |
 
-## Clean files (276)
+## Clean files (278)
 
 <details>
 <summary>Files with no Qt Widgets dependency</summary>
@@ -271,6 +269,8 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 - `LabelInteractionHandler.h`
 - `LabelTextureCache.cpp`
 - `LabelTextureCache.h`
+- `LuaInterface.cpp`
+- `LuaInterface.h`
 - `LuaLiteral.cpp`
 - `LuaLiteral.h`
 - `MacMicrophonePermission.h`

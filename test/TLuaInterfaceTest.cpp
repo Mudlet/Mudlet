@@ -1329,6 +1329,55 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
         QVERIFY2(!vu->savedVars.contains(qsl("gt.x.b")), "no mark may be invented for a name nothing has");
     }
 
+    void testValidMoveAnswersForTheTypeOfTheTargetVariable_data()
+    {
+        QTest::addColumn<QString>("value");
+        QTest::addColumn<int>("valueType");
+        QTest::addColumn<bool>("allowed");
+
+        QTest::newRow("a table") << qsl("{}") << LUA_TTABLE << true;
+        QTest::newRow("a number") << qsl("5") << LUA_TNUMBER << false;
+        QTest::newRow("a string") << qsl("'text'") << LUA_TSTRING << false;
+        QTest::newRow("a boolean") << qsl("true") << LUA_TBOOLEAN << false;
+        QTest::newRow("a function") << qsl("function() end") << LUA_TFUNCTION << false;
+    }
+
+    // Only a table can hold a variable, so every other type has to be refused -
+    // a row moved onto one would show the variable somewhere Lua does not have it.
+    void testValidMoveAnswersForTheTypeOfTheTargetVariable()
+    {
+        QFETCH(QString, value);
+        QFETCH(int, valueType);
+        QFETCH(bool, allowed);
+
+        execLua(qsl("gt = {target = %1}").arg(value));
+        interface->getVars(false);
+        TVar* holder = findGlobal(qsl("gt"));
+        QVERIFY(holder);
+        TVar* target = nullptr;
+        for (TVar* kid : holder->getChildren(false)) {
+            if (kid->getName() == qsl("target")) {
+                target = kid;
+                break;
+            }
+        }
+        QVERIFY2(target, "the walk did not reach the variable the row would stand for");
+        QCOMPARE(target->getValueType(), valueType);
+
+        const auto [verdict, message] = interface->validMove(target);
+        QCOMPARE(verdict, allowed);
+        QCOMPARE(message.isEmpty(), allowed);
+    }
+
+    // A row with no variable behind it - the top of the tree is one - reads as
+    // "no target named" rather than as a target of the wrong type.
+    void testValidMoveAcceptsNoNewParent()
+    {
+        const auto [allowed, message] = interface->validMove(nullptr);
+        QVERIFY2(allowed, "a move with no target variable is allowed");
+        QVERIFY2(message.isEmpty(), "an allowed move has nothing to tell the user");
+    }
+
 private:
     static std::unique_ptr<TVar> namedVar(const QString& name)
     {
