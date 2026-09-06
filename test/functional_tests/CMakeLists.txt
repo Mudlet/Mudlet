@@ -77,6 +77,7 @@ set(PROFILE_GROUP_TEST_SOURCES
     ConfigDirOverrideTest.cpp
     ConnectionDialogCrashTest.cpp
     ConnectionDialogFocusTest.cpp
+    ConnectionDialogKeychainWaitTest.cpp
     DefaultGameDeleteTest.cpp
     MissingDisplayFontTest.cpp
     ProfileDeletionSafetyTest.cpp
@@ -98,6 +99,7 @@ set(TELNET_GROUP_TEST_SOURCES
     TelnetAtcpMspTest.cpp
     TelnetLargeBurstTest.cpp
     TelnetLatencyMeasurementTest.cpp
+    TelnetLatePasswordTest.cpp
     TelnetBenchmark.cpp
     TelnetCharsetNegotiationTest.cpp
     CrashTestHookTest.cpp

@@ -29,6 +29,7 @@ class QTimer;
 
 namespace QKeychain {
 class Job;
+class ReadPasswordJob;
 }
 
 /**
@@ -65,6 +66,10 @@ public:
 
     // Callback types for asynchronous operations
     using CredentialCallback = std::function<void(bool success, const QString& errorMessage)>;
+    // Invoked once the fallback chain has an answer. A keychain read that reaches
+    // OPERATION_TIMEOUT_MS reports failure but leaves its job running, so this may be invoked a
+    // second time, with success, when the user answers the system prompt later on - and it must
+    // not assume the CredentialManager it was handed to still exists by then.
     using CredentialRetrievalCallback = std::function<void(bool success, QString password, const QString& errorMessage)>;
     using AvailabilityCallback = std::function<void(bool available, const QString& message)>;
 
@@ -77,6 +82,11 @@ public:
     // lookup, so this reads the credential internally but forwards only whether one exists (scrubbing the
     // retrieved value), so callers such as UI code need not materialize the secret just to test presence.
     void credentialExists(const QString& profileName, const QString& key, std::function<void(bool exists)> callback);
+
+    // Whether a reported failure was the operation running out of time rather than the keychain
+    // answering. A keychain that has not answered within OPERATION_TIMEOUT_MS is waiting on the
+    // user, so the answer it owes can still arrive - unlike every other failure, which is final.
+    static bool timedOut(const QString& errorMessage);
 
     // Static fallback methods (for migration and test cleanup - uses encrypted file storage)
     static bool storeCredential(const QString& profileName, const QString& key, const QString& credential);
@@ -108,6 +118,13 @@ private:
     void cleanupTimeout();
     void handleTimeout();
     void cleanupCurrentOperation();
+    // Starts a keychain read wired into the timeout and cleanup machinery above, so that no read
+    // of the fallback chain can leave a caller waiting forever. The caller connects its own
+    // finished handler to the returned job and starts it.
+    QKeychain::ReadPasswordJob* startTimedRead(const QString& service, const QString& key, CredentialRetrievalCallback callback);
+    // Hands a read that timed out a handler of its own, so that a system prompt answered after
+    // the timeout still reaches the caller instead of being thrown away with the job
+    void detachTimedOutRead();
 
     // Safety guard for keychain operation callbacks
     bool isOperationValid() const;
@@ -125,7 +142,7 @@ private:
     static bool removeCredentialFromFile(const QString& profileName, const QString& key);
 
     // Legacy keychain migration support
-    void checkLegacyKeychainFormat(const QString& profileName, std::function<void(bool, const QString&)> callback);
+    void checkLegacyKeychainFormat(const QString& profileName, CredentialRetrievalCallback callback);
     void deleteLegacyKeychainEntry(const QString& profileName);
 
     void attemptCollidingMigration(const QString& profileName, const QString& key, const QString& legacyService, const QString& password, CredentialRetrievalCallback callback);
@@ -140,6 +157,10 @@ private:
     CredentialCallback mCurrentCallback;
     CredentialRetrievalCallback mCurrentRetrievalCallback;
     AvailabilityCallback mCurrentAvailabilityCallback;
+
+    // The retrievePassword() callback the chain in flight belongs to, kept so that a keychain
+    // answer arriving after the timeout still has somewhere to go
+    CredentialRetrievalCallback mLateAnswerCallback;
 
     // Destruction flag to prevent operations during cleanup
     bool mShuttingDown = false;

@@ -73,6 +73,10 @@ using namespace std::chrono_literals;
 constexpr int AUTO_LOGIN_USERNAME_DELAY_MS = 2000;
 constexpr int AUTO_LOGIN_PASSWORD_DELAY_MS = 1000;
 constexpr int AUTO_LOGIN_MAX_DELAY_MS = 60000;
+// How long a password step reached with no password stays open to a password that turns up
+// afterwards - the login phase, the same span the password-mode safety timer uses. Beyond it the
+// game is assumed to have moved on whatever else the connection looks like:
+constexpr std::chrono::milliseconds AUTO_LOGIN_LATE_PASSWORD_WINDOW = 5min;
 
 // How long ECHO+SGA must survive a submitted input line before it counts as
 // character-at-a-time rather than a password mask - see
@@ -194,6 +198,11 @@ void cTelnet::reset()
     insb = false;
     mDiscardingOversizedSubnegotiation = false;
     mDeferredReconnect = false;
+    // Where the auto-login got to belongs to the connection being reset - a password arriving
+    // after this one ended has no prompt of this connection's left to answer:
+    mAutoLoginPasswordOutstanding = false;
+    mAutoLoginPasswordMaskWithdrawn = false;
+    mAutoLoginPasswordOutstandingSince.invalidate();
     // Stop any pending password mode timeout
     if (mTimerPasswordModeTimeout) {
         mTimerPasswordModeTimeout->stop();
@@ -360,6 +369,11 @@ void cTelnet::cancelLoginTimers()
     if (mTimerPass) {
         mTimerPass->stop();
     }
+
+    // Something else has taken the login over - GMCP Char.Login does - so the auto-login has no
+    // prompt left to answer and a password arriving later must not be typed into that session
+    mAutoLoginPasswordOutstanding = false;
+    mAutoLoginPasswordOutstandingSince.invalidate();
 }
 
 // This configures the encoding for all outgoing data and incoming OutOfBand data
@@ -834,7 +848,15 @@ void cTelnet::handleFailedConnection()
 void cTelnet::slot_send_login()
 {
     if (!mpHost->getLogin().isEmpty()) {
-        sendData(mpHost->getLogin());
+        const bool sent = sendData(mpHost->getLogin());
+        // ECHO and SGA already on when the login line goes out is what a character-at-a-time
+        // server looks like, and one of those echoes whatever it is sent. The login line is not a
+        // game command, so it does not arm the detection by itself - but its verdict has to be in
+        // before a password arriving late could be typed under that mask, see
+        // sendOutstandingAutoLoginPassword().
+        if (sent && !mCharacterModeDetected && mServerRequestedSGA && mpHost->isRemoteEchoingActive()) {
+            armCharacterModeDetection();
+        }
     }
     if (mpHost->hasAutoLoginCredentials()) {
         QSettings& settings = *mudlet::getQSettings();
@@ -847,11 +869,65 @@ void cTelnet::slot_send_login()
 
 void cTelnet::slot_send_pass()
 {
-    // Auto-login: Send password if credentials are configured
-    if (mpHost->hasAutoLoginCredentials()) {
+    if (!mpHost->getPass().isEmpty()) {
         qDebug() << "Auto-login: Sending password (timer-based, independent of ECHO mode)";
         sendData(mpHost->getPass(), false);
+        return;
     }
+
+    // Reachable only while a keychain read for this profile's password is still outstanding -
+    // that is what armed this step, see Host::hasAutoLoginCredentials()
+    mAutoLoginPasswordOutstanding = true;
+    mAutoLoginPasswordMaskWithdrawn = false;
+    mAutoLoginPasswordOutstandingSince.start();
+    qDebug() << "Auto-login: reached the password step with no password yet - holding the place for one that arrives later";
+}
+
+// A password that turned up after the auto-login had already passed the password step, which is
+// what an unanswered keychain prompt produces. Typing it for the player is only safe while the
+// game is provably still waiting for it: sent a moment too late it is echoed on screen in clear
+// text and handed to the game as a command, so anything short of proof leaves it to the player.
+void cTelnet::sendOutstandingAutoLoginPassword()
+{
+    if (!mAutoLoginPasswordOutstanding) {
+        return;
+    }
+    // Spent either way: a password that is not safe to send now cannot become safe later, and one
+    // that goes out must not go out a second time.
+    mAutoLoginPasswordOutstanding = false;
+
+    if (!mpHost || getConnectionState() != QAbstractSocket::ConnectedState) {
+        qDebug() << "cTelnet::sendOutstandingAutoLoginPassword() - the connection is gone, so the late password is not sent";
+        return;
+    }
+
+    if (mpHost->getPass().isEmpty()) {
+        qDebug() << "cTelnet::sendOutstandingAutoLoginPassword() - called without a password, nothing to send";
+        return;
+    }
+
+    const bool withinWindow = mAutoLoginPasswordOutstandingSince.isValid() && mAutoLoginPasswordOutstandingSince.elapsed() < AUTO_LOGIN_LATE_PASSWORD_WINDOW.count();
+    // A server that masks input (its WILL ECHO not withdrawn) is the client's own record of a
+    // password prompt still being open, and the only proof there is. A server that never
+    // negotiates ECHO offers none: "it has printed nothing since" cannot tell a password prompt
+    // from any other question it asked before the mark, so those games get the notice instead.
+    // A character-at-a-time server keeps ECHO on for the whole session and echoes what it is
+    // sent, so its mask proves nothing: one already recognised, or one still being tested for
+    // after the login line, is no prompt to type a password at either. Nor does a mask the
+    // server has put up again: a WONT ECHO since the password step closed the prompt that was
+    // open then, and whatever it is masking now is a different question.
+    const bool characterModeSuspected = mCharacterModeDetected || (mTimerCharacterModeDetect && mTimerCharacterModeDetect->isActive());
+    const bool stillAtPrompt = mpHost->isRemoteEchoingActive() && !mAutoLoginPasswordMaskWithdrawn && !characterModeSuspected;
+    if (!withinWindow || !stillAtPrompt) {
+        qDebug() << "cTelnet::sendOutstandingAutoLoginPassword() - not sending the late password. Within the window:" << withinWindow << "masking:" << mpHost->isRemoteEchoingActive()
+                 << "mask withdrawn since the password step:" << mAutoLoginPasswordMaskWithdrawn << "character-at-a-time suspected:" << characterModeSuspected;
+        //: Shown in the game window when a password fetched from the system keychain arrived after the game had moved past its password prompt
+        postMessage(tr("[ INFO ]  - The password arrived after the game moved on from its password prompt, so it was not sent. Please type it in yourself."));
+        return;
+    }
+
+    qDebug() << "Auto-login: sending the password that arrived after the password step";
+    sendData(mpHost->getPass(), false);
 }
 
 // Helper to disconnect signals and abort the socket that lost the connection race
@@ -1599,6 +1675,14 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent, con
         // 0xff (assuming that there are no Telnet protocol sequences in here):
         outData = mudlet::replaceString(outData, "\xff", "\xff\xff");
 
+        if (isGameCommand) {
+            // Only here, where the command really goes to the game: one a package turned down with
+            // denyCurrentSend() never reached the prompt, so it did not take it over. One that did
+            // means whatever the game is now waiting for is the player's input and not a password
+            // Mudlet still owes it.
+            mAutoLoginPasswordOutstanding = false;
+        }
+
         // Character-at-a-time detection: a genuine character-at-a-time server keeps
         // ECHO (with SGA) active across every submitted line, whereas a server that
         // is only masking a password releases ECHO (WONT ECHO) right after this line.
@@ -1609,19 +1693,12 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent, con
         // submission - an earlier command (e.g. a script firing while a password prompt
         // is still open) therefore cannot make it fire while the user is mid-input; the
         // server's WONT ECHO cancels it first.
-        const bool armCharacterModeDetection = isGameCommand && !mCharacterModeDetected && mServerRequestedSGA && mpHost->isRemoteEchoingActive();
+        const bool armDetection = isGameCommand && !mCharacterModeDetected && mServerRequestedSGA && mpHost->isRemoteEchoingActive();
 
         const bool sent = socketOutRaw(outData);
 
-        if (sent && armCharacterModeDetection) {
-            if (!mTimerCharacterModeDetect) {
-                mTimerCharacterModeDetect = new QTimer(this);
-                mTimerCharacterModeDetect->setSingleShot(true);
-                connect(mTimerCharacterModeDetect, &QTimer::timeout, this, [this]() {
-                    checkCharacterModePattern();
-                });
-            }
-            mTimerCharacterModeDetect->start(CHARACTER_MODE_DETECT);
+        if (sent && armDetection) {
+            armCharacterModeDetection();
         }
 
         return sent;
@@ -3467,6 +3544,10 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 hisOptionState.reset(idxOption);
 
                 if (option == OPT_ECHO) {
+                    // Whatever prompt the auto-login's password step found masked is over with
+                    // this, whether or not the release is honoured below - see
+                    // sendOutstandingAutoLoginPassword()
+                    mAutoLoginPasswordMaskWithdrawn = true;
                     if (mEchoAnomalyDetected) {
                         qDebug() << "ECHO: Ignoring WONT due to anomaly pattern";
                     } else {
@@ -6094,6 +6175,18 @@ QString cTelnet::assembleTelnetOptionsReport() const
         return tr("  (none negotiated yet)\n");
     }
     return lines.join(QLatin1Char('\n')).append(QLatin1Char('\n'));
+}
+
+void cTelnet::armCharacterModeDetection()
+{
+    if (!mTimerCharacterModeDetect) {
+        mTimerCharacterModeDetect = new QTimer(this);
+        mTimerCharacterModeDetect->setSingleShot(true);
+        connect(mTimerCharacterModeDetect, &QTimer::timeout, this, [this]() {
+            checkCharacterModePattern();
+        });
+    }
+    mTimerCharacterModeDetect->start(CHARACTER_MODE_DETECT);
 }
 
 void cTelnet::checkCharacterModePattern()
