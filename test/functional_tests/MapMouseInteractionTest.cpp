@@ -83,6 +83,7 @@ private:
     T2DMap* mp2dMap = nullptr;
     QTimer* mpModalAnswerTimer = nullptr;
     bool mModalDialogAnswered = false;
+    int mModalAnswerAttemptsLeft = 0;
     int mAreaId = 0;
     const QString mProfileName = qsl("MapMouseInteraction-Test");
     const QString mLocalhost = qsl("localhost");
@@ -397,20 +398,31 @@ private:
     // Spread, Shrink and Move to position block in a modal dialog until it is
     // answered, so the answer has to come from a timer armed before the item
     // is picked. The timer keeps trying until answer() reports that it was
-    // given the dialog it wanted.
+    // given the dialog it wanted. A dialog it keeps turning down is closed
+    // instead, as is anything the item puts up after that, so the case fails
+    // rather than sitting in a dialog's event loop until ctest gives up.
     void answerNextModalDialog(const std::function<bool(QWidget*)>& answer)
     {
         stopAnsweringModalDialogs();
         mModalDialogAnswered = false;
+        mModalAnswerAttemptsLeft = 100;
         mpModalAnswerTimer = new QTimer(this);
         mpModalAnswerTimer->setInterval(20);
         connect(mpModalAnswerTimer, &QTimer::timeout, this, [this, answer]() {
             QWidget* pDialog = QApplication::activeModalWidget();
-            if (!pDialog || !answer(pDialog)) {
+            if (!pDialog) {
                 return;
             }
-            mModalDialogAnswered = true;
-            stopAnsweringModalDialogs();
+            if (mModalAnswerAttemptsLeft <= 0) {
+                pDialog->close();
+                return;
+            }
+            if (answer(pDialog)) {
+                mModalDialogAnswered = true;
+                stopAnsweringModalDialogs();
+                return;
+            }
+            --mModalAnswerAttemptsLeft;
         });
         mpModalAnswerTimer->start();
     }
@@ -2200,6 +2212,7 @@ private slots:
         QCOMPARE(roomPosition(kWestRoomId), QVector3D(-2, 0, 0));
         QCOMPARE(roomPosition(kPlayerRoomId), QVector3D(0, 0, 0));
         QCOMPARE(roomPosition(kEastRoomId), QVector3D(2, 0, 0));
+        QCOMPARE(roomPosition(kNorthRoomId), QVector3D(0, 1, 0));
         QVERIFY(map()->isUnsaved());
     }
 
