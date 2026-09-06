@@ -68,6 +68,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     WindowLayoutSaveTest.cpp
     WindowStateGettersTest.cpp
     WrapLineRewrapTest.cpp
+    ScrollLostOnPartialRepaintTest.cpp
 )
 
 # Profiles: their config dir, their folders, and loading, saving and deleting them
@@ -531,6 +532,9 @@ set_tests_properties(NarrowWindowWrapTest PROPERTIES TIMEOUT 300)
 
 # WrapLineRewrapTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(WrapLineRewrapTest PROPERTIES TIMEOUT 300)
+
+# ScrollLostOnPartialRepaintTest creates a fresh profile per test method, so it needs a longer timeout
+set_tests_properties(ScrollLostOnPartialRepaintTest PROPERTIES TIMEOUT 300)
 
 # TelnetStringSequenceRecoveryTest runs its introducer matrix over a real
 # socket, waiting out cTelnet's 300ms idle flush in several cases and
