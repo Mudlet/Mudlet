@@ -4429,30 +4429,14 @@ std::pair<bool, QString> Host::openWindow(const QString& name, bool loadLayout, 
         return {false, qsl("label with the name '%1' already exists").arg(name)};
     }
 
-    auto hostName(getName());
     auto console = mpConsole->subConsoleWidget(name);
     auto dockwidget = mpConsole->dockWidget(name);
 
     if (!console && !dockwidget) {
         // The name is not used in either the QMaps of all user created TConsole
         // or TDockWidget instances - so we can make a NEW one:
-        dockwidget = new TDockWidget(this, name);
-        dockwidget->setObjectName(qsl("dockWindow_%1_%2").arg(hostName, name));
-        dockwidget->setContentsMargins(0, 0, 0, 0);
-        dockwidget->setWindowTitle(name);
-        mpConsole->registerDockWidget(name, dockwidget);
-        // It wasn't obvious but the parent passed to the TConsole constructor
-        // is sliced down to a QWidget and is NOT a TDockWidget pointer:
-        console = new TConsole(this, name, TConsole::UserWindow, dockwidget->widget());
-        console->setObjectName(qsl("dockWindowConsole_%1_%2").arg(hostName, name));
-        console->setContentsMargins(0, 0, 0, 0);
-        dockwidget->setTConsole(console);
-        console->layerCommandLine->hide();
-        console->setScrollBarVisible(false);
-        mpConsole->registerSubConsole(name, console);
-        dockwidget->setStyleSheet(mProfileStyleSheet);
-        mudlet::self()->addDockWidget(Qt::RightDockWidgetArea, dockwidget);
-        console->setFontSize(10);
+        dockwidget = mpConsole->createUserWindow(name);
+        console = mpConsole->subConsoleWidget(name);
     }
     if (!console || !dockwidget) {
         return {false, qsl("userwindow '%1' already exists").arg(name)};
@@ -5265,13 +5249,6 @@ void Host::createMapper(const bool loadDefaultMap)
     auto pMap = mpMap.data();
     auto hostName(getName());
     mpConsole->createMapperDock(tr("Map - %1").arg(hostName), qsl("dockMap_%1").arg(hostName));
-    // Arrange for TMap member values to be copied from the Host masters so they
-    // are in place when the 2D mapper is created:
-    getPlayerRoomStyleDetails(pMap->mPlayerRoomStyle, pMap->mPlayerRoomOuterDiameterPercentage, pMap->mPlayerRoomInnerDiameterPercentage, pMap->mPlayerRoomOuterColor, pMap->mPlayerRoomInnerColor);
-
-    pMap->mpMapper = new dlgMapper(mpConsole->mpDockableMapWidget, this, pMap); //FIXME: mpHost definieren
-    pMap->mpMapper->setStyleSheet(mProfileStyleSheet);
-    mpConsole->mpDockableMapWidget->setWidget(pMap->mpMapper);
 
     if (loadDefaultMap && pMap->mpRoomDB->isEmpty()) {
         qDebug() << "Host::create_mapper() - restore map case 3.";
