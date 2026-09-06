@@ -353,6 +353,30 @@ private slots:
         QCOMPARE(mpServer->receivedText(), csLoginLine);
     }
 
+    // N6: the mask was released and later put up again. The prompt the password step found is
+    // over, and whatever masked question the game is asking now is a different one - a mask is
+    // only proof of the prompt it was on for.
+    void testLatePasswordIsNotSentToAMaskTheGamePutUpAgain()
+    {
+        const ScopedAutoLoginDelays delays(csUsernameDelayMs, csPasswordDelayMs);
+        Host* host = connectWithLoginAndNoPassword();
+        QVERIFY(host);
+
+        mpServer->sendRaw(csPasswordPrompt + csMaskOn);
+        QVERIFY2(waitForMasking(host, true), "the client never entered password-masking mode");
+        waitOutThePasswordStep();
+        QCOMPARE(mpServer->receivedText(), csLoginLine);
+
+        mpServer->sendRaw(csMaskOff + QByteArrayLiteral("Timed out.\r\n"));
+        QVERIFY2(waitForMasking(host, false), "the client never left password-masking mode");
+        mpServer->sendRaw(QByteArrayLiteral("Delete this character? Enter its password to confirm:\r\n") + csMaskOn);
+        QVERIFY2(waitForMasking(host, true), "the client did not enter password-masking mode for the second prompt");
+
+        deliverLatePassword(host);
+        QVERIFY2(waitForConsoleContains(host, qsl("moved on from its password prompt")), "the player was not told why the password was not sent");
+        QCOMPARE(mpServer->receivedText(), csLoginLine);
+    }
+
     // N2: the player typed at the prompt themselves, so it is their input the game is answering
     // and not a password Mudlet still owes it.
     void testLatePasswordIsNotSentAfterTheUserTookOver()

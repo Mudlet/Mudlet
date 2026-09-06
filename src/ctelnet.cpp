@@ -201,6 +201,7 @@ void cTelnet::reset()
     // Where the auto-login got to belongs to the connection being reset - a password arriving
     // after this one ended has no prompt of this connection's left to answer:
     mAutoLoginPasswordOutstanding = false;
+    mAutoLoginPasswordMaskWithdrawn = false;
     mAutoLoginPasswordOutstandingSince.invalidate();
     // Stop any pending password mode timeout
     if (mTimerPasswordModeTimeout) {
@@ -877,6 +878,7 @@ void cTelnet::slot_send_pass()
     // Reachable only while a keychain read for this profile's password is still outstanding -
     // that is what armed this step, see Host::hasAutoLoginCredentials()
     mAutoLoginPasswordOutstanding = true;
+    mAutoLoginPasswordMaskWithdrawn = false;
     mAutoLoginPasswordOutstandingSince.start();
     qDebug() << "Auto-login: reached the password step with no password yet - holding the place for one that arrives later";
 }
@@ -911,12 +913,14 @@ void cTelnet::sendOutstandingAutoLoginPassword()
     // from any other question it asked before the mark, so those games get the notice instead.
     // A character-at-a-time server keeps ECHO on for the whole session and echoes what it is
     // sent, so its mask proves nothing: one already recognised, or one still being tested for
-    // after the login line, is no prompt to type a password at either.
+    // after the login line, is no prompt to type a password at either. Nor does a mask the
+    // server has put up again: a WONT ECHO since the password step closed the prompt that was
+    // open then, and whatever it is masking now is a different question.
     const bool characterModeSuspected = mCharacterModeDetected || (mTimerCharacterModeDetect && mTimerCharacterModeDetect->isActive());
-    const bool stillAtPrompt = mpHost->isRemoteEchoingActive() && !characterModeSuspected;
+    const bool stillAtPrompt = mpHost->isRemoteEchoingActive() && !mAutoLoginPasswordMaskWithdrawn && !characterModeSuspected;
     if (!withinWindow || !stillAtPrompt) {
         qDebug() << "cTelnet::sendOutstandingAutoLoginPassword() - not sending the late password. Within the window:" << withinWindow << "masking:" << mpHost->isRemoteEchoingActive()
-                 << "character-at-a-time suspected:" << characterModeSuspected;
+                 << "mask withdrawn since the password step:" << mAutoLoginPasswordMaskWithdrawn << "character-at-a-time suspected:" << characterModeSuspected;
         //: Shown in the game window when a password fetched from the system keychain arrived after the game had moved past its password prompt
         postMessage(tr("[ INFO ]  - The password arrived after the game moved on from its password prompt, so it was not sent. Please type it in yourself."));
         return;
@@ -3540,6 +3544,10 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 hisOptionState.reset(idxOption);
 
                 if (option == OPT_ECHO) {
+                    // Whatever prompt the auto-login's password step found masked is over with
+                    // this, whether or not the release is honoured below - see
+                    // sendOutstandingAutoLoginPassword()
+                    mAutoLoginPasswordMaskWithdrawn = true;
                     if (mEchoAnomalyDetected) {
                         qDebug() << "ECHO: Ignoring WONT due to anomaly pattern";
                     } else {

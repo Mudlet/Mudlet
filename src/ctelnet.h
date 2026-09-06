@@ -565,6 +565,10 @@ private:
     // arriving later may still be typed for the player. Per-connection, so reset() clears it.
     bool mAutoLoginPasswordOutstanding = false;
     QElapsedTimer mAutoLoginPasswordOutstandingSince;
+    // Set by a WONT ECHO and cleared when the password step marks the prompt above: the mask the
+    // password was owed under has ended, so a mask a later WILL ECHO puts up belongs to another
+    // question and proves nothing about that prompt.
+    bool mAutoLoginPasswordMaskWithdrawn = false;
     QTimer* mTimerPasswordModeTimeout = nullptr;
     QTimer* mTimerFailedConnectionRetry = nullptr;
     QElapsedTimer mRecordingChunkTimer;
