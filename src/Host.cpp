@@ -264,6 +264,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mpDlgIRC(nullptr)
 , mMMCPServer(nullptr)
 , mpDlgProfilePreferences(nullptr)
+, mMMCPChatName(csDefaultMMCPChatName)
 , mMMCPChatPort(csDefaultMMCPHostPort)
 , mMMCPChatPrefix(csDefaultChatPrefix)
 , mMMCPAutostartServer(false)
@@ -583,6 +584,15 @@ void Host::closeChildren()
     const auto hostToolBarMap = getActionUnit()->getToolBarList();
     // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
     mTelnet.terminateConnection();
+
+    if (mMMCPServer) {
+        // The peers have to go while the Host is still whole, as their slots
+        // report through it. The server itself is left alone: it dies with the
+        // Host through the QObject parent chain, whereas deleting it here would
+        // let a Lua handler further down this function lazily make another one
+        // on a profile that is on its way out.
+        mMMCPServer->disconnectAll();
+    }
 
     stopAllTriggers();
 
@@ -3945,10 +3955,10 @@ void Host::initMMCPServer()
 }
 
 
-// Return the MMCP chat name for this host
+// Return the MMCP chat name for this host, fall back to the default name if empty.
 const QString& Host::getMMCPChatName() const
 {
-    return mMMCPChatName;
+    return mMMCPChatName.isEmpty() ? csDefaultMMCPChatName : mMMCPChatName;
 }
 
 // Validate and set the MMCP chat name, notify connected peers, and update GUI.
@@ -3960,18 +3970,21 @@ bool Host::setMMCPChatName(const QString& name)
         return false;
     }
 
+    // Clearing the name in the preferences set value back to default
+    const QString newName = name.isEmpty() ? csDefaultMMCPChatName : name;
+
     // If the name is unchanged, no need to update or emit signals
-    if (mMMCPChatName == name) {
+    if (mMMCPChatName == newName) {
         return true;
     }
 
-    mMMCPChatName = name;
+    mMMCPChatName = newName;
 
     if (mMMCPServer) {
-        mMMCPServer->chatName(name);
+        mMMCPServer->chatName(newName);
     }
 
-    emit mmcpChatNameChanged(name);
+    emit mmcpChatNameChanged(newName);
     return true;
 }
 
