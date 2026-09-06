@@ -215,10 +215,8 @@ private:
     int addTestLabel() const { return addLabel(kLabelPosition, kLabelClickSize); }
     QPoint pointOnTestLabel() const { return pointOnLabel(kLabelPosition, kLabelClickSize); }
 
-    // Picks Create label from the menu and drags the box out from its top
-    // right corner to its bottom left, the one direction that lands the label
-    // exactly on the box's corner: dragged out upwards it lands a box-height
-    // below, and dragged out rightwards a pixel off.
+    // Picks Create label from the menu and drags out a box three units wide
+    // and two high with its top left corner at (-5, 5).
     void dragOutALabelBox() const
     {
         rightClickAt(pointUnitsFromCentre(-2, -2));
@@ -1829,6 +1827,7 @@ private slots:
         QVERIFY(!mp2dMap->mSizeLabel);
         QCOMPARE(area()->mMapLabels.size(), 1);
         QCOMPARE(area()->mMapLabels.first().pos, QVector3D(-5, 5, 0));
+        QCOMPARE(area()->mMapLabels.first().size, QSizeF(3, 2));
         QVERIFY2(mp2dMap->mpDlgMapLabel, "no dialog came up to fill the label in");
 
         mp2dMap->mpDlgMapLabel->close();
@@ -1849,6 +1848,60 @@ private slots:
 
         QCOMPARE(area()->mMapLabels.size(), 1);
         QVERIFY(map()->isUnsaved());
+    }
+
+    // A box is a box whichever corner it was dragged out from: the label goes
+    // in it exactly, at the size it was drawn.
+    void test_theLabelBoxLandsWhereItWasDrawnFromAnyCorner()
+    {
+        buildMap();
+        showMapper(false);
+        const QPoint topLeft = pointUnitsFromCentre(-5, 5);
+        const QPoint bottomRight = pointUnitsFromCentre(-2, 3);
+        const QPoint topRight(bottomRight.x(), topLeft.y());
+        const QPoint bottomLeft(topLeft.x(), bottomRight.y());
+        const struct
+        {
+            QString direction;
+            QPoint from;
+            QPoint to;
+        } drags[] = {
+                {qsl("down and right"), topLeft, bottomRight},
+                {qsl("up and left"), bottomRight, topLeft},
+                {qsl("down and left"), topRight, bottomLeft},
+                {qsl("up and right"), bottomLeft, topRight},
+        };
+
+        for (const auto& drag : drags) {
+            rightClickAt(pointUnitsFromCentre(-2, -2));
+            QVERIFY(pickContextMenuItem(qsl("Create label...")));
+            dragFromTo(drag.from, drag.to);
+
+            QCOMPARE(area()->mMapLabels.size(), 1);
+            const TMapLabel label = area()->mMapLabels.first();
+            QVERIFY2(label.pos == QVector3D(-5, 5, 0), qPrintable(qsl("dragged out %1 the label landed at %2, %3").arg(drag.direction).arg(label.pos.x()).arg(label.pos.y())));
+            QVERIFY2(label.size == QSizeF(3, 2), qPrintable(qsl("dragged out %1 the label came out %2 by %3").arg(drag.direction).arg(label.size.width()).arg(label.size.height())));
+
+            QVERIFY(mp2dMap->mpDlgMapLabel);
+            mp2dMap->mpDlgMapLabel->close();
+            QVERIFY(area()->mMapLabels.isEmpty());
+        }
+    }
+
+    // A click with no drag has no box to put a label in, so nothing is made
+    // and no dialog comes up.
+    void test_clickingWithoutDraggingOutABoxMakesNoLabel()
+    {
+        buildMap();
+        showMapper(false);
+        rightClickAt(pointUnitsFromCentre(-2, -2));
+        QVERIFY(pickContextMenuItem(qsl("Create label...")));
+
+        clickAt(pointUnitsFromCentre(-5, 5));
+
+        QVERIFY(!mp2dMap->mSizeLabel);
+        QVERIFY2(area()->mMapLabels.isEmpty(), "a label with no box was made");
+        QVERIFY2(!mp2dMap->mpDlgMapLabel, "a dialog came up for a label with no box");
     }
 };
 
