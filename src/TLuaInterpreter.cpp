@@ -32,7 +32,6 @@
 #include "EAction.h"
 #include "Host.h"
 #include "TAlias.h"
-#include "TCommandLine.h"
 #include "TConsole.h"
 #include "TDebug.h"
 #include "TEvent.h"
@@ -59,10 +58,10 @@
 #include <math.h>
 
 #include <QtConcurrentRun>
-#include <QApplication>
 #include <QCollator>
 #include <QCoreApplication>
 #include <QDesktopServices>
+#include <QGuiApplication>
 #include <QSettings>
 #if defined(Q_OS_MACOS)
 // Only used for this OS:
@@ -94,21 +93,6 @@ int luaopen_yajl(lua_State*);
 // gone.
 static const char* no_main_window_value = "the profile has no main window";
 
-// No documentation available in wiki - internal function
-static bool isMain(const QString& name)
-{
-    if (name.isEmpty()) {
-        return true;
-    }
-    if (!name.compare(qsl("main"))) {
-        return true;
-    }
-    return false;
-}
-
-static const char* bad_cmdline_type = "%s: bad argument #%d type (command line name as string expected, got %s)!";
-static const char* bad_cmdline_value = "command line \"%s\" not found";
-
 const QString TLuaInterpreter::csmInvalidRoomID{qsl("number %1 is not a valid roomID")};
 const QString TLuaInterpreter::csmInvalidStopWatchID{qsl("stopwatch with ID %1 not found")};
 const QString TLuaInterpreter::csmInvalidRedValue{qsl("red value %1 needs to be between 0-255")};
@@ -119,33 +103,6 @@ const QString TLuaInterpreter::csmInvalidExitRoomID{qsl("number %1 is not a vali
 const QString TLuaInterpreter::csmInvalidItemID{qsl("item ID as %1 does not seem to be parseable as a positive integer")};
 const QString TLuaInterpreter::csmInvalidAreaID{qsl("number %1 is not a valid area id")};
 const QString TLuaInterpreter::csmInvalidAreaName{qsl("string '%1' is not a valid area name")};
-
-#define CMDLINE_NAME(ARG_L, ARG_pos)                                                                                                                                                                   \
-    ({                                                                                                                                                                                                 \
-        int pos_ = (ARG_pos);                                                                                                                                                                          \
-        if (!lua_isstring(ARG_L, pos_)) {                                                                                                                                                              \
-            lua_pushfstring(ARG_L, bad_cmdline_type, __FUNCTION__, pos_, luaL_typename(ARG_L, pos_));                                                                                                  \
-            return lua_error(ARG_L);                                                                                                                                                                   \
-        }                                                                                                                                                                                              \
-        lua_tostring(ARG_L, pos_);                                                                                                                                                                     \
-    })
-
-#define COMMANDLINE(ARG_L, ARG_name)                                                                                                                                                                   \
-    ({                                                                                                                                                                                                 \
-        const QString& name_ = (ARG_name);                                                                                                                                                             \
-        auto console_ = getHostFromLua(ARG_L).mpConsole;                                                                                                                                               \
-        auto cmdLine_ = !console_ ? nullptr : (isMain(name_) ? &*console_->mpCommandLine : console_->subCommandLineWidget(name_));                                                                     \
-        if (!cmdLine_) {                                                                                                                                                                               \
-            lua_pushnil(ARG_L);                                                                                                                                                                        \
-            lua_pushfstring(ARG_L, bad_cmdline_value, name_.toUtf8().constData());                                                                                                                     \
-            return 2;                                                                                                                                                                                  \
-        }                                                                                                                                                                                              \
-        cmdLine_;                                                                                                                                                                                      \
-    })
-
-// variable names within these macros have trailing underscores because in
-// at least one case, masking an existing variable with the new one confused
-// GCC, leading to a crash.
 
 
 TLuaInterpreter::TLuaInterpreter(Host* pH, const QString& hostName, int id)
@@ -863,14 +820,6 @@ int TLuaInterpreter::loadReplay(lua_State* L)
     // Although we only use English text for Lua messages the errMsg could
     // contain a Windows pathFileName which may use non-ASCII characters:
     return warnArgumentValue(L, __func__, qsl("unable to start replay, reason: '%1'").arg(errMsg));
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#cut
-int TLuaInterpreter::cut(lua_State* L)
-{
-    const Host& host = getHostFromLua(L);
-    host.mpConsole->cut();
-    return 0;
 }
 
 // Internal helper for feedTelnet(...) and socketRaw(...) that enables the
@@ -2567,15 +2516,6 @@ void TLuaInterpreter::parseCommandsOrFunctionsTable(lua_State* lState, const cha
     }
 }
 
-// No Documentation - public function but should stay undocumented -- compare https://github.com/Mudlet/Mudlet/issues/1149
-int TLuaInterpreter::insertHTML(lua_State* L)
-{
-    const QString sendText = getVerifiedString(L, __func__, 1, "sendText");
-    const Host& host = getHostFromLua(L);
-    host.mpConsole->insertHTML(sendText);
-    return 0;
-}
-
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addSupportedTelnetOption
 int TLuaInterpreter::addSupportedTelnetOption(lua_State* L)
 {
@@ -2583,39 +2523,6 @@ int TLuaInterpreter::addSupportedTelnetOption(lua_State* L)
     Host& host = getHostFromLua(L);
     host.mTelnet.supportedTelnetOptions[option] = true;
     return 0;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#echo
-int TLuaInterpreter::echo(lua_State* L)
-{
-    Host& host = getHostFromLua(L);
-
-    const int n = lua_gettop(L);
-    int s = 1;
-
-    if (n > 1 && !checkStringArg(L, __func__, s++, "console name", true)) {
-        return lua_error(L);
-    }
-    if (!checkStringArg(L, __func__, s, "text to display")) {
-        return lua_error(L);
-    }
-    const QString consoleName = (n > 1) ? QString{lua_tostring(L, 1)} : QString();
-    const QString displayText{lua_tostring(L, s)};
-
-    if (isMain(consoleName)) {
-        host.mpConsole->buffer.mEchoingText = true;
-        host.mpConsole->echo(displayText);
-        host.mpConsole->buffer.mEchoingText = false;
-        // Writing to the main window must always succeed, but for consistent
-        // results, we now return a true for that
-        lua_pushboolean(L, true);
-        return 1;
-    }
-    if (!host.echoWindow(consoleName, displayText)) {
-        return warnArgumentValue(L, __func__, qsl("console/label '%1' does not exist").arg(consoleName));
-    }
-    lua_pushboolean(L, true);
-    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMergeTables
@@ -2808,57 +2715,6 @@ int TLuaInterpreter::getEpoch(lua_State* L)
     return 1;
 }
 
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#selectCmdLineText
-int TLuaInterpreter::addCmdLineBlacklist(lua_State* L)
-{
-    const int n = lua_gettop(L);
-    // The mandatory text is last, but with no arguments at all that would be
-    // index 0 - not a valid Lua stack index, and Lua 5.1 hands back the first
-    // free slot for it rather than complaining:
-    const int textIndex = qMax(n, 1);
-    const char* name = "main";
-    if (n > 1) {
-        name = CMDLINE_NAME(L, 1);
-    }
-    if (!checkStringArg(L, __func__, textIndex, "suggestion text")) {
-        return lua_error(L);
-    }
-    auto pN = COMMANDLINE(L, QString{name});
-    pN->addBlacklist(QString{lua_tostring(L, textIndex)});
-    return 0;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#removeCmdLineBlacklist
-int TLuaInterpreter::removeCmdLineBlacklist(lua_State* L)
-{
-    const int n = lua_gettop(L);
-    // See addCmdLineBlacklist() on why the index is clamped:
-    const int textIndex = qMax(n, 1);
-    const char* name = "main";
-    if (n > 1) {
-        name = CMDLINE_NAME(L, 1);
-    }
-    if (!checkStringArg(L, __func__, textIndex, "suggestion text")) {
-        return lua_error(L);
-    }
-    auto pN = COMMANDLINE(L, QString{name});
-    pN->removeBlacklist(QString{lua_tostring(L, textIndex)});
-    return 0;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearCmdLineBlacklist
-int TLuaInterpreter::clearCmdLineBlacklist(lua_State* L)
-{
-    const int n = lua_gettop(L);
-    const char* name = "main";
-    if (n >= 1) {
-        name = CMDLINE_NAME(L, 1);
-    }
-    auto pN = COMMANDLINE(L, QString{name});
-    pN->clearBlacklist();
-    return 0;
-}
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#installPackage
 int TLuaInterpreter::installPackage(lua_State* L)
@@ -7222,25 +7078,6 @@ std::pair<int, QString> TLuaInterpreter::startPermPromptTrigger(const QString& n
     return {pT->getID(), QString()};
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#alert
-int TLuaInterpreter::alert(lua_State* L)
-{
-    double luaAlertDuration = 0.0;
-
-    if (lua_gettop(L) > 0) {
-        luaAlertDuration = getVerifiedDouble(L, __func__, 1, "alert duration in seconds");
-        if (luaAlertDuration < 0.000) {
-            lua_pushstring(L, "alert: duration, in seconds, is optional but if given must be zero or greater.");
-            return lua_error(L);
-        }
-    }
-
-    // QApplication::alert expects milliseconds, not seconds
-    QApplication::alert(mudlet::self(), qRound(luaAlertDuration * 1000.0));
-
-    return 0;
-}
-
 static int host_key = 0;
 
 // No documentation available in wiki - internal function
@@ -9020,70 +8857,6 @@ int TLuaInterpreter::getConfig(lua_State* L)
     }
 
     return warnArgumentValue(L, __func__, qsl("'%1' isn't a valid configuration option").arg(key));
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getSaveCommandHistory
-int TLuaInterpreter::getSaveCommandHistory(lua_State* L)
-{
-    auto& host = getHostFromLua(L);
-    auto numberOfLines = host.getCommandLineHistorySaveSize();
-    if (!numberOfLines) {
-        // We do not use warnArgumentValue(...) because it is valid to have
-        // this disabled and we do not want a message to be painted on the
-        // Central Debug Console:
-        lua_pushboolean(L, false);
-        lua_pushstring(L, "disabled by profile global preference");
-        return 2;
-    }
-    const char* name = "main";
-    if (lua_gettop(L)) {
-        name = CMDLINE_NAME(L, 1);
-    }
-    auto pCommandline = COMMANDLINE(L, QString{name});
-    lua_pushboolean(L, pCommandline->mSaveCommands);
-    lua_pushstring(L, (pCommandline->mSaveCommands ? qsl("enabled (%1 lines will be saved)").arg(QString::number(numberOfLines)) : qsl("disabled")).toUtf8().constData());
-    return 2;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setSaveCommandHistory
-int TLuaInterpreter::setSaveCommandHistory(lua_State* L)
-{
-    auto n = lua_gettop(L);
-    auto& host = getHostFromLua(L);
-    auto numberOfLines = host.getCommandLineHistorySaveSize();
-    if (!numberOfLines) {
-        // Unlike for the getter we do want to alert on trying to set the
-        // per-commandLine option when things are disabled globally for the
-        // profile:
-        return warnArgumentValue(L, __func__, "disabled by profile global preference");
-    }
-    // both defaults have to stand outside the argument handling below:
-    // setSaveCommandHistory() and setSaveCommandHistory(name) each turn saving
-    // on, so neither belongs inside a branch on the argument count:
-    const char* name = "main";
-    bool saveCommands = true;
-    if (n > 0) {
-        if (lua_type(L, 1) == LUA_TSTRING) {
-            // First argument is a string so is presumably a command line name
-            name = CMDLINE_NAME(L, 1);
-            if (n > 1) {
-                saveCommands = getVerifiedBool(L, __func__, 2, "save command history", true);
-            }
-
-        } else {
-            if (lua_type(L, 1) != LUA_TBOOLEAN) {
-                lua_pushfstring(L, "%s: bad argument #1 type (command line name as string or save history as boolean is optional, got %s!)", __func__, luaL_typename(L, 1));
-                return lua_error(L); // Dummy return!
-            }
-
-            saveCommands = getVerifiedBool(L, __func__, 1, "save command history", true);
-        }
-    }
-
-    auto pCommandline = COMMANDLINE(L, QString{name});
-    pCommandline->mSaveCommands = saveCommands;
-    lua_pushboolean(L, true);
-    return 1;
 }
 
 void TLuaInterpreter::updateEditor()
