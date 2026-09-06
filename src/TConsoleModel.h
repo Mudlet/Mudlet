@@ -116,6 +116,9 @@ struct TConsoleModel
     QString mLogFileName;
     QTextStream mLogStream;
     bool mLogToLogFile = false;
+    // The path a failed start could not write and why, for a caller with no
+    // console to read the report off.
+    QString mLogStartFailure;
 };
 
 #endif // MUDLET_TCONSOLEMODEL_H

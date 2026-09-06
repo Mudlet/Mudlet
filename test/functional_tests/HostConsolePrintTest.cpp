@@ -323,6 +323,32 @@ private slots:
         buffer().setWrapAt(mpHost->mWrapAt);
     }
 
+    // The log file name is settled only after the autolog sentinel is written,
+    // so a start that fails on the sentinel has no current name to report and
+    // Lua has to be told what could not be written instead
+    void test_failedSentinelWriteIsReportedToLua()
+    {
+        const QString sentinel = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("autolog"));
+        QVERIFY(QDir().mkpath(sentinel));
+        buffer().setWrapAt(1000);
+        const int lineBefore = buffer().getLastLineNumber();
+
+        const bool ran = runLua(qsl("local ok, msg = startLogging(true)\n"
+                                    "assert(ok == nil, 'startLogging reported success on a failed start')\n"
+                                    "assert(msg:find('could not be logged', 1, true), msg)\n"
+                                    "local _, stop = msg:find([[%1: ]], 1, true)\n"
+                                    "assert(stop, 'the message does not name the sentinel: ' .. msg)\n"
+                                    "assert(#msg > stop, 'the message gives no reason: ' .. msg)")
+                                        .arg(sentinel));
+        QDir().rmdir(sentinel);
+        QVERIFY2(ran, "startLogging(true) did not report the sentinel it could not write and the reason");
+        QVERIFY(!mpHost->mainConsoleModel().mLogToLogFile);
+        QVERIFY2(!QFileInfo::exists(sentinel), "the blocking directory was not removed");
+        const QString report = lineContainingFrom(lineBefore, qsl("Could not start logging"));
+        QVERIFY2(report.contains(qsl("\"%1\": ").arg(sentinel)), qPrintable(report));
+        buffer().setWrapAt(mpHost->mWrapAt);
+    }
+
     void test_luaErrorsArePrintedWithTheirColours()
     {
         mpHost->mEchoLuaErrors = true;

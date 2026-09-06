@@ -1578,7 +1578,7 @@ int TLuaInterpreter::startLogging(lua_State* L)
         consoleModel.toggleLogging(false);
         if (consoleModel.mLogToLogFile != logOn) {
             lua_pushnil(L);
-            lua_pushfstring(L, "Main console output could not be logged to file: %s", consoleModel.mLogFileName.toUtf8().constData());
+            lua_pushfstring(L, "Main console output could not be logged to file: %s", consoleModel.mLogStartFailure.toUtf8().constData());
             return 2;
         }
 

@@ -61,6 +61,7 @@ QStringList TConsoleModel::lines(int from, int to)
 // the autolog resume on profile load has no button to watch.
 void TConsoleModel::reportFailedLogStart(const QString& path, const QString& reason)
 {
+    mLogStartFailure = qsl("%1: %2").arg(path, reason);
     //: Error shown on the main console when a log file could not be opened. %1 is the file, %2 is the reason
     mpHost->postMessage(QCoreApplication::translate("TConsoleModel", "[ ERROR ] - Could not start logging to \"%1\": %2").arg(path, reason));
     mpHost->raiseLoggingStateChanged(false);
