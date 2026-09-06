@@ -34,7 +34,6 @@
 #include "THyperlinkSelectionManager.h"
 #include "TPrintSink.h"
 #include "TStringUtils.h"
-#include "TTextEdit.h"
 #include "UntrustedText.h"
 #include "TTextProperties.h"
 #include "widechar_width.h"
@@ -8515,12 +8514,7 @@ void TBuffer::updateLinkCharacters(int linkIndex)
     qDebug() << "[OSC] Character search completed for link" << linkIndex << "- Total characters searched:" << totalCharacters << "- Matching characters found:" << matchingCharacters;
 #endif
 
-    // Refresh the display to show the updated character styling
-    // Use updateScreenView and repaint for immediate Qt rendering
     if (mpConsole) {
-        mpConsole->mUpperPane->updateScreenView();
-        mpConsole->mUpperPane->repaint();
-        mpConsole->mLowerPane->updateScreenView();
-        mpConsole->mLowerPane->repaint();
+        mpConsole->repaintPanes();
     }
 }

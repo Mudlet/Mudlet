@@ -2653,6 +2653,14 @@ void TConsole::setCompactInputLine(const bool state)
     mpButtonMainLayer->setVisible(!state && (mType & MainConsole));
 }
 
+void TConsole::repaintPanes() const
+{
+    mUpperPane->updateScreenView();
+    mUpperPane->repaint();
+    mLowerPane->updateScreenView();
+    mLowerPane->repaint();
+}
+
 void TConsole::setProfileName(const QString& newName)
 {
     mProfileName = newName;
