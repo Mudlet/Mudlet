@@ -34,6 +34,7 @@
 #include <QtTest/QtTest>
 
 #include <QBoxLayout>
+#include <QColorSpace>
 #include <QGroupBox>
 #include <QLabel>
 #include <QLineEdit>
@@ -404,7 +405,14 @@ private slots:
         // survives out of the file and into the header
         const QImage expected(qsl(":/icons/settings-display.png"));
         QCOMPARE(carried.size(), expected.size());
-        QCOMPARE(carried.convertToFormat(QImage::Format_Alpha8), expected.convertToFormat(QImage::Format_Alpha8));
+        QImage carriedShape = carried.convertToFormat(QImage::Format_Alpha8);
+        QImage expectedShape = expected.convertToFormat(QImage::Format_Alpha8);
+        // QImage::operator== compares the colour space, which a gAMA chunk in the
+        // icon gives one side and painting the tint strips from the other - an
+        // image optimiser re-encoding the icon would otherwise fail this
+        carriedShape.setColorSpace(QColorSpace());
+        expectedShape.setColorSpace(QColorSpace());
+        QCOMPARE(carriedShape, expectedShape);
     }
 
     // What someone types is often not a word the settings use - an acronym, or

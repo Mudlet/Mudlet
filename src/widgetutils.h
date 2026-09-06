@@ -86,8 +86,9 @@ public:
             QPoint dialogCenter = dialog->mapToGlobal(dialog->rect().center());
             const QScreen* dialogScreen = QApplication::screenAt(dialogCenter);
 
-            // If the dialog is not visible or not yet positioned, or if it's on the wrong screen,
-            // then reposition it. This handles cases where the dialog retains old positions.
+            // A hidden dialog reports no screen of its own, so this recentres one that is
+            // merely closed even when it holds a position worth keeping - not for windows
+            // whose position is remembered
             if (!dialog->isVisible() || !dialogScreen || dialogScreen != parentScreen) {
                 centerDialogOnScreen(dialog, parentScreen);
             }
@@ -109,8 +110,9 @@ public:
         }
     }
 
-    // Force reposition a dialog on the specified screen, regardless of current position
-    // This is useful for singleton dialogs that may retain old positions
+    // Centre a dialog on the parent's screen, discarding wherever it currently sits.
+    // Only for dialogs whose position is not persisted: a window that restores a
+    // remembered position lands back in the middle of the screen on every re-show
     static void forceRepositionDialogOnParentScreen(QWidget* dialog, QWidget* parent)
     {
         if (!dialog || !parent) {
@@ -128,6 +130,32 @@ public:
             // Always reposition, regardless of current dialog position
             centerDialogOnScreen(dialog, parentScreen);
         }
+    }
+
+    // Centre a dialog whose remembered position has since gone out of reach -
+    // the monitor it was left on can have been disconnected. What has to be on a
+    // screen is a piece of title bar big enough to grab and drag with, not the
+    // window: a couple of stray pixels at an edge are no way back
+    static void keepDialogOnAScreen(QWidget* dialog, QWidget* parent)
+    {
+        if (!dialog) {
+            return;
+        }
+
+        constexpr int graspableWidth = 40;
+        constexpr int graspableHeight = 20;
+        const QRect dialogRect = dialog->frameGeometry();
+        const QRect titleBar(dialogRect.x(), dialogRect.y(), dialogRect.width(), qMin(graspableHeight, dialogRect.height()));
+        const QList<QScreen*> screens = QApplication::screens();
+        for (const QScreen* screen : screens) {
+            const QRect grabbable = screen->availableGeometry().intersected(titleBar);
+            if (grabbable.width() >= qMin(graspableWidth, titleBar.width()) && grabbable.height() >= titleBar.height()) {
+                return;
+            }
+        }
+
+        const QScreen* fallbackScreen = parent ? parent->screen() : QApplication::primaryScreen();
+        centerDialogOnScreen(dialog, fallbackScreen);
     }
 
     // Position a dialog in the center of the specified screen

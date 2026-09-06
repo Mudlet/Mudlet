@@ -29,6 +29,7 @@
 #include "Tree.h"
 #include "utils.h"
 
+#include <QDebug>
 #include <QLatin1String>
 #include <QMutableSetIterator>
 #include <QScopeGuard>
@@ -286,6 +287,16 @@ int AliasUnit::getNewID()
 
 bool AliasUnit::processDataStream(const QString& data)
 {
+    if (mProcessingDepth >= scmMaxProcessingDepth) {
+        qWarning().nospace() << "AliasUnit::processDataStream(...) aborting: alias processing recursion reached the limit of " << scmMaxProcessingDepth
+                             << " - probably an alias that expands into itself.";
+        //: %1 is the command being expanded, %2 the depth limit. Shown in the game window when an alias keeps expanding into itself
+        mpHost->postMessage(tr("[ ERROR ] - Alias processing stopped to prevent a crash: \"%1\" was expanded by an alias %2 times in a row, each time producing a command that matched an alias "
+                               "again. It goes to the game unexpanded. Send from the alias with send() rather than expandAlias(), or give it a pattern that does not match what it sends.")
+                                    .arg(data, QString::number(scmMaxProcessingDepth)));
+        return false;
+    }
+
     TLuaInterpreter* Lua = mpHost->getLuaInterpreter();
     Lua->set_lua_string(qsl("command"), data);
     bool state = false;
@@ -467,6 +478,12 @@ void AliasUnit::doCleanup()
         return;
     }
 
+    // Called once per unit for every line of game text, and next to never has
+    // anything queued, so skip setting up the flush below.
+    if (!hasPendingDeletes()) {
+        return;
+    }
+
     QSet<TAlias*> deletedAliases;
     QMutableSetIterator<TAlias*> itAlias(mCleanupSet);
     while (itAlias.hasNext()) {
@@ -475,6 +492,10 @@ void AliasUnit::doCleanup()
         deletedAliases.insert(pAlias);
         delete pAlias;
     }
+    // Not a no-op: the drain above frees no buckets, so without this every later
+    // flush re-scans an array sized for the largest batch the set has ever held.
+    // squeeze() keeps whatever the drain left behind; clear() would drop it.
+    mCleanupSet.squeeze();
     // Flush the deletes uninstall() deferred (#9337). uninstallList is ordered
     // children-before-parents and each ~Tree unlinks from its parent, so deleting
     // children first empties the parent's child list (no double free); the seen

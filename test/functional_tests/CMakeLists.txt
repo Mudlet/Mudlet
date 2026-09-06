@@ -37,12 +37,14 @@ set(WINDOW_GROUP_TEST_SOURCES
     CopyAsImageTest.cpp
     DebugConsoleFilterTest.cpp
     FrontendRefreshSeamTest.cpp
+    CommandLineKeyHandlingTest.cpp
     DetachedWindowMenuShortcutsTest.cpp
     FramePacingTest.cpp
     GlyphOverflowTest.cpp
     HyperlinkModelSplitTest.cpp
     LabelAnchorInteractionTest.cpp
     LabelMovieRefusalTest.cpp
+    CaretNavigationTest.cpp
     MainConsoleSelectionTest.cpp
     TabDetachThresholdTest.cpp
     DetachedWindowDiscordButtonTest.cpp
@@ -58,6 +60,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     PastedLinkStateTest.cpp
     ProfileSwitchMiniconsoleTest.cpp
     RecolouredLineCacheTest.cpp
+    TextEditAccessibleInterfaceTest.cpp
     TrackedLinkTrimTest.cpp
     ProfileSwitchShortcutTest.cpp
     SubCommandLineLifetimeTest.cpp
@@ -65,10 +68,12 @@ set(WINDOW_GROUP_TEST_SOURCES
     WindowLayoutSaveTest.cpp
     WindowStateGettersTest.cpp
     WrapLineRewrapTest.cpp
+    ScrollLostOnPartialRepaintTest.cpp
 )
 
 # Profiles: their config dir, their folders, and loading, saving and deleting them
 set(PROFILE_GROUP_TEST_SOURCES
+    CloseDuringProfileLoadTest.cpp
     ConfigDirOverrideTest.cpp
     ConnectionDialogCrashTest.cpp
     ConnectionDialogFocusTest.cpp
@@ -91,6 +96,7 @@ set(TELNET_GROUP_TEST_SOURCES
     cTelnetBufferTest.cpp
     GMCPCharLoginTest.cpp
     TelnetAtcpMspTest.cpp
+    TelnetLargeBurstTest.cpp
     TelnetLatencyMeasurementTest.cpp
     TelnetBenchmark.cpp
     TelnetCharsetNegotiationTest.cpp
@@ -109,6 +115,8 @@ set(TELNET_GROUP_TEST_SOURCES
 
 # Triggers and the other scriptable units, and what a running script does to them
 set(TRIGGER_GROUP_TEST_SOURCES
+    CaptureGroupParkingTest.cpp
+    BigramFilterTest.cpp
     CorruptTriggerPatternsTest.cpp
     MultilineTriggerReentrancyTest.cpp
     SetScriptCallbackTest.cpp
@@ -122,7 +130,9 @@ set(EDITOR_GROUP_TEST_SOURCES
     dlgTriggerEditorUndoRedoTest.cpp
     EdbeeReinitTest.cpp
     EditorBannerViewSwitchTest.cpp
+    EditorWindowPositionTest.cpp
     ScriptEventHandlerLifetimeTest.cpp
+    TriggerEditorDisclosureTest.cpp
     TriggerEditorTest.cpp
     VariableEditorWriteBackTest.cpp
 )
@@ -149,9 +159,14 @@ set(MAP_GROUP_TEST_SOURCES
 set(PACKAGE_GROUP_TEST_SOURCES
     ActionSelfRemovalTest.cpp
     DefaultPackagesTest.cpp
+    DualPackageModuleTest.cpp
+    ModuleManagerListingTest.cpp
     ModuleSaveTeardownTest.cpp
+    PackageExporterDialogTest.cpp
     PackageFontsOnRefusedArchiveTest.cpp
+    PackageManagerRemovalTest.cpp
     PackageRemovalSaveTeardownTest.cpp
+    PackageRepositoryDownloadTest.cpp
     PackageSelfRemovalTest.cpp
 )
 
@@ -387,6 +402,10 @@ set_tests_properties(TelnetReconnectStateTest PROPERTIES TIMEOUT 300)
 # MsdpMalformedDiagnosticTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(MsdpMalformedDiagnosticTest PROPERTIES TIMEOUT 300)
 
+# TelnetLargeBurstTest boots a full profile and then waits out a 780 KB burst,
+# both of which sanitiser builds stretch well past the default budget.
+set_tests_properties(TelnetLargeBurstTest PROPERTIES TIMEOUT 300)
+
 # TelnetLatencyMeasurementTest boots a full profile and then spends its runtime in
 # real time by design - every round trip it times, and every stall it places, has
 # to be waited out - so it needs a longer timeout
@@ -423,9 +442,10 @@ set_tests_properties(ProfileLifecycleTest PROPERTIES TIMEOUT 300)
 # finish, because the assertion message is the whole point of the file. Its
 # nominal budget looks like ~120s of QTRY timeouts, but QTRY waits three times
 # what it is told: once to poll, then twice more to build the "would have passed
-# after N ms" debug message. Measured with every wire it covers cut, the file
-# takes 263s, so anything below that turns a readable failure into a silent
-# ctest kill. Guarded, because without the updater the test does not exist and
+# after N ms" debug message. Measured at 263s with every wire cut, and the five
+# cases added since each stop at their first blocking wait for at most 220s
+# more, so anything below that turns a readable failure into a silent ctest
+# kill. Guarded, because without the updater the test does not exist and
 # naming a test that does not exist is a hard CMake error
 if(USE_UPDATER)
     set_tests_properties(FeedChecksumRaceTest PROPERTIES TIMEOUT 600)
@@ -477,11 +497,22 @@ set_tests_properties(SettingsAppearanceTest
                      SettingsShellNavigationTest
                      PROPERTIES TIMEOUT 300)
 
+# PackageRepositoryDownloadTest passes in seconds, so this timeout is only ever
+# reached by a run that is already failing - and each of its QTRY assertions has
+# to be allowed to run out, 15s apiece, before it can say what went wrong. That
+# adds up to a couple of minutes across the cases, so a shorter timeout would
+# turn a readable failure into a silent ctest kill
+set_tests_properties(PackageRepositoryDownloadTest PROPERTIES TIMEOUT 300)
+
+# PackageExporterDialogTest creates a fresh profile per test method and several of
+# its methods export and then install a package, so it needs a longer timeout
+set_tests_properties(PackageExporterDialogTest PROPERTIES TIMEOUT 300)
+
 # HostWidgetDecouplingTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(HostWidgetDecouplingTest PROPERTIES TIMEOUT 300)
 
 # ConsoleModelExtractionTest creates a fresh profile per test method, so it needs a longer timeout
-set_tests_properties(ConsoleModelExtractionTest PROPERTIES TIMEOUT 300)
+set_tests_properties(ConsoleModelExtractionTest PROPERTIES TIMEOUT 600)
 
 # ConnectionDialogCrashTest waits out two real profile copies (15s budget each)
 # on top of a full mudlet start under ASan, so the 60s default is too tight for
@@ -501,6 +532,9 @@ set_tests_properties(NarrowWindowWrapTest PROPERTIES TIMEOUT 300)
 
 # WrapLineRewrapTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(WrapLineRewrapTest PROPERTIES TIMEOUT 300)
+
+# ScrollLostOnPartialRepaintTest creates a fresh profile per test method, so it needs a longer timeout
+set_tests_properties(ScrollLostOnPartialRepaintTest PROPERTIES TIMEOUT 300)
 
 # TelnetStringSequenceRecoveryTest runs its introducer matrix over a real
 # socket, waiting out cTelnet's 300ms idle flush in several cases and

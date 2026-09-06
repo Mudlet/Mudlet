@@ -174,7 +174,8 @@ successes):
   A throwaway `HOME` keeps the real profile tree untouched. Screenshot after every
   interaction — coordinates come from looking at the previous shot, not from guessing. The
   same display serves `docs/demo-videos.md`'s before/after recording workflow via ffmpeg.
-  All of this is Linux/X11-only, and XTEST events work headlessly on Xvfb only.
+  All of this is Linux/X11-only, and XTEST events work headlessly on Xvfb only; from a
+  Wayland desktop it needs `QT_QPA_PLATFORM=xcb GDK_BACKEND=x11`.
 
 The `docker/` directory is a separate developer convenience (QtCreator-in-container); its
 Ubuntu 22.04 base only offers Qt 6.2 from apt, so it cannot build current Mudlet until it is
