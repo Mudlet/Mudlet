@@ -27,7 +27,6 @@
 
 #include "Host.h"
 #include "T2DMap.h"
-#include "TConsole.h"
 #include "TRoomDB.h"
 
 #include <QBuffer>
@@ -373,7 +372,7 @@ void TArea::addRoom(int id)
         }
     } else {
         const QString error = tr("roomID=%1 does not exist, can not set properties of a non-existent room!").arg(id);
-        mpMap->mpHost->mpConsole->printSystemMessage(error);
+        mpMap->mpHost->printSystemMessage(error);
     }
 }
 

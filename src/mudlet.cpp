@@ -60,6 +60,8 @@
 #include "MMCPServer.h"
 #include "widgetutils.h"
 
+#include <QDataStream>
+#include <QSaveFile>
 #include <QAccessible>
 #include <QAccessibleAnnouncementEvent>
 #include <QApplication>

@@ -1272,7 +1272,7 @@ void TMedia::connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player)
 
         if (TDebug::smDebugMode && mpHost && mpHost->mpConsole) {
             //: %1 is the media backend's own description of what went wrong, e.g. "Failed to load media".
-            mpHost->mpConsole->printSystemMessage(qsl("%1\n").arg(tr("Media error: %1").arg(errorString)));
+            mpHost->printSystemMessage(qsl("%1\n").arg(tr("Media error: %1").arg(errorString)));
         }
 
         // Only a failure nothing else will report is ended from here. A track that was playing
@@ -1410,7 +1410,7 @@ void TMedia::updateList(QList<std::shared_ptr<T>>& list, int index, std::shared_
         TMedia::purgeStoppedMediaPlayers(list);
 
         if (TDebug::smDebugMode && mediaInstance && mediaInstance->mpHost && mediaInstance->mpHost->mpConsole) {
-            mediaInstance->mpHost->mpConsole->printSystemMessage(qsl("%1\n").arg(tr("Too many stopped media players. Purging stopped players.")));
+            mediaInstance->mpHost->printSystemMessage(qsl("%1\n").arg(tr("Too many stopped media players. Purging stopped players.")));
         }
 
         if (list.size() > mediaInstance->getMaxUnprunedPlayers()) {
@@ -1418,7 +1418,7 @@ void TMedia::updateList(QList<std::shared_ptr<T>>& list, int index, std::shared_
             list.removeFirst(); // Evict the oldest player to enforce cap
 
             if (TDebug::smDebugMode && mediaInstance && mediaInstance->mpHost && mediaInstance->mpHost->mpConsole) {
-                mediaInstance->mpHost->mpConsole->printSystemMessage(qsl("%1\n").arg(tr("Too many stopped media players. Removed oldest active player.")));
+                mediaInstance->mpHost->printSystemMessage(qsl("%1\n").arg(tr("Too many stopped media players. Removed oldest active player.")));
             }
         }
     }
@@ -1513,7 +1513,7 @@ std::shared_ptr<TMediaPlayer> TMedia::getMediaPlayer(TMediaData& mediaData)
         qWarning() << "TMedia::getMediaPlayer() - Too many active players for media type. Skipping creation.";
 
         if (TDebug::smDebugMode && mpHost && mpHost->mpConsole) {
-            mpHost->mpConsole->printSystemMessage(qsl("%1\n").arg(tr("Maximum allowed active media players reached for media type. Cannot play additional media.")));
+            mpHost->printSystemMessage(qsl("%1\n").arg(tr("Maximum allowed active media players reached for media type. Cannot play additional media.")));
         }
 
         return nullptr;
@@ -2525,6 +2525,6 @@ void TMedia::printClosedCaption(const TMediaData& mediaData, const QString& acti
         }
     }
 
-    mpHost->mpConsole->print(message);
+    mpHost->printToMainConsole(message);
 }
 // End Private

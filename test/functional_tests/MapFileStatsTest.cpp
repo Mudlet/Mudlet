@@ -34,6 +34,7 @@
  * Run with: ctest -R MapFileStatsTest -V
  */
 
+#include <QDataStream>
 #include <QFileInfo>
 #include <QSaveFile>
 #include <QTemporaryDir>

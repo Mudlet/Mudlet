@@ -994,8 +994,8 @@ void MMCPServer::clientMessage(const QString& fromStr, const QString& message)
     // other end-of-line indications the text does not get flushed to the
     // display until it does - so actually we need to re-append a final
     // line-feed that we may have previously trimmed off!
-    mpHost->mpConsole->printOnDisplay(trimmedStdStr.append(1, '\n'), false);
-    mpHost->mpConsole->finalize();
+    mpHost->printOnDisplay(trimmedStdStr.append(1, '\n'), false);
+    mpHost->finalizeMainConsole();
 }
 
 /**
@@ -1011,8 +1011,8 @@ void MMCPServer::snoopMessage(const std::string& message)
 
     std::string outStr = ss.str();
 
-    mpHost->mpConsole->printOnDisplay(outStr, false);
-    mpHost->mpConsole->finalize();
+    mpHost->printOnDisplay(outStr, false);
+    mpHost->finalizeMainConsole();
 }
 
 

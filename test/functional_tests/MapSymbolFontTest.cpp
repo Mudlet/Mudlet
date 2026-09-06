@@ -33,6 +33,7 @@
  * Run with: ctest -R MapSymbolFontTest -V
  */
 
+#include <QDataStream>
 #include <QFileInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
