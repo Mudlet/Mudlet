@@ -79,12 +79,6 @@ constexpr int AUTO_LOGIN_MAX_DELAY_MS = 60000;
 // cTelnet::checkCharacterModePattern():
 constexpr auto CHARACTER_MODE_DETECT = 3s;
 
-// How long the console has to hold still before its size is reported to the
-// game - see cTelnet::checkNAWS(). Has to outlast the 0.2s timer an adjustable
-// Geyser container re-reserves its border on, which is the longest step of a
-// resize:
-constexpr auto NAWS_SETTLE_TIME = 300ms;
-
 // How long to leave a game alone after a connection attempt to it failed, before
 // trying again for a profile that reconnects automatically. A refused connection
 // comes back at once, so without a wait here the retries are a tight loop. The
@@ -207,11 +201,6 @@ void cTelnet::reset()
     // Stop any pending character-at-a-time detection
     if (mTimerCharacterModeDetect) {
         mTimerCharacterModeDetect->stop();
-    }
-    // A window size waiting to be reported belongs to the connection being
-    // reset, and mNaws_x/mNaws_y are about to be zeroed for the next one
-    if (mTimerNawsUpdate) {
-        mTimerNawsUpdate->stop();
     }
     // Ensure we do not think that the game server is echoing for us:
     mpHost->setRemoteEchoingActive(false);
@@ -1735,22 +1724,6 @@ void cTelnet::abandonNetworkLatencyMeasurement()
 }
 
 void cTelnet::checkNAWS()
-{
-    // A window resize reaches the console as a burst rather than as one event:
-    // Qt lays it out, then any Geyser container attached to a border re-reserves
-    // that border from a timer of its own, which lays the console out again.
-    // Reporting each step would publish widths the window only ever had in
-    // passing - and the game wraps whatever it sends next to them - so wait for
-    // the burst to finish and report the size once.
-    if (!mTimerNawsUpdate) {
-        mTimerNawsUpdate = new QTimer(this);
-        mTimerNawsUpdate->setSingleShot(true);
-        connect(mTimerNawsUpdate, &QTimer::timeout, this, &cTelnet::sendCurrentNAWS);
-    }
-    mTimerNawsUpdate->start(NAWS_SETTLE_TIME);
-}
-
-void cTelnet::sendCurrentNAWS()
 {
     Host* pHost = mpHost;
     if (!pHost || !pHost->mpConsole) {
@@ -3746,10 +3719,8 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             // used values:
             mNaws_x = 0;
             mNaws_y = 0;
-            // Answer the negotiation itself rather than going through the
-            // resize debounce: the game asked for the size now, and games that
-            // draw their login screen from it get one chance to be told.
-            sendCurrentNAWS();
+            // thus sending of the values is performed when we check them:
+            checkNAWS();
         }
         break;
     }

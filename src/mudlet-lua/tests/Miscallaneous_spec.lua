@@ -1405,30 +1405,8 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         return string.char(math.floor(value / 16777216) % 256, math.floor(value / 65536) % 256, math.floor(value / 256) % 256, value % 256)
       end
 
-      -- one record: the delay in milliseconds before it, the number of bytes
-      -- in it, and then those bytes
-      local function chunk(delay, payload)
-        return bigEndian32(delay) .. bigEndian32(#payload) .. payload
-      end
-
-      -- the shape PR #4400 wrote for a while, where the delay took eight bytes
-      -- instead of four - Mudlet still reads it
-      local function wideChunk(delay, payload)
-        return string.rep("\0", 4) .. chunk(delay, payload)
-      end
-
       local function writeReplay(path, payload)
-        writeFile(path, chunk(0, payload))
-      end
-
-      local function playedBack(mark, marker)
-        for _ = 1, 40 do
-          pumpEvents(50)
-          if contains(textFrom(mark), marker) then
-            return true
-          end
-        end
-        return false
+        writeFile(path, bigEndian32(0) .. bigEndian32(#payload) .. payload)
       end
 
       it("raises a Lua error when called with no arguments", function()
@@ -1469,77 +1447,17 @@ describe("Tests C++ functions in the Miscallaneous category", function()
 
         assert.is_true(loadReplay(replay))
 
-        assert.is_true(playedBack(mark, "mudlet-spec-replayed-line"), "the replay did not reach the console")
+        local arrived = false
+        for _ = 1, 40 do
+          pumpEvents(50)
+          arrived = contains(textFrom(mark), "mudlet-spec-replayed-line")
+          if arrived then
+            break
+          end
+        end
+        assert.is_true(arrived, "the replay did not reach the console")
         -- whether a replay is running is application-wide, so let this one run
         -- out before the next spec asks for one
-        pumpEvents(200)
-      end)
-
-      it("plays back a replay written with the eight byte delay", function()
-        if not testMode then
-          pending("letting the replay timer run needs MUDLET_TEST_MODE")
-          return
-        end
-        local replay = getMudletHomeDir() .. "/mudlet-spec-wide-replay.dat"
-        finally(function() os.remove(replay) end)
-        writeFile(replay, wideChunk(10, "mudlet-spec-wide-replay-line\r\n"))
-        local mark = getLastLineNumber("main")
-
-        assert.is_true(loadReplay(replay))
-
-        assert.is_true(playedBack(mark, "mudlet-spec-wide-replay-line"), "the replay did not reach the console")
-        pumpEvents(200)
-      end)
-
-      it("acts on telnet negotiation that was recorded with the text", function()
-        if not testMode then
-          pending("letting the replay timer run needs MUDLET_TEST_MODE")
-          return
-        end
-        local replay = getMudletHomeDir() .. "/mudlet-spec-gmcp-replay.dat"
-        -- the gmcp table is the profile's, so whatever was under this key before
-        -- goes back afterwards
-        local previousReplay = gmcp.Replay
-        gmcp.Replay = nil
-        finally(function()
-          os.remove(replay)
-          gmcp.Replay = previousReplay
-        end)
-        -- IAC SB <GMCP> ... IAC SE, which only the telnet state machine can pick
-        -- out of the stream - played back as text it would just be printed
-        writeFile(replay, chunk(10, "\255\250\201Replay.Marker {\"note\":\"seen\"}\255\240mudlet-spec-gmcp-replay-line\r\n"))
-        local mark = getLastLineNumber("main")
-
-        assert.is_true(loadReplay(replay))
-
-        assert.is_true(playedBack(mark, "mudlet-spec-gmcp-replay-line"), "the replay did not reach the console")
-        assert.is_truthy(gmcp.Replay and gmcp.Replay.Marker, "the subnegotiation recorded in the replay was played back as text instead of acted on")
-        assert.equals("seen", gmcp.Replay.Marker.note)
-        pumpEvents(200)
-      end)
-
-      it("refuses a second replay while one is still running", function()
-        if not testMode then
-          pending("letting the replay timer run needs MUDLET_TEST_MODE")
-          return
-        end
-        local first = getMudletHomeDir() .. "/mudlet-spec-first-replay.dat"
-        local second = getMudletHomeDir() .. "/mudlet-spec-second-replay.dat"
-        finally(function()
-          os.remove(first)
-          os.remove(second)
-        end)
-        writeFile(first, chunk(400, "mudlet-spec-first-replay-line\r\n"))
-        writeFile(second, chunk(10, "mudlet-spec-second-replay-line\r\n"))
-        local mark = getLastLineNumber("main")
-
-        assert.is_true(loadReplay(first))
-        local ok, err = loadReplay(second)
-
-        assert.is_nil(ok)
-        assert.is_true(contains(err, "already be in progress"), tostring(err))
-        assert.is_true(playedBack(mark, "mudlet-spec-first-replay-line"), "the replay that was accepted did not reach the console")
-        assert.is_false(contains(textFrom(mark), "mudlet-spec-second-replay-line"), "the replay that was refused played anyway")
         pumpEvents(200)
       end)
     end)

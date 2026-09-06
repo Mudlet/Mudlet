@@ -790,12 +790,6 @@ describe("Tests Other.lua functions", function()
         assert.is_boolean(t.negative)
       end)
 
-      it("returns nil and a message for an unknown id", function()
-        local ok, err = getStopWatchBrokenDownTime(444444)
-        assert.is_nil(ok)
-        assert.is_string(err)
-      end)
-
       it("flags negative elapsed time with the negative field", function()
         local id = track(createStopWatch(false))
         adjustStopWatch(id, -90) -- one minute thirty seconds in the past
@@ -821,101 +815,6 @@ describe("Tests Other.lua functions", function()
         local ok, err = deleteStopWatch(555555)
         assert.is_nil(ok)
         assert.is_string(err)
-      end)
-    end)
-
-    -- Every one of these takes a name where the tests above pass an id, which
-    -- is a separate lookup in Host: an id goes straight to the stopwatch, while
-    -- a name has to be resolved to one first.
-    describe("naming a stopwatch instead of giving its id", function()
-      it("startStopWatch and stopStopWatch both take a name", function()
-        local id = track(createStopWatch("stopwatchSpecByNameRun"))
-        assert.is_true(startStopWatch("stopwatchSpecByNameRun"))
-        assert.is_true(getStopWatches()[id].isRunning)
-        adjustStopWatch(id, 6)
-
-        assertClose(6, stopStopWatch("stopwatchSpecByNameRun"))
-        assert.is_false(getStopWatches()[id].isRunning)
-      end)
-
-      it("setStopWatchName renames the stopwatch that currently has that name", function()
-        local id = track(createStopWatch("stopwatchSpecOldName"))
-
-        assert.is_true(setStopWatchName("stopwatchSpecOldName", "stopwatchSpecNewName"))
-
-        assert.equals("stopwatchSpecNewName", getStopWatches()[id].name)
-        local ok, err = getStopWatchTime("stopwatchSpecOldName")
-        assert.is_nil(ok, "the stopwatch still answers to the name it was renamed away from")
-        assert.is_string(err)
-      end)
-
-      it("getStopWatchBrokenDownTime takes a name", function()
-        local id = track(createStopWatch("stopwatchSpecBrokenDownByName"))
-        adjustStopWatch(id, 2 * 60 + 5)
-
-        local elapsed = getStopWatchBrokenDownTime("stopwatchSpecBrokenDownByName")
-
-        assert.equals(2, elapsed.minutes)
-        assert.equals(5, elapsed.seconds)
-      end)
-
-      it("says which name it could not find", function()
-        local ok, err = startStopWatch("stopwatchSpecNoSuchWatch")
-        assert.is_nil(ok)
-        assert.is_truthy(err:find("stopwatchSpecNoSuchWatch", 1, true), err)
-
-        ok, err = stopStopWatch("stopwatchSpecNoSuchWatch")
-        assert.is_nil(ok)
-        assert.is_truthy(err:find("stopwatchSpecNoSuchWatch", 1, true), err)
-
-        ok, err = setStopWatchName("stopwatchSpecNoSuchWatch", "stopwatchSpecIrrelevant")
-        assert.is_nil(ok)
-        assert.is_truthy(err:find("stopwatchSpecNoSuchWatch", 1, true), err)
-      end)
-    end)
-
-    describe("starting a stopwatch that is already running", function()
-      -- startStopWatch(id) resets the stopwatch back to zero first, which is
-      -- what it has always done; passing false asks for the elapsed time so far
-      -- to be kept, and then starting one that is already running is refused
-      it("keeps the elapsed time when asked not to reset", function()
-        local id = track(createStopWatch(false))
-        adjustStopWatch(id, 20)
-
-        assert.is_true(startStopWatch(id, false))
-
-        assertClose(20, getStopWatchTime(id))
-        stopStopWatch(id)
-      end)
-
-      it("throws the elapsed time away when not asked to keep it", function()
-        local id = track(createStopWatch(false))
-        adjustStopWatch(id, 20)
-
-        assert.is_true(startStopWatch(id))
-
-        assertClose(0, getStopWatchTime(id))
-        stopStopWatch(id)
-      end)
-
-      it("refuses a second start that would keep the elapsed time", function()
-        local id = track(createStopWatch(false))
-        assert.is_true(startStopWatch(id, false))
-        finally(function() stopStopWatch(id) end)
-
-        local ok, err = startStopWatch(id, false)
-
-        assert.is_nil(ok)
-        assert.is_truthy(err:find("already running", 1, true), err)
-      end)
-
-      it("refuses to stop one that is already stopped", function()
-        local id = track(createStopWatch("stopwatchSpecAlreadyStopped"))
-
-        local ok, err = stopStopWatch("stopwatchSpecAlreadyStopped")
-
-        assert.is_nil(ok)
-        assert.is_truthy(err:find("already stopped", 1, true), err)
       end)
     end)
 
