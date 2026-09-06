@@ -502,6 +502,7 @@ TBuffer::TBuffer(const TBuffer& other)
 , lastloggedToLine(other.lastloggedToLine)
 , lastTextToLog(other.lastTextToLog)
 , mEncoding(other.mEncoding)
+, mDecoder(other.mDecoder)
 , mCurrentHyperlinkCommand(other.mCurrentHyperlinkCommand)
 , mCurrentHyperlinkHint(other.mCurrentHyperlinkHint)
 , mCurrentHyperlinkLinkId(other.mCurrentHyperlinkLinkId)
@@ -599,6 +600,7 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         lastloggedToLine = other.lastloggedToLine;
         lastTextToLog = other.lastTextToLog;
         mEncoding = other.mEncoding;
+        mDecoder = other.mDecoder;
         mCurrentHyperlinkCommand = other.mCurrentHyperlinkCommand;
         mCurrentHyperlinkHint = other.mCurrentHyperlinkHint;
         mCurrentHyperlinkLinkId = other.mCurrentHyperlinkLinkId;
@@ -1537,33 +1539,33 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
             } else {
                 mMudLine.append(encodingLookupTable.at(index - 128));
             }
-        } else if (mEncoding == "ISO 8859-1") {
+        } else if (mDecoder == Decoder::Latin1) {
             mMudLine.append(QChar::fromLatin1(ch));
-        } else if (mEncoding == "GBK") {
+        } else if (mDecoder == Decoder::Gbk) {
             if (!processGBSequence(localBuffer, isFromServer, false, localBufferLength, localBufferPosition, isTwoTCharsNeeded)) {
                 // We have run out of bytes and we have stored the unprocessed
                 // ones but we need to bail out NOW!
                 return;
             }
-        } else if (mEncoding == "GB18030") {
+        } else if (mDecoder == Decoder::Gb18030) {
             if (!processGBSequence(localBuffer, isFromServer, true, localBufferLength, localBufferPosition, isTwoTCharsNeeded)) {
                 // We have run out of bytes and we have stored the unprocessed
                 // ones but we need to bail out NOW!
                 return;
             }
-        } else if (mEncoding == "EUC-KR") {
+        } else if (mDecoder == Decoder::EucKr) {
             if (!processEUC_KRSequence(localBuffer, isFromServer, localBufferLength, localBufferPosition, isTwoTCharsNeeded)) {
                 // We have run out of bytes and we have stored the unprocessed
                 // ones but we need to bail out NOW!
                 return;
             }
-        } else if (mEncoding == "BIG5" || mEncoding == "BIG5-HKSCS") {
+        } else if (mDecoder == Decoder::Big5) {
             if (!processBig5Sequence(localBuffer, isFromServer, localBufferLength, localBufferPosition, isTwoTCharsNeeded)) {
                 // We have run out of bytes and we have stored the unprocessed
                 // ones but we need to bail out NOW!
                 return;
             }
-        } else if (mEncoding == "UTF-8") {
+        } else if (mDecoder == Decoder::Utf8) {
             if (!processUtf8Sequence(localBuffer, isFromServer, localBufferLength, localBufferPosition, isTwoTCharsNeeded)) {
                 // We have run out of bytes and we have stored the unprocessed
                 // ones but we need to bail out NOW!
@@ -1876,12 +1878,15 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
     // the accumulator itself is let go rather than kept. Emptying them before
     // the commit rather than after leaves them usable by any nested pass that
     // the trigger engine starts from within commitLineData().
+    // The characters are moved out rather than copied: nothing still in the
+    // accumulator can be selected, so the copy constructor's clearing of that
+    // flag on every character would be wasted work.
     QString line;
     if (!mMudLine.isEmpty()) {
         line = QString(mMudLine.constData(), mMudLine.size());
         mMudLine.resize(0);
     }
-    std::vector<TChar> chars(mMudBuffer);
+    std::vector<TChar> chars(std::make_move_iterator(mMudBuffer.begin()), std::make_move_iterator(mMudBuffer.end()));
     mMudBuffer.clear();
     if (static_cast<size_t>(mMudLine.capacity()) > csmMaxRetainedLineCapacity) {
         QString().swap(mMudLine);
@@ -7454,10 +7459,34 @@ bool TBuffer::processEUC_KRSequence(const std::string& bufferData, const bool is
     return true;
 }
 
+TBuffer::Decoder TBuffer::decoderFor(const QByteArray& encoding)
+{
+    if (encoding == "UTF-8") {
+        return Decoder::Utf8;
+    }
+    if (encoding == "ISO 8859-1") {
+        return Decoder::Latin1;
+    }
+    if (encoding == "GBK") {
+        return Decoder::Gbk;
+    }
+    if (encoding == "GB18030") {
+        return Decoder::Gb18030;
+    }
+    if (encoding == "EUC-KR") {
+        return Decoder::EucKr;
+    }
+    if (encoding == "BIG5" || encoding == "BIG5-HKSCS") {
+        return Decoder::Big5;
+    }
+    return Decoder::Ascii;
+}
+
 void TBuffer::encodingChanged(const QByteArray& newEncoding)
 {
     if (mEncoding != newEncoding) {
         mEncoding = newEncoding;
+        mDecoder = decoderFor(mEncoding);
         if (mEncoding == "GBK" || mEncoding == "GB18030" || mEncoding == "BIG5" || mEncoding == "BIG5-HKSCS" || mEncoding == "EUC-KR") {
             if (!TEncodingHelper::isEncodingAvailable(mEncoding)) {
                 qCritical().nospace() << "encodingChanged(" << newEncoding << ") ERROR: This encoding cannot be handled as a required codec was not found in the system!";

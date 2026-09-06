@@ -455,6 +455,10 @@ public:
     // OSC 8 hyperlink documentation examples - triggered by secret phrase
     void injectOSC8DocumentationExamples();
 
+    // The decoder incoming text bytes go through, resolved from the encoding
+    // name when it changes instead of in the per-byte loop:
+    enum class Decoder : quint8 { Ascii, Latin1, Gbk, Gb18030, EucKr, Big5, Utf8 };
+    static Decoder decoderFor(const QByteArray&);
     // It would have been nice to do this with Qt's signals and slots but that
     // is apparently incompatible with using a default constructor - sigh!
     void encodingChanged(const QByteArray&);
@@ -674,6 +678,7 @@ private:
     QList<int> mCommitLineIndices;
 
     QByteArray mEncoding;
+    Decoder mDecoder = Decoder::Ascii;
 
     // OSC 8 hyperlink tracking
     QStringList mCurrentHyperlinkCommand;

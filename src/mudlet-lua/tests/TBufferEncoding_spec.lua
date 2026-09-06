@@ -279,3 +279,26 @@ describe("Tests EUC-KR decoding", function()
     assert.equals(replacement, decoded(bytes(0xC7, 0x20)))
   end)
 end)
+
+describe("Tests changing the encoding from a trigger", function()
+  -- A trigger fires while its packet is still being decoded. One that changes
+  -- the encoding and feeds more text re-enters the decoder, which takes the new
+  -- encoding up there and then, and the rest of the outer packet has to follow
+  -- it too.
+  it("decodes the rest of the packet with the encoding a re-entering trigger set", function()
+    -- busted keeps one finally() per test, so the trigger and the encoding
+    -- have to be put back from the same one
+    local restoreEncoding = restoreServerEncoding()
+    assert.is_true(setServerEncoding("UTF-8"))
+    local trigger = tempTrigger("enc:switch", function()
+      setServerEncoding("GBK")
+      feedTriggers("switched\n")
+    end)
+    finally(function()
+      killTrigger(trigger)
+      restoreEncoding()
+    end)
+
+    assert.equals("中", decoded("switch\r\nenc:" .. bytes(0xD6, 0xD0)))
+  end)
+end)
