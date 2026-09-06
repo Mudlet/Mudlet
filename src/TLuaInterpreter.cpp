@@ -59,7 +59,6 @@
 #include <math.h>
 
 #include <QtConcurrentRun>
-#include <QApplication>
 #include <QCollator>
 #include <QCoreApplication>
 #include <QDesktopServices>
@@ -7235,8 +7234,7 @@ int TLuaInterpreter::alert(lua_State* L)
         }
     }
 
-    // QApplication::alert expects milliseconds, not seconds
-    QApplication::alert(mudlet::self(), qRound(luaAlertDuration * 1000.0));
+    mudlet::self()->alertUser(qRound(luaAlertDuration * 1000.0));
 
     return 0;
 }
