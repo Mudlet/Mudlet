@@ -1006,6 +1006,118 @@ private slots:
         closeContextMenu();
     }
 
+    // Snapping remembers where the points were so that turning it off can put
+    // them back, but a point clicked in while it was on has no earlier place
+    // to go back to and stays where it is.
+    void test_turningSnappingOffKeepsThePointsAddedWhileItWasOn()
+    {
+        buildMap();
+        showMapper(false);
+        TRoom* pRoom = startDrawingALine(kPlayerRoomId, qsl("e"));
+        QVERIFY(pRoom);
+        clickAt(viewCentre() + QPoint(7, -3));
+        const QList<QPointF> asClicked = pRoom->customLines.value(qsl("e"));
+        QCOMPARE(asClicked.size(), 1);
+
+        mp2dMap->slot_setSnapCustomLinePointsToGrid(true);
+        clickAt(pointUnitsFromCentre(1.5, 0.5));
+        const QList<QPointF> whileSnapping{QPointF(0.5, 0.0), QPointF(1.5, 0.5)};
+        QCOMPARE(pRoom->customLines.value(qsl("e")), whileSnapping);
+
+        mp2dMap->slot_setSnapCustomLinePointsToGrid(false);
+        const QList<QPointF> expected{asClicked.first(), QPointF(1.5, 0.5)};
+        QCOMPARE(pRoom->customLines.value(qsl("e")), expected);
+    }
+
+    // A point that was dragged somewhere else while snapping was on has been
+    // put where the user wanted it, so it stays there too.
+    void test_turningSnappingOffLeavesAPointThatWasDraggedWhileItWasOn()
+    {
+        buildMap();
+        QVERIFY(addLineToTheEastRoom());
+        TRoom* pRoom = map()->mpRoomDB->getRoom(kLineRoomId);
+        pRoom->customLines[kLineExit] = {QPointF(1.2, 3.1), QPointF(1.0, 4.0)};
+        showMapper(false);
+        // halfway along the first segment, which the off-grid point tilts
+        clickAt(pointUnitsFromCentre(1.1, 1.55));
+        QCOMPARE(mp2dMap->mCustomLineSelectedRoom, kLineRoomId);
+        mp2dMap->slot_setSnapCustomLinePointsToGrid(true);
+        QCOMPARE(linePoints(), lineAsDrawn());
+
+        dragFromTo(pointUnitsFromCentre(1, 3), pointUnitsFromCentre(2, 3));
+        mp2dMap->slot_setSnapCustomLinePointsToGrid(false);
+
+        const QList<QPointF> expected{QPointF(2.0, 3.0), QPointF(1.0, 4.0)};
+        QCOMPARE(linePoints(), expected);
+    }
+
+    void test_turningSnappingOffRestoresAPointThatHadAnotherAddedInFrontOfIt()
+    {
+        buildMap();
+        QVERIFY(addLineToTheEastRoom());
+        TRoom* pRoom = map()->mpRoomDB->getRoom(kLineRoomId);
+        pRoom->customLines[kLineExit] = {QPointF(1.2, 3.1), QPointF(1.0, 4.0)};
+        showMapper(false);
+        clickAt(pointUnitsFromCentre(1.1, 1.55));
+        QCOMPARE(mp2dMap->mCustomLineSelectedRoom, kLineRoomId);
+        mp2dMap->slot_setSnapCustomLinePointsToGrid(true);
+        QCOMPARE(linePoints(), lineAsDrawn());
+
+        clickAt(pointUnitsFromCentre(1, 3));
+        QCOMPARE(mp2dMap->mCustomLineSelectedPoint, 0);
+        rightClickAt(pointUnitsFromCentre(1, 3));
+        QVERIFY(pickContextMenuItem(qsl("Add point")));
+        mp2dMap->slot_setSnapCustomLinePointsToGrid(false);
+
+        const QList<QPointF> expected{QPointF(1.0, 2.0), QPointF(1.2, 3.1), QPointF(1.0, 4.0)};
+        QCOMPARE(linePoints(), expected);
+    }
+
+    void test_turningSnappingOffRestoresAPointThatHadTheOneBeforeItRemoved()
+    {
+        buildMap();
+        QVERIFY(addLineToTheEastRoom());
+        TRoom* pRoom = map()->mpRoomDB->getRoom(kLineRoomId);
+        pRoom->customLines[kLineExit] = {QPointF(1.2, 3.1), QPointF(1.0, 4.0), QPointF(1.2, 5.1)};
+        showMapper(false);
+        clickAt(pointUnitsFromCentre(1.1, 1.55));
+        QCOMPARE(mp2dMap->mCustomLineSelectedRoom, kLineRoomId);
+        mp2dMap->slot_setSnapCustomLinePointsToGrid(true);
+        const QList<QPointF> snapped{QPointF(1.0, 3.0), QPointF(1.0, 4.0), QPointF(1.0, 5.0)};
+        QCOMPARE(linePoints(), snapped);
+
+        clickAt(pointUnitsFromCentre(1, 3));
+        QCOMPARE(mp2dMap->mCustomLineSelectedPoint, 0);
+        rightClickAt(pointUnitsFromCentre(1, 3));
+        QVERIFY(pickContextMenuItem(qsl("Remove point")));
+        mp2dMap->slot_setSnapCustomLinePointsToGrid(false);
+
+        const QList<QPointF> expected{QPointF(1.0, 4.0), QPointF(1.2, 5.1)};
+        QCOMPARE(linePoints(), expected);
+    }
+
+    void test_unsnappingLeavesAPointAloneAfterTheOneSnappedOntoItWasDraggedAway()
+    {
+        buildMap();
+        QVERIFY(addLineToTheEastRoom());
+        TRoom* pRoom = map()->mpRoomDB->getRoom(kLineRoomId);
+        pRoom->customLines[kLineExit] = {QPointF(1.2, 3.1), QPointF(1.0, 3.0)};
+        showMapper(false);
+        // halfway along the first segment, which the off-grid point tilts
+        clickAt(pointUnitsFromCentre(1.1, 1.55));
+        QCOMPARE(mp2dMap->mCustomLineSelectedRoom, kLineRoomId);
+        mp2dMap->slot_setSnapCustomLinePointsToGrid(true);
+        const QList<QPointF> snapped{QPointF(1.0, 3.0), QPointF(1.0, 3.0)};
+        QCOMPARE(linePoints(), snapped);
+
+        dragFromTo(pointUnitsFromCentre(1, 3), pointUnitsFromCentre(2, 3));
+        QCOMPARE(mp2dMap->mCustomLineSelectedPoint, 0);
+        mp2dMap->slot_setSnapCustomLinePointsToGrid(false);
+
+        const QList<QPointF> expected{QPointF(2.0, 3.0), QPointF(1.0, 3.0)};
+        QCOMPARE(linePoints(), expected);
+    }
+
     void test_clickingOnACustomLineSelectsIt()
     {
         buildMap();
