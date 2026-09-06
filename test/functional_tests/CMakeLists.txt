@@ -148,6 +148,7 @@ set(MAP_GROUP_TEST_SOURCES
     MapFileStatsTest.cpp
     MapLockNoOpTest.cpp
     MapperButtonConfigTest.cpp
+    MapperPanelTest.cpp
     MapProgressDialogSeamTest.cpp
     MapRoomGeometryTest.cpp
     MapRoundTripTest.cpp
