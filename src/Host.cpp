@@ -2058,27 +2058,33 @@ std::shared_ptr<TConsoleModel> Host::sharedMainConsoleModel()
 
 void Host::deselectMainConsole()
 {
-    mpConsole->deselect();
+    mpMainConsoleModel->deselect();
 }
 
 bool Host::selectMainConsoleSection(int from, int length)
 {
-    return mpConsole->selectSection(from, length);
+    return mpMainConsoleModel->selectSection(from, length);
 }
 
+// The colour goes onto the model whether or not a view exists; only the repaint
+// of the lines it landed on needs one.
 void Host::setMainConsoleFgColor(const QColor& color)
 {
-    mpConsole->setFgColor(color);
+    if (mpMainConsoleModel->setSelectionFgColor(color) && mpConsole) {
+        mpConsole->markSelectionDirty();
+    }
 }
 
 void Host::setMainConsoleBgColor(const QColor& color)
 {
-    mpConsole->setBgColor(color);
+    if (mpMainConsoleModel->setSelectionBgColor(color) && mpConsole) {
+        mpConsole->markSelectionDirty();
+    }
 }
 
 void Host::resetMainConsoleFormat()
 {
-    mpConsole->reset();
+    mpMainConsoleModel->resetFormat();
 }
 
 // Hot: the trigger engine reads the model for every character of a colour
