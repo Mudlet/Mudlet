@@ -22,12 +22,15 @@
 
 #include "TEasyButtonBar.h"
 
+#include "EAction.h"
 #include "Host.h"
 #include "TAction.h"
 #include "TConsole.h"
 #include "TFlipButton.h"
 
 #include <QGridLayout>
+#include <QIcon>
+#include <QMenu>
 #include <QScopeGuard>
 
 
@@ -117,6 +120,122 @@ void TEasyButtonBar::addButton(TFlipButton* pB)
     connect(pB, &QAbstractButton::clicked, this, &TEasyButtonBar::slot_pressed);
     mButtonList.push_back(pB);
     pB->setChecked(pB->mpTAction->mButtonState);
+}
+
+
+void TEasyButtonBar::addActionButtons(TAction* pAction)
+{
+    // The -1 is needed to compensate for the initial pre-increment to TEasyButtonBar::mItemCount
+    resetItemCount(pAction->getButtonFillerOffset() - 1);
+    for (auto* pTActionNode : *pAction->mpMyChildrenList) {
+        auto* pTAction = static_cast<TAction*>(pTActionNode);
+        if (!pTAction->isActive()) {
+            continue;
+        }
+        const QIcon icon(pTAction->getIcon());
+        const QString name = pTAction->getName();
+        auto pTFlipButton = new TFlipButton(pTAction, pAction->mpHost);
+        pTFlipButton->setIcon(icon);
+        pTFlipButton->setText(name);
+        pTFlipButton->setCheckable(pTAction->isPushDownButton());
+
+        if (pTAction->isPushDownButton()) {
+            pTFlipButton->setChecked(pTAction->mButtonState);
+        } else {
+            // The following was added to ensure a non-Pushdown button is never
+            // left in a checked state - Slysven
+            pTFlipButton->setChecked(false);
+        }
+
+        pTFlipButton->setFlat(pAction->getButtonFlat());
+        // This applies the CSS for THIS TAction to a CHILD's representation on the Toolbar
+        pTFlipButton->setStyleSheet(pAction->css);
+
+        //FIXME: Heiko April 2012: only run checkbox button scripts, but run them even if unchecked
+        if (pTAction->isPushDownButton() && pAction->mpHost->mIsProfileLoadingSequence) {
+            qDebug() << "expandToolBar() name=" << pTAction->getName() << " executing script";
+            pTAction->execute();
+        }
+
+
+        if (pTAction->isFolder()) {
+            auto pNewMenu = new QMenu(pTFlipButton);
+
+            // This applied the CSS for THIS TAction to a CHILD's own menu - is this right
+            // CHECK: consider using the Child's CSS instead for a menu on it
+            // - Slysven:
+            // pNewMenu->setStyleSheet( pTAction->css );
+            pNewMenu->setStyleSheet(pAction->css);
+
+            fillMenu(pTAction, pNewMenu);
+
+            // This has been moved until AFTER the child's menu has been
+            // populated, it was being done straight after pNewMenu was created,
+            // but I think we ought to insert the items into the menu before
+            // applying the menu to the button - Slysven
+            pTFlipButton->setMenu(pNewMenu);
+        }
+
+        if (pTAction->mpFButton) {
+            pTAction->mpFButton->deleteLater();
+        }
+        pTAction->mpFButton = pTFlipButton;
+
+        // Moved to be AFTER the pTAction->mIsFolder test as I think we ought to
+        // add the button to the toolbar AFTER any menu (children) items have
+        // been put on the button - Slysven
+        addButton(pTFlipButton);
+    }
+}
+
+// This seems to be the second half of TEasyButtonBar version of:
+//   TToolBar::addActionToMenu( TAction *, QMenu * )
+// the need for the split is not yet clear to me! - Slysven
+void TEasyButtonBar::fillMenu(TAction* pAction, QMenu* pMenu)
+{
+    for (auto* pTActionNode : *pAction->mpMyChildrenList) {
+        auto* pTAction = static_cast<TAction*>(pTActionNode);
+        if (!pTAction->isActive()) {
+            continue;
+        }
+        pAction->mpEasyButtonBar = this;
+        auto pEAction = new EAction(pAction->mpHost, QIcon(pAction->getIcon()), pTAction->getName(), pTAction->mID);
+        pEAction->setStatusTip(pTAction->getName());
+        pEAction->setCheckable(pTAction->isPushDownButton());
+        if (pTAction->isPushDownButton()) {
+            pEAction->setChecked(pTAction->mButtonState);
+        } else {
+            pEAction->setChecked(false);
+        }
+
+        if (pTAction->mpEAction) {
+            pTAction->mpEAction->deleteLater();
+        }
+        pTAction->mpEAction = pEAction;
+
+        //FIXME: Heiko April 2012 -> expandToolBar()
+        if (pTAction->isPushDownButton() && pAction->mpHost->mIsProfileLoadingSequence) {
+            pTAction->execute();
+        }
+
+        if (pTAction->isFolder()) {
+            // Adding a QWidget derived pointer to new QMenu() means the menu
+            // will be destroyed when the pointed to item is, we just need to
+            // find the item that it is attached to - ah ha, try the toolbar...
+            auto pNewMenu = new QMenu(this);
+            pEAction->setMenu(pNewMenu);
+
+            // CHECK: consider using the Child's CSS instead for a menu on it
+            // - Slysven:
+            // pNewMenu->setStyleSheet( pTAction->css );
+            pNewMenu->setStyleSheet(pAction->css);
+
+            fillMenu(pTAction, pNewMenu);
+        }
+
+        // Menu is PARENT'S menu pEAction, this line moved to be AFTER child builds its own menu if it is a folder
+        pMenu->addAction(pEAction);
+    }
 }
 
 

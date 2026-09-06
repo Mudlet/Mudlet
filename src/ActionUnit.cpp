@@ -620,7 +620,7 @@ void ActionUnit::constructToolbar(TAction* pAction, TToolBar* pToolBar)
     }
 
     if (pAction->mLocation == 4) {
-        pAction->expandToolbar(pToolBar);
+        pToolBar->addActionButtons(pAction);
         pToolBar->setTitleBarWidget(nullptr);
     }
 
@@ -697,7 +697,7 @@ void ActionUnit::constructToolbar(TAction* pA, TEasyButtonBar* pTB)
         return;
     }
 
-    pA->expandToolbar(pTB);
+    pTB->addActionButtons(pA);
     pTB->finalize();
     if (pA->mOrientation == 0) {
         pTB->setHorizontalOrientation();
