@@ -74,7 +74,7 @@ private:
         QVERIFY2(mCloseAskedFor, "the load never pumped the event loop, so this test asked for nothing");
         QVERIFY2(mWindow, "the main window was deleted underneath the profile load");
         QVERIFY2(mCloseRefused, "the close was accepted in the middle of the profile load");
-        QPointer<Host> host = mWindow->getHostManager().getHost(mProfileName);
+        QPointer<Host> host = HostManager::self()->getHost(mProfileName);
         QVERIFY2(host, "the profile was closed in the middle of its own load");
 
         // The held close happens on its own once the load returns; the window
@@ -128,7 +128,7 @@ private slots:
         mWindow->startAutoLogin({mProfileName, mSecondProfileName}, true);
 
         QVERIFY2(mWindow, "the main window was deleted underneath the profile load");
-        QVERIFY2(mWindow->getHostManager().getHost(mSecondProfileName), "the close cut the auto-login batch short");
+        QVERIFY2(HostManager::self()->getHost(mSecondProfileName), "the close cut the auto-login batch short");
         verifyTheCloseWasHeldAndThenHappened();
     }
 

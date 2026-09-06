@@ -27,6 +27,7 @@
 
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
+#include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "TMainConsole.h"
 #include "TelnetServerStub.h"
@@ -465,7 +466,7 @@ private slots:
         // the warning claimed above is therefore already in by the time this
         // returns.
         QTRY_VERIFY2_WITH_TIMEOUT(mTlsPromptAnswered, "The frontend never put the TLS upgrade question up for the user to answer.", 5000);
-        QVERIFY2(!mudlet::self()->getHostManager().getHost(mHostname), "The profile survived the teardown, so this is not the case being tested.");
+        QVERIFY2(!HostManager::self()->getHost(mHostname), "The profile survived the teardown, so this is not the case being tested.");
 #endif
     }
 
@@ -767,10 +768,10 @@ private:
                 // ~Host() runs here and now rather than being posted - which is
                 // what leaves the frontend's QPointer null when exec() returns.
                 // forceClose() first, or the teardown asks whether to save.
-                if (Host* pHost = mudlet::self()->getHostManager().getHost(mHostname)) {
+                if (Host* pHost = HostManager::self()->getHost(mHostname)) {
                     pHost->forceClose();
                 }
-                mudlet::self()->getHostManager().deleteHost(mHostname);
+                HostManager::self()->deleteHost(mHostname);
             }
             mTlsPromptAnswered = true;
             button->click();

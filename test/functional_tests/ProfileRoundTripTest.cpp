@@ -502,9 +502,9 @@ private slots:
 
         // The import target is a bare Host, matching the state a profile is
         // in when mudlet::loadProfile() imports its XML at startup:
-        auto& hostManager = mudlet::self()->getHostManager();
-        QVERIFY2(hostManager.addHost(mTargetName, mPort, QString(), QString()), "failed to create the target Host");
-        mpTarget = hostManager.getHost(mTargetName);
+        auto* hostManager = HostManager::self();
+        QVERIFY2(hostManager->addHost(mTargetName, mPort, QString(), QString()), "failed to create the target Host");
+        mpTarget = hostManager->getHost(mTargetName);
         QVERIFY(mpTarget);
 
         QFile file(xmlPath);

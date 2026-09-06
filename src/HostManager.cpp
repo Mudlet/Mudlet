@@ -28,6 +28,28 @@
 #include "mudlet.h"
 #include "TMap.h"
 
+#include <QDebug>
+
+HostManager::HostManager()
+{
+    // One instance is the contract, and every self()-> call site takes it on
+    // trust. A second one silently repointing the accessor - and nulling it
+    // again when it went out of scope, while the first was still in use - would
+    // surface as a null deref far from whatever built it.
+    if (smpSelf) {
+        qWarning() << "HostManager::HostManager() WARNING - a HostManager already exists, so self() keeps pointing at that one.";
+        return;
+    }
+    smpSelf = this;
+}
+
+HostManager::~HostManager()
+{
+    if (smpSelf == this) {
+        smpSelf = nullptr;
+    }
+}
+
 void HostManager::deleteHost(const QString& hostname)
 {
     // make sure this is really an existing host
@@ -134,7 +156,7 @@ void HostManager::changeAllHostColour(const Host* pHost)
         return;
     }
     //change all main and subconsoles color
-    for (const QSharedPointer<Host> &host : mHostPool.values()) {
+    for (const QSharedPointer<Host>& host : mHostPool.values()) {
         host->mpConsole->changeColors();
         // Mapper also needs a refresh of its colours
         auto mapper = host->mpMap->mpMapper;

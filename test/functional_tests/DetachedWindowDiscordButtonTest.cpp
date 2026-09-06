@@ -41,6 +41,7 @@
 
 #include "ProfileTestHelper.h"
 #include "Host.h"
+#include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "TDetachedWindow.h"
 #include "TLuaInterpreter.h"
@@ -144,7 +145,7 @@ private slots:
     // place before the detach builds that window's toolbar
     void init()
     {
-        Host* pHost = mudlet::self()->getHostManager().getHost(mSecondHostname);
+        Host* pHost = HostManager::self()->getHost(mSecondHostname);
         QVERIFY(pHost);
         pHost->setDiscordGameName(mGameName);
         pHost->setDiscordInviteURL(mInviteUrl);
@@ -182,7 +183,7 @@ private slots:
         QToolButton* pButton = discordButton();
         QVERIFY(pButton);
 
-        Host* pHost = mudlet::self()->getHostManager().getHost(mSecondHostname);
+        Host* pHost = HostManager::self()->getHost(mSecondHostname);
         QVERIFY(pHost);
         pHost->setDiscordInviteURL(QString());
         mudlet::self()->updateDiscordNamedIcon();
@@ -214,7 +215,7 @@ private slots:
         QToolButton* pButton = discordButton();
         QVERIFY(pButton);
 
-        Host* pHost = mudlet::self()->getHostManager().getHost(mSecondHostname);
+        Host* pHost = HostManager::self()->getHost(mSecondHostname);
         QVERIFY(pHost);
         pHost->processDiscordGMCP(qsl("External.Discord.Status"), qsl(R"({"game":"Avalon"})"));
 
@@ -228,7 +229,7 @@ private slots:
         QToolButton* pButton = discordButton();
         QVERIFY(pButton);
 
-        Host* pHost = mudlet::self()->getHostManager().getHost(mSecondHostname);
+        Host* pHost = HostManager::self()->getHost(mSecondHostname);
         QVERIFY(pHost);
 
         QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("setDiscordGameUrl('https://discord.gg/lusternia', 'Lusternia')")));
