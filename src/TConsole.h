@@ -151,6 +151,8 @@ class QVideoWidget;
 
 class dlgMapper;
 class Host;
+class TAction;
+class TEasyButtonBar;
 class TTextEdit;
 class TCommandLine;
 class TDockWidget;
@@ -320,6 +322,9 @@ public:
     void selectCurrentLine();
     // Returns the size of the main buffer area (excluding the command line and toolbars).
     QSize getMainWindowSize() const;
+    TEasyButtonBar* createTopEasyButtonBar(TAction* pAction, const QString& name);
+    void addEasyButtonBar(int location, TEasyButtonBar* pBar);
+    void removeEasyButtonBar(int location, TEasyButtonBar* pBar);
     ConsoleType getType() const { return mType; }
     virtual void setProfileName(const QString&);
     // In the next function the first element in the return is an
@@ -490,6 +495,7 @@ private slots:
     void hideSearchBar();
 
 private:
+    QWidget* toolBarForLocation(int location) const;
     void createFindBar();
     void positionFindBar();
     void createSearchOptionIcon();
