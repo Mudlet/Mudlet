@@ -43,6 +43,10 @@
 #include "TEvent.h"
 #include "TFeatureCallout.h"
 #include "TMap.h"
+#ifdef INCLUDE_MCPSERVER
+#include "TMCPBridge.h"
+#include "TMCPServer.h"
+#endif
 #include "TMedia.h"
 #include "TGameDetails.h"
 #include "TRoomDB.h"
@@ -103,6 +107,7 @@
 
 #include <chrono>
 #include <cmath>
+#include <limits>
 #include <memory>
 #include <zip.h>
 #include <QStyle>
@@ -4130,6 +4135,30 @@ void mudlet::readLateSettings(const QSettings& settings)
     slot_muteAPI(settings.contains(qsl("enableMuteAPI")) ? settings.value(qsl("enableMuteAPI"), QVariant(false)).toBool() : false);
     slot_muteGame(settings.contains(qsl("enableMuteGame")) ? settings.value(qsl("enableMuteGame"), QVariant(false)).toBool() : false);
 
+#ifdef INCLUDE_MCPSERVER
+    const int savedMcpPort = settings.value(qsl("mcpServerPort"), QVariant(mMCPServerPort)).toInt();
+    if (savedMcpPort > 0 && savedMcpPort <= std::numeric_limits<quint16>::max()) {
+        mMCPServerPort = static_cast<quint16>(savedMcpPort);
+    } else {
+        qWarning() << "mudlet::readLateSettings(...) WARNING - ignoring unusable saved MCP port" << savedMcpPort << "- keeping" << mMCPServerPort;
+    }
+    if (settings.value(qsl("mcpServerEnabled"), QVariant(false)).toBool()) {
+        QString mcpError;
+        if (!setMCPEnabled(true, mMCPServerPort, mcpError)) {
+            // No console exists yet to tell the user on, and refusing to start Mudlet over
+            // this would be worse than starting without the server. The preferences dialog
+            // shows the state, and a retry from there does report the reason.
+            qWarning() << "mudlet::readLateSettings(...) WARNING - the MCP server could not start:" << mcpError;
+        }
+    } else {
+        // A crash can leave last session's discovery file behind, pointing the bridge
+        // at a port something else may hold by now - but another running Mudlet may be
+        // serving on it right now, so only a file nobody answers for goes.
+        TMCPBridge::removeDiscoveryFileIfStale(confPath);
+    }
+    TMCPBridge::refreshClaudeDesktopEntry();
+    TMCPBridge::refreshCodexEntry();
+#endif
     if (settings.contains(qsl("debugConsole/categories"))) {
         // Only categories Mudlet still knows about, so that a category retired
         // in a later version cannot leave a stale bit set:
@@ -4284,6 +4313,101 @@ bool mudlet::isControlsVisible() const
     return mpMainToolBar->isVisible() || menuBar()->isVisible();
 }
 
+#ifdef INCLUDE_MCPSERVER
+QString mudlet::mcpEndpoint() const
+{
+    return mpMCPServer ? mpMCPServer->getEndpoint() : QString();
+}
+
+bool mudlet::setMCPEnabled(const bool enabled, const quint16 port, QString& error)
+{
+    const bool started = startMCPServer(enabled, port, error);
+
+    // However that turned out, the discovery file has to end up matching reality: it is
+    // how `mudlet --mcp-bridge` finds (or learns not to look for) the server.
+    if (mpMCPServer && mpMCPServer->running()) {
+        if (!TMCPBridge::writeDiscoveryFile(confPath, mpMCPServer->getPort(), mpMCPServer->authToken())) {
+            // The server answers, so nothing above went wrong - but an assistant launched
+            // through the bridge still cannot find it, and only this says so.
+            //: Shown beneath the AI assistant settings when the MCP server is listening but the file the bridge finds it through could not be written. %1 is a file path.
+            error = tr("Mudlet is listening, but could not write %1, so an assistant started through Mudlet will not find it.\n\nCheck that folder's permissions.")
+                            .arg(TMCPBridge::discoveryFilePath(confPath));
+            mMCPLastError = error;
+            return false;
+        }
+    } else {
+        // Some other Mudlet instance may own the file - this one failing to bind the
+        // port (or shutting down beside it) must not cut that instance off.
+        TMCPBridge::removeDiscoveryFileIfStale(confPath);
+    }
+    return started;
+}
+
+bool mudlet::startMCPServer(const bool enabled, const quint16 port, QString& error)
+{
+    mEnableMCP = enabled;
+    mMCPServerPort = port;
+
+    if (!enabled) {
+        if (mpMCPServer) {
+            mpMCPServer->stopServer();
+        }
+        mMCPLastError.clear();
+        return true;
+    }
+
+    if (!mpMCPServer) {
+        // Created on first use rather than in the constructor: most people never turn this
+        // on, and until they do there is no reason to carry the MCP machinery around.
+        mpMCPServer.reset(new TMCPServer());
+    }
+
+    if (mpMCPServer->running() && mpMCPServer->getPort() == port) {
+        mMCPLastError.clear();
+        return true;
+    }
+
+    // A listening socket cannot be moved to another port, so a port change means a bounce.
+    const quint16 previousPort = mpMCPServer->getPort();
+    const bool wasRunning = mpMCPServer->running();
+    mpMCPServer->stopServer();
+
+    const MCPStartResult start = mpMCPServer->startServer(port);
+    if (!start.started) {
+        // mEnableMCP deliberately stays set. The user asked for this, and clearing it would
+        // be written straight back out by writeSettings(), losing the setting for good over
+        // what is usually another program holding the port for the moment.
+        //
+        // Go back to the port that was working rather than leave the user with nothing: a
+        // typo in the port box would otherwise take down a server that was serving fine,
+        // and mMCPServerPort would persist the port that does not work.
+        const MCPStartResult fallback = wasRunning ? mpMCPServer->startServer(previousPort) : MCPStartResult{};
+        if (fallback.started) {
+            mMCPServerPort = previousPort;
+            //: Shown beneath the AI assistant settings when the MCP server could not move to a new port and went back to the one it was serving on. %1 is the TCP port number that could not be opened, %2 the reason, %3 the port Mudlet carried on serving on instead.
+            error = tr("Mudlet could not listen on port %1: %2\n\nAnother program may already be using that port, so Mudlet is still serving on port %3.")
+                            .arg(QString::number(port), start.error, QString::number(previousPort));
+        } else if (wasRunning) {
+            // Both ports are gone, so the user now has no server at all rather than the
+            // one they started with. Saying so matters: naming only the port they typed
+            // would read as though the server they already had were still serving.
+            //: Shown beneath the AI assistant settings when the MCP server could not open a new port and could not take back the one it was serving on either. %1 is the TCP port number that could not be opened, %2 the reason, %3 the port it had been serving on, %4 the reason that one could not be taken back.
+            error = tr("Mudlet could not listen on port %1: %2\n\nIt could not go back to port %3 either, so it is no longer serving: %4")
+                            .arg(QString::number(port), start.error, QString::number(previousPort), fallback.error);
+        } else {
+            //: Shown beneath the AI assistant settings when the MCP server could not open its port and nothing is serving. %1 is a TCP port number, %2 the reason the socket could not be opened.
+            error = tr("Mudlet could not listen on port %1: %2\n\nAnother program may already be using that port - try a different one.").arg(QString::number(port), start.error);
+        }
+        // A successful fallback leaves the server up, and a reason nothing is serving
+        // would be untrue of it - but the caller still has a message worth showing.
+        mMCPLastError = mpMCPServer->running() ? QString() : error;
+        return false;
+    }
+    mMCPLastError.clear();
+    return true;
+}
+#endif
+
 void mudlet::writeSettings()
 {
     QSettings& settings = *getQSettings();
@@ -4319,6 +4443,10 @@ void mudlet::writeSettings()
     settings.setValue(qsl("enableMuteAPI"), mMuteAPI);
     settings.setValue(qsl("enableMuteGame"), mMuteGame);
     settings.setValue(qsl("drawUpperLowerLevels"), mDrawUpperLowerLevels);
+#ifdef INCLUDE_MCPSERVER
+    settings.setValue(qsl("mcpServerEnabled"), mEnableMCP);
+    settings.setValue(qsl("mcpServerPort"), mMCPServerPort);
+#endif
     settings.setValue(qsl("debugConsole/categories"), TDebug::enabledCategories().toInt());
 #if !defined(Q_OS_MACOS)
     if (!settings.contains(qsl("highDpiScaleFactorRoundingPolicy"))) {
@@ -6354,6 +6482,15 @@ void mudlet::slot_compactInputLine(const bool state)
 
 mudlet::~mudlet()
 {
+#ifdef INCLUDE_MCPSERVER
+    // Stop taking requests before the rest of the teardown runs. ~TMCPServer does this too,
+    // but only once this destructor body has finished.
+    if (mpMCPServer) {
+        mpMCPServer->stopServer();
+        // Stale-only, as a second Mudlet instance may be the one the file describes.
+        TMCPBridge::removeDiscoveryFileIfStale(confPath);
+    }
+#endif
     if (mpHunspell_sharedDictionary) {
         saveDictionary(getMudletPath(enums::mainDataItemPath, qsl("mudlet")), mWordSet_shared);
         Hunspell_destroy(mpHunspell_sharedDictionary);

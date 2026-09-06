@@ -51,6 +51,13 @@
 #include "widgetutils.h"
 #include "utils.h"
 
+#ifdef INCLUDE_MCPSERVER
+#include "TMCPBridge.h"
+#include "TMCPServer.h"
+#include <QClipboard>
+#include <QGuiApplication>
+#endif
+
 #include <chrono>
 #include <vector>
 #include <QtConcurrentRun>
@@ -221,6 +228,21 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     connect(radioButton_discordGameDetails, &QRadioButton::toggled, this, updateDiscordPrivacyControls);
     connect(radioButton_discordMudletOnly, &QRadioButton::toggled, this, updateDiscordPrivacyControls);
     connect(radioButton_discordDisabled, &QRadioButton::toggled, this, updateDiscordPrivacyControls);
+
+#ifdef INCLUDE_MCPSERVER
+    connect(checkBox_enableMCPServer, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_updateMCPServerEndpoint);
+    connect(spinBox_mcpServerPort, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_updateMCPServerEndpoint);
+    connect(pushButton_connectClaudeDesktop, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_connectClaudeDesktop);
+    connect(pushButton_connectChatGpt, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_connectChatGpt);
+    connect(pushButton_copyMCPServerAddress, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_copyMCPServerAddress);
+    connect(pushButton_mcpConnectManually, &QAbstractButton::toggled, widget_mcpManualConnect, &QWidget::setVisible);
+    connect(pushButton_mcpAdvanced, &QAbstractButton::toggled, this, [this](const bool revealed) {
+        widget_mcpAdvanced->setVisible(revealed);
+        pushButton_mcpAdvanced->setArrowType(revealed ? Qt::DownArrow : Qt::RightArrow);
+    });
+#else
+    groupBox_mcpServer->hide();
+#endif
 
     // As we demonstrate the options that these next two checkboxes control in
     // the editor "preview" widget (on another tab) we will need to track
@@ -793,7 +815,15 @@ void dlgProfilePreferences::buildShell()
     auto* pCard_systemIntegration = createCard(qsl("card_systemIntegration"));
     moveIntoCard(pCard_systemIntegration, {telnetHandlerEnabled, checkBox_showIconsOnMenus});
     buildMigrationBanner();
-    buildCategoryPage(scmCategory_general, {groupBox_miscellaneous, groupBox_encoding, groupBox_logOptions, groupbox_searchEngineSelection, groupBox_updates, pCard_systemIntegration});
+    QList<QWidget*> generalCards{groupBox_miscellaneous, groupBox_encoding, groupBox_logOptions, groupbox_searchEngineSelection, groupBox_updates, pCard_systemIntegration};
+#ifdef INCLUDE_MCPSERVER
+    buildMcpSummaryCard();
+    generalCards.insert(generalCards.indexOf(pCard_systemIntegration), mpCard_mcpAssistant);
+#endif
+    buildCategoryPage(scmCategory_general, generalCards);
+#ifdef INCLUDE_MCPSERVER
+    addSubpage(scmCategory_general, qsl("mcp"), mpCard_mcpAssistant, {groupBox_mcpServer});
+#endif
 
     auto* pCard_theme = createCard(qsl("card_theme"));
     addCardRow(pCard_theme, label_appearance, comboBox_appearance);
@@ -1139,6 +1169,10 @@ void dlgProfilePreferences::retranslateShell()
     cardTitles.append({qsl("card_accessibilityText"), tr("Text and media")});
     //: Card title on the Accessibility settings page, above the options for moving around Mudlet from the keyboard
     cardTitles.append({qsl("card_accessibilityKeyboard"), tr("Keyboard")});
+#ifdef INCLUDE_MCPSERVER
+    //: Card title on the General settings page, above the row leading to the AI assistant settings. MCP is the name of the Model Context Protocol standard, leave it as-is.
+    cardTitles.append({qsl("card_mcpAssistant"), tr("AI assistant access (MCP)")});
+#endif
     for (const auto& [objectName, title] : cardTitles) {
         if (auto* pCard = findChild<QGroupBox*>(objectName); pCard) {
             pCard->setTitle(title);
@@ -1149,6 +1183,10 @@ void dlgProfilePreferences::retranslateShell()
     mSubpageTitles.insert(qsl("connection/protocols"), tr("Game protocols"));
     //: Breadcrumb name of the subpage holding the Discord Rich Presence settings, reached from the Chat and sharing settings page
     mSubpageTitles.insert(qsl("chat/discord"), tr("Discord Rich Presence"));
+#ifdef INCLUDE_MCPSERVER
+    //: Breadcrumb name of the subpage holding the AI assistant settings, reached from the General settings page. MCP is the name of the Model Context Protocol standard, leave it as-is.
+    mSubpageTitles.insert(qsl("general/mcp"), tr("AI assistant access (MCP)"));
+#endif
 
     QList<std::tuple<QCheckBox*, QString, QString>> protocols;
     //: A telnet protocol on the game protocols subpage: its name, then one line of what it does for the player
@@ -1192,6 +1230,9 @@ void dlgProfilePreferences::retranslateShell()
             tr("NEW-ENVIRON uses the same telnet option as MNES, so only one can be active. NEW-ENVIRON sends extended variables including OSC link support, while MNES sends a minimal set."));
     updateProtocolSummary();
     updateDiscordSummary();
+#ifdef INCLUDE_MCPSERVER
+    updateMcpSummary();
+#endif
     updateSecurityStatus();
     setCardDescriptions();
 
@@ -1286,6 +1327,10 @@ void dlgProfilePreferences::setSearchKeywords()
     synonyms.append({groupBox_font, tr("font, typeface, size, monospace, antialiasing")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for how long Mudlet waits for the game to answer.
     synonyms.append({label_networkPacketTimeout, tr("timeout, lag, latency, slow connection")});
+#ifdef INCLUDE_MCPSERVER
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for letting an AI assistant control Mudlet. Claude, ChatGPT and Codex are product names, leave them as-is.
+    synonyms.append({groupBox_mcpServer, tr("AI, assistant, MCP, Claude, ChatGPT, Codex, LLM, chatbot")});
+#endif
     for (const auto& [pControl, words] : synonyms) {
         pControl->setProperty(scmProp_searchKeywords, words);
     }
@@ -1590,6 +1635,12 @@ void dlgProfilePreferences::setCardDescriptions()
     setCardDescription(findChild<QGroupBox*>(qsl("card_systemIntegration")), tr("How Mudlet fits in with the rest of your desktop."));
     //: Description line under the "Web search" card title on the General settings page
     setCardDescription(groupbox_searchEngineSelection, tr("The site Mudlet opens when you pick \"search on the web\" after selecting some text in the game."));
+#ifdef INCLUDE_MCPSERVER
+    //: Description line under the "AI assistant access (MCP)" card title on the General settings page, and again at the top of the subpage it leads to
+    const QString mcpDescription = tr("Lets an AI assistant run Lua inside Mudlet for you. Lua can reach the rest of this computer, so only connect an assistant you trust.");
+    setCardDescription(mpCard_mcpAssistant, mcpDescription);
+    setCardDescription(groupBox_mcpServer, mcpDescription);
+#endif
     //: Description line under the "Scrollback" card title on the Main display settings page
     setCardDescription(groupBox_consoleBuffer, tr("How much of what the game has already sent stays available to scroll back through."));
     //: Description line under the "Scripting" card title on the Editor settings page
@@ -1761,6 +1812,51 @@ void dlgProfilePreferences::updateDiscordSummary()
     mpButton_discordSubpage->setText(state);
 }
 
+#ifdef INCLUDE_MCPSERVER
+void dlgProfilePreferences::buildMcpSummaryCard()
+{
+    mpCard_mcpAssistant = createCard(qsl("card_mcpAssistant"));
+    mpButton_mcpSubpage = new QPushButton(mpCard_mcpAssistant);
+    mpButton_mcpSubpage->setObjectName(qsl("pushButton_mcpSettings"));
+    // The words on the row are a status, so the things a user would look for by
+    // name are only on the page it leads to
+    mpButton_mcpSubpage->setProperty(scmProp_searchKeywords, qsl("MCP AI assistant Claude ChatGPT Codex Lua port token"));
+    makeChevronRow(mpButton_mcpSubpage);
+    qobject_cast<QVBoxLayout*>(mpCard_mcpAssistant->layout())->addWidget(mpButton_mcpSubpage);
+    connect(mpButton_mcpSubpage, &QAbstractButton::clicked, this, [this]() {
+        showSubpage(scmCategory_general, qsl("mcp"));
+    });
+}
+
+// The same four states as the status line on the subpage, said in one line: the
+// checkbox rather than mcpEnabled(), so the row moves with the tick rather than
+// with the apply that follows it 400ms later
+void dlgProfilePreferences::updateMcpSummary()
+{
+    if (!mpButton_mcpSubpage) {
+        return;
+    }
+    mudlet* pMudlet = mudlet::self();
+    if (!checkBox_enableMCPServer->isChecked()) {
+        //: Summary on the General page's AI assistant card, on the row that opens the assistant settings
+        mpButton_mcpSubpage->setText(tr("Off - no assistant can reach Mudlet"));
+        return;
+    }
+    if (!pMudlet->mcpEndpoint().isEmpty()) {
+        //: Summary on the General page's AI assistant card while the server is running. %1 is a TCP port number.
+        mpButton_mcpSubpage->setText(tr("On - listening on port %1").arg(pMudlet->mcpServerPort()));
+        return;
+    }
+    if (!pMudlet->mcpLastError().isEmpty()) {
+        //: Summary on the General page's AI assistant card when the server was switched on but could not start
+        mpButton_mcpSubpage->setText(tr("On, but not running - open to see why"));
+        return;
+    }
+    //: Summary on the General page's AI assistant card in the moment between the server being switched on and it answering
+    mpButton_mcpSubpage->setText(tr("Starting..."));
+}
+#endif
+
 void dlgProfilePreferences::buildSecurityStatusCard()
 {
     mpCard_securityStatus = createCard(qsl("card_securityStatus"));
@@ -1865,6 +1961,11 @@ void dlgProfilePreferences::retitleCards()
     groupBox_debug->setTitle(tr("Developer"));
     //: Card title on the Accessibility settings page, above the two options about what the system screen reader is told
     groupBox_accessibility->setTitle(tr("Screen reader"));
+#ifdef INCLUDE_MCPSERVER
+    // The only card on its subpage, whose breadcrumb already names it
+    groupBox_mcpServer->setTitle(QString());
+    groupBox_mcpServer->setProperty("settingsCardPlain", true);
+#endif
 }
 
 // A grid cell takes one widget, so a card is emptied before it is refilled
@@ -2773,6 +2874,13 @@ void dlgProfilePreferences::highlightMatches(QWidget* pCard, const QStringList& 
         }
         setSearchMatch(pWidget, true);
         mHighlightedWidgets.append(pWidget);
+#ifdef INCLUDE_MCPSERVER
+        // The MCP port is the one setting this dialog folds out of sight, and a
+        // search result nobody can see answers nothing
+        if (pWidget == label_mcpServerPort) {
+            pushButton_mcpAdvanced->setChecked(true);
+        }
+#endif
     }
 }
 
@@ -3840,6 +3948,21 @@ void dlgProfilePreferences::populateApplicationSettings()
         const QVariant storedOption = settings.value("autoSendCrashReports", QVariant());
         comboBox_crashReportPolicy->setCurrentIndex(storedOption.isValid() ? storedOption.toInt() - 1 : 2);
     }
+#ifdef INCLUDE_MCPSERVER
+    {
+        const QSignalBlocker enableBlocker(checkBox_enableMCPServer);
+        checkBox_enableMCPServer->setChecked(pMudlet->mcpEnabled());
+        const QSignalBlocker portBlocker(spinBox_mcpServerPort);
+        spinBox_mcpServerPort->setValue(pMudlet->mcpServerPort());
+    }
+    if (label_mcpConnectResult->text().isEmpty()) {
+        // A start refused at launch has no dialog open to report to, so the reason waits
+        // here for the first one. Anything already written is a fresher answer than this.
+        mMCPReportedError = pMudlet->mcpLastError();
+        label_mcpConnectResult->setText(mMCPReportedError);
+    }
+    slot_updateMCPServerEndpoint();
+#endif
 }
 
 void dlgProfilePreferences::initWithHost(Host* pHost)
@@ -6918,6 +7041,29 @@ void dlgProfilePreferences::applyAll()
         pMudlet->setToolBarVisibility(visibilityFromComboIndex(comboBox_toolBarVisibility->currentIndex()));
     }
 
+#ifdef INCLUDE_MCPSERVER
+    if (mSnapshot.anyDirty({checkBox_enableMCPServer, spinBox_mcpServerPort})) {
+        QString mcpError;
+        const auto requestedMcpPort = static_cast<quint16>(spinBox_mcpServerPort->value());
+        if (pMudlet->setMCPEnabled(checkBox_enableMCPServer->isChecked(), requestedMcpPort, mcpError)) {
+            if (!mMCPReportedError.isEmpty() && label_mcpConnectResult->text() == mMCPReportedError) {
+                // Only a reason of our own that is now out of date is ours to take back. The
+                // connect buttons write here too, and their message outlives the tick that
+                // their own text asks the user for.
+                label_mcpConnectResult->clear();
+            }
+            mMCPReportedError.clear();
+        } else {
+            mMCPReportedError = mcpError;
+            label_mcpConnectResult->setText(mcpError);
+        }
+        // refreshFromSettings() is the usual way back to the widgets, but it stands down
+        // while the search is open or the port box is still being typed into - both of
+        // which are exactly when this runs.
+        slot_updateMCPServerEndpoint();
+    }
+#endif
+
     if (mSnapshot.anyDirty({checkBox_showSpacesAndTabs, checkBox_showLineFeedsAndParagraphs})) {
         const QTextOption::Flags liveOptions = pMudlet->mEditorTextOptions;
         pMudlet->setEditorTextoptions(mSnapshot.dirty(checkBox_showSpacesAndTabs) ? checkBox_showSpacesAndTabs->isChecked() : liveOptions.testFlag(QTextOption::ShowTabsAndSpaces),
@@ -8087,6 +8233,159 @@ void dlgProfilePreferences::slot_changeShowMapAuditErrors(const bool state)
         checkBox_reportMapIssuesOnScreen->setChecked(state);
     }
 }
+
+#ifdef INCLUDE_MCPSERVER
+QString dlgProfilePreferences::mcpServerNotReadyHint() const
+{
+    if (!checkBox_enableMCPServer->isChecked()) {
+        //: Appended to either connect button's success message when the server checkbox above it is not on yet.
+        return tr("Also tick the checkbox above, or it will find nobody to talk to.");
+    }
+    if (mudlet::self()->mcpEndpoint().isEmpty()) {
+        //: Appended to either connect button's success message when the server is switched on but could not start. "Advanced" is the label of the button that reveals the port.
+        return tr("Mudlet is not serving yet though, so check the port under Advanced.");
+    }
+    return {};
+}
+
+void dlgProfilePreferences::slot_updateMCPServerEndpoint()
+{
+    updateMcpSummary();
+    mudlet* pMudlet = mudlet::self();
+    const quint16 port = static_cast<quint16>(spinBox_mcpServerPort->value());
+    // The address carries the access token, which only exists once the server is up, so it
+    // is shown verbatim rather than rebuilt from the port box.
+    const QString liveEndpoint = pMudlet->mcpEndpoint();
+
+    lineEdit_mcpServerAddress->setText(liveEndpoint);
+    pushButton_copyMCPServerAddress->setEnabled(!liveEndpoint.isEmpty());
+    pushButton_mcpConnectManually->setEnabled(!liveEndpoint.isEmpty());
+    if (liveEndpoint.isEmpty()) {
+        const QSignalBlocker blocker(pushButton_mcpConnectManually);
+        pushButton_mcpConnectManually->setChecked(false);
+        widget_mcpManualConnect->hide();
+    }
+
+    if (!liveEndpoint.isEmpty()) {
+        // The port it answers on, not the one in the box: a failed move leaves the two
+        // disagreeing, and the box is the request while this line is the outcome.
+        //: Shown beneath the AI assistant settings while the MCP server is running. %1 is a TCP port number.
+        label_mcpServerEndpoint->setText(tr("Listening on port %1.").arg(pMudlet->mcpServerPort()));
+        return;
+    }
+
+    if (!checkBox_enableMCPServer->isChecked()) {
+        //: Shown beneath the AI assistant settings while the MCP server is switched off.
+        label_mcpServerEndpoint->setText(tr("The server is off, so nothing can reach Mudlet."));
+        return;
+    }
+
+    if (!pMudlet->mcpLastError().isEmpty()) {
+        // Every reason the server can refuse to start is answered by the port box, so fold
+        // it out - the message telling the user to change it would otherwise point at
+        // something they cannot see. Never folded back in: that is theirs to close.
+        pushButton_mcpAdvanced->setChecked(true);
+        // The reason is on the result line below the buttons, which this must not contradict
+        //: Shown beneath the AI assistant settings when the MCP server could not open its port. The reason appears below the buttons.
+        label_mcpServerEndpoint->setText(tr("The server is not running."));
+        return;
+    }
+
+    // The moment between the box being ticked and the change being applied
+    //: Shown beneath the AI assistant settings in the moment between the server being switched on and it answering. %1 is a TCP port number.
+    label_mcpServerEndpoint->setText(tr("Starting on port %1...").arg(port));
+}
+
+void dlgProfilePreferences::slot_connectClaudeDesktop()
+{
+    switch (TMCPBridge::connectClaudeDesktop()) {
+    case TMCPBridge::ConnectOutcome::Written: {
+        //: Shown beneath the AI assistant settings after Mudlet was added to the Claude Desktop application's settings. Claude Desktop is a product name, leave it as-is.
+        QString message = tr("Done - restart Claude Desktop and Mudlet will appear among its connectors.");
+        const QString hint = mcpServerNotReadyHint();
+        if (!hint.isEmpty()) {
+            message.append(QChar::Space);
+            message.append(hint);
+        }
+        label_mcpConnectResult->setText(message);
+        break;
+    }
+    case TMCPBridge::ConnectOutcome::NoClientApp: {
+        const QString dir = TMCPBridge::claudeDesktopConfigDir();
+        if (dir.isEmpty()) {
+            //: Shown beneath the AI assistant settings when the location Claude Desktop keeps its settings in could not be worked out at all. Claude Desktop is a product name, leave it as-is.
+            label_mcpConnectResult->setText(tr("Could not work out where Claude Desktop keeps its settings on this system."));
+            break;
+        }
+        //: Shown beneath the AI assistant settings when the Claude Desktop application's settings folder does not exist. %1 is the folder Mudlet looked for, claude.com/download is a URL - leave it as-is.
+        label_mcpConnectResult->setText(tr("Claude Desktop does not look installed - there is no %1. Install it from claude.com/download and open it once, then try again.").arg(dir));
+        break;
+    }
+    case TMCPBridge::ConnectOutcome::NoBinaryPath:
+        //: Shown beneath the AI assistant settings when Mudlet could not work out its own location on disk. Claude Desktop is a product name, leave it as-is.
+        label_mcpConnectResult->setText(tr("Could not work out where this Mudlet is installed, so Claude Desktop was not told how to launch it."));
+        break;
+    case TMCPBridge::ConnectOutcome::ConfigUnreadable:
+        //: Shown beneath the AI assistant settings when the Claude Desktop application's settings file could not be read or understood. %1 is the file's location.
+        label_mcpConnectResult->setText(tr("Claude Desktop's settings file could not be read or understood, so it was left untouched. Check %1 for problems - a stray comma is enough - and try again.")
+                                                .arg(TMCPBridge::claudeDesktopConfigFilePath()));
+        break;
+    case TMCPBridge::ConnectOutcome::WriteFailed:
+        //: Shown beneath the AI assistant settings when an AI app's settings file could not be written. %1 is the file's location.
+        label_mcpConnectResult->setText(tr("Could not write to %1 - check its file permissions.").arg(TMCPBridge::claudeDesktopConfigFilePath()));
+        break;
+    }
+}
+
+void dlgProfilePreferences::slot_connectChatGpt()
+{
+    switch (TMCPBridge::connectCodex()) {
+    case TMCPBridge::ConnectOutcome::Written: {
+        //: Shown beneath the AI assistant settings after Mudlet was added to the settings shared by the ChatGPT desktop app and Codex. ChatGPT and Codex are product names, leave them as-is.
+        QString message = tr("Done - restart ChatGPT (or Codex) and Mudlet will appear among its connectors.");
+        const QString hint = mcpServerNotReadyHint();
+        if (!hint.isEmpty()) {
+            message.append(QChar::Space);
+            message.append(hint);
+        }
+        label_mcpConnectResult->setText(message);
+        break;
+    }
+    case TMCPBridge::ConnectOutcome::NoClientApp:
+        //: Shown beneath the AI assistant settings when the folder the ChatGPT desktop app and Codex keep their settings in does not exist. %1 is the folder Mudlet looked for, ChatGPT and Codex are product names - leave them as-is.
+        label_mcpConnectResult->setText(
+                tr("ChatGPT does not look installed - there is no %1. Install the ChatGPT desktop app or Codex and use it once, then try again.").arg(TMCPBridge::codexConfigDir()));
+        break;
+    case TMCPBridge::ConnectOutcome::NoBinaryPath:
+        //: Shown beneath the AI assistant settings when Mudlet could not work out its own location on disk. ChatGPT is a product name, leave it as-is.
+        label_mcpConnectResult->setText(tr("Could not work out where this Mudlet is installed, so ChatGPT was not told how to launch it."));
+        break;
+    case TMCPBridge::ConnectOutcome::ConfigUnreadable:
+        //: Shown beneath the AI assistant settings when the settings file shared by the ChatGPT desktop app and Codex could not be read or understood. %1 is the file's location.
+        label_mcpConnectResult->setText(
+                tr("ChatGPT's settings file could not be read or understood, so it was left untouched. Check %1 for problems and try again.").arg(TMCPBridge::codexConfigFilePath()));
+        break;
+    case TMCPBridge::ConnectOutcome::WriteFailed:
+        //: Shown beneath the AI assistant settings when an AI app's settings file could not be written. %1 is the file's location.
+        label_mcpConnectResult->setText(tr("Could not write to %1 - check its file permissions.").arg(TMCPBridge::codexConfigFilePath()));
+        break;
+    }
+}
+
+void dlgProfilePreferences::slot_copyMCPServerAddress()
+{
+    const QString endpoint = mudlet::self()->mcpEndpoint();
+    if (endpoint.isEmpty()) {
+        // The button disables itself while the server is down, but a stop can race the click.
+        //: Shown beneath the AI assistant settings when the Copy address button is pressed while the server is not running.
+        label_mcpConnectResult->setText(tr("There is no address to copy while the server is off."));
+        return;
+    }
+    QGuiApplication::clipboard()->setText(endpoint);
+    //: Shown beneath the AI assistant settings after the Copy address button is pressed.
+    label_mcpConnectResult->setText(tr("Address copied - paste it into your AI assistant."));
+}
+#endif
 
 // We do not use the QSpinBox::valueChanged() signal and it is only emitted if
 // the new value is different - so there is no need to worry about if we are or
