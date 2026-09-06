@@ -105,7 +105,16 @@ private:
     {
         runLua(qsl("setBackgroundColor(%1, %2, %3)").arg(background.red()).arg(background.green()).arg(background.blue()));
         QScrollBar* pScrollBar = mpHost->mpConsole->mpScrollBar;
+        const QRect handle = handleRect(pScrollBar);
+        if (handle.isEmpty()) {
+            return 1.0;
+        }
 
+        return contrastRatio(renderScrollBarOn(background).pixelColor(handle.center()), background);
+    }
+
+    static QRect handleRect(QScrollBar* pScrollBar)
+    {
         QStyleOptionSlider option;
         option.initFrom(pScrollBar);
         option.orientation = pScrollBar->orientation();
@@ -115,12 +124,7 @@ private:
         option.singleStep = pScrollBar->singleStep();
         option.sliderPosition = pScrollBar->sliderPosition();
         option.sliderValue = pScrollBar->value();
-        const QRect handle = pScrollBar->style()->subControlRect(QStyle::CC_ScrollBar, &option, QStyle::SC_ScrollBarSlider, pScrollBar);
-        if (handle.isEmpty()) {
-            return 1.0;
-        }
-
-        return contrastRatio(renderScrollBarOn(background).pixelColor(handle.center()), background);
+        return pScrollBar->style()->subControlRect(QStyle::CC_ScrollBar, &option, QStyle::SC_ScrollBarSlider, pScrollBar);
     }
 
     static int countPixels(const QImage& shot, const QColor& wanted)
@@ -230,6 +234,50 @@ private slots:
         const QColor background(0, 0, 255);
         const qreal contrast = handleContrastOn(background);
         QVERIFY2(contrast >= 3.0, qPrintable(qsl("handle contrast against a blue console was only %1:1").arg(contrast, 0, 'f', 2)));
+    }
+
+    // A background image is painted on MainDisplay, an ancestor of the scroll bar,
+    // so it shows through the groove: the handle has to stand out against the image
+    // and not merely against the colour stored underneath it.
+    void test_handleStandsOutOnALightBackgroundImage()
+    {
+        const QString imagePath = qsl("%1/white.png").arg(mConfigDir.path());
+        QImage white(8, 8, QImage::Format_RGB32);
+        white.fill(Qt::white);
+        QVERIFY(white.save(imagePath));
+
+        runLua(qsl("setBackgroundColor(0, 0, 0)"));
+        runLua(qsl("setBackgroundImage([[%1]], 1)").arg(imagePath));
+        QTest::qWait(100ms);
+
+        QScrollBar* pScrollBar = mpHost->mpConsole->mpScrollBar;
+        QWidget* pDisplay = pScrollBar;
+        for (QWidget* pW = pScrollBar; pW; pW = pW->parentWidget()) {
+            if (pW->objectName() == qsl("MainDisplay")) {
+                pDisplay = pW;
+            }
+        }
+        QVERIFY(pDisplay != pScrollBar);
+
+        QImage shot(pDisplay->size(), QImage::Format_RGB32);
+        shot.fill(Qt::magenta);
+        pDisplay->render(&shot, QPoint(), QRegion(), QWidget::DrawChildren);
+
+        const QRect handle = handleRect(pScrollBar).translated(pScrollBar->mapTo(pDisplay, QPoint()));
+        const QColor image = shot.pixelColor(handle.center().x(), handle.top() - 6);
+        int standingOut = 0;
+        for (int y = handle.top(); y <= handle.bottom(); ++y) {
+            for (int x = handle.left(); x <= handle.right(); ++x) {
+                if (contrastRatio(shot.pixelColor(x, y), image) >= 3.0) {
+                    ++standingOut;
+                }
+            }
+        }
+
+        runLua(qsl("resetBackgroundImage()"));
+        QTest::qWait(50ms);
+        QVERIFY2(image == QColor(Qt::white), qPrintable(qsl("the background image did not reach the scroll bar - it rendered %1").arg(image.name())));
+        QVERIFY2(standingOut >= handle.height(), qPrintable(qsl("only %1 of the handle's %2 pixels stood out against the background image").arg(standingOut).arg(handle.width() * handle.height())));
     }
 
     // setAppStyleSheet() has to keep winning too - QApplication::setStyle() skips

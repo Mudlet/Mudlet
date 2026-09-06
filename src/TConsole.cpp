@@ -119,11 +119,16 @@ public:
         const int inset = 3;
         const QRectF handleRect = (pSlider->orientation == Qt::Vertical) ? QRectF(handle).adjusted(inset, 0, -inset, 0) : QRectF(handle).adjusted(0, inset, 0, -inset);
 
+        // Outlined in the opposite colour because a background image is painted on
+        // an ancestor and shows through the groove: the fill alone can land on
+        // anything, but fill and outline cannot both blend into the same surface.
+        const QColor outlineColor(255 - handleColor.red(), 255 - handleColor.green(), 255 - handleColor.blue(), handleColor.alpha());
+
         pPainter->save();
         pPainter->setRenderHint(QPainter::Antialiasing);
-        pPainter->setPen(Qt::NoPen);
+        pPainter->setPen(QPen(outlineColor, 1));
         pPainter->setBrush(handleColor);
-        pPainter->drawRoundedRect(handleRect, 4, 4);
+        pPainter->drawRoundedRect(handleRect.adjusted(0.5, 0.5, -0.5, -0.5), 4, 4);
         pPainter->restore();
     }
 };
