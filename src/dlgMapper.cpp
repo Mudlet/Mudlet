@@ -991,10 +991,8 @@ void dlgMapper::slot_showSaveWarningMenu()
 
     auto* retryAction = new QAction(tr("Retry save"), this);
     connect(retryAction, &QAction::triggered, this, [this]() {
-        if (mpHost && mpHost->mpConsole) {
-            if (mpHost->saveMapFile(QString())) {
-                mpMap->setSaveError(false);
-            }
+        if (mpHost && mpHost->saveMapFile(QString())) {
+            mpMap->setSaveError(false);
         }
     });
     menu->addAction(retryAction);
