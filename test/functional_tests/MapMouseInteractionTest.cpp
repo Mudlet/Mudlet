@@ -41,6 +41,7 @@
 #include <QPixmap>
 #include <QSignalSpy>
 #include <QTemporaryDir>
+#include <QTreeWidgetItem>
 #include <QWheelEvent>
 #include <QtTest/QtTest>
 
@@ -426,6 +427,34 @@ private:
     double zoom() const { return area()->get2DMapZoom(); }
 
     QString consoleText() const { return mpHost->mpConsole->buffer.lineBuffer.join(QChar::LineFeed); }
+
+    QList<QTreeWidgetItem*> listedRooms() const
+    {
+        QList<QTreeWidgetItem*> items;
+        for (int row = 0; row < mp2dMap->mMultiSelectionListWidget.topLevelItemCount(); ++row) {
+            items.append(mp2dMap->mMultiSelectionListWidget.topLevelItem(row));
+        }
+        return items;
+    }
+
+    QSet<int> listedRoomIds() const
+    {
+        QSet<int> ids;
+        for (const QTreeWidgetItem* item : listedRooms()) {
+            ids.insert(item->text(0).toInt());
+        }
+        return ids;
+    }
+
+    QString listedRoomName(const int roomId) const
+    {
+        for (const QTreeWidgetItem* item : listedRooms()) {
+            if (item->text(0).toInt() == roomId) {
+                return item->text(1);
+            }
+        }
+        return QString();
+    }
 
 private slots:
     void initTestCase()
@@ -1902,6 +1931,114 @@ private slots:
         QVERIFY(!mp2dMap->mSizeLabel);
         QVERIFY2(area()->mMapLabels.isEmpty(), "a label with no box was made");
         QVERIFY2(!mp2dMap->mpDlgMapLabel, "a dialog came up for a label with no box");
+    }
+
+    // Boxing several rooms puts a list of them up in the corner of the map, so
+    // rooms that are drawn on top of one another can still be told apart.
+    void test_boxingSeveralRoomsListsThemInTheCornerOfTheMap()
+    {
+        buildMap();
+        showMapper(false);
+
+        dragFromTo(pointUnitsFromCentre(-1.5, 0.5), pointUnitsFromCentre(1.5, -0.5));
+
+        QVERIFY2(!mp2dMap->mMultiSelectionListWidget.isHidden(), "no list came up for the boxed rooms");
+        QCOMPARE(listedRoomIds(), (QSet<int>{kWestRoomId, kPlayerRoomId, kEastRoomId}));
+        QVERIFY2(mp2dMap->mMultiSelectionListWidget.isColumnHidden(1), "a names column came up for rooms with no names");
+
+        clickAt(pointUnitsFromCentre(0, 1));
+        QCOMPARE(mp2dMap->mMultiSelectionSet, QSet<int>{kNorthRoomId});
+        QVERIFY2(mp2dMap->mMultiSelectionListWidget.isHidden(), "the list stayed up for a single room");
+    }
+
+    void test_roomsWithNamesGetANamesColumnInTheList()
+    {
+        buildMap();
+        map()->mpRoomDB->getRoom(kWestRoomId)->name = qsl("West");
+        map()->mpRoomDB->getRoom(kEastRoomId)->name = qsl("East");
+        showMapper(false);
+
+        dragFromTo(pointUnitsFromCentre(-1.5, 0.5), pointUnitsFromCentre(1.5, -0.5));
+
+        QVERIFY2(!mp2dMap->mMultiSelectionListWidget.isColumnHidden(1), "the names column is hidden");
+        QCOMPARE(listedRoomIds(), (QSet<int>{kWestRoomId, kPlayerRoomId, kEastRoomId}));
+        QCOMPARE(listedRoomName(kWestRoomId), qsl("West"));
+        QCOMPARE(listedRoomName(kEastRoomId), qsl("East"));
+        QVERIFY(listedRoomName(kPlayerRoomId).isEmpty());
+    }
+
+    // Picking rooms in the list is what narrows a selection down to the ones
+    // the box could not separate.
+    void test_pickingRoomsInTheListNarrowsTheSelectionToThem()
+    {
+        buildMap();
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 0.5), pointUnitsFromCentre(1.5, -0.5));
+
+        for (QTreeWidgetItem* item : listedRooms()) {
+            item->setSelected(item->text(0).toInt() == kEastRoomId);
+        }
+
+        QCOMPARE(mp2dMap->mMultiSelectionSet, QSet<int>{kEastRoomId});
+        QCOMPARE(mp2dMap->mMultiSelectionHighlightRoomId, kEastRoomId);
+
+        mp2dMap->mMultiSelectionListWidget.clearSelection();
+        QVERIFY2(mp2dMap->mMultiSelectionSet.isEmpty(), "clearing the list left rooms selected");
+        QCOMPARE(mp2dMap->mMultiSelectionHighlightRoomId, 0);
+    }
+
+    // The list scrolls with the wheel, so a wheel over it must not zoom the map
+    // behind it as well.
+    void test_rollingTheWheelOverTheListDoesNotZoomTheMap()
+    {
+        buildMap();
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 0.5), pointUnitsFromCentre(1.5, -0.5));
+        QVERIFY(!mp2dMap->mMultiSelectionListWidget.isHidden());
+
+        rollWheelAt(mp2dMap->mMultiSelectionListWidget.geometry().center(), 1);
+
+        QCOMPARE(zoom(), kZoom);
+    }
+
+    void test_holdingControlTogglesARoomInAndOutOfTheSelection()
+    {
+        buildMap();
+        showMapper(false);
+        clickAt(pointUnitsFromCentre(-1, 0));
+
+        clickAt(pointUnitsFromCentre(1, 0), Qt::ControlModifier);
+        QCOMPARE(mp2dMap->mMultiSelectionSet, (QSet<int>{kWestRoomId, kEastRoomId}));
+
+        clickAt(pointUnitsFromCentre(1, 0), Qt::ControlModifier);
+        QCOMPARE(mp2dMap->mMultiSelectionSet, QSet<int>{kWestRoomId});
+    }
+
+    // An exit into another area is drawn as a stub with an arrow head one unit
+    // out from its room. Double-clicking that stub walks to the room it leads
+    // to, the same as double-clicking a room in this area.
+    void test_doubleClickingTheStubOfAnExitToAnotherAreaWalksThere()
+    {
+        buildMap();
+        const int otherAreaId = map()->mpRoomDB->addArea(qsl("Next Door"));
+        QVERIFY(otherAreaId > 0);
+        const int nextDoorRoomId = 20;
+        QVERIFY(map()->addRoom(nextDoorRoomId) && map()->setRoomArea(nextDoorRoomId, otherAreaId) && map()->setRoomCoordinates(nextDoorRoomId, 0, 0, 0));
+        QVERIFY(map()->setExit(kPlayerRoomId, kEastRoomId, DIR_EAST));
+        QVERIFY(map()->setExit(kEastRoomId, nextDoorRoomId, DIR_EAST));
+        showMapper(true);
+        QVERIFY(runLua(qsl("walkedDirs = nil\n"
+                           "function doSpeedWalk() walkedDirs = table.concat(speedWalkDir, ',') walkedPath = table.concat(speedWalkPath, ',') end")));
+
+        doubleClickAt(pointUnitsFromCentre(2, 0));
+        renderFrame();
+
+        QVERIFY(runLua(qsl("assert(walkedDirs, 'doSpeedWalk was never called')\n"
+                           "assert(walkedDirs == 'e,e', walkedDirs)\n"
+                           "assert(walkedPath == '%1,%2', walkedPath)")
+                               .arg(kEastRoomId)
+                               .arg(nextDoorRoomId)));
+        QCOMPARE(mp2dMap->mTargetRoomId, nextDoorRoomId);
     }
 };
 
