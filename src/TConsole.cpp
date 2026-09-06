@@ -52,10 +52,12 @@
 #include <QMessageBox>
 #include <QMimeData>
 #include <QPainter>
+#include <QProxyStyle>
 #include <QScrollBar>
 #include <QSettings>
 #include <QShortcut>
 #include <QSplitter>
+#include <QStyleOptionSlider>
 #include <QTextBoundaryFinder>
 #include <QVideoWidget>
 #include <chrono>
@@ -89,6 +91,47 @@ QColor readableLinkColor(const QColor& background)
 {
     const QColor lightBlue(80, 160, 255);
     return contrastRatio(QColor(Qt::blue), background) >= contrastRatio(lightBlue, background) ? QColor(Qt::blue) : lightBlue;
+}
+
+// Windows 11 colours the handle for the application's colour scheme rather than
+// for the surface it sits on - black at 45% alpha, invisible on a black console.
+// A style and not a style sheet: a widget's own style sheet outranks every other
+// rule, so a sheet here would drop a profile's setProfileStyleSheet() rules.
+class ConsoleScrollBarStyle : public QProxyStyle
+{
+public:
+    static constexpr const char* csHandleColorProperty = "mudletScrollBarHandleColor";
+
+    void drawComplexControl(const ComplexControl control, const QStyleOptionComplex* pOption, QPainter* pPainter, const QWidget* pWidget) const override
+    {
+        const auto* pSlider = qstyleoption_cast<const QStyleOptionSlider*>(pOption);
+        const QColor handleColor = pWidget ? pWidget->property(csHandleColorProperty).value<QColor>() : QColor();
+        if (control != CC_ScrollBar || !pSlider || !handleColor.isValid()) {
+            QProxyStyle::drawComplexControl(control, pOption, pPainter, pWidget);
+            return;
+        }
+
+        if (pSlider->minimum >= pSlider->maximum) {
+            return;
+        }
+
+        const QRect handle = subControlRect(CC_ScrollBar, pOption, SC_ScrollBarSlider, pWidget);
+        const int inset = 3;
+        const QRectF handleRect = (pSlider->orientation == Qt::Vertical) ? QRectF(handle).adjusted(inset, 0, -inset, 0) : QRectF(handle).adjusted(0, inset, 0, -inset);
+
+        pPainter->save();
+        pPainter->setRenderHint(QPainter::Antialiasing);
+        pPainter->setPen(Qt::NoPen);
+        pPainter->setBrush(handleColor);
+        pPainter->drawRoundedRect(handleRect, 4, 4);
+        pPainter->restore();
+    }
+};
+
+QStyle* consoleScrollBarStyle()
+{
+    static auto* pStyle = new ConsoleScrollBarStyle;
+    return pStyle;
 }
 } // namespace
 
@@ -321,6 +364,8 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 
     mpScrollBar->setFixedWidth(15);
     mpHScrollBar->setFixedHeight(15);
+    mpScrollBar->setStyle(consoleScrollBarStyle());
+    mpHScrollBar->setStyle(consoleScrollBarStyle());
 
     splitter = new TSplitter(Qt::Vertical, layer);
     splitter->setObjectName(qsl("splitter_%1_%2").arg(mProfileName, mConsoleName));
@@ -1182,6 +1227,20 @@ void TConsole::changeColors()
         buffer.mWrapAt = mpHost->mWrapAt;
         buffer.mWrapIndent = mpHost->mWrapIndentCount;
         buffer.mWrapHangingIndent = mpHost->mWrapHangingIndentCount;
+    }
+
+    updateScrollBarStyle();
+}
+
+void TConsole::updateScrollBarStyle()
+{
+    const QColor background = (mType == MainConsole) ? mpHost->mBgColor : mBgColor;
+    // 200 is the lowest alpha clearing a 3:1 contrast ratio on every background a profile can set
+    const QColor handle = contrastRatio(Qt::white, background) >= contrastRatio(Qt::black, background) ? QColor(255, 255, 255, 200) : QColor(0, 0, 0, 200);
+
+    for (QScrollBar* pScrollBar : {mpScrollBar, mpHScrollBar}) {
+        pScrollBar->setProperty(ConsoleScrollBarStyle::csHandleColorProperty, handle);
+        pScrollBar->update();
     }
 }
 
