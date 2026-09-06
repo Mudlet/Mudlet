@@ -7234,7 +7234,9 @@ int TLuaInterpreter::alert(lua_State* L)
         }
     }
 
-    mudlet::self()->alertUser(qRound(luaAlertDuration * 1000.0));
+    if (auto* application = mudlet::self()) {
+        application->alertUser(qRound(luaAlertDuration * 1000.0));
+    }
 
     return 0;
 }
