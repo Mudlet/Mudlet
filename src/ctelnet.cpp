@@ -88,6 +88,13 @@ constexpr auto CHARACTER_MODE_DETECT = 3s;
 constexpr auto PASSWORD_MASK_LOGIN_PHASE = 5min;
 constexpr auto PASSWORD_MASK_TIMEOUT = 60s;
 
+// A WILL ECHO arriving this soon after a line went out is taken to be the
+// game's answer to that line, so the line counts as masked and starts the
+// timeout although it was sent before the prompt arrived. Auto-login on a slow
+// connection does exactly that: it sends the password on a timer, and a prompt
+// that takes more than a second to come back lands behind it:
+constexpr auto PASSWORD_MASK_LATE_PROMPT_WINDOW = 10s;
+
 // How long to leave a game alone after a connection attempt to it failed, before
 // trying again for a profile that reconnects automatically. A refused connection
 // comes back at once, so without a wait here the retries are a tight loop. The
@@ -207,6 +214,9 @@ void cTelnet::reset()
     if (mTimerPasswordModeTimeout) {
         mTimerPasswordModeTimeout->stop();
     }
+    // So that a line sent on the previous connection cannot make a WILL ECHO on
+    // this one look like the answer to it:
+    mLastLineSentTimer.invalidate();
     // Stop any pending character-at-a-time detection
     if (mTimerCharacterModeDetect) {
         mTimerCharacterModeDetect->stop();
@@ -859,10 +869,11 @@ void cTelnet::slot_send_pass()
     // Auto-login: Send password if credentials are configured
     if (mpHost->hasAutoLoginCredentials()) {
         qDebug() << "Auto-login: Sending password (timer-based, independent of ECHO mode)";
-        // Not a game command, so sendData() does not start the password mask timeout
-        // itself, but this is the masked line most likely to leave masking stuck.
+        // Not a game command, so sendData() does not note this line itself, but it
+        // is the masked line most likely to leave masking stuck - and on a slow
+        // connection it goes out ahead of the prompt that asks for it.
         if (sendData(mpHost->getPass(), false)) {
-            restartPasswordMaskTimeout();
+            noteLineSentToGame();
         }
     }
 }
@@ -1638,7 +1649,7 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent, con
         }
 
         if (sent && isGameCommand) {
-            restartPasswordMaskTimeout();
+            noteLineSentToGame();
         }
 
 
@@ -3334,7 +3345,11 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
                         // The safety timeout against a game that never sends WONT ECHO is
                         // started by the masked line the player sends, not by this prompt -
-                        // see cTelnet::restartPasswordMaskTimeout().
+                        // see restartPasswordMaskTimeout(). Unless that line is already out:
+                        // a prompt this close behind one is the game's answer to it.
+                        if (mLastLineSentTimer.isValid() && mLastLineSentTimer.durationElapsed() < PASSWORD_MASK_LATE_PROMPT_WINDOW) {
+                            restartPasswordMaskTimeout();
+                        }
                     }
                 } else if (option == OPT_STATUS || option == OPT_TERMINAL_TYPE) {
                     sendTelnetOption(TN_DO, option);
@@ -6152,6 +6167,15 @@ bool cTelnet::checkEchoAnomalyPattern()
     }
     mEchoToggleTimer.restart();
     return false;
+}
+
+// Every line that goes out on the player's behalf passes through here, whether
+// or not the game has ECHO on at the time - the prompt for it may still be on
+// its way (see PASSWORD_MASK_LATE_PROMPT_WINDOW).
+void cTelnet::noteLineSentToGame()
+{
+    mLastLineSentTimer.restart();
+    restartPasswordMaskTimeout();
 }
 
 // Called for every line that goes out to the game while it has ECHO on, so

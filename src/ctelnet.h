@@ -563,6 +563,10 @@ private:
     QTimer* mTimerFailedConnectionRetry = nullptr;
     QElapsedTimer mRecordingChunkTimer;
     QElapsedTimer mConnectionTimer;
+    // When the last line went out to the game (a player command or the auto-login
+    // password), so that a WILL ECHO arriving shortly after can be told apart from
+    // one that arrives with no line behind it - see restartPasswordMaskTimeout():
+    QElapsedTimer mLastLineSentTimer;
     qint32 mRecordLastChunkMSecTimeOffset = 0;
     int mRecordingChunkCount = 0;
     int mCycleCountMTTS = 0;
@@ -628,6 +632,7 @@ private:
 
     void checkCharacterModePattern();
     bool checkEchoAnomalyPattern();
+    void noteLineSentToGame();
     void restartPasswordMaskTimeout();
 };
 
