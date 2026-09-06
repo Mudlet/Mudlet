@@ -5054,6 +5054,24 @@ void cTelnet::gotPrompt(std::string& mud_data)
     mIsTimerPosting = false;
 }
 
+// MXP escape sequences are the ONLY safe detection method.
+// Text-based tags like <version>, <send>, etc. can be faked by players
+// using illusions in games like IRE MUDs, which would cause false positives.
+// ESC sequences contain control character 0x1B which cannot be typed/illusioned.
+// Per MXP spec: "To ensure that tags are difficult to send by MUD players,
+// an escape sequence, similar to ANSI or VT100 is used: ESC[#z"
+// Valid modes: 0=open, 1=secure, 2=locked, 3=reset, 4=temp secure,
+//              5=lock open, 6=lock secure, 7=lock locked
+static bool containsMxpModeSwitch(const std::string& data)
+{
+    for (size_t pos = data.find('\x1B'); pos != std::string::npos && pos + 3 < data.size(); pos = data.find('\x1B', pos + 1)) {
+        if (data[pos + 1] == '[' && data[pos + 2] >= '0' && data[pos + 2] <= '7' && data[pos + 3] == 'z') {
+            return true;
+        }
+    }
+    return false;
+}
+
 void cTelnet::trackMXPElementDetection(const std::string& line)
 {
     if (!mpHost) {
@@ -5066,29 +5084,18 @@ void cTelnet::trackMXPElementDetection(const std::string& line)
         return;
     }
 
-    // MXP escape sequences are the ONLY safe detection method.
-    // Text-based tags like <version>, <send>, etc. can be faked by players
-    // using illusions in games like IRE MUDs, which would cause false positives.
-    // ESC sequences contain control character 0x1B which cannot be typed/illusioned.
-    // Per MXP spec: "To ensure that tags are difficult to send by MUD players,
-    // an escape sequence, similar to ANSI or VT100 is used: ESC[#z"
-    // Valid modes: 0=open, 1=secure, 2=locked, 3=reset, 4=temp secure,
-    //              5=lock open, 6=lock secure, 7=lock locked
-    static const std::vector<std::string> mxpEscapes = {"\x1B[0z", "\x1B[1z", "\x1B[2z", "\x1B[3z", "\x1B[4z", "\x1B[5z", "\x1B[6z", "\x1B[7z"};
-
-    for (const auto& esc : mxpEscapes) {
-        if (line.find(esc) != std::string::npos) {
-            // If force MXP is already enabled, this is a re-initialization (e.g., after "config mxp on")
-            // Re-apply secure mode without showing the auto-enable message
-            if (mpHost->getForceMXPProcessorOn() && mpHost->mPromptedForMXPProcessorOn) {
-                mpHost->mMxpProcessor.setMode(MXP_MODE_CODE_LOCK_SECURE);
-                return;
-            }
-            // Otherwise, this is the first time we're seeing MXP, so auto-enable it
-            autoEnableMXPProcessor();
-            return;
-        }
+    if (!containsMxpModeSwitch(line)) {
+        return;
     }
+
+    // If force MXP is already enabled, this is a re-initialization (e.g., after "config mxp on")
+    // Re-apply secure mode without showing the auto-enable message
+    if (mpHost->getForceMXPProcessorOn() && mpHost->mPromptedForMXPProcessorOn) {
+        mpHost->mMxpProcessor.setMode(MXP_MODE_CODE_LOCK_SECURE);
+        return;
+    }
+    // Otherwise, this is the first time we're seeing MXP, so auto-enable it
+    autoEnableMXPProcessor();
 }
 
 void cTelnet::gotRest(std::string& mud_data)

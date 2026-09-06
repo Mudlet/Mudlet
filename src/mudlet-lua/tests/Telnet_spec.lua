@@ -738,3 +738,56 @@ describe("Tests addSupportedTelnetOption", function()
     assert.is_truthy(tostring(err):find("integer over/under-flow", 1, true), tostring(err))
   end)
 end)
+
+describe("MXP auto-detection from the mode switch escape", function()
+
+  local function feed(data)
+    local ok, msg = feedTelnet(data)
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+  end
+
+  local promptedBefore, forcedBefore
+
+  before_each(function()
+    promptedBefore = getConfig("promptForMXPProcessorOn")
+    forcedBefore = getConfig("specialForceMXPProcessorOn")
+    setConfig("promptForMXPProcessorOn", false)
+    setConfig("specialForceMXPProcessorOn", false)
+  end)
+
+  -- detection turns MXP on for the rest of the connection as though the game
+  -- had negotiated it, and only a WONT from the game turns that off again
+  after_each(function()
+    setConfig("specialForceMXPProcessorOn", forcedBefore)
+    setConfig("promptForMXPProcessorOn", promptedBefore)
+    feed("<T_IAC><T_WONT><O_MXP>")
+  end)
+
+  it("turns MXP on when the game sends a mode switch", function()
+    feed("\27[1z<send>look</send>\r\n")
+    assert.is_true(getConfig("promptForMXPProcessorOn"))
+    assert.is_true(getConfig("specialForceMXPProcessorOn"))
+  end)
+
+  it("finds the switch in the middle of a read", function()
+    feed("Welcome, adventurer.\r\nThe gates are open. \27[7zLocked open.\r\n")
+    assert.is_true(getConfig("promptForMXPProcessorOn"))
+  end)
+
+  it("finds the switch when it ends the read", function()
+    feed("prompt> \27[0z")
+    assert.is_true(getConfig("promptForMXPProcessorOn"))
+    feed("\r\n")
+  end)
+
+  it("ignores a mode number MXP does not define", function()
+    feed("\27[8z<send>look</send>\r\n")
+    assert.is_false(getConfig("promptForMXPProcessorOn"))
+    assert.is_false(getConfig("specialForceMXPProcessorOn"))
+  end)
+
+  it("ignores SGR sequences and a bracket that is not part of an escape", function()
+    feed("\27[1mBold\27[0m and [1z in plain text\r\n")
+    assert.is_false(getConfig("promptForMXPProcessorOn"))
+  end)
+end)
