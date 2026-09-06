@@ -109,7 +109,7 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
             &mudlet::signal_profileLoaded,
             this,
             [this]() {
-                mpHost->spellChecker().warmSystemDictionary();
+                mpHost->spellChecker().warmDictionaries();
             },
             Qt::QueuedConnection);
 

@@ -37,18 +37,22 @@ class Host;
 // profile's own user dictionary, and the shared one all profiles can write to.
 // One instance per Host, so a profile with no view can still be spell-checked
 // (#8681) - which is why nothing here may reach for a widget.
+// Dictionaries are read from disk on first use, so the non-const members here
+// can block for tens of milliseconds and go to the filesystem; the const ones
+// only report what is already loaded.
 class TSpellChecker
 {
 public:
     explicit TSpellChecker(Host* pHost);
     ~TSpellChecker();
+    TSpellChecker(const TSpellChecker&) = delete;
+    TSpellChecker& operator=(const TSpellChecker&) = delete;
 
     void setSystemDictionary(const QString&);
-    // Reading a dictionary costs tens of milliseconds, so the handle is only
-    // built when something asks for it. This is what has the event loop pay
-    // that once the profile has loaded rather than in front of the first word
-    // typed.
-    void warmSystemDictionary();
+    // Builds the system handle (when spell check is on) and prepares the user
+    // dictionary. Only a view schedules it (TMainConsole ctor), so a profile
+    // without one builds both lazily on first use.
+    void warmDictionaries();
     Hunhandle* systemHandle();
     // The user dictionaries are always UTF-8, but the one chosen from the
     // system's may not be.
@@ -56,7 +60,7 @@ public:
     // The per-profile or the shared handle, or nullptr, depending on the two
     // options held by Host.
     Hunhandle* userHandle();
-    QSet<QString> wordSet() const;
+    QSet<QString> wordSet();
     QPair<bool, QString> addWord(const QString&);
     QPair<bool, QString> removeWord(const QString&);
     bool usingSharedDictionary() const;
@@ -65,17 +69,15 @@ public:
     // The dictionary shared by every profile that opts into it, opened once and
     // saved and closed when the application goes down.
     static Hunhandle* sharedDictionary();
-    static QSet<QString> sharedWordSet();
-    static bool addWordToShared(const QString&);
-    static bool removeWordFromShared(const QString&);
     static void closeSharedDictionary();
 
 private:
     void loadSystemDictionary();
-    // Both of these revise the contents of the .aff file and handle a .dic file
-    // that has been updated externally/manually (to add or remove words) - the
-    // first also puts the contents of the .dic file into the supplied second
-    // argument before returning the handle to the dictionary loaded:
+    // Reads profile.dic in the first time it is asked for.
+    Hunhandle* profileHandle();
+    static QSet<QString> sharedWordSet();
+    static bool addWordToShared(const QString&);
+    static bool removeWordFromShared(const QString&);
     static Hunhandle* prepareProfileDictionary(const QString&, QSet<QString>&);
     // This will save and replace the .dic file with just the words in the
     // supplied second argument and update the .aff file as appropriate. It is
@@ -92,14 +94,15 @@ private:
     // Names the dictionary mpHunspell_system is built for. The build is put off
     // until the load has finished, so the profile load never reads the whole
     // dictionary. Host's mSpellDic is the profile's setting; this is only ever
-    // what has been requested from it.
+    // what has been requested from it, or the platform default getSpellDic()
+    // substitutes when it is empty.
     QString mSystemDictionary;
 
-    // Three handles, one for the dictionary the user chooses from the system
-    // ones, one for the shared one and the third for a per profile one - the
-    // last pair are built by the user and/or lua functions:
+    // One handle for the dictionary the user chooses from the system ones and
+    // one for the profile's own, which is built by the user and/or lua
+    // functions. The shared dictionary is a static below, so that every
+    // profile using it works on the one handle.
     Hunhandle* mpHunspell_system = nullptr;
-    Hunhandle* mpHunspell_shared = nullptr;
     Hunhandle* mpHunspell_profile = nullptr;
     QByteArray mHunspellCodecName_system;
     // To update the profile dictionary we actually have to track all the words

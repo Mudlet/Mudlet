@@ -759,21 +759,57 @@ private slots:
         QVERIFY2(host, "No active host available for the test.");
         QVERIFY2(host->mpConsole, "The active host has no main console.");
 
-        Hunhandle* handle = host->spellChecker().systemHandle();
-        QVERIFY2(handle, "The spell checker built no system dictionary handle for the profile's dictionary.");
-
         // Hunspell_create() hands back a usable handle even when neither file
         // exists, so a non-null handle only proves the load ran. Telling a
         // reload apart from a failed load needs a dictionary that knows a word,
-        // which a machine with no en_US installed cannot supply.
-        if (!Hunspell_spell(handle, "the")) {
-            QSKIP("no en_US dictionary is installed here, so a reload cannot be told apart from a failed load");
+        // which a machine without the starting one installed cannot supply -
+        // asked of the files rather than of the handle, so a dictionary that is
+        // there but loads no words is a failure and not a skip.
+        const QString startingDictionary = host->getSpellDic();
+        const QString affixPath = qsl("%1%2.aff").arg(MudletApp::getMudletPath(enums::hunspellDictionaryPath, startingDictionary), startingDictionary);
+        if (!QFileInfo::exists(affixPath)) {
+            QSKIP(qPrintable(qsl("no \"%1\" dictionary is installed here, so a reload cannot be told apart from a failed load").arg(startingDictionary)));
         }
+
+        Hunhandle* handle = host->spellChecker().systemHandle();
+        QVERIFY2(handle, "The spell checker built no system dictionary handle for the profile's dictionary.");
+        QVERIFY2(Hunspell_spell(handle, "the"), qPrintable(qsl("The installed \"%1\" dictionary loaded no words.").arg(startingDictionary)));
+        // Hunspell reports the encoding of what it loaded, so an empty one is a
+        // handle that was never given a dictionary to read:
+        QVERIFY2(!host->spellChecker().systemCodecName().isEmpty(), "The system dictionary was loaded but its encoding was never read off it.");
 
         host->setSpellDic(mProfileSpellDic);
         Hunhandle* reloaded = host->spellChecker().systemHandle();
         QVERIFY2(reloaded, "The reload left the profile with no system dictionary handle at all.");
         QVERIFY2(!Hunspell_spell(reloaded, "the"), "Choosing a dictionary that does not exist left the previous one loaded, so Host::setSpellDic() never reached the spell checker.");
+    }
+
+    // Nothing reads profile.dic until something asks for the dictionary handle,
+    // and a profile with no view never runs the warm-up that would. Listing the
+    // words has to build it itself, or a script that asks before the profile
+    // has spell-checked anything is told the dictionary is empty.
+    void test_theWordListReadsTheDictionaryFileItself()
+    {
+        const QString dictionaryPath = MudletApp::getMudletPath(enums::profileDataItemPath, mSpellHostname, qsl("profile.dic"));
+        QVERIFY2(QDir().mkpath(QFileInfo(dictionaryPath).absolutePath()), "Could not create the seeded profile's data directory.");
+        // A word twice over and a count that matches neither, so a list that
+        // matches below has to have come from a real scan of the file:
+        QFile seed(dictionaryPath);
+        QVERIFY2(seed.open(QFile::WriteOnly | QFile::Text), qPrintable(qsl("Could not seed \"%1\".").arg(dictionaryPath)));
+        QVERIFY(seed.write("3\nfoo\nfoo\nbar") > 0);
+        seed.close();
+
+        Host* host = mudlet::self()->loadProfile(mSpellHostname, false);
+        QVERIFY2(host, "The seeded profile was not loaded.");
+        QVERIFY2(host->mpConsole.isNull(), "loadProfile() built a view, which warms the dictionary up and so hides what this tests.");
+
+        runLua(host, qsl("dictionaryList = table.concat(getDictionaryWordList(), ',')\n"));
+        QCOMPARE(luaGlobalString(host, "dictionaryList"), qsl("bar,foo"));
+
+        // Reading the file in is also what rewrites the pair of them, so the
+        // duplicate and the wrong count are gone and hunspell has its affixes:
+        QCOMPARE(readFile(dictionaryPath), qsl("2\nbar\nfoo"));
+        QVERIFY2(QFileInfo::exists(MudletApp::getMudletPath(enums::profileDataItemPath, mSpellHostname, qsl("profile.aff"))), "No affix file was written beside the dictionary.");
     }
 
     void cleanup()
@@ -880,11 +916,9 @@ noViewReport = table.concat(noViewProblems, '; ')
         QCOMPARE(luaGlobalString(host, "noViewReport"), QString());
     }
 
-    // The Hunspell handles and the profile's word set used to be the view's, so
-    // every spelling function reached through Host::mpConsole for them and
-    // refused once the window had been closed. They live on the profile now, so
-    // a view-less profile spell-checks for real - which is the headless
-    // contract the whole split is for.
+    // A profile with no view owns its Hunspell handles and word set, so every
+    // spelling function answers for real - the headless contract the split is
+    // for.
     void test_spellingFunctionsWorkWithNoView()
     {
         startProfile();
@@ -1010,9 +1044,9 @@ noViewSpellReport = table.concat(noViewSpellProblems, '; ')
     }
 
     // The shared dictionary outlives every profile, so nothing but the
-    // application going down writes it - and that write has to carry what a
-    // profile put into it.
-    void test_closingTheSharedDictionarySavesWhatWasAddedToIt()
+    // application going down writes it - and that write has to carry both what
+    // a profile put into it and what a profile took back out.
+    void test_closingTheSharedDictionarySavesWhatAProfileChangedInIt()
     {
         startProfile();
         auto host = mudlet::self()->getActiveHost();
@@ -1022,11 +1056,35 @@ noViewSpellReport = table.concat(noViewSpellProblems, '; ')
         host->setUserDictionaryOptions(true, true);
         QVERIFY2(host->spellChecker().userHandle() == TSpellChecker::sharedDictionary(), "The profile is not on the shared dictionary, so this proves nothing about it.");
 
-        runLua(host, qsl("sharedDictionaryAdd = tostring(addWordToDictionary('sharedoutlivingword'))\n"));
-        QCOMPARE(luaGlobalString(host, "sharedDictionaryAdd"), qsl("true"));
+        runLua(host, qsl(R"LUA(
+sharedDictionaryReport = {}
+if addWordToDictionary('sharedoutlivingword') ~= true then
+    table.insert(sharedDictionaryReport, 'the kept word was not added')
+end
+if addWordToDictionary('sharedremovedword') ~= true then
+    table.insert(sharedDictionaryReport, 'the word to remove was not added')
+end
+if removeWordFromDictionary('sharedremovedword') ~= true then
+    table.insert(sharedDictionaryReport, 'the word was not removed')
+end
+local listed = {}
+for _, word in ipairs(getDictionaryWordList()) do
+    listed[word] = true
+end
+if not listed['sharedoutlivingword'] then
+    table.insert(sharedDictionaryReport, 'the kept word is not listed')
+end
+if listed['sharedremovedword'] then
+    table.insert(sharedDictionaryReport, 'the removed word is still listed')
+end
+sharedDictionaryReport = table.concat(sharedDictionaryReport, '; ')
+)LUA"));
+        QCOMPARE(luaGlobalString(host, "sharedDictionaryReport"), QString());
 
         const QString dictionaryPath = MudletApp::getMudletPath(enums::mainDataItemPath, qsl("mudlet.dic"));
-        TSpellChecker::closeSharedDictionary();
+        // Through the application going down rather than by calling the static
+        // here, so this also pins that ~mudlet() is what closes it:
+        delete mudlet::self();
 
         const QString contents = readFile(dictionaryPath);
         QVERIFY2(!contents.isEmpty(), qPrintable(qsl("Nothing was written to \"%1\".").arg(dictionaryPath)));
@@ -1034,6 +1092,7 @@ noViewSpellReport = table.concat(noViewSpellProblems, '; ')
         QVERIFY2(!lines.isEmpty(), qPrintable(qsl("\"%1\" holds no lines at all.").arg(dictionaryPath)));
         const QString countLine = lines.takeFirst();
         QVERIFY2(lines.contains(qsl("sharedoutlivingword")), qPrintable(qsl("The saved shared dictionary does not carry the added word, it holds: %1").arg(lines.join(QChar::Space))));
+        QVERIFY2(!lines.contains(qsl("sharedremovedword")), qPrintable(qsl("The saved shared dictionary still carries the removed word, it holds: %1").arg(lines.join(QChar::Space))));
         QCOMPARE(countLine.toInt(), lines.count());
     }
 

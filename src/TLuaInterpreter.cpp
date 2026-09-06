@@ -7431,7 +7431,7 @@ int TLuaInterpreter::getDictionaryWordList(lua_State* L)
     // We must keep a local reference/copy of the value returned because the
     // returned item is a deep-copy in the case of a shared dictionary and two
     // calls to TSpellChecker::wordSet() can return two different instances which
-    // is fatally dangerous if used in a range based initialiser:
+    // is fatally dangerous if used in a range based initializer:
     QSet<QString> wordSet{host.spellChecker().wordSet()};
     QStringList wordList{wordSet.begin(), wordSet.end()};
     const int wordCount = wordList.size();
