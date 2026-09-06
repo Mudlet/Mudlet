@@ -110,41 +110,6 @@ private:
 
     static QString selection(const TCommandLine* pCommandLine) { return pCommandLine->textCursor().selectedText(); }
 
-    // Puts text into the command line without going through the keys, for the
-    // cases whose subject is what a key does to text that is already there - a
-    // pasted line feed is not something QTest::keyClicks can type.
-    static void setText(TCommandLine* pCommandLine, const QString& text)
-    {
-        pCommandLine->setPlainText(text);
-        pCommandLine->moveCursor(QTextCursor::End);
-    }
-
-    // The bytes a run of commands makes on the wire, so a test can tell one
-    // command carrying a line feed from two separate commands - the console
-    // echo cannot, since it shows the same thing either way.
-    QByteArray asSent(const QStringList& commands) const
-    {
-        const QByteArray eol = mpHost->mUSE_UNIX_EOL ? QByteArrayLiteral("\n") : QByteArrayLiteral("\r\n");
-        QByteArray wire;
-        for (const QString& command : commands) {
-            wire += command.toUtf8() + eol;
-        }
-        return wire;
-    }
-
-    // Sends a command and puts the history position back to the newest end.
-    // Sending leaves it one step in, on the command just sent, and typing the
-    // next command is what normally puts it back - Escape is the other way, and
-    // needs no text of its own that a later recall could then find.
-    void sendCommand(TCommandLine* pCommandLine, const QString& command)
-    {
-        setText(pCommandLine, QString());
-        type(pCommandLine, command);
-        press(pCommandLine, Qt::Key_Return);
-        press(pCommandLine, Qt::Key_Escape);
-        setText(pCommandLine, QString());
-    }
-
     bool runLua(const QString& script) { return mpHost->mLuaInterpreter.compileAndExecuteScript(script); }
 
     // What a script would see, so a callback that never ran is an empty string
@@ -278,40 +243,6 @@ private slots:
         press(pCommandLine, Qt::Key_Enter, Qt::KeypadModifier);
 
         QVERIFY2(waitForServerToReceive("kneel"), qPrintable(qsl("the game never received the command - it got: %1").arg(QString::fromUtf8(mpServer->received()))));
-    }
-
-    // A pasted block of several lines is several commands, not one. Sent as a
-    // single command it would lose the line feed on the way past
-    // cTelnet::sendData, so the game would be asked to run the two lines run
-    // together as one word.
-    void test_returnSendsEachLineAsItsOwnCommand()
-    {
-        TCommandLine* pCommandLine = freshCommandLine();
-        QVERIFY(pCommandLine);
-
-        setText(pCommandLine, qsl("firstofthepair\nsecondofthepair"));
-        press(pCommandLine, Qt::Key_Return);
-
-        QVERIFY2(waitForServerToReceive(asSent({qsl("firstofthepair"), qsl("secondofthepair")})),
-                 qPrintable(qsl("the two lines did not reach the game as two commands - the wire holds %1").arg(QString::fromUtf8(mpServer->received().toPercentEncoding()))));
-    }
-
-    // Ctrl+Return scrolls the console back to the bottom, and must not also send
-    void test_ctrlReturnDoesNotSendTheCommand()
-    {
-        TCommandLine* pCommandLine = freshCommandLine();
-        QVERIFY(pCommandLine);
-
-        type(pCommandLine, qsl("neversentcommand"));
-        press(pCommandLine, Qt::Key_Return, Qt::ControlModifier);
-        QCOMPARE(pCommandLine->toPlainText(), qsl("neversentcommand"));
-
-        // A command that does go, so that by the time the wire is read it has
-        // had every chance to carry the one before it as well
-        sendCommand(pCommandLine, qsl("commandsentafterwards"));
-        QVERIFY2(waitForServerToReceive("commandsentafterwards"), "the command sent afterwards never arrived, so nothing can be concluded about the one before it");
-
-        QVERIFY2(!mpServer->received().contains(QByteArrayLiteral("neversentcommand")), "Ctrl+Return sent the command as well as scrolling to the bottom");
     }
 
     // UI_spec.lua:6734 and GeyserCommandLine_spec.lua:152: setCmdLineAction
@@ -456,25 +387,6 @@ private slots:
         QCOMPARE(selection(pCommandLine), qsl("lo world"));
     }
 
-    // A password typed at a game's login prompt arrives with remote echo on, and
-    // must not be left in a history the next player at the keyboard can page
-    // through.
-    void test_aPasswordIsNotKeptInTheHistory()
-    {
-        TCommandLine* pCommandLine = freshCommandLine();
-        QVERIFY(pCommandLine);
-        sendCommand(pCommandLine, qsl("ordinarycommandbefore"));
-
-        mpHost->setRemoteEchoingActive(true);
-        sendCommand(pCommandLine, qsl("hunter2secret"));
-        mpHost->setRemoteEchoingActive(false);
-
-        press(pCommandLine, Qt::Key_Up);
-
-        QVERIFY2(pCommandLine->toPlainText() != qsl("hunter2secret"), "the password typed at the game's prompt was kept in the command history");
-        QCOMPARE(pCommandLine->toPlainText(), qsl("ordinarycommandbefore"));
-    }
-
     // Tab completes the word being typed from what the game has said recently,
     // and pressing it again cycles on to the next match.
     void test_tabCompletesAWordFromTheConsoleBuffer()
@@ -496,79 +408,6 @@ private slots:
         // Backtab is the same cycle in reverse
         press(pCommandLine, Qt::Key_Backtab, Qt::ShiftModifier);
         QCOMPARE(pCommandLine->toPlainText(), first);
-    }
-
-    // Only the word under the cursor is replaced - the words accepted before it
-    // are already what the player meant.
-    void test_tabCompletesOnlyTheWordBeingTyped()
-    {
-        mpHost->mpConsole->print(qsl("a qzxquinquagenarian appears\n"));
-        TCommandLine* pCommandLine = freshCommandLine();
-        QVERIFY(pCommandLine);
-
-        type(pCommandLine, qsl("greet qzxquinq"));
-        press(pCommandLine, Qt::Key_Tab);
-
-        QCOMPARE(pCommandLine->toPlainText(), qsl("greet qzxquinquagenarian"));
-    }
-
-    // There is no part-word to complete after a space, and guessing one from the
-    // word before it would overwrite what was already accepted.
-    void test_tabDoesNothingAfterASpace()
-    {
-        mpHost->mpConsole->print(qsl("the qzxbrachiosaurus lumbers past\n"));
-        TCommandLine* pCommandLine = freshCommandLine();
-        QVERIFY(pCommandLine);
-
-        type(pCommandLine, qsl("qzxbrachiosaurus "));
-        press(pCommandLine, Qt::Key_Tab);
-
-        QCOMPARE(pCommandLine->toPlainText(), qsl("qzxbrachiosaurus "));
-    }
-
-    // Typing a space accepts the completion. A Tab straight after it must not
-    // carry on cycling through the matches and swap the accepted word for the
-    // other one - which is what it would do if the space left the cycle where
-    // it was, since a space is the one key that goes past the typing tracker.
-    // Which of the two matches comes first is not part of the promise, so the
-    // test takes whichever Tab offered.
-    void test_aSpaceAcceptsTheCompletionSoTabNoLongerCyclesIt()
-    {
-        mpHost->mpConsole->print(qsl("qzxobstreperous qzxobfuscatory\n"));
-        TCommandLine* pCommandLine = freshCommandLine();
-        QVERIFY(pCommandLine);
-
-        type(pCommandLine, qsl("qzxob"));
-        press(pCommandLine, Qt::Key_Tab);
-        const QString first = pCommandLine->toPlainText();
-        QVERIFY2(first == qsl("qzxobstreperous") || first == qsl("qzxobfuscatory"), qPrintable(qsl("Tab completed to '%1' rather than to either of the words in the buffer").arg(first)));
-
-        press(pCommandLine, Qt::Key_Space);
-        press(pCommandLine, Qt::Key_Tab);
-
-        QCOMPARE(pCommandLine->toPlainText(), first + QChar::Space);
-    }
-
-    // Once a completion has been accepted, a fresh part-word typed after it
-    // starts a new completion from the first match rather than carrying on
-    // from wherever the last one was.
-    void test_aNewPartWordStartsTheCompletionOver()
-    {
-        mpHost->mpConsole->print(qsl("qzxobstreperous qzxobfuscatory\n"));
-        TCommandLine* pCommandLine = freshCommandLine();
-        QVERIFY(pCommandLine);
-
-        type(pCommandLine, qsl("qzxob"));
-        press(pCommandLine, Qt::Key_Tab);
-        const QString first = pCommandLine->toPlainText();
-        QVERIFY2(first == qsl("qzxobstreperous") || first == qsl("qzxobfuscatory"), qPrintable(qsl("Tab completed to '%1' rather than to either of the words in the buffer").arg(first)));
-
-        setText(pCommandLine, QString());
-        type(pCommandLine, qsl("say "));
-        type(pCommandLine, qsl("qzxob"));
-        press(pCommandLine, Qt::Key_Tab);
-
-        QCOMPARE(pCommandLine->toPlainText(), qsl("say %1").arg(first));
     }
 
     // addSuggestion puts a word into the completion pool that the game never

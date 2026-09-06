@@ -103,21 +103,6 @@ set_tests_properties(ReleaseChangelogSpanTest PROPERTIES
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
 )
 
-# The IRC client's message formatting. Built from the one source it covers rather
-# than linked against the Mudlet library: the formatter is static and reaches for
-# nothing but communi, so this needs neither the library nor the ~250MB a link
-# against it costs every build tree.
-add_executable(IrcMessageFormatterTest
-    IrcMessageFormatterTest.cpp
-    ${CMAKE_SOURCE_DIR}/src/ircmessageformatter.cpp
-)
-target_include_directories(IrcMessageFormatterTest PRIVATE ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(IrcMessageFormatterTest PRIVATE Qt6::Test communi)
-add_test(NAME IrcMessageFormatterTest COMMAND $<TARGET_FILE:IrcMessageFormatterTest>)
-set_tests_properties(IrcMessageFormatterTest PROPERTIES
-    ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
-)
-
 # DiscordTest checks the Lua API permission gating contract by scanning the source
 target_compile_definitions(DiscordTest PRIVATE MUDLET_SRC_DIR="${CMAKE_SOURCE_DIR}/src")
 

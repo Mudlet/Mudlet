@@ -317,15 +317,6 @@ void TMedia::stopMedia(TMediaData& mediaData)
         return;
     }
 
-    // MSP asks for a stop by naming the file "Off", which is not a file to match
-    // players against, and the request carries the priority every MSP request is
-    // given - which would then refuse to stop anything playing at that priority
-    // or above. Neither belongs on a stop, so take both off it.
-    if (mediaData.mediaProtocol() == TMediaData::MediaProtocolMSP && mediaData.mediaFileName() == qsl("Off")) {
-        mediaData.setMediaFileName(QString());
-        mediaData.setMediaPriority(TMediaData::MediaPriorityNotSet);
-    }
-
     QList<std::shared_ptr<TMediaPlayer>> mediaPlayerList = findMediaPlayersByCriteria(mediaData);
 
     if (mediaPlayerList.isEmpty()) {
