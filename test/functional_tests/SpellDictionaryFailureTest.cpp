@@ -40,8 +40,21 @@
 #include "MudletApp.h"
 #include "MudletInstanceCoordinator.h"
 #include "PortableModeTestHelper.h"
+#include "TLuaInterpreter.h"
 #include "TSpellChecker.h"
 #include "mudlet.h"
+
+extern "C" {
+#if defined(INCLUDE_VERSIONED_LUA_HEADERS)
+#include <lua5.1/lauxlib.h>
+#include <lua5.1/lua.h>
+#include <lua5.1/lualib.h>
+#else
+#include <lauxlib.h>
+#include <lua.h>
+#include <lualib.h>
+#endif
+}
 
 #include "GroupedTest.h"
 
@@ -54,6 +67,23 @@ private:
     QByteArray mSavedXdg;
     Host* mpHost = nullptr;
     const QString mProfileName = qsl("spell-dictionary-failure");
+
+    // Runs the chunk and hands back the string it left in the global "reason".
+    QString reasonFrom(const QString& code) const
+    {
+        lua_State* L = mpHost->getLuaInterpreter()->getLuaGlobalState();
+        if (luaL_dostring(L, code.toUtf8().constData()) != 0) {
+            const char* error = lua_tostring(L, -1);
+            const QString message = error ? QString::fromUtf8(error) : qsl("(a Lua error that is not a string)");
+            lua_pop(L, 1);
+            return qsl("the chunk itself failed: %1").arg(message);
+        }
+        lua_getglobal(L, "reason");
+        const char* value = lua_tostring(L, -1);
+        const QString reason = value ? QString::fromUtf8(value) : QString();
+        lua_pop(L, 1);
+        return reason;
+    }
 
 private slots:
     void initTestCase()
@@ -100,14 +130,26 @@ private slots:
     {
         const auto result = mpHost->spellChecker().addWord(qsl("kalamazoo"));
         QVERIFY2(!result.first, "addWord() claimed to have added a word with no dictionary to add it to");
-        QVERIFY2(!result.second.isEmpty(), "addWord() refused the word without saying why");
+        QVERIFY2(result.second.contains(qsl("profile dictionary could not be opened")), qPrintable(qsl("addWord() blamed the wrong thing: '%1'").arg(result.second)));
     }
 
     void test_removeWordRefusesWhenTheProfileDictionaryCannotBeOpened()
     {
         const auto result = mpHost->spellChecker().removeWord(qsl("kalamazoo"));
         QVERIFY2(!result.first, "removeWord() claimed to have removed a word with no dictionary to remove it from");
-        QVERIFY2(!result.second.isEmpty(), "removeWord() refused the word without saying why");
+        QVERIFY2(result.second.contains(qsl("profile dictionary could not be opened")), qPrintable(qsl("removeWord() blamed the wrong thing: '%1'").arg(result.second)));
+    }
+
+    void test_spellCheckWordRefusesWhenTheProfileDictionaryCannotBeOpened()
+    {
+        const QString reason = reasonFrom(qsl("local ok, why = spellCheckWord(\"kalamazoo\", true); reason = why"));
+        QVERIFY2(reason.contains(qsl("profile dictionary could not be opened")), qPrintable(qsl("spellCheckWord() answered '%1'").arg(reason)));
+    }
+
+    void test_spellSuggestWordRefusesWhenTheProfileDictionaryCannotBeOpened()
+    {
+        const QString reason = reasonFrom(qsl("local ok, why = spellSuggestWord(\"kalamazoo\", true); reason = why"));
+        QVERIFY2(reason.contains(qsl("profile dictionary could not be opened")), qPrintable(qsl("spellSuggestWord() answered '%1'").arg(reason)));
     }
 
     // The shared dictionary fails the same three ways, and reaching it is a
