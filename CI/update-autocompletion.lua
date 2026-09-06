@@ -28,6 +28,9 @@ local function scrapeLuaFunctions(htmlbody)
       -- of a repeated heading with _2, _3 ... which is not part of the function name
       name = string.match(line, '<h2><span class="mw%-headline" id=".-">(.-)</span></h2>')
       if name then
+        -- MediaWiki strips tags when it builds the anchor id but not from the heading
+        -- text, so a heading wrapped in a link would otherwise carry raw HTML into the name
+        name = name:gsub("<[^>]*>", "")
         state = 1
       end
     elseif state == 1 then
