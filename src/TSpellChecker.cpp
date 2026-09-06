@@ -120,7 +120,7 @@ static void sanitizeUtf8Path(QString& originalLocation, const QString& fileName)
     const QString pureANSIpath = qsl("C:\\Windows\\Temp\\mudlet_%1").arg(fileName);
     if (!QFileInfo::exists(pureANSIpath)) {
         if (!QFile::copy(originalLocation, pureANSIpath)) {
-            qWarning() << "TSpellChecker::sanitizeUtf8Path() ERROR: couldn't copy" << originalLocation << "to location without ASCII characters";
+            qWarning() << "sanitizeUtf8Path() ERROR: couldn't copy" << originalLocation << "to location without ASCII characters";
         } else {
             originalLocation = pureANSIpath;
         }
@@ -169,15 +169,16 @@ void TSpellChecker::setSystemDictionary(const QString& newDict)
     // the profile's own choice of dictionary has been read from its XML.
     if (!mpHost->mIsProfileLoadingSequence) {
         QTimer::singleShot(0, mpHost, [this]() {
-            warmSystemDictionary();
+            warmDictionaries();
         });
     }
 }
 
-void TSpellChecker::warmSystemDictionary()
+void TSpellChecker::warmDictionaries()
 {
-    // spellCheckWord() and spellSuggestWord() do not consult this flag, so the
-    // lazy getter still serves a script in a profile that has spell check off:
+    // The Lua spellCheckWord() and spellSuggestWord() do not consult this flag,
+    // so the lazy getter still serves a script in a profile that has spell
+    // check off:
     if (mpHost->getEnableSpellCheck()) {
         systemHandle();
     }
@@ -233,7 +234,8 @@ void TSpellChecker::loadSystemDictionary()
     }
 }
 
-// NOTE: mEnableUserDictionary has been wedged on (it will never be false)
+// NOTE: Host::setUserDictionaryOptions() forces the user dictionary on, so the
+// first branch here is unreachable today.
 void TSpellChecker::applyUserDictionaryOptions()
 {
     bool enableUserDictionary = false;
@@ -247,21 +249,26 @@ void TSpellChecker::applyUserDictionaryOptions()
             qDebug() << "TSpellChecker::applyUserDictionaryOptions() INFO - Saving profile's own Hunspell dictionary...";
             saveDictionary(MudletApp::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("profile")), mWordSet_profile);
         }
-        // Nothing else to do if not using the shared one
         return;
     }
 
     if (useSharedDictionary) {
-        // This will open it if needed:
-        mpHunspell_shared = sharedDictionary();
+        // Called for the opening it does, the handle is fetched again when one
+        // is wanted:
+        sharedDictionary();
         return;
     }
 
-    // Want to use per profile dictionary, is it loaded?
+    profileHandle();
+}
+
+Hunhandle* TSpellChecker::profileHandle()
+{
     if (!mpHunspell_profile) {
-        qDebug() << "TSpellChecker::applyUserDictionaryOptions() INFO - Preparing profile's own Hunspell dictionary...";
+        qDebug() << "TSpellChecker::profileHandle() INFO - Preparing profile's own Hunspell dictionary...";
         mpHunspell_profile = prepareProfileDictionary(mpHost->getName(), mWordSet_profile);
     }
+    return mpHunspell_profile;
 }
 
 Hunhandle* TSpellChecker::userHandle()
@@ -276,15 +283,11 @@ Hunhandle* TSpellChecker::userHandle()
     if (useSharedDictionary) {
         // Read back rather than cached, so a shared dictionary closed on the
         // way out of the application cannot be handed out again as a stale
-        // pointer:
-        mpHunspell_shared = sharedDictionary();
-        return mpHunspell_shared;
+        // pointer - sharedDictionary() re-opens a closed one from disk:
+        return sharedDictionary();
     }
 
-    if (!mpHunspell_profile) {
-        mpHunspell_profile = prepareProfileDictionary(mpHost->getName(), mWordSet_profile);
-    }
-    return mpHunspell_profile;
+    return profileHandle();
 }
 
 bool TSpellChecker::usingSharedDictionary() const
@@ -295,7 +298,7 @@ bool TSpellChecker::usingSharedDictionary() const
     return useSharedDictionary;
 }
 
-QSet<QString> TSpellChecker::wordSet() const
+QSet<QString> TSpellChecker::wordSet()
 {
     bool enableUserDictionary = false;
     bool useSharedDictionary = false;
@@ -303,6 +306,11 @@ QSet<QString> TSpellChecker::wordSet() const
     if (!enableUserDictionary) {
         return QSet<QString>();
     }
+
+    // Asking for the handle is what reads the dictionary file in, so without
+    // this a profile that has not spell-checked anything yet reports that it
+    // knows no words at all:
+    userHandle();
 
     if (!useSharedDictionary) {
         return mWordSet_profile;
@@ -334,7 +342,7 @@ QPair<bool, QString> TSpellChecker::addWord(const QString& word)
         return result;
     }
 
-    // The return value from this function is unclear - it does not seems to
+    // The return value from this function is unclear - it does not seem to
     // indicate anything useful
     Hunspell_add(userHandle(), word.toUtf8().constData());
     if (!mWordSet_profile.contains(word)) {
@@ -372,7 +380,7 @@ QPair<bool, QString> TSpellChecker::removeWord(const QString& word)
         return result;
     }
 
-    // The return value from this function is unclear - it does not seems to
+    // The return value from this function is unclear - it does not seem to
     // indicate anything useful
     Hunspell_remove(userHandle(), word.toUtf8().constData());
     if (mWordSet_profile.remove(word)) {
@@ -396,7 +404,6 @@ QPair<bool, QString> TSpellChecker::removeWord(const QString& word)
         return smpHunspell_sharedDictionary;
     }
 
-    // Need to check that the files exist first:
     QString dictionaryPath(MudletApp::getMudletPath(enums::mainDataItemPath, qsl("mudlet.dic")));
     QString affixPath(MudletApp::getMudletPath(enums::mainDataItemPath, qsl("mudlet.aff")));
     int oldWordCount = 0;
@@ -411,7 +418,6 @@ QPair<bool, QString> TSpellChecker::removeWord(const QString& word)
         return nullptr;
     }
 
-    // We have read, sorted (and deduplicated if it was) the wordlist
     const int wordCount = wordList.count();
     if (wordCount > oldWordCount) {
         qDebug().nospace().noquote() << "  Considered an extra " << wordCount - oldWordCount << " words.";
@@ -444,6 +450,7 @@ QPair<bool, QString> TSpellChecker::removeWord(const QString& word)
     saveDictionary(MudletApp::getMudletPath(enums::mainDataItemPath, qsl("mudlet")), smWordSet_shared);
     Hunspell_destroy(smpHunspell_sharedDictionary);
     smpHunspell_sharedDictionary = nullptr;
+    smWordSet_shared.clear();
 }
 
 /*static*/ bool TSpellChecker::addWordToShared(const QString& word)
@@ -486,10 +493,7 @@ QPair<bool, QString> TSpellChecker::removeWord(const QString& word)
 // the ".aff" file:
 /*static*/ Hunhandle* TSpellChecker::prepareProfileDictionary(const QString& hostName, QSet<QString>& wordSet)
 {
-    // Need to check that the files exist first:
-    // full dictionary path+filename
     QString dictionaryPath(MudletApp::getMudletPath(enums::profileDataItemPath, hostName, qsl("profile.dic")));
-    // full affix path+filename
     QString affixPath(MudletApp::getMudletPath(enums::profileDataItemPath, hostName, qsl("profile.aff")));
 
     int oldWordCount = 0;
@@ -504,7 +508,6 @@ QPair<bool, QString> TSpellChecker::removeWord(const QString& word)
         return nullptr;
     }
 
-    // We have read, sorted (and deduplicated if it was) the wordlist
     const int wordCount = wordList.count();
     if (wordCount > oldWordCount) {
         qDebug().nospace().noquote() << "  Considered an extra " << wordCount - oldWordCount << " words.";
@@ -518,17 +521,11 @@ QPair<bool, QString> TSpellChecker::removeWord(const QString& word)
         return nullptr;
     }
 
-    // The pair of files are now usable by hunspell library and being use to make
-    // suggestions - they are also capable of being munched - but since we are
-    // using this on our own profiles' dictionaries we will not know the
-    // language that the Mud uses and thus which locale's affixes are suitable.
-
-    // Also, given how we are using the dictionary, any affix rules are going
-    // to confuse our add/remove code.  We just need the SET line to force the
-    // Hunspell API to be UTF-8 and the TRY line to allow for searching for
-    // completions. Anyhow we now need to keep the copy of the word list ourself
-    // to allow for persistent editing of it as it is not possible to obtain it
-    // from the Hunspell library:
+    // The affix file carries only the SET line, which forces the Hunspell API to
+    // UTF-8, and the TRY line, which lets it search for completions: real affix
+    // rules would confuse the add/remove code, and the language the game uses -
+    // and so the locale whose affixes would suit - is not knowable here. The
+    // word list is kept because Hunspell cannot give it back.
 
     wordSet = QSet<QString>(wordList.begin(), wordList.end());
 
@@ -543,13 +540,12 @@ QPair<bool, QString> TSpellChecker::removeWord(const QString& word)
 // regenerates the ".aff" file.
 /*static*/ bool TSpellChecker::saveDictionary(const QString& pathFileBaseName, QSet<QString>& wordSet)
 {
-    // First update the line count in the list of words
     const QString dictionaryPath(qsl("%1.dic").arg(pathFileBaseName));
     const QString affixPath(qsl("%1.aff").arg(pathFileBaseName));
     QHash<QString, unsigned int> graphemeCounts;
 
-    // The file will have previously been created - for it to be missing now is
-    // not expected - thought it shouldn't really be fatal...
+    // The file will have previously been created, so it being missing now is
+    // not expected and aborts the save:
     const int oldWordCount = getDictionaryWordCount(dictionaryPath);
     if (oldWordCount == -1) {
         return false;
@@ -559,7 +555,6 @@ QPair<bool, QString> TSpellChecker::removeWord(const QString& word)
 
     // This also sorts wordList as a wanted side-effect:
     const int wordCount = scanWordList(wordList, graphemeCounts);
-    // We have sorted and scanned the wordlist
     if (wordCount > oldWordCount) {
         qDebug().nospace().noquote() << "  Saved an extra " << wordCount - oldWordCount << " words in dictionary.";
     } else if (wordCount < oldWordCount) {
@@ -587,7 +582,6 @@ QPair<bool, QString> TSpellChecker::removeWord(const QString& word)
         return true;
     }
 
-    // First update the line count in the list of words
     if (!dict.open(QFile::ReadOnly | QFile::Text)) {
         qWarning().nospace().noquote() << "TSpellChecker::scanDictionaryFile(...) ERROR - failed to open dictionary file (for reading): \"" << dict.fileName() << "\" reason: " << dict.errorString();
         return false;
@@ -604,7 +598,6 @@ QPair<bool, QString> TSpellChecker::removeWord(const QString& word)
         if (!dictionaryLine.isEmpty()) {
             wl << dictionaryLine;
             QTextBoundaryFinder graphemeFinder(QTextBoundaryFinder::Grapheme, dictionaryLine);
-            // The finder will be at the start of the string
             int startPos = 0;
             int endPos = graphemeFinder.toNextBoundary();
             do {
@@ -658,9 +651,6 @@ QPair<bool, QString> TSpellChecker::removeWord(const QString& word)
 // Returns false on significant failure (where the caller will have to bail out)
 /*static*/ bool TSpellChecker::overwriteDictionaryFile(const QString& dictionaryPath, const QStringList& wl)
 {
-    // (Re)Open the file to write out the cleaned/new contents
-    // QFile::WriteOnly automatically implies QFile::Truncate in the absence of
-    // certain other flags:
     QSaveFile dict(dictionaryPath);
     if (!dict.open(QFile::WriteOnly | QFile::Text)) {
         qWarning().nospace().noquote() << "TSpellChecker::overwriteDictionaryFile(...) ERROR - failed to open dictionary file (for writing): \"" << dict.fileName()
@@ -763,7 +753,6 @@ QPair<bool, QString> TSpellChecker::removeWord(const QString& word)
     }
 
     QSaveFile aff(affixPath);
-    // Finally, having got the needed content, write it out:
     if (!aff.open(QFile::WriteOnly | QFile::Text)) {
         qWarning().nospace().noquote() << "TSpellChecker::overwriteAffixFile(...) ERROR - failed to open affix file (for writing): \"" << aff.fileName() << "\" reason: " << aff.errorString();
         return false;
@@ -781,7 +770,6 @@ QPair<bool, QString> TSpellChecker::removeWord(const QString& word)
     return true;
 }
 
-// Returns the count of words in the first argument:
 /*static*/ int TSpellChecker::scanWordList(QStringList& wl, QHash<QString, unsigned int>& gc)
 {
     const int wordCount = wl.count();
@@ -795,7 +783,6 @@ QPair<bool, QString> TSpellChecker::removeWord(const QString& word)
 
     for (const auto& word : wl) {
         QTextBoundaryFinder graphemeFinder(QTextBoundaryFinder::Grapheme, word);
-        // The finder will be at the start of the string
         int startPos = 0;
         int endPos = graphemeFinder.toNextBoundary();
         do {

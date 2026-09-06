@@ -115,7 +115,9 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
             &mudlet::signal_profileLoaded,
             this,
             [this]() {
-                mpHost->spellChecker().warmSystemDictionary();
+                if (mpHost) {
+                    mpHost->spellChecker().warmDictionaries();
+                }
             },
             Qt::QueuedConnection);
     // ...and turning spell check on mid-session is the other moment the
@@ -125,7 +127,9 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
             &Host::signal_spellCheckEnabled,
             this,
             [this]() {
-                mpHost->spellChecker().warmSystemDictionary();
+                if (mpHost) {
+                    mpHost->spellChecker().warmDictionaries();
+                }
             },
             Qt::QueuedConnection);
 
