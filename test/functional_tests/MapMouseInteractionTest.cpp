@@ -38,9 +38,12 @@
 #include <QFileInfo>
 #include <QInputDialog>
 #include <QLineEdit>
+#include <QListWidget>
 #include <QMenu>
+#include <QMessageBox>
 #include <QMouseEvent>
 #include <QPixmap>
+#include <QPushButton>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTimer>
@@ -85,6 +88,9 @@ private:
     bool mModalDialogAnswered = false;
     int mModalAnswerAttemptsLeft = 0;
     int mAreaId = 0;
+    int mOtherAreaId = 0;
+    bool mNamePromptSeen = false;
+    QString mLastWarningTitle;
     const QString mProfileName = qsl("MapMouseInteraction-Test");
     const QString mLocalhost = qsl("localhost");
     QString mPort;
@@ -113,6 +119,7 @@ private:
     static inline const QVector3D kLabelPosition{2, 0, 0};
     static inline const QSizeF kLabelClickSize{40, 20};
     static constexpr int kSouthRoomId = 8;
+    static constexpr int kOtherAreaRoomId = 20;
 
     void deleteProfileDirectory() const
     {
@@ -480,6 +487,146 @@ private:
     // directly.
     QDialog* moveToAreaDialog() const { return mp2dMap->arealist_combobox ? qobject_cast<QDialog*>(mp2dMap->arealist_combobox->window()) : nullptr; }
 
+    // The dialog Configure areas puts up. It is not modal either, and closing
+    // it deletes it, so it is looked up afresh each time.
+    QDialog* configureAreasDialog() const
+    {
+        for (QDialog* pDialog : mp2dMap->findChildren<QDialog*>()) {
+            if (pDialog->isVisible() && pDialog->windowTitle() == qsl("Configure Areas")) {
+                return pDialog;
+            }
+        }
+        return nullptr;
+    }
+
+    bool openConfigureAreas()
+    {
+        rightClickAt(pointUnitsFromCentre(0, 0));
+        return pickContextMenuItem(qsl("Configure areas...")) && configureAreasDialog();
+    }
+
+    QListWidget* configuredAreaList() const
+    {
+        QDialog* pDialog = configureAreasDialog();
+        return pDialog ? pDialog->findChild<QListWidget*>() : nullptr;
+    }
+
+    QStringList configuredAreas() const
+    {
+        QStringList rows;
+        if (QListWidget* pList = configuredAreaList()) {
+            for (int row = 0; row < pList->count(); ++row) {
+                rows << pList->item(row)->text();
+            }
+        }
+        return rows;
+    }
+
+    QString configuredAreaSelected() const
+    {
+        QListWidget* pList = configuredAreaList();
+        return pList && pList->currentItem() ? pList->currentItem()->text() : QString();
+    }
+
+    bool selectConfiguredArea(const QString& rowText) const
+    {
+        QListWidget* pList = configuredAreaList();
+        if (!pList) {
+            return false;
+        }
+        for (int row = 0; row < pList->count(); ++row) {
+            if (pList->item(row)->text() == rowText) {
+                pList->setCurrentRow(row);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    QPushButton* configureAreasButton(const QString& text) const
+    {
+        QDialog* pDialog = configureAreasDialog();
+        if (!pDialog) {
+            return nullptr;
+        }
+        for (QPushButton* pButton : pDialog->findChildren<QPushButton*>()) {
+            if (pButton->text() == text) {
+                return pButton;
+            }
+        }
+        return nullptr;
+    }
+
+    bool configureAreasButtonEnabled(const QString& text) const
+    {
+        QPushButton* pButton = configureAreasButton(text);
+        return pButton && pButton->isEnabled();
+    }
+
+    bool pressConfigureAreasButton(const QString& text) const
+    {
+        QPushButton* pButton = configureAreasButton(text);
+        if (!pButton || !pButton->isEnabled()) {
+            return false;
+        }
+        pButton->click();
+        return true;
+    }
+
+    // Presses Rename or Create and types the name into the prompt it puts up;
+    // an empty name cancels the prompt instead. A name the map turns down is
+    // followed by a warning box, which is dismissed with its title kept in
+    // mLastWarningTitle. Reports whether the prompt came up at all.
+    bool pressAndName(const QString& buttonText, const QString& name)
+    {
+        QPushButton* pButton = configureAreasButton(buttonText);
+        if (!pButton || !pButton->isEnabled()) {
+            return false;
+        }
+        mNamePromptSeen = false;
+        mLastWarningTitle.clear();
+        answerNextModalDialog([this, name](QWidget* pDialog) {
+            if (auto* pPrompt = qobject_cast<QInputDialog*>(pDialog)) {
+                mNamePromptSeen = true;
+                if (name.isEmpty()) {
+                    pPrompt->reject();
+                } else {
+                    pPrompt->setTextValue(name);
+                    pPrompt->accept();
+                }
+                return false;
+            }
+            if (auto* pWarning = qobject_cast<QMessageBox*>(pDialog)) {
+                mLastWarningTitle = pWarning->windowTitle();
+                pWarning->accept();
+                return true;
+            }
+            return false;
+        });
+        pButton->click();
+        stopAnsweringModalDialogs();
+        return mNamePromptSeen;
+    }
+
+    QString mouseAreaRow() const { return qsl("Mouse Area (%1)").arg(mAreaId); }
+    QString otherAreaRow() const { return qsl("Other (%1)").arg(mOtherAreaId); }
+
+    // The map with a second area of one room, shown with the dropdown on the
+    // player's area and the default area in the dropdown too, so that it and
+    // the list in Configure areas hold the same rows.
+    void showMapWithAnotherArea()
+    {
+        buildMap();
+        mOtherAreaId = map()->mpRoomDB->addArea(qsl("Other"));
+        QVERIFY(mOtherAreaId > 0);
+        QVERIFY(map()->addRoom(kOtherAreaRoomId) && map()->setRoomArea(kOtherAreaRoomId, mOtherAreaId) && map()->setRoomCoordinates(kOtherAreaRoomId, 10, 10, 0));
+        map()->setDefaultAreaShown(true);
+        showMapper(false);
+        map()->mpMapper->updateAreaComboBox();
+        map()->mpMapper->resetAreaComboBoxToPlayerRoomArea();
+        QCOMPARE(map()->mpMapper->comboBox_showArea->currentText(), qsl("Mouse Area"));
+    }
+
     QSet<int> roomsInArea(const int areaId) const
     {
         const TArea* pArea = map()->mpRoomDB->getArea(areaId);
@@ -623,6 +770,9 @@ private slots:
         if (QDialog* pMoveToArea = moveToAreaDialog()) {
             pMoveToArea->close();
             mp2dMap->arealist_combobox.clear();
+        }
+        if (QDialog* pConfigureAreas = configureAreasDialog()) {
+            pConfigureAreas->close();
         }
         closeContextMenu();
         // A click sent while a menu was up is re-posted by the map, and would
@@ -2328,6 +2478,129 @@ private slots:
         QCOMPARE(mp2dMap->mAreaID, newAreaId);
         QCOMPARE(map()->mpMapper->comboBox_showArea->currentText(), qsl("Brand New"));
         QVERIFY(map()->isUnsaved());
+    }
+
+    void test_configureAreasListsEveryAreaWithItsIdAndPreselectsTheOneShown()
+    {
+        showMapWithAnotherArea();
+        QVERIFY(openConfigureAreas());
+
+        QCOMPARE(configuredAreas(), (QStringList{qsl("Default Area (-1)"), mouseAreaRow(), otherAreaRow()}));
+        QCOMPARE(configuredAreaSelected(), mouseAreaRow());
+        QVERIFY(configureAreasButtonEnabled(qsl("Rename")));
+        QVERIFY(configureAreasButtonEnabled(qsl("Delete")));
+    }
+
+    void test_closeTakesConfigureAreasAway()
+    {
+        showMapWithAnotherArea();
+        QVERIFY(openConfigureAreas());
+
+        QVERIFY(pressConfigureAreasButton(qsl("Close")));
+
+        QVERIFY(!configureAreasDialog());
+    }
+
+    void test_theDefaultAreaCannotBeRenamedOrDeletedFromConfigureAreas()
+    {
+        showMapWithAnotherArea();
+        QVERIFY(openConfigureAreas());
+
+        QVERIFY(selectConfiguredArea(qsl("Default Area (-1)")));
+        QVERIFY(!configureAreasButtonEnabled(qsl("Rename")));
+        QVERIFY(!configureAreasButtonEnabled(qsl("Delete")));
+        QVERIFY(configureAreasButtonEnabled(qsl("Create")));
+
+        QVERIFY(selectConfiguredArea(otherAreaRow()));
+        QVERIFY(configureAreasButtonEnabled(qsl("Rename")));
+        QVERIFY(configureAreasButtonEnabled(qsl("Delete")));
+    }
+
+    void test_creatingAnAreaFromConfigureAreasAddsItToTheListAndTheDropdown()
+    {
+        showMapWithAnotherArea();
+        QVERIFY(openConfigureAreas());
+
+        QVERIFY(pressAndName(qsl("Create"), qsl("Brand New")));
+
+        const int newAreaId = map()->mpRoomDB->getAreaNamesMap().key(qsl("Brand New"), 0);
+        QVERIFY2(newAreaId > 0, "no area called Brand New was made");
+        QVERIFY(mLastWarningTitle.isEmpty());
+        QCOMPARE(configuredAreas(), (QStringList{qsl("Brand New (%1)").arg(newAreaId), qsl("Default Area (-1)"), mouseAreaRow(), otherAreaRow()}));
+        QCOMPARE(configuredAreaSelected(), qsl("Brand New (%1)").arg(newAreaId));
+        QVERIFY2(map()->mpMapper->comboBox_showArea->findText(qsl("Brand New")) >= 0, "the dropdown does not offer the new area");
+        QCOMPARE(map()->mpMapper->comboBox_showArea->currentText(), qsl("Mouse Area"));
+        QCOMPARE(mp2dMap->mAreaID, mAreaId);
+    }
+
+    void test_creatingAnAreaWithANameAlreadyInUseIsRefused()
+    {
+        showMapWithAnotherArea();
+        QVERIFY(openConfigureAreas());
+        const QStringList before = configuredAreas();
+
+        QVERIFY(pressAndName(qsl("Create"), qsl("Other")));
+
+        QCOMPARE(mLastWarningTitle, qsl("Create failed"));
+        QCOMPARE(configuredAreas(), before);
+        QCOMPARE(map()->mpRoomDB->getAreaNamesMap().size(), 3);
+    }
+
+    void test_renamingTheAreaShownRenamesItInTheListAndTheDropdown()
+    {
+        showMapWithAnotherArea();
+        QVERIFY(openConfigureAreas());
+
+        QVERIFY(pressAndName(qsl("Rename"), qsl("Renamed Area")));
+
+        QVERIFY(mLastWarningTitle.isEmpty());
+        QCOMPARE(map()->mpRoomDB->getAreaNamesMap().value(mAreaId), qsl("Renamed Area"));
+        QCOMPARE(configuredAreas(), (QStringList{qsl("Default Area (-1)"), otherAreaRow(), qsl("Renamed Area (%1)").arg(mAreaId)}));
+        QCOMPARE(configuredAreaSelected(), qsl("Renamed Area (%1)").arg(mAreaId));
+        QCOMPARE(map()->mpMapper->comboBox_showArea->currentText(), qsl("Renamed Area"));
+        QCOMPARE(mp2dMap->mAreaID, mAreaId);
+    }
+
+    void test_renamingAnAreaToANameAlreadyInUseIsRefused()
+    {
+        showMapWithAnotherArea();
+        QVERIFY(openConfigureAreas());
+
+        QVERIFY(pressAndName(qsl("Rename"), qsl("Other")));
+
+        QCOMPARE(mLastWarningTitle, qsl("Rename failed"));
+        QCOMPARE(map()->mpRoomDB->getAreaNamesMap().value(mAreaId), qsl("Mouse Area"));
+        QCOMPARE(configuredAreaSelected(), mouseAreaRow());
+        QCOMPARE(map()->mpMapper->comboBox_showArea->currentText(), qsl("Mouse Area"));
+    }
+
+    void test_cancellingTheRenamePromptLeavesTheAreaAlone()
+    {
+        showMapWithAnotherArea();
+        QVERIFY(openConfigureAreas());
+
+        QVERIFY(pressAndName(qsl("Rename"), QString()));
+
+        QVERIFY(mLastWarningTitle.isEmpty());
+        QCOMPARE(map()->mpRoomDB->getAreaNamesMap().value(mAreaId), qsl("Mouse Area"));
+        QCOMPARE(configuredAreaSelected(), mouseAreaRow());
+    }
+
+    void test_deletingAnAreaFromConfigureAreasRemovesItAndItsRoomsEverywhere()
+    {
+        showMapWithAnotherArea();
+        QVERIFY(openConfigureAreas());
+        QVERIFY(selectConfiguredArea(otherAreaRow()));
+
+        QVERIFY(pressConfigureAreasButton(qsl("Delete")));
+
+        QVERIFY(!map()->mpRoomDB->getArea(mOtherAreaId));
+        QVERIFY(!map()->mpRoomDB->getAreaNamesMap().contains(mOtherAreaId));
+        QVERIFY2(!map()->mpRoomDB->getRoom(kOtherAreaRoomId), "the deleted area's room is still on the map");
+        QCOMPARE(configuredAreas(), (QStringList{qsl("Default Area (-1)"), mouseAreaRow()}));
+        QCOMPARE(map()->mpMapper->comboBox_showArea->findText(qsl("Other")), -1);
+        QCOMPARE(map()->mpMapper->comboBox_showArea->currentText(), qsl("Mouse Area"));
+        QCOMPARE(mp2dMap->mAreaID, mAreaId);
     }
 };
 
