@@ -90,7 +90,7 @@ private:
     int mAreaId = 0;
     int mOtherAreaId = 0;
     bool mNamePromptSeen = false;
-    QString mLastWarningTitle;
+    QString mLastWarningText;
     const QString mProfileName = qsl("MapMouseInteraction-Test");
     const QString mLocalhost = qsl("localhost");
     QString mPort;
@@ -575,8 +575,8 @@ private:
 
     // Presses Rename or Create and types the name into the prompt it puts up;
     // an empty name cancels the prompt instead. A name the map turns down is
-    // followed by a warning box, which is dismissed with its title kept in
-    // mLastWarningTitle. Reports whether the prompt came up at all.
+    // followed by a warning box, which is dismissed with its text kept in
+    // mLastWarningText. Reports whether the prompt came up at all.
     bool pressAndName(const QString& buttonText, const QString& name)
     {
         QPushButton* pButton = configureAreasButton(buttonText);
@@ -584,7 +584,7 @@ private:
             return false;
         }
         mNamePromptSeen = false;
-        mLastWarningTitle.clear();
+        mLastWarningText.clear();
         answerNextModalDialog([this, name](QWidget* pDialog) {
             if (auto* pPrompt = qobject_cast<QInputDialog*>(pDialog)) {
                 mNamePromptSeen = true;
@@ -597,7 +597,9 @@ private:
                 return false;
             }
             if (auto* pWarning = qobject_cast<QMessageBox*>(pDialog)) {
-                mLastWarningTitle = pWarning->windowTitle();
+                // macOS gives a message box no window title, so its text is the
+                // only part that identifies the warning on every platform
+                mLastWarningText = pWarning->text();
                 pWarning->accept();
                 return true;
             }
@@ -2543,7 +2545,7 @@ private slots:
 
         const int newAreaId = map()->mpRoomDB->getAreaNamesMap().key(qsl("Brand New"), 0);
         QVERIFY2(newAreaId > 0, "no area called Brand New was made");
-        QVERIFY(mLastWarningTitle.isEmpty());
+        QVERIFY(mLastWarningText.isEmpty());
         QCOMPARE(configuredAreas(), (QStringList{qsl("Brand New (%1)").arg(newAreaId), qsl("Default Area (-1)"), mouseAreaRow(), otherAreaRow()}));
         QCOMPARE(configuredAreaSelected(), qsl("Brand New (%1)").arg(newAreaId));
         QVERIFY2(map()->mpMapper->comboBox_showArea->findText(qsl("Brand New")) >= 0, "the dropdown does not offer the new area");
@@ -2559,7 +2561,7 @@ private slots:
 
         QVERIFY(pressAndName(qsl("Create"), qsl("Other")));
 
-        QCOMPARE(mLastWarningTitle, qsl("Create failed"));
+        QCOMPARE(mLastWarningText, qsl("Unable to create area. Name may be invalid or already in use."));
         QCOMPARE(configuredAreas(), before);
         QCOMPARE(map()->mpRoomDB->getAreaNamesMap().size(), 3);
     }
@@ -2573,7 +2575,7 @@ private slots:
 
         QVERIFY(pressAndName(qsl("Create"), QString()));
 
-        QVERIFY(mLastWarningTitle.isEmpty());
+        QVERIFY(mLastWarningText.isEmpty());
         QCOMPARE(configuredAreas(), before);
         QCOMPARE(configuredAreaSelected(), mouseAreaRow());
         QCOMPARE(map()->mpRoomDB->getAreaNamesMap().size(), 3);
@@ -2588,7 +2590,7 @@ private slots:
 
         QVERIFY(pressAndName(qsl("Rename"), qsl("Renamed Area")));
 
-        QVERIFY(mLastWarningTitle.isEmpty());
+        QVERIFY(mLastWarningText.isEmpty());
         QCOMPARE(map()->mpRoomDB->getAreaNamesMap().value(mAreaId), qsl("Renamed Area"));
         QCOMPARE(configuredAreas(), (QStringList{qsl("Default Area (-1)"), otherAreaRow(), qsl("Renamed Area (%1)").arg(mAreaId)}));
         QCOMPARE(configuredAreaSelected(), qsl("Renamed Area (%1)").arg(mAreaId));
@@ -2603,7 +2605,7 @@ private slots:
 
         QVERIFY(pressAndName(qsl("Rename"), qsl("Other")));
 
-        QCOMPARE(mLastWarningTitle, qsl("Rename failed"));
+        QCOMPARE(mLastWarningText, qsl("Unable to rename area. Name may be invalid or already in use."));
         QCOMPARE(map()->mpRoomDB->getAreaNamesMap().value(mAreaId), qsl("Mouse Area"));
         QCOMPARE(configuredAreaSelected(), mouseAreaRow());
         QCOMPARE(map()->mpMapper->comboBox_showArea->currentText(), qsl("Mouse Area"));
@@ -2616,7 +2618,7 @@ private slots:
 
         QVERIFY(pressAndName(qsl("Rename"), QString()));
 
-        QVERIFY(mLastWarningTitle.isEmpty());
+        QVERIFY(mLastWarningText.isEmpty());
         QCOMPARE(map()->mpRoomDB->getAreaNamesMap().value(mAreaId), qsl("Mouse Area"));
         QCOMPARE(configuredAreaSelected(), mouseAreaRow());
     }
