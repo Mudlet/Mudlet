@@ -32,6 +32,7 @@
 #include "mapInfoContributorManager.h"
 #include "mudlet.h"
 
+#include <QApplication>
 #include <QElapsedTimer>
 #include <QEvent>
 #include <QFileDialog>
@@ -127,8 +128,7 @@ dlgMapper::dlgMapper(QWidget* parent, Host* pH, TMap* pM)
     } else {
         qDebug() << "dlgMapper::dlgMapper(...) INFO constructor called, mpHost is null";
     }
-    //stops inheritance of palette from mpConsole->mpMainFrame
-    setPalette(QApplication::palette());
+    refreshColours();
 
     connect(mpMap->mMapInfoContributorManager, &MapInfoContributorManager::signal_contributorsUpdated, this, &dlgMapper::slot_updateInfoContributors);
     slot_updateInfoContributors();
@@ -167,6 +167,13 @@ static void centerOverlayIn(QFrame* overlay, QWidget* parent, int minWidth)
     const int w = qMin(qMax(hint.width(), minWidth), available);
     const int h = hint.height();
     overlay->setGeometry((parent->width() - w) / 2, (parent->height() - h) / 2, w, h);
+}
+
+// Taking the application palette explicitly is what stops the mapper inheriting
+// one from mpConsole->mpMainFrame.
+void dlgMapper::refreshColours()
+{
+    setPalette(QApplication::palette());
 }
 
 void dlgMapper::setupEmptyStateOverlay()
