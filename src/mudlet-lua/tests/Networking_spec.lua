@@ -1431,6 +1431,84 @@ describe("MMCP effects against a scripted chat peer", function()
     end)
   end)
 
+  describe("peek and connection requests a peer sends", function()
+    -- Sharing connections is off by default and only the preferences dialog can
+    -- turn it on, so what a peer gets back is always a refusal; what changes is
+    -- which one, and an ignored peer is told nothing at all.
+    -- the console wraps a long message, so the text is matched with its runs of
+    -- whitespace flattened rather than as the lines it landed on
+    local function displayedSince(mark)
+      return (table.concat(getLines("main", mark, getLastLineNumber("main") + 1), "\n"):gsub("%s+", " "))
+    end
+
+    local function waitForText(mark, needle)
+      waitUntil(function() return contains(displayedSince(mark), needle) end, 2000)
+      return displayedSince(mark)
+    end
+
+    it("shows the peers a peek list names", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      peerSends(29, "10.0.0.1~4050~AlphaPeer~10.0.0.2~4051~BetaPeer~")
+      local _, from, message = waitForEvent("sysMMCPChatMessage", 2000)
+      assert.equals(PEER_NAME, from)
+      for _, expected in ipairs({"AlphaPeer", "10.0.0.1", "4050", "BetaPeer", "10.0.0.2", "4051"}) do
+        assert.is_true(contains(message, expected), expected .. " missing from " .. tostring(message))
+      end
+    end)
+
+    it("says so rather than showing a peek list it cannot read", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      local mark = getLastLineNumber("main")
+      -- the entries are name, address and port, so a list that does not divide
+      -- into threes cannot be lined up with them
+      peerSends(29, "10.0.0.1~4050~")
+      local shown = waitForText(mark, "Badly formatted peek list")
+      assert.is_true(contains(shown, "Badly formatted peek list from " .. PEER_NAME), shown)
+    end)
+
+    it("turns down a request for its connections and says why", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      local mark = getLastLineNumber("main")
+      peerSends(2, "")
+      local shown = waitForText(mark, "requested your public connections")
+      assert.is_true(contains(shown, "you're ignoring connection requests"), shown)
+    end)
+
+    it("reports an ignored peer's connection request as an attempt", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      assert.is_true(mmcp.ignore(PEER_NAME))
+      local mark = getLastLineNumber("main")
+      peerSends(2, "")
+      local shown = waitForText(mark, "trying to request your connections")
+      assert.is_true(contains(shown, PEER_NAME .. " is trying to request your connections!"), shown)
+      assert.is_true(mmcp.ignore(PEER_NAME))
+    end)
+
+    it("turns down a peek at its connections and says why", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      local mark = getLastLineNumber("main")
+      peerSends(28, "")
+      local shown = waitForText(mark, "peek your connections")
+      assert.is_true(contains(shown, "you're ignoring peek requests"), shown)
+    end)
+
+    it("reports an ignored peer's peek as an attempt", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      assert.is_true(mmcp.ignore(PEER_NAME))
+      local mark = getLastLineNumber("main")
+      peerSends(28, "")
+      local shown = waitForText(mark, "trying to peek your connections")
+      assert.is_true(contains(shown, PEER_NAME .. " is trying to peek your connections!"), shown)
+      assert.is_true(mmcp.ignore(PEER_NAME))
+    end)
+  end)
+
   describe("mmcp.sendSideChannel", function()
     it("sends channel and message to the peer as one comma separated payload", function()
       if peerUnavailable() then return end
