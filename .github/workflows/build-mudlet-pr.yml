@@ -68,12 +68,15 @@ jobs:
             # Enable AddressSanitizer for PTB and testing builds, but not release
             # builds (tagged Mudlet-*) - ASAN adds significant runtime overhead
             enable_asan: 'true'
+          # Ships the Intel binary only: no test here branches on the host
+          # architecture, so the arm64 job below is the same coverage, and this
+          # is the slower pool.
           - os: macos-15-intel
-            buildname: 'macos (x86_64) / c++, lua tests'
+            buildname: 'macos (x86_64)'
             compiler: clang_64
             qt: '6.11.1'
             deploy: 'deploy'
-            run_tests: 'true'
+            build_tests: 'false'
           - os: macos-15
             buildname: 'macos (arm64) / c++, lua tests'
             compiler: clang_64
@@ -384,6 +387,7 @@ jobs:
           -DUSE_SANITIZER=${{ matrix.enable_asan == 'true' && !startsWith(github.ref, 'refs/tags/Mudlet-') && 'Address' || '' }}
           -DUSE_ALTERNATE_LINKER=${{ runner.os == 'Linux' && 'mold' || '' }}
           ${{ runner.os == 'macOS' && format('-DLUA_INCLUDE_DIR={0}/.lua/include -DLUA_LIBRARY={0}/.lua/lib/liblua.a', github.workspace) || '' }}
+          -DBUILD_TESTING=${{ matrix.build_tests == 'false' && 'OFF' || 'ON' }}
           -DWITH_SENTRY=ON
           -DSENTRY_SEND_DEBUG=${{ (startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true') && '1' || '0' }}
           -DSENTRY_DSN=${{ secrets.SENTRY_DSN }}
@@ -450,13 +454,14 @@ jobs:
         MUDLET_MEDIA_TESTS_REQUIRE_PLAYBACK: 1
 
     - name: (macOS) Run C++ tests
-      if: runner.os == 'macOS'
+      if: runner.os == 'macOS' && matrix.run_tests == 'true'
       working-directory: '${{runner.workspace}}/b/ninja'
       run: ctest --output-on-failure -j $(sysctl -n hw.ncpu)
 
-    # the full ctest run above already covers every functional-labelled test
+    # the full ctest run above already covers every functional-labelled test,
+    # and a BUILD_TESTING=OFF tree has no tests to find - bare ctest exits 8 there
     - name: Run QTest
-      if: matrix.run_tests != 'true'
+      if: matrix.run_tests != 'true' && matrix.build_tests != 'false'
       run: ctest --test-dir ${{runner.workspace}}/b/ninja -L functional --output-on-failure -j $(nproc)
 
     - name: add ssh-agent for release uploads
