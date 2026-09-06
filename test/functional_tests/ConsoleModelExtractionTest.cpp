@@ -314,6 +314,136 @@ private slots:
         QVERIFY2(!model->mIsPromptLine, "runTriggers() must clear the prompt flag once the line is processed.");
     }
 
+    // A colorizer trigger recolors its match by selecting a run of the line and
+    // painting it, all of which is model state. The return that used to guard
+    // those calls left the whole function, so with no view the trigger did not
+    // merely lose its color - the script, the capture groups and any child
+    // filters never ran either. One case per matcher that carried the guard;
+    // the color-pattern matcher is the case after this one.
+    void test_colorizerTriggersRunAndPaintTheModelWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        const QColor highlightFg(12, 34, 56);
+        const QColor highlightBg(65, 43, 21);
+        struct ColorizerCase
+        {
+            QString name;
+            int patternKind;
+            QString pattern;
+            QString lineText;
+            int matchStart;
+        };
+        // A pattern of its own per case, so a line can only ever be painted by
+        // the trigger it is meant for.
+        const QList<ColorizerCase> colorizerCases{
+                {qsl("substring"), REGEX_SUBSTRING, qsl("paint alpha"), qsl("before paint alpha after"), 7},
+                {qsl("perl"), REGEX_PERL, qsl("paint beta"), qsl("before paint beta after"), 7},
+                {qsl("beginOfLine"), REGEX_BEGIN_OF_LINE_SUBSTRING, qsl("paint gamma"), qsl("paint gamma and the rest"), 0},
+                {qsl("exact"), REGEX_EXACT_MATCH, qsl("paint delta"), qsl("paint delta"), 0},
+        };
+
+        // Built while the view is still up: setScript() compiles against the
+        // profile's Lua state, which is what the trigger's own script proves ran.
+        for (const ColorizerCase& colorizerCase : colorizerCases) {
+            auto* trigger = new TTrigger(qsl("viewless-%1").arg(colorizerCase.name), QStringList{colorizerCase.pattern}, QList<int>{colorizerCase.patternKind}, false, host);
+            trigger->setIsColorizerTrigger(true);
+            trigger->setColorizerFgColor(highlightFg);
+            trigger->setColorizerBgColor(highlightBg);
+            trigger->setIsActive(true);
+            QVERIFY2(host->getTriggerUnit()->registerTrigger(trigger), qPrintable(qsl("%1: the colorizer trigger was not registered.").arg(colorizerCase.name)));
+            // Only registering gives a trigger its id, and the script is compiled
+            // into a Lua function named after that id: scripted before it is
+            // registered, every one of these would compile into Trigger0 and the
+            // last body would answer for all of them.
+            QVERIFY2(trigger->setScript(qsl("viewlessColorizerRan = '%1'").arg(colorizerCase.name)), qPrintable(qsl("%1: the colorizer trigger's script did not compile.").arg(colorizerCase.name)));
+        }
+
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        destroyTheView(host);
+        // Closing the profile emergency-stops the trigger engine
+        // (Host::closeChildren()), which a profile that simply never had a view
+        // would not do:
+        host->reenableAllTriggers();
+
+        for (const ColorizerCase& colorizerCase : colorizerCases) {
+            const QString& name = colorizerCase.name;
+            runLua(host, qsl("viewlessColorizerRan = 'none'"));
+
+            const int fedLine = appendModelLine(model->buffer, colorizerCase.lineText);
+            QVERIFY2(fedLine >= 0, qPrintable(qsl("%1: the line never reached the view-less buffer.").arg(name)));
+            QCOMPARE(model->buffer.line(fedLine), colorizerCase.lineText);
+
+            host->runTriggers(fedLine);
+
+            QVERIFY2(luaGlobalString(host, "viewlessColorizerRan") == name, qPrintable(qsl("%1: the colorizer trigger's own script never ran, so the trigger was skipped entirely.").arg(name)));
+
+            const auto& chars = model->buffer.buffer.at(fedLine);
+            const int start = colorizerCase.matchStart;
+            const int end = start + colorizerCase.pattern.size() - 1;
+            QVERIFY2(static_cast<int>(chars.size()) > end, qPrintable(qsl("%1: the buffer line is shorter than the match.").arg(name)));
+            QVERIFY2(chars.at(start).foreground() == highlightFg && chars.at(start).background() == highlightBg,
+                     qPrintable(qsl("%1: the start of the match was not painted with the trigger's colors.").arg(name)));
+            QVERIFY2(chars.at(end).foreground() == highlightFg && chars.at(end).background() == highlightBg,
+                     qPrintable(qsl("%1: the end of the match was not painted with the trigger's colors.").arg(name)));
+            if (start > 0) {
+                QVERIFY2(chars.at(start - 1).foreground() != highlightFg, qPrintable(qsl("%1: the color spilled in front of the match.").arg(name)));
+            }
+            if (end + 1 < static_cast<int>(chars.size())) {
+                QVERIFY2(chars.at(end + 1).foreground() != highlightFg, qPrintable(qsl("%1: the color spilled past the match.").arg(name)));
+            }
+        }
+
+        // The format the model prints with has to be back to the profile's own
+        // pair, which is what the reset at the end of each colorizer pass does.
+        QCOMPARE(model->mFormatCurrent.foreground(), model->mFgColor);
+        QCOMPARE(model->mFormatCurrent.background(), model->mBgColor);
+    }
+
+    // The fifth guarded matcher. A color pattern is matched out of the model's
+    // buffer rather than compiled as a regex, so it takes a trigger built the
+    // way tempAnsiColorTrigger() builds one.
+    void test_aColorPatternColorizerTriggerRunsWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        const QColor highlightFg(9, 87, 65);
+        const QColor highlightBg(21, 43, 65);
+        auto* trigger = new TTrigger(nullptr, host);
+        trigger->setIsFolder(false);
+        trigger->setTemporary(true);
+        QVERIFY2(trigger->setupTmpColorTrigger(TTrigger::scmDefault, TTrigger::scmIgnored), "The color pattern was not set up.");
+        trigger->setIsColorizerTrigger(true);
+        trigger->setColorizerFgColor(highlightFg);
+        trigger->setColorizerBgColor(highlightBg);
+        trigger->setIsActive(true);
+        QVERIFY2(trigger->registerTrigger(), "The color pattern trigger was not registered.");
+        QVERIFY2(trigger->setScript(qsl("viewlessColorPatternRan = 'yes'")), "The color pattern trigger's script did not compile.");
+
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        destroyTheView(host);
+        host->reenableAllTriggers();
+
+        runLua(host, qsl("viewlessColorPatternRan = 'none'"));
+        // The default foreground is what the pattern matches, and it is the one
+        // an unstyled appended line is stamped with:
+        QCOMPARE(model->mFgColor, QColorConstants::LightGray);
+        const int fedLine = appendModelLine(model->buffer, qsl("color pattern line"));
+        host->runTriggers(fedLine);
+
+        QCOMPARE(luaGlobalString(host, "viewlessColorPatternRan"), qsl("yes"));
+        const auto& chars = model->buffer.buffer.at(fedLine);
+        QVERIFY2(!chars.empty(), "The line never reached the view-less buffer.");
+        QVERIFY2(chars.front().foreground() == highlightFg && chars.front().background() == highlightBg, "The color pattern's match was not painted with the trigger's colors.");
+        QVERIFY2(chars.back().foreground() == highlightFg && chars.back().background() == highlightBg, "The color pattern's match was not painted to the end of the line.");
+    }
+
     // sysBufferShrinkEvent tells scripts their stored line indexes just shifted.
     // With a view attached it has to carry that console's name and the batch
     // size that went away.
