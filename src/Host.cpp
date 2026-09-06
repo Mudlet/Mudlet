@@ -5611,6 +5611,9 @@ void Host::setBorders(QMargins borders)
     if (mpConsole.isNull()) {
         return;
     }
+    // A console put away by a tab switch is zero pixels wide, so the resize
+    // event below tells it nothing about the room its new borders leave
+    mpConsole->syncHiddenScreenDimensions();
     auto x = mpConsole->width();
     auto y = mpConsole->height();
     const QSize s = QSize(x, y);
