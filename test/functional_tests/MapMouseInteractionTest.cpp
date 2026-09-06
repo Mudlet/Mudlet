@@ -2238,6 +2238,26 @@ private slots:
         QVERIFY(map()->isUnsaved());
     }
 
+    void test_moveToPositionCarriesTheCustomLinesAlong()
+    {
+        buildMap();
+        QVERIFY(map()->setExit(kPlayerRoomId, kEastRoomId, DIR_EAST));
+        TRoom* pPlayerRoom = map()->mpRoomDB->getRoom(kPlayerRoomId);
+        QVERIFY(pPlayerRoom);
+        pPlayerRoom->customLines[qsl("e")] = QList<QPointF>{QPointF(0.5, 0.3), QPointF(0.8, -0.2)};
+        pPlayerRoom->calcRoomDimensions();
+        showMapper(false);
+        clickAt(pointUnitsFromCentre(0, 0));
+        rightClickAt(pointUnitsFromCentre(0, 0));
+
+        QVERIFY(pickMoveToPosition(3, 2, 0));
+
+        QCOMPARE(roomPosition(kPlayerRoomId), QVector3D(3, 2, 0));
+        QCOMPARE(pPlayerRoom->customLines.value(qsl("e")), (QList<QPointF>{QPointF(3.5, 2.3), QPointF(3.8, 1.8)}));
+        QCOMPARE(pPlayerRoom->max_x, 3.8);
+        QCOMPARE(pPlayerRoom->min_y, 1.8);
+    }
+
     // The view lands on the rooms that were moved rather than in the middle
     // of the area they went to, which may be a long way from them.
     void test_moveToAreaFromTheMenuMovesTheSelectionIntoThatAreaAndShowsIt()
