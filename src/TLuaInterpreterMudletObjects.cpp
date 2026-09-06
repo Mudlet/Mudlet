@@ -57,6 +57,7 @@
 #include "dlgTriggerEditor.h"
 #include "mapInfoContributorManager.h"
 #include "mudlet.h"
+#include "widgetutils.h"
 #include "TGameDetails.h"
 #if defined(INCLUDE_3DMAPPER)
 #include "glwidget_integration.h"
@@ -89,7 +90,6 @@
 #include <QCollator>
 #include <QCoreApplication>
 #include <QDesktopServices>
-#include <QFileDialog>
 #include <QFileInfo>
 #include <QMovie>
 #include <QVector>
@@ -952,11 +952,11 @@ int TLuaInterpreter::invokeFileDialog(lua_State* L)
     }
 
     if (!luaDir) {
-        const QString fileName = QFileDialog::getExistingDirectory(nullptr, title, location);
+        const QString fileName = widgetutils::chooseExistingDirectory(title, location);
         lua_pushstring(L, fileName.toUtf8().constData());
         return 1;
     }
-    const QString fileName = QFileDialog::getOpenFileName(nullptr, title, location);
+    const QString fileName = widgetutils::chooseFileToOpen(title, location);
     lua_pushstring(L, fileName.toUtf8().constData());
     return 1;
 }

@@ -23,6 +23,7 @@
  ***************************************************************************/
 
 #include <QApplication>
+#include <QFileDialog>
 #include <QPoint>
 #include <QRect>
 #include <QScreen>
@@ -184,6 +185,10 @@ public:
 
         dialog->move(constrainedPos);
     }
+
+    static QString chooseExistingDirectory(const QString& title, const QString& startingLocation) { return QFileDialog::getExistingDirectory(nullptr, title, startingLocation); }
+
+    static QString chooseFileToOpen(const QString& title, const QString& startingLocation) { return QFileDialog::getOpenFileName(nullptr, title, startingLocation); }
 };
 
 #endif // MUDLET_WIDGETUTILS_H

@@ -34,12 +34,10 @@
 #include "utils.h"
 
 #include <QDebug>
-#include <QDockWidget>
 #include <QLayout>
 #include <QMapIterator>
 #include <QPoint>
 #include <QSet>
-#include <QWidget>
 
 #include <functional>
 
@@ -654,7 +652,6 @@ void ActionUnit::constructToolbar(TAction* pAction, TToolBar* pToolBar)
     }
 
     pToolBar->setTitleBarWidget(nullptr);
-    pToolBar->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
     if (pAction->mLocation == 4) {
         if (pAction->mToolbarLastDockArea == Qt::NoDockWidgetArea) {
             qWarning().nospace().noquote() << "ActionUnit::constructToolbar(TAction*, TToolBar*) WARNING - no last dockarea was set for the TAction (\"" << pAction->getName()
