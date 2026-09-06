@@ -153,7 +153,7 @@ void TEasyButtonBar::addActionButtons(TAction* pAction)
 
         //FIXME: Heiko April 2012: only run checkbox button scripts, but run them even if unchecked
         if (pTAction->isPushDownButton() && pAction->mpHost->mIsProfileLoadingSequence) {
-            qDebug() << "expandToolBar() name=" << pTAction->getName() << " executing script";
+            qDebug() << "addActionButtons() name=" << pTAction->getName() << " executing script";
             pTAction->execute();
         }
 
@@ -213,7 +213,7 @@ void TEasyButtonBar::fillMenu(TAction* pAction, QMenu* pMenu)
         }
         pTAction->mpEAction = pEAction;
 
-        //FIXME: Heiko April 2012 -> expandToolBar()
+        //FIXME: Heiko April 2012 -> addActionButtons()
         if (pTAction->isPushDownButton() && pAction->mpHost->mIsProfileLoadingSequence) {
             pTAction->execute();
         }
