@@ -4376,8 +4376,8 @@ void Host::setCompactInputLine(const bool state)
         // read from the XML file the main TConsole has not been instatiated
         // yet - so must check for it existing first - and ensure the read
         // setting is applied in the constructor for it:
-        if (mpConsole && mpConsole->mpButtonMainLayer) {
-            mpConsole->mpButtonMainLayer->setVisible(!state);
+        if (mpConsole) {
+            mpConsole->setCompactInputLine(state);
         }
     }
 }
@@ -5010,12 +5010,7 @@ QSize Host::calcFontSize(const QString& windowName)
         return QSize(-1, -1);
     }
 
-    if (windowName.isEmpty() || windowName.compare(qsl("main"), Qt::CaseSensitive) == 0) {
-        QFontMetrics fontMetrics(mpConsole->mUpperPane->fontMetrics());
-        return QSize(fontMetrics.horizontalAdvance(QChar('W')), fontMetrics.height());
-    }
-
-    return mpConsole->subConsoleFontSize(windowName).value_or(QSize(-1, -1));
+    return mpConsole->consoleFontSize(windowName).value_or(QSize(-1, -1));
 }
 
 bool Host::setProfileStyleSheet(const QString& styleSheet)

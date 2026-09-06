@@ -684,7 +684,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     }
 
     if (mType & MainConsole) {
-        mpButtonMainLayer->setVisible(!mpHost->getCompactInputLine());
+        setCompactInputLine(mpHost->getCompactInputLine());
 
         mpCommandLine->adjustHeight();
     }
@@ -2574,6 +2574,11 @@ void TConsole::removeEasyButtonBar(int location, TEasyButtonBar* pBar)
     if (auto* toolBar = toolBarForLocation(location)) {
         toolBar->layout()->removeWidget(pBar);
     }
+}
+
+void TConsole::setCompactInputLine(const bool state)
+{
+    mpButtonMainLayer->setVisible(!state);
 }
 
 void TConsole::setProfileName(const QString& newName)

@@ -337,6 +337,7 @@ public:
     void setSearchOptions(const SearchOptions);
     void setF3SearchEnabled(const bool enabled);
     void setProxyForFocus(TCommandLine*);
+    void setCompactInputLine(const bool state);
     void raiseMudletSysWindowResizeEvent(const int overallWidth, const int overallHeight);
     // Raises an event if the number of lines (in the
     // (QStringList) TBuffer::lineBuffer) exceeds the number of rows in a
