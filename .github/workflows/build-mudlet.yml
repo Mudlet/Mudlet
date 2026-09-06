@@ -370,6 +370,8 @@ jobs:
         configurePreset: ${{ runner.os == 'macOS' && (matrix.build_tests == 'false' && 'ci-macos-no-tests' || 'ci-macos') || 'ci-linux' }}
         buildPreset: ${{ runner.os == 'macOS' && (matrix.build_tests == 'false' && 'ci-macos-no-tests' || 'ci-macos') || 'ci-linux' }}
       env:
+        CCACHE_COMPRESSLEVEL: 5
+        CCACHE_MAXSIZE: "80M"
         NINJA_STATUS: '[%f/%t %o/sec] '
         # The run-varying half of the ci-linux/ci-macos presets - everything else
         # about the configuration lives in CMakePresets.json
