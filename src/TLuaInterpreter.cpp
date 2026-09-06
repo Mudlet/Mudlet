@@ -32,8 +32,10 @@
 #include "EAction.h"
 #include "Host.h"
 #include "TAlias.h"
+#include "TBuffer.h"
 #include "TCommandLine.h"
 #include "TConsole.h"
+#include "TConsoleModel.h"
 #include "TDebug.h"
 #include "TEvent.h"
 #include "TFlipButton.h"
@@ -1199,7 +1201,7 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
         if (currentEncoding == "UTF-8") {
             // Simple case: the encoding is already what we are using:
             std::string dataStdString{data.toStdString()};
-            host.mpConsole->printOnDisplay(dataStdString);
+            host.printOnDisplay(dataStdString, false);
             lua_pushboolean(L, true);
             return 1;
         }
@@ -1217,7 +1219,7 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
             }
 
             std::string encodedText{TEncodingHelper::encode(dataQString, currentEncoding).toStdString()};
-            host.mpConsole->printOnDisplay(encodedText);
+            host.printOnDisplay(encodedText, false);
             lua_pushboolean(L, true);
             return 1;
         }
@@ -1233,7 +1235,7 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
         // It is safe to use the data directly now as we have already proved it
         // to be plain ASCII
         std::string dataStdString{dataQString.toStdString()};
-        host.mpConsole->printOnDisplay(dataStdString);
+        host.printOnDisplay(dataStdString, false);
         lua_pushboolean(L, true);
         return 1;
     }
@@ -1241,7 +1243,7 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
     // else the user is assumed to have coded it themselves into the Game
     // Server's current encoding - the backwards "compatible" form:
     std::string dataStdString{data.toStdString()};
-    host.mpConsole->printOnDisplay(dataStdString);
+    host.printOnDisplay(dataStdString, false);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -1561,40 +1563,41 @@ int TLuaInterpreter::closeUserWindow(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#startLogging
 int TLuaInterpreter::startLogging(lua_State* L)
 {
-    const Host& host = getHostFromLua(L);
+    Host& host = getHostFromLua(L);
     const bool logOn = getVerifiedBool(L, __func__, 1, "turn logging on/off");
+    TConsoleModel& consoleModel = host.mainConsoleModel();
 
     QString savedLogFileName;
-    if (host.mpConsole->mLogToLogFile) {
-        savedLogFileName = host.mpConsole->mLogFileName;
+    if (consoleModel.mLogToLogFile) {
+        savedLogFileName = consoleModel.mLogFileName;
         // Don't assume we will be able to find the file name once recording has
         // stopped.
     }
 
-    if (host.mpConsole->mLogToLogFile != logOn) {
-        host.mpConsole->toggleLogging(false);
-        // Changes state of host.mpConsole->mLogToLogFile, but that can't be
-        // really be called a side-effect!
+    if (consoleModel.mLogToLogFile != logOn) {
+        consoleModel.toggleLogging(false);
+        if (consoleModel.mLogToLogFile != logOn) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "Main console output could not be logged to file: %s", consoleModel.mLogStartFailure.toUtf8().constData());
+            return 2;
+        }
 
         lua_pushboolean(L, true);
-        if (host.mpConsole->mLogToLogFile) {
-            host.mpConsole->logButton->setChecked(true);
-            // Sets the button as checked but clicked() & pressed() signals are NOT generated
-            lua_pushfstring(L, "Main console output has started to be logged to file: %s", host.mpConsole->mLogFileName.toUtf8().constData());
-            lua_pushstring(L, host.mpConsole->mLogFileName.toUtf8().constData());
+        if (consoleModel.mLogToLogFile) {
+            lua_pushfstring(L, "Main console output has started to be logged to file: %s", consoleModel.mLogFileName.toUtf8().constData());
+            lua_pushstring(L, consoleModel.mLogFileName.toUtf8().constData());
             lua_pushnumber(L, 1);
         } else {
-            host.mpConsole->logButton->setChecked(false);
             lua_pushfstring(L, "Main console output has stopped being logged to file: %s", savedLogFileName.toUtf8().constData());
-            lua_pushstring(L, host.mpConsole->mLogFileName.toUtf8().constData());
+            lua_pushstring(L, consoleModel.mLogFileName.toUtf8().constData());
             lua_pushnumber(L, 0);
         }
 
     } else {
         lua_pushnil(L);
-        if (host.mpConsole->mLogToLogFile) {
-            lua_pushfstring(L, "Main console output is already being logged to file: %s", host.mpConsole->mLogFileName.toUtf8().constData());
-            lua_pushstring(L, host.mpConsole->mLogFileName.toUtf8().constData());
+        if (consoleModel.mLogToLogFile) {
+            lua_pushfstring(L, "Main console output is already being logged to file: %s", consoleModel.mLogFileName.toUtf8().constData());
+            lua_pushstring(L, consoleModel.mLogFileName.toUtf8().constData());
             lua_pushnumber(L, -1);
         } else {
             lua_pushstring(L, "Main console output was already not being logged to a file.");
@@ -1609,9 +1612,9 @@ int TLuaInterpreter::appendLog(lua_State* L)
 {
     const QString text = getVerifiedString(L, __func__, 1, "text to append to logfile", true);
 
-    const Host& host = getHostFromLua(L);
+    Host& host = getHostFromLua(L);
 
-    host.mpConsole->buffer.appendLog(text);
+    host.mainConsoleModel().buffer.appendLog(text);
 
     return 0;
 }
@@ -1718,13 +1721,14 @@ int TLuaInterpreter::errorc(lua_State* L)
     }
 
     if (host.mEchoLuaErrors) {
-        if (!host.mpConsole->buffer.isEmpty() && !host.mpConsole->buffer.lineBuffer.at(host.mpConsole->buffer.lineBuffer.size() - 1).isEmpty()) {
+        const TBuffer& buffer = host.mainConsoleModel().buffer;
+        if (!buffer.isEmpty() && !buffer.lineBuffer.at(buffer.lineBuffer.size() - 1).isEmpty()) {
             host.postMessage(qsl("\n"));
         }
-        host.mpConsole->print(qsl("[  LUA  ] - "), QColor(80, 160, 255), QColor(Qt::black));
-        host.mpConsole->print(qsl("ERROR: "), QColor(Qt::blue), QColor(Qt::black));
-        host.mpConsole->print(qsl("%1").arg(luaFunctionInfo), QColor(Qt::green), QColor(Qt::black));
-        host.mpConsole->print(qsl("           %1").arg(luaErrorText), QColor(200, 50, 42), QColor(Qt::black));
+        host.printToMainConsole(qsl("[  LUA  ] - "), QColor(80, 160, 255), QColor(Qt::black));
+        host.printToMainConsole(qsl("ERROR: "), QColor(Qt::blue), QColor(Qt::black));
+        host.printToMainConsole(qsl("%1").arg(luaFunctionInfo), QColor(Qt::green), QColor(Qt::black));
+        host.printToMainConsole(qsl("           %1").arg(luaErrorText), QColor(200, 50, 42), QColor(Qt::black));
     }
     return 0;
 }
@@ -2328,10 +2332,11 @@ int TLuaInterpreter::getTimestamp(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("line number %1 invalid, it should be greater than zero").arg(luaLine));
     }
 
-    const Host& host = getHostFromLua(L);
+    Host& host = getHostFromLua(L);
     if (name.isEmpty()) {
-        if (luaLine < host.mpConsole->buffer.timeBuffer.size()) {
-            lua_pushstring(L, host.mpConsole->buffer.timeBuffer.at(luaLine).toUtf8().constData());
+        const TBuffer& buffer = host.mainConsoleModel().buffer;
+        if (luaLine < buffer.timeBuffer.size()) {
+            lua_pushstring(L, buffer.timeBuffer.at(luaLine).toUtf8().constData());
             return 1;
         }
         return warnArgumentValue(L, __func__, qsl("line number %1 invalid, it is beyond the last line of the buffer").arg(luaLine));
@@ -4591,10 +4596,9 @@ void TLuaInterpreter::logError(std::string& e, const QString& name, const QStrin
     // Log error to Profile's Main TConsole:
     if (mpHost->mEchoLuaErrors) {
         // ensure the Lua error is on a line of its own and is not prepended to
-        // the previous line, however there is a nasty gotcha in that during
-        // profile loading the (TMainConsole*) Host::mpConsole pointer is
-        // null - but then the buffer must itself be empty:
-        if (mpHost->mpConsole && !mpHost->mpConsole->buffer.isEmpty() && !mpHost->mpConsole->buffer.lineBuffer.at(mpHost->mpConsole->buffer.lineBuffer.size() - 1).isEmpty()) {
+        // the previous line; the model is still null while the Host is being
+        // constructed - but then there is no buffer to be mid-line in
+        if (auto* pModel = mpHost->mainConsoleModelOrNull(); pModel && !pModel->buffer.isEmpty() && !pModel->buffer.lineBuffer.at(pModel->buffer.lineBuffer.size() - 1).isEmpty()) {
             mpHost->postMessage(qsl("\n"));
         }
 
@@ -4623,7 +4627,7 @@ void TLuaInterpreter::logEventError(const QString& event, const QString& error)
     // Log error to Profile's Main TConsole:
     if (mpHost->mEchoLuaErrors) {
         // ensure the Lua error is on a line of its own and is not prepended to the previous line
-        if (!mpHost->mpConsole->buffer.isEmpty() && !mpHost->mpConsole->buffer.lineBuffer.at(mpHost->mpConsole->buffer.lineBuffer.size() - 1).isEmpty()) {
+        if (auto* pModel = mpHost->mainConsoleModelOrNull(); pModel && !pModel->buffer.isEmpty() && !pModel->buffer.lineBuffer.at(pModel->buffer.lineBuffer.size() - 1).isEmpty()) {
             mpHost->postMessage(qsl("\n"));
         }
 

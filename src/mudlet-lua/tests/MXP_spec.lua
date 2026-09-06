@@ -99,6 +99,12 @@ describe("Tests MXP handling", function()
       assertLineShown("\27[1z<B>Greetings < hunters & sorcerers</B>\27[7z", "Greetings < hunters & sorcerers")
     end)
 
+    -- a locked line shows its tags verbatim, so a switch to it that was acted
+    -- on would leave the <B> pair on the line
+    it("ignores an MXP mode switch in text a script fed", function()
+      assertLineShown("\27[2zMXPLOCAL1<B>still parsed</B>", "MXPLOCAL1still parsed")
+    end)
+
     -- an unescaped & running into a non-ASCII character is not an entity, so
     -- the raw bytes have to be passed through for the charset decoder to
     -- reassemble them (follow-up to #9439)

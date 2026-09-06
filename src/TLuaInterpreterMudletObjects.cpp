@@ -37,6 +37,7 @@
 #include "TArea.h"
 #include "TCommandLine.h"
 #include "TConsole.h"
+#include "TConsoleModel.h"
 #include "TDebug.h"
 #include "TEvent.h"
 #include "TFlipButton.h"
@@ -3357,9 +3358,9 @@ int TLuaInterpreter::getSubsystemMemoryStats(lua_State* L)
     }
 
     // Main console buffer line count
-    if (host.mpConsole) {
+    if (auto* pModel = host.mainConsoleModelOrNull()) {
         lua_pushstring(L, "console_buffer_lines");
-        lua_pushnumber(L, host.mpConsole->buffer.size());
+        lua_pushnumber(L, pModel->buffer.size());
         lua_settable(L, -3);
     }
 
