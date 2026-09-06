@@ -114,28 +114,18 @@ public:
     mudlet();
     ~mudlet() override;
 
-    static QString getMudletPath(enums::mudletPathType, const QString& extra1 = QString(), const QString& extra2 = QString());
-    static QSettings* getQSettings();
     // From https://stackoverflow.com/a/14678964/4805858 an answer to:
     // "How to find and replace string?" by "Czarek Tomczak":
     static bool loadEdbeeTheme(const QString& themeName, const QString& themeFile);
     static bool loadLuaFunctionList();
     static std::string replaceString(std::string subject, const std::string& search, const std::string& replace);
     static mudlet* self();
-    static void setNetworkRequestDefaults(const QUrl& url, QNetworkRequest& request);
     // This method allows better debugging when mudlet::self() is called inappropriately.
     static void start();
     static bool unzip(const QString& archivePath, const QString& destination, const QDir& tmpDir);
     static QImage getSplashScreen(bool releaseVersion, bool testVersion);
 
 
-    QString mAppBuild;
-    // final, official release
-    bool releaseVersion;
-    // unofficial "nightly" build - still a type of a release
-    bool publicTestVersion;
-    // used by developers in everyday coding:
-    bool developmentVersion;
     // "scmMudletXmlDefaultVersion" number represents a major (integer part) and minor
     // (1000ths, range 0 to 999) that is used as a "version" attribute number when
     // writing the <MudletPackage ...> element of all (but maps if I ever get around
@@ -170,8 +160,6 @@ public:
     // translations done high enough will get a gold star to hide the last few percent
     // as well as encourage translators to maintain it
     static const int scmTranslationGoldStar = 95;
-    QString scmVersion;
-    QString confPath;
     // These have to be "inline" to satisfy the ODR (One Definition Rule):
     inline static bool smFirstLaunch = false;
     inline static QVariantHash smLuaFunctionNames;
@@ -233,7 +221,6 @@ public:
     const QMap<QString, QPointer<TDetachedWindow>>& getDetachedWindows() const { return mDetachedWindows; }
     QDockWidget* getMainWindowDockWidget(const QString& mapKey) const { return mMainWindowDockWidgetMap.value(mapKey); }
     std::optional<QSize> getImageSize(const QString&);
-    const QString& getInterfaceLanguage() const { return mInterfaceLanguage; }
     int64_t getPhysicalMemoryTotal();
     const QLocale& getUserLocale() const { return mUserLocale; }
     QSet<QString> getWordSet();
@@ -270,7 +257,6 @@ public:
     void readEarlySettings(const QSettings&);
     void readLateSettings(const QSettings&);
     QPair<bool, bool> removeWordFromSet(const QString&);
-    QString readProfileData(const QString& profile, const QString& item);
     void refreshTabBar();
     void refreshTabBarsAfterStyleChange();
     // Used by a profile to tell the mudlet class
@@ -354,14 +340,12 @@ public:
     enums::controlsVisibility toolBarVisibility() const { return mToolbarVisibility; }
     void updateDiscordNamedIcon();
     void updateMultiViewControls();
-    QPair<bool, QString> writeProfileData(const QString& profile, const QString& item, const QString& what);
     void writeSettings();
     bool muteAPI() const { return mMuteAPI; }
     bool muteGame() const { return mMuteGame; }
     bool mediaMuted() const { return mMuteAPI && mMuteGame; }
     bool mediaUnmuted() const { return !mMuteAPI && !mMuteGame; }
     bool profileExists(const QString& profileName);
-    QString getCanonicalProfileName(const QString& profileName);
     bool showSplitscreenTutorial();
     void showedSplitscreenTutorial();
     bool showMuteAllMediaTutorial();
@@ -416,7 +400,6 @@ public:
     // Flag to prevent connection dialog from opening during telnet:// URI processing
     bool mProcessingTelnetUri = false;
     QToolBar* mpMainToolBar = nullptr;
-    QPointer<QSettings> mpSettings;
     QPointer<ShortcutsManager> mpShortcutsManager;
     TTabBar* mpTabBar = nullptr;
     int mReplaySpeed = 1;
@@ -447,11 +430,7 @@ public:
     QString mTEXT_ON_BG_STYLESHEET;
     int mToolbarIconSize = 0;
     QMap<QString, translation> mTranslationsMap;
-    // This is used to keep track of where the main dictionary files are located
-    // will be true if they are ones bundled with Mudlet, false if provided by
-    // the system
     QSystemTrayIcon mTrayIcon;
-    bool mUsingMudletDictionaries = false;
     bool mWindowMinimized = false;
     std::unique_ptr<MudletInstanceCoordinator> mInstanceCoordinator;
     // How many graphemes do we need before we run the spell checker on a "word" in the command line:
@@ -664,7 +643,6 @@ private:
     // Has default form of "en_US" but can be just an ISO language code e.g. "fr" for french,
     // without a country designation. Replaces xx in "mudlet_xx.qm" to provide the translation
     // file for GUI translation
-    QString mInterfaceLanguage;
     QKeySequence mKeySequenceCloseProfile;
     QKeySequence mKeySequenceConnect;
     QKeySequence mKeySequenceDisconnect;
@@ -794,8 +772,8 @@ private:
     QString mTimeFormat;
     enums::controlsVisibility mToolbarVisibility = enums::visibleNever;
     QList<QPointer<QTranslator>> mTranslatorsLoadedList;
-    // An encapsulation of the mInterfaceLanguage in a form that Qt uses to
-    // hold all the details:
+    // An encapsulation of MudletApp::getInterfaceLanguage() in a form
+    // that Qt uses to hold all the details:
     QLocale mUserLocale;
     QMap<Host*, QToolBar*> mUserToolbarMap;
     // The collection of words in what mpHunspell_sharedDictionary points to:

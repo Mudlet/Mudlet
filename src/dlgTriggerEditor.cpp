@@ -29,6 +29,7 @@
 
 #include "Host.h"
 #include "LuaInterface.h"
+#include "MudletApp.h"
 #include "TConsole.h"
 #include "TDebug.h"
 #include "TEasyButtonBar.h"
@@ -1897,7 +1898,7 @@ void dlgTriggerEditor::closeEvent(QCloseEvent* event)
 
 void dlgTriggerEditor::readSettings()
 {
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletApp::getQSettings();
 
     const QSize size = settings.value("script_editor_size", QSize(600, 400)).toSize();
     resize(size);
@@ -1928,7 +1929,7 @@ void dlgTriggerEditor::readSettings()
 
 void dlgTriggerEditor::writeSettings()
 {
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletApp::getQSettings();
     if (mHasBeenShown) {
         settings.setValue("script_editor_pos", pos());
         settings.setValue("script_editor_size", size());
@@ -10498,7 +10499,7 @@ QString dlgTriggerEditor::profileSettingsPrefix() const
         return QString();
     }
 
-    const QString sanitized = utils::sanitizeForPath(profileName);
+    const QString sanitized = MudletApp::sanitizeForPath(profileName);
     if (sanitized.isEmpty()) {
         return QString();
     }
@@ -11678,7 +11679,7 @@ void dlgTriggerEditor::slot_export()
         return;
     }
 
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletApp::getQSettings();
     QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
 
     QString fileName = QFileDialog::getSaveFileName(this, tr("Export Item"), lastDir, tr("Mudlet packages (*.xml)"));
@@ -12500,7 +12501,7 @@ void dlgTriggerEditor::slot_import()
         qWarning().nospace().noquote() << "dlgTriggerEditor::slot_import() WARNING - switch(EditorViewType) not expected to be called for \"EditorViewType::cmUnknownView!\"";
     }
 
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletApp::getQSettings();
     QString lastDir = settings.value(qsl("lastFileDialogLocation"), QDir::homePath()).toString();
     //: Trigger editor - import packages from file dialog (multi-select enabled)
     //: Trigger editor - file filter for supported package types (mpackage, zip, xml)
@@ -12644,7 +12645,7 @@ void dlgTriggerEditor::slot_profileSaveAsAction()
 {
     mSavingAs = true;
 
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletApp::getQSettings();
     QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
     QString fileName = QFileDialog::getSaveFileName(this, tr("Backup Profile"), lastDir, tr("trigger files (*.trigger *.xml)"));
 
@@ -12915,7 +12916,7 @@ void dlgTriggerEditor::slot_colorizeTriggerSetBgColor()
 void dlgTriggerEditor::slot_soundTrigger()
 {
     // Use the existing path/filename if it is not empty, otherwise start in last global user dir
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletApp::getQSettings();
     QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
 
     const QString fileName = QFileDialog::getOpenFileName(
@@ -14663,7 +14664,7 @@ bool dlgTriggerEditor::bannerPermanentlyHidden(EditorViewType viewType, const QS
         return false;
     }
 
-    QSettings* settings = mudlet::getQSettings();
+    QSettings* settings = MudletApp::getQSettings();
     if (!settings) {
         return false;
     }
@@ -14701,7 +14702,7 @@ void dlgTriggerEditor::setBannerPermanentlyHidden(EditorViewType viewType, const
         return;
     }
 
-    QSettings* settings = mudlet::getQSettings();
+    QSettings* settings = MudletApp::getQSettings();
     settings->setValue(qsl("Editor/banner_permanently_hidden/%1").arg(key), hidden);
 
     if (!legacyKey.isEmpty() && legacyKey != key) {

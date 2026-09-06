@@ -25,6 +25,7 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "mudlet.h"
+#include "MudletApp.h"
 #include "widgetutils.h"
 #include "utils.h"
 #include "dlgMapper.h"
@@ -791,7 +792,7 @@ void TDetachedWindow::showTabContextMenu(const QPoint& position)
 
 void TDetachedWindow::saveWindowGeometry()
 {
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletApp::getQSettings();
     // Use current profile name for settings key
     const QString key = QString("DetachedWindow/%1").arg(mCurrentProfileName.isEmpty() ? "Unknown" : mCurrentProfileName);
     settings.setValue(key + "/geometry", saveGeometry());
@@ -800,7 +801,7 @@ void TDetachedWindow::saveWindowGeometry()
 
 void TDetachedWindow::restoreWindowGeometry()
 {
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletApp::getQSettings();
     // Use current profile name for settings key
     const QString key = QString("DetachedWindow/%1").arg(mCurrentProfileName.isEmpty() ? "Unknown" : mCurrentProfileName);
 

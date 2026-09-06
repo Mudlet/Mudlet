@@ -31,6 +31,7 @@
 
 #include "EAction.h"
 #include "Host.h"
+#include "MudletApp.h"
 #include "TAlias.h"
 #include "TCommandLine.h"
 #include "TConsole.h"
@@ -1687,7 +1688,7 @@ int TLuaInterpreter::showUnzipProgress(lua_State* L)
 int TLuaInterpreter::getMudletHomeDir(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    const QString nativeHomeDirectory = mudlet::getMudletPath(enums::profileHomePath, host.getName());
+    const QString nativeHomeDirectory = MudletApp::getMudletPath(enums::profileHomePath, host.getName());
     lua_pushstring(L, nativeHomeDirectory.toUtf8().constData());
     return 1;
 }
@@ -2648,7 +2649,7 @@ int TLuaInterpreter::getMudletVersion(lua_State* L)
     // report back instead of raising - see checkStringArg()
     const int results = [&L, functionName = __func__]() -> int {
         QByteArray version = QByteArray(APP_VERSION).trimmed();
-        const QByteArray build = mudlet::self()->mAppBuild.trimmed().toLocal8Bit();
+        const QByteArray build = MudletApp::buildSuffix().trimmed().toLocal8Bit();
 
         QList<QByteArray> const versionData = version.split('.');
         if (versionData.size() != 3) {
@@ -2731,7 +2732,7 @@ int TLuaInterpreter::getMudletVersion(lua_State* L)
             lua_pushinteger(L, revision);
             lua_settable(L, -3);
             lua_pushstring(L, "build");
-            lua_pushstring(L, mudlet::self()->mAppBuild.trimmed().toUtf8().constData());
+            lua_pushstring(L, MudletApp::buildSuffix().trimmed().toUtf8().constData());
             lua_settable(L, -3);
         } else { // NOLINT(readability-else-after-return)
             lua_pushstring(L,
@@ -5240,7 +5241,7 @@ int TLuaInterpreter::performHttpRequest(lua_State* L, const char* functionName, 
     }
 
     QNetworkRequest request = QNetworkRequest(url);
-    mudlet::self()->setNetworkRequestDefaults(url, request);
+    MudletApp::setNetworkRequestDefaults(url, request);
     applyHttpHeaders(L, pos + 3, request);
 
     QByteArray fileToUpload;
@@ -6248,7 +6249,7 @@ void TLuaInterpreter::initLuaGlobals()
     QStringList additionalLuaPaths;
     QStringList additionalCPaths;
     const auto appPath{QCoreApplication::applicationDirPath()};
-    const auto profilePath{mudlet::getMudletPath(enums::profileHomePath, hostName)};
+    const auto profilePath{MudletApp::getMudletPath(enums::profileHomePath, hostName)};
 
     // Allow for modules or libraries placed in the profile root directory:
     additionalLuaPaths << qsl("%1/?.lua").arg(profilePath);
@@ -6435,9 +6436,9 @@ void TLuaInterpreter::setupLanguageData()
     lua_setfield(L, -2, "d");
 
     // finalize language-specific directions table
-    lua_setfield(L, -2, mudlet::self()->getInterfaceLanguage().toUtf8().constData());
+    lua_setfield(L, -2, MudletApp::getInterfaceLanguage().toUtf8().constData());
 
-    lua_pushstring(L, mudlet::self()->getInterfaceLanguage().toUtf8().constData());
+    lua_pushstring(L, MudletApp::getInterfaceLanguage().toUtf8().constData());
     lua_setfield(L, -2, "interfacelanguage");
 
     lua_setfield(L, -2, "translations");
@@ -7510,13 +7511,13 @@ int TLuaInterpreter::getProfileInformation(lua_State* L)
             lua_pushstring(L, "getProfileInformation: profile name cannot be empty");
             return 2;
         }
-        const QString profileName = mudlet::self()->getCanonicalProfileName(requestedName);
+        const QString profileName = MudletApp::getCanonicalProfileName(requestedName);
         if (profileName.isEmpty()) {
             lua_pushnil(L);
             lua_pushfstring(L, "getProfileInformation: profile '%s' does not exist", requestedName.toUtf8().constData());
             return 2;
         }
-        info = mudlet::self()->readProfileData(profileName, qsl("description"));
+        info = MudletApp::readProfileData(profileName, qsl("description"));
         break;
     }
     }
@@ -7527,15 +7528,15 @@ int TLuaInterpreter::getProfileInformation(lua_State* L)
 
 // No documentation available in wiki - internal function
 // The folder a profile name resolves to, or an empty string if there is no such
-// profile. For writers, and so stricter than mudlet::getCanonicalProfileName(),
+// profile. For writers, and so stricter than MudletApp::getCanonicalProfileName(),
 // which also resolves a game Mudlet ships with that has never been opened:
 // writeProfileData() creates whatever folder it is handed, so writing under such
 // a name would turn that game into a profile of its own. Readers want the looser
 // call.
 static QString canonicalProfileFolder(const QString& profileName)
 {
-    const QString folder = mudlet::self()->getCanonicalProfileName(profileName);
-    if (folder.isEmpty() || !QDir(mudlet::getMudletPath(enums::profileHomePath, folder)).exists()) {
+    const QString folder = MudletApp::getCanonicalProfileName(profileName);
+    if (folder.isEmpty() || !QDir(MudletApp::getMudletPath(enums::profileHomePath, folder)).exists()) {
         return QString();
     }
     return folder;
@@ -7567,7 +7568,7 @@ int TLuaInterpreter::setProfileInformation(lua_State* L)
         text = lua_tostring(L, 2);
     }
 
-    const QPair<bool, QString> result = mudlet::self()->writeProfileData(profileName, qsl("description"), text);
+    const QPair<bool, QString> result = MudletApp::writeProfileData(profileName, qsl("description"), text);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second);
     }
@@ -7601,7 +7602,7 @@ int TLuaInterpreter::clearProfileInformation(lua_State* L)
         }
     }
 
-    const QPair<bool, QString> result = mudlet::self()->writeProfileData(profileName, qsl("description"), desc);
+    const QPair<bool, QString> result = MudletApp::writeProfileData(profileName, qsl("description"), desc);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second);
     }
@@ -8758,7 +8759,7 @@ int TLuaInterpreter::getConfig(lua_State* L)
                  const auto logDir = host.mLogDir;
 
                  if (logDir == nullptr || logDir.isEmpty()) {
-                     lua_pushstring(L, mudlet::getMudletPath(enums::profileReplayAndLogFilesPath, getHostFromLua(L).getName()).toUtf8().constData());
+                     lua_pushstring(L, MudletApp::getMudletPath(enums::profileReplayAndLogFilesPath, getHostFromLua(L).getName()).toUtf8().constData());
                  } else {
                      lua_pushstring(L, host.mLogDir.toUtf8().constData());
                  }
