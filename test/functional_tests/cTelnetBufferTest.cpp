@@ -93,6 +93,21 @@ private:
         return false;
     }
 
+    // The lines of the main console that carry the given text, so that a
+    // string which ought to have arrived whole shows up as one entry and a
+    // string that got split shows up as several.
+    QStringList linesContaining(const QString& text) const
+    {
+        QStringList lines;
+        TMainConsole* console = mpHost->mpConsole;
+        for (int i = 0; i <= console->buffer.getLastLineNumber(); ++i) {
+            if (console->buffer.line(i).contains(text)) {
+                lines << console->buffer.line(i);
+            }
+        }
+        return lines;
+    }
+
 private slots:
     void initTestCase()
     {
@@ -312,6 +327,57 @@ private slots:
                                             .arg(wasRefused ? qsl("dropped") : qsl("processed"))));
             }
         }
+    }
+
+    // Plain text goes into the line a run at a time, and each run stops at the
+    // bytes the parser handles on its own. The bytes checked here are the ones
+    // that end a run: a bell (which rings once each and stays in the text), an
+    // IAC (which starts a telnet command that is not text) and the carriage
+    // return and NUL that are dropped. Lines commit on the newline, and a byte
+    // that a run failed to stop at is either displayed or splits the line.
+    void bellsInsideTextRingOnceEachAndStayInTheLine()
+    {
+        QSignalSpy bells(&mpHost->mTelnet, &cTelnet::signal_bell);
+        QByteArray data = QByteArrayLiteral("\r\nRUN_A\aRUN_B\aRUN_C\r\n");
+
+        mpHost->mTelnet.processSocketData(data.data(), data.size(), true);
+
+        QCOMPARE(bells.count(), 2);
+        QCOMPARE(linesContaining(qsl("RUN_")), QStringList{qsl("RUN_A\aRUN_B\aRUN_C")});
+    }
+
+    void telnetCommandInsideTextIsTakenOutOfIt()
+    {
+        QByteArray data = QByteArrayLiteral("\r\nRUN_D");
+        data += TN_IAC;
+        data += TN_NOP;
+        data += "RUN_E\r\n";
+
+        mpHost->mTelnet.processSocketData(data.data(), data.size(), true);
+
+        QCOMPARE(linesContaining(qsl("RUN_")), QStringList{qsl("RUN_DRUN_E")});
+    }
+
+    void carriageReturnAndNulInsideTextAreDropped()
+    {
+        QByteArray data = QByteArrayLiteral("\r\nRUN_F\r\0RUN_G\0\rRUN_H\r\n");
+
+        mpHost->mTelnet.processSocketData(data.data(), data.size(), true);
+
+        QCOMPARE(linesContaining(qsl("RUN_")), QStringList{qsl("RUN_FRUN_GRUN_H")});
+    }
+
+    // A run that reaches the end of one read stops there and the next read
+    // carries on the same line.
+    void textRunEndingAtTheEndOfAReadContinuesInTheNext()
+    {
+        QByteArray first = QByteArrayLiteral("\r\nRUN_I");
+        QByteArray second = QByteArrayLiteral("RUN_J\r\n");
+
+        mpHost->mTelnet.processSocketData(first.data(), first.size(), true);
+        mpHost->mTelnet.processSocketData(second.data(), second.size(), true);
+
+        QCOMPARE(linesContaining(qsl("RUN_")), QStringList{qsl("RUN_IRUN_J")});
     }
 
     // Declared last on purpose: on the unfixed code this trips AddressSanitizer,
