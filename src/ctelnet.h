@@ -349,6 +349,10 @@ private:
     // without a real decompression bomb.
     friend class cTelnetBufferTest;
 
+    // Reads the password-mode safety timer and the connection clock, which have
+    // no public face, and fires that 60 second timer early rather than waiting.
+    friend class TelnetPasswordMaskTimeoutTest;
+
     // Calls reset() from its constructor. It has to be the Host that does that,
     // and not cTelnet itself, because reset() clears Host members declared after
     // cTelnet, which do not exist yet while cTelnet is being constructed.

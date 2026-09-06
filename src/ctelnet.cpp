@@ -78,6 +78,14 @@ constexpr int AUTO_LOGIN_MAX_DELAY_MS = 60000;
 // cTelnet::checkCharacterModePattern():
 constexpr auto CHARACTER_MODE_DETECT = 3s;
 
+// A WILL ECHO this soon after a connection is made is taken to be the login
+// password prompt, and gets a safety timeout that clears the masking if the
+// game never sends the WONT ECHO that should end it - see the OPT_ECHO handling
+// in cTelnet::processTelnetCommand(). The window restarts with every
+// connection, so a reconnect gets one as well:
+constexpr auto PASSWORD_MASK_LOGIN_PHASE = 5min;
+constexpr auto PASSWORD_MASK_TIMEOUT = 60s;
+
 // How long to leave a game alone after a connection attempt to it failed, before
 // trying again for a profile that reconnects automatically. A refused connection
 // comes back at once, so without a wait here the retries are a tight loop. The
@@ -3314,14 +3322,12 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                         qDebug() << "ECHO: Server requesting password mode - enabling content preservation";
 
                         // Start a safety timeout for password mode, but only during
-                        // the first 5 minutes of a connection (login phase). This
+                        // the first 5 minutes of each connection (login phase). This
                         // protects against servers that fail to send WONT ECHO due
-                        // to network issues or bugs, while not affecting legitimate
-                        // password prompts later in the session (e.g., admin commands).
+                        // to network issues or bugs, while leaving password prompts
+                        // later in the session (e.g., admin commands) alone.
                         // Skip this if the user has disabled password masking entirely.
-                        constexpr auto LOGIN_PHASE_MS = 5min;
-                        constexpr auto PASSWORD_TIMEOUT_MS = 60s;
-                        if (!mpHost->mDisablePasswordMasking && mConnectionTimer.isValid() && mConnectionTimer.elapsed() < LOGIN_PHASE_MS.count()) {
+                        if (!mpHost->mDisablePasswordMasking && mConnectionTimer.isValid() && mConnectionTimer.durationElapsed() < PASSWORD_MASK_LOGIN_PHASE) {
                             if (!mTimerPasswordModeTimeout) {
                                 mTimerPasswordModeTimeout = new QTimer(this);
                                 mTimerPasswordModeTimeout->setSingleShot(true);
@@ -3332,7 +3338,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                                     }
                                 });
                             }
-                            mTimerPasswordModeTimeout->start(std::chrono::duration_cast<std::chrono::milliseconds>(PASSWORD_TIMEOUT_MS).count());
+                            mTimerPasswordModeTimeout->start(PASSWORD_MASK_TIMEOUT);
                         }
                     }
                 } else if (option == OPT_STATUS || option == OPT_TERMINAL_TYPE) {
