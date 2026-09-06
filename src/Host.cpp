@@ -751,7 +751,7 @@ bool Host::importMapFile(const QString& location, QString* errMsg)
     if (!mpMap || !mpMap->mpMapper) {
         // And that failed so give up
         if (errMsg) {
-            *errMsg = qsl("loadMap: unable to initialise mapper {in TConsole::importMap(...)} - something is wrong!");
+            *errMsg = qsl("loadMap: unable to initialise mapper {in Host::importMapFile(...)} - something is wrong!");
         }
         return false;
     }

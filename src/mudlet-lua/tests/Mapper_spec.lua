@@ -3115,6 +3115,21 @@ describe("Tests saveMap and loadMap", function()
       assert.is_truthy(message:find("nosuchmapfile.xml", 1, true))
     end)
 
+    -- the XML import resolves a bare name against the profile directory the
+    -- same way saveMap and loadMap do, so the message has to name where it
+    -- really looked and not the directory Mudlet happens to have been started
+    -- in, which for a spec run is the build or source tree
+    it("resolves a bare XML name against the profile directory", function()
+      local bare = "mapper_spec_norelative.xml"
+      local resolved = getMudletHomeDir() .. "/" .. bare
+      assert.is_false(io.exists(resolved), "the spec needs a name nothing has written")
+
+      local ok, message = loadMap(bare)
+      assert.is_nil(ok)
+      assert.is_string(message)
+      assert.is_truthy(message:find(resolved, 1, true), message)
+    end)
+
     it("returns nil and a message for an XML file it cannot parse", function()
       local file = assert(io.open(brokenXmlPath, "w"))
       file:write("<map><areas><area id=\"1\" name=\"unterminated\">")

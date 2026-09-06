@@ -197,6 +197,34 @@ private slots:
         QCOMPARE(model.buffer.mLinkStore.getLinksConst(linkIndex), QStringList{qsl("send([[north]])")});
     }
 
+    // The case above cannot tell the model's buffer from the view's, because
+    // TConsole::buffer is a reference bound to the model's - they are one
+    // object whenever a view exists. This is the half that is only the model's:
+    // the MXP client writing text, resolving its link store and ending a
+    // redirect for a profile whose view has gone, which is what a headless one
+    // never had. Driven straight at Host::mMxpClient rather than through
+    // feedTriggers(), which still goes through the console widget.
+    void test_theMxpClientReachesTheModelsBufferWithNoView()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+
+        destroyTheView(host);
+        QCOMPARE(&host->mainConsoleModel(), model.get());
+
+        host->mMxpClient.insertText(qsl("MXPNOVIEW1 written with no view\n"));
+        const int lineNumber = lineHolding(model->buffer, qsl("MXPNOVIEW1"));
+        QVERIFY2(lineNumber >= 0, "insertText() never reached the model's buffer");
+        QCOMPARE(lineTextAt(model->buffer, lineNumber), qsl("MXPNOVIEW1 written with no view"));
+
+        QCOMPARE(&host->mMxpClient.getLinkStore(), &model->buffer.mLinkStore);
+
+        // Nothing to read back - the point is that it runs at all, on the
+        // buffer the model owns rather than through a console that has gone.
+        host->mMxpClient.clearMxpDestination();
+    }
+
     // Concealing rewrites the buffer, and the buffer is the model's. This drives
     // it against a model that never had a widget of any kind, which is what the
     // manager used to refuse to do: performConcealment() and performReveal()
