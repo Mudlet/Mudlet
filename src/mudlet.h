@@ -232,11 +232,22 @@ public:
     // stt.init() switch engines when it is handed another engine's model.
     void initSpeechRecognition(SpeechRecognizerFactory::Backend backend = SpeechRecognizerFactory::Backend::Auto);
     SpeechRecognizer* speechRecognizer() const;
-    // Raise one sysSTT* event on the active profile. Public because the stt.*
-    // bindings refuse before a recognizer exists - with no engine installed
-    // there is no object to emit through, and "refusals speak" has to hold
-    // there too or a consumer cannot tell "no engine" from "nothing said yet".
+    // Raise one sysSTT* event on the profile holding the microphone, or on the
+    // active one when nobody holds it. Public because the stt.* bindings refuse
+    // before a recognizer exists - with no engine installed there is no object
+    // to emit through, and "refusals speak" has to hold there too or a consumer
+    // cannot tell "no engine" from "nothing said yet".
     void raiseSpeechEvent(const QString& name, const QString& value);
+    // Take the microphone for this profile, stopping whoever held it. There is
+    // one recognizer for the whole application, so a second profile asking to
+    // listen is a handover rather than a second session - and the profile that
+    // loses it is told, since nothing else on its screen would say why its
+    // microphone went quiet. Call before startListening(); on a refusal call
+    // releaseMicrophone() so the claim does not outlive the session it was for.
+    void claimMicrophoneFor(Host* pHost);
+    void releaseMicrophone();
+    // Which profile the microphone currently belongs to, or nullptr
+    Host* microphoneOwner() const;
     const QMap<QString, QPointer<TDetachedWindow>>& getDetachedWindows() const { return mDetachedWindows; }
     QDockWidget* getMainWindowDockWidget(const QString& mapKey) const { return mMainWindowDockWidgetMap.value(mapKey); }
     std::optional<QSize> getImageSize(const QString&);
@@ -754,6 +765,16 @@ private:
     // The single shared speech recognizer (one microphone, one decoder);
     // created lazily by initSpeechRecognition()
     QPointer<SpeechRecognizer> mpSpeechRecognizer;
+    // The profile that asked for the microphone, for as long as the session it
+    // asked for lasts. Results belong to whoever started listening rather than
+    // to whoever happens to be in front when a phrase lands: those are the same
+    // profile in the ordinary case, and routing by the second one sends a
+    // phrase to the wrong game in every case where they differ.
+    QPointer<Host> mpMicrophoneOwner;
+    // Raise one sysSTT* event on a named profile, which is what the handover
+    // notice needs - it goes to the profile losing the microphone, and by then
+    // the owner is already the profile that took it.
+    void raiseSpeechEventOn(Host* pHost, const QString& name, const QString& value);
     QPointer<QToolButton> mpButtonPackageManagers;
     QHBoxLayout* mpHBoxLayout_profileContainer = nullptr;
     QPointer<QLabel> mpLabelReplaySpeedDisplay;

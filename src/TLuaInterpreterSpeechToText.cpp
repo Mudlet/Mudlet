@@ -456,12 +456,22 @@ int TLuaInterpreter::sttStart(lua_State* L)
         return warnArgumentValue(L, funcName, message);
     }
 
-    if (pRecognizer->listening()) {
+    // Already listening for this profile is nothing to do. Already listening
+    // for another one is not: answering "yes, you are listening" to a profile
+    // that holds nothing sent it away believing a microphone it never got was
+    // its own. That case falls through to the claim below, which takes the
+    // microphone off the profile that has it.
+    Host& host = getHostFromLua(L);
+    if (pRecognizer->listening() && pMudlet->microphoneOwner() == &host) {
         lua_pushboolean(L, true);
         return 1;
     }
 
+    // Claimed before the attempt so that a refusal's sysSTTError reaches the
+    // profile that asked, rather than whichever one happens to be in front.
+    pMudlet->claimMicrophoneFor(&host);
     if (pRecognizer->startListening() == SpeechRecognizer::StartResult::Refused) {
+        pMudlet->releaseMicrophone();
         // The recognizer has already said why through sysSTTError; what
         // matters here is not telling the caller that recording began
         return warnArgumentValue(L, funcName, "could not start listening - the sysSTTError event carries the reason");
@@ -537,11 +547,20 @@ int TLuaInterpreter::sttToggle(lua_State* L)
     // branch, had it refused silently, and answered "now listening" while the
     // microphone opened behind them. stopListening() handles Starting itself,
     // so the branch below needs no special case of its own.
-    if (pRecognizer->listening() || pRecognizer->starting()) {
+    //
+    // Only the profile holding the microphone can toggle it off. For any other
+    // profile this control is off - whatever some other game is doing with the
+    // decoder - so pressing it asks for the microphone rather than surrendering
+    // one it never had.
+    Host& host = getHostFromLua(L);
+    const bool ownedHere = pMudlet->microphoneOwner() == &host;
+    if ((pRecognizer->listening() || pRecognizer->starting()) && ownedHere) {
         pRecognizer->stopListening();
         lua_pushboolean(L, false);
     } else {
+        pMudlet->claimMicrophoneFor(&host);
         if (pRecognizer->startListening() == SpeechRecognizer::StartResult::Refused) {
+            pMudlet->releaseMicrophone();
             return warnArgumentValue(L, funcName, "could not start listening - the sysSTTError event carries the reason");
         }
         lua_pushboolean(L, true);

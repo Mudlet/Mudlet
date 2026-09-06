@@ -181,9 +181,22 @@ that a package should not assume one behaves like another:
 
 ## Events
 
-All events are raised on the **active profile**, and every handler receives
-**two string arguments**: the event name, then the payload below. String
-arguments only — the one type every client event system carries.
+Events are raised on the profile **holding the microphone** — the one whose
+`stt.start()` began the session — and on the **active profile** when no session
+is running. Those are the same profile in the ordinary case. They differ when
+the player moves to another game mid-session, and the session's results belong
+to the game they were spoken to rather than to the one now in front.
+
+There is one recognizer per client, so at most one profile can be listening.
+A second profile calling `stt.start()` or `stt.toggle()` **takes** the
+microphone: the running session is stopped and the profile that lost it is told
+through `sysSTTHandover`. `stt.toggle()` therefore only ever stops a session the
+calling profile owns; from any other profile it is a request for the microphone,
+because from there the control is off however busy the decoder is.
+
+Every handler receives **two string arguments**: the event name, then the
+payload below. String arguments only — the one type every client event system
+carries.
 
 | Event | Argument | When |
 | --- | --- | --- |
@@ -192,6 +205,7 @@ arguments only — the one type every client event system carries.
 | `sysSTTWords` | JSON string | Alongside each `sysSTTResult`, on backends whose `words` capability is true. Describes **the text as emitted**: an implementation that drops a word from the result must drop it here too, or the two events describe different phrases. Schema below. |
 | `sysSTTStateChanged` | state name | Any transition between the six states. |
 | `sysSTTError` | message | Anything the user should know went wrong: refusals to start, capture faults, model failures, and a configured model quietly replaced by another. The state moves to `error` for faults, but refusal messages can arrive without a state change. Most refusals carry the same text the call returned as its second value; a refused `stt.start()` is the exception, since the engine's own reason is what the event carries while the call returns only a pointer to it. **Raised with no engine installed too** — a consumer driving the bridge from events alone must be able to tell "no engine" from "nothing said yet". |
+| `sysSTTHandover` | profile name | Another profile took the microphone and this session is over. Raised on the profile that lost it, naming the one that now holds it. Nothing else says why a session stopped: the state change that follows looks like any other stop. |
 | `sysSTTCapabilitiesChanged` | JSON string | The `capabilities` table changed: a model loaded, a model was released — including by `stt.close()` — or the engine library was unloaded or reloaded underneath it. Same keys as `getInfo().capabilities`. Which of those actually fire it differs by backend, because different backends hang different capabilities off different things: sherpa-onnx's `biasing` follows the loaded model, so releasing one changes it, while Vosk's `words` follows a library symbol and releasing a model changes nothing. |
 
 ### `sysSTTWords` schema

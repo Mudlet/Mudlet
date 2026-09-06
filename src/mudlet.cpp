@@ -189,7 +189,17 @@ SpeechRecognizer* mudlet::speechRecognizer() const
 
 void mudlet::raiseSpeechEvent(const QString& name, const QString& value)
 {
-    Host* pHost = getActiveHost();
+    // The owner outranks the active profile: with the microphone held, every
+    // result, state change and fault belongs to the session that is running,
+    // whatever the player has since tabbed to. Only with nobody listening does
+    // "the profile in front" become the right answer - that is where a refusal
+    // from stt.init() or a capability change with no session goes.
+    Host* pHost = mpMicrophoneOwner ? mpMicrophoneOwner.data() : getActiveHost();
+    raiseSpeechEventOn(pHost, name, value);
+}
+
+void mudlet::raiseSpeechEventOn(Host* pHost, const QString& name, const QString& value)
+{
     if (!pHost) {
         // A fault landing as the last profile closes has nowhere to be raised,
         // and dropping it silently leaves no trace of it anywhere. Only the
@@ -206,6 +216,51 @@ void mudlet::raiseSpeechEvent(const QString& name, const QString& value)
     event.mArgumentList.append(value);
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     pHost->raiseEvent(event);
+}
+
+Host* mudlet::microphoneOwner() const
+{
+    return mpMicrophoneOwner;
+}
+
+void mudlet::claimMicrophoneFor(Host* pHost)
+{
+    if (!pHost || mpMicrophoneOwner == pHost) {
+        mpMicrophoneOwner = pHost;
+        return;
+    }
+
+    // A claim is held only for as long as the session it was made for: it is
+    // dropped when the recognizer goes idle and when a start is refused, so an
+    // owner being set at all means a session is running or about to. That is
+    // what makes this notice unconditional rather than a listening() check -
+    // the state such a check would look for is the state of having an owner.
+    //
+    // Told before the microphone moves, and through the old owner by name
+    // rather than through raiseSpeechEvent(): a moment later the owner is the
+    // profile that took it, and the notice would arrive at the game that is
+    // about to start listening instead of the one that just stopped.
+    Host* pLosing = mpMicrophoneOwner;
+    if (pLosing) {
+        raiseSpeechEventOn(pLosing, qsl("sysSTTHandover"), pHost->getName());
+        // Ended rather than merely renamed. One decoder means the audio the old
+        // profile was collecting cannot be kept while the new one records over
+        // it, and leaving it running would route the rest of a half-spoken
+        // phrase to a game that never asked for it. The stop happens while the
+        // old owner still holds the claim, so the state changes it raises are
+        // its news too - and the release that triggers is why the assignment
+        // below comes last.
+        if (mpSpeechRecognizer && (mpSpeechRecognizer->listening() || mpSpeechRecognizer->starting())) {
+            mpSpeechRecognizer->stopListening();
+        }
+    }
+
+    mpMicrophoneOwner = pHost;
+}
+
+void mudlet::releaseMicrophone()
+{
+    mpMicrophoneOwner = nullptr;
 }
 
 // Which Backend enum value corresponds to a live recognizer's concrete type.
@@ -320,6 +375,21 @@ void mudlet::initSpeechRecognition(SpeechRecognizerFactory::Backend backend)
             break;
         }
         raiseSpeechEvent(qsl("sysSTTStateChanged"), stateName);
+        // Released only once the event above has gone to the profile that owned
+        // the session, so the state change that ends a session is still the old
+        // owner's news. Processing keeps the claim: the phrase is still being
+        // decoded and its result is owed to the same profile.
+        switch (newState) {
+        case SpeechRecognizer::State::Ready:
+        case SpeechRecognizer::State::Error:
+        case SpeechRecognizer::State::Uninitialized:
+            releaseMicrophone();
+            break;
+        case SpeechRecognizer::State::Starting:
+        case SpeechRecognizer::State::Listening:
+        case SpeechRecognizer::State::Processing:
+            break;
+        }
     });
 
     // Latched, then swapped, then retired: the old engine is only released
@@ -3020,6 +3090,19 @@ void mudlet::closeHost(const QString& name)
 
     // Every command this profile placed, on whichever surface
     removeAddonCommandsForHost(pH);
+
+    // A profile that closes while holding the microphone takes its session with
+    // it. Left running, the owner pointer would clear with the Host and every
+    // further result would fall through to whichever profile is now in front -
+    // a game that never asked to listen, receiving the tail of someone else's
+    // phrase. The all-profiles-gone case below is the same rule with nobody
+    // left to hand back to.
+    if (mpMicrophoneOwner == pH) {
+        if (mpSpeechRecognizer && (mpSpeechRecognizer->listening() || mpSpeechRecognizer->starting())) {
+            mpSpeechRecognizer->cancel();
+        }
+        releaseMicrophone();
+    }
 
     mpTabBar->removeTab(name);
     // PLACEMARKER: Host destruction (1) - from all sources

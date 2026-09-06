@@ -51,6 +51,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     MainWindowSizeReportTest.cpp
     CommandLineScrollRangeTest.cpp
     DetachedWindowOwnershipTest.cpp
+    SpeechAcrossProfilesTest.cpp
     MxpFramePlacementTest.cpp
     MxpDestFrameClearTest.cpp
     LabelBackgroundPaintTest.cpp
