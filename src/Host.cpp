@@ -635,8 +635,8 @@ void Host::loadMap()
     }
 }
 
-// TODO: It may be worth considering moving the (now) three following methods
-// to the TMap class...?
+// The three methods below might be better off on TMap, which is what they all
+// end up talking to.
 bool Host::saveMapFile(const QString& location, int saveVersion)
 {
     QString filename_map = location;
