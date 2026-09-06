@@ -57,6 +57,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     MxpWatchdogBufferLifetimeTest.cpp
     NarrowWindowWrapTest.cpp
     NotepadTest.cpp
+    NawsWidthReportTest.cpp
     DetachedWindowToolBarIconSizeTest.cpp
     PastedLinkStateTest.cpp
     ProfileSwitchMiniconsoleTest.cpp
@@ -68,7 +69,9 @@ set(WINDOW_GROUP_TEST_SOURCES
     WindowBackgroundTest.cpp
     WindowLayoutSaveTest.cpp
     WindowStateGettersTest.cpp
+    ConsoleSearchBarTest.cpp
     WrapLineRewrapTest.cpp
+    ScrollLostOnPartialRepaintTest.cpp
 )
 
 # Profiles: their config dir, their folders, and loading, saving and deleting them
@@ -128,9 +131,14 @@ set(TRIGGER_GROUP_TEST_SOURCES
 set(EDITOR_GROUP_TEST_SOURCES
     dlgTriggerEditorUndoRedoTest.cpp
     EdbeeReinitTest.cpp
+    EditorClipboardXmlTest.cpp
     EditorBannerViewSwitchTest.cpp
+    ColorTriggerDialogTest.cpp
+    PackageExporterTest.cpp
     EditorWindowPositionTest.cpp
     ScriptEventHandlerLifetimeTest.cpp
+    EditorSearchTest.cpp
+    TreeWidgetItemMoveTest.cpp
     TriggerEditorDisclosureTest.cpp
     TriggerEditorTest.cpp
     VariableEditorWriteBackTest.cpp
@@ -143,10 +151,12 @@ set(MAP_GROUP_TEST_SOURCES
     MapAreaSelectionTest.cpp
     MapCloseDuringImportTest.cpp
     MapDownloadTest.cpp
+    RoomExitsDialogTest.cpp
     MapLevelOfDetailTest.cpp
     MapOffscreenCustomLineTest.cpp
     MapFileStatsTest.cpp
     MapLockNoOpTest.cpp
+    RoomPropertiesDialogTest.cpp
     MapperButtonConfigTest.cpp
     MapProgressDialogSeamTest.cpp
     MapRoomGeometryTest.cpp
@@ -193,6 +203,7 @@ set(SETTINGS_GROUP_TEST_SOURCES
     SettingsHostLifecycleTest.cpp
     SettingsInstantApplyTest.cpp
     SettingsLiveSyncTest.cpp
+    SettingsRoundTripTest.cpp
     SettingsSearchTest.cpp
     SettingsShellNavigationTest.cpp
 )
@@ -491,6 +502,7 @@ set_tests_properties(SettingsAppearanceTest
                      SettingsHostLifecycleTest
                      SettingsInstantApplyTest
                      SettingsLiveSyncTest
+                     SettingsRoundTripTest
                      SettingsSearchTest
                      SettingsShellNavigationTest
                      PROPERTIES TIMEOUT 300)
@@ -525,6 +537,9 @@ set_tests_properties(FrontendRefreshSeamTest PROPERTIES TIMEOUT 300)
 # them waits out a deliberately long OSC 8 reveal delay, so it needs a longer timeout
 set_tests_properties(HyperlinkModelSplitTest PROPERTIES TIMEOUT 300)
 
+# ConsoleSearchBarTest creates a fresh profile per test method, so it needs a longer timeout
+set_tests_properties(ConsoleSearchBarTest PROPERTIES TIMEOUT 300)
+
 # NarrowWindowWrapTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(NarrowWindowWrapTest PROPERTIES TIMEOUT 300)
 
@@ -533,6 +548,9 @@ set_tests_properties(NotepadTest PROPERTIES TIMEOUT 300)
 
 # WrapLineRewrapTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(WrapLineRewrapTest PROPERTIES TIMEOUT 300)
+
+# ScrollLostOnPartialRepaintTest creates a fresh profile per test method, so it needs a longer timeout
+set_tests_properties(ScrollLostOnPartialRepaintTest PROPERTIES TIMEOUT 300)
 
 # TelnetStringSequenceRecoveryTest runs its introducer matrix over a real
 # socket, waiting out cTelnet's 300ms idle flush in several cases and
