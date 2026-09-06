@@ -231,7 +231,9 @@ private slots:
 
         host->getActionUnit()->updateAllToolbars();
 
-        auto* menu = findButtonWidget(group)->menu();
+        auto* button = findButtonWidget(group);
+        QVERIFY(button);
+        auto* menu = button->menu();
         QVERIFY(menu);
         auto* entry = entryNamed(menu, qsl("menuTestEntry"));
         QVERIFY(entry);
@@ -251,7 +253,9 @@ private slots:
 
         host->getActionUnit()->updateAllToolbars();
 
-        auto* menu = findButtonWidget(group)->menu();
+        auto* button = findButtonWidget(group);
+        QVERIFY(button);
+        auto* menu = button->menu();
         QVERIFY(menu);
         QCOMPARE(entryNames(menu), QStringList({qsl("menuTestSubGroup")}));
     }
@@ -283,8 +287,9 @@ private slots:
 
         auto* subEntry = entryNamed(inner, qsl("menuTestSubGroup"));
         QVERIFY(subEntry);
-        QVERIFY2(subEntry->menu(), "the nesting should keep going for a group inside a group");
-        QCOMPARE(entryNames(subEntry->menu()), QStringList({qsl("menuTestSubEntry")}));
+        auto* subMenu = subEntry->menu();
+        QVERIFY2(subMenu, "the nesting should keep going for a group inside a group");
+        QCOMPARE(entryNames(subMenu), QStringList({qsl("menuTestSubEntry")}));
     }
 
     // The two bars disagree here, and the disagreement is the point: an entry
@@ -302,9 +307,13 @@ private slots:
 
         host->getActionUnit()->updateAllToolbars();
 
-        auto* menu = findButtonWidget(group)->menu();
+        auto* button = findButtonWidget(group);
+        QVERIFY(button);
+        auto* menu = button->menu();
         QVERIFY(menu);
-        auto* inner = entryNamed(menu, qsl("menuTestGroup"))->menu();
+        auto* intermediate = entryNamed(menu, qsl("menuTestGroup"));
+        QVERIFY(intermediate);
+        auto* inner = intermediate->menu();
         QVERIFY(inner);
         QCOMPARE(entryNames(inner), QStringList({qsl("menuTestEntry"), qsl("menuTestSubGroup")}));
     }
