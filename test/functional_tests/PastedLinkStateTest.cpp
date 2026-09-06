@@ -144,7 +144,7 @@ private slots:
                                                                      .arg(targetName, mLinkText));
         qApp->processEvents();
 
-        auto* pTarget = mpHost->mpConsole->mSubConsoleMap.value(targetName);
+        auto* pTarget = mpHost->mpConsole->subConsoleWidget(targetName);
         QVERIFY2(pTarget, "the target miniconsole was not created");
         const int ownId = pTarget->getLinkStore().getCurrentLinkID();
         QVERIFY2(ownId > 0, "the target's own echoLink() registered nothing, so there is no id to collide with");
@@ -203,7 +203,7 @@ private slots:
         mpHost->mpConsole->P_end = QPoint(splitColumn + 8, splitLine);
         mpHost->mpConsole->copy();
 
-        auto* pTarget = mpHost->mpConsole->mSubConsoleMap.value(targetName);
+        auto* pTarget = mpHost->mpConsole->subConsoleWidget(targetName);
         QVERIFY2(pTarget, "the target miniconsole was not created");
         QVERIFY(pTarget->moveCursor(0, 0));
         pTarget->paste();
@@ -288,7 +288,7 @@ private slots:
                                                                      .arg(targetName));
         qApp->processEvents();
 
-        auto* pTarget = mpHost->mpConsole->mSubConsoleMap.value(targetName);
+        auto* pTarget = mpHost->mpConsole->subConsoleWidget(targetName);
         QVERIFY2(pTarget, "the target miniconsole was not created");
         QVERIFY2(selectLinkRunInMainConsole(), "echoLink() put no link-bearing character in the main console");
 
@@ -349,7 +349,7 @@ private slots:
     }
 
 private:
-    TConsole* miniconsole() const { return mpHost->mpConsole->mSubConsoleMap.value(mMiniName); }
+    TConsole* miniconsole() const { return mpHost->mpConsole->subConsoleWidget(mMiniName); }
 
     // Highest link index still present in a console's buffer, 0 for none
     static int copiedLinkId(const TBuffer& destination)

@@ -1019,7 +1019,9 @@ void dlgPackageExporter::slot_exportPackage()
                                 return;
                             }
                         }
-                        auto [installSuccess, installMessage] = mpHost->installPackage(mPackagePathFileName, enums::PackageModuleType::ModuleFromUI);
+                        // quiet: the failure branch below reports it with context the
+                        // console line cannot carry - that it was exported but not installed
+                        auto [installSuccess, installMessage] = mpHost->installPackage(mPackagePathFileName, enums::PackageModuleType::ModuleFromUI, true);
                         if (installSuccess) {
                             const QString savedDir = QFileInfo(mPackagePathFileName).absolutePath();
                             const QString savedDirLink = qsl("<a href=\"%1\">%2</a>").arg(QUrl::fromLocalFile(savedDir).toString(QUrl::FullyEncoded).toHtmlEscaped(), savedDir.toHtmlEscaped());

@@ -1,0 +1,5 @@
+mpackage = [[mudlet-spec-nested.x.zipml]]
+author = [[Mudlet test suite]]
+title = [[Fixture whose manifest name hides a second ending under the first]]
+version = [[1.0]]
+description = [[Taking the .zip off "mudlet-spec-nested.x.zipml" leaves "mudlet-spec-nested.xml", which still has an ending to take, so one pass over the name and two give different answers.]]

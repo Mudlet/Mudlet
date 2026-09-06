@@ -82,6 +82,10 @@ QString toastMessage = tr("Banner hidden. <a href='undo'>Undo</a>");
 - Use Qt's parent-child system for automatic cleanup for Qt classes
 - Otherwise, use C++ smart pointers for non-Qt classes
 
+### Binary file formats
+
+Every `QDataStream` that reads or writes a Mudlet file must call `setVersion(QDataStream::Qt_5_12)` before any data crosses it, on both halves of a reader/writer pair - `QFont`'s binary representation changed at Qt 5.13, so that pinned version *is* the on-disk format and changing it breaks file compatibility.
+
 ### Include management
 
 Minimize `#include` directives to reduce build times:

@@ -205,8 +205,6 @@ private slots:
         delete mudlet::self();
     }
 
-    // Starts a profile the way a user would via the GUI (mirrors the helper in
-    // TFeedTriggersRecursionTest).
     // installPackage() works out why an install failed and hands the reason back,
     // but most callers drop it: a GUI install used to fail with nothing on screen
     // and only a qWarning on a terminal no player sees. A non-quiet install of a
@@ -237,6 +235,8 @@ private slots:
         QVERIFY2(bufferContains(reason), qPrintable(qsl("The message must carry the reason \"%1\", but the buffer held: \"%2\"").arg(reason, joinedBuffer())));
     }
 
+    // Starts a profile the way a user would via the GUI (mirrors the helper in
+    // TFeedTriggersRecursionTest).
     void startProfile(const QString& hostname, const QString& address, const QString& port)
     {
         auto host = TestProfile::create(hostname, address, port);

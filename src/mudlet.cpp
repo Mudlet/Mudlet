@@ -32,6 +32,7 @@
 #include "CredentialManager.h"
 #include "DarkTheme.h"
 #include "LuaInterface.h"
+#include "TBuffer.h"
 #include "TDebug.h"
 #include "TDebugFilterBar.h"
 #include "MudletInstanceCoordinator.h"
@@ -84,6 +85,7 @@
 #include <QSettings>
 #include <QShortcut>
 #include <QSplitter>
+#include <QSslConfiguration>
 #include <QStyleFactory>
 #include <QStyleHints>
 #include <QTableWidget>
@@ -156,7 +158,7 @@ using namespace std::chrono_literals;
 bool TConsoleMonitor::eventFilter(QObject* obj, QEvent* event)
 {
     if (event->type() == QEvent::Close) {
-        mudlet::smDebugMode = false;
+        TDebug::smDebugMode = false;
         mudlet::self()->refreshTabBar();
         return QObject::eventFilter(obj, event);
     }
@@ -1630,10 +1632,6 @@ void mudlet::init()
         emit signal_blinkStateChanged();
     });
 
-    // Monitor audio device changes to automatically refresh media players
-    mpMediaDevices = new QMediaDevices(this);
-    connect(mpMediaDevices, &QMediaDevices::audioOutputsChanged, this, &mudlet::slot_audioOutputDeviceChanged);
-
     // Initialize the window menu on startup
     updateWindowMenu();
 
@@ -2180,11 +2178,11 @@ void mudlet::loadMaps()
  in a console and might require translation for a few locales; the content
  is as per QDateTime::toString(...) and needs to follow the rules for that
  function as well as being suitable for the translation locale.*/
-    smTimeStampFormat = tr("hh:mm:ss.zzz ");
+    TBuffer::smTimeStampFormat = tr("hh:mm:ss.zzz ");
     /*: This represents the format of the timestamps shown for lines that do not
  have a timestamp in a console that is showing them. If localised this
- should be set to the same format and length as the smTimeStampFormat:*/
-    smBlankTimeStamp = tr("------------ ");
+ should be set to the same format and length as TBuffer::smTimeStampFormat:*/
+    TBuffer::smBlankTimeStamp = tr("------------ ");
 }
 
 // migrates the Central Debug Console to the next available host, if any
@@ -3298,7 +3296,10 @@ void mudlet::addConsoleForNewHost(Host* pH)
     pH->mpEditorDialog = pEditor;
     connect(pH, &Host::profileSaveStarted, pH->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveStarted);
     connect(pH, &Host::profileSaveFinished, pH->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveFinished);
-    pEditor->fillout_form();
+    // The editor's item trees are deliberately not populated here: the
+    // profile's scripts have yet to run and ScriptUnit::compileAll() queues a
+    // full rebuild once they have, so populating now would only double the
+    // cost of the load.
 
     pH->getActionUnit()->updateAllToolbars();
 
@@ -3673,9 +3674,7 @@ bool mudlet::saveWindowLayout()
 
         const QByteArray layoutData = saveState();
         QDataStream ofs(&layoutFile);
-        if (scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            ofs.setVersion(scmQDataStreamFormat_5_12);
-        }
+        ofs.setVersion(QDataStream::Qt_5_12);
         ofs << layoutData;
         if (!layoutFile.commit()) {
             qDebug() << "mudlet::saveWindowLayout: error saving window layout: " << layoutFile.errorString();
@@ -3709,9 +3708,7 @@ bool mudlet::loadWindowLayout()
 
             QByteArray layoutData;
             QDataStream ifs(&layoutFile);
-            if (scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-                ifs.setVersion(scmQDataStreamFormat_5_12);
-            }
+            ifs.setVersion(QDataStream::Qt_5_12);
             ifs >> layoutData;
             layoutFile.close();
 
@@ -3749,9 +3746,7 @@ bool mudlet::saveFloatingDockGeometries()
     }
 
     QDataStream ofs(&geoFile);
-    if (scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-        ofs.setVersion(scmQDataStreamFormat_5_12);
-    }
+    ofs.setVersion(QDataStream::Qt_5_12);
 
     QMap<QString, QByteArray> geometries;
     for (auto pHost : mHostManager) {
@@ -3759,7 +3754,8 @@ bool mudlet::saveFloatingDockGeometries()
             continue;
         }
         const auto hostName = pHost->getName();
-        for (auto&& [name, pDockWidget] : pHost->mpConsole->mDockWidgetMap.asKeyValueRange()) {
+        for (const QString& name : pHost->mpConsole->dockWidgetNames()) {
+            auto pDockWidget = pHost->mpConsole->dockWidget(name);
             if (pDockWidget && pDockWidget->isFloating()) {
                 const QString key = qsl("%1/%2").arg(hostName, name);
                 geometries[key] = pDockWidget->saveGeometry();
@@ -3786,9 +3782,7 @@ void mudlet::restoreFloatingDockGeometries()
     }
 
     QDataStream ifs(&geoFile);
-    if (scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-        ifs.setVersion(scmQDataStreamFormat_5_12);
-    }
+    ifs.setVersion(QDataStream::Qt_5_12);
 
     QMap<QString, QByteArray> geometries;
     ifs >> geometries;
@@ -3799,7 +3793,8 @@ void mudlet::restoreFloatingDockGeometries()
             continue;
         }
         const auto hostName = pHost->getName();
-        for (auto&& [name, pDockWidget] : pHost->mpConsole->mDockWidgetMap.asKeyValueRange()) {
+        for (const QString& name : pHost->mpConsole->dockWidgetNames()) {
+            auto pDockWidget = pHost->mpConsole->dockWidget(name);
             if (!pDockWidget || !pDockWidget->isFloating()) {
                 continue;
             }
@@ -4423,13 +4418,6 @@ void mudlet::slot_showEditorDialog()
     pEditor->raise();
     showEditorRestoringWindowState(pEditor);
     pEditor->activateWindow();
-
-    // Force reposition after showing, since script editor is a singleton
-    // that may restore its position after being shown
-    Host* activeHost = getActiveHost();
-    QWidget* activeConsole = activeHost ? activeHost->mpConsole : nullptr;
-    QWidget* referenceWidget = activeConsole ? activeConsole : this;
-    widgetutils::forceRepositionDialogOnParentScreen(pEditor, referenceWidget);
 }
 
 void mudlet::slot_showTriggerDialog()
@@ -4461,9 +4449,6 @@ void mudlet::slot_showTriggerDialog()
             }
         });
     });
-
-    // Position dialog on the same screen as the main window for better multi-monitor UX
-    widgetutils::positionDialogOnParentScreen(pEditor, this);
 
     pEditor->slot_showTriggers();
     pEditor->raise();
@@ -5578,9 +5563,7 @@ QString mudlet::readProfileData(const QString& profile, const QString& item)
     }
 
     QDataStream ifs(&file);
-    if (scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-        ifs.setVersion(scmQDataStreamFormat_5_12);
-    }
+    ifs.setVersion(QDataStream::Qt_5_12);
     QString ret;
 
     ifs >> ret;
@@ -5601,6 +5584,7 @@ QPair<bool, QString> mudlet::writeProfileData(const QString& profile, const QStr
     QSaveFile file(getMudletPath(enums::profileDataItemPath, profile, item));
     if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         QDataStream ofs(&file);
+        ofs.setVersion(QDataStream::Qt_5_12);
         ofs << what;
         if (!file.commit()) {
             qDebug().noquote().nospace() << "mudlet::writeProfileData(...) ERROR - writing profile: \"" << profile << "\", item: \"" << item << "\", reason: \"" << file.errorString() << "\".";
@@ -6291,6 +6275,18 @@ void mudlet::slot_audioOutputDeviceChanged()
             pHost->mpMedia->refreshAudioDevices();
         }
     }
+}
+
+// Only wanted once there is a player to refresh, and not before: constructing
+// a QMediaDevices loads the multimedia backend, which can stall start-up for
+// hundreds of milliseconds probing hardware decoders.
+void mudlet::watchAudioOutputDevices()
+{
+    if (mpMediaDevices) {
+        return;
+    }
+    mpMediaDevices = new QMediaDevices(this);
+    connect(mpMediaDevices, &QMediaDevices::audioOutputsChanged, this, &mudlet::slot_audioOutputDeviceChanged);
 }
 
 // Called by the short-cut to the menu item that doesn't pass the checked state
@@ -7155,7 +7151,6 @@ Host* mudlet::loadProfile(const QString& profile_name, const bool playOnline, co
     QStringList entries = dir.entryList(QStringList{qsl("*.xml")}, QDir::Files, QDir::Time);
     // pre-install packages when loading this profile for the first time
     bool preInstallPackages = false;
-    pHost->hideMudletsVariables();
     // NB: an explicitly requested saveFileName is honored even when no *.xml
     // is present - failing to open it then reports a proper load error rather
     // than silently starting a fresh profile:
@@ -8419,7 +8414,7 @@ void mudlet::refreshTabBar()
     for (const auto& pHost : mHostManager) {
         const QString hostName = pHost->getName();
 
-        if (smDebugMode) {
+        if (TDebug::smDebugMode) {
             mpTabBar->applyPrefixToDisplayedText(hostName, TDebug::getTag(pHost.data()));
         } else {
             mpTabBar->applyPrefixToDisplayedText(hostName);

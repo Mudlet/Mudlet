@@ -608,6 +608,87 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         end)
       end)
 
+      -- Host keeps profile.ini open and lets QSettings write it out on the next
+      -- pass through the event loop instead of syncing every write, so what a
+      -- command line stores has to reach the disk without anyone asking for a
+      -- save, and two command lines created in the same pass must not be handed
+      -- the same history file.
+      describe("Tests that the command line settings reach the profile's profile.ini", function()
+        local function iniValue(key)
+          local file = io.open(getMudletHomeDir() .. "/profile.ini", "r")
+          if not file then
+            return nil
+          end
+          local ini = file:read("*a")
+          file:close()
+          -- QSettings stores CommandLines/Group/name as "Group\name=" under a
+          -- [CommandLines] header; the name can hold pattern characters, so
+          -- find it as plain text
+          local start = ini:find(key .. "=", 1, true)
+          if not start then
+            return nil
+          end
+          return ini:match("=([^\r\n]*)", start)
+        end
+
+        it("gives each command line its own history file and writes the mapping out within one pass of the event loop", function()
+          if not testMode then
+            pending("only test mode can pump the event loop")
+            return
+          end
+          local first, second = "mudlet-spec-ini-first", "mudlet-spec-ini-second"
+          finally(function()
+            deleteCommandLine(first)
+            deleteCommandLine(second)
+          end)
+          createCommandLine(first, 10, 10, 120, 30)
+          createCommandLine(second, 10, 50, 120, 30)
+          pumpEvents(50)
+
+          local firstFile = iniValue("NameMapping\\" .. first)
+          local secondFile = iniValue("NameMapping\\" .. second)
+          assert.is_string(firstFile, "the first command line's history file mapping never reached profile.ini")
+          assert.is_string(secondFile, "the second command line's history file mapping never reached profile.ini")
+          assert.are_not.equals(firstFile, secondFile)
+        end)
+
+        it("writes a changed history saving setting out with the end of session save", function()
+          if not testMode then
+            pending("only test mode can pump the event loop")
+            return
+          end
+          local commandLine = "mudlet-spec-ini-save-history"
+          -- setSaveCommandHistory() refuses while the profile-wide history size is zero
+          local savedLines = getConfig("commandLineHistorySaveSize")
+          finally(function()
+            setConfig("commandLineHistorySaveSize", savedLines)
+            deleteCommandLine(commandLine)
+          end)
+          setConfig("commandLineHistorySaveSize", 10)
+          createCommandLine(commandLine, 10, 10, 120, 30)
+          -- a new command line starts from whatever the last run left in the
+          -- file, so flipping that is what makes this a fresh write every time
+          local flipped = not getSaveCommandHistory(commandLine)
+          assert.is_true(setSaveCommandHistory(commandLine, flipped))
+
+          -- The setting only leaves the command line on
+          -- Host::signal_saveCommandLinesHistory, which saveProfile() emits when
+          -- given no arguments. A save another spec started can still be running,
+          -- and saveProfile() answers nil until it finishes.
+          local saved, message
+          for _ = 1, 100 do
+            saved, message = saveProfile()
+            if saved then
+              break
+            end
+            pumpEvents(50)
+          end
+          assert.is_true(saved, tostring(message))
+          pumpEvents(50)
+          assert.equals(tostring(flipped), iniValue("SaveHistory\\" .. commandLine))
+        end)
+      end)
+
       -- The command lines only hear that the session is ending through
       -- Host::signal_saveCommandLinesHistory, which Host::saveProfile() emits
       -- only when given neither a folder nor a name, and nothing else writes
@@ -617,6 +698,24 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       -- history is silently never written again, which the user only discovers
       -- on the next launch.
       describe("Tests that an end of session save writes the command line histories", function()
+        -- A save another spec started can still be running, and saveProfile()
+        -- answers nil - without emitting anything - until it finishes.
+        local function saveWaitingOutAnyOtherSave()
+          local saved, message
+          for _ = 1, 100 do
+            saved, message = saveProfile()
+            -- Of the refusals saveProfile() can answer with, an already running
+            -- save is the only one waiting clears, and only test mode can pump
+            -- the event loop to let it. The rest are permanent, so they go back
+            -- as they are rather than costing five seconds of pumping first.
+            if saved or not testMode or not tostring(message):find("a save is already in progress", 1, true) then
+              break
+            end
+            pumpEvents(50)
+          end
+          return saved, message
+        end
+
         it("writes the main command line's history file out again", function()
           -- slot_saveHistory() returns without writing anything unless both of
           -- these are on, so they are what makes a missing file mean the signal
@@ -636,18 +735,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           os.remove(historyFile)
           assert.is_false(fileExists(historyFile), "the previous history file could not be cleared")
 
-          -- A save another spec started can still be running, and saveProfile()
-          -- answers nil - without emitting anything - until it finishes. Of the
-          -- refusals it can answer with that is the only one waiting clears,
-          -- and only test mode can pump the event loop to let it.
-          local saved, message
-          for _ = 1, 100 do
-            saved, message = saveProfile()
-            if saved or not testMode then
-              break
-            end
-            pumpEvents(50)
-          end
+          local saved, message = saveWaitingOutAnyOtherSave()
           if not saved and not testMode then
             pending("the profile save was refused and only test mode can wait one out: " .. tostring(message))
             return
@@ -657,6 +745,34 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           -- slot_saveHistory() writes from inside the emit, so the file is
           -- there by the time saveProfile() has returned
           assert.is_true(fileExists(historyFile), "the end of session save never wrote the command line history out")
+        end)
+
+        it("writes nothing for a command line whose history saving is turned off", function()
+          local savedLines = getConfig("commandLineHistorySaveSize")
+          local savedSaving = getSaveCommandHistory("main")
+          finally(function()
+            setSaveCommandHistory("main", savedSaving)
+            setConfig("commandLineHistorySaveSize", savedLines)
+          end)
+
+          -- the profile-wide size stays on, so only the per-command-line
+          -- setting is left to answer for the file not coming back
+          setConfig("commandLineHistorySaveSize", 10)
+          assert.is_true(setSaveCommandHistory("main", false))
+          assert.is_false((getSaveCommandHistory("main")))
+
+          local historyFile = getMudletHomeDir() .. "/command_history_main"
+          os.remove(historyFile)
+          assert.is_false(fileExists(historyFile), "the previous history file could not be cleared")
+
+          local saved, message = saveWaitingOutAnyOtherSave()
+          if not saved and not testMode then
+            pending("the profile save was refused and only test mode can wait one out: " .. tostring(message))
+            return
+          end
+          assert.is_true(saved, tostring(message))
+
+          assert.is_false(fileExists(historyFile), "the history was written out despite saving being turned off for that command line")
         end)
       end)
     end)

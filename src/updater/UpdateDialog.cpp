@@ -31,6 +31,7 @@
 #include <QDesktopServices>
 #include <QFile>
 #include <QGuiApplication>
+#include <QLabel>
 #include <QMessageBox>
 #include <QPixmap>
 #include <QRegularExpression>
@@ -102,6 +103,12 @@ UpdateDialog::UpdateDialog(Feed* feed, Type type, QSettings* settings, QWidget* 
     Q_ASSERT_X(settings, "UpdateDialog", "QSettings object is required");
     mUi->setupUi(this);
 
+    // Captured before the first substitution consumes the placeholders
+    for (auto* label : findChildren<QLabel*>()) {
+        mLabelTemplates.insert(label, label->text());
+    }
+    mWindowTitleTemplate = windowTitle();
+
     mUi->buttonCancel->addAction(mUi->actionCancel);
     mUi->buttonCancel->addAction(mUi->actionSkip);
     mUi->buttonCancel->setDefaultAction(mUi->actionCancel);
@@ -124,13 +131,24 @@ UpdateDialog::UpdateDialog(Feed* feed, Type type, QSettings* settings, QWidget* 
         break;
     }
 
+    // Mudlet keeps this dialog for the whole session and checks for updates
+    // twice a day, so it stays connected to hear every one of those checks. A
+    // changelog dialog is a transient the user closes, and reports one load
+    const bool transient = (mType == ManualChangelog);
+    if (!transient) {
+        connect(mFeed, &Feed::ready, this, &UpdateDialog::handleFeedReady);
+        connect(mFeed, &Feed::loadError, this, &UpdateDialog::handleLoadError);
+    }
+
     if (mFeed->isReady()) {
         handleFeedReady();
     } else {
         setupLoadingUi();
         mFeed->load();
-        KDToolBox::connectSingleShot(mFeed, &Feed::ready, this, &UpdateDialog::handleFeedReady);
-        KDToolBox::connectSingleShot(mFeed, &Feed::loadError, this, &UpdateDialog::handleLoadError);
+        if (transient) {
+            KDToolBox::connectSingleShot(mFeed, &Feed::ready, this, &UpdateDialog::handleFeedReady);
+            KDToolBox::connectSingleShot(mFeed, &Feed::loadError, this, &UpdateDialog::handleLoadError);
+        }
     }
 }
 
@@ -404,7 +422,7 @@ void UpdateDialog::adjustDialogSize()
 
 void UpdateDialog::updateWindowTitle()
 {
-    QString title = windowTitle();
+    QString title = mWindowTitleTemplate;
     replaceAppVars(title);
     setWindowTitle(title);
 }
@@ -451,9 +469,7 @@ void UpdateDialog::setupUpdateUi()
     }
 
     for (auto* label : {mUi->labelHeadline, mUi->labelInfo}) {
-        QString text = label->text();
-        replaceAppVars(text);
-        label->setText(text);
+        applyAppVars(label);
     }
     mUi->labelChangelog->setMarkdown(generateChangelogDocument());
 
@@ -502,9 +518,7 @@ void UpdateDialog::setupChangelogUi()
         widget->show();
     }
     for (auto* label : {mUi->labelHeadlineChangelog, mUi->labelInfoChangelog}) {
-        QString text = label->text();
-        replaceAppVars(text);
-        label->setText(text);
+        applyAppVars(label);
     }
 
     updateWindowTitle();
@@ -525,9 +539,9 @@ void UpdateDialog::setupNoUpdatesUi()
     }
     mUi->buttonConfirm->setFocus();
 
-    QString text = mUi->labelHeadlineNoUpdates->text();
-    replaceAppVars(text);
-    mUi->labelHeadlineNoUpdates->setText(text);
+    // labelHeadlineNoUpdates is also where handleLoadError() reports a failed
+    // check, so it is restored from the template rather than reused
+    applyAppVars(mUi->labelHeadlineNoUpdates);
 
     updateWindowTitle();
 
@@ -552,6 +566,13 @@ void UpdateDialog::replaceAppVars(QString& string)
     string.replace("%APPNAME%", QCoreApplication::applicationName());
     string.replace("%CURRENT_VERSION%", QCoreApplication::applicationVersion());
     string.replace("%UPDATE_VERSION%", mLatestRelease.getVersion());
+}
+
+void UpdateDialog::applyAppVars(QLabel* label)
+{
+    QString text = mLabelTemplates.value(label);
+    replaceAppVars(text);
+    label->setText(text);
 }
 
 QString UpdateDialog::generateChangelogDocument()
@@ -647,6 +668,9 @@ void UpdateDialog::handleFeedReady()
         return;
     }
 
+    // Re-derived from the settings on every check: the file a finished download
+    // left behind is deleted below once a later release supersedes it
+    mIsDownloadFinished = false;
     mUpdateFilePath = settingsValue(qsl("updateFilePath"), "", mSettings).toString();
     if (!mUpdateFilePath.isEmpty() && QFile::exists(mUpdateFilePath)) {
         QString updateFileVersion = settingsValue(qsl("updateFileVersion"), "", mSettings).toString();
@@ -676,9 +700,6 @@ void UpdateDialog::handleFeedReady()
 
     setupUpdateUi();
     emit ready();
-
-    KDToolBox::connectSingleShot(mFeed, &Feed::ready, this, &UpdateDialog::handleFeedReady);
-    KDToolBox::connectSingleShot(mFeed, &Feed::loadError, this, &UpdateDialog::handleLoadError);
 }
 
 void UpdateDialog::handleLoadError(const QString& message)
@@ -693,9 +714,6 @@ void UpdateDialog::handleLoadError(const QString& message)
         mUi->labelChangelog->show();
         adjustDialogSize();
     }
-    // Re-establish single-shot connections so the next feed load attempt reaches this dialog
-    KDToolBox::connectSingleShot(mFeed, &Feed::ready, this, &UpdateDialog::handleFeedReady);
-    KDToolBox::connectSingleShot(mFeed, &Feed::loadError, this, &UpdateDialog::handleLoadError);
 }
 
 void UpdateDialog::handleDownloadFinished()

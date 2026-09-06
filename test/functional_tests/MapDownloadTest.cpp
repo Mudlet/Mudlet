@@ -1240,9 +1240,7 @@ private slots:
 
         QByteArray serialized;
         QDataStream out(&serialized, QIODevice::WriteOnly);
-        if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            out.setVersion(mudlet::scmQDataStreamFormat_5_12);
-        }
+        out.setVersion(QDataStream::Qt_5_12);
         QVERIFY(pMap->serialize(out));
         mpMapServer->serve(qsl("/map.dat"), serialized);
 

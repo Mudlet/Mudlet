@@ -72,8 +72,8 @@ private:
     void createTargetCovering(int fillBackground)
     {
         runLua(qsl("createLabel('lbpTarget', 0, 0, %1, %2, %3)").arg(backdropArea.width()).arg(backdropArea.height()).arg(fillBackground));
-        QVERIFY(mpHost->mpConsole->mLabelMap.contains(qsl("lbpTarget")));
-        QCOMPARE(mpHost->mpConsole->mLabelMap.value(qsl("lbpTarget"))->geometry(), backdropArea);
+        QVERIFY(mpHost->mpConsole->labelWidget(qsl("lbpTarget")));
+        QCOMPARE(mpHost->mpConsole->labelWidget(qsl("lbpTarget"))->geometry(), backdropArea);
     }
 
 private slots:

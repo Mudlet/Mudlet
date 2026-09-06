@@ -35,6 +35,7 @@
 #include "TLuaInterpreter.h"
 #include "TimerUnit.h"
 #include "TMainConsole.h"
+#include "TWindowRegistry.h"
 #include "TriggerUnit.h"
 #include "ctelnet.h"
 #include "dlgTriggerEditor.h"
@@ -64,6 +65,7 @@ class xml_document;
 class QDockWidget;
 class QJsonObject;
 class QKeyEvent;
+class QSettings;
 
 class TEvent;
 class TArea;
@@ -285,6 +287,8 @@ public:
     // rather than dereference the shared_ptr.
     TConsoleModel* mainConsoleModelOrNull() { return mpMainConsoleModel.get(); }
     std::shared_ptr<TConsoleModel> sharedMainConsoleModel();
+    TWindowRegistry& windowRegistry() { return mWindowRegistry; }
+    const TWindowRegistry& windowRegistry() const { return mWindowRegistry; }
     void refreshMainConsoleColors();
     void runTriggers(int line);
     // The log lifecycle lives in the core console model, which is a plain
@@ -366,13 +370,19 @@ public:
     std::pair<bool, QString> installPackage(const QString& fileName, enums::PackageModuleType thing, bool quiet = false);
     bool uninstallPackage(const QString&, enums::PackageModuleType thing);
     bool removeDir(const QString&, const QString&);
-    void readPackageConfig(const QString&, QString&, bool);
-    QString getPackageConfig(const QString&, bool isModule = false);
+    // whyNotRead, when given, is set to why no manifest came back - telling a
+    // config.lua that would not run apart from one that simply names no package
+    void readPackageConfig(const QString&, QString&, bool, QString* whyNotRead = nullptr);
+    QString getPackageConfig(const QString&, bool isModule = false, QString* whyNotRead = nullptr);
     void postMessage(const QString message) { mTelnet.postMessage(message); }
     QColor getAnsiColor(const int ansiCode, const bool isBackground = false) const;
     QPair<bool, QString> writeProfileData(const QString&, const QString&);
-    bool writeProfileIniData(const QString& item, const QString& what);
     QString readProfileData(const QString&);
+    // Both share one QSettings kept open for the profile's lifetime; writes are
+    // left for the event loop to flush, as syncing each one cost two
+    // fdatasync()s - a ~50 ms stall for every command line a loading profile
+    // creates.
+    void writeProfileIniData(const QString& item, const QString& what);
     QString readProfileIniData(const QString& item);
     void xmlSaved(const QString& xmlName);
     bool currentlySavingProfile();
@@ -576,6 +586,8 @@ public:
     bool fontsAntiAlias() const { return !mNoAntiAlias; }
 
 private:
+    QSettings& profileIni();
+
     bool mNoAntiAlias = false;
     // These are used only during profile initiation to provide faked details
     // for things looking to the main console font before it gets instantiated:
@@ -590,6 +602,8 @@ private:
     // model would leave the view's aliasing references dangling. Reached
     // through mainConsoleModel()/sharedMainConsoleModel().
     std::shared_ptr<TConsoleModel> mpMainConsoleModel;
+    // Non-owning: the views own the models it indexes and keep it in step.
+    TWindowRegistry mWindowRegistry;
 
     // Initialised ahead of mLuaInterpreter below, whose construction reads it:
     // initLuaGlobals() posts a message for each Lua module that fails to load, and
@@ -1250,6 +1264,10 @@ private:
     // Set when the mudlet singleton demands that we close - used to force an
     // attempt to save the profile and map - without asking:
     bool mForcedClose = false;
+
+    // Only reach through profileIni(): setName() nulls this so the path
+    // follows the name.
+    QSettings* mpProfileIni = nullptr;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)

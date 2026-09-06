@@ -162,7 +162,7 @@ private slots:
         // A user window carries a model of its own, so its managers have to be
         // its own too - Host's belong to the main console alone.
         QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("openUserWindow('hyperlinkSplitWindow')\n")), "openUserWindow() did not run");
-        TConsole* subConsole = console->mSubConsoleMap.value(qsl("hyperlinkSplitWindow"));
+        TConsole* subConsole = console->subConsoleWidget(qsl("hyperlinkSplitWindow"));
         QVERIFY2(subConsole, "the user window was not created");
         QVERIFY2(&subConsole->getHyperlinkVisibilityManager() != &model.mHyperlinkVisibilityManager, "a user window must not share the main console's tracked hyperlinks");
         QVERIFY2(!subConsole->getHyperlinkSelectionManager().isSelected(qsl("splitgroup"), qsl("splitvalue")), "a user window must not share the main console's selection state");
