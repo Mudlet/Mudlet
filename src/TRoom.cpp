@@ -790,6 +790,22 @@ void TRoom::indexCustomLines()
     }
 }
 
+// A custom exit line's points are map coordinates rather than offsets from
+// the room, so a room that moves has to take them along or its line is left
+// behind.
+void TRoom::offset(const int deltaX, const int deltaY, const int deltaZ)
+{
+    mX += deltaX;
+    mY += deltaY;
+    mZ += deltaZ;
+    for (auto& points : customLines) {
+        for (auto& point : points) {
+            point += QPointF(deltaX, deltaY);
+        }
+    }
+    calcRoomDimensions();
+}
+
 void TRoom::calcRoomDimensions()
 {
     min_x = mX;

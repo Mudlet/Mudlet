@@ -112,21 +112,6 @@ bool RoomMoveDragHandler::handle(T2DMap::MapInteractionContext& context)
 
         room->offset(dx, dy, 0);
         dirtyAreas.insert(room->getArea());
-
-        QMapIterator<QString, QList<QPointF>> customLineIterator(room->customLines);
-        QMap<QString, QList<QPointF>> updatedLines;
-        while (customLineIterator.hasNext()) {
-            customLineIterator.next();
-            QList<QPointF> points = customLineIterator.value();
-            for (auto& point : points) {
-                const QPointF originalPoint = point;
-                point.setX(static_cast<float>(originalPoint.x() + dx));
-                point.setY(static_cast<float>(originalPoint.y() + dy));
-            }
-            updatedLines.insert(customLineIterator.key(), points);
-        }
-        room->customLines = updatedLines;
-        room->calcRoomDimensions();
     }
 
     QSetIterator<int> areaIterator(dirtyAreas);

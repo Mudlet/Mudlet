@@ -86,12 +86,7 @@ public:
         mY = y;
         mZ = z;
     }
-    inline void offset(const int deltaX, const int deltaY, const int deltaZ)
-    {
-        mX += deltaX;
-        mY += deltaY;
-        mZ += deltaZ;
-    }
+    void offset(int deltaX, int deltaY, int deltaZ);
     int getWeight() const { return weight; }
     bool isHidden() const { return hidden; }
     void setHidden(const bool);
