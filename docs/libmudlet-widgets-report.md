@@ -48,7 +48,7 @@ and the baseline are regenerated in each libmudlet PR, so drift shows up in the 
 | Source files in `mudlet_core` | 421 |
 | Files depending on Qt Widgets | 141 |
 | Clean files | 280 |
-| Committed baseline | 140 |
+| Committed baseline | 141 |
 
 ## Offending files
 
