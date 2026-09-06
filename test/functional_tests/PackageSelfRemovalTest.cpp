@@ -307,7 +307,7 @@ private slots:
         // Allow any queued activity (the declined deferred save, further timer
         // ticks) to surface problems:
         QTest::qWait(500);
-        // mudlet::slot_timerFires() flushes the deferred delete as soon as the
+        // TimerUnit::timerFired() flushes the deferred delete as soon as the
         // uninstalling timer's execute() has finished, so by now the timer must
         // be properly gone - not lingering deactivated where the next profile
         // save would serialize it back in:

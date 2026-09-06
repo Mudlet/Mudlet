@@ -287,6 +287,15 @@ public:
     // rather than dereference the shared_ptr.
     TConsoleModel* mainConsoleModelOrNull() { return mpMainConsoleModel.get(); }
     std::shared_ptr<TConsoleModel> sharedMainConsoleModel();
+    // How a colorizer trigger recolors the line it matched: select a run of
+    // the current line, paint it, then put the console's own format back. The
+    // selection is a TConsole member, so these dereference mpConsole and the
+    // callers check it first.
+    void deselectMainConsole();
+    bool selectMainConsoleSection(int from, int length);
+    void setMainConsoleFgColor(const QColor& color);
+    void setMainConsoleBgColor(const QColor& color);
+    void resetMainConsoleFormat();
     TWindowRegistry& windowRegistry() { return mWindowRegistry; }
     const TWindowRegistry& windowRegistry() const { return mWindowRegistry; }
     void refreshMainConsoleColors();
@@ -999,6 +1008,9 @@ signals:
     void signal_loggingAnnouncement(const bool isLogging, const QString& logFileName);
     // Raised once a logging change has settled, for the frontend's log button.
     void signal_loggingStateChanged(const bool isLogging);
+
+public slots:
+    void slot_timerFires();
 
 private slots:
     void slot_purgeTemps();

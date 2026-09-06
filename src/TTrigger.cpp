@@ -27,7 +27,6 @@
 
 #include "Host.h"
 #include "TBuffer.h"
-#include "TConsole.h"
 #include "TConsoleModel.h"
 #include "TDebug.h"
 #include "TLuaInterpreter.h"
@@ -35,7 +34,6 @@
 #include "TMedia.h"
 #include "TMediaData.h"
 #include "TriggerUnit.h"
-#include "TMainConsole.h"
 #include <QByteArray>
 #include <QChar>
 #include <QDebug>
@@ -588,11 +586,10 @@ END: {
         const int g2 = mFgColor.green();
         const int b2 = mFgColor.blue();
         const int total = captureList.size();
-        TConsole* pC = mpHost->mpConsole;
-        if (Q_UNLIKELY(!pC)) {
+        if (Q_UNLIKELY(!mpHost->mpConsole)) {
             return;
         }
-        pC->deselect();
+        mpHost->deselectMainConsole();
         auto its = captureList.begin();
         auto iti = posList.begin();
         for (int position = 1; iti != posList.end(); ++iti, ++its, position++) {
@@ -604,25 +601,25 @@ END: {
                 // to enable people to highlight capture groups if there are any
                 // otherwise highlight complete expression match
                 if (position % numberOfCaptureGroups != 1) {
-                    pC->selectSection(begin, length);
+                    mpHost->selectMainConsoleSection(begin, length);
                     if (mBgColor != QColorConstants::Transparent) {
-                        pC->setBgColor(r1, g1, b1, 255);
+                        mpHost->setMainConsoleBgColor(QColor(r1, g1, b1));
                     }
                     if (mFgColor != QColorConstants::Transparent) {
-                        pC->setFgColor(r2, g2, b2);
+                        mpHost->setMainConsoleFgColor(QColor(r2, g2, b2));
                     }
                 }
             } else {
-                pC->selectSection(begin, length);
+                mpHost->selectMainConsoleSection(begin, length);
                 if (mBgColor != QColorConstants::Transparent) {
-                    pC->setBgColor(r1, g1, b1, 255);
+                    mpHost->setMainConsoleBgColor(QColor(r1, g1, b1));
                 }
                 if (mFgColor != QColorConstants::Transparent) {
-                    pC->setFgColor(r2, g2, b2);
+                    mpHost->setMainConsoleFgColor(QColor(r2, g2, b2));
                 }
             }
         }
-        pC->reset();
+        mpHost->resetMainConsoleFormat();
     }
     if (mIsMultiline) {
         updateMultistates(patternNumber, captureList, posList, &nameGroups);
@@ -694,8 +691,7 @@ void TTrigger::processBeginOfLine(int patternNumber, int posOffset, int lineNumb
         const int r2 = mFgColor.red();
         const int g2 = mFgColor.green();
         const int b2 = mFgColor.blue();
-        TConsole* pC = mpHost->mpConsole;
-        if (Q_UNLIKELY(!pC)) {
+        if (Q_UNLIKELY(!mpHost->mpConsole)) {
             return;
         }
         auto its = captureList.begin();
@@ -703,15 +699,15 @@ void TTrigger::processBeginOfLine(int patternNumber, int posOffset, int lineNumb
             const int begin = *iti;
             const std::string& s = *its;
             const int length = QString::fromStdString(s).size();
-            pC->selectSection(begin, length);
+            mpHost->selectMainConsoleSection(begin, length);
             if (mBgColor != QColorConstants::Transparent) {
-                pC->setBgColor(r1, g1, b1, 255);
+                mpHost->setMainConsoleBgColor(QColor(r1, g1, b1));
             }
             if (mFgColor != QColorConstants::Transparent) {
-                pC->setFgColor(r2, g2, b2);
+                mpHost->setMainConsoleFgColor(QColor(r2, g2, b2));
             }
         }
-        pC->reset();
+        mpHost->resetMainConsoleFormat();
     }
     if (mIsMultiline) {
         updateMultistates(patternNumber, captureList, posList);
@@ -836,25 +832,24 @@ void TTrigger::processSubstringMatch(const QString& haystack, const QString& nee
         const int r2 = mFgColor.red();
         const int g2 = mFgColor.green();
         const int b2 = mFgColor.blue();
-        TConsole* pC = mpHost->mpConsole;
-        if (Q_UNLIKELY(!pC)) {
+        if (Q_UNLIKELY(!mpHost->mpConsole)) {
             return;
         }
-        pC->deselect();
+        mpHost->deselectMainConsole();
         auto its = captureList.begin();
         for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
             const int begin = *iti;
             const std::string& s = *its;
             const int length = QString::fromStdString(s).size();
-            pC->selectSection(begin, length);
+            mpHost->selectMainConsoleSection(begin, length);
             if (mBgColor != QColorConstants::Transparent) {
-                pC->setBgColor(r1, g1, b1, 255);
+                mpHost->setMainConsoleBgColor(QColor(r1, g1, b1));
             }
             if (mFgColor != QColorConstants::Transparent) {
-                pC->setFgColor(r2, g2, b2);
+                mpHost->setMainConsoleFgColor(QColor(r2, g2, b2));
             }
         }
-        pC->reset();
+        mpHost->resetMainConsoleFormat();
     }
     if (mIsMultiline) {
         updateMultistates(regexNumber, captureList, posList);
@@ -985,26 +980,25 @@ void TTrigger::processColorPattern(int patternNumber, std::list<std::string>& ca
         const int r2 = mFgColor.red();
         const int g2 = mFgColor.green();
         const int b2 = mFgColor.blue();
-        TConsole* pC = mpHost->mpConsole;
-        if (Q_UNLIKELY(!pC)) {
+        if (Q_UNLIKELY(!mpHost->mpConsole)) {
             return;
         }
-        pC->deselect();
+        mpHost->deselectMainConsole();
         auto its = captureList.begin();
         for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
             const int begin = *iti;
             //                qDebug() << "TTrigger::match_color_pattern(" << line << "," << patternNumber << ") INFO - match found: " << (*its).c_str() << " size is:" << (*its).size();
             const std::string& s = *its;
             const int length = QString::fromStdString(s).size();
-            pC->selectSection(begin, length);
+            mpHost->selectMainConsoleSection(begin, length);
             if (mBgColor != QColorConstants::Transparent) {
-                pC->setBgColor(r1, g1, b1, 255);
+                mpHost->setMainConsoleBgColor(QColor(r1, g1, b1));
             }
             if (mFgColor != QColorConstants::Transparent) {
-                pC->setFgColor(r2, g2, b2);
+                mpHost->setMainConsoleFgColor(QColor(r2, g2, b2));
             }
         }
-        pC->reset();
+        mpHost->resetMainConsoleFormat();
     }
     if (mIsMultiline) {
         updateMultistates(patternNumber, captureList, posList);
@@ -1134,8 +1128,7 @@ void TTrigger::processExactMatch(int patternNumber, int posOffset, int lineNumbe
         const int r2 = mFgColor.red();
         const int g2 = mFgColor.green();
         const int b2 = mFgColor.blue();
-        TConsole* pC = mpHost->mpConsole;
-        if (Q_UNLIKELY(!pC)) {
+        if (Q_UNLIKELY(!mpHost->mpConsole)) {
             return;
         }
         auto its = captureList.begin();
@@ -1143,15 +1136,15 @@ void TTrigger::processExactMatch(int patternNumber, int posOffset, int lineNumbe
             const int begin = *iti;
             const std::string& s = *its;
             const int length = QString::fromStdString(s).size();
-            pC->selectSection(begin, length);
+            mpHost->selectMainConsoleSection(begin, length);
             if (mBgColor != QColorConstants::Transparent) {
-                pC->setBgColor(r1, g1, b1, 255);
+                mpHost->setMainConsoleBgColor(QColor(r1, g1, b1));
             }
             if (mFgColor != QColorConstants::Transparent) {
-                pC->setFgColor(r2, g2, b2);
+                mpHost->setMainConsoleFgColor(QColor(r2, g2, b2));
             }
         }
-        pC->reset();
+        mpHost->resetMainConsoleFormat();
     }
     if (mIsMultiline) {
         updateMultistates(patternNumber, captureList, posList);

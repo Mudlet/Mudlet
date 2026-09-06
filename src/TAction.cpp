@@ -27,12 +27,12 @@
 #include "ActionUnit.h"
 #include "EAction.h"
 #include "Host.h"
+#include "TConsoleModel.h"
 #include "TDebug.h"
 #include "TEasyButtonBar.h"
 #include "TFlipButton.h"
 #include "TLuaInterpreter.h"
 #include "TToolBar.h"
-#include "TMainConsole.h"
 #include "utils.h"
 
 #include <QColor>
@@ -162,9 +162,8 @@ void TAction::execute()
         }
     }
 
-    // Moved this to be before the testing/compilation of the script so that
-    // the "command"s still work even if the script doesn't!
-    mpHost->mpConsole->mButtonState = (mButtonState ? 2 : 1);
+    // Recorded before the compile step below, which returns early on failure
+    mpHost->mainConsoleModel().mButtonState = (mButtonState ? 2 : 1);
 
     if (mNeedsToBeCompiled) {
         if (!compileScript()) {

@@ -37,6 +37,7 @@
 #include "TArea.h"
 #include "TCommandLine.h"
 #include "TConsole.h"
+#include "TConsoleModel.h"
 #include "TDebug.h"
 #include "TEvent.h"
 #include "TFlipButton.h"
@@ -621,7 +622,7 @@ int TLuaInterpreter::getButtonState(lua_State* L)
         // The original function only works in the script for a push-down button
         // and takes no arguments so provide the backwards compatible behaviour
         // if that is the case:
-        lua_pushnumber(L, host.mpConsole->getButtonState());
+        lua_pushnumber(L, host.mainConsoleModel().mButtonState);
         return 1;
     }
 

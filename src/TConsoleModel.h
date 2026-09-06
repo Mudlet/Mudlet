@@ -94,6 +94,10 @@ struct TConsoleModel
     int mEngineCursor = -1;
     QPoint mUserCursor;
     bool mIsPromptLine = false;
+    // 1 = up, 2 = down, 0 is not valid: the state of the toolbar button pressed
+    // most recently (a plain button sets it back to 1), read back by
+    // getButtonState() with no arguments
+    int mButtonState = 1;
 
     // The OSC 8 hyperlink managers. Concealing and revealing rewrite this
     // model's buffer, so they run with or without a view; repainting afterwards

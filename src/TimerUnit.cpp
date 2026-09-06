@@ -26,13 +26,12 @@
 
 #include "Host.h"
 #include "Tree.h"
-#include "mudlet.h"
 #include "TTimer.h"
 #include "utils.h"
 
+#include <QDebug>
 #include <QLatin1String>
 #include <QMutableSetIterator>
-#include <QSetIterator>
 #include <QStringList>
 #include <QTimer>
 #include <QVariant>
@@ -266,8 +265,43 @@ bool TimerUnit::registerTimer(TTimer* pT)
 
     // This has some side effects, including stopping the timer...
     pT->setTime(pT->getTime());
-    QTimer::connect(pT->getQTimer(), &QTimer::timeout, mudlet::self(), &mudlet::slot_timerFires, Qt::UniqueConnection);
+    QTimer::connect(pT->getQTimer(), &QTimer::timeout, mpHost, &Host::slot_timerFires, Qt::UniqueConnection);
     return true;
+}
+
+// Resolves the TTimer by the id stored on the QTimer rather than a captured
+// pointer: it may have been deleted since the timeout was queued
+void TimerUnit::timerFired(QTimer* pQTimer)
+{
+    const int id = pQTimer->property(TTimer::scmProperty_TTimerId).toInt();
+    if (Q_UNLIKELY(!id)) {
+        qWarning().nospace().noquote() << "TimerUnit::timerFired() INFO - TTimer ID is zero - so TTimer has probably been deleted.";
+        pQTimer->deleteLater();
+        return;
+    }
+    TTimer* pTT = getTimer(id);
+    if (Q_LIKELY(pTT)) {
+        pTT->execute();
+        // Re-verify timer still exists after execute (script may have killed it)
+        pTT = getTimer(id);
+        if (pTT && pTT->checkRestart()) {
+            pTT->start();
+        }
+
+        // Flush any deletes uninstall() deferred whilst execute() was on the
+        // stack (a timer script uninstalling its own package). Doing it here -
+        // after the last use of pTT - keeps the window in which the
+        // "uninstalled" timers linger down to this event loop iteration, before
+        // the profile save that Host::uninstallPackage() queues for the next
+        // event loop pass can serialize them back into the profile:
+        doCleanup();
+        return;
+    }
+
+    qWarning().nospace().noquote() << "TimerUnit::timerFired() ERROR - Timer not registered, it seems to have been called: \"" << pQTimer->objectName() << "\" - automatically deleting it!";
+    // Clean up any bogus ones:
+    pQTimer->stop();
+    pQTimer->deleteLater();
 }
 
 void TimerUnit::unregisterTimer(TTimer* pT)
@@ -278,7 +312,7 @@ void TimerUnit::unregisterTimer(TTimer* pT)
     // Stop the QTimer ASAP:
     pT->stop();
     pT->deactivate();
-    QTimer::disconnect(pT->getQTimer(), &QTimer::timeout, mudlet::self(), &mudlet::slot_timerFires);
+    QTimer::disconnect(pT->getQTimer(), &QTimer::timeout, mpHost, &Host::slot_timerFires);
     if (pT->getParent()) {
         _removeTimer(pT);
         return;
@@ -549,12 +583,4 @@ std::tuple<QString, int, int, int> TimerUnit::assembleReport()
         << QLatin1String("\n") << QLatin1String("active Timers: ") << QString::number(statsActiveItems) << QLatin1String("\n");
 
     return {msg.join(QString()), statsItemsTotal, statsTempItems, statsActiveItems};
-}
-
-void TimerUnit::changeHostName(const QString& newName)
-{
-    QSetIterator<QTimer*> itQTimerPtr(mQTimerSet);
-    while (itQTimerPtr.hasNext()) {
-        itQTimerPtr.next()->setProperty(TTimer::scmProperty_HostName, newName);
-    }
 }
