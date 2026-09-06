@@ -345,6 +345,7 @@ private:
 
     // Lets the functional test drive the real download entry point and inspect
     // the in-flight reply, reproducing the dialog-swap cancellation cascade.
+    friend class TelnetLatePasswordTest;
     friend class TelnetTlsPromptTest;
 
     // Needs to call processSocketData() with a buffer it laid out itself, which
@@ -632,6 +633,8 @@ private:
     QVector<unsigned char> mNegotiationOrder;
 
     void checkCharacterModePattern();
+    // Starts the timer checkCharacterModePattern() answers on, measured from the line just sent
+    void armCharacterModeDetection();
     bool checkEchoAnomalyPattern();
 };
 

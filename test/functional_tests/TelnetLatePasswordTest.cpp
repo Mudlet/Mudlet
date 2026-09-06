@@ -58,6 +58,8 @@ const QByteArray csPasswordPrompt = QByteArrayLiteral("Password:\r\n");
 // IAC WILL ECHO / IAC WONT ECHO - a game masking input, and releasing it again.
 const QByteArray csMaskOn = QByteArrayLiteral("\xff\xfb\x01");
 const QByteArray csMaskOff = QByteArrayLiteral("\xff\xfc\x01");
+// IAC WILL SGA - with ECHO already on, what a character-at-a-time server negotiates up front.
+const QByteArray csSgaOn = QByteArrayLiteral("\xff\xfb\x03");
 } // namespace
 
 // A game that says nothing unless the test tells it to, and records what the client typed. Only
@@ -78,6 +80,9 @@ public:
     bool start() { return mServer.listen(QHostAddress::LocalHost, 0); }
     quint16 serverPort() const { return mServer.serverPort(); }
     QByteArray receivedText() const { return mReceivedText; }
+    // Sent the moment a client connects, before it has typed anything - the way a game that
+    // negotiates its options up front greets a connection.
+    void setGreeting(const QByteArray& greeting) { mGreeting = greeting; }
 
     void sendRaw(const QByteArray& data)
     {
@@ -96,6 +101,10 @@ private slots:
             return;
         }
         connect(mClient, &QTcpSocket::readyRead, this, &PasswordPromptServerStub::onReadyRead);
+        if (!mGreeting.isEmpty()) {
+            mClient->write(mGreeting);
+            mClient->flush();
+        }
         connect(mClient, &QTcpSocket::disconnected, mClient, &QObject::deleteLater);
     }
 
@@ -167,6 +176,7 @@ private:
     QPointer<QTcpSocket> mClient;
     QByteArray mBuffer;
     QByteArray mReceivedText;
+    QByteArray mGreeting;
 };
 
 class TelnetLatePasswordTest : public QObject
@@ -272,6 +282,36 @@ private slots:
     }
 
     // ---- Nothing proves the prompt is still waiting ------------------------
+
+    // N5: a character-at-a-time server has ECHO and SGA on from its first byte and echoes whatever
+    // it is sent, so its mask is no password prompt - the login line going out under it starts the
+    // detection, and a password arriving after that is refused whether the verdict is in or still
+    // pending.
+    void testLatePasswordIsNotSentToACharacterAtATimeServer()
+    {
+        const ScopedAutoLoginDelays delays(csUsernameDelayMs, csPasswordDelayMs);
+        mpServer->setGreeting(csMaskOn + csSgaOn + QByteArrayLiteral("Name: "));
+        Host* host = connectWithLoginAndNoPassword();
+        QVERIFY(host);
+        QVERIFY2(host->isRemoteEchoingActive(), "the greeting's WILL ECHO did not put the client into masking mode");
+        QVERIFY2(host->mTelnet.mServerRequestedSGA, "the greeting's WILL SGA was not recorded");
+
+        waitOutThePasswordStep();
+        QCOMPARE(mpServer->receivedText(), csLoginLine);
+
+        // The login line went out under ECHO+SGA, so the detection is running or has already
+        // answered; either way the mask is not to be trusted
+        QVERIFY2(QTest::qWaitFor(
+                         [host]() {
+                             return host->mTelnet.mCharacterModeDetected;
+                         },
+                         8000),
+                 "the login line sent under ECHO+SGA never led to character-at-a-time mode being detected");
+
+        deliverLatePassword(host);
+        QVERIFY2(waitForConsoleContains(host, qsl("moved on from its password prompt")), "the player was not told why the password was not sent");
+        QCOMPARE(mpServer->receivedText(), csLoginLine);
+    }
 
     // N0: no ECHO negotiation at all, so there is no proof the prompt on screen is still the
     // password one - "the server has said nothing since" would fit any question it had asked.

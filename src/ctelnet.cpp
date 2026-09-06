@@ -847,7 +847,15 @@ void cTelnet::handleFailedConnection()
 void cTelnet::slot_send_login()
 {
     if (!mpHost->getLogin().isEmpty()) {
-        sendData(mpHost->getLogin());
+        const bool sent = sendData(mpHost->getLogin());
+        // ECHO and SGA already on when the login line goes out is what a character-at-a-time
+        // server looks like, and one of those echoes whatever it is sent. The login line is not a
+        // game command, so it does not arm the detection by itself - but its verdict has to be in
+        // before a password arriving late could be typed under that mask, see
+        // sendOutstandingAutoLoginPassword().
+        if (sent && !mCharacterModeDetected && mServerRequestedSGA && mpHost->isRemoteEchoingActive()) {
+            armCharacterModeDetection();
+        }
     }
     if (mpHost->hasAutoLoginCredentials()) {
         QSettings& settings = *mudlet::getQSettings();
@@ -901,9 +909,14 @@ void cTelnet::sendOutstandingAutoLoginPassword()
     // password prompt still being open, and the only proof there is. A server that never
     // negotiates ECHO offers none: "it has printed nothing since" cannot tell a password prompt
     // from any other question it asked before the mark, so those games get the notice instead.
-    const bool stillAtPrompt = mpHost->isRemoteEchoingActive();
+    // A character-at-a-time server keeps ECHO on for the whole session and echoes what it is
+    // sent, so its mask proves nothing: one already recognised, or one still being tested for
+    // after the login line, is no prompt to type a password at either.
+    const bool characterModeSuspected = mCharacterModeDetected || (mTimerCharacterModeDetect && mTimerCharacterModeDetect->isActive());
+    const bool stillAtPrompt = mpHost->isRemoteEchoingActive() && !characterModeSuspected;
     if (!withinWindow || !stillAtPrompt) {
-        qDebug() << "cTelnet::sendOutstandingAutoLoginPassword() - not sending the late password. Within the window:" << withinWindow << "still at the prompt:" << stillAtPrompt;
+        qDebug() << "cTelnet::sendOutstandingAutoLoginPassword() - not sending the late password. Within the window:" << withinWindow << "masking:" << mpHost->isRemoteEchoingActive()
+                 << "character-at-a-time suspected:" << characterModeSuspected;
         //: Shown in the game window when a password fetched from the system keychain arrived after the game had moved past its password prompt
         postMessage(tr("[ INFO ]  - The password arrived after the game moved on from its password prompt, so it was not sent. Please type it in yourself."));
         return;
@@ -1676,19 +1689,12 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent, con
         // submission - an earlier command (e.g. a script firing while a password prompt
         // is still open) therefore cannot make it fire while the user is mid-input; the
         // server's WONT ECHO cancels it first.
-        const bool armCharacterModeDetection = isGameCommand && !mCharacterModeDetected && mServerRequestedSGA && mpHost->isRemoteEchoingActive();
+        const bool armDetection = isGameCommand && !mCharacterModeDetected && mServerRequestedSGA && mpHost->isRemoteEchoingActive();
 
         const bool sent = socketOutRaw(outData);
 
-        if (sent && armCharacterModeDetection) {
-            if (!mTimerCharacterModeDetect) {
-                mTimerCharacterModeDetect = new QTimer(this);
-                mTimerCharacterModeDetect->setSingleShot(true);
-                connect(mTimerCharacterModeDetect, &QTimer::timeout, this, [this]() {
-                    checkCharacterModePattern();
-                });
-            }
-            mTimerCharacterModeDetect->start(CHARACTER_MODE_DETECT);
+        if (sent && armDetection) {
+            armCharacterModeDetection();
         }
 
         return sent;
@@ -6161,6 +6167,18 @@ QString cTelnet::assembleTelnetOptionsReport() const
         return tr("  (none negotiated yet)\n");
     }
     return lines.join(QLatin1Char('\n')).append(QLatin1Char('\n'));
+}
+
+void cTelnet::armCharacterModeDetection()
+{
+    if (!mTimerCharacterModeDetect) {
+        mTimerCharacterModeDetect = new QTimer(this);
+        mTimerCharacterModeDetect->setSingleShot(true);
+        connect(mTimerCharacterModeDetect, &QTimer::timeout, this, [this]() {
+            checkCharacterModePattern();
+        });
+    }
+    mTimerCharacterModeDetect->start(CHARACTER_MODE_DETECT);
 }
 
 void cTelnet::checkCharacterModePattern()
