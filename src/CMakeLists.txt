@@ -118,6 +118,7 @@ set(mudlet_SRCS
     SecureStringUtils.cpp
     SelectionRectangleHandler.cpp
     SentryWrapper.cpp
+    SherpaRecognizer.cpp
     ShortcutsManager.cpp
     SingleLineTextEdit.cpp
     SpeechAudioCapture.cpp
@@ -253,6 +254,20 @@ if(APPLE)
     LANGUAGE OBJCXX
     COMPILE_OPTIONS "-fobjc-arc"
   )
+
+  # The macOS speech recognition backend. Unlike MacMicrophonePermission its
+  # class declares Q_OBJECT, so AUTOMOC must see the header - but only where
+  # the .mm that defines the class is also built. Leaving it in the
+  # unconditional mudlet_HDRS set moc'd it on every platform and left Linux and
+  # Windows linking against a vtable nothing defined. The header is appended
+  # after that set() instead, since this block runs before it.
+  list(APPEND mudlet_SRCS AppleSpeechRecognizer.mm)
+  set_source_files_properties(
+    AppleSpeechRecognizer.mm
+    PROPERTIES
+    LANGUAGE OBJCXX
+    COMPILE_OPTIONS "-fobjc-arc"
+  )
 endif()
 
 # This is for compiled UI files, not those used at runtime
@@ -371,6 +386,7 @@ set(mudlet_HDRS
     SecureStringUtils.h
     SelectionRectangleHandler.h
     SentryWrapper.h
+    SherpaRecognizer.h
     ShortcutsManager.h
     SingleLineTextEdit.h
     SpeechAudioCapture.h
@@ -490,6 +506,13 @@ set(mudlet_HDRS
     widgetutils.h
     XMLexport.h
     XMLimport.h)
+
+if(APPLE)
+  # Appended rather than listed above: AUTOMOC generates a moc file for every
+  # Q_OBJECT header it is given, and AppleSpeechRecognizer is only compiled on
+  # Apple.
+  list(APPEND mudlet_HDRS AppleSpeechRecognizer.h)
+endif()
 
 
 if(USE_UPDATER)
@@ -885,9 +908,14 @@ endif()
 if(APPLE)
   target_link_libraries(${EXE_MUDLET_TARGET} "-framework AppKit")
   target_link_libraries(${EXE_MUDLET_TARGET} "-framework AVFoundation")
+  # A normal link, not a weak one: Speech.framework has shipped with every
+  # macOS Mudlet supports
+  target_link_libraries(${EXE_MUDLET_TARGET} "-framework Speech")
 
-  # Microphone permission sources are already added via mudlet_SRCS/mudlet_HDRS
+  # Microphone permission and speech recognition sources are already added via
+  # mudlet_SRCS/mudlet_HDRS
   target_link_libraries(${LIB_MUDLET_TARGET} "-framework AVFoundation")
+  target_link_libraries(${LIB_MUDLET_TARGET} "-framework Speech")
 
   if(USE_UPDATER)
     # need to specifically call out Objective-C sources so that automoc builds them.

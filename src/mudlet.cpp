@@ -36,6 +36,7 @@
 #include "TDebug.h"
 #include "TDebugFilterBar.h"
 #include "MudletInstanceCoordinator.h"
+#include "SherpaRecognizer.h"
 #include "SpeechRecognizer.h"
 #include "SpeechRecognizerFactory.h"
 #include "TDetachedWindow.h"
@@ -48,7 +49,12 @@
 #include "TRoomDB.h"
 #include "TTabBar.h"
 #include "TUiTour.h"
+#include "VoskRecognizer.h"
 #include "XMLimport.h"
+
+#if defined(Q_OS_MACOS)
+#include "AppleSpeechRecognizer.h"
+#endif
 #include "dlgAboutDialog.h"
 #include "dlgConnectionProfiles.h"
 #include "dlgMapper.h"
@@ -185,6 +191,13 @@ void mudlet::raiseSpeechEvent(const QString& name, const QString& value)
 {
     Host* pHost = getActiveHost();
     if (!pHost) {
+        // A fault landing as the last profile closes has nowhere to be raised,
+        // and dropping it silently leaves no trace of it anywhere. Only the
+        // error path is logged: the result and state events are ordinary
+        // traffic, and warning on every one of those would bury this.
+        if (name == qsl("sysSTTError")) {
+            qWarning().noquote() << "speech recognition error with no active profile to report it to:" << value;
+        }
         return;
     }
     TEvent event{};
@@ -195,33 +208,73 @@ void mudlet::raiseSpeechEvent(const QString& name, const QString& value)
     pHost->raiseEvent(event);
 }
 
-void mudlet::initSpeechRecognition()
+// Which Backend enum value corresponds to a live recognizer's concrete type.
+// Not kept as a member: the object's own type already says which backend
+// built it, so a second, parallel note of the same fact could only drift from
+// it. Returns Auto for a null recognizer or a type this does not recognise,
+// which initSpeechRecognition() below treats as "nothing to compare against".
+static SpeechRecognizerFactory::Backend currentSpeechBackend(SpeechRecognizer* pRecognizer)
+{
+    if (qobject_cast<SherpaRecognizer*>(pRecognizer)) {
+        return SpeechRecognizerFactory::Backend::Sherpa;
+    }
+    if (qobject_cast<VoskRecognizer*>(pRecognizer)) {
+        return SpeechRecognizerFactory::Backend::Vosk;
+    }
+#if defined(Q_OS_MACOS)
+    if (qobject_cast<AppleSpeechRecognizer*>(pRecognizer)) {
+        return SpeechRecognizerFactory::Backend::Platform;
+    }
+#endif
+    return SpeechRecognizerFactory::Backend::Auto;
+}
+
+void mudlet::initSpeechRecognition(SpeechRecognizerFactory::Backend backend)
 {
     if (mpSpeechRecognizer) {
+        // Auto and "the backend already built" both keep what is there:
+        // stt.start() and the other Lua setters pass Auto or an on-demand
+        // choice on every call, and rebuilding on every one of those would
+        // tear down a working recognizer under a caller who never asked to
+        // switch engines.
+        if (backend == SpeechRecognizerFactory::Backend::Auto || backend == currentSpeechBackend(mpSpeechRecognizer)) {
+            return;
+        }
+    }
+
+    // Build the replacement before touching what is already working. The
+    // backend is derived from the model directory's layout, so a mistyped path
+    // on a machine with only one engine installed resolves to the other one and
+    // create() answers nullptr - and tearing down first would have cost the
+    // caller their loaded model to answer a call that could not be honoured.
+    SpeechRecognizer* pReplacement = SpeechRecognizerFactory::create(backend, this);
+    if (!pReplacement) {
         return;
     }
 
-    mpSpeechRecognizer = SpeechRecognizerFactory::create(SpeechRecognizerFactory::Backend::Auto, this);
-    if (!mpSpeechRecognizer) {
-        return;
-    }
-
+    // Everything about the replacement is established - wired up, then
+    // published - before the old engine is touched. Retiring it first raised
+    // sysSTTStateChanged from its releaseResources() while mpSpeechRecognizer
+    // still pointed at it, so a Lua handler calling stt.init() from that event
+    // built and initialised an engine the outer frame then threw away: three
+    // consecutive statements acting on three different objects. A re-entrant
+    // caller now finds the new engine already in place and fully connected.
     // Bridge glue only: recognizer signals surface as Lua events on the active
     // profile. Text routing, UI state and policy all belong to the packages
     // consuming these events, not to the core.
-    connect(mpSpeechRecognizer, &SpeechRecognizer::partialResult, this, [this](const QString& text) {
+    connect(pReplacement, &SpeechRecognizer::partialResult, this, [this](const QString& text) {
         raiseSpeechEvent(qsl("sysSTTPartialResult"), text);
     });
-    connect(mpSpeechRecognizer, &SpeechRecognizer::finalResult, this, [this](const QString& text) {
+    connect(pReplacement, &SpeechRecognizer::finalResult, this, [this](const QString& text) {
         raiseSpeechEvent(qsl("sysSTTResult"), text);
     });
-    connect(mpSpeechRecognizer, &SpeechRecognizer::errorOccurred, this, [this](const QString& message) {
+    connect(pReplacement, &SpeechRecognizer::errorOccurred, this, [this](const QString& message) {
         raiseSpeechEvent(qsl("sysSTTError"), message);
     });
     // Word-level detail travels as one JSON string argument: table arguments
     // need per-Host Lua registry bookkeeping this glue should not own, and a
     // string is the one type every client's event system carries
-    connect(mpSpeechRecognizer, &SpeechRecognizer::wordsResult, this, [this](const QVariantList& words) {
+    connect(pReplacement, &SpeechRecognizer::wordsResult, this, [this](const QVariantList& words) {
         QJsonArray array;
         for (const QVariant& word : words) {
             array.append(QJsonObject::fromVariantMap(word.toMap()));
@@ -230,15 +283,21 @@ void mudlet::initSpeechRecognition()
     });
     // Documented as re-readable rather than cached, so the change has to reach
     // a consumer that did read it once - which is the obvious thing to do
-    connect(mpSpeechRecognizer, &SpeechRecognizer::capabilitiesChanged, this, [this](SpeechRecognizer::Capabilities newCapabilities) {
+    connect(pReplacement, &SpeechRecognizer::capabilitiesChanged, this, [this](SpeechRecognizer::Capabilities newCapabilities) {
         QJsonObject capabilities;
         capabilities.insert(qsl("biasing"), newCapabilities.biasing);
         capabilities.insert(qsl("grammar"), newCapabilities.grammar);
         capabilities.insert(qsl("words"), newCapabilities.wordResults);
+        // Carried like the rest: docs/stt-api.md promises this event the same
+        // keys as getInfo().capabilities, and a package rebuilding from the
+        // event would otherwise read a missing key as "this engine never can"
+        // - on Vosk, exactly the flag that moves when the library is unloaded
+        // or reloaded, which is one of the moments this fires.
+        capabilities.insert(qsl("sensitivityTuning"), newCapabilities.sensitivityTuning);
         capabilities.insert(qsl("onDevice"), newCapabilities.onDevice);
         raiseSpeechEvent(qsl("sysSTTCapabilitiesChanged"), QString::fromUtf8(QJsonDocument(capabilities).toJson(QJsonDocument::Compact)));
     });
-    connect(mpSpeechRecognizer, &SpeechRecognizer::stateChanged, this, [this](SpeechRecognizer::State newState) {
+    connect(pReplacement, &SpeechRecognizer::stateChanged, this, [this](SpeechRecognizer::State newState) {
         QString stateName;
         switch (newState) {
         case SpeechRecognizer::State::Ready:
@@ -262,6 +321,37 @@ void mudlet::initSpeechRecognition()
         }
         raiseSpeechEvent(qsl("sysSTTStateChanged"), stateName);
     });
+
+    // Latched, then swapped, then retired: the old engine is only released
+    // once mpSpeechRecognizer already names its replacement. It is parented to
+    // this and has live signal connections - releaseResources() drops its
+    // native resources, disconnect() detaches the connections made above for
+    // it, and deleteLater() - rather than delete - defers the destruction,
+    // since a handler reached through one of those connections may still be on
+    // the stack (the same reentrancy hazard SherpaRecognizer::slot_pcmReady()
+    // guards against).
+    SpeechRecognizer* pRetiring = mpSpeechRecognizer;
+    mpSpeechRecognizer = pReplacement;
+    if (pRetiring) {
+        // Disconnected first: releaseResources() sets the state and, on a
+        // backend whose capabilities follow the model, announces the change -
+        // and mpSpeechRecognizer already names the replacement by now, so a
+        // handler reached from either event would read the new engine while
+        // being told about the dead one. The retirement is meant to be silent.
+        // Said before releaseResources() below, which is what resets the state
+        // this reads - not before the disconnect, which has no bearing on it:
+        // raiseSpeechEvent() goes straight to the active Host rather than over
+        // the retiring engine's connections. An engine swap reached from
+        // stt.init() while a phrase is in flight takes that phrase with it,
+        // and rule 1 allows recognised speech to be dropped only by a path
+        // that reports.
+        if (pRetiring->listening() || pRetiring->state() == SpeechRecognizer::State::Processing) {
+            raiseSpeechEvent(qsl("sysSTTError"), qsl("changing the speech engine stopped the listening session that was under way - anything said during it is lost"));
+        }
+        pRetiring->disconnect();
+        pRetiring->releaseResources();
+        pRetiring->deleteLater();
+    }
 }
 
 // Where a command's menu item hangs, building the path's submenus as needed.
