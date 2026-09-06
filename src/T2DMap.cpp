@@ -5275,7 +5275,7 @@ void T2DMap::slot_spread()
             for (auto& customLinePoint : customLinePoints) {
                 const QPointF movingPoint = customLinePoint;
                 customLinePoint.setX(static_cast<float>((movingPoint.x() - dx) * spread + dx));
-                customLinePoint.setY(static_cast<float>((movingPoint.y() - dx) * spread + dy));
+                customLinePoint.setY(static_cast<float>((movingPoint.y() - dy) * spread + dy));
             }
             newCustomLinePointsMap.insert(itCustomLine.key(), customLinePoints);
         }
@@ -5345,7 +5345,7 @@ void T2DMap::slot_shrink()
             for (auto& customLinePoint : customLinePoints) {
                 const QPointF movingPoint = customLinePoint;
                 customLinePoint.setX(static_cast<float>((movingPoint.x() - dx) / spread + dx));
-                customLinePoint.setY(static_cast<float>((movingPoint.y() - dx) / spread + dy));
+                customLinePoint.setY(static_cast<float>((movingPoint.y() - dy) / spread + dy));
             }
             newCustomLinePointsMap.insert(itCustomLine.key(), customLinePoints);
         }
