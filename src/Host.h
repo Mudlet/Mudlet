@@ -35,6 +35,7 @@
 #include "TLuaInterpreter.h"
 #include "TimerUnit.h"
 #include "TMainConsole.h"
+#include "TSpellChecker.h"
 #include "TWindowRegistry.h"
 #include "TriggerUnit.h"
 #include "ctelnet.h"
@@ -230,6 +231,7 @@ public:
     const QString& getDiscordInviteURL() const { return mDiscordInviteURL; }
     void setSpellDic(const QString&);
     QString getSpellDic() const;
+    TSpellChecker& spellChecker() { return mSpellChecker; }
     void setUserDictionaryOptions(const bool useDictionary, const bool useShared);
     void getUserDictionaryOptions(bool& useDictionary, bool& useShared)
     {
@@ -1089,6 +1091,10 @@ private:
 
     int mHostID;
     QString mHostName;
+    // Declared after mHostName because ~TSpellChecker() saves the profile's own
+    // dictionary to a path built from getName(), and members are destroyed in
+    // reverse declaration order.
+    TSpellChecker mSpellChecker{this};
     QString mDiscordGameName; // Discord self-reported game name
 
     QString mLine;
@@ -1174,11 +1180,10 @@ private:
     // Empty until a dictionary is chosen: getSpellDic() substitutes the
     // platform's starting one, so reading this member directly under-reports
     // what the profile is using. Private so that setSpellDic() can push the
-    // change into a live console:
+    // change into the profile's spell checker:
     QString mSpellDic;
-    // These are hidden to prevent them being changed directly, they are also
-    // mirrored/cached in the main TConsole's instance so they do not need to be
-    // looked up directly by that class:
+    // Hidden to prevent them being changed directly - setUserDictionaryOptions()
+    // is what pushes a change into the profile's spell checker:
     bool mEnableUserDictionary = true;
     bool mUseSharedDictionary = false;
 
