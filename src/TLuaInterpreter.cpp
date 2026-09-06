@@ -59,7 +59,6 @@
 #include <math.h>
 
 #include <QtConcurrentRun>
-#include <QApplication>
 #include <QCollator>
 #include <QCoreApplication>
 #include <QDesktopServices>
@@ -7077,25 +7076,6 @@ std::pair<int, QString> TLuaInterpreter::startPermPromptTrigger(const QString& n
     pT->setName(name);
     updateEditor();
     return {pT->getID(), QString()};
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#alert
-int TLuaInterpreter::alert(lua_State* L)
-{
-    double luaAlertDuration = 0.0;
-
-    if (lua_gettop(L) > 0) {
-        luaAlertDuration = getVerifiedDouble(L, __func__, 1, "alert duration in seconds");
-        if (luaAlertDuration < 0.000) {
-            lua_pushstring(L, "alert: duration, in seconds, is optional but if given must be zero or greater.");
-            return lua_error(L);
-        }
-    }
-
-    // QApplication::alert expects milliseconds, not seconds
-    QApplication::alert(mudlet::self(), qRound(luaAlertDuration * 1000.0));
-
-    return 0;
 }
 
 static int host_key = 0;
