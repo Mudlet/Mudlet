@@ -182,6 +182,15 @@ public:
     void disableMapProgressDialogCancel();
     void closeMapProgressDialog();
     void createMapperDock(const QString& title, const QString& objectName);
+    // The map dock answered as values, so that the core is left holding the
+    // state of the map window rather than the widget showing it. Having made a
+    // dock is not the same as having one on screen, which is what the four
+    // after it answer for.
+    bool mapWidgetCreated() const;
+    bool setMapWidgetTitle(const QString& title);
+    std::optional<QString> mapWidgetTitle() const;
+    std::optional<QRect> mapWidgetGeometry() const;
+    bool hideMapWidget();
     void showMapperScriptReminder();
     void showUnpackingProgress(const QString& message, const QString& title);
     void closeUnpackingProgress();
@@ -222,7 +231,7 @@ public:
     QPointer<QProgressDialog> mpMapProgressDialog;
     // Outlives Host::closeMapWidget(), which only hides it, so this being
     // non-null says the profile has made a map widget at some point, not that it
-    // has one on screen - see Host::mapWidget() for the latter.
+    // has one on screen - see mapWidget() for the latter.
     QPointer<QDockWidget> mpDockableMapWidget;
     QPointer<QDialog> mpUnpackingDialog;
 
@@ -259,6 +268,18 @@ private:
     // Where the three by-name-alone kinds are resolved to a widget, in the one
     // order the core resolves a name that is more than one of them in.
     QWidget* plainWindowWidget(const QString& name) const;
+    // The single answer to "does this profile have a map widget on screen right
+    // now" - null both for a profile that has never opened one and for one that
+    // put it away again, which a script cannot tell apart and does not need to.
+    //
+    // isHidden() rather than a flag of our own, because the dock gets hidden by
+    // paths that would never think to update one: its own title bar close
+    // button, mudlet::slot_showMapperDialog() handing the map over to a main
+    // window dock, and QMainWindow::restoreState() replaying a saved layout. It
+    // is also not !isVisible(), which would additionally answer "no map widget"
+    // whenever the main window itself is hidden, e.g. minimised to the system
+    // tray.
+    QDockWidget* mapWidget() const;
     void registerLabelWidget(const QString& name, TLabel* pLabel);
     void deregisterLabelWidget(TLabel* pLabel);
 

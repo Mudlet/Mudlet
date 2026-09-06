@@ -46,9 +46,9 @@ and the baseline are regenerated in each libmudlet PR, so drift shows up in the 
 | Metric | Count |
 | --- | ---: |
 | Source files in `mudlet_core` | 421 |
-| Files depending on Qt Widgets | 149 |
-| Clean files | 272 |
-| Committed baseline | 149 |
+| Files depending on Qt Widgets | 147 |
+| Clean files | 274 |
+| Committed baseline | 147 |
 
 ## Offending files
 
@@ -72,7 +72,7 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `dlgRoomProperties.cpp` | 2 | 51 | QColorDialog, QMenu, QWidget, QDialog, QLineEdit, QComboBox, QAbstractButton, QSpinBox, QListWidgetItem, QVBoxLayout, QSizePolicy, QListWidget, QListView, QHBoxLayout, QPushButton |
 | `dlgMapper.cpp` | 10 | 41 | QFileDialog, QFrame, QLabel, QListWidget, QMenu, QMessageBox, QProgressBar, QProgressDialog, QPushButton, QVBoxLayout, QWidget, QAbstractButton, QToolButton, QComboBox, QApplication, QDialog, QSizePolicy |
 | `dlgRoomExits.h` | 2 | 49 | QDialog, QStyledItemDelegate, QCheckBox, QWidget, QStyleOptionViewItem, QLineEdit, QTreeWidgetItem, QRadioButton, QSpinBox |
-| `TMainConsole.cpp` | 8 | 39 | QDialog, QDockWidget, QLabel, QLineEdit, QMessageBox, QProgressDialog, QScrollBar, QSizePolicy, QWidget, QApplication |
+| `TMainConsole.cpp` | 8 | 40 | QDialog, QDockWidget, QLabel, QLineEdit, QMessageBox, QProgressDialog, QScrollBar, QSizePolicy, QWidget, QApplication |
 | `dlgPackageManager.cpp` | 3 | 42 | QFileDialog, QMessageBox, QProgressDialog, QWidget, QDialog, QLineEdit, QListWidget, QAbstractButton, QListWidgetItem, QButtonGroup |
 | `dlgNotepad.cpp` | 8 | 36 | QApplication, QHBoxLayout, QInputDialog, QLabel, QLineEdit, QMenu, QPlainTextEdit, QToolButton, QWidget, QTabWidget, QMainWindow, QTextEdit |
 | `TTreeWidget.cpp` | 2 | 38 | QHeaderView, QToolTip, QWidget, QTreeWidget, QAbstractItemView, QTreeWidgetItem, QStyle |
@@ -104,9 +104,9 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `dlgNotepad.h` | 0 | 14 | QLabel, QLineEdit, QPlainTextEdit, QToolButton, QMainWindow, QWidget |
 | `dlgMapper.h` | 0 | 13 | QFrame, QLabel, QProgressBar, QPushButton, QWidget, QMenu |
 | `TDebugFilterBar.h` | 1 | 12 | QToolBar, QLabel, QLineEdit, QMenu, QToolButton, QWidget |
+| `TMainConsole.h` | 1 | 11 | QWidget, QDialog, QDockWidget, QProgressDialog |
 | `TUiTour.h` | 1 | 11 | QWidget, QFrame, QLabel, QPushButton |
 | `updater.cpp` | 2 | 10 | QMessageBox, QPushButton, QApplication, QAbstractButton |
-| `TMainConsole.h` | 1 | 10 | QWidget, QDialog, QDockWidget, QProgressDialog |
 | `updater/UpdateDialog.h` | 1 | 10 | QDialog, QAbstractButton, QLabel, QWidget |
 | `VarUnit.cpp` | 1 | 10 | QTreeWidgetItem |
 | `VarUnit.h` | 0 | 11 | QTreeWidgetItem |
@@ -190,8 +190,6 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `dlgTriggersMainArea.h` | 0 | 2 | QWidget |
 | `dlgVarsMainArea.h` | 0 | 2 | QWidget |
 | `glwidget_integration.h` | 0 | 2 | QWidget |
-| `Host.cpp` | 1 | 1 | QApplication, QDockWidget |
-| `Host.h` | 0 | 2 | QDockWidget |
 | `LabelInteractionHandler.cpp` | 1 | 1 | QMenu |
 | `modern_glwidget.cpp` | 0 | 2 | QWidget |
 | `SelectionRectangleHandler.cpp` | 1 | 1 | QTreeWidgetItem |
@@ -207,7 +205,7 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `HostManager.cpp` | 0 | 1 | QApplication |
 | `modern_glwidget.h` | 0 | 1 | QWidget |
 
-## Clean files (272)
+## Clean files (274)
 
 <details>
 <summary>Files with no Qt Widgets dependency</summary>
@@ -264,6 +262,8 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 - `GifTracker.h`
 - `GMCPAuthenticator.cpp`
 - `GMCPAuthenticator.h`
+- `Host.cpp`
+- `Host.h`
 - `HostManager.h`
 - `ircmessageformatter.cpp`
 - `ircmessageformatter.h`
