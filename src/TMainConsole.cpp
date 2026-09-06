@@ -1040,6 +1040,35 @@ void TMainConsole::deregisterSubCommandLine(TCommandLine* pCommandLine)
     });
 }
 
+void TMainConsole::setCommandLinePlaceholderText(const QString& text)
+{
+    mpCommandLine->setPlaceholderText(text);
+}
+
+void TMainConsole::updateCommandLineSpellCheck(bool enabled)
+{
+    if (enabled) {
+        mpCommandLine->recheckWholeLine();
+    } else {
+        mpCommandLine->clearMarksOnWholeLine();
+    }
+}
+
+void TMainConsole::setCommandLineText(const QString& text)
+{
+    mpCommandLine->setPlainText(text);
+    mpCommandLine->selectAll();
+}
+
+TCommandLine* TMainConsole::raiseCommandLine()
+{
+    mpCommandLine->activateWindow();
+    show();
+    raise();
+    repaint();
+    return mpCommandLine;
+}
+
 std::pair<bool, QString> TMainConsole::createTextBox(const QString& windowname, const QString& name, int x, int y, int width, int height)
 {
     if (name.isEmpty()) {

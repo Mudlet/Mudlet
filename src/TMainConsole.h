@@ -158,6 +158,10 @@ public:
     bool clearDockLayoutChanged(const QString& name);
     TCommandLine* subCommandLineWidget(const QString& name) const { return mSubCommandLineMap.value(name); }
     QList<TCommandLine*> subCommandLineWidgets() const { return mSubCommandLineMap.values(); }
+    void setCommandLinePlaceholderText(const QString& text);
+    void updateCommandLineSpellCheck(bool enabled);
+    void setCommandLineText(const QString& text);
+    TCommandLine* raiseCommandLine();
     TTextBox* textBoxWidget(const QString& name) const { return mTextBoxMap.value(name); }
     // One set of operations for scroll boxes, command lines and text boxes
     // together rather than one per kind: each is the same plain QWidget call
