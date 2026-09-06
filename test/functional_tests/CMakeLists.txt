@@ -100,9 +100,11 @@ set(TELNET_GROUP_TEST_SOURCES
     TelnetLatencyMeasurementTest.cpp
     TelnetBenchmark.cpp
     TelnetCharsetNegotiationTest.cpp
+    TelnetChannel102WireTest.cpp
     CrashTestHookTest.cpp
     TelnetConnectFailureTest.cpp
     TelnetConnectLookupRaceTest.cpp
+    TelnetIacEscapingTest.cpp
     TelnetNewEnvironTest.cpp
     TelnetOptionsReportTest.cpp
     TelnetReconnectStateTest.cpp
