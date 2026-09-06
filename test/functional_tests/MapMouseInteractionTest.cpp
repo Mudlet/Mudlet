@@ -1190,6 +1190,33 @@ private slots:
         QVERIFY2(map()->isUnsaved(), "moving a point did not mark the map as needing a save");
     }
 
+    // With one line selected, a press on a point of another line takes hold
+    // of that point, on that line - not the same-numbered point of the line
+    // that was selected before.
+    void test_grabbingAPointOfAnotherLineTakesHoldOfThatLine()
+    {
+        buildMap();
+        QVERIFY(addLineToTheEastRoom());
+        TRoom* pWest = map()->mpRoomDB->getRoom(kWestRoomId);
+        QVERIFY(pWest);
+        pWest->customLines[qsl("n")] = {QPointF(-1.0, 3.0), QPointF(-1.0, 4.0)};
+        pWest->customLinesColor[qsl("n")] = QColor(0, 0, 255);
+        pWest->customLinesStyle[qsl("n")] = Qt::SolidLine;
+        pWest->customLinesArrow[qsl("n")] = false;
+        pWest->calcRoomDimensions();
+        showMapper(false);
+        clickAt(pointUnitsFromCentre(1, 2));
+        QCOMPARE(mp2dMap->mCustomLineSelectedRoom, kLineRoomId);
+
+        dragFromTo(pointUnitsFromCentre(-1, 4), pointUnitsFromCentre(-2, 4));
+
+        QCOMPARE(mp2dMap->mCustomLineSelectedRoom, kWestRoomId);
+        QCOMPARE(mp2dMap->mCustomLineSelectedPoint, 1);
+        const QList<QPointF> westExpected{QPointF(-1.0, 3.0), QPointF(-2.0, 4.0)};
+        QCOMPARE(pWest->customLines.value(qsl("n")), westExpected);
+        QCOMPARE(linePoints(), lineAsDrawn());
+    }
+
     void test_draggingAPointWithSnappingOnLandsItOnTheHalfGrid()
     {
         buildMap();
