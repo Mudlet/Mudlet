@@ -669,6 +669,8 @@ private:
     edbee::TextEditorWidget* mpSourceEditorEdbee = nullptr;
     edbee::TextDocument* mpSourceEditorEdbeeDocument = nullptr;
     edbee::TextSearcher* mpSourceEditorSearcher = nullptr;
+    QPointer<QWidget> mpSourceEditorAutocompleteList;
+    bool mForwardingSourceEditorAutocompleteKey = false;
 
     inline static const QRegularExpression csmSimplifyStatusBarRegex{qsl(R"(^(?:\[\*\] )?(.+?) \|)")};
 
@@ -772,6 +774,7 @@ private:
 
     QMap<EditorViewType, QMap<int, EditorState>> mEditorStates;
 
+    void configureSourceEditorAutocompleteFocus();
     void saveEditorState(EditorViewType viewType, int itemId);
     void restoreEditorState(EditorViewType viewType, int itemId);
     void clearEditorState(EditorViewType viewType, int itemId);
