@@ -135,6 +135,7 @@ set(EDITOR_GROUP_TEST_SOURCES
     ColorTriggerDialogTest.cpp
     PackageExporterTest.cpp
     EditorWindowPositionTest.cpp
+    MissingEditorThemeTest.cpp
     ScriptEventHandlerLifetimeTest.cpp
     EditorSearchTest.cpp
     TreeWidgetItemMoveTest.cpp
