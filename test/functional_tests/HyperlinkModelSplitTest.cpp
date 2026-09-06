@@ -167,6 +167,36 @@ private slots:
         QVERIFY2(!subConsole->getHyperlinkSelectionManager().isSelected(qsl("splitgroup"), qsl("splitvalue")), "a user window must not share the main console's selection state");
     }
 
+    // The MXP client takes its link store off the model's buffer, so a <SEND>
+    // lands on the characters that buffer wrote. A store of the client's own
+    // would still answer the client's own reads - the caption, the actions on
+    // the queued event - so the proof is taken off the buffer instead: the
+    // character's link index, and the command that index resolves to. Nothing
+    // in Lua reads a stored link command back, which is why this is here rather
+    // than in MXP_spec.
+    void test_anMxpSendLinkIsStoredOnTheModelsBuffer()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        TConsoleModel& model = host->mainConsoleModel();
+
+        // feedTriggers() is not server data, so the ESC[1z a game would send to
+        // open secure mode is inert here; forcing the processor on is what makes
+        // the tag below a tag at all.
+        host->setForceMXPProcessorOn(true);
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("feedTriggers([[MXPSEND1 <SEND \"north\">go north</SEND>]] .. \"\\n\")")),
+                 "feedTriggers() did not run, so no MXP link was ever registered");
+
+        const int lineNumber = lineHolding(model.buffer, qsl("MXPSEND1"));
+        QVERIFY2(lineNumber >= 0, "the line carrying the MXP link never reached the buffer");
+        const QString line = lineTextAt(model.buffer, lineNumber);
+        QCOMPARE(line, qsl("MXPSEND1 go north"));
+
+        const int linkIndex = model.buffer.getLinkIndexAt(lineNumber, line.indexOf(qsl("go north")));
+        QVERIFY2(linkIndex > 0, "the linked characters carry no link index, so the MXP link is not clickable");
+        QCOMPARE(model.buffer.mLinkStore.getLinksConst(linkIndex), QStringList{qsl("send([[north]])")});
+    }
+
     // Concealing rewrites the buffer, and the buffer is the model's. This drives
     // it against a model that never had a widget of any kind, which is what the
     // manager used to refuse to do: performConcealment() and performReveal()

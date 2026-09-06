@@ -3063,7 +3063,7 @@ describe("Tests saveMap and loadMap", function()
 
   -- Careful with the order of anything added here: a load that fails can still
   -- have emptied the map first, both for a missing binary file
-  -- (TMainConsole::loadMap clears before it restores) and for a map document
+  -- (Host::loadMapFile clears before it restores) and for a map document
   -- that will not parse (TMap::readXmlMapFile clears before it parses), so most
   -- of these leave no map behind for the next spec. A file that is not a map
   -- document at all is the exception: it is refused before the clear.

@@ -2774,7 +2774,7 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
 }
 
 // Called from TLuaInterpreter::loadFile() or dlgProfilePreferences's "loadMap"
-// both via TConsole::importMap( QFile & ) - it is intended to prevent
+// both via Host::importMapFile(...) - it is intended to prevent
 // readXmlMapFile( QFile & ) from being used more than once at a time and to
 // prevent the above callers from using that when a map download is in progress!
 // errMsg if, non-null is for a suitable structured error message to return to
@@ -3030,7 +3030,7 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
     QString parsingFileName;
     if (!readFile.fileName().endsWith(qsl("xml"), Qt::CaseInsensitive)) {
         parsingFileName = readFile.fileName();
-        parsingWasSuccessful = pHost->mpConsole->loadMap(parsingFileName);
+        parsingWasSuccessful = pHost->loadMapFile(parsingFileName);
     } else {
         parsingFileName = mLocalMapFileName;
         if (!readFile.open(QFile::OpenMode(QFile::ReadOnly | QFile::Text))) {

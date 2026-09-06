@@ -45,7 +45,7 @@
  * A real profile rather than a bare Host, because the interesting part of the
  * chain is what happens after the bytes land: the reply handler writes the file,
  * parses it, and reports every outcome to the console through Host::postMessage()
- * - and hands a non-XML file to TMainConsole::loadMap(). A Host with no console
+ * - and hands a non-XML file to Host::loadMapFile(). A Host with no console
  * would stack those messages up unread and crash on that last call. It is also
  * the only way to get the frontend wiring at all: those connects are made in
  * mudlet::addConsoleForNewHost(), so a profile built through HostManager::addHost
@@ -1222,7 +1222,7 @@ private slots:
 
     // A destination file name that does not end in "xml" - which an URL not
     // ending in "xml" is what gives it by default - is a binary map file, and
-    // goes to TMainConsole::loadMap() rather than the XML reader.
+    // goes to Host::loadMapFile() rather than the XML reader.
     //
     // After every standalone-progress test on purpose: loadMap() creates the
     // mapper widget, and from then on TMap puts its progress on that widget
@@ -1325,14 +1325,14 @@ private slots:
         const QString destination = qsl("%1/map.dat").arg(saveDir.path());
         // A format version this Mudlet cannot write, which is what Lua's
         // saveMap(fileName, version) hands straight through. A destination that
-        // cannot be opened is no use for this: TMainConsole::saveMap() returns
+        // cannot be opened is no use for this: Host::saveMapFile() returns
         // from that one before it ever reaches the flag.
-        QVERIFY2(!mpHost->mpConsole->saveMap(destination, 9999), "the map save was supposed to fail");
+        QVERIFY2(!mpHost->saveMapFile(destination, 9999), "the map save was supposed to fail");
         QVERIFY2(!QFileInfo::exists(destination), "the failed save wrote a map file anyway");
         QVERIFY(pMap->hasSaveError());
         QVERIFY2(!pMapper->toolButton_saveWarning->isHidden(), "a failed map save left the mapper's warning indicator down");
 
-        QVERIFY2(mpHost->mpConsole->saveMap(destination), "the map save with a supported format version failed");
+        QVERIFY2(mpHost->saveMapFile(destination), "the map save with a supported format version failed");
         QVERIFY(!pMap->hasSaveError());
         QVERIFY2(pMapper->toolButton_saveWarning->isHidden(), "a successful map save left the mapper's warning indicator up");
     }

@@ -552,6 +552,9 @@ public:
     void setUserBorders(const QMargins);
     void setMxpBorders(const QMargins);
     void loadMap();
+    bool saveMapFile(const QString& location, int saveVersion = 0);
+    bool loadMapFile(const QString& location);
+    bool importMapFile(const QString& location, QString* errMsg = nullptr);
     std::tuple<QString, bool> getCmdLineSettings(const TCommandLine::CommandLineType, const QString&);
     void setCmdLineSettings(const TCommandLine::CommandLineType, const bool, const QString&);
     int getCommandLineHistorySaveSize() const { return mCommandLineHistorySaveSize; }
