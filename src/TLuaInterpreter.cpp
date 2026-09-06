@@ -57,6 +57,8 @@
 #include "glwidget_integration.h"
 #endif
 
+#include <hunspell/hunspell.h>
+
 #include <math.h>
 
 #include <QtConcurrentRun>
@@ -86,14 +88,6 @@ using namespace std::chrono_literals;
 extern "C" {
 int luaopen_yajl(lua_State*);
 }
-
-
-// A Host outlives its main console: closing a profile's window destroys the view
-// while triggers, the buffer, logging and Lua all keep running. The live
-// Hunspell handles and the user dictionary's word set belong to that view, so
-// the spelling functions have to report this rather than dereference what is
-// gone.
-static const char* no_main_window_value = "the profile has no main window";
 
 // No documentation available in wiki - internal function
 static bool isMain(const QString& name)
@@ -7304,10 +7298,7 @@ int TLuaInterpreter::addWordToDictionary(lua_State* L)
     }
 
     const QString text = getVerifiedString(L, __func__, 1, "word");
-    if (!host.mpConsole) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
-    QPair<bool, QString> const result = host.mpConsole->addWordToSet(text);
+    QPair<bool, QString> const result = host.spellChecker().addWord(text);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
     }
@@ -7327,10 +7318,7 @@ int TLuaInterpreter::removeWordFromDictionary(lua_State* L)
     }
 
     const QString text = getVerifiedString(L, __func__, 1, "word");
-    if (!host.mpConsole) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
-    QPair<bool, QString> const result = host.mpConsole->removeWordFromSet(text);
+    QPair<bool, QString> const result = host.spellChecker().removeWord(text);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
     }
@@ -7359,23 +7347,19 @@ int TLuaInterpreter::spellCheckWord(lua_State* L)
     }
     const QString text{lua_tostring(L, 1)};
 
-    if (!host.mpConsole) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
     Hunhandle* handle = nullptr;
     QByteArray encodedText;
     if (useUserDictionary) {
-        handle = host.mpConsole->getHunspellHandle_user();
+        handle = host.spellChecker().userHandle();
         encodedText = text.toUtf8();
     } else {
-        handle = host.mpConsole->getHunspellHandle_system();
+        handle = host.spellChecker().systemHandle();
         if (!handle) {
             return warnArgumentValue(L, __func__, "no main dictionaries found: Mudlet has not been able to find any dictionary files to use so is unable to check your word");
         }
 
-        encodedText = TEncodingHelper::encode(text, host.mpConsole->getHunspellCodecName_system());
+        encodedText = TEncodingHelper::encode(text, host.spellChecker().systemCodecName());
     }
-    // CHECKME: Is there any danger of contention here - do we need to get mudlet::mDictionaryReadWriteLock locked for reading if we are accessing the shared user dictionary?
     lua_pushboolean(L, Hunspell_spell(handle, encodedText.constData()));
     return 1;
 }
@@ -7401,25 +7385,21 @@ int TLuaInterpreter::spellSuggestWord(lua_State* L)
     }
     const QString text{lua_tostring(L, 1)};
 
-    if (!host.mpConsole) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
     char** wordList;
     size_t wordCount = 0;
     Hunhandle* handle = nullptr;
     QByteArray encodedText;
     if (useUserDictionary) {
-        handle = host.mpConsole->getHunspellHandle_user();
+        handle = host.spellChecker().userHandle();
         encodedText = text.toUtf8();
     } else {
-        handle = host.mpConsole->getHunspellHandle_system();
+        handle = host.spellChecker().systemHandle();
         if (!handle) {
             return warnArgumentValue(L, __func__, "no main dictionaries found: Mudlet has not been able to find any dictionary files to use so is unable to make suggestions for your word");
         }
 
-        encodedText = TEncodingHelper::encode(text, host.mpConsole->getHunspellCodecName_system());
+        encodedText = TEncodingHelper::encode(text, host.spellChecker().systemCodecName());
     }
-    // CHECKME: Is there any danger of contention here - do we need to get mudlet::mDictionaryReadWriteLock locked for reading if we are accessing the shared user dictionary?
     wordCount = Hunspell_suggest(handle, &wordList, encodedText.constData());
     lua_newtable(L);
     for (size_t i = 0; i < wordCount; ++i) {
@@ -7428,7 +7408,7 @@ int TLuaInterpreter::spellSuggestWord(lua_State* L)
         if (hasUserDictionary) {
             suggestion = QString::fromUtf8(wordList[i]);
         } else {
-            suggestion = TEncodingHelper::decode(QByteArray(wordList[i]), host.mpConsole->getHunspellCodecName_system());
+            suggestion = TEncodingHelper::decode(QByteArray(wordList[i]), host.spellChecker().systemCodecName());
         }
         lua_pushstring(L, suggestion.toUtf8().constData());
         lua_settable(L, -3);
@@ -7448,16 +7428,11 @@ int TLuaInterpreter::getDictionaryWordList(lua_State* L)
         return warnArgumentValue(L, __func__, "no user dictionary enabled in the preferences for this profile");
     }
 
-    if (!host.mpConsole) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
-    // This may stall if this is accessing the shared user dictionary and that
-    // is being updated by another profile, but it should eventually return...
     // We must keep a local reference/copy of the value returned because the
     // returned item is a deep-copy in the case of a shared dictionary and two
-    // calls to TConsole::getWordSet() can return two different instances which
+    // calls to TSpellChecker::wordSet() can return two different instances which
     // is fatally dangerous if used in a range based initialiser:
-    QSet<QString> wordSet{host.mpConsole->getWordSet()};
+    QSet<QString> wordSet{host.spellChecker().wordSet()};
     QStringList wordList{wordSet.begin(), wordSet.end()};
     const int wordCount = wordList.size();
     if (wordCount > 1) {

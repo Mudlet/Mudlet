@@ -4036,9 +4036,7 @@ void Host::setSpellDic(const QString& newDict)
         return;
     }
     mSpellDic = newDict;
-    if (mpConsole) {
-        mpConsole->setSystemSpellDictionary(newDict);
-    }
+    mSpellChecker.setSystemDictionary(newDict);
 }
 
 // When called from dlgProfilePreferences the second flag will only be changed
@@ -4061,15 +4059,12 @@ void Host::setUserDictionaryOptions(const bool _useDictionary, const bool useSha
         dictionaryChanged = true;
     }
 
-    if (!mpConsole) {
-        return;
+    if (dictionaryChanged) {
+        mSpellChecker.applyUserDictionaryOptions();
     }
 
-    if (dictionaryChanged) {
-        // This will propagate the changes in the two flags to the main
-        // TConsole's copies of them - although setProfileSpellDictionary() is
-        // also called in the main TConsole constructor:
-        mpConsole->setProfileSpellDictionary();
+    if (!mpConsole) {
+        return;
     }
 
     // This also needs to handle the spell checking against the system/mudlet
