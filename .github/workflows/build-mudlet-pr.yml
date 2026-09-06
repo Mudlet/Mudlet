@@ -68,15 +68,12 @@ jobs:
             # Enable AddressSanitizer for PTB and testing builds, but not release
             # builds (tagged Mudlet-*) - ASAN adds significant runtime overhead
             enable_asan: 'true'
-          # Ships the Intel binary only: no test here branches on the host
-          # architecture, so the arm64 job below is the same coverage, and this
-          # is the slower pool.
           - os: macos-15-intel
-            buildname: 'macos (x86_64)'
+            buildname: 'macos (x86_64) / c++, lua tests'
             compiler: clang_64
             qt: '6.11.1'
             deploy: 'deploy'
-            build_tests: 'false'
+            run_tests: 'true'
           - os: macos-15
             buildname: 'macos (arm64) / c++, lua tests'
             compiler: clang_64
@@ -375,19 +372,23 @@ jobs:
         key: sentry-${{ runner.os }}-${{ runner.arch }}-${{ steps.sentry-hash.outputs.SENTRY_HASH }}
 
     - name: Build Mudlet
-      uses: lukka/run-cmake@v10.9
+      uses: lukka/run-cmake@v3
       with:
-        configurePreset: ${{ runner.os == 'macOS' && (matrix.build_tests == 'false' && 'ci-macos-no-tests' || 'ci-macos') || 'ci-linux' }}
-        buildPreset: ${{ runner.os == 'macOS' && (matrix.build_tests == 'false' && 'ci-macos-no-tests' || 'ci-macos') || 'ci-linux' }}
+        cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
+        cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
+        buildDirectory: '${{runner.workspace}}/b/ninja'
+        cmakeAppendedArgs: >-
+          -G Ninja
+          -DCMAKE_BUILD_TYPE=${{ startsWith(github.ref, 'refs/tags/Mudlet-') && 'Release' || '' }}
+          -DCMAKE_PREFIX_PATH=${{ env.CMAKE_PREFIX_PATH != '' && env.CMAKE_PREFIX_PATH || (env.QT_PREFIX != '' && env.QT_PREFIX || env.MINGW_BASE_DIR) }}
+          -DUSE_SANITIZER=${{ matrix.enable_asan == 'true' && !startsWith(github.ref, 'refs/tags/Mudlet-') && 'Address' || '' }}
+          -DUSE_ALTERNATE_LINKER=${{ runner.os == 'Linux' && 'mold' || '' }}
+          ${{ runner.os == 'macOS' && format('-DLUA_INCLUDE_DIR={0}/.lua/include -DLUA_LIBRARY={0}/.lua/lib/liblua.a', github.workspace) || '' }}
+          -DWITH_SENTRY=ON
+          -DSENTRY_SEND_DEBUG=${{ (startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true') && '1' || '0' }}
+          -DSENTRY_DSN=${{ secrets.SENTRY_DSN }}
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
-        # The run-varying half of the ci-linux/ci-macos presets - everything else
-        # about the configuration lives in CMakePresets.json
-        CMAKE_BUILD_TYPE: ${{ startsWith(github.ref, 'refs/tags/Mudlet-') && 'Release' || '' }}
-        USE_SANITIZER: ${{ matrix.enable_asan == 'true' && !startsWith(github.ref, 'refs/tags/Mudlet-') && 'Address' || '' }}
-        WITH_SENTRY: 'ON'
-        SENTRY_SEND_DEBUG: ${{ (startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true') && '1' || '0' }}
-        SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         MUDLET_SANITIZERS: ${{ github.event_name == 'pull_request' && 'address' || '' }}
         SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
@@ -449,14 +450,13 @@ jobs:
         MUDLET_MEDIA_TESTS_REQUIRE_PLAYBACK: 1
 
     - name: (macOS) Run C++ tests
-      if: runner.os == 'macOS' && matrix.run_tests == 'true'
+      if: runner.os == 'macOS'
       working-directory: '${{runner.workspace}}/b/ninja'
       run: ctest --output-on-failure -j $(sysctl -n hw.ncpu)
 
-    # the full ctest run above already covers every functional-labelled test,
-    # and a BUILD_TESTING=OFF tree has no tests to find - bare ctest exits 8 there
+    # the full ctest run above already covers every functional-labelled test
     - name: Run QTest
-      if: matrix.run_tests != 'true' && matrix.build_tests != 'false'
+      if: matrix.run_tests != 'true'
       run: ctest --test-dir ${{runner.workspace}}/b/ninja -L functional --output-on-failure -j $(nproc)
 
     - name: add ssh-agent for release uploads
