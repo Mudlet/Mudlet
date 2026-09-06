@@ -19,7 +19,8 @@
 
 /*
  * Everything the mapper does with the mouse: which room a point on the widget
- * is over, and the handlers a press, a drag and a release are dispatched to.
+ * is over, and the handlers a press, a drag, a release, a wheel notch and a
+ * double-click are dispatched to.
  *
  * None of it has a Lua route - the hit test and the selection are private to
  * the widget, and no scripting call makes a selection or pans the view - so
@@ -40,7 +41,10 @@
 #include <QPixmap>
 #include <QSignalSpy>
 #include <QTemporaryDir>
+#include <QWheelEvent>
 #include <QtTest/QtTest>
+
+#include <cmath>
 
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
@@ -380,6 +384,30 @@ private:
 
     bool runLua(const QString& code) const { return mpHost->getLuaInterpreter()->compileAndExecuteScript(code); }
 
+    // The pointer moving over the map with no button down, which is all the
+    // map sees of a move started from the context menu.
+    void hoverTo(const QPoint& position) const { sendMouse(QEvent::MouseMove, position, Qt::NoButton, Qt::NoButton, Qt::NoModifier); }
+
+    void doubleClickAt(const QPoint& position) const { sendMouse(QEvent::MouseButtonDblClick, position, Qt::LeftButton, Qt::LeftButton, Qt::NoModifier); }
+
+    // Rolls the wheel that many notches forward (away from the user), or back
+    // for a negative count.
+    void rollWheelAt(const QPoint& position, const int notches, const Qt::KeyboardModifiers modifiers = Qt::NoModifier) const
+    {
+        QWheelEvent event(QPointF(position), mp2dMap->mapToGlobal(QPointF(position)), QPoint(), QPoint(0, notches * 120), Qt::NoButton, modifiers, Qt::NoScrollPhase, false);
+        QApplication::sendEvent(mp2dMap, &event);
+    }
+
+    // How many pixels across a map unit is drawn at, for a zoom of that many
+    // map units across the shorter side of the view. The map keeps the size
+    // as a float, so it is compared at that precision.
+    float pixelsPerMapUnitAtZoom(const double zoom) const { return static_cast<float>(kPixelsPerMapUnit * kZoom / zoom); }
+
+    // The wheel stores the zoom on the area, where the next frame reads it from.
+    double zoom() const { return area()->get2DMapZoom(); }
+
+    QString consoleText() const { return mpHost->mpConsole->buffer.lineBuffer.join(QChar::LineFeed); }
+
 private slots:
     void initTestCase()
     {
@@ -447,6 +475,17 @@ private slots:
         map()->mUserMenus.clear();
         map()->mUserActions.clear();
         map()->setMmpMapLocation(QString());
+        mudlet::self()->setInvertMapZoom(false);
+        mp2dMap->mRoomBeingMoved = false;
+        mp2dMap->mRoomMoveViaContextMenu = false;
+        mp2dMap->mNewMoveAction = false;
+        mp2dMap->mHasRoomMoveLastMapPoint = false;
+        mp2dMap->mHelpMsg.clear();
+        mp2dMap->setMouseTracking(false);
+        mp2dMap->mPick = false;
+        mp2dMap->mStartSpeedWalk = false;
+        runLua(qsl("mudlet.custom_speedwalk = nil\ndoSpeedWalk = nil"));
+        mpHost->mpConsole->discardAll();
         mp2dMap->mCustomLinesRoomFrom = 0;
         mp2dMap->mCustomLinesRoomTo = 0;
         mp2dMap->mCustomLinesRoomExit.clear();
@@ -1475,6 +1514,190 @@ private slots:
         QCOMPARE(pRoom->x(), 0);
         QCOMPARE(pRoom->y(), 0);
         QVERIFY2(!mp2dMap->mMapViewOnly, "a brand new map should open ready to edit");
+    }
+
+    // Rolling the wheel forward zooms in, 7% a notch: fewer map units fit
+    // across the view, so each room is drawn bigger.
+    void test_rollingTheWheelForwardZoomsIn()
+    {
+        buildMap();
+        showMapper(true);
+
+        rollWheelAt(viewCentre(), 1);
+
+        const double expectedZoom = kZoom / 1.07;
+        QCOMPARE(zoom(), expectedZoom);
+        renderFrame();
+        QCOMPARE(mp2dMap->mRoomWidth, pixelsPerMapUnitAtZoom(expectedZoom));
+        QCOMPARE(mp2dMap->mRoomHeight, pixelsPerMapUnitAtZoom(expectedZoom));
+    }
+
+    void test_rollingTheWheelBackZoomsOut()
+    {
+        buildMap();
+        showMapper(true);
+
+        rollWheelAt(viewCentre(), -1);
+
+        const double expectedZoom = kZoom * 1.07;
+        QCOMPARE(zoom(), expectedZoom);
+        renderFrame();
+        QCOMPARE(mp2dMap->mRoomWidth, pixelsPerMapUnitAtZoom(expectedZoom));
+    }
+
+    // The preference for the older way round: forward zooms out.
+    void test_invertedZoomRollsTheOtherWay()
+    {
+        buildMap();
+        showMapper(true);
+        mudlet::self()->setInvertMapZoom(true);
+
+        rollWheelAt(viewCentre(), 1);
+
+        QCOMPARE(zoom(), kZoom * 1.07);
+    }
+
+    // Holding Control makes each notch count for five, for getting across a
+    // big area's worth of zoom without wearing the wheel out.
+    void test_holdingControlZoomsFiveNotchesAtATime()
+    {
+        buildMap();
+        showMapper(true);
+
+        rollWheelAt(viewCentre(), 1, Qt::ControlModifier);
+
+        QCOMPARE(zoom(), kZoom / std::pow(1.07, 5));
+    }
+
+    // Zooming with the pointer off-centre shifts the view so that whatever
+    // was under the pointer stays under it, which is what lets a user zoom in
+    // on a corner of an area without then having to pan back to it.
+    void test_theRoomUnderThePointerStaysThereWhileZooming()
+    {
+        buildMap();
+        showMapper(true);
+        const QPoint northEast = pointUnitsFromCentre(1, 1);
+        QCOMPARE(mp2dMap->roomIdAtWidgetPosition(northEast, area()), std::optional<int>(kNorthEastRoomId));
+
+        // Far enough out that a room drawn from a view that had not shifted
+        // would be well clear of where it was.
+        rollWheelAt(northEast, -10);
+        renderFrame();
+
+        QCOMPARE(mp2dMap->roomIdAtWidgetPosition(northEast, area()), std::optional<int>(kNorthEastRoomId));
+        QVERIFY2(mp2dMap->roomIdAtWidgetPosition(viewCentre(), area()) != std::optional<int>(kPlayerRoomId), "the view did not shift, so the room under the pointer only stayed put by luck");
+    }
+
+    // There is a limit to how far in the map goes, so a runaway wheel cannot
+    // leave a single room filling the view many times over.
+    void test_zoomingInStopsAtTheClosestTheMapGoes()
+    {
+        buildMap();
+        showMapper(true);
+
+        rollWheelAt(viewCentre(), 100);
+
+        QCOMPARE(zoom(), T2DMap::csmMinXYZoom);
+        rollWheelAt(viewCentre(), 1);
+        QCOMPARE(zoom(), T2DMap::csmMinXYZoom);
+    }
+
+    // "Move" from the context menu picks the selected rooms up without a
+    // button held: they follow how far the pointer moves from there, in whole
+    // units, taking their custom lines along, until a click puts them down.
+    void test_moveFromTheMenuCarriesTheRoomsWithThePointerUntilAClick()
+    {
+        buildMap();
+        TRoom* pEastRoom = addLineToTheEastRoom();
+        QVERIFY(pEastRoom);
+        showMapper(false);
+        // Just short of the middle, where the custom line's first segment would
+        // take the click instead.
+        rightClickAt(pointUnitsFromCentre(1, -0.2));
+        QVERIFY(pickContextMenuItem(qsl("Move")));
+        QVERIFY2(!mp2dMap->mHelpMsg.isEmpty(), "the map does not say how to finish the move");
+
+        // The first hover only says where the pointer is starting from.
+        hoverTo(pointUnitsFromCentre(3, -1));
+        QCOMPARE(pEastRoom->x(), 1);
+        QCOMPARE(pEastRoom->y(), 0);
+
+        hoverTo(pointUnitsFromCentre(5, -2));
+        QCOMPARE(pEastRoom->x(), 3);
+        QCOMPARE(pEastRoom->y(), -1);
+        QCOMPARE(linePoints(), (QList<QPointF>{QPointF(3.0, 2.0), QPointF(3.0, 3.0)}));
+
+        clickAt(pointUnitsFromCentre(3, -1));
+        QVERIFY2(!mp2dMap->mRoomBeingMoved, "a click did not put the rooms down");
+        QVERIFY(mp2dMap->mHelpMsg.isEmpty());
+        hoverTo(pointUnitsFromCentre(7, -2));
+        QCOMPARE(pEastRoom->x(), 3);
+        QCOMPARE(pEastRoom->y(), -1);
+    }
+
+    // Double-clicking a room walks the player to it along the exits the map
+    // knows about, by handing the directions to the profile's doSpeedWalk.
+    void test_doubleClickingARoomWalksThereAlongTheKnownExits()
+    {
+        buildMap();
+        QVERIFY(map()->setExit(kPlayerRoomId, kEastRoomId, DIR_EAST));
+        showMapper(true);
+        QVERIFY(runLua(qsl("walkedDirs = nil\n"
+                           "function doSpeedWalk() walkedDirs = table.concat(speedWalkDir, ',') walkedPath = table.concat(speedWalkPath, ',') end")));
+
+        doubleClickAt(pointUnitsFromCentre(1, 0));
+        // The room under a double-click is looked up as the next frame is drawn.
+        renderFrame();
+
+        QVERIFY(runLua(qsl("assert(walkedDirs, 'doSpeedWalk was never called')\n"
+                           "assert(walkedDirs == 'e', walkedDirs)\n"
+                           "assert(walkedPath == '%1', walkedPath)")
+                               .arg(kEastRoomId)));
+        QCOMPARE(mp2dMap->mTargetRoomId, kEastRoomId);
+    }
+
+    void test_doubleClickingARoomWithNoWayToItSaysSo()
+    {
+        buildMap();
+        showMapper(true);
+        QVERIFY(runLua(qsl("walked = false\nfunction doSpeedWalk() walked = true end")));
+
+        doubleClickAt(pointUnitsFromCentre(1, 0));
+        renderFrame();
+
+        QVERIFY(consoleText().contains(qsl("Mapper: Cannot find a path from %1 to %2 using known exits.").arg(QString::number(kPlayerRoomId), QString::number(kEastRoomId))));
+        QVERIFY(runLua(qsl("assert(not walked, 'doSpeedWalk was called with no path to walk')")));
+    }
+
+    // A profile that finds its own way, by setting mudlet.custom_speedwalk,
+    // gets the two ends of the walk instead of a path the map worked out.
+    void test_aProfileThatWalksItsOwnWayGetsTheEndsOfTheWalk()
+    {
+        buildMap();
+        showMapper(true);
+        QVERIFY(runLua(qsl("mudlet.custom_speedwalk = true\n"
+                           "walkFrom, walkTo = nil, nil\n"
+                           "function doSpeedWalk() walkFrom, walkTo = speedWalkFrom, speedWalkTo end")));
+
+        doubleClickAt(pointUnitsFromCentre(1, 0));
+        renderFrame();
+
+        QVERIFY(runLua(qsl("assert(walkFrom == %1 and walkTo == %2, tostring(walkFrom) .. ' to ' .. tostring(walkTo))").arg(kPlayerRoomId).arg(kEastRoomId)));
+        QVERIFY(!consoleText().contains(qsl("Cannot find a path")));
+    }
+
+    void test_doubleClickingEmptySpaceStartsNoWalk()
+    {
+        buildMap();
+        QVERIFY(map()->setExit(kPlayerRoomId, kEastRoomId, DIR_EAST));
+        showMapper(true);
+        QVERIFY(runLua(qsl("walked = false\nfunction doSpeedWalk() walked = true end")));
+
+        doubleClickAt(pointUnitsFromCentre(2, 0.5));
+        renderFrame();
+
+        QVERIFY(runLua(qsl("assert(not walked, 'doSpeedWalk was called for a double-click on nothing')")));
+        QVERIFY(!consoleText().contains(qsl("Cannot find a path")));
     }
 };
 
