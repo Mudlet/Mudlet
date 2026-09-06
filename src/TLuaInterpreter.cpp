@@ -7385,7 +7385,8 @@ int TLuaInterpreter::spellCheckWord(lua_State* L)
     if (useUserDictionary) {
         handle = host.spellChecker().userHandle();
         if (!handle) {
-            return warnArgumentValue(L, __func__, "the profile dictionary could not be opened so is unable to check your word");
+            return warnArgumentValue(
+                    L, __func__, qsl("the %1 dictionary could not be opened so is unable to check your word").arg(host.spellChecker().usingSharedDictionary() ? qsl("shared") : qsl("profile")));
         }
 
         encodedText = text.toUtf8();
@@ -7429,7 +7430,10 @@ int TLuaInterpreter::spellSuggestWord(lua_State* L)
     if (useUserDictionary) {
         handle = host.spellChecker().userHandle();
         if (!handle) {
-            return warnArgumentValue(L, __func__, "the profile dictionary could not be opened so is unable to make suggestions for your word");
+            return warnArgumentValue(
+                    L,
+                    __func__,
+                    qsl("the %1 dictionary could not be opened so is unable to make suggestions for your word").arg(host.spellChecker().usingSharedDictionary() ? qsl("shared") : qsl("profile")));
         }
 
         encodedText = text.toUtf8();
