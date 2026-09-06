@@ -62,7 +62,6 @@ namespace pugi {
 class xml_document;
 }
 
-class QDockWidget;
 class QJsonObject;
 class QKeyEvent;
 class QSettings;
@@ -471,7 +470,6 @@ public:
     void setBufferSearchOptions(const TConsole::SearchOptions);
     std::pair<bool, QString> setMapperTitle(const QString&);
     std::optional<QString> getMapperTitle() const;
-    QDockWidget* mapWidget() const;
     // Gives TMap::mpMapper back to this profile's own mapper - see the definition.
     void restoreOwnMapper();
 

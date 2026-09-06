@@ -62,7 +62,6 @@
 
 #include <chrono>
 #include <QtConcurrentRun>
-#include <QApplication>
 #include <QCoreApplication>
 #include <QDataStream>
 #include <QDirIterator>
@@ -4268,25 +4267,6 @@ void Host::setBufferSearchOptions(const TConsole::SearchOptions optionsState)
     mBufferSearchOptions = optionsState;
 }
 
-// The single answer to "does this profile have a map widget on screen right
-// now" - null both for a profile that has never opened one and for one that put
-// it away again, which a script cannot tell apart and does not need to.
-//
-// isHidden() rather than a flag of our own, because the dock gets hidden by
-// paths that would never think to update one: its own title bar close button,
-// mudlet::slot_showMapperDialog() handing the map over to a main window dock,
-// and QMainWindow::restoreState() replaying a saved layout. It is also not
-// !isVisible(), which would additionally answer "no map widget" whenever the
-// main window itself is hidden, e.g. minimised to the system tray.
-QDockWidget* Host::mapWidget() const
-{
-    if (!mpConsole || !mpConsole->mpDockableMapWidget || mpConsole->mpDockableMapWidget->isHidden()) {
-        return nullptr;
-    }
-
-    return mpConsole->mpDockableMapWidget;
-}
-
 // Hands TMap::mpMapper back to this profile's own mapper. The map dock and the
 // detached windows borrow it while they show a map of their own, and every one
 // of them gives it back through here. createMapper() records the embedded
@@ -4314,15 +4294,9 @@ void Host::restoreOwnMapper()
 
 std::pair<bool, QString> Host::setMapperTitle(const QString& title)
 {
-    auto pM = mapWidget();
-    if (!pM) {
+    const QString newTitle = title.isEmpty() ? tr("Map - %1").arg(mHostName) : title;
+    if (!mpConsole || !mpConsole->setMapWidgetTitle(newTitle)) {
         return {false, qsl("no floating/dockable type map window found")};
-    }
-
-    if (title.isEmpty()) {
-        pM->setWindowTitle(tr("Map - %1").arg(mHostName));
-    } else {
-        pM->setWindowTitle(title);
     }
 
     return {true, QString()};
@@ -4330,12 +4304,11 @@ std::pair<bool, QString> Host::setMapperTitle(const QString& title)
 
 std::optional<QString> Host::getMapperTitle() const
 {
-    auto pM = mapWidget();
-    if (!pM) {
+    if (!mpConsole) {
         return {};
     }
 
-    return {pM->windowTitle()};
+    return mpConsole->mapWidgetTitle();
 }
 
 std::pair<int, QString> Host::createMapView(int areaId)
@@ -4890,17 +4863,14 @@ std::pair<bool, QString> Host::openMapWidget(const QString& area, int x, int y, 
 }
 
 // The inverse of moveMapWidget()/resizeMapWidget(), which reach the dock widget
-// through openMapWidget(). pos()/size() rather than geometry() for the same
-// reason as Host::windowGeometry(): they are what move()/resize() were given,
-// while a floating dock's geometry() reports the client area instead.
+// through openMapWidget().
 std::optional<QRect> Host::mapWidgetGeometry() const
 {
-    auto pM = mapWidget();
-    if (!pM) {
+    if (!mpConsole) {
         return {};
     }
 
-    return {QRect(pM->pos(), pM->size())};
+    return mpConsole->mapWidgetGeometry();
 }
 
 std::pair<bool, QString> Host::closeMapWidget()
@@ -4909,15 +4879,14 @@ std::pair<bool, QString> Host::closeMapWidget()
         return {false, qsl("no console for this profile - it may be closing")};
     }
 
-    // Test the raw pointer first so that a profile which never made a map widget
-    // is told apart from one that has put its widget away.
-    if (!mpConsole->mpDockableMapWidget) {
+    // Ask whether the widget was ever made first, so that a profile which never
+    // made one is told apart from one that has put its widget away.
+    if (!mpConsole->mapWidgetCreated()) {
         return {false, qsl("no map widget found to close")};
     }
-    if (!mapWidget()) {
+    if (!mpConsole->hideMapWidget()) {
         return {false, qsl("map widget already closed")};
     }
-    mpConsole->mpDockableMapWidget->hide();
     return {true, QString()};
 }
 

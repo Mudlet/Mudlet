@@ -2517,6 +2517,65 @@ void TMainConsole::createMapperDock(const QString& title, const QString& objectN
     mpDockableMapWidget->setObjectName(objectName);
 }
 
+QDockWidget* TMainConsole::mapWidget() const
+{
+    if (!mpDockableMapWidget || mpDockableMapWidget->isHidden()) {
+        return nullptr;
+    }
+
+    return mpDockableMapWidget;
+}
+
+bool TMainConsole::mapWidgetCreated() const
+{
+    return !mpDockableMapWidget.isNull();
+}
+
+bool TMainConsole::setMapWidgetTitle(const QString& title)
+{
+    auto pM = mapWidget();
+    if (!pM) {
+        return false;
+    }
+
+    pM->setWindowTitle(title);
+    return true;
+}
+
+std::optional<QString> TMainConsole::mapWidgetTitle() const
+{
+    auto pM = mapWidget();
+    if (!pM) {
+        return {};
+    }
+
+    return {pM->windowTitle()};
+}
+
+// pos()/size() rather than geometry() for the same reason as
+// Host::windowGeometry(): they are what move()/resize() were given, while a
+// floating dock's geometry() reports the client area instead.
+std::optional<QRect> TMainConsole::mapWidgetGeometry() const
+{
+    auto pM = mapWidget();
+    if (!pM) {
+        return {};
+    }
+
+    return {QRect(pM->pos(), pM->size())};
+}
+
+bool TMainConsole::hideMapWidget()
+{
+    auto pM = mapWidget();
+    if (!pM) {
+        return false;
+    }
+
+    pM->hide();
+    return true;
+}
+
 void TMainConsole::showMapperScriptReminder()
 {
     QUiLoader loader;

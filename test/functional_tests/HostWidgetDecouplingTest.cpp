@@ -138,6 +138,31 @@ private slots:
         QCOMPARE(host->mpConsole->mpDockableMapWidget->windowTitle(), qsl("Custom map title"));
     }
 
+    // closeMapWidget tells three states apart and Lua reads the difference from
+    // the message, so a dock that was never made must not report as one that has
+    // already been put away.
+    void test_closeMapWidgetTellsNeverMadeFromAlreadyClosed()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        auto [neverMade, neverMadeMessage] = host->closeMapWidget();
+        QVERIFY2(!neverMade, "closeMapWidget must fail on a profile that never made a map widget.");
+        QCOMPARE(neverMadeMessage, qsl("no map widget found to close"));
+
+        host->showHideOrCreateMapper(true);
+        QVERIFY2(host->mpConsole->mpDockableMapWidget, "The mapper dock was not created.");
+
+        auto [closed, closedMessage] = host->closeMapWidget();
+        QVERIFY2(closed, qPrintable(closedMessage));
+
+        auto [alreadyClosed, alreadyClosedMessage] = host->closeMapWidget();
+        QVERIFY2(!alreadyClosed, "Closing an already closed map widget must fail.");
+        QCOMPARE(alreadyClosedMessage, qsl("map widget already closed"));
+    }
+
     // The mapping-script reminder used to be a QDialog built inside Host; it is
     // now shown by the frontend in response to signal_showMapperScriptReminder().
     // Verify the frontend handler actually raises a dialog parented on the main
