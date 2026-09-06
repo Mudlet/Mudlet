@@ -2646,7 +2646,11 @@ void TConsole::removeEasyButtonBar(int location, TEasyButtonBar* pBar)
 
 void TConsole::setCompactInputLine(const bool state)
 {
-    mpButtonMainLayer->setVisible(!state);
+    // the button row belongs to the main console alone - setCmdVisible() keeps
+    // it hidden for every other type and the constructor only applies the
+    // setting for a main console, so showing it here on the bare setting would
+    // put it on a console that never has one
+    mpButtonMainLayer->setVisible(!state && (mType & MainConsole));
 }
 
 void TConsole::repaintPanes() const

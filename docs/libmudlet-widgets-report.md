@@ -46,9 +46,9 @@ and the baseline are regenerated in each libmudlet PR, so drift shows up in the 
 | Metric | Count |
 | --- | ---: |
 | Source files in `mudlet_core` | 421 |
-| Files depending on Qt Widgets | 137 |
-| Clean files | 284 |
-| Committed baseline | 137 |
+| Files depending on Qt Widgets | 138 |
+| Clean files | 283 |
+| Committed baseline | 138 |
 
 ## Offending files
 
@@ -92,10 +92,10 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `TDetachedWindow.h` | 7 | 16 | QMainWindow, QVBoxLayout, QToolBar, QToolButton, QLabel, QStackedWidget, QDockWidget, QMenu |
 | `TEasyButtonBar.cpp` | 2 | 20 | QGridLayout, QMenu, QWidget, QVBoxLayout, QSizePolicy, QAbstractButton, QPushButton |
 | `TToolBar.cpp` | 1 | 21 | QMenu, QWidget, QDockWidget, QGridLayout, QSizePolicy, QAbstractButton, QPushButton |
-| `widgetutils.h` | 3 | 19 | QApplication, QFileDialog, QWidget |
 | `T2DMap.h` | 2 | 19 | QTreeWidget, QWidget, QCheckBox, QComboBox, QListWidgetItem, QPushButton, QTreeWidgetItem, QMenu, QDialog |
 | `TTreeWidget.h` | 1 | 20 | QTreeWidget, QWidget, QTreeWidgetItem |
 | `dlgTriggerPatternEdit.cpp` | 8 | 11 | QAbstractButton, QAbstractItemView, QAbstractScrollArea, QAbstractSpinBox, QPlainTextEdit, QComboBox, QLineEdit, QWidget |
+| `widgetutils.h` | 2 | 17 | QApplication, QWidget |
 | `TFlipButton.cpp` | 3 | 15 | QMenu, QStyleOptionButton, QStylePainter, QPushButton, QSizePolicy, QStyle |
 | `TTabBar.h` | 2 | 15 | QProxyStyle, QTabBar, QStyleOption, QWidget, QStyleOptionTab |
 | `dlgConnectionProfiles.h` | 0 | 16 | QTabBar, QDialog, QWidget, QListWidgetItem, QListWidget, QLabel, QPushButton |
@@ -159,6 +159,7 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `TAccessibleTextEdit.cpp` | 0 | 3 | QAccessibleWidget |
 | `TFlipButton.h` | 1 | 2 | QPushButton, QStyleOptionButton |
 | `TLabel.h` | 1 | 2 | QLabel, QWidget |
+| `TLuaInterpreterUI.cpp` | 1 | 2 | QFileDialog |
 | `TSplitter.cpp` | 0 | 3 | QWidget, QSplitter, QSplitterHandle |
 | `TTextBox.cpp` | 0 | 3 | QWidget, QPlainTextEdit, QFrame |
 | `TTextBox.h` | 1 | 2 | QPlainTextEdit, QWidget |
@@ -195,7 +196,7 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `glwidget_integration.cpp` | 0 | 1 | QWidget |
 | `modern_glwidget.h` | 0 | 1 | QWidget |
 
-## Clean files (284)
+## Clean files (283)
 
 <details>
 <summary>Files with no Qt Widgets dependency</summary>
@@ -373,7 +374,6 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 - `TLuaInterpreterNetworking.cpp`
 - `TLuaInterpreterSpeechToText.cpp`
 - `TLuaInterpreterTextToSpeech.cpp`
-- `TLuaInterpreterUI.cpp`
 - `TMap.cpp`
 - `TMap.h`
 - `TMapLabel.cpp`
