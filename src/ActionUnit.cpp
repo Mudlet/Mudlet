@@ -34,7 +34,6 @@
 #include "utils.h"
 
 #include <QDebug>
-#include <QLayout>
 #include <QMapIterator>
 #include <QPoint>
 #include <QSet>
@@ -246,15 +245,7 @@ void ActionUnit::reParentAction(int childID, int oldParentID, int newParentID, i
 
     if ((!pOldParent) && (pNewParent)) {
         if (pChild->mpEasyButtonBar) {
-            if (pChild->mLocation == 0) {
-                mpHost->mpConsole->mpTopToolBar->layout()->removeWidget(pChild->mpEasyButtonBar);
-            }
-            if (pChild->mLocation == 2) {
-                mpHost->mpConsole->mpLeftToolBar->layout()->removeWidget(pChild->mpEasyButtonBar);
-            }
-            if (pChild->mLocation == 3) {
-                mpHost->mpConsole->mpRightToolBar->layout()->removeWidget(pChild->mpEasyButtonBar);
-            }
+            mpHost->mpConsole->removeEasyButtonBar(pChild->mLocation, pChild->mpEasyButtonBar);
         }
         if (pChild->mpToolBar) {
             if (pChild->mLocation == 4) {
@@ -324,15 +315,7 @@ void ActionUnit::unregisterAction(TAction* pT)
         return;
     }
     if (pT->mpEasyButtonBar && pT->mPackageName.isEmpty()) {
-        if (pT->mLocation == 0) {
-            mpHost->mpConsole->mpTopToolBar->layout()->removeWidget(pT->mpEasyButtonBar);
-        }
-        if (pT->mLocation == 2) {
-            mpHost->mpConsole->mpLeftToolBar->layout()->removeWidget(pT->mpEasyButtonBar);
-        }
-        if (pT->mLocation == 3) {
-            mpHost->mpConsole->mpRightToolBar->layout()->removeWidget(pT->mpEasyButtonBar);
-        }
+        mpHost->mpConsole->removeEasyButtonBar(pT->mLocation, pT->mpEasyButtonBar);
         if (pT->mLocation == 4) {
             if (pT->mpToolBar) {
                 pT->mpToolBar->setFloating(false);
@@ -466,8 +449,7 @@ void ActionUnit::regenerateEasyButtonBars()
                     }
                 }
                 if (!pTB) {
-                    pTB = new TEasyButtonBar(rootAction, childAction->getName(), mpHost->mpConsole->mpTopToolBar);
-                    mpHost->mpConsole->mpTopToolBar->layout()->addWidget(pTB);
+                    pTB = mpHost->mpConsole->createTopEasyButtonBar(rootAction, childAction->getName());
                     mEasyButtonBarList.emplace_back(pTB);
                     childAction->mpEasyButtonBar = pTB; // needed for drag&drop
                 }
@@ -491,8 +473,7 @@ void ActionUnit::regenerateEasyButtonBars()
             }
         }
         if (!pTB) {
-            pTB = new TEasyButtonBar(rootAction, rootAction->getName(), mpHost->mpConsole->mpTopToolBar);
-            mpHost->mpConsole->mpTopToolBar->layout()->addWidget(pTB);
+            pTB = mpHost->mpConsole->createTopEasyButtonBar(rootAction, rootAction->getName());
             mEasyButtonBarList.emplace_back(pTB);
             rootAction->mpEasyButtonBar = pTB; // needed for drag&drop
         }
@@ -723,20 +704,7 @@ void ActionUnit::constructToolbar(TAction* pA, TEasyButtonBar* pTB)
     } else {
         pTB->setVerticalOrientation();
     }
-    switch (pA->mLocation) {
-    case 0:
-        mpHost->mpConsole->mpTopToolBar->layout()->addWidget(pTB);
-        break;
-    //case 1:
-    //mpHost->mpConsole->mpTopToolBar->layout()->addWidget( pTB );
-    //break;
-    case 2:
-        mpHost->mpConsole->mpLeftToolBar->layout()->addWidget(pTB);
-        break;
-    case 3:
-        mpHost->mpConsole->mpRightToolBar->layout()->addWidget(pTB);
-        break;
-    }
+    mpHost->mpConsole->addEasyButtonBar(pA->mLocation, pTB);
 
     pTB->setStyleSheet(pTB->mpTAction->css);
     pTB->show();

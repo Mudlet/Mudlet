@@ -32,6 +32,7 @@
 #include "TCommandLine.h"
 #include "TDebug.h"
 #include "TDockWidget.h"
+#include "TEasyButtonBar.h"
 #include "TEvent.h"
 #include "THyperlinkVisibilityManager.h"
 #include "TLabel.h"
@@ -2605,6 +2606,42 @@ QSize TConsole::getMainWindowSize() const
         mLastMeasuredSize = mainWindowSize;
     }
     return mainWindowSize;
+}
+
+QWidget* TConsole::toolBarForLocation(int location) const
+{
+    switch (location) {
+    case 0:
+        return mpTopToolBar;
+    case 2:
+        return mpLeftToolBar;
+    case 3:
+        return mpRightToolBar;
+    default:
+        return nullptr;
+    }
+}
+
+TEasyButtonBar* TConsole::createTopEasyButtonBar(TAction* pAction, const QString& name)
+{
+    // Bars are born in the top toolbar; constructToolbar() then moves them to the action's location.
+    auto* pBar = new TEasyButtonBar(pAction, name, mpTopToolBar);
+    mpTopToolBar->layout()->addWidget(pBar);
+    return pBar;
+}
+
+void TConsole::addEasyButtonBar(int location, TEasyButtonBar* pBar)
+{
+    if (auto* toolBar = toolBarForLocation(location)) {
+        toolBar->layout()->addWidget(pBar);
+    }
+}
+
+void TConsole::removeEasyButtonBar(int location, TEasyButtonBar* pBar)
+{
+    if (auto* toolBar = toolBarForLocation(location)) {
+        toolBar->layout()->removeWidget(pBar);
+    }
 }
 
 void TConsole::setProfileName(const QString& newName)
