@@ -586,9 +586,6 @@ END: {
         const int g2 = mFgColor.green();
         const int b2 = mFgColor.blue();
         const int total = captureList.size();
-        if (Q_UNLIKELY(!mpHost->mpConsole)) {
-            return;
-        }
         mpHost->deselectMainConsole();
         auto its = captureList.begin();
         auto iti = posList.begin();
@@ -691,9 +688,6 @@ void TTrigger::processBeginOfLine(int patternNumber, int posOffset, int lineNumb
         const int r2 = mFgColor.red();
         const int g2 = mFgColor.green();
         const int b2 = mFgColor.blue();
-        if (Q_UNLIKELY(!mpHost->mpConsole)) {
-            return;
-        }
         auto its = captureList.begin();
         for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
             const int begin = *iti;
@@ -832,9 +826,6 @@ void TTrigger::processSubstringMatch(const QString& haystack, const QString& nee
         const int r2 = mFgColor.red();
         const int g2 = mFgColor.green();
         const int b2 = mFgColor.blue();
-        if (Q_UNLIKELY(!mpHost->mpConsole)) {
-            return;
-        }
         mpHost->deselectMainConsole();
         auto its = captureList.begin();
         for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
@@ -980,9 +971,6 @@ void TTrigger::processColorPattern(int patternNumber, std::list<std::string>& ca
         const int r2 = mFgColor.red();
         const int g2 = mFgColor.green();
         const int b2 = mFgColor.blue();
-        if (Q_UNLIKELY(!mpHost->mpConsole)) {
-            return;
-        }
         mpHost->deselectMainConsole();
         auto its = captureList.begin();
         for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
@@ -1128,9 +1116,6 @@ void TTrigger::processExactMatch(int patternNumber, int posOffset, int lineNumbe
         const int r2 = mFgColor.red();
         const int g2 = mFgColor.green();
         const int b2 = mFgColor.blue();
-        if (Q_UNLIKELY(!mpHost->mpConsole)) {
-            return;
-        }
         auto its = captureList.begin();
         for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
             const int begin = *iti;
