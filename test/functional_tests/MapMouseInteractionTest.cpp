@@ -2169,6 +2169,51 @@ private slots:
         QVERIFY(map()->isUnsaved());
     }
 
+    // A custom exit line is scaled about the highlighted room the same way
+    // its rooms are, so it still runs between them afterwards. The rooms sit
+    // off the diagonal so that scaling y about the wrong axis shows up.
+    void test_spreadingRoomsCarriesTheirCustomLinesWithThem()
+    {
+        buildMap();
+        for (int roomId = 1; roomId <= 9; ++roomId) {
+            const TRoom* pRoom = map()->mpRoomDB->getRoom(roomId);
+            QVERIFY(map()->setRoomCoordinates(roomId, pRoom->x() + 3, pRoom->y(), 0));
+        }
+        QVERIFY(map()->setExit(kPlayerRoomId, kEastRoomId, DIR_EAST));
+        map()->mpRoomDB->getRoom(kPlayerRoomId)->customLines[qsl("e")] = QList<QPointF>{QPointF(3.5, 1.0), QPointF(4.0, 0.5)};
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(1.5, 0.5), pointUnitsFromCentre(4.5, -0.5));
+        QCOMPARE(mp2dMap->mMultiSelectionHighlightRoomId, kPlayerRoomId);
+        rightClickAt(pointUnitsFromCentre(4, 0));
+
+        QVERIFY(pickFactorItem(qsl("Spread..."), 2));
+
+        QCOMPARE(roomPosition(kPlayerRoomId), QVector3D(3, 0, 0));
+        QCOMPARE(roomPosition(kEastRoomId), QVector3D(5, 0, 0));
+        QCOMPARE(map()->mpRoomDB->getRoom(kPlayerRoomId)->customLines.value(qsl("e")), (QList<QPointF>{QPointF(4.0, 2.0), QPointF(5.0, 1.0)}));
+    }
+
+    void test_shrinkingRoomsCarriesTheirCustomLinesWithThem()
+    {
+        buildMap();
+        for (int roomId = 1; roomId <= 9; ++roomId) {
+            const TRoom* pRoom = map()->mpRoomDB->getRoom(roomId);
+            QVERIFY(map()->setRoomCoordinates(roomId, pRoom->x() * 2 + 3, pRoom->y() * 2, 0));
+        }
+        QVERIFY(map()->setExit(kPlayerRoomId, kEastRoomId, DIR_EAST));
+        map()->mpRoomDB->getRoom(kPlayerRoomId)->customLines[qsl("e")] = QList<QPointF>{QPointF(4.0, 2.0), QPointF(5.0, 1.0)};
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(0.5, 0.5), pointUnitsFromCentre(5.5, -0.5));
+        QCOMPARE(mp2dMap->mMultiSelectionHighlightRoomId, kPlayerRoomId);
+        rightClickAt(pointUnitsFromCentre(5, 0));
+
+        QVERIFY(pickFactorItem(qsl("Shrink..."), 2));
+
+        QCOMPARE(roomPosition(kPlayerRoomId), QVector3D(3, 0, 0));
+        QCOMPARE(roomPosition(kEastRoomId), QVector3D(4, 0, 0));
+        QCOMPARE(map()->mpRoomDB->getRoom(kPlayerRoomId)->customLines.value(qsl("e")), (QList<QPointF>{QPointF(3.5, 1.0), QPointF(4.0, 0.5)}));
+    }
+
     void test_shrinkFromTheMenuPullsTheSelectedRoomsInTowardsTheHighlightedOne()
     {
         buildMap();
