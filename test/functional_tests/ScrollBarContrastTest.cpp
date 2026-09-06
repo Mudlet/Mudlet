@@ -199,6 +199,7 @@ private slots:
 
     void cleanupTestCase()
     {
+        delete mudlet::smpDebugArea;
         delete mpServer;
         mpServer = nullptr;
         mpHost = nullptr;
@@ -264,7 +265,9 @@ private slots:
         QVERIFY(!handle.isEmpty());
 
         const qreal contrast = contrastRatio(renderWidget(pScrollBar, background).pixelColor(handle.center()), background);
-        mudlet::smpDebugArea->hide();
+        // Nothing else destroys it: the debug area is parentless and only a profile
+        // closing takes it down, so it would outlive the Host its console points at.
+        delete mudlet::smpDebugArea;
         QVERIFY2(contrast >= 3.0, qPrintable(qsl("handle contrast against the debug console's %1 background was only %2:1").arg(background.name(), QString::number(contrast, 'f', 2))));
     }
 
@@ -326,7 +329,16 @@ private slots:
         // Measured against the image and not against the groove: a base style that
         // paints an opaque groove hides the image on that platform, but one that
         // leaves it clear - as Windows 11 does - puts the image right behind the handle.
-        const QColor image = shot.pixelColor(pDisplay->width() / 2, pDisplay->height() / 2);
+        // Taken from what was written rather than sampled, because every pixel of the
+        // display could be a glyph of the text the handle was given to scroll.
+        const QColor image(Qt::white);
+        int imagePixels = 0;
+        for (int y = 0; y < shot.height(); y += 4) {
+            for (int x = 0; x < shot.width(); x += 4) {
+                imagePixels += (shot.pixelColor(x, y) == image) ? 1 : 0;
+            }
+        }
+
         int standingOut = 0;
         for (int y = handle.top(); y <= handle.bottom(); ++y) {
             for (int x = handle.left(); x <= handle.right(); ++x) {
@@ -338,7 +350,8 @@ private slots:
 
         runLua(qsl("resetBackgroundImage()"));
         QTest::qWait(50ms);
-        QVERIFY2(image == QColor(Qt::white), qPrintable(qsl("the background image did not reach the scroll bar - it rendered %1").arg(image.name())));
+        const int sampled = ((shot.width() + 3) / 4) * ((shot.height() + 3) / 4);
+        QVERIFY2(imagePixels > sampled / 2, qPrintable(qsl("the background image did not reach the console - only %1 of %2 sampled pixels were its white").arg(imagePixels).arg(sampled)));
         QVERIFY2(standingOut >= handle.height(), qPrintable(qsl("only %1 of the handle's %2 pixels stood out against the background image").arg(standingOut).arg(handle.width() * handle.height())));
     }
 

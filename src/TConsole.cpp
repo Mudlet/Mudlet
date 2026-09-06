@@ -111,9 +111,9 @@ public:
             return;
         }
 
-        // The groove, the arrows and the hover feedback stay the base style's work, but
-        // its handle is masked out: ours is alpha blended, so it would take its colour
-        // from that handle instead of from the console it was measured against.
+        // The groove and the arrows stay the base style's work, but its handle is masked
+        // out - and with it the handle's own hover state - because ours is alpha blended
+        // and would otherwise take its colour from that handle rather than the console.
         QStyleOptionSlider baseOption(*pSlider);
         baseOption.subControls &= ~SC_ScrollBarSlider;
         QProxyStyle::drawComplexControl(control, &baseOption, pPainter, pWidget);
