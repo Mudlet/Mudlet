@@ -204,6 +204,7 @@ set(SETTINGS_GROUP_TEST_SOURCES
     SettingsRoundTripTest.cpp
     SettingsSearchTest.cpp
     SettingsShellNavigationTest.cpp
+    SettingsSpellCheckEnableTest.cpp
 )
 
 # Teardown: who owns a profile's dialogs and windows, and what becomes of them when it closes

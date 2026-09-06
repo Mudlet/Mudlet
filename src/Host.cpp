@@ -4040,6 +4040,19 @@ void Host::setSpellDic(const QString& newDict)
     }
 }
 
+void Host::setEnableSpellCheck(const bool enable)
+{
+    if (mEnableSpellCheck == enable) {
+        return;
+    }
+    mEnableSpellCheck = enable;
+    // The load-end warm skips a profile with spell check off, so this is when
+    // the dictionary first becomes wanted:
+    if (enable && mpConsole) {
+        QTimer::singleShot(0, mpConsole.data(), &TMainConsole::slot_warmSystemSpellDictionary);
+    }
+}
+
 // When called from dlgProfilePreferences the second flag will only be changed
 // if necessary:
 // DISABLED: - Prevent "None" option for user dictionary - modified to prevent original useDictionary argument from being false:

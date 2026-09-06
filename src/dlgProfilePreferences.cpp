@@ -6413,7 +6413,7 @@ void dlgProfilePreferences::applyAll()
         }
 
         if (mSnapshot.dirty(checkBox_spellCheck)) {
-            pHost->mEnableSpellCheck = checkBox_spellCheck->isChecked();
+            pHost->setEnableSpellCheck(checkBox_spellCheck->isChecked());
         }
         if (mSnapshot.anyDirty({radioButton_userDictionary_common, radioButton_userDictionary_profile})) {
             if (radioButton_userDictionary_common->isChecked()) {
