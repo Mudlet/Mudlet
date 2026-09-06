@@ -94,21 +94,6 @@ int luaopen_yajl(lua_State*);
 // gone.
 static const char* no_main_window_value = "the profile has no main window";
 
-// No documentation available in wiki - internal function
-static bool isMain(const QString& name)
-{
-    if (name.isEmpty()) {
-        return true;
-    }
-    if (!name.compare(qsl("main"))) {
-        return true;
-    }
-    return false;
-}
-
-static const char* bad_cmdline_type = "%s: bad argument #%d type (command line name as string expected, got %s)!";
-static const char* bad_cmdline_value = "command line \"%s\" not found";
-
 const QString TLuaInterpreter::csmInvalidRoomID{qsl("number %1 is not a valid roomID")};
 const QString TLuaInterpreter::csmInvalidStopWatchID{qsl("stopwatch with ID %1 not found")};
 const QString TLuaInterpreter::csmInvalidRedValue{qsl("red value %1 needs to be between 0-255")};
@@ -119,20 +104,6 @@ const QString TLuaInterpreter::csmInvalidExitRoomID{qsl("number %1 is not a vali
 const QString TLuaInterpreter::csmInvalidItemID{qsl("item ID as %1 does not seem to be parseable as a positive integer")};
 const QString TLuaInterpreter::csmInvalidAreaID{qsl("number %1 is not a valid area id")};
 const QString TLuaInterpreter::csmInvalidAreaName{qsl("string '%1' is not a valid area name")};
-
-#define CMDLINE_NAME(ARG_L, ARG_pos)                                                                                                                                                                   \
-    ({                                                                                                                                                                                                 \
-        int pos_ = (ARG_pos);                                                                                                                                                                          \
-        if (!lua_isstring(ARG_L, pos_)) {                                                                                                                                                              \
-            lua_pushfstring(ARG_L, bad_cmdline_type, __FUNCTION__, pos_, luaL_typename(ARG_L, pos_));                                                                                                  \
-            return lua_error(ARG_L);                                                                                                                                                                   \
-        }                                                                                                                                                                                              \
-        lua_tostring(ARG_L, pos_);                                                                                                                                                                     \
-    })
-
-// variable names within these macros have trailing underscores because in
-// at least one case, masking an existing variable with the new one confused
-// GCC, leading to a crash.
 
 
 TLuaInterpreter::TLuaInterpreter(Host* pH, const QString& hostName, int id)
