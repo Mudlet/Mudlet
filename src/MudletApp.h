@@ -75,6 +75,10 @@ public:
     // password load and save
     static bool portableModeActive(const QString& execDir);
 
+    // A portable root Mudlet cannot write to would start up looking like every
+    // profile had vanished, so setupConfig() aborts on one instead
+    static bool portableRootUsable(const QString& path);
+
     // The XDG leg on its own: $XDG_CONFIG_HOME/mudlet takes a tie with
     // legacyDefault so that a fresh install lands there
     static ConfigDirResolution xdgConfigDir(const QString& legacyDefault);

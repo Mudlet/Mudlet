@@ -511,6 +511,68 @@ private slots:
         QVERIFY(MudletApp::resolveConfigRoot(exec.path()).portable);
     }
 
+    // --- MudletApp::portableRootUsable() --------------------------------------
+
+    // An empty portable.txt names "portable" beside the executable, so a stray
+    // "touch portable.txt" against a system install points the root at somewhere
+    // only root may write. Coming up there looks exactly like every profile
+    // having vanished, so setupConfig() has to abort rather than start.
+    void test_aPortableRootNobodyCanWriteToIsRefused()
+    {
+        QTemporaryDir parent;
+        QVERIFY(parent.isValid());
+        const QString root = qsl("%1/portable").arg(parent.path());
+        QVERIFY(QDir().mkpath(root));
+        QVERIFY(MudletApp::portableRootUsable(root));
+
+        QVERIFY(QFile::setPermissions(root, QFileDevice::ReadOwner | QFileDevice::ExeOwner));
+        if (QFileInfo(root).isWritable()) {
+            QFile::setPermissions(root, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner);
+            QSKIP("this user can write to a read-only directory, so there is nothing to refuse");
+        }
+        QVERIFY(!MudletApp::portableRootUsable(root));
+        QFile::setPermissions(root, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner);
+    }
+
+    // The guessed root usually does not exist yet, which is fine - but only when
+    // Mudlet is allowed to create it
+    void test_aPortableRootThatCannotBeCreatedIsRefused()
+    {
+        QTemporaryDir parent;
+        QVERIFY(parent.isValid());
+        const QString root = qsl("%1/portable").arg(parent.path());
+        QVERIFY(!QFileInfo::exists(root));
+        QVERIFY(MudletApp::portableRootUsable(root));
+
+        QVERIFY(QFile::setPermissions(parent.path(), QFileDevice::ReadOwner | QFileDevice::ExeOwner));
+        if (QFileInfo(parent.path()).isWritable()) {
+            QFile::setPermissions(parent.path(), QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner);
+            QSKIP("this user can write to a read-only directory, so there is nothing to refuse");
+        }
+        QVERIFY(!MudletApp::portableRootUsable(root));
+        QFile::setPermissions(parent.path(), QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner);
+    }
+
+    void test_aPortableRootWithNoParentIsRefused()
+    {
+        QTemporaryDir parent;
+        QVERIFY(parent.isValid());
+        QVERIFY(!MudletApp::portableRootUsable(qsl("%1/missing/portable").arg(parent.path())));
+    }
+
+    void test_aPortableRootThatIsAFileIsRefused()
+    {
+        QTemporaryDir parent;
+        QVERIFY(parent.isValid());
+        const QString root = qsl("%1/portable").arg(parent.path());
+        QFile file(root);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        file.close();
+        QVERIFY(!MudletApp::portableRootUsable(root));
+    }
+
+    void test_anUnnamedPortableRootIsRefused() { QVERIFY(!MudletApp::portableRootUsable(QString())); }
+
     // --- MudletApp::sanitizeForPath() -----------------------------------------
 
     // Stored passwords are filed under the result, so two long names must not

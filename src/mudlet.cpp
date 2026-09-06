@@ -1645,30 +1645,11 @@ void mudlet::init()
     //    });
 }
 
-static bool validateConfDir(const QString& path)
-{
-    if (path.isEmpty()) {
-        qWarning("WARN: portable data path not specified");
-        return false;
-    }
-    QFileInfo pathInfo(path);
-    if (pathInfo.isFile()) {
-        qWarning("WARN: specified portable data path is an existing file: %s", qPrintable(path));
-        return false;
-    }
-    QFileInfo parentInfo(pathInfo.dir().path());
-    if (!parentInfo.isDir()) {
-        qWarning("WARN: parent directory of specified portable data path doesn't exist: %s", qPrintable(parentInfo.filePath()));
-        return false;
-    }
-    return true;
-}
-
 void mudlet::setupConfig()
 {
     const auto resolution = MudletApp::resolveConfigRoot(MudletApp::executableDir());
     const QString confPath = resolution.path;
-    if (resolution.portable && !validateConfDir(confPath)) {
+    if (resolution.portable && !MudletApp::portableRootUsable(confPath)) {
         qFatal("FATAL: portable data path invalid");
     }
     if (resolution.migrationPending) {

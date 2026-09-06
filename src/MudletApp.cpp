@@ -179,6 +179,32 @@ bool MudletApp::portableModeActive(const QString& execDir)
     return QFileInfo(qsl("%1/portable.txt").arg(execDir)).isFile() || QFileInfo(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath())).isFile();
 }
 
+bool MudletApp::portableRootUsable(const QString& path)
+{
+    if (path.isEmpty()) {
+        qWarning("WARN: portable data path not specified");
+        return false;
+    }
+    const QFileInfo pathInfo(path);
+    if (pathInfo.isFile()) {
+        qWarning("WARN: specified portable data path is an existing file: %s", qPrintable(path));
+        return false;
+    }
+    // An empty portable.txt guesses "portable" beside the executable, which for a
+    // system install lands where only root may write. Mudlet would come up with
+    // no profiles and every save failing quietly, so refuse the root outright.
+    const QFileInfo writableInfo = pathInfo.isDir() ? pathInfo : QFileInfo(pathInfo.dir().path());
+    if (!writableInfo.isDir()) {
+        qWarning("WARN: parent directory of specified portable data path doesn't exist: %s", qPrintable(writableInfo.filePath()));
+        return false;
+    }
+    if (!writableInfo.isWritable()) {
+        qWarning("WARN: portable data path cannot be written to: %s", qPrintable(writableInfo.filePath()));
+        return false;
+    }
+    return true;
+}
+
 MudletApp::ConfigDirResolution MudletApp::xdgConfigDir(const QString& legacyDefault)
 {
     const QString xdgConfigHome = qEnvironmentVariable("XDG_CONFIG_HOME");
