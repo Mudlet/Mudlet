@@ -363,7 +363,7 @@ void dlgMapper::loadMapFromFile()
         }
         bool success = false;
         if (fileName.endsWith(qsl(".xml"), Qt::CaseInsensitive)) {
-            success = pHost->mpConsole->importMap(fileName);
+            success = pHost->importMapFile(fileName);
         } else if (fileName.endsWith(qsl(".json"), Qt::CaseInsensitive)) {
             auto [ok, errorMessage] = pHost->mpMap->readJsonMapFile(fileName);
             success = ok;
@@ -371,7 +371,7 @@ void dlgMapper::loadMapFromFile()
                 pHost->postMessage(tr("[ ERROR ] - Unable to load JSON map file: %1\nreason: %2.").arg(fileName, errorMessage));
             }
         } else {
-            success = pHost->mpConsole->loadMap(fileName);
+            success = pHost->loadMapFile(fileName);
         }
         if (success) {
             pHost->mpMap->audit();
@@ -1004,7 +1004,7 @@ void dlgMapper::slot_showSaveWarningMenu()
     auto* retryAction = new QAction(tr("Retry save"), this);
     connect(retryAction, &QAction::triggered, this, [this]() {
         if (mpHost && mpHost->mpConsole) {
-            if (mpHost->mpConsole->saveMap(QString())) {
+            if (mpHost->saveMapFile(QString())) {
                 mpMap->setSaveError(false);
             }
         }
