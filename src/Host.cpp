@@ -25,6 +25,7 @@
 
 #include "Host.h"
 
+#include "discord.h"
 #include "dlgIRC.h"
 #include "dlgMapper.h"
 #include "dlgModuleManager.h"
@@ -1097,6 +1098,12 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
         qDebug().noquote().nospace() << "Host::saveProfile(...) INFO - called with no saveFolder or saveName arguments for profile '" << mHostName
                                      << "' so assuming it is an end of session save and the TCommandLines' histories need saving...";
         emit signal_saveCommandLinesHistory();
+    }
+    // The event loop flushes profile.ini, so a write there only shows up as
+    // having failed later - by the time the profile is next saved:
+    if (mpProfileIni && mpProfileIni->status() == QSettings::AccessError) {
+        qWarning().nospace().noquote()
+                << "Host::saveProfile(...) ERROR - the profile's \"profile.ini\" file could not be written, the command lines' history settings and the notepad's window state may be lost.";
     }
 
     auto writer = std::make_shared<XMLexport>(this);
@@ -3371,31 +3378,28 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule, QString*
     return noManifest(qsl("%1: %2").arg(QString::fromStdString(reason), QString::fromStdString(e)));
 }
 
-// writeProfileIniData(...) and readProfileIniData(...) might eventually
-// replace writeProfileData(...) and readProfileData(...) but for now are just
-// used to store some information about one or more TCommandLine's mHistoryData:
-bool Host::writeProfileIniData(const QString& item, const QString& what)
+// profile.ini holds the command lines' history settings and the notepad's
+// window state. Opened once per Host; setName() drops it because the path
+// carries the name:
+QSettings& Host::profileIni()
 {
-    QSettings settings(mudlet::getMudletPath(enums::profileDataItemPath, getName(), qsl("profile.ini")), QSettings::IniFormat);
-    settings.setValue(item, what);
-    settings.sync();
-    switch (settings.status()) {
-    case QSettings::NoError:
-        return true;
-    case QSettings::FormatError:
-        qWarning().nospace().noquote() << "Host::writeProfileIniData(\"" << item << "\", \"" << what << "\") ERROR - failed to save this detail, reason: \"Format error\".";
-        return false;
-    case QSettings::AccessError:
-        qWarning().nospace().noquote() << "Host::writeProfileIniData(\"" << item << "\", \"" << what << "\") ERROR - failed to save this detail, reason: \"Access error\".";
-        return false;
+    if (!mpProfileIni) {
+        mpProfileIni = new QSettings(mudlet::getMudletPath(enums::profileDataItemPath, getName(), qsl("profile.ini")), QSettings::IniFormat, this);
+        if (mpProfileIni->status() == QSettings::FormatError) {
+            qWarning().nospace().noquote() << "Host::profileIni() ERROR - the profile's \"profile.ini\" file could not be parsed, the settings it held will be replaced.";
+        }
     }
-    Q_UNREACHABLE();
+    return *mpProfileIni;
+}
+
+void Host::writeProfileIniData(const QString& item, const QString& what)
+{
+    profileIni().setValue(item, what);
 }
 
 QString Host::readProfileIniData(const QString& item)
 {
-    QSettings settings(mudlet::getMudletPath(enums::profileDataItemPath, getName(), qsl("profile.ini")), QSettings::IniFormat);
-    return settings.value(item).toString();
+    return profileIni().value(item).toString();
 }
 
 // This function retrieves command line history settings based on the given
@@ -3479,9 +3483,7 @@ QPair<bool, QString> Host::writeProfileData(const QString& item, const QString& 
     QSaveFile file(mudlet::getMudletPath(enums::profileDataItemPath, getName(), item));
     if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         QDataStream ofs(&file);
-        if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            ofs.setVersion(mudlet::scmQDataStreamFormat_5_12);
-        }
+        ofs.setVersion(QDataStream::Qt_5_12);
         ofs << what;
         if (!file.commit()) {
             qDebug() << "Host::writeProfileData: writing host data: " << file.errorString();
@@ -3502,9 +3504,7 @@ QString Host::readProfileData(const QString& item)
     QString ret;
     if (success) {
         QDataStream ifs(&file);
-        if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
-        }
+        ifs.setVersion(QDataStream::Qt_5_12);
         ifs >> ret;
         file.close();
     }
@@ -3681,15 +3681,15 @@ void Host::processGMCPDiscordInfo(const QJsonObject& discordInfo)
     if (appID != QJsonValue::Undefined) {
         hasApplicationId = true;
         if (appID.toString() == Discord::mMudletApplicationId) {
-            pMudlet->mDiscord.setApplicationID(this, QString());
+            Discord::self()->setApplicationID(this, QString());
         } else {
             hasCustomAppID = true;
-            pMudlet->mDiscord.setApplicationID(this, appID.toString());
-            auto image = pMudlet->mDiscord.getLargeImage(this);
+            Discord::self()->setApplicationID(this, appID.toString());
+            auto image = Discord::self()->getLargeImage(this);
 
             if (image.isEmpty() || image == QLatin1String("mudlet")) {
-                pMudlet->mDiscord.setServerOrigin(this, DiscordSetLargeIcon);
-                pMudlet->mDiscord.setLargeImage(this, qsl("server-icon"));
+                Discord::self()->setServerOrigin(this, DiscordSetLargeIcon);
+                Discord::self()->setLargeImage(this, qsl("server-icon"));
             }
         }
     }
@@ -3722,92 +3722,92 @@ void Host::processGMCPDiscordStatus(const QJsonObject& discordInfo)
     if (gameName != QJsonValue::Undefined) {
         setDiscordGameName(gameName.toString());
         pMudlet->updateDiscordNamedIcon();
-        QPair<bool, QString> const richPresenceSupported = pMudlet->mDiscord.gameIntegrationSupported(getUrl());
-        if (richPresenceSupported.first && pMudlet->mDiscord.usingMudletsDiscordID(this)) {
-            pMudlet->mDiscord.setServerOrigin(this, DiscordSetDetail);
-            pMudlet->mDiscord.setDetailText(this, tr("Playing %1").arg(richPresenceSupported.second));
-            pMudlet->mDiscord.setServerOrigin(this, DiscordSetLargeIcon);
-            pMudlet->mDiscord.setLargeImage(this, richPresenceSupported.second);
-            pMudlet->mDiscord.setServerOrigin(this, DiscordSetLargeIconText);
+        QPair<bool, QString> const richPresenceSupported = Discord::self()->gameIntegrationSupported(getUrl());
+        if (richPresenceSupported.first && Discord::self()->usingMudletsDiscordID(this)) {
+            Discord::self()->setServerOrigin(this, DiscordSetDetail);
+            Discord::self()->setDetailText(this, tr("Playing %1").arg(richPresenceSupported.second));
+            Discord::self()->setServerOrigin(this, DiscordSetLargeIcon);
+            Discord::self()->setLargeImage(this, richPresenceSupported.second);
+            Discord::self()->setServerOrigin(this, DiscordSetLargeIconText);
             //: %1 is the game name and %2:%3 is game server address like: mudlet.org:23
-            pMudlet->mDiscord.setLargeImageText(this, tr("%1 at %2:%3").arg(gameName.toString(), getUrl(), QString::number(getPort())));
+            Discord::self()->setLargeImageText(this, tr("%1 at %2:%3").arg(gameName.toString(), getUrl(), QString::number(getPort())));
         } else {
             // We are using a custom application id, so the top line is
             // likely to be saying "Playing MudName"
             if (richPresenceSupported.first) {
-                pMudlet->mDiscord.setServerOrigin(this, DiscordSetDetail);
-                pMudlet->mDiscord.setDetailText(this, QString());
-                pMudlet->mDiscord.setServerOrigin(this, DiscordSetLargeIconText);
+                Discord::self()->setServerOrigin(this, DiscordSetDetail);
+                Discord::self()->setDetailText(this, QString());
+                Discord::self()->setServerOrigin(this, DiscordSetLargeIconText);
                 //: %1 is the game name and %2:%3 is game server address like: mudlet.org:23
-                pMudlet->mDiscord.setLargeImageText(this, tr("%1 at %2:%3").arg(gameName.toString(), getUrl(), QString::number(getPort())));
-                pMudlet->mDiscord.setServerOrigin(this, DiscordSetLargeIcon);
-                pMudlet->mDiscord.setLargeImage(this, qsl("server-icon"));
+                Discord::self()->setLargeImageText(this, tr("%1 at %2:%3").arg(gameName.toString(), getUrl(), QString::number(getPort())));
+                Discord::self()->setServerOrigin(this, DiscordSetLargeIcon);
+                Discord::self()->setLargeImage(this, qsl("server-icon"));
             }
         }
     }
 
     auto details = discordInfo.value(qsl("details"));
     if (details != QJsonValue::Undefined) {
-        pMudlet->mDiscord.setServerOrigin(this, DiscordSetDetail);
-        pMudlet->mDiscord.setDetailText(this, details.toString());
+        Discord::self()->setServerOrigin(this, DiscordSetDetail);
+        Discord::self()->setDetailText(this, details.toString());
     }
 
     auto state = discordInfo.value(qsl("state"));
     if (state != QJsonValue::Undefined) {
-        pMudlet->mDiscord.setServerOrigin(this, DiscordSetState);
-        pMudlet->mDiscord.setStateText(this, state.toString());
+        Discord::self()->setServerOrigin(this, DiscordSetState);
+        Discord::self()->setStateText(this, state.toString());
     }
 
     auto largeImages = discordInfo.value(qsl("largeimage"));
     if (largeImages != QJsonValue::Undefined) {
         auto largeImage = largeImages.toArray().first();
         if (largeImage != QJsonValue::Undefined) {
-            pMudlet->mDiscord.setServerOrigin(this, DiscordSetLargeIcon);
-            pMudlet->mDiscord.setLargeImage(this, largeImage.toString());
+            Discord::self()->setServerOrigin(this, DiscordSetLargeIcon);
+            Discord::self()->setLargeImage(this, largeImage.toString());
         }
     }
 
     auto largeImageText = discordInfo.value(qsl("largeimagetext"));
     if (largeImageText != QJsonValue::Undefined) {
-        pMudlet->mDiscord.setServerOrigin(this, DiscordSetLargeIconText);
-        pMudlet->mDiscord.setLargeImageText(this, largeImageText.toString());
+        Discord::self()->setServerOrigin(this, DiscordSetLargeIconText);
+        Discord::self()->setLargeImageText(this, largeImageText.toString());
     }
 
     auto smallImages = discordInfo.value(qsl("smallimage"));
     if (smallImages != QJsonValue::Undefined) {
         auto smallImage = smallImages.toArray().first();
         if (smallImage != QJsonValue::Undefined) {
-            pMudlet->mDiscord.setServerOrigin(this, DiscordSetSmallIcon);
-            pMudlet->mDiscord.setSmallImage(this, smallImage.toString());
+            Discord::self()->setServerOrigin(this, DiscordSetSmallIcon);
+            Discord::self()->setSmallImage(this, smallImage.toString());
         }
     }
 
     auto smallImageText = discordInfo.value(qsl("smallimagetext"));
     if ((smallImageText != QJsonValue::Undefined)) {
-        pMudlet->mDiscord.setServerOrigin(this, DiscordSetSmallIconText);
-        pMudlet->mDiscord.setSmallImageText(this, smallImageText.toString());
+        Discord::self()->setServerOrigin(this, DiscordSetSmallIconText);
+        Discord::self()->setSmallImageText(this, smallImageText.toString());
     }
 
     int64_t timeStamp = -1;
     auto endTimeStamp = discordInfo.value(qsl("endtime"));
     if (endTimeStamp.isDouble()) {
         timeStamp = static_cast<int64_t>(endTimeStamp.toDouble());
-        pMudlet->mDiscord.setServerOrigin(this, DiscordSetTimeInfo);
-        pMudlet->mDiscord.setEndTimeStamp(this, timeStamp);
+        Discord::self()->setServerOrigin(this, DiscordSetTimeInfo);
+        Discord::self()->setEndTimeStamp(this, timeStamp);
     } else if (endTimeStamp.isString()) {
         timeStamp = endTimeStamp.toString().toLongLong();
-        pMudlet->mDiscord.setServerOrigin(this, DiscordSetTimeInfo);
-        pMudlet->mDiscord.setEndTimeStamp(this, timeStamp);
+        Discord::self()->setServerOrigin(this, DiscordSetTimeInfo);
+        Discord::self()->setEndTimeStamp(this, timeStamp);
     } else {
         auto startTimeStamp = discordInfo.value(qsl("starttime"));
         if (startTimeStamp.isDouble()) {
             timeStamp = static_cast<int64_t>(startTimeStamp.toDouble());
-            pMudlet->mDiscord.setServerOrigin(this, DiscordSetTimeInfo);
-            pMudlet->mDiscord.setStartTimeStamp(this, timeStamp);
+            Discord::self()->setServerOrigin(this, DiscordSetTimeInfo);
+            Discord::self()->setStartTimeStamp(this, timeStamp);
         } else if (startTimeStamp.isString()) {
             timeStamp = startTimeStamp.toString().toLongLong();
-            pMudlet->mDiscord.setServerOrigin(this, DiscordSetTimeInfo);
-            pMudlet->mDiscord.setStartTimeStamp(this, timeStamp);
+            Discord::self()->setServerOrigin(this, DiscordSetTimeInfo);
+            Discord::self()->setStartTimeStamp(this, timeStamp);
         }
     }
 
@@ -3816,37 +3816,36 @@ void Host::processGMCPDiscordStatus(const QJsonObject& discordInfo)
     auto partyMax = discordInfo.value(qsl("partymax"));
     auto partySize = discordInfo.value(qsl("partysize"));
     if (partyMax != QJsonValue::Undefined || partySize != QJsonValue::Undefined) {
-        pMudlet->mDiscord.setServerOrigin(this, DiscordSetPartyInfo);
+        Discord::self()->setServerOrigin(this, DiscordSetPartyInfo);
     }
     if (partyMax.isDouble()) {
         partyMaxValue = static_cast<int>(partyMax.toDouble());
         if (partyMaxValue > 0 && partySize.isDouble()) {
             partySizeValue = static_cast<int>(partySize.toDouble());
-            pMudlet->mDiscord.setParty(this, partySizeValue, partyMaxValue);
+            Discord::self()->setParty(this, partySizeValue, partyMaxValue);
         } else {
-            pMudlet->mDiscord.setParty(this, 0, 0);
+            Discord::self()->setParty(this, 0, 0);
         }
     } else {
         if (partySize.isDouble()) {
             partySizeValue = static_cast<int>(partySize.toDouble());
-            pMudlet->mDiscord.setParty(this, partySizeValue);
+            Discord::self()->setParty(this, partySizeValue);
         } else {
-            pMudlet->mDiscord.setParty(this, 0, 0);
+            Discord::self()->setParty(this, 0, 0);
         }
     }
 }
 
 void Host::clearDiscordData()
 {
-    mudlet* pMudlet = mudlet::self();
-    pMudlet->mDiscord.setDetailText(this, QString());
-    pMudlet->mDiscord.setStateText(this, QString());
-    pMudlet->mDiscord.setLargeImage(this, QString());
-    pMudlet->mDiscord.setLargeImageText(this, QString());
-    pMudlet->mDiscord.setSmallImage(this, QString());
-    pMudlet->mDiscord.setSmallImageText(this, QString());
-    pMudlet->mDiscord.setStartTimeStamp(this, 0);
-    pMudlet->mDiscord.setParty(this, 0, 0);
+    Discord::self()->setDetailText(this, QString());
+    Discord::self()->setStateText(this, QString());
+    Discord::self()->setLargeImage(this, QString());
+    Discord::self()->setLargeImageText(this, QString());
+    Discord::self()->setSmallImage(this, QString());
+    Discord::self()->setSmallImageText(this, QString());
+    Discord::self()->setStartTimeStamp(this, 0);
+    Discord::self()->setParty(this, 0, 0);
 }
 
 void Host::setDiscordMode(DiscordMode mode)
@@ -3855,8 +3854,6 @@ void Host::setDiscordMode(DiscordMode mode)
     mDiscordMode = mode;
 
     writeProfileData(qsl("discordmode"), QString::number(static_cast<int>(mode)));
-
-    auto pMudlet = mudlet::self();
 
     if (mode == DiscordShowGameDetails && oldMode != DiscordShowGameDetails) {
         // Switching to full integration - advertise Discord support to server.
@@ -3873,11 +3870,11 @@ void Host::setDiscordMode(DiscordMode mode)
         if (mTelnet.isGMCPEnabled()) {
             mTelnet.sendGMCPSupportsRemove(qsl("External.Discord 1"));
         }
-        pMudlet->mDiscord.resetData(this);
+        Discord::self()->resetData(this);
         return;
     }
 
-    pMudlet->mDiscord.UpdatePresence();
+    Discord::self()->UpdatePresence();
 }
 
 
@@ -3905,9 +3902,9 @@ void Host::processDiscordMSDP(const QString& variable, QString value)
     //    }
 
     //    if (variable == QLatin1String("SERVER_ID")) {
-    //        mudlet::self()->mDiscord.setGame(this, value);
+    //        Discord::self()->setGame(this, value);
     //    } else if (variable == QLatin1String("AREA_NAME")) {
-    //        mudlet::self()->mDiscord.setArea(this, value);
+    //        Discord::self()->setArea(this, value);
     //    }
 }
 
@@ -4105,6 +4102,12 @@ void Host::setName(const QString& name)
     }
 
     mHostName = name;
+
+    if (mpProfileIni) {
+        // Flushes on the way out; the next use reopens it under the new name:
+        delete mpProfileIni;
+        mpProfileIni = nullptr;
+    }
 
     mTelnet.mProfileName = name;
     if (mpMap) {

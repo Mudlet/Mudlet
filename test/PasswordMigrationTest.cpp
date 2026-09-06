@@ -54,7 +54,7 @@ private:
       return false;
     }
     QDataStream ofs(&file);
-    // Match the version used by Mudlet for Qt >= 5.13
+    // Match the stream version Mudlet pins its files to
     ofs.setVersion(QDataStream::Qt_5_12);
     ofs << password;
     return file.commit();

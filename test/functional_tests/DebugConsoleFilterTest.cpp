@@ -23,6 +23,7 @@
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "PortableModeTestHelper.h"
+#include "TBuffer.h"
 #include "TConsole.h"
 #include "TDebug.h"
 #include "TLuaInterpreter.h"
@@ -302,7 +303,7 @@ private slots:
         TDebug::setEnabledCategories(TDebug::csmAllCategories);
         TDebug::setPaused(true);
         TDebug(Qt::blue, Qt::black, TDebug::Category::TriggerMatch) << "timed message\n" >> host;
-        const QString arrivalTime = QTime::currentTime().toString(mudlet::smTimeStampFormat);
+        const QString arrivalTime = QTime::currentTime().toString(TBuffer::smTimeStampFormat);
 
         QTest::qWait(1200);
         TDebug::setPaused(false);
@@ -526,7 +527,7 @@ private slots:
         // A profile muted by a test that failed part way through would
         // otherwise silence whatever runs next:
         TDebug::enableAllHosts();
-        mudlet::smDebugMode = false;
+        TDebug::smDebugMode = false;
 
         delete mpServer;
         mpServer = nullptr;
@@ -543,7 +544,7 @@ private:
         auto* host = mudlet::self()->getActiveHost();
 
         mudlet::self()->attachDebugArea(host->getName());
-        mudlet::smDebugMode = true;
+        TDebug::smDebugMode = true;
         // Drain anything the profile emitted while starting up, so each test
         // only sees what it wrote itself:
         TDebug::flushMessageQueue();
