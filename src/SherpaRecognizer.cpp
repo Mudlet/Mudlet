@@ -706,7 +706,7 @@ bool SherpaRecognizer::loadModel(const QString& modelPath)
     // The decoder was just built from mSensitivity, so whatever was asked for
     // is now the rule in force - including a request an earlier refusal kept
     // but could not apply.
-    mSensitivityApplied = true;
+    mAppliedSensitivity = mSensitivity;
 
     // Whether this engine can bias was just decided by the model that loaded,
     // so anyone who read the capabilities before now may be holding a stale
@@ -1133,9 +1133,9 @@ bool SherpaRecognizer::setSensitivity(Sensitivity sensitivity)
     // separate question, and only that one may short-circuit - committing the
     // value and then refusing left the next identical request answering yes
     // for a decoder still running the old rules.
-    const bool changed = (mSensitivity != sensitivity);
+    const bool alreadyInForce = (mSensitivity == sensitivity && mAppliedSensitivity == sensitivity);
     mSensitivity = sensitivity;
-    if (!changed && mSensitivityApplied) {
+    if (alreadyInForce) {
         return true;
     }
 
@@ -1148,8 +1148,9 @@ bool SherpaRecognizer::setSensitivity(Sensitivity sensitivity)
     // readback-agrees-engine-disagrees pair SpeechRecognizer.h says this bool
     // exists to prevent.
     if (state() == State::Ready && !mModelPath.isEmpty()) {
-        mSensitivityApplied = initialize(mModelPath);
-        return mSensitivityApplied;
+        // loadModel() sets mAppliedSensitivity from mSensitivity when it gets
+        // that far, so the readback follows the decoder either way
+        return initialize(mModelPath);
     }
 
     // A live decoder that could not be rebuilt still holds the rules it was
@@ -1161,14 +1162,15 @@ bool SherpaRecognizer::setSensitivity(Sensitivity sensitivity)
     // phrase, or sitting in Error with its handles still alive. "Not idle"
     // rather than "busy", because Error is neither.
     if (mRecognizer) {
-        mSensitivityApplied = false;
         //: Shown when a change to speech sensitivity cannot take effect until the engine next loads a model
         emit errorOccurred(tr("Speech recognition is not idle, so the new sensitivity is kept and takes effect at the next model load."));
         return false;
     }
 
     // Nothing is loaded, so there is no decoder to disagree with: the value is
-    // simply what the next model will be built with.
+    // simply what the next model will be built with, and the readback can say
+    // so without contradicting anything.
+    mAppliedSensitivity = mSensitivity;
     return true;
 }
 

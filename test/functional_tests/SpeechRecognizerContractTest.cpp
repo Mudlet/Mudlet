@@ -1429,6 +1429,21 @@ private slots:
         QCOMPARE(changes.count(), 1);
     }
 
+    // A sensitivity that was kept for the next model load is not one the
+    // engine is using, and the readback has to say which it is. It reported
+    // the request either way, so "stt status" and the quality test's own
+    // settings line both named a mode the decode had not used - the
+    // readback-agrees-engine-disagrees pair setSensitivity() is careful about,
+    // left standing one accessor over.
+    void theSensitivityReadbackIsTheOneTheEngineIsUsing()
+    {
+        SherpaRecognizer recognizer;
+
+        // Nothing loaded: no decoder to disagree with, so the request stands
+        QVERIFY(recognizer.setSensitivity(SpeechRecognizer::Sensitivity::Long));
+        QCOMPARE(recognizer.sensitivity(), SpeechRecognizer::Sensitivity::Long);
+    }
+
     void aRejectedWordIsNotSilentlyDropped()
     {
         QStringList rejected;

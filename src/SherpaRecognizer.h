@@ -102,7 +102,12 @@ public:
     // Maps to the endpoint rules baked into the recognizer at model load, so
     // changing it with a model loaded reloads that model
     bool setSensitivity(Sensitivity sensitivity) override;
-    Sensitivity sensitivity() const override { return mSensitivity; }
+    // What the decoder was actually built with, not what was last asked for.
+    // Those differ whenever a change was kept for the next model load, and
+    // reporting the request would be the readback-agrees-engine-disagrees pair
+    // setSensitivity() takes such care to avoid - visible as a "stt test" run
+    // labelled with a setting the decode did not use.
+    Sensitivity sensitivity() const override { return mAppliedSensitivity; }
 
     // Static method to check if the sherpa-onnx library is available on this system
     static bool sherpaAvailable();
@@ -191,12 +196,13 @@ private:
     QString mModelPath;
     QString mCurrentLanguage;
     Sensitivity mSensitivity = Sensitivity::Default;
-    // Whether mSensitivity is the value the loaded decoder was actually built
-    // with, as against merely the value asked for. The pair mirrors
-    // mVocabulary/mVocabularyApplied in the base, and for the same reason: the
-    // request is kept for the next load either way, so without this a refused
-    // change short-circuits the next identical request into a yes.
-    bool mSensitivityApplied = true;
+    // What the loaded decoder was built with, as against mSensitivity which is
+    // what was last asked for. The pair mirrors mVocabulary/mVocabularyApplied
+    // in the base, and for the same reason: the request is kept for the next
+    // load either way, so without this a refused change short-circuits the
+    // next identical request into a yes - and sensitivity() answers with this
+    // one, because it is the one the engine is using.
+    Sensitivity mAppliedSensitivity = Sensitivity::Default;
     QString mLastPartialResult;
 
     // Words to bias recognition toward, and the model's sub-word vocabulary
