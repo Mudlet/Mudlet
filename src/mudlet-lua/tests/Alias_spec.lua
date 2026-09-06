@@ -31,6 +31,95 @@ describe("Alias processing", function()
 
     end)
 
+    describe("runaway recursion", function()
+
+        it("stops an alias that keeps expanding into itself", function()
+            local fired = 0
+            local id = tempAlias("^expand_into_myself$", function()
+                fired = fired + 1
+                expandAlias("expand_into_myself", false)
+            end)
+            local sends = 0
+            local handler = registerAnonymousEventHandler("sysDataSendRequest", function(_, command)
+                if command == "expand_into_myself" then
+                    sends = sends + 1
+                end
+            end)
+
+            expandAlias("expand_into_myself", false)
+
+            killAnonymousEventHandler(handler)
+            assert.is_true(killAlias(id), "a temporary alias should be removable by id")
+            -- One run per level; the call past the cap is refused instead of matched
+            assert.are.equal(50, fired)
+            assert.are.equal(1, sends, "the call past the cap should go to the game once, unexpanded")
+        end)
+
+        -- The "command" field of an alias is sent as if typed, so one that
+        -- matches its own pattern recurses without any Lua in between
+        it("stops an alias whose command matches itself", function()
+            if not os.getenv("MUDLET_TEST_MODE") then
+                pending("uninstalling the fixture needs pumpEvents(), which does nothing outside MUDLET_TEST_MODE")
+                return
+            end
+            local path = getMudletHomeDir() .. "/alias-runaway-command.xml"
+            finally(function()
+                -- uninstallPackage() refuses while the profile save the install
+                -- started is still running
+                local removed = false
+                for _ = 1, 100 do
+                    if uninstallPackage("alias-runaway-command") == true then
+                        removed = true
+                        break
+                    end
+                    pumpEvents(50)
+                end
+                os.remove(path)
+                -- let the save the uninstall queues run now rather than during
+                -- the next spec
+                pumpEvents(200)
+                assert.is_true(removed, "could not uninstall the runaway alias package")
+            end)
+            local file = assert(io.open(path, "w"))
+            file:write([[<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+	<TriggerPackage />
+	<TimerPackage />
+	<AliasPackage>
+		<Alias isActive="yes" isFolder="no">
+			<name>runaway_command_alias</name>
+			<script></script>
+			<command>runaway_command</command>
+			<packageName></packageName>
+			<regex>^runaway_command$</regex>
+		</Alias>
+	</AliasPackage>
+	<ActionPackage />
+	<ScriptPackage />
+	<KeyPackage />
+	<VariablePackage>
+		<HiddenVariables />
+	</VariablePackage>
+</MudletPackage>
+]])
+            file:close()
+            assert.is_true(installPackage(path))
+
+            local mark = getLastLineNumber("main")
+            expandAlias("runaway_command", false)
+
+            local stopped = false
+            for _, line in ipairs(getLines("main", mark, getLastLineNumber("main") + 1)) do
+                if line:find('Alias processing stopped to prevent a crash: "runaway_command"', 1, true) then
+                    stopped = true
+                end
+            end
+            assert.is_true(stopped, "the runaway alias was not reported on the main console")
+        end)
+
+    end)
+
     -- Test for nested alias processing with self-deletion (GitHub issue #8817)
     -- This verifies the fix that uses mProcessingDepth counter instead of a bool flag
     --
@@ -255,6 +344,91 @@ describe("Alias processing", function()
         it("rejects a non-string, non-function body", function()
             -- a table is not string-coercible (a number would be accepted as code)
             assert.has_error(function() tempAlias("^bad$", {}) end)
+        end)
+
+    end)
+
+    describe("alias captures", function()
+
+        after_each(function()
+            _G.AliasSpec = nil
+        end)
+
+        it("puts a named group's capture in the matches table under its name", function()
+            _G.AliasSpec = {}
+            local id = tempAlias([[^named_alias (?<who>\w+) with (?<what>\w+)$]], [==[
+                _G.AliasSpec.whole = matches[1]
+                _G.AliasSpec.who = matches["who"]
+                _G.AliasSpec.what = matches["what"]
+            ]==])
+            finally(function() killAlias(id) end)
+
+            expandAlias("named_alias orc with sword", false)
+
+            assert.are.equal("named_alias orc with sword", _G.AliasSpec.whole, "the alias should have matched at all")
+            assert.are.equal("orc", _G.AliasSpec.who)
+            assert.are.equal("sword", _G.AliasSpec.what)
+        end)
+
+        it("leaves out a named group that took no part in the match", function()
+            _G.AliasSpec = {}
+            local id = tempAlias([[^named_alias_alt (?:(?<left>aaa)|(?<right>bbb))$]], [==[
+                _G.AliasSpec.left = matches["left"]
+                _G.AliasSpec.right = matches["right"]
+            ]==])
+            finally(function() killAlias(id) end)
+
+            expandAlias("named_alias_alt bbb", false)
+
+            assert.are.equal("bbb", _G.AliasSpec.right, "the branch that matched should be named in the matches table")
+            assert.is_nil(_G.AliasSpec.left, "a group on the branch that did not match has no capture to offer")
+        end)
+
+        it("gives an empty string for a group that matched no characters", function()
+            _G.AliasSpec = {}
+            local id = tempAlias([[^empty_capture_alias(\d*)$]], [==[
+                _G.AliasSpec.whole = matches[1]
+                _G.AliasSpec.digits = matches[2]
+            ]==])
+            finally(function() killAlias(id) end)
+
+            expandAlias("empty_capture_alias", false)
+
+            assert.are.equal("empty_capture_alias", _G.AliasSpec.whole, "the alias should have matched at all")
+            assert.are.equal("", _G.AliasSpec.digits, "a group that matched nothing is still a capture")
+        end)
+
+        it("does not fire an alias whose pattern failed to compile", function()
+            _G.AliasSpec = {good = 0, bad = 0}
+            local goodId = tempAlias([[^bad_alias_pattern$]], [==[_G.AliasSpec.good = _G.AliasSpec.good + 1]==])
+            local badId = tempAlias([[^bad_alias_pattern($]], [==[_G.AliasSpec.bad = _G.AliasSpec.bad + 1]==])
+            -- busted keeps only the last finally(), so this undoes everything at once
+            finally(function()
+                killAlias(goodId)
+                killAlias(badId)
+            end)
+            assert.is_true(badId > 0, "an uncompilable pattern still makes an alias, so that it can be seen and repaired")
+
+            expandAlias("bad_alias_pattern", false)
+
+            assert.are.equal(1, _G.AliasSpec.good, "the control alias shows the command does reach the alias engine")
+            assert.are.equal(0, _G.AliasSpec.bad, "an alias whose regex did not compile must not fire")
+        end)
+
+        it("does not fire an alias with an empty pattern", function()
+            _G.AliasSpec = {empty = 0, control = 0}
+            local emptyId = tempAlias("", [==[_G.AliasSpec.empty = _G.AliasSpec.empty + 1]==])
+            local controlId = tempAlias([[^empty_pattern_alias$]], [==[_G.AliasSpec.control = _G.AliasSpec.control + 1]==])
+            finally(function()
+                killAlias(emptyId)
+                killAlias(controlId)
+            end)
+            assert.is_true(emptyId > 0, "an empty pattern still makes an alias, so that it can be seen and repaired")
+
+            expandAlias("empty_pattern_alias", false)
+
+            assert.are.equal(1, _G.AliasSpec.control, "the control alias shows the command does reach the alias engine")
+            assert.are.equal(0, _G.AliasSpec.empty, "an empty pattern would otherwise match every command typed")
         end)
 
     end)

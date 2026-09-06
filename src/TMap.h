@@ -126,6 +126,8 @@ public:
     void updateArea(int areaId);
 
     void audit();
+    // One switch for the whole application, not one per map.
+    inline static bool smShowMapAuditErrors = false;
 
     QList<int> detectRoomCollisions(int id);
     void setRoom(int);

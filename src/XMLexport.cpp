@@ -47,7 +47,6 @@
 #include <QMetaEnum>
 
 #include <sstream>
-#include <QApplication>
 #include <utility>
 
 XMLexport::XMLexport(Host* pH)
