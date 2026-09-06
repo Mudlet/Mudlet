@@ -62,7 +62,6 @@
 
 #include <chrono>
 #include <QtConcurrentRun>
-#include <QApplication>
 #include <QCoreApplication>
 #include <QDataStream>
 #include <QDirIterator>
