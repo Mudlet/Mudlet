@@ -392,6 +392,9 @@ int TLuaInterpreter::copy(lua_State* L)
 int TLuaInterpreter::cut(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
+    if (!host.mpConsole) {
+        return warnArgumentValue(L, __func__, no_main_window_value);
+    }
     host.mpConsole->cut();
     return 0;
 }
@@ -1026,6 +1029,9 @@ int TLuaInterpreter::echo(lua_State* L)
     const QString displayText{lua_tostring(L, s)};
 
     if (isMain(consoleName)) {
+        if (!host.mpConsole) {
+            return warnArgumentValue(L, __func__, no_main_window_value);
+        }
         host.mpConsole->buffer.mEchoingText = true;
         host.mpConsole->echo(displayText);
         host.mpConsole->buffer.mEchoingText = false;
@@ -2164,6 +2170,9 @@ int TLuaInterpreter::insertHTML(lua_State* L)
 {
     const QString sendText = getVerifiedString(L, __func__, 1, "sendText");
     const Host& host = getHostFromLua(L);
+    if (!host.mpConsole) {
+        return warnArgumentValue(L, __func__, no_main_window_value);
+    }
     host.mpConsole->insertHTML(sendText);
     return 0;
 }
