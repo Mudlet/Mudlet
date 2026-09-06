@@ -464,6 +464,9 @@ QTreeWidgetItem* TTreeWidget::findItemByTriggerID(QTreeWidgetItem* pParent, int 
 
 void TTreeWidget::buildVariableRows(VarUnit* pVarUnit, QTreeWidgetItem* pParent, TVar* pVariable, bool showHidden)
 {
+    // rows from the tree that came before stand for variables this walk is
+    // about to replace, so they go rather than be re-validated by the stamp
+    clearVariableRows();
     mVariablesGeneration = pVarUnit->treeGeneration();
     addVariableRows(pVarUnit, pParent, pVariable, showHidden);
 }

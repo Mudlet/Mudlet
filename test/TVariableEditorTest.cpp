@@ -1677,6 +1677,33 @@ private slots:
         QVERIFY2(!tree.variableForRow(replacement, strandedItem), "while the row the reset stranded still stands for nothing");
     }
 
+    // The stamp buildVariableRows() puts on the widget says "these rows stand
+    // for this tree". Rows left from the tree before would be covered by that
+    // stamp too, and start answering with variables the reset has freed, so the
+    // rebuild drops them itself rather than trusting its caller to.
+    void testRebuildingTheRowsDropsTheOnesTheOldTreeLeft()
+    {
+        execLua(qsl("strandedName = 'value'"));
+        interface->getVars(false);
+
+        TTreeWidget tree(nullptr);
+        auto* rootItem = new QTreeWidgetItem(&tree, QStringList() << qsl("Variables"));
+        VarUnit* vu = interface->getVarUnit();
+        tree.buildVariableRows(vu, rootItem, vu->getBase(), false);
+        QTreeWidgetItem* strandedItem = childItemNamed(rootItem, qsl("strandedName"));
+        QVERIFY2(strandedItem && tree.variableForRow(vu, strandedItem), "the row has to resolve before the tree is replaced");
+
+        interface = std::make_unique<LuaInterface>(L); // as Host::resetProfile() does
+        interface->getVars(true);
+        VarUnit* replacement = interface->getVarUnit();
+
+        // deliberately without the clearVariableRows() repopulateVars() does:
+        auto* rebuiltRoot = new QTreeWidgetItem(&tree, QStringList() << qsl("Variables"));
+        tree.buildVariableRows(replacement, rebuiltRoot, replacement->getBase(), false);
+
+        QVERIFY2(!tree.variableForRow(replacement, strandedItem), "a row from the tree that was replaced must resolve to nothing");
+    }
+
     // clearVariableRows() is what repopulateVars() leans on before it rebuilds
     // the view, so it has to drop the rows on its own rather than leave them for
     // the staleness check to hide.
