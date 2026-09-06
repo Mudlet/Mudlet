@@ -64,6 +64,10 @@
 using namespace std::chrono_literals;
 
 namespace {
+// The gap the layout leaves between the text panes and the vertical scroll bar.
+// Anything predicting how wide the panes come out has to take it off too.
+constexpr int scrollBarSpacing = 1;
+
 double relativeLuminance(const QColor& color)
 {
     const auto channel = [](const double value) {
@@ -364,7 +368,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     layoutLayer->addWidget(splitter);
     layoutLayer->addWidget(mpScrollBar);
     layoutLayer->setContentsMargins(0, 0, 0, 0);
-    layoutLayer->setSpacing(1); // not closer, otherwise there could be performance problems when displaying
+    layoutLayer->setSpacing(scrollBarSpacing); // not closer, otherwise there could be performance problems when displaying
 
     vLayoutLayer->addLayout(layoutLayer);
     vLayoutLayer->addWidget(mpHScrollBar);
@@ -818,45 +822,18 @@ void TConsole::resizeEvent(QResizeEvent* event)
 
     // Sync Host dimensions on resize so wraps and NAWS reflect the current pane width.
     if ((mType & MainConsole) && !mpHost.isNull() && mUpperPane && !mUpperPane->visibleRegion().isEmpty()) {
-        const int paneWidthPx = mUpperPane->visibleRegion().boundingRect().width();
-        auto syncHost = [paneWidthPx](Host* host, const QWidget* paneForFont) {
-            if (!host || !paneForFont) {
-                return;
-            }
-            const int fontWidth = QFontMetrics(paneForFont->font()).averageCharWidth();
-            if (fontWidth <= 0) {
-                return;
-            }
-            const int cols = qMax(40, paneWidthPx / fontWidth);
-            if (cols > 0 && cols != host->mScreenWidth) {
-                host->setScreenDimensions(cols, host->mScreenHeight);
-                QTimer::singleShot(0ms, host, &Host::updateDisplayDimensions);
-            }
-        };
+        syncHostScreenDimensions(mUpperPane->visibleRegion().boundingRect().width(), -1);
 
-        syncHost(mpHost.data(), mUpperPane);
-
-        // Detached profiles have their own pixel width; only propagate from a main-window console.
+        // The consoles put away in background tabs share this one's container
+        // and get no resize event of their own, so they are worked out from here.
+        // A detached profile has a window of its own and says nothing about them.
         mudlet* const app = mudlet::self();
-        const bool inMainWindow = app && !app->getDetachedWindows().contains(mpHost->getName());
-        if (inMainWindow) {
+        if (app && !app->getDetachedWindows().contains(mpHost->getName())) {
             for (const auto& otherHostPtr : app->getHostManager()) {
                 Host* otherHost = otherHostPtr.data();
-                if (!otherHost || otherHost == mpHost.data()) {
-                    continue;
+                if (otherHost && otherHost != mpHost.data() && otherHost->mpConsole) {
+                    otherHost->mpConsole->syncHiddenScreenDimensions();
                 }
-                // Skip detached profiles: different container, different width.
-                if (app->getDetachedWindows().contains(otherHost->getName())) {
-                    continue;
-                }
-                if (!otherHost->mpConsole || !otherHost->mpConsole->mUpperPane) {
-                    continue;
-                }
-                // Visible siblings (multi-view) handle their own resizeEvent.
-                if (!otherHost->mpConsole->mUpperPane->visibleRegion().isEmpty()) {
-                    continue;
-                }
-                syncHost(otherHost, otherHost->mpConsole->mUpperPane);
             }
         }
     }
@@ -2542,12 +2519,101 @@ void TConsole::slot_searchBufferDown()
     print(qsl("%1\n").arg(tr("No search results, sorry!")));
 }
 
+// How big this console's upper pane comes out when the main window gives the
+// console a container this size. Deselecting a tab resizes its console to
+// nothing and leaves the panes inside at whatever they last happened to be, so
+// a console in the background cannot simply be measured - but what it will get
+// is not a mystery either, since every main-window console shares a container
+// and only differs in what it takes out of it. Each term mirrors what
+// resizeEvent() does with the size it is given, in the same order, so that the
+// two cannot drift apart.
+int TConsole::upperPaneWidthFor(const int containerWidth) const
+{
+    int paneWidth = containerWidth - (mpLeftToolBar->width() + mpRightToolBar->width());
+    if (!mpHost.isNull()) {
+        // The host's borders rather than mBorders: that copy is only refreshed
+        // when the console lays out, so for one that has been in the background
+        // across a setBorderLeft() it is the width it is coming back from.
+        const QMargins borders = mpHost->borders();
+        paneWidth -= borders.left() + borders.right();
+    }
+    if (!mpScrollBar->isHidden()) {
+        paneWidth -= mpScrollBar->width() + scrollBarSpacing;
+    }
+    return qMax(0, paneWidth);
+}
+
+int TConsole::upperPaneHeightFor(const int containerHeight) const
+{
+    // A scrolled-back console shows the lower pane as well, and where the user
+    // has dragged the split between the two is not something to guess at
+    if (!mLowerPane->isHidden()) {
+        return -1;
+    }
+    int paneHeight = containerHeight - mpTopToolBar->height();
+    if (!mpHost.isNull()) {
+        const QMargins borders = mpHost->borders();
+        paneHeight -= borders.top() + borders.bottom();
+    }
+    if (mpCommandLine) {
+        paneHeight -= mpCommandLine->height();
+    }
+    if (!mpHScrollBar->isHidden()) {
+        paneHeight -= mpHScrollBar->height();
+    }
+    return qMax(0, paneHeight);
+}
+
+// Either dimension can be -1 to leave what the Host already has.
+void TConsole::syncHostScreenDimensions(const int paneWidthPx, const int paneHeightPx)
+{
+    if (mpHost.isNull() || !mUpperPane) {
+        return;
+    }
+    const QFontMetrics metrics(mUpperPane->font());
+    int cols = mpHost->mScreenWidth;
+    if (paneWidthPx >= 0 && metrics.averageCharWidth() > 0) {
+        cols = qMax(40, paneWidthPx / metrics.averageCharWidth());
+    }
+    int rows = mpHost->mScreenHeight;
+    if (paneHeightPx >= 0 && metrics.height() > 0) {
+        // A pane too short for a single row keeps the height it had: NAWS sends
+        // nothing at all for a height of zero, and the width still has to go out
+        const int predictedRows = paneHeightPx / metrics.height();
+        if (predictedRows > 0) {
+            rows = predictedRows;
+        }
+    }
+    if (cols == mpHost->mScreenWidth && rows == mpHost->mScreenHeight) {
+        return;
+    }
+    mpHost->setScreenDimensions(cols, rows);
+    QTimer::singleShot(0ms, mpHost, &Host::updateDisplayDimensions);
+}
+
+void TConsole::syncHiddenScreenDimensions()
+{
+    // Only a console put away by a tab switch. One that is merely sharing the
+    // container - multi-view, or a splitter share not handed out yet - is on
+    // screen and sizes itself, and a detached one has a window of its own.
+    const QWidget* container = parentWidget();
+    if (mType != MainConsole || mpHost.isNull() || !isHidden() || !container) {
+        return;
+    }
+    mudlet* const app = mudlet::self();
+    if (!app || app->getDetachedWindows().contains(mpHost->getName())) {
+        return;
+    }
+    syncHostScreenDimensions(upperPaneWidthFor(container->width()), upperPaneHeightFor(container->height()));
+}
+
 QSize TConsole::getMainWindowSize() const
 {
-    if (isHidden() && mLastMeasuredSize.isValid()) {
-        return mLastMeasuredSize;
-    }
-    const QSize consoleSize = size();
+    // A console put away by a tab switch is resized to nothing while the panes
+    // inside it keep whatever geometry they last had, so it cannot be measured -
+    // but it is going back into the container it came out of, and that can be.
+    const bool predicted = mType == MainConsole && isHidden() && parentWidget();
+    const QSize consoleSize = predicted ? parentWidget()->size() : size();
     const int toolbarWidth = mpLeftToolBar->width() + mpRightToolBar->width();
     const int toolbarHeight = mpTopToolBar->height();
     const int commandLineHeight = mpCommandLine->height();
@@ -2567,7 +2633,9 @@ QSize TConsole::getMainWindowSize() const
         return mLastMeasuredSize.isValid() ? mLastMeasuredSize : mainWindowSize;
     }
 
-    mLastMeasuredSize = mainWindowSize;
+    if (!predicted) {
+        mLastMeasuredSize = mainWindowSize;
+    }
     return mainWindowSize;
 }
 

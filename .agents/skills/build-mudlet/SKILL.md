@@ -66,7 +66,7 @@ ctest --preset macos-debug            # run the test suite
 | `linux-lowspec` | Linux | No sanitizers, no updater, no 3D mapper, 2 jobs — Raspberry Pi and similar |
 | `<platform>-release` | macOS / Linux / Windows | Release build, no sanitizers - the flags CI ships to players |
 
-Every configure preset has a matching build and test preset of the same name, and all three are
+Every developer preset has a matching build and test preset of the same name, and all three are
 conditioned on the host system — so `cmake --list-presets` on macOS will not offer `linux-debug`,
 and `ctest --preset X` always runs against the tree that `cmake --build --preset X` produced.
 
@@ -74,12 +74,31 @@ The plain `<platform>-debug` presets build into `build/`. Every variant builds i
 `build-<preset-name>/` instead, so an AddressSanitizer tree and a sanitizer-free tree can coexist
 without forcing each other to rebuild. The `/build*` entry in `.gitignore` covers all of them.
 
+### Reproducing what CI configures
+
+`ci-linux`, `ci-macos`, `ci-macos-no-tests`, `ci-windows` and `ci-codeql` are the presets the
+workflows themselves configure with, so `cmake --preset ci-linux` reproduces a CI build rather
+than approximating one.
+They take `CMAKE_BUILD_TYPE`, `USE_SANITIZER`, `WITH_SENTRY`, `SENTRY_DSN` and
+`SENTRY_SEND_DEBUG` from the environment, since a run varies those by tag and by matrix entry.
+Leaving one unset is not the same as what CI passes: a pull request build sets `WITH_SENTRY=ON`
+on every platform and `USE_SANITIZER=Address` on Linux, and a `Mudlet-*` tag sets
+`CMAKE_BUILD_TYPE=Release` with `USE_SANITIZER` empty and `SENTRY_SEND_DEBUG=1`. So
+`USE_SANITIZER=Address cmake --preset ci-linux` reproduces the Linux PR job; `SENTRY_DSN` is a
+repository secret and cannot be matched locally. `ci-macos-no-tests` is `ci-macos` with
+`BUILD_TESTING=OFF`, for the Intel job that ships a binary and leaves the testing to the arm64
+one. `ci-windows` builds into `build-$MSYSTEM/`, but the rest build into `../b/ninja` — beside
+the checkout, not inside it, which is where the workflows' ctest and packaging steps look — so
+reach for them to investigate a CI failure, not for day-to-day work. They have no test presets:
+the workflows call `ctest` themselves, with per-platform labels and environment.
+
 ### When to use a release preset
 
 Reach for `<platform>-release` when the *speed and size* of the binary are what is being measured:
 performance work, benchmarking, or reproducing something a player reports that a Debug build may
 not show. It sets `CMAKE_BUILD_TYPE=Release` and clears `USE_SANITIZER`, which is what
-`.github/workflows/build-mudlet.yml` passes on a `Mudlet-*` tag.
+`.github/workflows/build-mudlet.yml` hands the `ci-linux` and `ci-macos` presets on a
+`Mudlet-*` tag.
 `CI/build-mudlet-for-windows.sh` builds Release on every Windows run and has no sanitizer to
 clear. A `linux-debug` binary is unoptimised and close to seven times the size - 297MB against
 43MB - so timings taken on one say little about the shipped client.
@@ -174,7 +193,8 @@ successes):
   A throwaway `HOME` keeps the real profile tree untouched. Screenshot after every
   interaction — coordinates come from looking at the previous shot, not from guessing. The
   same display serves `docs/demo-videos.md`'s before/after recording workflow via ffmpeg.
-  All of this is Linux/X11-only, and XTEST events work headlessly on Xvfb only.
+  All of this is Linux/X11-only, and XTEST events work headlessly on Xvfb only; from a
+  Wayland desktop it needs `QT_QPA_PLATFORM=xcb GDK_BACKEND=x11`.
 
 The `docker/` directory is a separate developer convenience (QtCreator-in-container); its
 Ubuntu 22.04 base only offers Qt 6.2 from apt, so it cannot build current Mudlet until it is

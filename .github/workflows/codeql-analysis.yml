@@ -12,6 +12,13 @@ on:
     - cron: '0 7 * * 3'
   workflow_dispatch:
 
+# A branch scan only needs the newest commit analysed: five pushes to
+# development in quick succession otherwise hold five full builds at once, and
+# the runner concurrency is shared with every other repository in the org.
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   analyze:
     name: ${{matrix.buildname}}
@@ -155,15 +162,10 @@ jobs:
         ${{github.workspace}}/CI/set-build-info.sh
 
     - name: Build Mudlet
-      uses: lukka/run-cmake@v3
+      uses: lukka/run-cmake@v10.9
       with:
-        cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
-        cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
-        buildDirectory: '${{runner.workspace}}/b/ninja'
-        cmakeAppendedArgs: >-
-          -G Ninja
-          -DCMAKE_PREFIX_PATH=${{ env.QT_PREFIX != '' && env.QT_PREFIX || env.MINGW_BASE_DIR }}
-          -DBUILD_TESTING=OFF
+        configurePreset: ci-codeql
+        buildPreset: ci-codeql
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
         # ninja's default of cores + 2 exhausts this runner's memory
