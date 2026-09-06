@@ -1735,10 +1735,8 @@ private slots:
     }
 
     // Move from the label's menu works like Move for rooms: the label follows
-    // the pointer with no button held until a click puts it down. Dragging a
-    // label instead drags out a selection box, so the menu is the way a label
-    // gets moved, and since a label is part of the map, moving one leaves the
-    // map needing a save.
+    // the pointer with no button held until a click puts it down, and since a
+    // label is part of the map, moving one leaves the map needing a save.
     void test_moveFromTheLabelMenuCarriesItWithThePointerUntilAClick()
     {
         buildMap();
