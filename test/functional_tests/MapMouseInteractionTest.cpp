@@ -36,16 +36,20 @@
 #include <QAction>
 #include <QCursor>
 #include <QFileInfo>
+#include <QInputDialog>
+#include <QLineEdit>
 #include <QMenu>
 #include <QMouseEvent>
 #include <QPixmap>
 #include <QSignalSpy>
 #include <QTemporaryDir>
+#include <QTimer>
 #include <QTreeWidgetItem>
 #include <QWheelEvent>
 #include <QtTest/QtTest>
 
 #include <cmath>
+#include <functional>
 
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
@@ -77,6 +81,9 @@ private:
     TelnetServerStub* mpServer = nullptr;
     Host* mpHost = nullptr;
     T2DMap* mp2dMap = nullptr;
+    QTimer* mpModalAnswerTimer = nullptr;
+    bool mModalDialogAnswered = false;
+    int mModalAnswerAttemptsLeft = 0;
     int mAreaId = 0;
     const QString mProfileName = qsl("MapMouseInteraction-Test");
     const QString mLocalhost = qsl("localhost");
@@ -97,6 +104,7 @@ private:
     // The 3x3 block buildMap() lays out, a unit apart, with the player in the
     // middle of it.
     static constexpr int kNorthRoomId = 2;
+    static constexpr int kNorthWestRoomId = 1;
     static constexpr int kNorthEastRoomId = 3;
     static constexpr int kWestRoomId = 4;
     static constexpr int kPlayerRoomId = 5;
@@ -387,6 +395,103 @@ private:
         return true;
     }
 
+    // Spread, Shrink and Move to position block in a modal dialog until it is
+    // answered, so the answer has to come from a timer armed before the item
+    // is picked. The timer keeps trying until answer() reports that it was
+    // given the dialog it wanted. A dialog it keeps turning down is closed
+    // instead, as is anything the item puts up after that, so the case fails
+    // rather than sitting in a dialog's event loop until ctest gives up.
+    void answerNextModalDialog(const std::function<bool(QWidget*)>& answer)
+    {
+        stopAnsweringModalDialogs();
+        mModalDialogAnswered = false;
+        mModalAnswerAttemptsLeft = 100;
+        mpModalAnswerTimer = new QTimer(this);
+        mpModalAnswerTimer->setInterval(20);
+        connect(mpModalAnswerTimer, &QTimer::timeout, this, [this, answer]() {
+            QWidget* pDialog = QApplication::activeModalWidget();
+            if (!pDialog) {
+                return;
+            }
+            if (mModalAnswerAttemptsLeft <= 0) {
+                pDialog->close();
+                return;
+            }
+            if (answer(pDialog)) {
+                mModalDialogAnswered = true;
+                stopAnsweringModalDialogs();
+                return;
+            }
+            --mModalAnswerAttemptsLeft;
+        });
+        mpModalAnswerTimer->start();
+    }
+
+    void stopAnsweringModalDialogs()
+    {
+        if (!mpModalAnswerTimer) {
+            return;
+        }
+        mpModalAnswerTimer->stop();
+        mpModalAnswerTimer->deleteLater();
+        mpModalAnswerTimer = nullptr;
+    }
+
+    // Answers the factor dialog that Spread and Shrink put up; a factor of 0
+    // cancels it instead.
+    bool pickFactorItem(const QString& text, const int factor)
+    {
+        answerNextModalDialog([factor](QWidget* pDialog) {
+            auto* pInput = qobject_cast<QInputDialog*>(pDialog);
+            if (!pInput) {
+                return false;
+            }
+            if (factor) {
+                pInput->setIntValue(factor);
+                pInput->accept();
+            } else {
+                pInput->reject();
+            }
+            return true;
+        });
+        return pickContextMenuItem(text) && mModalDialogAnswered;
+    }
+
+    // Answers the coordinates dialog Move to position puts up. Its three
+    // fields are the only line edits on it and are made in x, y, z order.
+    bool pickMoveToPosition(const int x, const int y, const int z)
+    {
+        answerNextModalDialog([x, y, z](QWidget* pDialog) {
+            auto* pMoveDialog = qobject_cast<QDialog*>(pDialog);
+            const QList<QLineEdit*> fields = pDialog->findChildren<QLineEdit*>();
+            if (!pMoveDialog || fields.size() != 3) {
+                return false;
+            }
+            fields[0]->setText(QString::number(x));
+            fields[1]->setText(QString::number(y));
+            fields[2]->setText(QString::number(z));
+            pMoveDialog->accept();
+            return true;
+        });
+        return pickContextMenuItem(qsl("Move to position...")) && mModalDialogAnswered;
+    }
+
+    // The dialog Move to area puts up; it is not modal, so the case drives it
+    // directly.
+    QDialog* moveToAreaDialog() const { return mp2dMap->arealist_combobox ? qobject_cast<QDialog*>(mp2dMap->arealist_combobox->window()) : nullptr; }
+
+    QSet<int> roomsInArea(const int areaId) const
+    {
+        const TArea* pArea = map()->mpRoomDB->getArea(areaId);
+        return pArea ? pArea->rooms : QSet<int>{};
+    }
+
+    QVector3D roomPosition(const int roomId) const
+    {
+        const TRoom* pRoom = map()->mpRoomDB->getRoom(roomId);
+        return pRoom ? QVector3D(pRoom->x(), pRoom->y(), pRoom->z()) : QVector3D(-999, -999, -999);
+    }
+
     // An item on one of the menus a script added to the map's context menu.
     QAction* userMenuItem(const QString& menuText, const QString& itemText) const
     {
@@ -510,10 +615,15 @@ private slots:
     // on its timer, and it would carry on into the next case.
     void cleanup()
     {
+        stopAnsweringModalDialogs();
         if (!mp2dMap) {
             return;
         }
         mp2dMap->mMiddleMousePanHandler->cancel();
+        if (QDialog* pMoveToArea = moveToAreaDialog()) {
+            pMoveToArea->close();
+            mp2dMap->arealist_combobox.clear();
+        }
         closeContextMenu();
         // A click sent while a menu was up is re-posted by the map, and would
         // land in whichever later case first spins the event loop.
@@ -2039,6 +2149,138 @@ private slots:
                                .arg(kEastRoomId)
                                .arg(nextDoorRoomId)));
         QCOMPARE(mp2dMap->mTargetRoomId, nextDoorRoomId);
+    }
+
+    void test_spreadFromTheMenuMovesTheSelectedRoomsOutFromTheHighlightedOne()
+    {
+        buildMap();
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 0.5), pointUnitsFromCentre(1.5, -0.5));
+        QCOMPARE(mp2dMap->mMultiSelectionHighlightRoomId, kPlayerRoomId);
+        map()->resetUnsaved();
+        rightClickAt(pointUnitsFromCentre(1, 0));
+
+        QVERIFY(pickFactorItem(qsl("Spread..."), 3));
+
+        QCOMPARE(roomPosition(kWestRoomId), QVector3D(-3, 0, 0));
+        QCOMPARE(roomPosition(kPlayerRoomId), QVector3D(0, 0, 0));
+        QCOMPARE(roomPosition(kEastRoomId), QVector3D(3, 0, 0));
+        QCOMPARE(roomPosition(kNorthRoomId), QVector3D(0, 1, 0));
+        QVERIFY(map()->isUnsaved());
+    }
+
+    void test_shrinkFromTheMenuPullsTheSelectedRoomsInTowardsTheHighlightedOne()
+    {
+        buildMap();
+        QVERIFY(map()->setRoomCoordinates(kWestRoomId, -4, 0, 0));
+        QVERIFY(map()->setRoomCoordinates(kEastRoomId, 4, 0, 0));
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-4.5, 0.5), pointUnitsFromCentre(4.5, -0.5));
+        QCOMPARE(mp2dMap->mMultiSelectionHighlightRoomId, kPlayerRoomId);
+        map()->resetUnsaved();
+        rightClickAt(pointUnitsFromCentre(4, 0));
+
+        QVERIFY(pickFactorItem(qsl("Shrink..."), 2));
+
+        QCOMPARE(roomPosition(kWestRoomId), QVector3D(-2, 0, 0));
+        QCOMPARE(roomPosition(kPlayerRoomId), QVector3D(0, 0, 0));
+        QCOMPARE(roomPosition(kEastRoomId), QVector3D(2, 0, 0));
+        QCOMPARE(roomPosition(kNorthRoomId), QVector3D(0, 1, 0));
+        QVERIFY(map()->isUnsaved());
+    }
+
+    void test_cancellingTheSpreadDialogLeavesTheRoomsWhereTheyAre()
+    {
+        buildMap();
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 0.5), pointUnitsFromCentre(1.5, -0.5));
+        map()->resetUnsaved();
+        rightClickAt(pointUnitsFromCentre(1, 0));
+
+        QVERIFY(pickFactorItem(qsl("Spread..."), 0));
+
+        QCOMPARE(roomPosition(kWestRoomId), QVector3D(-1, 0, 0));
+        QCOMPARE(roomPosition(kEastRoomId), QVector3D(1, 0, 0));
+        QVERIFY2(!map()->isUnsaved(), "cancelling the dialog left the map needing a save");
+    }
+
+    // The coordinates typed in are for the highlighted room and the rest of the
+    // selection moves by the same amount, so a block of rooms keeps its shape.
+    void test_moveToPositionFromTheMenuShiftsTheWholeSelectionTogether()
+    {
+        buildMap();
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 0.5), pointUnitsFromCentre(1.5, -0.5));
+        QCOMPARE(mp2dMap->mMultiSelectionHighlightRoomId, kPlayerRoomId);
+        map()->resetUnsaved();
+        rightClickAt(pointUnitsFromCentre(1, 0));
+
+        QVERIFY(pickMoveToPosition(3, 2, 1));
+
+        QCOMPARE(roomPosition(kWestRoomId), QVector3D(2, 2, 1));
+        QCOMPARE(roomPosition(kPlayerRoomId), QVector3D(3, 2, 1));
+        QCOMPARE(roomPosition(kEastRoomId), QVector3D(4, 2, 1));
+        QCOMPARE(roomPosition(kNorthRoomId), QVector3D(0, 1, 0));
+        QVERIFY(map()->isUnsaved());
+    }
+
+    // The view lands on the rooms that were moved rather than in the middle
+    // of the area they went to, which may be a long way from them.
+    void test_moveToAreaFromTheMenuMovesTheSelectionIntoThatAreaAndShowsIt()
+    {
+        buildMap();
+        const int otherAreaId = map()->mpRoomDB->addArea(qsl("Next Door"));
+        QVERIFY(otherAreaId > 0);
+        const QSet<int> farRooms{20, 21};
+        for (const int roomId : farRooms) {
+            QVERIFY(map()->addRoom(roomId) && map()->setRoomArea(roomId, otherAreaId) && map()->setRoomCoordinates(roomId, roomId - 10, 10, 0));
+        }
+        showMapper(false);
+        // The mapper's list of areas was filled before this map's areas existed.
+        map()->mpMapper->updateAreaComboBox();
+        dragFromTo(pointUnitsFromCentre(-1.5, 1.5), pointUnitsFromCentre(1.5, 0.5));
+        const QSet<int> northRow{kNorthWestRoomId, kNorthRoomId, kNorthEastRoomId};
+        QCOMPARE(mp2dMap->mMultiSelectionSet, northRow);
+        map()->resetUnsaved();
+        rightClickAt(pointUnitsFromCentre(1, 1));
+        QVERIFY(pickContextMenuItem(qsl("Move to area...")));
+        QDialog* pDialog = moveToAreaDialog();
+        QVERIFY(pDialog);
+        const int nextDoorIndex = mp2dMap->arealist_combobox->findData(QString::number(otherAreaId));
+        QVERIFY2(nextDoorIndex >= 0, "Next Door is not offered in the list of areas");
+
+        mp2dMap->arealist_combobox->setCurrentIndex(nextDoorIndex);
+        pDialog->accept();
+
+        QCOMPARE(roomsInArea(otherAreaId), northRow + farRooms);
+        QVERIFY2(!roomsInArea(mAreaId).intersects(northRow), "the rooms are still in the area they came from");
+        QCOMPARE(mp2dMap->mAreaID, otherAreaId);
+        QCOMPARE(map()->mpMapper->comboBox_showArea->currentText(), qsl("Next Door"));
+        QCOMPARE(mp2dMap->mMapCenterX, 0.0);
+        QCOMPARE(mp2dMap->mMapCenterY, -1.0);
+        QVERIFY(map()->isUnsaved());
+    }
+
+    void test_typingANewAreaNameIntoMoveToAreaMakesThatArea()
+    {
+        buildMap();
+        showMapper(false);
+        clickAt(pointUnitsFromCentre(1, 0));
+        map()->resetUnsaved();
+        rightClickAt(pointUnitsFromCentre(1, 0));
+        QVERIFY(pickContextMenuItem(qsl("Move to area...")));
+        QDialog* pDialog = moveToAreaDialog();
+        QVERIFY(pDialog);
+
+        mp2dMap->arealist_combobox->setCurrentText(qsl("Brand New"));
+        pDialog->accept();
+
+        const int newAreaId = map()->mpRoomDB->getAreaNamesMap().key(qsl("Brand New"), 0);
+        QVERIFY2(newAreaId > 0, "no area called Brand New was made");
+        QCOMPARE(roomsInArea(newAreaId), QSet<int>{kEastRoomId});
+        QCOMPARE(mp2dMap->mAreaID, newAreaId);
+        QCOMPARE(map()->mpMapper->comboBox_showArea->currentText(), qsl("Brand New"));
+        QVERIFY(map()->isUnsaved());
     }
 };
 
