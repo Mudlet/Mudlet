@@ -117,6 +117,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 , mConsoleName(name)
 , mCurrentLine(mpModel->mCurrentLine)
 , mEngineCursor(mpModel->mEngineCursor)
+, mFormatCurrent(mpModel->mFormatCurrent)
 , mpBaseVFrame(new QWidget(this))
 , mpTopToolBar(new QWidget(mpBaseVFrame))
 , mpBaseHFrame(new QWidget(mpBaseVFrame))
@@ -127,6 +128,8 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 , mpScrollBar(new QScrollBar)
 , mpHScrollBar(new QScrollBar(Qt::Horizontal))
 , mUserCursor(mpModel->mUserCursor)
+, P_begin(mpModel->P_begin)
+, P_end(mpModel->P_end)
 , mProfileName(mpHost ? mpHost->getName() : qsl("debug console"))
 , mIsPromptLine(mpModel->mIsPromptLine)
 , mpBufferSearchBox(new QLineEdit)
@@ -1327,8 +1330,7 @@ void TConsole::scrollUp(int lines)
 
 void TConsole::deselect()
 {
-    P_begin = QPoint();
-    P_end = QPoint();
+    mpModel->deselect();
 }
 
 void TConsole::showEvent(QShowEvent* event)
@@ -1358,9 +1360,7 @@ void TConsole::hideEvent(QHideEvent* event)
 
 void TConsole::reset()
 {
-    deselect();
-    mFormatCurrent.setColors(mFgColor, mBgColor);
-    mFormatCurrent.setAllDisplayAttributes(TChar::None);
+    mpModel->resetFormat();
 }
 
 void TConsole::insertLink(const QString& text, QStringList& func, QStringList& hint, QPoint P, bool customFormat, QVector<int> luaReference)
@@ -1986,29 +1986,7 @@ int TConsole::select(const QString& text, int numOfMatch)
 
 bool TConsole::selectSection(int from, int to)
 {
-    if (TDebug::wants(TDebug::Category::Selection)) {
-        TDebug(Qt::darkMagenta, Qt::black, TDebug::Category::Selection) << "selectSection(" << from << "," << to << "): line under current user cursor: " << buffer.line(mUserCursor.y()) << "\n"
-                >> mpHost;
-    }
-    if (from < 0) {
-        return false;
-    }
-    if (mUserCursor.y() >= static_cast<int>(buffer.buffer.size())) {
-        return false;
-    }
-    const int s = buffer.buffer[mUserCursor.y()].size();
-    if (from > s || from + to > s) {
-        return false;
-    }
-    P_begin = QPoint(from, mUserCursor.y());
-    P_end = QPoint(from + to, mUserCursor.y());
-
-    if (TDebug::wants(TDebug::Category::Selection)) {
-        TDebug(Qt::darkMagenta, Qt::black, TDebug::Category::Selection) << "P_begin(" << P_begin.x() << "/" << P_begin.y() << "), P_end(" << P_end.x() << "/" << P_end.y() << ") selectedText:\n\""
-                                                                        << buffer.line(mUserCursor.y()).mid(P_begin.x(), P_end.x() - P_begin.x()) << "\"\n"
-                >> mpHost;
-    }
-    return true;
+    return mpModel->selectSection(from, to);
 }
 
 // returns whenever the selection is valid, the selection text,
@@ -2070,16 +2048,14 @@ void TConsole::setBgColor(int r, int g, int b, int a)
 
 void TConsole::setBgColor(const QColor& newColor)
 {
-    mFormatCurrent.setBackground(newColor);
-    if (buffer.applyBgColor(P_begin, P_end, newColor)) {
+    if (mpModel->setBgColor(newColor)) {
         markSelectionDirty();
     }
 }
 
 void TConsole::setFgColor(const QColor& newColor)
 {
-    mFormatCurrent.setForeground(newColor);
-    if (buffer.applyFgColor(P_begin, P_end, newColor)) {
+    if (mpModel->setFgColor(newColor)) {
         markSelectionDirty();
     }
 }

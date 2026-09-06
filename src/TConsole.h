@@ -360,13 +360,13 @@ public:
     // the console itself:
     QPointer<QWidget> mpFindBar;
 
-    // The buffer, cursor/prompt state and fg/bg colours live in a core
-    // TConsoleModel reached through model(). For the main console that model is
-    // co-owned with Host (which drives the trigger pipeline through it - see
-    // Host::runTriggers); sub-consoles own theirs. The members below are
-    // references aliasing the model, so the existing buffer/mFgColor/...
-    // accesses across the codebase are unchanged - which is why the model has
-    // to stay declared ahead of every one of them.
+    // The buffer, cursor/prompt state, selection, current format and fg/bg
+    // colours live in a core TConsoleModel reached through model(). For the
+    // main console that model is co-owned with Host (which drives the trigger
+    // pipeline through it - see Host::runTriggers); sub-consoles own theirs.
+    // The members below are references aliasing the model, so the existing
+    // buffer/mFgColor/... accesses across the codebase are unchanged - which is
+    // why the model has to stay declared ahead of every one of them.
     std::shared_ptr<TConsoleModel> mpModel;
     TBuffer& buffer;
     static const QString cmLuaLineVariable;
@@ -400,7 +400,7 @@ public:
     int mOldX = 0;
     int mOldY = 0;
 
-    TChar mFormatCurrent;
+    TChar& mFormatCurrent;
     QString mFormatSequenceRest;
 
     QWidget* mpBaseVFrame = nullptr;
@@ -427,8 +427,8 @@ public:
     QPoint& mUserCursor;
     int mWrapAt = 100;
     QLineEdit* mpLineEdit_networkLatency = nullptr;
-    QPoint P_begin;
-    QPoint P_end;
+    QPoint& P_begin;
+    QPoint& P_end;
     QString mProfileName;
     TSplitter* splitter = nullptr;
     bool& mIsPromptLine;

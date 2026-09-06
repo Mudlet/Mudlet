@@ -76,6 +76,17 @@ struct TConsoleModel
     // Not const because TBuffer::line() hands out a mutable QString&.
     QStringList lines(int from, int to);
 
+    // How a colorizer trigger recolors the line it matched: select a run of the
+    // current line, paint it, then put the format back. All of it is buffer and
+    // selection state, so it runs with no view; the two painting calls answer
+    // whether the buffer actually changed, which is the view's cue to repaint
+    // those lines.
+    void deselect();
+    bool selectSection(int from, int to);
+    void resetFormat();
+    bool setFgColor(const QColor& newColor);
+    bool setBgColor(const QColor& newColor);
+
     // No 'm' prefix on purpose: TConsole::buffer aliases this one by reference and has to keep its name for the rest of the codebase, so the two match.
     TBuffer buffer;
     // A QPointer because Host and view are torn down in either order: quitting
@@ -93,6 +104,13 @@ struct TConsoleModel
     QString mCurrentLine;
     int mEngineCursor = -1;
     QPoint mUserCursor;
+    // The selected run of a line: what selectSection() marks and the painting
+    // calls act on. No 'm' prefix for the same reason as buffer above - the
+    // widget's members alias these two and keep their long-standing names.
+    QPoint P_begin;
+    QPoint P_end;
+    // The format text is written into the buffer with.
+    TChar mFormatCurrent;
     bool mIsPromptLine = false;
     // 1 = up, 2 = down, 0 is not valid: the state of the toolbar button pressed
     // most recently (a plain button sets it back to 1), read back by
