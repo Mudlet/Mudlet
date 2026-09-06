@@ -27,11 +27,19 @@
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TMainConsole.h"
+#include "TTrigger.h"
+#include "TriggerUnit.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
+#include "dlgNotepad.h"
+#include "dlgProfilePreferences.h"
+#include "dlgTriggerEditor.h"
 #include "mudlet.h"
 #include "utils.h"
+
+#include "edbee/models/texteditorconfig.h"
+#include "edbee/texteditorwidget.h"
 
 #include <QDialog>
 #include <QDockWidget>
@@ -337,6 +345,145 @@ private slots:
         // WA_DeleteOnClose) and then, from its destructor, the dock.
         QTest::qWait(500ms);
         QVERIFY2(dock.isNull(), "Closing the profile must destroy the map dock the console owns.");
+    }
+
+    // Host::setProfileStyleSheet() no longer restyles the editor, the
+    // preferences and the notepad by name: each dialog hears about the change
+    // over signal_profileStyleSheetChanged, connected in its own constructor.
+    void test_profileStyleSheetReachesTheOpenDialogs()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        auto* editor = host->mpEditorDialog.data();
+        QVERIFY2(editor, "The profile came up without its editor dialog.");
+        mudlet::self()->slot_notes();
+        auto* notepad = host->mpNotePad.data();
+        QVERIFY2(notepad, "The notepad was not opened.");
+        auto* note = notepad->tabWidget->widget(0);
+        QVERIFY2(note, "The notepad opened without a tab.");
+        mudlet::self()->showOptionsDialog(qsl("tab_general"), host);
+        auto* preferences = host->mpDlgProfilePreferences.data();
+        QVERIFY2(preferences, "The preferences dialog was not opened.");
+
+        const QString styleSheet = qsl("QWidget { color: #123456; }");
+        QVERIFY2(editor->styleSheet() != styleSheet && preferences->styleSheet() != styleSheet && notepad->styleSheet() != styleSheet && note->styleSheet() != styleSheet,
+                 "SETUP: a dialog already carries the style sheet, so the assertions below cannot fail.");
+
+        QVERIFY(host->setProfileStyleSheet(styleSheet));
+
+        QCOMPARE(editor->styleSheet(), styleSheet);
+        QCOMPARE(preferences->styleSheet(), styleSheet);
+        QCOMPARE(notepad->styleSheet(), styleSheet);
+        QCOMPARE(note->styleSheet(), styleSheet);
+    }
+
+    // The same seam for the display font: Host::updateConsolesFont() raises
+    // signal_consoleFontChanged and the editor's source pane and the notepad's
+    // tabs follow the main console.
+    void test_consoleFontReachesTheEditorAndNotepad()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        auto* editor = host->mpEditorDialog.data();
+        QVERIFY2(editor, "The profile came up without its editor dialog.");
+        auto* sourceEditor = editor->findChild<edbee::TextEditorWidget*>(qsl("edbeeEditorWidget"));
+        QVERIFY2(sourceEditor, "The editor has no source editor pane.");
+        mudlet::self()->slot_notes();
+        auto* notepad = host->mpNotePad.data();
+        QVERIFY2(notepad, "The notepad was not opened.");
+        auto* note = notepad->tabWidget->widget(0);
+        QVERIFY2(note, "The notepad opened without a tab.");
+
+        QFont font = host->getDisplayFont();
+        QVERIFY2(font.pointSize() > 0, "The display font is not sized in points, so a point size cannot be compared.");
+        font.setPointSize(font.pointSize() + 3);
+        QVERIFY2(sourceEditor->config()->font().pointSize() != font.pointSize() && note->font().pointSize() != font.pointSize(),
+                 "SETUP: the editor or the notepad already uses the new size, so the assertions below cannot fail.");
+
+        const auto [applied, error] = host->setDisplayFont(font);
+        QVERIFY2(applied, qPrintable(error));
+        QCOMPARE(host->mpConsole->font().pointSize(), font.pointSize());
+
+        QCOMPARE(sourceEditor->config()->font().pointSize(), font.pointSize());
+        QCOMPARE(note->font().pointSize(), font.pointSize());
+    }
+
+    // XMLimport hands the saved search options to Host::setSearchOptions(),
+    // which carries them to an editor that is already up over
+    // signal_editorSearchOptionsChanged.
+    void test_searchOptionsReachTheEditor()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        auto* editor = host->mpEditorDialog.data();
+        QVERIFY2(editor, "The profile came up without its editor dialog.");
+
+        const enums::EditorSearchOptions options = enums::EditorSearchOptionCaseSensitive | enums::EditorSearchOptionWholeWord;
+        QVERIFY2(editor->mSearchOptions != options, "SETUP: the editor already has these search options, so the assertions below cannot fail.");
+
+        host->setSearchOptions(options);
+
+        QCOMPARE(editor->mSearchOptions, options);
+        QVERIFY(editor->mpAction_searchCaseSensitive->isChecked());
+        QVERIFY(!editor->mpAction_searchIncludeVariables->isChecked());
+        QVERIFY(editor->mpAction_searchWholeWord->isChecked());
+    }
+
+    // The preferences' "show bidi control characters" box goes through
+    // Host::setEditorShowBidi(), and the editor's source pane hears about it
+    // over signal_editorShowBidiChanged.
+    void test_editorShowBidiReachesTheEditor()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        auto* editor = host->mpEditorDialog.data();
+        QVERIFY2(editor, "The profile came up without its editor dialog.");
+        auto* sourceEditor = editor->findChild<edbee::TextEditorWidget*>(qsl("edbeeEditorWidget"));
+        QVERIFY2(sourceEditor, "The editor has no source editor pane.");
+
+        // Host::setEditorShowBidi() only speaks up for a change, so the profile
+        // is first put where the editor already is - a no-op when they agree.
+        const bool before = sourceEditor->config()->renderBidiContolCharacters();
+        host->setEditorShowBidi(before);
+        QCOMPARE(sourceEditor->config()->renderBidiContolCharacters(), before);
+
+        host->setEditorShowBidi(!before);
+
+        QCOMPARE(host->getEditorShowBidi(), !before);
+        QCOMPARE(sourceEditor->config()->renderBidiContolCharacters(), !before);
+    }
+
+    // installPackage() and uninstallPackage() used to reach into the editor to
+    // rebuild its trees; the editor now hears signal_editorCleanResetRequested.
+    // A trigger registered behind the editor's back tells a rebuild from none:
+    // only a clean reset reads the units again.
+    void test_packageChangesRepopulateTheEditor()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        auto* editor = host->mpEditorDialog.data();
+        QVERIFY2(editor, "The profile came up without its editor dialog.");
+        QVERIFY2(editor->mpTriggerBaseItem, "The editor has no trigger tree root.");
+        const int shown = editor->mpTriggerBaseItem->childCount();
+
+        auto* trigger = new TTrigger(nullptr, host);
+        trigger->setName(qsl("registered behind the editor"));
+        QVERIFY(host->getTriggerUnit()->registerTrigger(trigger));
+        QCOMPARE(editor->mpTriggerBaseItem->childCount(), shown);
+
+        host->mInstalledPackages << qsl("reset-probe");
+        QVERIFY2(host->uninstallPackage(qsl("reset-probe"), enums::PackageModuleType::Package), "The seeded package could not be uninstalled");
+        // doCleanReset() defers the rebuild to the next event loop turn
+        QTest::qWait(50);
+
+        QVERIFY2(editor->mpTriggerBaseItem, "The rebuilt editor has no trigger tree root.");
+        QCOMPARE(editor->mpTriggerBaseItem->childCount(), shown + 1);
+        host->waitForProfileSave();
     }
 
     void cleanup()

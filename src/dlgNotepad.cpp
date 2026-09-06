@@ -93,6 +93,9 @@ dlgNotepad::dlgNotepad(Host* pH)
     if (mpHost) {
         restore();
         restoreSettings();
+        connect(mpHost, &Host::signal_profileStyleSheetChanged, this, &dlgNotepad::setStyleSheet);
+        connect(mpHost, &Host::signal_profileStyleSheetChanged, this, &dlgNotepad::setTabsStyleSheet);
+        connect(mpHost, &Host::signal_consoleFontChanged, this, &dlgNotepad::setFont);
     }
 
     setupFindBar();

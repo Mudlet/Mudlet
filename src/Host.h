@@ -993,6 +993,13 @@ signals:
     void signal_loggingAnnouncement(const bool isLogging, const QString& logFileName);
     // Raised once a logging change has settled, for the frontend's log button.
     void signal_loggingStateChanged(const bool isLogging);
+    void signal_editorCleanResetRequested();
+    void signal_packageListChanged();
+    void signal_profileStyleSheetChanged(const QString& styleSheet);
+    void signal_consoleFontChanged(const QFont& font);
+    void signal_editorSearchOptionsChanged(const enums::EditorSearchOptions);
+    void signal_editorShowBidiChanged(const bool);
+    void signal_showIdsInEditorChanged(const bool);
 
 private slots:
     void slot_purgeTemps();
