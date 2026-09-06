@@ -46,9 +46,9 @@ and the baseline are regenerated in each libmudlet PR, so drift shows up in the 
 | Metric | Count |
 | --- | ---: |
 | Source files in `mudlet_core` | 421 |
-| Files depending on Qt Widgets | 140 |
-| Clean files | 281 |
-| Committed baseline | 140 |
+| Files depending on Qt Widgets | 138 |
+| Clean files | 283 |
+| Committed baseline | 138 |
 
 ## Offending files
 
@@ -90,13 +90,13 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `TUiTour.cpp` | 8 | 21 | QFrame, QHBoxLayout, QLabel, QMenu, QMenuBar, QPushButton, QToolBar, QVBoxLayout, QWidget |
 | `TCommandLine.cpp` | 2 | 22 | QScrollBar, QToolButton, QWidget, QPlainTextEdit, QFrame, QApplication, QMenu |
 | `TDetachedWindow.h` | 7 | 16 | QMainWindow, QVBoxLayout, QToolBar, QToolButton, QLabel, QStackedWidget, QDockWidget, QMenu |
+| `TEasyButtonBar.cpp` | 2 | 20 | QGridLayout, QMenu, QWidget, QVBoxLayout, QSizePolicy, QAbstractButton, QPushButton |
+| `TToolBar.cpp` | 1 | 21 | QMenu, QWidget, QDockWidget, QGridLayout, QSizePolicy, QAbstractButton, QPushButton |
 | `T2DMap.h` | 2 | 19 | QTreeWidget, QWidget, QCheckBox, QComboBox, QListWidgetItem, QPushButton, QTreeWidgetItem, QMenu, QDialog |
 | `TTreeWidget.h` | 1 | 20 | QTreeWidget, QWidget, QTreeWidgetItem |
 | `dlgTriggerPatternEdit.cpp` | 8 | 11 | QAbstractButton, QAbstractItemView, QAbstractScrollArea, QAbstractSpinBox, QPlainTextEdit, QComboBox, QLineEdit, QWidget |
 | `widgetutils.h` | 2 | 17 | QApplication, QWidget |
-| `TEasyButtonBar.cpp` | 1 | 17 | QGridLayout, QWidget, QVBoxLayout, QSizePolicy, QAbstractButton, QPushButton |
 | `TFlipButton.cpp` | 3 | 15 | QMenu, QStyleOptionButton, QStylePainter, QPushButton, QSizePolicy, QStyle |
-| `TToolBar.cpp` | 0 | 18 | QWidget, QDockWidget, QGridLayout, QSizePolicy, QAbstractButton, QPushButton |
 | `TTabBar.h` | 2 | 15 | QProxyStyle, QTabBar, QStyleOption, QWidget, QStyleOptionTab |
 | `dlgConnectionProfiles.h` | 0 | 16 | QTabBar, QDialog, QWidget, QListWidgetItem, QListWidget, QLabel, QPushButton |
 | `TFeatureCallout.cpp` | 4 | 12 | QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget |
@@ -114,9 +114,10 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `PackageItemDelegate.cpp` | 1 | 8 | QApplication, QStyledItemDelegate, QStyleOptionViewItem, QStyle |
 | `AltFocusMenuBarDisable.cpp` | 0 | 8 | QProxyStyle, QStyleFactory, QStyleOption, QWidget, QStyleHintReturn, QStyle |
 | `dlgPackageManager.h` | 4 | 4 | QButtonGroup, QDialog, QListWidget, QTextBrowser, QWidget, QListWidgetItem |
-| `TAction.cpp` | 1 | 7 | QMenu |
+| `TEasyButtonBar.h` | 1 | 7 | QWidget, QGridLayout, QMenu |
 | `TKeySequenceEdit.cpp` | 1 | 7 | QLineEdit, QWidget, QKeySequenceEdit |
 | `TMxpFrameManager.h` | 5 | 3 | QBoxLayout, QHBoxLayout, QTabWidget, QVBoxLayout, QWidget |
+| `TToolBar.h` | 1 | 7 | QDockWidget, QGridLayout, QMenu, QWidget |
 | `dlgComposer.cpp` | 1 | 6 | QMenu, QAbstractButton, QWidget, QMainWindow |
 | `TDockWidget.cpp` | 0 | 7 | QDockWidget, QWidget |
 | `AltFocusMenuBarDisable.h` | 2 | 4 | QProxyStyle, QStyleFactory, QStyleOption, QWidget, QStyleHintReturn |
@@ -125,8 +126,6 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `SingleLineTextEdit.cpp` | 0 | 6 | QWidget, QPlainTextEdit |
 | `TAccessibleTextEdit.h` | 1 | 5 | QAccessibleWidget, QWidget |
 | `TCommandLine.h` | 2 | 4 | QPlainTextEdit, QToolButton, QWidget, QMenu |
-| `TEasyButtonBar.h` | 1 | 5 | QWidget, QGridLayout |
-| `TToolBar.h` | 1 | 5 | QDockWidget, QGridLayout, QWidget |
 | `dlgActionMainArea.cpp` | 0 | 5 | QWidget, QLineEdit, QSpinBox, QComboBox |
 | `dlgModuleManager.h` | 1 | 4 | QDialog, QWidget, QTableWidgetItem |
 | `PackageItemDelegate.h` | 2 | 3 | QStyledItemDelegate, QStyleOptionViewItem |
@@ -142,7 +141,6 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `dlgScriptsMainArea.cpp` | 0 | 4 | QWidget, QLineEdit |
 | `exitstreewidget.cpp` | 0 | 4 | QWidget, QTreeWidget, QAbstractItemView, QTreeWidgetItem |
 | `RoomContextMenuHandler.cpp` | 1 | 3 | QMenu |
-| `TAction.h` | 0 | 4 | QMenu |
 | `TMapViewManager.cpp` | 0 | 4 | QDockWidget |
 | `TScrollBox.cpp` | 0 | 4 | QWidget, QScrollArea |
 | `TSplitter.h` | 1 | 3 | QSplitter, QWidget, QSplitterHandle |
@@ -198,7 +196,7 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `glwidget_integration.cpp` | 0 | 1 | QWidget |
 | `modern_glwidget.h` | 0 | 1 | QWidget |
 
-## Clean files (281)
+## Clean files (283)
 
 <details>
 <summary>Files with no Qt Widgets dependency</summary>
@@ -318,6 +316,8 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 - `SpeechRecognizer.h`
 - `SpeechRecognizerFactory.cpp`
 - `SpeechRecognizerFactory.h`
+- `TAction.cpp`
+- `TAction.h`
 - `TAlias.cpp`
 - `TAlias.h`
 - `TArea.cpp`

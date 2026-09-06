@@ -168,6 +168,7 @@ set(MAP_GROUP_TEST_SOURCES
 # Packages and modules: installing them, saving them and removing them
 set(PACKAGE_GROUP_TEST_SOURCES
     ActionSelfRemovalTest.cpp
+    ActionToolbarMenuTest.cpp
     DefaultPackagesTest.cpp
     DualPackageModuleTest.cpp
     ModuleManagerListingTest.cpp

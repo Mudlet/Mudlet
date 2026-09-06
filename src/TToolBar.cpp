@@ -24,11 +24,14 @@
 #include "TToolBar.h"
 
 
+#include "EAction.h"
 #include "TAction.h"
 #include "TConsole.h"
 #include "TFlipButton.h"
 #include "mudlet.h"
 
+#include <QIcon>
+#include <QMenu>
 #include <QScopeGuard>
 
 
@@ -156,6 +159,95 @@ void TToolBar::addButton(TFlipButton* pB)
     // Was using pressed() signal but now we want to track the ACTUAL state of
     // the underlying QAbstractButton
     connect(pB, &QAbstractButton::clicked, this, &TToolBar::slot_pressed);
+}
+
+void TToolBar::addActionButtons(TAction* pAction)
+{
+    // The -1 is needed to compensate for the initial pre-increment to TToolBar::mItemCount
+    resetItemCount(pAction->getButtonFillerOffset() - 1);
+    for (auto* pTActionNode : *pAction->mpMyChildrenList) {
+        auto* pTAction = static_cast<TAction*>(pTActionNode);
+        if (!pTAction->isActive()) {
+            // This test and conditional loop abort was missing from this method
+            // but is needed so that disabled buttons do not appear on
+            // floating toolbars - possible future scope here to have "disabled"
+            // buttons show in a "greyed-out" state... - Slysven
+            continue;
+        }
+        const QIcon icon(pTAction->getIcon());
+        const QString name = pTAction->getName();
+        auto pTFlipButton = new TFlipButton(pTAction, pAction->mpHost);
+        pTFlipButton->setIcon(icon);
+        pTFlipButton->setText(name);
+        pTFlipButton->setCheckable(pTAction->isPushDownButton());
+
+        if (pTAction->isPushDownButton()) {
+            pTFlipButton->setChecked(pTAction->mButtonState);
+        } else {
+            // The following was added to ensure a non-Pushdown button is never
+            // left in a checked state - Slysven
+            pTFlipButton->setChecked(false);
+        }
+
+        pTFlipButton->setFlat(pAction->getButtonFlat());
+        // This applies the CSS for THIS TAction to a CHILD's representation on the Toolbar
+        pTFlipButton->setStyleSheet(pAction->css);
+
+        if (pTAction->isFolder()) {
+            auto pNewMenu = new QMenu(this);
+            // This applies the CSS for THIS TAction to a CHILD's own menu - is this right
+            pNewMenu->setStyleSheet(pAction->css);
+            // CHECK: Use the Child's CSS instead for a menu on it? - Slysven:
+            // pNewMenu->setStyleSheet( pTAction->css );
+            addActionToMenu(pTAction, pNewMenu);
+            // This has been move until AFTER the child's menu has been
+            // populated, it was being done straight after pNewMenu was created,
+            // but I think we ought to insert the items into the menu before
+            // applying the menu to the button - Slysven
+            pTFlipButton->setMenu(pNewMenu);
+        }
+
+        if (pTAction->mpFButton) {
+            pTAction->mpFButton->deleteLater();
+        }
+        pTAction->mpFButton = pTFlipButton;
+
+        // Moved to be AFTER the pTAction->mIsFolder test as I think we ought to
+        // add the button to the toolbar AFTER any menu (children) items have
+        // been put on the button - Slysven
+        addButton(pTFlipButton);
+    }
+}
+
+// This seems to be the TToolBar version of
+// TEasyButtonBar::fillMenu(TAction *, QMenu *)
+// Unlike the other this one seems to introduce an "intermediate" single menu
+// item to which the sub-menu is added.
+void TToolBar::addActionToMenu(TAction* pAction, QMenu* pMenu)
+{
+    pAction->mpToolBar = this;
+    auto pEAction = new EAction(pAction->mpHost, QIcon(pAction->getIcon()), pAction->getName(), pAction->mID);
+    pEAction->setCheckable(pAction->isPushDownButton());
+    pEAction->setStatusTip(pAction->getName());
+    if (pAction->mpEAction) {
+        pAction->mpEAction->deleteLater();
+    }
+    pAction->mpEAction = pEAction;
+    pMenu->addAction(pEAction);
+
+    if (pAction->isFolder()) {
+        // The use of mudlet::self() here meant that the QMenu was not destroyed
+        // until the mudlet instance is at the end of the application!
+        // Changed to use the toolbar
+        auto pNewMenu = new QMenu(this);
+        pNewMenu->setStyleSheet(pAction->css);
+        pEAction->setMenu(pNewMenu);
+
+        for (auto* childActionNode : *pAction->mpMyChildrenList) {
+            auto* childAction = static_cast<TAction*>(childActionNode);
+            addActionToMenu(childAction, pNewMenu);
+        }
+    }
 }
 
 void TToolBar::finalize()
