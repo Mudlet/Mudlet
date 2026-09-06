@@ -635,6 +635,193 @@ void Host::loadMap()
     }
 }
 
+// The three methods below might be better off on TMap, which is what they all
+// end up talking to.
+bool Host::saveMapFile(const QString& location, int saveVersion)
+{
+    QString filename_map = location;
+    if (filename_map.isEmpty()) {
+        filename_map = MudletApp::getMudletPath(enums::profileDateTimeStampedMapPathFileName, mHostName, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
+    } else if (const QFileInfo fileInfo(location); fileInfo.isRelative()) {
+        // Resolve the name relative to the profile home directory the way
+        // Host::importMapFile does, rather than against whatever directory
+        // Mudlet happens to have been started in:
+        filename_map = QDir::cleanPath(MudletApp::getMudletPath(enums::profileDataItemPath, mHostName, fileInfo.filePath()));
+    }
+
+    const QDir dir_map(MudletApp::getMudletPath(enums::profileMapsPath, mHostName));
+    if (!dir_map.exists() && !dir_map.mkpath(dir_map.path())) {
+        qDebug().noquote() << "Error saving map: could not make the profile's map directory" << dir_map.path();
+        return false;
+    }
+
+    QSaveFile file_map(filename_map);
+    if (!file_map.open(QIODevice::WriteOnly)) {
+        // Naming the file matters more than usual: a relative location is not
+        // the path the caller typed
+        qDebug().noquote() << "Error saving map to" << filename_map << ":" << file_map.errorString();
+        return false;
+    }
+
+    QDataStream out(&file_map);
+    out.setVersion(QDataStream::Qt_5_12);
+
+    bool saved = mpMap->serialize(out, saveVersion);
+    if (saved && !file_map.commit()) {
+        qDebug() << "Error saving map: " << (file_map.error() == QFile::NoError ? "issue with serializing" : file_map.errorString());
+        saved = false;
+    }
+
+    if (saved) {
+        mpMap->resetUnsaved();
+        mpMap->setSaveError(false);
+    } else {
+        mpMap->setSaveError(true);
+    }
+
+    return saved;
+}
+
+bool Host::loadMapFile(const QString& location)
+{
+    if (!mpMap || !mpMap->mpMapper) {
+        // No map or map currently loaded - so try and created mapper
+        // but don't load a map here by default, we do that below and it may not
+        // be the default map anyhow
+        showHideOrCreateMapper(false);
+    }
+
+    if (!mpMap || !mpMap->mpMapper) {
+        // And that failed so give up
+        return false;
+    }
+
+    mpMap->mapClear();
+
+    // The same resolution saveMapFile and importMapFile use, so that a map
+    // written under a bare name is looked for where it was written:
+    QString filePathName = location;
+    if (const QFileInfo fileInfo(location); !location.isEmpty() && fileInfo.isRelative()) {
+        filePathName = QDir::cleanPath(MudletApp::getMudletPath(enums::profileDataItemPath, mHostName, fileInfo.filePath()));
+    }
+
+    qDebug() << "Host::loadMapFile() - restore map case 1.";
+    mpMap->pushErrorMessagesToFile(tr("Pre-Map loading(1) report"), true);
+    const QDateTime now(QDateTime::currentDateTime());
+
+    bool result = false;
+    if (mpMap->restore(filePathName)) {
+        mpMap->audit();
+        mpMap->mpMapper->mp2dMap->init();
+        mpMap->mpMapper->updateAreaComboBox();
+        mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
+        mpMap->mpMapper->show();
+        result = true;
+    } else {
+        mpMap->mpMapper->mp2dMap->init();
+        mpMap->mpMapper->updateAreaComboBox();
+        mpMap->mpMapper->show();
+    }
+
+    if (filePathName.isEmpty()) {
+        mpMap->pushErrorMessagesToFile(tr("Loading map(1) at %1 report").arg(now.toString(Qt::ISODate)), true);
+    } else {
+        mpMap->pushErrorMessagesToFile(tr(R"(Loading map(1) "%1" at %2 report)").arg(filePathName, now.toString(Qt::ISODate)), true);
+    }
+
+    mpMap->updateArea(-1);
+
+    return result;
+}
+
+// Used by TLuaInterpreter::loadMap() and dlgProfilePreferences for import/load
+// of files ending in ".xml"
+// The TLuaInterpreter::loadMap() supplies a pointer to an error Message which
+// it requires in the event of an error (it should be written in a structure
+// to match "loadMap: XXXXX." format) - the presence of a non-null pointer here
+// should be used to suppress the writing of error messages direct to the
+// console - if possible!
+bool Host::importMapFile(const QString& location, QString* errMsg)
+{
+    if (!mpMap || !mpMap->mpMapper) {
+        // No map or mapper currently loaded/present - so try and create mapper
+        showHideOrCreateMapper(false);
+    }
+
+    if (!mpMap || !mpMap->mpMapper) {
+        // And that failed so give up
+        if (errMsg) {
+            *errMsg = qsl("loadMap: unable to initialise mapper {in Host::importMapFile(...)} - something is wrong!");
+        }
+        return false;
+    }
+
+    // Dump any outstanding map errors from past activities that had not yet
+    // been logged...
+    qDebug() << "Host::importMapFile() - importing map case 1.";
+    mpMap->pushErrorMessagesToFile(tr("Pre-Map importing(1) report"), true);
+    const QDateTime now(QDateTime::currentDateTime());
+
+    bool result = false;
+
+    const QFileInfo fileInfo(location);
+    QString filePathNameString;
+    if (!fileInfo.filePath().isEmpty()) {
+        if (fileInfo.isRelative()) {
+            // Resolve the name relative to the profile home directory:
+            filePathNameString = QDir::cleanPath(MudletApp::getMudletPath(enums::profileDataItemPath, mHostName, fileInfo.filePath()));
+        } else {
+            if (fileInfo.exists()) {
+                filePathNameString = fileInfo.canonicalFilePath(); // Cannot use canonical path if file doesn't exist!
+            } else {
+                filePathNameString = fileInfo.absoluteFilePath();
+            }
+        }
+    }
+
+    QFile file(filePathNameString);
+    if (!file.exists()) {
+        if (!errMsg) {
+            const QString infoMsg = tr("[ ERROR ]  - Map file not found, path and name used was:\n"
+                                       "%1.")
+                                            .arg(filePathNameString);
+            postMessage(infoMsg);
+        } else {
+            // error message for lua loadMap()
+            *errMsg = tr("loadMap: bad argument #1 value (filename used: \n"
+                         "\"%1\" was not found).")
+                              .arg(filePathNameString);
+        }
+        return false;
+    }
+
+    if (file.open(QFile::ReadOnly | QFile::Text)) {
+        if (!errMsg) {
+            const QString infoMsg = tr("[ INFO ]  - Map file located and opened, now parsing it...");
+            postMessage(infoMsg);
+        }
+
+        result = mpMap->importMap(file, errMsg);
+
+        file.close();
+        mpMap->pushErrorMessagesToFile(tr(R"(Importing map(1) "%1" at %2 report)").arg(location, now.toString(Qt::ISODate)));
+    } else {
+        if (!errMsg) {
+            const QString infoMsg = tr(R"([ INFO ]  - Map file located but it could not opened, please check permissions on:"%1".)").arg(filePathNameString);
+            postMessage(infoMsg);
+        } else {
+            *errMsg = tr("loadMap: bad argument #1 value (filename used: \n"
+                         "\"%1\" could not be opened for reading).")
+                              .arg(filePathNameString);
+        }
+        return false;
+    }
+
+    mpMap->updateArea(-1);
+
+    return result;
+}
+
 void Host::startMapAutosave(const int interval)
 {
     if (interval > 0) {
@@ -659,7 +846,7 @@ void Host::autoSaveMap()
 #if defined(DEBUG_MAPAUTOSAVE)
             qDebug().nospace().noquote() << "Host::autoSaveMap() INFO - map auto save initiated at:" << nowString << ".";
 #endif
-            if (!mpConsole->saveMap(MudletApp::getMudletPath(enums::profileMapPathFileName, mHostName, qsl("autosave.dat")))) {
+            if (!saveMapFile(MudletApp::getMudletPath(enums::profileMapPathFileName, mHostName, qsl("autosave.dat")))) {
                 mpMap->setSaveError(true);
             } else {
                 mpMap->setSaveError(false);
@@ -5200,7 +5387,7 @@ bool Host::interceptMapperButton()
 
 // Needed to extract into a separate method from mudlet::slot_mapper() so that
 // we can use it WITHOUT loading a file - at least for the
-// TConsole::importMap(...) case that may need to create a map widget before it
+// Host::importMapFile(...) case that may need to create a map widget before it
 // loads/imports a non-default (last saved map in profile's map directory).
 void Host::showHideOrCreateMapper(const bool loadDefaultMap)
 {

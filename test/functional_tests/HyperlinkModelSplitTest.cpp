@@ -167,6 +167,64 @@ private slots:
         QVERIFY2(!subConsole->getHyperlinkSelectionManager().isSelected(qsl("splitgroup"), qsl("splitvalue")), "a user window must not share the main console's selection state");
     }
 
+    // The MXP client takes its link store off the model's buffer, so a <SEND>
+    // lands on the characters that buffer wrote. A store of the client's own
+    // would still answer the client's own reads - the caption, the actions on
+    // the queued event - so the proof is taken off the buffer instead: the
+    // character's link index, and the command that index resolves to. Nothing
+    // in Lua reads a stored link command back, which is why this is here rather
+    // than in MXP_spec.
+    void test_anMxpSendLinkIsStoredOnTheModelsBuffer()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        TConsoleModel& model = host->mainConsoleModel();
+
+        // feedTriggers() is not server data, so the ESC[1z a game would send to
+        // open secure mode is inert here; forcing the processor on is what makes
+        // the tag below a tag at all.
+        host->setForceMXPProcessorOn(true);
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("feedTriggers([[MXPSEND1 <SEND \"north\">go north</SEND>]] .. \"\\n\")")),
+                 "feedTriggers() did not run, so no MXP link was ever registered");
+
+        const int lineNumber = lineHolding(model.buffer, qsl("MXPSEND1"));
+        QVERIFY2(lineNumber >= 0, "the line carrying the MXP link never reached the buffer");
+        const QString line = lineTextAt(model.buffer, lineNumber);
+        QCOMPARE(line, qsl("MXPSEND1 go north"));
+
+        const int linkIndex = model.buffer.getLinkIndexAt(lineNumber, line.indexOf(qsl("go north")));
+        QVERIFY2(linkIndex > 0, "the linked characters carry no link index, so the MXP link is not clickable");
+        QCOMPARE(model.buffer.mLinkStore.getLinksConst(linkIndex), QStringList{qsl("send([[north]])")});
+    }
+
+    // The case above cannot tell the model's buffer from the view's, because
+    // TConsole::buffer is a reference bound to the model's - they are one
+    // object whenever a view exists. This is the half that is only the model's:
+    // the MXP client writing text, resolving its link store and ending a
+    // redirect for a profile whose view has gone, which is what a headless one
+    // never had. Driven straight at Host::mMxpClient rather than through
+    // feedTriggers(), which still goes through the console widget.
+    void test_theMxpClientReachesTheModelsBufferWithNoView()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+
+        destroyTheView(host);
+        QCOMPARE(&host->mainConsoleModel(), model.get());
+
+        host->mMxpClient.insertText(qsl("MXPNOVIEW1 written with no view\n"));
+        const int lineNumber = lineHolding(model->buffer, qsl("MXPNOVIEW1"));
+        QVERIFY2(lineNumber >= 0, "insertText() never reached the model's buffer");
+        QCOMPARE(lineTextAt(model->buffer, lineNumber), qsl("MXPNOVIEW1 written with no view"));
+
+        QCOMPARE(&host->mMxpClient.getLinkStore(), &model->buffer.mLinkStore);
+
+        // Nothing to read back - the point is that it runs at all, on the
+        // buffer the model owns rather than through a console that has gone.
+        host->mMxpClient.clearMxpDestination();
+    }
+
     // Concealing rewrites the buffer, and the buffer is the model's. This drives
     // it against a model that never had a widget of any kind, which is what the
     // manager used to refuse to do: performConcealment() and performReveal()
