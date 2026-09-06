@@ -583,6 +583,24 @@ private slots:
         QVERIFY(!area()->mMapLabels.value(labelId).highlight);
     }
 
+    // A label that has been picked up follows the mouse until it is put down.
+    void test_aPickedUpLabelFollowsTheMouse()
+    {
+        buildMap();
+        showMapper(false);
+        const QVector3D where(2, 0, 0);
+        const QSizeF clickSize(40, 20);
+        const int labelId = addLabel(where, clickSize);
+
+        pressAt(pointOnLabel(where, clickSize));
+        QVERIFY(mp2dMap->mLabelHighlighted);
+        moveTo(pointUnitsFromCentre(3, 1));
+
+        const QVector3D moved = area()->mMapLabels.value(labelId).pos;
+        QCOMPARE(static_cast<double>(moved.x()), 3.0);
+        QCOMPARE(static_cast<double>(moved.y()), 1.0);
+    }
+
     // A room the map is locked for viewing cannot be dragged out of place by a
     // stray click.
     void test_aRoomCannotBeDraggedWhileViewing()
