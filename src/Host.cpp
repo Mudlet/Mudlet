@@ -2070,14 +2070,14 @@ bool Host::selectMainConsoleSection(int from, int length)
 // of the lines it landed on needs one.
 void Host::setMainConsoleFgColor(const QColor& color)
 {
-    if (mpMainConsoleModel->setFgColor(color) && mpConsole) {
+    if (mpMainConsoleModel->setSelectionFgColor(color) && mpConsole) {
         mpConsole->markSelectionDirty();
     }
 }
 
 void Host::setMainConsoleBgColor(const QColor& color)
 {
-    if (mpMainConsoleModel->setBgColor(color) && mpConsole) {
+    if (mpMainConsoleModel->setSelectionBgColor(color) && mpConsole) {
         mpConsole->markSelectionDirty();
     }
 }

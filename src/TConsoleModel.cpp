@@ -87,13 +87,13 @@ void TConsoleModel::resetFormat()
     mFormatCurrent.setAllDisplayAttributes(TChar::None);
 }
 
-bool TConsoleModel::setBgColor(const QColor& newColor)
+bool TConsoleModel::setSelectionBgColor(const QColor& newColor)
 {
     mFormatCurrent.setBackground(newColor);
     return buffer.applyBgColor(P_begin, P_end, newColor);
 }
 
-bool TConsoleModel::setFgColor(const QColor& newColor)
+bool TConsoleModel::setSelectionFgColor(const QColor& newColor)
 {
     mFormatCurrent.setForeground(newColor);
     return buffer.applyFgColor(P_begin, P_end, newColor);

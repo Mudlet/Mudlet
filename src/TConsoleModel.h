@@ -80,12 +80,15 @@ struct TConsoleModel
     // current line, paint it, then put the format back. All of it is buffer and
     // selection state, so it runs with no view; the two painting calls answer
     // whether the buffer actually changed, which is the view's cue to repaint
-    // those lines.
+    // those lines. "Selection" in their names is load-bearing: they write
+    // mFormatCurrent and the selected run, not the mFgColor/mBgColor below,
+    // which are the profile's own colours and are set by
+    // Host::refreshMainConsoleColors().
     void deselect();
     bool selectSection(int from, int to);
     void resetFormat();
-    bool setFgColor(const QColor& newColor);
-    bool setBgColor(const QColor& newColor);
+    bool setSelectionFgColor(const QColor& newColor);
+    bool setSelectionBgColor(const QColor& newColor);
 
     // No 'm' prefix on purpose: TConsole::buffer aliases this one by reference and has to keep its name for the rest of the codebase, so the two match.
     TBuffer buffer;

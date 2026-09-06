@@ -2048,14 +2048,14 @@ void TConsole::setBgColor(int r, int g, int b, int a)
 
 void TConsole::setBgColor(const QColor& newColor)
 {
-    if (mpModel->setBgColor(newColor)) {
+    if (mpModel->setSelectionBgColor(newColor)) {
         markSelectionDirty();
     }
 }
 
 void TConsole::setFgColor(const QColor& newColor)
 {
-    if (mpModel->setFgColor(newColor)) {
+    if (mpModel->setSelectionFgColor(newColor)) {
         markSelectionDirty();
     }
 }
