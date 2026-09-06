@@ -163,6 +163,11 @@ MudletApp::ConfigDirResolution MudletApp::resolveConfigRoot(const QString& execD
         QString portPath = readMarkerFile(marker);
         if (portPath.isEmpty()) {
             portPath = qsl("./portable"); // fallback value for empty portable.txt
+            // An empty marker in the home directory used to be fatal, so say
+            // where the guess landed - a stray "touch portable.txt" beside a
+            // system install otherwise hides every profile without a word.
+            qWarning().nospace().noquote() << "MudletApp::resolveConfigRoot(...) WARNING - \"" << marker << "\" names no location, so portable mode is guessing \"" << portPath << "\" relative to \""
+                                           << execDir << "\". Profiles kept anywhere else will not be listed.";
         }
         return {.path = pathResolveRelative(QDir::cleanPath(portPath), execDir), .portable = true};
     }
