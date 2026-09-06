@@ -104,6 +104,7 @@ set(TELNET_GROUP_TEST_SOURCES
     TelnetConnectFailureTest.cpp
     TelnetConnectLookupRaceTest.cpp
     TelnetNewEnvironTest.cpp
+    TelnetPasswordMaskTimeoutTest.cpp
     TelnetOptionsReportTest.cpp
     TelnetReconnectStateTest.cpp
     TelnetStringSequenceRecoveryTest.cpp
@@ -426,10 +427,11 @@ set_tests_properties(GlyphOverflowTest PROPERTIES TIMEOUT 600)
 # also reconnects, so it needs a longer timeout
 set_tests_properties(TelnetCharsetNegotiationTest PROPERTIES TIMEOUT 300)
 
-# TelnetNewEnvironTest, TelnetOptionsReportTest and TelnetAtcpMspTest each boot a
-# full profile, which is nearly all of their runtime and the part a sanitizer and
-# a loaded runner stretch, so they get the same headroom as their neighbours
-set_tests_properties(TelnetNewEnvironTest TelnetOptionsReportTest TelnetAtcpMspTest PROPERTIES TIMEOUT 300)
+# TelnetNewEnvironTest, TelnetOptionsReportTest, TelnetAtcpMspTest and
+# TelnetPasswordMaskTimeoutTest each boot a full profile, which is nearly all of
+# their runtime and the part a sanitizer and a loaded runner stretch, so they get
+# the same headroom as their neighbours
+set_tests_properties(TelnetNewEnvironTest TelnetOptionsReportTest TelnetAtcpMspTest TelnetPasswordMaskTimeoutTest PROPERTIES TIMEOUT 300)
 
 # ProfileLifecycleTest opens and closes several profiles, and every open is a
 # full profile load and every close a full save, so it needs a longer timeout
