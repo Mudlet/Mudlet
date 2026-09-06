@@ -18,27 +18,31 @@
  ***************************************************************************/
 
 // A server that sends IAC WILL ECHO puts the profile into password masking and
-// is trusted to send WONT ECHO when the password line is done. A server that
+// is trusted to send WONT ECHO once the password line is done. A server that
 // never does would leave the player typing invisibly for the rest of the
-// session, so during the login phase cTelnet arms a 60 second single-shot timer
-// that clears the masking itself.
+// session, so during the login phase cTelnet keeps a 60 second single-shot
+// timer that clears the masking itself. The prompt does not start that timer:
+// each masked line the player sends starts it, and restarts it, so it can only
+// fire a minute after the last line went out and never while one is still being
+// typed - which would clear the input mid-password.
 //
-// That arming used to be guarded by comparing QElapsedTimer::elapsed(), which is
-// in milliseconds, against .count() of a 5 minute constant, which is the number
-// 5 - so the safety net only existed inside the first 5 milliseconds of a
-// connection and in practice never armed at all. The discriminating assertion
-// here is therefore the timer being non-null and active after a WILL ECHO fed at
-// least 50 ms after connecting: that is past the old 5 ms window and far inside
-// the intended 5 minutes. The interval is pinned at exactly 60000 rather than
-// merely being non-zero, so a later constant expressed in the wrong unit shows
-// up as a failure instead of a differently-timed safety net.
+// When it fires it sends DONT ECHO as well as dropping Mudlet's masking flag,
+// so a later WILL ECHO from the same game is a fresh request rather than a
+// repeat of one cTelnet still has on its books. Without that, the second
+// password prompt of a session is typed in the clear.
+//
+// History: the arming used to compare QElapsedTimer::elapsed(), which is in
+// milliseconds, against .count() of a 5 minute constant, which is the number 5,
+// so the safety net only existed inside the first 5 milliseconds of a
+// connection. Hence the wait below until the connection is at least 50 ms old,
+// which is past that window and far inside the intended 5 minutes, and the
+// interval being pinned at exactly 60000 rather than merely non-zero.
 //
 // Budget: cTelnet::checkEchoAnomalyPattern() counts every WILL and every WONT
 // ECHO, and 5 toggles inside a 5 second window latch an anomaly that makes the
 // process refuse ECHO for good. A grouped ctest case runs this whole class in
-// one process, so the class may make at most 4 toggles unless a test deliberately
-// waits 5 seconds between two of them. The two tests below spend 3: WILL, WONT,
-// WILL. A fourth test adding two more would break the ones already here.
+// one process, so init() clears that window before every test function and each
+// function may make at most 4 toggles of its own. The two below spend 2 each.
 
 #include <QTemporaryDir>
 #include <QTimer>
@@ -84,6 +88,13 @@ private:
     // cTelnet's record of the server half of the ECHO negotiation, which gates
     // whether a WILL ECHO is acted on or dropped as a repeat.
     bool echoNegotiatedByServer() const { return mpHost->mTelnet.hisOptionState.test(static_cast<size_t>(OPT_ECHO)); }
+
+    // A line the player submits, sent the way Host::send() sends it.
+    void playerSends(const QString& text)
+    {
+        QString line = text;
+        QVERIFY2(mpHost->mTelnet.sendData(line, true, true), "the line was not written to the stub server");
+    }
 
 private slots:
     void initTestCase()
@@ -142,16 +153,27 @@ private slots:
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
     }
 
-    // The well-behaved server: WILL ECHO arms the safety net, WONT ECHO takes it
-    // back down again before it can fire.
-    void test_wontEchoCancelsTheTimeout()
+    void init()
+    {
+        // Each case gets a clean ECHO anomaly window (see the file comment), so
+        // the toggles one case spends do not count against the next.
+        mpHost->mTelnet.mEchoToggleCount = 0;
+        mpHost->mTelnet.mEchoAnomalyDetected = false;
+        mpHost->mTelnet.mEchoToggleTimer.invalidate();
+    }
+
+    // The well-behaved server: the prompt only turns masking on, the password
+    // line starts the safety net, and WONT ECHO takes it back down again before
+    // it can fire.
+    void test_promptDoesNotStartTheClockAndWontEchoCancelsIt()
     {
         QVERIFY(mpHost);
 
         QVERIFY2(!mpHost->mDisablePasswordMasking, "the profile has password masking switched off, so no timeout would ever be armed");
         QVERIFY2(!mpHost->isRemoteEchoingActive(), "masking was already on before this test announced any ECHO");
         QVERIFY2(!echoNegotiatedByServer(), "ECHO was already negotiated, so the WILL below would be ignored as a repeat");
-        QVERIFY2(mpHost->mTelnet.mTimerPasswordModeTimeout == nullptr, "something armed the password mode timeout before this test did");
+        QTimer* timer = mpHost->mTelnet.mTimerPasswordModeTimeout;
+        QVERIFY2(!timer || !timer->isActive(), "something armed the password mode timeout before this test did");
 
         QVERIFY(mpHost->mTelnet.mConnectionTimer.isValid());
         // The assertions below only bite once the connection is old enough to be
@@ -165,10 +187,26 @@ private slots:
         serverSaysEcho(TN_WILL);
 
         QVERIFY2(mpHost->isRemoteEchoingActive(), "WILL ECHO did not turn password masking on");
-        QTimer* timer = mpHost->mTelnet.mTimerPasswordModeTimeout;
-        QVERIFY2(timer, "WILL ECHO during the login phase did not create the password mode timeout at all");
-        QVERIFY2(timer->isActive(), "the password mode timeout exists but was not started");
+        timer = mpHost->mTelnet.mTimerPasswordModeTimeout;
+        QVERIFY2(!timer || !timer->isActive(), "the prompt alone started the clock, so it can fire while the player is still typing the password");
+
+        playerSends(qsl("hunter2"));
+
+        timer = mpHost->mTelnet.mTimerPasswordModeTimeout;
+        QVERIFY2(timer, "the masked line did not create the password mode timeout at all");
+        QVERIFY2(timer->isActive(), "the password mode timeout exists but the masked line did not start it");
         QVERIFY2(timer->isSingleShot(), "the password mode timeout would repeat");
+        QCOMPARE(timer->interval(), 60000);
+
+        // Every masked line starts the clock afresh. Reading the remaining time
+        // back cannot show that, since a coarse QTimer may shift a minute-long
+        // deadline by a few seconds either way, so stop it by hand instead and
+        // require the next line to bring it back.
+        timer->stop();
+
+        playerSends(qsl("hunter2"));
+
+        QVERIFY2(timer->isActive(), "the second masked line did not restart the password mode timeout");
         QCOMPARE(timer->interval(), 60000);
 
         serverSaysEcho(TN_WONT);
@@ -178,9 +216,10 @@ private slots:
         QVERIFY2(!echoNegotiatedByServer(), "WONT ECHO did not clear the negotiated ECHO state");
     }
 
-    // The buggy server: WILL ECHO and then silence. The timer is what ends the
-    // masking, so it is fired early here rather than waiting out its minute.
-    void test_timeoutClearsMaskingTheServerNeverReleased()
+    // The buggy server: WILL ECHO, the password line, and then silence. The timer
+    // is what ends the masking, so it is fired early here rather than waiting out
+    // its minute, and the game has to be able to mask a later prompt afterwards.
+    void test_timeoutClearsMaskingAndLetsTheNextPromptMaskAgain()
     {
         QVERIFY(mpHost);
 
@@ -190,19 +229,24 @@ private slots:
         serverSaysEcho(TN_WILL);
 
         QVERIFY2(mpHost->isRemoteEchoingActive(), "WILL ECHO did not turn password masking on");
+
+        playerSends(qsl("hunter2"));
+
         QTimer* timer = mpHost->mTelnet.mTimerPasswordModeTimeout;
-        QVERIFY2(timer, "WILL ECHO during the login phase did not create the password mode timeout at all");
-        QVERIFY2(timer->isActive(), "WILL ECHO during the login phase did not arm the password mode timeout");
+        QVERIFY2(timer, "the masked line did not create the password mode timeout at all");
+        QVERIFY2(timer->isActive(), "the masked line during the login phase did not start the password mode timeout");
         QCOMPARE(timer->interval(), 60000);
 
         // Same timer, same connected slot: only the wait is cut short.
         timer->start(0ms);
         QTRY_VERIFY_WITH_TIMEOUT(!mpHost->isRemoteEchoingActive(), 5000);
         QVERIFY2(!timer->isActive(), "the single-shot timeout was still running after it fired");
+        QVERIFY2(!echoNegotiatedByServer(), "the timeout did not send DONT ECHO, so the game's next WILL ECHO is dropped as a repeat");
 
-        // hisOptionState still reports ECHO as negotiated afterwards: the slot
-        // clears the masking only. A test added after this one has to send WONT
-        // ECHO first, and that plus its own WILL is the rest of the toggle budget.
+        serverSaysEcho(TN_WILL);
+
+        QVERIFY2(mpHost->isRemoteEchoingActive(), "a password prompt after the timeout no longer masks anything");
+        QVERIFY2(!timer->isActive(), "the prompt alone started the clock again");
     }
 };
 

@@ -429,6 +429,7 @@ private:
 
 private slots:
     void slot_networkLatencyBeat();
+    void slot_passwordMaskTimeout();
 
 private:
 #if !defined(QT_NO_SSL)
@@ -626,6 +627,7 @@ private:
 
     void checkCharacterModePattern();
     bool checkEchoAnomalyPattern();
+    void restartPasswordMaskTimeout();
 };
 
 #endif // MUDLET_CTELNET_H
