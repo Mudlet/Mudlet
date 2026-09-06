@@ -4121,12 +4121,20 @@ void T2DMap::createLabel(QRectF labelRectangle)
     }
     const int labelId = pArea->createLabelId();
 
-    connect(mpDlgMapLabel, &dlgMapLabel::updated, this, [=, this]() {
-        updateMapLabel(labelRectangle, labelId, pArea);
+    // A script can clear or replace the map while the dialog is open (the user
+    // can too, as it is not modal), deleting the area from under it: look it up
+    // again by id rather than keep the pointer.
+    const int areaId = mAreaID;
+    connect(mpDlgMapLabel, &dlgMapLabel::updated, this, [this, labelRectangle, labelId, areaId]() {
+        if (auto pLabelArea = mpMap->mpRoomDB->getArea(areaId)) {
+            updateMapLabel(labelRectangle, labelId, pLabelArea);
+        }
     });
 
-    connect(mpDlgMapLabel, &dlgMapLabel::rejected, this, [=, this]() mutable {
-        pArea->mMapLabels.remove(labelId);
+    connect(mpDlgMapLabel, &dlgMapLabel::rejected, this, [this, labelId, areaId]() {
+        if (auto pLabelArea = mpMap->mpRoomDB->getArea(areaId)) {
+            pLabelArea->mMapLabels.remove(labelId);
+        }
         update();
     });
 
