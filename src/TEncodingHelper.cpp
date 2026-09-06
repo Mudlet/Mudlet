@@ -19,15 +19,23 @@
 
 #include "TEncodingHelper.h"
 #include "TEncodingTable.h"
-#include "TTextCodec.h"
-#include <QDebug>
 #include <QStringDecoder>
 #include <QStringEncoder>
 #include <QTextCodec>
 
-bool TEncodingHelper::isCustomEncoding(const QByteArray& encoding)
+// The TEncodingTable key for one of the code pages Mudlet carries itself, or
+// empty for anything else. "M_" is the name these went by while they were
+// QTextCodec subclasses registered alongside Qt's own, and the rest of the
+// encoding code still accepts it. They take precedence over QStringConverter:
+// with ICU, Qt offers codecs under the names CP437, CP737 and CP869, and not
+// all of those match Mudlet's tables (no euro sign at CP869 0x87, for one).
+QByteArray TEncodingHelper::customEncodingKey(const QByteArray& encoding)
 {
-    return encoding.startsWith("M_") || encoding == "CP437" || encoding == "CP667" || encoding == "CP737" || encoding == "CP869";
+    const QByteArray key = encoding.startsWith("M_") ? encoding.mid(2) : encoding;
+    if (key == "CP437" || key == "CP667" || key == "CP737" || key == "CP869" || key == "MEDIEVIA") {
+        return key;
+    }
+    return {};
 }
 
 // Check if an encoding is available via Qt6's QStringDecoder
@@ -126,20 +134,8 @@ bool TEncodingHelper::canEncodeWithLookupTable(const QString& str, const QByteAr
 
 QString TEncodingHelper::decode(const QByteArray& bytes, const QByteArray& encoding)
 {
-    if (encoding == "M_CP437" || encoding == "CP437") {
-        return TTextCodec_437::toUnicode(bytes);
-    }
-    if (encoding == "M_CP667" || encoding == "CP667") {
-        return TTextCodec_667::toUnicode(bytes);
-    }
-    if (encoding == "M_CP737" || encoding == "CP737") {
-        return TTextCodec_737::toUnicode(bytes);
-    }
-    if (encoding == "M_CP869" || encoding == "CP869") {
-        return TTextCodec_869::toUnicode(bytes);
-    }
-    if (encoding == "M_MEDIEVIA" || encoding == "MEDIEVIA") {
-        return TTextCodec_medievia::toUnicode(bytes);
+    if (const QByteArray customKey = customEncodingKey(encoding); !customKey.isEmpty()) {
+        return decodeWithLookupTable(bytes, customKey);
     }
 
     // Try Qt6's QStringDecoder which handles both built-in encodings (UTF-8, Latin1, etc.)
@@ -162,20 +158,8 @@ QString TEncodingHelper::decode(const QByteArray& bytes, const QByteArray& encod
 
 QByteArray TEncodingHelper::encode(const QString& str, const QByteArray& encoding)
 {
-    if (encoding == "M_CP437" || encoding == "CP437") {
-        return TTextCodec_437::fromUnicode(str);
-    }
-    if (encoding == "M_CP667" || encoding == "CP667") {
-        return TTextCodec_667::fromUnicode(str);
-    }
-    if (encoding == "M_CP737" || encoding == "CP737") {
-        return TTextCodec_737::fromUnicode(str);
-    }
-    if (encoding == "M_CP869" || encoding == "CP869") {
-        return TTextCodec_869::fromUnicode(str);
-    }
-    if (encoding == "M_MEDIEVIA" || encoding == "MEDIEVIA") {
-        return TTextCodec_medievia::fromUnicode(str);
+    if (const QByteArray customKey = customEncodingKey(encoding); !customKey.isEmpty()) {
+        return encodeWithLookupTable(str, customKey);
     }
 
     // Try Qt6's QStringEncoder which handles both built-in encodings (UTF-8, Latin1, etc.)
@@ -198,16 +182,8 @@ QByteArray TEncodingHelper::encode(const QString& str, const QByteArray& encodin
 
 bool TEncodingHelper::canEncode(const QString& str, const QByteArray& encoding)
 {
-    if (encoding == "M_CP437" || encoding == "CP437") {
-        return TTextCodec_437::canEncode(str);
-    } else if (encoding == "M_CP667" || encoding == "CP667") { // NOLINT(readability-else-after-return)
-        return TTextCodec_667::canEncode(str);
-    } else if (encoding == "M_CP737" || encoding == "CP737") { // NOLINT(readability-else-after-return)
-        return TTextCodec_737::canEncode(str);
-    } else if (encoding == "M_CP869" || encoding == "CP869") { // NOLINT(readability-else-after-return)
-        return TTextCodec_869::canEncode(str);
-    } else if (encoding == "M_MEDIEVIA" || encoding == "MEDIEVIA") { // NOLINT(readability-else-after-return)
-        return TTextCodec_medievia::canEncode(str);
+    if (const QByteArray customKey = customEncodingKey(encoding); !customKey.isEmpty()) {
+        return canEncodeWithLookupTable(str, customKey);
     }
 
     // Try Qt6's QStringEncoder which handles both built-in encodings (UTF-8, Latin1, etc.)
@@ -238,7 +214,7 @@ bool TEncodingHelper::canEncode(const QString& str, const QByteArray& encoding)
 
 bool TEncodingHelper::isEncodingAvailable(const QByteArray& encoding)
 {
-    if (isCustomEncoding(encoding)) {
+    if (!customEncodingKey(encoding).isEmpty()) {
         return true;
     }
 
@@ -254,21 +230,4 @@ bool TEncodingHelper::isEncodingAvailable(const QByteArray& encoding)
 
     // Fall back to Qt5Compat's ICU-independent codecs for builds whose Qt lacks ICU
     return legacyCodec(encoding) != nullptr;
-}
-
-QList<QByteArray> TEncodingHelper::aliases(const QByteArray& encoding)
-{
-    if (encoding == "M_CP437" || encoding == "CP437") {
-        return TTextCodec_437::aliases();
-    } else if (encoding == "M_CP667" || encoding == "CP667") { // NOLINT(readability-else-after-return)
-        return TTextCodec_667::aliases();
-    } else if (encoding == "M_CP737" || encoding == "CP737") { // NOLINT(readability-else-after-return)
-        return TTextCodec_737::aliases();
-    } else if (encoding == "M_CP869" || encoding == "CP869") { // NOLINT(readability-else-after-return)
-        return TTextCodec_869::aliases();
-    } else if (encoding == "M_MEDIEVIA" || encoding == "MEDIEVIA") { // NOLINT(readability-else-after-return)
-        return TTextCodec_medievia::aliases();
-    }
-
-    return {};
 }

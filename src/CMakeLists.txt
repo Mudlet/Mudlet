@@ -213,7 +213,6 @@ set(mudlet_SRCS
     TStringUtils.cpp
     TTabBar.cpp
     TTextBox.cpp
-    TTextCodec.cpp
     TTextEdit.cpp
     TTimer.cpp
     TToolBar.cpp
@@ -471,7 +470,6 @@ set(mudlet_HDRS
     TStringUtils.h
     TTabBar.h
     TTextBox.h
-    TTextCodec.h
     TTextEdit.h
     TTextProperties.h
     TTimer.h

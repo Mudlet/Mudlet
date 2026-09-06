@@ -41,7 +41,6 @@
 #include "TMedia.h"
 #include "TRoomDB.h"
 #include "GMCPAuthenticator.h"
-#include "TTextCodec.h"
 #include "TEncodingHelper.h"
 #include "utils.h"
 #include "TTextEdit.h"
@@ -452,29 +451,11 @@ QPair<bool, QString> cTelnet::setEncoding(const QByteArray& newEncoding, const b
             }
         }
     } else if (!(mAcceptableEncodings.contains(newEncoding) || mAcceptableEncodings.contains("M_" + newEncoding))) {
-        // Not in list (even with a "M_" prefix that indicates the relevant
-        // QTextCodec is actually one of our own TTextCodecs) - so reject it
-        // Since we want to hide the implementation detail that some of the
-        // encoding names could have a "M_"  prefix we will need to preprocess
-        // the list of encodings.
-        // Since the mAcceptableEncodings list is unchanging once it has been
-        // populated we only need to do this once and can save the results for
-        // reuse - in hindsight this is undoing part of:
-        // TBuffer::getEncodingNames() !
-        static QByteArrayList fixedUpEncodings;
-        if (fixedUpEncodings.isEmpty()) {
-            fixedUpEncodings = mAcceptableEncodings;
-            QMutableByteArrayListIterator itEncoding(fixedUpEncodings);
-            while (itEncoding.hasNext()) {
-                auto checkEncoding{itEncoding.next()};
-                if (checkEncoding.left(2) == "M_") {
-                    itEncoding.setValue(checkEncoding.mid(2));
-                }
-            }
-        }
+        // Not in list (even under the "M_" name Mudlet's own code pages were
+        // once registered as) - so reject it
         return qMakePair(false,
-                         QLatin1String(R"(Encoding ")") % newEncoding % QLatin1String("\" does not exist;\nuse one of the following:\n\"ASCII\", \"") % QLatin1String(fixedUpEncodings.join(R"(", ")"))
-                                 % QLatin1String(R"(".)"));
+                         QLatin1String(R"(Encoding ")") % newEncoding % QLatin1String("\" does not exist;\nuse one of the following:\n\"ASCII\", \"")
+                                 % QLatin1String(mAcceptableEncodings.join(R"(", ")")) % QLatin1String(R"(".)"));
     } else if (mEncoding != newEncoding && ("M_" + mEncoding) != newEncoding) {
         encodingChanged(newEncoding);
 

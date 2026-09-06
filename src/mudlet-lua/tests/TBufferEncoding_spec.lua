@@ -24,19 +24,23 @@ local function restoreServerEncoding()
 end
 
 -- The prefix is ASCII, which every encoding here passes through untouched, so
--- it marks this feed's own line without disturbing the bytes under test.
-local function decoded(data)
-  local mark = getLastLineNumber("main")
-  local ok, msg = feedTelnet("enc:" .. data .. "\r\n")
-  assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+-- it marks a feed's own line without disturbing the bytes under test.
+local function fedLine(prefix, mark)
   local lines = getLines("main", mark, getLastLineNumber("main") + 1)
   for i = #lines, 1, -1 do
-    local payload = lines[i]:match("^enc:(.*)$")
+    local payload = lines[i]:match("^" .. prefix .. ":(.*)$")
     if payload then
       return payload
     end
   end
-  error("no line carrying the fed bytes reached the buffer")
+  error("no line carrying the " .. prefix .. " feed reached the buffer")
+end
+
+local function decoded(data)
+  local mark = getLastLineNumber("main")
+  local ok, msg = feedTelnet("enc:" .. data .. "\r\n")
+  assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+  return fedLine("enc", mark)
 end
 
 -- A run of bytes below 0x7F is copied into the line in one go by a fast path
@@ -277,5 +281,62 @@ describe("Tests EUC-KR decoding", function()
     using("EUC-KR")
 
     assert.equals(replacement, decoded(bytes(0xC7, 0x20)))
+  end)
+end)
+
+describe("Tests transcoding text out into the game server encoding", function()
+
+  -- feedTriggers() takes UTF-8 and puts it into the game server encoding, the
+  -- same conversion that carries what a player types out to the game, and the
+  -- buffer then decodes those bytes again. A character that survives the round
+  -- trip proves the sending and the displaying side agree on where it sits.
+  local function transcoded(text)
+    local mark = getLastLineNumber("main")
+    local ok, err = feedTriggers("out:" .. text .. "\n")
+    if not ok then
+      return nil, err
+    end
+    return fedLine("out", mark)
+  end
+
+  it("carries CP737's lowercase Greek out and back unchanged", function()
+    using("CP737")
+
+    assert.equals("ικλΏ", transcoded("ικλΏ"))
+  end)
+
+  it("refuses under CP737 the accented Latin letters CP437 keeps in the same rows", function()
+    using("CP737")
+
+    local payload, err = transcoded("Ü")
+    assert.is_nil(payload, "CP737 has no Ü, so this should have been refused")
+    assert.matches("cannot be conveyed in the current game server encoding", err)
+  end)
+
+  it("carries CP667's accented capital O and the letters after it out and back unchanged", function()
+    using("CP667")
+
+    assert.equals("ÓńŃźż", transcoded("ÓńŃźż"))
+  end)
+end)
+
+-- Out-of-band data such as MSSP is decoded by TEncodingHelper rather than by the
+-- buffer, so this is where the incoming half of that path shows.
+describe("Tests decoding out-of-band data in the game server encoding", function()
+
+  it("decodes an MSSP value with the same CP737 table as game text", function()
+    using("CP737")
+
+    local ok, msg = feedTelnet("<T_IAC><T_SB><O_MSSP><01>ENCSPEC<02>" .. bytes(0xA0, 0xA1, 0xF0) .. "<T_IAC><T_SE>")
+    assert.is_true(ok, tostring(msg))
+    assert.equals("ικΏ", mssp.ENCSPEC)
+  end)
+
+  it("decodes an MSSP value with the same CP667 table as game text", function()
+    using("CP667")
+
+    local ok, msg = feedTelnet("<T_IAC><T_SB><O_MSSP><01>ENCSPEC<02>" .. bytes(0xA3, 0xA4, 0xA5, 0xA6, 0xA7) .. "<T_IAC><T_SE>")
+    assert.is_true(ok, tostring(msg))
+    assert.equals("ÓńŃźż", mssp.ENCSPEC)
   end)
 end)

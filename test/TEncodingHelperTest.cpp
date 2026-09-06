@@ -56,6 +56,17 @@ class TEncodingHelperTest : public QObject
         return result;
     }
 
+    inline static const QList<QByteArray> csmOwnCodePages{"CP437", "CP667", "CP737", "CP869", "MEDIEVIA"};
+
+    static QByteArray upperHalf()
+    {
+        QByteArray bytes;
+        for (int byte = 0x80; byte <= 0xFF; ++byte) {
+            bytes.append(static_cast<char>(byte));
+        }
+        return bytes;
+    }
+
 private slots:
 
     // -------------------------------------------------------------------------
@@ -195,6 +206,67 @@ private slots:
         const QString input = fromCodepoints({0x0048, 0x00E9, 0x006C, 0x006C, 0x006F}); // Héllo
         const QByteArray encoded = TEncodingHelper::encode(input, "ISO 8859-1");
         QCOMPARE(TEncodingHelper::decode(encoded, "ISO 8859-1"), input);
+    }
+
+    // -------------------------------------------------------------------------
+    // Mudlet's own code pages - CP437, CP667, CP737, CP869 and MEDIEVIA are
+    // answered from the tables in TEncodingTable.cpp ahead of anything Qt
+    // supplies under the same name. The "M_" prefix they once registered under
+    // is still accepted.
+    // -------------------------------------------------------------------------
+
+    void encode_cp737_lowercaseGreek()
+    {
+        // 0xA0 ι, 0xA1 κ, 0xF0 Ώ
+        QCOMPARE(TEncodingHelper::encode(fromCodepoints({0x03B9, 0x03BA, 0x038F}), "CP737"), QByteArray::fromHex("a0a1f0"));
+    }
+
+    void canEncode_cp737_lowercaseGreek_true() { QVERIFY(TEncodingHelper::canEncode(fromCodepoints({0x03B9}), "CP737")); }
+
+    // CP737 has no accented Latin letters: a table that accepts Ü has CP437's
+    // 0x98-0xAF row in place of CP737's lowercase Greek.
+    void canEncode_cp737_capitalUUmlaut_false() { QVERIFY(!TEncodingHelper::canEncode(fromCodepoints({0x00DC}), "CP737")); }
+
+    void encode_cp667_oAcuteAndTheRunAfterIt()
+    {
+        // 0xA3 Ó, 0xA4 ń, 0xA5 Ń, 0xA6 ź, 0xA7 ż
+        QCOMPARE(TEncodingHelper::encode(fromCodepoints({0x00D3, 0x0144, 0x0143, 0x017A, 0x017C}), "CP667"), QByteArray::fromHex("a3a4a5a6a7"));
+    }
+
+    // 0x87 is the euro sign in Mudlet's CP869 and undefined in the ICU table Qt
+    // offers under that name, so this holds only while Mudlet's own table
+    // answers ahead of Qt.
+    void decode_cp869_euroFromMudletsOwnTable() { QCOMPARE(TEncodingHelper::decode(QByteArray::fromHex("87"), "CP869"), fromCodepoints({0x20AC})); }
+
+    void prefixedName_reachesTheSameTable()
+    {
+        const QByteArray upper = upperHalf();
+        for (const QByteArray& name : csmOwnCodePages) {
+            const QByteArray prefixed = "M_" + name;
+            const QString decoded = TEncodingHelper::decode(upper, name);
+            // went through a table, not the Latin-1 fallthrough
+            QVERIFY2(decoded != QString::fromLatin1(upper), name.constData());
+            QCOMPARE(TEncodingHelper::decode(upper, prefixed), decoded);
+            QCOMPARE(TEncodingHelper::encode(decoded, prefixed), TEncodingHelper::encode(decoded, name));
+            QCOMPARE(TEncodingHelper::canEncode(decoded, prefixed), TEncodingHelper::canEncode(decoded, name));
+            QVERIFY2(TEncodingHelper::isEncodingAvailable(prefixed), prefixed.constData());
+        }
+    }
+
+    // Every byte a code page defines has to come back as itself after decoding
+    // and encoding, which also proves no two bytes share a code point.
+    void roundTrip_ownCodePages_everyDefinedByte()
+    {
+        for (const QByteArray& name : csmOwnCodePages) {
+            for (int byte = 0x80; byte <= 0xFF; ++byte) {
+                const QByteArray original(1, static_cast<char>(byte));
+                const QString character = TEncodingHelper::decode(original, name);
+                if (character == QString(QChar(0xFFFD))) {
+                    continue;
+                }
+                QVERIFY2(TEncodingHelper::encode(character, name) == original, (name + " 0x" + QByteArray::number(byte, 16)).constData());
+            }
+        }
     }
 };
 

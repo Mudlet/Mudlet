@@ -30,7 +30,7 @@ local subsystems = {
   }},
   {name = "Telnet + MXP + MMCP + GMCP", patterns = {
     "^ctelnet", "^MMCP", "^TMxp", "^MxpTag", "^GMCPAuthenticator", "^TEntity",
-    "^TTextCodec", "^TEncoding",
+    "^TEncoding",
   }},
   {name = "Text pipeline (TBuffer/TConsole/TTextEdit)", patterns = {
     "^TBuffer", "^TConsole", "^TMainConsole", "^TTextEdit", "^TCommandLine", "^TLinkStore",

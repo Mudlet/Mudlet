@@ -23,39 +23,12 @@
 
 
 #include "TEncodingTable.h"
-#include "TEncodingHelper.h"
-#include "TTextCodec.h"
 
 const TEncodingTable TEncodingTable::csmDefaultInstance = TEncodingTable(csmEncodings);
 
 QList<QByteArray> TEncodingTable::getEncodingNames() const
 {
-    static QByteArrayList results;
-    if (results.isEmpty()) {
-        // First call, list is empty - so work them out, just this once:
-        results = QByteArrayList{mEncodingMap.keys()};
-
-        QMutableByteArrayListIterator itEncoding(results);
-        while (itEncoding.hasNext()) {
-            const QByteArray encoding{itEncoding.next()};
-            if (!TEncodingHelper::isEncodingAvailable(encoding)) {
-                // We do not have that encoder available after all
-                itEncoding.remove();
-                if (encoding == "CP437") {
-                    itEncoding.insert(TTextCodec_437::name());
-                } else if (encoding == "CP667") {
-                    itEncoding.insert(TTextCodec_667::name());
-                } else if (encoding == "CP737") {
-                    itEncoding.insert(TTextCodec_737::name());
-                } else if (encoding == "CP869") {
-                    itEncoding.insert(TTextCodec_869::name());
-                } else if (encoding == "MEDIEVIA") {
-                    itEncoding.insert(TTextCodec_medievia::name());
-                }
-            }
-        }
-    }
-    return results;
+    return mEncodingMap.keys();
 }
 
 const QVector<QChar>& TEncodingTable::getLookupTable(const QByteArray& encoding) const
@@ -339,7 +312,7 @@ const QMap<QByteArray, QVector<QChar>> TEncodingTable::csmEncodings = {
           QChar(0x00E8), QChar(0x00E9), QChar(0x00EA), QChar(0x00EB), QChar(0x00EC), QChar(0x00ED), QChar(0x00EE), QChar(0x00EF),  // E8-EF
           QChar(0x0111), QChar(0x0144), QChar(0x00F2), QChar(0x00F3), QChar(0x00F4), QChar(0x0151), QChar(0x00F6), QChar(0x015B),  // F0=F7
           QChar(0x0171), QChar(0x00F9), QChar(0x00FA), QChar(0x00FB), QChar(0x00FC), QChar(0x0119), QChar(0x021B), QChar(0x00FF)}},// F8-FF
-        {"CP437", // Our alternative is M_CP437
+        {"CP437",
           //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
          {QChar(0x00C7), QChar(0x00FC), QChar(0x00E9), QChar(0x00E2), QChar(0x00E4), QChar(0x00E0), QChar(0x00E5), QChar(0x00E7),  // 80-87
           QChar(0x00EA), QChar(0x00EB), QChar(0x00E8), QChar(0x00EF), QChar(0x00EE), QChar(0x00EC), QChar(0x00C4), QChar(0x00C5),  // 88-8F
@@ -357,7 +330,7 @@ const QMap<QByteArray, QVector<QChar>> TEncodingTable::csmEncodings = {
           QChar(0x03A6), QChar(0x0398), QChar(0x03A9), QChar(0x03B4), QChar(0x221E), QChar(0x03C6), QChar(0x03B5), QChar(0x2229),  // E8-EF
           QChar(0x2261), QChar(0x00B1), QChar(0x2265), QChar(0x2264), QChar(0x2320), QChar(0x2321), QChar(0x00F7), QChar(0x2248),  // F0=F7
           QChar(0x00B0), QChar(0x2219), QChar(0x00B7), QChar(0x221A), QChar(0x207F), QChar(0x00B2), QChar(0x25A0), QChar(0x00A0)}},// F8-FF
-        {"CP667", // Our alternative is M_CP667
+        {"CP667",
           //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
          {QChar(0x00C7), QChar(0x00FC), QChar(0x00E9), QChar(0x00E2), QChar(0x00E4), QChar(0x00E0), QChar(0x0105), QChar(0x00E7),  // 80-87
           QChar(0x00EA), QChar(0x00EB), QChar(0x00E8), QChar(0x00EF), QChar(0x00EE), QChar(0x0107), QChar(0x00C4), QChar(0x0104),  // 88-8F
@@ -375,7 +348,7 @@ const QMap<QByteArray, QVector<QChar>> TEncodingTable::csmEncodings = {
           QChar(0x03A6), QChar(0x0398), QChar(0x03A9), QChar(0x03B4), QChar(0x221E), QChar(0x03C6), QChar(0x03B5), QChar(0x2229),  // E8-EF
           QChar(0x2261), QChar(0x00B1), QChar(0x2265), QChar(0x2264), QChar(0x2320), QChar(0x2321), QChar(0x00F7), QChar(0x2248),  // F0=F7
           QChar(0x00B0), QChar(0x2219), QChar(0x00B7), QChar(0x221A), QChar(0x207F), QChar(0x00B2), QChar(0x25A0), QChar(0x00A0)}},// F8-FF
-        {"CP737", // Our alternative is M_CP737
+        {"CP737",
           //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
          {QChar(0x0391), QChar(0x0392), QChar(0x0393), QChar(0x0394), QChar(0x0395), QChar(0x0396), QChar(0x0397), QChar(0x0398),  // 80-87
           QChar(0x0399), QChar(0x039A), QChar(0x039B), QChar(0x039C), QChar(0x039D), QChar(0x039E), QChar(0x039F), QChar(0x03A0),  // 88-8F
@@ -429,7 +402,7 @@ const QMap<QByteArray, QVector<QChar>> TEncodingTable::csmEncodings = {
           QChar(0x0448), QChar(0x0449), QChar(0x044A), QChar(0x044B), QChar(0x044C), QChar(0x044D), QChar(0x044E), QChar(0x044F),  // E8-EF
           QChar(0x0401), QChar(0x0451), QChar(0x0404), QChar(0x0454), QChar(0x0407), QChar(0x0457), QChar(0x040E), QChar(0x045E),  // F0=F7
           QChar(0x00B0), QChar(0x2219), QChar(0x00B7), QChar(0x221A), QChar(0x2116), QChar(0x00A4), QChar(0x25A0), QChar(0x00A0)}},// F8-FF
-        {"CP869", // Our alternative is M_CP869
+        {"CP869",
           //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
          {QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0x0386), QChar(0x20AC),  // 80-87
           QChar(0x00B7), QChar(0x00AC), QChar(0x00A6), QChar(0x2018), QChar(0x2019), QChar(0x0388), QChar(0x2015), QChar(0x0389),  // 88-8F
