@@ -5165,6 +5165,97 @@ bool Host::resetBackgroundImage(const QString& name, bool fullWindow)
     return mpConsole->resetSubConsoleBackgroundImage(name);
 }
 
+bool Host::setSvgTint(const QString& name, const QColor& color)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    if (!mWindowRegistry.hasLabel(name)) {
+        return false;
+    }
+
+    return mpConsole->setLabelSvgTint(name, color);
+}
+
+bool Host::resetSvgTint(const QString& name)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    if (!mWindowRegistry.hasLabel(name)) {
+        return false;
+    }
+
+    return mpConsole->resetLabelSvgTint(name);
+}
+
+bool Host::setSvgRotation(const QString& name, double angle)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    if (!mWindowRegistry.hasLabel(name)) {
+        return false;
+    }
+
+    return mpConsole->setLabelSvgRotation(name, angle);
+}
+
+bool Host::resetSvgRotation(const QString& name)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    if (!mWindowRegistry.hasLabel(name)) {
+        return false;
+    }
+
+    return mpConsole->resetLabelSvgRotation(name);
+}
+
+bool Host::setSvgShear(const QString& name, double shearX, double shearY)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    if (!mWindowRegistry.hasLabel(name)) {
+        return false;
+    }
+
+    return mpConsole->setLabelSvgShear(name, shearX, shearY);
+}
+
+bool Host::resetSvgShear(const QString& name)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    if (!mWindowRegistry.hasLabel(name)) {
+        return false;
+    }
+
+    return mpConsole->resetLabelSvgShear(name);
+}
+
+bool Host::resetSvgTransform(const QString& name)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    if (!mWindowRegistry.hasLabel(name)) {
+        return false;
+    }
+
+    return mpConsole->resetLabelSvgTransform(name);
+}
+
 bool Host::setCommandBackgroundColor(const QString& name, int r, int g, int b, int alpha)
 {
     if (!mpConsole) {

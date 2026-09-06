@@ -42,6 +42,7 @@
 #include "TDockWidget.h"
 #include "TEvent.h"
 #include "TFeatureCallout.h"
+#include "TLabel.h"
 #include "TMap.h"
 #include "TMedia.h"
 #include "TGameDetails.h"
@@ -88,6 +89,7 @@
 #include <QSplitter>
 #include <QSslConfiguration>
 #include <QStyleFactory>
+#include <QSvgRenderer>
 #include <QStyleHints>
 #include <QTableWidget>
 #include <QTextBoundaryFinder>
@@ -3845,6 +3847,16 @@ void mudlet::hideEvent(QHideEvent* event)
 
 std::optional<QSize> mudlet::getImageSize(const QString& imageLocation)
 {
+    // QImage reads an SVG only where the qsvg image plugin is deployed, so the
+    // document's own reader answers first; anything it cannot read - a raster
+    // under a .svg name included - falls through to QImage
+    if (TLabel::svgCandidate(imageLocation)) {
+        QSvgRenderer renderer;
+        if (TLabel::loadSvg(renderer, imageLocation) && !renderer.defaultSize().isEmpty()) {
+            return renderer.defaultSize();
+        }
+    }
+
     const QImage image(imageLocation);
 
     if (image.isNull()) {
