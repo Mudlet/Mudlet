@@ -89,7 +89,6 @@
 #include <QCollator>
 #include <QCoreApplication>
 #include <QDesktopServices>
-#include <QFileDialog>
 #include <QFileInfo>
 #include <QMovie>
 #include <QVector>
@@ -927,38 +926,6 @@ int TLuaInterpreter::getScript(lua_State* L)
     lua_pushnumber(L, -1);
     lua_pushstring(L, qsl("script \"%1\" at position %2 not found").arg(name, QString::number(pos)).toUtf8().constData());
     return 2;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#invokeFileDialog
-int TLuaInterpreter::invokeFileDialog(lua_State* L)
-{
-    const int n = lua_gettop(L);
-    if (!checkBoolArg(L, __func__, 1, "fileOrFolder") || !checkStringArg(L, __func__, 2, "dialogTitle") || (n > 2 && !checkStringArg(L, __func__, 3, "dialogLocation"))) {
-        return lua_error(L);
-    }
-
-    Host& host = getHostFromLua(L);
-    QString location = mudlet::getMudletPath(enums::profileHomePath, host.getName());
-    const bool luaDir = lua_toboolean(L, 1);
-    const QString title{lua_tostring(L, 2)};
-
-    if (n > 2) {
-        const QString target{lua_tostring(L, 3)};
-        const QDir dir(target);
-
-        if (dir.exists()) {
-            location = target;
-        }
-    }
-
-    if (!luaDir) {
-        const QString fileName = QFileDialog::getExistingDirectory(nullptr, title, location);
-        lua_pushstring(L, fileName.toUtf8().constData());
-        return 1;
-    }
-    const QString fileName = QFileDialog::getOpenFileName(nullptr, title, location);
-    lua_pushstring(L, fileName.toUtf8().constData());
-    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#isActive
