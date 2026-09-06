@@ -913,6 +913,61 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           assert.is_true(contains(contents, getProfileName()), "the HTML log title does not name the profile")
           assert.is_true(contains(contents, "mudlet-spec-html-logged-line"), "the console output did not reach the HTML log")
         end)
+
+        it("marks the text up with the colours and attributes it carries", function()
+          local logPath
+          local htmlLogging = getConfig("logInHTML")
+          finally(function()
+            startLogging(false)
+            setConfig("logInHTML", htmlLogging)
+            if logPath then
+              os.remove(logPath)
+            end
+          end)
+          setConfig("logInHTML", true)
+
+          logPath = select(3, startLogging(true))
+
+          feedTelnet("\27[0m\27[30;47mSpecHtmlPlain\27[0m\n")
+          feedTelnet("\27[0m\27[7;30;47mSpecHtmlReverse\27[0m\n")
+          feedTelnet("\27[0m\27[1;3mSpecHtmlBoldItalic\27[0m\n")
+          feedTelnet("\27[0m\27[4;9;53mSpecHtmlDecorated\27[0m\n")
+          echo("SpecHtmlAngles a<b>c\n")
+          -- a received line is only written once the next one commits
+          feedTelnet("SpecHtmlFlush\n")
+          startLogging(false)
+
+          local contents = readFile(logPath)
+          assert.is_string(contents, "the HTML log file that was closed is not readable")
+
+          -- the style of the span that the marker's own text sits in
+          local function styleOf(marker)
+            local at = contents:find(marker, 1, true)
+            assert.is_truthy(at, marker .. " never reached the HTML log")
+            return contents:sub(1, at - 1):match(".*<span([^>]*)>")
+          end
+
+          local function coloursOf(style)
+            local fr, fg, fb, br, bg, bb = style:match("color: rgb%((%d+),(%d+),(%d+)%); background: rgb%((%d+),(%d+),(%d+)%)")
+            assert.is_truthy(fr, "no foreground and background pair in " .. tostring(style))
+            return table.concat({fr, fg, fb}, ","), table.concat({br, bg, bb}, ",")
+          end
+
+          local plainFg, plainBg = coloursOf(styleOf("SpecHtmlPlain"))
+          local reverseFg, reverseBg = coloursOf(styleOf("SpecHtmlReverse"))
+          assert.are_not.equal(plainFg, plainBg, "the precondition failed - this needs two different colours to tell a swap from a no-op")
+          assert.equal(plainBg, reverseFg, "the reverse attribute did not put the background colour in front")
+          assert.equal(plainFg, reverseBg, "the reverse attribute did not put the foreground colour behind")
+
+          local boldItalic = styleOf("SpecHtmlBoldItalic")
+          assert.is_true(contains(boldItalic, "font-weight: bold;"), boldItalic)
+          assert.is_true(contains(boldItalic, "font-style: italic;"), boldItalic)
+
+          local decorated = styleOf("SpecHtmlDecorated")
+          assert.is_true(contains(decorated, "text-decoration: underline line-through overline;"), decorated)
+
+          assert.is_true(contains(contents, "SpecHtmlAngles a&lt;b&gt;c"), "the angle brackets in the logged text were not escaped")
+        end)
       end)
 
       -- A received line is held back from the log until the next one commits.
@@ -1350,8 +1405,30 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         return string.char(math.floor(value / 16777216) % 256, math.floor(value / 65536) % 256, math.floor(value / 256) % 256, value % 256)
       end
 
+      -- one record: the delay in milliseconds before it, the number of bytes
+      -- in it, and then those bytes
+      local function chunk(delay, payload)
+        return bigEndian32(delay) .. bigEndian32(#payload) .. payload
+      end
+
+      -- the shape PR #4400 wrote for a while, where the delay took eight bytes
+      -- instead of four - Mudlet still reads it
+      local function wideChunk(delay, payload)
+        return string.rep("\0", 4) .. chunk(delay, payload)
+      end
+
       local function writeReplay(path, payload)
-        writeFile(path, bigEndian32(0) .. bigEndian32(#payload) .. payload)
+        writeFile(path, chunk(0, payload))
+      end
+
+      local function playedBack(mark, marker)
+        for _ = 1, 40 do
+          pumpEvents(50)
+          if contains(textFrom(mark), marker) then
+            return true
+          end
+        end
+        return false
       end
 
       it("raises a Lua error when called with no arguments", function()
@@ -1392,17 +1469,77 @@ describe("Tests C++ functions in the Miscallaneous category", function()
 
         assert.is_true(loadReplay(replay))
 
-        local arrived = false
-        for _ = 1, 40 do
-          pumpEvents(50)
-          arrived = contains(textFrom(mark), "mudlet-spec-replayed-line")
-          if arrived then
-            break
-          end
-        end
-        assert.is_true(arrived, "the replay did not reach the console")
+        assert.is_true(playedBack(mark, "mudlet-spec-replayed-line"), "the replay did not reach the console")
         -- whether a replay is running is application-wide, so let this one run
         -- out before the next spec asks for one
+        pumpEvents(200)
+      end)
+
+      it("plays back a replay written with the eight byte delay", function()
+        if not testMode then
+          pending("letting the replay timer run needs MUDLET_TEST_MODE")
+          return
+        end
+        local replay = getMudletHomeDir() .. "/mudlet-spec-wide-replay.dat"
+        finally(function() os.remove(replay) end)
+        writeFile(replay, wideChunk(10, "mudlet-spec-wide-replay-line\r\n"))
+        local mark = getLastLineNumber("main")
+
+        assert.is_true(loadReplay(replay))
+
+        assert.is_true(playedBack(mark, "mudlet-spec-wide-replay-line"), "the replay did not reach the console")
+        pumpEvents(200)
+      end)
+
+      it("acts on telnet negotiation that was recorded with the text", function()
+        if not testMode then
+          pending("letting the replay timer run needs MUDLET_TEST_MODE")
+          return
+        end
+        local replay = getMudletHomeDir() .. "/mudlet-spec-gmcp-replay.dat"
+        -- the gmcp table is the profile's, so whatever was under this key before
+        -- goes back afterwards
+        local previousReplay = gmcp.Replay
+        gmcp.Replay = nil
+        finally(function()
+          os.remove(replay)
+          gmcp.Replay = previousReplay
+        end)
+        -- IAC SB <GMCP> ... IAC SE, which only the telnet state machine can pick
+        -- out of the stream - played back as text it would just be printed
+        writeFile(replay, chunk(10, "\255\250\201Replay.Marker {\"note\":\"seen\"}\255\240mudlet-spec-gmcp-replay-line\r\n"))
+        local mark = getLastLineNumber("main")
+
+        assert.is_true(loadReplay(replay))
+
+        assert.is_true(playedBack(mark, "mudlet-spec-gmcp-replay-line"), "the replay did not reach the console")
+        assert.is_truthy(gmcp.Replay and gmcp.Replay.Marker, "the subnegotiation recorded in the replay was played back as text instead of acted on")
+        assert.equals("seen", gmcp.Replay.Marker.note)
+        pumpEvents(200)
+      end)
+
+      it("refuses a second replay while one is still running", function()
+        if not testMode then
+          pending("letting the replay timer run needs MUDLET_TEST_MODE")
+          return
+        end
+        local first = getMudletHomeDir() .. "/mudlet-spec-first-replay.dat"
+        local second = getMudletHomeDir() .. "/mudlet-spec-second-replay.dat"
+        finally(function()
+          os.remove(first)
+          os.remove(second)
+        end)
+        writeFile(first, chunk(400, "mudlet-spec-first-replay-line\r\n"))
+        writeFile(second, chunk(10, "mudlet-spec-second-replay-line\r\n"))
+        local mark = getLastLineNumber("main")
+
+        assert.is_true(loadReplay(first))
+        local ok, err = loadReplay(second)
+
+        assert.is_nil(ok)
+        assert.is_true(contains(err, "already be in progress"), tostring(err))
+        assert.is_true(playedBack(mark, "mudlet-spec-first-replay-line"), "the replay that was accepted did not reach the console")
+        assert.is_false(contains(textFrom(mark), "mudlet-spec-second-replay-line"), "the replay that was refused played anyway")
         pumpEvents(200)
       end)
     end)
@@ -1702,6 +1839,167 @@ describe("Tests C++ functions in the Miscallaneous category", function()
 
         assert.is_true(enableTrigger(parentGroup))
         assert.is_true(isAncestorsActive(childId, "trigger"))
+      end)
+    end)
+
+    describe("Tests the functionality of ancestors", function()
+      -- Nesting needs permanent items, which Lua cannot delete again, so each
+      -- item type gets one group and one child, built on first use and shared
+      -- by the specs below.
+      local nestedItems = {}
+
+      local createChild = {
+        timer = function(name, parent) return permTimer(name, parent, 0, "") end,
+        alias = function(name, parent) return permAlias(name, parent, "^mudletSpecAncestorNeverTyped$", "") end,
+        keybind = function(name, parent) return permKey(name, parent, mudlet.key.F12, "") end,
+        script = function(name, parent) return permScript(name, parent, "") end,
+      }
+      -- permGroup spells the key type "key" where ancestors() spells it "keybind"
+      local groupType = {timer = "timer", alias = "alias", keybind = "key", script = "script"}
+
+      local function nested(itemType)
+        if not nestedItems[itemType] then
+          local groupName = "mudletSpecAncestorGroup" .. itemType
+          local childName = "mudletSpecAncestorChild" .. itemType
+          -- The profile these run in is saved on exit and reused by the next
+          -- run, so a second run finds the first run's items still there. They
+          -- cannot be deleted from Lua, and creating them again just stacks up
+          -- another copy under the same name, so reuse what is already there.
+          local id = findItems(childName, itemType)[1]
+          if not id then
+            assert.is_true(permGroup(groupName, groupType[itemType]), "could not create the " .. itemType .. " group")
+            id = createChild[itemType](childName, groupName)
+          end
+          assert.is_true(type(id) == "number" and id > 0, "could not nest a " .. itemType .. " in " .. groupName)
+          nestedItems[itemType] = {id = id, group = groupName}
+        end
+        return nestedItems[itemType].id, nestedItems[itemType].group
+      end
+
+      local function assertNamesTheGroup(list, groupName)
+        assert.is_table(list)
+        assert.equals(1, #list, "expected exactly the one group the item was created in")
+        assert.equals(groupName, list[1].name)
+        assert.equals("group", list[1].node)
+        assert.is_number(list[1].id)
+        assert.is_boolean(list[1].isActive)
+      end
+
+      it("raises a Lua error when called with no arguments", function()
+        assertArgError(function() ancestors() end, "ancestors: bad argument #1 type")
+      end)
+
+      it("raises a Lua error when given no item type", function()
+        assertArgError(function() ancestors(1) end, "ancestors: bad argument #2 type")
+      end)
+
+      it("returns nil+msg for a negative item ID", function()
+        local ok, err = ancestors(-1, "alias")
+        assert.is_nil(ok)
+        assert.is_true(contains(err, "does not seem to be parseable as a positive integer"), tostring(err))
+      end)
+
+      it("returns nil+msg for an item that does not exist", function()
+        local ok, err = ancestors(9999999, "trigger")
+        assert.is_nil(ok)
+        assert.is_true(contains(err, "does not exist"), tostring(err))
+      end)
+
+      it("returns nil+msg for an item type it does not know", function()
+        local ok, err = ancestors(1, "sandwich")
+        assert.is_nil(ok)
+        assert.is_true(contains(err, "invalid item type 'sandwich' given"), tostring(err))
+      end)
+
+      it("returns an empty list for a temporary item, which has no ancestors", function()
+        local triggerId = tempTrigger("mudletSpecAncestorsTrigger", function() end)
+        local timerId = tempTimer(60, function() end)
+        finally(function()
+          killTrigger(tostring(triggerId))
+          killTimer(timerId)
+        end)
+
+        assert.same({}, ancestors(triggerId, "trigger"))
+        assert.same({}, ancestors(timerId, "timer"))
+      end)
+
+      it("names every group between a nested trigger and the top, innermost first", function()
+        -- the run-tests package (the one running these specs) is the only
+        -- hierarchy a spec can count on being there
+        local nestedTriggers = findItems("Trigger", "trigger")
+        assert.equals(1, #nestedTriggers, "expected exactly the run-tests package's nested 'Trigger'")
+        local list = ancestors(nestedTriggers[1], "trigger")
+
+        assert.is_true(#list >= 3, "expected at least the three groups the trigger is nested in, got " .. #list)
+        assert.equals("Not Filter", list[1].name)
+        assert.equals("Filter", list[2].name)
+        assert.equals("Test selectCaptureGroup with nested hierarchy", list[3].name)
+        for index, ancestor in ipairs(list) do
+          assert.is_number(ancestor.id)
+          assert.is_true(ancestor.node == "group" or ancestor.node == "package",
+            "ancestor " .. index .. " of a trigger should be a group or a package, got " .. tostring(ancestor.node))
+        end
+      end)
+
+      it("reports each ancestor's own active state, not the item's", function()
+        local nestedTriggers = findItems("Trigger", "trigger")
+        assert.equals(1, #nestedTriggers, "expected exactly the run-tests package's nested 'Trigger'")
+        local childId = nestedTriggers[1]
+        finally(function() enableTrigger("Not Filter") end)
+
+        assert.is_true(ancestors(childId, "trigger")[1].isActive)
+
+        assert.is_true(disableTrigger("Not Filter"))
+        local list = ancestors(childId, "trigger")
+        assert.is_false(list[1].isActive, "the disabled group still reported itself as active")
+        assert.is_true(list[2].isActive, "disabling one group should not touch the group above it")
+      end)
+
+      it("names the group a permanent timer sits in", function()
+        local id, groupName = nested("timer")
+        assertNamesTheGroup(ancestors(id, "timer"), groupName)
+      end)
+
+      it("names the group a permanent alias sits in", function()
+        local id, groupName = nested("alias")
+        assertNamesTheGroup(ancestors(id, "alias"), groupName)
+      end)
+
+      it("names the group a permanent keybind sits in", function()
+        local id, groupName = nested("keybind")
+        assertNamesTheGroup(ancestors(id, "keybind"), groupName)
+      end)
+
+      it("names the group a permanent script sits in", function()
+        local id, groupName = nested("script")
+        assertNamesTheGroup(ancestors(id, "script"), groupName)
+      end)
+
+      it("names the toolbar a button sits on", function()
+        local toolbar = "mudletSpecAncestorToolbar"
+        -- Lua cannot delete a toolbar again, and one left docked keeps its
+        -- share of the main window's height for the rest of the run - which is
+        -- enough to stop the window resize specs elsewhere from having room to
+        -- measure. Hiding it hands that height back.
+        finally(function() hideToolBar(toolbar) end)
+        if exists(toolbar, "button") == 0 then
+          assert.is_true(tempButtonToolbar(toolbar, 0, 0) > 0)
+        end
+        -- the toolbar and its button are saved with the profile, so a reused
+        -- profile already has both and tempButton() refuses the duplicate name
+        local buttonId = findItems("mudletSpecAncestorButton", "button")[1]
+            or tempButton(toolbar, "mudletSpecAncestorButton", 0)
+        assert.is_true(type(buttonId) == "number" and buttonId > 0, "could not put a button on " .. toolbar)
+
+        assertNamesTheGroup(ancestors(buttonId, "button"), toolbar)
+      end)
+
+      it("is case insensitive about the item type", function()
+        local id, groupName = nested("timer")
+        -- the group is named again here rather than only comparing the two
+        -- calls: two empty lists match each other just as well
+        assertNamesTheGroup(ancestors(id, "TIMER"), groupName)
+        assert.same(ancestors(id, "timer"), ancestors(id, "TIMER"))
       end)
     end)
 

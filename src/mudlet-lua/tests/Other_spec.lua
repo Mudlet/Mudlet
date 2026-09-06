@@ -412,6 +412,62 @@ describe("Tests Other.lua functions", function()
     end)
   end)
 
+  describe("Tests the functionality of getMudletVersion", function()
+
+    it("answers each documented style with the piece of the version it names", function()
+      local version = getMudletVersion()
+      assert.are.equal(version.major, getMudletVersion("major"))
+      assert.are.equal(version.minor, getMudletVersion("minor"))
+      assert.are.equal(version.revision, getMudletVersion("revision"))
+      -- a development build appends its own suffix, so the version is what the
+      -- string starts with rather than all of it
+      local numbers = ("%d.%d.%d"):format(version.major, version.minor, version.revision)
+      assert.are.equal(numbers, getMudletVersion("string"):sub(1, #numbers))
+    end)
+
+    -- the four-value form is what a script unpacks in one go, so the count and
+    -- the order of the returns are as much a contract as the numbers
+    it("returns the four parts in order when asked for a table", function()
+      local version = getMudletVersion()
+      -- a release build reports no suffix as a nil fourth value rather than by
+      -- returning three, so the count is checked before the values are unpacked
+      assert.are.equal(4, select("#", getMudletVersion("table")))
+      local major, minor, revision, build = getMudletVersion("table")
+      assert.are.equal(version.major, major)
+      assert.are.equal(version.minor, minor)
+      assert.are.equal(version.revision, revision)
+      -- a release build has no suffix, and nil is how that is reported
+      if build ~= nil then
+        assert.are.equal(build, getMudletVersion("build"))
+      end
+    end)
+
+    it("reads the style however it is cased and spaced", function()
+      assert.are.equal(getMudletVersion("major"), getMudletVersion("  MAJOR  "))
+    end)
+
+    -- the two refusals are worded differently on purpose: one is "that is not a
+    -- style", the other is "you passed too many arguments", and collapsing them
+    -- would leave the second mistake looking like the first
+    it("lists the styles it has when refusing one it does not", function()
+      local ok, err = pcall(getMudletVersion, "patch")
+      assert.is_false(ok)
+      for _, style in ipairs({"major", "minor", "revision", "build", "string", "table"}) do
+        assert.is_true(err:find(style, 1, true) ~= nil, style .. " was left out of: " .. tostring(err))
+      end
+      assert.is_true(err:find("takes one (optional) argument", 1, true) ~= nil, tostring(err))
+      -- "only takes one" contains "takes one", so the wording of the other
+      -- refusal has to be ruled out for this to mean anything
+      assert.is_nil(err:find("only takes one", 1, true), "an unknown style was reported as too many arguments: " .. tostring(err))
+    end)
+
+    it("says so separately when given more than the one argument it takes", function()
+      local ok, err = pcall(getMudletVersion, "major", "minor")
+      assert.is_false(ok)
+      assert.is_true(err:find("only takes one (optional) argument", 1, true) ~= nil, tostring(err))
+    end)
+  end)
+
   describe("Tests the functionality of mudletOlderThan", function()
     it("tests the comparisons", function()
       local versionTable = getMudletVersion()
@@ -734,6 +790,12 @@ describe("Tests Other.lua functions", function()
         assert.is_boolean(t.negative)
       end)
 
+      it("returns nil and a message for an unknown id", function()
+        local ok, err = getStopWatchBrokenDownTime(444444)
+        assert.is_nil(ok)
+        assert.is_string(err)
+      end)
+
       it("flags negative elapsed time with the negative field", function()
         local id = track(createStopWatch(false))
         adjustStopWatch(id, -90) -- one minute thirty seconds in the past
@@ -759,6 +821,101 @@ describe("Tests Other.lua functions", function()
         local ok, err = deleteStopWatch(555555)
         assert.is_nil(ok)
         assert.is_string(err)
+      end)
+    end)
+
+    -- Every one of these takes a name where the tests above pass an id, which
+    -- is a separate lookup in Host: an id goes straight to the stopwatch, while
+    -- a name has to be resolved to one first.
+    describe("naming a stopwatch instead of giving its id", function()
+      it("startStopWatch and stopStopWatch both take a name", function()
+        local id = track(createStopWatch("stopwatchSpecByNameRun"))
+        assert.is_true(startStopWatch("stopwatchSpecByNameRun"))
+        assert.is_true(getStopWatches()[id].isRunning)
+        adjustStopWatch(id, 6)
+
+        assertClose(6, stopStopWatch("stopwatchSpecByNameRun"))
+        assert.is_false(getStopWatches()[id].isRunning)
+      end)
+
+      it("setStopWatchName renames the stopwatch that currently has that name", function()
+        local id = track(createStopWatch("stopwatchSpecOldName"))
+
+        assert.is_true(setStopWatchName("stopwatchSpecOldName", "stopwatchSpecNewName"))
+
+        assert.equals("stopwatchSpecNewName", getStopWatches()[id].name)
+        local ok, err = getStopWatchTime("stopwatchSpecOldName")
+        assert.is_nil(ok, "the stopwatch still answers to the name it was renamed away from")
+        assert.is_string(err)
+      end)
+
+      it("getStopWatchBrokenDownTime takes a name", function()
+        local id = track(createStopWatch("stopwatchSpecBrokenDownByName"))
+        adjustStopWatch(id, 2 * 60 + 5)
+
+        local elapsed = getStopWatchBrokenDownTime("stopwatchSpecBrokenDownByName")
+
+        assert.equals(2, elapsed.minutes)
+        assert.equals(5, elapsed.seconds)
+      end)
+
+      it("says which name it could not find", function()
+        local ok, err = startStopWatch("stopwatchSpecNoSuchWatch")
+        assert.is_nil(ok)
+        assert.is_truthy(err:find("stopwatchSpecNoSuchWatch", 1, true), err)
+
+        ok, err = stopStopWatch("stopwatchSpecNoSuchWatch")
+        assert.is_nil(ok)
+        assert.is_truthy(err:find("stopwatchSpecNoSuchWatch", 1, true), err)
+
+        ok, err = setStopWatchName("stopwatchSpecNoSuchWatch", "stopwatchSpecIrrelevant")
+        assert.is_nil(ok)
+        assert.is_truthy(err:find("stopwatchSpecNoSuchWatch", 1, true), err)
+      end)
+    end)
+
+    describe("starting a stopwatch that is already running", function()
+      -- startStopWatch(id) resets the stopwatch back to zero first, which is
+      -- what it has always done; passing false asks for the elapsed time so far
+      -- to be kept, and then starting one that is already running is refused
+      it("keeps the elapsed time when asked not to reset", function()
+        local id = track(createStopWatch(false))
+        adjustStopWatch(id, 20)
+
+        assert.is_true(startStopWatch(id, false))
+
+        assertClose(20, getStopWatchTime(id))
+        stopStopWatch(id)
+      end)
+
+      it("throws the elapsed time away when not asked to keep it", function()
+        local id = track(createStopWatch(false))
+        adjustStopWatch(id, 20)
+
+        assert.is_true(startStopWatch(id))
+
+        assertClose(0, getStopWatchTime(id))
+        stopStopWatch(id)
+      end)
+
+      it("refuses a second start that would keep the elapsed time", function()
+        local id = track(createStopWatch(false))
+        assert.is_true(startStopWatch(id, false))
+        finally(function() stopStopWatch(id) end)
+
+        local ok, err = startStopWatch(id, false)
+
+        assert.is_nil(ok)
+        assert.is_truthy(err:find("already running", 1, true), err)
+      end)
+
+      it("refuses to stop one that is already stopped", function()
+        local id = track(createStopWatch("stopwatchSpecAlreadyStopped"))
+
+        local ok, err = stopStopWatch("stopwatchSpecAlreadyStopped")
+
+        assert.is_nil(ok)
+        assert.is_truthy(err:find("already stopped", 1, true), err)
       end)
     end)
 
@@ -1080,6 +1237,236 @@ describe("Tests Other.lua functions", function()
       assert.is_table(result)
       assert.equals(getConfig("enableGMCP"), result.enableGMCP)
       assert.equals(getConfig("editorAutoComplete"), result.editorAutoComplete)
+    end)
+
+    -- The modern key and the negotiation-off key it replaced are two spellings
+    -- of one flag, so a script written against either has to see what the other
+    -- one did. getConfig() with no arguments does not list the modern spellings,
+    -- so the generic round-trip loop above never reaches them.
+    it("keeps enableCHARSET the exact inverse of specialForceCharsetNegotiationOff", function()
+      snapshot("enableCHARSET")
+      assert.is_boolean(getConfig("enableCHARSET"))
+
+      assert.is_true(setConfig("enableCHARSET", true))
+      assert.is_true(getConfig("enableCHARSET"))
+      assert.is_false(getConfig("specialForceCharsetNegotiationOff"))
+
+      assert.is_true(setConfig("specialForceCharsetNegotiationOff", true))
+      assert.is_false(getConfig("enableCHARSET"))
+
+      restore("enableCHARSET")
+    end)
+
+    it("keeps enableNEWENVIRON the exact inverse of forceNewEnvironNegotiationOff", function()
+      snapshot("enableNEWENVIRON")
+      assert.is_boolean(getConfig("enableNEWENVIRON"))
+
+      assert.is_true(setConfig("enableNEWENVIRON", true))
+      assert.is_true(getConfig("enableNEWENVIRON"))
+      assert.is_false(getConfig("forceNewEnvironNegotiationOff"))
+
+      assert.is_true(setConfig("forceNewEnvironNegotiationOff", true))
+      assert.is_false(getConfig("enableNEWENVIRON"))
+
+      restore("enableNEWENVIRON")
+    end)
+
+    it("takes showSentText as a boolean, which is the legacy spelling of two of the modes", function()
+      local original = getConfig("showSentText", true)
+      originalValues.showSentText = original
+
+      assert.is_true(setConfig("showSentText", false))
+      assert.equals("never", getConfig("showSentText", true))
+
+      assert.is_true(setConfig("showSentText", true))
+      assert.equals("script", getConfig("showSentText", true))
+
+      setConfig("showSentText", original)
+      originalValues.showSentText = nil
+    end)
+
+    it("refuses a showSentText mode it does not have, and leaves the mode alone", function()
+      -- if a refusal turns out to have applied the value after all, the
+      -- assertion below fails with the mode already changed, so the teardown
+      -- safety net has to know the string form of what it was
+      local original = getConfig("showSentText", true)
+      originalValues.showSentText = original
+
+      local ok, err = setConfig("showSentText", "sometimes")
+      assert.is_nil(ok)
+      assert.is_string(err)
+      assert.equals(original, getConfig("showSentText", true), "a rejected mode was applied anyway")
+
+      -- neither a boolean nor a string is not a mode at all
+      local okType, errType = setConfig("showSentText", 42)
+      assert.is_nil(okType)
+      assert.is_string(errType)
+      assert.equals(original, getConfig("showSentText", true))
+      originalValues.showSentText = nil
+    end)
+
+    -- Each of these keys refuses a value outside its own set. The refusal has to
+    -- carry the set, because that list is the only place a script author can
+    -- read what the key accepts.
+    it("lists what it accepts when refusing a string enum, and changes nothing", function()
+      local enums = {
+        blankLinesBehaviour = {"replacewithspace", "sideways"},
+        controlCharacterHandling = {"picture", "sideways"},
+        ambiguousEAsianWidthCharacters = {"narrow", "sideways"},
+      }
+      for key, pair in pairs(enums) do
+        local expectedInMessage, rejected = pair[1], pair[2]
+        snapshot(key)
+        local before = getConfig(key)
+        local ok, err = setConfig(key, rejected)
+        assert.is_nil(ok, key .. " accepted '" .. rejected .. "'")
+        assert.is_string(err)
+        assert.is_truthy(err:find(expectedInMessage, 1, true),
+          key .. " did not say it accepts '" .. expectedInMessage .. "', got: " .. tostring(err))
+        assert.equals(before, getConfig(key), key .. " was changed by a rejected value")
+        restore(key)
+      end
+    end)
+
+    -- the refusals for blankLinesBehaviour and controlCharacterHandling name
+    -- caretShortcut and commandLineHistorySaveSize instead of the key that was
+    -- actually rejected (#10391)
+    pending("names the key it rejected in every string enum refusal")
+
+    describe("experiment keys", function()
+      -- The two rendering experiments are a group, of which at most one may be
+      -- on. An experiment is written to the profile, so whichever one the group
+      -- arrived with is put back rather than the group being left switched off.
+      local group = "experiment.rendering"
+      local first = group .. ".originalish"
+      local second = group .. ".more-transparent"
+
+      local function allOff()
+        setConfig(first, false)
+        setConfig(second, false)
+      end
+
+      local function restoreGroup()
+        local wasActive = getConfig(group .. ".active")
+        return function()
+          allOff()
+          if wasActive then
+            setConfig(group .. "." .. wasActive, true)
+          end
+        end
+      end
+
+      it("lists the experiments this build knows", function()
+        local list = getConfig("experiment.list")
+        assert.is_table(list)
+        assert.is_true(#list > 0, "no experiments were listed")
+        local names = {}
+        for _, name in ipairs(list) do names[name] = true end
+        assert.is_true(names[first], first .. " was not listed")
+        assert.is_true(names[second], second .. " was not listed")
+      end)
+
+      it("reports an unknown experiment as off rather than refusing to read it", function()
+        assert.is_false(getConfig("experiment.no.such.thing"))
+      end)
+
+      it("refuses to enable an experiment that is not on the list", function()
+        local ok, err = setConfig("experiment.no.such.thing", true)
+        assert.is_nil(ok)
+        assert.is_true(err:find("experiment.no.such.thing", 1, true) ~= nil, tostring(err))
+        assert.is_false(getConfig("experiment.no.such.thing"))
+      end)
+
+      it("lets at most one experiment in a group be active at a time", function()
+        finally(restoreGroup())
+        allOff()
+        assert.is_nil(getConfig(group .. ".active"), "the group started with something active")
+
+        assert.is_true(setConfig(first, true))
+        assert.is_true(getConfig(first))
+        assert.equals("originalish", getConfig(group .. ".active"))
+
+        -- turning the sibling on has to turn this one off, or two mutually
+        -- exclusive renderers are both live
+        assert.is_true(setConfig(second, true))
+        assert.is_false(getConfig(first), "the group let two experiments run at once")
+        assert.equals("more-transparent", getConfig(group .. ".active"))
+
+        assert.is_true(setConfig(second, false))
+        assert.is_nil(getConfig(group .. ".active"))
+      end)
+    end)
+
+    describe("IRC keys", function()
+      -- These are stored in the profile rather than on the Host, and are the
+      -- only config keys that read back through dlgIRC.
+      local ircKeys = {"ircHostName", "ircHostPort", "ircHostSecure", "ircChannels", "ircNickName"}
+
+      local function snapshotIrc()
+        local saved = {}
+        for _, key in ipairs(ircKeys) do
+          saved[key] = getConfig(key)
+        end
+        return function()
+          for _, key in ipairs(ircKeys) do
+            setConfig(key, saved[key])
+          end
+        end
+      end
+
+      it("answers every IRC key with the documented type", function()
+        assert.is_string(getConfig("ircHostName"))
+        assert.is_number(getConfig("ircHostPort"))
+        assert.is_boolean(getConfig("ircHostSecure"))
+        assert.is_string(getConfig("ircChannels"))
+        assert.is_string(getConfig("ircNickName"))
+      end)
+
+      it("round-trips the IRC connection settings", function()
+        finally(snapshotIrc())
+
+        assert.is_true(setConfig("ircHostName", "irc.mudlet-spec.invalid"))
+        assert.equals("irc.mudlet-spec.invalid", getConfig("ircHostName"))
+
+        assert.is_true(setConfig("ircHostPort", 6697))
+        assert.equals(6697, getConfig("ircHostPort"))
+
+        assert.is_true(setConfig("ircHostSecure", true))
+        assert.is_true(getConfig("ircHostSecure"))
+        assert.is_true(setConfig("ircHostSecure", false))
+        assert.is_false(getConfig("ircHostSecure"))
+
+        assert.is_true(setConfig("ircNickName", "MudletSpecNick"))
+        assert.equals("MudletSpecNick", getConfig("ircNickName"))
+      end)
+
+      -- Channels go in as one space separated string and come back joined the
+      -- same way, so a script can hand back what it read
+      it("round-trips a space separated channel list", function()
+        finally(snapshotIrc())
+
+        assert.is_true(setConfig("ircChannels", "#mudlet #mudlet-spec"))
+        assert.equals("#mudlet #mudlet-spec", getConfig("ircChannels"))
+      end)
+
+      -- An unusable port would strand the IRC client on a connect attempt it
+      -- can never make, so the reader falls back rather than handing it out
+      it("reads back the default port when the stored one is out of range", function()
+        finally(snapshotIrc())
+
+        assert.is_true(setConfig("ircHostPort", 6697))
+        assert.equals(6697, getConfig("ircHostPort"))
+
+        -- the writer takes any integer today; whether it starts refusing this
+        -- one is not what is being pinned, only that the reader never answers
+        -- with a port nothing can connect to
+        local stored = setConfig("ircHostPort", 70000)
+        local fallback = getConfig("ircHostPort")
+        assert.is_true(fallback >= 1 and fallback <= 65535, "an unusable port was handed out: " .. tostring(fallback))
+        if stored then
+          assert.are_not.equals(6697, fallback, "the stored port was left in place rather than replaced by the default")
+        end
+      end)
     end)
   end)
 
