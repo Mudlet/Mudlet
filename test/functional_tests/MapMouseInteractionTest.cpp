@@ -2546,6 +2546,23 @@ private slots:
         QCOMPARE(map()->mpRoomDB->getAreaNamesMap().size(), 3);
     }
 
+    void test_cancellingTheCreatePromptLeavesTheAreasAlone()
+    {
+        showMapWithAnotherArea();
+        QVERIFY(openConfigureAreas());
+        const QStringList before = configuredAreas();
+        const int dropdownCountBefore = map()->mpMapper->comboBox_showArea->count();
+
+        QVERIFY(pressAndName(qsl("Create"), QString()));
+
+        QVERIFY(mLastWarningTitle.isEmpty());
+        QCOMPARE(configuredAreas(), before);
+        QCOMPARE(configuredAreaSelected(), mouseAreaRow());
+        QCOMPARE(map()->mpRoomDB->getAreaNamesMap().size(), 3);
+        QCOMPARE(map()->mpMapper->comboBox_showArea->count(), dropdownCountBefore);
+        QCOMPARE(map()->mpMapper->comboBox_showArea->currentText(), qsl("Mouse Area"));
+    }
+
     void test_renamingTheAreaShownRenamesItInTheListAndTheDropdown()
     {
         showMapWithAnotherArea();
