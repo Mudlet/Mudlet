@@ -145,7 +145,7 @@ public:
     bool moveSubConsole(const QString& name, int x, int y);
     bool reparentWindow(const QString& windowname, const QString& name, int x, int y, bool show);
     bool pasteToSubConsole(const QString& name);
-    std::optional<QSize> subConsoleFontSize(const QString& name) const;
+    std::optional<QSize> consoleFontSize(const QString& name) const;
     bool setSubConsoleBackgroundColor(const QString& name, const QColor& color);
     bool setSubConsoleBackgroundImage(const QString& name, const QString& path, int mode);
     bool resetSubConsoleBackgroundImage(const QString& name);

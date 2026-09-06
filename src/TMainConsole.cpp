@@ -1439,14 +1439,13 @@ bool TMainConsole::pasteToSubConsole(const QString& name)
     return true;
 }
 
-std::optional<QSize> TMainConsole::subConsoleFontSize(const QString& name) const
+std::optional<QSize> TMainConsole::consoleFontSize(const QString& name) const
 {
-    auto pC = mSubConsoleMap.value(name);
+    const TConsole* pC = (name.isEmpty() || name == qsl("main")) ? this : mSubConsoleMap.value(name).data();
     if (!pC) {
         return {};
     }
 
-    Q_ASSERT_X(pC->mUpperPane, "TMainConsole::subConsoleFontSize", "located console does not have the upper pane available");
     const QFontMetrics fontMetrics(pC->mUpperPane->fontMetrics());
     return {QSize(fontMetrics.horizontalAdvance(QChar('W')), fontMetrics.height())};
 }
