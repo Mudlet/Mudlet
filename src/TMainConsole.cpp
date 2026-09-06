@@ -1595,6 +1595,9 @@ void TMainConsole::setDockWidgetStyleSheets(const QString& styleSheet)
     for (auto& pDockWidget : mDockWidgetMap) {
         pDockWidget->setStyleSheet(styleSheet);
     }
+    if (mpDockableMapWidget) {
+        mpDockableMapWidget->setStyleSheet(styleSheet);
+    }
 }
 
 void TMainConsole::setDockLayoutChanged(const QString& name)
@@ -2574,6 +2577,87 @@ bool TMainConsole::hideMapWidget()
 
     pM->hide();
     return true;
+}
+
+void TMainConsole::showMapWidget()
+{
+    mpDockableMapWidget->show();
+}
+
+dlgMapper* TMainConsole::createDockedMapper(TMap* pMap, const QString& styleSheet)
+{
+    auto* pMapper = new dlgMapper(mpDockableMapWidget, mpHost, pMap);
+    pMapper->setStyleSheet(styleSheet);
+    mpDockableMapWidget->setWidget(pMapper);
+    return pMapper;
+}
+
+dlgMapper* TMainConsole::dockedMapper() const
+{
+    if (!mpDockableMapWidget) {
+        return nullptr;
+    }
+
+    return qobject_cast<dlgMapper*>(mpDockableMapWidget->widget());
+}
+
+void TMainConsole::dockMapWidget(Qt::DockWidgetArea area)
+{
+    mudlet::self()->addDockWidget(area, mpDockableMapWidget);
+}
+
+std::pair<bool, QString> TMainConsole::placeMapWidget(const QString& area, int x, int y, int width, int height)
+{
+    auto pM = mpDockableMapWidget;
+    if (!pM) {
+        return {false, qsl("cannot create map widget. Do you already use an embedded mapper?")};
+    }
+
+    pM->show();
+    if (area.isEmpty()) {
+        return {true, QString()};
+    }
+
+    if (area == QLatin1String("f") || area == QLatin1String("floating")) {
+        if (!pM->isFloating()) {
+            // Undock a docked window
+            // Change of position or size is only possible when floating
+            pM->setFloating(true);
+        }
+        if ((x != -1) && (y != -1)) {
+            pM->move(x, y);
+        }
+        if ((width != -1) && (height != -1)) {
+            pM->resize(width, height);
+        }
+        return {true, QString()};
+    }
+
+    if (area == QLatin1String("r") || area == QLatin1String("right")) {
+        pM->setFloating(false);
+        dockMapWidget(Qt::RightDockWidgetArea);
+        return {true, QString()};
+    }
+
+    if (area == QLatin1String("l") || area == QLatin1String("left")) {
+        pM->setFloating(false);
+        dockMapWidget(Qt::LeftDockWidgetArea);
+        return {true, QString()};
+    }
+
+    if (area == QLatin1String("t") || area == QLatin1String("top")) {
+        pM->setFloating(false);
+        dockMapWidget(Qt::TopDockWidgetArea);
+        return {true, QString()};
+    }
+
+    if (area == QLatin1String("b") || area == QLatin1String("bottom")) {
+        pM->setFloating(false);
+        dockMapWidget(Qt::BottomDockWidgetArea);
+        return {true, QString()};
+    }
+
+    return {false, qsl(R"("docking option "%1" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating")").arg(area)};
 }
 
 void TMainConsole::showMapperScriptReminder()
