@@ -45,6 +45,7 @@
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "CredentialManager.h"
+#include "GMCPAuthenticator.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "ctelnet.h"
@@ -1023,6 +1024,58 @@ private slots:
                                                    && !entry.contains(qsl("token"));
                                         }),
                  "rejection should rewrite the entry as an {account, provider} resume hint with no leftover token");
+    }
+
+    void testDroppingADeadTokenRemovesTheTokenKey()
+    {
+        Host* host = connectAndNegotiate(true);
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+        QVERIFY(seedSplitSignIn(host->getName(), qsl("{\"account\": \"acct:char\", \"provider\": \"discord\", \"secure_only\": true}"), qsl("dead-token")));
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\", \"password-credentials\"]}"));
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Reconnect"), sent), "client did not replay the saved token");
+
+        mpServer->sendGmcp(qsl("Char.Login.Result {\"success\": false, \"message\": \"Reconnect token expired\"}"));
+
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return CredentialManager::retrieveCredential(host->getName(), qsl("reconnect-token")).isEmpty();
+                         },
+                         4000),
+                 "a dead token must not survive under its own key");
+        QVERIFY2(waitForStoredReconnect(host,
+                                        [](const QJsonObject& entry) {
+                                            return entry.value(qsl("provider")).toString() == qsl("discord") && !entry.contains(qsl("token"));
+                                        }),
+                 "the resume hint should remain");
+    }
+
+    void testForgettingTheSavedSignInRemovesBothKeys()
+    {
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        QVERIFY(seedSplitSignIn(host->getName(), qsl("{\"account\": \"acct:char\", \"provider\": \"discord\", \"secure_only\": false}"), qsl("forget-me")));
+
+        bool reported = false;
+        bool removed = false;
+        host->mpAuth->forgetSavedSignIn([&](bool success) {
+            reported = true;
+            removed = success;
+        });
+
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return reported;
+                         },
+                         4000),
+                 "forgetSavedSignIn never reported an outcome");
+        QVERIFY2(removed, "forgetting a saved sign-in should report success");
+        QVERIFY2(CredentialManager::retrieveCredential(host->getName(), qsl("reconnect-token")).isEmpty(), "the token key should be gone");
+        QVERIFY2(CredentialManager::retrieveCredential(host->getName(), qsl("reconnect")).isEmpty(), "the metadata key should be gone");
     }
 
     void testResumeSentWhenTokenAbsentButProviderRemembered()

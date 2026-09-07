@@ -523,20 +523,36 @@ void GMCPAuthenticator::storeResumeHint(const QString& account, const QString& p
     const QString payload = QString::fromUtf8(QJsonDocument(obj).toJson(QJsonDocument::Compact));
 
     QPointer<Host> safeHost = mpHost;
-    QPointer<CredentialManager> credentialManager = new CredentialManager();
-    credentialManager->storePassword(mpHost->getName(), qsl("reconnect"), payload, [this, safeHost, credentialManager](bool success, const QString& errorMessage) {
-        if (credentialManager) {
-            credentialManager->deleteLater();
+    // The token goes first. This function runs because the token is dead, so leaving it under its own
+    // key while the metadata is rewritten would keep a dead bearer secret on disk for the next read to
+    // replay - the exact outcome this rewrite exists to prevent.
+    QPointer<CredentialManager> tokenRemover = new CredentialManager();
+    tokenRemover->removePassword(mpHost->getName(), tokenKey(), [this, safeHost, tokenRemover, payload](bool removed, const QString& removeError) {
+        if (tokenRemover) {
+            tokenRemover->deleteLater();
         }
-        if (!success) {
-            qWarning().noquote() << "GMCP Char.Login - failed to keep the sign-in resume hint after a rejected token:" << errorMessage;
-            // The stale bearer token is still stored under the reconnect key; delete the whole entry so
-            // it cannot be replayed on a later connection. Losing the resume hint only costs the player
-            // one provider menu. Guard on the Host (which owns this authenticator) still being alive.
-            if (safeHost) {
-                discardReconnectToken();
+        if (!safeHost) {
+            return;
+        }
+        if (!removed) {
+            qWarning().noquote() << "GMCP Char.Login - failed to remove the dead saved token:" << removeError;
+            // The dead token is still stored; drop the whole entry rather than leave it replayable.
+            // Losing the resume hint only costs the player one provider menu.
+            discardReconnectToken();
+            return;
+        }
+        QPointer<CredentialManager> credentialManager = new CredentialManager();
+        credentialManager->storePassword(safeHost->getName(), metadataKey(), payload, [this, safeHost, credentialManager](bool success, const QString& errorMessage) {
+            if (credentialManager) {
+                credentialManager->deleteLater();
             }
-        }
+            if (!success) {
+                qWarning().noquote() << "GMCP Char.Login - failed to keep the sign-in resume hint after a rejected token:" << errorMessage;
+                if (safeHost) {
+                    discardReconnectToken();
+                }
+            }
+        });
     });
 }
 
@@ -547,21 +563,39 @@ void GMCPAuthenticator::forgetSavedSignIn(std::function<void(bool success)> call
 
 void GMCPAuthenticator::discardReconnectToken(std::function<void(bool success)> callback)
 {
-    QPointer<CredentialManager> credentialManager = new CredentialManager();
-    credentialManager->removePassword(mpHost->getName(), qsl("reconnect"), [credentialManager, callback = std::move(callback)](bool success, const QString& errorMessage) {
+    QPointer<Host> safeHost = mpHost;
+    // Token first: a partial failure then leaves metadata behind, which is harmless, rather than the
+    // secret, which is not.
+    QPointer<CredentialManager> tokenRemover = new CredentialManager();
+    tokenRemover->removePassword(mpHost->getName(), tokenKey(), [safeHost, tokenRemover, callback = std::move(callback)](bool tokenRemoved, const QString& tokenError) mutable {
+        if (tokenRemover) {
+            tokenRemover->deleteLater();
+        }
         // A failed removal leaves a now-invalid bearer token on disk, so make it visible rather than
         // swallowing it - the security intent of this flow is to not keep stale tokens around.
-        if (!success) {
-            qWarning().noquote() << "GMCP Char.Login - failed to remove stored reconnect token:" << errorMessage;
+        if (!tokenRemoved) {
+            qWarning().noquote() << "GMCP Char.Login - failed to remove the stored reconnect token:" << tokenError;
         }
-        if (credentialManager) {
-            credentialManager->deleteLater();
+        if (!safeHost) {
+            if (callback) {
+                callback(false);
+            }
+            return;
         }
-        // Report the real outcome so callers (e.g. the preferences UI) only claim success once the token
-        // is actually gone, rather than before the asynchronous removal has resolved.
-        if (callback) {
-            callback(success);
-        }
+        QPointer<CredentialManager> metadataRemover = new CredentialManager();
+        metadataRemover->removePassword(safeHost->getName(), metadataKey(), [metadataRemover, tokenRemoved, callback = std::move(callback)](bool success, const QString& errorMessage) {
+            if (!success) {
+                qWarning().noquote() << "GMCP Char.Login - failed to remove the stored sign-in:" << errorMessage;
+            }
+            if (metadataRemover) {
+                metadataRemover->deleteLater();
+            }
+            // Report the real outcome so callers (e.g. the preferences UI) only claim success once
+            // everything is actually gone - both keys, not just the one that answered first.
+            if (callback) {
+                callback(success && tokenRemoved);
+            }
+        });
     });
 }
 
