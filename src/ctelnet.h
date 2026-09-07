@@ -349,6 +349,11 @@ private:
     // without a real decompression bomb.
     friend class cTelnetBufferTest;
 
+    // Reads the password-mode safety timer, the connection clock and the
+    // character-at-a-time detection timer and flags, which have no public face,
+    // and fires those timers early rather than waiting them out.
+    friend class TelnetPasswordMaskTimeoutTest;
+
     // Calls reset() from its constructor. It has to be the Host that does that,
     // and not cTelnet itself, because reset() clears Host members declared after
     // cTelnet, which do not exist yet while cTelnet is being constructed.
@@ -425,6 +430,7 @@ private:
 
 private slots:
     void slot_networkLatencyBeat();
+    void slot_passwordMaskTimeout();
 
 private:
 #if !defined(QT_NO_SSL)
@@ -625,6 +631,7 @@ private:
 
     void checkCharacterModePattern();
     bool checkEchoAnomalyPattern();
+    void restartPasswordMaskTimeout();
 };
 
 #endif // MUDLET_CTELNET_H
