@@ -205,44 +205,28 @@ void TRoomDB::updateEntranceMap(TRoom* pR, bool isMapLoading)
 // this is call by TRoom destructor only
 bool TRoomDB::__removeRoom(int id)
 {
-    static QMultiHash<int, int> _entranceMap; // Make it persistent - for multiple room deletions
-    static bool isBulkDelete = false;
-    // Gets set / reset by mpTempRoomDeletionSet being non-null, used to setup
-    // _entranceMap the first time around for multi-room deletions
-
     TRoom* pR = getRoom(id);
     // This will FAIL during map deletion as TRoomDB::rooms has already been
     // zapped, so can use to skip everything...
     if (pR) {
-        if (mpTempRoomDeletionSet && mpTempRoomDeletionSet->size() > 1) { // We are deleting multiple rooms
-            if (!isBulkDelete) {
-                _entranceMap = entranceMap;
-                _entranceMap.detach(); // MUST take a deep copy of the data
-                isBulkDelete = true;   // But only do it the first time for a bulk delete
-            }
-        } else {                // We are deleting a single room
-            if (isBulkDelete) { // Last time was a bulk delete but it isn't one now
-                isBulkDelete = false;
-            }
-            _entranceMap.clear();
-            _entranceMap = entranceMap; // Refresh our local copy
-            _entranceMap.detach();      // MUST take a deep copy of the data
-        }
+        const bool isBulkDelete = mpTempRoomDeletionSet && mpTempRoomDeletionSet->size() > 1;
 
         // FIXME: make a proper exit controller so we don't need to do all these if statements
-        // Remove the links from the rooms entering this room
-        QMultiHash<int, int>::const_iterator i = _entranceMap.constFind(id);
-        // The removeAllSpecialExitsToRoom below modifies the entranceMap - and
-        // it is unsafe to modify (use copy operations on) something that an STL
-        // iterator is active on - see "Implicit sharing iterator problem" in
-        // "Container Class | Qt 5.x Core" - this is now avoid by taking a deep
-        // copy and iterating through that instead while modifying the original
-        while (i != _entranceMap.cend() && i.key() == id) {
-            if (i.value() == id || (mpTempRoomDeletionSet && mpTempRoomDeletionSet->size() > 1 && mpTempRoomDeletionSet->contains(i.value()))) {
-                ++i;
+        // Remove the links from the rooms entering this room. entranceMap.values(id)
+        // only walks this key's own bucket, not the whole map, so this list is cheap
+        // regardless of overall map size - unlike the QMultiHash-wide deep copy this
+        // used to take, which made every single-room deletion cost O(every exit on the
+        // map). The list also holds its own values rather than referencing entranceMap,
+        // so removeAllSpecialExitsToRoom()/determineAreaExitsOfRoom() below are free to
+        // mutate the live entranceMap for other rooms without disturbing this loop - see
+        // "Implicit sharing iterator problem" in "Container Class | Qt 5.x Core" for why
+        // an iterator into entranceMap itself could not have tolerated that.
+        const QList<int> enteringRoomIds = entranceMap.values(id);
+        for (const int enteringRoomId : enteringRoomIds) {
+            if (enteringRoomId == id || (isBulkDelete && mpTempRoomDeletionSet->contains(enteringRoomId))) {
                 continue; // Bypass rooms we know are also to be deleted
             }
-            TRoom* r = getRoom(i.value());
+            TRoom* r = getRoom(enteringRoomId);
             if (r) {
                 if (r->getNorth() == id) {
                     r->setNorth(-1);
@@ -287,7 +271,6 @@ bool TRoomDB::__removeRoom(int id)
                     pEnteringRoomArea->determineAreaExitsOfRoom(r->getId());
                 }
             }
-            ++i;
         }
         const int areaID = pR->getArea();
         TArea* pA = getArea(areaID);
