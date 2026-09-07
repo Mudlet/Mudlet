@@ -481,6 +481,38 @@ private slots:
         runLua(mpSecondHost, qsl("removeCommand(%1)").arg(secondId));
     }
 
+    // The one signal that survives the window being minimised or behind
+    // something else, which is exactly the case "stt focus keep" creates.
+    void test_theWindowTitleSaysWhenItsProfileHasTheMicrophone()
+    {
+        mudlet::self()->activateProfile(mpFirstHost);
+        const QString quiet = mudlet::self()->windowTitle();
+        QVERIFY2(!quiet.contains(qsl("listening")), "the title claimed a microphone before one was open");
+
+        mudlet::self()->claimMicrophoneFor(mpFirstHost);
+        QVERIFY2(mudlet::self()->windowTitle().contains(qsl("listening")), qPrintable(qsl("the title does not say the microphone is open: %1").arg(mudlet::self()->windowTitle())));
+
+        mudlet::self()->releaseMicrophone();
+        QCOMPARE(mudlet::self()->windowTitle(), quiet);
+    }
+
+    // A profile in another window holding the microphone is not this window's
+    // news, or every window would claim the one microphone at once.
+    void test_onlyTheOwningWindowsTitleIsMarked()
+    {
+        mudlet::self()->activateProfile(mpFirstHost);
+        TDetachedWindow* pWindow = detachSecondProfile();
+        QVERIFY(pWindow);
+
+        mudlet::self()->claimMicrophoneFor(mpSecondHost);
+        QVERIFY2(pWindow->windowTitle().contains(qsl("listening")), qPrintable(qsl("the detached window holding the microphone does not say so: %1").arg(pWindow->windowTitle())));
+        QVERIFY2(!mudlet::self()->windowTitle().contains(qsl("listening")), "the main window claimed a microphone belonging to a profile in another window");
+
+        mudlet::self()->releaseMicrophone();
+        mudlet::self()->slot_tabReattachRequested(mSecondHostname);
+        QTest::qWait(200ms);
+    }
+
 private:
     TDetachedWindow* detachSecondProfile()
     {

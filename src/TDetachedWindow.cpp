@@ -1384,6 +1384,20 @@ void TDetachedWindow::updateWindowTitle()
         title = tr("Mudlet (%1 profiles) - %2 (Detached)").arg(mProfileConsoleMap.size()).arg(mCurrentProfileName);
     }
 
+    // Any profile this window holds, not only the one it is showing: a window
+    // whose second tab has the microphone open is still a window with an open
+    // microphone, and its title is the only place that says so once it is behind
+    // something else.
+    if (auto pMudlet = mudlet::self()) {
+        for (const QString& profileName : mProfileConsoleMap.keys()) {
+            const QString marker = pMudlet->microphoneMarkerFor(profileName);
+            if (!marker.isEmpty()) {
+                title += marker;
+                break;
+            }
+        }
+    }
+
     setWindowTitle(title);
 }
 

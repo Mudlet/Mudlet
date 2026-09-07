@@ -58,6 +58,9 @@ public:
     int getProfileCount() const { return mProfileConsoleMap.size(); }
 
     void updateToolbarForProfile(Host* pHost);
+    // Public because mudlet refreshes every window's title when the microphone
+    // moves, and the marker it carries lives in the title
+    void updateWindowTitle();
     // The chrome add-on commands are placed into for the profile this window is
     // showing. mudlet reaches these through addonToolBarFor()/addonOptionsMenuFor().
     QToolBar* toolBar() const { return mpToolBar; }
@@ -183,7 +186,6 @@ private:
     void createMenus();
     void createToolBar();
     void connectToolBarActions();
-    void updateWindowTitle();
     void updateTabIndicator(int tabIndex = -1);                            // -1 means current tab
     void updateDockWidgetVisibilityForProfile(const QString& profileName); // Show/hide docked widgets based on active profile
     void restoreWindowGeometry();

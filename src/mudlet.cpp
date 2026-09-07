@@ -227,6 +227,7 @@ void mudlet::claimMicrophoneFor(Host* pHost)
 {
     if (!pHost || mpMicrophoneOwner == pHost) {
         mpMicrophoneOwner = pHost;
+        refreshMicrophoneMarkers();
         return;
     }
 
@@ -256,11 +257,16 @@ void mudlet::claimMicrophoneFor(Host* pHost)
     }
 
     mpMicrophoneOwner = pHost;
+    refreshMicrophoneMarkers();
 }
 
 void mudlet::releaseMicrophone()
 {
+    if (!mpMicrophoneOwner) {
+        return;
+    }
     mpMicrophoneOwner = nullptr;
+    refreshMicrophoneMarkers();
 }
 
 // Which Backend enum value corresponds to a live recognizer's concrete type.
@@ -4004,10 +4010,40 @@ void mudlet::updateMainWindowTitle()
 
     // Set window title based on whether we have an active profile in the main window
     if (!mainWindowActiveProfileName.isEmpty()) {
-        setWindowTitle(qsl("%1 - %2").arg(mainWindowActiveProfileName, scmVersion));
+        setWindowTitle(qsl("%1%2 - %3").arg(mainWindowActiveProfileName, microphoneMarkerFor(mainWindowActiveProfileName), scmVersion));
     } else {
         // No active profiles in main window, show just the version
         setWindowTitle(scmVersion);
+    }
+}
+
+// An open microphone said where the window manager will show it. Every other
+// signal Mudlet has - a button, a menu item, a pulsing icon - needs the window
+// to be on screen, and the one moment a player most needs to know a microphone
+// is open is when it is not: minimised, or behind a browser, which is exactly
+// the case "stt focus keep" is for.
+//
+// It marks the device rather than the purpose. Core knows a microphone is open
+// for this profile; what it is open *for* is the package's business, and a
+// title is no place to guess at it.
+QString mudlet::microphoneMarkerFor(const QString& profileName) const
+{
+    if (!mpMicrophoneOwner || mpMicrophoneOwner->getName() != profileName) {
+        return QString();
+    }
+    //: Added to the title of the window whose profile has the microphone open, after the profile name
+    return tr(" (listening)");
+}
+
+// Titles carry the marker, so every window has to be asked again whenever the
+// microphone changes hands - including the one that just lost it.
+void mudlet::refreshMicrophoneMarkers()
+{
+    updateMainWindowTitle();
+    for (auto it = mDetachedWindows.constBegin(); it != mDetachedWindows.constEnd(); ++it) {
+        if (it.value()) {
+            it.value()->updateWindowTitle();
+        }
     }
 }
 

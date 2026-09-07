@@ -251,6 +251,9 @@ public:
     void releaseMicrophone();
     // Which profile the microphone currently belongs to, or nullptr
     Host* microphoneOwner() const;
+    // The " (listening)" a window's title carries while this profile holds the
+    // microphone, or nothing. Public because a detached window builds its own title.
+    QString microphoneMarkerFor(const QString& profileName) const;
     const QMap<QString, QPointer<TDetachedWindow>>& getDetachedWindows() const { return mDetachedWindows; }
     QDockWidget* getMainWindowDockWidget(const QString& mapKey) const { return mMainWindowDockWidgetMap.value(mapKey); }
     std::optional<QSize> getImageSize(const QString&);
@@ -779,6 +782,7 @@ private:
     // notice needs - it goes to the profile losing the microphone, and by then
     // the owner is already the profile that took it.
     void raiseSpeechEventOn(Host* pHost, const QString& name, const QString& value);
+    void refreshMicrophoneMarkers();
     QPointer<QToolButton> mpButtonPackageManagers;
     QHBoxLayout* mpHBoxLayout_profileContainer = nullptr;
     QPointer<QLabel> mpLabelReplaySpeedDisplay;
