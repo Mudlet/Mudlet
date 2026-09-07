@@ -82,6 +82,7 @@ private:
     const QString mProfileName = qsl("MapRoomIdDigitsCache-Test");
     const QString mLocalhost = qsl("localhost");
     QString mPort;
+    QImage mLastFrame;
 
     void deleteProfileDirectory() const
     {
@@ -149,13 +150,17 @@ private:
         mpHost->mMapInfoContributors.clear();
     }
 
-    static int nonBackgroundPixels(const QImage& frame)
+    // How many pixels the room id itself puts on screen, measured as the
+    // difference between drawing with and without it.
+    static int differingPixels(const QImage& a, const QImage& b)
     {
-        const QRgb background = frame.pixel(0, 0);
+        if (a.size() != b.size()) {
+            return -1;
+        }
         int count = 0;
-        for (int y = 0; y < frame.height(); ++y) {
-            for (int x = 0; x < frame.width(); ++x) {
-                if (frame.pixel(x, y) != background) {
+        for (int y = 0; y < a.height(); ++y) {
+            for (int x = 0; x < a.width(); ++x) {
+                if (a.pixel(x, y) != b.pixel(x, y)) {
                     ++count;
                 }
             }
@@ -185,9 +190,63 @@ private:
         p2dMap->init();
         aimWidgetAtArea(p2dMap, kBigRoomId, false);
         const QImage withoutIds = renderFrame(p2dMap);
-        ok = (withIds != withoutIds);
-        qInfo().nospace() << "big-id frame: " << nonBackgroundPixels(withIds) << " lit pixels with room ids, " << nonBackgroundPixels(withoutIds) << " without";
+        const int idInk = differingPixels(withIds, withoutIds);
+        ok = (idInk > 0);
+        qInfo().nospace() << "the six digit room id puts " << idInk << " pixels on screen";
         return withIds;
+    }
+
+    void writeMapAs(int roomId, const QString& path)
+    {
+        buildMap(roomId);
+        map()->audit();
+        auto [ok, errorMessage] = map()->writeJsonMapFile(path);
+        QVERIFY2(ok, qPrintable(qsl("could not write the JSON map: %1").arg(errorMessage)));
+    }
+
+    // The load the two dialogs perform: readJsonMapFile() then audit(), with
+    // init() only when a caller explicitly asks for it.
+    quint32 loadMapAndRender(T2DMap* p2dMap, const QString& path, int playerRoomId, bool resetCache = false)
+    {
+        auto [ok, errorMessage] = map()->readJsonMapFile(path);
+        [&]() {
+            QVERIFY2(ok, qPrintable(qsl("could not read the JSON map: %1").arg(errorMessage)));
+        }();
+        map()->audit();
+        map()->mRoomIdHash[map()->mProfileName] = playerRoomId;
+        if (resetCache) {
+            p2dMap->init();
+        }
+        aimWidgetAtArea(p2dMap, playerRoomId);
+        mLastFrame = renderFrame(p2dMap);
+        TArea* pArea = roomDB()->getArea(kAreaId);
+        return pArea ? pArea->getRoomsVersion() : 0;
+    }
+
+    quint32 primeCacheWithSmallIdArea(T2DMap* p2dMap)
+    {
+        buildMap(kSmallRoomId);
+        p2dMap->init();
+        aimWidgetAtArea(p2dMap, kSmallRoomId);
+        renderFrame(p2dMap);
+        return roomDB()->getArea(kAreaId)->getRoomsVersion();
+    }
+
+    QImage remakeAreaWithBigIdAndRender(T2DMap* p2dMap, bool resetCache = false)
+    {
+        [&]() {
+            QVERIFY(roomDB()->removeArea(kAreaId));
+            QCOMPARE(roomDB()->addArea(qsl("remade")), kAreaId);
+            QVERIFY(map()->addRoom(kBigRoomId));
+            QVERIFY(map()->setRoomCoordinates(kBigRoomId, 0, 0, 0));
+            QVERIFY(map()->setRoomArea(kBigRoomId, kAreaId));
+        }();
+        map()->mRoomIdHash[map()->mProfileName] = kBigRoomId;
+        if (resetCache) {
+            p2dMap->init();
+        }
+        aimWidgetAtArea(p2dMap, kBigRoomId);
+        return renderFrame(p2dMap);
     }
 
 private slots:
@@ -237,7 +296,10 @@ private slots:
 
     // dlgMapper::slot_loadMap() and dlgProfilePreferences::loadMap() both do
     // readJsonMapFile() then audit() for a .json file, and neither calls
-    // T2DMap::init().
+    // T2DMap::init(). Both maps here are loaded that way, which is what puts
+    // their areas on the same rooms version: a loaded area is filled by a
+    // direct write to TArea::rooms that does not bump, so it sits at zero
+    // until audit() takes every area to one.
     void jsonMapLoadResizesTheRoomIdText()
     {
         T2DMap* p2dMap = mapWidget();
@@ -247,35 +309,29 @@ private slots:
         const QImage correctFrame = captureCorrectBigIdFrame(p2dMap, idsAreDrawn);
         QVERIFY2(idsAreDrawn, "the room id is not being drawn, so this test could not see a wrong digit count");
 
-        // Write the big-id map out, so it can be loaded back later.
-        const QString jsonPath = qsl("%1/big-ids.json").arg(mMapDir.path());
-        {
-            auto [ok, errorMessage] = map()->writeJsonMapFile(jsonPath);
-            QVERIFY2(ok, qPrintable(qsl("could not write the JSON map: %1").arg(errorMessage)));
-        }
+        const QString bigPath = qsl("%1/big-ids.json").arg(mMapDir.path());
+        const QString smallPath = qsl("%1/small-ids.json").arg(mMapDir.path());
+        writeMapAs(kBigRoomId, bigPath);
+        writeMapAs(kSmallRoomId, smallPath);
 
-        // Put the small-id map on screen so the cache holds its digit count.
-        buildMap(kSmallRoomId);
-        map()->audit();
-        p2dMap->init();
-        aimWidgetAtArea(p2dMap, kSmallRoomId);
-        renderFrame(p2dMap);
-        const quint32 smallVersion = roomDB()->getArea(kAreaId)->getRoomsVersion();
+        // Control: both loads reset the cache, so the second one recomputes and
+        // the frame must match. Anything the real run below differs by is then
+        // the missing reset, not the loading.
+        const quint32 smallVersion = loadMapAndRender(p2dMap, smallPath, kSmallRoomId, true);
+        loadMapAndRender(p2dMap, bigPath, kBigRoomId, true);
+        const QImage controlFrame = mLastFrame;
+        QVERIFY2(controlFrame == correctFrame, "control: with the cache reset, a loaded big-id map draws the same as a built one");
 
-        // Now the load the two dialogs perform.
-        {
-            auto [ok, errorMessage] = map()->readJsonMapFile(jsonPath);
-            QVERIFY2(ok, qPrintable(qsl("could not read the JSON map back: %1").arg(errorMessage)));
-        }
-        map()->audit();
+        // The real thing. The first load stands in for however the map already
+        // on screen got there - the .dat and .xml paths do reset the cache - and
+        // the second is the JSON one, which does not.
+        loadMapAndRender(p2dMap, smallPath, kSmallRoomId, true);
+        const quint32 bigVersion = loadMapAndRender(p2dMap, bigPath, kBigRoomId);
+        const QImage loadedFrame = mLastFrame;
 
-        aimWidgetAtArea(p2dMap, kBigRoomId);
-        const QImage loadedFrame = renderFrame(p2dMap);
-        const quint32 bigVersion = roomDB()->getArea(kAreaId)->getRoomsVersion();
-
-        qInfo().nospace() << "area " << kAreaId << " rooms version: " << smallVersion << " before the load, " << bigVersion << " after";
+        qInfo().nospace() << "area " << kAreaId << " rooms version: " << smallVersion << " for the small-id map, " << bigVersion << " for the big-id one";
         if (smallVersion == bigVersion) {
-            qInfo() << "both maps present the same version for the same area id, so the cache key collides";
+            qInfo() << "both loaded maps present the same version for the same area id, so the cache key collides";
         }
 
         QVERIFY2(loadedFrame == correctFrame, "the room ids of the loaded map are drawn at the previous map's digit width");
@@ -293,23 +349,15 @@ private slots:
         const QImage correctFrame = captureCorrectBigIdFrame(p2dMap, idsAreDrawn);
         QVERIFY2(idsAreDrawn, "the room id is not being drawn, so this test could not see a wrong digit count");
 
-        // Small-id map on screen, so the cache holds a one-digit count.
-        buildMap(kSmallRoomId);
-        p2dMap->init();
-        aimWidgetAtArea(p2dMap, kSmallRoomId);
-        renderFrame(p2dMap);
-        const quint32 smallVersion = roomDB()->getArea(kAreaId)->getRoomsVersion();
+        // Control first: the same sequence with the cache reset before the
+        // final render, which pins everything except the cache.
+        const quint32 smallVersion = primeCacheWithSmallIdArea(p2dMap);
+        const QImage controlFrame = remakeAreaWithBigIdAndRender(p2dMap, true);
+        QVERIFY2(controlFrame == correctFrame, "control: with the cache reset, a remade area draws the same as a freshly built one");
 
-        // deleteArea() then addAreaName(), the way a script would.
-        QVERIFY(roomDB()->removeArea(kAreaId));
-        QCOMPARE(roomDB()->addArea(qsl("remade")), kAreaId);
-        QVERIFY(map()->addRoom(kBigRoomId));
-        QVERIFY(map()->setRoomCoordinates(kBigRoomId, 0, 0, 0));
-        QVERIFY(map()->setRoomArea(kBigRoomId, kAreaId));
-        map()->mRoomIdHash[map()->mProfileName] = kBigRoomId;
-
-        aimWidgetAtArea(p2dMap, kBigRoomId);
-        const QImage remadeFrame = renderFrame(p2dMap);
+        // And now without the reset.
+        primeCacheWithSmallIdArea(p2dMap);
+        const QImage remadeFrame = remakeAreaWithBigIdAndRender(p2dMap);
         const quint32 remadeVersion = roomDB()->getArea(kAreaId)->getRoomsVersion();
 
         qInfo().nospace() << "area " << kAreaId << " rooms version: " << smallVersion << " before it was remade, " << remadeVersion << " after";
