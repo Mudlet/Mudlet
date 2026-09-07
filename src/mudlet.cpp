@@ -2145,7 +2145,7 @@ void mudlet::loadMaps()
             //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
             {"M_CP869", qsl("m ") % tr("CP869 (DOS Greek 2)")},
             //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-            {"CP1161", tr("CP1161 (Latin/Thai)")},
+            {"CP1162", tr("CP1162 (Latin/Thai)")},
             //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
             {"KOI8-R", tr("KOI8-R (Cyrillic)")},
             //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
