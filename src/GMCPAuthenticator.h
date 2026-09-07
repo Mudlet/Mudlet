@@ -21,6 +21,7 @@
  ***************************************************************************/
 
 #include "Host.h"
+#include "SignInStoreReconciler.h"
 #include "utils.h"
 
 #include <QElapsedTimer>
@@ -28,6 +29,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QPointer>
+#include <QScopedPointer>
 #include <QString>
 #include <QVariantMap>
 
@@ -109,8 +111,9 @@ private:
     // earlier Char.Login.URL. The absence of a password (not the presence of provider) distinguishes it.
     void sendResume(const QString& account, const QString& provider);
     void handleAuthToken(const QString& packageMessage, const QString& data);
-    // secureOnly is the token's transport requirement, stored with it because it belongs to the
-    // connection that minted the token rather than to whichever one later replays it.
+    // Requests that the stored sign-in become {account, provider, secureOnly} plus the token, and
+    // decides what to tell the player once it has - or has not. secureOnly is the token's transport
+    // requirement, stored with it because it belongs to the connection that minted it.
     void storeReconnectToken(const QString& account, QString token, bool secureOnly);
     // After a rejected reconnect: re-reads the store first - another Mudlet instance sharing this
     // profile's keychain may have rotated the (single-use) token, in which case the fresh token is
@@ -120,14 +123,22 @@ private:
     // Takes the account and provider explicitly: the caller captures them before its keychain read, so
     // a Char.Login.Default arriving mid-read cannot clear mConn and turn this into a full discard.
     void dropTokenKeepResumeHint(const QString& account, const QString& provider);
-    // Removes the token key first - that is the security-relevant half, since this runs because the
-    // stored token is dead and must not be left for the next read to replay - and only then rewrites
-    // the metadata as {account, provider}: enough to resume later, nothing any longer a bearer secret.
+    // Requests that the stored sign-in become a resume hint - {account, provider} and no token. Runs
+    // because a token is dead, so the token is removed before the metadata is rewritten; a failure to
+    // remove it falls back to forgetting the whole entry rather than leaving it replayable.
     void storeResumeHint(const QString& account, const QString& provider);
+    // Requests that nothing be stored. The token goes first, and a failure to remove it leaves the
+    // metadata alone: deleting that half would hide the surviving token from the only UI that can
+    // offer to remove it again. callback reports whether the store really did become empty.
     void discardReconnectToken(std::function<void(bool success)> callback = {});
     void resetPerConnectionState();
     // Per socket connection, unlike resetPerConnectionState() which runs per Char.Login.Default.
     void resetForNewConnection();
+
+    // The mechanism the reconciler drives: one store operation against CredentialManager, mapped to
+    // the metadata or token key, with the same per-operation CredentialManager and QPointer<Host>
+    // guard every credential callback in this file uses.
+    void performStoreOperation(SignInStoreReconciler::Operation op, QString payload, SignInStoreReconciler::Done done);
 
     // Adds the two fields every client->server Char.Login message may carry: the negotiated version we
     // are acting on, and token_storage - whether a reconnect token minted on this connection would
@@ -137,6 +148,11 @@ private:
     bool clientDrivenOAuthAvailable() const;
 
     Host* mpHost;
+    // Every mutation of the stored sign-in goes through here, so only one sequence of store
+    // operations runs at a time and a newer request supersedes an older one. Owned outright rather
+    // than parented to the Host: it must die with this authenticator, before the Host's own QObject
+    // teardown, so no completion can ever run against a destroyed `this`.
+    QScopedPointer<SignInStoreReconciler> mpStoreReconciler;
     QStringList mSupportedAuthTypes;
     // Version 2 client-driven OAuth capability, advertised by a server that is itself an OpenID
     // Provider. Only populated when the connection is encrypted: the flow's completing
