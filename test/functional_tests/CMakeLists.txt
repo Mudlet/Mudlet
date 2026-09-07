@@ -407,6 +407,11 @@ set_tests_properties(MsdpMalformedDiagnosticTest PROPERTIES TIMEOUT 300)
 # both of which sanitiser builds stretch well past the default budget.
 set_tests_properties(TelnetLargeBurstTest PROPERTIES TIMEOUT 300)
 
+# TelnetLatePasswordTest boots a Mudlet and a profile for each of its cases and waits out the
+# auto-login timers in real time, which takes half the default budget without sanitisers and
+# more than all of it with them
+set_tests_properties(TelnetLatePasswordTest PROPERTIES TIMEOUT 300)
+
 # TelnetLatencyMeasurementTest boots a full profile and then spends its runtime in
 # real time by design - every round trip it times, and every stall it places, has
 # to be waited out - so it needs a longer timeout
