@@ -5162,8 +5162,8 @@ void dlgProfilePreferences::setColors2()
 
         setButtonColor(pushButton_foreground_color_2, QColor());
         setButtonColor(pushButton_background_color_2, QColor());
-        setButtonColor(pushButton_lowerLevelColor, QColor(), true);
-        setButtonColor(pushButton_upperLevelColor, QColor(), true);
+        setButtonColor(pushButton_lowerLevelColor, QColor());
+        setButtonColor(pushButton_upperLevelColor, QColor());
         setButtonColor(pushButton_roomBorderColor, QColor());
         setButtonColor(pushButton_mapInfoBg, QColor());
         setButtonColor(pushButton_roomCollisionBorderColor, QColor());
