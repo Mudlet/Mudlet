@@ -2040,6 +2040,14 @@ bool TDetachedWindow::addProfile(const QString& profileName, TMainConsole* conso
             console->repaint();
         }
     });
+    // Which window holds a profile decides where its add-on commands go, and
+    // every path that moves one between windows - a drag into an existing
+    // detached window, a move between two of them, a move back to the main
+    // window - passes through here. Hooked at this depth rather than in each of
+    // those callers so that a path added later cannot forget.
+    if (auto pMudlet = mudlet::self()) {
+        pMudlet->refreshAddonPlacement();
+    }
 
     return true;
 }
@@ -2207,6 +2215,14 @@ bool TDetachedWindow::removeProfile(const QString& profileName)
                 repaint();
             }
         });
+    }
+    // Which window holds a profile decides where its add-on commands go, and
+    // every path that moves one between windows - a drag into an existing
+    // detached window, a move between two of them, a move back to the main
+    // window - passes through here. Hooked at this depth rather than in each of
+    // those callers so that a path added later cannot forget.
+    if (auto pMudlet = mudlet::self()) {
+        pMudlet->refreshAddonPlacement();
     }
 
     return true;

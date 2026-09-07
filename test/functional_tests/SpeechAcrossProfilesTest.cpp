@@ -266,9 +266,20 @@ private slots:
     // asserting against a command that was never created.
     void init() { mudlet::self()->setToolBarVisibility(enums::visibleAlways); }
 
-    // No test may leave the microphone claimed: the owner decides where the
-    // next test's events land, so a leaked claim fails the one after it
-    void cleanup() { mudlet::self()->releaseMicrophone(); }
+    // No test may leave the microphone claimed or a profile detached: the owner
+    // decides where the next test's events land, and a detached profile changes
+    // which window its commands are in. Done here rather than at the end of
+    // each case because a QVERIFY that fails leaves the rest of its body unrun -
+    // so tidying inline means one real failure arrives as several.
+    void cleanup()
+    {
+        mudlet::self()->releaseMicrophone();
+        if (mudlet::self()->getDetachedWindows().contains(mSecondHostname)) {
+            mudlet::self()->slot_tabReattachRequested(mSecondHostname);
+            QTest::qWait(200ms);
+        }
+        mudlet::self()->activateWindow();
+    }
 
     // The case the whole ownership model exists for. Listening starts in one
     // profile, the player tabs to the other, and the phrase they finish saying
@@ -437,8 +448,6 @@ private slots:
         QVERIFY2(pMoved->toolTip().contains(qsl("listening in StickMUD")), qPrintable(qsl("the tooltip did not survive the move: %1").arg(pMoved->toolTip())));
         QVERIFY2(!pMoved->isEnabled(), "a disabled command came out of the move enabled");
 
-        mudlet::self()->slot_tabReattachRequested(mSecondHostname);
-        QTest::qWait(200ms);
         runLua(mpSecondHost, qsl("removeCommand(%1)").arg(secondId));
     }
 
@@ -509,8 +518,6 @@ private slots:
         QVERIFY2(!mudlet::self()->windowTitle().contains(qsl("listening")), "the main window claimed a microphone belonging to a profile in another window");
 
         mudlet::self()->releaseMicrophone();
-        mudlet::self()->slot_tabReattachRequested(mSecondHostname);
-        QTest::qWait(200ms);
     }
 
     // Dragging a profile out of the main window while it is listening moves its
@@ -539,8 +546,52 @@ private slots:
         mudlet::self()->releaseMicrophone();
         QVERIFY2(!pWindow->windowTitle().contains(qsl("listening")), "the marker outlived the session it was describing");
 
-        mudlet::self()->slot_tabReattachRequested(mSecondHostname);
-        QTest::qWait(200ms);
+        runLua(mpSecondHost, qsl("removeCommand(%1)").arg(secondId));
+    }
+
+    // Pinning is for a control the player must be able to reach from wherever
+    // they are, so it has to follow them between Mudlet's own windows - not
+    // only when Mudlet as a whole comes to the front.
+    void test_aPinnedCommandFollowsThePlayerBetweenWindows()
+    {
+        const int firstId = addCommand(mpFirstHost, qsl("name = \"SpeechFollow\", surfaces = \"toolbar\""));
+        QVERIFY(firstId > 0);
+
+        mudlet::self()->activateProfile(mpFirstHost);
+        mudlet::self()->activateWindow();
+        QVERIFY(runLua(mpFirstHost, qsl("setCommandPinned(%1, true)").arg(firstId)).isNull());
+        QVERIFY2(buttonIn(mudlet::self(), qsl("SpeechFollow")), "the pinned command should start in the window the player is in");
+
+        TDetachedWindow* pWindow = detachSecondProfile();
+        QVERIFY(pWindow);
+        pWindow->activateWindow();
+        QVERIFY2(QTest::qWaitFor(
+                         [pWindow]() {
+                             return QApplication::activeWindow() == pWindow;
+                         },
+                         2000),
+                 "the detached window never became the active one, so this cannot test what follows focus");
+
+        QVERIFY2(buttonIn(pWindow, qsl("SpeechFollow")), "a pinned command did not follow the player into the window they moved to");
+
+        QVERIFY(runLua(mpFirstHost, qsl("setCommandPinned(%1, false)").arg(firstId)).isNull());
+        runLua(mpFirstHost, qsl("removeCommand(%1)").arg(firstId));
+    }
+
+    // A command created by a profile that is not the one on screen must arrive
+    // hidden. Packages place their commands when they load, which is not
+    // necessarily a moment their profile is the one being looked at.
+    void test_aCommandCreatedByABackgroundProfileArrivesHidden()
+    {
+        mudlet::self()->activateProfile(mpFirstHost);
+
+        const int secondId = addCommand(mpSecondHost, qsl("name = \"SpeechLate\", surfaces = \"toolbar\""));
+        QVERIFY(secondId > 0);
+
+        QAction* pEntry = toolbarEntryIn(mudlet::self(), qsl("SpeechLate"));
+        QVERIFY2(pEntry, "the command was not placed at all");
+        QVERIFY2(!pEntry->isVisible(), "a command created by a profile that is not on screen was shown straight away");
+
         runLua(mpSecondHost, qsl("removeCommand(%1)").arg(secondId));
     }
 

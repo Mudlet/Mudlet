@@ -324,6 +324,12 @@ private slots:
     // shortcut by disabling both, so the profile that switched the search on
     // has to be told - without being told whose command it was, which is the
     // other package's business and nothing this profile can act on.
+    // A command is only on screen while the window is showing the profile that
+    // created it, so a case asserting on one has to say which profile it means
+    // to be looking at. Most of these are the first profile's, and without this
+    // they read whatever the last case happened to leave active.
+    void init() { mudlet::self()->activateProfile(mpFirstHost); }
+
     void test_theSearchSaysSoWhenAnotherProfilesCommandHoldsItsKey()
     {
         runLua(mpSecondHost, qsl("setConfig('f3SearchEnabled', false)"));

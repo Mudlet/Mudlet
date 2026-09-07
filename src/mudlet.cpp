@@ -815,6 +815,10 @@ int mudlet::addAddonCommand(const CommandRequest& request, Host* pHost, QString&
 
     placeAddonCommand(commandId, command, pContainer);
     mAddonCommands[commandId] = command;
+    // A package places its commands when it loads, which is not necessarily a
+    // moment its profile is the one on screen - so a new command is shown or
+    // hidden by the same rule as every other rather than arriving visible.
+    refreshAddonPlacement();
     return commandId;
 }
 
@@ -1412,6 +1416,15 @@ void mudlet::init()
     // another window.
     mApplicationActive = qGuiApp->applicationState() == Qt::ApplicationActive;
     connect(qGuiApp, &QGuiApplication::applicationStateChanged, this, &mudlet::slot_applicationStateChanged);
+    // A pinned command sits in whichever window the player is in, so moving
+    // between Mudlet's own windows moves it. applicationStateChanged is not
+    // that signal: Mudlet stays ApplicationActive while the player moves from
+    // the main window to a detached one, so a pinned command hung where it was
+    // - in the one case pinning exists for. Only asked when something is
+    // actually pinned, since unpinned placement does not depend on focus.
+    connect(qGuiApp, &QGuiApplication::focusWindowChanged, this, [this](QWindow*) {
+        refreshAddonPlacementIfAnyPinned();
+    });
     readEarlySettings(*mpSettings);
 
     if (mShowIconsOnMenuCheckedState != Qt::PartiallyChecked) {
@@ -2900,11 +2913,6 @@ void mudlet::slot_applicationStateChanged(const Qt::ApplicationState state)
         return;
     }
     mApplicationActive = nowActive;
-
-    // A pinned command sits in whichever window is in front, so a change of
-    // window moves it. Only asked when something is actually pinned: with
-    // nothing pinned, placement does not depend on focus at all.
-    refreshAddonPlacementIfAnyPinned();
 
     // Every profile hears it: this is a fact about the application, not about
     // which profile is in front, and a profile in a background tab has as much
