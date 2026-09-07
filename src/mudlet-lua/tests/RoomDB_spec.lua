@@ -95,9 +95,11 @@ describe("Tests the room and area database behind the map", function()
       assert.are.same({}, getAreaRooms1(area))
     end)
 
-    it("deleting an area hands its ID back to the next area created", function()
-      -- an area above the freed one, or handing out one past the highest ID in
-      -- use would answer this just as well as reusing the hole
+    it("deleting an area does not block the next one from getting a fresh ID", function()
+      -- Area IDs are handed out past the highest one in use rather than
+      -- reusing a hole left by a deleted area, since rescanning for the
+      -- lowest free ID from scratch on every creation made bulk area
+      -- creation quadratic in the area count.
       local recycled = addAreaName("RoomDBSpecRecycled")
       local above = addAreaName("RoomDBSpecAbove")
       finally(function()
@@ -108,7 +110,8 @@ describe("Tests the room and area database behind the map", function()
       assert.is_true(above > recycled)
 
       assert.is_true(deleteArea(recycled))
-      assert.are.equal(recycled, addAreaName("RoomDBSpecReused"))
+      local reused = addAreaName("RoomDBSpecReused")
+      assert.is_true(reused > above)
     end)
   end)
 
