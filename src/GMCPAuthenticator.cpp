@@ -408,26 +408,21 @@ void GMCPAuthenticator::storeReconnectToken(const QString& account, QString toke
 {
     QJsonObject obj;
     obj[qsl("account")] = account;
-    obj[qsl("token")] = token;
     // Stored with the token rather than recomputed at replay time: the requirement belongs to the
     // connection that minted it, which by then is long gone.
     obj[qsl("secure_only")] = secureOnly;
-    // Keep the provider with the token (in the same protected store) so a later connection can resume
-    // this provider's browser sign-in if the token has expired or been revoked by then.
+    // Keep the provider with the entry so a later connection can resume this provider's browser sign-in
+    // if the token has expired or been revoked by then.
     if (!mConn.accountProvider.isEmpty()) {
         obj[qsl("provider")] = mConn.accountProvider;
     }
-    QByteArray json = QJsonDocument(obj).toJson(QJsonDocument::Compact);
-    QString payload = QString::fromUtf8(json);
-    // Release the JSON object and the plaintext bytes that also hold the token.
-    obj = QJsonObject();
-    SecureStringUtils::secureByteArrayClear(json);
+    // The metadata holds no secret now that the token has its own key, so it needs no scrubbing.
+    const QString payload = QString::fromUtf8(QJsonDocument(obj).toJson(QJsonDocument::Compact));
 
-    // One reconnect token per profile: the fixed "reconnect" key means signing a profile into a second
-    // account overwrites the first account's token. A stale-account token is simply rejected on the next
+    // One reconnect token per profile: the fixed keys mean signing a profile into a second account
+    // overwrites the first account's token. A stale-account token is simply rejected on the next
     // connect and falls back to a fresh sign-in, so this is safe under the one-account-per-profile model.
     QPointer<Host> safeHost = mpHost;
-    QPointer<CredentialManager> credentialManager = new CredentialManager();
     // Whether a successful save here is worth telling the player about at all, decided now rather than
     // in the callback: both answers belong to the moment the token arrived, and the next
     // Char.Login.Default resets mConn while the save is still in flight.
@@ -441,50 +436,69 @@ void GMCPAuthenticator::storeReconnectToken(const QString& account, QString toke
     // Which sign-in attempt this save belongs to, so its announcement is deduplicated against that
     // attempt rather than against whichever one happens to be live when the write lands.
     const auto attemptGeneration = mAuthAttemptGeneration;
-    // safeHost stands in for `this` as well: Host owns this authenticator (its QScopedPointer member),
-    // so the authenticator is alive for as long as the Host is.
-    credentialManager->storePassword(mpHost->getName(), qsl("reconnect"), payload, [this, safeHost, credentialManager, worthAnnouncing, attemptGeneration](bool success, const QString& errorMessage) {
-        if (credentialManager) {
-            credentialManager->deleteLater();
-        }
-        // Log before the liveness check: a save can resolve, or time out, after the profile has closed,
-        // and that is precisely when the record of a token that never reached disk matters most. It does
-        // not cover application shutdown, where CredentialManager drops the callback unrun (see #10587).
-        if (!success) {
-            qWarning().noquote() << "GMCP Char.Login.Token - failed to store reconnect token:" << errorMessage;
-        }
-        if (!safeHost) {
-            return;
-        }
-        if (!success) {
-            //: Shown when the user opted to stay signed in but saving the sign-in token failed, so they will have to sign in again next time.
-            safeHost->postMessage(tr("[ WARN ]  - Could not save your sign-in for next time; you may need to sign in again."));
-            return;
-        }
-        // Announced only once the save has actually landed, so a failure is never announced as a success
-        // first, and at most once per sign-in attempt.
-        //
-        // Whether the announcement happens is deliberately not gated on that attempt still being the
-        // current one, unlike the asynchronous reads elsewhere in this file. Those gate because acting on
-        // a stale result would drive a sign-in on the wrong connection; this only reports what became of
-        // the profile's stored token, which stays true whichever attempt is live by the time the write
-        // lands. Gating it would mean a save that succeeded during a burst of Char.Login.Default frames
-        // was never mentioned at all. The attempt is what the message is deduplicated *against*, which is
-        // why that latch cannot live in mConn: a stale callback would otherwise consume the flag belonging
-        // to whichever attempt had since replaced it.
-        if (!worthAnnouncing || mAnnouncedSaveForAttempt == attemptGeneration) {
-            return;
-        }
-        mAnnouncedSaveForAttempt = attemptGeneration;
-        //: Shown once after a browser/OAuth sign-in whose reconnect token was saved, so future connects need no sign-in.
-        //: "Privacy and security" is the name of a page in the preferences dialog; translate it the same way there.
-        safeHost->postMessage(tr("[ INFO ]  - You'll be signed in automatically next time. Manage this under Preferences, Privacy and security."));
-    });
 
-    // The token is a bearer secret; storePassword has already taken its own copy (inside payload), so
-    // scrub both our serialized payload and the caller-owned token argument we took by value.
-    SecureStringUtils::secureStringClear(payload);
-    SecureStringUtils::secureStringClear(token);
+    // Metadata first, token second, and the token only if the metadata landed. A failure after the
+    // first write leaves a resume hint, which the read path already understands; the reverse order
+    // would pair a fresh token with stale metadata, which it does not.
+    QPointer<CredentialManager> metadataWriter = new CredentialManager();
+    metadataWriter->storePassword(mpHost->getName(),
+                                  metadataKey(),
+                                  payload,
+                                  [this, safeHost, metadataWriter, token = std::move(token), worthAnnouncing, attemptGeneration](bool success, const QString& errorMessage) mutable {
+                                      if (metadataWriter) {
+                                          metadataWriter->deleteLater();
+                                      }
+                                      if (!success) {
+                                          qWarning().noquote() << "GMCP Char.Login.Token - failed to store the sign-in details:" << errorMessage;
+                                          SecureStringUtils::secureStringClear(token);
+                                          if (safeHost) {
+                                              //: Shown when the user opted to stay signed in but saving the sign-in token failed, so they will have to sign in again next time.
+                                              safeHost->postMessage(tr("[ WARN ]  - Could not save your sign-in for next time; you may need to sign in again."));
+                                          }
+                                          return;
+                                      }
+                                      if (!safeHost) {
+                                          SecureStringUtils::secureStringClear(token);
+                                          return;
+                                      }
+                                      QPointer<CredentialManager> tokenWriter = new CredentialManager();
+                                      tokenWriter->storePassword(
+                                              safeHost->getName(), tokenKey(), token, [this, safeHost, tokenWriter, worthAnnouncing, attemptGeneration](bool tokenStored, const QString& tokenError) {
+                                                  if (tokenWriter) {
+                                                      tokenWriter->deleteLater();
+                                                  }
+                                                  // Log before the liveness check: a save can resolve, or time out, after the profile
+                                                  // has closed, and that is precisely when the record of a token that never reached
+                                                  // disk matters most. It does not cover application shutdown, where CredentialManager
+                                                  // drops the callback unrun (see #10587).
+                                                  if (!tokenStored) {
+                                                      qWarning().noquote() << "GMCP Char.Login.Token - failed to store reconnect token:" << tokenError;
+                                                  }
+                                                  if (!safeHost) {
+                                                      return;
+                                                  }
+                                                  if (!tokenStored) {
+                                                      //: Shown when the user opted to stay signed in but saving the sign-in token failed, so they will have to sign in again next time.
+                                                      safeHost->postMessage(tr("[ WARN ]  - Could not save your sign-in for next time; you may need to sign in again."));
+                                                      return;
+                                                  }
+                                                  // Announced only once the token itself has landed, so a failure is never announced as
+                                                  // a success first, and at most once per sign-in attempt. Deliberately not gated on
+                                                  // that attempt still being current: this only reports what became of the profile's
+                                                  // stored token, which stays true whichever attempt is live by the time the write
+                                                  // lands. The attempt is what the message is deduplicated against, which is why that
+                                                  // latch cannot live in mConn.
+                                                  if (!worthAnnouncing || mAnnouncedSaveForAttempt == attemptGeneration) {
+                                                      return;
+                                                  }
+                                                  mAnnouncedSaveForAttempt = attemptGeneration;
+                                                  //: Shown once after a browser/OAuth sign-in whose reconnect token was saved, so future connects need no sign-in.
+                                                  //: "Privacy and security" is the name of a page in the preferences dialog; translate it the same way there.
+                                                  safeHost->postMessage(tr("[ INFO ]  - You'll be signed in automatically next time. Manage this under Preferences, Privacy and security."));
+                                              });
+                                      // storePassword has taken its own copy, so scrub ours now rather than in the callback.
+                                      SecureStringUtils::secureStringClear(token);
+                                  });
 }
 
 void GMCPAuthenticator::sendResume(const QString& account, const QString& provider)

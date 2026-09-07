@@ -660,18 +660,61 @@ private slots:
         QVERIFY2(waitForConsoleContainsUnwrapped(host, qsl("Manage this under Preferences, Privacy and security.")), "the notice should name the preferences page that manages the saved sign-in");
         QVERIFY2(waitForStoredReconnect(host,
                                         [](const QJsonObject& entry) {
-                                            return entry.value(qsl("account")).toString() == qsl("acct:char") && entry.value(qsl("token")).toString() == qsl("opaque-token");
+                                            return entry.value(qsl("account")).toString() == qsl("acct:char");
                                         }),
-                 "the reconnect token should be persisted with the announced account and token");
+                 "the reconnect metadata should be persisted with the announced account");
+        QVERIFY2(waitForStoredToken(host, qsl("opaque-token")), "the token should be persisted under its own key");
 
         // A server may mint repeatedly on one sign-in; the player only needs telling once.
         mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:char\", \"token\": \"second-token\"}"));
+        QVERIFY2(waitForStoredToken(host, qsl("second-token")), "the second token should overwrite the first");
+        QCOMPARE(consoleOccurrences(host, qsl("signed in automatically next time")), 1);
+    }
+
+    void testASavedTokenGoesToItsOwnKey()
+    {
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:char\", \"token\": \"opaque-token\"}"));
+
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return CredentialManager::retrieveCredential(host->getName(), qsl("reconnect-token")) == qsl("opaque-token");
+                         },
+                         4000),
+                 "the token should be stored under its own key, verbatim");
+        const QJsonObject metadata = readStoredReconnect(host);
+        QCOMPARE(metadata.value(qsl("account")).toString(), qsl("acct:char"));
+        QVERIFY2(!metadata.contains(qsl("token")), "the metadata must not carry the token any more");
+        QCOMPARE(metadata.value(qsl("secure_only")), QJsonValue(false));
+    }
+
+    void testATornSaveLeavesAResumeHintAndNoPromise()
+    {
+        // Block only the token key's file. The metadata write still lands, so what survives is a resume
+        // hint - a state the read path already handles - and the player is told the save failed rather
+        // than promised an automatic sign-in that could never happen.
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        mpServer->sendGmcp(qsl("Char.Login.URL {\"url\": \"https://example.com/signin\", \"provider\": \"discord\"}"));
+        QVERIFY(waitForConsoleContains(host, qsl("To sign in, open this link")));
+
+        const QString tokenPath = reconnectCredentialPath(host->getName(), qsl("reconnect-token"));
+        QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect-token"), qsl("seed")));
+        QVERIFY2(QFileInfo::exists(tokenPath), qPrintable(qsl("the credential store no longer files entries at %1").arg(tokenPath)));
+        QVERIFY(CredentialManager::removeCredential(host->getName(), qsl("reconnect-token")));
+        QVERIFY(QDir().mkpath(tokenPath));
+
+        mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:char\", \"token\": \"opaque-token\"}"));
+
+        QVERIFY2(waitForConsoleContains(host, qsl("Could not save your sign-in")), "a torn save should be reported to the player");
+        QVERIFY2(!waitForConsoleContains(host, qsl("signed in automatically next time"), 500), "a torn save must not promise an automatic sign-in");
         QVERIFY2(waitForStoredReconnect(host,
                                         [](const QJsonObject& entry) {
-                                            return entry.value(qsl("token")).toString() == qsl("second-token");
+                                            return entry.value(qsl("account")).toString() == qsl("acct:char") && entry.value(qsl("provider")).toString() == qsl("discord")
+                                                   && !entry.contains(qsl("token"));
                                         }),
-                 "the second token should overwrite the first");
-        QCOMPARE(consoleOccurrences(host, qsl("signed in automatically next time")), 1);
+                 "the metadata write should have landed, leaving a resume hint");
     }
 
     void testAFailedSaveIsNotAnnouncedAsASuccess()
@@ -685,7 +728,7 @@ private slots:
         // Seeding a real credential first proves the computed path is the one
         // actually in use, so a change to the storage scheme fails this test rather than quietly
         // blocking nothing and letting it pass for the wrong reason.
-        const QString credentialPath = reconnectCredentialPath(host->getName());
+        const QString credentialPath = reconnectCredentialPath(host->getName(), qsl("reconnect"));
         QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect"), qsl("seed")));
         QVERIFY2(QFileInfo::exists(credentialPath), qPrintable(qsl("the credential store no longer files entries at %1").arg(credentialPath)));
         QVERIFY(CredentialManager::removeCredential(host->getName(), qsl("reconnect")));
@@ -715,9 +758,10 @@ private slots:
         mpServer->sendGmcp(qsl("Char.Login.Token {\"secure_only\": \"false\", \"token\": \"opaque-token\", \"account\": \"acct:char\"}"));
         QVERIFY2(waitForStoredReconnect(host,
                                         [](const QJsonObject& entry) {
-                                            return entry.value(qsl("token")).toString() == qsl("opaque-token") && entry.value(qsl("secure_only")) == QJsonValue(false);
+                                            return entry.value(qsl("secure_only")) == QJsonValue(false);
                                         }),
-                 "the token's transport requirement should be stored alongside it");
+                 "the token's transport requirement should be stored in the metadata");
+        QVERIFY2(waitForStoredToken(host, qsl("opaque-token")), "the token should be stored under its own key");
 
         mpServer->clearReceived();
         mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\", \"password-credentials\"]}"));
@@ -744,9 +788,10 @@ private slots:
         mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:char\", \"token\": \"opaque-token\"}"));
         QVERIFY2(waitForStoredReconnect(host,
                                         [encrypted](const QJsonObject& entry) {
-                                            return entry.value(qsl("token")).toString() == qsl("opaque-token") && entry.value(qsl("secure_only")) == QJsonValue(encrypted);
+                                            return entry.value(qsl("secure_only")) == QJsonValue(encrypted);
                                         }),
                  "an absent secure_only should be defaulted from the transport the token arrived on");
+        QVERIFY2(waitForStoredToken(host, qsl("opaque-token")), "the token should be stored under its own key");
     }
 
     void testSecureOnlyIsDecodedInEveryFormTheStandardAllows_data()
@@ -799,9 +844,10 @@ private slots:
         mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:char\", \"token\": \"opaque-token\", \"secure_only\": %1}").arg(literal));
         QVERIFY2(waitForStoredReconnect(host,
                                         [secureOnly](const QJsonObject& entry) {
-                                            return entry.value(qsl("token")).toString() == qsl("opaque-token") && entry.value(qsl("secure_only")) == QJsonValue(secureOnly);
+                                            return entry.value(qsl("secure_only")) == QJsonValue(secureOnly);
                                         }),
                  qPrintable(qsl("secure_only %1 should have been stored as %2").arg(literal, secureOnly ? qsl("true") : qsl("false"))));
+        QVERIFY2(waitForStoredToken(host, qsl("opaque-token")), "the token should be stored under its own key");
     }
 
     // ---- Char.Login.Reconnect ----------------------------------------------
@@ -830,11 +876,7 @@ private slots:
         // fresh opt-in, so it is saved without telling the player they will be remembered next time -
         // they already were.
         mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:char\", \"token\": \"rotated-token\"}"));
-        QVERIFY2(waitForStoredReconnect(host,
-                                        [](const QJsonObject& entry) {
-                                            return entry.value(qsl("token")).toString() == qsl("rotated-token");
-                                        }),
-                 "the rotated token should still be persisted");
+        QVERIFY2(waitForStoredToken(host, qsl("rotated-token")), "the rotated token should still be persisted");
         QVERIFY2(!waitForConsoleContains(host, qsl("signed in automatically next time"), 500), "a silent rotation must not be announced as a new opt-in");
     }
 
@@ -1111,10 +1153,10 @@ private slots:
         mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:char\", \"token\": \"opaque-token\"}"));
         QVERIFY2(waitForStoredReconnect(host,
                                         [](const QJsonObject& entry) {
-                                            return entry.value(qsl("account")).toString() == qsl("acct:char") && entry.value(qsl("token")).toString() == qsl("opaque-token")
-                                                   && entry.value(qsl("provider")).toString() == qsl("discord");
+                                            return entry.value(qsl("account")).toString() == qsl("acct:char") && entry.value(qsl("provider")).toString() == qsl("discord");
                                         }),
-                 "the token should be persisted together with the provider learned from Char.Login.URL");
+                 "the metadata should be persisted together with the provider learned from Char.Login.URL");
+        QVERIFY2(waitForStoredToken(host, qsl("opaque-token")), "the token should be persisted under its own key");
     }
 
     void testRotatedTokenIsReplayedNotDiscarded()
@@ -1749,18 +1791,20 @@ private:
 
     void removeBlockingCredentialDirectory()
     {
-        QDir blockedCredential(reconnectCredentialPath(mHostname));
-        if (blockedCredential.exists()) {
-            blockedCredential.removeRecursively();
+        for (const auto& key : {qsl("reconnect"), qsl("reconnect-token")}) {
+            QDir blockedCredential(reconnectCredentialPath(mHostname, key));
+            if (blockedCredential.exists()) {
+                blockedCredential.removeRecursively();
+            }
         }
     }
 
-    // Where the file-backed credential store files this profile's reconnect entry. Blocking that exact
-    // path is how a test makes a save fail; see testAFailedSaveIsNotAnnouncedAsASuccess.
-    static QString reconnectCredentialPath(const QString& profileName)
+    // Where the file-backed credential store files this profile's entry under the given key. Blocking
+    // that exact path is how a test makes a save fail; see testAFailedSaveIsNotAnnouncedAsASuccess and
+    // testATornSaveLeavesAResumeHintAndNoPromise.
+    static QString reconnectCredentialPath(const QString& profileName, const QString& key)
     {
-        return qsl("%1/profiles/%2/passwords/%3")
-                .arg(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation), utils::sanitizeForPath(profileName), utils::sanitizeForPath(qsl("reconnect")));
+        return qsl("%1/profiles/%2/passwords/%3").arg(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation), utils::sanitizeForPath(profileName), utils::sanitizeForPath(key));
     }
 
     // Seeds the split storage format: metadata under "reconnect", the token under its own key. The
@@ -1798,6 +1842,21 @@ private:
         return QTest::qWaitFor(
                 [&]() {
                     return predicate(readStoredReconnect(host));
+                },
+                timeoutMs);
+    }
+
+    // Wait until the token key holds exactly this value. The token has its own key now (see
+    // storeReconnectToken), so a test asserting on a freshly-saved token's value checks this rather than
+    // the metadata read above.
+    bool waitForStoredToken(Host* host, const QString& expected, int timeoutMs = 4000)
+    {
+        if (!host) {
+            return false;
+        }
+        return QTest::qWaitFor(
+                [&]() {
+                    return CredentialManager::retrieveCredential(host->getName(), qsl("reconnect-token")) == expected;
                 },
                 timeoutMs);
     }
