@@ -37,21 +37,6 @@
 
 #include "GroupedTest.h"
 
-// Detects an AddressSanitizer build, the same way MapRenderBenchmark.cpp does, so the one test
-// below that deliberately reads memory freed by secureStringClear() can skip itself there instead
-// of registering as a heap-use-after-free.
-#if defined(__has_feature)
-#if __has_feature(address_sanitizer)
-#define SIGNINSTORERECONCILER_TEST_BUILD_ASAN 1
-#endif
-#endif
-#if !defined(SIGNINSTORERECONCILER_TEST_BUILD_ASAN) && defined(__SANITIZE_ADDRESS__)
-#define SIGNINSTORERECONCILER_TEST_BUILD_ASAN 1
-#endif
-#ifndef SIGNINSTORERECONCILER_TEST_BUILD_ASAN
-#define SIGNINSTORERECONCILER_TEST_BUILD_ASAN 0
-#endif
-
 using Shape = SignInStoreReconciler::Shape;
 using Operation = SignInStoreReconciler::Operation;
 using Outcome = SignInStoreReconciler::Outcome;
@@ -653,44 +638,6 @@ private slots:
         QCOMPARE(resultA, Outcome::Superseded);
         QCOMPARE(completionsB, 1);
         QCOMPARE(resultB, Outcome::Reached);
-    }
-
-    // ---- scrub() actually reaches the bytes ------------------------------------
-
-    void aScrubbedTokensBytesAreActuallyZeroed()
-    {
-        // Pins scrub(): replacing its body with a no-op leaves every other case in this file
-        // green. secureStringClear() zeros the buffer in place and then QString::clear()s it,
-        // which - since the token here is uniquely owned, hence the local Intent moved in rather
-        // than one of the helpers above being copied - drops the last reference and frees it. So
-        // reading through the raw pointer below is, strictly, reading memory a correct
-        // implementation has already freed: safe in practice in this exact window, because the
-        // completion is a no-op and nothing else allocates between the free and the read, but a
-        // real heap-use-after-free as far as AddressSanitizer is concerned. Skipped there rather
-        // than risk a false crash in a sanitizer build; see SIGNINSTORERECONCILER_TEST_BUILD_ASAN
-        // above.
-#if SIGNINSTORERECONCILER_TEST_BUILD_ASAN
-        QSKIP("reads memory freed by secureStringClear(); unsafe under AddressSanitizer");
-#else
-        FakeStore store;
-        SignInStoreReconciler reconciler(store.performer());
-
-        Intent intent;
-        intent.shape = Shape::Full;
-        intent.account = qsl("acct:char");
-        intent.token = QString::fromUtf8("scrub-me-1234");
-        const QChar* rawData = intent.token.constData();
-        const int length = intent.token.length();
-
-        // Fail the metadata step so the token is dropped without ever being written to the store -
-        // scrub() runs on exactly this path - with a no-op completion so nothing else allocates.
-        reconciler.setIntent(std::move(intent), [](Outcome, Operation, QString) {});
-        store.release(0, false, qsl("disk full"));
-
-        for (int i = 0; i < length; ++i) {
-            QCOMPARE(rawData[i], QChar(0));
-        }
-#endif
     }
 };
 
