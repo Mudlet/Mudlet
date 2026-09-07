@@ -985,7 +985,8 @@ void GMCPAuthenticator::handleAuthToken(const QString& packageMessage, const QSt
     if (!mConn.reconnectingWithToken && !mConn.announcedTokenSave) {
         mConn.announcedTokenSave = true;
         //: Shown once after a browser/OAuth sign-in whose reconnect token was saved, so future connects need no sign-in.
-        mpHost->postMessage(tr("[ INFO ]  - You'll be signed in automatically next time. Manage this under Preferences, Connection."));
+        //: "Privacy and security" is the name of a page in the preferences dialog; translate it the same way there.
+        mpHost->postMessage(tr("[ INFO ]  - You'll be signed in automatically next time. Manage this under Preferences, Privacy and security."));
     }
 
 #if defined(DEBUG_GMCP_AUTHENTICATION)
