@@ -2,19 +2,10 @@
 # SessionStart hook for Claude Code on the web: provision everything needed to
 # compile Mudlet natively on the Ubuntu 24.04 session container.
 #
-# The container filesystem is cached after this hook *completes*, so the
+# The container filesystem is cached after this hook completes, so the
 # expensive steps (apt, Qt download, luarocks) only run when the cache is
 # cold; on a warm container every step short-circuits and the hook finishes
 # in well under a minute.
-#
-# That word "completes" is load-bearing, and it is why nothing here compiles
-# Mudlet. The hook is killed at a hard 10-minute timeout, a full debug build
-# takes ~18 minutes on the 4 cores these containers get, and a hook killed
-# mid-build exits non-zero, so *no* container state is cached - forfeiting
-# the cheap apt/Qt caching to chase the expensive ccache one, and leaving
-# every session to pay the same 10 idle minutes over again. Keep this hook
-# comfortably inside the budget: ccache is left to warm up naturally from
-# whatever the session itself builds.
 set -euo pipefail
 
 # Local checkouts (desktop/CLI) manage their own toolchain - do nothing there.

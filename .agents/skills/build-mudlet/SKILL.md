@@ -152,13 +152,8 @@ apt dependencies, Qt 6.9.0 via aqtinstall under `/opt/qt` (Ubuntu's packaged Qt 
 than the 6.8.2 minimum), the Lua rocks, submodules, and a CMake configure of the
 `linux-debug-nosan` preset. The hook exports `CMAKE_PREFIX_PATH` pointing at the aqt Qt, so the
 documented preset commands work unchanged. It takes ~3 minutes on a cold container and seconds
-on a warm one.
-
-The hook deliberately compiles nothing. It is killed at a hard 10-minute timeout, and only a
-hook that *completes* gets its container state cached — so a warm-up build large enough to be
-worth having is also large enough to abort the hook and throw away the apt and Qt caching with
-it. Budget for a cold ccache instead: the first full build of a session costs ~18 minutes on
-the 4 cores these containers get, and only sessions that actually build pay it.
+on a warm one. ccache starts cold, so budget ~18 minutes for the first full build of a session
+on the 4 cores these containers get.
 
 The hook also pre-configures `build-linux-debug-nosan/` with `-DUSE_ALTERNATE_LINKER=mold`:
 linking is the bulk of a rebuild and mold shrinks it dramatically (PR #9927 measured a CI
