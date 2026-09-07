@@ -340,7 +340,10 @@ private slots:
         listenFor(mpFirstHost, qsl("sysSTTHandover"), qsl("_handoverAgain"));
 
         mudlet::self()->claimMicrophoneFor(mpFirstHost);
-        mudlet::self()->claimMicrophoneFor(mpFirstHost);
+        // Answers true without taking anything, which is what lets a caller
+        // tell "I hold it" apart from "I could not have it" and give back only
+        // what its own call actually took.
+        QVERIFY2(mudlet::self()->claimMicrophoneFor(mpFirstHost), "a profile could not re-claim the microphone it already held");
 
         QCOMPARE(mudlet::self()->microphoneOwner(), mpFirstHost);
         QVERIFY2(luaGlobalString(mpFirstHost, qsl("_handoverAgain")).isEmpty(), "a profile that kept the microphone was told it had lost it");
@@ -593,6 +596,58 @@ private slots:
         QVERIFY2(!pEntry->isVisible(), "a command created by a profile that is not on screen was shown straight away");
 
         runLua(mpSecondHost, qsl("removeCommand(%1)").arg(secondId));
+    }
+
+    // The commonest arrangement of all, and the one the marker was built for:
+    // two games as tabs in this window, the background one listening, the
+    // player about to minimise Mudlet. Asking only about the shown tab left
+    // that case with no marker anywhere.
+    void test_theMainWindowMarksAListeningProfileOnABackgroundTab()
+    {
+        mudlet::self()->activateProfile(mpFirstHost);
+        const QString quiet = mudlet::self()->windowTitle();
+
+        mudlet::self()->claimMicrophoneFor(mpSecondHost);
+        QVERIFY2(mudlet::self()->windowTitle().contains(qsl("listening")), qPrintable(qsl("a profile listening on a background tab left the title unmarked: %1").arg(mudlet::self()->windowTitle())));
+
+        mudlet::self()->releaseMicrophone();
+        QCOMPARE(mudlet::self()->windowTitle(), quiet);
+    }
+
+    // A handover answers, and the answer is what the binding reports. The
+    // refusal half of this rule - that a claim is turned down while the
+    // outgoing profile's phrase is still being decoded, so its result is not
+    // delivered to a game that never said it - needs a recognizer sitting in
+    // Processing, and no engine exists in a test run. This pins the granted
+    // path only; the refusal is covered by inspection rather than here.
+    void test_aHandoverIsGrantedWhenNothingIsBeingDecoded()
+    {
+        mudlet::self()->claimMicrophoneFor(mpFirstHost);
+        QCOMPARE(mudlet::self()->microphoneOwner(), mpFirstHost);
+
+        QVERIFY2(mudlet::self()->claimMicrophoneFor(mpSecondHost), "a handover was refused with nothing being decoded");
+        QCOMPARE(mudlet::self()->microphoneOwner(), mpSecondHost);
+    }
+
+    // Per-window chrome must not outlive its window. The entry is keyed by the
+    // window's address, and a detached window deletes itself when it closes.
+    void test_chromeOfAClosedWindowIsForgotten()
+    {
+        const int secondId = addCommand(mpSecondHost, qsl("name = \"SpeechPruned\", menuPath = \"Pruned\""));
+        QVERIFY(secondId > 0);
+
+        TDetachedWindow* pWindow = detachSecondProfile();
+        QVERIFY(pWindow);
+        QVERIFY2(buttonIn(pWindow, qsl("SpeechPruned")), "the command did not move into the detached window");
+        const int withWindowOpen = mudlet::self()->addonChromeWindowCount();
+        QVERIFY2(withWindowOpen >= 2, "the detached window never took chrome of its own");
+
+        runLua(mpSecondHost, qsl("removeCommand(%1)").arg(secondId));
+        mudlet::self()->slot_tabReattachRequested(mSecondHostname);
+        QTest::qWait(200ms);
+        mudlet::self()->refreshAddonPlacement();
+
+        QVERIFY2(mudlet::self()->addonChromeWindowCount() < withWindowOpen, "the closed window's chrome is still recorded, keyed by an address that no longer belongs to it");
     }
 
 private:

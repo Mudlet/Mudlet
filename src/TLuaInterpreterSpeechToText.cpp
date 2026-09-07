@@ -87,6 +87,18 @@ static void reportSpeechRefusal(const QString& message)
     }
 }
 
+// A refusal belongs to the profile whose call was refused. raiseSpeechEvent()
+// prefers the microphone's owner, which is right for the recognizer's own
+// traffic and wrong here: a profile refused while another one is listening
+// would otherwise send its fault to that other profile, which cannot act on it
+// and would report a fault in a session that is running perfectly well.
+static void reportSpeechRefusalTo(Host& host, const QString& message)
+{
+    if (auto* pMudlet = mudlet::self()) {
+        pMudlet->raiseSpeechEventOn(&host, qsl("sysSTTError"), message);
+    }
+}
+
 // Every directory a dynamically-loaded engine could have been installed into,
 // across all of them rather than Vosk's alone. A reader told where Mudlet
 // looked has to be told where it looked for the engine they installed, and on
@@ -467,11 +479,20 @@ int TLuaInterpreter::sttStart(lua_State* L)
         return 1;
     }
 
-    // Claimed before the attempt so that a refusal's sysSTTError reaches the
-    // profile that asked, rather than whichever one happens to be in front.
-    pMudlet->claimMicrophoneFor(&host);
+    // Only what this call takes is given back below: claiming a microphone this
+    // profile already holds does nothing, so releasing it unconditionally would
+    // drop a claim made for an earlier session and send the phrase it is still
+    // decoding to whichever profile happens to be in front.
+    const bool alreadyOurs = (pMudlet->microphoneOwner() == &host);
+    if (!alreadyOurs && !pMudlet->claimMicrophoneFor(&host)) {
+        const QString message = qsl("another profile is still finishing a phrase on the microphone - try again in a moment");
+        reportSpeechRefusalTo(host, message);
+        return warnArgumentValue(L, funcName, message);
+    }
     if (pRecognizer->startListening() == SpeechRecognizer::StartResult::Refused) {
-        pMudlet->releaseMicrophone();
+        if (!alreadyOurs) {
+            pMudlet->releaseMicrophone();
+        }
         // The recognizer has already said why through sysSTTError; what
         // matters here is not telling the caller that recording began
         return warnArgumentValue(L, funcName, "could not start listening - the sysSTTError event carries the reason");
@@ -509,6 +530,20 @@ int TLuaInterpreter::sttStop(lua_State* L)
         // every refusal the engine caused, and a consumer driving the bridge
         // from events alone heard nothing at all about this one.
         reportSpeechRefusal(message);
+        return warnArgumentValue(L, funcName, message);
+    }
+
+    // A session belongs to the profile that started it, and stopping is as much
+    // a part of owning it as starting was. Without this a profile could end
+    // another game's session and be told it had succeeded, while that game saw
+    // only a bare state change - the very ambiguity sysSTTHandover was added to
+    // remove, reached through a different door. Nothing is owed to a caller
+    // that holds nothing, so this refuses rather than handing the microphone
+    // over: taking it is what stt.start() is for.
+    Host& host = getHostFromLua(L);
+    if (pMudlet->microphoneOwner() && pMudlet->microphoneOwner() != &host) {
+        const QString message = qsl("another profile is listening, and only the profile that started a session can stop it");
+        reportSpeechRefusalTo(host, message);
         return warnArgumentValue(L, funcName, message);
     }
 
@@ -558,9 +593,15 @@ int TLuaInterpreter::sttToggle(lua_State* L)
         pRecognizer->stopListening();
         lua_pushboolean(L, false);
     } else {
-        pMudlet->claimMicrophoneFor(&host);
+        if (!ownedHere && !pMudlet->claimMicrophoneFor(&host)) {
+            const QString message = qsl("another profile is still finishing a phrase on the microphone - try again in a moment");
+            reportSpeechRefusalTo(host, message);
+            return warnArgumentValue(L, funcName, message);
+        }
         if (pRecognizer->startListening() == SpeechRecognizer::StartResult::Refused) {
-            pMudlet->releaseMicrophone();
+            if (!ownedHere) {
+                pMudlet->releaseMicrophone();
+            }
             return warnArgumentValue(L, funcName, "could not start listening - the sysSTTError event carries the reason");
         }
         lua_pushboolean(L, true);
@@ -808,16 +849,36 @@ int TLuaInterpreter::sttListModels(lua_State* L)
 // Returns true.
 int TLuaInterpreter::sttClose(lua_State* L)
 {
+    const char* funcName = "stt.close";
+
     auto* pMudlet = mudlet::self();
     if (pMudlet) {
         auto* pRecognizer = pMudlet->speechRecognizer();
         if (pRecognizer) {
+            // Closing takes the engine down for every profile, so a profile
+            // that holds nothing must not be able to do it to the one that
+            // does - it would end another game's session and destroy the model
+            // under it, and that game would see only a state change.
+            Host& host = getHostFromLua(L);
+            if (pMudlet->microphoneOwner() && pMudlet->microphoneOwner() != &host) {
+                const QString message = qsl("another profile is listening, so the speech engine cannot be closed from here");
+                reportSpeechRefusalTo(host, message);
+                return warnArgumentValue(L, funcName, message);
+            }
+
+            // Held rather than resolved later: releaseResources() below drives
+            // the recognizer to Uninitialized, which releases the claim, and
+            // the report is raised after that - so by then raiseSpeechEvent()
+            // would answer with whichever profile is in front rather than the
+            // one whose phrase was lost.
+            Host* pOwner = pMudlet->microphoneOwner() ? pMudlet->microphoneOwner() : &host;
+
             if (pRecognizer->listening()) {
                 pRecognizer->cancel();
             }
             // Noted before the release, said after it. The test has to run
             // while the state still shows Processing, but the report must not:
-            // reportSpeechRefusal reaches Lua inside this frame, and a handler
+            // the report reaches Lua inside this frame, and a handler
             // answering "phrase lost" by restarting would be refused by the
             // base for still processing - a second, false error about a phrase
             // that had just been declared gone.
@@ -829,7 +890,7 @@ int TLuaInterpreter::sttClose(lua_State* L)
             // the player never speaking. docs/stt-api.md rule 1 allows exactly
             // one way to drop recognised speech, which is to report it.
             if (lostAPhraseBeingTranscribed) {
-                reportSpeechRefusal(qsl("speech recognition was closed while the last phrase was still being transcribed, so that phrase is lost"));
+                reportSpeechRefusalTo(*pOwner, qsl("speech recognition was closed while the last phrase was still being transcribed, so that phrase is lost"));
             }
         }
     }

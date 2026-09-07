@@ -247,13 +247,22 @@ public:
     // Re-place and re-show add-on commands: called whenever the profile a window
     // is showing changes, or a profile moves between windows.
     void refreshAddonPlacement();
-    void claimMicrophoneFor(Host* pHost);
+    bool claimMicrophoneFor(Host* pHost);
     void releaseMicrophone();
+    // Raise one sysSTT* event on a named profile. A refusal belongs to the
+    // profile that asked for it, which is not the profile the microphone's own
+    // traffic goes to once somebody else is listening.
+    void raiseSpeechEventOn(Host* pHost, const QString& name, const QString& value);
     // Which profile the microphone currently belongs to, or nullptr
     Host* microphoneOwner() const;
     // The " (listening)" a window's title carries while this profile holds the
     // microphone, or nothing. Public because a detached window builds its own title.
     QString microphoneMarkerFor(const QString& profileName) const;
+    // How many windows currently have add-on chrome recorded. Public only so a
+    // test can see that a closed window's entry is dropped; nothing reads it.
+    int addonChromeWindowCount() const { return mAddonChrome.size(); }
+    // The marker the main window carries, for any profile it holds
+    QString mainWindowMicrophoneMarker() const;
     const QMap<QString, QPointer<TDetachedWindow>>& getDetachedWindows() const { return mDetachedWindows; }
     QDockWidget* getMainWindowDockWidget(const QString& mapKey) const { return mMainWindowDockWidgetMap.value(mapKey); }
     std::optional<QSize> getImageSize(const QString&);
@@ -781,7 +790,6 @@ private:
     // Raise one sysSTT* event on a named profile, which is what the handover
     // notice needs - it goes to the profile losing the microphone, and by then
     // the owner is already the profile that took it.
-    void raiseSpeechEventOn(Host* pHost, const QString& name, const QString& value);
     void refreshMicrophoneMarkers();
     QPointer<QToolButton> mpButtonPackageManagers;
     QHBoxLayout* mpHBoxLayout_profileContainer = nullptr;
@@ -903,6 +911,7 @@ private:
     Host* addonShownProfileIn(QMainWindow* pContainer);
     QMainWindow* addonFocusedContainer();
     void refreshAddonPlacementIfAnyPinned();
+    void forgetChromeOfClosedWindows();
     void placeAddonCommand(int commandId, AddonCommand& command, QMainWindow* pContainer);
     void unplaceAddonCommand(AddonCommand& command);
     void applyAddonCommandState(AddonCommand& command);

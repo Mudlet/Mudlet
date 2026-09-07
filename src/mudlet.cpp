@@ -223,23 +223,33 @@ Host* mudlet::microphoneOwner() const
     return mpMicrophoneOwner;
 }
 
-void mudlet::claimMicrophoneFor(Host* pHost)
+bool mudlet::claimMicrophoneFor(Host* pHost)
 {
-    if (!pHost || mpMicrophoneOwner == pHost) {
-        mpMicrophoneOwner = pHost;
-        refreshMicrophoneMarkers();
-        return;
+    if (!pHost) {
+        return false;
+    }
+    if (mpMicrophoneOwner == pHost) {
+        return true;
     }
 
-    // A claim is held only for as long as the session it was made for: it is
-    // dropped when the recognizer goes idle and when a start is refused, so an
-    // owner being set at all means a session is running or about to. That is
-    // what makes this notice unconditional rather than a listening() check -
-    // the state such a check would look for is the state of having an owner.
+    // A phrase still being decoded is owed to the profile that spoke it, and
+    // the claim is what routes it there - so the microphone cannot change hands
+    // until that has landed. Taking it here would orphan the phrase: the owner
+    // would move, the result would arrive for a profile that never said it, and
+    // the one that did would be left with a session that simply stopped.
     //
+    // Refused rather than waited for, because a decode can outlive the call. It
+    // is the same answer docs/stt-api.md already gives a stop-then-start on a
+    // backend that finalises asynchronously - try again in a moment - and the
+    // caller passes that on rather than a session of somebody else's being
+    // destroyed for a start that was going to be refused anyway.
+    if (mpSpeechRecognizer && mpSpeechRecognizer->state() == SpeechRecognizer::State::Processing) {
+        return false;
+    }
+
     // Told before the microphone moves, and through the old owner by name
     // rather than through raiseSpeechEvent(): a moment later the owner is the
-    // profile that took it, and the notice would arrive at the game that is
+    // profile that asked for it, and the notice would arrive at the game that is
     // about to start listening instead of the one that just stopped.
     Host* pLosing = mpMicrophoneOwner;
     if (pLosing) {
@@ -258,6 +268,7 @@ void mudlet::claimMicrophoneFor(Host* pHost)
 
     mpMicrophoneOwner = pHost;
     refreshMicrophoneMarkers();
+    return true;
 }
 
 void mudlet::releaseMicrophone()
@@ -852,6 +863,42 @@ Host* mudlet::addonShownProfileIn(QMainWindow* pContainer)
     return mHostManager.getHost(mpTabBar->tabName(mpTabBar->currentIndex()));
 }
 
+// A detached window deletes itself when it closes, and its entry here would
+// otherwise sit on a freed address for the rest of the run - taking with it a
+// submenuOwners map whose QMenu keys and Host values died with the window. A
+// later window or menu allocated onto one of those addresses would then match a
+// dead entry and be judged against a profile that no longer exists.
+//
+// Keys are compared, never dereferenced, so testing them against the windows
+// that are still open is safe. Pruning here rather than on a destroyed() signal
+// keeps it to one rule in one place: every path that could have closed a window
+// reaches this before it next places anything.
+void mudlet::forgetChromeOfClosedWindows()
+{
+    if (mAddonChrome.size() <= 1) {
+        return;
+    }
+    QList<QMainWindow*> doomed;
+    for (auto it = mAddonChrome.constBegin(); it != mAddonChrome.constEnd(); ++it) {
+        if (it.key() == this) {
+            continue;
+        }
+        bool stillOpen = false;
+        for (auto windowIt = mDetachedWindows.constBegin(); windowIt != mDetachedWindows.constEnd(); ++windowIt) {
+            if (windowIt.value() == it.key()) {
+                stillOpen = true;
+                break;
+            }
+        }
+        if (!stillOpen) {
+            doomed.append(it.key());
+        }
+    }
+    for (QMainWindow* pClosed : doomed) {
+        mAddonChrome.remove(pClosed);
+    }
+}
+
 // The window the player is working in, when that is one of ours. A pinned
 // command follows this rather than its own profile's window.
 void mudlet::refreshAddonPlacementIfAnyPinned()
@@ -882,6 +929,8 @@ QMainWindow* mudlet::addonFocusedContainer()
 // is reserved for a profile that has actually changed windows.
 void mudlet::refreshAddonPlacement()
 {
+    forgetChromeOfClosedWindows();
+
     for (auto it = mAddonCommands.begin(); it != mAddonCommands.end(); ++it) {
         AddonCommand& command = it.value();
         if (!command.pHost) {
@@ -3363,7 +3412,10 @@ void mudlet::closeHost(const QString& name)
     // phrase. The all-profiles-gone case below is the same rule with nobody
     // left to hand back to.
     if (mpMicrophoneOwner == pH) {
-        if (mpSpeechRecognizer && (mpSpeechRecognizer->listening() || mpSpeechRecognizer->starting())) {
+        // Processing counts: a phrase still decoding for the profile that is
+        // going away has nowhere to be delivered, and the release below would
+        // otherwise let it fall through to whichever profile is now in front.
+        if (mpSpeechRecognizer && (mpSpeechRecognizer->listening() || mpSpeechRecognizer->starting() || mpSpeechRecognizer->state() == SpeechRecognizer::State::Processing)) {
             mpSpeechRecognizer->cancel();
         }
         releaseMicrophone();
@@ -4018,11 +4070,23 @@ void mudlet::updateMainWindowTitle()
 
     // Set window title based on whether we have an active profile in the main window
     if (!mainWindowActiveProfileName.isEmpty()) {
-        setWindowTitle(qsl("%1%2 - %3").arg(mainWindowActiveProfileName, microphoneMarkerFor(mainWindowActiveProfileName), scmVersion));
+        setWindowTitle(qsl("%1%2 - %3").arg(mainWindowActiveProfileName, mainWindowMicrophoneMarker(), scmVersion));
     } else {
         // No active profiles in main window, show just the version
         setWindowTitle(scmVersion);
     }
+}
+
+// Any profile the main window holds, not only the tab it is showing - the same
+// rule a detached window follows. Asking only about the shown tab left the
+// commonest arrangement of all unmarked: two games open here, the one in the
+// background listening, and nothing anywhere saying the microphone was live.
+QString mudlet::mainWindowMicrophoneMarker() const
+{
+    if (!mpMicrophoneOwner || mDetachedWindows.contains(mpMicrophoneOwner->getName())) {
+        return QString();
+    }
+    return microphoneMarkerFor(mpMicrophoneOwner->getName());
 }
 
 // An open microphone said where the window manager will show it. Every other
