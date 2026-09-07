@@ -127,7 +127,6 @@ public:
     void auditExit(int&,
                    int,
                    QString,
-                   QString,
                    QMap<QString, int>&,
                    QSet<int>&,
                    QSet<int>&,
