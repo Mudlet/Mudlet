@@ -157,9 +157,8 @@ private:
     {
         mpDialog = new dlgRoomExits(mpHost, roomId);
         verifySpecialExitColumnCount(mpDialog);
-        // The dialog installs two item delegates it does not own (see the
-        // specialExitDelegatesOutliveTheDialog case), so deleting the dialog is
-        // not enough to get rid of them
+        // Tracked via QPointer so specialExitDelegatesAreDestroyedWithTheDialog
+        // can confirm deleting the dialog takes both of these with it.
         mpRoomIdDelegate = mpDialog->specialExits->itemDelegateForColumn(colIndex_exitRoomId);
         mpWeightDelegate = mpDialog->specialExits->itemDelegateForColumn(colIndex_exitWeight);
         return mpDialog;
@@ -662,7 +661,7 @@ private slots:
     // WeightSpinBoxDelegate on every opening of the exits editor. Fixed by
     // parenting both to specialExits, so deleting the dialog now cascades
     // through it and frees them too.
-    void specialExitDelegatesOutliveTheDialog()
+    void specialExitDelegatesAreDestroyedWithTheDialog()
     {
         buildMap();
         auto* pDlg = openDialogOn(scmSubjectRoom);
