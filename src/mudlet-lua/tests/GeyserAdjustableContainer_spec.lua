@@ -2045,4 +2045,361 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       }, {x, y, width, height})
     end)
   end)
+  describe("Tests the functionality of Adjustable.Container:connectToBorder", function()
+    local containers
+    local bordersBefore
+
+    local function make(props)
+      props.autoLoad = false
+      props.autoSave = false
+      local container = Adjustable.Container:new(props)
+      containers[#containers + 1] = container
+      return container
+    end
+
+    -- setMainWindowSize sizes the application window while getMainWindowSize
+    -- reads the console inside it, so the difference between the two has to be
+    -- measured before the console can be resized to a wanted size. Measuring it
+    -- means shrinking the window, so this puts it back before it returns
+    local function consoleChrome()
+      local width, height = getMainWindowSize()
+      setMainWindowSize(width, height)
+      pumpEvents(50)
+      local innerWidth, innerHeight = getMainWindowSize()
+      setMainWindowSize(width + (width - innerWidth), height + (height - innerHeight))
+      pumpEvents(50)
+      return width - innerWidth, height - innerHeight
+    end
+
+    before_each(function()
+      containers = {}
+      bordersBefore = {getBorderTop(), getBorderLeft()}
+    end)
+
+    after_each(function()
+      for index = #containers, 1, -1 do
+        local container = containers[index]
+        if container.attached then
+          container:detach()
+        end
+        container:delete()
+      end
+      containers = {}
+      setBorderTop(bordersBefore[1])
+      setBorderLeft(bordersBefore[2])
+    end)
+
+    -- The connected container's new size is worked out in pixels, so storing it
+    -- as one froze it at the window size it was connected at and it stopped
+    -- following the window from then on
+    it("leaves a connected container's size able to follow the window", function()
+      make({name = "gasConnectTop", x = "0%", y = "0%", width = "100%", height = "10%", attached = "top"})
+      local side = make({name = "gasConnectSide", x = "0%", y = "10%", width = "25%", height = "90%", attached = "left"})
+      local heightBefore = side:get_height()
+
+      side:connectToBorder("top")
+
+      assert.is_truthy(tostring(side.height):find("%%"),
+        "the height came back as " .. tostring(side.height) .. ", which cannot follow the window")
+      assert.is_true(math.abs(side:get_height() - heightBefore) <= 1,
+        "connecting to the border moved the bottom edge, it should only have made the height scalable")
+    end)
+
+    it("leaves a container that was sized absolutely absolute", function()
+      make({name = "gasConnectTopFixed", x = "0%", y = "0%", width = "100%", height = "10%", attached = "top"})
+      local side = make({name = "gasConnectSideFixed", x = "0%", y = "10%", width = "25%", height = 300, attached = "left"})
+
+      side:connectToBorder("top")
+
+      assert.is_falsy(tostring(side.height):find("%%"),
+        "an absolute height came back as " .. tostring(side.height) .. ", so it would start following the window")
+    end)
+
+    it("leaves a container that was positioned absolutely absolute", function()
+      make({name = "gasConnectTopPos", x = "0%", y = "0%", width = "100%", height = "10%", attached = "top"})
+      local side = make({name = "gasConnectSidePos", x = 0, y = 120, width = "25%", height = "90%", attached = "left"})
+
+      side:connectToBorder("top")
+
+      assert.is_falsy(tostring(side.y):find("%%"),
+        "an absolute y came back as " .. tostring(side.y) .. ", so it would start following the window")
+    end)
+
+    -- What the share is for: asserting on the constraint string cannot show
+    -- that the container actually tracks the window afterwards
+    it("keeps a connected container following the window once it is resized", function()
+      local chromeWidth, chromeHeight = consoleChrome()
+      local startWidth, startHeight = getMainWindowSize()
+
+      make({name = "gasFollowTop", x = "0%", y = "0%", width = "100%", height = "10%", attached = "top"})
+      local side = make({name = "gasFollowSide", x = "0%", y = "10%", width = "25%", height = "90%", attached = "left"})
+
+      side:connectToBorder("top")
+      local before = side:get_height()
+      setMainWindowSize(startWidth + chromeWidth, math.floor(startHeight * 0.6) + chromeHeight)
+      pumpEvents(50)
+      local shrunkWidth, shrunkHeight = getMainWindowSize()
+      local after = side:get_height()
+      setMainWindowSize(startWidth + chromeWidth, startHeight + chromeHeight)
+      pumpEvents(50)
+
+      assert.is_true(shrunkHeight < startHeight * 0.8,
+        string.format("the window did not resize, so nothing here is under test: asked for 60%% of %dpx and the console became %dpx", startHeight, shrunkHeight))
+      assert.is_true(after < before * 0.8,
+        "the container was " .. before .. "px and stayed " .. after .. "px in a window shrunk to 60%, so it is not following it")
+    end)
+
+    -- Dragging the anchor past the connected container's far edge makes the new
+    -- size negative, and Geyser reads a negative share as its complement - so an
+    -- unclamped -5% comes back as 95% of the parent
+    it("does not balloon a connected container when the anchor passes its far edge", function()
+      local top = make({name = "gasNegTop", x = "0%", y = "0%", width = "100%", height = "10%", attached = "top"})
+      local side = make({name = "gasNegSide", x = "0%", y = "10%", width = "25%", height = "30%", attached = "left"})
+
+      side:connectToBorder("top")
+      local heightBefore = side:get_height()
+      top:resize(nil, "45%")
+      top:adjustConnectedContainers()
+
+      assert.is_falsy(tostring(side.height):find("^%-"),
+        "the height came back as " .. tostring(side.height) .. ", which Geyser resolves as its complement")
+      assert.is_true(side:get_height() <= heightBefore,
+        "the container grew from " .. heightBefore .. "px to " .. side:get_height() .. "px when the anchor swallowed it")
+    end)
+
+    -- Geyser resolves a share against the container's own parent, so measuring
+    -- one against the main window gives a container in a smaller parent a size
+    -- that has nothing to do with the space it is in
+    it("measures a nested container's share against its own parent", function()
+      local dock = Geyser.Container:new({name = "gasDock", x = "0%", y = "0%", width = "40%", height = 400})
+      make({name = "gasNestTop", x = "0%", y = "0%", width = "100%", height = "10%", attached = "top"})
+      local side = Adjustable.Container:new({
+        name = "gasNestSide", x = "0%", y = "10%", width = "50%", height = "90%",
+        attached = "left", autoLoad = false, autoSave = false,
+      }, dock)
+      containers[#containers + 1] = side
+      local heightBefore = side:get_height()
+
+      side:connectToBorder("top")
+      local heightAfter = side:get_height()
+      local dockHeight = dock:get_height()
+      dock:hide()
+
+      -- measured against the main window instead, the share comes out roughly
+      -- the parent's size over the window's and the container shrinks to it
+      assert.is_true(heightAfter >= heightBefore * 0.9,
+        "the nested container was " .. heightBefore .. "px in a " .. dockHeight .. "px parent and came back "
+          .. heightAfter .. "px, so its share was measured against the main window rather than that parent")
+    end)
+
+    -- Geyser resolves a percentage against the parent, so a parent with no size
+    -- gives nothing to measure against. Dividing by it makes a nan that
+    -- calc_constraints raises on, and this runs from onMove on every mouse move
+    it("leaves a connected container alone inside a parent with no size", function()
+      local dock = Geyser.Container:new({name = "gasZeroDock", x = "0%", y = "10%", width = "40%", height = 0})
+      local top = Adjustable.Container:new({
+        name = "gasZeroTop", x = "0%", y = "0%", width = "100%", height = "10%",
+        attached = "top", autoLoad = false, autoSave = false,
+      }, dock)
+      containers[#containers + 1] = top
+      local side = Adjustable.Container:new({
+        name = "gasZeroSide", x = "0%", y = "10%", width = "50%", height = "90%",
+        attached = "left", autoLoad = false, autoSave = false,
+      }, dock)
+      containers[#containers + 1] = side
+
+      local ok, err = pcall(function() side:connectToBorder("top") end)
+      local heightAfter, yAfter = tostring(side.height), tostring(side.y)
+      dock:hide()
+
+      assert.is_true(ok, "connecting inside a parent with no size raised: " .. tostring(err))
+      assert.is_falsy(heightAfter:find("nan") or yAfter:find("nan"),
+        "the constraints came back as " .. heightAfter .. " and " .. yAfter .. ", which calc_constraints cannot parse")
+    end)
+
+    -- A position is resolved from the parent's corner, so the parent's own origin
+    -- has to come off the pixels before they become a share of it. The dock sits
+    -- part way down the window on purpose: at the top its origin is zero and
+    -- leaving it in would make no difference
+    it("measures a nested container's position from its own parent's origin", function()
+      local dock = Geyser.Container:new({name = "gasOriginDock", x = "0%", y = "20%", width = "40%", height = 300})
+      local top = Adjustable.Container:new({
+        name = "gasOriginTop", x = "0%", y = "0%", width = "100%", height = "10%",
+        attached = "top", autoLoad = false, autoSave = false,
+      }, dock)
+      containers[#containers + 1] = top
+      local side = Adjustable.Container:new({
+        name = "gasOriginSide", x = "0%", y = "10%", width = "50%", height = "90%",
+        attached = "left", autoLoad = false, autoSave = false,
+      }, dock)
+      containers[#containers + 1] = side
+
+      side:connectToBorder("top")
+      local anchorBottom = top:get_y() + top:get_height()
+      local sideTop = side:get_y()
+      dock:hide()
+
+      assert.is_true(math.abs(sideTop - anchorBottom) <= 1,
+        "the anchor's bottom is at " .. anchorBottom .. "px and the container's top at " .. sideTop
+          .. "px, so the parent's own origin was left in the share")
+    end)
+
+    -- A negative constraint is a fixed gap from the parent's far edge. Turning
+    -- it into a share of the parent would change what the constraint means, and
+    -- save() would persist the new meaning
+    it("does not turn a height measured from the far edge into a share", function()
+      make({name = "gasFarTop", x = "0%", y = "0%", width = "100%", height = "10%", attached = "top"})
+      local side = make({name = "gasFarSide", x = "0%", y = "10%", width = "25%", height = "-100", attached = "left"})
+
+      side:connectToBorder("top")
+
+      assert.is_falsy(tostring(side.height):find("%%"),
+        "a far-edge height came back as " .. tostring(side.height) .. ", so the fixed gap became a proportional one that save() would persist")
+    end)
+
+    -- A far-edge constraint recomputes itself from wherever its container ends
+    -- up, so it has to come through untouched. Rewritten as the pixels it
+    -- happens to measure right now it stops following the far edge, which only
+    -- shows once the window changes without the anchor moving
+    it("leaves a far-edge constraint measuring from the far edge", function()
+      local chromeWidth, chromeHeight = consoleChrome()
+      local startWidth, startHeight = getMainWindowSize()
+
+      make({name = "gasKeepTop", x = "0%", y = "0%", width = "100%", height = "10%", attached = "top"})
+      local side = make({name = "gasKeepSide", x = "0%", y = "10%", width = "25%", height = "-100", attached = "left"})
+      side:connectToBorder("top")
+      local gapBefore = startHeight - (side:get_y() + side:get_height())
+
+      setMainWindowSize(startWidth + chromeWidth, math.floor(startHeight * 0.7) + chromeHeight)
+      pumpEvents(50)
+      local shrunkHeight = select(2, getMainWindowSize())
+      local gapAfter = shrunkHeight - (side:get_y() + side:get_height())
+      setMainWindowSize(startWidth + chromeWidth, startHeight + chromeHeight)
+      pumpEvents(50)
+
+      assert.is_true(shrunkHeight < startHeight * 0.9,
+        string.format("the window did not resize, so nothing here is under test: asked for 70%% of %dpx and the console became %dpx", startHeight, shrunkHeight))
+      assert.is_true(math.abs(gapAfter - gapBefore) <= 2,
+        "the container sat " .. gapBefore .. "px above the parent's bottom and " .. gapAfter
+          .. "px above it once the window changed, so its constraint was rewritten as a fixed size")
+    end)
+
+    -- Geyser reads a percentage before it reads a negative, so a negative share
+    -- is a share of the parent and not a gap from its far edge. Mistaken for one
+    -- it would be left alone, and the container would keep a height that no
+    -- longer fits under the anchor
+    it("treats a negative share as a share rather than a far-edge constraint", function()
+      local top = make({name = "gasNegPctTop", x = "0%", y = "0%", width = "100%", height = "10%", attached = "top"})
+      local side = make({name = "gasNegPctSide", x = "0%", y = "10%", width = "25%", height = "-25%", attached = "left"})
+      side:connectToBorder("top")
+      local bottomBefore = side:get_y() + side:get_height()
+
+      top:resize(nil, "30%")
+      top:adjustConnectedContainers()
+
+      local bottomAfter = side:get_y() + side:get_height()
+      assert.is_true(math.abs(bottomAfter - bottomBefore) <= 1,
+        "the container's bottom was at " .. bottomBefore .. "px and moved to " .. bottomAfter
+          .. "px, so its negative share was taken for a far-edge constraint and left as it was")
+    end)
+
+    -- Squeezed to nothing the container has no size left to show, but the far
+    -- edge it had has to survive, or the anchor coming back leaves it somewhere
+    -- it has never been
+    it("gives a squeezed connected container its size back when the anchor returns", function()
+      local top = make({name = "gasSqueezeTop", x = "0%", y = "0%", width = "100%", height = "10%", attached = "top"})
+      local side = make({name = "gasSqueezeSide", x = "0%", y = "10%", width = "25%", height = "20%", attached = "left"})
+      side:connectToBorder("top")
+      local bottomBefore = side:get_y() + side:get_height()
+
+      top:resize(nil, "40%")
+      top:adjustConnectedContainers()
+      top:resize(nil, "10%")
+      top:adjustConnectedContainers()
+
+      local bottomAfter = side:get_y() + side:get_height()
+      assert.is_true(math.abs(bottomAfter - bottomBefore) <= 1,
+        "the container's bottom was at " .. bottomBefore .. "px and came back at " .. bottomAfter
+          .. "px, so the anchor pushing past it moved the bottom for good")
+    end)
+
+    -- Only a size counted from the far edge re-derives itself from the container's
+    -- own position: Geyser gives a negative width and height the container's own x
+    -- or y to work from and a negative x and y nothing, so a position measured that
+    -- way is fixed and has to take the new value like a plain one would
+    it("moves a connected container whose position is counted from the far edge", function()
+      local top = make({name = "gasNegPosTop", x = "0%", y = "0%", width = "100%", height = "10%", attached = "top"})
+      local side = make({name = "gasNegPosSide", x = "0%", y = "-300", width = "25%", height = 200, attached = "left"})
+      side:connectToBorder("top")
+
+      top:resize(nil, "30%")
+      top:adjustConnectedContainers()
+
+      local anchorBottom = top:get_y() + top:get_height()
+      assert.is_true(math.abs(side:get_y() - anchorBottom) <= 1,
+        "the anchor's bottom is at " .. anchorBottom .. "px and the container's top is at " .. side:get_y()
+          .. "px, so a position counted from the far edge did not follow the anchor")
+    end)
+
+    -- adjustConnectedContainers runs from onMove on every mouse-move event, and
+    -- Geyser stores a pixel value with its fraction truncated. Working the size
+    -- out from the position asked for rather than the one the move stored drops
+    -- that fraction twice, so the container loses a pixel every pass
+    it("does not shrink a connected container over repeated adjustment", function()
+      local top = make({name = "gasRepeatTop", x = "0%", y = "0%", width = "100%", height = "10%", attached = "top"})
+      local side = make({name = "gasRepeatSide", x = "0%", y = 120, width = "25%", height = 200, attached = "left"})
+      side:connectToBorder("top")
+      local bottomBefore = side:get_y() + side:get_height()
+
+      for _ = 1, 40 do
+        top:adjustConnectedContainers()
+      end
+
+      local bottomAfter = side:get_y() + side:get_height()
+      assert.is_true(math.abs(bottomAfter - bottomBefore) <= 1,
+        "the container's bottom was at " .. bottomBefore .. "px and drifted to " .. bottomAfter
+          .. "px over 40 passes, so every pass costs it a pixel")
+    end)
+
+    -- The left branch is the mirror of the top one and carries the same three
+    -- writes, so it needs its own case rather than the assumption that the two
+    -- behave alike
+    it("holds a container connected to a left border anchor inside its right edge", function()
+      local anchor = make({name = "gasLeftAnchor", x = "0%", y = "0%", width = "10%", height = "100%", attached = "left"})
+      local top = make({name = "gasLeftTop", x = "10%", y = "0%", width = "60%", height = "20%", attached = "top"})
+      top:connectToBorder("left")
+      local rightBefore = top:get_x() + top:get_width()
+
+      anchor:resize("95%", nil)
+      anchor:adjustConnectedContainers()
+      local squeezed = top:get_width()
+      anchor:resize("10%", nil)
+      anchor:adjustConnectedContainers()
+
+      local rightAfter = top:get_x() + top:get_width()
+      assert.is_true(squeezed <= 1,
+        "the container stayed " .. squeezed .. "px wide with the anchor over it, so it did not collapse")
+      assert.is_true(math.abs(rightAfter - rightBefore) <= 1,
+        "the container's right edge was at " .. rightBefore .. "px and came back at " .. rightAfter
+          .. "px, so the anchor passing it moved the edge for good")
+    end)
+
+    -- An anchor that only resizes its connected container has no move to hold
+    -- back, so the share itself has to be floored: Geyser reads a negative share
+    -- as its complement and the container fills the parent instead of emptying
+    it("does not balloon a connected container when a bottom anchor passes its top", function()
+      local bar = make({name = "gasBotBar", x = "0%", y = "80%", width = "100%", height = "20%", attached = "bottom"})
+      local side = make({name = "gasBotSide", x = "0%", y = "60%", width = "25%", height = "20%", attached = "left"})
+      side:connectToBorder("bottom")
+      local heightBefore = side:get_height()
+
+      bar:move(nil, "20%")
+      bar:resize(nil, "80%")
+      bar:adjustConnectedContainers()
+
+      assert.is_true(side:get_height() <= heightBefore,
+        "the container was " .. heightBefore .. "px and grew to " .. side:get_height()
+          .. "px when the anchor passed its top, so a negative share came back as its complement")
+    end)
+  end)
 end)
