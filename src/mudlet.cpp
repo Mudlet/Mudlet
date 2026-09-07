@@ -427,7 +427,7 @@ void mudlet::initSpeechRecognition(SpeechRecognizerFactory::Backend backend)
         // being told about the dead one. The retirement is meant to be silent.
         // Said before releaseResources() below, which is what resets the state
         // this reads - not before the disconnect, which has no bearing on it:
-        // raiseSpeechEvent() goes straight to the active Host rather than over
+        // raiseSpeechEvent() goes to the microphone's owner rather than over
         // the retiring engine's connections. An engine swap reached from
         // stt.init() while a phrase is in flight takes that phrase with it,
         // and rule 1 allows recognised speech to be dropped only by a path
@@ -441,10 +441,6 @@ void mudlet::initSpeechRecognition(SpeechRecognizerFactory::Backend backend)
     }
 }
 
-// Where a command's menu item hangs, building the path's submenus as needed.
-// A path part that names an existing leaf item is refused rather than
-// duplicated: two entries with one label, one a command and one a submenu, is
-// not something a package can have meant.
 QToolBar* mudlet::addonToolBarFor(QMainWindow* pContainer) const
 {
     if (pContainer == this) {
@@ -463,6 +459,10 @@ QMenu* mudlet::addonOptionsMenuFor(QMainWindow* pContainer) const
     return pDetached ? pDetached->optionsMenu() : nullptr;
 }
 
+// Where a command's menu item hangs, building the path's submenus as needed.
+// A path part that names an existing leaf item is refused rather than
+// duplicated: two entries with one label, one a command and one a submenu, is
+// not something a package can have meant.
 QMenu* mudlet::addonMenuForPath(QMainWindow* pContainer, const QString& menuPath, const Host* pHost, QString& error)
 {
     AddonChrome& chrome = mAddonChrome[pContainer];
@@ -641,15 +641,28 @@ bool mudlet::addonShortcutUsable(const QKeySequence& sequence, const Host* pHost
         }
     }
 
-    for (const QAction* action : findChildren<QAction*>()) {
+    // Every window's actions, not only this one's. A command now lives in the
+    // window holding its profile, and a detached window is parentless by
+    // design - so scanning this window's children alone stopped seeing a
+    // detached profile's commands, and two profiles in different windows could
+    // both be granted the same key. They collide the moment one is pinned into
+    // the other's window, and Qt answers an ambiguous shortcut by disabling
+    // both, which no release build ever prints a word about.
+    QList<QAction*> candidates = findChildren<QAction*>();
+    for (auto it = mDetachedWindows.constBegin(); it != mDetachedWindows.constEnd(); ++it) {
+        if (it.value()) {
+            candidates.append(it.value()->findChildren<QAction*>());
+        }
+    }
+
+    for (const QAction* action : candidates) {
         if (action->shortcut() != sequence) {
             continue;
         }
-        // Menu actions are shared between profiles, so the holder can be a
-        // command another profile placed. Its name is that package's business
-        // and nothing this one can act on, so the key is reported as taken
-        // without saying by whom - the alternative leaks a label out of a
-        // profile the caller cannot see.
+        // The holder can be a command another profile placed, in this window or
+        // another. Its name is that package's business and nothing this one can
+        // act on, so the key is reported as taken without saying by whom - the
+        // alternative leaks a label out of a profile the caller cannot see.
         const Host* pOwner = addonCommandOwning(action);
         if (pOwner && pOwner != pHost) {
             //: Refusal shown to a package, %1 is a keyboard shortcut such as "Ctrl+K" that a command belonging to a different profile already uses
@@ -699,6 +712,14 @@ bool mudlet::addonShortcutUsable(const QKeySequence& sequence, const Host* pHost
 // unescaped '<' silently eats the rest of the tooltip as markup. Wrapping
 // empty text would defeat the "no tooltip" case, because "<p></p>" is not an
 // empty string and Qt shows an empty tooltip box for it.
+// One spelling of what a pulsing button looks like. It was written out at each
+// of the three places that paint one, so a change to the appearance would have
+// shown up on a button only until its profile was dragged to another window.
+QString mudlet::addonPulseStyleSheet(const QString& colour)
+{
+    return qsl("QToolButton { background-color: %1; border-radius: 4px; }").arg(colour);
+}
+
 QString mudlet::addonTooltip(const QString& tooltip)
 {
     if (tooltip.isEmpty()) {
@@ -863,6 +884,21 @@ Host* mudlet::addonShownProfileIn(QMainWindow* pContainer)
     return mHostManager.getHost(mpTabBar->tabName(mpTabBar->currentIndex()));
 }
 
+// Depth first, so an inner submenu is decided before the one holding it is
+// asked whether anything visible is left.
+void mudlet::hideEmptyAddonSubmenus(QMenu* pMenu)
+{
+    if (!pMenu) {
+        return;
+    }
+    for (QAction* pAction : pMenu->actions()) {
+        if (QMenu* pSubmenu = pAction->menu()) {
+            hideEmptyAddonSubmenus(pSubmenu);
+            pAction->setVisible(!pSubmenu->isEmpty());
+        }
+    }
+}
+
 // A detached window deletes itself when it closes, and its entry here would
 // otherwise sit on a freed address for the rest of the run - taking with it a
 // submenuOwners map whose QMenu keys and Host values died with the window. A
@@ -899,8 +935,9 @@ void mudlet::forgetChromeOfClosedWindows()
     }
 }
 
-// The window the player is working in, when that is one of ours. A pinned
-// command follows this rather than its own profile's window.
+// Focus changes are frequent and placement depends on them only while something
+// is pinned, so the scan is what keeps an unpinned session from re-placing every
+// command each time a window comes forward.
 void mudlet::refreshAddonPlacementIfAnyPinned()
 {
     for (auto it = mAddonCommands.constBegin(); it != mAddonCommands.constEnd(); ++it) {
@@ -911,6 +948,8 @@ void mudlet::refreshAddonPlacementIfAnyPinned()
     }
 }
 
+// The window the player is working in, when that is one of ours. Null for the
+// script editor, for Preferences, and for another application entirely.
 QMainWindow* mudlet::addonFocusedContainer()
 {
     QWidget* pActive = QApplication::activeWindow();
@@ -942,8 +981,15 @@ void mudlet::refreshAddonPlacement()
         // profile that window is showing. Everything else stays home.
         QMainWindow* pTarget = addonHomeContainerFor(command.pHost);
         if (command.pinned) {
-            if (QMainWindow* pFocused = addonFocusedContainer()) {
-                pTarget = pFocused;
+            // The last Mudlet window the player was in, not necessarily the one
+            // with focus now: focus goes to the script editor, to Preferences,
+            // and out of Mudlet altogether, and none of those mean "put this
+            // back with its own profile". Dropping it home on those would take
+            // a live microphone's control off the window the player is working
+            // in at the moment they most need it - alt-tabbed to a browser is
+            // the case a keep-listening setting exists for.
+            if (mpLastFocusedContainer) {
+                pTarget = mpLastFocusedContainer;
             }
         }
         if (command.container != pTarget) {
@@ -963,6 +1009,17 @@ void mudlet::refreshAddonPlacement()
         }
         if (command.menuAction) {
             command.menuAction->setVisible(visible);
+        }
+    }
+
+    // A submenu whose contents are all hidden is an empty popup the player can
+    // still open: QMenu::isEmpty() counts visible actions, so hiding a
+    // command's own item is not enough to take the "Speech" it sits under off
+    // the menu with it. Walked outermost-in so that a submenu of submenus
+    // settles in one pass.
+    for (auto it = mAddonChrome.constBegin(); it != mAddonChrome.constEnd(); ++it) {
+        if (it.value().addonsMenu) {
+            hideEmptyAddonSubmenus(it.value().addonsMenu);
         }
     }
 
@@ -991,6 +1048,15 @@ void mudlet::refreshAddonPlacement()
 // when the command was created, and a command that has been moved must arrive.
 void mudlet::placeAddonCommand(const int commandId, AddonCommand& command, QMainWindow* pContainer)
 {
+    // A command is in one window or none. Placing one that is still placed
+    // would strand its old widgets: the pointers here are overwritten, the
+    // ghost button stays in the old window answering to nothing, and the
+    // separator that window keeps is decided by scanning for commands whose
+    // container matches - which the ghost's no longer does.
+    if (command.container) {
+        unplaceAddonCommand(command);
+    }
+
     const CommandRequest& request = command.request;
     const bool wantsToolbar = request.surfaces != CommandSurface::Menu;
     const bool wantsMenu = request.surfaces != CommandSurface::Toolbar;
@@ -1054,22 +1120,18 @@ void mudlet::applyAddonCommandState(AddonCommand& command)
     if (command.button) {
         command.button->setToolTip(addonTooltip(command.tooltip));
         command.button->setEnabled(command.enabled);
-        if (command.checkable) {
-            command.button->setCheckable(true);
-            command.button->setChecked(command.checked);
-        }
-        if (command.pulseEnabled) {
-            const QString& colour = command.pulseState ? command.pulseColor1 : command.pulseColor2;
-            command.button->setStyleSheet(qsl("QToolButton { background-color: %1; border-radius: 4px; }").arg(colour));
-        }
+        command.button->setCheckable(command.checkable);
+        command.button->setChecked(command.checkable && command.checked);
+        // Cleared as well as set: this has to be able to put a widget into the
+        // state the record describes, not only add to whatever it already had,
+        // or it cannot be the one place that agreement is made.
+        command.button->setStyleSheet(command.pulseEnabled ? addonPulseStyleSheet(command.pulseState ? command.pulseColor1 : command.pulseColor2) : QString());
     }
     if (command.menuAction) {
         command.menuAction->setToolTip(addonTooltip(command.tooltip));
         command.menuAction->setEnabled(command.enabled);
-        if (command.checkable) {
-            command.menuAction->setCheckable(true);
-            command.menuAction->setChecked(command.checked);
-        }
+        command.menuAction->setCheckable(command.checkable);
+        command.menuAction->setChecked(command.checkable && command.checked);
     }
 }
 
@@ -1378,7 +1440,6 @@ bool mudlet::setAddonCommandPulse(int commandId, bool enabled, const QString& co
         command.pulseColor2 = color2;
         command.pulseState = true;
         command.pulseEnabled = true;
-        command.pulseInterval = interval;
 
         if (!command.pulseTimer) {
             command.pulseTimer = new QTimer(this);
@@ -1392,13 +1453,13 @@ bool mudlet::setAddonCommandPulse(int commandId, bool enabled, const QString& co
                 }
                 pulsing.pulseState = !pulsing.pulseState;
                 const QString& colour = pulsing.pulseState ? pulsing.pulseColor1 : pulsing.pulseColor2;
-                pulsing.button->setStyleSheet(qsl("QToolButton { background-color: %1; border-radius: 4px; }").arg(colour));
+                pulsing.button->setStyleSheet(addonPulseStyleSheet(colour));
             });
         }
 
         command.pulseTimer->setInterval(interval);
         command.pulseTimer->start();
-        command.button->setStyleSheet(qsl("QToolButton { background-color: %1; border-radius: 4px; }").arg(color1));
+        command.button->setStyleSheet(addonPulseStyleSheet(color1));
     } else {
         command.pulseEnabled = false;
         if (command.pulseTimer) {
@@ -1472,6 +1533,9 @@ void mudlet::init()
     // - in the one case pinning exists for. Only asked when something is
     // actually pinned, since unpinned placement does not depend on focus.
     connect(qGuiApp, &QGuiApplication::focusWindowChanged, this, [this](QWindow*) {
+        if (QMainWindow* pFocused = addonFocusedContainer()) {
+            mpLastFocusedContainer = pFocused;
+        }
         refreshAddonPlacementIfAnyPinned();
     });
     readEarlySettings(*mpSettings);
@@ -8836,7 +8900,6 @@ void mudlet::activateProfile(Host* pHost)
     // Regenerate the multi-view mode if it is enabled:
     reshowRequiredMainConsoles();
 
-    // The main window's chrome now belongs to a different profile
     refreshAddonPlacement();
 
     // Reset the styles to reflect those of the now active profile:
@@ -9582,7 +9645,9 @@ void mudlet::detachTab(int tabIndex, const QPoint& position)
     // Update main window title to reflect changed tab state
     updateMainWindowTitle();
 
-    // The profile took its commands out of the main window with it
+    // Asked for here because the window was built with the profile already in
+    // its map, so TDetachedWindow::addProfile() - which would otherwise cover
+    // this - is never called on the way out.
     refreshAddonPlacement();
 
     // Only show connection dialog if there are no profiles loaded anywhere,
@@ -9761,7 +9826,6 @@ void mudlet::reattachTab(const QString& profileName, int insertIndex)
     // Update main window title to reflect the reattached profile
     updateMainWindowTitle();
 
-    // ...and brings them back
     refreshAddonPlacement();
 }
 

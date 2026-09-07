@@ -86,7 +86,7 @@ default.
 | `enableCommand(id)` | boolean | Enables it on every surface. |
 | `disableCommand(id)` | boolean | Disables it on every surface. |
 | `setCommandChecked(id, checked)` | boolean | Sets a checkmark (the command becomes checkable on first use), on every surface. A checkable command activated by the user stays in step across surfaces: the state the pressed surface reached is the state the others take, before `sysCommandClicked` is raised. |
-| `setCommandPinned(id, pinned)` | boolean | Shows the command in whichever window the player is in, whatever profile that window is showing, until unpinned. For a control that must stay reachable while it is running - an open microphone. Unpinning returns it to its own profile's window. |
+| `setCommandPinned(id, pinned)` | boolean | Shows the command in whichever window the player is in, whatever profile that window is showing, until unpinned. For a control that must stay reachable while it is running - an open microphone. It follows the last window of this client the player was in, so it stays put when they move to something else entirely rather than retreating to its own profile's window. Unpinning returns it there. |
 | `setCommandIcon(id, icon)` | boolean | Replaces the icon; path rules as above. |
 | `setCommandTooltip(id, tooltip)` | boolean | Replaces the tooltip; an empty string takes it away, leaving the menu item to fall back on its own label as every other menu item does. Package text is escaped, so `<` and `&` show as typed - in labels too, where a bare `&` would otherwise be read as a keyboard mnemonic and vanish from the text. |
 | `setCommandPulse(id, enabled[, color1, color2, interval])` | boolean \| `nil, error` | Toolbar-only refinement: a two-colour background pulse (defaults `#ff4444`/`#cc0000`, 500ms). Refuses a colour the client cannot parse, and an `interval` below 1ms. |
@@ -107,13 +107,14 @@ above are decided by the calling profile's own commands. Two profiles may use
 the same path or the same label, and neither can see or clear the other's -
 which is why a refusal never names one.
 
-Shortcuts are the exception: a key sequence belongs to the window, so two
-profiles cannot hold the same one at once. The second is refused, without
-being told whose command has it.
+Shortcuts are the exception: a key sequence is checked against every window, so
+two profiles cannot hold the same one at once even when their profiles are in
+different windows. The second is refused, without being told whose command has
+it.
 
 **Detached profiles keep their own chrome.** A profile detached into its own
-window builds its own menu bar and toolbar, and commands are not mirrored into
-them; they stay reachable from the main window.
+window builds its own menu bar and toolbar, and its commands move into them
+with it - see *Where a command appears* above.
 
 ## Events
 

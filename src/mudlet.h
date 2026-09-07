@@ -244,9 +244,6 @@ public:
     // loses it is told, since nothing else on its screen would say why its
     // microphone went quiet. Call before startListening(); on a refusal call
     // releaseMicrophone() so the claim does not outlive the session it was for.
-    // Re-place and re-show add-on commands: called whenever the profile a window
-    // is showing changes, or a profile moves between windows.
-    void refreshAddonPlacement();
     bool claimMicrophoneFor(Host* pHost);
     void releaseMicrophone();
     // Raise one sysSTT* event on a named profile. A refusal belongs to the
@@ -255,6 +252,10 @@ public:
     void raiseSpeechEventOn(Host* pHost, const QString& name, const QString& value);
     // Which profile the microphone currently belongs to, or nullptr
     Host* microphoneOwner() const;
+    // Re-place and re-show add-on commands: called whenever the profile a window
+    // is showing changes, or a profile moves between windows. Nothing to do with
+    // the microphone; it sits here only because a detached window calls it.
+    void refreshAddonPlacement();
     // The " (listening)" a window's title carries while this profile holds the
     // microphone, or nothing. Public because a detached window builds its own title.
     QString microphoneMarkerFor(const QString& profileName) const;
@@ -889,7 +890,6 @@ private:
         bool pulseState = false;
         QString pulseColor1;
         QString pulseColor2;
-        int pulseInterval = 0;
     };
     // The chrome one window lends to add-on commands. There is a set of these
     // per window rather than one for the application, because a detached window
@@ -905,19 +905,25 @@ private:
     // The toolbar and the Options menu of a window, whichever kind it is
     QToolBar* addonToolBarFor(QMainWindow* pContainer) const;
     QMenu* addonOptionsMenuFor(QMainWindow* pContainer) const;
-    // Build this command's widgets in a window and apply everything the package
-    // has set, or take them down again and tidy what they leave behind
     QMainWindow* addonHomeContainerFor(Host* pHost) const;
     Host* addonShownProfileIn(QMainWindow* pContainer);
     QMainWindow* addonFocusedContainer();
     void refreshAddonPlacementIfAnyPinned();
     void forgetChromeOfClosedWindows();
+    void hideEmptyAddonSubmenus(QMenu* pMenu);
+    // The last window of ours the player was in. A pinned command follows this
+    // rather than whatever holds focus now, which may be the script editor or
+    // another application entirely.
+    QPointer<QMainWindow> mpLastFocusedContainer;
+    // Build this command's widgets in a window and apply everything the package
+    // has set, or take them down again and tidy what they leave behind
     void placeAddonCommand(int commandId, AddonCommand& command, QMainWindow* pContainer);
     void unplaceAddonCommand(AddonCommand& command);
     void applyAddonCommandState(AddonCommand& command);
     QMenu* addonMenuForPath(QMainWindow* pContainer, const QString& menuPath, const Host* pHost, QString& error);
     bool addonShortcutUsable(const QKeySequence& sequence, const Host* pHost, QString& error) const;
     static QString addonTooltip(const QString& tooltip);
+    static QString addonPulseStyleSheet(const QString& colour);
     // Qt reads '&' in a QAction's or QToolButton's text as a mnemonic, so a
     // package's "Fish & Chips" draws without the ampersand and steals Alt+Space.
     // The clash checks compare labels after doubling, so a path part is put

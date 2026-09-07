@@ -650,6 +650,123 @@ private slots:
         QVERIFY2(mudlet::self()->addonChromeWindowCount() < withWindowOpen, "the closed window's chrome is still recorded, keyed by an address that no longer belongs to it");
     }
 
+    // Hiding a command's own item is not enough to take the submenu it sits
+    // under off the menu: QMenu::isEmpty() counts visible actions, so "Speech"
+    // stayed openable and opened onto nothing.
+    void test_aSubmenuHoldingOnlyHiddenCommandsIsHiddenToo()
+    {
+        const int secondId = addCommand(mpSecondHost, qsl("name = \"Rec\", menuPath = \"SpeechMenu\", surfaces = \"menu\""));
+        QVERIFY(secondId > 0);
+
+        mudlet::self()->activateProfile(mpSecondHost);
+        QAction* pSubmenu = menuItemIn(mudlet::self(), qsl("SpeechMenu"));
+        QVERIFY2(pSubmenu, "the submenu was never created");
+        QVERIFY2(pSubmenu->isVisible(), "the submenu is hidden while its own profile is being shown");
+
+        mudlet::self()->activateProfile(mpFirstHost);
+        QVERIFY2(!pSubmenu->isVisible(), "a submenu holding nothing but another profile's hidden commands is still on the menu");
+
+        runLua(mpSecondHost, qsl("removeCommand(%1)").arg(secondId));
+    }
+
+    // Focus leaving Mudlet - alt-tabbed to a browser, or into the script editor
+    // - must not drag a pinned control back to its own profile's window. That
+    // is the moment the player is furthest from it.
+    void test_aPinnedCommandStaysPutWhenFocusLeavesEveryWindow()
+    {
+        const int firstId = addCommand(mpFirstHost, qsl("name = \"SpeechStay\", surfaces = \"toolbar\""));
+        QVERIFY(firstId > 0);
+
+        mudlet::self()->activateProfile(mpFirstHost);
+        mudlet::self()->activateWindow();
+        QVERIFY(runLua(mpFirstHost, qsl("setCommandPinned(%1, true)").arg(firstId)).isNull());
+
+        TDetachedWindow* pWindow = detachSecondProfile();
+        QVERIFY(pWindow);
+        pWindow->activateWindow();
+        QVERIFY2(QTest::qWaitFor(
+                         [pWindow]() {
+                             return QApplication::activeWindow() == pWindow;
+                         },
+                         2000),
+                 "the detached window never became active, so this cannot test what happens when focus leaves it");
+        QVERIFY2(buttonIn(pWindow, qsl("SpeechStay")), "the pinned command did not follow the player into the detached window");
+
+        // Nothing of ours has focus now, which is what alt-tabbing away looks
+        // like from in here
+        pWindow->activateWindow();
+        QApplication::setActiveWindow(nullptr);
+        mudlet::self()->refreshAddonPlacement();
+
+        QVERIFY2(buttonIn(pWindow, qsl("SpeechStay")), "a pinned command was dragged back to its own profile's window when focus left Mudlet");
+
+        QVERIFY(runLua(mpFirstHost, qsl("setCommandPinned(%1, false)").arg(firstId)).isNull());
+        runLua(mpFirstHost, qsl("removeCommand(%1)").arg(firstId));
+    }
+
+    // A moved command keeps its icon and its pulse, which the first version of
+    // this rule recorded nowhere and would have lost on every drag-out.
+    void test_aMovedCommandKeepsItsIconAndItsPulse()
+    {
+        const int secondId = addCommand(mpSecondHost, qsl("name = \"SpeechPaint\", surfaces = \"toolbar\""));
+        QVERIFY(secondId > 0);
+        QVERIFY(runLua(mpSecondHost, qsl("setCommandIcon(%1, \"dialog-information\")").arg(secondId)).isNull());
+        QVERIFY(runLua(mpSecondHost, qsl("setCommandPulse(%1, true, \"#ff4444\", \"#cc0000\", 500)").arg(secondId)).isNull());
+
+        TDetachedWindow* pWindow = detachSecondProfile();
+        QVERIFY(pWindow);
+
+        QToolButton* pMoved = buttonIn(pWindow, qsl("SpeechPaint"));
+        QVERIFY2(pMoved, "the command did not arrive in the detached window");
+        QVERIFY2(!pMoved->styleSheet().isEmpty(), "a pulsing command came out of the move unpainted");
+        QVERIFY2(pMoved->styleSheet().contains(qsl("background-color")), "the pulse stylesheet did not survive the move");
+
+        runLua(mpSecondHost, qsl("setCommandPulse(%1, false)").arg(secondId));
+        runLua(mpSecondHost, qsl("removeCommand(%1)").arg(secondId));
+    }
+
+    // The question this whole rule was written to answer: several games sharing
+    // one window show one set of commands, not one set each. The main window
+    // covers the same code path, but a detached window is where a player is
+    // most likely to stack profiles up, and its own switchToProfile() is what
+    // drives the swap there.
+    void test_oneWindowWithTwoProfilesShowsOneSetOfCommands()
+    {
+        const int firstId = addCommand(mpFirstHost, qsl("name = \"SpeechOne\", surfaces = \"toolbar\""));
+        const int secondId = addCommand(mpSecondHost, qsl("name = \"SpeechTwo\", surfaces = \"toolbar\""));
+        QVERIFY(firstId > 0 && secondId > 0);
+
+        TDetachedWindow* pWindow = detachSecondProfile();
+        QVERIFY(pWindow);
+
+        // Move the first profile in alongside the second, so one window holds
+        // both - the arrangement four tabs in one detached window generalises
+        QVERIFY2(pWindow->addProfile(mFirstHostname, mpFirstHost->mpConsole), "the first profile could not join the detached window");
+        pWindow->switchToProfile(mFirstHostname);
+        QTest::qWait(200ms);
+
+        QCOMPARE(pWindow->getProfileCount(), 2);
+        QCOMPARE(pWindow->getCurrentProfileName(), mFirstHostname);
+
+        QAction* pOne = toolbarEntryIn(pWindow, qsl("SpeechOne"));
+        QAction* pTwo = toolbarEntryIn(pWindow, qsl("SpeechTwo"));
+        QVERIFY2(pOne, "the shown profile's command is not in the window at all");
+        QVERIFY2(pOne->isVisible(), "the shown profile's command is not on the toolbar");
+        QVERIFY2(!pTwo || !pTwo->isVisible(), "both profiles' commands are on one window's toolbar at once");
+
+        pWindow->switchToProfile(mSecondHostname);
+        QTest::qWait(200ms);
+        QAction* pTwoNow = toolbarEntryIn(pWindow, qsl("SpeechTwo"));
+        QVERIFY2(pTwoNow && pTwoNow->isVisible(), "switching tabs in the detached window did not bring the other profile's command out");
+        QAction* pOneNow = toolbarEntryIn(pWindow, qsl("SpeechOne"));
+        QVERIFY2(!pOneNow || !pOneNow->isVisible(), "switching tabs left the previous profile's command on the toolbar");
+
+        pWindow->removeProfile(mFirstHostname);
+        QTest::qWait(100ms);
+        runLua(mpFirstHost, qsl("removeCommand(%1)").arg(firstId));
+        runLua(mpSecondHost, qsl("removeCommand(%1)").arg(secondId));
+    }
+
 private:
     TDetachedWindow* detachSecondProfile()
     {
