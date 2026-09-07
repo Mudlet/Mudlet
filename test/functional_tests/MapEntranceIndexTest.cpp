@@ -220,7 +220,7 @@ private slots:
             QFile file(QString::fromUtf8(digestPath));
             if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
                 QTextStream stream(&file);
-                stream << mDigest.join(QChar::LineFeed) << QChar::LineFeed;
+                stream << mDigest.join(QChar('\n')) << '\n';
             }
         }
         if (mSavedXdg.isEmpty()) {
