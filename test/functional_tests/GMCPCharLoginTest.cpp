@@ -38,6 +38,7 @@
 #include <QDesktopServices>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QRegularExpression>
 #include <QUrlQuery>
 #include <functional>
 
@@ -651,11 +652,24 @@ private slots:
         QVERIFY(host);
         mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:char\", \"token\": \"opaque-token\"}"));
         QVERIFY2(waitForConsoleContains(host, qsl("signed in automatically next time")), "saving a reconnect token should be announced once");
+        // Asserted separately rather than as one sentence, which the console wraps across lines. The page
+        // name is pinned because it can silently drift away from where the "Forget saved sign-in" control
+        // actually lives - which is exactly how the notice came to name the wrong page before.
+        QVERIFY2(waitForConsoleContainsUnwrapped(host, qsl("Manage this under Preferences, Privacy and security.")), "the notice should name the preferences page that manages the saved sign-in");
         QVERIFY2(waitForStoredReconnect(host,
                                         [](const QJsonObject& entry) {
                                             return entry.value(qsl("account")).toString() == qsl("acct:char") && entry.value(qsl("token")).toString() == qsl("opaque-token");
                                         }),
                  "the reconnect token should be persisted with the announced account and token");
+
+        // A server may mint repeatedly on one sign-in; the player only needs telling once.
+        mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:char\", \"token\": \"second-token\"}"));
+        QVERIFY2(waitForStoredReconnect(host,
+                                        [](const QJsonObject& entry) {
+                                            return entry.value(qsl("token")).toString() == qsl("second-token");
+                                        }),
+                 "the second token should overwrite the first");
+        QCOMPARE(consoleOccurrences(host, qsl("signed in automatically next time")), 1);
     }
 
     void testAFailedSaveIsNotAnnouncedAsASuccess()
@@ -738,29 +752,30 @@ private slots:
         QTest::addColumn<QString>("literal");
         QTest::addColumn<bool>("encrypted");
         QTest::addColumn<bool>("secureOnly");
+        QTest::addColumn<bool>("decodable");
         // Every row is minted on the transport whose inherited default is the OPPOSITE of what it
         // expects, so no row can pass unless the value was really decoded. Run them all over TLS and the
         // true-expecting rows would pass against a decoder that always returned "undecodable".
         //
         // Decodable false, minted over TLS, where an undecoded value would have inherited true:
-        QTest::newRow("JSON false") << qsl("false") << true << false;
-        QTest::newRow("string false") << qsl("\"false\"") << true << false;
-        QTest::newRow("string FALSE") << qsl("\"FALSE\"") << true << false;
-        QTest::newRow("string zero") << qsl("\"0\"") << true << false;
-        QTest::newRow("number zero") << qsl("0") << true << false;
+        QTest::newRow("JSON false") << qsl("false") << true << false << true;
+        QTest::newRow("string false") << qsl("\"false\"") << true << false << true;
+        QTest::newRow("string FALSE") << qsl("\"FALSE\"") << true << false << true;
+        QTest::newRow("string zero") << qsl("\"0\"") << true << false << true;
+        QTest::newRow("number zero") << qsl("0") << true << false << true;
         // Decodable true, minted in the clear, where an undecoded value would have inherited false:
-        QTest::newRow("JSON true") << qsl("true") << false << true;
-        QTest::newRow("string true") << qsl("\"true\"") << false << true;
-        QTest::newRow("padded string True") << qsl("\" True \"") << false << true;
-        QTest::newRow("number one") << qsl("1") << false << true;
+        QTest::newRow("JSON true") << qsl("true") << false << true << true;
+        QTest::newRow("string true") << qsl("\"true\"") << false << true << true;
+        QTest::newRow("padded string True") << qsl("\" True \"") << false << true << true;
+        QTest::newRow("number one") << qsl("1") << false << true << true;
         // Undecodable is absent, never a guess: each of these must land on the transport's own default,
         // which is only demonstrated by pinning it in both directions.
-        QTest::newRow("unrecognised string") << qsl("\"maybe\"") << true << true;
-        QTest::newRow("null") << qsl("null") << true << true;
-        QTest::newRow("array") << qsl("[false]") << true << true;
-        QTest::newRow("out-of-range number") << qsl("2") << false << false;
-        QTest::newRow("fractional number") << qsl("1.5") << false << false;
-        QTest::newRow("object") << qsl("{}") << false << false;
+        QTest::newRow("unrecognised string") << qsl("\"maybe\"") << true << true << false;
+        QTest::newRow("null") << qsl("null") << true << true << false;
+        QTest::newRow("array") << qsl("[false]") << true << true << false;
+        QTest::newRow("out-of-range number") << qsl("2") << false << false << false;
+        QTest::newRow("fractional number") << qsl("1.5") << false << false << false;
+        QTest::newRow("object") << qsl("{}") << false << false << false;
     }
 
     void testSecureOnlyIsDecodedInEveryFormTheStandardAllows()
@@ -768,9 +783,16 @@ private slots:
         QFETCH(QString, literal);
         QFETCH(bool, encrypted);
         QFETCH(bool, secureOnly);
+        QFETCH(bool, decodable);
         Host* host = connectAndNegotiate(encrypted);
         QVERIFY(host);
         QCOMPARE(host->mTelnet.currentlySecure(), encrypted);
+        if (!decodable) {
+            // ignoreMessage fails the test if the message never arrives, so this asserts the diagnostic
+            // rather than merely silencing it: a value no conformant client can read is the one thing the
+            // server operator needs told, and nothing else would tell them.
+            QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("'secure_only' value of type .* is not a boolean")));
+        }
 
         mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:char\", \"token\": \"opaque-token\", \"secure_only\": %1}").arg(literal));
         QVERIFY2(waitForStoredReconnect(host,
@@ -1055,8 +1077,18 @@ private slots:
         QCOMPARE(sent.value(qsl("token")).toString(), qsl("token-B"));
     }
 
+    void testRotatedTokenRefusedOnTransportGroundsIsLeftAlone_data()
+    {
+        QTest::addColumn<QString>("rotatedEntry");
+        QTest::newRow("explicitly encrypted-only") << qsl("{\"account\": \"acct:char\", \"provider\": \"discord\", \"token\": \"token-B\", \"secure_only\": true}");
+        // An instance running an older Mudlet shares the store and writes no requirement at all. The
+        // rotation path has to read that strictly for itself, exactly as readStoredSignIn does.
+        QTest::newRow("written by a Mudlet that stored no requirement") << qsl("{\"account\": \"acct:char\", \"provider\": \"discord\", \"token\": \"token-B\"}");
+    }
+
     void testRotatedTokenRefusedOnTransportGroundsIsLeftAlone()
     {
+        QFETCH(QString, rotatedEntry);
         // The mirror of the case above: the other instance's fresh token requires encryption that this
         // connection does not have. It must not be replayed, and - because it is another instance's live
         // token, not a dead one - must not be destroyed either.
@@ -1074,16 +1106,13 @@ private slots:
         QVERIFY2(waitForClientGmcp(qsl("Char.Login.Reconnect"), sent), "client did not replay the saved token");
         QCOMPARE(sent.value(qsl("token")).toString(), qsl("token-A"));
 
-        const QString rotatedJson = qsl("{\"account\": \"acct:char\", \"provider\": \"discord\", \"token\": \"token-B\", \"secure_only\": true}");
-        QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect"), rotatedJson));
+        QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect"), rotatedEntry));
         mpServer->clearReceived();
         mpServer->sendGmcp(qsl("Char.Login.Result {\"success\": false, \"message\": \"Reconnect token expired\"}"));
 
         QVERIFY2(waitForConsoleContains(host, qsl("not encrypted")), "the user should be told why the rotated token was not used");
         QCOMPARE(mpServer->countReceived(qsl("Char.Login.Reconnect")), 0);
-        const QJsonObject stored = readStoredReconnect(host);
-        QCOMPARE(stored.value(qsl("token")).toString(), qsl("token-B"));
-        QCOMPARE(stored.value(qsl("secure_only")), QJsonValue(true));
+        QCOMPARE(readStoredReconnect(host).value(qsl("token")).toString(), qsl("token-B"));
     }
 
     void testRotationReplayClearsTheRejectionLatch()
@@ -1525,6 +1554,21 @@ private:
         return true;
     }
 
+    static int consoleOccurrences(Host* host, const QString& substring)
+    {
+        if (!host || !host->mpConsole) {
+            return 0;
+        }
+        auto& buffer = host->mpConsole->buffer;
+        int seen = 0;
+        for (int i = 0; i <= buffer.getLastLineNumber(); ++i) {
+            if (buffer.line(i).contains(substring)) {
+                ++seen;
+            }
+        }
+        return seen;
+    }
+
     static bool consoleContains(Host* host, const QString& substring)
     {
         if (!host || !host->mpConsole) {
@@ -1537,6 +1581,28 @@ private:
             all.append(QChar::Space);
         }
         return all.contains(substring);
+    }
+
+    // Matches ignoring every space and line break on both sides, so an assertion on a whole sentence does
+    // not depend on where the console happened to wrap it. Use it only where the wording itself is the
+    // thing under test; waitForConsoleContains is the right tool for a short distinctive phrase.
+    bool waitForConsoleContainsUnwrapped(Host* host, const QString& sentence, int timeoutMs = 4000)
+    {
+        static const QRegularExpression whitespace(qsl("\\s+"));
+        const QString needle = QString(sentence).remove(whitespace);
+        return QTest::qWaitFor(
+                [&]() {
+                    if (!host || !host->mpConsole) {
+                        return false;
+                    }
+                    auto& buffer = host->mpConsole->buffer;
+                    QString all;
+                    for (int i = 0; i <= buffer.getLastLineNumber(); ++i) {
+                        all.append(buffer.line(i));
+                    }
+                    return all.remove(whitespace).contains(needle);
+                },
+                timeoutMs);
     }
 
     bool waitForConsoleContains(Host* host, const QString& substring, int timeoutMs = 4000)

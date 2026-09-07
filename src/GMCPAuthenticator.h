@@ -151,9 +151,6 @@ private:
         // True on a connection that logged in by replaying a saved token, so a Char.Login.Token arriving
         // afterwards is a silent rotation rather than a first-time save worth announcing to the user.
         bool reconnectingWithToken = false;
-        // One-shot guard so the "you'll be signed in automatically next time" notice is shown at most
-        // once per connection, on the first token we persist.
-        bool announcedTokenSave = false;
         // One-shot guard: at most one rotated-token retry per connection, so two instances sharing a
         // store cannot ping-pong retries indefinitely.
         bool retriedRotatedToken = false;
@@ -193,6 +190,16 @@ private:
     // what became of the stored token rather than driving anything. Not part of mConn: it must
     // monotonically increase, never reset.
     unsigned int mAuthAttemptGeneration = 0;
+    // The sign-in attempt whose successful token save has already been announced, so the "you'll be
+    // signed in automatically next time" notice is shown at most once per attempt, on the first token
+    // that attempt actually persists.
+    //
+    // Deliberately NOT part of mConn, unlike the other one-shot guards there: the announcement is made
+    // from the asynchronous save callback, so a save resolving after a newer Char.Login.Default would
+    // otherwise consume - or be suppressed by - a flag belonging to the attempt that replaced it.
+    // Stamping it with the generation keeps each attempt's announcement its own. Zero matches no
+    // attempt, since the constructor's reset makes the first generation 1.
+    unsigned int mAnnouncedSaveForAttempt = 0;
 
     // A server can pack thousands of Char.Login.Default frames into one packet and every sign-in
     // attempt reads the credential store. Throttling bounds that cost by wall clock rather than by how
