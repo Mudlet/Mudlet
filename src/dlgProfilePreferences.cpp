@@ -5135,8 +5135,8 @@ void dlgProfilePreferences::setColors2()
 
         setButtonColor(pushButton_foreground_color_2, pHost->mFgColor_2);
         setButtonColor(pushButton_background_color_2, pHost->mBgColor_2);
-        setButtonColor(pushButton_lowerLevelColor, pHost->mLowerLevelColor);
-        setButtonColor(pushButton_upperLevelColor, pHost->mUpperLevelColor);
+        setButtonColor(pushButton_lowerLevelColor, pHost->mLowerLevelColor, true);
+        setButtonColor(pushButton_upperLevelColor, pHost->mUpperLevelColor, true);
         setButtonColor(pushButton_roomBorderColor, pHost->mRoomBorderColor);
         setButtonColor(pushButton_mapInfoBg, pHost->mMapInfoBg, true);
         setButtonColor(pushButton_roomCollisionBorderColor, pHost->mRoomCollisionBorderColor);
@@ -5162,8 +5162,8 @@ void dlgProfilePreferences::setColors2()
 
         setButtonColor(pushButton_foreground_color_2, QColor());
         setButtonColor(pushButton_background_color_2, QColor());
-        setButtonColor(pushButton_lowerLevelColor, QColor());
-        setButtonColor(pushButton_upperLevelColor, QColor());
+        setButtonColor(pushButton_lowerLevelColor, QColor(), true);
+        setButtonColor(pushButton_upperLevelColor, QColor(), true);
         setButtonColor(pushButton_roomBorderColor, QColor());
         setButtonColor(pushButton_mapInfoBg, QColor());
         setButtonColor(pushButton_roomCollisionBorderColor, QColor());
@@ -5589,7 +5589,7 @@ void dlgProfilePreferences::slot_setLowerLevelColor()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_lowerLevelColor, pHost->mLowerLevelColor);
+        setButtonAndProfileColor(pushButton_lowerLevelColor, pHost->mLowerLevelColor, true);
     }
 }
 
@@ -5597,7 +5597,7 @@ void dlgProfilePreferences::slot_setUpperLevelColor()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_upperLevelColor, pHost->mUpperLevelColor);
+        setButtonAndProfileColor(pushButton_upperLevelColor, pHost->mUpperLevelColor, true);
     }
 }
 
