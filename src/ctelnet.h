@@ -349,8 +349,9 @@ private:
     // without a real decompression bomb.
     friend class cTelnetBufferTest;
 
-    // Reads the password-mode safety timer and the connection clock, which have
-    // no public face, and fires that 60 second timer early rather than waiting.
+    // Reads the password-mode safety timer, the connection clock and the
+    // character-at-a-time detection timer and flags, which have no public face,
+    // and fires those timers early rather than waiting them out.
     friend class TelnetPasswordMaskTimeoutTest;
 
     // Calls reset() from its constructor. It has to be the Host that does that,
@@ -564,10 +565,6 @@ private:
     QTimer* mTimerFailedConnectionRetry = nullptr;
     QElapsedTimer mRecordingChunkTimer;
     QElapsedTimer mConnectionTimer;
-    // When the last line went out to the game (a player command or the auto-login
-    // password), so that a WILL ECHO arriving shortly after can be told apart from
-    // one that arrives with no line behind it - see restartPasswordMaskTimeout():
-    QElapsedTimer mLastLineSentTimer;
     qint32 mRecordLastChunkMSecTimeOffset = 0;
     int mRecordingChunkCount = 0;
     int mCycleCountMTTS = 0;
@@ -634,7 +631,6 @@ private:
 
     void checkCharacterModePattern();
     bool checkEchoAnomalyPattern();
-    void noteLineSentToGame();
     void restartPasswordMaskTimeout();
 };
 
