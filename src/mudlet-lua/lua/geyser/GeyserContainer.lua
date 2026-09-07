@@ -107,6 +107,10 @@ end
 -- @param skipChildren If true, place only this window, for a caller that walks
 --                     the children itself.
 function Geyser.Container:reposition (skipChildren)
+  -- a hidden nested label is placed by its nest parent when shown, so this is wasted
+  if self.nestParent and self.hidden then
+    return
+  end
   if self.type ~= "userwindow" then
     moveWindow(self.name, self:get_x(), self:get_y())
     resizeWindow(self.name, self:get_width(), self:get_height())

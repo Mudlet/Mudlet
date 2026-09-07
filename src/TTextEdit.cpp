@@ -364,7 +364,10 @@ void TTextEdit::updateScreenView()
     // revealed columns/rows unpainted - e.g. growing the pane horizontally
     // after it has been shrunk. Force a full repaint so the whole pane is
     // re-rendered and the cache is rebuilt at the new size.
-    if (mScreenWidth != oldScreenWidth || mScreenHeight != oldScreenHeight) {
+    // Growing reveals cells and any change of height shifts every row, but
+    // losing columns does neither: wrapping happens on insert, so the cache
+    // still holds every column that is left.
+    if (mScreenWidth > oldScreenWidth || mScreenHeight != oldScreenHeight) {
         forceUpdate();
     }
     mOldScrollPos = mpBuffer->getLastLineNumber();
