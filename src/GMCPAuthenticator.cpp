@@ -1210,9 +1210,11 @@ void GMCPAuthenticator::readStoredSignInEntry(std::function<void(bool success, S
                             if (tokenSuccess) {
                                 entry.token = std::move(tokenValue);
                             } else {
-                                // The metadata read succeeded, so the entry is still usable as a resume
-                                // hint; only the token is unavailable this time.
-                                qWarning().noquote() << "GMCP Char.Login - could not read the saved token; using the stored sign-in as a resume hint only:" << tokenError;
+                                // CredentialManager cannot tell an absent key from a failed read, and the common
+                                // reason to land here is the ordinary one: this entry is a resume hint with no token
+                                // to find. A genuinely broken store fails the metadata read above and warns there,
+                                // so this stays a debug note rather than claiming a failure that may not have happened.
+                                qDebug().noquote() << "GMCP Char.Login - no saved token was read; using the stored sign-in as a resume hint only:" << tokenError;
                             }
                             callback(true, std::move(entry), attemptGeneration);
                         });

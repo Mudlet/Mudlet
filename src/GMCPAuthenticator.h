@@ -91,7 +91,8 @@ private:
     // metadata for an entry written before the split, otherwise under its own key. Reports the auth
     // attempt current when the read began rather than acting on it, because the two callers want
     // different things from a stale result - one drops it, the other still has to decide whether it
-    // may rewrite the store.
+    // may rewrite the store. The callback is never invoked at all if the Host goes away while a read is
+    // in flight.
     void readStoredSignInEntry(std::function<void(bool success, StoredSignIn entry, unsigned int attemptGeneration)> callback);
     // Reads the stored sign-in entry ({account, provider?, token?}) and acts on it: replay the token
     // (when allowToken), else send the resume form for a remembered provider, else fall through to
