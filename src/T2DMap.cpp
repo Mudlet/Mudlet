@@ -3864,14 +3864,13 @@ void T2DMap::paintRoomExits(QPainter& painter,
                     }
                 }
                 if (!oneWayToDestination) {
-                    // Two way exit
+                    // Two way exit. drawLine() does not itself touch any
+                    // painter state, so there is nothing here for save()
+                    // /restore() to protect - removed along with the QPen
+                    // copy that was never installed via setPen() and so
+                    // never actually took effect.
                     const QLineF l0 = QLineF(p2.toPointF(), p1.toPointF());
-                    painter.save();
-                    QPen exitPen = painter.pen();
-                    // We need the line not to extend past the actual end point:
-                    exitPen.setCapStyle(Qt::FlatCap);
                     painter.drawLine(l0);
-                    painter.restore();
                 } else {
                     // one way non-area exit - draw arrow
                     QLineF l0 = QLineF(p2.toPointF(), p1.toPointF());
