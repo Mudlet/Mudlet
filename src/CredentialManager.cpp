@@ -27,6 +27,7 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QPointer>
 #include <QSaveFile>
 #include <QDataStream>
 #include <QProcessEnvironment>
@@ -35,6 +36,8 @@
 #include <QStandardPaths>
 #include <QTimer>
 #include <QVersionNumber>
+
+#include <utility>
 #if defined(INCLUDE_OWN_QT6_KEYCHAIN)
 #include <qtkeychain/keychain.h>
 #else
@@ -797,9 +800,16 @@ void CredentialManager::storeCredential(const QString& service, const QString& a
             &QKeychain::WritePasswordJob::finished,
             this,
             [this, writeJob, service, account, password, profileName]() {
-                // Early exit if operation is no longer valid
+                // The operation was abandoned - the caller timed out, started another, or the
+                // application is closing - so its callback is not invoked here: during teardown it may
+                // have captured objects that are already half destroyed. That makes this line the only
+                // record of what became of the write, so it carries the job's real outcome rather than
+                // just the fact of the abandonment, and names the entry so it can be told apart from
+                // the other keychain entries the same profile owns.
                 if (!isOperationValid()) {
-                    qWarning() << "CredentialManager: Ignoring keychain callback - operation no longer valid";
+                    const bool stored = (writeJob->error() == QKeychain::NoError);
+                    qWarning().noquote().nospace() << "CredentialManager: abandoned the keychain write for profile \"" << profileName << "\", key \"" << account << "\" (entry \"" << service
+                                                   << "\"). The write itself " << (stored ? qsl("succeeded") : qsl("failed: ") + writeJob->errorString()) << ", but no caller is left to tell.";
                     writeJob->deleteLater();
                     return;
                 }
@@ -884,9 +894,11 @@ void CredentialManager::retrieveCredential(const QString& service, const QString
             &QKeychain::ReadPasswordJob::finished,
             this,
             [this, readJob, service, account, profileName]() {
-                // Early exit if operation is no longer valid
+                // Abandoned; see the write path above for why the caller's callback is not invoked.
                 if (!isOperationValid()) {
-                    qWarning() << "CredentialManager: Ignoring keychain callback - operation no longer valid";
+                    const bool read = (readJob->error() == QKeychain::NoError);
+                    qWarning().noquote().nospace() << "CredentialManager: abandoned the keychain read for profile \"" << profileName << "\", key \"" << account << "\" (entry \"" << service
+                                                   << "\"). The read itself " << (read ? qsl("succeeded") : qsl("failed: ") + readJob->errorString()) << ", but no caller is left to tell.";
                     readJob->deleteLater();
                     return;
                 }
@@ -927,18 +939,55 @@ void CredentialManager::retrieveCredential(const QString& service, const QString
                     }
                     qDebug() << "CredentialManager:" << errorContext << ", trying fallback storage";
 
-                    // Try old format first (before Windows keychain fix), then legacy formats
-                    // Clear state to prevent callback being called twice and keep member state consistent
-                    auto originalCallback = mCurrentRetrievalCallback;
-                    mCurrentRetrievalCallback = nullptr;
+                    // Try old format first (before Windows keychain fix), then legacy formats.
+                    //
+                    // The chain below is several more keychain jobs deep, and none of them arms a
+                    // timeout of its own. Leave the caller's callback in mCurrentRetrievalCallback and
+                    // re-arm the timer across the whole chain, so a job that never answers - a secret
+                    // service waiting on an unlock nobody sees, an unresponsive wallet - still ends in
+                    // handleTimeout() reporting a failure rather than in silence. Before this, the
+                    // member was cleared here and the timer stopped just above, so the ordinary
+                    // "no entry in the new format" case spent its entire tail unguarded: the caller
+                    // waited forever, and dlgConnectionProfiles' mKeychainOperationInProgress latched
+                    // on, leaving the profiles dialog unable to accept for the rest of its life.
+                    //
+                    // The chain funnels every outcome through the callback handed to it, so wrapping
+                    // that one callback covers all of them. The wrapper consumes the member, and
+                    // handleTimeout() consumes it too (std::exchange), so exactly one of the two can
+                    // ever report - which is what the cleared member used to guarantee.
                     mCurrentJob = nullptr;
+                    setupTimeout();
+                    QPointer<CredentialManager> self = this;
+                    // The timer setupTimeout() just installed is this chain's identity. Anything that
+                    // supersedes this retrieval - a timeout, or another operation started on the same
+                    // manager - replaces or clears it, so a chain that answers after that is answering
+                    // for an operation nobody is waiting on any more. Without this check such a late
+                    // answer would cancel the *current* operation's guard and take the *current*
+                    // caller's callback, handing it a result from the retrieval it replaced. That is
+                    // reachable: handleTimeout() consumes the callback and drives the cascade's next
+                    // stage onto this same manager, while the stalled job it gave up on can still
+                    // answer afterwards.
+                    QPointer<QTimer> chainGuard = mTimeoutTimer;
+                    CredentialRetrievalCallback chainCallback = [self, chainGuard](bool chainSuccess, QString chainPassword, const QString& chainError) {
+                        if (!self || chainGuard.isNull() || self->mTimeoutTimer != chainGuard) {
+                            SecureStringUtils::secureStringClear(chainPassword);
+                            return;
+                        }
+                        self->cleanupTimeout();
+                        auto callback = std::exchange(self->mCurrentRetrievalCallback, nullptr);
+                        if (callback) {
+                            callback(chainSuccess, std::move(chainPassword), chainError);
+                        } else {
+                            SecureStringUtils::secureStringClear(chainPassword);
+                        }
+                    };
 #if defined(Q_OS_WIN)
                     // qtkeychain 0.17.0 started honouring the service name on Windows, moving
                     // entries from TargetName "<key>" to "<key>@<service>" - recover entries
                     // written by builds linked against older qtkeychain first
-                    attemptCompatNamingMigration(service, account, profileName, originalCallback);
+                    attemptCompatNamingMigration(service, account, profileName, chainCallback);
 #else
-                    attemptOldFormatMigration(service, account, profileName, originalCallback);
+                    attemptOldFormatMigration(service, account, profileName, chainCallback);
 #endif
                     readJob->deleteLater();
                     return;
@@ -1003,9 +1052,11 @@ void CredentialManager::removeCredential(const QString& service, const QString& 
             &QKeychain::DeletePasswordJob::finished,
             this,
             [this, deleteJob, service, account, profileName]() {
-                // Early exit if operation is no longer valid
+                // Abandoned; see the write path above for why the caller's callback is not invoked.
                 if (!isOperationValid()) {
-                    qWarning() << "CredentialManager: Ignoring keychain callback - operation no longer valid";
+                    const bool removed = keychainDeleteSucceeded(deleteJob->error());
+                    qWarning().noquote().nospace() << "CredentialManager: abandoned the keychain removal for profile \"" << profileName << "\", key \"" << account << "\" (entry \"" << service
+                                                   << "\"). The removal itself " << (removed ? qsl("succeeded") : qsl("failed: ") + deleteJob->errorString()) << ", but no caller is left to tell.";
                     deleteJob->deleteLater();
                     return;
                 }
@@ -1036,8 +1087,14 @@ void CredentialManager::removeCredential(const QString& service, const QString& 
                         &QKeychain::DeletePasswordJob::finished,
                         this,
                         [this, bareJob, service, account, profileName, primarySuccess, primaryError]() {
+                            // Abandoned after the primary removal already ran, so a pre-0.17 bare entry
+                            // may survive - and a later read's compat migration would resurrect the
+                            // credential from it. Worth saying plainly, since nobody is left to be told.
                             if (!isOperationValid()) {
-                                qWarning() << "CredentialManager: Ignoring keychain callback - operation no longer valid";
+                                const bool swept = keychainDeleteSucceeded(bareJob->error());
+                                qWarning().noquote().nospace() << "CredentialManager: abandoned the bare-name keychain sweep for profile \"" << profileName << "\", key \"" << account
+                                                               << "\". The sweep itself " << (swept ? qsl("succeeded") : qsl("failed: ") + bareJob->errorString())
+                                                               << "; a surviving old-format entry can restore this credential on a later read.";
                                 bareJob->deleteLater();
                                 return;
                             }
@@ -1130,9 +1187,12 @@ void CredentialManager::isKeychainAvailable(AvailabilityCallback callback)
             &QKeychain::ReadPasswordJob::finished,
             this,
             [this, testJob]() {
-                // Early exit if operation is no longer valid
+                // Abandoned; see the write path above. (Nothing calls isKeychainAvailable today, but
+                // this is the shape the next author copies.)
                 if (!isOperationValid()) {
-                    qWarning() << "CredentialManager: Ignoring keychain callback - operation no longer valid";
+                    const bool probed = (testJob->error() == QKeychain::NoError || testJob->error() == QKeychain::EntryNotFound);
+                    qWarning().noquote().nospace() << "CredentialManager: abandoned the keychain availability probe. The probe itself "
+                                                   << (probed ? qsl("answered") : qsl("failed: ") + testJob->errorString()) << ", but no caller is left to tell.";
                     testJob->deleteLater();
                     return;
                 }

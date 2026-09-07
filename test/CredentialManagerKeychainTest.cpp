@@ -44,8 +44,9 @@
 // colliding-format layouts can all be planted and verified regardless of which qtkeychain
 // is linked, and the expected outcomes branch on QTKEYCHAIN_LINKED_VERSION.
 //
-// The scenarios only exist on Windows, so every test skips elsewhere (the bodies still
-// compile on all platforms).
+// The migration scenarios only exist on Windows, so those tests skip elsewhere (the bodies
+// still compile on all platforms). testFallbackChainRunsUnderATimeout is the exception: the
+// fallback chain it guards runs on every platform, so it does not skip.
 
 class CredentialManagerKeychainTest : public QObject
 {
@@ -60,6 +61,7 @@ private slots:
     void testRemoveSweepsBareEntry();
     void testOldFormatMigration();
     void testCollidingFormatRecovery();
+    void testFallbackChainRunsUnderATimeout();
 
 private:
     QString mProfile;
@@ -473,6 +475,84 @@ void CredentialManagerKeychainTest::testCollidingFormatRecovery()
     QVERIFY(again.success);
     QCOMPARE(again.password, secret);
     QVERIFY(!readTarget(legacyService));
+}
+
+void CredentialManagerKeychainTest::testFallbackChainRunsUnderATimeout()
+{
+    // Not Windows-gated: every platform runs the fallback chain, and this is about the chain being
+    // guarded at all rather than about any historical entry layout.
+    //
+    // retrieveCredential arms a timeout for its first read and cancels it the moment that read
+    // answers. A read answering "no entry in the new format" - the ordinary case for any profile that
+    // has never saved a password - then hands off to a chain several more keychain jobs deep. Those
+    // jobs used to run with nothing armed, so one that never answered left the caller waiting for
+    // good: dlgConnectionProfiles latches mKeychainOperationInProgress on such a read and clears it
+    // only from the callback, so the profiles dialog could never be accepted again.
+    //
+    // The stall is not hypothetical on a developer machine - the old-format probe below routinely
+    // fails to answer on macOS - which is why this asserts the guard rather than waiting one out.
+    QPointer<CredentialManager> manager = new CredentialManager;
+
+    bool answered = false;
+    bool reportedSuccess = true;
+    QString reportedError;
+    manager->retrievePassword(mProfile, mKey, [&](bool success, QString, const QString& errorMessage) {
+        answered = true;
+        reportedSuccess = success;
+        reportedError = errorMessage;
+    });
+
+    auto* readJob = manager->findChild<QKeychain::ReadPasswordJob*>();
+    QVERIFY2(readJob, "retrievePassword should have started a keychain read");
+
+    // Drive the hand-off deterministically rather than depending on what this machine's store says
+    // about an entry that does not exist.
+    readJob->emitFinishedWithError(QKeychain::EntryNotFound, QStringLiteral("synthetic: no such entry"));
+    // The completion is a queued connection, so one pass delivers it and starts the chain. The
+    // chain's own jobs answer in later passes, which is what leaves the guard observable here.
+    QCoreApplication::processEvents();
+
+    // Collapse each guard as it appears, standing in for a stage whose keychain job never answers.
+    // Waiting the real interval out would cost half a minute per stage.
+    //
+    // retrievePassword is a cascade: each stage's failure starts the next, and only the last -
+    // encrypted file storage, which is synchronous - answers the caller. So a timeout does not report
+    // failure directly, it advances the cascade. The property that matters is that the cascade still
+    // reaches its end when every keychain stage stalls, instead of stopping on one that never answers.
+    bool everArmed = false;
+    for (int stage = 0; stage < 20 && !answered; ++stage) {
+        QTimer* guard = nullptr;
+        const auto timers = manager ? manager->findChildren<QTimer*>() : QList<QTimer*>{};
+        for (auto* candidate : timers) {
+            // The armed one specifically: setupTimeout() replaces the timer by disconnecting the old
+            // one and deleteLater()ing it, so for one event-loop pass both are children.
+            if (candidate->isActive()) {
+                guard = candidate;
+                break;
+            }
+        }
+        if (!guard) {
+            // No stage in flight and nobody has answered: either the cascade is between stages, or it
+            // is stuck on an unguarded one. qWaitFor decides which.
+            QTest::qWait(20);
+            continue;
+        }
+        everArmed = true;
+        guard->setInterval(0);
+        guard->start();
+        QTest::qWait(20);
+    }
+
+    QVERIFY2(everArmed, "no stage of the fallback cascade ever armed a timeout, so a keychain job that never answers would strand the caller");
+    QVERIFY2(QTest::qWaitFor(
+                     [&answered]() {
+                         return answered;
+                     },
+                     5000),
+             "a fallback cascade whose keychain stages all stall must still report an outcome to its caller");
+    QVERIFY2(!reportedSuccess, "a retrieval that found nothing must be reported as a failure, not as an empty success");
+
+    delete manager;
 }
 
 QTEST_GUILESS_MAIN(CredentialManagerKeychainTest)
