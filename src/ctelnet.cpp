@@ -848,15 +848,7 @@ void cTelnet::handleFailedConnection()
 void cTelnet::slot_send_login()
 {
     if (!mpHost->getLogin().isEmpty()) {
-        const bool sent = sendData(mpHost->getLogin());
-        // ECHO and SGA already on when the login line goes out is what a character-at-a-time
-        // server looks like, and one of those echoes whatever it is sent. The login line is not a
-        // game command, so it does not arm the detection by itself - but its verdict has to be in
-        // before a password arriving late could be typed under that mask, see
-        // sendOutstandingAutoLoginPassword().
-        if (sent && !mCharacterModeDetected && mServerRequestedSGA && mpHost->isRemoteEchoingActive()) {
-            armCharacterModeDetection();
-        }
+        sendData(mpHost->getLogin());
     }
     if (mpHost->hasAutoLoginCredentials()) {
         QSettings& settings = *mudlet::getQSettings();
@@ -911,16 +903,17 @@ void cTelnet::sendOutstandingAutoLoginPassword()
     // password prompt still being open, and the only proof there is. A server that never
     // negotiates ECHO offers none: "it has printed nothing since" cannot tell a password prompt
     // from any other question it asked before the mark, so those games get the notice instead.
-    // A character-at-a-time server keeps ECHO on for the whole session and echoes what it is
-    // sent, so its mask proves nothing: one already recognised, or one still being tested for
-    // after the login line, is no prompt to type a password at either. Nor does a mask the
-    // server has put up again: a WONT ECHO since the password step closed the prompt that was
-    // open then, and whatever it is masking now is a different question.
-    const bool characterModeSuspected = mCharacterModeDetected || (mTimerCharacterModeDetect && mTimerCharacterModeDetect->isActive());
-    const bool stillAtPrompt = mpHost->isRemoteEchoingActive() && !mAutoLoginPasswordMaskWithdrawn && !characterModeSuspected;
+    // Nor does a mask the server has put up again: a WONT ECHO since the password step closed
+    // the prompt that was open then, and whatever it is masking now is a different question.
+    // A server already recognised as character-at-a-time keeps ECHO on for the whole session
+    // and echoes what it is sent, so its mask is no prompt either. One merely suspected is not
+    // held against the prompt: a line-mode game that masks its login prompt as well as its
+    // password prompt looks exactly like one until a game command has gone out, and refusing
+    // it would leave the player at a prompt the game is still holding open.
+    const bool stillAtPrompt = mpHost->isRemoteEchoingActive() && !mAutoLoginPasswordMaskWithdrawn && !mCharacterModeDetected;
     if (!withinWindow || !stillAtPrompt) {
         qDebug() << "cTelnet::sendOutstandingAutoLoginPassword() - not sending the late password. Within the window:" << withinWindow << "masking:" << mpHost->isRemoteEchoingActive()
-                 << "mask withdrawn since the password step:" << mAutoLoginPasswordMaskWithdrawn << "character-at-a-time suspected:" << characterModeSuspected;
+                 << "mask withdrawn since the password step:" << mAutoLoginPasswordMaskWithdrawn << "character-at-a-time detected:" << mCharacterModeDetected;
         //: Shown in the game window when a password fetched from the system keychain arrived after the game had moved past its password prompt
         postMessage(tr("[ INFO ]  - The password arrived after the game moved on from its password prompt, so it was not sent. Please type it in yourself."));
         return;
