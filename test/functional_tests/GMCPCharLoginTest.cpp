@@ -451,6 +451,7 @@ private slots:
         // temporary config directory, and removeCredential below cannot delete a directory.
         removeBlockingCredentialDirectory();
         CredentialManager::removeCredential(mHostname, qsl("reconnect"));
+        CredentialManager::removeCredential(mHostname, qsl("reconnect-token"));
         deleteProfileDirectory(mHostname);
     }
 
@@ -834,6 +835,61 @@ private slots:
                                         }),
                  "the rotated token should still be persisted");
         QVERIFY2(!waitForConsoleContains(host, qsl("signed in automatically next time"), 500), "a silent rotation must not be announced as a new opt-in");
+    }
+
+    void testTokenStoredUnderItsOwnKeyIsReplayed()
+    {
+        Host* host = connectAndNegotiate(true);
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+        QVERIFY(seedSplitSignIn(host->getName(), qsl("{\"account\": \"acct:char\", \"secure_only\": true}"), qsl("split-token")));
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\", \"password-credentials\"]}"));
+
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Reconnect"), sent), "a token stored under its own key should be replayed");
+        QCOMPARE(sent.value(qsl("account")).toString(), qsl("acct:char"));
+        QCOMPARE(sent.value(qsl("token")).toString(), qsl("split-token"));
+    }
+
+    void testInlineTokenWinsOverTheTokenKey()
+    {
+        // Only a Mudlet from before the split writes an inline token, and every split-format save
+        // rewrites the metadata without one - so an inline token found beside a token key means that
+        // instance rotated more recently, and its token is the live one.
+        Host* host = connectAndNegotiate(true);
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+        QVERIFY(seedSplitSignIn(host->getName(), qsl("{\"account\": \"acct:char\", \"token\": \"inline-token\", \"secure_only\": true}"), qsl("stale-key-token")));
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\", \"password-credentials\"]}"));
+
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Reconnect"), sent), "client did not replay a token");
+        QCOMPARE(sent.value(qsl("token")).toString(), qsl("inline-token"));
+    }
+
+    void testMetadataWithoutATokenSendsTheResumeForm()
+    {
+        // A metadata entry with no token key at all is a resume hint, exactly as a token-less inline
+        // entry has always been.
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+        QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect"), qsl("{\"account\": \"acct:char\", \"provider\": \"discord\"}")));
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\", \"password-credentials\"]}"));
+
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "client did not send the resume form");
+        QCOMPARE(sent.value(qsl("provider")).toString(), qsl("discord"));
+        QCOMPARE(mpServer->countReceived(qsl("Char.Login.Reconnect")), 0);
     }
 
     void testSavedTokenIsNotReplayedOverCleartext()
@@ -1628,6 +1684,14 @@ private:
     {
         return qsl("%1/profiles/%2/passwords/%3")
                 .arg(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation), utils::sanitizeForPath(profileName), utils::sanitizeForPath(qsl("reconnect")));
+    }
+
+    // Seeds the split storage format: metadata under "reconnect", the token under its own key. The
+    // inline-JSON seeds elsewhere in this file are the legacy format on purpose - they are what a
+    // Mudlet from before the split wrote, and the read path still has to understand them.
+    static bool seedSplitSignIn(const QString& profileName, const QString& metadataJson, const QString& token)
+    {
+        return CredentialManager::storeCredential(profileName, qsl("reconnect"), metadataJson) && CredentialManager::storeCredential(profileName, qsl("reconnect-token"), token);
     }
 
     static QString describe(const QJsonObject& obj) { return QString::fromUtf8(QJsonDocument(obj).toJson(QJsonDocument::Compact)); }

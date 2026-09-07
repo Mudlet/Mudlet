@@ -120,6 +120,21 @@ bool readStoredTransportRequirement(const QJsonObject& entry)
     return decoded.value_or(true);
 }
 
+// The two credential-store keys a profile's saved sign-in occupies. Functions rather than repeated
+// literals: the token key is named at five call sites, and a typo in one of them would silently write
+// where nothing ever reads.
+QString metadataKey()
+{
+    return qsl("reconnect");
+}
+
+// Holds the raw token and nothing else, so the secret never passes through a QJsonDocument - whose
+// parsed copy lives in heap storage Qt does not expose and cannot be zeroed.
+QString tokenKey()
+{
+    return qsl("reconnect-token");
+}
+
 } // namespace
 
 GMCPAuthenticator::GMCPAuthenticator(Host* pHost)
@@ -1130,86 +1145,128 @@ void GMCPAuthenticator::attemptReconnect()
     readStoredSignIn(true);
 }
 
+void GMCPAuthenticator::readStoredSignInEntry(std::function<void(bool success, StoredSignIn entry, unsigned int attemptGeneration)> callback)
+{
+    QPointer<Host> safeHost = mpHost;
+    QPointer<CredentialManager> metadataReader = new CredentialManager();
+    const auto attemptGeneration = mAuthAttemptGeneration;
+    metadataReader->retrievePassword(
+            mpHost->getName(), metadataKey(), [safeHost, metadataReader, attemptGeneration, callback = std::move(callback)](bool success, QString value, const QString& errorMessage) mutable {
+                if (metadataReader) {
+                    metadataReader->deleteLater();
+                }
+                if (!safeHost) {
+                    SecureStringUtils::secureStringClear(value);
+                    return;
+                }
+                // A read failure is indistinguishable from "no stored sign-in" to the caller - both end
+                // at an interactive sign-in - so log it here to make an unreadable token visible rather
+                // than silently downgrading the player with no clue.
+                if (!success) {
+                    qWarning().noquote() << "GMCP Char.Login - could not read the stored sign-in; falling back to interactive sign-in:" << errorMessage;
+                    callback(false, StoredSignIn{}, attemptGeneration);
+                    return;
+                }
+                StoredSignIn entry;
+                if (value.isEmpty()) {
+                    callback(true, entry, attemptGeneration);
+                    return;
+                }
+                // An entry written before the split still carries the token inline, so parse from an
+                // owned buffer and scrub every owned copy on every path, corrupt entries included.
+                QByteArray valueBytes = value.toUtf8();
+                const auto doc = QJsonDocument::fromJson(valueBytes);
+                SecureStringUtils::secureByteArrayClear(valueBytes);
+                SecureStringUtils::secureStringClear(value);
+                if (!doc.isObject()) {
+                    callback(true, entry, attemptGeneration);
+                    return;
+                }
+                const auto obj = doc.object();
+                entry.account = obj[qsl("account")].toString();
+                entry.provider = obj[qsl("provider")].toString();
+                entry.secureOnly = readStoredTransportRequirement(obj);
+                entry.token = obj[qsl("token")].toString();
+                // An inline token wins over the token key. Only a Mudlet from before the split writes
+                // one, and every split-format save rewrites the metadata without it - so an inline token
+                // sitting beside a token key means that instance rotated the token more recently than
+                // any split write, and its copy is the live one.
+                if (!entry.token.isEmpty() || entry.account.isEmpty()) {
+                    callback(true, std::move(entry), attemptGeneration);
+                    return;
+                }
+                QPointer<CredentialManager> tokenReader = new CredentialManager();
+                tokenReader->retrievePassword(
+                        safeHost->getName(),
+                        tokenKey(),
+                        [safeHost, tokenReader, entry = std::move(entry), attemptGeneration, callback = std::move(callback)](bool tokenSuccess, QString tokenValue, const QString& tokenError) mutable {
+                            if (tokenReader) {
+                                tokenReader->deleteLater();
+                            }
+                            if (!safeHost) {
+                                SecureStringUtils::secureStringClear(tokenValue);
+                                return;
+                            }
+                            if (tokenSuccess) {
+                                entry.token = std::move(tokenValue);
+                            } else {
+                                // The metadata read succeeded, so the entry is still usable as a resume
+                                // hint; only the token is unavailable this time.
+                                qWarning().noquote() << "GMCP Char.Login - could not read the saved token; using the stored sign-in as a resume hint only:" << tokenError;
+                            }
+                            callback(true, std::move(entry), attemptGeneration);
+                        });
+            });
+}
+
 void GMCPAuthenticator::readStoredSignIn(bool allowToken)
 {
     QPointer<Host> safeHost = mpHost;
-    QPointer<CredentialManager> credentialManager = new CredentialManager();
-    // Capture the current auth attempt so a result arriving after a newer Char.Login.Default (which
-    // bumps mAuthAttemptGeneration) is dropped rather than driving a sign-in on the wrong connection.
-    const auto attemptGeneration = mAuthAttemptGeneration;
-    credentialManager->retrievePassword(
-            mpHost->getName(), qsl("reconnect"), [this, safeHost, credentialManager, attemptGeneration, allowToken](bool success, QString value, const QString& errorMessage) {
-                if (credentialManager) {
-                    credentialManager->deleteLater();
-                }
-                // The Host (which owns this authenticator) may have gone away while the keychain read was in
-                // flight; bail out without touching any members if so.
-                if (!safeHost) {
-                    return;
-                }
-                // A newer connection started while this read was in flight; its result is stale, so ignore it
-                // rather than send a reconnect or pick a method for the connection that superseded it.
-                if (attemptGeneration != mAuthAttemptGeneration) {
-                    return;
-                }
-                // A read failure (locked/denied/timed-out keychain) is indistinguishable from "no stored
-                // sign-in" below - both skip to selectAuthMethod() - so log it here to make an unreadable token
-                // visible rather than silently downgrading the player to a full interactive sign-in with no clue.
-                if (!success) {
-                    qWarning().noquote() << "GMCP Char.Login - could not read the stored sign-in; falling back to interactive sign-in:" << errorMessage;
-                }
-
-                if (success && !value.isEmpty()) {
-                    // The stored JSON may hold a bearer token; parse from an owned buffer and scrub every owned
-                    // copy - the QByteArray, and the QString value itself (retrievePassword moved it in, so this
-                    // is the sole live copy) - on every path, including a corrupt entry that never parses.
-                    QByteArray valueBytes = value.toUtf8();
-                    const auto doc = QJsonDocument::fromJson(valueBytes);
-                    SecureStringUtils::secureByteArrayClear(valueBytes);
-                    SecureStringUtils::secureStringClear(value);
-                    if (doc.isObject()) {
-                        const auto account = doc.object()[qsl("account")].toString();
-                        auto token = doc.object()[qsl("token")].toString();
-                        const auto provider = doc.object()[qsl("provider")].toString();
-                        // An entry whose requirement is missing (written before it was stored) or unreadable
-                        // (a corrupted entry) gets the strict reading, so upgrading Mudlet never widens the
-                        // exposure of a token already on disk; it gains the field on the next rotation.
-                        const bool secureOnly = readStoredTransportRequirement(doc.object());
-                        if (!provider.isEmpty()) {
-                            mConn.accountProvider = provider;
-                        }
-                        if (allowToken && !account.isEmpty() && !token.isEmpty()) {
-                            // Remember only a hash of what we send: if the reconnect is rejected, comparing it
-                            // against a fresh read tells a dead token apart from one another running instance
-                            // (sharing this profile's keychain) rotated while ours was in flight.
-                            QByteArray tokenBytes = token.toUtf8();
-                            const QByteArray sentHash = QCryptographicHash::hash(tokenBytes, QCryptographicHash::Sha256);
-                            SecureStringUtils::secureByteArrayClear(tokenBytes);
-                            // Move the token in so sendReconnect owns the sole copy and can scrub it either way.
-                            if (sendReconnect(account, std::move(token), secureOnly)) {
-                                // This connection is logging in by replaying a saved token, so a Char.Login.Token
-                                // that comes back is a silent rotation rather than a first-time save to announce.
-                                mConn.reconnectingWithToken = true;
-                                mConn.awaitingReconnectResult = true;
-                                mConn.reconnectAccount = account;
-                                mConn.sentReconnectTokenHash = sentHash;
-                                return;
-                            }
-                            // Not sent, so nothing awaits a result on it; fall through to resume or hand-off.
-                        }
-                        if (!account.isEmpty() && !provider.isEmpty()) {
-                            // No usable token, but we remember how this account signs in: ask the game to
-                            // restart that provider's browser sign-in rather than fall to a provider menu.
-                            SecureStringUtils::secureStringClear(token);
-                            sendResume(account, provider);
-                            return;
-                        }
-                        SecureStringUtils::secureStringClear(token);
-                    }
-                }
-
-                selectAuthMethod();
-            });
+    readStoredSignInEntry([this, safeHost, allowToken](bool, StoredSignIn entry, unsigned int attemptGeneration) {
+        // The Host (which owns this authenticator) may have gone away while the read was in flight.
+        if (!safeHost) {
+            SecureStringUtils::secureStringClear(entry.token);
+            return;
+        }
+        // A newer connection started while this read was in flight; its result is stale, so ignore it
+        // rather than send a reconnect or pick a method for the connection that superseded it.
+        if (attemptGeneration != mAuthAttemptGeneration) {
+            SecureStringUtils::secureStringClear(entry.token);
+            return;
+        }
+        if (!entry.provider.isEmpty()) {
+            mConn.accountProvider = entry.provider;
+        }
+        if (allowToken && !entry.account.isEmpty() && !entry.token.isEmpty()) {
+            // Remember only a hash of what we send: if the reconnect is rejected, comparing it against a
+            // fresh read tells a dead token apart from one another running instance (sharing this
+            // profile's keychain) rotated while ours was in flight.
+            QByteArray tokenBytes = entry.token.toUtf8();
+            const QByteArray sentHash = QCryptographicHash::hash(tokenBytes, QCryptographicHash::Sha256);
+            SecureStringUtils::secureByteArrayClear(tokenBytes);
+            // Move the token in so sendReconnect owns the sole copy and can scrub it either way.
+            if (sendReconnect(entry.account, std::move(entry.token), entry.secureOnly)) {
+                // This connection is logging in by replaying a saved token, so a Char.Login.Token that
+                // comes back is a silent rotation rather than a first-time save to announce.
+                mConn.reconnectingWithToken = true;
+                mConn.awaitingReconnectResult = true;
+                mConn.reconnectAccount = entry.account;
+                mConn.sentReconnectTokenHash = sentHash;
+                return;
+            }
+            // Not sent, so nothing awaits a result on it; fall through to resume or hand-off.
+        }
+        // Scrub on every remaining path: the token is still live here whenever sendReconnect was not
+        // reached or refused.
+        SecureStringUtils::secureStringClear(entry.token);
+        if (!entry.account.isEmpty() && !entry.provider.isEmpty()) {
+            // No usable token, but we remember how this account signs in: ask the game to restart that
+            // provider's browser sign-in rather than fall to a provider menu.
+            sendResume(entry.account, entry.provider);
+            return;
+        }
+        selectAuthMethod();
+    });
 }
 
 void GMCPAuthenticator::selectAuthMethod()

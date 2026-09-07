@@ -76,6 +76,23 @@ private:
     void selectAuthMethod();
     void scheduleSignInAttempt();
     void attemptReconnect();
+    // A profile's saved sign-in, assembled from both credential keys. token is empty when there is
+    // none to replay; it is a bearer secret, so whoever receives one scrubs it on every path.
+    struct StoredSignIn
+    {
+        QString account;
+        QString provider;
+        // Strict unless the store says otherwise, so an entry whose requirement is missing or
+        // unreadable never widens a stored token's exposure.
+        bool secureOnly = true;
+        QString token;
+    };
+    // Reads the stored sign-in as one entry, following the token wherever it lives: inline in the
+    // metadata for an entry written before the split, otherwise under its own key. Reports the auth
+    // attempt current when the read began rather than acting on it, because the two callers want
+    // different things from a stale result - one drops it, the other still has to decide whether it
+    // may rewrite the store.
+    void readStoredSignInEntry(std::function<void(bool success, StoredSignIn entry, unsigned int attemptGeneration)> callback);
     // Reads the stored sign-in entry ({account, provider?, token?}) and acts on it: replay the token
     // (when allowToken), else send the resume form for a remembered provider, else fall through to
     // selectAuthMethod(). allowToken is false on the connection straight after a rejection, so a
