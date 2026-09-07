@@ -94,7 +94,8 @@ private:
     // may rewrite the store. The callback is never invoked at all if the Host goes away while a read is
     // in flight.
     void readStoredSignInEntry(std::function<void(bool success, StoredSignIn entry, unsigned int attemptGeneration)> callback);
-    // Reads the stored sign-in entry ({account, provider?, token?}) and acts on it: replay the token
+    // Reads the stored sign-in - the {account, provider?, secure_only} metadata plus the token from
+    // wherever it lives, its own key or inline in a pre-split entry - and acts on it: replay the token
     // (when allowToken), else send the resume form for a remembered provider, else fall through to
     // selectAuthMethod(). allowToken is false on the connection straight after a rejection, so a
     // not-yet-rewritten entry cannot loop us back into another rejected reconnect.
@@ -119,8 +120,9 @@ private:
     // Takes the account and provider explicitly: the caller captures them before its keychain read, so
     // a Char.Login.Default arriving mid-read cannot clear mConn and turn this into a full discard.
     void dropTokenKeepResumeHint(const QString& account, const QString& provider);
-    // Rewrites the stored entry as {account, provider} with no token: enough to resume later, nothing
-    // any longer a bearer secret.
+    // Removes the token key first - that is the security-relevant half, since this runs because the
+    // stored token is dead and must not be left for the next read to replay - and only then rewrites
+    // the metadata as {account, provider}: enough to resume later, nothing any longer a bearer secret.
     void storeResumeHint(const QString& account, const QString& provider);
     void discardReconnectToken(std::function<void(bool success)> callback = {});
     void resetPerConnectionState();

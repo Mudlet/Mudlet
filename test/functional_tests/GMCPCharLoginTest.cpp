@@ -1120,6 +1120,38 @@ private slots:
         QVERIFY2(CredentialManager::retrieveCredential(host->getName(), qsl("reconnect")).isEmpty(), "the metadata key should be gone");
     }
 
+    void testAFailedTokenRemovalKeepsTheWholeEntry()
+    {
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        QVERIFY(seedSplitSignIn(host->getName(), qsl("{\"account\": \"acct:char\", \"provider\": \"discord\", \"secure_only\": false}"), qsl("forget-me")));
+
+        // Block the token key's own file so its removal cannot succeed. Removing the metadata anyway
+        // would strand the token: preferences only offers "Forget saved sign-in" when the metadata key
+        // exists, so the entry has to survive whole for the player to be able to try again.
+        const QString tokenPath = reconnectCredentialPath(host->getName(), qsl("reconnect-token"));
+        QVERIFY2(QFileInfo::exists(tokenPath), qPrintable(qsl("the credential store no longer files entries at %1").arg(tokenPath)));
+        QVERIFY(CredentialManager::removeCredential(host->getName(), qsl("reconnect-token")));
+        QVERIFY(QDir().mkpath(tokenPath));
+
+        bool reported = false;
+        bool removed = true;
+        host->mpAuth->forgetSavedSignIn([&](bool success) {
+            reported = true;
+            removed = success;
+        });
+
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return reported;
+                         },
+                         4000),
+                 "forgetSavedSignIn never reported an outcome");
+        QVERIFY2(!removed, "a failed token removal must not be reported as a success");
+        QVERIFY2(!CredentialManager::retrieveCredential(host->getName(), qsl("reconnect")).isEmpty(),
+                 "the metadata must survive a failed token removal, or preferences can never offer to remove the token again");
+    }
+
     void testResumeSentWhenTokenAbsentButProviderRemembered()
     {
         Host* host = connectAndNegotiate();

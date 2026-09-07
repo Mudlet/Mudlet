@@ -120,9 +120,14 @@ bool readStoredTransportRequirement(const QJsonObject& entry)
     return decoded.value_or(true);
 }
 
-// The two credential-store keys a profile's saved sign-in occupies. Functions rather than repeated
-// literals: the token key is named at five call sites, and a typo in one of them would silently write
-// where nothing ever reads.
+// The two credential-store keys a profile's saved sign-in occupies: non-secret metadata under one, the
+// bearer token under the other. Every write goes metadata-then-token and every removal goes
+// token-then-metadata, each step conditional on the one before, so a store failure part way through can
+// only ever leave the harmless half without the secret - never the secret without the metadata, which is
+// the half the preferences "Forget saved sign-in" control keys off.
+//
+// Functions rather than repeated literals: the token key is named at five call sites, and a typo in one
+// of them would silently write where nothing ever reads.
 QString metadataKey()
 {
     return qsl("reconnect");
@@ -437,9 +442,13 @@ void GMCPAuthenticator::storeReconnectToken(const QString& account, QString toke
     // attempt rather than against whichever one happens to be live when the write lands.
     const auto attemptGeneration = mAuthAttemptGeneration;
 
-    // Metadata first, token second, and the token only if the metadata landed. A failure after the
-    // first write leaves a resume hint, which the read path already understands; the reverse order
-    // would pair a fresh token with stale metadata, which it does not.
+    // Metadata first, token second, and the token only if the metadata landed. The reverse order would
+    // pair a fresh token with stale metadata, which the read path does not understand. In this order a
+    // failed token write degrades to something it does: on a first save the entry is left as a resume
+    // hint with no token, and on a rotation the previous token stays paired with the fresh metadata (a
+    // sign-in to a second account leaves the first account's token likewise). The stale token is simply
+    // replayed and rejected once, which the rejection/rotation recovery already handles, so it costs a
+    // round trip rather than the sign-in.
     QPointer<CredentialManager> metadataWriter = new CredentialManager();
     metadataWriter->storePassword(mpHost->getName(),
                                   metadataKey(),
@@ -496,7 +505,11 @@ void GMCPAuthenticator::storeReconnectToken(const QString& account, QString toke
                                                   //: "Privacy and security" is the name of a page in the preferences dialog; translate it the same way there.
                                                   safeHost->postMessage(tr("[ INFO ]  - You'll be signed in automatically next time. Manage this under Preferences, Privacy and security."));
                                               });
-                                      // storePassword has taken its own copy, so scrub ours now rather than in the callback.
+                                      // Release our copy here rather than in the callback: the write is already under way and
+                                      // does not read this string again. It is not a guarantee the secret is gone from memory -
+                                      // the keychain backend captures the token by value into its job, and clearing a QString that
+                                      // shares its data detaches, zeroing this buffer while the job's copy lives until the write
+                                      // finishes.
                                       SecureStringUtils::secureStringClear(token);
                                   });
 }
@@ -550,8 +563,11 @@ void GMCPAuthenticator::storeResumeHint(const QString& account, const QString& p
         }
         if (!removed) {
             qWarning().noquote() << "GMCP Char.Login - failed to remove the dead saved token:" << removeError;
-            // The dead token is still stored; drop the whole entry rather than leave it replayable.
-            // Losing the resume hint only costs the player one provider menu.
+            // The dead token is still stored; try to drop the whole entry rather than leave it
+            // replayable, at the cost of a provider menu on the next sign-in. Whatever is wrong with
+            // the store usually stops that removal too, in which case discardReconnectToken() keeps
+            // the entry whole (it will not delete the metadata while the token survives) and reports
+            // the failure - leaving the player the preferences control to try again with.
             discardReconnectToken();
             return;
         }
@@ -578,8 +594,12 @@ void GMCPAuthenticator::forgetSavedSignIn(std::function<void(bool success)> call
 void GMCPAuthenticator::discardReconnectToken(std::function<void(bool success)> callback)
 {
     QPointer<Host> safeHost = mpHost;
-    // Token first: a partial failure then leaves metadata behind, which is harmless, rather than the
-    // secret, which is not.
+    // Token first, and the metadata only if the token actually went: a partial failure then leaves
+    // metadata behind, which is harmless, rather than the secret, which is not. Removing the metadata
+    // anyway after a failed token removal would be the one unrecoverable outcome - the preferences
+    // "Forget saved sign-in" button is shown only when the metadata key exists, so the player would
+    // lose the only control that can remove a token still sitting in the store. Leaving the whole
+    // entry standing instead simply means the button reappears and the removal can be retried.
     QPointer<CredentialManager> tokenRemover = new CredentialManager();
     tokenRemover->removePassword(mpHost->getName(), tokenKey(), [safeHost, tokenRemover, callback = std::move(callback)](bool tokenRemoved, const QString& tokenError) mutable {
         if (tokenRemover) {
@@ -590,14 +610,14 @@ void GMCPAuthenticator::discardReconnectToken(std::function<void(bool success)> 
         if (!tokenRemoved) {
             qWarning().noquote() << "GMCP Char.Login - failed to remove the stored reconnect token:" << tokenError;
         }
-        if (!safeHost) {
+        if (!safeHost || !tokenRemoved) {
             if (callback) {
                 callback(false);
             }
             return;
         }
         QPointer<CredentialManager> metadataRemover = new CredentialManager();
-        metadataRemover->removePassword(safeHost->getName(), metadataKey(), [metadataRemover, tokenRemoved, callback = std::move(callback)](bool success, const QString& errorMessage) {
+        metadataRemover->removePassword(safeHost->getName(), metadataKey(), [metadataRemover, callback = std::move(callback)](bool success, const QString& errorMessage) {
             if (!success) {
                 qWarning().noquote() << "GMCP Char.Login - failed to remove the stored sign-in:" << errorMessage;
             }
@@ -607,7 +627,7 @@ void GMCPAuthenticator::discardReconnectToken(std::function<void(bool success)> 
             // Report the real outcome so callers (e.g. the preferences UI) only claim success once
             // everything is actually gone - both keys, not just the one that answered first.
             if (callback) {
-                callback(success && tokenRemoved);
+                callback(success);
             }
         });
     });
