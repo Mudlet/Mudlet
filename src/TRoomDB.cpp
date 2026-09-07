@@ -1132,6 +1132,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
                 pA->mIsDirty = true;
             }
             pA->rooms = foundRooms;
+            pA->bumpRoomsVersion();
         }
     }
     // END OF TASK 8

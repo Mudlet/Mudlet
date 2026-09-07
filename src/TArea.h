@@ -96,6 +96,13 @@ public:
     // A rebuild costs a pass over every room, so the callers that know which
     // room changed use the ones below instead.
     void markLodExitIndexDirty() { mLodExitIndex.markDirty(); }
+    // Bumped whenever a room joins or leaves this area (addRoom(), removeRoom(),
+    // and auditRooms() rewriting the set wholesale). Cheap enough for a caller
+    // to compare against a value it cached last time, rather than a query
+    // costing a scan of every room in the area - the renderer's room-ID digit
+    // count uses it this way rather than rescanning every rooms() every frame.
+    quint32 getRoomsVersion() const { return mRoomsVersion; }
+    void bumpRoomsVersion() { ++mRoomsVersion; }
     quint32 lodExitIndexRebuildCount() const { return mLodExitIndex.rebuildCount(); }
     // Re-files one room after its own 2D-plane exits or exit stubs changed.
     void updateLodExitRoom(int roomId);
@@ -222,6 +229,8 @@ private:
     // queries - the renderer only holds a const TArea* and most maps never
     // show the reduced-detail tier - hence mutable.
     mutable TAreaLodExitIndex mLodExitIndex;
+    // See getRoomsVersion()/bumpRoomsVersion().
+    quint32 mRoomsVersion = 0;
 
     // One room's position and area as rebuildLodExitIndex() caches them for
     // its destination lookups. Sixteen bytes, so a lookup costs one cache
