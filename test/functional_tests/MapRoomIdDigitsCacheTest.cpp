@@ -18,17 +18,17 @@
  ***************************************************************************/
 
 /*
- * The 2D mapper caches the room-ID digit count per area, keyed on the area id
- * and TArea::getRoomsVersion(). Every TArea starts its version at 0, and a map
- * load builds brand new TArea objects, so a map loaded through a path that does
- * not call T2DMap::init() can present the very same (areaId, version) pair as
- * the map that was on screen before it - and be served the previous map's digit
- * count.
+ * The 2D mapper sizes the room-ID text from the digit count of the biggest
+ * room id in the drawn area, and caches that count against the area id plus
+ * TArea::getRoomsVersion(). The version counts from zero on each TArea
+ * instance while the key names an area id, so a different TArea that comes to
+ * occupy the same id can present a key the cache already holds and be served
+ * the previous area's digit count.
  *
- * The two JSON load paths that do exactly that are dlgMapper.cpp's "load map
- * file" and dlgProfilePreferences.cpp's: both call TMap::readJsonMapFile()
- * followed by TMap::audit(), and neither calls init(). This drives that same
- * pair of calls.
+ * Both tests here render the same map twice - once through a path that resets
+ * the cache and once through a path that does not - and require the two frames
+ * to match. mMaxRoomIdDigits is private, so the digit count is observed the
+ * way a user would: in the pixels.
  *
  * Run with: ctest -R MapRoomIdDigitsCacheTest -V
  */
@@ -36,13 +36,15 @@
 #include <QtTest/QtTest>
 
 #include <QDir>
+#include <QImage>
+#include <QPixmap>
 #include <QTemporaryDir>
 
-#include "PortableModeTestHelper.h"
-#include "SettingsTestHelper.h"
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
+#include "PortableModeTestHelper.h"
+#include "SettingsTestHelper.h"
 #include "T2DMap.h"
 #include "TArea.h"
 #include "TMap.h"
@@ -57,6 +59,11 @@ namespace {
 const int kWidgetWidth = 640;
 const int kWidgetHeight = 480;
 const int kAreaId = 1;
+// Big enough on screen that a six digit room id is still legible, so the
+// digit count actually reaches the pixels.
+const double kZoom = 40.0;
+const int kSmallRoomId = 7;
+const int kBigRoomId = 999999;
 } // namespace
 
 class MapRoomIdDigitsCacheTest : public QObject
@@ -73,19 +80,16 @@ private:
     TMap* map() const { return mpHost->mpMap.data(); }
     TRoomDB* roomDB() const { return mpHost->mpMap->mpRoomDB.get(); }
 
-    // Area kAreaId gets five rooms whose ids all start at firstRoomId, so the
-    // digit count the mapper should show is the width of the largest of them.
-    void buildMap(int firstRoomId)
+    // One area holding one room, so the only thing that varies between the
+    // maps built here is the width of the room id.
+    void buildMap(int roomId)
     {
         map()->mpRoomDB->clearMapDB();
-        QVERIFY(roomDB()->addArea(kAreaId, qsl("area-%1").arg(firstRoomId)));
-        for (int i = 0; i < 5; ++i) {
-            const int roomId = firstRoomId + i;
-            QVERIFY(map()->addRoom(roomId));
-            QVERIFY(map()->setRoomCoordinates(roomId, i * 2, 0, 0));
-            QVERIFY(map()->setRoomArea(roomId, kAreaId));
-        }
-        map()->mRoomIdHash[map()->mProfileName] = firstRoomId;
+        QVERIFY(roomDB()->addArea(kAreaId, qsl("area-%1").arg(roomId)));
+        QVERIFY(map()->addRoom(roomId));
+        QVERIFY(map()->setRoomCoordinates(roomId, 0, 0, 0));
+        QVERIFY(map()->setRoomArea(roomId, kAreaId));
+        map()->mRoomIdHash[map()->mProfileName] = roomId;
     }
 
     T2DMap* mapWidget() const
@@ -97,9 +101,9 @@ private:
         return pMap->mpMapper ? pMap->mpMapper->mp2dMap : nullptr;
     }
 
-    // Everything prepareWidget() in MapLevelOfDetailTest does, minus init() -
+    // What prepareWidget() in MapLevelOfDetailTest sets up, minus init() -
     // whether init() runs is the whole point here, so the caller decides.
-    void aimWidgetAtArea(T2DMap* p2dMap, int playerRoomId)
+    void aimWidgetAtArea(T2DMap* p2dMap, int playerRoomId, bool showRoomIds = true)
     {
         p2dMap->resize(kWidgetWidth, kWidgetHeight);
         p2dMap->mRoomID = playerRoomId;
@@ -110,18 +114,51 @@ private:
         p2dMap->mMapCenterY = 0;
         p2dMap->mMapCenterZ = 0;
         p2dMap->mMultiSelectionSet.clear();
-        p2dMap->mShowRoomID = true;
+        p2dMap->mShowRoomID = showRoomIds;
         TArea* pArea = roomDB()->getArea(kAreaId);
         if (pArea) {
-            pArea->set2DMapZoom(3.0);
+            pArea->set2DMapZoom(kZoom);
         }
     }
 
-    static void renderFrame(T2DMap* p2dMap)
+    void setDeterministicRendering()
+    {
+        mpHost->mRoomSize = 1.0;
+        mpHost->mRoomBorderSize = 0.5;
+        mpHost->mLineSize = 10.0;
+        mpHost->mMapperUseAntiAlias = false;
+        mpHost->mMapperShowGrid = false;
+        mpHost->mMapperShowRoomBorders = false;
+        mpHost->mMapperCenterSmallAreas = false;
+        mpHost->mBgColor_2 = QColor(0, 0, 0);
+        mpHost->mFgColor_2 = QColor(255, 255, 255);
+        mpHost->mMapInfoContributors.clear();
+    }
+
+    static QImage renderFrame(T2DMap* p2dMap)
     {
         QPixmap target(kWidgetWidth, kWidgetHeight);
         target.fill(Qt::black);
         p2dMap->render(&target, QPoint(), QRegion(), QWidget::DrawWindowBackground);
+        return target.toImage();
+    }
+
+    // Renders the big-id map with the cache freshly reset, which is the answer
+    // the other renders have to match. Also proves the room id reaches the
+    // pixels at all, so a later comparison cannot pass by drawing nothing.
+    QImage captureCorrectBigIdFrame(T2DMap* p2dMap, bool& ok)
+    {
+        buildMap(kBigRoomId);
+        map()->audit();
+        p2dMap->init();
+        aimWidgetAtArea(p2dMap, kBigRoomId);
+        const QImage withIds = renderFrame(p2dMap);
+
+        p2dMap->init();
+        aimWidgetAtArea(p2dMap, kBigRoomId, false);
+        const QImage withoutIds = renderFrame(p2dMap);
+        ok = (withIds != withoutIds);
+        return withIds;
     }
 
 private slots:
@@ -150,6 +187,7 @@ private slots:
         mpHost = hostManager.getHost(mProfileName);
         QVERIFY(mpHost);
         QVERIFY(map());
+        setDeterministicRendering();
     }
 
     void cleanupTestCase()
@@ -161,109 +199,89 @@ private slots:
         }
     }
 
-    void digitCountFollowsTheLoadedMap()
+    // dlgMapper::slot_loadMap() and dlgProfilePreferences::loadMap() both do
+    // readJsonMapFile() then audit() for a .json file, and neither calls
+    // T2DMap::init().
+    void jsonMapLoadResizesTheRoomIdText()
     {
-        const QString jsonPath = qsl("%1/big-ids.json").arg(mMapDir.path());
+        T2DMap* p2dMap = mapWidget();
+        QVERIFY(p2dMap);
 
-        // The map that gets loaded second: room ids 100001..100005, so six
-        // digits.
-        buildMap(100001);
-        map()->audit();
+        bool idsAreDrawn = false;
+        const QImage correctFrame = captureCorrectBigIdFrame(p2dMap, idsAreDrawn);
+        QVERIFY2(idsAreDrawn, "the room id is not being drawn, so this test could not see a wrong digit count");
+
+        // Write the big-id map out, so it can be loaded back later.
+        const QString jsonPath = qsl("%1/big-ids.json").arg(mMapDir.path());
         {
             auto [ok, errorMessage] = map()->writeJsonMapFile(jsonPath);
             QVERIFY2(ok, qPrintable(qsl("could not write the JSON map: %1").arg(errorMessage)));
         }
 
-        // The map on screen first: room ids 1..5, so one digit.
-        buildMap(1);
+        // Put the small-id map on screen so the cache holds its digit count.
+        buildMap(kSmallRoomId);
         map()->audit();
-
-        T2DMap* p2dMap = mapWidget();
-        QVERIFY(p2dMap);
         p2dMap->init();
-        aimWidgetAtArea(p2dMap, 1);
+        aimWidgetAtArea(p2dMap, kSmallRoomId);
         renderFrame(p2dMap);
+        const quint32 smallVersion = roomDB()->getArea(kAreaId)->getRoomsVersion();
 
-        TArea* pSmallArea = roomDB()->getArea(kAreaId);
-        QVERIFY(pSmallArea);
-        const quint32 smallVersion = pSmallArea->getRoomsVersion();
-        const int smallDigits = p2dMap->mMaxRoomIdDigits;
-        qInfo().nospace() << "small-id map: rooms version " << smallVersion << ", digit count " << smallDigits;
-        QCOMPARE(smallDigits, 1);
-
-        // Exactly what dlgMapper::slot_loadMap() and
-        // dlgProfilePreferences::loadMap() do for a .json file - note the
-        // absence of any init() call.
+        // Now the load the two dialogs perform.
         {
             auto [ok, errorMessage] = map()->readJsonMapFile(jsonPath);
             QVERIFY2(ok, qPrintable(qsl("could not read the JSON map back: %1").arg(errorMessage)));
         }
         map()->audit();
 
-        aimWidgetAtArea(p2dMap, 100001);
-        renderFrame(p2dMap);
+        aimWidgetAtArea(p2dMap, kBigRoomId);
+        const QImage loadedFrame = renderFrame(p2dMap);
+        const quint32 bigVersion = roomDB()->getArea(kAreaId)->getRoomsVersion();
 
-        TArea* pBigArea = roomDB()->getArea(kAreaId);
-        QVERIFY(pBigArea);
-        const quint32 bigVersion = pBigArea->getRoomsVersion();
-        const int bigDigits = p2dMap->mMaxRoomIdDigits;
-        qInfo().nospace() << "big-id map: rooms version " << bigVersion << ", digit count " << bigDigits << " (should be 6)";
-
-        // The two maps presenting the same version is what lets the stale
-        // digit count survive; report it either way so a failure says why.
+        qInfo().nospace() << "area " << kAreaId << " rooms version: " << smallVersion << " before the load, " << bigVersion << " after";
         if (smallVersion == bigVersion) {
-            qInfo() << "both maps present rooms version" << bigVersion << "for area" << kAreaId << "- the cache key collides";
+            qInfo() << "both maps present the same version for the same area id, so the cache key collides";
         }
 
-        QCOMPARE(bigDigits, 6);
+        QVERIFY2(loadedFrame == correctFrame, "the room ids of the loaded map are drawn at the previous map's digit width");
     }
 
-    // The same collision without any file at all: delete the area and make a
-    // new one, which TRoomDB::createNewAreaID() hands the lowest free id - so
-    // the recycled id comes back on a brand new TArea whose version restarts
-    // at 0 and reaches 1 again after a single setRoomArea().
-    void digitCountFollowsAnAreaThatWasDeletedAndRemade()
+    // Area ids are recycled - TRoomDB::createNewAreaID() hands back the lowest
+    // free one - so deleting an area and making another gets the same id on a
+    // new TArea whose version restarts at zero.
+    void remakingAnAreaResizesTheRoomIdText()
     {
-        map()->mpRoomDB->clearMapDB();
-        QVERIFY(roomDB()->addArea(kAreaId, qsl("small")));
-        QVERIFY(map()->addRoom(7));
-        QVERIFY(map()->setRoomCoordinates(7, 0, 0, 0));
-        QVERIFY(map()->setRoomArea(7, kAreaId));
-        map()->mRoomIdHash[map()->mProfileName] = 7;
-
         T2DMap* p2dMap = mapWidget();
         QVERIFY(p2dMap);
-        p2dMap->init();
-        aimWidgetAtArea(p2dMap, 7);
-        renderFrame(p2dMap);
 
-        TArea* pSmallArea = roomDB()->getArea(kAreaId);
-        QVERIFY(pSmallArea);
-        const quint32 smallVersion = pSmallArea->getRoomsVersion();
-        qInfo().nospace() << "before: area " << kAreaId << " version " << smallVersion << ", digit count " << p2dMap->mMaxRoomIdDigits;
-        QCOMPARE(static_cast<int>(p2dMap->mMaxRoomIdDigits), 1);
+        bool idsAreDrawn = false;
+        const QImage correctFrame = captureCorrectBigIdFrame(p2dMap, idsAreDrawn);
+        QVERIFY2(idsAreDrawn, "the room id is not being drawn, so this test could not see a wrong digit count");
+
+        // Small-id map on screen, so the cache holds a one-digit count.
+        buildMap(kSmallRoomId);
+        p2dMap->init();
+        aimWidgetAtArea(p2dMap, kSmallRoomId);
+        renderFrame(p2dMap);
+        const quint32 smallVersion = roomDB()->getArea(kAreaId)->getRoomsVersion();
 
         // deleteArea() then addAreaName(), the way a script would.
         QVERIFY(roomDB()->removeArea(kAreaId));
-        const int remadeAreaId = roomDB()->addArea(qsl("large"));
-        QCOMPARE(remadeAreaId, kAreaId);
-        QVERIFY(map()->addRoom(999999));
-        QVERIFY(map()->setRoomCoordinates(999999, 0, 0, 0));
-        QVERIFY(map()->setRoomArea(999999, kAreaId));
-        map()->mRoomIdHash[map()->mProfileName] = 999999;
+        QCOMPARE(roomDB()->addArea(qsl("remade")), kAreaId);
+        QVERIFY(map()->addRoom(kBigRoomId));
+        QVERIFY(map()->setRoomCoordinates(kBigRoomId, 0, 0, 0));
+        QVERIFY(map()->setRoomArea(kBigRoomId, kAreaId));
+        map()->mRoomIdHash[map()->mProfileName] = kBigRoomId;
 
-        aimWidgetAtArea(p2dMap, 999999);
-        renderFrame(p2dMap);
+        aimWidgetAtArea(p2dMap, kBigRoomId);
+        const QImage remadeFrame = renderFrame(p2dMap);
+        const quint32 remadeVersion = roomDB()->getArea(kAreaId)->getRoomsVersion();
 
-        TArea* pLargeArea = roomDB()->getArea(kAreaId);
-        QVERIFY(pLargeArea);
-        const quint32 largeVersion = pLargeArea->getRoomsVersion();
-        qInfo().nospace() << "after : area " << kAreaId << " version " << largeVersion << ", digit count " << p2dMap->mMaxRoomIdDigits << " (should be 6)";
-        if (smallVersion == largeVersion) {
-            qInfo() << "the remade area presents the same rooms version" << largeVersion << "- the cache key collides";
+        qInfo().nospace() << "area " << kAreaId << " rooms version: " << smallVersion << " before it was remade, " << remadeVersion << " after";
+        if (smallVersion == remadeVersion) {
+            qInfo() << "the remade area presents the same version as the one it replaced, so the cache key collides";
         }
 
-        QCOMPARE(static_cast<int>(p2dMap->mMaxRoomIdDigits), 6);
+        QVERIFY2(remadeFrame == correctFrame, "the room ids of the remade area are drawn at the previous area's digit width");
     }
 };
 
