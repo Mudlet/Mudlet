@@ -545,15 +545,15 @@ end
 -- internal function to resize the border automatically if the window size changes
 function Adjustable.Container:resizeBorder()
     local winw, winh = getMainWindowSize()
-    self.timer_active = self.timer_active or true
     -- Check if Window resize already happened.
     -- If that is not checked this creates an infinite loop and crashes because setBorder also causes a resize event
-    if (winw ~= self.old_w_value or winh ~= self.old_h_value) and self.timer_active then
-        self.timer_active = false
-        tempTimer(0.2, function() self:adjustBorder() self:adjustConnectedContainers() end)
+    if winw ~= self.old_w_value or winh ~= self.old_h_value then
+        -- recorded before adjusting: setBorder raises a resize event that finds nothing to do
+        self.old_w_value = winw
+        self.old_h_value = winh
+        self:adjustBorder()
+        self:adjustConnectedContainers()
     end
-    self.old_w_value = winw
-    self.old_h_value = winh
 end
 
 --- attaches your container to the given border
@@ -582,14 +582,16 @@ end
 function Adjustable.Container:detach()
     -- a container of the same name may have taken over the registration, so
     -- only unregister while it is still ours - the same guard type_delete uses
-    local attachedTo = Adjustable.Container.Attached and Adjustable.Container.Attached[self.attached]
+    local where = self.attached
+    local attachedTo = Adjustable.Container.Attached and Adjustable.Container.Attached[where]
     if attachedTo and attachedTo[self.name] == self then
         attachedTo[self.name] = nil
     end
     self.borderSize = nil
-    self:resetBorder(self.attached)
-    self.attached=false
+    -- unhooked first: handing the border back raises an event we would answer by re-reserving
+    self.attached = false
     if self.resizeHandlerID then killAnonymousEventHandler(self.resizeHandlerID) end
+    self:resetBorder(where)
 end
 
 -- internal function to reset the given border
