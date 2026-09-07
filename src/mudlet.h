@@ -353,6 +353,7 @@ public:
     bool setAddonCommandChecked(int commandId, bool checked, Host* pHost);
     bool setAddonCommandIcon(int commandId, const QString& icon, Host* pHost);
     bool setAddonCommandTooltip(int commandId, const QString& tooltip, Host* pHost);
+    bool setAddonCommandPinned(int commandId, bool pinned, Host* pHost);
     bool setAddonCommandPulse(int commandId, bool enabled, const QString& color1, const QString& color2, int interval, Host* pHost, QString& error);
     // Every command a profile placed, dropped when it closes or resets
     void removeAddonCommandsForHost(Host* pHost);
@@ -868,6 +869,10 @@ private:
         bool checked = false;
         QString icon;
         QString tooltip;
+        // Shown in whichever window the player is in, whatever profile that
+        // window is showing - for a control they must be able to reach while it
+        // is doing something, a microphone that is open being the case in hand.
+        bool pinned = false;
         bool pulseEnabled = false;
         bool pulseState = false;
         QString pulseColor1;
@@ -892,6 +897,8 @@ private:
     // has set, or take them down again and tidy what they leave behind
     QMainWindow* addonHomeContainerFor(Host* pHost) const;
     Host* addonShownProfileIn(QMainWindow* pContainer);
+    QMainWindow* addonFocusedContainer();
+    void refreshAddonPlacementIfAnyPinned();
     void placeAddonCommand(int commandId, AddonCommand& command, QMainWindow* pContainer);
     void unplaceAddonCommand(AddonCommand& command);
     void applyAddonCommandState(AddonCommand& command);

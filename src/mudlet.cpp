@@ -842,6 +842,30 @@ Host* mudlet::addonShownProfileIn(QMainWindow* pContainer)
     return mHostManager.getHost(mpTabBar->tabName(mpTabBar->currentIndex()));
 }
 
+// The window the player is working in, when that is one of ours. A pinned
+// command follows this rather than its own profile's window.
+void mudlet::refreshAddonPlacementIfAnyPinned()
+{
+    for (auto it = mAddonCommands.constBegin(); it != mAddonCommands.constEnd(); ++it) {
+        if (it.value().pinned) {
+            refreshAddonPlacement();
+            return;
+        }
+    }
+}
+
+QMainWindow* mudlet::addonFocusedContainer()
+{
+    QWidget* pActive = QApplication::activeWindow();
+    if (!pActive) {
+        return nullptr;
+    }
+    if (pActive == this) {
+        return this;
+    }
+    return qobject_cast<TDetachedWindow*>(pActive);
+}
+
 // Puts every command where it belongs and shows only the ones whose profile its
 // window is showing. Cheap enough to call on any change that could move one: a
 // command already in the right window is only shown or hidden, and rebuilding
@@ -853,7 +877,16 @@ void mudlet::refreshAddonPlacement()
         if (!command.pHost) {
             continue;
         }
+        // A pinned command is one the package says the player must be able to
+        // reach while it is doing something - a microphone that is open. It
+        // goes to the window they are actually in, and is shown there whatever
+        // profile that window is showing. Everything else stays home.
         QMainWindow* pTarget = addonHomeContainerFor(command.pHost);
+        if (command.pinned) {
+            if (QMainWindow* pFocused = addonFocusedContainer()) {
+                pTarget = pFocused;
+            }
+        }
         if (command.container != pTarget) {
             unplaceAddonCommand(command);
             placeAddonCommand(it.key(), command, pTarget);
@@ -865,7 +898,7 @@ void mudlet::refreshAddonPlacement()
         // QAction's shortcut stops firing, which is the point - a key that
         // raises another game's event while you are looking at this one is the
         // same mistake as a button that does.
-        const bool visible = (addonShownProfileIn(pTarget) == command.pHost);
+        const bool visible = command.pinned || (addonShownProfileIn(pTarget) == command.pHost);
         if (command.toolbarAction) {
             command.toolbarAction->setVisible(visible);
         }
@@ -1242,6 +1275,17 @@ bool mudlet::setAddonCommandTooltip(int commandId, const QString& tooltip, Host*
     if (command.menuAction) {
         command.menuAction->setToolTip(addonTooltip(tooltip));
     }
+    return true;
+}
+
+bool mudlet::setAddonCommandPinned(int commandId, bool pinned, Host* pHost)
+{
+    if (!mAddonCommands.contains(commandId) || mAddonCommands[commandId].pHost != pHost) {
+        return false;
+    }
+
+    mAddonCommands[commandId].pinned = pinned;
+    refreshAddonPlacement();
     return true;
 }
 
@@ -2850,6 +2894,11 @@ void mudlet::slot_applicationStateChanged(const Qt::ApplicationState state)
         return;
     }
     mApplicationActive = nowActive;
+
+    // A pinned command sits in whichever window is in front, so a change of
+    // window moves it. Only asked when something is actually pinned: with
+    // nothing pinned, placement does not depend on focus at all.
+    refreshAddonPlacementIfAnyPinned();
 
     // Every profile hears it: this is a fact about the application, not about
     // which profile is in front, and a profile in a background tab has as much

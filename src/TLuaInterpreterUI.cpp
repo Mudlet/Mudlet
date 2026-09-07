@@ -4507,6 +4507,22 @@ int TLuaInterpreter::setCommandChecked(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setCommandPinned
+int TLuaInterpreter::setCommandPinned(lua_State* L)
+{
+    const int commandId = getVerifiedInt(L, __func__, 1, "commandId");
+    const bool pinned = getVerifiedBool(L, __func__, 2, "pinned");
+
+    auto& host = getHostFromLua(L);
+    mudlet* pMudlet = mudlet::self();
+    if (!pMudlet) {
+        return warnArgumentValue(L, __func__, "mudlet instance not available");
+    }
+
+    lua_pushboolean(L, pMudlet->setAddonCommandPinned(commandId, pinned, &host));
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setCommandIcon
 int TLuaInterpreter::setCommandIcon(lua_State* L)
 {

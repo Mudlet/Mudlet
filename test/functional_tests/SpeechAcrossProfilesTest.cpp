@@ -136,6 +136,15 @@ private:
         QVERIFY2(runLua(pHost, code).isNull(), qPrintable(qsl("could not arm a handler for %1").arg(eventName)));
     }
 
+    bool luaGlobalBoolean(Host* pHost, const QString& globalName) const
+    {
+        lua_State* L = pHost->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, globalName.toUtf8().constData());
+        const bool value = lua_toboolean(L, -1);
+        lua_pop(L, 1);
+        return value;
+    }
+
     int luaGlobalNumber(Host* pHost, const QString& globalName) const
     {
         lua_State* L = pHost->getLuaInterpreter()->getLuaGlobalState();
@@ -430,6 +439,45 @@ private slots:
 
         mudlet::self()->slot_tabReattachRequested(mSecondHostname);
         QTest::qWait(200ms);
+        runLua(mpSecondHost, qsl("removeCommand(%1)").arg(secondId));
+    }
+
+    // What the player asked for: a live microphone they can always see and stop,
+    // without the two idle buttons that made them ask. A pinned command is shown
+    // in the window they are in even while it shows another profile - and only
+    // one command is ever pinned, the one that is actually doing something.
+    void test_aPinnedCommandIsShownWhileAnotherProfileIsInFront()
+    {
+        const int secondId = addCommand(mpSecondHost, qsl("name = \"SpeechPinned\", surfaces = \"toolbar\""));
+        QVERIFY(secondId > 0);
+
+        mudlet::self()->activateProfile(mpFirstHost);
+        QAction* pEntry = toolbarEntryIn(mudlet::self(), qsl("SpeechPinned"));
+        QVERIFY2(pEntry, "the command was not placed at all");
+        QVERIFY2(!pEntry->isVisible(), "an unpinned command of another profile is on the toolbar");
+
+        QVERIFY(runLua(mpSecondHost, qsl("setCommandPinned(%1, true)").arg(secondId)).isNull());
+        QVERIFY2(pEntry->isVisible(), "a pinned command is not shown while another profile is in front");
+
+        QVERIFY(runLua(mpSecondHost, qsl("setCommandPinned(%1, false)").arg(secondId)).isNull());
+        QVERIFY2(!pEntry->isVisible(), "unpinning did not put the command back with its own profile");
+
+        runLua(mpSecondHost, qsl("removeCommand(%1)").arg(secondId));
+    }
+
+    // Pinning is the profile's own business, like every other command operation:
+    // an id belonging to somebody else answers as an unknown one does.
+    void test_pinningIsRefusedForAnotherProfilesCommand()
+    {
+        const int secondId = addCommand(mpSecondHost, qsl("name = \"SpeechNotYours\", surfaces = \"toolbar\""));
+        QVERIFY(secondId > 0);
+
+        QVERIFY(runLua(mpFirstHost, qsl("_pinnedOther = setCommandPinned(%1, true)").arg(secondId)).isNull());
+        QVERIFY2(!luaGlobalBoolean(mpFirstHost, qsl("_pinnedOther")), "a profile pinned another profile's command");
+
+        QVERIFY(runLua(mpFirstHost, qsl("_pinnedUnknown = setCommandPinned(999999, true)")).isNull());
+        QVERIFY2(!luaGlobalBoolean(mpFirstHost, qsl("_pinnedUnknown")), "an unknown id was accepted");
+
         runLua(mpSecondHost, qsl("removeCommand(%1)").arg(secondId));
     }
 
