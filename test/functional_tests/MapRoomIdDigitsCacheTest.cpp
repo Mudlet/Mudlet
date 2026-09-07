@@ -44,7 +44,9 @@
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "PortableModeTestHelper.h"
-#include "SettingsTestHelper.h"
+#include "ProfileTestHelper.h"
+#include "TelnetServerStub.h"
+#include "ctelnet.h"
 #include "T2DMap.h"
 #include "TArea.h"
 #include "TMap.h"
@@ -59,9 +61,10 @@ namespace {
 const int kWidgetWidth = 640;
 const int kWidgetHeight = 480;
 const int kAreaId = 1;
-// Big enough on screen that a six digit room id is still legible, so the
-// digit count actually reaches the pixels.
-const double kZoom = 40.0;
+// Zoom is inverted - a room is drawn kWidgetHeight / zoom pixels across - so
+// this draws 160 pixel rooms, big enough that a six digit room id clears the
+// 7pt floor sizeFontToFitTextInRect() enforces and so reaches the pixels.
+const double kZoom = 3.0;
 const int kSmallRoomId = 7;
 const int kBigRoomId = 999999;
 } // namespace
@@ -74,8 +77,19 @@ private:
     QTemporaryDir mConfigDir;
     QTemporaryDir mMapDir;
     QByteArray mSavedXdg;
+    TelnetServerStub* mpServer = nullptr;
     Host* mpHost = nullptr;
     const QString mProfileName = qsl("MapRoomIdDigitsCache-Test");
+    const QString mLocalhost = qsl("localhost");
+    QString mPort;
+
+    void deleteProfileDirectory() const
+    {
+        QDir dir(mudlet::getMudletPath(enums::profileHomePath, mProfileName));
+        if (dir.exists()) {
+            dir.removeRecursively();
+        }
+    }
 
     TMap* map() const { return mpHost->mpMap.data(); }
     TRoomDB* roomDB() const { return mpHost->mpMap->mpRoomDB.get(); }
@@ -135,6 +149,20 @@ private:
         mpHost->mMapInfoContributors.clear();
     }
 
+    static int nonBackgroundPixels(const QImage& frame)
+    {
+        const QRgb background = frame.pixel(0, 0);
+        int count = 0;
+        for (int y = 0; y < frame.height(); ++y) {
+            for (int x = 0; x < frame.width(); ++x) {
+                if (frame.pixel(x, y) != background) {
+                    ++count;
+                }
+            }
+        }
+        return count;
+    }
+
     static QImage renderFrame(T2DMap* p2dMap)
     {
         QPixmap target(kWidgetWidth, kWidgetHeight);
@@ -158,6 +186,7 @@ private:
         aimWidgetAtArea(p2dMap, kBigRoomId, false);
         const QImage withoutIds = renderFrame(p2dMap);
         ok = (withIds != withoutIds);
+        qInfo().nospace() << "big-id frame: " << nonBackgroundPixels(withIds) << " lit pixels with room ids, " << nonBackgroundPixels(withoutIds) << " without";
         return withIds;
     }
 
@@ -174,18 +203,25 @@ private slots:
         mSavedXdg = qgetenv("XDG_CONFIG_HOME");
         qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
 
+        mpServer = new TelnetServerStub(qApp);
+        mpServer->start(mLocalhost, 0);
+        mPort = QString::number(mpServer->serverPort());
+
         mudlet::start();
         mudlet::self()->setupConfig();
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
         mudlet::self()->setShowMapAuditErrors(false);
-        deleteProfileDirectory(mProfileName);
+        mudlet::self()->mSkipDefaultPackageInstall = true;
+        deleteProfileDirectory();
 
-        auto& hostManager = mudlet::self()->getHostManager();
-        QVERIFY2(hostManager.addHost(mProfileName, qsl("23"), QString(), QString()), "failed to create the Host");
-        mpHost = hostManager.getHost(mProfileName);
+        // A fully loaded profile, because showHideOrCreateMapper() needs the
+        // profile's console before it will make a mapper.
+        mpHost = TestProfile::create(mProfileName, mLocalhost, mPort);
         QVERIFY(mpHost);
+        QSignalSpy connected(&(mpHost->mTelnet), &cTelnet::signal_connected);
+        QVERIFY2(connected.wait(3000), "could not connect to the telnet stub");
         QVERIFY(map());
         setDeterministicRendering();
     }
