@@ -26,6 +26,8 @@
 #include <QJsonObject>
 #include <QPointer>
 
+#include <utility>
+
 SignInStoreReconciler::SignInStoreReconciler(Performer performer, QObject* parent)
 : QObject(parent)
 , mPerformer(std::move(performer))
@@ -77,23 +79,27 @@ QString SignInStoreReconciler::metadataPayload(const Intent& intent)
 
 void SignInStoreReconciler::scrub(Request& request)
 {
-    // The intent's token is uniquely owned - it is moved in by setIntent and moved out by WriteToken,
-    // never copied - which is the one case in which zeroing a QString actually reaches the bytes.
+    // secureStringClear() only reaches the real bytes when the token is uniquely owned at this
+    // point - true whenever the caller std::move()s the Intent into setIntent(), as every caller
+    // in this file does, but not enforceable from here: a caller that copies an Intent in instead
+    // gets a private detach-and-zero that leaves the original bytes untouched.
     SecureStringUtils::secureStringClear(request.intent.token);
 }
 
 unsigned int SignInStoreReconciler::setIntent(Intent intent, Completion completion)
 {
     const auto id = ++mNextId;
-    if (mPending) {
+    // Assign the new pending request before finishing whatever it displaced: that completion may
+    // itself call setIntent() again, and if it did so while the old request was still sitting in
+    // mPending, its own request would be the one silently overwritten a moment later instead of
+    // this one.
+    auto replaced = std::exchange(mPending, std::optional<Request>(Request{id, std::move(intent), std::move(completion), 0}));
+    if (replaced) {
         // Replaced before it ever started: it will never reach the store, so say so now and drop
         // its secret. Invoking the completion here, rather than never, is what keeps "exactly once"
         // true for every request.
-        auto replaced = std::move(*mPending);
-        mPending.reset();
-        finish(replaced, Outcome::Superseded, Operation::WriteMetadata, QString());
+        finish(*replaced, Outcome::Superseded, Operation::WriteMetadata, QString());
     }
-    mPending = Request{id, std::move(intent), std::move(completion), 0};
     if (!mActive) {
         start();
     }

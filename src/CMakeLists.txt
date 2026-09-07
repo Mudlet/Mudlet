@@ -93,7 +93,6 @@ set(mudlet_SRCS
     FontManager.cpp
     GifTracker.cpp
     GMCPAuthenticator.cpp
-    SignInStoreReconciler.cpp
     Host.cpp
     HostManager.cpp
     ircmessageformatter.cpp
@@ -120,6 +119,7 @@ set(mudlet_SRCS
     SelectionRectangleHandler.cpp
     SentryWrapper.cpp
     ShortcutsManager.cpp
+    SignInStoreReconciler.cpp
     SingleLineTextEdit.cpp
     SpeechAudioCapture.cpp
     SpeechRecognizerFactory.cpp

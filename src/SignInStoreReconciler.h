@@ -86,6 +86,9 @@ public:
     // request's completion is invoked exactly once - Reached, Failed or Superseded - unless the
     // reconciler is destroyed first, in which case none are, since their owner is going with it.
     // Returns the id assigned, in case the caller wants to correlate.
+    // Pass intent as an rvalue (std::move it in) when it carries a Full token: a dropped request's
+    // token is scrubbed before its completion runs, but that scrub only reaches the real bytes
+    // when this call is the token's sole owner - a copy elsewhere in the caller survives it intact.
     unsigned int setIntent(Intent intent, Completion completion);
     bool inFlight() const { return mActive.has_value(); }
 

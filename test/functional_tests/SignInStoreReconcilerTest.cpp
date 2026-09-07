@@ -26,7 +26,6 @@
 #include <QtTest/QtTest>
 
 #include <QHash>
-#include <QPointer>
 #include <QJsonDocument>
 #include <QJsonObject>
 
@@ -37,6 +36,21 @@
 #include "utils.h"
 
 #include "GroupedTest.h"
+
+// Detects an AddressSanitizer build, the same way MapRenderBenchmark.cpp does, so the one test
+// below that deliberately reads memory freed by secureStringClear() can skip itself there instead
+// of registering as a heap-use-after-free.
+#if defined(__has_feature)
+#if __has_feature(address_sanitizer)
+#define SIGNINSTORERECONCILER_TEST_BUILD_ASAN 1
+#endif
+#endif
+#if !defined(SIGNINSTORERECONCILER_TEST_BUILD_ASAN) && defined(__SANITIZE_ADDRESS__)
+#define SIGNINSTORERECONCILER_TEST_BUILD_ASAN 1
+#endif
+#ifndef SIGNINSTORERECONCILER_TEST_BUILD_ASAN
+#define SIGNINSTORERECONCILER_TEST_BUILD_ASAN 0
+#endif
 
 using Shape = SignInStoreReconciler::Shape;
 using Operation = SignInStoreReconciler::Operation;
@@ -97,6 +111,37 @@ struct Outcomes
         return [this, idOut](Outcome outcome, Operation failedAt, QString error) {
             byId[*idOut].push_back({outcome, failedAt, std::move(error)});
         };
+    }
+};
+
+// A performer that completes every operation immediately, inline - the production behaviour on
+// the file-backed credential store, and the reason the functional suite cannot reach the races
+// FakeStore exists to test. Used to confirm the reconciler behaves the same way when there is
+// never anything actually in flight.
+struct SyncStore
+{
+    struct Call
+    {
+        Operation op;
+        QString payload;
+    };
+    std::vector<Call> calls;
+
+    SignInStoreReconciler::Performer performer()
+    {
+        return [this](Operation op, QString payload, SignInStoreReconciler::Done done) {
+            calls.push_back({op, payload});
+            done(true, QString());
+        };
+    }
+
+    std::vector<Operation> operations() const
+    {
+        std::vector<Operation> ops;
+        for (const auto& call : calls) {
+            ops.push_back(call.op);
+        }
+        return ops;
     }
 };
 
@@ -418,6 +463,234 @@ private slots:
             }
         }
         QCOMPARE(written, QStringList{qsl("the-only-token-that-lands")});
+    }
+
+    // ---- Re-entrancy: a Completion calling setIntent() again -------------------
+
+    void reenteringSetIntentFromASupersededCompletionPreservesTheReplacement()
+    {
+        // Regression: displacing a still-pending request used to run its Superseded completion
+        // before the new request was recorded as pending. If that completion itself calls
+        // setIntent() - easy for Task 2's caller to do from a "saved sign-in changed" handler -
+        // the request it sets was silently overwritten a moment later, and its completion was
+        // never invoked.
+        FakeStore store;
+        Outcomes outcomes;
+        SignInStoreReconciler reconciler(store.performer());
+        unsigned int idA = 0;
+        unsigned int idB = 0;
+        unsigned int idD = 0;
+        int completionsC = 0;
+        Outcome resultC = Outcome::Failed;
+
+        idA = reconciler.setIntent(fullIntent(qsl("tok-A")), outcomes.recorder(&idA));
+        idB = reconciler.setIntent(fullIntent(qsl("tok-B")), [&](Outcome outcome, Operation failedAt, QString error) {
+            outcomes.byId[idB].push_back({outcome, failedAt, std::move(error)});
+            if (outcome == Outcome::Superseded) {
+                // Fires while C's setIntent() call below is still on the stack.
+                idD = reconciler.setIntent(fullIntent(qsl("tok-D")), outcomes.recorder(&idD));
+            }
+        });
+        // Not Outcomes::recorder() for C: with the bug fixed, C's own Superseded completion fires
+        // synchronously nested inside this very call - B's completion above sets D, which displaces
+        // C - before the assignment below would have happened, so a pointer-to-id lookup would see
+        // the id's old value. See the comment on the SyncStore-based tests further down for the
+        // same hazard in a simpler shape.
+        reconciler.setIntent(fullIntent(qsl("tok-C")), [&](Outcome outcome, Operation, QString) {
+            ++completionsC;
+            resultC = outcome;
+        });
+
+        std::size_t next = 0;
+        while (reconciler.inFlight()) {
+            QVERIFY2(next < store.calls.size(), "the reconciler is in flight but issued nothing to complete");
+            store.release(next++);
+        }
+
+        // Every one of the four requests must be accounted for exactly once - D above all, since
+        // it is the one the bug used to drop on the floor.
+        QCOMPARE(outcomes.byId[idA].size(), std::size_t{1});
+        QCOMPARE(outcomes.byId[idB].size(), std::size_t{1});
+        QCOMPARE(completionsC, 1);
+        QCOMPARE(resultC, Outcome::Superseded);
+        QCOMPARE(outcomes.byId[idD].size(), std::size_t{1});
+        QCOMPARE(outcomes.byId[idB][0].outcome, Outcome::Superseded);
+        QCOMPARE(outcomes.byId[idD][0].outcome, Outcome::Reached);
+
+        QStringList written;
+        for (const auto& call : store.calls) {
+            if (call.op == Operation::WriteToken) {
+                written << call.payload;
+            }
+        }
+        QCOMPARE(written, QStringList{qsl("tok-D")});
+    }
+
+    void reachedCompletionCanReenterSetIntentAndTheNewRequestRuns()
+    {
+        // Pins the restart in runStep() after a Reached completion sets a new intent: the
+        // reconciler must actually start it, and must not also try to start it a second time
+        // once runStep() itself notices mPending.
+        FakeStore store;
+        Outcomes outcomes;
+        SignInStoreReconciler reconciler(store.performer());
+        unsigned int idA = 0;
+        unsigned int idB = 0;
+        idA = reconciler.setIntent(hintIntent(), [&](Outcome outcome, Operation failedAt, QString error) {
+            outcomes.byId[idA].push_back({outcome, failedAt, std::move(error)});
+            if (outcome == Outcome::Reached) {
+                idB = reconciler.setIntent(fullIntent(qsl("tok-B")), outcomes.recorder(&idB));
+            }
+        });
+
+        store.release(0); // RemoveToken
+        store.release(1); // WriteMetadata -> A reaches; its completion sets B, reentrant, right here
+        QCOMPARE(outcomes.byId[idA].size(), std::size_t{1});
+        QCOMPARE(outcomes.byId[idA][0].outcome, Outcome::Reached);
+        QVERIFY(reconciler.inFlight());
+        QCOMPARE(store.operations(), (std::vector<Operation>{Operation::RemoveToken, Operation::WriteMetadata, Operation::WriteMetadata}));
+
+        store.release(2);
+        store.release(3);
+        QCOMPARE(outcomes.byId[idB].size(), std::size_t{1});
+        QCOMPARE(outcomes.byId[idB][0].outcome, Outcome::Reached);
+        QCOMPARE(store.calls.back().payload, qsl("tok-B"));
+    }
+
+    void failedCompletionCanReenterSetIntentAndTheFallbackRuns()
+    {
+        // Pins the restart in onStepDone() after a Failed completion sets a new intent - Task 2's
+        // storeResumeHint fallback depends on being able to do exactly this (fall back to a
+        // forget) directly from inside a Failed completion, and have it actually run rather than
+        // being silently dropped.
+        FakeStore store;
+        Outcomes outcomes;
+        SignInStoreReconciler reconciler(store.performer());
+        unsigned int idA = 0;
+        unsigned int idB = 0;
+        idA = reconciler.setIntent(fullIntent(qsl("tok-A")), [&](Outcome outcome, Operation failedAt, QString error) {
+            outcomes.byId[idA].push_back({outcome, failedAt, std::move(error)});
+            if (outcome == Outcome::Failed) {
+                idB = reconciler.setIntent(absentIntent(), outcomes.recorder(&idB));
+            }
+        });
+
+        store.release(0, false, qsl("disk full")); // A's WriteMetadata fails -> fallback sets B, reentrant
+        QCOMPARE(outcomes.byId[idA].size(), std::size_t{1});
+        QCOMPARE(outcomes.byId[idA][0].outcome, Outcome::Failed);
+        QVERIFY(reconciler.inFlight());
+        QCOMPARE(store.operations(), (std::vector<Operation>{Operation::WriteMetadata, Operation::RemoveToken}));
+
+        store.release(1);
+        store.release(2);
+        QCOMPARE(outcomes.byId[idB].size(), std::size_t{1});
+        QCOMPARE(outcomes.byId[idB][0].outcome, Outcome::Reached);
+    }
+
+    // ---- A fully synchronous Performer - the production, file-backed path ------
+
+    void aSynchronousPerformerCompletesAFullSequenceInline()
+    {
+        // The file-backed credential store completes every operation inline, which the
+        // FakeStore-based tests above cannot exercise. setIntent() must return only once the
+        // whole synchronous sequence - here, a Full - has already run to completion.
+        //
+        // Outcomes::recorder() is deliberately not used here: it looks a request's id up through a
+        // pointer the test fills in *after* setIntent() returns, which assumes the completion fires
+        // later still. A synchronous performer fires it before setIntent() returns, while that
+        // pointer's target is still its old value - so the completion is captured directly instead.
+        SyncStore store;
+        SignInStoreReconciler reconciler(store.performer());
+        int completions = 0;
+        Outcome result = Outcome::Failed;
+        reconciler.setIntent(fullIntent(qsl("tok-1")), [&](Outcome outcome, Operation, QString) {
+            ++completions;
+            result = outcome;
+        });
+
+        QCOMPARE(store.operations(), (std::vector<Operation>{Operation::WriteMetadata, Operation::WriteToken}));
+        QVERIFY(!reconciler.inFlight());
+        QCOMPARE(completions, 1);
+        QCOMPARE(result, Outcome::Reached);
+    }
+
+    void aSynchronousPerformerAbandonsARequestSupersededMidSequence()
+    {
+        // With a synchronous store, the only way a second request can arrive while the first is
+        // still running is reentrancy from within the performer itself - simulated here to prove
+        // the abandon path in onStepDone() still works, and nothing crashes, when there is never
+        // a moment where the reconciler is waiting on anything. Completions are captured directly,
+        // not through Outcomes::recorder() - see the comment in the test above this one.
+        SignInStoreReconciler* reconciler = nullptr;
+        std::vector<Operation> ops;
+        bool triggered = false;
+        int completionsA = 0;
+        int completionsB = 0;
+        Outcome resultA = Outcome::Failed;
+        Outcome resultB = Outcome::Failed;
+
+        auto performer = [&](Operation op, QString payload, SignInStoreReconciler::Done done) {
+            ops.push_back(op);
+            if (!triggered && op == Operation::WriteMetadata) {
+                triggered = true;
+                reconciler->setIntent(absentIntent(), [&](Outcome outcome, Operation, QString) {
+                    ++completionsB;
+                    resultB = outcome;
+                });
+            }
+            done(true, QString());
+        };
+        SignInStoreReconciler r(performer);
+        reconciler = &r;
+
+        r.setIntent(fullIntent(qsl("tok-A")), [&](Outcome outcome, Operation, QString) {
+            ++completionsA;
+            resultA = outcome;
+        });
+
+        QCOMPARE(ops, (std::vector<Operation>{Operation::WriteMetadata, Operation::RemoveToken, Operation::RemoveMetadata}));
+        QCOMPARE(completionsA, 1);
+        QCOMPARE(resultA, Outcome::Superseded);
+        QCOMPARE(completionsB, 1);
+        QCOMPARE(resultB, Outcome::Reached);
+    }
+
+    // ---- scrub() actually reaches the bytes ------------------------------------
+
+    void aScrubbedTokensBytesAreActuallyZeroed()
+    {
+        // Pins scrub(): replacing its body with a no-op leaves every other case in this file
+        // green. secureStringClear() zeros the buffer in place and then QString::clear()s it,
+        // which - since the token here is uniquely owned, hence the local Intent moved in rather
+        // than one of the helpers above being copied - drops the last reference and frees it. So
+        // reading through the raw pointer below is, strictly, reading memory a correct
+        // implementation has already freed: safe in practice in this exact window, because the
+        // completion is a no-op and nothing else allocates between the free and the read, but a
+        // real heap-use-after-free as far as AddressSanitizer is concerned. Skipped there rather
+        // than risk a false crash in a sanitizer build; see SIGNINSTORERECONCILER_TEST_BUILD_ASAN
+        // above.
+#if SIGNINSTORERECONCILER_TEST_BUILD_ASAN
+        QSKIP("reads memory freed by secureStringClear(); unsafe under AddressSanitizer");
+#else
+        FakeStore store;
+        SignInStoreReconciler reconciler(store.performer());
+
+        Intent intent;
+        intent.shape = Shape::Full;
+        intent.account = qsl("acct:char");
+        intent.token = QString::fromUtf8("scrub-me-1234");
+        const QChar* rawData = intent.token.constData();
+        const int length = intent.token.length();
+
+        // Fail the metadata step so the token is dropped without ever being written to the store -
+        // scrub() runs on exactly this path - with a no-op completion so nothing else allocates.
+        reconciler.setIntent(std::move(intent), [](Outcome, Operation, QString) {});
+        store.release(0, false, qsl("disk full"));
+
+        for (int i = 0; i < length; ++i) {
+            QCOMPARE(rawData[i], QChar(0));
+        }
+#endif
     }
 };
 
