@@ -655,15 +655,13 @@ private slots:
         QVERIFY2(subject()->getExit(DIR_NORTH) == scmNearRoom, "save() on a dialog with no room wrote over another room's exits");
     }
 
-    /*
-     * Known defect, kept as an expected failure so that fixing it is noticed:
-     * dlgRoomExits' constructor hands specialExits two parentless delegates
-     * through setItemDelegateForColumn(), which does not take ownership, so
-     * both outlive the dialog with nothing left pointing at them. Every opening
-     * of the exits editor leaks a RoomIdLineEditDelegate and a
-     * WeightSpinBoxDelegate; parenting them to the dialog is the fix, and it
-     * turns both QVERIFYs below green.
-     */
+    // Regression test for issue #10423: dlgRoomExits' constructor used to hand
+    // specialExits two parentless delegates through setItemDelegateForColumn(),
+    // which does not take ownership, so both outlived the dialog with nothing
+    // left pointing at them - leaking a RoomIdLineEditDelegate and a
+    // WeightSpinBoxDelegate on every opening of the exits editor. Fixed by
+    // parenting both to specialExits, so deleting the dialog now cascades
+    // through it and frees them too.
     void specialExitDelegatesOutliveTheDialog()
     {
         buildMap();
@@ -673,9 +671,7 @@ private slots:
 
         delete pDlg;
 
-        QEXPECT_FAIL("", "issue #10423: the roomID delegate is parentless, so deleting the dialog does not destroy it", Continue);
         QVERIFY(mpRoomIdDelegate.isNull());
-        QEXPECT_FAIL("", "issue #10423: the weight delegate is parentless, so deleting the dialog does not destroy it", Continue);
         QVERIFY(mpWeightDelegate.isNull());
     }
 };
