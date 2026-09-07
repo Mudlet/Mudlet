@@ -120,11 +120,12 @@ void SignInStoreReconciler::runStep()
         // Move the request out before reporting, so a completion that immediately sets a new intent
         // finds the reconciler idle rather than re-entering a request still marked active.
         auto reached = std::move(*mActive);
+        // mActive must already be empty when finish() runs: a completion that calls setIntent()
+        // relies on finding no active request here so it can self-start via setIntent()'s own
+        // "if (!mActive) { start(); }" below - reordering these two lines would leave that
+        // self-start unreachable and the re-entrant request would never run.
         mActive.reset();
         finish(reached, Outcome::Reached, Operation::WriteMetadata, QString());
-        if (mPending && !mActive) {
-            start();
-        }
         return;
     }
 
@@ -162,7 +163,9 @@ void SignInStoreReconciler::onStepDone(unsigned int id, Operation op, bool ok, Q
         // next operation: the newer intent describes the end state the caller wants now, and running
         // this one to completion is exactly the interleaving this class exists to prevent. Start the
         // newer one before reporting, so a completion that sets yet another intent queues behind it
-        // rather than replacing it.
+        // rather than replacing it - and so mActive already holds that new request, not empty, by
+        // the time the abandoned completion runs: if it calls setIntent() again and found mActive
+        // empty here, that call would self-start too, colliding with the start() below.
         auto abandoned = std::move(*mActive);
         mActive.reset();
         start();
@@ -172,12 +175,12 @@ void SignInStoreReconciler::onStepDone(unsigned int id, Operation op, bool ok, Q
 
     if (!ok) {
         auto failed = std::move(*mActive);
+        // mActive must already be empty when finish() runs: a completion that reacts to the failure
+        // by calling setIntent() (a failed hint falling back to a forget) relies on finding no
+        // active request here so it can self-start via setIntent()'s own "if (!mActive) { start(); }"
+        // - reordering these two lines would leave that self-start unreachable.
         mActive.reset();
         finish(failed, Outcome::Failed, op, std::move(error));
-        // A completion may have set a new intent in response (a failed hint falls back to a forget).
-        if (mPending && !mActive) {
-            start();
-        }
         return;
     }
 

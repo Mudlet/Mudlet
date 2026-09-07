@@ -511,6 +511,57 @@ private slots:
         QCOMPARE(written, QStringList{qsl("tok-D")});
     }
 
+    void reenteringSetIntentFromAnAbandonedActiveCompletionPreservesTheReplacement()
+    {
+        // The third re-entrancy path named for finding 2: an ACTIVE request abandoned mid-sequence
+        // (as opposed to a still-pending one, covered above), whose Superseded completion itself
+        // calls setIntent() again. onStepDone()'s abandon branch starts the newer, already-pending
+        // request before finishing the abandoned one specifically so mActive is never empty at that
+        // point - swap that order and a re-entrant setIntent() here finds mPending already consumed
+        // by a nested start(), then the outer function's own start() dereferences an empty mPending.
+        FakeStore store;
+        Outcomes outcomes;
+        SignInStoreReconciler reconciler(store.performer());
+        unsigned int idA = 0;
+        unsigned int idB = 0;
+        unsigned int idC = 0;
+
+        idA = reconciler.setIntent(fullIntent(qsl("tok-A")), [&](Outcome outcome, Operation failedAt, QString error) {
+            outcomes.byId[idA].push_back({outcome, failedAt, std::move(error)});
+            if (outcome == Outcome::Superseded) {
+                // Fires from inside the abandon branch below, while B (already pending) is starting.
+                idC = reconciler.setIntent(fullIntent(qsl("tok-C")), outcomes.recorder(&idC));
+            }
+        });
+        idB = reconciler.setIntent(fullIntent(qsl("tok-B")), outcomes.recorder(&idB));
+        // A is active and mid-sequence - its WriteMetadata is in flight - when B arrives and queues.
+        QCOMPARE(store.operations(), (std::vector<Operation>{Operation::WriteMetadata}));
+        QVERIFY(reconciler.inFlight());
+
+        std::size_t next = 0;
+        while (reconciler.inFlight()) {
+            QVERIFY2(next < store.calls.size(), "the reconciler is in flight but issued nothing to complete");
+            store.release(next++);
+        }
+
+        // Every one of the three requests must be accounted for exactly once - C above all, since a
+        // start()/finish() reorder in the abandon branch is what would drop it.
+        QCOMPARE(outcomes.byId[idA].size(), std::size_t{1});
+        QCOMPARE(outcomes.byId[idA][0].outcome, Outcome::Superseded);
+        QCOMPARE(outcomes.byId[idB].size(), std::size_t{1});
+        QCOMPARE(outcomes.byId[idB][0].outcome, Outcome::Superseded);
+        QCOMPARE(outcomes.byId[idC].size(), std::size_t{1});
+        QCOMPARE(outcomes.byId[idC][0].outcome, Outcome::Reached);
+
+        QStringList written;
+        for (const auto& call : store.calls) {
+            if (call.op == Operation::WriteToken) {
+                written << call.payload;
+            }
+        }
+        QCOMPARE(written, QStringList{qsl("tok-C")});
+    }
+
     void reachedCompletionCanReenterSetIntentAndTheNewRequestRuns()
     {
         // Pins the restart in runStep() after a Reached completion sets a new intent: the
