@@ -279,8 +279,8 @@ dlgRoomExits::dlgRoomExits(Host* pH, const int roomNumber, QWidget* pW)
 
     init();
 
-    specialExits->setItemDelegateForColumn(ExitsTreeWidget::colIndex_exitRoomId, new RoomIdLineEditDelegate);
-    specialExits->setItemDelegateForColumn(ExitsTreeWidget::colIndex_exitWeight, new WeightSpinBoxDelegate);
+    specialExits->setItemDelegateForColumn(ExitsTreeWidget::colIndex_exitRoomId, new RoomIdLineEditDelegate(specialExits));
+    specialExits->setItemDelegateForColumn(ExitsTreeWidget::colIndex_exitWeight, new WeightSpinBoxDelegate(specialExits));
 }
 
 dlgRoomExits::~dlgRoomExits() = default;
@@ -301,6 +301,25 @@ void dlgRoomExits::slot_endEditSpecialExits()
         mEditColumn = -1;
     }
     specialExits->clearSelection();
+}
+
+// The Delete key removes the selected special exits (see
+// ExitsTreeWidget::keyPressEvent()), and one of them may be the item being
+// edited.
+void dlgRoomExits::slot_specialExitRowsAboutToBeRemoved(const QModelIndex& parent, const int first, const int last)
+{
+    if (!mpEditItem || parent.isValid()) {
+        return;
+    }
+    for (int row = first; row <= last; ++row) {
+        if (specialExits->topLevelItem(row) == mpEditItem) {
+            mpEditItem = nullptr;
+            mEditColumn = -1;
+            button_endEditing->setDisabled(true);
+            button_addSpecialExit->setEnabled(true);
+            return;
+        }
+    }
 }
 
 void dlgRoomExits::slot_editSpecialExit(QTreeWidgetItem* pI, int column)
@@ -1908,6 +1927,7 @@ void dlgRoomExits::init()
     connect(button_addSpecialExit, &QAbstractButton::clicked,                      this, &dlgRoomExits::slot_addSpecialExit);
     connect(specialExits,          &QTreeWidget::itemClicked,                      this, &dlgRoomExits::slot_editSpecialExit);
     connect(specialExits,          &QTreeWidget::itemClicked,                      this, &dlgRoomExits::slot_checkModified);
+    connect(specialExits->model(), &QAbstractItemModel::rowsAboutToBeRemoved,     this, &dlgRoomExits::slot_specialExitRowsAboutToBeRemoved);
     connect(button_endEditing,     &QAbstractButton::clicked,                      this, &dlgRoomExits::slot_endEditSpecialExits);
     connect(button_endEditing,     &QAbstractButton::clicked,                      this, &dlgRoomExits::slot_checkModified);
     connect(nw,                    &QLineEdit::textEdited,                         this, &dlgRoomExits::slot_nw_textEdited);
