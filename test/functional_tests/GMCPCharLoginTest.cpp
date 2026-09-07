@@ -472,6 +472,9 @@ private slots:
         QCOMPARE(sent.value(qsl("account")).toString(), qsl("player"));
         QCOMPARE(sent.value(qsl("password")).toString(), qsl("secret"));
         QCOMPARE(sent.value(qsl("version")).toInt(), 2);
+        // A real JSON boolean, not the string "true": Qt can serialise one, so the leniency the
+        // standard allows for driver-limited peers is not ours to spend.
+        QCOMPARE(sent.value(qsl("token_storage")), QJsonValue(true));
     }
 
     void testAbsentServerVersionEchoesVersionOne()
@@ -489,9 +492,10 @@ private slots:
         QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "client did not send Char.Login.Credentials");
         QCOMPARE(sent.value(qsl("account")).toString(), qsl("player"));
         QCOMPARE(sent.value(qsl("version")).toInt(), 1);
+        QCOMPARE(sent.value(qsl("token_storage")), QJsonValue(true));
     }
 
-    void testNoCredentialsHandsOffWithEmptyCredentials()
+    void testNoCredentialsHandsOffToTheGamesSignInScreen()
     {
         Host* host = connectAndNegotiate();
         QVERIFY(host);
@@ -503,7 +507,24 @@ private slots:
 
         QJsonObject sent;
         QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "client did not hand off with Char.Login.Credentials");
-        QVERIFY2(sent.isEmpty(), "hand-off Char.Login.Credentials should be an empty object");
+        QVERIFY2(isVersionTwoHandoff(sent), qPrintable(qsl("expected the version 2 hand-off, got %1").arg(describe(sent))));
+    }
+
+    void testVersionOneHandoffStaysABareEmptyObject()
+    {
+        // Version 1 predates both the common fields and the "a hand-off is the message with no
+        // account" rule, so a version 1 server may still be testing for a literally empty object.
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"type\": [\"oauth\", \"password-credentials\"]}"));
+
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "client did not hand off with Char.Login.Credentials");
+        QVERIFY2(sent.isEmpty(), qPrintable(qsl("a version 1 hand-off must stay the bare {} object, got %1").arg(describe(sent))));
     }
 
     void testDefaultWithoutAuthTypesLeavesTimerAutoLoginAlone_data()
@@ -569,7 +590,7 @@ private slots:
 
         QJsonObject sent;
         QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "client did not respond");
-        QVERIFY2(sent.isEmpty(), "a partial credential pair must not be autofilled");
+        QVERIFY2(isVersionTwoHandoff(sent), qPrintable(qsl("a partial credential pair must not be autofilled, got %1").arg(describe(sent))));
     }
 
     void testClientDrivenOAuthFieldsIgnoredOnCleartext()
@@ -587,7 +608,7 @@ private slots:
 
         QJsonObject sent;
         QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "client did not hand off");
-        QVERIFY2(sent.isEmpty(), "client-driven OAuth fields must be ignored on cleartext, yielding an empty hand-off");
+        QVERIFY2(isVersionTwoHandoff(sent), qPrintable(qsl("client-driven OAuth fields must be ignored on cleartext, yielding a hand-off, got %1").arg(describe(sent))));
     }
 
     // ---- Char.Login.URL safety ---------------------------------------------
@@ -626,6 +647,96 @@ private slots:
                  "the reconnect token should be persisted with the announced account and token");
     }
 
+    void testTokenMintedInTheClearIsReplayedInTheClear()
+    {
+        // Issue #10585 end to end: remember-me was unusable on a plain telnet game, because a token
+        // the server had explicitly marked replayable on either transport was stored and then refused
+        // on every later connection. secure_only arrives as a JSON string here because the server that
+        // found this (LDMud) has no JSON boolean to send.
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        QVERIFY2(!host->mTelnet.currentlySecure(), "precondition: this connection is unencrypted");
+        host->setLogin(QString());
+        host->setPass(QString());
+
+        mpServer->sendGmcp(qsl("Char.Login.Token {\"secure_only\": \"false\", \"token\": \"opaque-token\", \"account\": \"acct:char\"}"));
+        QVERIFY2(waitForStoredReconnect(host,
+                                        [](const QJsonObject& entry) {
+                                            return entry.value(qsl("token")).toString() == qsl("opaque-token") && entry.value(qsl("secure_only")) == QJsonValue(false);
+                                        }),
+                 "the token's transport requirement should be stored alongside it");
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\", \"password-credentials\"]}"));
+
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Reconnect"), sent), "a token the server marked replayable in the clear should be replayed");
+        QCOMPARE(sent.value(qsl("token")).toString(), qsl("opaque-token"));
+    }
+
+    void testAbsentSecureOnlyInheritsTheIssuingTransport_data()
+    {
+        QTest::addColumn<bool>("encrypted");
+        QTest::newRow("minted in the clear") << false;
+        QTest::newRow("minted over TLS") << true;
+    }
+
+    void testAbsentSecureOnlyInheritsTheIssuingTransport()
+    {
+        QFETCH(bool, encrypted);
+        Host* host = connectAndNegotiate(encrypted);
+        QVERIFY(host);
+        QCOMPARE(host->mTelnet.currentlySecure(), encrypted);
+
+        mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:char\", \"token\": \"opaque-token\"}"));
+        QVERIFY2(waitForStoredReconnect(host,
+                                        [encrypted](const QJsonObject& entry) {
+                                            return entry.value(qsl("token")).toString() == qsl("opaque-token") && entry.value(qsl("secure_only")) == QJsonValue(encrypted);
+                                        }),
+                 "an absent secure_only should be defaulted from the transport the token arrived on");
+    }
+
+    void testSecureOnlyIsDecodedInEveryFormTheStandardAllows_data()
+    {
+        QTest::addColumn<QString>("literal");
+        QTest::addColumn<bool>("secureOnly");
+        // Every row is minted over TLS, where an inherited default is true - so each false below is one
+        // the server actually asked for rather than one we fell back to.
+        QTest::newRow("JSON false") << qsl("false") << false;
+        QTest::newRow("string false") << qsl("\"false\"") << false;
+        QTest::newRow("string FALSE") << qsl("\"FALSE\"") << false;
+        QTest::newRow("string zero") << qsl("\"0\"") << false;
+        QTest::newRow("number zero") << qsl("0") << false;
+        QTest::newRow("JSON true") << qsl("true") << true;
+        QTest::newRow("string true") << qsl("\"true\"") << true;
+        QTest::newRow("padded string True") << qsl("\" True \"") << true;
+        QTest::newRow("number one") << qsl("1") << true;
+        // Undecodable is absent, never a guess - and absent here inherits TLS, the strict answer. A
+        // permissive reading of a value we could not parse is what the standard singles out as wrong.
+        QTest::newRow("unrecognised string") << qsl("\"maybe\"") << true;
+        QTest::newRow("out-of-range number") << qsl("2") << true;
+        QTest::newRow("fractional number") << qsl("1.5") << true;
+        QTest::newRow("null") << qsl("null") << true;
+        QTest::newRow("object") << qsl("{}") << true;
+        QTest::newRow("array") << qsl("[false]") << true;
+    }
+
+    void testSecureOnlyIsDecodedInEveryFormTheStandardAllows()
+    {
+        QFETCH(QString, literal);
+        QFETCH(bool, secureOnly);
+        Host* host = connectAndNegotiate(true);
+        QVERIFY(host);
+        QVERIFY2(host->mTelnet.currentlySecure(), "precondition: this connection is encrypted");
+
+        mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:char\", \"token\": \"opaque-token\", \"secure_only\": %1}").arg(literal));
+        QVERIFY2(waitForStoredReconnect(host,
+                                        [secureOnly](const QJsonObject& entry) {
+                                            return entry.value(qsl("token")).toString() == qsl("opaque-token") && entry.value(qsl("secure_only")) == QJsonValue(secureOnly);
+                                        }),
+                 qPrintable(qsl("secure_only %1 should have been stored as %2").arg(literal, secureOnly ? qsl("true") : qsl("false"))));
+    }
+
     // ---- Char.Login.Reconnect ----------------------------------------------
 
     void testSavedTokenIsReplayedOnReconnect()
@@ -646,6 +757,7 @@ private slots:
         QCOMPARE(sent.value(qsl("account")).toString(), qsl("acct:char"));
         QCOMPARE(sent.value(qsl("token")).toString(), qsl("saved-token"));
         QCOMPARE(sent.value(qsl("version")).toInt(), 2);
+        QCOMPARE(sent.value(qsl("token_storage")), QJsonValue(true));
     }
 
     void testSavedTokenIsNotReplayedOverCleartext()
@@ -663,7 +775,7 @@ private slots:
 
         QJsonObject sent;
         QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "the sign-in should fall back to the interactive hand-off");
-        QVERIFY2(sent.isEmpty(), "the fall-back must be the empty {} hand-off");
+        QVERIFY2(isVersionTwoHandoff(sent), qPrintable(qsl("the fall-back must be the hand-off, got %1").arg(describe(sent))));
         QCOMPARE(mpServer->countReceived(qsl("Char.Login.Reconnect")), 0);
         QVERIFY2(waitForConsoleContains(host, qsl("not encrypted")), "the user should be told why their saved sign-in was not used");
         QVERIFY2(!CredentialManager::retrieveCredential(host->getName(), qsl("reconnect")).isEmpty(), "refusing to send the token must not destroy it");
@@ -673,6 +785,44 @@ private slots:
         mpServer->sendGmcp(qsl("Char.Login.Result {\"success\": false, \"message\": \"Invalid credentials\"}"));
         QVERIFY2(waitForConsoleContains(host, qsl("Could not log in to the game")), "a failed interactive sign-in should be reported as one");
         QVERIFY2(!CredentialManager::retrieveCredential(host->getName(), qsl("reconnect")).isEmpty(), "the stored sign-in must survive an unrelated login failure");
+    }
+
+    void testStoredTransportRequirementGatesReplay_data()
+    {
+        QTest::addColumn<QString>("entry");
+        QTest::addColumn<bool>("replayed");
+        QTest::newRow("replayable in the clear") << qsl("{\"account\": \"acct:char\", \"token\": \"saved-token\", \"secure_only\": false}") << true;
+        QTest::newRow("encrypted only") << qsl("{\"account\": \"acct:char\", \"token\": \"saved-token\", \"secure_only\": true}") << false;
+        // Written by a Mudlet from before the requirement was stored: keep the strict reading, so
+        // upgrading never widens the exposure of a token already on disk. It gains the field on the
+        // next rotation.
+        QTest::newRow("no requirement stored") << qsl("{\"account\": \"acct:char\", \"token\": \"saved-token\"}") << false;
+    }
+
+    void testStoredTransportRequirementGatesReplay()
+    {
+        QFETCH(QString, entry);
+        QFETCH(bool, replayed);
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        QVERIFY2(!host->mTelnet.currentlySecure(), "precondition: this connection is unencrypted");
+        host->setLogin(QString());
+        host->setPass(QString());
+        QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect"), entry));
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\", \"password-credentials\"]}"));
+
+        QJsonObject sent;
+        if (replayed) {
+            QVERIFY2(waitForClientGmcp(qsl("Char.Login.Reconnect"), sent), "a token this transport is allowed to carry should have been replayed");
+            QCOMPARE(sent.value(qsl("token")).toString(), qsl("saved-token"));
+            return;
+        }
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "a token this transport may not carry should fall through to the hand-off");
+        QCOMPARE(mpServer->countReceived(qsl("Char.Login.Reconnect")), 0);
+        QVERIFY2(waitForConsoleContains(host, qsl("not encrypted")), "the user should be told why their saved sign-in was not used");
+        QVERIFY2(!CredentialManager::retrieveCredential(host->getName(), qsl("reconnect")).isEmpty(), "a token refused on this transport must not be destroyed");
     }
 
     void testCleartextTokenFallsBackToProviderResume()
@@ -762,6 +912,7 @@ private slots:
         QCOMPARE(sent.value(qsl("provider")).toString(), qsl("discord"));
         QVERIFY2(!sent.contains(qsl("password")), "the resume form must not carry a password");
         QCOMPARE(sent.value(qsl("version")).toInt(), 2);
+        QCOMPARE(sent.value(qsl("token_storage")), QJsonValue(true));
     }
 
     void testProviderFromUrlIsPersistedWithToken()
@@ -872,7 +1023,7 @@ private slots:
 
         QJsonObject sent;
         QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "a corrupt stored entry should fall through to the hand-off");
-        QVERIFY2(sent.isEmpty(), "the fall-through must be the empty {} hand-off, not a reconnect or a partial replay");
+        QVERIFY2(isVersionTwoHandoff(sent), qPrintable(qsl("the fall-through must be the hand-off, not a reconnect or a partial replay, got %1").arg(describe(sent))));
         QCOMPARE(mpServer->countReceived(qsl("Char.Login.Reconnect")), 0);
     }
 
@@ -1273,6 +1424,16 @@ private:
                     return all.contains(substring);
                 },
                 timeoutMs);
+    }
+
+    static QString describe(const QJsonObject& obj) { return QString::fromUtf8(QJsonDocument(obj).toJson(QJsonDocument::Compact)); }
+
+    // The version 2 interactive hand-off is identified by the absence of account, not by the payload
+    // being literally {}: the common fields ride on it, and token_storage riding there is the whole
+    // point - it reaches the game before the game writes a line of its sign-in screen.
+    static bool isVersionTwoHandoff(const QJsonObject& sent)
+    {
+        return !sent.contains(qsl("account")) && !sent.contains(qsl("password")) && sent.value(qsl("version")).toInt() == 2 && sent.value(qsl("token_storage")) == QJsonValue(true);
     }
 
     // Parse the stored reconnect entry as JSON so tests can assert its exact shape rather than

@@ -36,10 +36,12 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonParseError>
+#include <QJsonValue>
 #include <QPointer>
 #include <QTimer>
 #include <QUrl>
 #include <chrono>
+#include <optional>
 
 using namespace std::chrono_literals;
 
@@ -64,6 +66,41 @@ QString providerDisplayName(const QString& id)
         display[0] = display[0].toUpper();
     }
     return display;
+}
+
+// Decodes a field the standard declares boolean, in every form it permits: a JSON boolean, the
+// strings "true"/"false" or "1"/"0" (case-insensitive), or the numbers 1/0. Several MUD drivers have
+// no JSON boolean in their serializer at all - LDMud's json_serialize() among them - which is why the
+// string and number forms exist at all.
+//
+// A value in none of those forms is not a boolean, and returns nullopt so the caller applies that
+// field's documented default. That distinction is the point: the defaults here are not all false, and
+// for a security-bearing field like secure_only the permissive reading is exactly the wrong guess.
+std::optional<bool> decodeWireBool(const QJsonValue& value)
+{
+    if (value.isBool()) {
+        return value.toBool();
+    }
+    if (value.isDouble()) {
+        const double number = value.toDouble();
+        if (number == 1) {
+            return true;
+        }
+        if (number == 0) {
+            return false;
+        }
+        return std::nullopt;
+    }
+    if (value.isString()) {
+        const QString text = value.toString().trimmed().toLower();
+        if (text == qsl("true") || text == qsl("1")) {
+            return true;
+        }
+        if (text == qsl("false") || text == qsl("0")) {
+            return false;
+        }
+    }
+    return std::nullopt;
 }
 } // namespace
 
@@ -181,6 +218,23 @@ void GMCPAuthenticator::saveSupportsSet(const QString& packageMessage, const QSt
 #endif
 }
 
+void GMCPAuthenticator::addCommonFields(QJsonObject& payload) const
+{
+    // Echo the negotiated version so the server can confirm both ends agree.
+    payload[qsl("version")] = mNegotiatedVersion;
+    // Whether a Char.Login.Token minted on this connection would actually be written to protected
+    // storage and replayed later - which is what lets the game decide whether it can honestly offer to
+    // remember this player before it writes its sign-in screen.
+    //
+    // Constant true for Mudlet, and honestly so rather than as a shortcut: CredentialManager always has
+    // somewhere to put a token - the system keychain, falling back to its own encrypted file store when
+    // the keychain is unavailable or the install is portable - and nothing here runs unless the profile
+    // has GMCP enabled. The standard asks the question per connection because a client whose store can
+    // go missing must answer for the connection in hand; ours cannot go missing. Qt serialises a real
+    // JSON boolean, which is the form the standard prefers.
+    payload[qsl("token_storage")] = true;
+}
+
 bool GMCPAuthenticator::clientDrivenOAuthAvailable() const
 {
     // Both fields are only ever stored when the connection is encrypted (see saveSupportsSet), so
@@ -196,14 +250,20 @@ void GMCPAuthenticator::sendCredentials(bool interactiveHandoff)
     QJsonObject credentials;
 
     // Autofill stored credentials only when this is not an explicit interactive hand-off and the game
-    // actually accepts password-credentials; otherwise this stays an empty object, the deliberate
-    // Char.Login.Credentials {} hand-off telling the game to run its own sign-in screen (see
-    // selectAuthMethod).
+    // actually accepts password-credentials; otherwise this is the deliberate hand-off telling the game
+    // to run its own sign-in screen (see selectAuthMethod).
     if (!interactiveHandoff && mSupportedAuthTypes.contains(qsl("password-credentials")) && !character.isEmpty() && !password.isEmpty()) {
         credentials[qsl("account")] = character;
         credentials[qsl("password")] = password;
-        // Echo the negotiated version so the server can confirm both ends agree.
-        credentials[qsl("version")] = mNegotiatedVersion;
+        addCommonFields(credentials);
+    } else if (mNegotiatedVersion >= 2) {
+        // A version 2 hand-off is identified by carrying no account, not by being literally {}, so the
+        // common fields ride on it - and carrying token_storage here is the whole reason to send it:
+        // this message reaches the game before it writes a line of its sign-in screen, which is the last
+        // moment at which it can still decide whether to offer to remember this player. Version 1
+        // predates both that rule and the field, so its hand-off stays the bare {} object that a version
+        // 1 server may still be testing for literally.
+        addCommonFields(credentials);
     }
 
     QJsonDocument doc(credentials);
@@ -244,12 +304,14 @@ void GMCPAuthenticator::sendCredentials(bool interactiveHandoff)
 #endif
 }
 
-bool GMCPAuthenticator::sendReconnect(const QString& account, QString token)
+bool GMCPAuthenticator::sendReconnect(const QString& account, QString token, bool secureOnly)
 {
     // The token signs in to the account without the player's password, and is replayed on whatever
     // transport is live now rather than the one it was earned on: in the clear that hands the account
-    // to anyone on the path.
-    if (!mpHost->mTelnet.currentlySecure()) {
+    // to anyone on the path. Whether that matters is the issuing server's call, recorded in the token's
+    // own requirement when it was minted - so a game that mints and accepts tokens on plain telnet can
+    // use them there, while a token earned over TLS is still never spent in the clear.
+    if (secureOnly && !mpHost->mTelnet.currentlySecure()) {
         SecureStringUtils::secureStringClear(token);
         qWarning().noquote() << "GMCP Char.Login.Reconnect - refusing to replay the saved sign-in token over an unencrypted connection.";
         //: Shown when a saved password-less sign-in cannot be reused because this connection to the game is not encrypted.
@@ -260,7 +322,10 @@ bool GMCPAuthenticator::sendReconnect(const QString& account, QString token)
     QJsonObject payload;
     payload[qsl("account")] = account;
     payload[qsl("token")] = token;
-    payload[qsl("version")] = mNegotiatedVersion;
+    // Redundant here - a client replaying a token evidently stores them - but sending the common fields
+    // uniformly is simpler than special-casing this one message, and the standard forbids a server from
+    // requiring the field here anyway.
+    addCommonFields(payload);
     QByteArray json = QJsonDocument(payload).toJson(QJsonDocument::Compact);
     QString gmcpMessage = QString::fromUtf8(json);
     payload = QJsonObject();
@@ -297,11 +362,14 @@ bool GMCPAuthenticator::sendReconnect(const QString& account, QString token)
     return true;
 }
 
-void GMCPAuthenticator::storeReconnectToken(const QString& account, QString token)
+void GMCPAuthenticator::storeReconnectToken(const QString& account, QString token, bool secureOnly)
 {
     QJsonObject obj;
     obj[qsl("account")] = account;
     obj[qsl("token")] = token;
+    // Stored with the token rather than recomputed at replay time: the requirement belongs to the
+    // connection that minted it, which by then is long gone.
+    obj[qsl("secure_only")] = secureOnly;
     // Keep the provider with the token (in the same protected store) so a later connection can resume
     // this provider's browser sign-in if the token has expired or been revoked by then.
     if (!mConn.accountProvider.isEmpty()) {
@@ -342,7 +410,7 @@ void GMCPAuthenticator::sendResume(const QString& account, const QString& provid
     QJsonObject payload;
     payload[qsl("account")] = account;
     payload[qsl("provider")] = provider;
-    payload[qsl("version")] = mNegotiatedVersion;
+    addCommonFields(payload);
     const QString gmcpMessage = QString::fromUtf8(QJsonDocument(payload).toJson(QJsonDocument::Compact));
 
     std::string output;
@@ -561,7 +629,7 @@ void GMCPAuthenticator::sendAuthCode(QString code, QString codeVerifier, const Q
     } else if (mOAuthNonceRequired) {
         qWarning().noquote() << "GMCP Char.Login.AuthCode - the server asked for a nonce but none was generated, so it cannot verify the ID token's nonce claim.";
     }
-    payload[qsl("version")] = mNegotiatedVersion;
+    addCommonFields(payload);
     QByteArray json = QJsonDocument(payload).toJson(QJsonDocument::Compact);
     QString gmcpMessage = QString::fromUtf8(json);
     payload = QJsonObject();
@@ -719,6 +787,8 @@ void GMCPAuthenticator::retryOrDropRejectedToken()
                     if (doc.isObject()) {
                         const auto account = doc.object()[qsl("account")].toString();
                         auto token = doc.object()[qsl("token")].toString();
+                        // As in readStoredSignIn: an entry with no requirement stored is read strictly.
+                        const bool secureOnly = decodeWireBool(doc.object()[qsl("secure_only")]).value_or(true);
                         if (!account.isEmpty() && !token.isEmpty()) {
                             QByteArray tokenBytes = token.toUtf8();
                             const QByteArray storedHash = QCryptographicHash::hash(tokenBytes, QCryptographicHash::Sha256);
@@ -733,7 +803,7 @@ void GMCPAuthenticator::retryOrDropRejectedToken()
 #if defined(DEBUG_GMCP_AUTHENTICATION)
                                 qDebug() << "GMCP reconnect token was rotated by another instance; replaying the fresh token";
 #endif
-                                if (sendReconnect(account, std::move(token))) {
+                                if (sendReconnect(account, std::move(token), secureOnly)) {
                                     mConn.retriedRotatedToken = true;
                                     mConn.sentReconnectTokenHash = storedHash;
                                     mConn.reconnectingWithToken = true;
@@ -897,11 +967,18 @@ void GMCPAuthenticator::handleAuthToken(const QString& packageMessage, const QSt
         return;
     }
 
+    // Whether this token may only ever be replayed on an encrypted transport. Absent - or in a form
+    // that is not a boolean at all - means it inherits the transport it arrived on: a token minted over
+    // TLS is encrypted-only, one minted in the clear may be replayed either way. A server that mints
+    // over TLS but accepts replays in the clear has to say so with an explicit false, so silence can
+    // only ever narrow the token's exposure, never widen it.
+    const bool secureOnly = decodeWireBool(obj[qsl("secure_only")]).value_or(mpHost->mTelnet.currentlySecure());
+
     // The server issues this token at its own discretion - the "remember me" decision belongs to the
     // game's flow, not the client - so we simply persist whatever arrives (overwriting on rotation) and
     // offer a local "forget saved sign-in" control in preferences. Move the token in so
     // storeReconnectToken owns the sole copy and can scrub it after persisting.
-    storeReconnectToken(account, std::move(token));
+    storeReconnectToken(account, std::move(token), secureOnly);
 
     // Let the player know their sign-in will be remembered - but only the first time this connection,
     // and never on a token-reconnect (where the arriving token is a silent rotation, not a new opt-in).
@@ -1018,6 +1095,10 @@ void GMCPAuthenticator::readStoredSignIn(bool allowToken)
                         const auto account = doc.object()[qsl("account")].toString();
                         auto token = doc.object()[qsl("token")].toString();
                         const auto provider = doc.object()[qsl("provider")].toString();
+                        // An entry written before the requirement was stored gets the strict reading, so
+                        // upgrading Mudlet never widens the exposure of a token already on disk; it gains
+                        // the field the next time the server rotates it.
+                        const bool secureOnly = decodeWireBool(doc.object()[qsl("secure_only")]).value_or(true);
                         if (!provider.isEmpty()) {
                             mConn.accountProvider = provider;
                         }
@@ -1029,7 +1110,7 @@ void GMCPAuthenticator::readStoredSignIn(bool allowToken)
                             const QByteArray sentHash = QCryptographicHash::hash(tokenBytes, QCryptographicHash::Sha256);
                             SecureStringUtils::secureByteArrayClear(tokenBytes);
                             // Move the token in so sendReconnect owns the sole copy and can scrub it either way.
-                            if (sendReconnect(account, std::move(token))) {
+                            if (sendReconnect(account, std::move(token), secureOnly)) {
                                 // This connection is logging in by replaying a saved token, so a Char.Login.Token
                                 // that comes back is a silent rotation rather than a first-time save to announce.
                                 mConn.reconnectingWithToken = true;

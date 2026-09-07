@@ -46,9 +46,11 @@ public:
     ~GMCPAuthenticator() = default;
 
     void saveSupportsSet(const QString& packageMessage, const QString& data);
-    // Sends Char.Login.Credentials. With interactiveHandoff true it always sends the empty object {}
-    // (the "run your own sign-in screen" hand-off) even when the profile has stored credentials;
-    // otherwise it autofills the stored character name and password when the game accepts them.
+    // Sends Char.Login.Credentials. With interactiveHandoff true it always sends the "run your own
+    // sign-in screen" hand-off even when the profile has stored credentials; otherwise it autofills the
+    // stored character name and password when the game accepts them. A version 2 hand-off is the
+    // message with no account rather than a literally empty object - it carries the common fields (see
+    // addCommonFields) - while a version 1 one stays {}.
     void sendCredentials(bool interactiveHandoff = false);
     void handleAuthResult(const QString& packageMessage, const QString& data);
     void handleAuthGMCP(const QString& packageMessage, const QString& data);
@@ -79,15 +81,19 @@ private:
     // selectAuthMethod(). allowToken is false on the connection straight after a rejection, so a
     // not-yet-rewritten entry cannot loop us back into another rejected reconnect.
     void readStoredSignIn(bool allowToken);
-    // Returns false when it refused to send: the token is a bearer secret and never goes out over a
-    // cleartext transport. It is scrubbed either way, and only a true return means a result is awaited.
-    bool sendReconnect(const QString& account, QString token);
-    // Sends the resume form of Char.Login.Credentials: {account, provider, version}, no password -
-    // asking the game to restart the browser sign-in for the provider remembered from an earlier
+    // Returns false when it refused to send: the token is a bearer secret, and one the issuing server
+    // scoped to an encrypted transport (secureOnly) never goes out in the clear. It is scrubbed either
+    // way, and only a true return means a result is awaited.
+    bool sendReconnect(const QString& account, QString token, bool secureOnly);
+    // Sends the resume form of Char.Login.Credentials: an account and provider plus the common fields,
+    // no password - asking the game to restart the browser sign-in for the provider remembered from an
+    // earlier
     // Char.Login.URL. The absence of a password (not the presence of provider) is what distinguishes it.
     void sendResume(const QString& account, const QString& provider);
     void handleAuthToken(const QString& packageMessage, const QString& data);
-    void storeReconnectToken(const QString& account, QString token);
+    // secureOnly is the token's transport requirement, stored with it because it belongs to the
+    // connection that minted the token rather than to whichever one later replays it.
+    void storeReconnectToken(const QString& account, QString token, bool secureOnly);
     // After a rejected reconnect: re-reads the store first - another Mudlet instance sharing this
     // profile's keychain may have rotated the (single-use) token, in which case the fresh token is
     // replayed once instead of destroyed. Only a genuinely dead token is dropped, keeping the
@@ -103,6 +109,11 @@ private:
     void resetPerConnectionState();
     // Per socket connection, unlike resetPerConnectionState() which runs per Char.Login.Default.
     void resetForNewConnection();
+
+    // Adds the two fields every client->server Char.Login message may carry: the negotiated version we
+    // are acting on, and token_storage - whether a reconnect token minted on this connection would
+    // actually be kept.
+    void addCommonFields(QJsonObject& payload) const;
 
     bool clientDrivenOAuthAvailable() const;
 
@@ -122,8 +133,10 @@ private:
     // The negotiated Char.Login protocol version the server reported in Char.Login.Default. Absent (a
     // version 1 server or legacy exchange) is treated as 1; we echo this back on our client->server
     // messages (Credentials, Reconnect, resume, AuthCode) so both ends agree on the version even though
-    // base GMCP negotiation is one-directional. The one exception is the empty Char.Login.Credentials {}
-    // hand-off, which carries no fields at all by design.
+    // base GMCP negotiation is one-directional. The one exception is the hand-off on a version 1
+    // exchange, which stays the bare Char.Login.Credentials {} that a version 1 server may be testing
+    // for literally - version 2 defined the hand-off as the message with no account instead, so from
+    // there on it carries the common fields like any other.
     int mNegotiatedVersion = 1;
 
     // Sign-in/token state for a single sign-in attempt, reset as one unit on every Char.Login.Default
