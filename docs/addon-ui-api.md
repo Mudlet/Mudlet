@@ -54,6 +54,31 @@ not be placed. The reasons are:
 - `surfaces` names something other than `"menu"` or `"toolbar"`, or is an
   empty list - which asks for the command to go nowhere
 
+## Where a command appears
+
+A command appears in the window holding the profile that created it, and only
+while that window is showing that profile. A window holds several profiles as
+tabs and shows one of them; switching tabs swaps their commands over. A profile
+dragged out into its own window takes its commands with it, and brings them
+back when it is put away.
+
+So the count is one set of commands per window, not one per profile. Four
+profiles as tabs in one window give that window one set - the set belonging to
+the profile it is showing. Two games open no longer means two identical buttons
+side by side.
+
+A command that is not being shown is hidden rather than removed, and its
+keyboard shortcut goes quiet with it. That is deliberate: a key that raises
+another profile's event while you are looking at this one is the same mistake
+as a button that does.
+
+The exception is a **pinned** command - see `setCommandPinned` below - which is
+shown in whichever window the player is in, whatever profile that window is
+showing, and follows them from window to window. Pin a command only while it is
+doing something the player must be able to stop from wherever they are; a
+microphone that is open is the case it was built for. Nothing is pinned by
+default.
+
 | Function | Returns | Behaviour |
 | --- | --- | --- |
 | `addCommand{...}` | id \| `nil, error` | As above. The first toolbar command also adds a separator dividing addon commands from Mudlet's own. |
@@ -61,6 +86,7 @@ not be placed. The reasons are:
 | `enableCommand(id)` | boolean | Enables it on every surface. |
 | `disableCommand(id)` | boolean | Disables it on every surface. |
 | `setCommandChecked(id, checked)` | boolean | Sets a checkmark (the command becomes checkable on first use), on every surface. A checkable command activated by the user stays in step across surfaces: the state the pressed surface reached is the state the others take, before `sysCommandClicked` is raised. |
+| `setCommandPinned(id, pinned)` | boolean | Shows the command in whichever window the player is in, whatever profile that window is showing, until unpinned. For a control that must stay reachable while it is running - an open microphone. Unpinning returns it to its own profile's window. |
 | `setCommandIcon(id, icon)` | boolean | Replaces the icon; path rules as above. |
 | `setCommandTooltip(id, tooltip)` | boolean | Replaces the tooltip; an empty string takes it away, leaving the menu item to fall back on its own label as every other menu item does. Package text is escaped, so `<` and `&` show as typed - in labels too, where a bare `&` would otherwise be read as a keyboard mnemonic and vanish from the text. |
 | `setCommandPulse(id, enabled[, color1, color2, interval])` | boolean \| `nil, error` | Toolbar-only refinement: a two-colour background pulse (defaults `#ff4444`/`#cc0000`, 500ms). Refuses a colour the client cannot parse, and an `interval` below 1ms. |
@@ -135,11 +161,20 @@ end)
 6. **A command that cannot be placed says so.** Returning an id for something
    the user cannot see or reach is worse than refusing, because the package
    has no way to find out.
-7. **Package text is data, not markup.** Labels, tooltips and colours come
+7. **A command appears with its profile.** A client that has more than one
+   window puts a command in the one holding the profile that created it, and
+   shows it there only while that window is showing that profile - so a player
+   sees one set of commands per window rather than one set per open profile.
+   Everything a package has set - enabled, checked, icon, tooltip, and any
+   client-specific refinement - survives the profile being moved between
+   windows, because the state belongs to the command and not to whatever the
+   client drew for it. A pinned command is the deliberate exception, and a
+   client with only one window can treat pinning as a no-op that answers `true`.
+8. **Package text is data, not markup.** Labels, tooltips and colours come
    from a package and are escaped or validated before they reach the client's
    chrome - a `<` must not eat the rest of a tooltip, an `&` must not become a
    mnemonic, and a colour must not be able to carry styling of its own.
-8. **A checkable command holds one state.** Where a client shows a command on
+9. **A checkable command holds one state.** Where a client shows a command on
    more than one surface and the user can toggle it, activating one surface
    carries the others with it. Two representations of one command must never
    disagree about whether it is checked.

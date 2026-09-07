@@ -198,6 +198,12 @@ Every handler receives **two string arguments**: the event name, then the
 payload below. String arguments only — the one type every client event system
 carries.
 
+A client with windows of its own also marks the one holding the listening
+profile, so an open microphone stays visible when that window is minimised or
+behind something else — the case a "keep listening while another application is
+in front" setting creates, which no in-window signal can cover. Desktop Mudlet
+puts "(listening)" in the window title.
+
 | Event | Argument | When |
 | --- | --- | --- |
 | `sysSTTPartialResult` | text so far | During recognition; may revise as more audio arrives. Never final. |
