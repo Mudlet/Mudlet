@@ -513,6 +513,37 @@ private slots:
         QTest::qWait(200ms);
     }
 
+    // Dragging a profile out of the main window while it is listening moves its
+    // control to the new window and the marker with it. The claim itself must
+    // not move: the session is still running and still belongs to that profile,
+    // whichever window is now drawing it.
+    void test_detachingAProfileThatHoldsTheMicrophoneCarriesBothWithIt()
+    {
+        // Deliberately not pinned: a pinned command follows the player rather
+        // than its profile, and which window has focus after a detach is the
+        // window manager's business - not something to assert offscreen. Where
+        // a pinned one goes is covered by the pinning case above.
+        const int secondId = addCommand(mpSecondHost, qsl("name = \"SpeechLive\", surfaces = \"toolbar\""));
+        QVERIFY(secondId > 0);
+        mudlet::self()->claimMicrophoneFor(mpSecondHost);
+
+        TDetachedWindow* pWindow = detachSecondProfile();
+        QVERIFY(pWindow);
+
+        QCOMPARE(mudlet::self()->microphoneOwner(), mpSecondHost);
+        QVERIFY2(pWindow->windowTitle().contains(qsl("listening")), "the detached window does not say it took the open microphone with it");
+        QVERIFY2(buttonIn(pWindow, qsl("SpeechLive")), "the live command did not follow its profile out of the main window");
+
+        QVERIFY2(!buttonIn(mudlet::self(), qsl("SpeechLive")), "the command stayed in the main window while its listening profile left");
+
+        mudlet::self()->releaseMicrophone();
+        QVERIFY2(!pWindow->windowTitle().contains(qsl("listening")), "the marker outlived the session it was describing");
+
+        mudlet::self()->slot_tabReattachRequested(mSecondHostname);
+        QTest::qWait(200ms);
+        runLua(mpSecondHost, qsl("removeCommand(%1)").arg(secondId));
+    }
+
 private:
     TDetachedWindow* detachSecondProfile()
     {
