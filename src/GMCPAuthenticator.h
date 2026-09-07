@@ -85,10 +85,9 @@ private:
     // scoped to an encrypted transport (secureOnly) never goes out in the clear. It is scrubbed either
     // way, and only a true return means a result is awaited.
     bool sendReconnect(const QString& account, QString token, bool secureOnly);
-    // Sends the resume form of Char.Login.Credentials: an account and provider plus the common fields,
-    // no password - asking the game to restart the browser sign-in for the provider remembered from an
-    // earlier
-    // Char.Login.URL. The absence of a password (not the presence of provider) is what distinguishes it.
+    // Sends the resume form of Char.Login.Credentials: an account and provider plus the common fields, no
+    // password - asking the game to restart the browser sign-in for the provider remembered from an
+    // earlier Char.Login.URL. The absence of a password (not the presence of provider) distinguishes it.
     void sendResume(const QString& account, const QString& provider);
     void handleAuthToken(const QString& packageMessage, const QString& data);
     // secureOnly is the token's transport requirement, stored with it because it belongs to the
@@ -186,10 +185,13 @@ private:
     // when a superseded recovery leaves the rejected token stored - by then the superseding Default has
     // already consumed the latch, so without re-arming the Default after that could replay the dead token.
     bool mReconnectRejected = false;
-    // Incremented on every per-connection auth reset (each Char.Login.Default). The asynchronous
-    // reconnect-token keychain read captures the value current when it started and re-checks it in its
-    // callback, so a result arriving after a newer connection began is discarded instead of driving a
-    // sign-in on the wrong attempt. Not part of mConn: it must monotonically increase, never reset.
+    // Incremented on every per-connection auth reset - each Char.Login.Default, and each socket connect
+    // or disconnect. The asynchronous reconnect-token keychain read captures the value current when it
+    // started and re-checks it in its callback, so a result arriving after a newer connection began is
+    // discarded instead of driving a sign-in on the wrong attempt. Only work that would *act* on the
+    // connection is gated this way: the token save's announcement deliberately is not, since it reports
+    // what became of the stored token rather than driving anything. Not part of mConn: it must
+    // monotonically increase, never reset.
     unsigned int mAuthAttemptGeneration = 0;
 
     // A server can pack thousands of Char.Login.Default frames into one packet and every sign-in

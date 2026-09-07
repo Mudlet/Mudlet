@@ -69,13 +69,13 @@ QString providerDisplayName(const QString& id)
 }
 
 // Decodes a field the standard declares boolean, in every form it permits: a JSON boolean, the
-// strings "true"/"false" or "1"/"0" (case-insensitive), or the numbers 1/0. Several MUD drivers have
-// no JSON boolean in their serializer at all - LDMud's json_serialize() among them - which is why the
-// string and number forms exist at all.
+// strings "true"/"false" or "1"/"0" (case-insensitive, surrounding whitespace ignored), or the numbers
+// 1/0. Several MUD drivers have no JSON boolean in their serializer at all - LDMud's json_serialize()
+// among them - which is why the string and number forms exist at all.
 //
 // A value in none of those forms is not a boolean, and returns nullopt so the caller applies that
-// field's documented default. That distinction is the point: the defaults here are not all false, and
-// for a security-bearing field like secure_only the permissive reading is exactly the wrong guess.
+// field's documented default. Keeping "absent" distinct from "false" is the point: no caller here
+// defaults to false, so collapsing the two would quietly answer a security-bearing question wrong.
 std::optional<bool> decodeWireBool(const QJsonValue& value)
 {
     if (value.isBool()) {
@@ -226,12 +226,19 @@ void GMCPAuthenticator::addCommonFields(QJsonObject& payload) const
     // storage and replayed later - which is what lets the game decide whether it can honestly offer to
     // remember this player before it writes its sign-in screen.
     //
-    // Constant true for Mudlet, and honestly so rather than as a shortcut: CredentialManager always has
-    // somewhere to put a token - the system keychain, falling back to its own encrypted file store when
-    // the keychain is unavailable or the install is portable - and nothing here runs unless the profile
-    // has GMCP enabled. The standard asks the question per connection because a client whose store can
-    // go missing must answer for the connection in hand; ours cannot go missing. Qt serialises a real
-    // JSON boolean, which is the form the standard prefers.
+    // Constant true for Mudlet: CredentialManager always has somewhere to attempt the write - the system
+    // keychain, falling back to its own encrypted file store when the keychain is unavailable or the
+    // install is portable. The standard asks per connection because a client that has no store at all has
+    // to say so; ours always has one to try.
+    //
+    // A version 1 server gets the fields too. An unknown member is inert to it, and we already echo
+    // `version` - itself a version 2 addition - to such servers today. Only the hand-off is special-cased
+    // (see sendCredentials), because there the empty object is load-bearing rather than incidental.
+    //
+    // That is a statement of intent rather than a guarantee the write lands: a store that fails anyway is
+    // reported to the player by storeReconnectToken. The standard puts no obligation on a client that
+    // answered true and then could not save - only on one that answered false, which must then discard a
+    // token that arrives. Qt serialises a real JSON boolean, the form the standard prefers.
     payload[qsl("token_storage")] = true;
 }
 
@@ -310,7 +317,10 @@ bool GMCPAuthenticator::sendReconnect(const QString& account, QString token, boo
     // transport is live now rather than the one it was earned on: in the clear that hands the account
     // to anyone on the path. Whether that matters is the issuing server's call, recorded in the token's
     // own requirement when it was minted - so a game that mints and accepts tokens on plain telnet can
-    // use them there, while a token earned over TLS is still never spent in the clear.
+    // use them there. The requirement is the server's to set rather than an invariant enforced here: a
+    // server that mints over TLS and sends an explicit secure_only false has asked for its own token to
+    // be replayable in the clear, and gets that. What is never done is inferring the permissive answer
+    // where the server did not give one - see handleAuthToken for the defaulting.
     if (secureOnly && !mpHost->mTelnet.currentlySecure()) {
         SecureStringUtils::secureStringClear(token);
         qWarning().noquote() << "GMCP Char.Login.Reconnect - refusing to replay the saved sign-in token over an unencrypted connection.";
@@ -386,17 +396,45 @@ void GMCPAuthenticator::storeReconnectToken(const QString& account, QString toke
     // connect and falls back to a fresh sign-in, so this is safe under the one-account-per-profile model.
     QPointer<Host> safeHost = mpHost;
     QPointer<CredentialManager> credentialManager = new CredentialManager();
-    credentialManager->storePassword(mpHost->getName(), qsl("reconnect"), payload, [safeHost, credentialManager](bool success, const QString& errorMessage) {
-        if (!success) {
-            qWarning().noquote() << "GMCP Char.Login.Token - failed to store reconnect token:" << errorMessage;
-            if (safeHost) {
-                //: Shown when the user opted to stay signed in but saving the sign-in token failed, so they will have to sign in again next time.
-                safeHost->postMessage(tr("[ WARN ]  - Could not save your sign-in for next time; you may need to sign in again."));
-            }
-        }
+    // Whether a rotation is in progress belongs to the moment the token arrived, so snapshot it rather
+    // than read it from the callback: the next Char.Login.Default resets mConn while the save is still
+    // in flight, and by then the answer is about a different sign-in.
+    const bool rotatingSavedToken = mConn.reconnectingWithToken;
+    // safeHost stands in for `this` as well: Host owns this authenticator (its QScopedPointer member),
+    // so the authenticator is alive for as long as the Host is.
+    credentialManager->storePassword(mpHost->getName(), qsl("reconnect"), payload, [this, safeHost, credentialManager, rotatingSavedToken](bool success, const QString& errorMessage) {
         if (credentialManager) {
             credentialManager->deleteLater();
         }
+        // Log before the liveness check: a save can resolve (or time out) after the profile has closed,
+        // and that is precisely when the record of a token that never reached disk matters most.
+        if (!success) {
+            qWarning().noquote() << "GMCP Char.Login.Token - failed to store reconnect token:" << errorMessage;
+        }
+        if (!safeHost) {
+            return;
+        }
+        if (!success) {
+            //: Shown when the user opted to stay signed in but saving the sign-in token failed, so they will have to sign in again next time.
+            safeHost->postMessage(tr("[ WARN ]  - Could not save your sign-in for next time; you may need to sign in again."));
+            return;
+        }
+        // Announced only once the save has actually landed, so a failure is never announced as a success
+        // first; only the first time this connection; and never on a token-reconnect, where the arriving
+        // token is a silent rotation rather than a new opt-in.
+        //
+        // Deliberately not gated on the sign-in attempt still being current, unlike the asynchronous
+        // reads elsewhere in this file. Those gate because acting on a stale result would drive a sign-in
+        // on the wrong connection; this only reports what became of the profile's stored token, which is
+        // true whichever attempt is live by the time the write lands. Gating it would mean a save that
+        // succeeded during a burst of Char.Login.Default frames was never mentioned at all.
+        if (rotatingSavedToken || mConn.announcedTokenSave) {
+            return;
+        }
+        mConn.announcedTokenSave = true;
+        //: Shown once after a browser/OAuth sign-in whose reconnect token was saved, so future connects need no sign-in.
+        //: "Privacy and security" is the name of a page in the preferences dialog; translate it the same way there.
+        safeHost->postMessage(tr("[ INFO ]  - You'll be signed in automatically next time. Manage this under Preferences, Privacy and security."));
     });
 
     // The token is a bearer secret; storePassword has already taken its own copy (inside payload), so
@@ -787,7 +825,8 @@ void GMCPAuthenticator::retryOrDropRejectedToken()
                     if (doc.isObject()) {
                         const auto account = doc.object()[qsl("account")].toString();
                         auto token = doc.object()[qsl("token")].toString();
-                        // As in readStoredSignIn: an entry with no requirement stored is read strictly.
+                        // As in readStoredSignIn: an entry whose requirement is missing or unreadable is
+                        // read strictly.
                         const bool secureOnly = decodeWireBool(doc.object()[qsl("secure_only")]).value_or(true);
                         if (!account.isEmpty() && !token.isEmpty()) {
                             QByteArray tokenBytes = token.toUtf8();
@@ -970,24 +1009,27 @@ void GMCPAuthenticator::handleAuthToken(const QString& packageMessage, const QSt
     // Whether this token may only ever be replayed on an encrypted transport. Absent - or in a form
     // that is not a boolean at all - means it inherits the transport it arrived on: a token minted over
     // TLS is encrypted-only, one minted in the clear may be replayed either way. A server that mints
-    // over TLS but accepts replays in the clear has to say so with an explicit false, so silence can
-    // only ever narrow the token's exposure, never widen it.
-    const bool secureOnly = decodeWireBool(obj[qsl("secure_only")]).value_or(mpHost->mTelnet.currentlySecure());
+    // over TLS but accepts replays in the clear has to say so with an explicit false, so on the transport
+    // where a token has any protection to lose, silence can only ever keep it.
+    const auto declaredSecureOnly = obj[qsl("secure_only")];
+    const auto decodedSecureOnly = decodeWireBool(declaredSecureOnly);
+    // A value we could not decode is treated as absent, which is what the standard requires - but unlike
+    // a genuinely absent field it means the server tried to state a transport requirement in a form no
+    // conformant client can read. Nothing else would report that, and the server operator is the only
+    // person who can fix it.
+    if (!decodedSecureOnly && !declaredSecureOnly.isUndefined()) {
+        qWarning().noquote().nospace() << "GMCP " << packageMessage
+                                       << " - ignoring a 'secure_only' value that is not a boolean in any form the standard permits; defaulting it to the transport the token arrived on.";
+    }
+    const bool secureOnly = decodedSecureOnly.value_or(mpHost->mTelnet.currentlySecure());
 
     // The server issues this token at its own discretion - the "remember me" decision belongs to the
     // game's flow, not the client - so we simply persist whatever arrives (overwriting on rotation) and
     // offer a local "forget saved sign-in" control in preferences. Move the token in so
     // storeReconnectToken owns the sole copy and can scrub it after persisting.
+    // Announcing that the sign-in was saved belongs to the save's own callback, not here: the store is
+    // asynchronous, so a message posted at this point would promise a save that may still fail.
     storeReconnectToken(account, std::move(token), secureOnly);
-
-    // Let the player know their sign-in will be remembered - but only the first time this connection,
-    // and never on a token-reconnect (where the arriving token is a silent rotation, not a new opt-in).
-    if (!mConn.reconnectingWithToken && !mConn.announcedTokenSave) {
-        mConn.announcedTokenSave = true;
-        //: Shown once after a browser/OAuth sign-in whose reconnect token was saved, so future connects need no sign-in.
-        //: "Privacy and security" is the name of a page in the preferences dialog; translate it the same way there.
-        mpHost->postMessage(tr("[ INFO ]  - You'll be signed in automatically next time. Manage this under Preferences, Privacy and security."));
-    }
 
 #if defined(DEBUG_GMCP_AUTHENTICATION)
     qDebug() << "Stored GMCP reconnect token for account:" << account;
@@ -1096,9 +1138,9 @@ void GMCPAuthenticator::readStoredSignIn(bool allowToken)
                         const auto account = doc.object()[qsl("account")].toString();
                         auto token = doc.object()[qsl("token")].toString();
                         const auto provider = doc.object()[qsl("provider")].toString();
-                        // An entry written before the requirement was stored gets the strict reading, so
-                        // upgrading Mudlet never widens the exposure of a token already on disk; it gains
-                        // the field the next time the server rotates it.
+                        // An entry whose requirement is missing (written before it was stored) or unreadable
+                        // (a corrupted entry) gets the strict reading, so upgrading Mudlet never widens the
+                        // exposure of a token already on disk; it gains the field on the next rotation.
                         const bool secureOnly = decodeWireBool(doc.object()[qsl("secure_only")]).value_or(true);
                         if (!provider.isEmpty()) {
                             mConn.accountProvider = provider;
@@ -1162,8 +1204,8 @@ void GMCPAuthenticator::selectAuthMethod()
         return;
     }
 
-    // Otherwise hand off to the game's own interactive sign-in with an empty Char.Login.Credentials {}
-    // and let the player choose there - even if the profile has a stored password (the game's screen
+    // Otherwise hand off to the game's own interactive sign-in (sendCredentials has the shape that takes
+    // per negotiated version) and let the player choose there - even if the profile has a stored password (the game's screen
     // still accepts it), so a saved password never blocks reaching a provider choice.
     sendCredentials(true);
 }
