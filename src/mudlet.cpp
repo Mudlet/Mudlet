@@ -428,20 +428,45 @@ void mudlet::initSpeechRecognition(SpeechRecognizerFactory::Backend backend)
 // A path part that names an existing leaf item is refused rather than
 // duplicated: two entries with one label, one a command and one a submenu, is
 // not something a package can have meant.
-QMenu* mudlet::addonMenuForPath(const QString& menuPath, const Host* pHost, QString& error)
+QToolBar* mudlet::addonToolBarFor(QMainWindow* pContainer) const
 {
-    if (!mpAddonsMenu) {
+    if (pContainer == this) {
+        return mpMainToolBar;
+    }
+    auto* pDetached = qobject_cast<TDetachedWindow*>(pContainer);
+    return pDetached ? pDetached->toolBar() : nullptr;
+}
+
+QMenu* mudlet::addonOptionsMenuFor(QMainWindow* pContainer) const
+{
+    if (pContainer == this) {
+        return menuOptions;
+    }
+    auto* pDetached = qobject_cast<TDetachedWindow*>(pContainer);
+    return pDetached ? pDetached->optionsMenu() : nullptr;
+}
+
+QMenu* mudlet::addonMenuForPath(QMainWindow* pContainer, const QString& menuPath, const Host* pHost, QString& error)
+{
+    AddonChrome& chrome = mAddonChrome[pContainer];
+    if (!chrome.addonsMenu) {
+        QMenu* pOptionsMenu = addonOptionsMenuFor(pContainer);
+        if (!pOptionsMenu) {
+            //: Refusal shown to a package whose profile is in a window with no menu of its own to place commands in
+            error = tr("this window has no menu for commands to be placed in");
+            return nullptr;
+        }
         //: Name of the menu that packages add their own commands to, shown inside the Options menu
-        mpAddonsMenu = menuOptions->addMenu(tr("Extensions"));
+        chrome.addonsMenu = pOptionsMenu->addMenu(tr("Extensions"));
         // QMenu::toolTipsVisible is false by default and is not inherited from
         // the menu above, which is why Mudlet sets it on its own menus too.
         // Without it the menu half of every command's tooltip never appears,
         // leaving a documented property that only works on the toolbar.
-        mpAddonsMenu->setToolTipsVisible(true);
+        chrome.addonsMenu->setToolTipsVisible(true);
     }
-    mpAddonsMenu->menuAction()->setVisible(true);
+    chrome.addonsMenu->menuAction()->setVisible(true);
 
-    QMenu* targetMenu = mpAddonsMenu;
+    QMenu* targetMenu = chrome.addonsMenu;
     for (const QString& part : menuPath.split(qsl("/"), Qt::SkipEmptyParts)) {
         QMenu* submenu = nullptr;
         for (QAction* action : targetMenu->actions()) {
@@ -453,7 +478,7 @@ QMenu* mudlet::addonMenuForPath(const QString& menuPath, const Host* pHost, QStr
             // something this package can see or clear, so it must not decide
             // whether this placement succeeds.
             if (QMenu* existingSubmenu = action->menu()) {
-                if (mAddonSubmenuOwners.value(existingSubmenu) != pHost) {
+                if (chrome.submenuOwners.value(existingSubmenu) != pHost) {
                     continue;
                 }
                 submenu = existingSubmenu;
@@ -469,7 +494,7 @@ QMenu* mudlet::addonMenuForPath(const QString& menuPath, const Host* pHost, QStr
         if (!submenu) {
             submenu = targetMenu->addMenu(addonLabel(part));
             submenu->setToolTipsVisible(true);
-            mAddonSubmenuOwners.insert(submenu, pHost);
+            chrome.submenuOwners.insert(submenu, pHost);
         }
         targetMenu = submenu;
     }
@@ -751,69 +776,141 @@ int mudlet::addAddonCommand(const CommandRequest& request, Host* pHost, QString&
         }
     }
 
-    QMenu* targetMenu = nullptr;
+    // Resolved here rather than in placeAddonCommand() below because the two
+    // menu refusals are the package's to hear, and only a first placement can
+    // refuse: once a command exists, moving it between windows must always
+    // succeed. Calling it twice for the same window is harmless - the second
+    // call finds the submenus the first built and returns the same menu.
+    QMainWindow* pContainer = addonHomeContainerFor(pHost);
     if (wantsMenu) {
-        targetMenu = addonMenuForPath(request.menuPath, pHost, error);
+        QMenu* targetMenu = addonMenuForPath(pContainer, request.menuPath, pHost, error);
         if (!targetMenu) {
             return -1;
+        }
+        // The inverse of the menuPath check: a label may not be both a command
+        // and a submenu in one menu, or a later menuPath naming it cannot say
+        // which was meant - and the player sees the label twice. Two commands
+        // sharing a label is fine, and stays fine; ids are the identity.
+        for (const QAction* existing : targetMenu->actions()) {
+            if (existing->menu() && existing->text() == addonLabel(request.name) && mAddonChrome[pContainer].submenuOwners.value(existing->menu()) == pHost) {
+                //: Refusal shown to a package, %1 is the name it gave its command
+                error = tr("\"%1\" is already a submenu here, so a command cannot take that label too").arg(request.name);
+                return -1;
+            }
         }
     }
 
     const int commandId = mNextAddonCommandId++;
     AddonCommand command;
     command.pHost = pHost;
+    command.request = request;
+    command.icon = request.icon;
+    command.tooltip = request.tooltip;
 
-    if (wantsMenu) {
-        // The inverse of the menuPath check: a label may not be both a command
-        // and a submenu in one menu, or a later menuPath naming it cannot say
-        // which was meant - and the player sees the label twice. Two commands
-        // sharing a label is fine, and stays fine; ids are the identity.
-        for (const QAction* existing : targetMenu->actions()) {
-            if (existing->menu() && existing->text() == addonLabel(request.name) && mAddonSubmenuOwners.value(existing->menu()) == pHost) {
-                //: Refusal shown to a package, %1 is the name it gave its command
-                error = tr("\"%1\" is already a submenu here, so a command cannot take that label too").arg(request.name);
-                return -1;
-            }
-        }
-
-        QAction* action = targetMenu->addAction(addonLabel(request.name));
-        action->setToolTip(addonTooltip(request.tooltip));
-        if (!shortcut.isEmpty()) {
-            action->setShortcut(shortcut);
-        }
-        command.menuAction = action;
-        connect(action, &QAction::triggered, this, [this, commandId](const bool checked) {
-            mirrorAddonCommandChecked(commandId, checked);
-            raiseAddonCommandEvent(commandId);
-        });
-    }
-
-    if (wantsToolbar && mpMainToolBar) {
-        if (!mpAddonToolbarSeparator) {
-            mpAddonToolbarSeparator = mpMainToolBar->addSeparator();
-        }
-        auto* button = new QToolButton(this);
-        button->setText(addonLabel(request.name));
-        button->setObjectName(qsl("addon_%1").arg(request.name));
-        button->setToolTip(addonTooltip(request.tooltip));
-        button->setAutoRaise(true);
-        // Both, and not the style alone: a widget added through addWidget()
-        // inherits neither, so a button took Qt's 16px default beside Mudlet's
-        // own at whatever size the toolbar was on - until the user next changed
-        // the icon size, which is the only thing that called the helper below.
-        button->setToolButtonStyle(mpMainToolBar->toolButtonStyle());
-        button->setIconSize(mpMainToolBar->iconSize());
-        command.button = button;
-        command.toolbarAction = mpMainToolBar->addWidget(button);
-        connect(button, &QToolButton::clicked, this, [this, commandId](const bool checked) {
-            mirrorAddonCommandChecked(commandId, checked);
-            raiseAddonCommandEvent(commandId);
-        });
-    }
-
-    applyAddonIcon(command.button, command.menuAction, request.icon);
+    placeAddonCommand(commandId, command, pContainer);
     mAddonCommands[commandId] = command;
     return commandId;
+}
+
+// Which window a command belongs in: the one holding the profile that created
+// it. A profile dragged out of the main window takes its commands with it.
+QMainWindow* mudlet::addonHomeContainerFor(Host* pHost) const
+{
+    if (pHost) {
+        for (auto it = mDetachedWindows.constBegin(); it != mDetachedWindows.constEnd(); ++it) {
+            if (it.value() && it.value()->getProfileNames().contains(pHost->getName())) {
+                return it.value();
+            }
+        }
+    }
+    return const_cast<mudlet*>(this);
+}
+
+// Builds the widgets for one command in one window and puts everything the
+// package has set onto them. Nothing here can refuse: the request was accepted
+// when the command was created, and a command that has been moved must arrive.
+void mudlet::placeAddonCommand(const int commandId, AddonCommand& command, QMainWindow* pContainer)
+{
+    const CommandRequest& request = command.request;
+    const bool wantsToolbar = request.surfaces != CommandSurface::Menu;
+    const bool wantsMenu = request.surfaces != CommandSurface::Toolbar;
+    command.container = pContainer;
+
+    if (wantsMenu) {
+        QString error;
+        if (QMenu* targetMenu = addonMenuForPath(pContainer, request.menuPath, command.pHost, error)) {
+            QAction* action = targetMenu->addAction(addonLabel(request.name));
+            if (!request.shortcut.isEmpty()) {
+                action->setShortcut(QKeySequence(request.shortcut));
+            }
+            command.menuAction = action;
+            connect(action, &QAction::triggered, this, [this, commandId](const bool checked) {
+                mirrorAddonCommandChecked(commandId, checked);
+                raiseAddonCommandEvent(commandId);
+            });
+        } else {
+            // Only a window with no menu of its own reaches this, and the
+            // command still has its toolbar half. Said out loud rather than
+            // dropped: a command that quietly lost a surface it was placed on
+            // looks to the package like one that was never there.
+            qWarning().noquote() << "mudlet::placeAddonCommand() INFO - no menu in this window for" << request.name << "-" << error;
+        }
+    }
+
+    if (wantsToolbar) {
+        if (QToolBar* pToolBar = addonToolBarFor(pContainer)) {
+            AddonChrome& chrome = mAddonChrome[pContainer];
+            if (!chrome.toolbarSeparator) {
+                chrome.toolbarSeparator = pToolBar->addSeparator();
+            }
+            auto* button = new QToolButton(pContainer);
+            button->setText(addonLabel(request.name));
+            button->setObjectName(qsl("addon_%1").arg(request.name));
+            button->setAutoRaise(true);
+            // Both, and not the style alone: a widget added through addWidget()
+            // inherits neither, so a button took Qt's 16px default beside Mudlet's
+            // own at whatever size the toolbar was on - until the user next changed
+            // the icon size, which is the only thing that called the helper below.
+            button->setToolButtonStyle(pToolBar->toolButtonStyle());
+            button->setIconSize(pToolBar->iconSize());
+            command.button = button;
+            command.toolbarAction = pToolBar->addWidget(button);
+            connect(button, &QToolButton::clicked, this, [this, commandId](const bool checked) {
+                mirrorAddonCommandChecked(commandId, checked);
+                raiseAddonCommandEvent(commandId);
+            });
+        }
+    }
+
+    applyAddonCommandState(command);
+}
+
+// Everything a package has set since the command was created, put onto whatever
+// widgets it has now. The widgets are rebuilt on a move, so this is what keeps a
+// checked, disabled, pulsing command the same command afterwards.
+void mudlet::applyAddonCommandState(AddonCommand& command)
+{
+    applyAddonIcon(command.button, command.menuAction, command.icon);
+    if (command.button) {
+        command.button->setToolTip(addonTooltip(command.tooltip));
+        command.button->setEnabled(command.enabled);
+        if (command.checkable) {
+            command.button->setCheckable(true);
+            command.button->setChecked(command.checked);
+        }
+        if (command.pulseEnabled) {
+            const QString& colour = command.pulseState ? command.pulseColor1 : command.pulseColor2;
+            command.button->setStyleSheet(qsl("QToolButton { background-color: %1; border-radius: 4px; }").arg(colour));
+        }
+    }
+    if (command.menuAction) {
+        command.menuAction->setToolTip(addonTooltip(command.tooltip));
+        command.menuAction->setEnabled(command.enabled);
+        if (command.checkable) {
+            command.menuAction->setCheckable(true);
+            command.menuAction->setChecked(command.checked);
+        }
+    }
 }
 
 // Qt toggles only the control the user activated, so a checkable command shown
@@ -827,7 +924,12 @@ void mudlet::mirrorAddonCommandChecked(const int commandId, const bool checked)
         return;
     }
 
-    const AddonCommand& command = mAddonCommands[commandId];
+    AddonCommand& command = mAddonCommands[commandId];
+    // The record moves with the surfaces: a command the user ticked and whose
+    // profile is then dragged to another window must arrive there ticked.
+    if (command.checkable) {
+        command.checked = checked;
+    }
     if (command.button && command.button->isCheckable() && command.button->isChecked() != checked) {
         // Nothing to raise from the surface that did not move: the event for
         // this activation is about to go out once, from the caller
@@ -875,6 +977,24 @@ bool mudlet::removeAddonCommand(int commandId, Host* pHost)
         delete command.pulseTimer;
     }
 
+    unplaceAddonCommand(command);
+    mAddonCommands.remove(commandId);
+    return true;
+}
+
+// Takes a command's widgets down and tidies what they leave behind in the
+// window they were in. Used both by removeCommand() and by a move between
+// windows, which is why it neither touches mAddonCommands nor the pulse timer:
+// a moved command keeps both.
+void mudlet::unplaceAddonCommand(AddonCommand& command)
+{
+    QMainWindow* pContainer = command.container;
+    if (!pContainer) {
+        return;
+    }
+    AddonChrome& chrome = mAddonChrome[pContainer];
+    QToolBar* pToolBar = addonToolBarFor(pContainer);
+
     if (command.toolbarAction) {
         // removeAction() only detaches the QWidgetAction that addWidget() created,
         // leaving it parented to the toolbar; deleting it here stops one accruing
@@ -882,8 +1002,12 @@ bool mudlet::removeAddonCommand(int commandId, Host* pHost)
         // owns its default widget.
         // deleteLater(), because the usual caller is a Lua handler running from
         // this very command's click, with Qt still inside the event handling.
-        mpMainToolBar->removeAction(command.toolbarAction);
+        if (pToolBar) {
+            pToolBar->removeAction(command.toolbarAction);
+        }
         command.toolbarAction->deleteLater();
+        command.toolbarAction = nullptr;
+        command.button = nullptr;
     }
 
     QMenu* parentMenu = command.menuAction ? qobject_cast<QMenu*>(command.menuAction->parent()) : nullptr;
@@ -899,9 +1023,8 @@ bool mudlet::removeAddonCommand(int commandId, Host* pHost)
         // than whenever Qt gets round to the deletion.
         command.menuAction->setShortcut(QKeySequence());
         command.menuAction->deleteLater();
+        command.menuAction = nullptr;
     }
-
-    mAddonCommands.remove(commandId);
 
     // Discard the menuPath submenus once they hold no visible items, otherwise
     // repeated add/remove cycles leave a trail of empty menus behind.
@@ -909,7 +1032,7 @@ bool mudlet::removeAddonCommand(int commandId, Host* pHost)
     // handler running from the command's own click, and Qt is still inside
     // QMenu's activation machinery, which touches the menu after the handler
     // returns.
-    while (parentMenu && parentMenu != mpAddonsMenu && parentMenu->isEmpty()) {
+    while (parentMenu && parentMenu != chrome.addonsMenu && parentMenu->isEmpty()) {
         QMenu* grandParentMenu = qobject_cast<QMenu*>(parentMenu->parent());
         // Detached from the menu above rather than merely hidden: a handler
         // that empties a menuPath and adds another command at that same path
@@ -921,13 +1044,13 @@ bool mudlet::removeAddonCommand(int commandId, Host* pHost)
         } else {
             parentMenu->menuAction()->setVisible(false);
         }
-        mAddonSubmenuOwners.remove(parentMenu);
+        chrome.submenuOwners.remove(parentMenu);
         parentMenu->deleteLater();
         parentMenu = grandParentMenu;
     }
 
-    if (mpAddonsMenu && mpAddonsMenu->isEmpty()) {
-        mpAddonsMenu->menuAction()->setVisible(false);
+    if (chrome.addonsMenu && chrome.addonsMenu->isEmpty()) {
+        chrome.addonsMenu->menuAction()->setVisible(false);
     }
 
     // Remove the separator once no command is left on the toolbar. addSeparator()
@@ -935,18 +1058,20 @@ bool mudlet::removeAddonCommand(int commandId, Host* pHost)
     // it needs deleting too or one accumulates per empty-to-occupied cycle.
     bool anyOnToolbar = false;
     for (auto it = mAddonCommands.constBegin(); it != mAddonCommands.constEnd(); ++it) {
-        if (it.value().toolbarAction) {
+        if (it.value().toolbarAction && it.value().container == pContainer) {
             anyOnToolbar = true;
             break;
         }
     }
-    if (!anyOnToolbar && mpAddonToolbarSeparator) {
-        mpMainToolBar->removeAction(mpAddonToolbarSeparator);
-        mpAddonToolbarSeparator->deleteLater();
-        mpAddonToolbarSeparator = nullptr;
+    if (!anyOnToolbar && chrome.toolbarSeparator) {
+        if (pToolBar) {
+            pToolBar->removeAction(chrome.toolbarSeparator);
+        }
+        chrome.toolbarSeparator->deleteLater();
+        chrome.toolbarSeparator = nullptr;
     }
 
-    return true;
+    command.container = nullptr;
 }
 
 QStringList mudlet::addonCommandsUsingShortcut(const QKeySequence& sequence, const Host* pHost) const
@@ -993,6 +1118,7 @@ bool mudlet::setAddonCommandEnabled(int commandId, bool enabled, Host* pHost)
     }
 
     AddonCommand& command = mAddonCommands[commandId];
+    command.enabled = enabled;
     if (command.button) {
         command.button->setEnabled(enabled);
     }
@@ -1009,6 +1135,8 @@ bool mudlet::setAddonCommandChecked(int commandId, bool checked, Host* pHost)
     }
 
     AddonCommand& command = mAddonCommands[commandId];
+    command.checkable = true;
+    command.checked = checked;
     if (command.button) {
         command.button->setCheckable(true);
         command.button->setChecked(checked);
@@ -1027,6 +1155,7 @@ bool mudlet::setAddonCommandIcon(int commandId, const QString& icon, Host* pHost
     }
 
     AddonCommand& command = mAddonCommands[commandId];
+    command.icon = icon;
     applyAddonIcon(command.button, command.menuAction, icon);
     return true;
 }
@@ -1038,6 +1167,7 @@ bool mudlet::setAddonCommandTooltip(int commandId, const QString& tooltip, Host*
     }
 
     AddonCommand& command = mAddonCommands[commandId];
+    command.tooltip = tooltip;
     if (command.button) {
         command.button->setToolTip(addonTooltip(tooltip));
     }
@@ -1076,6 +1206,8 @@ bool mudlet::setAddonCommandPulse(int commandId, bool enabled, const QString& co
         command.pulseColor1 = color1;
         command.pulseColor2 = color2;
         command.pulseState = true;
+        command.pulseEnabled = true;
+        command.pulseInterval = interval;
 
         if (!command.pulseTimer) {
             command.pulseTimer = new QTimer(this);
@@ -1097,6 +1229,7 @@ bool mudlet::setAddonCommandPulse(int commandId, bool enabled, const QString& co
         command.pulseTimer->start();
         command.button->setStyleSheet(qsl("QToolButton { background-color: %1; border-radius: 4px; }").arg(color1));
     } else {
+        command.pulseEnabled = false;
         if (command.pulseTimer) {
             command.pulseTimer->stop();
         }
@@ -1112,13 +1245,14 @@ bool mudlet::setAddonCommandPulse(int commandId, bool enabled, const QString& co
 // born with and end up towering over everything around them.
 void mudlet::applyToolBarStyleToAddonCommands()
 {
-    if (!mpMainToolBar) {
-        return;
-    }
     for (auto it = mAddonCommands.begin(); it != mAddonCommands.end(); ++it) {
-        if (it.value().button) {
-            it.value().button->setToolButtonStyle(mpMainToolBar->toolButtonStyle());
-            it.value().button->setIconSize(mpMainToolBar->iconSize());
+        // The toolbar of the window this command is actually in - a detached
+        // window carries its own icon size, and reading the main window's here
+        // would resize a button sitting in somebody else's toolbar.
+        QToolBar* pToolBar = addonToolBarFor(it.value().container);
+        if (it.value().button && pToolBar) {
+            it.value().button->setToolButtonStyle(pToolBar->toolButtonStyle());
+            it.value().button->setIconSize(pToolBar->iconSize());
         }
     }
 }

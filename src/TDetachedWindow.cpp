@@ -388,6 +388,7 @@ void TDetachedWindow::createMenus()
     // Options menu - matches main window order
     //: This is the name of a menu in the menubar of a detached Mudlet window. Please do not add an "&" to the translation: it would become a keyboard shortcut for the whole window and stop one of the window's other shortcuts from working.
     auto optionsMenu = menuBar()->addMenu(tr("Options"));
+    mpOptionsMenu = optionsMenu;
 
     //: This is an item in the "Options" menu in the menubar of a detached Mudlet window.
     mpMenuPreferencesAction = new QAction(tr("&Preferences"), this);

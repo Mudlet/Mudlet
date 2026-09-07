@@ -33,6 +33,7 @@
 #include <QDockWidget>
 #include <functional>
 
+class QMenu;
 class TMainConsole;
 class Host;
 class TTabBar;
@@ -57,6 +58,10 @@ public:
     int getProfileCount() const { return mProfileConsoleMap.size(); }
 
     void updateToolbarForProfile(Host* pHost);
+    // The chrome add-on commands are placed into for the profile this window is
+    // showing. mudlet reaches these through addonToolBarFor()/addonOptionsMenuFor().
+    QToolBar* toolBar() const { return mpToolBar; }
+    QMenu* optionsMenu() const { return mpOptionsMenu; }
     void updateDiscordNamedIcon();
     void setReattaching(bool reattaching) { mIsReattaching = reattaching; }
     void refreshTabBar();                             // Update tab text to account for CDC identifiers
@@ -201,6 +206,7 @@ private:
     QVBoxLayout* mpMainLayout{nullptr};
     TTabBar* mpTabBar{nullptr};
     QToolBar* mpToolBar{nullptr};
+    QMenu* mpOptionsMenu{nullptr};
 
     // Toolbar actions - mirroring main window
     QAction* mpActionConnect{nullptr};

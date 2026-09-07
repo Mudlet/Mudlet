@@ -844,16 +844,54 @@ private:
     // in the click handlers, which resolve pHost lazily.
     struct AddonCommand
     {
+        // What the package asked for, kept because the widgets are rebuilt
+        // whenever the command changes window: addAddonCommand() validates a
+        // request once, and re-placing an accepted command must not be able to
+        // refuse it a second time.
+        CommandRequest request;
+        QPointer<Host> pHost;
+        // The window the widgets below currently live in; null while unplaced
+        QPointer<QMainWindow> container;
         QPointer<QToolButton> button;
         QPointer<QAction> toolbarAction;
         QPointer<QAction> menuAction;
         QPointer<QTimer> pulseTimer;
-        QPointer<Host> pHost;
+        // Everything a package has set since the command was created. The
+        // widgets are the surface, not the record: they are destroyed and
+        // rebuilt on a move, and a state kept only in them would be lost every
+        // time a profile was dragged out of the main window.
+        bool enabled = true;
+        bool checkable = false;
+        bool checked = false;
+        QString icon;
+        QString tooltip;
+        bool pulseEnabled = false;
         bool pulseState = false;
         QString pulseColor1;
         QString pulseColor2;
+        int pulseInterval = 0;
     };
-    QMenu* addonMenuForPath(const QString& menuPath, const Host* pHost, QString& error);
+    // The chrome one window lends to add-on commands. There is a set of these
+    // per window rather than one for the application, because a detached window
+    // has a toolbar and an Options menu of its own and a command belongs beside
+    // the profile it was created by, wherever that profile has been dragged to.
+    struct AddonChrome
+    {
+        QPointer<QAction> toolbarSeparator;
+        QPointer<QMenu> addonsMenu;
+        QHash<QMenu*, const Host*> submenuOwners;
+    };
+    QHash<QMainWindow*, AddonChrome> mAddonChrome;
+    // The toolbar and the Options menu of a window, whichever kind it is
+    QToolBar* addonToolBarFor(QMainWindow* pContainer) const;
+    QMenu* addonOptionsMenuFor(QMainWindow* pContainer) const;
+    // Build this command's widgets in a window and apply everything the package
+    // has set, or take them down again and tidy what they leave behind
+    QMainWindow* addonHomeContainerFor(Host* pHost) const;
+    void placeAddonCommand(int commandId, AddonCommand& command, QMainWindow* pContainer);
+    void unplaceAddonCommand(AddonCommand& command);
+    void applyAddonCommandState(AddonCommand& command);
+    QMenu* addonMenuForPath(QMainWindow* pContainer, const QString& menuPath, const Host* pHost, QString& error);
     bool addonShortcutUsable(const QKeySequence& sequence, const Host* pHost, QString& error) const;
     static QString addonTooltip(const QString& tooltip);
     // Qt reads '&' in a QAction's or QToolButton's text as a mnemonic, so a
@@ -875,13 +913,6 @@ private:
     QMap<int, AddonCommand> mAddonCommands;
     // One sequence for every command, so an id names one thing or nothing
     int mNextAddonCommandId = 1;
-    QAction* mpAddonToolbarSeparator = nullptr;
-    QPointer<QMenu> mpAddonsMenu;
-    // Which profile a menuPath submenu was built for. Placement has to be
-    // decided by the profile's own commands alone: sharing one namespace meant
-    // whether a package could place a command depended on which unrelated
-    // profiles happened to be open, and on labels it could neither see nor clear.
-    QHash<QMenu*, const Host*> mAddonSubmenuOwners;
 
     // amount of times the shortcut has been shown help educate new users
     int mScrollbackTutorialsShown = 0;   // Cancel split screen
