@@ -1133,6 +1133,30 @@ private slots:
         QCOMPARE(sent.value(qsl("token")).toString(), qsl("token-B"));
     }
 
+    void testRotationIsDetectedWhenTheRotatedTokenIsUnderItsOwnKey()
+    {
+        Host* host = connectAndNegotiate(true);
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+        QVERIFY(seedSplitSignIn(host->getName(), qsl("{\"account\": \"acct:char\", \"provider\": \"discord\", \"secure_only\": true}"), qsl("token-A")));
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\", \"password-credentials\"]}"));
+
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Reconnect"), sent), "client did not replay the saved token");
+        QCOMPARE(sent.value(qsl("token")).toString(), qsl("token-A"));
+
+        // Another instance sharing the store rotates the single-use token, in split format.
+        QVERIFY(seedSplitSignIn(host->getName(), qsl("{\"account\": \"acct:char\", \"provider\": \"discord\", \"secure_only\": true}"), qsl("token-B")));
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Result {\"success\": false, \"message\": \"Reconnect token expired\"}"));
+
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Reconnect"), sent), "the rotated token under its own key should be replayed, not discarded");
+        QCOMPARE(sent.value(qsl("token")).toString(), qsl("token-B"));
+    }
+
     void testRotatedTokenRefusedOnTransportGroundsIsLeftAlone_data()
     {
         QTest::addColumn<QString>("rotatedEntry");
