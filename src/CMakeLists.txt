@@ -93,6 +93,7 @@ set(mudlet_SRCS
     FontManager.cpp
     GifTracker.cpp
     GMCPAuthenticator.cpp
+    SignInStoreReconciler.cpp
     Host.cpp
     HostManager.cpp
     ircmessageformatter.cpp
