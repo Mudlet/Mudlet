@@ -625,8 +625,15 @@ int TLuaInterpreter::sttIsListening(lua_State* L)
         return 1;
     }
 
+    // This profile's answer, not the decoder's. One recognizer is shared, so the
+    // engine being busy says nothing about whose session it is - and a package
+    // asking "am I listening" and being told about another game's microphone
+    // showed a live control it did not own and announced stops it never made.
+    // A profile that wants to know the device is busy elsewhere learns it from
+    // the refusal its own start returns.
     auto* pRecognizer = pMudlet->speechRecognizer();
-    lua_pushboolean(L, pRecognizer && pRecognizer->listening());
+    const bool listeningHere = pRecognizer && pRecognizer->listening() && pMudlet->microphoneOwner() == &getHostFromLua(L);
+    lua_pushboolean(L, listeningHere);
     return 1;
 }
 
@@ -690,8 +697,11 @@ int TLuaInterpreter::sttGetInfo(lua_State* L)
     lua_pushboolean(L, pRecognizer && pRecognizer->initialized());
     lua_settable(L, -3);
 
+    // Per-profile, matching stt.listening() - the two are documented as the same
+    // answer, and a getInfo() that reported another game's session while
+    // stt.listening() said no would be the worse of the two to debug.
     lua_pushstring(L, "listening");
-    lua_pushboolean(L, pRecognizer && pRecognizer->listening());
+    lua_pushboolean(L, pRecognizer && pRecognizer->listening() && pMudlet->microphoneOwner() == &getHostFromLua(L));
     lua_settable(L, -3);
 
     // Engine state, which distinguishes Error from Uninitialized - both of

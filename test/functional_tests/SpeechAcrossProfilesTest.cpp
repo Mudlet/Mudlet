@@ -34,6 +34,13 @@
  * recognizer. It does not need to - the ownership and the routing are core's,
  * and raiseSpeechEvent() is the seam every backend's results arrive through.
  *
+ * What that does put out of reach is anything whose answer depends on the
+ * recognizer's own state. Two rules here are covered by inspection rather than
+ * by a case, because with no recognizer both sides of them read the same: a
+ * claim being refused while the outgoing profile's phrase is still decoding,
+ * and stt.listening() answering for the asking profile alone. A test for
+ * either passes whether the rule holds or not, which is worse than none.
+ *
  * Run with: ctest -R SpeechAcrossProfilesTest -V
  */
 
