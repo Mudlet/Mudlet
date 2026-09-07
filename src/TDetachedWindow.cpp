@@ -2306,6 +2306,11 @@ void TDetachedWindow::switchToProfile(const QString& profileName)
         }
     });
 
+    // This window's chrome now belongs to a different profile
+    if (auto pMudlet = mudlet::self()) {
+        pMudlet->refreshAddonPlacement();
+    }
+
     // Ensure the detached window itself gets focus and is brought to the front
     raise();
     activateWindow();

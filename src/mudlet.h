@@ -244,6 +244,9 @@ public:
     // loses it is told, since nothing else on its screen would say why its
     // microphone went quiet. Call before startListening(); on a refusal call
     // releaseMicrophone() so the claim does not outlive the session it was for.
+    // Re-place and re-show add-on commands: called whenever the profile a window
+    // is showing changes, or a profile moves between windows.
+    void refreshAddonPlacement();
     void claimMicrophoneFor(Host* pHost);
     void releaseMicrophone();
     // Which profile the microphone currently belongs to, or nullptr
@@ -888,6 +891,7 @@ private:
     // Build this command's widgets in a window and apply everything the package
     // has set, or take them down again and tidy what they leave behind
     QMainWindow* addonHomeContainerFor(Host* pHost) const;
+    Host* addonShownProfileIn(QMainWindow* pContainer);
     void placeAddonCommand(int commandId, AddonCommand& command, QMainWindow* pContainer);
     void unplaceAddonCommand(AddonCommand& command);
     void applyAddonCommandState(AddonCommand& command);

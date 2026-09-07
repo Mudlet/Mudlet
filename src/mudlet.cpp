@@ -826,6 +826,74 @@ QMainWindow* mudlet::addonHomeContainerFor(Host* pHost) const
     return const_cast<mudlet*>(this);
 }
 
+// Which profile a window is currently showing. A window holds several profiles
+// as tabs and shows one of them, and that one decides whose commands its chrome
+// carries. The main window's answer is its current tab rather than the active
+// host: with a detached window in front, the active host is the profile in that
+// window, while the main window is still showing whatever tab it was left on.
+Host* mudlet::addonShownProfileIn(QMainWindow* pContainer)
+{
+    if (auto* pDetached = qobject_cast<TDetachedWindow*>(pContainer)) {
+        return mHostManager.getHost(pDetached->getCurrentProfileName());
+    }
+    if (!mpTabBar || mpTabBar->currentIndex() < 0) {
+        return nullptr;
+    }
+    return mHostManager.getHost(mpTabBar->tabName(mpTabBar->currentIndex()));
+}
+
+// Puts every command where it belongs and shows only the ones whose profile its
+// window is showing. Cheap enough to call on any change that could move one: a
+// command already in the right window is only shown or hidden, and rebuilding
+// is reserved for a profile that has actually changed windows.
+void mudlet::refreshAddonPlacement()
+{
+    for (auto it = mAddonCommands.begin(); it != mAddonCommands.end(); ++it) {
+        AddonCommand& command = it.value();
+        if (!command.pHost) {
+            continue;
+        }
+        QMainWindow* pTarget = addonHomeContainerFor(command.pHost);
+        if (command.container != pTarget) {
+            unplaceAddonCommand(command);
+            placeAddonCommand(it.key(), command, pTarget);
+        }
+
+        // Hidden rather than destroyed: switching tabs is something a player
+        // does constantly, and tearing menus down and rebuilding them each time
+        // would churn the submenu bookkeeping for no visible gain. A hidden
+        // QAction's shortcut stops firing, which is the point - a key that
+        // raises another game's event while you are looking at this one is the
+        // same mistake as a button that does.
+        const bool visible = (addonShownProfileIn(pTarget) == command.pHost);
+        if (command.toolbarAction) {
+            command.toolbarAction->setVisible(visible);
+        }
+        if (command.menuAction) {
+            command.menuAction->setVisible(visible);
+        }
+    }
+
+    // A separator with nothing after it is a line hanging off the end of the
+    // toolbar, so it follows the commands it divides.
+    for (auto it = mAddonChrome.begin(); it != mAddonChrome.end(); ++it) {
+        bool anyVisible = false;
+        for (auto commandIt = mAddonCommands.constBegin(); commandIt != mAddonCommands.constEnd(); ++commandIt) {
+            const AddonCommand& command = commandIt.value();
+            if (command.container == it.key() && command.toolbarAction && command.toolbarAction->isVisible()) {
+                anyVisible = true;
+                break;
+            }
+        }
+        if (it.value().toolbarSeparator) {
+            it.value().toolbarSeparator->setVisible(anyVisible);
+        }
+        if (it.value().addonsMenu) {
+            it.value().addonsMenu->menuAction()->setVisible(!it.value().addonsMenu->isEmpty());
+        }
+    }
+}
+
 // Builds the widgets for one command in one window and puts everything the
 // package has set onto them. Nothing here can refuse: the request was accepted
 // when the command was created, and a command that has been moved must arrive.
@@ -8611,6 +8679,9 @@ void mudlet::activateProfile(Host* pHost)
     // Regenerate the multi-view mode if it is enabled:
     reshowRequiredMainConsoles();
 
+    // The main window's chrome now belongs to a different profile
+    refreshAddonPlacement();
+
     // Reset the styles to reflect those of the now active profile:
     mpMainToolBar->setStyleSheet(mpCurrentActiveHost->mProfileStyleSheet);
     mpTabBar->setStyleSheet(mpCurrentActiveHost->mProfileStyleSheet);
@@ -9354,6 +9425,9 @@ void mudlet::detachTab(int tabIndex, const QPoint& position)
     // Update main window title to reflect changed tab state
     updateMainWindowTitle();
 
+    // The profile took its commands out of the main window with it
+    refreshAddonPlacement();
+
     // Only show connection dialog if there are no profiles loaded anywhere,
     // not just when the main window is empty (profiles might be in detached windows)
     if (mpTabBar->count() == 0 && mHostManager.getHostCount() == 0 && !mIsGoingDown) {
@@ -9529,6 +9603,9 @@ void mudlet::reattachTab(const QString& profileName, int insertIndex)
 
     // Update main window title to reflect the reattached profile
     updateMainWindowTitle();
+
+    // ...and brings them back
+    refreshAddonPlacement();
 }
 
 TMainConsole* mudlet::removeConsoleFromSplitter(const QString& profileName)

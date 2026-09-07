@@ -37,7 +37,12 @@
  * Run with: ctest -R SpeechAcrossProfilesTest -V
  */
 
+#include <QAction>
 #include <QFileInfo>
+#include <QMenu>
+#include <QToolBar>
+#include <QToolButton>
+#include <QWidgetAction>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 #include <chrono>
@@ -47,6 +52,8 @@
 #include "MudletInstanceCoordinator.h"
 #include "ProfileTestHelper.h"
 #include "TLuaInterpreter.h"
+#include "TDetachedWindow.h"
+#include "TTabBar.h"
 #include "TelnetServerStub.h"
 #include "mudlet.h"
 
@@ -129,6 +136,63 @@ private:
         QVERIFY2(runLua(pHost, code).isNull(), qPrintable(qsl("could not arm a handler for %1").arg(eventName)));
     }
 
+    int luaGlobalNumber(Host* pHost, const QString& globalName) const
+    {
+        lua_State* L = pHost->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, globalName.toUtf8().constData());
+        const int value = static_cast<int>(lua_tonumber(L, -1));
+        lua_pop(L, 1);
+        return value;
+    }
+
+    // The id a Lua call returned, or -1 when the command was refused
+    int addCommand(Host* pHost, const QString& fields) const
+    {
+        const QString error = runLua(pHost, qsl("_addonId = addCommand{%1} or -1").arg(fields));
+        if (!error.isNull()) {
+            qWarning() << "addCommand:" << error;
+            return -1;
+        }
+        return luaGlobalNumber(pHost, qsl("_addonId"));
+    }
+
+    // The button a command placed, searched for in one window only - which is
+    // the whole question here, since the bug being pinned is a button appearing
+    // in a window that is not its profile's.
+    QToolButton* buttonIn(QWidget* pContainer, const QString& name) const { return pContainer->findChild<QToolButton*>(qsl("addon_%1").arg(name), Qt::FindChildrenRecursively); }
+
+    // The toolbar entry a command placed. Asked for rather than the button's own
+    // isVisible(), which in an offscreen run is false for every widget in a
+    // window that was never shown, and rather than isHidden(), which a toolbar
+    // that is itself hidden sets on the buttons inside it. The action's
+    // visibility is the command's own answer either way.
+    QAction* toolbarEntryIn(QWidget* pContainer, const QString& name) const
+    {
+        QToolButton* pButton = buttonIn(pContainer, name);
+        if (!pButton) {
+            return nullptr;
+        }
+        for (QToolBar* pToolBar : pContainer->findChildren<QToolBar*>()) {
+            for (QAction* pAction : pToolBar->actions()) {
+                auto* pWidgetAction = qobject_cast<QWidgetAction*>(pAction);
+                if (pWidgetAction && pWidgetAction->defaultWidget() == pButton) {
+                    return pAction;
+                }
+            }
+        }
+        return nullptr;
+    }
+
+    QAction* menuItemIn(QWidget* pContainer, const QString& name) const
+    {
+        for (QAction* pAction : pContainer->findChildren<QAction*>()) {
+            if (pAction->text() == name) {
+                return pAction;
+            }
+        }
+        return nullptr;
+    }
+
     void deleteProfileDirectory(const QString& profileName) const
     {
         QDir dir(mudlet::getMudletPath(enums::profileHomePath, profileName));
@@ -187,6 +251,11 @@ private slots:
         }
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
     }
+
+    // The main toolbar is hidden by default, and a toolbar-only command is
+    // refused while it is - which would leave every placement case below
+    // asserting against a command that was never created.
+    void init() { mudlet::self()->setToolBarVisibility(enums::visibleAlways); }
 
     // No test may leave the microphone claimed: the owner decides where the
     // next test's events land, so a leaked claim fails the one after it
@@ -272,6 +341,106 @@ private slots:
 
         QCOMPARE(luaGlobalString(mpSecondHost, qsl("_stateSecond")), qsl("ready"));
         QVERIFY2(luaGlobalString(mpFirstHost, qsl("_stateFirst")).isEmpty(), "a released microphone left its old owner still receiving the session's events");
+    }
+
+    // The duplicate the player reported: every open profile placed its command
+    // in the main window's toolbar, so two games meant two identical buttons
+    // with nothing but a tooltip to tell them apart.
+    void test_onlyTheShownProfilesCommandIsOnTheToolbar()
+    {
+        const int firstId = addCommand(mpFirstHost, qsl("name = \"SpeechFirst\", surfaces = \"toolbar\""));
+        const int secondId = addCommand(mpSecondHost, qsl("name = \"SpeechSecond\", surfaces = \"toolbar\""));
+        QVERIFY(firstId > 0 && secondId > 0);
+
+        mudlet::self()->activateProfile(mpFirstHost);
+        QAction* pFirstEntry = toolbarEntryIn(mudlet::self(), qsl("SpeechFirst"));
+        QAction* pSecondEntry = toolbarEntryIn(mudlet::self(), qsl("SpeechSecond"));
+        QVERIFY2(pFirstEntry && pSecondEntry, "both commands should exist in the main window, whatever their visibility");
+        QVERIFY2(pFirstEntry->isVisible(), "the shown profile's button is not on the toolbar");
+        QVERIFY2(!pSecondEntry->isVisible(), "a profile that is not being shown still has a button on the toolbar");
+
+        mudlet::self()->activateProfile(mpSecondHost);
+        QVERIFY2(!pFirstEntry->isVisible(), "switching profiles left the old profile's button behind");
+        QVERIFY2(pSecondEntry->isVisible(), "switching profiles did not bring the new profile's button out");
+
+        runLua(mpFirstHost, qsl("removeCommand(%1)").arg(firstId));
+        runLua(mpSecondHost, qsl("removeCommand(%1)").arg(secondId));
+    }
+
+    // The menu half goes with it, and takes its shortcut: a key that raises
+    // another game's event while you look at this one is the same mistake as
+    // a button that does.
+    void test_aHiddenProfilesMenuItemIsHiddenToo()
+    {
+        const int secondId = addCommand(mpSecondHost, qsl("name = \"MenuSecond\", menuPath = \"Speech\", surfaces = \"menu\""));
+        QVERIFY(secondId > 0);
+
+        mudlet::self()->activateProfile(mpSecondHost);
+        QAction* pItem = menuItemIn(mudlet::self(), qsl("MenuSecond"));
+        QVERIFY2(pItem, "the menu item was never placed");
+        QVERIFY2(pItem->isVisible(), "the shown profile's menu item is not on the menu");
+
+        mudlet::self()->activateProfile(mpFirstHost);
+        QVERIFY2(!pItem->isVisible(), "another profile's menu item is still on the menu");
+
+        runLua(mpSecondHost, qsl("removeCommand(%1)").arg(secondId));
+    }
+
+    // A detached profile's button used to stay in the main window, which is the
+    // one window it certainly does not belong in.
+    void test_detachingTakesTheCommandToItsNewWindow()
+    {
+        const int secondId = addCommand(mpSecondHost, qsl("name = \"SpeechMoved\", surfaces = \"toolbar\""));
+        QVERIFY(secondId > 0);
+        QVERIFY2(buttonIn(mudlet::self(), qsl("SpeechMoved")), "the command was not placed in the main window to begin with");
+
+        TDetachedWindow* pWindow = detachSecondProfile();
+        QVERIFY(pWindow);
+
+        QVERIFY2(!buttonIn(mudlet::self(), qsl("SpeechMoved")), "the command stayed in the main window after its profile was detached");
+        QVERIFY2(buttonIn(pWindow, qsl("SpeechMoved")), "the command did not arrive in the detached window");
+        QAction* pMovedEntry = toolbarEntryIn(pWindow, qsl("SpeechMoved"));
+        QVERIFY2(pMovedEntry && pMovedEntry->isVisible(), "the command arrived in the detached window but is not shown, though that window shows its profile");
+
+        mudlet::self()->slot_tabReattachRequested(mSecondHostname);
+        QTest::qWait(200ms);
+        QVERIFY2(buttonIn(mudlet::self(), qsl("SpeechMoved")), "reattaching did not bring the command back to the main window");
+
+        runLua(mpSecondHost, qsl("removeCommand(%1)").arg(secondId));
+    }
+
+    // The widgets are rebuilt on a move, so everything the package set has to
+    // be re-applied to them - it lives on the command, not on the button.
+    void test_aMovedCommandKeepsWhatThePackageSet()
+    {
+        const int secondId = addCommand(mpSecondHost, qsl("name = \"SpeechState\", surfaces = \"toolbar\""));
+        QVERIFY(secondId > 0);
+        runLua(mpSecondHost, qsl("setCommandChecked(%1, true)").arg(secondId));
+        runLua(mpSecondHost, qsl("setCommandTooltip(%1, \"listening in StickMUD\")").arg(secondId));
+        runLua(mpSecondHost, qsl("disableCommand(%1)").arg(secondId));
+
+        TDetachedWindow* pWindow = detachSecondProfile();
+        QVERIFY(pWindow);
+
+        QToolButton* pMoved = buttonIn(pWindow, qsl("SpeechState"));
+        QVERIFY2(pMoved, "the command did not arrive in the detached window");
+        QVERIFY2(pMoved->isChecked(), "a checked command came out of the move unchecked");
+        QVERIFY2(pMoved->toolTip().contains(qsl("listening in StickMUD")), qPrintable(qsl("the tooltip did not survive the move: %1").arg(pMoved->toolTip())));
+        QVERIFY2(!pMoved->isEnabled(), "a disabled command came out of the move enabled");
+
+        mudlet::self()->slot_tabReattachRequested(mSecondHostname);
+        QTest::qWait(200ms);
+        runLua(mpSecondHost, qsl("removeCommand(%1)").arg(secondId));
+    }
+
+private:
+    TDetachedWindow* detachSecondProfile()
+    {
+        // Whichever profile sits at tab 1 detaches, and slot_tabDetachRequested
+        // refuses index 0 - so this is the second profile by construction
+        mudlet::self()->slot_tabDetachRequested(1, QPoint(200, 200));
+        QTest::qWait(200ms);
+        return mudlet::self()->getDetachedWindows().value(mSecondHostname);
     }
 };
 
