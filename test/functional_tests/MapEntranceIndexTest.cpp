@@ -162,7 +162,8 @@ private:
         mDigest << qsl("  truth    : %1").arg(groundTruthDigest());
         mDigest << qsl("  exits    : %1").arg(exitDigest());
         mDigest << qsl("  areas    : %1").arg(areaDigest());
-        mDigest << qsl("  phantom  : %1").arg(phantomExitDigest());
+        const QString phantoms = phantomExitDigest();
+        mDigest << qsl("  phantom  : count=%1 [%2]").arg(phantoms.isEmpty() ? 0 : phantoms.count(QChar(' ')) + 1).arg(phantoms);
     }
 
     void makeRoom(int id, int areaId, int x, int y, int z)
