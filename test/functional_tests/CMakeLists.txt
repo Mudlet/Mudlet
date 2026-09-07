@@ -156,6 +156,8 @@ set(MAP_GROUP_TEST_SOURCES
     MapMouseInteractionTest.cpp
     MapOffscreenCustomLineTest.cpp
     MapFileStatsTest.cpp
+    MapEntranceIndexTest.cpp
+    MapRoomIdDigitsCacheTest.cpp
     MapLockNoOpTest.cpp
     RoomPropertiesDialogTest.cpp
     MapperButtonConfigTest.cpp
