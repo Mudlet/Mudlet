@@ -44,21 +44,79 @@ local function stillInLayout(container)
     return owner ~= nil and owner.windowList ~= nil and owner.windowList[container.name] == container
 end
 
--- Internal function: tells whether a constraint means a different size once the
--- container it belongs to is put somewhere else. A percentage is a share of the
--- parent and a negative value is measured from the parent's far edge, while a
--- plain pixel or character size means the same wherever the container ends up.
+-- Internal function: tells whether a constraint is a share of the parent
 -- @param constraint a Geyser size constraint
-local function relativeToParent(constraint)
-    if type(constraint) ~= "string" then
-        return false
-    end
-    return string.find(constraint, "%%") ~= nil or string.find(constraint, "-") ~= nil
+local function scalesWithParent(constraint)
+    return type(constraint) == "string" and string.find(constraint, "%", 1, true) ~= nil
 end
 
-local function keepRelative(constraint, value, total)
-    if relativeToParent(constraint) then
-        return make_percent(value/total)
+-- Internal function: tells whether a constraint is counted from the parent's anti-origin
+-- @param constraint a Geyser size constraint
+local function fromAntiOrigin(constraint)
+    return type(constraint) == "string" and string.find(constraint, "-", 1, true) ~= nil
+end
+
+-- Internal function: tells whether a constraint still re-derives itself from the far edge
+-- @param constraint a Geyser size constraint
+local function followsFarEdge(constraint)
+    return fromAntiOrigin(constraint) and not scalesWithParent(constraint)
+end
+
+-- Internal function: tells whether a constraint implies a different size in a different parent
+-- @param constraint a Geyser size constraint
+local function relativeToParent(constraint)
+    return scalesWithParent(constraint) or followsFarEdge(constraint)
+end
+
+-- Internal function: the size and origin Geyser resolves a percentage against,
+-- which is the container's own parent rather than the main window - the same
+-- switch setPercent() and onMove() make
+-- @param container the container whose constraint is being recomputed
+local function parentFrame(container)
+    local x, y = 0, 0
+    local winw, winh = getMainWindowSize()
+    if (container.container) and (container.container ~= Geyser) then
+        x, y = container.container.get_x(), container.container.get_y()
+        winw, winh = container.container.get_width(), container.container.get_height()
+    end
+    return x, y, winw, winh
+end
+
+-- Internal function: gives a size constraint a new value while keeping its kind. A
+-- share is measured against the parent, since that is what Geyser resolves it
+-- against, and floored at zero because a negative share reads as its complement. A
+-- size counted from the far edge re-derives itself and is already right, and a
+-- parent with no size gives nothing to measure against at all.
+-- @param constraint the constraint as it stands
+-- @param value the new size in pixels
+-- @param total the parent's size along the same axis
+local function keepRelativeSize(constraint, value, total)
+    if total <= 0 then
+        return constraint
+    end
+    if scalesWithParent(constraint) then
+        return make_percent(math.max(0, value)/total)
+    end
+    if followsFarEdge(constraint) then
+        return constraint
+    end
+    return value
+end
+
+-- Internal function: gives a position constraint a new value while keeping its
+-- kind. A share is measured from the parent's origin as well as against its size.
+-- Nothing is left alone here: Geyser gives only a negative size the container's own
+-- position to work from, so a position counted from the far edge cannot follow it.
+-- @param constraint the constraint as it stands
+-- @param value the new position in pixels
+-- @param total the parent's size along the same axis
+-- @param origin the parent's origin along the same axis
+local function keepRelativePosition(constraint, value, total, origin)
+    if total <= 0 then
+        return constraint
+    end
+    if scalesWithParent(constraint) then
+        return make_percent(math.max(0, value - origin)/total)
     end
     return value
 end
@@ -450,24 +508,28 @@ function Adjustable.Container:adjustConnectedContainers()
                 container:move(x, y)
                 container:resize(width, height)
             else
-                local winw, winh = getMainWindowSize()
+                -- every size below is measured from where the move actually put the
+                -- container rather than from the position it asked for: a pixel
+                -- constraint is stored whole, so dropping the fraction twice walks
+                -- the far edge in a pixel on every mouse move
+                local px, py, pw, ph = parentFrame(container)
                 if where == "right" then
-                    container:resize(keepRelative(container.width, self:get_x() - container:get_x(), winw), nil)
+                    container:resize(keepRelativeSize(container.width, self:get_x() - container:get_x(), pw), nil)
                 end
                 if where == "left" then
                     local right_x = container:get_x() + container:get_width()
-                    local left_x = self:get_x() + self:get_width()
-                    container:move(keepRelative(container.x, left_x, winw), nil)
-                    container:resize(keepRelative(container.width, right_x - left_x, winw), nil)
+                    local left_x = math.min(self:get_x() + self:get_width(), right_x)
+                    container:move(keepRelativePosition(container.x, left_x, pw, px), nil)
+                    container:resize(keepRelativeSize(container.width, right_x - container:get_x(), pw), nil)
                 end
                 if where == "bottom" then
-                    container:resize(nil, keepRelative(container.height, self:get_y() - container:get_y(), winh))
+                    container:resize(nil, keepRelativeSize(container.height, self:get_y() - container:get_y(), ph))
                 end
                 if where == "top" then
                     local bottom_y = container:get_y() + container:get_height()
-                    local top_y = self:get_y() + self:get_height()
-                    container:move(nil, keepRelative(container.y, top_y, winh))
-                    container:resize(nil, keepRelative(container.height, bottom_y - top_y, winh))
+                    local top_y = math.min(self:get_y() + self:get_height(), bottom_y)
+                    container:move(nil, keepRelativePosition(container.y, top_y, ph, py))
+                    container:resize(nil, keepRelativeSize(container.height, bottom_y - container:get_y(), ph))
                 end
             end
             container:adjustBorder()
