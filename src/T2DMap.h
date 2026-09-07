@@ -527,6 +527,13 @@ private:
     QPointer<QAction> mpCreateRoomAction;
     // in the players current area, how many digits does the biggest room number have?
     quint8 mMaxRoomIdDigits = 0;
+    // Cache for the above: recomputing it is a scan of every room in the area,
+    // so it is only redone when the drawn area or its room membership version
+    // (TArea::getRoomsVersion()) has actually moved on since last time. Reset
+    // in init(), which runs after every full map (re)load.
+    bool mCachedRoomIdDigitsValid = false;
+    int mCachedRoomIdDigitsAreaId = 0;
+    quint32 mCachedRoomIdDigitsVersion = 0;
 
     // Holds the QRadialGradient details to use for the player room:
     QGradientStops mPlayerRoomColorGradientStops;
