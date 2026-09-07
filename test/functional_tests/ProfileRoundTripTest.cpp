@@ -244,6 +244,12 @@ private:
         auto scInner = addScript(scGroup, qsl("scripts <sub> & 'group'"), true, true, {}, QString());
         addScript(scInner, qsl("émoji🎉 script"), false, true, {qsl("emojiEvent🎉")}, qsl("-- emoji script\n"));
         addScript(nullptr, qsl("lone script"), false, false, {}, QString());
+
+        // Non-default, non-opaque map level colors, to prove the alpha
+        // channel survives XMLexport -> XMLimport rather than being dropped
+        // back to fully opaque:
+        mpSource->mLowerLevelColor = QColor(30, 60, 90, 120);
+        mpSource->mUpperLevelColor = QColor(200, 150, 100, 45);
     }
 
     // -----------------------------------------------------------------------
@@ -613,6 +619,15 @@ private slots:
                 return;
             }
         }
+    }
+
+    // mLowerLevelColor/mUpperLevelColor round-trip through XMLexport's "alpha"
+    // attribute (see readHostColorElement()'s alphaColors map) rather than
+    // being clipped back to opaque by QColor::name()'s #RRGGBB form:
+    void test_mapLevelColorsRoundTrip()
+    {
+        QCOMPARE(mpTarget->mLowerLevelColor, QColor(30, 60, 90, 120));
+        QCOMPARE(mpTarget->mUpperLevelColor, QColor(200, 150, 100, 45));
     }
 
     // The imported scripts registered their event handlers in the fresh Host:
