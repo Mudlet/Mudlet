@@ -373,6 +373,7 @@ set(mudlet_HDRS
     SelectionRectangleHandler.h
     SentryWrapper.h
     ShortcutsManager.h
+    SignInStoreReconciler.h
     SingleLineTextEdit.h
     SpeechAudioCapture.h
     SpeechRecognizer.h
