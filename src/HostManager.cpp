@@ -27,6 +27,7 @@
 #include "dlgMapper.h"
 #include "mudlet.h"
 #include "TMap.h"
+#include "TMapViewManager.h"
 
 void HostManager::deleteHost(const QString& hostname)
 {
@@ -134,12 +135,17 @@ void HostManager::changeAllHostColour(const Host* pHost)
         return;
     }
     //change all main and subconsoles color
-    for (const QSharedPointer<Host> &host : mHostPool.values()) {
+    for (const QSharedPointer<Host>& host : mHostPool.values()) {
         host->mpConsole->changeColors();
         // Mapper also needs a refresh of its colours
         auto mapper = host->mpMap->mpMapper;
         if (mapper) {
             mapper->setPalette(QApplication::palette());
+        }
+        // ...as do any secondary map views
+        auto viewManager = host->mpMap->getViewManager();
+        if (viewManager) {
+            viewManager->changeViewsColour();
         }
         for (const QString& subConsoleName : host->windowRegistry().subConsoleNames()) {
             host->mpConsole->changeSubConsoleColors(subConsoleName);
