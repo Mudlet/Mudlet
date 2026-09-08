@@ -4364,6 +4364,56 @@ void Host::setDebugShowAllProblemCodepoints(const bool state)
     }
 }
 
+void Host::raiseSettingChangedEvent(const QString& settingName, const bool value)
+{
+    // The profile's own file is read before the console exists, so a value arriving from it is not a change to report:
+    if (!mpConsole) {
+        return;
+    }
+
+    TEvent event{};
+    event.mArgumentList.append(qsl("sysSettingChanged"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(settingName);
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(value ? qsl("1") : qsl("0"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
+    raiseEvent(event);
+}
+
+bool Host::changeSetting(bool& setting, const bool state, const QString& settingName)
+{
+    if (setting == state) {
+        return false;
+    }
+    setting = state;
+    raiseSettingChangedEvent(settingName, state);
+    return true;
+}
+
+bool Host::setEnableClosedCaption(const bool state)
+{
+    return changeSetting(mEnableClosedCaption, state, qsl("enableClosedCaption"));
+}
+
+bool Host::setAdvertiseScreenReader(const bool state)
+{
+    return changeSetting(mAdvertiseScreenReader, state, qsl("advertiseScreenReader"));
+}
+
+bool Host::setAnnounceIncomingText(const bool state)
+{
+    return changeSetting(mAnnounceIncomingText, state, qsl("announceIncomingText"));
+}
+
+void Host::setMapperPanelVisible(const bool state)
+{
+    if (mpMap && mpMap->mpMapper) {
+        mpMap->mpMapper->slot_setMapperPanelVisible(state);
+    }
+    changeSetting(mShowPanel, state, qsl("mapperPanelVisible"));
+}
+
 void Host::setCompactInputLine(const bool state)
 {
     if (mCompactInputLine != state) {
@@ -4375,6 +4425,7 @@ void Host::setCompactInputLine(const bool state)
         if (mpConsole && mpConsole->mpButtonMainLayer) {
             mpConsole->mpButtonMainLayer->setVisible(!state);
         }
+        raiseSettingChangedEvent(qsl("compactInputLine"), state);
     }
 }
 

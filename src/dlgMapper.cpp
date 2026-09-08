@@ -506,13 +506,14 @@ void dlgMapper::slot_toggleStrongHighlight(int toggle)
 
 void dlgMapper::slot_togglePanel()
 {
-    dlgMapper::slot_setMapperPanelVisible(!widget_panel->isVisible());
+    // The host holds the setting; widget_panel->isVisible() is also false while
+    // the whole map dock is hidden, which would make this a no-op:
+    mpHost->setMapperPanelVisible(!mpHost->mShowPanel);
 }
 
 void dlgMapper::slot_setMapperPanelVisible(bool panelVisible)
 {
     widget_panel->setVisible(panelVisible);
-    mpHost->mShowPanel = panelVisible;
 }
 
 void dlgMapper::slot_toggle3DView(const bool is3DMode)

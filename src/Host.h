@@ -476,6 +476,13 @@ public:
     bool debugShowAllProblemCodepoints() const { return mDebugShowAllProblemCodepoints; }
     void setCompactInputLine(const bool state);
     bool getCompactInputLine() const { return mCompactInputLine; }
+    // Only ever raised for a setting that really changed, or a handler that
+    // writes the value back through setConfig() would loop.
+    void raiseSettingChangedEvent(const QString& settingName, const bool value);
+    bool setEnableClosedCaption(const bool state);
+    bool setAdvertiseScreenReader(const bool state);
+    bool setAnnounceIncomingText(const bool state);
+    void setMapperPanelVisible(const bool state);
     QPointer<TConsole> findConsole(QString name);
 
     QPair<bool, QStringList> getLines(const QString& windowName, const int lineFrom, const int lineTo);
@@ -1005,6 +1012,9 @@ private slots:
     void slot_saveProfileAfterPackageChange();
 
 private:
+    // Stores a boolean setting and tells scripts about it, reporting whether it
+    // was a change at all.
+    bool changeSetting(bool& setting, const bool state, const QString& settingName);
     void setBorders(const QMargins);
     void installPackageFonts(const QString& packageName);
     void processGMCPDiscordStatus(const QJsonObject& discordInfo);

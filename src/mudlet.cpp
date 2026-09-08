@@ -6208,6 +6208,10 @@ void mudlet::slot_multiView(const bool state)
 
 void mudlet::toggleMute(bool state, QAction* toolbarAction, QAction* menuAction, bool isAPINotGame, const QString& unmuteText, const QString& muteText)
 {
+    // Read before the flag below is assigned: the rest of this function runs
+    // either way, because it also re-syncs the actions with the flag
+    const bool changed = (isAPINotGame ? mMuteAPI : mMuteGame) != state;
+
     if (toolbarAction->isChecked() != state || menuAction->isChecked() != state) {
         toolbarAction->setChecked(state);
         menuAction->setChecked(state);
@@ -6275,6 +6279,21 @@ void mudlet::toggleMute(bool state, QAction* toolbarAction, QAction* menuAction,
             }
         }
     }
+
+    if (changed) {
+        // Muting is application-wide rather than per profile, so every open
+        // profile is told about it
+        const QString settingName = isAPINotGame ? qsl("muteMediaAPI") : qsl("muteMediaGame");
+        for (const auto& pHost : mHostManager) {
+            if ((isAPINotGame ? mMuteAPI : mMuteGame) != state) {
+                // A handler in an earlier profile wrote the opposite value
+                // back; that nested call already told every profile, so the
+                // rest of this loop would report a value nothing holds any more
+                break;
+            }
+            pHost->raiseSettingChangedEvent(settingName, state);
+        }
+    }
 }
 
 void mudlet::slot_muteAPI(const bool state)
@@ -6335,10 +6354,6 @@ void mudlet::slot_toggleCompactInputLine()
 // Called by the menu-item's action itself, that DOES pass the checked state:
 void mudlet::slot_compactInputLine(const bool state)
 {
-    if (dactionInputLine->isChecked() != state) {
-        // Ensure the menu item reflectes the actual state:
-        dactionInputLine->setChecked(state);
-    }
     if (mpCurrentActiveHost) {
         mpCurrentActiveHost->setCompactInputLine(state);
         // Make sure players don't get confused when accidentally hiding buttons.
@@ -6349,6 +6364,12 @@ void mudlet::slot_compactInputLine(const bool state)
             mpCurrentActiveHost->postMessage(infoMsg);
             mpCurrentActiveHost->mTutorialForCompactLineAlreadyShown = true;
         }
+    }
+    // Ensure the menu item reflects the actual state - a handler of the event
+    // the setter raised may have written the opposite value back:
+    const bool held = mpCurrentActiveHost ? mpCurrentActiveHost->getCompactInputLine() : state;
+    if (dactionInputLine->isChecked() != held) {
+        dactionInputLine->setChecked(held);
     }
 }
 

@@ -6833,16 +6833,16 @@ void dlgProfilePreferences::applyAll()
             pHost->mMMCPShowSnoopInMainConsole = checkBox_mmcpSnoopInMainConsole->isChecked();
         }
         if (mSnapshot.dirty(checkBox_announceIncomingText)) {
-            pHost->mAnnounceIncomingText = checkBox_announceIncomingText->isChecked();
+            pHost->setAnnounceIncomingText(checkBox_announceIncomingText->isChecked());
         }
         if (mSnapshot.dirty(checkBox_advertiseScreenReader)) {
-            pHost->mAdvertiseScreenReader = checkBox_advertiseScreenReader->isChecked();
+            pHost->setAdvertiseScreenReader(checkBox_advertiseScreenReader->isChecked());
         }
         if (mSnapshot.dirty(checkBox_enableOSC8Hyperlinks)) {
             pHost->mEnableOSC8Hyperlinks = checkBox_enableOSC8Hyperlinks->isChecked();
         }
         if (mSnapshot.dirty(checkBox_enableClosedCaption)) {
-            pHost->mEnableClosedCaption = checkBox_enableClosedCaption->isChecked();
+            pHost->setEnableClosedCaption(checkBox_enableClosedCaption->isChecked());
         }
 
         if (mSnapshot.dirty(checkBox_expectCSpaceIdInColonLessMColorCode)) {
@@ -8473,8 +8473,7 @@ void dlgProfilePreferences::slot_toggleAdvertiseScreenReader(const bool state)
         return;
     }
 
-    if (pHost->mAdvertiseScreenReader != state) {
-        pHost->mAdvertiseScreenReader = state;
+    if (pHost->setAdvertiseScreenReader(state)) {
         pHost->mTelnet.sendInfoNewEnvironValue(qsl("SCREEN_READER"));
         pHost->mTelnet.sendInfoNewEnvironValue(qsl("MTTS"));
     }
@@ -8496,8 +8495,8 @@ void dlgProfilePreferences::slot_toggleEnableOSC8Hyperlinks(const bool state)
 
 void dlgProfilePreferences::slot_toggleEnableClosedCaption(const bool state)
 {
-    if (mpHost && mpHost->mEnableClosedCaption != state) {
-        mpHost->mEnableClosedCaption = state;
+    if (mpHost) {
+        mpHost->setEnableClosedCaption(state);
     }
 }
 
