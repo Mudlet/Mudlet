@@ -136,8 +136,8 @@ private:
     void resetForNewConnection();
 
     // The mechanism the reconciler drives: one store operation against CredentialManager, mapped to
-    // the metadata or token key, with the same per-operation CredentialManager and QPointer<Host>
-    // guard every credential callback in this file uses.
+    // the metadata or token key, with the same per-operation CredentialManager guard every credential
+    // callback in this file uses.
     void performStoreOperation(SignInStoreReconciler::Operation op, QString payload, SignInStoreReconciler::Done done);
 
     // Adds the two fields every client->server Char.Login message may carry: the negotiated version we

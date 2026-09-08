@@ -341,6 +341,33 @@ private slots:
         QCOMPARE(outcomes.byId[secondId][0].outcome, Outcome::Reached);
     }
 
+    void aFailedStepWithANewerIntentPendingIsSupersededNotFailed()
+    {
+        // The stale-warning fix: a save that fails while a newer intent waits must report Superseded,
+        // so GMCPAuthenticator stays silent rather than warning that a sign-in was not saved after a
+        // later save has already succeeded and announced itself. Reversing the mPending and !ok
+        // branches in onStepDone passes every other case in this file while reintroducing that bug and
+        // stranding the pending request unstarted.
+        FakeStore store;
+        Outcomes outcomes;
+        SignInStoreReconciler reconciler(store.performer());
+        unsigned int firstId = 0;
+        unsigned int secondId = 0;
+        firstId = reconciler.setIntent(fullIntent(qsl("tok-A")), outcomes.recorder(&firstId));
+        secondId = reconciler.setIntent(fullIntent(qsl("tok-B")), outcomes.recorder(&secondId));
+
+        store.release(0, false, qsl("Operation timed out"));
+
+        QCOMPARE(outcomes.byId[firstId].size(), std::size_t{1});
+        QCOMPARE(outcomes.byId[firstId][0].outcome, Outcome::Superseded);
+        QVERIFY2(reconciler.inFlight(), "the newer intent must still run after the older one failed");
+        QCOMPARE(store.operations(), (std::vector<Operation>{Operation::WriteMetadata, Operation::WriteMetadata}));
+
+        store.release(1);
+        store.release(2);
+        QCOMPARE(outcomes.byId[secondId][0].outcome, Outcome::Reached);
+    }
+
     void aPendingIntentReplacedBeforeStartingIsSuperseded()
     {
         FakeStore store;
@@ -400,6 +427,9 @@ private slots:
 
     void aDoneArrivingAfterDestructionIsDiscarded()
     {
+        // Only bites under a sanitizer build: swap the QPointer guard in runStep() for a bare `this`
+        // capture and this still passes under the -nosan preset, because the use-after-free happens
+        // to be benign there. CI's Linux ASan job is what actually enforces this one.
         FakeStore store;
         Outcomes outcomes;
         auto reconciler = std::make_unique<SignInStoreReconciler>(store.performer());

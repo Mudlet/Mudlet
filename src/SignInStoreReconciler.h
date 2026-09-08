@@ -39,6 +39,12 @@
 // The class knows nothing about where the entries live: the caller supplies a Performer that does
 // one operation and calls back. That is what lets a test drive it with complete control over when
 // each operation completes.
+//
+// Serialising every mutation has a cost: a stalled store operation now delays every later sign-in
+// mutation behind it, up to CredentialManager's own timeout per step - about twice that for a
+// two-step sequence. Concretely, "Forget saved sign-in" can take up to a minute to answer where it
+// previously raced ahead of a slow save. Bounded and correct, but worth knowing before you go
+// looking for why a UI action seems to hang.
 class SignInStoreReconciler : public QObject
 {
     Q_OBJECT
@@ -72,8 +78,9 @@ public:
 
     using Done = std::function<void(bool ok, QString error)>;
     // Perform one operation. payload is the metadata JSON for WriteMetadata, the token for
-    // WriteToken, and empty for the removals. Call done exactly once, on any thread affinity the
-    // reconciler's own; a done arriving after the reconciler is destroyed is discarded.
+    // WriteToken, and empty for the removals. Must call done exactly once, on any thread affinity the
+    // reconciler's own; a done arriving after the reconciler is destroyed is discarded. A Performer
+    // that never calls done at all leaves the reconciler permanently occupied - see setIntent().
     using Performer = std::function<void(Operation op, QString payload, Done done)>;
     // failedAt is meaningful only when outcome is Failed.
     using Completion = std::function<void(Outcome outcome, Operation failedAt, QString error)>;
@@ -83,9 +90,13 @@ public:
 
     // Requests an end state. Replaces any request that has not started yet (which completes as
     // Superseded) and, if a request is running, abandons it before its next operation. Every
-    // request's completion is invoked exactly once - Reached, Failed or Superseded - unless the
-    // reconciler is destroyed first, in which case none are, since their owner is going with it.
-    // Returns the id assigned, in case the caller wants to correlate.
+    // request's completion is invoked exactly once - Reached, Failed or Superseded - with two
+    // exceptions: the reconciler is destroyed first, in which case none are, since their owner is
+    // going with it; or the active request's Performer never calls its Done at all, which leaves
+    // mActive occupied forever and every later request either superseded or never run. The latter is
+    // not hypothetical: CredentialManager drops its callback outright at application shutdown (its
+    // isOperationValid() returns false and the callback is never invoked), tracked in #10587. Returns
+    // the id assigned, in case the caller wants to correlate.
     // Pass intent as an rvalue (std::move it in) when it carries a Full token: a dropped request's
     // token is scrubbed before its completion runs, but that scrub only reaches the real bytes
     // when this call is the token's sole owner - a copy elsewhere in the caller survives it intact.

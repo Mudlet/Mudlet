@@ -135,7 +135,10 @@ void SignInStoreReconciler::runStep()
         payload = metadataPayload(mActive->intent);
     } else if (op == Operation::WriteToken) {
         // A genuine handover, not a copy: the store's write owns the token from here, and this
-        // request no longer holds anything to scrub.
+        // request no longer holds anything to scrub. Load-bearing for scrub(): it can only zero real
+        // bytes because this move leaves no other copy of the token behind. Change this to a copy and
+        // scrub() starts zeroing a detached QString instead, silently stopping the secret from ever
+        // being wiped.
         payload = std::move(mActive->intent.token);
     }
 
