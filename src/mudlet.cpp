@@ -6282,9 +6282,12 @@ void mudlet::toggleMute(bool state, QAction* toolbarAction, QAction* menuAction,
 
     if (changed) {
         // Muting is application-wide rather than per profile, so every open
-        // profile is told about it
+        // profile is told about it. The handlers run Lua synchronously and may
+        // open a profile, which inserts into the live host map, so this walks
+        // a copy the way HostManager's own broadcasts do:
         const QString settingName = isAPINotGame ? qsl("muteMediaAPI") : qsl("muteMediaGame");
-        for (const auto& pHost : mHostManager) {
+        const QList<QSharedPointer<Host>> hosts = mHostManager.hostList();
+        for (const auto& pHost : hosts) {
             if ((isAPINotGame ? mMuteAPI : mMuteGame) != state) {
                 // A handler in an earlier profile wrote the opposite value
                 // back; that nested call already told every profile, so the
