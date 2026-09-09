@@ -1516,6 +1516,30 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       container:resetBorder("left")
       assert.are.equal(0, getBorderLeft())
     end)
+
+    it("leaves the console some of the window when the container is as big as it", function()
+      local winw = getMainWindowSize()
+      local container = make("gapFullWidth", {width = winw})
+      container:attachToBorder("left")
+      assert.is_true(getBorderLeft() < winw, "the container reserved the whole window")
+      assert.is_true(getColumnCount() > 0, "no columns were left for text")
+    end)
+
+    -- the cap belongs on the container's own reservation rather than on the
+    -- widest one applied, so resetBorder hands back a capped figure too
+    it("keeps the capped reservation when a smaller container detaches", function()
+      local winw = getMainWindowSize()
+      local narrow = make("gapCapNarrow", {width = 100})
+      local wide = make("gapCapWide", {width = winw})
+      narrow:attachToBorder("left")
+      wide:attachToBorder("left")
+      local capped = getBorderLeft()
+
+      narrow:detach()
+
+      assert.are.equal(capped, getBorderLeft())
+      assert.is_true(getColumnCount() > 0, "no columns were left for text")
+    end)
   end)
 
   describe("Adjustable.Container:connectToBorder/disconnect", function()
