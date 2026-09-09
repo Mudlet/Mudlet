@@ -508,7 +508,11 @@ void dlgMapper::slot_togglePanel()
 {
     // The host holds the setting; widget_panel->isVisible() is also false while
     // the whole map dock is hidden, which would make this a no-op:
-    mpHost->setMapperPanelVisible(!mpHost->mShowPanel);
+    const bool show = !mpHost->mShowPanel;
+    // This widget is not necessarily the one the host knows as mpMap->mpMapper,
+    // which is all the setter pushes the change to:
+    slot_setMapperPanelVisible(show);
+    mpHost->setMapperPanelVisible(show);
 }
 
 void dlgMapper::slot_setMapperPanelVisible(bool panelVisible)

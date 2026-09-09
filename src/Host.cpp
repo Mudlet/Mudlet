@@ -4381,29 +4381,37 @@ void Host::raiseSettingChangedEvent(const QString& settingName, const bool value
     raiseEvent(event);
 }
 
-bool Host::changeSetting(bool& setting, const bool state, const QString& settingName)
+void Host::changeSetting(bool& setting, const bool state, const QString& settingName)
 {
     if (setting == state) {
-        return false;
+        return;
     }
     setting = state;
     raiseSettingChangedEvent(settingName, state);
-    return true;
 }
 
-bool Host::setEnableClosedCaption(const bool state)
+void Host::setEnableClosedCaption(const bool state)
 {
-    return changeSetting(mEnableClosedCaption, state, qsl("enableClosedCaption"));
+    changeSetting(mEnableClosedCaption, state, qsl("enableClosedCaption"));
 }
 
-bool Host::setAdvertiseScreenReader(const bool state)
+void Host::setAdvertiseScreenReader(const bool state)
 {
-    return changeSetting(mAdvertiseScreenReader, state, qsl("advertiseScreenReader"));
+    if (mAdvertiseScreenReader == state) {
+        return;
+    }
+    mAdvertiseScreenReader = state;
+    // The game hears about it before the scripts do, so a handler that writes
+    // the value back leaves it informed of the final value by the nested call
+    // rather than of a value that no longer holds:
+    mTelnet.sendInfoNewEnvironValue(qsl("SCREEN_READER"));
+    mTelnet.sendInfoNewEnvironValue(qsl("MTTS"));
+    raiseSettingChangedEvent(qsl("advertiseScreenReader"), state);
 }
 
-bool Host::setAnnounceIncomingText(const bool state)
+void Host::setAnnounceIncomingText(const bool state)
 {
-    return changeSetting(mAnnounceIncomingText, state, qsl("announceIncomingText"));
+    changeSetting(mAnnounceIncomingText, state, qsl("announceIncomingText"));
 }
 
 void Host::setMapperPanelVisible(const bool state)

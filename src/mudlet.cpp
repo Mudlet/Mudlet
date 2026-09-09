@@ -6357,20 +6357,22 @@ void mudlet::slot_toggleCompactInputLine()
 // Called by the menu-item's action itself, that DOES pass the checked state:
 void mudlet::slot_compactInputLine(const bool state)
 {
-    if (mpCurrentActiveHost) {
-        mpCurrentActiveHost->setCompactInputLine(state);
+    // The setter runs the event handlers, which may close this profile, so the
+    // host is held and re-checked rather than read off the member each time:
+    QPointer<Host> pHost = mpCurrentActiveHost;
+    if (pHost) {
+        pHost->setCompactInputLine(state);
         // Make sure players don't get confused when accidentally hiding buttons.
-        if (QKeySequence* shortcut = mpShortcutsManager->getSequence(qsl("Compact input line"));
-            state && !mpCurrentActiveHost->mTutorialForCompactLineAlreadyShown && shortcut && !shortcut->isEmpty()) {
+        if (QKeySequence* shortcut = mpShortcutsManager->getSequence(qsl("Compact input line")); pHost && state && !pHost->mTutorialForCompactLineAlreadyShown && shortcut && !shortcut->isEmpty()) {
             //: Here %1 will be replaced with the keyboard shortcut, default is ALT+L.
             const QString infoMsg = tr("[ INFO ]  - Compact input line set. Press \"%1\" to show bottom-right buttons again.").arg(shortcut->toString(QKeySequence::NativeText));
-            mpCurrentActiveHost->postMessage(infoMsg);
-            mpCurrentActiveHost->mTutorialForCompactLineAlreadyShown = true;
+            pHost->postMessage(infoMsg);
+            pHost->mTutorialForCompactLineAlreadyShown = true;
         }
     }
     // Ensure the menu item reflects the actual state - a handler of the event
     // the setter raised may have written the opposite value back:
-    const bool held = mpCurrentActiveHost ? mpCurrentActiveHost->getCompactInputLine() : state;
+    const bool held = pHost ? pHost->getCompactInputLine() : state;
     if (dactionInputLine->isChecked() != held) {
         dactionInputLine->setChecked(held);
     }
