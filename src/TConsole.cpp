@@ -1982,7 +1982,11 @@ bool TConsole::selectSection(int from, int to)
         return false;
     }
     const int s = buffer.buffer[mUserCursor.y()].size();
-    if (from > s || from + to > s) {
+    // the length is compared against what is left of the line rather than
+    // added to the start: `from + to` overflows for a large `to`, and signed
+    // overflow that wraps negative sails through a check written that way,
+    // handing back a selection whose end precedes its start
+    if (from > s || to > s - from) {
         return false;
     }
     P_begin = QPoint(from, mUserCursor.y());
