@@ -26,6 +26,7 @@
 
 #include "Host.h"
 #include "TTrigger.h"
+#include "dlgTriggerEditor.h"
 
 #include <QScopeGuard>
 #include <QStringConverter>
@@ -592,6 +593,9 @@ bool TriggerUnit::enableTrigger(const QString& name)
         }
         it.value()->setIsActive(true);
         found = true;
+        if (mpHost->mpEditorDialog) {
+            mpHost->mpEditorDialog->refreshTriggerIcon(it.value()->getID());
+        }
     }
     return found;
 }
@@ -605,6 +609,9 @@ bool TriggerUnit::disableTrigger(const QString& name)
     for (auto it = begin; it != end; ++it) {
         it.value()->setIsActive(false);
         found = true;
+        if (mpHost->mpEditorDialog) {
+            mpHost->mpEditorDialog->refreshTriggerIcon(it.value()->getID());
+        }
     }
     return found;
 }

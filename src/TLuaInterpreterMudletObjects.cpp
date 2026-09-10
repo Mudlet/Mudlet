@@ -408,6 +408,9 @@ int TLuaInterpreter::disableScript(lua_State* L)
         if (script->getName() == name) {
             cnt++;
             script->setIsActive(false);
+            if (host.mpEditorDialog) {
+                host.mpEditorDialog->refreshScriptIcon(script->getID());
+            }
         }
     }
     if (cnt == 0) {
@@ -470,6 +473,9 @@ int TLuaInterpreter::enableScript(lua_State* L)
         if (script->getName() == name) {
             cnt++;
             script->setIsActive(true);
+            if (host.mpEditorDialog) {
+                host.mpEditorDialog->refreshScriptIcon(script->getID());
+            }
         }
     }
     if (cnt == 0) {

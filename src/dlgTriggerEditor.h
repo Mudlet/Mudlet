@@ -205,6 +205,14 @@ public:
     void children_icon_timer(QTreeWidgetItem* pWidgetItemParent);
     void children_icon_script(QTreeWidgetItem* pWidgetItemParent);
     void children_icon_action(QTreeWidgetItem* pWidgetItemParent);
+    // Repaints a single item's icon/description from its current TX::isActive()
+    // state, without a full tree rebuild - for GUI-external state changes such
+    // as the enableTrigger()/disableTrigger() family of Lua functions.
+    void refreshTriggerIcon(int triggerID);
+    void refreshAliasIcon(int aliasID);
+    void refreshScriptIcon(int scriptID);
+    void refreshTimerIcon(int timerID);
+    void refreshKeyIcon(int keyID);
     void doCleanReset();
     void writeScript(int id);
     void addVar(bool);
@@ -407,6 +415,10 @@ private:
     void saveTrigger();
     void saveAlias();
     void computeAliasIcon(TAlias* pT, QIcon& icon, QString& itemDescription) const;
+    void computeTriggerIcon(TTrigger* pT, QIcon& icon, QString& itemDescription) const;
+    void computeTimerIcon(TTimer* pT, QIcon& icon, QString& itemDescription) const;
+    void computeScriptIcon(TScript* pT, QIcon& icon, QString& itemDescription) const;
+    void computeKeyIcon(TKey* pT, QIcon& icon, QString& itemDescription) const;
     void setAliasNormalIcon(QTreeWidgetItem* pItem, TAlias* pT);
     void showAliasError(QTreeWidgetItem* pItem, const QString& name, const QString& error);
     void showAliasLoopWarning(QTreeWidgetItem* pItem, const QString& name);
