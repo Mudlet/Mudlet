@@ -916,9 +916,9 @@ public:
     // configurable via the mapCenterSmallAreas key in Mudlet.ini.
     bool mMapperCenterSmallAreas = false;
     // Hovering the mouse over a room in the 2D mapper shows a tooltip with
-    // the room number, name and exits after this many milliseconds. Zero shows
-    // it instantly; configurable in profile preferences. Stored in Mudlet.ini
-    // under mapperTooltipDelay.
+    // the room number, name and exits after this many milliseconds. Zero
+    // disables it; configurable in profile preferences. Persisted with the
+    // profile (see XMLexport/XMLimport).
     int mMapperTooltipDelay = 300;
     bool mVersionInTTYPE = false;
     QSet<QChar> mDoubleClickIgnore;

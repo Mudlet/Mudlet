@@ -462,11 +462,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 
     mMapperCenterSmallAreas = settings->value("mapCenterSmallAreas", false).toBool();
 
-    mMapperTooltipDelay = settings->value("mapperTooltipDelay", 300).toInt();
-    if (mMapperTooltipDelay < 0) {
-        mMapperTooltipDelay = 0;
-    }
-
     // Built here, at the end of the constructor, rather than on first use: the
     // model's buffer snapshots this Host's colours, so every one of them has to
     // be initialised first. The view binds the buffer's back-pointer when it

@@ -405,6 +405,11 @@ public slots:
 private:
     // Builds the exits line for a room's hover tooltip.
     QString roomHoverExits(const TRoom* room) const;
+    // Drops any pending room-hover tooltip and forgets which rooms are under
+    // the cursor. Called when the displayed area changes (centerview,
+    // switchArea, player-follow) so a timer armed over the old area cannot
+    // later resolve its retained room ids against the new one.
+    void clearRoomHover();
 
     class InteractionDispatcher
     {

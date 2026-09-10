@@ -697,6 +697,7 @@ void T2DMap::switchArea(const QString& newAreaName)
                 pruneRoomSelectionToArea(areaID);
                 mAreaID = areaID;
                 mLastViewedAreaID = mAreaID;
+                clearRoomHover();
             }
 
             mShiftMode = true;
@@ -941,6 +942,7 @@ std::pair<bool, QString> T2DMap::centerview(int roomId)
     }
     mAreaID = areaId;
     mLastViewedAreaID = areaId;
+    clearRoomHover();
     mRoomID = roomId;
     mMapCenterX = pR->x();
     mMapCenterY = -pR->y(); // Map y coordinates are reversed
@@ -2712,6 +2714,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
         const int playerAreaID = pPlayerRoom->getArea();
         if (mAreaID != playerAreaID) {
             pruneRoomSelectionToArea(playerAreaID);
+            clearRoomHover();
         }
         mAreaID = playerAreaID;
         if (mLastViewedAreaID != mAreaID) {
@@ -5785,10 +5788,17 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
 
 void T2DMap::leaveEvent(QEvent* event)
 {
-    mRoomHoverTimer->stop();
+    clearRoomHover();
+    QWidget::leaveEvent(event);
+}
+
+void T2DMap::clearRoomHover()
+{
+    if (mRoomHoverTimer) {
+        mRoomHoverTimer->stop();
+    }
     mCurrentHoveredRooms.clear();
     QToolTip::hideText();
-    QWidget::leaveEvent(event);
 }
 
 void T2DMap::setRoomHoverDelay(int delayMs)
@@ -5797,11 +5807,7 @@ void T2DMap::setRoomHoverDelay(int delayMs)
     if (mRoomHoverDelay == 0) {
         // Feature off: no tooltip, no ongoing hover state, and stop paying for
         // mouse-move events with no button held.
-        if (mRoomHoverTimer) {
-            mRoomHoverTimer->stop();
-        }
-        mCurrentHoveredRooms.clear();
-        QToolTip::hideText();
+        clearRoomHover();
         setMouseTracking(false);
     } else {
         setMouseTracking(true);
@@ -5852,6 +5858,14 @@ QString T2DMap::roomHoverTooltip(const QSet<int>& roomIds) const
     for (const int roomId : sortedIds) {
         const TRoom* room = mpMap->mpRoomDB->getRoom(roomId);
         if (!room) {
+            continue;
+        }
+        // Defence in depth: only describe rooms in the area currently on
+        // screen. The hovered-room set is cleared on every area change, but if
+        // a timer armed over the previous area ever fires late, resolving room
+        // ids through the global database would otherwise surface a tooltip for
+        // rooms that are not visible here.
+        if (room->getArea() != mAreaID) {
             continue;
         }
         // First line: room number and name (name omitted if empty).

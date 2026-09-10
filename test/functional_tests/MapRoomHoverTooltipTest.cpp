@@ -116,6 +116,10 @@ private slots:
         map()->mapClear();
         mAreaId = roomDB()->addArea(mAreaName);
         QVERIFY(mAreaId > 0);
+        // roomHoverTooltip() only describes rooms in the area the widget is
+        // currently showing, so point the widget at the area the fixtures live
+        // in - mirroring how the sibling map tests wire up mAreaID.
+        mp2dMap->mAreaID = mAreaId;
     }
 
     void cleanupTestCase()
@@ -206,6 +210,33 @@ private slots:
     {
         QCOMPARE(mp2dMap->roomHoverTooltip({}), QString());
         QCOMPARE(mp2dMap->roomHoverTooltip({999999}), QString()); // nonexistent room
+    }
+
+    void roomsOutsideDisplayedAreaAreHidden()
+    {
+        // The widget shows mAreaId. A room living in a different area must not
+        // surface in the tooltip even if its id is handed to
+        // roomHoverTooltip(): this is the defence that stops a hover timer armed
+        // over the previous area from describing rooms that are no longer on
+        // screen after centerview()/switchArea() repoint mAreaID.
+        const int otherArea = roomDB()->addArea(qsl("other hover area"));
+        QVERIFY(otherArea > 0);
+        QVERIFY(map()->addRoom(30));
+        QVERIFY(map()->setRoomArea(30, otherArea));
+        QVERIFY(map()->setRoomCoordinates(30, 9, 9, 0));
+        TRoom* foreign = roomDB()->getRoom(30);
+        foreign->name = qsl("Far Away");
+
+        addRoom(31, 0, 1, 0);
+        roomDB()->getRoom(31)->name = qsl("Local");
+
+        // Mixed set: only the room in the displayed area is described.
+        const QString mixed = mp2dMap->roomHoverTooltip({30, 31});
+        QVERIFY(mixed.contains(qsl("Local")));
+        QVERIFY(!mixed.contains(qsl("Far Away")));
+
+        // A set drawn entirely from the foreign area produces no tooltip.
+        QCOMPARE(mp2dMap->roomHoverTooltip({30}), QString());
     }
 
     void zeroDelayDisablesMouseTracking()
