@@ -158,6 +158,14 @@ public:
     void prepareSingleClickSelection(MapInteractionContext& context);
     std::optional<int> roomIdAtWidgetPosition(const QPoint& widgetPosition, const TArea* area) const;
     QSet<int> roomIdsAtWidgetPosition(const QPoint& widgetPosition, const TArea* area) const;
+    // Walks the spread offset sequence from the current `slot` (already
+    // advanced past the anchor) and returns the first cell not occupied by a
+    // different room, or nullopt if `maxSlots` consecutive candidates are all
+    // taken. Advances `slot` to the slot that yielded the result (or the last
+    // tried on exhaustion). Pure query exposed for testing - slot_spread()
+    // forwards to it, and the exhaustion path (return nullopt, leave the room
+    // where it is) needs a small maxSlots to exercise.
+    std::optional<QPoint> findFreeSpreadCell(TArea& area, int roomId, int z, int dx, int dy, int spread, qsizetype& slot, qsizetype maxSlots) const;
     void populateUserContextMenus(QMenu& menu);
 
     // Was getTopLeft() which returned an index into mMultiSelectionList but that
@@ -397,6 +405,12 @@ public slots:
     void slot_exportAreaToImage();
 
 private:
+    // Maps a 1-based index into the expanding-square-ring offset sequence used
+    // by slot_spread() to fan coincident rooms out around their centre. Slot 1
+    // is the first offset (north); the centre (slot 0) is the anchor that keeps
+    // its coordinates. Pure math, no instance state, so static.
+    static QPoint offsetForSpreadSlot(qsizetype slot);
+
     class InteractionDispatcher
     {
     public:

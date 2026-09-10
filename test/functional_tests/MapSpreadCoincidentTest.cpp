@@ -44,6 +44,7 @@
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "T2DMap.h"
+#include "TArea.h"
 #include "TMap.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
@@ -359,6 +360,63 @@ private slots:
         // And none of them may collide with the foreign room either.
         QVERIFY2(!occupiedCells.contains(qMakePair(occupiedX, occupiedY)),
                  "a selected room shares the foreign room's cell");
+    }
+
+    // findFreeSpreadCell() is the seam slot_spread() uses to skip occupied
+    // candidates. With a free neighbourhood it returns the first spiral cell.
+    void findFreeSpreadCellReturnsFirstFreeCell()
+    {
+        buildStackedMap();
+        TArea* pArea = roomDB()->getArea(mAreaId);
+        QVERIFY(pArea);
+
+        // No foreign rooms: the very first candidate (slot 1, due north at
+        // spread 1) is free and must be returned. slot starts at the anchor
+        // (0) and the caller advances past it before searching.
+        qsizetype slot = 0;
+        const auto cell = mp2dMap->findFreeSpreadCell(*pArea, /*roomId=*/2, /*z=*/0,
+                                                      scmStackX, scmStackY, /*spread=*/1,
+                                                      ++slot, /*maxSlots=*/8);
+        QVERIFY(cell.has_value());
+        QCOMPARE(cell->x(), scmStackX);
+        QCOMPARE(cell->y(), scmStackY + 1);
+        QCOMPARE(slot, qsizetype(1));
+    }
+
+    // When every one of the capped candidates is occupied, findFreeSpreadCell()
+    // must report exhaustion (nullopt) rather than handing back an occupied
+    // cell. slot_spread() turns that nullopt into "leave the room where it is",
+    // which is the fix for the review comment that an exhausted search used to
+    // park the room on an occupied cell and recreate the overlap.
+    void findFreeSpreadCellExhaustsWithoutColliding()
+    {
+        buildStackedMap();
+        TArea* pArea = roomDB()->getArea(mAreaId);
+        QVERIFY(pArea);
+
+        // Fill all eight ring-1 neighbours of the centre (Chebyshev distance 1)
+        // with foreign rooms. At spread 1 the spiral's first eight slots are
+        // exactly those cells, so capping the search at 8 guarantees it sees
+        // only occupied candidates.
+        const QList<QPair<int, int>> ring1{{0, 1}, {1, 1}, {1, 0}, {1, -1},
+                                           {0, -1}, {-1, -1}, {-1, 0}, {-1, 1}};
+        int foreignId = 1000;
+        for (const auto& [ox, oy] : ring1) {
+            QVERIFY(map()->addRoom(foreignId));
+            QVERIFY(map()->setRoomArea(foreignId, mAreaId));
+            QVERIFY(map()->setRoomCoordinates(foreignId, scmStackX + ox, scmStackY + oy, 0));
+            ++foreignId;
+        }
+
+        qsizetype slot = 0;
+        const auto cell = mp2dMap->findFreeSpreadCell(*pArea, /*roomId=*/2, /*z=*/0,
+                                                      scmStackX, scmStackY, /*spread=*/1,
+                                                      ++slot, /*maxSlots=*/8);
+        QVERIFY2(!cell.has_value(),
+                 "exhausting the capped candidates must return nullopt, not an occupied cell");
+        // The search advanced slot once per failed candidate, so it lands at
+        // the starting slot plus the allowance (1 + 8 here).
+        QCOMPARE(slot, qsizetype(9));
     }
 };
 

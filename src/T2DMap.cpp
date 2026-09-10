@@ -5222,6 +5222,60 @@ void T2DMap::slot_deleteRoom()
     mpMap->setUnsaved(__func__);
 }
 
+// Expanding-square-ring offset for slot_spread()'s fan-out. Slot 1 is the first
+// offset (north); slot 0 is the anchor. Walks the perimeter of [-ring,ring]^2
+// clockwise starting at (0,ring): five legs summing to 8*ring steps return just
+// shy of the start (E:r, S:2r, W:2r, N:2r, E:r). No trig, no duplicates, every
+// cell visited once.
+QPoint T2DMap::offsetForSpreadSlot(qsizetype slot)
+{
+    qsizetype ring = 1;
+    while (slot > 8 * ring) {
+        slot -= 8 * ring;
+        ++ring;
+    }
+    const int r = static_cast<int>(ring);
+    const int segLens[5] = {r, 2 * r, 2 * r, 2 * r, r};
+    const int segDX[5] = {1, 0, -1, 0, 1};
+    const int segDY[5] = {0, -1, 0, 1, 0};
+    int x = 0;
+    int y = r;
+    qsizetype moves = slot - 1;
+    for (int s = 0; s < 5; ++s) {
+        if (moves < segLens[s]) {
+            x += segDX[s] * static_cast<int>(moves);
+            y += segDY[s] * static_cast<int>(moves);
+            return QPoint(x, y);
+        }
+        x += segDX[s] * segLens[s];
+        y += segDY[s] * segLens[s];
+        moves -= segLens[s];
+    }
+    return QPoint(0, 0); // unreachable: slot <= 8*ring guarantees a hit
+}
+
+std::optional<QPoint> T2DMap::findFreeSpreadCell(TArea& area, const int roomId, const int z, const int dx, const int dy, const int spread, qsizetype& slot, const qsizetype maxSlots) const
+{
+    for (qsizetype tried = 0; tried < maxSlots; ++tried) {
+        const QPoint offset = offsetForSpreadSlot(slot);
+        const int x = dx + offset.x() * spread;
+        const int y = dy + offset.y() * spread;
+        const QList<int> occupants = area.getRoomsByPosition(x, y, z);
+        bool free = true;
+        for (const int occupantId : occupants) {
+            if (occupantId != roomId) {
+                free = false;
+                break;
+            }
+        }
+        if (free) {
+            return QPoint(x, y);
+        }
+        ++slot;
+    }
+    return std::nullopt;
+}
+
 void T2DMap::slot_spread()
 {
     if (mMultiSelectionSet.size() < 2) { // nothing to do!
@@ -5284,35 +5338,6 @@ void T2DMap::slot_spread()
         // (-1,0),(-1,1),(0,2),(1,2),... No trig, no duplicates, every cell
         // visited once. Slot 1 is the first offset; the centre (slot 0) is the
         // anchor room, which keeps its coordinates.
-        auto offsetForSlot = [](qsizetype slot) {
-            qsizetype ring = 1;
-            while (slot > 8 * ring) {
-                slot -= 8 * ring;
-                ++ring;
-            }
-            // Walk the perimeter of [-ring,ring]^2 clockwise starting at (0,ring).
-            // Cell #1 of the ring is the start (0,ring); cell #k is after k-1
-            // steps. Five legs sum to 8*ring steps and return just shy of the
-            // start: E:r, S:2r, W:2r, N:2r, E:r.
-            const int r = static_cast<int>(ring);
-            const int segLens[5] = {r, 2 * r, 2 * r, 2 * r, r};
-            const int segDX[5] = {1, 0, -1, 0, 1};
-            const int segDY[5] = {0, -1, 0, 1, 0};
-            int x = 0;
-            int y = r;
-            qsizetype moves = slot - 1;
-            for (int s = 0; s < 5; ++s) {
-                if (moves < segLens[s]) {
-                    x += segDX[s] * static_cast<int>(moves);
-                    y += segDY[s] * static_cast<int>(moves);
-                    return QPoint(x, y);
-                }
-                x += segDX[s] * segLens[s];
-                y += segDY[s] * segLens[s];
-                moves -= segLens[s];
-            }
-            return QPoint(0, 0); // unreachable: slot <= 8*ring guarantees a hit
-        };
 
         // Deterministic placement: walk the selection in ascending room-id order
         // so repeating the action is predictable. The highlighted centre room
@@ -5336,7 +5361,7 @@ void T2DMap::slot_spread()
                 continue;
             }
             const int z = pMovingR->z();
-            QPoint offset = offsetForSlot(++slot);
+            QPoint offset = offsetForSpreadSlot(++slot);
             int newX = dx + offset.x() * spread;
             int newY = dy + offset.y() * spread;
             if (pArea) {
@@ -5346,24 +5371,17 @@ void T2DMap::slot_spread()
                 // moved rooms count as occupants). The room's own z is used: spread
                 // preserves z, so each floor is independent. Bound the search so an
                 // implausibly packed map cannot wedge the loop: ~ring 50 (a
-                // 100x100 neighbourhood) is far beyond any realistic spread.
+                // 100x100 neighbourhood) is far beyond any realistic spread. If
+                // even that many candidates are all taken, leave the room where it
+                // is rather than parking it on an occupied cell and recreating the
+                // overlap spreading is meant to resolve.
                 constexpr qsizetype scmMaxSlotsToTry = 10000;
-                for (qsizetype tried = 0; tried < scmMaxSlotsToTry; ++tried) {
-                    const QList<int> occupants = pArea->getRoomsByPosition(newX, newY, z);
-                    bool free = true;
-                    for (const int occupantId : occupants) {
-                        if (occupantId != roomId) {
-                            free = false;
-                            break;
-                        }
-                    }
-                    if (free) {
-                        break;
-                    }
-                    offset = offsetForSlot(++slot);
-                    newX = dx + offset.x() * spread;
-                    newY = dy + offset.y() * spread;
+                const auto freeCell = findFreeSpreadCell(*pArea, roomId, z, dx, dy, spread, slot, scmMaxSlotsToTry);
+                if (!freeCell) {
+                    continue;
                 }
+                newX = freeCell->x();
+                newY = freeCell->y();
             }
             const int deltaWX = newX - pMovingR->x();
             const int deltaWY = newY - pMovingR->y();
