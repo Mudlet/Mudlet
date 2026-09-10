@@ -6422,9 +6422,11 @@ void dlgTriggerEditor::computeAliasIcon(TAlias* pT, QIcon& icon, QString& itemDe
 }
 
 // Restores an alias tree item to its non-error appearance and clears the editor notice.
-void dlgTriggerEditor::setAliasNormalIcon(QTreeWidgetItem* pItem, TAlias* pT)
+void dlgTriggerEditor::setAliasNormalIcon(QTreeWidgetItem* pItem, TAlias* pT, bool touchNotification)
 {
-    clearEditorNotification();
+    if (touchNotification) {
+        clearEditorNotification();
+    }
     if (pT->checkIfNew()) {
         // A freshly added alias keeps its "unsaved" cue until an explicit Save
         // activates it - don't recompute it to an active/inactive icon here.
@@ -6440,14 +6442,16 @@ void dlgTriggerEditor::setAliasNormalIcon(QTreeWidgetItem* pItem, TAlias* pT)
 }
 
 // Flags an alias tree item as broken and shows the given error message.
-void dlgTriggerEditor::showAliasError(QTreeWidgetItem* pItem, const QString& name, const QString& error)
+void dlgTriggerEditor::showAliasError(QTreeWidgetItem* pItem, const QString& name, const QString& error, bool touchNotification)
 {
     QIcon iconError;
     iconError = cachedIcon(qsl(":/icons/tools-report-bug.png"));
     pItem->setIcon(0, iconError);
     pItem->setText(0, name);
     pItem->setData(0, Qt::AccessibleDescriptionRole, descError);
-    showError(error);
+    if (touchNotification) {
+        showError(error);
+    }
 }
 
 void dlgTriggerEditor::showAliasLoopWarning(QTreeWidgetItem* pItem, const QString& name)
@@ -6459,18 +6463,21 @@ void dlgTriggerEditor::showAliasLoopWarning(QTreeWidgetItem* pItem, const QStrin
 
 // Reflects the alias's compile state on its tree item: normal icon when the
 // pattern compiles, faulty-regex error otherwise.
-void dlgTriggerEditor::applyAliasState(QTreeWidgetItem* pItem, TAlias* pT)
+void dlgTriggerEditor::applyAliasState(QTreeWidgetItem* pItem, TAlias* pT, bool touchNotification)
 {
     if (pT->state()) {
-        setAliasNormalIcon(pItem, pT);
+        setAliasNormalIcon(pItem, pT, touchNotification);
     } else {
-        showAliasError(pItem, pT->getName(), pT->getError());
+        showAliasError(pItem, pT->getName(), pT->getError(), touchNotification);
     }
 }
 
 // Repaints aliasID's tree item (and, if any, its descendants) from its
 // current isActive() state - used when the state changed via the Lua
-// enableAlias()/disableAlias() API rather than the GUI toggle.
+// enableAlias()/disableAlias() API rather than the GUI toggle. Only touches
+// the shared editor-wide notification banner when aliasID is the item
+// currently open in the detail pane - otherwise a background state change
+// would clobber whatever diagnostic the user is actually looking at.
 void dlgTriggerEditor::refreshAliasIcon(int aliasID)
 {
     TAlias* pT = mpHost->getAliasUnit()->getAlias(aliasID);
@@ -6482,7 +6489,7 @@ void dlgTriggerEditor::refreshAliasIcon(int aliasID)
         return;
     }
 
-    applyAliasState(pItem, pT);
+    applyAliasState(pItem, pT, pItem == mpCurrentAliasItem);
 
     if (pItem->childCount() > 0) {
         children_icon_alias(pItem);
@@ -8928,7 +8935,9 @@ void dlgTriggerEditor::computeKeyIcon(TKey* pT, QIcon& icon, QString& itemDescri
 
 // Repaints keyID's tree item (and, if any, its descendants) from its current
 // isActive() state - used when the state changed via the Lua
-// enableKey()/disableKey() API rather than the GUI toggle.
+// enableKey()/disableKey() API rather than the GUI toggle. Only touches the
+// shared editor-wide notification banner when keyID is the item currently
+// open in the detail pane.
 void dlgTriggerEditor::refreshKeyIcon(int keyID)
 {
     TKey* pT = mpHost->getKeyUnit()->getKey(keyID);
@@ -8940,15 +8949,20 @@ void dlgTriggerEditor::refreshKeyIcon(int keyID)
         return;
     }
 
+    const bool isCurrentItem = (pItem == mpCurrentKeyItem);
     QIcon icon;
     QString itemDescription;
     if (pT->state()) {
-        clearEditorNotification();
+        if (isCurrentItem) {
+            clearEditorNotification();
+        }
         computeKeyIcon(pT, icon, itemDescription);
     } else {
         icon = cachedIcon(qsl(":/icons/tools-report-bug.png"));
         itemDescription = descError;
-        showError(pT->getError());
+        if (isCurrentItem) {
+            showError(pT->getError());
+        }
     }
     pItem->setIcon(0, icon);
     pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
@@ -9183,7 +9197,9 @@ void dlgTriggerEditor::computeScriptIcon(TScript* pT, QIcon& icon, QString& item
 
 // Repaints scriptID's tree item (and, if any, its descendants) from its
 // current isActive() state - used when the state changed via the Lua
-// enableScript()/disableScript() API rather than the GUI toggle.
+// enableScript()/disableScript() API rather than the GUI toggle. Only
+// touches the shared editor-wide notification banner when scriptID is the
+// item currently open in the detail pane.
 void dlgTriggerEditor::refreshScriptIcon(int scriptID)
 {
     TScript* pT = mpHost->getScriptUnit()->getScript(scriptID);
@@ -9195,15 +9211,20 @@ void dlgTriggerEditor::refreshScriptIcon(int scriptID)
         return;
     }
 
+    const bool isCurrentItem = (pItem == mpCurrentScriptItem);
     QIcon icon;
     QString itemDescription;
     if (pT->state()) {
-        clearEditorNotification();
+        if (isCurrentItem) {
+            clearEditorNotification();
+        }
         computeScriptIcon(pT, icon, itemDescription);
     } else {
         icon = cachedIcon(qsl(":/icons/tools-report-bug.png"));
         itemDescription = descError;
-        showError(pT->getError());
+        if (isCurrentItem) {
+            showError(pT->getError());
+        }
     }
     pItem->setIcon(0, icon);
     pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
@@ -9310,7 +9331,9 @@ void dlgTriggerEditor::computeTimerIcon(TTimer* pT, QIcon& icon, QString& itemDe
 
 // Repaints timerID's tree item (and, if any, its descendants) from its
 // current isActive() state - used when the state changed via the Lua
-// enableTimer()/disableTimer() API rather than the GUI toggle.
+// enableTimer()/disableTimer() API rather than the GUI toggle. Only touches
+// the shared editor-wide notification banner when timerID is the item
+// currently open in the detail pane.
 void dlgTriggerEditor::refreshTimerIcon(int timerID)
 {
     TTimer* pT = mpHost->getTimerUnit()->getTimer(timerID);
@@ -9322,15 +9345,20 @@ void dlgTriggerEditor::refreshTimerIcon(int timerID)
         return;
     }
 
+    const bool isCurrentItem = (pItem == mpCurrentTimerItem);
     QIcon icon;
     QString itemDescription;
     if (pT->state()) {
-        clearEditorNotification();
+        if (isCurrentItem) {
+            clearEditorNotification();
+        }
         computeTimerIcon(pT, icon, itemDescription);
     } else {
         icon = cachedIcon(qsl(":/icons/tools-report-bug.png"));
         itemDescription = descError;
-        showError(pT->getError());
+        if (isCurrentItem) {
+            showError(pT->getError());
+        }
     }
     pItem->setIcon(0, icon);
     pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
@@ -9440,6 +9468,9 @@ void dlgTriggerEditor::computeTriggerIcon(TTrigger* pT, QIcon& icon, QString& it
 // current isActive() state - used when the state changed via the Lua
 // enableTrigger()/disableTrigger() API rather than the GUI toggle, which
 // otherwise leaves the tree icon stale until the next full repopulation.
+// Only touches the shared editor-wide notification banner when triggerID is
+// the item currently open in the detail pane - otherwise a background state
+// change would clobber whatever diagnostic the user is actually looking at.
 void dlgTriggerEditor::refreshTriggerIcon(int triggerID)
 {
     TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(triggerID);
@@ -9451,15 +9482,20 @@ void dlgTriggerEditor::refreshTriggerIcon(int triggerID)
         return;
     }
 
+    const bool isCurrentItem = (pItem == mpCurrentTriggerItem);
     QIcon icon;
     QString itemDescription;
     if (pT->state()) {
-        clearEditorNotification();
+        if (isCurrentItem) {
+            clearEditorNotification();
+        }
         computeTriggerIcon(pT, icon, itemDescription);
     } else {
         icon = cachedIcon(qsl(":/icons/tools-report-bug.png"));
         itemDescription = descError;
-        showError(pT->getError());
+        if (isCurrentItem) {
+            showError(pT->getError());
+        }
     }
     pItem->setIcon(0, icon);
     pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);

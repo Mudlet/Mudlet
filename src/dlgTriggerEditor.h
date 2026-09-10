@@ -419,10 +419,10 @@ private:
     void computeTimerIcon(TTimer* pT, QIcon& icon, QString& itemDescription) const;
     void computeScriptIcon(TScript* pT, QIcon& icon, QString& itemDescription) const;
     void computeKeyIcon(TKey* pT, QIcon& icon, QString& itemDescription) const;
-    void setAliasNormalIcon(QTreeWidgetItem* pItem, TAlias* pT);
-    void showAliasError(QTreeWidgetItem* pItem, const QString& name, const QString& error);
+    void setAliasNormalIcon(QTreeWidgetItem* pItem, TAlias* pT, bool touchNotification = true);
+    void showAliasError(QTreeWidgetItem* pItem, const QString& name, const QString& error, bool touchNotification = true);
     void showAliasLoopWarning(QTreeWidgetItem* pItem, const QString& name);
-    void applyAliasState(QTreeWidgetItem* pItem, TAlias* pT);
+    void applyAliasState(QTreeWidgetItem* pItem, TAlias* pT, bool touchNotification = true);
     bool aliasSubstitutionLoops(const QString& regex, const QString& substitution) const;
     void saveTimer();
     void saveKey();
