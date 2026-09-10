@@ -35,6 +35,7 @@
 #include <QPixmap>
 #include <QPointer>
 #include <QPointF>
+#include <QSet>
 #include <QString>
 #include <QTreeWidget>
 #include <QWidget>
@@ -89,6 +90,7 @@ public:
     bool event(QEvent* event) override;
     void wheelEvent(QWheelEvent*) override;
     void mouseMoveEvent(QMouseEvent* event) override;
+    void leaveEvent(QEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* e) override;
 
     friend class CustomLineDrawContextMenuHandler;
@@ -158,6 +160,10 @@ public:
     void prepareSingleClickSelection(MapInteractionContext& context);
     std::optional<int> roomIdAtWidgetPosition(const QPoint& widgetPosition, const TArea* area) const;
     QSet<int> roomIdsAtWidgetPosition(const QPoint& widgetPosition, const TArea* area) const;
+    // Builds the hover-tooltip markup for the given rooms (number, name, exits
+    // per room; a horizontal rule between them when more than one). Pure query
+    // exposed for testing - slot_showRoomHover() forwards to it.
+    QString roomHoverTooltip(const QSet<int>& roomIds) const;
     void populateUserContextMenus(QMenu& menu);
 
     // Was getTopLeft() which returned an index into mMultiSelectionList but that
@@ -397,6 +403,9 @@ public slots:
     void slot_exportAreaToImage();
 
 private:
+    // Builds the exits line for a room's hover tooltip.
+    QString roomHoverExits(const TRoom* room) const;
+
     class InteractionDispatcher
     {
     public:
@@ -531,6 +540,25 @@ private:
     // Holds the QRadialGradient details to use for the player room:
     QGradientStops mPlayerRoomColorGradientStops;
 
+    // Hover-tooltip state for rooms under the cursor. A tooltip listing each
+    // room's number, name and exits appears after mRoomHoverDelay milliseconds
+    // of resting over the same set of rooms; moving away or onto empty space
+    // hides it. Multiple stacked rooms are separated by a horizontal rule.
+    QTimer* mRoomHoverTimer = nullptr;
+    QSet<int> mCurrentHoveredRooms;
+    QPoint mLastHoverGlobalPos;
+    int mRoomHoverDelay = 300;
+
+public:
+    // Sets the room hover-tooltip delay in milliseconds. A delay of 0 disables
+    // the feature entirely: it hides any current tooltip, drops mouse tracking
+    // (so plain mouse motion stops generating move events), and clears the
+    // hovered-room state.
+    void setRoomHoverDelay(int delayMs);
+    // True when room hover tooltips are enabled (delay > 0). Used by the move
+    // handlers to decide whether to leave mouse tracking on after a drag.
+    bool roomHoverEnabled() const { return mRoomHoverDelay > 0; }
+
     QPointer<dlgRoomProperties> mpDlgRoomProperties;
     QPointer<dlgMapLabel> mpDlgMapLabel;
     // Track the area last viewed so we can raise an event when it changes,
@@ -543,6 +571,7 @@ private:
 
 private slots:
     void slot_createRoom();
+    void slot_showRoomHover();
 };
 
 #endif // MUDLET_T2DMAP_H

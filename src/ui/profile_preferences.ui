@@ -2716,7 +2716,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="0" column="2">
+          <item row="1" column="0">
            <widget class="QCheckBox" name="checkBox_invertMapZoom">
             <property name="toolTip">
              <string>&lt;p&gt;If checked, scrolling up zooms out and scrolling down zooms in. If unchecked, scrolling up zooms in and scrolling down zooms out.&lt;/p&gt;</string>
@@ -2732,7 +2732,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="1" column="0">
+          <item row="1" column="1">
            <widget class="QCheckBox" name="checkbox_mMapperShowRoomBorders">
             <property name="toolTip">
              <string>&lt;p&gt;This enables borders around room. Color can be set in Mapper colors tab.&lt;/p&gt;</string>
@@ -2748,7 +2748,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="1" column="1">
+          <item row="2" column="0">
            <widget class="QCheckBox" name="checkBox_largeAreaExitArrows">
             <property name="text">
              <string>Use large area exit arrows in 2D view</string>
@@ -2758,7 +2758,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="1" column="2">
+          <item row="2" column="1">
            <widget class="QCheckBox" name="checkBox_showDefaultArea">
             <property name="toolTip">
              <string>&lt;p&gt;The default area (area id -1) is used by some mapper scripts as a temporary 'holding area' for rooms before they're placed in the correct area.&lt;/p&gt;</string>
@@ -2774,7 +2774,95 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="2" column="0" colspan="3">
+          <item row="3" column="0" colspan="2">
+           <widget class="QWidget" name="widget_tooltipDelay">
+            <layout class="QHBoxLayout" name="horizontalLayout_tooltipDelay">
+             <property name="leftMargin">
+              <number>0</number>
+             </property>
+             <property name="topMargin">
+              <number>0</number>
+             </property>
+             <property name="rightMargin">
+              <number>0</number>
+             </property>
+             <property name="bottomMargin">
+              <number>0</number>
+             </property>
+             <item>
+                <widget class="QLabel" name="label_tooltipDelay">
+                                         <property name="sizePolicy">
+                                          <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+                                           <horstretch>0</horstretch>
+                                           <verstretch>0</verstretch>
+                                          </sizepolicy>
+                                         </property>
+                                         <property name="text">
+                                          <string>Tooltip delay (ms, 0 to disable):</string>
+                                         </property>
+                                         <property name="buddy">
+                                          <cstring>spinBox_tooltipDelay</cstring>
+                                         </property>
+                                        </widget>
+            
+          
+             </item>
+             <item>
+                <widget class="QSpinBox" name="spinBox_tooltipDelay">
+                                         <property name="sizePolicy">
+                                          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                                           <horstretch>0</horstretch>
+                                           <verstretch>0</verstretch>
+                                          </sizepolicy>
+                                         </property>
+                                         <property name="minimumSize">
+                                          <size>
+                                           <width>70</width>
+                                           <height>0</height>
+                                          </size>
+                                         </property>
+                                         <property name="maximumSize">
+                                          <size>
+                                           <width>70</width>
+                                           <height>16777215</height>
+                                          </size>
+                                         </property>
+                                         <property name="alignment">
+                                          <set>Qt::AlignmentFlag::AlignCenter</set>
+                                         </property>
+                                         <property name="minimum">
+                                          <number>0</number>
+                                         </property>
+                                         <property name="maximum">
+                                          <number>5000</number>
+                                         </property>
+                                         <property name="singleStep">
+                                          <number>50</number>
+                                         </property>
+                                         <property name="value">
+                                          <number>300</number>
+                                         </property>
+                                        </widget>
+            
+          
+             </item>
+             <item>
+              <spacer name="horizontalSpacer_tooltipDelay">
+               <property name="orientation">
+                <enum>Qt::Orientation::Horizontal</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>40</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item row="5" column="0" colspan="3">
            <widget class="QGroupBox" name="gridGroupBox">
             <property name="enabled">
              <bool>true</bool>
@@ -2968,7 +3056,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </layout>
            </widget>
           </item>
-          <item row="3" column="0" colspan="3">
+          <item row="6" column="0" colspan="3">
            <widget class="QGroupBox" name="groupBox_mapSymbols">
             <property name="title">
              <string>Symbols</string>
@@ -5276,6 +5364,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>spinBox_exitSize</tabstop>
   <tabstop>spinBox_borderSize</tabstop>
   <tabstop>doubleSpinBox_gridSize</tabstop>
+  <tabstop>spinBox_tooltipDelay</tabstop>
   <tabstop>fontComboBox_mapSymbols</tabstop>
   <tabstop>checkBox_isOnlyMapSymbolFontToBeUsed</tabstop>
   <tabstop>pushButton_showGlyphUsage</tabstop>
