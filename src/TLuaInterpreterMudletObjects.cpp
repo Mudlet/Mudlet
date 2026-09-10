@@ -402,18 +402,7 @@ int TLuaInterpreter::disableScript(lua_State* L)
     const QString name = getVerifiedString(L, __func__, 1, "script name");
 
     Host& host = getHostFromLua(L);
-    int cnt = 0;
-    QMap<int, TScript*> const scripts = host.getScriptUnit()->getScriptList();
-    for (auto script : scripts) {
-        if (script->getName() == name) {
-            cnt++;
-            script->setIsActive(false);
-            if (host.mpEditorDialog) {
-                host.mpEditorDialog->refreshScriptIcon(script->getID());
-            }
-        }
-    }
-    if (cnt == 0) {
+    if (!host.getScriptUnit()->disableScript(name)) {
         return warnArgumentValue(L, __func__, qsl("script '%1' not found").arg(name));
     }
 
@@ -467,18 +456,7 @@ int TLuaInterpreter::enableScript(lua_State* L)
     const QString name = getVerifiedString(L, __func__, 1, "script name");
 
     Host& host = getHostFromLua(L);
-    int cnt = 0;
-    QMap<int, TScript*> const scripts = host.getScriptUnit()->getScriptList();
-    for (auto script : scripts) {
-        if (script->getName() == name) {
-            cnt++;
-            script->setIsActive(true);
-            if (host.mpEditorDialog) {
-                host.mpEditorDialog->refreshScriptIcon(script->getID());
-            }
-        }
-    }
-    if (cnt == 0) {
+    if (!host.getScriptUnit()->enableScript(name)) {
         return warnArgumentValue(L, __func__, qsl("script '%1' not found").arg(name));
     }
 
