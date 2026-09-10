@@ -304,7 +304,62 @@ private slots:
         QCOMPARE(pRoom3->y() - cy, room3OffsetYBefore * 2);
     }
 
+    // Spreading a stack must not drop a room onto a cell a different room
+    // already occupies: the sequence advances past occupied candidates.
+    void spreadSkipsOccupiedCells()
+    {
+        buildStackedMap();
 
+        // A pre-existing room - not part of the selection - parked exactly
+        // where the first offset (due north, distance = spread) would land.
+        constexpr int scmForeignRoom = 999;
+        QVERIFY(map()->addRoom(scmForeignRoom));
+        QVERIFY(map()->setRoomArea(scmForeignRoom, mAreaId));
+        const int occupiedX = scmStackX;
+        const int occupiedY = scmStackY + scmSpreadFactor;
+        QVERIFY(map()->setRoomCoordinates(scmForeignRoom, occupiedX, occupiedY, 0));
+
+        selectAllRooms();
+        QVERIFY(!mp2dMap->mMultiSelectionSet.contains(scmForeignRoom));
+
+        answerSpreadDialog(scmSpreadFactor);
+        mp2dMap->slot_spread();
+
+        // The foreign room is untouched.
+        const TRoom* pForeign = roomDB()->getRoom(scmForeignRoom);
+        QVERIFY(pForeign);
+        QCOMPARE(pForeign->x(), occupiedX);
+        QCOMPARE(pForeign->y(), occupiedY);
+
+        // No selected room may have landed on the occupied cell.
+        for (const int roomId : mRoomIds) {
+            const TRoom* pRoom = roomDB()->getRoom(roomId);
+            QVERIFY(pRoom);
+            QVERIFY2(!(pRoom->x() == occupiedX && pRoom->y() == occupiedY),
+                     qPrintable(qsl("room %1 was placed onto the occupied cell (%2,%3)")
+                                        .arg(roomId)
+                                        .arg(occupiedX)
+                                        .arg(occupiedY)));
+        }
+
+        // Selected rooms must still be pairwise non-colliding after the skip.
+        QHash<QPair<int, int>, int> occupiedCells;
+        for (const int roomId : mRoomIds) {
+            const TRoom* pRoom = roomDB()->getRoom(roomId);
+            const auto key = qMakePair(pRoom->x(), pRoom->y());
+            QVERIFY2(!occupiedCells.contains(key),
+                     qPrintable(qsl("selected rooms %1 and %2 collided on (%3,%4)")
+                                        .arg(occupiedCells.value(key))
+                                        .arg(roomId)
+                                        .arg(key.first)
+                                        .arg(key.second)));
+            occupiedCells.insert(key, roomId);
+        }
+
+        // And none of them may collide with the foreign room either.
+        QVERIFY2(!occupiedCells.contains(qMakePair(occupiedX, occupiedY)),
+                 "a selected room shares the foreign room's cell");
+    }
 };
 
 #include "MapSpreadCoincidentTest.moc"

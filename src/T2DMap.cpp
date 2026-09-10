@@ -5317,6 +5317,12 @@ void T2DMap::slot_spread()
         // Deterministic placement: walk the selection in ascending room-id order
         // so repeating the action is predictable. The highlighted centre room
         // stays put; the rest take successive offsets from the sequence.
+        //
+        // Skip any candidate cell that a different room already occupies, so
+        // spreading a stack does not bulldoze pre-existing rooms (nor rooms
+        // placed earlier in this same pass - getRoomsByPosition() reads live
+        // coordinates, so moved rooms count as occupants). The room's own z is
+        // used for the check: spread preserves z, so each floor is independent.
         QList<int> sortedRoomIds = mMultiSelectionSet.values();
         std::sort(sortedRoomIds.begin(), sortedRoomIds.end());
         qsizetype slot = 0;
@@ -5329,9 +5335,36 @@ void T2DMap::slot_spread()
                 pMovingR->calcRoomDimensions();
                 continue;
             }
-            const QPoint offset = offsetForSlot(++slot);
-            const int newX = dx + offset.x() * spread;
-            const int newY = dy + offset.y() * spread;
+            const int z = pMovingR->z();
+            QPoint offset = offsetForSlot(++slot);
+            int newX = dx + offset.x() * spread;
+            int newY = dy + offset.y() * spread;
+            if (pArea) {
+                // Advance through the sequence until the target cell is free of
+                // any other room (a pre-existing room, or one placed earlier in
+                // this pass - getRoomsByPosition() reads live coordinates, so
+                // moved rooms count as occupants). The room's own z is used: spread
+                // preserves z, so each floor is independent. Bound the search so an
+                // implausibly packed map cannot wedge the loop: ~ring 50 (a
+                // 100x100 neighbourhood) is far beyond any realistic spread.
+                constexpr qsizetype scmMaxSlotsToTry = 10000;
+                for (qsizetype tried = 0; tried < scmMaxSlotsToTry; ++tried) {
+                    const QList<int> occupants = pArea->getRoomsByPosition(newX, newY, z);
+                    bool free = true;
+                    for (const int occupantId : occupants) {
+                        if (occupantId != roomId) {
+                            free = false;
+                            break;
+                        }
+                    }
+                    if (free) {
+                        break;
+                    }
+                    offset = offsetForSlot(++slot);
+                    newX = dx + offset.x() * spread;
+                    newY = dy + offset.y() * spread;
+                }
+            }
             const int deltaWX = newX - pMovingR->x();
             const int deltaWY = newY - pMovingR->y();
             doneSomething = true;
