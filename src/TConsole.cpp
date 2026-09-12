@@ -786,18 +786,29 @@ void TConsole::resizeEvent(QResizeEvent* event)
         mpBaseVFrame->resize(x, y);
         mpBaseHFrame->resize(x, y);
         x -= (mpLeftToolBar->width() + mpRightToolBar->width());
+        // The height it has, not the height it will be given as in the branch
+        // below: by the time a console with a command line is resized from a
+        // script, the resize of mpBaseVFrame two lines up has laid the top bar
+        // out and this reads a real height. Only the main console's first
+        // resizes, while it is still being built, see Qt's 100x30 default here,
+        // and the resizes that follow immediately put those right - which is why
+        // the rows a console is created with only went missing below.
         y -= mpTopToolBar->height();
         // The mBorders components will be all zeros for all but the MainConsole:
         mpMainDisplay->resize(x - mBorders.left() - mBorders.right(), y - mBorders.top() - mBorders.bottom() - mpCommandLine->height());
     } else {
         mpMainFrame->resize(x, y);
-        // The top bar ends up as tall as whatever it holds, which for the types
-        // that reach here is usually nothing at all. Ask for the height it will
-        // be given rather than the one it has: a console is sized as it is
-        // created, before it has ever been laid out, and a widget that has not
-        // been laid out still reports Qt's default 30 pixels - taking those off
-        // leaves every miniconsole and user window a row or two of text shorter
-        // than it was asked for, until something resizes it again:
+        // Ask the bar for the height it will be given, not the height it has: a
+        // console is sized as it is created, before this frame's layout has ever
+        // run, and a child widget still carries Qt's 100x30 default geometry
+        // until then - taking those 30 pixels off left every miniconsole and
+        // user window a row or two of text short of what it asked for, until
+        // something resized it again. The hint is exact because the bar's
+        // vertical size policy is Fixed inside a QVBoxLayout. In practice it is
+        // always zero: only a main console's easy button bars ever fill that bar,
+        // and a main console cannot reach this branch, since enableCommandLine()
+        // and disableCommandLine() both refuse "main" and nothing else hides that
+        // command line.
         if (!mpTopToolBar->isHidden()) {
             y -= mpTopToolBar->sizeHint().height();
         }
