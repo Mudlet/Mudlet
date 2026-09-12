@@ -251,7 +251,16 @@ void GMCPAuthenticator::saveSupportsSet(const QString& packageMessage, const QSt
                 mOAuthScopes.append(scopeName);
             }
         }
-        mOAuthNonceRequired = jsonObj[qsl("nonce")].toBool();
+        // The standard's field is nonce_required, named deliberately apart from the string nonce that
+        // Char.Login.URL and Char.Login.AuthCode carry. Mudlet read plain "nonce" until #10623, so a
+        // conformant server's nonce_required was ignored and its authorization request went out with no
+        // nonce for the server to check the ID token against. The old key is still accepted when the
+        // standard's is absent, so a server written against the previous behaviour keeps working.
+        auto nonceRequired = decodeWireBool(jsonObj[qsl("nonce_required")]);
+        if (!nonceRequired.has_value()) {
+            nonceRequired = decodeWireBool(jsonObj[qsl("nonce")]);
+        }
+        mOAuthNonceRequired = nonceRequired.value_or(false);
     }
 
 #if defined(DEBUG_GMCP_AUTHENTICATION)
@@ -783,9 +792,22 @@ void GMCPAuthenticator::handleAuthResult(const QString& packageMessage, const QS
     }
     auto obj = doc.object();
 
-    // some game drivers can parse JSON for true or false, but may not be able to write booleans back
-    auto result = obj[qsl("success")];
-    bool success = (result.isBool() && result.toBool()) || (result.isString() && result.toString() == "true");
+    // The standard declares success boolean and permits all three encodings, so it decodes like every
+    // other declared boolean here. Reading only a JSON true or the string "true" made an integer 1 a
+    // failure, and a failed reconnect runs the recovery below - telling the player their sign-in
+    // expired and deleting a token the server had just accepted (#10622). The drivers that send 1 are
+    // the ones with no JSON boolean, the same limitation that motivated secure_only's string form.
+    //
+    // success is required, so absent is not a state the standard allows; false remains the reading for
+    // it, as it always was. An undecodable value is worth reporting, because a server whose result is
+    // unreadable will look to its players like a login that silently failed.
+    const auto declaredSuccess = obj[qsl("success")];
+    const auto decodedSuccess = decodeWireBool(declaredSuccess);
+    if (!decodedSuccess.has_value() && !declaredSuccess.isUndefined()) {
+        qWarning().noquote().nospace() << "GMCP " << packageMessage << " - a 'success' value of type " << declaredSuccess.type()
+                                       << " is not a boolean in any form the standard permits; treating the attempt as failed.";
+    }
+    const bool success = decodedSuccess.value_or(false);
     auto message = obj[qsl("message")].toString();
 
     // A failed password-less reconnect is not a dead end: retryOrDropRejectedToken() first checks

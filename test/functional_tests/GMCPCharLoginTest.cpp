@@ -978,6 +978,40 @@ private slots:
         QCOMPARE(mpServer->countReceived(qsl("Char.Login.Reconnect")), 0);
     }
 
+    void testReconnectAcceptedAsTheIntegerOneKeepsTheToken_data()
+    {
+        QTest::addColumn<QString>("successLiteral");
+        // Issue #10622: the standard declares success boolean and permits all three encodings. Reading
+        // only a JSON true or the string "true" made an integer 1 a failure - and a failed reconnect
+        // runs the recovery, which tells the player their sign-in expired and deletes a token the
+        // server had just accepted. The drivers that send 1 are the ones with no JSON boolean, which is
+        // the same limitation that motivated secure_only's string form.
+        QTest::newRow("integer one") << qsl("1");
+        QTest::newRow("string one") << qsl("\"1\"");
+        QTest::newRow("string TRUE") << qsl("\"TRUE\"");
+        QTest::newRow("JSON true") << qsl("true");
+    }
+
+    void testReconnectAcceptedAsTheIntegerOneKeepsTheToken()
+    {
+        QFETCH(QString, successLiteral);
+        Host* host = connectAndNegotiate(true);
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+        QVERIFY(seedSplitSignIn(host->getName(), qsl("{\"account\": \"acct:char\", \"secure_only\": true}"), qsl("saved-token")));
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\", \"password-credentials\"]}"));
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Reconnect"), sent), "client did not replay the saved token");
+
+        mpServer->sendGmcp(qsl("Char.Login.Result {\"success\": %1}").arg(successLiteral));
+
+        QVERIFY2(!waitForConsoleContains(host, qsl("saved sign-in has expired"), 1000), "an accepted reconnect must not be reported as expired");
+        QVERIFY2(CredentialManager::retrieveCredential(host->getName(), qsl("reconnect-token")) == qsl("saved-token"), "an accepted reconnect must not destroy the token the server just accepted");
+    }
+
     void testSavedTokenIsNotReplayedOverCleartext()
     {
         Host* host = connectAndNegotiate();
@@ -1624,6 +1658,25 @@ private slots:
         QCOMPARE(sent.value(qsl("token_storage")), QJsonValue(true));
     }
 
+    void testTheLegacyNonceKeyStillRequestsANonce()
+    {
+        // Issue #10623: Mudlet read "nonce" where the standard's field is "nonce_required". The code
+        // now reads the standard's name, but a server written against the old behaviour must keep
+        // working, so the old key is still honoured when the standard's is absent.
+        Host* host = connectAndNegotiate(true);
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+        startDiscoveryServer();
+        mOpenedUrls.clear();
+
+        mpServer->sendGmcp(clientDrivenDefaultWithLegacyNonceKey());
+        QTRY_VERIFY(!mOpenedUrls.isEmpty());
+
+        const QUrlQuery authorizationQuery(mOpenedUrls.first());
+        QVERIFY2(!authorizationQuery.queryItemValue(qsl("nonce")).isEmpty(), "the legacy nonce key should still request a nonce");
+    }
+
     void testAuthCodeOmitsTheNonceWhenTheServerDidNotAskForIt()
     {
         Host* host = connectAndNegotiate(true);
@@ -1722,11 +1775,20 @@ private:
         QVERIFY(mpDiscovery->start());
     }
 
-    // Advertises the client-driven OAuth capability, which the client only honours over TLS.
+    // Advertises the client-driven OAuth capability, which the client only honours over TLS. The field
+    // is nonce_required, deliberately named apart from the string nonce that Char.Login.URL and
+    // Char.Login.AuthCode carry.
     QString clientDrivenDefault(bool requestNonce = true) const
     {
-        return qsl(R"(Char.Login.Default {"version": 2, "type": ["oauth"], "location": "%1", "client_id": "test-client", "nonce": %2})")
+        return qsl(R"(Char.Login.Default {"version": 2, "type": ["oauth"], "location": "%1", "client_id": "test-client", "nonce_required": %2})")
                 .arg(mpDiscovery->discoveryUrl(), requestNonce ? qsl("true") : qsl("false"));
+    }
+
+    // The key Mudlet read before issue #10623. Still honoured so a server written against the old
+    // behaviour keeps working.
+    QString clientDrivenDefaultWithLegacyNonceKey() const
+    {
+        return qsl(R"(Char.Login.Default {"version": 2, "type": ["oauth"], "location": "%1", "client_id": "test-client", "nonce": true})").arg(mpDiscovery->discoveryUrl());
     }
 
     // Drive the GUI to create/connect a profile, then wait for GMCP to negotiate. Reaching TLS by
