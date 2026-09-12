@@ -23,6 +23,26 @@ describe("Tests DateTime.lua functions", function()
       _G.cecho = _G.oldcecho
       _G.oldcecho = nil
     end)
+
+    it("should raise its documented assertion for something that is not a number", function()
+      local message = "Please supply a valid number"
+      assert.error_matches(function() shms("not a number") end, message)
+      assert.error_matches(function() shms(nil) end, message)
+      assert.error_matches(function() shms({}) end, message)
+    end)
+
+    it("should accept a number written as a string", function()
+      assert.are.same({'01', '32', '15'}, {shms("5535")})
+    end)
+
+    it("should keep counting hours past 24 rather than wrapping to a new day", function()
+      -- an uptime or a fight timer is not a clock, so 25 hours has to stay 25
+      assert.are.same({'25', '01', '01'}, {shms(90061)})
+    end)
+
+    it("should truncate a fractional second rather than rounding it up", function()
+      assert.are.same({'00', '01', '01'}, {shms(61.9)})
+    end)
   end)
 
   describe("Tests datetime:parse", function()
@@ -118,6 +138,10 @@ describe("Tests DateTime.lua functions", function()
       assert.are.equal(30, back.min)
       assert.are.equal(45, back.sec)
     end)
+
+    -- the isdst lookup calls os.time() on the half built date table before
+    -- anything has checked that the format supplied a day
+    pending("datetime:parse handles a format with no date part - '05:06:07' with '^%H:%M:%S$' raises \"field 'day' missing in date table\" - issue #10415")
   end)
 
   describe("Tests datetime:parse round-trips with string formatting", function()
@@ -165,6 +189,28 @@ describe("Tests DateTime.lua functions", function()
       local p = datetime:_get_pattern(fmt)
       assert.is_not_nil(p:tfind("2025-06-15"))
       assert.is_nil(p:tfind("not-a-date"))
+    end)
+
+    it("passes a directive it does not know through as a literal", function()
+      -- %Z is not in _directives, so it stays in the regex as the two characters
+      -- it is written with rather than becoming a capture group
+      local fmt = "^%Z$"
+      datetime._pattern_cache[fmt] = nil
+      local p = datetime:_get_pattern(fmt)
+      assert.is_not_nil(p:tfind("%Z"))
+      assert.is_nil(p:tfind("Z"))
+      datetime._pattern_cache[fmt] = nil
+    end)
+
+    it("compiles a format only once and hands the same pattern back", function()
+      local fmt = "^dateTimeSpecUncachedFormat %Y$"
+      datetime._pattern_cache[fmt] = nil
+      local before = table.size(datetime._pattern_cache)
+      local first = datetime:_get_pattern(fmt)
+      assert.equals(before + 1, table.size(datetime._pattern_cache))
+      assert.equals(first, datetime:_get_pattern(fmt))
+      assert.equals(before + 1, table.size(datetime._pattern_cache))
+      datetime._pattern_cache[fmt] = nil
     end)
   end)
 

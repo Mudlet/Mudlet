@@ -90,7 +90,8 @@ private slots:
         qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
 
         // VoskRecognizer's path helpers go through MudletPaths::getMudletPath(),
-        // which dereferences mudlet::self()
+        // which resolves the config root itself - so it is setupConfig() that
+        // settles it on the redirected one, not mudlet::start()
         mudlet::start();
         mudlet::self()->setupConfig();
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));

@@ -27,7 +27,7 @@
 // would otherwise touch the real one has to skip
 inline bool portableMarkerPresent()
 {
-    return MudletPaths::resolveConfigRoot(MudletPaths::executableDir()).portable;
+    return !MudletPaths::portableMarkerPath(MudletPaths::executableDir()).isEmpty();
 }
 
 #endif // MUDLET_PORTABLEMODETESTHELPER_H

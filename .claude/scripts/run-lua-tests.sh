@@ -154,6 +154,10 @@ export MUDLET_TEST_HTTP_PORT="$HTTP_PORT"
 export MUDLET_TEST_MMCP_DIR="$peer_dir"
 export MUDLET_TEST_TELNET_DIR="$telnet_dir"
 export XDG_RUNTIME_DIR="${MUDLET_TEST_DISCORD_RUNTIME_DIR:-$runtime_dir}"
+# Xvfb is an X server, so both toolkits have to target X11 - on a Wayland desktop
+# neither picks it by itself, and the GTK3 platform theme Qt loads under GNOME
+# calls gtk_init(), which exits the process when it cannot open a display.
+export QT_QPA_PLATFORM=xcb
 # Replacing XDG_RUNTIME_DIR above also hides the desktop's Wayland socket. Where
 # Qt loads its GTK platform theme, GDK then finds no display it is willing to
 # open and gtk_init() exits the process during QApplication construction - status
