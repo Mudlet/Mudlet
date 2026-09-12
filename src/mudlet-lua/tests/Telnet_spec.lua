@@ -1376,6 +1376,14 @@ describe("MXP auto-detection from the mode switch escape", function()
     assert.is_false(getConfig("specialForceMXPProcessorOn"))
   end)
 
+  -- the detection is ESC [ # z, not ESC anything # z: another escape family
+  -- carrying the same two bytes after it must not turn MXP on
+  it("ignores an escape that is not a control sequence introducer", function()
+    feed("\27X1z<send>look</send>\r\n")
+    assert.is_false(getConfig("promptForMXPProcessorOn"))
+    assert.is_false(getConfig("specialForceMXPProcessorOn"))
+  end)
+
   it("ignores SGR sequences and a bracket that is not part of an escape", function()
     feed("\27[1mBold\27[0m and [1z in plain text\r\n")
     assert.is_false(getConfig("promptForMXPProcessorOn"))
