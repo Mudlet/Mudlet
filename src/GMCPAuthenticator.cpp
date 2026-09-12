@@ -284,9 +284,13 @@ void GMCPAuthenticator::sendCredentials(bool interactiveHandoff)
         // A version 2 hand-off is identified by carrying no account, not by being literally {}, so the
         // common fields ride on it - and carrying token_storage here is the whole reason to send it:
         // this message reaches the game before it writes a line of its sign-in screen, which is the last
-        // moment at which it can still decide whether to offer to remember this player. Version 1
-        // predates both that rule and the field, so its hand-off stays the bare {} object that a version
-        // 1 server may still be testing for literally.
+        // moment at which it can still decide whether to offer to remember this player.
+        //
+        // A version 1 exchange keeps the bare {} instead. That is a compatibility choice rather than
+        // anything the standard asks for: the empty hand-off is itself a version 2 addition, so no
+        // version 1 server was ever told to expect one. Mudlet has sent {} to such servers since long
+        // before the standard existed, and some may well have been written against exactly that, so
+        // there is nothing to gain by widening it now.
         addCommonFields(credentials);
     }
 
