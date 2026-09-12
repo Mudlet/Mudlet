@@ -47,6 +47,7 @@
 #include <algorithm>
 
 Hunhandle* TSpellChecker::smpHunspell_sharedDictionary = nullptr;
+bool TSpellChecker::smSharedDictionaryFailed = false;
 QSet<QString> TSpellChecker::smWordSet_shared;
 
 namespace {
@@ -260,6 +261,7 @@ void TSpellChecker::applyUserDictionaryOptions()
     bool useSharedDictionary = false;
     mpHost->getUserDictionaryOptions(enableUserDictionary, useSharedDictionary);
     if (!enableUserDictionary) {
+        mProfileDictionaryFailed = false;
         if (mpHunspell_profile) {
             Hunspell_destroy(mpHunspell_profile);
             mpHunspell_profile = nullptr;
@@ -282,9 +284,13 @@ void TSpellChecker::applyUserDictionaryOptions()
 
 Hunhandle* TSpellChecker::profileHandle()
 {
-    if (!mpHunspell_profile) {
+    if (!mpHunspell_profile && !mProfileDictionaryFailed) {
         qDebug() << "TSpellChecker::profileHandle() INFO - Preparing profile's own Hunspell dictionary...";
         mpHunspell_profile = prepareProfileDictionary(mpHost->getName(), mWordSet_profile);
+        if (!mpHunspell_profile) {
+            qWarning() << "TSpellChecker::profileHandle() ERROR - the profile's own dictionary could not be opened, so it will not be used for the rest of this session.";
+            mProfileDictionaryFailed = true;
+        }
     }
     return mpHunspell_profile;
 }
@@ -429,17 +435,26 @@ QPair<bool, QString> TSpellChecker::removeWord(const QString& word)
 
 /*static*/ Hunhandle* TSpellChecker::sharedDictionary()
 {
-    if (smpHunspell_sharedDictionary) {
+    if (smpHunspell_sharedDictionary || smSharedDictionaryFailed) {
         return smpHunspell_sharedDictionary;
     }
 
     smpHunspell_sharedDictionary =
             openDictionary(MudletApp::getMudletPath(enums::mainDataItemPath, qsl("mudlet.dic")), MudletApp::getMudletPath(enums::mainDataItemPath, qsl("mudlet.aff")), smWordSet_shared);
+    if (!smpHunspell_sharedDictionary) {
+        // Same reason as mProfileDictionaryFailed: a shared dictionary that
+        // will not open is not scanned and rewritten again for every word
+        // typed. Nothing retries it until closeSharedDictionary() runs, so say
+        // so once rather than leave the silence to be explained later.
+        qWarning() << "TSpellChecker::sharedDictionary() ERROR - the shared dictionary could not be opened, so it will not be used for the rest of this session.";
+        smSharedDictionaryFailed = true;
+    }
     return smpHunspell_sharedDictionary;
 }
 
 /*static*/ void TSpellChecker::closeSharedDictionary()
 {
+    smSharedDictionaryFailed = false;
     if (!smpHunspell_sharedDictionary) {
         return;
     }

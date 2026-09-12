@@ -27,12 +27,20 @@
  * This stands an unopenable dictionary in the way and asks the spell checker to
  * add and to remove a word: both have to come back with a false/reason pair.
  *
+ * The failure also has to be remembered. userHandle() is on the per-word
+ * spell-check path (TCommandLine::spellCheck() -> spellCheckWord()), so a
+ * dictionary retried on every call means a scan of profile.dic and a rewrite of
+ * it and profile.aff in front of every misspelled word typed. Taking the rig
+ * away and asking again proves the retry is not happening: a second attempt
+ * would succeed, and would leave the rewritten pair on disk.
+ *
  * Run with: ctest -R SpellDictionaryFailureTest -V
  */
 
 #include <QtTest/QtTest>
 
 #include <QDir>
+#include <QFileInfo>
 #include <QTemporaryDir>
 
 #include "Host.h"
@@ -152,6 +160,21 @@ private slots:
         QVERIFY2(reason.contains(qsl("profile dictionary could not be opened")), qPrintable(qsl("spellSuggestWord() answered '%1'").arg(reason)));
     }
 
+    // Runs after the cases above because it takes the rig away: from here on a
+    // fresh attempt at the profile dictionary would succeed.
+    void test_theFailedProfileDictionaryIsNotOpenedAgain()
+    {
+        const QString dictionaryPath = MudletApp::getMudletPath(enums::profileDataItemPath, mProfileName, qsl("profile.dic"));
+        const QString affixPath = MudletApp::getMudletPath(enums::profileDataItemPath, mProfileName, qsl("profile.aff"));
+        QVERIFY2(QDir().rmdir(dictionaryPath), "could not remove the directory standing in for profile.dic");
+        QVERIFY(!QFileInfo::exists(dictionaryPath));
+        QVERIFY(!QFileInfo::exists(affixPath));
+
+        QVERIFY2(!mpHost->spellChecker().userHandle(), "the failed profile dictionary was opened again instead of the failure being remembered");
+        QVERIFY2(!QFileInfo::exists(dictionaryPath), "a second attempt rewrote profile.dic, so the failed open is retried for every word checked");
+        QVERIFY2(!QFileInfo::exists(affixPath), "a second attempt rewrote profile.aff, so the failed open is retried for every word checked");
+    }
+
     // The shared dictionary fails the same three ways, and reaching it is a
     // matter of one profile setting, so these run last - they leave the profile
     // pointed at the shared dictionary.
@@ -172,6 +195,27 @@ private slots:
         const auto result = mpHost->spellChecker().removeWord(qsl("kalamazoo"));
         QVERIFY2(!result.first, "removeWord() claimed to have removed a word with no dictionary to remove it from");
         QVERIFY2(result.second.contains(qsl("could not be opened")), qPrintable(qsl("removeWord() blamed the wrong thing: '%1'").arg(result.second)));
+    }
+
+    void test_theFailedSharedDictionaryIsNotOpenedAgain()
+    {
+        const QString dictionaryPath = MudletApp::getMudletPath(enums::mainDataItemPath, qsl("mudlet.dic"));
+        const QString affixPath = MudletApp::getMudletPath(enums::mainDataItemPath, qsl("mudlet.aff"));
+        QVERIFY2(QDir().rmdir(dictionaryPath), "could not remove the directory standing in for mudlet.dic");
+        QVERIFY(!QFileInfo::exists(dictionaryPath));
+        QVERIFY(!QFileInfo::exists(affixPath));
+
+        QVERIFY2(!TSpellChecker::sharedDictionary(), "the failed shared dictionary was opened again instead of the failure being remembered");
+        QVERIFY2(!QFileInfo::exists(dictionaryPath), "a second attempt rewrote mudlet.dic, so the failed open is retried for every word checked");
+        QVERIFY2(!QFileInfo::exists(affixPath), "a second attempt rewrote mudlet.aff, so the failed open is retried for every word checked");
+    }
+
+    // Remembering the failure must not outlive the handle it was remembered
+    // for: closing the shared dictionary has to leave it openable again.
+    void test_closingTheSharedDictionaryLetsItBeOpenedAgain()
+    {
+        TSpellChecker::closeSharedDictionary();
+        QVERIFY2(TSpellChecker::sharedDictionary(), "the shared dictionary stayed refused after being closed, so the remembered failure outlived the handle");
     }
 };
 
