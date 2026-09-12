@@ -1822,8 +1822,17 @@ QSize T2DMap::lodRoomBlobSize() const
 // defined - a zoom has no upper bound, and at a ten-millionth of a pixel per
 // room the range is billions of cells wide, which a double holds and an int
 // does not.
-static int clampedRoomCoordinate(const double coordinate)
+// A zoom far enough out to overflow the float span leaves a room zero pixels
+// wide and the inverse transform dividing zero by zero. A NaN has no ordering
+// for qBound to clamp, and the comparisons settle both bounds the same way, so
+// clamping one collapses the range instead of widening it - hence the caller
+// naming the end that stands in for it, which draws every room into the one
+// pixel the map has become.
+static int clampedRoomCoordinate(const double coordinate, const int nanFallback)
 {
+    if (std::isnan(coordinate)) {
+        return nanFallback;
+    }
     return static_cast<int>(qBound(static_cast<double>(INT_MIN), coordinate, static_cast<double>(INT_MAX)));
 }
 
@@ -1839,10 +1848,10 @@ static int clampedRoomCoordinate(const double coordinate)
 // an extra cell only costs an index lookup that comes back empty.
 QRect T2DMap::viewportRoomBounds(const float rx0, const float ry0, const float roomWidth, const float roomHeight, const float widgetWidth, const float widgetHeight)
 {
-    const int minX = clampedRoomCoordinate(std::floor(static_cast<double>(-rx0) / roomWidth) - 1.0);
-    const int maxX = clampedRoomCoordinate(std::ceil(static_cast<double>(widgetWidth - rx0) / roomWidth) + 1.0);
-    const int minY = clampedRoomCoordinate(std::floor(static_cast<double>(ry0 - widgetHeight) / roomHeight) - 1.0);
-    const int maxY = clampedRoomCoordinate(std::ceil(static_cast<double>(ry0) / roomHeight) + 1.0);
+    const int minX = clampedRoomCoordinate(std::floor(static_cast<double>(-rx0) / roomWidth) - 1.0, INT_MIN);
+    const int maxX = clampedRoomCoordinate(std::ceil(static_cast<double>(widgetWidth - rx0) / roomWidth) + 1.0, INT_MAX);
+    const int minY = clampedRoomCoordinate(std::floor(static_cast<double>(ry0 - widgetHeight) / roomHeight) - 1.0, INT_MIN);
+    const int maxY = clampedRoomCoordinate(std::ceil(static_cast<double>(ry0) / roomHeight) + 1.0, INT_MAX);
     return QRect(QPoint(minX, minY), QPoint(maxX, maxY));
 }
 
