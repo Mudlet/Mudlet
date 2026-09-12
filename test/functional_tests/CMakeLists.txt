@@ -86,6 +86,7 @@ set(PROFILE_GROUP_TEST_SOURCES
     ProfileLifecycleTest.cpp
     ProfileLoadTempFileTest.cpp
     ProfileRoundTripTest.cpp
+    ProfileIniParseErrorTest.cpp
     ProfileSaveShutdownRaceTest.cpp
     ResetProfileTest.cpp
     SavedVariableFenceTest.cpp
