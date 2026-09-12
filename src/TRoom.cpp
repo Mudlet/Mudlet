@@ -29,6 +29,7 @@
 #include "TMap.h"
 #include "TRoomDB.h"
 
+#include <QDataStream>
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QJsonValue>
@@ -261,8 +262,7 @@ void TRoom::setExitStub(int direction, bool status)
                 exitStubs.append(direction);
             }
         } else {
-            mpRoomDB->mpMap->logError(tr("Cannot set exit stub in given direction in RoomID %1. There is already an exit there!")
-                                              .arg(QString::number(id)));
+            mpRoomDB->mpMap->logError(tr("Cannot set exit stub in given direction in RoomID %1. There is already an exit there!").arg(QString::number(id)));
             // Since there is no change don't proceed to mark map as needing saving
             return;
         }
@@ -372,8 +372,7 @@ bool TRoom::setArea(int areaID)
         mpRoomDB->addArea(areaID);
         pA = mpRoomDB->getArea(areaID);
         if (!pA) { // Oh dear, THAT didn't work
-            mpRoomDB->mpMap->logError(tr("Requested AreaID %1 did not exist and could not be created. Note: Area numbers must be greater than zero!")
-                                              .arg(QString::number(areaID)));
+            mpRoomDB->mpMap->logError(tr("Requested AreaID %1 did not exist and could not be created. Note: Area numbers must be greater than zero!").arg(QString::number(areaID)));
             return false;
         }
     }
@@ -384,8 +383,7 @@ bool TRoom::setArea(int areaID)
         pA2->removeRoom(id);
     } else {
         //: Although this is reported as an error it is not a problem
-        mpRoomDB->mpMap->logError(tr("When setting the Area for RoomID %1 it did not have a current area, this is unexpected but not a problem!")
-                                          .arg(QString::number(id)));
+        mpRoomDB->mpMap->logError(tr("When setting the Area for RoomID %1 it did not have a current area, this is unexpected but not a problem!").arg(QString::number(id)));
     }
 
     area = areaID;

@@ -53,6 +53,7 @@
 #include <QTextStream>
 
 #include <memory>
+#include <string>
 
 #include "TMxpMudlet.h"
 #include "TMxpProcessor.h"
@@ -375,6 +376,12 @@ public:
     void readPackageConfig(const QString&, QString&, bool, QString* whyNotRead = nullptr);
     QString getPackageConfig(const QString&, bool isModule = false, QString* whyNotRead = nullptr);
     void postMessage(const QString message) { mTelnet.postMessage(message); }
+    void printToMainConsole(const QString& msg);
+    void printToMainConsole(const QString& msg, QColor fgColor, QColor bgColor);
+    void printSystemMessage(const QString& msg);
+    void printOnDisplay(std::string& data, bool isFromServer);
+    void finalizeMainConsole();
+    bool mainConsoleShowsTimeStamps() const;
     QColor getAnsiColor(const int ansiCode, const bool isBackground = false) const;
     QPair<bool, QString> writeProfileData(const QString&, const QString&);
     QString readProfileData(const QString&);

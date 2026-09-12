@@ -27,6 +27,7 @@
 #include "T2DMap.h"
 #include "TMap.h"
 
+#include <QDataStream>
 #include <QElapsedTimer>
 #include <QRegularExpression>
 

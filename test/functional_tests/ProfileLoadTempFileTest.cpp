@@ -36,6 +36,7 @@
  * Run with: ctest -R ProfileLoadTempFileTest -V
  */
 
+#include <QSaveFile>
 #include <QtTest/QtTest>
 
 #include <QTemporaryDir>
