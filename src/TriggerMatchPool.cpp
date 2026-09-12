@@ -20,9 +20,11 @@
 #include "TriggerMatchPool.h"
 
 #include "TTrigger.h"
+#include "mudlet.h"
 #include "utils.h"
 
 #include <QDebug>
+#include <QSettings>
 #include <QThread>
 
 #include <algorithm>
@@ -92,21 +94,37 @@ int chunkIndexOf(const uint64_t cursor)
     return static_cast<int>(cursor & kFieldMask);
 }
 
-// An absent variable means the default. One that is set but does not parse,
-// or is below the floor, is refused out loud: a typo that quietly measured
-// the default is the worst outcome for a tuning knob.
-int envIntOr(const char* name, const int fallback, const int minimum)
+// A knob comes from the environment first, then from Mudlet.ini, then from the
+// default: the file is where a player sets one and keeps it, the environment
+// is how a test or a benchmark pins one for a single run without touching the
+// file. A value that is set but does not parse, or is below the floor, is
+// refused out loud: a typo that quietly measured the default is the worst
+// outcome for a tuning knob.
+int knobOr(const char* envName, const QString& iniKey, const int fallback, const int minimum)
 {
-    if (!qEnvironmentVariableIsSet(name)) {
-        return fallback;
+    if (qEnvironmentVariableIsSet(envName)) {
+        bool parsed = false;
+        const int value = qEnvironmentVariableIntValue(envName, &parsed);
+        if (!parsed || value < minimum) {
+            qWarning().nospace() << envName << " is set to " << qEnvironmentVariable(envName) << " but is not an integer of at least " << minimum << "; using " << fallback;
+            return fallback;
+        }
+        return value;
     }
-    bool parsed = false;
-    const int value = qEnvironmentVariableIntValue(name, &parsed);
-    if (!parsed || value < minimum) {
-        qWarning().nospace() << name << " is set to " << qEnvironmentVariable(name) << " but is not an integer of at least " << minimum << "; using " << fallback;
-        return fallback;
+    // The settings exist once mudlet has been set up; a pool created before
+    // that, or in a harness with no mudlet at all, runs on the defaults.
+    QSettings* settings = mudlet::self() ? mudlet::getQSettings() : nullptr;
+    if (settings && settings->contains(iniKey)) {
+        bool parsed = false;
+        const int value = settings->value(iniKey).toInt(&parsed);
+        if (!parsed || value < minimum) {
+            qWarning().nospace().noquote() << "Mudlet.ini sets " << iniKey << " to \"" << settings->value(iniKey).toString() << "\" but that is not an integer of at least " << minimum << "; using "
+                                           << fallback;
+            return fallback;
+        }
+        return value;
     }
-    return value;
+    return fallback;
 }
 } // namespace
 
@@ -130,12 +148,15 @@ TriggerMatchPool::TriggerMatchPool()
     // Half the machine, capped: past four the tail of the fork-join grows
     // faster than the share of work each extra thread takes away. Zero is how
     // the pool is turned off.
-    const int wanted = std::min(envIntOr("MUDLET_MATCH_THREADS", std::min(4, cores / 2), 0), cores);
-    mThreshold = envIntOr("MUDLET_MATCH_THRESHOLD", 32, 1);
-    mFloodChunkLines = envIntOr("MUDLET_MATCH_FLOOD_LINES", 8, 1);
+    const int wanted = std::min(knobOr("MUDLET_MATCH_THREADS", qsl("triggerMatchThreads"), std::min(4, cores / 2), 0), cores);
+    // Where a two-thread pool breaks even on a Release build: below this the
+    // fork-join costs the main thread as much as the regex work it hands away,
+    // while the helper burns a core spinning between lines for nothing.
+    mThreshold = knobOr("MUDLET_MATCH_THRESHOLD", qsl("triggerMatchThreshold"), 128, 1);
+    mFloodChunkLines = knobOr("MUDLET_MATCH_FLOOD_LINES", qsl("triggerMatchFloodLines"), 8, 1);
     // Zero parks a helper as soon as a batch is exhausted, which puts the
     // wake-up path under every line of a burst.
-    mSpinBudget = std::chrono::microseconds(envIntOr("MUDLET_MATCH_SPIN_US", 100, 0));
+    mSpinBudget = std::chrono::microseconds(knobOr("MUDLET_MATCH_SPIN_US", qsl("triggerMatchSpinMicroseconds"), 100, 0));
     if (wanted < 2) {
         return;
     }
@@ -243,7 +264,7 @@ uint32_t TriggerMatchPool::runChunks(const int slot)
         const int end = std::min(begin + mJob.chunkSize, mJob.count);
         for (int i = begin; i < end; ++i) {
             TTrigger* trigger = mJob.triggers[i];
-            trigger->setPrescanVerdict(mJob.passId, trigger->prescanMayFire(mJob.subject, mJob.subjectLength, *mJob.haystack, scratch));
+            trigger->setPrescanVerdict(mJob.passId, trigger->prescanMayFire(mJob.subject, mJob.subjectLength, *mJob.haystack, *mJob.lineBigrams, scratch));
         }
         mDone.fetch_add(1, std::memory_order_release);
     }
@@ -281,7 +302,8 @@ void TriggerMatchPool::workerLoop(const int slot)
     }
 }
 
-bool TriggerMatchPool::prescan(TTrigger* const* triggers, const int count, const quint32 passId, const char* subject, const int subjectLength, const QString& haystack)
+bool TriggerMatchPool::prescan(
+        TTrigger* const* triggers, const int count, const quint32 passId, const char* subject, const int subjectLength, const QString& haystack, const TBigramFilter& lineBigrams)
 {
     if (mThreads.empty() || count < mThreshold) {
         return false;
@@ -297,6 +319,7 @@ bool TriggerMatchPool::prescan(TTrigger* const* triggers, const int count, const
     mJob.subject = subject;
     mJob.subjectLength = subjectLength;
     mJob.haystack = &haystack;
+    mJob.lineBigrams = &lineBigrams;
 
     mDone.store(0, std::memory_order_relaxed);
     publish(chunkCount);

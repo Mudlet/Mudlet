@@ -126,6 +126,38 @@ public:
         return true;
     }
 
+    // Builds the summary now, on the calling thread, if it is worth having, so
+    // that couldContainShared() can be asked from other threads: after this
+    // nothing is left to build lazily.
+    void prepareForSharing() const
+    {
+        if (mSummarise && !mBuilt) {
+            mLineBits = bitsFor(mLine);
+            mBuilt = true;
+        }
+    }
+
+    // couldContain() for a thread that is not the main one: reads only, so it
+    // neither builds the summary nor counts the question. The count is what
+    // decides whether the next line is summarised, and the main thread asks
+    // about every substring pattern the prescan does not rule out, so the
+    // questions left uncounted here are the few the prescan answered itself.
+    bool couldContainShared(const QString& haystack, const Bits& pattern) const
+    {
+        Q_ASSERT(haystack.constData() == mLine.constData());
+        Q_UNUSED(haystack)
+        if (!mSummarise) {
+            return true;
+        }
+        Q_ASSERT_X(mBuilt, "TBigramFilter::couldContainShared", "prepareForSharing() has to run on the main thread before another thread asks");
+        for (int i = 0; i < Bits::scmWords; ++i) {
+            if (pattern.words[i] & ~mLineBits.words[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     int questionsAsked() const { return mQuestionsAsked; }
 
 private:
@@ -186,8 +218,9 @@ public:
     // enough to answer yes or no. Safe to call from another thread: it writes
     // nothing, taking the one piece of mutable state a match needs - PCRE2's
     // match data - from the caller. Answers yes to anything it cannot decide
-    // that way, so a false is a promise and a true is only a maybe.
-    bool prescanMayFire(const char* haystackC, int haystackCLength, const QString& haystack, pcre2_match_data* scratch) const;
+    // that way, so a false is a promise and a true is only a maybe. The bigram
+    // filter has to have been prepared for sharing by the main thread.
+    bool prescanMayFire(const char* haystackC, int haystackCLength, const QString& haystack, const TBigramFilter& lineBigrams, pcre2_match_data* scratch) const;
     // Records what the prescan for pass id decided. Written from a worker
     // thread, and only ever for a trigger no other worker is holding.
     void setPrescanVerdict(const quint32 passId, const bool mayFire)

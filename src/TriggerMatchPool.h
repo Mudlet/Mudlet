@@ -30,6 +30,7 @@
 #include <QString>
 
 class QThread;
+class TBigramFilter;
 class TTrigger;
 struct pcre2_real_match_data_8;
 
@@ -73,10 +74,11 @@ public:
     // line. Returns false when it declined the batch (too few triggers to be
     // worth distributing, or no worker threads), in which case nothing was
     // written and the caller runs its ordinary sequential pass. One caller at
-    // a time: the batch lives in the pool until this returns.
-    bool prescan(TTrigger* const* triggers, int count, quint32 passId, const char* subject, int subjectLength, const QString& haystack);
+    // a time: the batch lives in the pool until this returns. The bigram
+    // filter must already be prepared for sharing.
+    bool prescan(TTrigger* const* triggers, int count, quint32 passId, const char* subject, int subjectLength, const QString& haystack, const TBigramFilter& lineBigrams);
 
-    // Below this many triggers the fork-join costs more than it saves.
+    // Below this many regex triggers the fork-join costs more than it saves.
     int threshold() const { return mThreshold; }
     // How many lines one chunk has to carry before its matching is worth
     // sharing out - see TriggerUnit::processDataStream().
@@ -112,6 +114,7 @@ private:
         const char* subject = nullptr;
         int subjectLength = 0;
         const QString* haystack = nullptr;
+        const TBigramFilter* lineBigrams = nullptr;
     };
 
     // What the words the threads contend on are kept apart by. 128 rather than

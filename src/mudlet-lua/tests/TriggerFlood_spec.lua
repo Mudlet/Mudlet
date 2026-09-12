@@ -1,8 +1,8 @@
 -- A line arriving on its own and the same line arriving in the middle of a
 -- burst do not take the same path through the trigger engine. A chunk carrying
 -- MUDLET_MATCH_FLOOD_LINES lines or more (8 by default), in a profile with
--- MUDLET_MATCH_THRESHOLD pattern-bearing triggers or more (32), opens the
--- parallel prescan in TriggerMatchPool: worker threads decide up front which
+-- MUDLET_MATCH_THRESHOLD regex triggers or more (128), opens the parallel
+-- prescan in TriggerMatchPool: worker threads decide up front which of those
 -- triggers cannot match the line, and TTrigger::match() then skips those.
 --
 -- That decision is a second implementation of the matching rules, so if it ever
@@ -22,9 +22,10 @@
 -- one of them cold, which is the path a warm burst never touches.
 describe("trigger matching under a flood", function()
 
-    -- Enough pattern-bearing triggers to clear the prescan's threshold without
-    -- depending on what else the profile happens to have loaded.
-    local paddingTriggers = 40
+    -- Enough regex triggers to clear the prescan's threshold without depending
+    -- on what else the profile happens to have loaded. Only regex triggers
+    -- count: the rest are cheap enough to answer on the main thread.
+    local paddingTriggers = 130
 
     local ids
     local fired
@@ -84,7 +85,7 @@ describe("trigger matching under a flood", function()
         -- reachable by name from it.
         _G.FloodSpecNote = note
         for index = 1, paddingTriggers do
-            track(tempTrigger("flood_padding_matches_nothing_" .. index, function() note("padding") end))
+            track(tempRegexTrigger("^flood_padding_matches_nothing_" .. index .. "$", function() note("padding") end))
         end
     end)
 

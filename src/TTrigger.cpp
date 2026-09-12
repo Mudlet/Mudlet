@@ -275,6 +275,9 @@ quint32 TTrigger::smPrescanPassIdCounter = 0;
 bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, bool existingTrigger)
 {
     ++smStructureGeneration;
+    // A verdict reached against the old patterns says nothing about the new
+    // ones, and this can happen in the middle of the line it was reached for
+    mPrescanPassId = 0;
     patterns.replaceInStrings("\n", "");
     mPatterns.clear();
     mSubstringPatterns.clear();
@@ -1184,7 +1187,7 @@ void TTrigger::processExactMatch(int patternNumber, int posOffset, int lineNumbe
 // line: line number in the buffer
 // posOffset: position in the line to start matching from; used by child triggers
 
-bool TTrigger::prescanMayFire(const char* haystackC, const int haystackCLength, const QString& haystack, pcre2_match_data* scratch) const
+bool TTrigger::prescanMayFire(const char* haystackC, const int haystackCLength, const QString& haystack, const TBigramFilter& lineBigrams, pcre2_match_data* scratch) const
 {
     // Everything below decides "this trigger cannot possibly do anything on
     // this line". Anything whose outcome depends on more than the line text -
@@ -1211,10 +1214,16 @@ bool TTrigger::prescanMayFire(const char* haystackC, const int haystackCLength, 
             if (patternNumber >= static_cast<int>(mSubstringPatterns.size()) || !mSubstringPatterns[patternNumber].matcher) {
                 return true;
             }
+            const TSubstringPattern& pattern = mSubstringPatterns[patternNumber];
+            // The same dismissal match_substring() makes, so a pattern the line
+            // cannot hold is never searched for on any thread
+            if (!lineBigrams.couldContainShared(haystack, pattern.bigrams)) {
+                break;
+            }
             // unique_ptr's operator-> hands out a non-const matcher even from a
             // const member, so bind a const reference to keep the compiler
             // checking that this helper-thread path stays read-only.
-            const QStringMatcher& matcher = *mSubstringPatterns[patternNumber].matcher;
+            const QStringMatcher& matcher = *pattern.matcher;
             if (matcher.indexIn(haystack) != -1) {
                 return true;
             }

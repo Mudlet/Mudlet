@@ -407,14 +407,19 @@ void TriggerUnit::stopSameLineCreationLoop(const int chainId)
                                 .arg(triggerName, created));
 }
 
-// Flattens out the triggers whose own patterns gate what is below them. The walk
-// stops at any trigger that has both patterns and children: ruling such a parent
-// out already rules out everything beneath it, and its children are matched
-// against one of its captures rather than against the line, so a verdict reached
-// against the line would not apply to them.
+// Flattens out the triggers the match pool can take real work off the main
+// thread for: those with a Perl regex pattern, the one kind whose evaluation
+// costs a search. A substring pattern is dismissed by the bigram filter in a
+// few instructions on the main thread, and a begin-of-line or exact pattern by
+// one comparison, so handing those over would cost more in traffic between the
+// threads than it could save. The walk stops at any trigger that has both
+// patterns and children: ruling such a parent out already rules out everything
+// beneath it, and its children are matched against one of its captures rather
+// than against the line, so a verdict reached against the line would not apply
+// to them.
 void TriggerUnit::collectPrescanTasks(TTrigger* pT)
 {
-    if (!pT->getPatternsList().isEmpty()) {
+    if (pT->getRegexCodePropertyList().contains(REGEX_PERL)) {
         mPrescanTasks.push_back(pT);
     }
     if (pT->isFilterChain()) {
@@ -537,18 +542,26 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     const auto prescanGuard = qScopeGuard([previousPrescanPassId] {
         TTrigger::setPrescanPassId(previousPrescanPassId);
     });
-    rebuildPrescanTasksIfStale();
     // Only while the client is behind, which a chunk carrying many lines at once
     // is what looks like from here. Handing one line's matching to other cores
     // costs a wake-up that is repaid only when the next line is already waiting;
     // at the speed a game sends text the threads would wake, find half a
     // microsecond of work and sleep again, spending CPU to save nothing anyone
-    // could perceive.
-    const bool inFlood = mpHost && mpHost->mpConsole && mpHost->mpConsole->buffer.pendingChunkLines() >= TriggerMatchPool::instance().floodChunkLines();
-    if (inFlood && static_cast<int>(mPrescanTasks.size()) >= TriggerMatchPool::instance().threshold()) {
-        const quint32 passId = TTrigger::nextPrescanPassId();
-        if (TriggerMatchPool::instance().prescan(mPrescanTasks.data(), static_cast<int>(mPrescanTasks.size()), passId, subject, subjectLength, data)) {
-            TTrigger::setPrescanPassId(passId);
+    // could perceive. With the pool off none of this runs, not even the list
+    // rebuild, so the line takes exactly the path it took before the pool
+    // existed.
+    TriggerMatchPool& pool = TriggerMatchPool::instance();
+    const bool inFlood = pool.workerCount() > 0 && mpHost && mpHost->mpConsole && mpHost->mpConsole->buffer.pendingChunkLines() >= pool.floodChunkLines();
+    if (inFlood) {
+        rebuildPrescanTasksIfStale();
+        if (static_cast<int>(mPrescanTasks.size()) >= pool.threshold()) {
+            // Built here rather than by the first trigger to ask, so the helper
+            // threads find it ready and have nothing to write
+            lineBigrams.prepareForSharing();
+            const quint32 passId = TTrigger::nextPrescanPassId();
+            if (pool.prescan(mPrescanTasks.data(), static_cast<int>(mPrescanTasks.size()), passId, subject, subjectLength, data, lineBigrams)) {
+                TTrigger::setPrescanPassId(passId);
+            }
         }
     }
 

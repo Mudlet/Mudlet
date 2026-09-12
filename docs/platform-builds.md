@@ -137,15 +137,20 @@ This applies only to those six. Other `WITH_*` names are ordinary options: `WITH
 
 ## Runtime tuning: the trigger match pool
 
-When a single chunk from the game carries many lines, `TriggerMatchPool` (`src/TriggerMatchPool.h`) spreads the "can this trigger match this line?" question over a few helper threads. Four environment variables tune it, read once at startup; none are needed in normal use:
+When a single chunk from the game carries many lines, `TriggerMatchPool` (`src/TriggerMatchPool.h`) spreads the "can this trigger match this line?" question over a few helper threads, for the triggers with a Perl regex pattern - the one pattern kind whose evaluation costs a search; substring, begin-of-line and exact-match patterns are answered on the main thread in a few instructions, so nothing is gained by handing them over. Four knobs tune it, read once when the pool starts; none are needed in normal use. Each has a key in `Mudlet.ini` (in the `[General]` section, alongside the other settings there) for a player who wants to keep a setting, and an environment variable that overrides the file for one run, which is what the tests and benchmarks use:
 
-| Variable | Default | Meaning |
-| --- | --- | --- |
-| `MUDLET_MATCH_THREADS` | `min(4, cores / 2)` | Threads sharing a batch, the main thread included. Capped at the core count. Below 2 the pool is off, so `0` disables it. |
-| `MUDLET_MATCH_THRESHOLD` | `32` | Fewest pattern-bearing triggers a profile needs before a batch is shared out. `0` or below falls back to the default. |
-| `MUDLET_MATCH_FLOOD_LINES` | `8` | Fewest lines one incoming chunk must carry to count as a flood. `0` or below falls back to the default. |
-| `MUDLET_MATCH_SPIN_US` | `100` | Microseconds a helper keeps spinning after a batch before it parks. `0` parks at once, which is the setting for stressing the wake-up path. |
+| `Mudlet.ini` key | Environment variable | Default | Meaning |
+| --- | --- | --- | --- |
+| `triggerMatchThreads` | `MUDLET_MATCH_THREADS` | `min(4, cores / 2)` | Threads sharing a batch, the main thread included. Capped at the core count. Below 2 the pool is off, so `0` disables it and the trigger engine runs exactly as it did before the pool existed. |
+| `triggerMatchThreshold` | `MUDLET_MATCH_THRESHOLD` | `128` | Fewest regex triggers a profile needs before a batch is shared out. `0` or below falls back to the default. |
+| `triggerMatchFloodLines` | `MUDLET_MATCH_FLOOD_LINES` | `8` | Fewest lines one incoming chunk must carry to count as a flood. `0` or below falls back to the default. |
+| `triggerMatchSpinMicroseconds` | `MUDLET_MATCH_SPIN_US` | `100` | Microseconds a helper keeps spinning after a batch before it parks. `0` parks at once, which is the setting for stressing the wake-up path. |
 
-A value that is set but does not parse as an integer, or is out of range, is refused with a warning on the console and the default is used.
+A value that is set but does not parse as an integer, or is out of range, is refused with a warning on the console and the default is used. For example, to turn the pool off for good:
+
+```ini
+[General]
+triggerMatchThreads=0
+```
 
 Setting the threshold and flood lines to `1` puts every line through the pool, which is the way to run `src/mudlet-lua/tests/TriggerFlood_spec.lua` and the rest of the trigger specs against both paths; `MUDLET_MATCH_SPIN_US=0` on top makes every one of those lines a cold start. No checked-in CI job does this yet, so it is a local run, and the pool has to be on for it to mean anything - `MUDLET_MATCH_THREADS=2` on a small machine. `PipelineBenchmark` reads `MUDLET_BENCH_TRIGGERS` and `MUDLET_BENCH_CHUNK_LINES` to sweep trigger counts and chunk sizes against these thresholds - see the comment at the top of `test/functional_tests/PipelineBenchmark.cpp`.
