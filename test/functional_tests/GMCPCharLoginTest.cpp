@@ -1670,7 +1670,7 @@ private:
     static QString reconnectCredentialPath(const QString& profileName)
     {
         return qsl("%1/profiles/%2/passwords/%3")
-                .arg(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation), utils::sanitizeForPath(profileName), utils::sanitizeForPath(qsl("reconnect")));
+                .arg(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation), MudletPaths::sanitizeForPath(profileName), MudletPaths::sanitizeForPath(qsl("reconnect")));
     }
 
     static QString describe(const QJsonObject& obj) { return QString::fromUtf8(QJsonDocument(obj).toJson(QJsonDocument::Compact)); }
