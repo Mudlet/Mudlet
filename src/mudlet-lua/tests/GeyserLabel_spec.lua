@@ -105,6 +105,265 @@ describe("Tests functionality of Geyser.Label", function()
       assert.is_truthy(html:find("font%-size: 50pt"))
     end)
   end)
+
+  describe("Tests SVG transform functions", function()
+    local testLabel = "testSvgLabel"
+    local svgPath
+    local bigSvgPath
+
+    setup(function()
+      createLabel(testLabel, 0, 0, 100, 100, 1)
+      -- every case below runs against a label that really has an SVG on it, so
+      -- the render path runs rather than only the argument checks
+      svgPath = getMudletHomeDir() .. "/svg_spec_square.svg"
+      local file = io.open(svgPath, "w")
+      file:write([[<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10" width="10" height="10"><rect width="10" height="10" fill="#ff0000"/></svg>]])
+      file:close()
+      bigSvgPath = getMudletHomeDir() .. "/svg_spec_big.svg"
+      local bigFile = io.open(bigSvgPath, "w")
+      bigFile:write([[<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200"><rect width="200" height="200" fill="#00ff00"/></svg>]])
+      bigFile:close()
+      assert.is_true(setBackgroundImage(testLabel, svgPath))
+    end)
+
+    teardown(function()
+      hideWindow(testLabel)
+      os.remove(svgPath)
+      os.remove(bigSvgPath)
+    end)
+
+    describe("Tests getLabelSizeHint with an SVG background", function()
+      it("should report the document size of the SVG", function()
+        local width, height = getLabelSizeHint(testLabel)
+        assert.are.equal(10, width)
+        assert.are.equal(10, height)
+      end)
+
+      it("should add the border and the padding a stylesheet asks for", function()
+        setLabelStyleSheet(testLabel, [[border: 10px solid rgb(0, 0, 255); padding: 4px;]])
+        local width, height = getLabelSizeHint(testLabel)
+        setLabelStyleSheet(testLabel, "")
+        assert.are.equal(38, width)
+        assert.are.equal(38, height)
+      end)
+
+      it("should leave the hint of a label with text to that text", function()
+        echo(testLabel, "Hello")
+        local textWidth, textHeight = getLabelSizeHint(testLabel)
+        assert.is_true(setBackgroundImage(testLabel, bigSvgPath))
+        local width, height = getLabelSizeHint(testLabel)
+        echo(testLabel, "")
+        assert.is_true(setBackgroundImage(testLabel, svgPath))
+        assert.are.equal(textWidth, width)
+        assert.are.equal(textHeight, height)
+      end)
+    end)
+
+    describe("Tests setSvgTint", function()
+      it("should accept RGB values", function()
+        local result = setSvgTint(testLabel, 255, 0, 0)
+        assert.is_true(result)
+      end)
+
+      it("should accept color string", function()
+        local result = setSvgTint(testLabel, "#ff0000")
+        assert.is_true(result)
+      end)
+
+      it("should accept a Mudlet color name", function()
+        local result = setSvgTint(testLabel, "alice_blue")
+        assert.is_true(result)
+      end)
+
+      it("should accept an SVG color name", function()
+        local result = setSvgTint(testLabel, "aliceblue")
+        assert.is_true(result)
+      end)
+
+      it("should accept a Mudlet color name regardless of case", function()
+        local result = setSvgTint(testLabel, "Alice_Blue")
+        assert.is_true(result)
+      end)
+
+      it("should accept a CamelCase Mudlet color name QColor does not know", function()
+        local result = setSvgTint(testLabel, "LightGoldenrod")
+        assert.is_true(result)
+      end)
+
+      it("should return nil for invalid color string", function()
+        local result, err = setSvgTint(testLabel, "notacolor")
+        assert.is_nil(result)
+        assert.is_string(err)
+      end)
+
+      it("should return nil for out-of-range RGB", function()
+        local result, err = setSvgTint(testLabel, 256, 0, 0)
+        assert.is_nil(result)
+        assert.is_string(err)
+      end)
+
+      it("should return nil for non-existent label", function()
+        local result, err = setSvgTint("noSuchLabel", 255, 0, 0)
+        assert.is_nil(result)
+        assert.is_string(err)
+      end)
+
+      -- the tint belongs to the label, so nothing done to the image clears it;
+      -- that it is still on the pixels is LabelSvgBackgroundTest's job
+      it("should stay set across a reset and a new image", function()
+        assert.is_true(setSvgTint(testLabel, 0, 0, 255))
+        assert.is_true(resetBackgroundImage(testLabel))
+        assert.is_true(setBackgroundImage(testLabel, svgPath))
+      end)
+    end)
+
+    describe("Tests resetSvgTint", function()
+      it("should succeed on existing label", function()
+        local result = resetSvgTint(testLabel)
+        assert.is_true(result)
+      end)
+
+      it("should return nil for non-existent label", function()
+        local result, err = resetSvgTint("noSuchLabel")
+        assert.is_nil(result)
+        assert.is_string(err)
+      end)
+    end)
+
+    describe("Tests setSvgRotation", function()
+      it("should accept positive angle", function()
+        local result = setSvgRotation(testLabel, 45)
+        assert.is_true(result)
+      end)
+
+      it("should accept negative angle", function()
+        local result = setSvgRotation(testLabel, -90)
+        assert.is_true(result)
+      end)
+
+      it("should return nil for non-existent label", function()
+        local result, err = setSvgRotation("noSuchLabel", 45)
+        assert.is_nil(result)
+        assert.is_string(err)
+      end)
+
+      it("should return nil for a non-finite angle", function()
+        local result, err = setSvgRotation(testLabel, 0/0)
+        assert.is_nil(result)
+        assert.is_string(err)
+      end)
+    end)
+
+    describe("Tests resetSvgRotation", function()
+      it("should succeed on existing label", function()
+        local result = resetSvgRotation(testLabel)
+        assert.is_true(result)
+      end)
+
+      it("should return nil for non-existent label", function()
+        local result, err = resetSvgRotation("noSuchLabel")
+        assert.is_nil(result)
+        assert.is_string(err)
+      end)
+    end)
+
+    describe("Tests setSvgShear", function()
+      it("should accept shear values", function()
+        local result = setSvgShear(testLabel, 0.3, 0.1)
+        assert.is_true(result)
+      end)
+
+      it("should return nil for non-existent label", function()
+        local result, err = setSvgShear("noSuchLabel", 0.3, 0.1)
+        assert.is_nil(result)
+        assert.is_string(err)
+      end)
+
+      it("should return nil for a non-finite shear factor", function()
+        local result, err = setSvgShear(testLabel, 0/0, 0)
+        assert.is_nil(result)
+        assert.is_string(err)
+      end)
+    end)
+
+    describe("Tests resetSvgShear", function()
+      it("should succeed on existing label", function()
+        local result = resetSvgShear(testLabel)
+        assert.is_true(result)
+      end)
+
+      it("should return nil for non-existent label", function()
+        local result, err = resetSvgShear("noSuchLabel")
+        assert.is_nil(result)
+        assert.is_string(err)
+      end)
+    end)
+
+    describe("Tests resetSvgTransform", function()
+      it("should succeed on existing label", function()
+        local result = resetSvgTransform(testLabel)
+        assert.is_true(result)
+      end)
+
+      it("should return nil for non-existent label", function()
+        local result, err = resetSvgTransform("noSuchLabel")
+        assert.is_nil(result)
+        assert.is_string(err)
+      end)
+    end)
+
+    describe("Tests the Geyser.Label SVG wrappers", function()
+      local label
+
+      setup(function()
+        label = Geyser.Label:new({name = "svgSpecGeyser", x = 0, y = 0, width = 50, height = 50})
+        assert.is_true(label:setBackgroundImage(svgPath))
+      end)
+
+      teardown(function()
+        label:hide()
+      end)
+
+      -- Geyser.Label:new always echoes an empty rich-text div, so the hint has to
+      -- read the text as the document renders it rather than as a string
+      it("should report the document size through the empty div a Geyser label carries", function()
+        local width, height = getLabelSizeHint("svgSpecGeyser")
+        assert.are.equal(10, width)
+        assert.are.equal(10, height)
+      end)
+
+      it("should hand back what the global setSvgTint returned", function()
+        assert.is_true(label:setSvgTint("alice_blue"))
+      end)
+
+      it("should hand back what the global setSvgRotation returned", function()
+        assert.is_true(label:setSvgRotation(45))
+      end)
+
+      it("should hand back what the global setSvgShear returned", function()
+        assert.is_true(label:setSvgShear(0.3, 0.1))
+      end)
+
+      it("should report an unknown colour name rather than raising", function()
+        local ok, result, err = pcall(function()
+          return label:setSvgTint("not_a_colour")
+        end)
+        assert.is_true(ok)
+        assert.is_nil(result)
+        assert.is_string(err)
+      end)
+
+      -- Geyser.Color.parse reads only part of a hex string this short
+      it("should report a half-parsed hex colour rather than raising", function()
+        local ok, result, err = pcall(function()
+          return label:setSvgTint("#ff")
+        end)
+        assert.is_true(ok)
+        assert.is_nil(result)
+        assert.is_string(err)
+      end)
+    end)
+  end)
 end)
 
 -- Geometry, visibility and text readback for Geyser.Label, asserted against

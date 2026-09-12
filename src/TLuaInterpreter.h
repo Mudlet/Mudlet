@@ -607,6 +607,13 @@ public:
     static int enableClickthrough(lua_State*);
     static int disableClickthrough(lua_State*);
     static int setLabelStyleSheet(lua_State*);
+    static int setSvgTint(lua_State*);
+    static int resetSvgTint(lua_State*);
+    static int setSvgRotation(lua_State*);
+    static int resetSvgRotation(lua_State*);
+    static int setSvgShear(lua_State*);
+    static int resetSvgShear(lua_State*);
+    static int resetSvgTransform(lua_State*);
     static int setLinkStyle(lua_State*);
     static int resetLinkStyle(lua_State*);
     static int clearVisitedLinks(lua_State*);
