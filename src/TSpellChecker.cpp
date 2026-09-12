@@ -468,6 +468,10 @@ QPair<bool, QString> TSpellChecker::removeWord(const QString& word)
 /*static*/ bool TSpellChecker::addWordToShared(const QString& word)
 {
     auto* handle = sharedDictionary();
+    if (!handle) {
+        return false;
+    }
+
     bool isAdded = false;
     Hunspell_add(handle, word.toUtf8().constData());
     if (!smWordSet_shared.contains(word)) {
@@ -481,6 +485,10 @@ QPair<bool, QString> TSpellChecker::removeWord(const QString& word)
 /*static*/ bool TSpellChecker::removeWordFromShared(const QString& word)
 {
     auto* handle = sharedDictionary();
+    if (!handle) {
+        return false;
+    }
+
     bool isRemoved = false;
     Hunspell_remove(handle, word.toUtf8().constData());
     if (smWordSet_shared.remove(word)) {
