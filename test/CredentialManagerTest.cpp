@@ -23,8 +23,10 @@
 
 #include <QtTest/QtTest>
 
+#include <QDateTime>
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QStandardPaths>
 #include <QTemporaryDir>
 
@@ -38,6 +40,55 @@
 // async one is what dlgConnectionProfiles and dlgProfilePreferences actually call,
 // and MUDLET_TEST_MODE routes it down the same file storage, so its callbacks are
 // delivered synchronously and need no event loop.
+
+namespace {
+// Where a credential sits for a path component spelled out in full - which is how a Mudlet
+// that shortened a long name by truncation alone filed one, and where such a Mudlet still
+// looks today.
+QString credentialPath(const QString& profileComponent, const QString& key)
+{
+    return qsl("%1/profiles/%2/passwords/%3").arg(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation), profileComponent, key);
+}
+
+// Writes a credential straight to one path, encrypted for that profile: what an older
+// Mudlet's own store leaves behind.
+bool plantCredential(const QString& path, const QString& profileName, const QString& credential)
+{
+    if (!QDir().mkpath(QFileInfo(path).absolutePath())) {
+        return false;
+    }
+
+    const QString encrypted = SecureStringUtils::encryptStringForProfile(credential, profileName);
+    QFile file(path);
+
+    if (encrypted.isEmpty() || !file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        return false;
+    }
+
+    return file.write(encrypted.toUtf8()) != -1;
+}
+
+// What such a file holds, read the way the profile it was encrypted for reads it
+QString plantedCredential(const QString& path, const QString& profileName)
+{
+    QFile file(path);
+
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        return QString();
+    }
+
+    return SecureStringUtils::decryptStringForProfile(QString::fromUtf8(file.readAll()), profileName);
+}
+
+// Which of two copies of one credential was written last is what decides between them, so a
+// case that needs one to be the newer says so outright rather than leaving a filesystem's
+// timestamp resolution to separate two writes made a moment apart.
+bool setModificationTime(const QString& path, const int secondsFromNow)
+{
+    QFile file(path);
+    return file.open(QIODevice::ReadWrite) && file.setFileTime(QDateTime::currentDateTime().addSecs(secondsFromNow), QFileDevice::FileModificationTime);
+}
+} // namespace
 
 class CredentialManagerTest : public QObject
 {
@@ -58,6 +109,10 @@ private slots:
     void testCredentialsFiledUnderTheTruncatedPathSurvive();
     void testLegacySharedKeyPathOwnershipIsUndecidable();
     void testLegacyKeyAtTheLengthCapClaimsNoLongerKeysCredential();
+    void testTheTruncatedPathKeepsItsCopyForAnOlderMudlet();
+    void testTheNewerOfTheTwoCopiesIsTheOneHandedBack();
+    void testAPasswordSavedHereReachesTheTruncatedPathToo();
+    void testTheTruncatedPathIsNeverCreatedNorTakenOver();
     void testPathTraversalPrevention();
     void testConcurrentAccess();
     void testAsyncStoreAndRetrieve();
@@ -407,6 +462,121 @@ void CredentialManagerTest::testLegacyKeyAtTheLengthCapClaimsNoLongerKeysCredent
 
     QVERIFY(QFile::remove(legacyPath));
     CredentialManager::removeCredential(profile, longerKey);
+}
+
+// The file the earlier naming scheme left is the only place a Mudlet from before the rename
+// looks, so bringing a credential across has to copy it and not move it. Configuration
+// directories are shared between installed Mudlets, so moving it means a user who still has
+// an older one loses the password from it the moment a newer Mudlet has read it once.
+void CredentialManagerTest::testTheTruncatedPathKeepsItsCopyForAnOlderMudlet()
+{
+    const QString truncated(50, QChar('k'));
+    const QString profile = truncated + "KeptForAnOlderMudlet";
+    const QString key = "character";
+    const QString legacyPath = credentialPath(truncated, key);
+
+    QVERIFY(plantCredential(legacyPath, profile, "saved_by_the_older_mudlet"));
+
+    QCOMPARE(CredentialManager::retrieveCredential(profile, key), QString("saved_by_the_older_mudlet"));
+
+    QVERIFY2(QFile::exists(legacyPath), "reading the credential once took away the only copy an older Mudlet can find");
+    QCOMPARE(plantedCredential(legacyPath, profile), QString("saved_by_the_older_mudlet"));
+
+    // and it is under the current naming as well, which is what makes that copy the one
+    // this Mudlet goes to from here on
+    QVERIFY(QFile::exists(credentialPath(utils::sanitizeForPath(profile), key)));
+
+    CredentialManager::removeCredential(profile, key);
+}
+
+// Two Mudlets, one credential, two files - and only the older one of the two writes the
+// truncated path. Whichever file was written last therefore holds the password the user set
+// last, so a password re-entered in that older Mudlet has to win over the copy this naming
+// scheme already holds rather than the stale one being handed back for ever.
+void CredentialManagerTest::testTheNewerOfTheTwoCopiesIsTheOneHandedBack()
+{
+    const QString truncated(50, QChar('n'));
+    const QString profile = truncated + "NewerCopyIsTheOneHandedBack";
+    const QString key = "character";
+    const QString legacyPath = credentialPath(truncated, key);
+    const QString currentPath = credentialPath(utils::sanitizeForPath(profile), key);
+
+    QVERIFY(CredentialManager::storeCredential(profile, key, "the_password_this_mudlet_knows"));
+    QVERIFY(QFile::exists(currentPath));
+
+    QVERIFY(plantCredential(legacyPath, profile, "re_entered_in_the_older_mudlet"));
+    QVERIFY(setModificationTime(legacyPath, 30));
+
+    QCOMPARE(CredentialManager::retrieveCredential(profile, key), QString("re_entered_in_the_older_mudlet"));
+
+    // and it is taken over rather than only read, so this naming scheme has it too once the
+    // two are no longer in that order
+    QVERIFY(setModificationTime(legacyPath, -30));
+    QCOMPARE(plantedCredential(currentPath, profile), QString("re_entered_in_the_older_mudlet"));
+    QCOMPARE(CredentialManager::retrieveCredential(profile, key), QString("re_entered_in_the_older_mudlet"));
+
+    CredentialManager::removeCredential(profile, key);
+}
+
+// The same interoperability from the other side: a password changed here has to reach the
+// file the older Mudlet reads as well, or that Mudlet goes on offering the one it was
+// changed from.
+void CredentialManagerTest::testAPasswordSavedHereReachesTheTruncatedPathToo()
+{
+    const QString truncated(50, QChar('w'));
+    const QString profile = truncated + "WrittenThroughToTheOlderPath";
+    const QString key = "character";
+    const QString legacyPath = credentialPath(truncated, key);
+
+    QVERIFY(plantCredential(legacyPath, profile, "the_password_both_started_with"));
+    QCOMPARE(CredentialManager::retrieveCredential(profile, key), QString("the_password_both_started_with"));
+
+    QVERIFY(CredentialManager::storeCredential(profile, key, "the_password_changed_here"));
+
+    QCOMPARE(plantedCredential(legacyPath, profile), QString("the_password_changed_here"));
+    QCOMPARE(CredentialManager::retrieveCredential(profile, key), QString("the_password_changed_here"));
+
+    // and removing the password still takes both copies with it, so neither Mudlet is left
+    // holding one that was deleted
+    QVERIFY(CredentialManager::removeCredential(profile, key));
+    QVERIFY2(!QFile::exists(legacyPath), "the copy an older Mudlet reads outlived the removal of the password");
+    QVERIFY(CredentialManager::retrieveCredential(profile, key).isEmpty());
+}
+
+// Keeping the older scheme's file in step is only safe where one is already there and
+// already this profile's own: two profiles whose names share their first 50 characters share
+// that path, so writing it for the second would put them back on a single file - the very
+// collision the digest-bearing name exists to end.
+void CredentialManagerTest::testTheTruncatedPathIsNeverCreatedNorTakenOver()
+{
+    const QString truncated(50, QChar('c'));
+    const QString first = truncated + "FirstOfTwoCollidingNames";
+    const QString second = truncated + "SecondOfTwoCollidingNames";
+    const QString key = "character";
+    const QString legacyPath = credentialPath(truncated, key);
+
+    QVERIFY(plantCredential(legacyPath, first, "the_first_profiles_password"));
+    QCOMPARE(CredentialManager::retrieveCredential(first, key), QString("the_first_profiles_password"));
+
+    // the second profile saving a password of its own, and then changing it, leaves the
+    // shared file exactly as the first profile left it
+    QVERIFY(CredentialManager::storeCredential(second, key, "the_second_profiles_password"));
+    QVERIFY(CredentialManager::storeCredential(second, key, "the_second_profiles_password_changed"));
+    QCOMPARE(plantedCredential(legacyPath, first), QString("the_first_profiles_password"));
+
+    QCOMPARE(CredentialManager::retrieveCredential(first, key), QString("the_first_profiles_password"));
+    QCOMPARE(CredentialManager::retrieveCredential(second, key), QString("the_second_profiles_password_changed"));
+
+    // and a profile that never had a file at the truncated path is not given one, so no
+    // sharing is created where there was none
+    const QString neverTruncated(50, QChar('f'));
+    const QString neverFiledThere = neverTruncated + "NeverFiledUnderTheTruncatedPath";
+    QVERIFY(CredentialManager::storeCredential(neverFiledThere, key, "a_password_saved_only_here"));
+    QVERIFY2(!QFile::exists(credentialPath(neverTruncated, key)), "a credential was created at the path two long names would share");
+
+    CredentialManager::removeCredential(first, key);
+    CredentialManager::removeCredential(second, key);
+    CredentialManager::removeCredential(neverFiledThere, key);
 }
 
 void CredentialManagerTest::testPathTraversalPrevention()
@@ -777,6 +947,12 @@ void CredentialManagerTest::cleanupTestCase()
     const QString truncatedPrefix(50, QChar('t'));
     CredentialManager::removeCredential(truncatedPrefix + "FiledBeforeTheRename", "character");
     CredentialManager::removeCredential(truncatedPrefix + "StoredAfterwards", "character");
+
+    CredentialManager::removeCredential(QString(50, QChar('k')) + "KeptForAnOlderMudlet", "character");
+    CredentialManager::removeCredential(QString(50, QChar('n')) + "NewerCopyIsTheOneHandedBack", "character");
+    CredentialManager::removeCredential(QString(50, QChar('c')) + "FirstOfTwoCollidingNames", "character");
+    CredentialManager::removeCredential(QString(50, QChar('c')) + "SecondOfTwoCollidingNames", "character");
+    CredentialManager::removeCredential(QString(50, QChar('f')) + "NeverFiledUnderTheTruncatedPath", "character");
 }
 
 #include "CredentialManagerTest.moc"
