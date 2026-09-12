@@ -6832,17 +6832,8 @@ void dlgProfilePreferences::applyAll()
         if (mSnapshot.dirty(checkBox_mmcpSnoopInMainConsole)) {
             pHost->mMMCPShowSnoopInMainConsole = checkBox_mmcpSnoopInMainConsole->isChecked();
         }
-        if (mSnapshot.dirty(checkBox_announceIncomingText)) {
-            pHost->mAnnounceIncomingText = checkBox_announceIncomingText->isChecked();
-        }
-        if (mSnapshot.dirty(checkBox_advertiseScreenReader)) {
-            pHost->mAdvertiseScreenReader = checkBox_advertiseScreenReader->isChecked();
-        }
         if (mSnapshot.dirty(checkBox_enableOSC8Hyperlinks)) {
             pHost->mEnableOSC8Hyperlinks = checkBox_enableOSC8Hyperlinks->isChecked();
-        }
-        if (mSnapshot.dirty(checkBox_enableClosedCaption)) {
-            pHost->mEnableClosedCaption = checkBox_enableClosedCaption->isChecked();
         }
 
         if (mSnapshot.dirty(checkBox_expectCSpaceIdInColonLessMColorCode)) {
@@ -6896,6 +6887,18 @@ void dlgProfilePreferences::applyAll()
                     it->second->swap(sequence);
                 }
             }
+        }
+
+        // Last, because these setters run script handlers synchronously, which
+        // may do anything to the Host this block is still writing to
+        if (mSnapshot.dirty(checkBox_announceIncomingText)) {
+            pHost->setAnnounceIncomingText(checkBox_announceIncomingText->isChecked());
+        }
+        if (mSnapshot.dirty(checkBox_advertiseScreenReader)) {
+            pHost->setAdvertiseScreenReader(checkBox_advertiseScreenReader->isChecked());
+        }
+        if (mSnapshot.dirty(checkBox_enableClosedCaption)) {
+            pHost->setEnableClosedCaption(checkBox_enableClosedCaption->isChecked());
         }
     }
 
@@ -8467,16 +8470,8 @@ void dlgProfilePreferences::slot_changeControlCharacterHandling()
 
 void dlgProfilePreferences::slot_toggleAdvertiseScreenReader(const bool state)
 {
-    Host* pHost = mpHost;
-
-    if (!pHost) {
-        return;
-    }
-
-    if (pHost->mAdvertiseScreenReader != state) {
-        pHost->mAdvertiseScreenReader = state;
-        pHost->mTelnet.sendInfoNewEnvironValue(qsl("SCREEN_READER"));
-        pHost->mTelnet.sendInfoNewEnvironValue(qsl("MTTS"));
+    if (mpHost) {
+        mpHost->setAdvertiseScreenReader(state);
     }
 }
 
@@ -8496,8 +8491,8 @@ void dlgProfilePreferences::slot_toggleEnableOSC8Hyperlinks(const bool state)
 
 void dlgProfilePreferences::slot_toggleEnableClosedCaption(const bool state)
 {
-    if (mpHost && mpHost->mEnableClosedCaption != state) {
-        mpHost->mEnableClosedCaption = state;
+    if (mpHost) {
+        mpHost->setEnableClosedCaption(state);
     }
 }
 
