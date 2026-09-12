@@ -79,6 +79,9 @@ private:
     static bool addWordToShared(const QString&);
     static bool removeWordFromShared(const QString&);
     static Hunhandle* prepareProfileDictionary(const QString&, QSet<QString>&);
+    // The paths are taken by value because the Windows build rewrites them to an
+    // ASCII-only copy before handing them to Hunspell.
+    static Hunhandle* openDictionary(QString dictionaryPath, QString affixPath, QSet<QString>&);
     // This will save and replace the .dic file with just the words in the
     // supplied second argument and update the .aff file as appropriate. It is
     // to be used at the end of a session to store away the user's changes:

@@ -35,6 +35,7 @@
 #include <QTimer>
 
 #if defined(Q_OS_WINDOWS)
+#include <QCryptographicHash>
 #include <QFileInfo>
 #include <QRegularExpression>
 #include <QScopedArrayPointer>
@@ -71,7 +72,7 @@ static QString getShortPathName(const QString& name)
 
 // 'strip' non-ASCII characters from the path by copying it to a location without them
 // this is only an issue for the Win32 API; macOS and Linux don't have such issues
-static void sanitizeUtf8Path(QString& originalLocation, const QString& fileName)
+static void sanitizeUtf8Path(QString& originalLocation)
 {
     static auto findNonAscii = QRegularExpression(qsl("([^ -~])"));
 
@@ -87,14 +88,31 @@ static void sanitizeUtf8Path(QString& originalLocation, const QString& fileName)
         return;
     }
 
-    const QString pureANSIpath = qsl("C:\\Windows\\Temp\\mudlet_%1").arg(fileName);
-    if (!QFileInfo::exists(pureANSIpath)) {
-        if (!QFile::copy(originalLocation, pureANSIpath)) {
-            qWarning() << "sanitizeUtf8Path() ERROR: couldn't copy" << originalLocation << "to location without ASCII characters";
-        } else {
-            originalLocation = pureANSIpath;
-        }
+    // The name has to be unique to the file being copied and the copy has to be
+    // refreshed. A fixed "mudlet_profile.dic" put every profile with a
+    // non-ASCII path onto the one temp file, and the copy was only ever made
+    // when it did not already exist - so Hunspell read another profile's word
+    // list, or a stale one, while every write went to the real profile path.
+    // Both halves come off the source path itself: the digest keeps the name
+    // ASCII and unique whatever the path holds, and taking the base name from
+    // the path is what stops a caller naming the copy after the wrong file.
+    const auto digest = QString::fromLatin1(QCryptographicHash::hash(originalLocation.toUtf8(), QCryptographicHash::Sha1).toHex().left(8));
+    // The digest is what makes the name unique, so the base name can lose
+    // whatever is not ASCII in it and still name the right copy:
+    QString asciiName = QFileInfo(originalLocation).fileName();
+    asciiName.remove(findNonAscii);
+    const QString pureANSIpath = qsl("C:\\Windows\\Temp\\mudlet_%1_%2").arg(digest, asciiName);
+    if (QFileInfo::exists(pureANSIpath) && !QFile::remove(pureANSIpath)) {
+        qWarning() << "sanitizeUtf8Path() ERROR: couldn't remove the previous copy at" << pureANSIpath;
+        return;
     }
+
+    if (!QFile::copy(originalLocation, pureANSIpath)) {
+        qWarning() << "sanitizeUtf8Path() ERROR: couldn't copy" << originalLocation << "to location without ASCII characters";
+        return;
+    }
+
+    originalLocation = pureANSIpath;
 }
 #endif
 
@@ -192,8 +210,8 @@ void TSpellChecker::loadSystemDictionary()
 #if defined(Q_OS_WINDOWS)
     // strip non-ASCII characters from the path because hunspell can't handle them
     // when compiled with MinGW 7.3.0
-    sanitizeUtf8Path(spell_aff, qsl("%1.aff").arg(mSystemDictionary));
-    sanitizeUtf8Path(spell_dic, qsl("%1.dic").arg(mSystemDictionary));
+    sanitizeUtf8Path(spell_aff);
+    sanitizeUtf8Path(spell_dic);
 #endif
 
     mpHunspell_system = Hunspell_create(spell_aff.toUtf8().constData(), spell_dic.toUtf8().constData());
@@ -371,51 +389,14 @@ QPair<bool, QString> TSpellChecker::removeWord(const QString& word)
     return result;
 }
 
-// This will load up the shared spelling dictionary for profiles that want it
-// - and handles the absence of files for the first run from an older Mudlet
-// version - it processes any changes made by the user in the ".dic" file and
-// regenerates (deduplicates and sorts) it and (rebuilds the "TRY" line) in
-// the ".aff" file:
 /*static*/ Hunhandle* TSpellChecker::sharedDictionary()
 {
     if (smpHunspell_sharedDictionary) {
         return smpHunspell_sharedDictionary;
     }
 
-    QString dictionaryPath(MudletApp::getMudletPath(enums::mainDataItemPath, qsl("mudlet.dic")));
-    QString affixPath(MudletApp::getMudletPath(enums::mainDataItemPath, qsl("mudlet.aff")));
-    int oldWordCount = 0;
-    QStringList wordList;
-    QHash<QString, unsigned int> graphemeCounts;
-
-    if (!scanDictionaryFile(dictionaryPath, oldWordCount, graphemeCounts, wordList)) {
-        return nullptr;
-    }
-
-    if (!overwriteDictionaryFile(dictionaryPath, wordList)) {
-        return nullptr;
-    }
-
-    const int wordCount = wordList.count();
-    if (wordCount > oldWordCount) {
-        qDebug().nospace().noquote() << "  Considered an extra " << wordCount - oldWordCount << " words.";
-    } else if (wordCount < oldWordCount) {
-        qDebug().nospace().noquote() << "  Considered " << oldWordCount - wordCount << " fewer words.";
-    } else {
-        qDebug().nospace().noquote() << "  No change in the number of words in dictionary.";
-    }
-
-    if (!overwriteAffixFile(affixPath, graphemeCounts)) {
-        return nullptr;
-    }
-
-    smWordSet_shared = QSet<QString>(wordList.begin(), wordList.end());
-
-#if defined(Q_OS_WINDOWS)
-    sanitizeUtf8Path(dictionaryPath, qsl("mudlet.dic"));
-    sanitizeUtf8Path(affixPath, qsl("mudlet.aff"));
-#endif
-    smpHunspell_sharedDictionary = Hunspell_create(affixPath.toUtf8().constData(), dictionaryPath.toUtf8().constData());
+    smpHunspell_sharedDictionary =
+            openDictionary(MudletApp::getMudletPath(enums::mainDataItemPath, qsl("mudlet.dic")), MudletApp::getMudletPath(enums::mainDataItemPath, qsl("mudlet.aff")), smWordSet_shared);
     return smpHunspell_sharedDictionary;
 }
 
@@ -466,16 +447,19 @@ QPair<bool, QString> TSpellChecker::removeWord(const QString& word)
     return wordSet;
 }
 
-// This will load up the spelling dictionary for the profile - and handles the
-// absence of files for the first run in a new profile or from an older
-// Mudlet version - it processes any changes made by the user in the ".dic" file
-// and regenerates (deduplicates and sorts) it and rebuilds (the "TRY" line in)
-// the ".aff" file:
 /*static*/ Hunhandle* TSpellChecker::prepareProfileDictionary(const QString& hostName, QSet<QString>& wordSet)
 {
-    QString dictionaryPath(MudletApp::getMudletPath(enums::profileDataItemPath, hostName, qsl("profile.dic")));
-    QString affixPath(MudletApp::getMudletPath(enums::profileDataItemPath, hostName, qsl("profile.aff")));
+    return openDictionary(
+            MudletApp::getMudletPath(enums::profileDataItemPath, hostName, qsl("profile.dic")), MudletApp::getMudletPath(enums::profileDataItemPath, hostName, qsl("profile.aff")), wordSet);
+}
 
+// This will load up a spelling dictionary - the profile's own or the shared one
+// - and handles the absence of files for the first run in a new profile or from
+// an older Mudlet version - it processes any changes made by the user in the
+// ".dic" file and regenerates (deduplicates and sorts) it and rebuilds (the
+// "TRY" line in) the ".aff" file:
+/*static*/ Hunhandle* TSpellChecker::openDictionary(QString dictionaryPath, QString affixPath, QSet<QString>& wordSet)
+{
     int oldWordCount = 0;
     QStringList wordList;
     QHash<QString, unsigned int> graphemeCounts;
@@ -510,8 +494,8 @@ QPair<bool, QString> TSpellChecker::removeWord(const QString& word)
     wordSet = QSet<QString>(wordList.begin(), wordList.end());
 
 #if defined(Q_OS_WINDOWS)
-    sanitizeUtf8Path(dictionaryPath, qsl("profile.dic"));
-    sanitizeUtf8Path(affixPath, qsl("profile.aff"));
+    sanitizeUtf8Path(dictionaryPath);
+    sanitizeUtf8Path(affixPath);
 #endif
     return Hunspell_create(affixPath.toUtf8().constData(), dictionaryPath.toUtf8().constData());
 }
