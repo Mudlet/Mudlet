@@ -142,6 +142,11 @@ void SignInStoreReconciler::runStep()
         payload = std::move(mActive->intent.token);
     }
 
+    issue(op, std::move(payload));
+}
+
+void SignInStoreReconciler::issue(Operation op, QString payload)
+{
     // The performer may complete synchronously or long after this object is gone; the QPointer makes
     // a late completion a no-op instead of a use-after-free.
     const auto id = mActive->id;
@@ -176,7 +181,34 @@ void SignInStoreReconciler::onStepDone(unsigned int id, Operation op, bool ok, Q
         return;
     }
 
+    if (mActive->removingStaleToken) {
+        // The removal that follows a failed token write has answered. Either way the caller hears the
+        // original failure: reaching a resume hint is damage control, not success. If the removal
+        // failed too the entry is where it would have been without this step, which is the worst case
+        // it can produce and no worse than not trying.
+        auto failed = std::move(*mActive);
+        mActive.reset();
+        finish(failed, Outcome::Failed, failed.failedAt, std::move(failed.failureError));
+        return;
+    }
+
     if (!ok) {
+        if (op == Operation::WriteToken) {
+            // The metadata landed and the token did not. On a first save that leaves a resume hint on
+            // its own, but on a rotation - the common case in production - it leaves the new metadata
+            // beside the PREVIOUS token, which the server has already spent. The next connection would
+            // replay that, be rejected, and fall into recovery that drops the token and, for an account
+            // with no remembered provider, the whole saved sign-in with it.
+            //
+            // So remove the token rather than leave it: if Full cannot be reached, the nearest state
+            // worth settling in is Hint, which the read path is built for. The original failure is
+            // held and reported when the removal answers.
+            mActive->removingStaleToken = true;
+            mActive->failedAt = op;
+            mActive->failureError = std::move(error);
+            issue(Operation::RemoveToken, QString());
+            return;
+        }
         auto failed = std::move(*mActive);
         // mActive must already be empty when finish() runs: a completion that reacts to the failure
         // by calling setIntent() (a failed hint falling back to a forget) relies on finding no

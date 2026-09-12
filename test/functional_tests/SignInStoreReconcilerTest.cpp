@@ -249,6 +249,82 @@ private slots:
         QCOMPARE(outcomes.byId[id][0].error, qsl("disk full"));
     }
 
+    void aFailedTokenWriteRemovesTheStaleToken()
+    {
+        // The metadata landed and the token did not. On a rotation that would leave the new metadata
+        // beside the token already in the store - one the server has spent - and the next connection
+        // would replay it, be rejected, and drop the saved sign-in. Removing it instead settles the
+        // entry as a resume hint, which the read path is built for.
+        FakeStore store;
+        Outcomes outcomes;
+        SignInStoreReconciler reconciler(store.performer());
+        unsigned int id = 0;
+        id = reconciler.setIntent(fullIntent(qsl("tok-new")), outcomes.recorder(&id));
+
+        store.release(0);                                // metadata write succeeds
+        store.release(1, false, qsl("keychain locked")); // token write fails
+
+        QCOMPARE(store.operations(), (std::vector<Operation>{Operation::WriteMetadata, Operation::WriteToken, Operation::RemoveToken}));
+        // Nothing is reported until the removal has answered.
+        QVERIFY(outcomes.byId[id].empty());
+
+        store.release(2);
+        QCOMPARE(outcomes.byId[id].size(), std::size_t{1});
+        // The caller hears the original failure, not the removal: a resume hint is damage control.
+        QCOMPARE(outcomes.byId[id][0].outcome, Outcome::Failed);
+        QCOMPARE(outcomes.byId[id][0].failedAt, Operation::WriteToken);
+        QCOMPARE(outcomes.byId[id][0].error, qsl("keychain locked"));
+        QVERIFY(!reconciler.inFlight());
+    }
+
+    void aFailedTokenWriteReportsTheWriteEvenWhenTheRemovalAlsoFails()
+    {
+        // Both halves gone wrong leaves the entry exactly where it would have been without the extra
+        // step, so the removal's own failure is not what the caller needs to hear about.
+        FakeStore store;
+        Outcomes outcomes;
+        SignInStoreReconciler reconciler(store.performer());
+        unsigned int id = 0;
+        id = reconciler.setIntent(fullIntent(qsl("tok-new")), outcomes.recorder(&id));
+
+        store.release(0);
+        store.release(1, false, qsl("keychain locked"));
+        store.release(2, false, qsl("still locked"));
+
+        QCOMPARE(outcomes.byId[id].size(), std::size_t{1});
+        QCOMPARE(outcomes.byId[id][0].outcome, Outcome::Failed);
+        QCOMPARE(outcomes.byId[id][0].failedAt, Operation::WriteToken);
+        QCOMPARE(outcomes.byId[id][0].error, qsl("keychain locked"));
+        QVERIFY(!reconciler.inFlight());
+    }
+
+    void aNewerIntentDuringTheStaleTokenRemovalStillWins()
+    {
+        // The removal is part of the failed request's sequence, so a newer intent supersedes it on the
+        // same terms as any other step - the newer request describes the end state wanted now.
+        FakeStore store;
+        Outcomes outcomes;
+        SignInStoreReconciler reconciler(store.performer());
+        unsigned int failing = 0;
+        unsigned int winner = 0;
+        failing = reconciler.setIntent(fullIntent(qsl("tok-old")), outcomes.recorder(&failing));
+
+        store.release(0);
+        store.release(1, false, qsl("keychain locked"));
+        QCOMPARE(store.operations().back(), Operation::RemoveToken);
+
+        winner = reconciler.setIntent(absentIntent(), outcomes.recorder(&winner));
+        store.release(2);
+
+        QCOMPARE(outcomes.byId[failing].size(), std::size_t{1});
+        QCOMPARE(outcomes.byId[failing][0].outcome, Outcome::Superseded);
+        std::size_t next = 3;
+        while (reconciler.inFlight()) {
+            store.release(next++);
+        }
+        QCOMPARE(outcomes.byId[winner][0].outcome, Outcome::Reached);
+    }
+
     void tokenRemovalFailureNeverTouchesTheMetadata()
     {
         // The security ordering for a forget: if the token cannot be removed, the metadata must be

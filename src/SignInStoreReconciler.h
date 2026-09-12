@@ -110,12 +110,22 @@ private:
         Intent intent;
         Completion completion;
         std::size_t step = 0;
+        // Set once a Full sequence's token write has failed and the stale token is being removed, so
+        // the entry settles as a resume hint rather than as new metadata beside an old token. The
+        // outcome the caller hears is still the original failure, held here across that extra step.
+        bool removingStaleToken = false;
+        Operation failedAt = Operation::WriteMetadata;
+        QString failureError;
     };
 
     static std::vector<Operation> sequenceFor(Shape shape);
     static QString metadataPayload(const Intent& intent);
     static void scrub(Request& request);
     void start();
+    // Hands one operation to the performer on behalf of the active request. The completion is guarded
+    // by a QPointer, so a performer that answers after this object is gone is a no-op rather than a
+    // use-after-free.
+    void issue(Operation op, QString payload);
     void runStep();
     void onStepDone(unsigned int id, Operation op, bool ok, QString error);
     void finish(Request& request, Outcome outcome, Operation failedAt, QString error);
