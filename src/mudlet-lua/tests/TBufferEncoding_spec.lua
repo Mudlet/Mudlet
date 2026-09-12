@@ -290,6 +290,13 @@ describe("Tests changing the encoding from a trigger", function()
     -- have to be put back from the same one
     local restoreEncoding = restoreServerEncoding()
     assert.is_true(setServerEncoding("UTF-8"))
+    -- The buffer takes the encoding up when a packet arrives, not when it is
+    -- set, so settle it on UTF-8 with a packet of its own first. Without this
+    -- the packet below starts on whichever decoder the spec before it left
+    -- behind, and every multi-byte decoder reads the encoding of the moment -
+    -- the very thing the trigger changes - so the case would pass however
+    -- coarsely the decoder was resolved.
+    assert.equals("settled", decoded("settled"))
     local trigger = tempTrigger("enc:switch", function()
       setServerEncoding("GBK")
       feedTriggers("switched\n")
