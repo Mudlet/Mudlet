@@ -30,7 +30,8 @@
 #include <QWidget>
 #include <QtTest/QTest>
 
-#include "mudlet.h"
+#include "MudletPaths.h"
+#include "utils.h"
 
 // Free inline functions rather than a QObject on purpose: a header is not listed
 // in test/functional_tests/CMakeLists.txt, so nothing would run moc over it and
@@ -48,7 +49,7 @@ inline constexpr int scmApplyTimeout = 10000;
 
 inline void deleteProfileDirectory(const QString& profileName)
 {
-    QDir dir(mudlet::getMudletPath(enums::profileHomePath, profileName));
+    QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, profileName));
     if (dir.exists()) {
         dir.removeRecursively();
     }

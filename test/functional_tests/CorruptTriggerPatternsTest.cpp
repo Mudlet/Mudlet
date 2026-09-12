@@ -49,6 +49,7 @@
 
 #include <QTemporaryDir>
 
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "Host.h"
 #include "HostManager.h"
@@ -237,7 +238,7 @@ private slots:
         if (portableMarkerPresent()) {
             QSKIP("portable.txt marker present - config dir cannot be redirected for this test");
         }
-        QVERIFY2(mudlet::getMudletPath(enums::profilesPath).startsWith(mConfigDir.path()), "test config dir redirection did not take effect");
+        QVERIFY2(MudletPaths::getMudletPath(enums::profilesPath).startsWith(mConfigDir.path()), "test config dir redirection did not take effect");
     }
 
     void cleanupTestCase()
@@ -248,7 +249,7 @@ private slots:
 
     void test_aTriggerWithMismatchedPatternListsDoesNotCrashTheLoad()
     {
-        const QString folder = mudlet::getMudletPath(enums::profileXmlFilesPath, mProfileName);
+        const QString folder = MudletPaths::getMudletPath(enums::profileXmlFilesPath, mProfileName);
         QVERIFY(QDir().mkpath(folder));
         {
             QFile xmlFile(qsl("%1/2020-01-01#00-00-00.xml").arg(folder));

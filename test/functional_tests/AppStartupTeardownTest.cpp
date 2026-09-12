@@ -88,7 +88,7 @@ private slots:
             // A root of its own per run, so the child reads none of the
             // developer's profiles and leaves nothing behind. Creating
             // mudlet/profiles is what makes XDG_CONFIG_HOME outrank the legacy
-            // ~/.config/mudlet, see utils::xdgConfigDir()
+            // ~/.config/mudlet, see MudletPaths::xdgConfigDir()
             QTemporaryDir sandbox;
             QVERIFY2(sandbox.isValid(), qPrintable(sandbox.errorString()));
             QVERIFY(QDir().mkpath(qsl("%1/config/mudlet/profiles").arg(sandbox.path())));

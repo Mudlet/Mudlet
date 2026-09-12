@@ -40,6 +40,7 @@
 #include "Host.h"
 #include "KeyUnit.h"
 #include "MudletInstanceCoordinator.h"
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "ScriptUnit.h"
@@ -91,7 +92,7 @@ private:
     QTimer* mpModalAnswerTimer = nullptr;
     QStringList mStagedPackageNames;
 
-    QString profileHome() const { return mudlet::getMudletPath(enums::profileHomePath, mProfileName); }
+    QString profileHome() const { return MudletPaths::getMudletPath(enums::profileHomePath, mProfileName); }
 
     QString packagePath(const QString& packageName) const { return qsl("%1/%2.mpackage").arg(mExportDir, packageName); }
 
@@ -328,7 +329,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);

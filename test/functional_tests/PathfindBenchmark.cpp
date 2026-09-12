@@ -48,6 +48,7 @@
 #include <cstdio>
 #include <limits>
 
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -210,7 +211,7 @@ private slots:
         mPort = mpServer->serverPort();
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -509,7 +510,7 @@ private:
 
     void deleteProfileDirectory()
     {
-        const QString path = mudlet::getMudletPath(enums::profileHomePath, mHostname);
+        const QString path = MudletPaths::getMudletPath(enums::profileHomePath, mHostname);
         QDir dir(path);
         if (dir.exists()) {
             dir.removeRecursively();

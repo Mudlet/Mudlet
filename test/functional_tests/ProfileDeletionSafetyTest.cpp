@@ -30,6 +30,7 @@
 
 #include <QtTest/QtTest>
 
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "MudletInstanceCoordinator.h"
 #include "dlgConnectionProfiles.h"
@@ -46,12 +47,12 @@ private:
     QByteArray mSavedXdg;
     const QString mKeeper = qsl("QA Keeper");
 
-    QString profilePath(const QString& profile) const { return mudlet::getMudletPath(enums::profileHomePath, profile); }
+    QString profilePath(const QString& profile) const { return MudletPaths::getMudletPath(enums::profileHomePath, profile); }
 
     void makeProfileWithSavedGame(const QString& profile) const
     {
-        QVERIFY(QDir().mkpath(mudlet::getMudletPath(enums::profileXmlFilesPath, profile)));
-        QFile savedGame(qsl("%1/%2.xml").arg(mudlet::getMudletPath(enums::profileXmlFilesPath, profile), profile));
+        QVERIFY(QDir().mkpath(MudletPaths::getMudletPath(enums::profileXmlFilesPath, profile)));
+        QFile savedGame(qsl("%1/%2.xml").arg(MudletPaths::getMudletPath(enums::profileXmlFilesPath, profile), profile));
         QVERIFY(savedGame.open(QIODevice::WriteOnly));
         savedGame.write("<MudletPackage></MudletPackage>");
         savedGame.close();
@@ -145,7 +146,7 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -170,9 +171,9 @@ private slots:
         QVERIFY2(confirmation(dlg), "removal went ahead without asking");
         confirmRemovalOf(dlg, qsl("."));
 
-        QVERIFY2(QDir(mudlet::getMudletPath(enums::profilesPath)).exists(), "the profiles directory was deleted");
+        QVERIFY2(QDir(MudletPaths::getMudletPath(enums::profilesPath)).exists(), "the profiles directory was deleted");
         QVERIFY2(QDir(profilePath(mKeeper)).exists(), "an unrelated profile was deleted");
-        QVERIFY2(QFile::exists(qsl("%1/%2.xml").arg(mudlet::getMudletPath(enums::profileXmlFilesPath, mKeeper), mKeeper)), "an unrelated profile's saved game was deleted");
+        QVERIFY2(QFile::exists(qsl("%1/%2.xml").arg(MudletPaths::getMudletPath(enums::profileXmlFilesPath, mKeeper), mKeeper)), "an unrelated profile's saved game was deleted");
         QVERIFY2(!dlg->notificationAreaMessageBox->text().isEmpty(), "the refusal was not reported to the user");
 
         closeDialog(dlg);
@@ -187,8 +188,8 @@ private slots:
         QVERIFY2(confirmation(dlg), "removal went ahead without asking");
         confirmRemovalOf(dlg, qsl(".."));
 
-        QVERIFY2(QDir(mudlet::getMudletPath(enums::mainPath)).exists(), "Mudlet's configuration directory was deleted");
-        QVERIFY2(QDir(mudlet::getMudletPath(enums::profilesPath)).exists(), "the profiles directory was deleted");
+        QVERIFY2(QDir(MudletPaths::getMudletPath(enums::mainPath)).exists(), "Mudlet's configuration directory was deleted");
+        QVERIFY2(QDir(MudletPaths::getMudletPath(enums::profilesPath)).exists(), "the profiles directory was deleted");
         QVERIFY2(QDir(profilePath(mKeeper)).exists(), "an unrelated profile was deleted");
         QVERIFY2(!dlg->notificationAreaMessageBox->text().isEmpty(), "the refusal was not reported to the user");
 
@@ -197,7 +198,7 @@ private slots:
 
     void test_onlyDirectChildrenOfTheProfilesDirectoryAreProfiles()
     {
-        const QString profilesPath = mudlet::getMudletPath(enums::profilesPath);
+        const QString profilesPath = MudletPaths::getMudletPath(enums::profilesPath);
 
         QCOMPARE(dlgConnectionProfiles::profileFolderPath(profilesPath, mKeeper), qsl("%1/%2").arg(profilesPath, mKeeper));
         QVERIFY(dlgConnectionProfiles::profileFolderPath(profilesPath, qsl(".")).isEmpty());
@@ -213,8 +214,8 @@ private slots:
     void test_profileWithOnlyAMapIsConfirmedBeforeRemoval()
     {
         const QString mapped = qsl("QA Mapped");
-        QVERIFY(QDir().mkpath(mudlet::getMudletPath(enums::profileMapsPath, mapped)));
-        QVERIFY(!QDir(mudlet::getMudletPath(enums::profileXmlFilesPath, mapped)).exists());
+        QVERIFY(QDir().mkpath(MudletPaths::getMudletPath(enums::profileMapsPath, mapped)));
+        QVERIFY(!QDir(MudletPaths::getMudletPath(enums::profileXmlFilesPath, mapped)).exists());
 
         auto* dlg = openDialog();
         selectProfile(dlg, mapped);

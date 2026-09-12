@@ -27,6 +27,7 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "mudlet.h"
 
@@ -52,7 +53,7 @@ private:
 
     static bool provisionProfileOnDisk(const QString& name)
     {
-        return QDir().mkpath(mudlet::getMudletPath(enums::profileHomePath, name)) && mudlet::self()->writeProfileData(name, qsl("url"), qsl("localhost")).first
+        return QDir().mkpath(MudletPaths::getMudletPath(enums::profileHomePath, name)) && mudlet::self()->writeProfileData(name, qsl("url"), qsl("localhost")).first
                && mudlet::self()->writeProfileData(name, qsl("port"), qsl("23")).first;
     }
 
@@ -103,7 +104,7 @@ private slots:
     {
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         // A settings file that already holds something is how
         // mudletUsedBefore() recognises an existing player, which keeps the
         // first-run UI tour and the starter UI package out of this test
