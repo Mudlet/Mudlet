@@ -39,6 +39,7 @@
 #include <memory>
 
 class Host;
+class QContextMenuEvent;
 class QMouseEvent;
 
 class TLabel : public QLabel
@@ -64,6 +65,7 @@ public:
     void enterEvent(TEnterEvent*) override;
     void resizeEvent(QResizeEvent* event) override;
     void changeEvent(QEvent* event) override;
+    void contextMenuEvent(QContextMenuEvent*) override;
     void setClickThrough(bool clickthrough);
     void setBackgroundColor(const QColor& color);
     void setLinkStyle(const QString& linkColor, const QString& linkVisitedColor, bool underline = true);

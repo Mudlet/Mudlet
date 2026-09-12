@@ -44,19 +44,39 @@ using namespace std::chrono_literals;
 // out clickable but unstyled.
 static bool containsAnchorTag(const QString& text)
 {
+    const qsizetype length = text.size();
     qsizetype from = 0;
+    // the last '>' the walk found, which stays the nearest one until it is passed
+    qsizetype close = -1;
     while (true) {
         const qsizetype at = text.indexOf(QLatin1Char('<'), from);
         // Too near the end for a tag name and a separator, and every later '<' is
         // nearer still, so there is nothing left to find
-        if (at < 0 || at + 2 >= text.size()) {
+        if (at < 0 || at + 2 >= length) {
             return false;
         }
         const char16_t tagName = text.at(at + 1).unicode();
-        if ((tagName == u'a' || tagName == u'A') && text.at(at + 2).isSpace()) {
+        if ((tagName != u'a' && tagName != u'A') || !text.at(at + 2).isSpace()) {
+            from = at + 1;
+            continue;
+        }
+        // Prose - and game text echoed into a label - holds "<a" and a space too,
+        // so it is only a tag once the '>' that closes it turns up; another '<' on
+        // the way there means this one never was one.
+        if (close < at) {
+            // Searched for again only once the walk has passed the last one
+            // found, so the ranges these scans cover never overlap
+            close = text.indexOf(QLatin1Char('>'), at + 3);
+            if (close < 0) {
+                // no tag anywhere past here can be closed either
+                return false;
+            }
+        }
+        const qsizetype nextOpen = text.indexOf(QLatin1Char('<'), at + 3);
+        if (nextOpen < 0 || close < nextOpen) {
             return true;
         }
-        from = at + 1;
+        from = nextOpen;
     }
 }
 
@@ -111,13 +131,12 @@ void TLabel::setText(const QString& text)
 {
     const bool hasAnchor = containsAnchorTag(text);
 
-    // Enable TextBrowserInteraction only when the label contains hyperlinks
-    // This prevents Qt's default context menu from appearing on labels without links
-    if (hasAnchor) {
-        setTextInteractionFlags(Qt::TextBrowserInteraction);
-    } else {
-        setTextInteractionFlags(Qt::NoTextInteraction);
-    }
+    // Links only, and only when the label carries one. The selection half of
+    // Qt::TextBrowserInteraction is what brings Qt's own context menu to a label,
+    // and it also has QLabel swallow the press that the label's click callback
+    // needs; links on their own leave the press to us and still activate on the
+    // release.
+    setTextInteractionFlags(hasAnchor ? Qt::LinksAccessibleByMouse : Qt::NoTextInteraction);
 
     // If we have link styling configured and the text contains HTML links,
     // we need to inject inline styles because QTextDocument doesn't use
@@ -190,14 +209,15 @@ void TLabel::setText(const QString& text)
 
 void TLabel::mousePressEvent(QMouseEvent* event)
 {
-    // If the label has rich text with potential hyperlinks, let QLabel handle the event first
-    // QLabel will emit linkActivated if a link was clicked
+    // QLabel needs the press to note which link it landed on, so that the
+    // matching release can activate it. A link in the text must not cost the
+    // label the click callback a script registered on it, so the callback runs
+    // either way and only the fall-through to the parent is skipped when QLabel
+    // took the press for itself.
+    bool takenByQt = false;
     if (!text().isEmpty() && textFormat() == Qt::RichText && containsAnchorTag(text())) {
         QLabel::mousePressEvent(event);
-        // If QLabel didn't accept the event, then it wasn't a link click
-        if (event->isAccepted()) {
-            return;
-        }
+        takenByQt = event->isAccepted();
     }
 
     if (mpHost && mClickFunction) {
@@ -206,7 +226,7 @@ void TLabel::mousePressEvent(QMouseEvent* event)
         // any parent, e.g. the containing TConsole
         event->accept();
         mudlet::self()->activateProfile(mpHost);
-    } else {
+    } else if (!takenByQt) {
         QWidget::mousePressEvent(event);
     }
 }
@@ -223,13 +243,12 @@ void TLabel::mouseDoubleClickEvent(QMouseEvent* event)
 
 void TLabel::mouseReleaseEvent(QMouseEvent* event)
 {
-    // If the label has rich text with potential hyperlinks, let QLabel handle the event first
+    // The release is where QLabel activates a link, and where the label's own
+    // release callback has to run whether it did or not
+    bool takenByQt = false;
     if (!text().isEmpty() && textFormat() == Qt::RichText && containsAnchorTag(text())) {
         QLabel::mouseReleaseEvent(event);
-        // If QLabel accepted the event, it was handling a link click
-        if (event->isAccepted()) {
-            return;
-        }
+        takenByQt = event->isAccepted();
     }
 
     auto labelParent = qobject_cast<TConsole*>(parent());
@@ -241,7 +260,7 @@ void TLabel::mouseReleaseEvent(QMouseEvent* event)
     if (mpHost && mReleaseFunction) {
         mpHost->getLuaInterpreter()->callLabelCallbackEvent(mReleaseFunction, event);
         event->accept();
-    } else {
+    } else if (!takenByQt) {
         QWidget::mouseReleaseEvent(event);
     }
 }
@@ -292,6 +311,15 @@ void TLabel::resizeEvent(QResizeEvent* event)
     QWidget::resizeEvent(event);
 }
 
+// A label is game UI with its own right-click handling - a script's callback has
+// already run by the time this arrives - so Qt's "Copy Link Location" menu over
+// a link is left out, and the event is passed on exactly as a label with no link
+// in its text passes it on.
+void TLabel::contextMenuEvent(QContextMenuEvent* event)
+{
+    event->ignore();
+}
+
 
 void TLabel::setClickThrough(bool clickthrough)
 {
@@ -303,11 +331,7 @@ void TLabel::setClickThrough(bool clickthrough)
         setTextInteractionFlags(Qt::NoTextInteraction);
     } else {
         // Re-enable text interaction only if the current text has hyperlinks
-        if (containsAnchorTag(text())) {
-            setTextInteractionFlags(Qt::TextBrowserInteraction);
-        } else {
-            setTextInteractionFlags(Qt::NoTextInteraction);
-        }
+        setTextInteractionFlags(containsAnchorTag(text()) ? Qt::LinksAccessibleByMouse : Qt::NoTextInteraction);
     }
 }
 

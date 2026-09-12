@@ -18,15 +18,17 @@
  ***************************************************************************/
 
 /*
- * A label only gets Qt's text-browser interaction - and with it clickable links
- * and a context menu - when its text carries an anchor, so which texts count as
- * carrying one decides which links work. Neither the interaction flags nor a
- * synthesised click on a link are reachable from Lua, so both have to be asked of
- * the TLabel directly.
+ * A label only gets Qt's link interaction - and with it clickable links - when
+ * its text carries an anchor, so which texts count as carrying one decides which
+ * links work, whether a right-click brings up a menu of Qt's own, and whether the
+ * press still reaches the label's own click callback. None of the interaction
+ * flags, a synthesised click on a link, or a context menu event are reachable
+ * from Lua, so they all have to be asked of the TLabel directly.
  *
  * Run with: ctest -R LabelAnchorInteractionTest -V
  */
 
+#include <QContextMenuEvent>
 #include <QSignalSpy>
 #include <QtTest/QtTest>
 #include <QTextDocument>
@@ -36,6 +38,7 @@
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TLabel.h"
+#include "TLuaInterpreter.h"
 #include "TMainConsole.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
@@ -63,6 +66,12 @@ private:
     QByteArray mSavedXdgConfigHome;
 
     TLabel* label() const { return mpHost->mpConsole->labelWidget(mLabelName); }
+
+    // What a Lua callback counted, since the callbacks themselves only exist in
+    // the interpreter. Read back through the return value rather than
+    // getLuaString(), which reports an absolute stack slot and so only answers
+    // correctly for the first call in a process.
+    bool luaHolds(const QString& condition) const { return mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(%1)").arg(condition)); }
 
     // Where the label's only word of text sits, so a synthesised click lands on
     // the link rather than the empty space around it
@@ -174,6 +183,12 @@ private slots:
         QTest::newRow("upper case anchor split by a newline") << qsl("<A\nHREF='https://example.com'>go</A>") << true;
         // an anchor needs attributes, and a bare "<a" cannot be the start of one
         QTest::newRow("anchor tag name only") << qsl("truncated at <a") << false;
+        // prose - and game text echoed into a label - holds "<a" and whitespace
+        // too, with nothing Qt draws as a link
+        QTest::newRow("prose holding a bare <a") << qsl("five <a\nb, ten <a\nc") << false;
+        QTest::newRow("prose holding a bare <a and a space") << qsl("five <a b, ten <a c") << false;
+        QTest::newRow("an anchor that is never closed") << qsl("<a href='https://example.com'") << false;
+        QTest::newRow("a bare <a ahead of a real anchor") << qsl("five <a b <a href='https://example.com'>go</a>") << true;
         QTest::newRow("a word starting with a") << qsl("<abbr title='x'>ab</abbr>") << false;
         QTest::newRow("consecutive angle brackets") << qsl("<<a href='https://example.com'>go</a>") << true;
     }
@@ -189,8 +204,10 @@ private slots:
         label()->setText(text);
 
         // the whole flag set, not just the link bit: leaving the label selectable
-        // would bring back the context menu these flags exist to keep away
-        QCOMPARE(label()->textInteractionFlags(), interactive ? Qt::TextBrowserInteraction : Qt::NoTextInteraction);
+        // would bring back the context menu these flags exist to keep away, and
+        // would have QLabel swallow the press the label's click callback needs
+        const Qt::TextInteractionFlags expected = interactive ? Qt::TextInteractionFlags(Qt::LinksAccessibleByMouse) : Qt::TextInteractionFlags(Qt::NoTextInteraction);
+        QCOMPARE(label()->textInteractionFlags(), expected);
     }
 
     void test_aLinkSplitByWhitespaceIsClickable()
@@ -213,7 +230,63 @@ private slots:
         label()->setClickThrough(true);
         label()->setClickThrough(false);
 
-        QCOMPARE(label()->textInteractionFlags(), Qt::TextBrowserInteraction);
+        QCOMPARE(label()->textInteractionFlags(), Qt::TextInteractionFlags(Qt::LinksAccessibleByMouse));
+    }
+
+    void test_aClickOnALinkStillReachesTheLabelsOwnCallbacks()
+    {
+        label()->resetLinkStyle();
+        label()->setText(qsl("<a\nhref='https://example.com'>go</a>"));
+
+        mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("anchorClicks = 0\n"
+                                                                 "anchorReleases = 0\n"
+                                                                 "anchorRegistered = setLabelClickCallback('%1', function() anchorClicks = anchorClicks + 1 end)\n"
+                                                                 "anchorRegistered = anchorRegistered and setLabelReleaseCallback('%1', function() anchorReleases = anchorReleases + 1 end)\n")
+                                                                     .arg(mLabelName));
+        // a registration that quietly failed would make the counts below prove
+        // nothing at all
+        QVERIFY2(luaHolds(qsl("anchorRegistered")), "the callbacks did not reach the label");
+
+        QSignalSpy activated(label(), &QLabel::linkActivated);
+        QTest::mouseClick(label(), Qt::LeftButton, Qt::NoModifier, linkCentre());
+
+        // the link the click landed on, and the callbacks the script registered:
+        // a label carrying a link is still a clickable label
+        QCOMPARE(activated.count(), 1);
+        QVERIFY2(luaHolds(qsl("anchorClicks == 1")), "the label's click callback did not fire");
+        QVERIFY2(luaHolds(qsl("anchorReleases == 1")), "the label's release callback did not fire");
+    }
+
+    void test_aRightClickOpensNoMenuOfQtsOwn_data()
+    {
+        QTest::addColumn<QString>("text");
+
+        QTest::newRow("plain text") << qsl("just some words");
+        QTest::newRow("prose holding a bare <a") << qsl("five <a\nb, ten <a\nc");
+        QTest::newRow("a link") << qsl("<a\nhref='https://example.com'>go</a>");
+    }
+
+    void test_aRightClickOpensNoMenuOfQtsOwn()
+    {
+        QFETCH(QString, text);
+
+        label()->resetLinkStyle();
+        label()->setText(text);
+
+        // right on the text, which is where Qt looks for an anchor to offer
+        const QPoint where = linkCentre();
+        QContextMenuEvent menuEvent(QContextMenuEvent::Mouse, where, label()->mapToGlobal(where));
+        QApplication::sendEvent(label(), &menuEvent);
+
+        // Qt's menu is a popup window of its own, so it is there to be found
+        // whether or not the event was accepted
+        QWidget* popup = QApplication::activePopupWidget();
+        if (popup) {
+            popup->close();
+            QTest::qWait(50ms);
+        }
+        QVERIFY2(!popup, "Qt opened a context menu of its own over the label");
+        QVERIFY2(!menuEvent.isAccepted(), "the label took the context menu event instead of passing it on");
     }
 };
 
