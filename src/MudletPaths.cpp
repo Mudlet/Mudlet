@@ -101,6 +101,11 @@ QString pathResolveRelative(const QString& path, const QString& base)
     return QDir::cleanPath(qsl("%1/%2").arg(base, path));
 }
 
+QString markerIn(const QString& dir)
+{
+    return qsl("%1/portable.txt").arg(dir);
+}
+
 QString readMarkerFile(const QString& path)
 {
     QString line;
@@ -123,22 +128,35 @@ QString MudletPaths::executableDir()
     return QCoreApplication::applicationDirPath();
 }
 
+QString MudletPaths::legacyConfigDir()
+{
+    return qsl("%1/.config/mudlet").arg(QDir::homePath());
+}
+
+QString MudletPaths::portableMarkerPath(const QString& execDir, const QString& configDir)
+{
+    const QString besideExecutable = markerIn(execDir);
+    if (QFileInfo(besideExecutable).isFile()) {
+        return besideExecutable;
+    }
+    const QString inConfigDir = markerIn(configDir);
+    return QFileInfo(inConfigDir).isFile() ? inConfigDir : QString();
+}
+
 MudletPaths::ConfigDirResolution MudletPaths::resolveConfigRoot(const QString& execDir)
 {
-    const QString confDirDefault = qsl("%1/.config/mudlet").arg(QDir::homePath());
-    const QString markerExecDir = qsl("%1/portable.txt").arg(execDir);
-    const QString markerHomeDir = qsl("%1/portable.txt").arg(confDirDefault);
-    if (QFileInfo(markerExecDir).isFile()) {
-        QString portPath = readMarkerFile(markerExecDir);
-        if (portPath.isEmpty()) {
-            portPath = qsl("./portable"); // fallback value for empty portable.txt
-        }
-        return {.path = pathResolveRelative(QDir::cleanPath(portPath), execDir), .portable = true};
+    const QString confDirDefault = legacyConfigDir();
+    const QString marker = portableMarkerPath(execDir, confDirDefault);
+    if (marker.isEmpty()) {
+        return xdgConfigDir(confDirDefault);
     }
-    if (QFileInfo(markerHomeDir).isFile()) {
-        return {.path = pathResolveRelative(QDir::cleanPath(readMarkerFile(markerHomeDir)), execDir), .portable = true};
+    QString portPath = readMarkerFile(marker);
+    // Only beside the executable does an empty marker mean "the data is here
+    // too"; the one in the config dir names no such default
+    if (portPath.isEmpty() && marker == markerIn(execDir)) {
+        portPath = qsl("./portable"); // fallback value for empty portable.txt
     }
-    return xdgConfigDir(confDirDefault);
+    return {.path = pathResolveRelative(QDir::cleanPath(portPath), execDir), .portable = true};
 }
 
 MudletPaths::ConfigDirResolution MudletPaths::xdgConfigDir(const QString& legacyDefault)

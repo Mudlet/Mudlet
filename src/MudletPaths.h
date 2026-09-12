@@ -57,6 +57,16 @@ struct ConfigDirResolution
 // from one
 QString executableDir();
 
+// ~/.config/mudlet: the pre-XDG default, and the second place a portable.txt
+// marker is looked for
+QString legacyConfigDir();
+
+// The portable.txt that governs, or an empty string when there is none - the
+// one beside the executable outranks the one in the config dir. Two stats and
+// no file read, so callers that only want to know whether portable mode is on
+// can ask on every operation.
+QString portableMarkerPath(const QString& execDir, const QString& configDir = legacyConfigDir());
+
 // Applies the whole precedence to a given executable directory. Remembers
 // nothing, so the Mudlet.ini read that happens before QApplication exists can
 // share it.
