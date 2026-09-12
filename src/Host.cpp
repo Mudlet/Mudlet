@@ -1521,36 +1521,63 @@ static bool platformResolvesFontFamily(const QString& requested)
 
     // Seeded from a UUID rather than a fixed name so that no machine can have a
     // font by that name, which would make every unknown family look resolved.
+    // Measured once for the process: the answer must not drift between one font's
+    // resolution and the next's.
     static const QString unrecognisedName = QUuid::createUuid().toString();
     static const QString unrecognisedFamily = QFontInfo(QFont(unrecognisedName)).family();
 
     // Should a platform ever hand an unrecognised name back rather than name the
     // family it drew instead, it tells the two apart for nobody - so take nothing
     // on it that the font database does not list, and leave the fallback alone.
-    if (unrecognisedFamily.compare(unrecognisedName, Qt::CaseInsensitive) == 0) {
+    // Said once, because it silently turns this whole test off: without it, a
+    // report of "Mudlet keeps replacing my font" cannot be told from one where the
+    // font really is missing.
+    static const bool nameResolutionIsReadable = []() {
+        if (unrecognisedFamily.compare(unrecognisedName, Qt::CaseInsensitive) == 0) {
+            qWarning().nospace().noquote() << "Host: this platform hands an unrecognised font family name back unchanged instead of naming the family it drew "
+                                              "in its place, so a name it resolves for itself cannot be told from a font nobody has - every name the font "
+                                              "database does not list will be reported as missing.";
+            return false;
+        }
+
+        return true;
+    }();
+
+    if (!nameResolutionIsReadable) {
         return false;
     }
 
     return QFontInfo(QFont(requested)).family() != unrecognisedFamily;
 }
 
-Host::FontFamilyResolution Host::resolveFontFamily(const QString& requested) const
+// The family as the font database spells it, not as it was typed: that spelling is what
+// getFont() reports back and what the Geyser wrappers remember. Empty when the database
+// lists nothing by that name.
+static QString installedFamily(const QStringList& availableFonts, const QString& name)
 {
-    const QStringList availableFonts = mudlet::self()->getAvailableFonts();
-    // The family as the font database spells it, not as it was typed: it is what
-    // ends up reported back by getFont() and remembered by the Geyser wrappers.
     for (const QString& family : availableFonts) {
-        if (family.compare(requested, Qt::CaseInsensitive) == 0) {
-            return {family, QFont::Normal, true};
+        if (family.compare(name, Qt::CaseInsensitive) == 0) {
+            return family;
         }
     }
 
-    auto [baseName, weight] = parseFontNameAndStyle(requested);
-    if (baseName != requested) {
-        for (const QString& family : availableFonts) {
-            if (family.compare(baseName, Qt::CaseInsensitive) == 0) {
-                return {family, weight, true};
-            }
+    return QString();
+}
+
+Host::FontFamilyResolution Host::resolveFontFamily(const QString& requested) const
+{
+    const QStringList availableFonts = mudlet::self()->getAvailableFonts();
+
+    if (const QString installed = installedFamily(availableFonts, requested); !installed.isEmpty()) {
+        return {installed, QFont::Normal, true};
+    }
+
+    const auto [baseName, weight] = parseFontNameAndStyle(requested);
+    const bool carriesAStyleSuffix = baseName != requested;
+
+    if (carriesAStyleSuffix) {
+        if (const QString installed = installedFamily(availableFonts, baseName); !installed.isEmpty()) {
+            return {installed, weight, true};
         }
     }
 
@@ -1563,7 +1590,7 @@ Host::FontFamilyResolution Host::resolveFontFamily(const QString& requested) con
         return {requested, QFont::Normal, true};
     }
 
-    if (baseName != requested && platformResolvesFontFamily(baseName)) {
+    if (carriesAStyleSuffix && platformResolvesFontFamily(baseName)) {
         return {baseName, weight, true};
     }
 

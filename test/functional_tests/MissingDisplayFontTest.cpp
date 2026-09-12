@@ -49,6 +49,7 @@
 #include <QFontDatabase>
 #include <QFontInfo>
 #include <QTemporaryDir>
+#include <QUuid>
 #include <zip.h>
 
 #include "Host.h"
@@ -292,20 +293,31 @@ private:
         return contents.mid(from, end - from).section(QChar::fromLatin1(','), 0, 0);
     }
 
-    // Makes mAliasFamily into a name this machine resolves for itself, standing in
-    // for a fontconfig alias, and hands back whether that is something the case can
-    // still tell from a name nothing knows - it is not on a machine whose stand-in
-    // for an unknown family is the very family the alias is pointed at.
-    bool stageAliasFamily()
+    // Makes mAliasFamily into a name this machine resolves for itself, standing in for
+    // a fontconfig alias, and hands back the family it was pointed at - or an empty
+    // string on a platform that cannot show the difference at all.
+    //
+    // The family it is pointed at is one of the two this test registers itself, and
+    // never the one this machine falls back to for a name nothing knows: those two
+    // would be indistinguishable, which is the one thing the cases below have to be
+    // able to tell apart. On a minimal machine the stand-in can perfectly well be the
+    // bundled default, so which of the two is used has to be decided here rather than
+    // fixed - otherwise both cases skip on exactly the installations where the font
+    // they cover matters most.
+    QString stageAliasFamily()
     {
-        const QString beforeStaging = QFontInfo(QFont(mAliasFamily)).family();
-        // ...nor on one that hands an unrecognised name straight back instead of
-        // naming the family it drew in its place
-        if (beforeStaging == mAliasFamily || beforeStaging == Host::scmDefaultFontFamily) {
-            return false;
+        // Asked afresh of a name nothing can have, so that what comes back is this
+        // machine's stand-in for an unknown family rather than a font it really has
+        const QString unknownName = QUuid::createUuid().toString();
+        const QString standIn = QFontInfo(QFont(unknownName)).family();
+
+        if (standIn == unknownName) {
+            return QString();
         }
-        QFont::insertSubstitution(mAliasFamily, Host::scmDefaultFontFamily);
-        return QFontInfo(QFont(mAliasFamily)).family() == Host::scmDefaultFontFamily;
+
+        const QString target = (standIn == Host::scmDefaultFontFamily) ? mOtherBundledFamily : Host::scmDefaultFontFamily;
+        QFont::insertSubstitution(mAliasFamily, target);
+        return target;
     }
 
 private slots:
@@ -396,9 +408,13 @@ private slots:
     void test_resolveAcceptsANameThePlatformResolvesForItself()
     {
         QVERIFY2(!mpHost->resolveFontFamily(mAliasFamily).available, "the alias name is resolvable before anything resolves it, so this case proves nothing");
-        if (!stageAliasFamily()) {
-            QSKIP("this machine hands back the same family for an unknown name as for the staged alias, so the two cannot be told apart");
+        const QString standingInFor = stageAliasFamily();
+        if (standingInFor.isEmpty()) {
+            QSKIP("this platform hands an unrecognised font name back unchanged instead of naming the family it drew in its place, so no name it resolves can be told from one nothing knows");
         }
+        // A failure of the case's own tool rather than of the machine it runs on, so
+        // it is reported as one: Qt consults the substitution table on every platform.
+        QCOMPARE(QFontInfo(QFont(mAliasFamily)).family(), standingInFor);
 
         const auto resolved = mpHost->resolveFontFamily(mAliasFamily);
         QVERIFY2(resolved.available, "a name the platform resolves was reported as an uninstalled font");
@@ -412,9 +428,11 @@ private slots:
     // and reported to the player as a font they do not have.
     void test_aDisplayFontThePlatformResolvesIsNotStoodInFor()
     {
-        if (!stageAliasFamily()) {
-            QSKIP("this machine hands back the same family for an unknown name as for the staged alias, so the two cannot be told apart");
+        const QString standingInFor = stageAliasFamily();
+        if (standingInFor.isEmpty()) {
+            QSKIP("this platform hands an unrecognised font name back unchanged instead of naming the family it drew in its place, so no name it resolves can be told from one nothing knows");
         }
+        QCOMPARE(QFontInfo(QFont(mAliasFamily)).family(), standingInFor);
 
         QVERIFY(mpHost->setDisplayFont(QFont(mAliasFamily, 13, QFont::Normal)).first);
 
