@@ -6813,15 +6813,13 @@ void dlgProfilePreferences::applyAll()
             pHost->mMMCPChatPort = ok ? port : csDefaultMMCPHostPort;
         }
 
-        /* Possible inclusion in 4.21
+        /* Possible inclusion in 4.21 - these three have no controls on the form
+           yet, so an apply has nothing to write them from and must leave the
+           values the profile was loaded with alone (#10165's residue)
         pHost->mMMCPAutostartServer = checkBox_mmcpAutostartServer->isChecked();
         pHost->mMMCPAutoAcceptCalls = checkBox_mmcpAutoAcceptCalls->isChecked();
         pHost->mMMCPAllowPeekRequests = checkBox_mmcpAllowPeekReq->isChecked();
         */
-        // remove these when the above is restored
-        pHost->mMMCPAutostartServer = false;
-        pHost->mMMCPAutoAcceptCalls = false;
-        pHost->mMMCPAllowPeekRequests = false;
 
         if (mSnapshot.dirty(checkBox_mmcpPrefixEmotes)) {
             pHost->mMMCPPrefixEmotes = checkBox_mmcpPrefixEmotes->isChecked();
