@@ -40,6 +40,9 @@ class dlgConnectionProfiles : public QDialog, public Ui::connection_profiles
 {
     Q_OBJECT
 
+    // Allows the functional test to stand in for a keychain read that has not answered yet:
+    friend class ConnectionDialogKeychainWaitTest;
+
 public:
     Q_DISABLE_COPY(dlgConnectionProfiles)
     explicit dlgConnectionProfiles(QWidget* parent = nullptr);
@@ -152,6 +155,19 @@ private:
     void addLetterToProfileSearch(const int);
     void clearNotificationArea();
     void loadPasswordAsync(const QString& profileName);
+    // While a keychain read is outstanding the dialog stays up and says so, rather than hiding
+    // itself for however long the system prompt behind it goes unanswered
+    void showKeychainWait();
+    void clearKeychainWait();
+    // Runs the load that Connect or Offline queued while the keychain was busy, and reports
+    // whether there was one - the dialog is on its way out when there was
+    bool completePendingProfileLoad(const QString& profileName);
+    // Drops a queued load that nothing is going to complete, and gives the dialog its buttons back
+    void abandonPendingProfileLoad();
+    // What a keychain read answers with. A read that timed out can still be answered afterwards,
+    // and lateAnswer marks that second call: by then the load this dialog was holding has long
+    // since run, so all such an answer may still do is fill a password field left empty.
+    void passwordRetrieved(const QString& profileName, bool success, const QString& password, const QString& errorMessage, bool lateAnswer);
     void revealConnectionDetails();
     bool showingOnlyMyProfiles() const;
 
@@ -199,6 +215,7 @@ private:
     QString mPendingProfileLoad;               // Profile name waiting for password load
     bool mPendingConnect = false;              // Whether to connect (true) or just load (false)
     bool mKeychainOperationInProgress = false; // Track if keychain op is active
+    bool mKeychainWaitShown = false;           // Whether the dialog is showing the keychain wait
 
 
 private slots:
