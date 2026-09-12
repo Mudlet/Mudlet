@@ -1094,6 +1094,10 @@ void TConsole::slot_toggleReplayRecording()
             dirLogFile.mkpath(directoryLogFile);
         }
         if (!telnet.startReplayRecording(mLogFileName)) {
+            // The button has already toggled itself on - clicked() fires after
+            // that - so put it back rather than leave it looking pressed with
+            // no recording behind it:
+            replayButton->setChecked(false);
             qWarning() << "TConsole: failed to open replay file for writing:" << telnet.replayRecordingErrorString();
             //: Informational message displayed when replay recording file could not be opened. %1 is the reason
             printSystemMessage(tr("Failed to open replay recording file for writing: %1").arg(telnet.replayRecordingErrorString()) % QChar::LineFeed);
