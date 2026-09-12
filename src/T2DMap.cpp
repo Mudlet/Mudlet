@@ -1822,17 +1822,8 @@ QSize T2DMap::lodRoomBlobSize() const
 // defined - a zoom has no upper bound, and at a ten-millionth of a pixel per
 // room the range is billions of cells wide, which a double holds and an int
 // does not.
-// A zoom far enough out to overflow the float span leaves a room zero pixels
-// wide and the inverse transform dividing zero by zero. A NaN has no ordering
-// for qBound to clamp, and the comparisons settle both bounds the same way, so
-// clamping one collapses the range instead of widening it - hence the caller
-// naming the end that stands in for it, which draws every room into the one
-// pixel the map has become.
-static int clampedRoomCoordinate(const double coordinate, const int nanFallback)
+static int clampedRoomCoordinate(const double coordinate)
 {
-    if (std::isnan(coordinate)) {
-        return nanFallback;
-    }
     return static_cast<int>(qBound(static_cast<double>(INT_MIN), coordinate, static_cast<double>(INT_MAX)));
 }
 
@@ -1848,10 +1839,25 @@ static int clampedRoomCoordinate(const double coordinate, const int nanFallback)
 // an extra cell only costs an index lookup that comes back empty.
 QRect T2DMap::viewportRoomBounds(const float rx0, const float ry0, const float roomWidth, const float roomHeight, const float widgetWidth, const float widgetHeight)
 {
-    const int minX = clampedRoomCoordinate(std::floor(static_cast<double>(-rx0) / roomWidth) - 1.0, INT_MIN);
-    const int maxX = clampedRoomCoordinate(std::ceil(static_cast<double>(widgetWidth - rx0) / roomWidth) + 1.0, INT_MAX);
-    const int minY = clampedRoomCoordinate(std::floor(static_cast<double>(ry0 - widgetHeight) / roomHeight) - 1.0, INT_MIN);
-    const int maxY = clampedRoomCoordinate(std::ceil(static_cast<double>(ry0) / roomHeight) + 1.0, INT_MAX);
+    // A zoom far enough out overflows the float span, which leaves a room zero
+    // pixels across and every bound below dividing by that zero. Nothing that
+    // division returns can be clamped into a range: an infinity pins a bound
+    // onto whichever end its sign points at, and a NaN pins it onto the lower
+    // end whichever bound it is, since qBound is qMax(min, qMin(max, val)) and
+    // no comparison against a NaN is true. Which of the two each bound gets is
+    // not even the same on every machine - the pan offsets are qRound()ed from
+    // zero times that infinite span, and int(NaN) is INT_MIN on x86-64 and 0 on
+    // ARM64 - so leaving it to the clamp collapses the viewport onto one end of
+    // the coordinate space and the map comes out blank. Answer "everything"
+    // once instead, which is what 5.0.1 drew: every room into the one pixel the
+    // map has become.
+    if (!(roomWidth > 0.0f) || !(roomHeight > 0.0f)) {
+        return QRect(QPoint(INT_MIN, INT_MIN), QPoint(INT_MAX, INT_MAX));
+    }
+    const int minX = clampedRoomCoordinate(std::floor(static_cast<double>(-rx0) / roomWidth) - 1.0);
+    const int maxX = clampedRoomCoordinate(std::ceil(static_cast<double>(widgetWidth - rx0) / roomWidth) + 1.0);
+    const int minY = clampedRoomCoordinate(std::floor(static_cast<double>(ry0 - widgetHeight) / roomHeight) - 1.0);
+    const int maxY = clampedRoomCoordinate(std::ceil(static_cast<double>(ry0) / roomHeight) + 1.0);
     return QRect(QPoint(minX, minY), QPoint(maxX, maxY));
 }
 
@@ -2065,8 +2071,9 @@ void T2DMap::drawGridModeRooms(QPainter& painter,
             QDebug dbg(profileOutput);
             dbg.noquote().nospace() << "drawGridModeRooms (" << lodPathName << ") timing (ms):" << " total:" << (timeIndex + timeCollect + timeBlit) << " indexSetup:" << timeIndex
                                     << " collect+pixelWrite:" << timeCollect << " imageBlit:" << timeBlit << " visibleRooms:" << roomCount
-                                    << " viewportCells:" << (static_cast<qint64>(maxX) - minX + 1) * (static_cast<qint64>(maxY) - minY + 1) << " viewportBounds: x[" << minX << "," << maxX << "] y["
-                                    << minY << "," << maxY << "]" << " roomSizePx:" << mRoomWidth << " gridIndexRooms:" << gridIndex.size() << " gridIndexBytes:" << gridIndex.memoryEstimateBytes();
+                                    << " viewportColumns:" << (static_cast<qint64>(maxX) - minX + 1) << " viewportRows:" << (static_cast<qint64>(maxY) - minY + 1) << " viewportBounds: x[" << minX
+                                    << "," << maxX << "] y[" << minY << "," << maxY << "]" << " roomSizePx:" << mRoomWidth << " gridIndexRooms:" << gridIndex.size()
+                                    << " gridIndexBytes:" << gridIndex.memoryEstimateBytes();
         }
 
         // Handle double-click speedwalk via grid-cell lookup.  The pixel-level
@@ -2393,8 +2400,8 @@ void T2DMap::drawGridModeRooms(QPainter& painter,
         QDebug dbg(profileOutput);
         dbg.noquote().nospace() << "drawGridModeRooms timing (ms):" << " total:" << (timeIndex + timeCollect + timeBatchDraw + timeCollision + timeDecor) << " indexSetup:" << timeIndex
                                 << " collect(gridIndex):" << timeCollect << " batchDraw:" << timeBatchDraw << " collision:" << timeCollision << " decor:" << timeDecor << " visibleRooms:" << roomCount
-                                << " viewportCells:" << (static_cast<qint64>(maxX) - minX + 1) * (static_cast<qint64>(maxY) - minY + 1) << " viewportBounds: x[" << minX << "," << maxX << "] y["
-                                << minY << "," << maxY << "]" << " gridIndexRooms:" << gridIndex.size() << " gridIndexBytes:" << gridIndex.memoryEstimateBytes();
+                                << " viewportColumns:" << (static_cast<qint64>(maxX) - minX + 1) << " viewportRows:" << (static_cast<qint64>(maxY) - minY + 1) << " viewportBounds: x[" << minX << ","
+                                << maxX << "] y[" << minY << "," << maxY << "]" << " gridIndexRooms:" << gridIndex.size() << " gridIndexBytes:" << gridIndex.memoryEstimateBytes();
     }
 }
 
@@ -3376,6 +3383,17 @@ void T2DMap::drawDoor(QPainter& painter, const TRoom& room, const QString& dirKe
     painter.restore();
 }
 
+// Not QRect::contains(): it works out which way round the rectangle is by
+// computing left - 1, which is not a value when a viewport bound has reached
+// the coordinate limit - and a map holding a room out there is exactly when one
+// has. The comparison it makes of the wrapped result then comes out inverted,
+// so a room off the side of the viewport is reported as inside it and one
+// inside it as off the side.
+static bool withinViewportBounds(const QRect& bounds, const int x, const int y)
+{
+    return x >= bounds.left() && x <= bounds.right() && y >= bounds.top() && y <= bounds.bottom();
+}
+
 void T2DMap::paintRoomExits(QPainter& painter,
                             QPen& pen,
                             QList<ExitToPaint>& exitList,
@@ -3481,7 +3499,7 @@ void T2DMap::paintRoomExits(QPainter& painter,
         // the in-progress custom line happens to lead to:
         if (customLineDestinationTarget > 0 && !alreadyListed.contains(customLineDestinationTarget)) {
             const TRoom* pTargetRoom = mpMap->mpRoomDB->getRoom(customLineDestinationTarget);
-            if (pTargetRoom && pTargetRoom->getArea() == mAreaID && pTargetRoom->z() == zLevel && roomBounds.contains(pTargetRoom->x(), pTargetRoom->y())) {
+            if (pTargetRoom && pTargetRoom->getArea() == mAreaID && pTargetRoom->z() == zLevel && withinViewportBounds(roomBounds, pTargetRoom->x(), pTargetRoom->y())) {
                 roomsToPaint.append(customLineDestinationTarget);
             }
         }
@@ -3491,7 +3509,7 @@ void T2DMap::paintRoomExits(QPainter& painter,
             TRoom* pRoomWithCustomLines = mpMap->mpRoomDB->getRoom(customLineRoomId);
             // Rooms inside the bounds are in the list already, and painting a
             // room's exits twice does not look like painting them once.
-            if (!pRoomWithCustomLines || roomBounds.contains(pRoomWithCustomLines->x(), pRoomWithCustomLines->y())) {
+            if (!pRoomWithCustomLines || withinViewportBounds(roomBounds, pRoomWithCustomLines->x(), pRoomWithCustomLines->y())) {
                 continue;
             }
             roomsToPaint.append(customLineRoomId);

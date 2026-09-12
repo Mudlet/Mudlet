@@ -150,6 +150,7 @@ set(MAP_GROUP_TEST_SOURCES
     MapAreaReassignmentTest.cpp
     MapAreaSelectionTest.cpp
     MapCloseDuringImportTest.cpp
+    MapCoordinateLimitTest.cpp
     MapDownloadTest.cpp
     RoomExitsDialogTest.cpp
     MapLevelOfDetailTest.cpp

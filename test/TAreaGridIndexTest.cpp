@@ -42,6 +42,27 @@
  * - isEmpty / clear / size
  * - Integration: add + full rebuild + remove + move
  */
+namespace {
+// More occupied columns (rows) than any range below asks for, so the scan probes
+// the cells it wants instead of walking the ones the index has - probing is the
+// loop that stopped terminating at the coordinate limit.
+constexpr int cOccupiedCells = 600;
+
+void addRoomsAlongX(TAreaGridIndex& idx)
+{
+    for (int i = 0; i < cOccupiedCells; ++i) {
+        idx.addRoom(i + 1, 0, i, 0);
+    }
+}
+
+void addRoomsAlongY(TAreaGridIndex& idx)
+{
+    for (int i = 0; i < cOccupiedCells; ++i) {
+        idx.addRoom(i + 1, 0, 0, i);
+    }
+}
+} // namespace
+
 class TAreaGridIndexTest : public QObject
 {
     Q_OBJECT
@@ -488,20 +509,19 @@ private slots:
     // -------------------------------------------------------------------------
     // Ranges that reach the limits of the coordinate space
     //
-    // A viewport bound is a room coordinate clamped into int, so a map holding
-    // a room out at the edge of that space - or a zoom so far out that the map
-    // collapses to a point - asks for a range that ends at INT_MAX. Probing
-    // such a range one column at a time is the arithmetic that never gets past
-    // its last step, so each of these cases hangs rather than answers wrongly
-    // when it regresses: run the binary under a timeout.
+    // A viewport bound is a room coordinate clamped into int, so a map holding a
+    // room out at the edge of that space asks for a range that ends at INT_MAX,
+    // and a zoom so far out that the map collapses to a point asks for the whole
+    // range. Probing a range that ends at INT_MAX one column at a time is the
+    // arithmetic that never gets past its last step, so each of these cases
+    // hangs rather than answers wrongly when it regresses: run the binary under
+    // a timeout.
     // -------------------------------------------------------------------------
 
     void roomsInViewport_rangeEndingAtTheCoordinateLimit_returnsTheRoomsInIt()
     {
         TAreaGridIndex idx;
-        for (int i = 0; i < 600; ++i) {
-            idx.addRoom(i + 1, 0, i, 0);
-        }
+        addRoomsAlongX(idx);
         idx.addRoom(9999, 0, INT_MAX, 0);
 
         // 201 of the 601 occupied columns are wanted, so probing them is the
@@ -514,9 +534,7 @@ private slots:
     void roomsInViewport_oneColumnWideAtTheCoordinateLimit_returnsTheRoomsInIt()
     {
         TAreaGridIndex idx;
-        for (int i = 0; i < 600; ++i) {
-            idx.addRoom(i + 1, 0, i, 0);
-        }
+        addRoomsAlongX(idx);
         idx.addRoom(9999, 0, INT_MAX, 0);
 
         const QList<int> result = idx.roomsInViewport(0, INT_MAX, INT_MAX, -10, 10);
@@ -527,9 +545,7 @@ private slots:
     void roomsInViewport_rangeStartingAtTheCoordinateLimit_returnsTheRoomsInIt()
     {
         TAreaGridIndex idx;
-        for (int i = 0; i < 600; ++i) {
-            idx.addRoom(i + 1, 0, i, 0);
-        }
+        addRoomsAlongX(idx);
         idx.addRoom(9999, 0, INT_MIN, 0);
 
         const QList<int> result = idx.roomsInViewport(0, INT_MIN, INT_MIN + 200, -10, 10);
@@ -537,6 +553,10 @@ private slots:
         QCOMPARE(result, QList<int>({9999}));
     }
 
+    // Three rooms is fewer than the 2^32 columns the range covers, so this is
+    // the key-walking branch rather than the probing one: what it pins is that
+    // the widest range there is still answers, which is what an absurd zoom now
+    // asks for.
     void roomsInViewport_theWholeCoordinateRange_returnsEveryRoom()
     {
         TAreaGridIndex idx;
@@ -553,9 +573,7 @@ private slots:
     void roomsInViewport_yRangeEndingAtTheCoordinateLimit_returnsTheRoomsInIt()
     {
         TAreaGridIndex idx;
-        for (int i = 0; i < 600; ++i) {
-            idx.addRoom(i + 1, 0, 0, i);
-        }
+        addRoomsAlongY(idx);
         idx.addRoom(9999, 0, 0, INT_MAX);
 
         const QList<int> result = idx.roomsInViewport(0, 0, 0, INT_MAX - 200, INT_MAX);
@@ -566,9 +584,7 @@ private slots:
     void roomsInViewportWithCollisions_rangeEndingAtTheCoordinateLimit_returnsTheRoomsInIt()
     {
         TAreaGridIndex idx;
-        for (int i = 0; i < 600; ++i) {
-            idx.addRoom(i + 1, 0, i, 0);
-        }
+        addRoomsAlongX(idx);
         idx.addRoom(9998, 0, INT_MAX, 0);
         idx.addRoom(9999, 0, INT_MAX, 0);
 
@@ -583,9 +599,7 @@ private slots:
     void roomsInViewportWithCollisions_yRangeEndingAtTheCoordinateLimit_returnsTheRoomsInIt()
     {
         TAreaGridIndex idx;
-        for (int i = 0; i < 600; ++i) {
-            idx.addRoom(i + 1, 0, 0, i);
-        }
+        addRoomsAlongY(idx);
         idx.addRoom(9999, 0, 0, INT_MAX);
 
         const auto result = idx.roomsInViewportWithCollisions(0, 0, 0, INT_MAX - 200, INT_MAX);
