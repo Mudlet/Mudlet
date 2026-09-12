@@ -9521,15 +9521,55 @@ void dlgTriggerEditor::refreshTriggerIcon(int triggerID)
     if (!isVisible()) {
         return;
     }
-    TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(triggerID);
-    if (!pT) {
-        return;
+    mPendingTriggerIconRefresh.insert(triggerID);
+    if (!mTriggerIconRefreshQueued) {
+        mTriggerIconRefreshQueued = true;
+        QTimer::singleShot(0ms, this, &dlgTriggerEditor::flushPendingTriggerIconRefresh);
     }
-    QTreeWidgetItem* pItem = findItemByID(mpTriggerBaseItem, triggerID);
-    if (!pItem) {
-        return;
-    }
+}
 
+void dlgTriggerEditor::flushPendingTriggerIconRefresh()
+{
+    mTriggerIconRefreshQueued = false;
+    if (mPendingTriggerIconRefresh.isEmpty()) {
+        return;
+    }
+    if (mpTriggerBaseItem && isVisible()) {
+        int remaining = mPendingTriggerIconRefresh.size();
+        refreshTriggerIconsIn(mpTriggerBaseItem, false, remaining);
+    }
+    mPendingTriggerIconRefresh.clear();
+}
+
+// One pass over the tree: repaints every pending item and, since a folder's
+// state changes its descendants' greyed-out look, everything under one. Stops
+// as soon as every pending ID has been seen.
+void dlgTriggerEditor::refreshTriggerIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, int& remaining)
+{
+    for (int i = 0, n = pParent->childCount(); i < n; ++i) {
+        QTreeWidgetItem* pItem = pParent->child(i);
+        const int id = pItem->data(0, Qt::UserRole).toInt();
+        const bool pending = mPendingTriggerIconRefresh.contains(id);
+        if (pending) {
+            --remaining;
+        }
+        const bool dirty = ancestorDirty || pending;
+        if (dirty) {
+            if (TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(id)) {
+                paintTriggerItem(pItem, pT);
+            }
+        }
+        if (pItem->childCount() > 0 && (dirty || remaining > 0)) {
+            refreshTriggerIconsIn(pItem, dirty, remaining);
+        }
+        if (!ancestorDirty && remaining <= 0) {
+            return;
+        }
+    }
+}
+
+void dlgTriggerEditor::paintTriggerItem(QTreeWidgetItem* pItem, TTrigger* pT)
+{
     const bool isCurrentItem = (pItem == mpCurrentTriggerItem) && (mCurrentView == EditorViewType::cmTriggerView);
     QIcon icon;
     QString itemDescription;
@@ -9545,12 +9585,13 @@ void dlgTriggerEditor::refreshTriggerIcon(int triggerID)
             showError(pT->getError());
         }
     }
-    pItem->setIcon(0, icon);
-    pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
-
-    if (pItem->childCount() > 0) {
-        children_icon_triggers(pItem, isCurrentItem);
+    // QIcon has no operator==, so setIcon() always emits dataChanged() and the
+    // view re-measures the row - skip it when the icon is the cached one already
+    // shown, which is every item toggled off and back on within one turn.
+    if (pItem->icon(0).cacheKey() != icon.cacheKey()) {
+        pItem->setIcon(0, icon);
     }
+    pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
 }
 
 void dlgTriggerEditor::repopulateVars()
