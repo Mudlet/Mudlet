@@ -263,6 +263,13 @@ void cTelnet::reset()
 
 cTelnet::~cTelnet()
 {
+    // A recording that is still running would otherwise be thrown away:
+    // ~QSaveFile() calls cancelWriting(), which deletes the temporary file
+    // without ever producing the .dat the user has been recording into.
+    if (mRecordReplay) {
+        stopReplayRecording();
+    }
+
     // Stop all timers immediately
     if (mTimerLogin) {
         mTimerLogin->stop();
@@ -977,6 +984,20 @@ void cTelnet::slot_socketDisconnected()
         // A line held back for server-wrap undoing is complete now that the
         // connection is gone - commit it before the disconnect messages:
         mpHost->mainConsoleModel().buffer.flushPendingServerWrapJoin();
+    }
+
+    // The session being recorded has ended, so commit what was captured rather
+    // than leave it to ~QSaveFile(), which cancels the save and deletes the
+    // temporary file:
+    if (mRecordReplay) {
+        const QString recordedFileName = replayRecordingFileName();
+        if (stopReplayRecording()) {
+            //: Message shown when a replay recording is saved because the connection to the game ended. %1 is the file name
+            postMessage(tr("[ INFO ]  - Replay recording has been stopped and saved. File: %1").arg(recordedFileName));
+        } else {
+            //: Message shown when a replay recording could not be saved after the connection to the game ended. %1 is the reason
+            postMessage(tr("[ WARN ]  - Replay recording has been stopped, but couldn't be saved: %1").arg(replayRecordingErrorString()));
+        }
     }
 
     emit signal_disconnected(mpHost);
