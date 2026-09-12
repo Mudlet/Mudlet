@@ -83,10 +83,10 @@ set(PROFILE_GROUP_TEST_SOURCES
     MissingDisplayFontTest.cpp
     ProfileDeletionSafetyTest.cpp
     ProfileFolderNameTest.cpp
+    ProfileIniParseErrorTest.cpp
     ProfileLifecycleTest.cpp
     ProfileLoadTempFileTest.cpp
     ProfileRoundTripTest.cpp
-    ProfileIniParseErrorTest.cpp
     ProfileSaveShutdownRaceTest.cpp
     ResetProfileTest.cpp
     SavedVariableFenceTest.cpp

@@ -37,6 +37,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QRegularExpression>
+#include <QSettings>
 #include <QTemporaryDir>
 
 #include "PortableModeTestHelper.h"
@@ -49,12 +50,14 @@
 
 // Counts the parse diagnostic so that the case for a well-formed file can say it
 // was not printed - QTest::ignoreMessage only ever asserts the other direction.
+// Matched on the function that emits it rather than on the words "could not be
+// parsed", which any other subsystem is free to say about anything.
 static QtMessageHandler previousMessageHandler = nullptr;
 static int parseWarnings = 0;
 
 static void countParseWarnings(QtMsgType type, const QMessageLogContext& context, const QString& message)
 {
-    if (message.contains(QLatin1String("could not be parsed"))) {
+    if (message.contains(QLatin1String("Host::profileIni() ERROR"))) {
         ++parseWarnings;
     }
     if (previousMessageHandler) {
@@ -75,20 +78,39 @@ private:
     // sections as it is constructed and so catches a broken section header there
     static QByteArray unparseableIni() { return QByteArrayLiteral("[CommandLines]\nUsedIndexes=1\nthis line was truncated mid-write\n"); }
 
+    static QString iniPathFor(const QString& profileName) { return mudlet::getMudletPath(enums::profileDataItemPath, profileName, qsl("profile.ini")); }
+
+    // Whether QSettings really does refuse the fixture, which is what the whole case
+    // rests on. Asked of a copy at a path of its own, never of the fixture itself:
+    // QSettings keeps the sections it has parsed per file path and shares them between
+    // instances - and beyond the life of the one that parsed them - so probing the
+    // fixture would answer the question by consuming the parse the Host has to make.
+    static bool refusedByQSettings(const QString& path, const QString& copyPath)
+    {
+        if (!QFile::exists(copyPath) && !QFile::copy(path, copyPath)) {
+            return false;
+        }
+        QSettings probe(copyPath, QSettings::IniFormat);
+        probe.allKeys();
+        return probe.status() == QSettings::FormatError;
+    }
+
     // The Host has to meet the file on its first use of it: profile.ini is
     // opened once and kept, so anything written here afterwards would not be
-    // read again.
+    // read again. A null 'contents' is a profile that has never written one.
     Host* hostWithProfileIni(const QString& profileName, const QByteArray& contents)
     {
-        const QString iniPath = mudlet::getMudletPath(enums::profileDataItemPath, profileName, qsl("profile.ini"));
+        const QString iniPath = iniPathFor(profileName);
         if (!QDir().mkpath(QFileInfo(iniPath).absolutePath())) {
             return nullptr;
         }
-        QFile ini(iniPath);
-        if (!ini.open(QIODevice::WriteOnly | QIODevice::Truncate) || ini.write(contents) != contents.size()) {
-            return nullptr;
+        if (!contents.isNull()) {
+            QFile ini(iniPath);
+            if (!ini.open(QIODevice::WriteOnly | QIODevice::Truncate) || ini.write(contents) != contents.size()) {
+                return nullptr;
+            }
+            ini.close();
         }
-        ini.close();
 
         auto& hostManager = mudlet::self()->getHostManager();
         if (!hostManager.addHost(profileName, QString(), QString(), QString())) {
@@ -135,19 +157,26 @@ private slots:
     void test_anUnparseableProfileIniIsReported()
     {
         const QString profileName = qsl("ProfileIniParseError-Bad");
+        const QString iniPath = iniPathFor(profileName);
         parseWarnings = 0;
-        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl(R"(^Host::profileIni\(\) ERROR - the profile's "profile\.ini" file could not be parsed)")));
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl(R"(^Host::profileIni\(\) ERROR - the "profile\.ini" file of profile "%1" \(.*\) could not be parsed)").arg(profileName)));
 
         Host* pHost = hostWithProfileIni(profileName, unparseableIni());
         QVERIFY2(pHost, "the profile with an unparseable profile.ini was not created");
+        QVERIFY2(refusedByQSettings(iniPath, qsl("%1.probe").arg(iniPath)), "QSettings no longer refuses the damaged fixture, so there is nothing here for the profile to report");
         pHost->writeProfileIniData(qsl("CommandLines/UsedIndexes"), qsl("1"));
 
-        QVERIFY2(parseWarnings == 1, "an unparseable profile.ini was accepted without a word");
-        // ...and what the warning promises: the settings it held are replaced
-        // rather than the write being dropped
-        QCOMPARE(pHost->readProfileIniData(qsl("CommandLines/UsedIndexes")), qsl("1"));
-
-        mudlet::self()->getHostManager().deleteHost(profileName);
+        QCOMPARE(parseWarnings, 1);
+        // ...and what the warning promises: the settings the file held are replaced
+        // rather than the write being dropped. Through the file rather than through
+        // readProfileIniData(), which answers from the very QSettings that has just
+        // cached the write and so would say "1" whatever became of the file.
+        mudlet::self()->getHostManager().deleteHost(profileName); // the Host's QSettings writes itself out as it goes
+        QFile written(iniPath);
+        QVERIFY(written.open(QIODevice::ReadOnly | QIODevice::Text));
+        const QString contents = QString::fromUtf8(written.readAll());
+        QVERIFY2(contents.contains(qsl("UsedIndexes=1")), qPrintable(qsl("the setting written to a damaged profile.ini did not reach the file, which holds: %1").arg(contents)));
+        QVERIFY2(!contents.contains(qsl("truncated mid-write")), qPrintable(qsl("the damage was left in place rather than the file being replaced, which holds: %1").arg(contents)));
     }
 
     // ...and a file that parses is not slandered, which is the state every
@@ -161,7 +190,7 @@ private slots:
         QVERIFY2(pHost, "the profile with a well-formed profile.ini was not created");
 
         QCOMPARE(pHost->readProfileIniData(qsl("CommandLines/UsedIndexes")), qsl("3"));
-        QVERIFY2(parseWarnings == 0, "a well-formed profile.ini was reported as unparseable");
+        QCOMPARE(parseWarnings, 0);
 
         mudlet::self()->getHostManager().deleteHost(profileName);
     }
@@ -173,16 +202,14 @@ private slots:
         const QString profileName = qsl("ProfileIniParseError-Absent");
         parseWarnings = 0;
 
-        QVERIFY(QDir().mkpath(mudlet::getMudletPath(enums::profileHomePath, profileName)));
-        auto& hostManager = mudlet::self()->getHostManager();
-        QVERIFY(hostManager.addHost(profileName, QString(), QString(), QString()));
-        Host* pHost = hostManager.getHost(profileName);
-        QVERIFY(pHost);
+        Host* pHost = hostWithProfileIni(profileName, QByteArray());
+        QVERIFY2(pHost, "the profile with no profile.ini was not created");
+        QVERIFY2(!QFile::exists(iniPathFor(profileName)), "the fixture wrote a profile.ini for a profile that is supposed to have none");
 
         QCOMPARE(pHost->readProfileIniData(qsl("CommandLines/UsedIndexes")), QString());
-        QVERIFY2(parseWarnings == 0, "a profile that has no profile.ini yet was reported as having an unparseable one");
+        QCOMPARE(parseWarnings, 0);
 
-        hostManager.deleteHost(profileName);
+        mudlet::self()->getHostManager().deleteHost(profileName);
     }
 };
 

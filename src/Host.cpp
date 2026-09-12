@@ -3387,10 +3387,14 @@ QSettings& Host::profileIni()
         mpProfileIni = new QSettings(mudlet::getMudletPath(enums::profileDataItemPath, getName(), qsl("profile.ini")), QSettings::IniFormat, this);
         // Constructing it only splits the file into sections, and each section
         // is parsed by the first lookup that needs it, so damage inside one is
-        // not visible in status() yet. allKeys() parses them all:
-        mpProfileIni->allKeys();
+        // not visible in status() yet. allKeys() parses them all, and the keys
+        // it hands back are of no interest here:
+        static_cast<void>(mpProfileIni->allKeys());
         if (mpProfileIni->status() == QSettings::FormatError) {
-            qWarning().nospace().noquote() << "Host::profileIni() ERROR - the profile's \"profile.ini\" file could not be parsed, the settings it held will be replaced.";
+            // Named, because with several profiles open there is otherwise no
+            // telling which one lost its command line history and notepad state
+            qWarning().nospace().noquote() << "Host::profileIni() ERROR - the \"profile.ini\" file of profile \"" << getName() << "\" (" << mpProfileIni->fileName()
+                                           << ") could not be parsed, the settings it held will be replaced.";
         }
     }
     return *mpProfileIni;
