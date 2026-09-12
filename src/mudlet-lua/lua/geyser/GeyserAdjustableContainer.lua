@@ -411,6 +411,9 @@ function Adjustable.Container:adjustBorder()
         self.attached = false
         return
     end
+    -- the console keeps a fifth of the window: a container as big as it would reserve every pixel
+    local windowExtent = (where == "top" or where == "bottom") and winh or winw
+    self.borderSize = math.min(self.borderSize, math.floor(windowExtent * 0.8))
     local borderSize = self.borderSize
     for k,v in pairs(Adjustable.Container.Attached[where]) do
         if v.borderSize > borderSize then
