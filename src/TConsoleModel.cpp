@@ -27,6 +27,7 @@
 #include <QCoreApplication>
 #include <QDateTime>
 #include <QDir>
+#include <QFileInfo>
 #include <QFontInfo>
 
 TConsoleModel::TConsoleModel(Host* pHost)
@@ -56,6 +57,37 @@ QStringList TConsoleModel::lines(int from, int to)
 // - QFontInfo(Host::getDisplayFont()) is what QWidget::fontInfo() reports for
 //   the main console, because Host::getDisplayFont() hands back that widget's
 //   own QFont - and unlike the widget call it still answers with no widget.
+namespace {
+// The sentinel's only job is to say that logging was on when the profile last
+// closed: Host reads its bare existence on the next load and clicks the log
+// button. One left behind by a start that never began makes that failure
+// repeat on every launch, and what blocks the sentinel can be a directory,
+// which QFile::remove() will not take.
+void removeAutologSentinel(const QString& path)
+{
+    const QFileInfo sentinel(path);
+    if (!sentinel.exists()) {
+        return;
+    }
+    if (sentinel.isDir()) {
+        QDir().rmdir(path);
+        return;
+    }
+    QFile::remove(path);
+}
+} // namespace
+
+// A clicked checkable button has already flipped itself, so a start that goes
+// nowhere still has to report the state it left behind - and say why, since
+// the autolog resume on profile load has no button to watch.
+void TConsoleModel::reportFailedLogStart(const QString& path, const QString& reason)
+{
+    mLogStartFailure = qsl("%1: %2").arg(path, reason);
+    //: Error shown on the main console when a log file could not be opened. %1 is the file, %2 is the reason
+    mpHost->postMessage(QCoreApplication::translate("TConsoleModel", "[ ERROR ] - Could not start logging to \"%1\": %2").arg(path, reason));
+    mpHost->raiseLoggingStateChanged(false);
+}
+
 void TConsoleModel::toggleLogging(bool isMessageEnabled)
 {
     // Logging is profile-wide, not per-console: the autolog sentinel, the log
@@ -72,7 +104,9 @@ void TConsoleModel::toggleLogging(bool isMessageEnabled)
     const QDateTime logDateTime = QDateTime::currentDateTime();
     if (!mLogToLogFile) {
         if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-            qWarning() << "TConsoleModel: failed to open autolog file for writing:" << file.errorString();
+            qWarning() << "TConsoleModel: failed to open autolog file" << loggingPath << "for writing:" << file.errorString();
+            removeAutologSentinel(loggingPath);
+            reportFailedLogStart(loggingPath, file.errorString());
             return;
         }
         QTextStream out(&file);
@@ -122,12 +156,16 @@ void TConsoleModel::toggleLogging(bool isMessageEnabled)
         // implies Truncate."
         if (mpHost->mIsCurrentLogFileInHtmlFormat) {
             if (!mLogFile.open(QIODevice::ReadWrite)) {
-                qWarning() << "TConsoleModel: failed to open log file for reading/writing:" << mLogFile.errorString();
+                qWarning() << "TConsoleModel: failed to open log file" << mLogFileName << "for reading/writing:" << mLogFile.errorString();
+                removeAutologSentinel(loggingPath);
+                reportFailedLogStart(mLogFileName, mLogFile.errorString());
                 return;
             }
         } else {
             if (!mLogFile.open(QIODevice::Append)) {
-                qWarning() << "TConsoleModel: failed to open log file for appending:" << mLogFile.errorString();
+                qWarning() << "TConsoleModel: failed to open log file" << mLogFileName << "for appending:" << mLogFile.errorString();
+                removeAutologSentinel(loggingPath);
+                reportFailedLogStart(mLogFileName, mLogFile.errorString());
                 return;
             }
         }
@@ -141,7 +179,7 @@ void TConsoleModel::toggleLogging(bool isMessageEnabled)
         }
         mLogToLogFile = true;
     } else {
-        QFile::remove(loggingPath);
+        removeAutologSentinel(loggingPath);
         mLogToLogFile = false;
         if (isMessageEnabled) {
             // Likewise raised only once the flag above is down, or the frontend's

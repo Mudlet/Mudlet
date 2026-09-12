@@ -157,6 +157,22 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       end)
     end)
 
+    describe("Tests the functionality of getSubsystemMemoryStats", function()
+      it("counts the main console's buffer lines", function()
+        if not getSubsystemMemoryStats then
+          pending("only a USE_MEMORY_TRACKING build registers getSubsystemMemoryStats")
+        end
+        local before = getSubsystemMemoryStats().console_buffer_lines
+        -- the buffer keeps an empty line ready after the last line feed, which
+        -- getLineCount() leaves out
+        assert.equals(getLineCount() + 1, before)
+
+        echo("getSubsystemMemoryStats test line\n")
+
+        assert.equals(before + 1, getSubsystemMemoryStats().console_buffer_lines)
+      end)
+    end)
+
     describe("Tests the functionality of getModulePath", function()
       it("should return nil+msg for a module that does not exist", function()
         local path, err = getModulePath("busted-nonexistent-module")
