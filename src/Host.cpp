@@ -68,6 +68,7 @@
 #include <QDirIterator>
 #include <QElapsedTimer>
 #include <QEventLoop>
+#include <QFontInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonValue>
@@ -81,6 +82,7 @@
 #include <QTemporaryFile>
 #include <QTextStream>
 #include <QThread>
+#include <QUuid>
 #include <zip.h>
 #include <memory>
 
@@ -1501,6 +1503,37 @@ std::pair<QString, QFont::Weight> Host::parseFontNameAndStyle(const QString& fon
     return {fontName, QFont::Normal};
 }
 
+// Whether the platform makes a font of the name itself. The font database lists
+// the families that are installed, not the names a platform resolves on top of
+// them: fontconfig turns "Helvetica", "Times" or "monospace" into a real family
+// without any of those being an installed family, and Windows has a substitution
+// table of its own. Qt answers with one fixed stand-in for a name that means
+// nothing anywhere - the arbitrary substitution issue #4159 is about - so a name
+// that lands anywhere else is one the platform recognised. An alias that resolves
+// to that very stand-in ("sans-serif" on most GNU/Linux systems, which is also
+// what an unknown name falls to) cannot be told from an unknown name and is
+// treated as missing.
+static bool platformResolvesFontFamily(const QString& requested)
+{
+    if (requested.isEmpty()) {
+        return false;
+    }
+
+    // Seeded from a UUID rather than a fixed name so that no machine can have a
+    // font by that name, which would make every unknown family look resolved.
+    static const QString unrecognisedName = QUuid::createUuid().toString();
+    static const QString unrecognisedFamily = QFontInfo(QFont(unrecognisedName)).family();
+
+    // Should a platform ever hand an unrecognised name back rather than name the
+    // family it drew instead, it tells the two apart for nobody - so take nothing
+    // on it that the font database does not list, and leave the fallback alone.
+    if (unrecognisedFamily.compare(unrecognisedName, Qt::CaseInsensitive) == 0) {
+        return false;
+    }
+
+    return QFontInfo(QFont(requested)).family() != unrecognisedFamily;
+}
+
 Host::FontFamilyResolution Host::resolveFontFamily(const QString& requested) const
 {
     const QStringList availableFonts = mudlet::self()->getAvailableFonts();
@@ -1519,6 +1552,19 @@ Host::FontFamilyResolution Host::resolveFontFamily(const QString& requested) con
                 return {family, weight, true};
             }
         }
+    }
+
+    // An alias the platform resolves is not a missing font, and the name to go on
+    // using is the one that was asked for: it is the profile's own choice, it is
+    // what gets saved, and the platform makes a real family of it every time it is
+    // drawn - swapping in the family it currently resolves to would quietly turn
+    // this machine's idea of "Helvetica" into what the profile asks for everywhere.
+    if (platformResolvesFontFamily(requested)) {
+        return {requested, QFont::Normal, true};
+    }
+
+    if (baseName != requested && platformResolvesFontFamily(baseName)) {
+        return {baseName, weight, true};
     }
 
     return {requested, QFont::Normal, false};
