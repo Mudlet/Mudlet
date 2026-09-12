@@ -29,6 +29,7 @@
 
 #include "TBuffer.h"
 #include "TConsoleModel.h"
+#include "TDebug.h"
 #include "TPrintSink.h"
 
 #include <QDataStream>
@@ -160,9 +161,9 @@ class TSplitter;
 class dlgNotepad;
 
 
-// TPrintSink is the write-only face core code redirects output to; QWidget
-// stays first so moc sees the QObject base it needs.
-class TConsole : public QWidget, public TPrintSink
+// TPrintSink and TDebug::Sink are the write-only faces core code redirects
+// output to; QWidget stays first so moc sees the QObject base it needs.
+class TConsole : public QWidget, public TPrintSink, public TDebug::Sink
 {
     Q_OBJECT
 
@@ -280,6 +281,7 @@ public:
     // until its right-click menu asks for it:
     void showSearchBar();
     void printFormatted(const QString& text, const std::vector<TChar>& formatting, const TLinkStore& sourceLinkStore) override;
+    void printDebugLine(const QString& text, const QColor& foreground, const QColor& background, const QString& timeStamp) override;
     void discardAll() override;
     void discardLastLine() override;
     void printSystemMessage(const QString& msg);
