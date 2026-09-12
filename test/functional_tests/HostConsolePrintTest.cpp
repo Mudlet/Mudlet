@@ -124,6 +124,16 @@ private slots:
         QVERIFY(mpHost->mpConsole);
     }
 
+    // A test that fails part-way through would otherwise leave the recording
+    // running, and the next one to touch it would trip on the "already
+    // recording" guard rather than on what it is testing.
+    void cleanup()
+    {
+        if (mpHost && mpHost->mTelnet.recordingReplay()) {
+            mpHost->mTelnet.stopReplayRecording();
+        }
+    }
+
     void cleanupTestCase()
     {
         const QString profilePath = mudlet::getMudletPath(enums::profileHomePath, mHostname);
