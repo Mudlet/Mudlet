@@ -526,8 +526,10 @@ private slots:
 
     void testVersionOneHandoffStaysABareEmptyObject()
     {
-        // Version 1 predates both the common fields and the "a hand-off is the message with no
-        // account" rule, so a version 1 server may still be testing for a literally empty object.
+        // Keeping the bare {} on a version 1 exchange is a compatibility choice, not a protocol rule:
+        // the empty hand-off is itself a version 2 addition, so no version 1 server was specified to
+        // expect one. Mudlet has sent {} to such servers since before the standard, and some may have
+        // been written against that, so this pins the behaviour rather than the standard.
         Host* host = connectAndNegotiate();
         QVERIFY(host);
         host->setLogin(QString());
@@ -715,6 +717,46 @@ private slots:
                                                    && !entry.contains(qsl("token"));
                                         }),
                  "the metadata write should have landed, leaving a resume hint");
+    }
+
+    void testATokenMintedOverTlsIsAnnounced()
+    {
+        // The ordinary encrypted sign-in: secure_only defaults to true from the transport, and this
+        // connection satisfies it, so the promise holds and is worth making. This is the case that
+        // pins the transport half of worthAnnouncing - drop it and reduce the test to the cleartext
+        // ones and the notice could stop appearing on TLS entirely without anything noticing.
+        Host* host = connectAndNegotiate(true);
+        QVERIFY(host);
+        QVERIFY2(host->mTelnet.currentlySecure(), "precondition: this connection is encrypted");
+
+        mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:char\", \"token\": \"opaque-token\"}"));
+
+        QVERIFY2(waitForStoredReconnect(host,
+                                        [](const QJsonObject& entry) {
+                                            return entry.value(qsl("secure_only")) == QJsonValue(true);
+                                        }),
+                 "a token minted over TLS should be stored as encrypted-only");
+        QVERIFY2(waitForConsoleContains(host, qsl("signed in automatically next time")), "a token this connection is able to replay should be announced");
+    }
+
+    void testATokenThisTransportCannotReplayIsNotAnnounced()
+    {
+        // Minted in the clear but scoped by the server to an encrypted transport. Every later connect
+        // on this transport refuses it (see sendReconnect), so promising an automatic sign-in would be
+        // knowably false at the moment it was written. The token is still stored: the requirement may
+        // be met by some future connection.
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        QVERIFY2(!host->mTelnet.currentlySecure(), "precondition: this connection is unencrypted");
+
+        mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:char\", \"token\": \"opaque-token\", \"secure_only\": true}"));
+
+        QVERIFY2(waitForStoredReconnect(host,
+                                        [](const QJsonObject& entry) {
+                                            return entry.value(qsl("token")).toString() == qsl("opaque-token") && entry.value(qsl("secure_only")) == QJsonValue(true);
+                                        }),
+                 "the token should still be stored, carrying the requirement the server set");
+        QVERIFY2(!waitForConsoleContains(host, qsl("signed in automatically next time"), 500), "a token this transport cannot replay must not be announced as one that will be");
     }
 
     void testAFailedSaveIsNotAnnouncedAsASuccess()

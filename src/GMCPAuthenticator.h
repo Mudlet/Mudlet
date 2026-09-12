@@ -169,9 +169,10 @@ private:
     // version 1 server or legacy exchange) is treated as 1; we echo this back on our client->server
     // messages (Credentials, Reconnect, resume, AuthCode) so both ends agree on the version even though
     // base GMCP negotiation is one-directional. The one exception is the hand-off on a version 1
-    // exchange, which stays the bare Char.Login.Credentials {} that a version 1 server may be testing
-    // for literally - version 2 defined the hand-off as the message with no account instead, so from
-    // there on it carries the common fields like any other.
+    // exchange, which stays the bare Char.Login.Credentials {} Mudlet has always sent such servers -
+    // a compatibility choice, not a protocol requirement, since the empty hand-off is itself a
+    // version 2 addition. From version 2 on it is the message with no account, so it carries the
+    // common fields like any other.
     int mNegotiatedVersion = 1;
 
     // Sign-in/token state for a single sign-in attempt, reset as one unit on every Char.Login.Default
