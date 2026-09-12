@@ -116,6 +116,7 @@ private:
     static QString generateFilePath(const QString& profileName, const QString& key);
     static QString generateLegacyFilePath(const QString& profileName, const QString& key);
     static QString readLegacyFileCredential(const QString& profileName, const QString& key);
+    static QString ourLegacyFilePath(const QString& profileName, const QString& key);
     static void refreshLegacyFileCredential(const QString& profileName, const QString& key, const QString& credential);
     static void removeLegacyFileCredential(const QString& profileName, const QString& key);
     static QString generateServiceName(const QString& profileName, const QString& key);
