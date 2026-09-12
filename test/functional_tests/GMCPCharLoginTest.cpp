@@ -751,11 +751,12 @@ private slots:
 
         mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:char\", \"token\": \"opaque-token\", \"secure_only\": true}"));
 
+        QVERIFY2(waitForStoredToken(host, qsl("opaque-token")), "the token should still be stored under its own key");
         QVERIFY2(waitForStoredReconnect(host,
                                         [](const QJsonObject& entry) {
-                                            return entry.value(qsl("token")).toString() == qsl("opaque-token") && entry.value(qsl("secure_only")) == QJsonValue(true);
+                                            return entry.value(qsl("secure_only")) == QJsonValue(true);
                                         }),
-                 "the token should still be stored, carrying the requirement the server set");
+                 "the metadata should carry the requirement the server set");
         QVERIFY2(!waitForConsoleContains(host, qsl("signed in automatically next time"), 500), "a token this transport cannot replay must not be announced as one that will be");
     }
 
