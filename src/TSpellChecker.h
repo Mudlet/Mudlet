@@ -73,7 +73,8 @@ public:
 
 private:
     void loadSystemDictionary();
-    // Reads profile.dic in the first time it is asked for.
+    // Reads profile.dic in the first time it is asked for, and remembers a
+    // failure rather than reading it again.
     Hunhandle* profileHandle();
     static QSet<QString> sharedWordSet();
     static bool addWordToShared(const QString&);
@@ -107,6 +108,12 @@ private:
     // profile using it works on the one handle.
     Hunhandle* mpHunspell_system = nullptr;
     Hunhandle* mpHunspell_profile = nullptr;
+    // userHandle() sits on the per-word spell-check path, so a dictionary that
+    // will not open is remembered rather than tried again: preparing it reads
+    // profile.dic and rewrites it and profile.aff, which is not work to put in
+    // front of every keystroke. Cleared when the user dictionary is switched
+    // off, so switching it back on opens the dictionary afresh.
+    bool mProfileDictionaryFailed = false;
     QByteArray mHunspellCodecName_system;
     // To update the profile dictionary we actually have to track all the words
     // in it so we load the contents into this on startup and adjust it as we
@@ -117,6 +124,7 @@ private:
     QSet<QString> mWordSet_profile;
 
     static Hunhandle* smpHunspell_sharedDictionary;
+    static bool smSharedDictionaryFailed;
     // The collection of words in what smpHunspell_sharedDictionary points to:
     static QSet<QString> smWordSet_shared;
 };
