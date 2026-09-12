@@ -35,6 +35,7 @@
 #include <QSet>
 #include <QString>
 
+#include <limits>
 #include <list>
 #include <memory>
 #include <vector>
@@ -134,6 +135,8 @@ private:
     void removeTriggerRootNode(TTrigger* pT);
     void removeTrigger(TTrigger*);
     void startOrExtendSameLineChain(TTrigger* pT);
+    void collectPrescanTasks(TTrigger* pT);
+    void rebuildPrescanTasksIfStale();
     void stopSameLineCreationLoop(const int chainId);
 
     QPointer<Host> mpHost;
@@ -145,6 +148,12 @@ private:
     // than any game sends.
     static constexpr qsizetype scmMaxRetainedUtf8Scratch = 3 * 8192;
     QByteArray mUtf8Scratch;
+    // Every trigger in the tree whose own patterns gate what is below it, in
+    // the order they are reached, so a line's worth of them can be handed to
+    // the match pool as one list. Rebuilt only when the tree changes - see
+    // rebuildPrescanTasksIfStale().
+    std::vector<TTrigger*> mPrescanTasks;
+    quint64 mPrescanTasksGeneration = std::numeric_limits<quint64>::max();
     QMap<int, TTrigger*> mTriggerMap;
     std::list<TTrigger*> mTriggerRootNodeList;
     // What processDataStream() iterates instead of mTriggerRootNodeList itself -
