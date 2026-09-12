@@ -1197,6 +1197,82 @@ private slots:
         QVERIFY2(CredentialManager::retrieveCredential(host->getName(), qsl("reconnect")).isEmpty(), "the metadata key should be gone");
     }
 
+    void testForgettingBeatsARotationOfTheReplayedToken()
+    {
+        Host* host = connectAndNegotiate(true);
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+        QVERIFY(seedSplitSignIn(host->getName(), qsl("{\"account\": \"acct:char\", \"provider\": \"discord\", \"secure_only\": true}"), qsl("replayed-token")));
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\"]}"));
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Reconnect"), sent), "client did not replay the saved token");
+
+        bool reported = false;
+        bool removed = false;
+        host->mpAuth->forgetSavedSignIn([&](bool success) {
+            reported = true;
+            removed = success;
+        });
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return reported;
+                         },
+                         4000),
+                 "forgetSavedSignIn never reported an outcome");
+        QVERIFY2(removed, "forgetting a saved sign-in should report success");
+
+        // The server rotates the token the player has just discarded. Storing the replacement would put
+        // the sign-in straight back under a fresh value, with nothing on screen to say so.
+        mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:char\", \"token\": \"rotated-after-forget\"}"));
+        QVERIFY2(!waitForStoredToken(host, qsl("rotated-after-forget"), 1000), "a rotation of a forgotten token must not be stored");
+        QVERIFY2(CredentialManager::retrieveCredential(host->getName(), qsl("reconnect")).isEmpty(), "the forgotten metadata must not come back with the rotation");
+    }
+
+    void testForgettingBeatsARejectedTokensResumeHint()
+    {
+        Host* host = connectAndNegotiate(true);
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+        QVERIFY(seedSplitSignIn(host->getName(), qsl("{\"account\": \"acct:char\", \"provider\": \"discord\", \"secure_only\": true}"), qsl("stale-token")));
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\"]}"));
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Reconnect"), sent), "client did not replay the saved token");
+
+        bool reported = false;
+        bool removed = false;
+        host->mpAuth->forgetSavedSignIn([&](bool success) {
+            reported = true;
+            removed = success;
+        });
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return reported;
+                         },
+                         4000),
+                 "forgetSavedSignIn never reported an outcome");
+        QVERIFY2(removed, "forgetting a saved sign-in should report success");
+
+        // Only now does the server answer the reconnect, rejecting it. The recovery normally rewrites
+        // the entry as an {account, provider} resume hint from the account and provider it captured
+        // before its read - which would restore, after the removal, the very entry preferences keys
+        // "Forget saved sign-in" on.
+        mpServer->sendGmcp(qsl("Char.Login.Result {\"success\": false, \"message\": \"Reconnect token expired\"}"));
+        QVERIFY2(waitForConsoleContains(host, qsl("saved sign-in has expired")), "a rejected reconnect should still be reported after a forget");
+        QVERIFY2(!waitForStoredReconnect(
+                         host,
+                         [](const QJsonObject& entry) {
+                             return !entry.isEmpty();
+                         },
+                         1000),
+                 "a rejection recovery must not write a resume hint back over a sign-in the player forgot");
+    }
+
     void testAFailedTokenRemovalKeepsTheWholeEntry()
     {
         Host* host = connectAndNegotiate();

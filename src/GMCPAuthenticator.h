@@ -188,6 +188,13 @@ private:
         // True on a connection that logged in by replaying a saved token, so a Char.Login.Token arriving
         // afterwards is a silent rotation rather than a first-time save worth announcing to the user.
         bool reconnectingWithToken = false;
+        // The forget generation (see mForgetGeneration) current when this connection replayed a saved
+        // token; set wherever reconnectingWithToken is, and only meaningful while a replay is what this
+        // connection is running on. Differing from mForgetGeneration later means the player has since
+        // forgotten that sign-in, so neither a rotation of the replayed token nor a resume hint built
+        // from it may be written back - either would restore what the forget just removed. A token from
+        // a sign-in the player began after the forget carries no such history and is stored normally.
+        unsigned int forgetAtReplay = 0;
         // One-shot guard: at most one rotated-token retry per connection, so two instances sharing a
         // store cannot ping-pong retries indefinitely.
         bool retriedRotatedToken = false;
@@ -237,6 +244,14 @@ private:
     // Stamping it with the generation keeps each attempt's announcement its own. Zero matches no
     // attempt, since the constructor's reset makes the first generation 1.
     unsigned int mAnnouncedSaveForAttempt = 0;
+    // Incremented by forgetSavedSignIn(). "Forget saved sign-in" has to beat whatever the sign-in
+    // machinery already had in flight, and none of that is a new sign-in attempt, so it cannot ride on
+    // mAuthAttemptGeneration - which also gates work the forget must not cancel. Each store read that
+    // goes on to act captures this value beforehand and compares it afterwards: without that, a read
+    // still in flight replays the token being discarded, and a rejection recovery still in flight writes
+    // a resume hint back over the entry just removed, leaving Forget with nothing to show for itself.
+    // Not part of mConn: it must monotonically increase, never reset.
+    unsigned int mForgetGeneration = 0;
 
     // A server can pack thousands of Char.Login.Default frames into one packet and every sign-in
     // attempt reads the credential store. Throttling bounds that cost by wall clock rather than by how

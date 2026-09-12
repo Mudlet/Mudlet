@@ -452,6 +452,15 @@ void GMCPAuthenticator::performStoreOperation(SignInStoreReconciler::Operation o
 
 void GMCPAuthenticator::storeReconnectToken(const QString& account, QString token, bool secureOnly)
 {
+    // A rotation of a token this connection replayed before the player asked to forget the saved
+    // sign-in belongs to the sign-in that forget discarded, so it goes no further: storing it would put
+    // back, under a fresh value, exactly what was just removed - and the player has no way to tell.
+    // A token from a sign-in the player started after the forget is not a rotation and is stored.
+    if (mConn.reconnectingWithToken && mConn.forgetAtReplay != mForgetGeneration) {
+        SecureStringUtils::secureStringClear(token);
+        return;
+    }
+
     SignInStoreReconciler::Intent intent;
     intent.shape = SignInStoreReconciler::Shape::Full;
     intent.account = account;
@@ -563,6 +572,10 @@ void GMCPAuthenticator::storeResumeHint(const QString& account, const QString& p
 
 void GMCPAuthenticator::forgetSavedSignIn(std::function<void(bool success)> callback)
 {
+    // Bumped before the removal is requested, so anything already reading the store - or already
+    // awaiting the result of a token it replayed - can see that the player has since asked for all of
+    // it to go, and stops short of putting any of it back.
+    ++mForgetGeneration;
     discardReconnectToken(std::move(callback));
 }
 
@@ -862,9 +875,13 @@ void GMCPAuthenticator::retryOrDropRejectedToken()
     const auto retriedRotatedToken = mConn.retriedRotatedToken;
     const auto reconnectAccount = mConn.reconnectAccount;
     const auto accountProvider = mConn.accountProvider;
+    // The forget generation the rejected replay was sent under - not the one current now. A forget the
+    // player performed at any point since that replay, before this rejection or while its read is in
+    // flight, leaves this differing from mForgetGeneration when the callback checks.
+    const auto forgetAtReplay = mConn.forgetAtReplay;
     // Latch synchronously rather than when the read returns; see mReconnectRejected's declaration.
     mReconnectRejected = true;
-    readStoredSignInEntry([this, safeHost, attemptGeneration, sentTokenHash, retriedRotatedToken, reconnectAccount, accountProvider](bool success, StoredSignIn entry, unsigned int) {
+    readStoredSignInEntry([this, safeHost, attemptGeneration, sentTokenHash, retriedRotatedToken, reconnectAccount, accountProvider, forgetAtReplay](bool success, StoredSignIn entry, unsigned int) {
         if (!safeHost) {
             SecureStringUtils::secureStringClear(entry.token);
             return;
@@ -873,6 +890,12 @@ void GMCPAuthenticator::retryOrDropRejectedToken()
         // recovery must not send anything or reconnect. It may still rewrite the stored entry, but only
         // on positive evidence that the rejected token is the one stored - see the drop below.
         const bool superseded = (attemptGeneration != mAuthAttemptGeneration);
+        // The player has asked to forget the saved sign-in since the token this recovery is recovering
+        // from was replayed. The account and provider captured above describe that forgotten sign-in, so
+        // this writes nothing and replays nothing: restoring them as a resume hint would put back, after
+        // the removal, the entry preferences keys "Forget saved sign-in" on. The reconnect below still
+        // happens - the token was rejected either way, and the player needs a connection to sign in on.
+        const bool forgotten = (forgetAtReplay != mForgetGeneration);
 
         bool rejectedTokenStillStored = false;
 
@@ -880,7 +903,7 @@ void GMCPAuthenticator::retryOrDropRejectedToken()
         // sent, another running instance rotated it (single-use) - replay the fresh one once, rather
         // than discarding its token. A rejection whose stored token still matches (a genuinely dead
         // token, or a non-rotation rejection) falls through to drop-and-re-sign-in below.
-        if (!retriedRotatedToken && success && !entry.account.isEmpty() && !entry.token.isEmpty()) {
+        if (!forgotten && !retriedRotatedToken && success && !entry.account.isEmpty() && !entry.token.isEmpty()) {
             QByteArray tokenBytes = entry.token.toUtf8();
             const QByteArray storedHash = QCryptographicHash::hash(tokenBytes, QCryptographicHash::Sha256);
             SecureStringUtils::secureByteArrayClear(tokenBytes);
@@ -898,6 +921,7 @@ void GMCPAuthenticator::retryOrDropRejectedToken()
                     mConn.retriedRotatedToken = true;
                     mConn.sentReconnectTokenHash = storedHash;
                     mConn.reconnectingWithToken = true;
+                    mConn.forgetAtReplay = mForgetGeneration;
                     mConn.awaitingReconnectResult = true;
                     mConn.reconnectAccount = entry.account;
                     // This attempt is replaying a live token rather than recovering from a dead one, so
@@ -928,8 +952,11 @@ void GMCPAuthenticator::retryOrDropRejectedToken()
             return;
         }
         // The token really is dead. Keep the account+provider resume hint (dropping only the token) so
-        // the next attempt restarts the same provider's browser sign-in with no menu.
-        dropTokenKeepResumeHint(reconnectAccount, accountProvider);
+        // the next attempt restarts the same provider's browser sign-in with no menu - unless the player
+        // has since asked to forget the sign-in, in which case the hint is theirs to have removed.
+        if (!forgotten) {
+            dropTokenKeepResumeHint(reconnectAccount, accountProvider);
+        }
         if (superseded) {
             return;
         }
@@ -1210,7 +1237,8 @@ void GMCPAuthenticator::readStoredSignInEntry(std::function<void(bool success, S
 void GMCPAuthenticator::readStoredSignIn(bool allowToken)
 {
     QPointer<Host> safeHost = mpHost;
-    readStoredSignInEntry([this, safeHost, allowToken](bool, StoredSignIn entry, unsigned int attemptGeneration) {
+    const auto forgetGeneration = mForgetGeneration;
+    readStoredSignInEntry([this, safeHost, allowToken, forgetGeneration](bool, StoredSignIn entry, unsigned int attemptGeneration) {
         // The Host (which owns this authenticator) may have gone away while the read was in flight.
         if (!safeHost) {
             SecureStringUtils::secureStringClear(entry.token);
@@ -1220,6 +1248,15 @@ void GMCPAuthenticator::readStoredSignIn(bool allowToken)
         // rather than send a reconnect or pick a method for the connection that superseded it.
         if (attemptGeneration != mAuthAttemptGeneration) {
             SecureStringUtils::secureStringClear(entry.token);
+            return;
+        }
+        // The player asked to forget the saved sign-in while this read was in flight, so what it
+        // returned is already on its way out of the store: treat it as nothing stored. Replaying the
+        // token would sign in with the credential being discarded, and resuming its provider would act
+        // on a hint that is going too. This connection still gets a way in, from selectAuthMethod().
+        if (forgetGeneration != mForgetGeneration) {
+            SecureStringUtils::secureStringClear(entry.token);
+            selectAuthMethod();
             return;
         }
         if (!entry.provider.isEmpty()) {
@@ -1237,6 +1274,7 @@ void GMCPAuthenticator::readStoredSignIn(bool allowToken)
                 // This connection is logging in by replaying a saved token, so a Char.Login.Token that
                 // comes back is a silent rotation rather than a first-time save to announce.
                 mConn.reconnectingWithToken = true;
+                mConn.forgetAtReplay = mForgetGeneration;
                 mConn.awaitingReconnectResult = true;
                 mConn.reconnectAccount = entry.account;
                 mConn.sentReconnectTokenHash = sentHash;
