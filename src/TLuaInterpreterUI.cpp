@@ -3926,12 +3926,16 @@ int TLuaInterpreter::setWindowWrapIndent(lua_State* L)
     const char* windowName = WINDOW_NAME(L, 1);
     const int luaFrom = getVerifiedInt(L, __func__, 2, "wrapTo");
     auto console = CONSOLE(L, QString{windowName});
+    if (luaFrom < 0) {
+        return warnArgumentValue(L, __func__, qsl("indent %1 is not valid, it must be 0 or more").arg(luaFrom));
+    }
     console->setIndentCount(luaFrom);
-    if (luaFrom >= 0 && console->getType() == TConsole::MainConsole) {
+    if (console->getType() == TConsole::MainConsole) {
         Host& host = getHostFromLua(L);
         host.mWrapIndentCount = luaFrom;
     }
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 //Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setWindowWrapHangingIndent
@@ -3940,12 +3944,16 @@ int TLuaInterpreter::setWindowWrapHangingIndent(lua_State* L)
     const char* windowName = WINDOW_NAME(L, 1);
     const int luaFrom = getVerifiedInt(L, __func__, 2, "wrapTo");
     auto console = CONSOLE(L, QString{windowName});
+    if (luaFrom < 0) {
+        return warnArgumentValue(L, __func__, qsl("indent %1 is not valid, it must be 0 or more").arg(luaFrom));
+    }
     console->setHangingIndentCount(luaFrom);
-    if (luaFrom >= 0 && console->getType() == TConsole::MainConsole) {
+    if (console->getType() == TConsole::MainConsole) {
         Host& host = getHostFromLua(L);
         host.mWrapHangingIndentCount = luaFrom;
     }
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#showWindow

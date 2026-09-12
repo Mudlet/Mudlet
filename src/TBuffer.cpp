@@ -5648,8 +5648,10 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
     materialisePreTriggerPassLine(startLine);
 
     // consider moving this upstream and returning an error if you try to set indentation higher than wrapWidth
-    const int indent = (indentSize < maxWidth) ? indentSize : 0;
-    const int hangingIndent = (hangingIndentSize < maxWidth) ? hangingIndentSize : 0;
+    // a negative indent needs discarding too: the insert() applying it below
+    // takes an unsigned count, so it would ask for a huge allocation
+    const int indent = (indentSize > 0 && indentSize < maxWidth) ? indentSize : 0;
+    const int hangingIndent = (hangingIndentSize > 0 && hangingIndentSize < maxWidth) ? hangingIndentSize : 0;
     const int total = static_cast<int>(buffer.size());
 
     // Leading lines that getWrapInfo() finds no break points in stay where they
