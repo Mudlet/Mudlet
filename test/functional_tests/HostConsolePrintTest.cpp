@@ -29,6 +29,7 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QToolButton>
 #include <QtTest/QtTest>
@@ -358,6 +359,10 @@ private slots:
     {
         const QString sentinel = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("autolog"));
         QVERIFY(QDir().mkpath(sentinel));
+        // Clearing the blocker is the failed start's job and the assertion
+        // below checks that it did it - the guard is only so that a failure
+        // before then does not leave it for the rest of the class:
+        const auto sentinelGuard = qScopeGuard([&sentinel]() { QDir().rmdir(sentinel); });
         buffer().setWrapAt(1000);
         const int lineBefore = buffer().getLastLineNumber();
 
@@ -368,7 +373,6 @@ private slots:
                                     "assert(stop, 'the message does not name the sentinel: ' .. msg)\n"
                                     "assert(#msg > stop, 'the message gives no reason: ' .. msg)")
                                         .arg(sentinel));
-        QDir().rmdir(sentinel);
         QVERIFY2(ran, "startLogging(true) did not report the sentinel it could not write and the reason");
         QVERIFY(!mpHost->mainConsoleModel().mLogToLogFile);
         QVERIFY2(!QFileInfo::exists(sentinel), "the blocking directory was not removed");
