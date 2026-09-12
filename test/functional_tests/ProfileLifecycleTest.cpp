@@ -134,8 +134,8 @@ private:
     // constructor reads both back out of the profile's data files.
     bool provisionProfileOnDisk(const QString& profileName) const
     {
-        return QDir().mkpath(MudletPaths::getMudletPath(enums::profileHomePath, profileName)) && mudlet::self()->writeProfileData(profileName, qsl("url"), mLocalhost).first
-               && mudlet::self()->writeProfileData(profileName, qsl("port"), mPort).first;
+        return QDir().mkpath(MudletPaths::getMudletPath(enums::profileHomePath, profileName)) && MudletPaths::writeProfileData(profileName, qsl("url"), mLocalhost).first
+               && MudletPaths::writeProfileData(profileName, qsl("port"), mPort).first;
     }
 
     // Returns the Lua error, or a null QString when the chunk ran
