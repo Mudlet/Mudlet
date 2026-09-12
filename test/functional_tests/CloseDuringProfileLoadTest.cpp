@@ -53,8 +53,8 @@ private:
 
     static bool provisionProfileOnDisk(const QString& name)
     {
-        return QDir().mkpath(MudletPaths::getMudletPath(enums::profileHomePath, name)) && mudlet::self()->writeProfileData(name, qsl("url"), qsl("localhost")).first
-               && mudlet::self()->writeProfileData(name, qsl("port"), qsl("23")).first;
+        return QDir().mkpath(MudletPaths::getMudletPath(enums::profileHomePath, name)) && MudletPaths::writeProfileData(name, qsl("url"), qsl("localhost")).first
+               && MudletPaths::writeProfileData(name, qsl("port"), qsl("23")).first;
     }
 
     // Fires from the first event-loop pump inside a load, as the window's
