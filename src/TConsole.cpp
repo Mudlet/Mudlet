@@ -791,11 +791,15 @@ void TConsole::resizeEvent(QResizeEvent* event)
         mpMainDisplay->resize(x - mBorders.left() - mBorders.right(), y - mBorders.top() - mBorders.bottom() - mpCommandLine->height());
     } else {
         mpMainFrame->resize(x, y);
-        // The debug console's top bar holds its search box, so unlike the other
-        // types that reach here it is not zero-height - without this the display
-        // overruns its parent and the newest lines are clipped off the bottom:
+        // The top bar ends up as tall as whatever it holds, which for the types
+        // that reach here is usually nothing at all. Ask for the height it will
+        // be given rather than the one it has: a console is sized as it is
+        // created, before it has ever been laid out, and a widget that has not
+        // been laid out still reports Qt's default 30 pixels - taking those off
+        // leaves every miniconsole and user window a row or two of text shorter
+        // than it was asked for, until something resizes it again:
         if (!mpTopToolBar->isHidden()) {
-            y -= mpTopToolBar->height();
+            y -= mpTopToolBar->sizeHint().height();
         }
         mpMainDisplay->resize(x, y);
     }
