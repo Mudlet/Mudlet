@@ -37,12 +37,14 @@ set(WINDOW_GROUP_TEST_SOURCES
     CopyAsImageTest.cpp
     DebugConsoleFilterTest.cpp
     FrontendRefreshSeamTest.cpp
+    CommandLineKeyHandlingTest.cpp
     DetachedWindowMenuShortcutsTest.cpp
     FramePacingTest.cpp
     GlyphOverflowTest.cpp
     HyperlinkModelSplitTest.cpp
     LabelAnchorInteractionTest.cpp
     LabelMovieRefusalTest.cpp
+    CaretNavigationTest.cpp
     MainConsoleSelectionTest.cpp
     TabDetachThresholdTest.cpp
     DetachedWindowDiscordButtonTest.cpp
@@ -54,21 +56,26 @@ set(WINDOW_GROUP_TEST_SOURCES
     LabelBackgroundPaintTest.cpp
     MxpWatchdogBufferLifetimeTest.cpp
     NarrowWindowWrapTest.cpp
+    NawsWidthReportTest.cpp
     DetachedWindowToolBarIconSizeTest.cpp
     PastedLinkStateTest.cpp
     ProfileSwitchMiniconsoleTest.cpp
     RecolouredLineCacheTest.cpp
+    TextEditAccessibleInterfaceTest.cpp
     TrackedLinkTrimTest.cpp
     ProfileSwitchShortcutTest.cpp
     SubCommandLineLifetimeTest.cpp
     WindowBackgroundTest.cpp
     WindowLayoutSaveTest.cpp
     WindowStateGettersTest.cpp
+    ConsoleSearchBarTest.cpp
     WrapLineRewrapTest.cpp
+    ScrollLostOnPartialRepaintTest.cpp
 )
 
 # Profiles: their config dir, their folders, and loading, saving and deleting them
 set(PROFILE_GROUP_TEST_SOURCES
+    CloseDuringProfileLoadTest.cpp
     ConfigDirOverrideTest.cpp
     ConnectionDialogCrashTest.cpp
     ConnectionDialogFocusTest.cpp
@@ -109,6 +116,7 @@ set(TELNET_GROUP_TEST_SOURCES
 
 # Triggers and the other scriptable units, and what a running script does to them
 set(TRIGGER_GROUP_TEST_SOURCES
+    CaptureGroupParkingTest.cpp
     BigramFilterTest.cpp
     CorruptTriggerPatternsTest.cpp
     MultilineTriggerReentrancyTest.cpp
@@ -122,9 +130,15 @@ set(TRIGGER_GROUP_TEST_SOURCES
 set(EDITOR_GROUP_TEST_SOURCES
     dlgTriggerEditorUndoRedoTest.cpp
     EdbeeReinitTest.cpp
+    EditorClipboardXmlTest.cpp
     EditorBannerViewSwitchTest.cpp
+    ColorTriggerDialogTest.cpp
+    PackageExporterTest.cpp
     EditorWindowPositionTest.cpp
+    MissingEditorThemeTest.cpp
     ScriptEventHandlerLifetimeTest.cpp
+    EditorSearchTest.cpp
+    TreeWidgetItemMoveTest.cpp
     TriggerEditorDisclosureTest.cpp
     TriggerEditorTest.cpp
     VariableEditorWriteBackTest.cpp
@@ -137,15 +151,19 @@ set(MAP_GROUP_TEST_SOURCES
     MapAreaSelectionTest.cpp
     MapCloseDuringImportTest.cpp
     MapDownloadTest.cpp
+    RoomExitsDialogTest.cpp
     MapLevelOfDetailTest.cpp
+    MapMouseInteractionTest.cpp
     MapOffscreenCustomLineTest.cpp
     MapFileStatsTest.cpp
     MapLockNoOpTest.cpp
+    RoomPropertiesDialogTest.cpp
     MapperButtonConfigTest.cpp
     MapProgressDialogSeamTest.cpp
     MapRoomGeometryTest.cpp
     MapRoundTripTest.cpp
     MapSymbolFontTest.cpp
+    RoomExitsDeletedEditItemTest.cpp
 )
 
 # Packages and modules: installing them, saving them and removing them
@@ -155,6 +173,7 @@ set(PACKAGE_GROUP_TEST_SOURCES
     DualPackageModuleTest.cpp
     ModuleManagerListingTest.cpp
     ModuleSaveTeardownTest.cpp
+    PackageExporterDialogTest.cpp
     PackageFontsOnRefusedArchiveTest.cpp
     PackageManagerRemovalTest.cpp
     PackageRemovalSaveTeardownTest.cpp
@@ -186,12 +205,14 @@ set(SETTINGS_GROUP_TEST_SOURCES
     SettingsHostLifecycleTest.cpp
     SettingsInstantApplyTest.cpp
     SettingsLiveSyncTest.cpp
+    SettingsRoundTripTest.cpp
     SettingsSearchTest.cpp
     SettingsShellNavigationTest.cpp
 )
 
 # Teardown: who owns a profile's dialogs and windows, and what becomes of them when it closes
 set(TEARDOWN_GROUP_TEST_SOURCES
+    AppStartupTeardownTest.cpp
     DialogTeardownTest.cpp
     HostChildTeardownTest.cpp
     HostWidgetDecouplingTest.cpp
@@ -315,6 +336,14 @@ add_grouped_test_binary(functional_starterui_tests ${STARTERUI_GROUP_TEST_SOURCE
 add_grouped_test_binary(functional_teardown_tests ${TEARDOWN_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_media_tests ${MEDIA_GROUP_TEST_SOURCES})
 
+# AppStartupTeardownTest runs the shipped application instead of linking it, so it
+# needs that binary's path and needs it built by the time ctest runs. Naming the
+# target literally is deliberate: EXE_MUDLET_TARGET is a plain variable local to
+# src/CMakeLists.txt, so a rename there fails generation here rather than quietly
+# depending on nothing.
+add_dependencies(functional_teardown_tests mudlet_executable)
+target_compile_definitions(functional_teardown_tests PRIVATE MUDLET_APP_BINARY="$<TARGET_FILE:mudlet_executable>")
+
 # Every list's cases, so a grouped test's properties are the solo ones verbatim
 foreach(test_name ${allFunctionalTestNames})
     if(leakCheckAvailable AND NOT test_name IN_LIST leakCheckExcludedTests)
@@ -371,6 +400,10 @@ endforeach()
 # ResetProfileTest creates a full profile per test method, so it needs a longer
 # timeout than the default 60s
 set_tests_properties(ResetProfileTest PROPERTIES TIMEOUT 300)
+
+# AppStartupTeardownTest starts the whole application eight times over, and a
+# sanitiser build spends seconds on each of those start-ups
+set_tests_properties(AppStartupTeardownTest PROPERTIES TIMEOUT 300)
 
 # Undo/redo tests need a longer timeout due to large batch operations
 set_tests_properties(dlgTriggerEditorUndoRedoTest PROPERTIES TIMEOUT 300)
@@ -484,6 +517,7 @@ set_tests_properties(SettingsAppearanceTest
                      SettingsHostLifecycleTest
                      SettingsInstantApplyTest
                      SettingsLiveSyncTest
+                     SettingsRoundTripTest
                      SettingsSearchTest
                      SettingsShellNavigationTest
                      PROPERTIES TIMEOUT 300)
@@ -494,6 +528,10 @@ set_tests_properties(SettingsAppearanceTest
 # adds up to a couple of minutes across the cases, so a shorter timeout would
 # turn a readable failure into a silent ctest kill
 set_tests_properties(PackageRepositoryDownloadTest PROPERTIES TIMEOUT 300)
+
+# PackageExporterDialogTest creates a fresh profile per test method and several of
+# its methods export and then install a package, so it needs a longer timeout
+set_tests_properties(PackageExporterDialogTest PROPERTIES TIMEOUT 300)
 
 # HostWidgetDecouplingTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(HostWidgetDecouplingTest PROPERTIES TIMEOUT 300)
@@ -514,11 +552,17 @@ set_tests_properties(FrontendRefreshSeamTest PROPERTIES TIMEOUT 300)
 # them waits out a deliberately long OSC 8 reveal delay, so it needs a longer timeout
 set_tests_properties(HyperlinkModelSplitTest PROPERTIES TIMEOUT 300)
 
+# ConsoleSearchBarTest creates a fresh profile per test method, so it needs a longer timeout
+set_tests_properties(ConsoleSearchBarTest PROPERTIES TIMEOUT 300)
+
 # NarrowWindowWrapTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(NarrowWindowWrapTest PROPERTIES TIMEOUT 300)
 
 # WrapLineRewrapTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(WrapLineRewrapTest PROPERTIES TIMEOUT 300)
+
+# ScrollLostOnPartialRepaintTest creates a fresh profile per test method, so it needs a longer timeout
+set_tests_properties(ScrollLostOnPartialRepaintTest PROPERTIES TIMEOUT 300)
 
 # TelnetStringSequenceRecoveryTest runs its introducer matrix over a real
 # socket, waiting out cTelnet's 300ms idle flush in several cases and

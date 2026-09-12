@@ -145,7 +145,7 @@ private:
     // runners.
     bool establishDiscordLogin()
     {
-        auto& discord = mudlet::self()->mDiscord;
+        auto& discord = *Discord::self();
         if (discord.mRpcActive && Discord::getLoggedInUserName() == mDiscordStubUserName) {
             return true;
         }
@@ -218,7 +218,7 @@ private slots:
         // handshake resets the library's internal reconnect backoff (capped at
         // 60s), which the per-test init/shutdown churn below can otherwise
         // inflate. The end-to-end tests reuse this connection where they can.
-        auto& discord = mudlet::self()->mDiscord;
+        auto& discord = *Discord::self();
         if (discord.libraryLoaded() && mpDiscordIpcStub->listening()) {
             mpHost->mDiscordMode = Host::DiscordShowGameDetails;
             mpHost->mRequiredDiscordUserName.clear();
@@ -229,7 +229,7 @@ private slots:
     void init()
     {
         QVERIFY(mpHost);
-        auto& discord = mudlet::self()->mDiscord;
+        auto& discord = *Discord::self();
         // Restore the default gating state BEFORE resetData(): resetData() calls
         // UpdatePresence() internally, and a Disabled mode or username mismatch
         // left over from the previous test would make that call tear the shared
@@ -249,7 +249,7 @@ private slots:
     void testGMCPIgnoredInDisabledMode()
     {
         mpHost->mDiscordMode = Host::DiscordDisabled;
-        auto& discord = mudlet::self()->mDiscord;
+        auto& discord = *Discord::self();
 
         mpHost->processDiscordGMCP(qsl("External.Discord.Status"), qsl(R"({"details":"Exploring the forest","state":"Level 50 Mage"})"));
 
@@ -260,7 +260,7 @@ private slots:
     void testGMCPIgnoredInMudletOnlyMode()
     {
         mpHost->mDiscordMode = Host::DiscordShowMudletOnly;
-        auto& discord = mudlet::self()->mDiscord;
+        auto& discord = *Discord::self();
 
         mpHost->processDiscordGMCP(qsl("External.Discord.Status"), qsl(R"({"details":"Exploring the forest","state":"Level 50 Mage"})"));
 
@@ -271,7 +271,7 @@ private slots:
     void testGMCPProcessedInGameDetailsMode()
     {
         mpHost->mDiscordMode = Host::DiscordShowGameDetails;
-        auto& discord = mudlet::self()->mDiscord;
+        auto& discord = *Discord::self();
 
         mpHost->processDiscordGMCP(qsl("External.Discord.Status"), qsl(R"({"details":"Exploring the forest","state":"Level 50 Mage"})"));
 
@@ -282,7 +282,7 @@ private slots:
     void testGMCPInfoIgnoredOutsideGameDetailsMode()
     {
         mpHost->mDiscordMode = Host::DiscordShowMudletOnly;
-        auto& discord = mudlet::self()->mDiscord;
+        auto& discord = *Discord::self();
 
         mpHost->processDiscordGMCP(qsl("External.Discord.Info"), qsl(R"({"applicationid":"123456789"})"));
 
@@ -295,7 +295,7 @@ private slots:
     void testGMCPSetsServerOrigin()
     {
         mpHost->mDiscordMode = Host::DiscordShowGameDetails;
-        auto& discord = mudlet::self()->mDiscord;
+        auto& discord = *Discord::self();
 
         QVERIFY2(!discord.isServerOrigin(mpHost, Host::DiscordSetDetail), "Detail should not be server-origin before GMCP");
         QVERIFY2(!discord.isServerOrigin(mpHost, Host::DiscordSetState), "State should not be server-origin before GMCP");
@@ -308,7 +308,7 @@ private slots:
 
     void testLuaSetterClearsServerOrigin()
     {
-        auto& discord = mudlet::self()->mDiscord;
+        auto& discord = *Discord::self();
 
         // First, have the server set it
         mpHost->processDiscordGMCP(qsl("External.Discord.Status"), qsl(R"({"details":"Server set this"})"));
@@ -324,7 +324,7 @@ private slots:
 
     void testServerOriginNotSetForUnsentFields()
     {
-        auto& discord = mudlet::self()->mDiscord;
+        auto& discord = *Discord::self();
 
         // Send GMCP with only detail, not state
         mpHost->processDiscordGMCP(qsl("External.Discord.Status"), qsl(R"({"details":"Only details"})"));
@@ -337,7 +337,7 @@ private slots:
 
     void testPrivacyFlagBlocksServerField()
     {
-        auto& discord = mudlet::self()->mDiscord;
+        auto& discord = *Discord::self();
 
         // Server sets detail
         mpHost->processDiscordGMCP(qsl("External.Discord.Status"), qsl(R"({"details":"Secret details","state":"Visible state"})"));
@@ -358,7 +358,7 @@ private slots:
 
     void testGMCPStatusSetsAllFields()
     {
-        auto& discord = mudlet::self()->mDiscord;
+        auto& discord = *Discord::self();
 
         mpHost->processDiscordGMCP(qsl("External.Discord.Status"),
                                    qsl(R"({"details":"Hunting","state":"Level 50","smallimagetext":"Warrior","largeimagetext":"Achaea","starttime":1234567890,"partysize":3,"partymax":6})"));
@@ -382,7 +382,7 @@ private slots:
 
     void testResetDataClearsEverything()
     {
-        auto& discord = mudlet::self()->mDiscord;
+        auto& discord = *Discord::self();
 
         // Set some data via GMCP
         mpHost->processDiscordGMCP(qsl("External.Discord.Status"), qsl(R"({"details":"Test","state":"Test"})"));
@@ -404,7 +404,7 @@ private slots:
 
     void testLuaSetterDeniedWhenDisabled()
     {
-        auto& discord = mudlet::self()->mDiscord;
+        auto& discord = *Discord::self();
         discord.setDetailText(mpHost, qsl("original"));
         mpHost->mDiscordMode = Host::DiscordDisabled;
 
@@ -416,7 +416,7 @@ private slots:
 
     void testLuaResetDeniedWhenDisabled()
     {
-        auto& discord = mudlet::self()->mDiscord;
+        auto& discord = *Discord::self();
         discord.setDetailText(mpHost, qsl("keep me"));
         mpHost->mDiscordMode = Host::DiscordDisabled;
 
@@ -428,7 +428,7 @@ private slots:
 
     void testLuaSetterAndResetDeniedWhenReadOnly()
     {
-        auto& discord = mudlet::self()->mDiscord;
+        auto& discord = *Discord::self();
         if (!discord.libraryLoaded()) {
             QSKIP("Discord RPC library not available - cannot test the read-only gate");
         }
@@ -452,7 +452,7 @@ private slots:
 
     void testLuaGettersAllowedWhenReadOnly()
     {
-        auto& discord = mudlet::self()->mDiscord;
+        auto& discord = *Discord::self();
         if (!discord.libraryLoaded()) {
             QSKIP("Discord RPC library not available - cannot test the read-only gate");
         }
@@ -473,7 +473,7 @@ private slots:
 
     void testLuaSetterAndResetAllowedWithWriteAccess()
     {
-        auto& discord = mudlet::self()->mDiscord;
+        auto& discord = *Discord::self();
         if (!discord.libraryLoaded()) {
             QSKIP("Discord RPC library not available - cannot test the write-access path");
         }
@@ -497,7 +497,7 @@ private slots:
 
     void testIpcHandshakeMakesApiReadOnlyEndToEnd()
     {
-        auto& discord = mudlet::self()->mDiscord;
+        auto& discord = *Discord::self();
         if (!discord.libraryLoaded()) {
             QSKIP("Discord RPC library not available - cannot test the IPC handshake");
         }
@@ -532,7 +532,7 @@ private slots:
 
     void testSetActivityReachesDiscordEndToEnd()
     {
-        auto& discord = mudlet::self()->mDiscord;
+        auto& discord = *Discord::self();
         if (!discord.libraryLoaded()) {
             QSKIP("Discord RPC library not available - cannot test presence delivery");
         }
