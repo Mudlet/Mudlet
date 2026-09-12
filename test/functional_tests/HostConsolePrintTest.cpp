@@ -61,6 +61,8 @@ private:
     QByteArray mSavedXdg;
     TelnetServerStub* mpServer = nullptr;
     Host* mpHost = nullptr;
+    QString mSavedLogFileNameFormat;
+    QString mSavedLogFileName;
     const QString mHostname = qsl("Test-HostConsolePrint");
     const QString mLocalhost = qsl("localhost");
 
@@ -166,6 +168,8 @@ private slots:
             QVERIFY2(connected.wait(15000), "The test profile never connected to the stub server.");
         }
         QVERIFY(mpHost->mpConsole);
+        mSavedLogFileNameFormat = mpHost->mLogFileNameFormat;
+        mSavedLogFileName = mpHost->mLogFileName;
     }
 
     void cleanupTestCase()
@@ -211,6 +215,12 @@ private slots:
         if (mpHost->mainConsoleModel().mLogToLogFile) {
             mpHost->mainConsoleModel().toggleLogging(false);
         }
+        // The logging cases widen the wrap and name a log file of their own;
+        // restoring that here rather than on their success path keeps one
+        // failure from leaking into every case that follows it.
+        mpHost->mLogFileNameFormat = mSavedLogFileNameFormat;
+        mpHost->mLogFileName = mSavedLogFileName;
+        buffer().setWrapAt(mpHost->mWrapAt);
         // A test that fails part-way through would otherwise leave the
         // recording running, and the next one to touch it would trip on the
         // "already recording" guard rather than on what it is testing.
@@ -320,8 +330,6 @@ private slots:
         QVERIFY(blocker.open(QIODevice::WriteOnly));
         blocker.close();
         mpHost->mLogDir = qsl("%1/logs").arg(blocker.fileName());
-        const QString savedNameFormat = mpHost->mLogFileNameFormat;
-        const QString savedName = mpHost->mLogFileName;
         mpHost->mLogFileNameFormat.clear();
         mpHost->mLogFileName = qsl("hcpt-failed-log");
 
@@ -347,9 +355,6 @@ private slots:
         QVERIFY2(mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("local ok, msg = startLogging(true); assert(ok == nil, 'startLogging reported success on a failed start'); assert(msg:find('could "
                                                                      "not be logged', 1, true), msg); assert(msg:find('hcpt-failed-log.txt', 1, true), msg)")),
                  "startLogging(true) did not report the failed start with its file");
-        mpHost->mLogFileNameFormat = savedNameFormat;
-        mpHost->mLogFileName = savedName;
-        buffer().setWrapAt(mpHost->mWrapAt);
     }
 
     // The log file name is settled only after the autolog sentinel is written,
@@ -362,7 +367,9 @@ private slots:
         // Clearing the blocker is the failed start's job and the assertion
         // below checks that it did it - the guard is only so that a failure
         // before then does not leave it for the rest of the class:
-        const auto sentinelGuard = qScopeGuard([&sentinel]() { QDir().rmdir(sentinel); });
+        const auto sentinelGuard = qScopeGuard([&sentinel]() {
+            QDir().rmdir(sentinel);
+        });
         buffer().setWrapAt(1000);
         const int lineBefore = buffer().getLastLineNumber();
 
@@ -378,7 +385,6 @@ private slots:
         QVERIFY2(!QFileInfo::exists(sentinel), "the blocking directory was not removed");
         const QString report = lineContainingFrom(lineBefore, qsl("Could not start logging"));
         QVERIFY2(report.contains(qsl("\"%1\": ").arg(sentinel)), qPrintable(report));
-        buffer().setWrapAt(mpHost->mWrapAt);
     }
 
     void test_luaErrorsArePrintedWithTheirColours()
