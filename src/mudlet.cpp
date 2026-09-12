@@ -1659,30 +1659,14 @@ void mudlet::init()
     //    });
 }
 
-static bool validateConfDir(const QString& path)
-{
-    if (path.isEmpty()) {
-        qWarning("WARN: portable data path not specified");
-        return false;
-    }
-    QFileInfo pathInfo(path);
-    if (pathInfo.isFile()) {
-        qWarning("WARN: specified portable data path is an existing file: %s", qPrintable(path));
-        return false;
-    }
-    QFileInfo parentInfo(pathInfo.dir().path());
-    if (!parentInfo.isDir()) {
-        qWarning("WARN: parent directory of specified portable data path doesn't exist: %s", qPrintable(parentInfo.filePath()));
-        return false;
-    }
-    return true;
-}
-
 void mudlet::setupConfig()
 {
     const auto resolution = MudletPaths::resolveConfigRoot(MudletPaths::executableDir());
     const QString confPath = resolution.path;
-    if (resolution.portable && !validateConfDir(confPath)) {
+    // The resolver has already said which check the root failed, and carried on
+    // with the non-portable location - which is not what a portable install
+    // asked for, so startup still stops here rather than quietly relocating
+    if (resolution.portableRootRejected) {
         qFatal("FATAL: portable data path invalid");
     }
     if (resolution.migrationPending) {

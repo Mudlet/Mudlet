@@ -45,6 +45,10 @@ struct ConfigDirResolution
     // A portable.txt marker named the path; the caller decides whether what it
     // named is usable
     bool portable = false;
+    // The marker named a root that cannot be used, so path holds the
+    // non-portable location instead. Startup refuses to run on one; a caller
+    // resolving before then carries on with the fallback.
+    bool portableRootRejected = false;
     // XDG_CONFIG_HOME is set, but an existing legacy dir was used anyway, so
     // the caller can hint at the migration
     bool migrationPending = false;
@@ -67,10 +71,17 @@ QString legacyConfigDir();
 // can ask on every operation.
 QString portableMarkerPath(const QString& execDir, const QString& configDir = legacyConfigDir());
 
+// Whether a root a portable.txt named can be used at all: it has to name
+// something, must not already exist as anything other than a directory - a
+// symlink with no target included, since mkpath() cannot create through one -
+// and its parent has to exist. Says why when it refuses.
+bool portableRootUsable(const QString& path);
+
 // Applies the whole precedence to a given executable directory. Remembers
 // nothing, so the Mudlet.ini read that happens before QApplication exists can
-// share it.
-ConfigDirResolution resolveConfigRoot(const QString& execDir);
+// share it. Never hands back an empty root: a portable.txt naming an unusable
+// one falls back to the non-portable location with portableRootRejected set.
+ConfigDirResolution resolveConfigRoot(const QString& execDir, const QString& configDir = legacyConfigDir());
 
 // The XDG leg on its own: $XDG_CONFIG_HOME/mudlet takes a tie with
 // legacyDefault so that a fresh install lands there
@@ -80,8 +91,10 @@ ConfigDirResolution xdgConfigDir(const QString& legacyDefault);
 // inference is what hides profiles, so assume the strongest content instead.
 bool configDirHoldsProfiles(const QString& dir);
 
-// Resolves the config root itself on first use; setConfigPath() replaces it,
-// which is how setupConfig() installs the root it has validated
+// Resolves the config root itself on first use and then remembers it, so the
+// resolver runs once however many paths are asked for; setConfigPath()
+// replaces it, which is how setupConfig() installs the root it has validated.
+// An empty path passed to setConfigPath() forgets the resolution instead.
 QString getMudletPath(enums::mudletPathType mode, const QString& extra1 = QString(), const QString& extra2 = QString());
 void setConfigPath(const QString& path);
 
