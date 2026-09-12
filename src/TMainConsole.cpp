@@ -46,9 +46,7 @@
 
 #include <QDataStream>
 #include <QDialog>
-#include <QDir>
 #include <QDockWidget>
-#include <QFileInfo>
 #include <QIcon>
 #include <QLabel>
 #include <QLayout>
