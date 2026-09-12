@@ -127,12 +127,34 @@ private slots:
     void cleanupTestCase()
     {
         const QString profilePath = mudlet::getMudletPath(enums::profileHomePath, mHostname);
+
+        // Profile teardown has to commit a recording that is still running:
+        // ~QSaveFile() cancels the save, so the .dat would never appear. The
+        // name is chosen here rather than taken from the console button, whose
+        // second-resolution name can collide with a recording made earlier in
+        // the same second and make an uncommitted save look committed.
+        QString teardownReplay;
+        if (mpHost) {
+            const QString replayDir = mudlet::getMudletPath(enums::profileReplayAndLogFilesPath, mHostname);
+            QDir().mkpath(replayDir);
+            teardownReplay = qsl("%1/teardown.dat").arg(replayDir);
+            if (QFileInfo::exists(teardownReplay) || !mpHost->mTelnet.startReplayRecording(teardownReplay)) {
+                teardownReplay.clear();
+            }
+        }
+
         mpHost = nullptr;
         delete mudlet::self();
         delete mpServer;
         mpServer = nullptr;
+
+        const bool teardownCommitted = !teardownReplay.isEmpty() && QFileInfo::exists(teardownReplay);
+
         QDir(profilePath).removeRecursively();
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
+
+        QVERIFY2(!teardownReplay.isEmpty(), "the recording that teardown was meant to commit never started");
+        QVERIFY2(teardownCommitted, qPrintable(qsl("the replay recording running at teardown was not committed to %1").arg(teardownReplay)));
     }
 
     void test_plainPrintLandsOnTheMainConsole()
@@ -268,6 +290,38 @@ private slots:
         QVERIFY(!telnet.startReplayRecording(qsl("/nonexistent/directory/replay.dat")));
         QVERIFY(!telnet.recordingReplay());
         QVERIFY(!telnet.replayRecordingErrorString().isEmpty());
+    }
+
+    // Last, because it drops the connection the earlier tests rely on. What the
+    // game sent has to reach the file even though nothing stops the recording:
+    // an uncommitted QSaveFile takes the whole session down with it.
+    void test_replayRecordingIsCommittedWhenTheConnectionDrops()
+    {
+        cTelnet& telnet = mpHost->mTelnet;
+        mpHost->mpConsole->slot_toggleReplayRecording();
+        QVERIFY(telnet.recordingReplay());
+        const QString fileName = telnet.replayRecordingFileName();
+        QVERIFY(!fileName.isEmpty());
+
+        const QByteArray sent{"dropped mid-recording\r\n"};
+        mpServer->sendRaw(sent);
+        QTRY_VERIFY(bufferContains(qsl("dropped mid-recording")));
+
+        QSignalSpy disconnected(&telnet, &cTelnet::signal_disconnected);
+        telnet.disconnectIt();
+        // A loopback socket can be gone before disconnectIt() returns, and
+        // QSignalSpy::wait() waits for the *next* signal after the ones it
+        // already holds:
+        if (disconnected.isEmpty()) {
+            QVERIFY2(disconnected.wait(15000), "the test profile never noticed the disconnection");
+        }
+
+        QVERIFY(!telnet.recordingReplay());
+        QVERIFY2(QFileInfo::exists(fileName), qPrintable(fileName));
+        QFile replay(fileName);
+        QVERIFY(replay.open(QIODevice::ReadOnly));
+        const QByteArray recorded = replay.readAll();
+        QVERIFY2(recorded.contains(sent), "the recording was committed without what the game sent");
     }
 };
 
