@@ -298,7 +298,6 @@ function Adjustable.Container:onMove (label, event)
     end
 
     if adjustInfo.x and adjustInfo.name == label.name then
-        self:adjustBorder()
         local x, y = getMousePosition()
         local winw, winh = getMainWindowSize()
         local x1, y1, w, h = self.get_x(), self.get_y(), self:get_width(), self:get_height()
@@ -369,6 +368,8 @@ function Adjustable.Container:onMove (label, event)
                 self:adjustConnectedContainers()
             end
         end
+        -- measured after the drag applies, not before: the border is the container's own size
+        self:adjustBorder()
         adjustInfo.x, adjustInfo.y = x, y
     end
 end
