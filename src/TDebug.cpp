@@ -295,7 +295,9 @@ bool TDebug::passesFilters(const Host* pHost)
     if (Q_UNLIKELY(!smpSink)) {
         if (Q_LIKELY(!line.isEmpty())) {
             // Don't enqueue empty messages
-            smMessageQueue.enqueue(TDebugMessage(line, QString(), foreground, background));
+            // Stamped here rather than when the sink turns up, so that a
+            // backlog replayed minutes later still reads as when it happened:
+            smMessageQueue.enqueue(TDebugMessage(line, QString(), foreground, background, QTime::currentTime().toString(TBuffer::smTimeStampFormat)));
         }
         return;
     }

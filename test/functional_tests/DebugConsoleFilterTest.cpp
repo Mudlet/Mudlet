@@ -539,6 +539,41 @@ private slots:
         QVERIFY2(sink.lines.at(2).text.contains(qsl("first with a sink")), qPrintable(sink.lines.at(2).text));
     }
 
+    // The backlog is stamped when it is written, not when the console that
+    // finally shows it turns up - otherwise five minutes of play looks like it
+    // all happened the moment the Central Debug Console was first opened.
+    void test_backlogIsStampedWhenItIsWrittenNotWhenItIsReplayed()
+    {
+        RecordingDebugSink sink;
+        installSink(sink);
+        TDebug::setEnabledCategories(TDebug::csmAllCategories);
+        TDebug::setSink(nullptr);
+
+        const QDateTime before = QDateTime::currentDateTime();
+        TDebug(Qt::blue, Qt::black, TDebug::Category::TriggerMatch) << "written with no sink\n" >> nullptr;
+        const QDateTime after = QDateTime::currentDateTime();
+        QVERIFY2(sink.lines.isEmpty(), "A line written with no sink installed reached one anyway");
+
+        // Long enough that a stamp taken when the sink arrives cannot land
+        // inside the arrival window:
+        QTest::qWait(100);
+        TDebug::setSink(&sink);
+        TDebug(Qt::blue, Qt::black, TDebug::Category::TriggerMatch) << "written with a sink\n" >> nullptr;
+
+        QCOMPARE(sink.lines.size(), 2);
+        QVERIFY2(sink.lines.at(0).text.contains(qsl("written with no sink")), qPrintable(sink.lines.at(0).text));
+        const QTime stampedTime = QTime::fromString(sink.lines.at(0).timeStamp, TBuffer::smTimeStampFormat);
+        QVERIFY2(stampedTime.isValid(), qPrintable(qsl("Replayed backlog line carried no usable time stamp: '%1'").arg(sink.lines.at(0).timeStamp)));
+        // The stamp carries no date, so a window that straddles midnight has to
+        // read a small stamp as the next day rather than as the past:
+        QDateTime stamped(before.date(), stampedTime);
+        if (stamped < before) {
+            stamped = stamped.addDays(1);
+        }
+        const QString window = qsl("%1- %2").arg(before.time().toString(TBuffer::smTimeStampFormat), after.time().toString(TBuffer::smTimeStampFormat));
+        QVERIFY2(before <= stamped && stamped <= after, qPrintable(qsl("Backlog line was stamped %1, outside its arrival window %2").arg(sink.lines.at(0).timeStamp, window)));
+    }
+
     // Resuming hands each held line to the sink stamped with the time it
     // arrived, not the time it was let through.
     void test_resumingHandsHeldLinesToTheSinkWithTheirArrivalTimes()
