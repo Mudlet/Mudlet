@@ -237,6 +237,5 @@ private slots:
   }
 };
 
-#include "MudletPaths.h"
 #include "PasswordMigrationTest.moc"
 QTEST_MAIN(PasswordMigrationTest)
