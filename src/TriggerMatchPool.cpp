@@ -94,6 +94,24 @@ int chunkIndexOf(const uint64_t cursor)
     return static_cast<int>(cursor & kFieldMask);
 }
 
+// mDone is chunks finished:32 | regex searches:32.
+constexpr uint64_t kDoneShift = 32;
+
+uint64_t packDone(const int searches)
+{
+    return (uint64_t(1) << kDoneShift) | static_cast<uint32_t>(searches);
+}
+
+int doneChunksOf(const uint64_t done)
+{
+    return static_cast<int>(done >> kDoneShift);
+}
+
+int searchesOf(const uint64_t done)
+{
+    return static_cast<int>(done & 0xFFFFFFFF);
+}
+
 // A knob comes from the environment first, then from Mudlet.ini, then from the
 // default: the file is where a player sets one and keeps it, the environment
 // is how a test or a benchmark pins one for a single run without touching the
@@ -149,9 +167,10 @@ TriggerMatchPool::TriggerMatchPool()
     // faster than the share of work each extra thread takes away. Zero is how
     // the pool is turned off.
     const int wanted = std::min(knobOr("MUDLET_MATCH_THREADS", qsl("triggerMatchThreads"), std::min(4, cores / 2), 0), cores);
-    // Where a two-thread pool breaks even on a Release build: below this the
-    // fork-join costs the main thread as much as the regex work it hands away,
-    // while the helper burns a core spinning between lines for nothing.
+    // Where a two-thread pool breaks even on a Release build, in regex
+    // searches per line: below this the fork-join costs the main thread as
+    // much as the work it hands away, while the helper burns a core spinning
+    // between lines for nothing.
     mThreshold = knobOr("MUDLET_MATCH_THRESHOLD", qsl("triggerMatchThreshold"), 128, 1);
     mFloodChunkLines = knobOr("MUDLET_MATCH_FLOOD_LINES", qsl("triggerMatchFloodLines"), 8, 1);
     // Zero parks a helper as soon as a batch is exhausted, which puts the
@@ -262,11 +281,12 @@ uint32_t TriggerMatchPool::runChunks(const int slot)
         }
         const int begin = chunk * mJob.chunkSize;
         const int end = std::min(begin + mJob.chunkSize, mJob.count);
+        int searches = 0;
         for (int i = begin; i < end; ++i) {
             TTrigger* trigger = mJob.triggers[i];
-            trigger->setPrescanVerdict(mJob.passId, trigger->prescanMayFire(mJob.subject, mJob.subjectLength, *mJob.haystack, *mJob.lineBigrams, scratch));
+            trigger->setPrescanVerdict(mJob.passId, trigger->prescanMayFire(mJob.subject, mJob.subjectLength, *mJob.haystack, *mJob.lineBigrams, scratch, searches));
         }
-        mDone.fetch_add(1, std::memory_order_release);
+        mDone.fetch_add(packDone(searches), std::memory_order_release);
     }
 }
 
@@ -305,7 +325,7 @@ void TriggerMatchPool::workerLoop(const int slot)
 bool TriggerMatchPool::prescan(
         TTrigger* const* triggers, const int count, const quint32 passId, const char* subject, const int subjectLength, const QString& haystack, const TBigramFilter& lineBigrams)
 {
-    if (mThreads.empty() || count < mThreshold) {
+    if (mThreads.empty() || count <= 0) {
         return false;
     }
 
@@ -330,7 +350,7 @@ bool TriggerMatchPool::prescan(
     // still waking up holds none, so it is never waited for.
     int pauses = 0;
     std::chrono::steady_clock::time_point yieldAt{};
-    while (mDone.load(std::memory_order_acquire) != chunkCount) {
+    while (doneChunksOf(mDone.load(std::memory_order_acquire)) != chunkCount) {
         cpuRelax();
         if (++pauses < kPausesPerClockCheck) {
             continue;
@@ -343,9 +363,12 @@ bool TriggerMatchPool::prescan(
             break;
         }
     }
-    while (mDone.load(std::memory_order_acquire) != chunkCount) {
+    uint64_t done = mDone.load(std::memory_order_acquire);
+    while (doneChunksOf(done) != chunkCount) {
         QThread::yieldCurrentThread();
+        done = mDone.load(std::memory_order_acquire);
     }
+    mRegexSearchesInLastBatch = searchesOf(done);
     Q_ASSERT(chunkIndexOf(mCursor.load(std::memory_order_relaxed)) >= chunkCount);
     return true;
 }

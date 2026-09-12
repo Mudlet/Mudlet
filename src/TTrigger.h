@@ -219,8 +219,15 @@ public:
     // nothing, taking the one piece of mutable state a match needs - PCRE2's
     // match data - from the caller. Answers yes to anything it cannot decide
     // that way, so a false is a promise and a true is only a maybe. The bigram
-    // filter has to have been prepared for sharing by the main thread.
-    bool prescanMayFire(const char* haystackC, int haystackCLength, const QString& haystack, const TBigramFilter& lineBigrams, pcre2_match_data* scratch) const;
+    // filter has to have been prepared for sharing by the main thread. Adds
+    // the regex searches it ran to regexSearches, which is the caller's own
+    // and so keeps this free of shared state.
+    bool prescanMayFire(const char* haystackC, int haystackCLength, const QString& haystack, const TBigramFilter& lineBigrams, pcre2_match_data* scratch, int& regexSearches) const;
+    // Regex searches match() has run so far on the main thread, over every
+    // trigger of every profile, counting only the ones a prescan could have
+    // run instead - a multiline trigger's are not. A caller reads it before
+    // and after a pass to learn what the pass cost.
+    static quint64 regexSearches() { return smRegexSearches; }
     // Records what the prescan for pass id decided. Written from a worker
     // thread, and only ever for a trigger no other worker is holding.
     void setPrescanVerdict(const quint32 passId, const bool mayFire)
@@ -399,6 +406,7 @@ private:
     int mSameLineChainId = 0;
     int mSameLineGeneration = 0;
     static quint64 smStructureGeneration;
+    static quint64 smRegexSearches;
     static quint32 smPrescanPassId;
     static quint32 smPrescanPassIdCounter;
     quint32 mPrescanPassId = 0;

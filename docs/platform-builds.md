@@ -142,7 +142,7 @@ When a single chunk from the game carries many lines, `TriggerMatchPool` (`src/T
 | `Mudlet.ini` key | Environment variable | Default | Meaning |
 | --- | --- | --- | --- |
 | `triggerMatchThreads` | `MUDLET_MATCH_THREADS` | `min(4, cores / 2)` | Threads sharing a batch, the main thread included. Capped at the core count. Below 2 the pool is off, so `0` disables it and the trigger engine runs exactly as it did before the pool existed. |
-| `triggerMatchThreshold` | `MUDLET_MATCH_THRESHOLD` | `128` | Fewest regex triggers a profile needs before a batch is shared out. `0` or below falls back to the default. |
+| `triggerMatchThreshold` | `MUDLET_MATCH_THRESHOLD` | `128` | Fewest regex searches the previous line must have run before this line's batch is shared out. Searches rather than triggers: a trigger that is disabled, multiline, or settled by an earlier pattern of its own runs none, and only work the pool would actually share out counts. `0` or below falls back to the default. |
 | `triggerMatchFloodLines` | `MUDLET_MATCH_FLOOD_LINES` | `8` | Fewest lines one incoming chunk must carry to count as a flood. `0` or below falls back to the default. |
 | `triggerMatchSpinMicroseconds` | `MUDLET_MATCH_SPIN_US` | `100` | Microseconds a helper keeps spinning after a batch before it parks. `0` parks at once, which is the setting for stressing the wake-up path. |
 

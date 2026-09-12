@@ -550,18 +550,22 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     // could perceive. With the pool off none of this runs, not even the list
     // rebuild, so the line takes exactly the path it took before the pool
     // existed.
+    // Whether the last line ran enough regex searches to be worth sharing out
+    // is judged from the searches themselves rather than from the list, whose
+    // entries may mostly be disabled or settled before their regex is reached.
     TriggerMatchPool& pool = TriggerMatchPool::instance();
     const bool inFlood = pool.workerCount() > 0 && mpHost && mpHost->mpConsole && mpHost->mpConsole->buffer.pendingChunkLines() >= pool.floodChunkLines();
-    if (inFlood) {
+    const quint64 regexSearchesBefore = TTrigger::regexSearches();
+    int prescanRegexSearches = 0;
+    if (inFlood && mRegexSearchesOnTheLastLine >= pool.threshold()) {
         rebuildPrescanTasksIfStale();
-        if (static_cast<int>(mPrescanTasks.size()) >= pool.threshold()) {
-            // Built here rather than by the first trigger to ask, so the helper
-            // threads find it ready and have nothing to write
-            lineBigrams.prepareForSharing();
-            const quint32 passId = TTrigger::nextPrescanPassId();
-            if (pool.prescan(mPrescanTasks.data(), static_cast<int>(mPrescanTasks.size()), passId, subject, subjectLength, data, lineBigrams)) {
-                TTrigger::setPrescanPassId(passId);
-            }
+        // Built here rather than by the first trigger to ask, so the helper
+        // threads find it ready and have nothing to write
+        lineBigrams.prepareForSharing();
+        const quint32 passId = TTrigger::nextPrescanPassId();
+        if (pool.prescan(mPrescanTasks.data(), static_cast<int>(mPrescanTasks.size()), passId, subject, subjectLength, data, lineBigrams)) {
+            TTrigger::setPrescanPassId(passId);
+            prescanRegexSearches = pool.regexSearchesInLastBatch();
         }
     }
 
@@ -597,6 +601,9 @@ void TriggerUnit::processDataStream(const QString& data, int line)
         trigger->match(subject, subjectLength, data, line, 0, &lineBigrams);
     }
     mSubstringQuestionsOnTheLastLine = lineBigrams.questionsAsked();
+    // A nested pass's searches land in here too; its lines are as real as
+    // this one and the count only steers the next line
+    mRegexSearchesOnTheLastLine = prescanRegexSearches + static_cast<int>(TTrigger::regexSearches() - regexSearchesBefore);
 }
 
 void TriggerUnit::compileAll()

@@ -268,6 +268,7 @@ static void pcre2_match_data_deleter(pcre2_match_data* pointer)
 }
 
 quint64 TTrigger::smStructureGeneration = 0;
+quint64 TTrigger::smRegexSearches = 0;
 quint32 TTrigger::smPrescanPassId = 0;
 quint32 TTrigger::smPrescanPassIdCounter = 0;
 
@@ -466,6 +467,11 @@ bool TTrigger::match_perl(const char* haystackC, const int haystackCLength, cons
     }
     pcre2_match_data* match_data = matchData.data();
 
+    // A search the prescan could have run instead; what it does not count is
+    // exactly what the prescan answers without searching
+    if (!mIsMultiline) {
+        ++smRegexSearches;
+    }
     // pcre2_match() finds the JIT code by itself, but only after a preamble of
     // option and argument checks that a matching run repeats for every line
     const int rc = mRegexJitCompiled[patternNumber] ? pcre2_jit_match(re.data(), reinterpret_cast<PCRE2_SPTR>(haystackC), haystackCLength, 0, 0, match_data, nullptr)
@@ -1187,7 +1193,7 @@ void TTrigger::processExactMatch(int patternNumber, int posOffset, int lineNumbe
 // line: line number in the buffer
 // posOffset: position in the line to start matching from; used by child triggers
 
-bool TTrigger::prescanMayFire(const char* haystackC, const int haystackCLength, const QString& haystack, const TBigramFilter& lineBigrams, pcre2_match_data* scratch) const
+bool TTrigger::prescanMayFire(const char* haystackC, const int haystackCLength, const QString& haystack, const TBigramFilter& lineBigrams, pcre2_match_data* scratch, int& regexSearches) const
 {
     // Everything below decides "this trigger cannot possibly do anything on
     // this line". Anything whose outcome depends on more than the line text -
@@ -1242,6 +1248,7 @@ bool TTrigger::prescanMayFire(const char* haystackC, const int haystackCLength, 
                 // keeps flooding.
                 return true;
             }
+            ++regexSearches;
             const int rc = mRegexJitCompiled[patternNumber] ? pcre2_jit_match(re.data(), reinterpret_cast<PCRE2_SPTR>(haystackC), haystackCLength, 0, 0, scratch, nullptr)
                                                             : pcre2_match(re.data(), reinterpret_cast<PCRE2_SPTR>(haystackC), haystackCLength, 0, 0, scratch, nullptr);
             if (rc >= 0) {

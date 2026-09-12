@@ -154,6 +154,11 @@ private:
     // rebuildPrescanTasksIfStale().
     std::vector<TTrigger*> mPrescanTasks;
     quint64 mPrescanTasksGeneration = std::numeric_limits<quint64>::max();
+    // How many regex searches the previous line took, on whichever path it
+    // went, which stands in for how many this one will take - the work the
+    // pool could share out, as opposed to how many triggers hold a regex,
+    // most of which may be disabled or settled before their regex is reached.
+    int mRegexSearchesOnTheLastLine = 0;
     QMap<int, TTrigger*> mTriggerMap;
     std::list<TTrigger*> mTriggerRootNodeList;
     // What processDataStream() iterates instead of mTriggerRootNodeList itself -

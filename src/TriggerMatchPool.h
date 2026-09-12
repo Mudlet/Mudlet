@@ -71,15 +71,22 @@ public:
     TriggerMatchPool& operator=(const TriggerMatchPool&) = delete;
 
     // Records on each trigger, under this pass id, whether it may fire on this
-    // line. Returns false when it declined the batch (too few triggers to be
-    // worth distributing, or no worker threads), in which case nothing was
-    // written and the caller runs its ordinary sequential pass. One caller at
-    // a time: the batch lives in the pool until this returns. The bigram
-    // filter must already be prepared for sharing.
+    // line. Returns false when it declined the batch (nothing in it, or no
+    // worker threads), in which case nothing was written and the caller runs
+    // its ordinary sequential pass; whether a batch is worth sharing out is
+    // the caller's call, made against threshold(). One caller at a time: the
+    // batch lives in the pool until this returns. The bigram filter must
+    // already be prepared for sharing.
     bool prescan(TTrigger* const* triggers, int count, quint32 passId, const char* subject, int subjectLength, const QString& haystack, const TBigramFilter& lineBigrams);
 
-    // Below this many regex triggers the fork-join costs more than it saves.
+    // Below this many regex searches on a line the fork-join costs more than
+    // it saves. Searches rather than triggers: a trigger that is disabled,
+    // multiline, or settled by an earlier pattern of its own runs none, and
+    // only work the pool would actually share out should open it.
     int threshold() const { return mThreshold; }
+    // How many regex searches the last batch ran across every thread, which
+    // is what the caller weighs against threshold() for the next line.
+    int regexSearchesInLastBatch() const { return mRegexSearchesInLastBatch; }
     // How many lines one chunk has to carry before its matching is worth
     // sharing out - see TriggerUnit::processDataStream().
     int floodChunkLines() const { return mFloodChunkLines; }
@@ -142,6 +149,7 @@ private:
     // Main thread only, written alongside mJob and so on its line; mEpoch is
     // published to the helpers inside mCursor.
     quint64 mPrescanCount = 0;
+    int mRegexSearchesInLastBatch = 0;
     uint32_t mEpoch = 0;
 
     // Epoch, chunk count and next chunk index in one word, so a single
@@ -151,7 +159,9 @@ private:
     // value before any batch, which is why helpers start with seen == 0 and
     // publish() pre-increments.
     alignas(scmCacheLine) std::atomic<uint64_t> mCursor{0};
-    alignas(scmCacheLine) std::atomic<int> mDone{0};
+    // Chunks finished:32 | regex searches run:32, so that a chunk reports
+    // both in the one fetch_add the join is already waiting on.
+    alignas(scmCacheLine) std::atomic<uint64_t> mDone{0};
 };
 
 #endif // MUDLET_TRIGGERMATCHPOOL_H

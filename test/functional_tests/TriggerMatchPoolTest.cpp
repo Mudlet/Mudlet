@@ -123,8 +123,12 @@ private slots:
         mudlet::self()->slot_connectionDialogueFinished(mProfileName, false);
         QVERIFY(host->mpConsole);
         const quint64 prescansBefore = pool.prescanCount();
+        // The pool opens for a line on the strength of the searches the line
+        // before it ran, so the first line of a profile is always sequential;
+        // the trigger is not given anything to match on it.
         host->getLuaInterpreter()->compileAndExecuteScript(qsl("needleCount = 0\n"
                                                                "tempRegexTrigger('^needle$', [[needleCount = needleCount + 1]])\n"
+                                                               "feedTriggers('haystack\\n')\n"
                                                                "feedTriggers('needle\\n')\n"));
         // The line went through the pool and the trigger still fired, so the
         // helper has consumed a batch and is parked on its epoch.
