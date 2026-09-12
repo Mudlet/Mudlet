@@ -43,9 +43,7 @@
 #include "GifTracker.h"
 
 #include <QDialog>
-#include <QDir>
 #include <QDockWidget>
-#include <QFileInfo>
 #include <QIcon>
 #include <QLabel>
 #include <QLineEdit>

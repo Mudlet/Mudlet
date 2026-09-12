@@ -44,9 +44,8 @@
  *
  * A real profile rather than a bare Host, because the interesting part of the
  * chain is what happens after the bytes land: the reply handler writes the file,
- * parses it, and reports every outcome to the console through Host::postMessage()
- * - and hands a non-XML file to Host::loadMapFile(). A Host with no console
- * would stack those messages up unread and crash on that last call. It is also
+ * parses it, and reports every outcome to the console through Host::postMessage().
+ * A Host with no console would stack those messages up unread. It is also
  * the only way to get the frontend wiring at all: those connects are made in
  * mudlet::addConsoleForNewHost(), so a profile built through HostManager::addHost
  * has none of them.
