@@ -222,6 +222,53 @@ describe("addon commands", function()
         "the search took F3 from a command without saying so: " .. text)
     end)
 
+    -- A key binding is neither a QAction nor a QShortcut: it lives in the
+    -- profile's own key unit and is matched from the command line's key
+    -- handling, so none of the scans above can see one. A command placed on a
+    -- binding's key gets the key event first and the binding simply stops
+    -- firing - and the package was told its command went on fine.
+    it("refuses one a key binding of this profile already has, and names it", function()
+      permKey("SpecKeyClashBinding", "", mudlet.keymodifier.Alt, mudlet.key.F9, [[echo("bound")]])
+
+      local id, why = place{name = "KeyBindingClashSpec", shortcut = "Alt+F9"}
+      disableKey("SpecKeyClashBinding")
+
+      assert.is_nil(id, "a command took a key binding's key, which stops the binding firing")
+      assert.is_truthy(why:find("SpecKeyClashBinding", 1, true),
+        "the refusal does not name the key binding holding the key: " .. tostring(why))
+    end)
+
+    -- A temporary binding is named after its own id, which names nothing the
+    -- player could go and look for, so the refusal says what holds the key
+    -- rather than quoting a label that appears nowhere on screen.
+    it("refuses one a temporary key binding holds, without quoting its id as a name", function()
+      local key = tempKey(mudlet.keymodifier.Alt, mudlet.key.F8, [[echo("bound")]])
+
+      local id, why = place{name = "TempKeyClashSpec", shortcut = "Alt+F8"}
+      killKey(key)
+
+      assert.is_nil(id, "a command took a temporary key binding's key")
+      assert.is_falsy(why:find('"' .. tostring(key) .. '"', 1, true),
+        "the refusal quotes the binding's id as though it were a name: " .. tostring(why))
+    end)
+
+    -- The clash check only runs when a package asks for a key. A binding made
+    -- afterwards is the same clash from the other end, and the menu item still
+    -- gets the key first, so it is the player's new binding that does nothing.
+    -- The binding is not the one to refuse - it is the player's own - so, as
+    -- with the buffer search, the only thing owed is saying so.
+    it("says so when a key binding is made over a command's key", function()
+      assert.is_number(place{name = "BindingClashSpec", shortcut = "Alt+F7"})
+
+      clearWindow()
+      local key = tempKey(mudlet.keymodifier.Alt, mudlet.key.F7, [[echo("bound")]])
+      local text = table.concat(getLines("main", 0, getLastLineNumber("main") + 1), "\n")
+      killKey(key)
+
+      assert.is_truthy(text:find("BindingClashSpec", 1, true),
+        "a key binding took a command's key without saying so: " .. text)
+    end)
+
     -- Qt keeps the first four chunks of a longer sequence and drops the rest,
     -- so the command went onto a key nobody had asked for
     it("refuses one of more steps than Qt can hold", function()

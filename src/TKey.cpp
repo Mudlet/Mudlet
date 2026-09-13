@@ -115,25 +115,30 @@ bool TKey::match(const Qt::Key key, const Qt::KeyboardModifiers modifier, const 
 }
 
 
-bool TKey::wouldMatch(const Qt::Key key, const Qt::KeyboardModifiers modifier) const
+const TKey* TKey::firstMatch(const Qt::Key key, const Qt::KeyboardModifiers modifier) const
 {
     // Also covers the dereference below - isActive() is false once mpMyChildrenList is gone
     if (!isActive()) {
-        return false;
+        return nullptr;
     }
 
     if (!isFolder() && (mKeyCode == key) && (mKeyModifier == modifier)) {
-        return true;
+        return this;
     }
 
     for (auto* childKeyNode : *mpMyChildrenList) {
         auto* childKey = static_cast<TKey*>(childKeyNode);
-        if (childKey->wouldMatch(key, modifier)) {
-            return true;
+        if (const TKey* match = childKey->firstMatch(key, modifier)) {
+            return match;
         }
     }
 
-    return false;
+    return nullptr;
+}
+
+bool TKey::wouldMatch(const Qt::Key key, const Qt::KeyboardModifiers modifier) const
+{
+    return firstMatch(key, modifier) != nullptr;
 }
 
 
