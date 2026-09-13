@@ -122,6 +122,7 @@ set(TRIGGER_GROUP_TEST_SOURCES
     MultilineTriggerReentrancyTest.cpp
     SetScriptCallbackTest.cpp
     TFeedTriggersRecursionTest.cpp
+    TriggerMatchPoolTest.cpp
     UnitDeferredDeleteTest.cpp
     UnitProcessingDepthTest.cpp
 )
