@@ -3,9 +3,9 @@
 # compile Mudlet natively on the Ubuntu 24.04 session container.
 #
 # The container filesystem is cached after this hook completes, so the
-# expensive steps (apt, Qt download, ccache warm-up build) only run when the
-# cache is cold; on a warm container every step short-circuits and the hook
-# finishes in well under a minute.
+# expensive steps (apt, Qt download, luarocks) only run when the cache is
+# cold; on a warm container every step short-circuits and the hook finishes
+# in well under a minute.
 set -euo pipefail
 
 # Local checkouts (desktop/CLI) manage their own toolchain - do nothing there.
@@ -169,21 +169,10 @@ if [ -n "${CLAUDE_PROJECT_DIR:-}" ]; then
   git -C "${CLAUDE_PROJECT_DIR}" submodule update --init --recursive
 
   # Configure the default tree every session (cheap) so it already exists
-  # with Qt and the mold linker wired in - linking dominates a warm rebuild,
-  # and mold cuts the link tail dramatically (see PR #9927; until its
-  # top-level set_alternate_linker() move merges, the flag only reaches the
-  # main mudlet binary, afterwards every target).
+  # with Qt and the mold linker wired in - linking dominates a rebuild, and
+  # mold cuts the link tail dramatically (see PR #9927; until its top-level
+  # set_alternate_linker() move merges, the flag only reaches the main mudlet
+  # binary, afterwards every target).
   cd "${CLAUDE_PROJECT_DIR}"
   cmake --preset linux-debug-nosan -DCMAKE_PREFIX_PATH="${QT_DIR}" -DUSE_ALTERNATE_LINKER=mold
-
-  # Warm the compiler cache once per container image. CMakeLists.txt wires
-  # ccache in automatically, so this one cold build (~20 min) makes every
-  # later session's build mostly cache hits (a few minutes including linking).
-  # The build tree itself is discarded with the session; only ccache persists.
-  CCACHE_DIR_PATH="$(ccache -k cache_dir 2>/dev/null || echo "${HOME}/.cache/ccache")"
-  CACHE_KB="$(du -sk "${CCACHE_DIR_PATH}" 2>/dev/null | cut -f1 || echo 0)"
-  if [ "${CACHE_KB:-0}" -lt 102400 ]; then
-    echo "Cold ccache - running warm-up build..."
-    cmake --build --preset linux-debug-nosan
-  fi
 fi
