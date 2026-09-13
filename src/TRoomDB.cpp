@@ -1135,6 +1135,10 @@ void TRoomDB::clearMapDB()
     QElapsedTimer timer;
     timer.start();
 
+    // Every room, area and label id in circulation stops meaning anything here,
+    // and the map that replaces this one will hand the same ids out again.
+    ++mMapGeneration;
+
     // Set bulk deletion mode to prevent expensive individual cleanup
     mBulkDeletionMode = true;
 

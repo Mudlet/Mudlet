@@ -794,8 +794,8 @@ private slots:
         mp2dMap->setMouseTracking(false);
         mp2dMap->mPick = false;
         mp2dMap->mStartSpeedWalk = false;
-        // Cancelling the label dialog removes the label from the area it was
-        // made in, so it has to go before the next test throws that area away.
+        // A label dialog left open by one case would still be up for the next,
+        // which may be checking that none came up.
         if (mp2dMap->mpDlgMapLabel) {
             mp2dMap->mpDlgMapLabel->close();
         }
@@ -2221,6 +2221,116 @@ private slots:
         QVERIFY(!mp2dMap->mSizeLabel);
         QVERIFY2(area()->mMapLabels.isEmpty(), "a label with no box was made");
         QVERIFY2(!mp2dMap->mpDlgMapLabel, "a dialog came up for a label with no box");
+    }
+
+    // A script can clear the map, or load another one, while the dialog is
+    // open. Cancelling it then has no area to take the label back out of and
+    // must not reach for the one that was deleted, which only AddressSanitizer
+    // can see: the assertion is just that the dialog still closes.
+    void test_cancellingTheLabelDialogAfterTheMapWasClearedClosesIt()
+    {
+        buildMap();
+        showMapper(false);
+        dragOutALabelBox();
+        QVERIFY(mp2dMap->mpDlgMapLabel);
+        map()->mapClear();
+        QVERIFY(!area());
+
+        mp2dMap->mpDlgMapLabel->close();
+
+        QTRY_VERIFY2(!mp2dMap->mpDlgMapLabel, "cancelling the dialog did not close it");
+    }
+
+    // Typing into the dialog redraws the label in its area, which is gone once
+    // the map has been cleared, so nothing left on the cleared map may get the
+    // label.
+    void test_editingTheLabelDialogAfterTheMapWasClearedMakesNoLabel()
+    {
+        buildMap();
+        showMapper(false);
+        dragOutALabelBox();
+        QVERIFY(mp2dMap->mpDlgMapLabel);
+        map()->mapClear();
+        QVERIFY(!area());
+        map()->resetUnsaved();
+
+        mp2dMap->mpDlgMapLabel->plainTextEdit_labelText->setPlainText(qsl("typed after the map went"));
+
+        QVERIFY2(!map()->isUnsaved(), "the label was written back into the cleared map");
+    }
+
+    // The dialog is not modal, so the mapper can be switched to another area
+    // while it is open. The label belongs to the area its box was dragged out
+    // in: typing keeps it there, and cancelling takes it back out of there.
+    void test_theLabelDialogStaysWithTheAreaItsBoxWasDraggedOutIn()
+    {
+        buildMap();
+        showMapper(false);
+        dragOutALabelBox();
+        QVERIFY(mp2dMap->mpDlgMapLabel);
+        const int otherAreaId = map()->mpRoomDB->addArea(qsl("Next Door"));
+        QVERIFY(otherAreaId > 0);
+        const int nextDoorRoomId = 20;
+        QVERIFY(map()->addRoom(nextDoorRoomId) && map()->setRoomArea(nextDoorRoomId, otherAreaId) && map()->setRoomCoordinates(nextDoorRoomId, 0, 0, 0));
+        mp2dMap->switchArea(otherAreaId);
+        QCOMPARE(mp2dMap->mAreaID, otherAreaId);
+
+        mp2dMap->mpDlgMapLabel->plainTextEdit_labelText->setPlainText(qsl("typed in another area"));
+
+        QCOMPARE(area()->mMapLabels.size(), 1);
+        QVERIFY2(map()->mpRoomDB->getArea(otherAreaId)->mMapLabels.isEmpty(), "the label landed in the area the mapper was switched to");
+
+        mp2dMap->mpDlgMapLabel->close();
+
+        QTRY_VERIFY(!mp2dMap->mpDlgMapLabel);
+        QVERIFY2(area()->mMapLabels.isEmpty(), "cancelling the dialog left the label in the area it was made in");
+    }
+
+    // A map loaded in place of the cleared one hands the same ids straight back
+    // out - areas from the lowest free one, labels from zero in each area - so
+    // the pair the dialog is holding names a label of the new map that it has
+    // nothing to do with. Cancelling it must leave that one where it is.
+    void test_cancellingTheLabelDialogAfterTheMapWasReplacedLeavesTheNewLabelAlone()
+    {
+        buildMap();
+        showMapper(false);
+        dragOutALabelBox();
+        QVERIFY(mp2dMap->mpDlgMapLabel);
+        const int replacedAreaId = mAreaId;
+        QCOMPARE(area()->mMapLabels.size(), 1);
+        QVERIFY2(area()->mMapLabels.contains(0), "the dialog's own label did not take id 0");
+
+        buildMap();
+        QCOMPARE(mAreaId, replacedAreaId);
+        const int labelId = addTestLabel();
+        QCOMPARE(labelId, 0);
+
+        mp2dMap->mpDlgMapLabel->close();
+
+        QTRY_VERIFY(!mp2dMap->mpDlgMapLabel);
+        QVERIFY2(area()->mMapLabels.contains(labelId), "cancelling the dialog took the replacement map's label out");
+    }
+
+    // Same reused ids, the other handler: typing into the dialog redraws the
+    // label it made, which is not the one the replacement map put at those ids.
+    void test_editingTheLabelDialogAfterTheMapWasReplacedLeavesTheNewLabelAlone()
+    {
+        buildMap();
+        showMapper(false);
+        dragOutALabelBox();
+        QVERIFY(mp2dMap->mpDlgMapLabel);
+        const int replacedAreaId = mAreaId;
+
+        buildMap();
+        QCOMPARE(mAreaId, replacedAreaId);
+        const int labelId = addTestLabel();
+        const TMapLabel newMapsLabel = area()->mMapLabels.value(labelId);
+
+        mp2dMap->mpDlgMapLabel->plainTextEdit_labelText->setPlainText(qsl("typed after the map was replaced"));
+
+        QCOMPARE(area()->mMapLabels.size(), 1);
+        QCOMPARE(area()->mMapLabels.value(labelId).text, newMapsLabel.text);
+        QCOMPARE(area()->mMapLabels.value(labelId).pos, newMapsLabel.pos);
     }
 
     // Boxing several rooms puts a list of them up in the corner of the map, so
