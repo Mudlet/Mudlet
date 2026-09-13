@@ -47,12 +47,14 @@
 #include <QVector>
 
 #include <zlib.h>
+#include <zstd.h>
 
 #include <bitset>
 #include <iostream>
 #include <queue>
 #include <string>
 #include <utility>
+#include <vector>
 
 #if defined(Q_OS_WINDOWS)
 #include <ws2tcpip.h>
@@ -118,7 +120,8 @@ const char OPT_CHARSET = 42;
 const char OPT_MSDP = 69;                    // https://tintin.mudhalla.net/protocols/msdp/
 const char OPT_MSSP = static_cast<char>(70); // https://tintin.mudhalla.net/protocols/mssp/
 const char OPT_COMPRESS = 85;
-const char OPT_COMPRESS2 = 86;
+const char OPT_COMPRESS2 = 86; // MCCP2 https://mudstandards.org/mud/mccp2
+const char OPT_COMPRESS4 = 88; // MCCP4 - zstd/deflate compression via telnet option 88
 const char OPT_MSP = 90;
 const char OPT_MXP = 91;
 const char OPT_102 = 102;
@@ -165,6 +168,12 @@ const char NEW_ENVIRON_VAR = 0;
 const char NEW_ENVIRON_VAL = 1;
 const char NEW_ENVIRON_ESC = 2;
 const char NEW_ENVIRON_USERVAR = 3;
+
+const char MCCP4_ACCEPT_ENCODING = 1;
+const char MCCP4_BEGIN_ENCODING = 2;
+constexpr std::byte MCCP4_ENCODING_NONE{0};
+constexpr std::byte MCCP4_ENCODING_ZSTD{1};
+constexpr std::byte MCCP4_ENCODING_DEFLATE{2};
 
 class cTelnet : public QObject
 {
@@ -366,7 +375,17 @@ private:
     // feedTelnet(...) Lua function.
     void processSocketData(char* data, int size, const bool loopbackTesting = false);
     void initStreamDecompressor();
+    void endStreamDecompressor();
+    void endMCCP4Compression();
+    void cleanupMCCP4();
     int decompressBuffer(char*& in_buffer, int& length, char* out_buffer);
+    int decompressMCCP4Buffer(char*& in_buffer, int& length, char* out_buffer);
+    // True only while the zstd decoder is the one running and is still holding
+    // output from the previous pass. mZstdFlushPending on its own could outlive
+    // the decoder it describes - a disconnect clears mNeedDecompression without
+    // going through endMCCP4Compression() - and processSocketData() would then
+    // keep re-entering itself for a flush nothing can deliver.
+    bool zstdFlushPending() const { return mZstdFlushPending && mNeedDecompression && mMCCP_version_4 && mMCCP4_encoding == MCCP4_ENCODING_ZSTD && mZstdDstream != nullptr; }
     void reset();
     void handleFailedConnection();
     void sendLoginAndPass();
@@ -498,8 +517,22 @@ private:
     std::queue<int> mCommandQueue;
 
     z_stream mZstream = {};
+    ZSTD_DStream* mZstdDstream = nullptr;
+    std::vector<char> mZstdOutBuffer;
+    // zstd hands back at most one output buffer per call and keeps the rest in
+    // its own; mZstdOutBuffer is BUFFER_SIZE, which is smaller than a zstd block,
+    // so a frame that expands past it leaves bytes behind even once every
+    // compressed byte has been consumed. Set when ZSTD_decompressStream() filled
+    // the output buffer completely - the documented "there might be some data
+    // left within internal buffers" signal - so processSocketData() knows it has
+    // to come back for them rather than wait for the server to send more.
+    bool mZstdFlushPending = false;
 
     bool mNeedDecompression = false;
+    // mZstream outlives mNeedDecompression: the end of a compressed run clears
+    // that flag but immediately re-initialises the stream to listen for the
+    // next one, so only this says whether zlib still holds state to release.
+    bool mStreamDecompressorInitialised = false;
     // Re-entry depth of processSocketData() while draining leftover
     // (de)compressed data; bounds stack use and decompression-bomb output.
     int mDecompressionRecursionDepth = 0;
@@ -541,6 +574,8 @@ private:
 
     bool mMCCP_version_1 = false;
     bool mMCCP_version_2 = false;
+    bool mMCCP_version_4 = false;
+    std::byte mMCCP4_encoding{0};
 
 
     std::string mMudData;
