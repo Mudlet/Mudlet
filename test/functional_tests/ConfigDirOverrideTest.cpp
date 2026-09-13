@@ -480,6 +480,32 @@ private slots:
         QCOMPARE(r.path, target);
     }
 
+    // --- MudletApp::portableMarkerPath() ----------------------------------------
+
+    // The cheap question behind isPortableModeActive(), which runs on every
+    // credential operation: two stats, and no marker read
+    void test_portableMarkerPathPrefersTheOneBesideTheExecutable()
+    {
+        QTemporaryDir exec;
+        QTemporaryDir configDir;
+        QVERIFY(exec.isValid() && configDir.isValid());
+        QVERIFY(writeMarker(exec.path(), "./portable"));
+        QVERIFY(writeMarker(configDir.path(), "./elsewhere"));
+
+        QCOMPARE(MudletApp::portableMarkerPath(exec.path(), configDir.path()), qsl("%1/portable.txt").arg(exec.path()));
+    }
+
+    void test_portableMarkerPathFallsBackToTheConfigDirAndThenToNothing()
+    {
+        QTemporaryDir exec;
+        QTemporaryDir configDir;
+        QVERIFY(exec.isValid() && configDir.isValid());
+        QVERIFY(MudletApp::portableMarkerPath(exec.path(), configDir.path()).isEmpty());
+
+        QVERIFY(writeMarker(configDir.path(), ""));
+        QCOMPARE(MudletApp::portableMarkerPath(exec.path(), configDir.path()), qsl("%1/portable.txt").arg(configDir.path()));
+    }
+
     // CredentialManager picks the keychain or a file on the marker alone, so the
     // marker it reads has to be the one resolveConfigRoot() honours
     void test_portableMarkerPathAgreesWithResolveConfigRoot()
