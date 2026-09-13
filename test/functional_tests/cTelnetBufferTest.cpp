@@ -63,6 +63,13 @@
 
 using namespace std::chrono_literals;
 
+// The chunk buffer the replay path reads and the count of bytes in it.
+// cTelnet::loadReplayChunk() fills both before its timer calls
+// slot_processReplayChunk(); they are file-scope globals in ctelnet.cpp rather
+// than members, so a test can stage a chunk in them without a replay file.
+extern char loadBuffer[];
+extern int loadedBytes;
+
 class cTelnetBufferTest : public QObject
 {
     Q_OBJECT
@@ -80,6 +87,9 @@ private:
     // the one immediately after it that it must leave alone.
     static constexpr char scmTerminatorSlot = '\x7b';
     static constexpr char scmPastTheEnd = '\x7c';
+    // Ordinary text as far as the replay state machine is concerned, so a run
+    // that overran its chunk would append it rather than stop at it.
+    static constexpr char scmReplayCanary = '\x7d';
 
     // True if any line in the main console buffer contains the given substring
     bool bufferContains(const QString& text) const
@@ -106,6 +116,22 @@ private:
             }
         }
         return lines;
+    }
+
+    // Stages a chunk in loadBuffer the way loadReplayChunk() does and runs the
+    // replay state machine over it. The byte just past the chunk is a canary
+    // that is not a run boundary, so a run allowed to walk past loadedBytes
+    // would take it into the line: nothing in the replay path writes a
+    // terminator there, unlike processSocketData() which NULs in_buffer[amount]
+    // itself and so cannot be probed this way.
+    void feedReplayChunk(const QByteArray& chunk)
+    {
+        // loadBuffer is BUFFER_SIZE (100000) + 1 bytes; the chunks here are tens
+        QVERIFY(chunk.size() < 1024);
+        std::memcpy(loadBuffer, chunk.constData(), chunk.size());
+        loadBuffer[chunk.size()] = scmReplayCanary;
+        loadedBytes = static_cast<int>(chunk.size());
+        mpHost->mTelnet.slot_processReplayChunk();
     }
 
 private slots:
@@ -368,7 +394,11 @@ private slots:
     }
 
     // A run that reaches the end of one read stops there and the next read
-    // carries on the same line.
+    // carries on the same line. This pins the carry-over, not the read bound
+    // itself: processSocketData() writes its own NUL at in_buffer[amount], and
+    // a NUL ends a run, so a run let past the end of the read would stop on
+    // that terminator and append nothing either way. The replay case below,
+    // where nothing writes a terminator, is the one that can plant a canary.
     void textRunEndingAtTheEndOfAReadContinuesInTheNext()
     {
         QByteArray first = QByteArrayLiteral("\r\nRUN_I");
@@ -378,6 +408,46 @@ private slots:
         mpHost->mTelnet.processSocketData(second.data(), second.size(), true);
 
         QCOMPARE(linesContaining(qsl("RUN_")), QStringList{qsl("RUN_IRUN_J")});
+    }
+
+    // slot_processReplayChunk() runs a second copy of the same state machine
+    // over the chunk loadReplayChunk() leaves in loadBuffer, and it takes its
+    // text in runs too. The bytes checked here are the ones that end a run: an
+    // IAC starting a telnet command, a bell (which this path shows without
+    // ringing, unlike the socket one), and the carriage return and NUL that are
+    // dropped.
+    void replayChunkTextArrivesARunAtATime()
+    {
+        QByteArray chunk = QByteArrayLiteral("\r\nREPLAY_A");
+        chunk += TN_IAC;
+        chunk += TN_NOP;
+        chunk += QByteArrayLiteral("REPLAY_B\aREPLAY_C\r\0REPLAY_D\r\n");
+        const QString expected = qsl("REPLAY_AREPLAY_B\aREPLAY_CREPLAY_D");
+
+        feedReplayChunk(chunk);
+
+        QCOMPARE(linesContaining(qsl("REPLAY_")), QStringList{expected});
+
+        // the same bytes one chunk per byte, which is the byte-at-a-time walk
+        // the loop did before: every run is then one byte long, so this is what
+        // taking them a run at a time has to agree with
+        for (const char ch : chunk) {
+            feedReplayChunk(QByteArray(1, ch));
+        }
+
+        QCOMPARE(linesContaining(qsl("REPLAY_")), (QStringList{expected, expected}));
+    }
+
+    // A run that reaches the end of one chunk stops there and the next chunk
+    // carries on the same line. The canary feedReplayChunk() plants right past
+    // the chunk is ordinary text, so a run that read one byte too far would
+    // show it up in the middle of the line.
+    void replayRunEndingAtTheEndOfAChunkContinuesInTheNext()
+    {
+        feedReplayChunk(QByteArrayLiteral("\r\nREPLAY_E"));
+        feedReplayChunk(QByteArrayLiteral("REPLAY_F\r\n"));
+
+        QCOMPARE(linesContaining(qsl("REPLAY_E")), QStringList{qsl("REPLAY_EREPLAY_F")});
     }
 
     // Declared last on purpose: on the unfixed code this trips AddressSanitizer,
