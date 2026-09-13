@@ -160,6 +160,8 @@ class Host : public QObject
     friend class dlgProfilePreferences;
     // Allows the functional test to set the Discord username restriction:
     friend class TDiscordModeTest;
+    // Allows the functional test to call closeChildren() on its own:
+    friend class HostWidgetDecouplingTest;
 
 public:
     Host(int port, const QString& mHostName, const QString& login, const QString& pass, int host_id);
@@ -1000,6 +1002,13 @@ signals:
     void signal_loggingAnnouncement(const bool isLogging, const QString& logFileName);
     // Raised once a logging change has settled, for the frontend's log button.
     void signal_loggingStateChanged(const bool isLogging);
+    void signal_editorCleanResetRequested();
+    void signal_packageListChanged();
+    void signal_profileStyleSheetChanged(const QString& styleSheet);
+    void signal_consoleFontChanged(const QFont& font);
+    void signal_editorSearchOptionsChanged(const enums::EditorSearchOptions);
+    void signal_editorShowBidiChanged(const bool);
+    void signal_showIdsInEditorChanged(const bool);
 
 private slots:
     void slot_purgeTemps();

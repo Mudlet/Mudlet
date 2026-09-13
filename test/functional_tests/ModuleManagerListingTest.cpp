@@ -144,7 +144,6 @@ private slots:
         listModules(host);
 
         auto* manager = new dlgModuleManager(nullptr, host);
-        host->mpModuleManager = manager;
         QCOMPARE(rowNames(manager), mModuleNames);
 
         QVERIFY2(host->uninstallPackage(qsl("listing-b"), enums::PackageModuleType::ModuleFromScript), "The seeded module could not be uninstalled");
@@ -152,7 +151,6 @@ private slots:
 
         QCOMPARE(rowNames(manager), QStringList({qsl("listing-a"), qsl("listing-c"), qsl("listing-d")}));
 
-        host->mpModuleManager = nullptr;
         delete manager;
     }
 

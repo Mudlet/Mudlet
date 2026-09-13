@@ -82,6 +82,10 @@ dlgPackageManager::dlgPackageManager(QWidget* parent, Host* pHost)
     mCurrentView = NavigationView::Installed;
     slot_setPackageList();
 
+    // connected last: resetPackageList() dereferences mpNavigationGroup, which
+    // setupNavigationButtons() creates above
+    connect(mpHost, &Host::signal_packageListChanged, this, &dlgPackageManager::resetPackageList);
+
     setAttribute(Qt::WA_DeleteOnClose);
 }
 
