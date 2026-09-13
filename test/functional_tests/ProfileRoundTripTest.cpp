@@ -531,8 +531,8 @@ private slots:
         // readHostColorElement()'s hasAttribute() guard still defaults the
         // missing alpha to opaque instead of, say, an absent toInt() 0:
         deleteProfileDirectory(mLegacyTargetName);
-        QVERIFY2(hostManager.addHost(mLegacyTargetName, mPort, QString(), QString()), "failed to create the legacy target Host");
-        mpLegacyTarget = hostManager.getHost(mLegacyTargetName);
+        QVERIFY2(hostManager->addHost(mLegacyTargetName, mPort, QString(), QString()), "failed to create the legacy target Host");
+        mpLegacyTarget = hostManager->getHost(mLegacyTargetName);
         QVERIFY(mpLegacyTarget);
 
         QString legacyXml = mExportedXml;
