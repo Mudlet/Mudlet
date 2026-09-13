@@ -151,12 +151,34 @@ static bool textBreaksIrcLine(const QString& text)
     });
 }
 
-// What sendMsg() will put on the wire is one IRC command whose parameters are
-// separated by spaces and ended by a CR LF, so either argument carrying one of
-// those separators makes the server read a second, caller-chosen command - a
-// QUIT, or a PRIVMSG to somewhere else - out of a single sendMsg(). The caller is
-// often relaying text that a game server chose, which would put those commands in
-// the game's hands.
+// A nick and a channel name are each a single IRC parameter, and a parameter ends
+// at the first space.
+static bool textHasSpace(const QString& text)
+{
+    return std::any_of(text.cbegin(), text.cend(), [](const QChar character) {
+        return character.isSpace();
+    });
+}
+
+// A refusal that quotes the text it is refusing must not break its own line doing
+// it, and a game server can make that text arbitrarily long.
+static QString escapedForError(const QString& text)
+{
+    QString escaped = text;
+    escaped.replace(QChar::Null, qsl("\\0")).replace(QChar::CarriageReturn, qsl("\\r")).replace(QChar::LineFeed, qsl("\\n"));
+    if (escaped.length() > 40) {
+        escaped.truncate(40);
+        escaped.append(qsl("..."));
+    }
+    return escaped;
+}
+
+// What goes on the wire is one IRC command whose parameters are separated by
+// spaces and ended by a CR LF, so either argument carrying one of those
+// separators makes the server read a second, caller-chosen command - a QUIT, or a
+// PRIVMSG to somewhere else - out of a single send. The caller is often relaying
+// text that a game server chose, which would put those commands in the game's
+// hands.
 //
 // They are refused rather than stripped: a stripped message is not the one the
 // caller asked to send and nothing says so, whereas a refusal leaves the caller
@@ -167,37 +189,66 @@ static bool textBreaksIrcLine(const QString& text)
 QPair<bool, QString> dlgIRC::validateMsgArguments(const QString& target, const QString& message)
 {
     if (target.isEmpty()) {
-        return {false, qsl("no target given to send the message to")};
+        return {false, qsl("no target given, name the channel or the nick to send the message to")};
     }
     if (textBreaksIrcLine(target)) {
-        return {false, qsl("target must not contain a line break or a null character")};
+        return {false, qsl("target \"%1\" must not contain a line break or a null character").arg(escapedForError(target))};
     }
-    const bool targetHasSeparator = std::any_of(target.cbegin(), target.cend(), [](const QChar character) {
-        return character.isSpace() || character == QLatin1Char(',');
-    });
-    if (targetHasSeparator) {
-        return {false, qsl("target must be a single nick or channel name, without spaces or commas")};
+    // a comma-separated list of targets is still one PRIVMSG in the protocol, so
+    // it is allowed - but every name in that list has to be a name
+    const QStringList names = target.split(QLatin1Char(','));
+    for (const QString& name : names) {
+        if (name.isEmpty()) {
+            return {false, qsl("target \"%1\" has an empty name in its list").arg(escapedForError(target))};
+        }
+        if (textHasSpace(name)) {
+            return {false, qsl("target \"%1\" must be a channel or a nick name, which holds no spaces").arg(escapedForError(name))};
+        }
+        if (name.startsWith(QLatin1Char(':'))) {
+            return {false, qsl("target \"%1\" must not start with a colon").arg(escapedForError(name))};
+        }
     }
-    if (target.startsWith(QLatin1Char(':'))) {
-        return {false, qsl("target must not start with a colon")};
+    if (message.isEmpty()) {
+        return {false, qsl("no message given to send")};
     }
     if (textBreaksIrcLine(message)) {
-        return {false, qsl("message must not contain a line break or a null character")};
+        return {false, qsl("message \"%1\" must not contain a line break or a null character").arg(escapedForError(message))};
     }
     return {true, QString()};
 }
 
-// Only the Lua sub-system call to this method even looks at the return values
-// and even then it only uses the second one if the first is false:
-QPair<bool, QString> dlgIRC::sendMsg(const QString& target, const QString& message)
+// Where the Lua API's sendIrc() ends up, rather than in sendMsg(): what it is
+// given is text to send, never a command to run. sendMsg() hands the message to
+// the command parser, which turns a leading "/" into JOIN, NICK, QUIT or - by way
+// of QUOTE, and of the tolerant parser's raw relay of an unknown verb - any verb
+// at all. That is a second way for a caller relaying what a game server said to
+// hand the game the choice of command, needing no CR or LF to do it, so the path
+// a game's text reaches does not parse commands.
+QPair<bool, QString> dlgIRC::sendText(const QString& target, const QString& message)
 {
     const auto arguments = validateMsgArguments(target, message);
     if (!arguments.first) {
         return arguments;
     }
 
-    if (message.isEmpty()) {
-        return {true, QString()};
+    IrcCommand* command = IrcCommand::createMessage(target, message);
+    connection->sendCommand(command);
+
+    // echo own messages (servers do not send our own messages back)
+    IrcMessage* msg = command->toMessage(connection->nickName(), connection);
+    slot_receiveMessage(msg);
+    delete msg;
+
+    return {true, QString()};
+}
+
+// The IRC window's own input, where a command the user typed is meant to be acted
+// on - see sendText() for the path that must not do that.
+QPair<bool, QString> dlgIRC::sendMsg(const QString& target, const QString& message)
+{
+    const auto arguments = validateMsgArguments(target, message);
+    if (!arguments.first) {
+        return arguments;
     }
 
     // inform the command parser of the target for this message.
@@ -406,8 +457,14 @@ bool dlgIRC::processCustomCommand(IrcCommand* cmd)
             msgText = QString(cmd->parameters().mid(2).join(" "));
         }
 
-        // This could return a false + error message but we seem to be ignoring that:
-        sendMsg(target, msgText);
+        // the input line is cleared whatever this returns, so a refusal that went
+        // unreported would take the typed message away without a word
+        const auto result = sendMsg(target, msgText);
+        if (!result.first) {
+            //: %1 is why the message could not be sent, e.g. 'no message given to send'
+            const QString error = tr("[ERROR] Could not send that message: %1").arg(result.second);
+            ircBrowser->append(IrcMessageFormatter::formatMessage(error, qsl("indianred")));
+        }
         return true;
     }
     if (cmdName == "MSGLIMIT") {
@@ -878,6 +935,15 @@ QPair<bool, QString> dlgIRC::writeIrcHostSecure(Host* pH, bool secure)
 
 QPair<bool, QString> dlgIRC::writeIrcNickName(Host* pH, const QString& nickname)
 {
+    // What is stored here is put on the wire as "NICK <nickname>" at registration
+    // without passing through validateMsgArguments(), and IrcConnection only
+    // takes the first space-separated word of it - which leaves a line break
+    // inside that word to end the NICK and start a command of the storer's
+    // choosing.
+    if (textBreaksIrcLine(nickname) || textHasSpace(nickname)) {
+        return {false, qsl("nick name \"%1\" must be a single word, without a line break or a null character").arg(escapedForError(nickname))};
+    }
+
     // update app-wide file to set a default nick as whatever the last-used nick was.
     writeAppDefaultIrcNick(nickname);
 
@@ -886,6 +952,13 @@ QPair<bool, QString> dlgIRC::writeIrcNickName(Host* pH, const QString& nickname)
 
 QPair<bool, QString> dlgIRC::writeIrcPassword(Host* pH, const QString& password)
 {
+    // as for the nick name above, except that this goes out as the trailing
+    // parameter of "PASS :<password>", so an injected line could hold spaces too.
+    // The password itself is never quoted back.
+    if (textBreaksIrcLine(password)) {
+        return {false, qsl("password must not contain a line break or a null character")};
+    }
+
     return pH->writeProfileData(dlgIRC::PasswordCfgItem, password);
 }
 

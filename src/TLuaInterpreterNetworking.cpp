@@ -437,9 +437,9 @@ int TLuaInterpreter::sendIrc(lua_State* L)
         return warnArgumentValue(L, __func__, "not ready to send just yet");
     }
 
-    const auto result = pHost->mpDlgIRC->sendMsg(target, msg);
+    const auto result = pHost->mpDlgIRC->sendText(target, msg);
     if (!result.first) {
-        return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
+        return warnArgumentValue(L, __func__, result.second);
     }
 
     lua_pushboolean(L, true);
@@ -602,7 +602,15 @@ int TLuaInterpreter::setIrcChannels(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setIrcNick
 int TLuaInterpreter::setIrcNick(lua_State* L)
 {
-    const QString nick = getVerifiedString(L, __func__, 1, "nick");
+    if (!checkStringArg(L, __func__, 1, "nick")) {
+        return lua_error(L);
+    }
+
+    // read with the length rather than as a C string, so that an embedded NUL is
+    // refused below instead of silently truncating the nick - as for sendIrc()
+    size_t nickLength = 0;
+    const char* nickText = lua_tolstring(L, 1, &nickLength);
+    const QString nick{QString::fromUtf8(nickText, static_cast<qsizetype>(nickLength))};
     if (nick.isEmpty()) {
         return warnArgumentValue(L, __func__, "nick must not be empty");
     }
@@ -650,7 +658,11 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
 
     QString password;
     if (passwordGiven) {
-        password = lua_tostring(L, 4);
+        // with the length, as for the nick above: a NUL here would truncate the
+        // credential that goes out as "PASS :<password>"
+        size_t passwordLength = 0;
+        const char* passwordText = lua_tolstring(L, 4, &passwordLength);
+        password = QString::fromUtf8(passwordText, static_cast<qsizetype>(passwordLength));
     }
 
     Host* pHost = &getHostFromLua(L);

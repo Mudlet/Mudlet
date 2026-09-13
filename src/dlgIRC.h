@@ -81,6 +81,7 @@ public:
     IrcConnection* connection = nullptr;
     bool mReadyForSending = false;
     QPair<bool, QString> sendMsg(const QString& target, const QString& message);
+    QPair<bool, QString> sendText(const QString& target, const QString& message);
     QString getHostName() const { return mHostName; }
     int getHostPort() const { return mHostPort; }
     bool getHostSecure() const { return mHostSecure; }
