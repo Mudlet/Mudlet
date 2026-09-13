@@ -96,6 +96,19 @@ public:
     // A rebuild costs a pass over every room, so the callers that know which
     // room changed use the ones below instead.
     void markLodExitIndexDirty() { mLodExitIndex.markDirty(); }
+    // Bumped whenever a room joins or leaves this area (addRoom(), removeRoom(),
+    // and auditRooms() rewriting the set wholesale). Cheap enough for a caller
+    // to compare against a value it cached last time, rather than a query
+    // costing a scan of every room in the area - the renderer's room-ID digit
+    // count uses it this way rather than rescanning every rooms() every frame.
+    // Drawn from a counter shared by every TArea rather than restarting at 0
+    // per instance, so a cache keyed on (area ID, version) cannot mistake a
+    // new TArea for the one a recycled area ID used to name: createNewAreaID()
+    // hands out the lowest free ID, so a deleted and remade area, or a second
+    // map loaded over the first, can otherwise reach the exact version a stale
+    // cache entry already holds.
+    quint32 getRoomsVersion() const { return mRoomsVersion; }
+    void bumpRoomsVersion() { mRoomsVersion = ++smRoomsVersionCounter; }
     quint32 lodExitIndexRebuildCount() const { return mLodExitIndex.rebuildCount(); }
     // Re-files one room after its own 2D-plane exits or exit stubs changed.
     void updateLodExitRoom(int roomId);
@@ -222,6 +235,12 @@ private:
     // queries - the renderer only holds a const TArea* and most maps never
     // show the reduced-detail tier - hence mutable.
     mutable TAreaLodExitIndex mLodExitIndex;
+    // See getRoomsVersion()/bumpRoomsVersion(). Seeded from the shared counter
+    // at construction too, not just on every bump, so two TArea objects are
+    // never even momentarily stamped with the same version - including the
+    // gap between a new TArea existing and its first bumpRoomsVersion() call.
+    quint32 mRoomsVersion = ++smRoomsVersionCounter;
+    static inline quint32 smRoomsVersionCounter = 0;
 
     // One room's position and area as rebuildLodExitIndex() caches them for
     // its destination lookups. Sixteen bytes, so a lookup costs one cache

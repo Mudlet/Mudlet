@@ -59,6 +59,7 @@ TRoomDB::~TRoomDB()
     rooms.clear();
     areas.clear();
     entranceMap.clear();
+    entranceMapBySource.clear();
     areaNamesMap.clear();
     hashToRoomID.clear();
     roomIDToHash.clear();
@@ -121,35 +122,26 @@ bool TRoomDB::addRoom(int id, TRoom* pR, bool isMapLoading)
 
 void TRoomDB::deleteValuesFromEntranceMap(int value)
 {
-    QList<int> const keyList = entranceMap.keys();
-    QList<int> const valueList = entranceMap.values();
-    QList<uint> deleteEntries;
-    int index = valueList.indexOf(value);
-    while (index != -1) {
-        deleteEntries.append(index);
-        index = valueList.indexOf(value, index + 1);
+    // entranceMapBySource.values(value) is exactly the set of targets `value`
+    // was filed under in entranceMap, so each can be removed directly instead
+    // of scanning entranceMap for entries whose value happens to match.
+    const QList<int> targets = entranceMapBySource.values(value);
+    for (const int target : targets) {
+        entranceMap.remove(target, value);
     }
-    for (int i = deleteEntries.size() - 1; i >= 0; --i) {
-        entranceMap.remove(keyList.at(deleteEntries.at(i)), valueList.at(deleteEntries.at(i)));
-    }
+    entranceMapBySource.remove(value);
 }
 
 void TRoomDB::deleteValuesFromEntranceMap(QSet<int>& valueSet)
 {
     QElapsedTimer timer;
     timer.start();
-    QList<int> const keyList = entranceMap.keys();
-    QList<int> const valueList = entranceMap.values();
-    QList<uint> deleteEntries;
-    for (auto roomId : valueSet) {
-        int index = valueList.indexOf(roomId);
-        while (index >= 0) {
-            deleteEntries.append(index);
-            index = valueList.indexOf(roomId, index + 1);
+    for (const int value : valueSet) {
+        const QList<int> targets = entranceMapBySource.values(value);
+        for (const int target : targets) {
+            entranceMap.remove(target, value);
         }
-    }
-    for (unsigned const int entry : deleteEntries) {
-        entranceMap.remove(keyList.at(entry), valueList.at(entry));
+        entranceMapBySource.remove(value);
     }
     qDebug() << "TRoomDB::deleteValuesFromEntranceMap() with a list of:" << valueSet.size() << "items, run time:" << timer.nsecsElapsed() * 1.0e-9 << "sec.";
 }
@@ -194,6 +186,7 @@ void TRoomDB::updateEntranceMap(TRoom* pR, bool isMapLoading)
                 // more than possible - it was actually happening and making
                 // entranceMap get larger than needed...!
                 entranceMap.insert(toExit, id);
+                entranceMapBySource.insert(id, toExit);
             }
         }
         if (showDebug) {
@@ -212,44 +205,28 @@ void TRoomDB::updateEntranceMap(TRoom* pR, bool isMapLoading)
 // this is call by TRoom destructor only
 bool TRoomDB::__removeRoom(int id)
 {
-    static QMultiHash<int, int> _entranceMap; // Make it persistent - for multiple room deletions
-    static bool isBulkDelete = false;
-    // Gets set / reset by mpTempRoomDeletionSet being non-null, used to setup
-    // _entranceMap the first time around for multi-room deletions
-
     TRoom* pR = getRoom(id);
     // This will FAIL during map deletion as TRoomDB::rooms has already been
     // zapped, so can use to skip everything...
     if (pR) {
-        if (mpTempRoomDeletionSet && mpTempRoomDeletionSet->size() > 1) { // We are deleting multiple rooms
-            if (!isBulkDelete) {
-                _entranceMap = entranceMap;
-                _entranceMap.detach(); // MUST take a deep copy of the data
-                isBulkDelete = true;   // But only do it the first time for a bulk delete
-            }
-        } else {                // We are deleting a single room
-            if (isBulkDelete) { // Last time was a bulk delete but it isn't one now
-                isBulkDelete = false;
-            }
-            _entranceMap.clear();
-            _entranceMap = entranceMap; // Refresh our local copy
-            _entranceMap.detach();      // MUST take a deep copy of the data
-        }
+        const bool isBulkDelete = mpTempRoomDeletionSet && mpTempRoomDeletionSet->size() > 1;
 
         // FIXME: make a proper exit controller so we don't need to do all these if statements
-        // Remove the links from the rooms entering this room
-        QMultiHash<int, int>::const_iterator i = _entranceMap.constFind(id);
-        // The removeAllSpecialExitsToRoom below modifies the entranceMap - and
-        // it is unsafe to modify (use copy operations on) something that an STL
-        // iterator is active on - see "Implicit sharing iterator problem" in
-        // "Container Class | Qt 5.x Core" - this is now avoid by taking a deep
-        // copy and iterating through that instead while modifying the original
-        while (i != _entranceMap.cend() && i.key() == id) {
-            if (i.value() == id || (mpTempRoomDeletionSet && mpTempRoomDeletionSet->size() > 1 && mpTempRoomDeletionSet->contains(i.value()))) {
-                ++i;
+        // Remove the links from the rooms entering this room. entranceMap.values(id)
+        // only walks this key's own bucket, not the whole map, so this list is cheap
+        // regardless of overall map size - unlike the QMultiHash-wide deep copy this
+        // used to take, which made every single-room deletion cost O(every exit on the
+        // map). The list also holds its own values rather than referencing entranceMap,
+        // so removeAllSpecialExitsToRoom()/determineAreaExitsOfRoom() below are free to
+        // mutate the live entranceMap for other rooms without disturbing this loop - see
+        // "Implicit sharing iterator problem" in "Container Class | Qt 5.x Core" for why
+        // an iterator into entranceMap itself could not have tolerated that.
+        const QList<int> enteringRoomIds = entranceMap.values(id);
+        for (const int enteringRoomId : enteringRoomIds) {
+            if (enteringRoomId == id || (isBulkDelete && mpTempRoomDeletionSet->contains(enteringRoomId))) {
                 continue; // Bypass rooms we know are also to be deleted
             }
-            TRoom* r = getRoom(i.value());
+            TRoom* r = getRoom(enteringRoomId);
             if (r) {
                 if (r->getNorth() == id) {
                     r->setNorth(-1);
@@ -294,7 +271,6 @@ bool TRoomDB::__removeRoom(int id)
                     pEnteringRoomArea->determineAreaExitsOfRoom(r->getId());
                 }
             }
-            ++i;
         }
         const int areaID = pR->getArea();
         TArea* pA = getArea(areaID);
@@ -311,8 +287,15 @@ bool TRoomDB::__removeRoom(int id)
             hashToRoomID.remove(hash);
         }
         if ((!mpTempRoomDeletionSet) || mpTempRoomDeletionSet->size() == 1) { // if NOT deleting multiple rooms
-            entranceMap.remove(id);                                           // Only removes matching keys
-            deleteValuesFromEntranceMap(id);                                  // Needed to remove matching values
+            // Entries under key id name the rooms that had an exit into id (its
+            // sources); entranceMapBySource needs those removed too, so read
+            // them out before the key removal below drops them from entranceMap.
+            const QList<int> sourcesIntoRoom = entranceMap.values(id);
+            entranceMap.remove(id); // Only removes matching keys
+            for (const int source : sourcesIntoRoom) {
+                entranceMapBySource.remove(source, id);
+            }
+            deleteValuesFromEntranceMap(id); // Needed to remove matching values
         }
         // Because we clear the graph in initGraph which will be called
         // if mMapGraphNeedsUpdate is true -- we don't need to
@@ -370,7 +353,14 @@ void TRoomDB::removeRoom(QSet<int>& ids)
         mpTempRoomDeletionSet->remove(deleteRoomId);
     }
     for (auto deleteRoomId : deletedRoomIds) {
+        // As in __removeRoom(): capture the sources filed under this key before
+        // the key removal drops them from entranceMap, so entranceMapBySource
+        // can be kept in step.
+        const QList<int> sourcesIntoRoom = entranceMap.values(deleteRoomId);
         entranceMap.remove(deleteRoomId); // This has been deferred from __removeRoom()
+        for (const int source : sourcesIntoRoom) {
+            entranceMapBySource.remove(source, deleteRoomId);
+        }
     }
     deleteValuesFromEntranceMap(deletedRoomIds);
     mpTempRoomDeletionSet->clear();
@@ -1125,6 +1115,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
                 pA->mIsDirty = true;
             }
             pA->rooms = foundRooms;
+            pA->bumpRoomsVersion();
         }
     }
     // END OF TASK 8
@@ -1146,6 +1137,7 @@ void TRoomDB::clearMapDB()
     rooms.clear(); // Prevents any further use of TRoomDB::getRoom(int) !!!
     areas.clear();
     entranceMap.clear();
+    entranceMapBySource.clear();
     areaNamesMap.clear();
     hashToRoomID.clear();
     roomIDToHash.clear();

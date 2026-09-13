@@ -357,6 +357,7 @@ void TArea::addRoom(int id)
     if (pR) {
         if (!rooms.contains(id)) {
             rooms.insert(id);
+            bumpRoomsVersion();
             mZLevelIndex.addRoom(id, pR->z());
             mGridIndex.addRoom(id, pR->z(), pR->x(), pR->y());
             if (!pR->customLines.empty()) {
@@ -689,6 +690,7 @@ void TArea::removeRoom(int room)
         qWarning() << "TArea::removeRoom(" << room << ") the room is no longer in the map, so this area's indexes cannot be updated";
     }
     rooms.remove(room);
+    bumpRoomsVersion();
     mAreaExits.remove(room);
     // Exits leading here from the area's remaining rooms are handled by
     // whoever took the room away: TRoomDB::__removeRoom() clears them through
