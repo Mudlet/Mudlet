@@ -40,6 +40,7 @@
 #include <QLineEdit>
 #include <QPushButton>
 #include <QRadioButton>
+#include <QSignalSpy>
 #include <QSpinBox>
 #include <QTemporaryDir>
 #include <QTreeWidget>
@@ -157,9 +158,8 @@ private:
     {
         mpDialog = new dlgRoomExits(mpHost, roomId);
         verifySpecialExitColumnCount(mpDialog);
-        // The dialog installs two item delegates it does not own (see the
-        // specialExitDelegatesOutliveTheDialog case), so deleting the dialog is
-        // not enough to get rid of them
+        // Tracked via QPointer so specialExitDelegatesAreDestroyedWithTheDialog
+        // can confirm deleting the dialog takes both of these with it.
         mpRoomIdDelegate = mpDialog->specialExits->itemDelegateForColumn(colIndex_exitRoomId);
         mpWeightDelegate = mpDialog->specialExits->itemDelegateForColumn(colIndex_exitWeight);
         return mpDialog;
@@ -655,16 +655,14 @@ private slots:
         QVERIFY2(subject()->getExit(DIR_NORTH) == scmNearRoom, "save() on a dialog with no room wrote over another room's exits");
     }
 
-    /*
-     * Known defect, kept as an expected failure so that fixing it is noticed:
-     * dlgRoomExits' constructor hands specialExits two parentless delegates
-     * through setItemDelegateForColumn(), which does not take ownership, so
-     * both outlive the dialog with nothing left pointing at them. Every opening
-     * of the exits editor leaks a RoomIdLineEditDelegate and a
-     * WeightSpinBoxDelegate; parenting them to the dialog is the fix, and it
-     * turns both QVERIFYs below green.
-     */
-    void specialExitDelegatesOutliveTheDialog()
+    // Regression test for issue #10423: dlgRoomExits' constructor used to hand
+    // specialExits two parentless delegates through setItemDelegateForColumn(),
+    // which does not take ownership, so both outlived the dialog with nothing
+    // left pointing at them - leaking a RoomIdLineEditDelegate and a
+    // WeightSpinBoxDelegate on every opening of the exits editor. Fixed by
+    // parenting both to specialExits, so deleting the dialog now cascades
+    // through it and frees them too.
+    void specialExitDelegatesAreDestroyedWithTheDialog()
     {
         buildMap();
         auto* pDlg = openDialogOn(scmSubjectRoom);
@@ -673,10 +671,41 @@ private slots:
 
         delete pDlg;
 
-        QEXPECT_FAIL("", "issue #10423: the roomID delegate is parentless, so deleting the dialog does not destroy it", Continue);
         QVERIFY(mpRoomIdDelegate.isNull());
-        QEXPECT_FAIL("", "issue #10423: the weight delegate is parentless, so deleting the dialog does not destroy it", Continue);
         QVERIFY(mpWeightDelegate.isNull());
+    }
+
+    // Changing an exit (here flipping a door to locked) and closing the dialog
+    // must repaint the mapper and mark the map unsaved - previously the map
+    // stayed stale until the next scroll/pan, and the edit was not even marked
+    // unsaved.
+    void saveRepaintsTheMapAndMarksItUnsaved()
+    {
+        buildMap();
+        map()->resetUnsaved();
+        QCOMPARE(subject()->getDoor(qsl("n")), 2); // closed, from buildMap
+
+        auto* pDlg = openDialogOn(scmSubjectRoom);
+        QVERIFY(pDlg->doortype_closed_n->isChecked());
+        // Flip the north door to locked.
+        pDlg->doortype_locked_n->setChecked(true);
+        QVERIFY(pDlg->doortype_locked_n->isChecked());
+
+        QSignalSpy areaChangedSpy(map(), &TMap::signal_areaChanged);
+        QVERIFY(areaChangedSpy.isValid());
+        QVERIFY(!map()->isUnsaved());
+
+        pDlg->save();
+
+        // The door change was committed to the room.
+        QCOMPARE(subject()->getDoor(qsl("n")), 3); // locked
+        // The map was marked unsaved.
+        QVERIFY2(map()->isUnsaved(), "editing exits did not mark the map unsaved");
+        // updateArea() queues a throttled repaint that emits signal_areaChanged
+        // for the subject's area - drain the queued call and check it arrived.
+        QVERIFY2(areaChangedSpy.wait(1000), "updateArea() did not repaint the map (signal_areaChanged never fired)");
+        QCOMPARE(areaChangedSpy.count(), 1);
+        QCOMPARE(areaChangedSpy.takeFirst().at(0).toInt(), subject()->getArea());
     }
 };
 
