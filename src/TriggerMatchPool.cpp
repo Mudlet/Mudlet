@@ -99,7 +99,7 @@ constexpr uint64_t kDoneShift = 32;
 
 uint64_t packDone(const int searches)
 {
-    return (uint64_t(1) << kDoneShift) | static_cast<uint32_t>(searches);
+    return (static_cast<uint64_t>(1) << kDoneShift) | static_cast<uint32_t>(searches);
 }
 
 int doneChunksOf(const uint64_t done)
