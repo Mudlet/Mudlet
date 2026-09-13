@@ -232,10 +232,11 @@ QPair<bool, QString> dlgIRC::sendText(const QString& target, const QString& mess
     }
 
     IrcCommand* command = IrcCommand::createMessage(target, message);
-    connection->sendCommand(command);
-
-    // echo own messages (servers do not send our own messages back)
+    // the local echo (servers do not send our own messages back) is built before
+    // the command is handed over: sendCommand() takes ownership of a parentless
+    // command, and Communi states it is not safe to access one after that
     IrcMessage* msg = command->toMessage(connection->nickName(), connection);
+    connection->sendCommand(command);
     slot_receiveMessage(msg);
     delete msg;
 
