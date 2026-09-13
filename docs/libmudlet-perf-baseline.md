@@ -107,6 +107,20 @@ Two environment variables reshape the workload for one-off experiments:
   the way a socket delivers it, instead of as one burst. The cuts land mid-line
   as real reads do.
 
+Chunked feeding peaks *lower* on memory than one burst rather than higher, and
+the margin widens with the corpus: one burst holds the whole read's `cleandata`
+plus its decoded copy while it works, where the chunk list retains one corpus
+with a single read's worth of transients. `peak_rss_kb` from a
+`linux-debug-nosan` build, two runs a side agreeing within 0.2 MB:
+
+| corpus | one burst | 1 KiB reads |
+| --- | ---: | ---: |
+| 25000 lines (the default) | 363,792 kB | 361,464 kB |
+| 250000 lines | 440,296 kB | 391,224 kB |
+
+So a chunked run's memory figures are only comparable with another chunked run's
+of the same size, which is what the guards below enforce.
+
 A run with either set reports `corpus_version 0`, so the compare script refuses
 to set it against a standard run. A chunked run also reports `bench_chunk_bytes`,
 and the script refuses two experimental runs whose line count or read size
