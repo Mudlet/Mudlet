@@ -1508,30 +1508,24 @@ std::pair<QString, QFont::Weight> Host::parseFontNameAndStyle(const QString& fon
 // them: fontconfig turns "Helvetica", "Times" or "monospace" into a real family
 // without any of those being an installed family, and Windows has a substitution
 // table of its own. Qt answers with one fixed stand-in for a name that means
-// nothing anywhere - the arbitrary substitution issue #4159 is about - so a name
-// that lands anywhere else is one the platform recognised. An alias that resolves
-// to that very stand-in ("sans-serif" on most GNU/Linux systems, which is also
-// what an unknown name falls to) cannot be told from an unknown name and is
-// treated as missing.
+// nothing anywhere, so a name that lands anywhere else is one the platform
+// recognised - and an alias that resolves to that very stand-in ("sans-serif" on
+// most GNU/Linux systems) cannot be told from an unknown name, so it counts as
+// missing.
 static bool platformResolvesFontFamily(const QString& requested)
 {
     if (requested.isEmpty()) {
         return false;
     }
 
-    // Seeded from a UUID rather than a fixed name so that no machine can have a
-    // font by that name, which would make every unknown family look resolved.
-    // Measured once for the process: the answer must not drift between one font's
-    // resolution and the next's.
+    // A UUID rather than a fixed name, so that no machine can have a font by that
+    // name and make every unknown family look resolved
     static const QString unrecognisedName = QUuid::createUuid().toString();
     static const QString unrecognisedFamily = QFontInfo(QFont(unrecognisedName)).family();
 
-    // Should a platform ever hand an unrecognised name back rather than name the
-    // family it drew instead, it tells the two apart for nobody - so take nothing
-    // on it that the font database does not list, and leave the fallback alone.
-    // Said once, because it silently turns this whole test off: without it, a
-    // report of "Mudlet keeps replacing my font" cannot be told from one where the
-    // font really is missing.
+    // A platform that hands an unrecognised name back unchanged tells an alias and an
+    // unknown name apart for nobody, so nothing the font database does not list can be
+    // taken on it - said once, because it silently turns this whole check off
     static const bool nameResolutionIsReadable = []() {
         if (unrecognisedFamily.compare(unrecognisedName, Qt::CaseInsensitive) == 0) {
             qWarning().nospace().noquote() << "Host: this platform hands an unrecognised font family name back unchanged instead of naming the family it drew "
@@ -1551,8 +1545,7 @@ static bool platformResolvesFontFamily(const QString& requested)
 }
 
 // The family as the font database spells it, not as it was typed: that spelling is what
-// getFont() reports back and what the Geyser wrappers remember. Empty when the database
-// lists nothing by that name.
+// getFont() reports back and what the Geyser wrappers remember
 static QString installedFamily(const QStringList& availableFonts, const QString& name)
 {
     for (const QString& family : availableFonts) {
@@ -1581,11 +1574,9 @@ Host::FontFamilyResolution Host::resolveFontFamily(const QString& requested) con
         }
     }
 
-    // An alias the platform resolves is not a missing font, and the name to go on
-    // using is the one that was asked for: it is the profile's own choice, it is
-    // what gets saved, and the platform makes a real family of it every time it is
-    // drawn - swapping in the family it currently resolves to would quietly turn
-    // this machine's idea of "Helvetica" into what the profile asks for everywhere.
+    // Go on using the name that was asked for rather than the family it resolves to:
+    // the name is what gets saved, so pinning this machine's idea of "Helvetica" into
+    // the profile would carry it to every other machine the profile is opened on
     if (platformResolvesFontFamily(requested)) {
         return {requested, QFont::Normal, true};
     }
