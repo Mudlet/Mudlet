@@ -45,6 +45,11 @@ HostManager::HostManager()
 
 HostManager::~HostManager()
 {
+    // Drain the pool while self() still answers: ~Host() and everything it
+    // drives is entitled to reach the manager it is being removed from, which
+    // is the window the header promises. Clearing the accessor first would
+    // leave every profile's teardown looking at a null manager.
+    mHostPool.clear();
     if (smpSelf == this) {
         smpSelf = nullptr;
     }
