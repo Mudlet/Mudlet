@@ -109,6 +109,44 @@ describe("stt bridge", function()
     end)
   end)
 
+  describe("capability announcements", function()
+
+    -- getInfo().capabilities and sysSTTCapabilitiesChanged have to describe the
+    -- same thing in both directions. docs/stt-api.md offers following the event
+    -- as an equivalent to re-reading after init(), so a package that follows it
+    -- must not be told about a change getInfo() cannot see, nor left unaware of
+    -- one it can. The asymmetry that broke this was a recognizer coming into
+    -- existence: every capability reads false while there is none, so the
+    -- transition is real to Lua even though the recognizer is not asked until
+    -- the next init(), long after Lua's answer changed.
+    --
+    -- With no engine installed nothing here creates a recognizer, so this
+    -- degrades to asserting that nothing was announced either - true, but
+    -- proving little. It bites where an engine exists.
+    it("agrees with getInfo about what counts as a change", function()
+      local events = 0
+      local handler = registerAnonymousEventHandler("sysSTTCapabilitiesChanged", function() events = events + 1 end)
+      finally(function() killAnonymousEventHandler(handler) end)
+
+      local function capabilities()
+        local current = stt.getInfo().capabilities
+        return ("%s|%s|%s|%s"):format(tostring(current.biasing), tostring(current.grammar), tostring(current.words), tostring(current.onDevice))
+      end
+
+      local before, announced = capabilities(), events
+      -- Enough to create the recognizer if nothing has yet, and harmless if
+      -- something already did
+      stt.setSilenceTimeout(1500)
+      local after = capabilities()
+
+      if after ~= before then
+        assert.is_true(events > announced, "capabilities changed with no sysSTTCapabilitiesChanged to say so")
+      else
+        assert.are.equal(announced, events, "sysSTTCapabilitiesChanged announced a change getInfo() cannot see")
+      end
+    end)
+  end)
+
   describe("refusals", function()
 
     -- A raise through the binding must not strand anything it built first:
@@ -226,6 +264,41 @@ describe("stt bridge", function()
       assert.is_string(err)
       assert.are.equal(err, seen, "the refusal was returned to the caller but never announced")
       assert.is_false(stt.listening(), "a refused toggle must leave nothing listening")
+    end)
+
+    -- Semantics rule 2: a refusal the engine caused speaks through sysSTTError
+    -- as well as in its return value. stop()'s own message names that event as
+    -- where the reason is, so staying silent made the message describe
+    -- something that never happened - and a consumer driving the bridge from
+    -- events alone, the case the contract calls out, saw a session that simply
+    -- stopped answering. start() and toggle() have always announced theirs.
+    it("announces a stop it refused because of an earlier error", function()
+      local raised, seen = 0, nil
+      local handler = registerAnonymousEventHandler("sysSTTError", function(_, message)
+        raised = raised + 1
+        seen = message
+      end)
+      finally(function() killAnonymousEventHandler(handler) end)
+
+      -- The error state is only reachable with an engine installed: every
+      -- setState(Error) is a recognizer method, and with no library the factory
+      -- builds no recognizer, so stt.init() refuses before one exists. Nothing
+      -- here can arrange the precondition on a bare CI runner, so it is skipped
+      -- rather than asserted - setup that cannot be arranged is not a failure.
+      if not stt.available() then return end
+
+      -- A directory that exists but holds no model. It has to exist: stt.init()
+      -- refuses a path that does not before the recognizer is ever asked to load
+      -- it, so a made-up path never reaches the engine at all.
+      stt.init(getMudletHomeDir())
+      if stt.getInfo().state ~= "error" then return end
+
+      raised, seen = 0, nil
+      local ok, err = stt.stop()
+      assert.is_nil(ok, "stopping from the error state should refuse rather than claim it stopped something")
+      assert.is_string(err)
+      assert.are.equal(1, raised, "the refusal was returned to the caller but never announced")
+      assert.are.equal(err, seen, "the event and the return value should carry the same reason")
     end)
 
     it("raises on a vocabulary that is not a table", function()

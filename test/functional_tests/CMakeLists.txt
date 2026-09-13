@@ -337,6 +337,49 @@ add_grouped_test_binary(functional_starterui_tests ${STARTERUI_GROUP_TEST_SOURCE
 add_grouped_test_binary(functional_teardown_tests ${TEARDOWN_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_media_tests ${MEDIA_GROUP_TEST_SOURCES})
 
+# A stand-in libvosk, so SpeechRecognizerContractTest can reach the code below
+# VoskRecognizer's library guard on a machine with no speech engine - which is
+# every CI runner. Named exactly as the real library is on each platform,
+# because VoskRecognizer looks it up by filename along librarySearchPaths().
+# The test copies it into its own redirected config dir, the first of those
+# paths, so nothing outside the test's temporary directory is touched.
+#
+# Deliberately not linked into anything: it is dlopen()ed by path, which is the
+# whole point, and linking it would put a second set of these symbols in the
+# test binary.
+add_library(vosk_stub SHARED stubs/vosk_stub.cpp)
+set_target_properties(vosk_stub PROPERTIES
+    PREFIX ""
+    OUTPUT_NAME "libvosk"
+    # No "lib" prefix from CMake and no version decoration: the name has to be
+    # the one the real release ships, which VoskRecognizer hardcodes.
+    # A subdirectory, NOT beside the test executables. loadVoskLibrary() asks for
+    # the bare name "vosk" before it tries any search path, and the dynamic
+    # loader answers that from the executable's own directory - so a stub built
+    # next to the binaries is found by every test in it, from process start,
+    # whether or not the test installed one. That silently skipped the two cases
+    # here that require no library and failed a third, all before any case ran.
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/vosk-stub"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/vosk-stub"
+    # The stub's entry points are plain extern "C" with no __declspec(dllexport),
+    # so without this a Windows build produces a DLL that loads and resolves
+    # nothing - QLibrary::resolve() returns null for every symbol and the cases
+    # below would fail for a reason that has nothing to do with what they test.
+    WINDOWS_EXPORT_ALL_SYMBOLS ON)
+if(APPLE)
+    set_target_properties(vosk_stub PROPERTIES SUFFIX ".dylib")
+elseif(WIN32)
+    set_target_properties(vosk_stub PROPERTIES SUFFIX ".dll")
+else()
+    set_target_properties(vosk_stub PROPERTIES SUFFIX ".so")
+endif()
+add_dependencies(functional_media_tests vosk_stub)
+# Passed rather than reconstructed in the test: the suffix rules above are the
+# only place the platform naming is decided, and a test guessing at it would
+# silently skip instead of failing when they change.
+target_compile_definitions(functional_media_tests PRIVATE
+    MUDLET_VOSK_STUB_LIBRARY="$<TARGET_FILE:vosk_stub>")
+
 # AppStartupTeardownTest runs the shipped application instead of linking it, so it
 # needs that binary's path and needs it built by the time ctest runs. Naming the
 # target literally is deliberate: EXE_MUDLET_TARGET is a plain variable local to
