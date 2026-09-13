@@ -28,6 +28,7 @@
 #include "Tree.h"
 #include "mudlet.h"
 #include "TTimer.h"
+#include "dlgTriggerEditor.h"
 #include "utils.h"
 
 #include <QLatin1String>
@@ -363,6 +364,9 @@ bool TimerUnit::enableTimer(const QString& name)
         }
 
         found = true;
+        if (mpHost->mpEditorDialog) {
+            mpHost->mpEditorDialog->refreshTimerIcon(pT->getID());
+        }
     }
     return found;
 }
@@ -383,6 +387,9 @@ bool TimerUnit::disableTimer(const QString& name)
 
         pT->disableTimer();
         found = true;
+        if (mpHost->mpEditorDialog) {
+            mpHost->mpEditorDialog->refreshTimerIcon(pT->getID());
+        }
     }
     return found;
 }

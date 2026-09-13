@@ -37,6 +37,8 @@
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "MudletInstanceCoordinator.h"
+#include "TLuaInterpreter.h"
+#include "dlgTriggerEditor.h"
 #include "SingleLineTextEdit.h"
 #include "TelnetServerStub.h"
 #include "dlgConnectionProfiles.h"
@@ -213,6 +215,66 @@ private slots:
     QFocusEvent tabFocusOut(QEvent::FocusOut, Qt::TabFocusReason);
     QApplication::sendEvent(&edit, &tabFocusOut);
     QVERIFY2(!edit.textCursor().hasSelection(), "focus moving to another widget kept the selection");
+  }
+  // enableTrigger()/disableTrigger() from Lua used to leave the editor's tree
+  // icon stale until something else rebuilt the tree. The repaint is deferred
+  // to the next event-loop turn so a script toggling many triggers per line
+  // pays one tree walk, not one per call - hence the QTRY_ waits.
+  void test_luaToggleRepaintsTheTreeItem() {
+    mudlet::self()->slot_showScriptDialog();
+    QTest::qWait(100ms);
+    dlgTriggerEditor *pEditor = mpHost->mpEditorDialog;
+    QVERIFY2(pEditor, "the editor dialog was not created");
+    TLuaInterpreter *pLua = mpHost->getLuaInterpreter();
+    QVERIFY(pLua->compileAndExecuteScript(
+        qsl("permGroup(\"qaToggleFolder\", \"trigger\")\n"
+            "permRegexTrigger(\"qaToggleLeaf\", \"qaToggleFolder\", "
+            "{\"^qa toggle$\"}, \"\")")));
+    pEditor->doCleanReset();
+    QTreeWidgetItem *pLeaf = nullptr;
+    // The tree is a private Ui member; its objectName is what the .ui gives it
+    auto *pTree = pEditor->findChild<QTreeWidget *>(qsl("treeWidget_triggers"));
+    QVERIFY(pTree);
+    QVERIFY2(QTest::qWaitFor([&]() {
+      const auto found = pTree->findItems(
+          qsl("qaToggleLeaf"),
+          Qt::MatchCaseSensitive | Qt::MatchFixedString | Qt::MatchRecursive,
+          0);
+      pLeaf = found.isEmpty() ? nullptr : found.first();
+      return pLeaf != nullptr;
+    }), "the editor never rebuilt its tree around the planted trigger");
+    QTreeWidgetItem *pFolder = pLeaf->parent();
+    QVERIFY(pFolder);
+    // The accessible description is written alongside the icon from the same
+    // computed state, so it stands in for the icon here
+    auto description = [](QTreeWidgetItem *pItem) {
+      return pItem->data(0, Qt::AccessibleDescriptionRole).toString();
+    };
+    const QString active = dlgTriggerEditor::tr("activated");
+    const QString inactive = dlgTriggerEditor::tr("deactivated");
+    const QString activeFolder = dlgTriggerEditor::tr("activated folder");
+    const QString inactiveFolder = dlgTriggerEditor::tr("deactivated folder");
+    const QString inactiveParent = dlgTriggerEditor::tr("%1 in a deactivated group").arg(active);
+    QCOMPARE(description(pLeaf), active);
+
+    QVERIFY(pLua->compileAndExecuteScript(qsl("disableTrigger(\"qaToggleLeaf\")")));
+    QTRY_COMPARE(description(pLeaf), inactive);
+
+    QVERIFY(pLua->compileAndExecuteScript(qsl("enableTrigger(\"qaToggleLeaf\")")));
+    QTRY_COMPARE(description(pLeaf), active);
+
+    // A folder's state greys out everything under it
+    QVERIFY(pLua->compileAndExecuteScript(qsl("disableTrigger(\"qaToggleFolder\")")));
+    QTRY_COMPARE(description(pFolder), inactiveFolder);
+    QCOMPARE(description(pLeaf), inactiveParent);
+
+    // Toggled off and back on within one turn: the tree ends where it started
+    QVERIFY(pLua->compileAndExecuteScript(
+        qsl("enableTrigger(\"qaToggleFolder\")\n"
+            "disableTrigger(\"qaToggleLeaf\")\n"
+            "enableTrigger(\"qaToggleLeaf\")")));
+    QTRY_COMPARE(description(pFolder), activeFolder);
+    QCOMPARE(description(pLeaf), active);
   }
 };
 

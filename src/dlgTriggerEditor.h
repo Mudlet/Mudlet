@@ -199,12 +199,26 @@ public:
     void showError(const QString&);
     void showWarning(const QString&, bool announce = true);
     void showInfo(const QString&);
-    void children_icon_triggers(QTreeWidgetItem* pWidgetItemParent);
-    void children_icon_alias(QTreeWidgetItem* pWidgetItemParent);
-    void children_icon_key(QTreeWidgetItem* pWidgetItemParent);
-    void children_icon_timer(QTreeWidgetItem* pWidgetItemParent);
-    void children_icon_script(QTreeWidgetItem* pWidgetItemParent);
+    // touchNotification: whether an errored descendant may show its error on the
+    // shared editor-wide notification banner. The GUI toggle paths default this
+    // true - the user is looking at the tree they just clicked in - while the
+    // Lua-triggered refreshXIcon() paths pass whether the recursing item is the
+    // one currently open, so a background toggle cannot clobber an unrelated
+    // diagnostic the user is actually reading.
+    void children_icon_triggers(QTreeWidgetItem* pWidgetItemParent, bool touchNotification = true);
+    void children_icon_alias(QTreeWidgetItem* pWidgetItemParent, bool touchNotification = true);
+    void children_icon_key(QTreeWidgetItem* pWidgetItemParent, bool touchNotification = true);
+    void children_icon_timer(QTreeWidgetItem* pWidgetItemParent, bool touchNotification = true);
+    void children_icon_script(QTreeWidgetItem* pWidgetItemParent, bool touchNotification = true);
     void children_icon_action(QTreeWidgetItem* pWidgetItemParent);
+    // Repaints a single item's icon/description from its current TX::isActive()
+    // state, without a full tree rebuild - for GUI-external state changes such
+    // as the enableTrigger()/disableTrigger() family of Lua functions.
+    void refreshTriggerIcon(int triggerID);
+    void refreshAliasIcon(int aliasID);
+    void refreshScriptIcon(int scriptID);
+    void refreshTimerIcon(int timerID);
+    void refreshKeyIcon(int keyID);
     void doCleanReset();
     void writeScript(int id);
     void addVar(bool);
@@ -407,10 +421,20 @@ private:
     void saveTrigger();
     void saveAlias();
     void computeAliasIcon(TAlias* pT, QIcon& icon, QString& itemDescription) const;
-    void setAliasNormalIcon(QTreeWidgetItem* pItem, TAlias* pT);
-    void showAliasError(QTreeWidgetItem* pItem, const QString& name, const QString& error);
+    void computeTriggerIcon(TTrigger* pT, QIcon& icon, QString& itemDescription) const;
+    void computeTimerIcon(TTimer* pT, QIcon& icon, QString& itemDescription) const;
+    void computeScriptIcon(TScript* pT, QIcon& icon, QString& itemDescription) const;
+    void computeKeyIcon(TKey* pT, QIcon& icon, QString& itemDescription) const;
+    // respectNewState: a freshly-added, not-yet-saved alias keeps its "unsaved"
+    // icon rather than an active/inactive one - true for every GUI-driven path,
+    // since TAlias::mIsNew only ever clears via an explicit Save. The
+    // Lua-triggered refreshAliasIcon() passes false: a profile's aliases are
+    // still "new" until manually saved, so respecting it there painted every
+    // Lua-toggled alias with the save-as icon instead of reporting its state.
+    void setAliasNormalIcon(QTreeWidgetItem* pItem, TAlias* pT, bool touchNotification = true, bool respectNewState = true);
+    void showAliasError(QTreeWidgetItem* pItem, const QString& name, const QString& error, bool touchNotification = true);
     void showAliasLoopWarning(QTreeWidgetItem* pItem, const QString& name);
-    void applyAliasState(QTreeWidgetItem* pItem, TAlias* pT);
+    void applyAliasState(QTreeWidgetItem* pItem, TAlias* pT, bool touchNotification = true, bool respectNewState = true);
     bool aliasSubstitutionLoops(const QString& regex, const QString& substitution) const;
     void saveTimer();
     void saveKey();
@@ -725,6 +749,13 @@ private:
 
     // keeps track of the dialog reset being queued
     bool mCleanResetQueued = false;
+    // Trigger IDs whose tree icon is stale; painted in one tree walk on the
+    // next event-loop turn rather than one O(tree) lookup per Lua toggle.
+    QSet<int> mPendingTriggerIconRefresh;
+    bool mTriggerIconRefreshQueued = false;
+    void flushPendingTriggerIconRefresh();
+    void refreshTriggerIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, int& remaining);
+    void paintTriggerItem(QTreeWidgetItem* pItem, TTrigger* pT);
 
     // One QIcon per resource path: a tree of thousands of items would otherwise
     // decode the same handful of PNGs once per item, every time it is rebuilt

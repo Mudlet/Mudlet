@@ -288,6 +288,36 @@ int ScriptUnit::getNewID()
     return ++mMaxID;
 }
 
+bool ScriptUnit::enableScript(const QString& name)
+{
+    bool found = false;
+    for (auto script : std::as_const(mScriptMap)) {
+        if (script->getName() == name) {
+            script->setIsActive(true);
+            found = true;
+            if (mpHost->mpEditorDialog) {
+                mpHost->mpEditorDialog->refreshScriptIcon(script->getID());
+            }
+        }
+    }
+    return found;
+}
+
+bool ScriptUnit::disableScript(const QString& name)
+{
+    bool found = false;
+    for (auto script : std::as_const(mScriptMap)) {
+        if (script->getName() == name) {
+            script->setIsActive(false);
+            found = true;
+            if (mpHost->mpEditorDialog) {
+                mpHost->mpEditorDialog->refreshScriptIcon(script->getID());
+            }
+        }
+    }
+    return found;
+}
+
 void ScriptUnit::compileAll(bool saveLoadingError)
 {
     // Iterate a snapshot of the root list: a script's top-level body, run by
