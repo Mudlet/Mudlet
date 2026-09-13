@@ -121,7 +121,10 @@ bool RoomMoveActivationHandler::handle(T2DMap::MapInteractionContext& context)
     }
     case QEvent::MouseButtonRelease:
         mMapWidget.mPopupMenu = false;
-        mMapWidget.setMouseTracking(false);
+        // The drag-start turned mouse tracking on; turn it back off unless room
+        // hover tooltips are enabled (delay > 0), in which case tracking stays on
+        // so hovering keeps working after the move.
+        mMapWidget.setMouseTracking(mMapWidget.roomHoverEnabled());
         mMapWidget.mRoomBeingMoved = false;
         mMapWidget.mRoomMoveViaContextMenu = false;
         mMapWidget.mMultiRect = QRect(0, 0, 0, 0);

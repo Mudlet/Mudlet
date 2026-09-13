@@ -1889,12 +1889,20 @@ void dlgProfilePreferences::reflowWideCards()
 
     const QList<QWidget*> mapViewOptions{
             mMapperUseAntiAlias, checkBox_drawUpperLowerLevels, checkbox_mMapperShowRoomBorders, checkBox_invertMapZoom, checkBox_largeAreaExitArrows, checkBox_showDefaultArea};
-    takeOutOfLayout(gridLayout_groupBox_mapViewOptions, mapViewOptions + QList<QWidget*>{gridGroupBox, groupBox_mapSymbols});
+    takeOutOfLayout(gridLayout_groupBox_mapViewOptions, mapViewOptions + QList<QWidget*>{widget_tooltipDelay, gridGroupBox, groupBox_mapSymbols});
     for (int i = 0, total = mapViewOptions.size(); i < total; ++i) {
         gridLayout_groupBox_mapViewOptions->addWidget(mapViewOptions.at(i), i / 2, i % 2);
     }
-    gridLayout_groupBox_mapViewOptions->addWidget(gridGroupBox, 3, 0, 1, 2);
-    gridLayout_groupBox_mapViewOptions->addWidget(groupBox_mapSymbols, 4, 0, 1, 2);
+    // Tooltip-delay row sits between the checkboxes and the Feature sizes group;
+    // the label and spinbox live together in widget_tooltipDelay so the spinbox
+    // stays next to its label rather than lining up under the second checkbox.
+    gridLayout_groupBox_mapViewOptions->addWidget(widget_tooltipDelay, 3, 0, 1, 2);
+    // A breath of vertical space before the titled "Feature sizes" group, so it
+    // is not cramped against the thin tooltip row - the Symbols group gets this
+    // for free from the titled group box above it, this matches that.
+    gridLayout_groupBox_mapViewOptions->setRowMinimumHeight(4, 8);
+    gridLayout_groupBox_mapViewOptions->addWidget(gridGroupBox, 5, 0, 1, 2);
+    gridLayout_groupBox_mapViewOptions->addWidget(groupBox_mapSymbols, 6, 0, 1, 2);
 
     // A column of three, leaving the two cells initWithHost() appends the
     // scaling factor to free
@@ -4345,10 +4353,12 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         spinBox_exitSize->setValue(qBound(1, qRound(50.0 / pHost->mLineSize), 11));
         spinBox_borderSize->setValue(qBound(1, qRound(50.0 / pHost->mRoomBorderSize), 11));
         doubleSpinBox_gridSize->setValue(pHost->mMapGridLineSize);
+        spinBox_tooltipDelay->setValue(pHost->mMapperTooltipDelay);
         connect(spinBox_roomSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_roomSizeChanged, Qt::UniqueConnection);
         connect(spinBox_exitSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_exitSizeChanged, Qt::UniqueConnection);
         connect(spinBox_borderSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_borderSizeChanged, Qt::UniqueConnection);
         connect(doubleSpinBox_gridSize, qOverload<double>(&QDoubleSpinBox::valueChanged), this, &dlgProfilePreferences::slot_gridSizeChanged, Qt::UniqueConnection);
+        connect(spinBox_tooltipDelay, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_tooltipDelayChanged, Qt::UniqueConnection);
         connect(checkbox_mMapperShowRoomBorders, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_changeMapperShowRoomBorders, Qt::UniqueConnection);
         connect(checkBox_drawUpperLowerLevels, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_changeDrawUpperLowerLevels, Qt::UniqueConnection);
         connect(mMapperUseAntiAlias, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_changeMapperUseAntiAlias, Qt::UniqueConnection);
@@ -4856,6 +4866,7 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(spinBox_exitSize, qOverload<int>(&QSpinBox::valueChanged), nullptr, nullptr);
     disconnect(spinBox_borderSize, qOverload<int>(&QSpinBox::valueChanged), nullptr, nullptr);
     disconnect(doubleSpinBox_gridSize, qOverload<double>(&QDoubleSpinBox::valueChanged), nullptr, nullptr);
+    disconnect(spinBox_tooltipDelay, qOverload<int>(&QSpinBox::valueChanged), nullptr, nullptr);
     disconnect(checkBox_largeAreaExitArrows, &QCheckBox::toggled, nullptr, nullptr);
     disconnect(checkBox_invertMapZoom, &QCheckBox::toggled, nullptr, nullptr);
     disconnect(checkbox_mMapperShowRoomBorders, &QCheckBox::toggled, nullptr, nullptr);
@@ -8790,6 +8801,16 @@ void dlgProfilePreferences::slot_gridSizeChanged(double size)
         mpHost->mMapGridLineSize = size;
         if (mpHost->mpMap && mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
             mpHost->mpMap->mpMapper->mp2dMap->update();
+        }
+    }
+}
+
+void dlgProfilePreferences::slot_tooltipDelayChanged(int delay)
+{
+    if (mpHost) {
+        mpHost->mMapperTooltipDelay = qMax(0, delay);
+        if (mpHost->mpMap && mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
+            mpHost->mpMap->mpMapper->mp2dMap->setRoomHoverDelay(mpHost->mMapperTooltipDelay);
         }
     }
 }

@@ -922,6 +922,11 @@ public:
     // viewport, instead of following the player room. Off by default;
     // configurable via the mapCenterSmallAreas key in Mudlet.ini.
     bool mMapperCenterSmallAreas = false;
+    // Hovering the mouse over a room in the 2D mapper shows a tooltip with
+    // the room number, name and exits after this many milliseconds. Zero
+    // disables it; configurable in profile preferences. Persisted with the
+    // profile (see XMLexport/XMLimport).
+    int mMapperTooltipDelay = 300;
     bool mVersionInTTYPE = false;
     QSet<QChar> mDoubleClickIgnore;
     bool mEnableTextAnalyzer = false;
