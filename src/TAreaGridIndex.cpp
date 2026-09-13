@@ -27,9 +27,8 @@ const TAreaGridIndex::RoomIds TAreaGridIndex::csmEmptyCell;
 // zoomed-out one covers more rows than exist, so neither wins outright - the
 // smaller key count is the one to get through.
 //
-// The probing loops count in qint64 rather than int: a viewport can reach the
-// coordinate limit, and an int counter at INT_MAX never compares greater than
-// it - it overflows back to INT_MIN and the loop runs forever.
+// The probing loops count in qint64 because an int counter at INT_MAX overflows
+// back to INT_MIN rather than passing a bound of INT_MAX, and never terminates.
 static void appendRoomsInYRange(const QHash<int, TAreaGridIndex::RoomIds>& yMap, int minY, int maxY, QList<int>& result)
 {
     const qint64 wantedRows = static_cast<qint64>(maxY) - minY + 1;

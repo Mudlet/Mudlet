@@ -18,22 +18,13 @@
  ***************************************************************************/
 
 /*
- * The two ends of the mapper's viewport query that a room out at the edge of
- * the coordinate space reaches, and that a Lua spec cannot:
+ * Why not a spec: viewportRoomBounds() has to be asked directly, because at the
+ * zoom these cases cover the whole map is one pixel and nothing drawn differs
+ * between the right answer and the wrong one; and loading a map file replaces
+ * the map of the profile the specs share.
  *
- *   - viewportRoomBounds() for the zoom that leaves a room zero pixels across.
- *     Every bound is then a division by that zero, and which non-number comes
- *     back differs by processor, so the only way to pin the answer is to ask
- *     the function directly with each of the pan offsets a machine can produce.
- *     Nothing the mapper draws differs between the right answer and the wrong
- *     one that a spec could see: at that zoom the whole map is one pixel.
- *
- *   - the paint that follows loading a map file which holds such a room. That
- *     route needs no script in the session that freezes, and a spec cannot
- *     take it: loading a map replaces the map of the profile the specs share.
- *
- * Both of these hang rather than fail when they regress, so what reports them
- * is the 60 second cap every functional test carries rather than an assertion.
+ * Both cases hang rather than fail when they regress, so what reports them is
+ * the 60 second cap every functional test carries rather than an assertion.
  *
  * Run with: ctest -R MapCoordinateLimitTest -V
  */
@@ -77,15 +68,12 @@ private:
 
     static constexpr int kWidgetWidth = 600;
     static constexpr int kWidgetHeight = 400;
-    // One pixel per room on a widget this tall, which is where the viewport's
-    // right-hand bound lands on the coordinate limit. The scroll wheel reaches
-    // it.
+    // One pixel per room on a widget this tall, which puts the viewport's
+    // right-hand bound on the coordinate limit.
     static constexpr double kOnePixelPerRoomZoom = 400.0;
-    // More occupied columns than the viewport at that zoom asks for, so the
-    // scan probes the columns it wants instead of walking the ones the area
-    // has - probing is the route that stopped terminating. The margin is wide
-    // because how many columns the viewport wants is half the widget's width in
-    // rooms, which platform chrome moves.
+    // More occupied columns than the viewport at that zoom asks for, so the scan
+    // probes the columns it wants instead of walking the ones the area has. The
+    // margin is wide because how many it wants tracks the widget's width.
     static constexpr int kOccupiedColumns = 2000;
     static constexpr int kFarRoomId = 99999;
 
@@ -101,10 +89,8 @@ private:
 
     bool addRoomAt(const int id, const int areaId, const int x, const int y) const { return map()->addRoom(id) && map()->setRoomArea(id, areaId) && map()->setRoomCoordinates(id, x, y, 0); }
 
-    // An area a few thousand columns wide with one room out at the coordinate
-    // limit, the player standing in that room, and the zoom that draws it a
-    // pixel per room already stored on the area - which is the state a saved
-    // map file carries.
+    // The player is left standing in the far room and the zoom is stored on the
+    // area, which is the state a saved map file carries.
     int buildAreaWithARoomAtTheCoordinateLimit() const
     {
         TMap* pMap = map();
@@ -130,8 +116,6 @@ private:
         return areaId;
     }
 
-    // The widget the profile's own mapper holds, sized and left to centre
-    // itself on the player room the way a repaint after a map load does.
     T2DMap* preparedWidget() const
     {
         TMap* pMap = map();
@@ -207,10 +191,8 @@ private slots:
     {
         QTest::addColumn<float>("panOffset");
 
-        // mRX and mRY are qRound()ed from zero times the overflowed span, which
-        // is a NaN, and int(NaN) is not the same everywhere: x86-64 lands on
-        // INT_MIN and ARM64 on 0. The third row is the same zoom with the map
-        // panned so that both ends of the division are on the same side.
+        // mRX and mRY are qRound()ed from a NaN, and int(NaN) is not the same
+        // everywhere: x86-64 lands on INT_MIN and ARM64 on 0.
         QTest::newRow("the pan offset an x86-64 build produces") << static_cast<float>(INT_MIN);
         QTest::newRow("the pan offset an ARM64 build produces") << 0.0f;
         QTest::newRow("panned past the widget") << 1000.0f;
@@ -230,9 +212,6 @@ private slots:
         QCOMPARE(bounds.bottom(), INT_MAX);
     }
 
-    // The control for the case above: widening the range is only the right
-    // answer where there is no range to work out, so an ordinary zoom has to
-    // come back with the handful of coordinates that really can be on screen.
     void test_theViewportStaysNarrowAtAnOrdinaryZoom()
     {
         const QRect bounds = T2DMap::viewportRoomBounds(kWidgetWidth / 2.0f, kWidgetHeight / 2.0f, 20.0f, 20.0f, kWidgetWidth, kWidgetHeight);
@@ -243,10 +222,6 @@ private slots:
         QCOMPARE(bounds.bottom(), 11);
     }
 
-    // The route that needs no script in the session that freezes: the room out
-    // at the limit, the area's zoom and the player's position all travel in the
-    // map file, so the first paint after the file is read back is the one that
-    // asks the index for a range ending at INT_MAX.
     void test_aMapFileHoldingARoomAtTheCoordinateLimitIsPaintedWhenItIsLoadedBack()
     {
         const int areaId = buildAreaWithARoomAtTheCoordinateLimit();
@@ -263,9 +238,8 @@ private slots:
         map()->mapClear();
         QVERIFY2(map()->restore(fileName), "the map under test could not be read back");
 
-        // What the file has to have carried for the paint below to be the one
-        // this covers, checked before the paint rather than after it - a paint
-        // that never returns reports nothing at all.
+        // Checked before the paint rather than after it: a paint that never
+        // returns reports nothing at all.
         const TRoom* pFarRoom = map()->mpRoomDB->getRoom(kFarRoomId);
         QVERIFY2(pFarRoom, "the room at the coordinate limit did not survive the save and load");
         QCOMPARE(pFarRoom->x(), INT_MAX);
@@ -278,9 +252,8 @@ private slots:
         QVERIFY2(p2dMap, "the profile's mapper could not be created");
         renderFrame(p2dMap);
 
-        // Reached at all, which is the whole point: the scan this paint runs
-        // used to count in an int and so never got past a range ending at
-        // INT_MAX.
+        // Reached at all is the point: a paint whose scan never returns never
+        // gets here.
         QCOMPARE(p2dMap->mAreaID, pFarRoom->getArea());
     }
 };

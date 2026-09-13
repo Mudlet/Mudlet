@@ -44,8 +44,7 @@
  */
 namespace {
 // More occupied columns (rows) than any range below asks for, so the scan probes
-// the cells it wants instead of walking the ones the index has - probing is the
-// loop that stopped terminating at the coordinate limit.
+// the cells it wants instead of walking the ones the index has.
 constexpr int cOccupiedCells = 600;
 
 void addRoomsAlongX(TAreaGridIndex& idx)
@@ -509,13 +508,8 @@ private slots:
     // -------------------------------------------------------------------------
     // Ranges that reach the limits of the coordinate space
     //
-    // A viewport bound is a room coordinate clamped into int, so a map holding a
-    // room out at the edge of that space asks for a range that ends at INT_MAX,
-    // and a zoom so far out that the map collapses to a point asks for the whole
-    // range. Probing a range that ends at INT_MAX one column at a time is the
-    // arithmetic that never gets past its last step, so each of these cases
-    // hangs rather than answers wrongly when it regresses: run the binary under
-    // a timeout.
+    // These cases hang rather than answer wrongly when they regress, so the
+    // binary needs a timeout to report them.
     // -------------------------------------------------------------------------
 
     void roomsInViewport_rangeEndingAtTheCoordinateLimit_returnsTheRoomsInIt()
@@ -553,10 +547,8 @@ private slots:
         QCOMPARE(result, QList<int>({9999}));
     }
 
-    // Three rooms is fewer than the 2^32 columns the range covers, so this is
-    // the key-walking branch rather than the probing one: what it pins is that
-    // the widest range there is still answers, which is what an absurd zoom now
-    // asks for.
+    // Three rooms is fewer than the 2^32 columns the range covers, so this takes
+    // the key-walking branch rather than the probing one.
     void roomsInViewport_theWholeCoordinateRange_returnsEveryRoom()
     {
         TAreaGridIndex idx;

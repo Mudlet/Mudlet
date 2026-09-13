@@ -1,35 +1,19 @@
--- The 2D mapper works out which rooms could be on screen by inverting the
--- transform that puts them there, and the coordinates that come back are
--- clamped into an int because that is what a room coordinate is. Two ordinary
--- things push a bound onto the clamp. A map holding a room out at the edge of
--- the coordinate space asks for a range that ends at the largest int there is,
--- and a scan that cannot get past that last column never comes back - the paint
--- never finishes and the client stops dead. A zoom far enough out that the span
--- it divides by stops being a finite number puts both bounds on one end of that
--- space instead, which draws nothing at all where 5.0.1 drew the whole map into
--- one pixel. So the first of these hangs rather than fails when it regresses,
--- and the run times out instead of reporting.
+-- These cases hang rather than fail when they regress: the run times out
+-- instead of reporting.
 
 local kFarX = 2147483647
 -- More occupied columns than any viewport here asks for, so the scan probes the
--- columns it wants rather than walking every column the area has: it is the
--- probing route that stops terminating. How many columns a viewport wants is
--- about half the map window's width in rooms, so the margin over that has to be
--- wide enough that no platform's window chrome can close it.
+-- columns it wants rather than walking every column the area has. The margin is
+-- wide because how many it wants tracks the map window's width.
 local kColumns = 2000
 -- One pixel per room on the 600x400 map window below, which puts the viewport's
--- right-hand bound past the coordinate limit and so, once it is clamped, onto
--- it, over a range narrow enough for the scan to probe. The scroll wheel
--- reaches this zoom.
+-- right-hand bound onto the coordinate limit once it is clamped.
 local kOnePixelPerRoomZoom = 400
--- Far enough out that the span overflows a float. That setMapZoom() accepts it
--- is the status quo rather than the requirement here - nothing validates an
--- upper bound - and what this pins is what the mapper does with it once it has.
+-- Far enough out that the span overflows a float.
 local kSpanOverflowingZoom = 1e40
--- An ordinary zoom, and the one the parking area below is kept at. Both are
--- distinct from each other, from the zooms above, and from the 20 an untouched
--- area carries - so the mapper reporting either of them is the mapper showing
--- the one area that has it, which only a repaint can make true.
+-- Distinct from each other, from the zooms above, and from the 20 an untouched
+-- area carries, so the mapper reporting either is the mapper showing the one
+-- area that has it.
 local kOrdinaryZoom = 21
 local kParkZoom = 31
 
@@ -50,9 +34,8 @@ describe("Tests 2D map painting at the limits of the coordinate space", function
 
   setup(function()
     originalRoom = getPlayerRoom()
-    -- Tolerant rather than asserting: a spec that ran before this one may have
-    -- left the widget open, and failing here would leave the rooms below and
-    -- the widget itself to every spec that runs after.
+    -- Tolerant rather than asserting: an earlier spec may have left the widget
+    -- open, and failing here would leak the rooms below to every spec after.
     closeMapWidget()
     assert.is_true(openMapWidget(0, 0, 600, 400))
 
@@ -87,10 +70,9 @@ describe("Tests 2D map painting at the limits of the coordinate space", function
     closeMapWidget()
   end)
 
-  -- The no-argument getMapZoom() reports the area the mapper is SHOWING, and
-  -- only a repaint moves it onto the area a centring asked for - so waiting for
-  -- it to name a zoom is waiting for a paint of that area to have happened. A
-  -- scan that never returns takes the pump with it and nothing below runs again.
+  -- The no-argument getMapZoom() reports the area the mapper is SHOWING, and only
+  -- a repaint moves it onto the area a centring asked for, so waiting for it to
+  -- name a zoom is waiting for a paint of that area.
   local function waitForTheMapperToShow(zoom)
     local waitedMs = 0
     while getMapZoom() ~= zoom and waitedMs < 5000 do
@@ -101,10 +83,10 @@ describe("Tests 2D map painting at the limits of the coordinate space", function
     return getMapZoom() == zoom
   end
 
-  -- Parking on another area first is what makes the wait below mean something:
-  -- from an area the mapper is already showing, the zoom it reports changes the
-  -- moment the zoom is stored, paint or no paint. Storing the zoom before the
-  -- centring is what makes the paint that is waited for the paint at that zoom.
+  -- Parking on another area first is what makes the wait mean something: from an
+  -- area the mapper already shows, the reported zoom changes the moment it is
+  -- stored, paint or no paint. Storing the zoom before the centring is what makes
+  -- the paint waited for the paint at that zoom.
   local function showAtZoom(roomId, zoom)
     assert.is_true(centerview(parkRoom))
     assert.is_true(waitForTheMapperToShow(kParkZoom),
