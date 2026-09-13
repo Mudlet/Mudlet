@@ -1847,7 +1847,7 @@ void TMainConsole::slot_warmSystemSpellDictionary()
 {
     // spellCheck() and spellSuggestWord() do not consult this flag, so the
     // lazy getter still serves a script in a profile that has spell check off:
-    if (mpHost && mpHost->mEnableSpellCheck) {
+    if (mpHost && mpHost->getEnableSpellCheck()) {
         getHunspellHandle_system();
     }
 }

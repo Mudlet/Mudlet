@@ -144,7 +144,7 @@ private slots:
         QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
         mpPreferences->checkBox_spellCheck->click();
         QVERIFY2(TestSettings::waitForApply(applySpy), "the tick never reached the Host");
-        QVERIFY2(mpHost->mEnableSpellCheck, "the tick did not turn spell check on");
+        QVERIFY2(mpHost->getEnableSpellCheck(), "the tick did not turn spell check on");
 
         // Nothing here has asked for the handle, so a read now can only be the
         // one the tick queued

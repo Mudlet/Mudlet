@@ -3877,7 +3877,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
 
     comboBox_dictionary->clear();
-    checkBox_spellCheck->setChecked(pHost->mEnableSpellCheck);
+    checkBox_spellCheck->setChecked(pHost->getEnableSpellCheck());
     bool useUserDictionary = false;
     pHost->getUserDictionaryOptions(useUserDictionary, mUseSharedDictionary);
     // Always set the true radio button first - avoids any problems with
