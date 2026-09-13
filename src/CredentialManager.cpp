@@ -37,6 +37,7 @@
 #include <QTimer>
 #include <QVersionNumber>
 
+#include <memory>
 #include <utility>
 #if defined(INCLUDE_OWN_QT6_KEYCHAIN)
 #include <qtkeychain/keychain.h>
@@ -406,7 +407,16 @@ void CredentialManager::attemptCollidingMigration(const QString& profileName, co
 {
     qDebug() << "CredentialManager: Migrating password from colliding format for" << profileName;
 
-    storePassword(profileName, key, password, [this, legacyService, key, profileName, callback, password](bool migrationSuccess, const QString& migrationError) {
+    // A migration is its own operation, not part of the retrieval that reached it. Running it on
+    // this manager calls cleanupCurrentOperation() and setupTimeout() on single-operation state that
+    // a newer, unrelated lookup may already own - wiping that caller's callback and guard and leaving
+    // them waiting for good. A cascade whose guard has already fired still runs to completion and can
+    // arrive here long afterwards, so this is not hypothetical. Parented, so it cannot outlive us.
+    QPointer<CredentialManager> migrator = new CredentialManager(this);
+    migrator->storePassword(profileName, key, password, [this, migrator, legacyService, key, profileName, callback, password](bool migrationSuccess, const QString& migrationError) {
+        if (migrator) {
+            migrator->deleteLater();
+        }
         if (migrationSuccess) {
             // Only clean up old colliding entry if version > 4.20.1
             // The colliding format bug existed in 4.20.0 and 4.20.1
@@ -428,7 +438,13 @@ void CredentialManager::attemptCollidingMigration(const QString& profileName, co
             }
 
             if (appVersion > collidingFormatVersion) {
-                removeCredential(legacyService, key, profileName, [](bool, const QString&) {});
+                // Its own manager too, for the same reason as the store above.
+                QPointer<CredentialManager> sweeper = new CredentialManager(this);
+                sweeper->removeCredential(legacyService, key, profileName, [sweeper](bool, const QString&) {
+                    if (sweeper) {
+                        sweeper->deleteLater();
+                    }
+                });
             }
 #endif
         } else {
@@ -448,7 +464,13 @@ void CredentialManager::attemptLegacyKeychainMigration(const QString& profileNam
         if (legacySuccess && !legacyPassword.isEmpty()) {
             qDebug() << "CredentialManager: Migrating password from legacy format for" << profileName;
 
-            storePassword(profileName, key, legacyPassword, [this, profileName, callback, legacyPassword](bool migrationSuccess, const QString& migrationError) {
+            // Its own manager: see attemptCollidingMigration() for why a migration must not run on
+            // the shared single-operation state.
+            QPointer<CredentialManager> migrator = new CredentialManager(this);
+            migrator->storePassword(profileName, key, legacyPassword, [this, migrator, profileName, callback, legacyPassword](bool migrationSuccess, const QString& migrationError) {
+                if (migrator) {
+                    migrator->deleteLater();
+                }
                 if (!migrationSuccess) {
                     qWarning() << "CredentialManager: Migration failed:" << migrationError;
                 } else {
@@ -941,46 +963,62 @@ void CredentialManager::retrieveCredential(const QString& service, const QString
 
                     // Try old format first (before Windows keychain fix), then legacy formats.
                     //
-                    // The chain below is several more keychain jobs deep, and none of them arms a
-                    // timeout of its own. Leave the caller's callback in mCurrentRetrievalCallback and
-                    // re-arm the timer across the whole chain, so a job that never answers - a secret
-                    // service waiting on an unlock nobody sees, an unresponsive wallet - still ends in
-                    // handleTimeout() reporting a failure rather than in silence. Before this, the
-                    // member was cleared here and the timer stopped just above, so the ordinary
-                    // "no entry in the new format" case spent its entire tail unguarded: the caller
-                    // waited forever, and dlgConnectionProfiles' mKeychainOperationInProgress latched
-                    // on, leaving the profiles dialog unable to accept for the rest of its life.
+                    // The cascade below is several more keychain jobs deep and used to run with
+                    // nothing watching it: the timer above was stopped when this read answered, and
+                    // none of the cascade's own jobs arms one. A job that never answered therefore
+                    // left the caller waiting for good - and dlgConnectionProfiles latches
+                    // mKeychainOperationInProgress on exactly this kind of read, clearing it only from
+                    // the callback, so the profiles dialog could never be accepted again.
                     //
-                    // The chain funnels every outcome through the callback handed to it, so wrapping
-                    // that one callback covers all of them. The wrapper consumes the member, and
-                    // handleTimeout() consumes it too (std::exchange), so exactly one of the two can
-                    // ever report - which is what the cleared member used to guarantee.
+                    // The guard belongs to the cascade rather than to the manager's current operation,
+                    // because the cascade nests further operations on this same manager: recovering a
+                    // password from the legacy or colliding format calls storePassword(), which runs
+                    // cleanupCurrentOperation() and setupTimeout(), wiping the shared callback and
+                    // replacing the shared timer mid-cascade. Anything anchored to those would reject
+                    // or lose the migration's own result. The caller's callback therefore travels by
+                    // value down the cascade, as it always has, and this timer only has to outlive it.
+                    auto originalCallback = mCurrentRetrievalCallback;
+                    mCurrentRetrievalCallback = nullptr;
                     mCurrentJob = nullptr;
-                    setupTimeout();
+                    cleanupTimeout();
+
                     QPointer<CredentialManager> self = this;
-                    // The timer setupTimeout() just installed is this chain's identity. Anything that
-                    // supersedes this retrieval - a timeout, or another operation started on the same
-                    // manager - replaces or clears it, so a chain that answers after that is answering
-                    // for an operation nobody is waiting on any more. Without this check such a late
-                    // answer would cancel the *current* operation's guard and take the *current*
-                    // caller's callback, handing it a result from the retrieval it replaced. That is
-                    // reachable: handleTimeout() consumes the callback and drives the cascade's next
-                    // stage onto this same manager, while the stalled job it gave up on can still
-                    // answer afterwards.
-                    QPointer<QTimer> chainGuard = mTimeoutTimer;
-                    CredentialRetrievalCallback chainCallback = [self, chainGuard](bool chainSuccess, QString chainPassword, const QString& chainError) {
-                        if (!self || chainGuard.isNull() || self->mTimeoutTimer != chainGuard) {
+                    auto* cascadeGuard = new QTimer(this);
+                    cascadeGuard->setSingleShot(true);
+                    cascadeGuard->setInterval(OPERATION_TIMEOUT_MS);
+                    // Whichever of the cascade and its guard gets there first answers; the other finds
+                    // this set and stands down. The caller hears exactly one outcome either way.
+                    auto answered = std::make_shared<bool>(false);
+
+                    CredentialRetrievalCallback chainCallback = [self, cascadeGuard, answered, originalCallback](bool chainSuccess, QString chainPassword, const QString& chainError) {
+                        if (*answered) {
                             SecureStringUtils::secureStringClear(chainPassword);
                             return;
                         }
-                        self->cleanupTimeout();
-                        auto callback = std::exchange(self->mCurrentRetrievalCallback, nullptr);
-                        if (callback) {
-                            callback(chainSuccess, std::move(chainPassword), chainError);
+                        *answered = true;
+                        if (self && cascadeGuard) {
+                            cascadeGuard->stop();
+                            cascadeGuard->deleteLater();
+                        }
+                        if (originalCallback) {
+                            originalCallback(chainSuccess, std::move(chainPassword), chainError);
                         } else {
                             SecureStringUtils::secureStringClear(chainPassword);
                         }
                     };
+
+                    connect(cascadeGuard, &QTimer::timeout, this, [cascadeGuard, answered, originalCallback]() {
+                        if (*answered) {
+                            return;
+                        }
+                        *answered = true;
+                        cascadeGuard->deleteLater();
+                        qWarning() << "CredentialManager: the saved-password fallback chain stalled; giving up so the caller is not left waiting";
+                        if (originalCallback) {
+                            originalCallback(false, QString(), qsl("Operation timed out"));
+                        }
+                    });
+                    cascadeGuard->start();
 #if defined(Q_OS_WIN)
                     // qtkeychain 0.17.0 started honouring the service name on Windows, moving
                     // entries from TargetName "<key>" to "<key>@<service>" - recover entries
