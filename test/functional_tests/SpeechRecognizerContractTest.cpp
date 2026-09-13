@@ -68,6 +68,7 @@ class SpeechRecognizerContractTest : public QObject
 private:
     QTemporaryDir mConfigDir;
     QByteArray mSavedXdg;
+    bool mSystemEngineWins = false;
 
     // Puts the stand-in engine where librarySearchPaths() looks first, so the
     // paths below initialize()'s library guard become reachable on a machine
@@ -191,6 +192,23 @@ private slots:
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
+
+        // Decided once, here, and before anything has installed or loaded a
+        // stub. loadVoskLibrary() asks QLibrary for the bare name "vosk" and
+        // only falls back to librarySearchPaths() when that fails, so a machine
+        // with libvosk on the loader's own path never reaches the copy the stub
+        // cases install - they would hand the real engine an empty model
+        // directory while reading counters from a library nothing loaded.
+        //
+        // The probe has to happen while nothing is mapped: dlopen() and
+        // LoadLibrary() both answer a bare name from what is already loaded, so
+        // asking this once a stub is in memory would report the stub as the
+        // system engine.
+        QLibrary bare(qsl("vosk"));
+        mSystemEngineWins = bare.load();
+        if (mSystemEngineWins) {
+            bare.unload();
+        }
     }
 
     void cleanupTestCase()
@@ -310,6 +328,9 @@ private slots:
     // dereferences it, which is why the stub counts nulls rather than crashing.
     void aHandlerClosingTheBridgeMidLoadIsNotHandedANullEngine()
     {
+        if (mSystemEngineWins) {
+            QSKIP("libvosk answers the bare name here, so the loader would reach it before the stand-in this case installs");
+        }
         QVERIFY2(installStubEngine(), "the stand-in engine could not be installed, so nothing below the library guard is reachable");
         VoskRecognizer recognizer;
 
@@ -340,6 +361,9 @@ private slots:
     // load. Only the path it was asked for can settle that.
     void aHandlerLoadingAnotherModelDoesNotCountAsThisLoadSucceeding()
     {
+        if (mSystemEngineWins) {
+            QSKIP("libvosk answers the bare name here, so the loader would reach it before the stand-in this case installs");
+        }
         QVERIFY2(installStubEngine(), "the stand-in engine could not be installed, so nothing below the library guard is reachable");
         VoskRecognizer recognizer;
 
@@ -365,6 +389,9 @@ private slots:
     // caused is the one it should hear most about, not least.
     void aLoadUndoneByAHandlerSaysSo()
     {
+        if (mSystemEngineWins) {
+            QSKIP("libvosk answers the bare name here, so the loader would reach it before the stand-in this case installs");
+        }
         QVERIFY2(installStubEngine(), "the stand-in engine could not be installed, so nothing below the library guard is reachable");
         VoskRecognizer recognizer;
         QSignalSpy errors(&recognizer, &SpeechRecognizer::errorOccurred);
