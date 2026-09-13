@@ -369,6 +369,7 @@ public:
 
     std::pair<bool, QString> installPackage(const QString& fileName, enums::PackageModuleType thing, bool quiet = false);
     bool uninstallPackage(const QString&, enums::PackageModuleType thing);
+    void refreshBundledPackages();
     bool removeDir(const QString&, const QString&);
     // whyNotRead, when given, is set to why no manifest came back - telling a
     // config.lua that would not run apart from one that simply names no package
@@ -1062,6 +1063,7 @@ private:
     void timerEvent(QTimerEvent* event) override;
     void autoSaveMap();
     QString sanitizePackageName(const QString packageName) const;
+    std::pair<QString, QString> bundledPackageIdentity(const QString& resourcePath);
     TCommandLine* activeCommandLine();
     void closeChildren();
     void setupSandboxedLuaState(lua_State* L);
