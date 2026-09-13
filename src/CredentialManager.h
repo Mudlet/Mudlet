@@ -58,6 +58,7 @@ class Job;
 class CredentialManager : public QObject
 {
     Q_OBJECT
+    friend class CredentialManagerTest;
 
 public:
     explicit CredentialManager(QObject* parent = nullptr);
@@ -108,6 +109,7 @@ private:
     void cleanupTimeout();
     void handleTimeout();
     void cleanupCurrentOperation();
+    void trackCurrentJob(QKeychain::Job* job);
 
     // Safety guard for keychain operation callbacks
     bool isOperationValid() const;
@@ -136,6 +138,7 @@ private:
 
     // Current operation state
     QPointer<QKeychain::Job> mCurrentJob{nullptr};
+    bool mCurrentJobFinished = false;
     QTimer* mTimeoutTimer{nullptr};
     CredentialCallback mCurrentCallback;
     CredentialRetrievalCallback mCurrentRetrievalCallback;
