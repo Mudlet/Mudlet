@@ -104,16 +104,19 @@ end
 
 --- Responsible for placing/moving/resizing this window to the correct place/size.
 -- Called on window resize events.
-function Geyser.Container:reposition ()
-  local x, y, w, h = self:get_x(), self:get_y(), self:get_width(), self:get_height()
+-- @param skipChildren If true, place only this window, for a caller that walks
+--                     the children itself.
+function Geyser.Container:reposition (skipChildren)
   if self.type ~= "userwindow" then
     moveWindow(self.name, self:get_x(), self:get_y())
     resizeWindow(self.name, self:get_width(), self:get_height())
   end
   -- deal with all children of this container
-  for k, v in pairs(self.windowList) do
-    if k ~= self and not v.nestLabels then
-      v:reposition()
+  if not skipChildren then
+    for k, v in pairs(self.windowList) do
+      if k ~= self and not v.nestLabels then
+        v:reposition()
+      end
     end
   end
 
@@ -278,7 +281,11 @@ end
 -- @param cons Any Lua table that contains appropriate constraint entries.
 function Geyser.Container:set_constraints (cons)
   cons = cons or self
-  Geyser.set_constraints(self, cons, self.container)
+  -- this walk already reaches every descendant, so letting reposition() recurse
+  -- too placed each one again for every ancestor. Self first: ScrollBox:reposition
+  -- zeroes its own origin once placed, and its children are relative to that.
+  Geyser.calc_constraints(self, cons, self.container)
+  self:reposition(true)
   for k, v in pairs(self.windowList) do
     v:set_constraints(v)
   end
@@ -315,7 +322,8 @@ setmetatable(Geyser.Container, Geyser)
 -- This function creates a new container/window
 -- @param cons Any Lua table that contains appropriate constraint entries.
 --             Include any parameter such as name or fontSize in cons
---             that are to be used for the new window.
+--             that are to be used for the new window. Set cons.hidden to true
+--             to create the element without ever showing it.
 -- @param container The parent container.
 function Geyser.Container:new(cons, container)
   -- create new table for the container and copy over constraints
@@ -326,11 +334,16 @@ function Geyser.Container:new(cons, container)
   me.name = me.name or Geyser.nameGen()
   me.windowList = {}
   me.windows = {}
-  --pass the given hidden/auto_hidden values for add2
+  -- add2() reads these flags itself, while add() shows whatever it adds and
+  -- Container:show() clears them on the way - so on that path the constraint is
+  -- remembered here and put back once this element is in its container
+  local consHidden, consAutoHidden = false, false
   if me.useAdd2 == true or (container and container.useAdd2) then
     me.hidden = me.hidden or false
     me.auto_hidden = me.auto_hidden or false
   else
+    consHidden = me.hidden or false
+    consAutoHidden = me.auto_hidden or false
     me.hidden = false
     me.auto_hidden = false
   end
@@ -377,6 +390,9 @@ function Geyser.Container:new(cons, container)
         me.rootContainer = container
     end
   end
+
+  me.hidden = me.hidden or consHidden
+  me.auto_hidden = me.auto_hidden or consAutoHidden
 
   --print("New in " .. self.name .. " : " .. me.name)
   return me

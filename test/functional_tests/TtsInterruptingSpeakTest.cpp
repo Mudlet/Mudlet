@@ -43,6 +43,7 @@
 
 #include <QTemporaryDir>
 
+#include "PortableModeTestHelper.h"
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
@@ -55,12 +56,7 @@
 #include <QTextToSpeech>
 #endif
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForTtsInterruptingSpeakTest();
+#include "GroupedTest.h"
 
 class TtsInterruptingSpeakTest : public QObject
 {
@@ -98,7 +94,9 @@ private:
 private slots:
     void initTestCase()
     {
-        initializeQRCResourcesForTtsInterruptingSpeakTest();
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
 
         QVERIFY(mConfigDir.isValid());
         mSavedXdg = qgetenv("XDG_CONFIG_HOME");
@@ -224,20 +222,5 @@ private slots:
     }
 };
 
-void initializeQRCResourcesForTtsInterruptingSpeakTest()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "TtsInterruptingSpeakTest.moc"
-QTEST_MAIN(TtsInterruptingSpeakTest)
+MUDLET_GROUPED_TEST_MAIN(TtsInterruptingSpeakTest)

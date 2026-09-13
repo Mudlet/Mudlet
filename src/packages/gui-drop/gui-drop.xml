@@ -179,7 +179,14 @@ end</script>
     if not containername:match("%D+") then
         containername = "defaultName"
     end
-    
+    --a name that merely *starts* with a digit ("20260803_164803.jpg", the shape
+    --every phone camera produces) passes the check above, but createDropManager
+    --emits it as `GUIDropImages.&lt;name&gt; = ...` - which is a syntax error, so
+    --setScript rejects the generated script and the drop is lost. Prefix it.
+    if containername:match("^%d") then
+        containername = "_"..containername
+    end
+
     --Check if image exists already and create new containername by adding +1 to the name
     if GUIDropImages[containername] or _G[containername] then 
         while GUIDropImages[containername] or _G[containername] do

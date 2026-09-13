@@ -11,8 +11,8 @@ Geyser.MiniConsole = Geyser.Window:new({
   wrapAt = 300, })
 
 --- Override reposition to reset autowrap
-function Geyser.MiniConsole:reposition()
-  self.parent.reposition(self)
+function Geyser.MiniConsole:reposition(skipChildren)
+  self.parent.reposition(self, skipChildren)
   if self.autoWrap then
     self:resetAutoWrap()
   end
@@ -57,13 +57,17 @@ function Geyser.MiniConsole:setBufferSize (linesLimit, sizeOfBatchDeletion)
 end
 
 --- Sets the new font to use - use a monospaced font, non-monospaced fonts aren't supported by Mudlet
--- and won't give the best results.
+-- and won't give the best results. Returns true if the font changed, nil+error if not.
 -- @param font Font family name to use (see https://doc.qt.io/qt-5/qfont.html#setFamily for details)
 function Geyser.MiniConsole:setFont (font)
-  if font then
-    self.font = font
+  -- only remember a family the miniconsole really took: setFont() refuses one
+  -- that is not installed, which Qt would otherwise silently substitute
+  local ok, err = setFont(self.name, font)
+  if not ok then
+    return nil, err
   end
-  setFont(self.name, font)
+  self.font = font
+  return true
 end
 
 --- Returns the font family in use by this miniconsole.
@@ -609,7 +613,7 @@ function Geyser.MiniConsole:new (cons, container)
     createMiniConsole(me.windowname,me.name, me:get_x(), me:get_y(),
     me:get_width(), me:get_height())
 
--- This only has an effect if add2 is being used as for the standard add method me.hidden and me.auto_hidden is always false at creation/initialisation
+-- Geyser.Container:new() settles the hidden constraint before there is a widget to hide, so the hide is made good here
     if me.hidden or me.auto_hidden then
       hideWindow(me.name)
     end

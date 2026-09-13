@@ -23,6 +23,11 @@
 // Reconnect) and on the messages it prints, so future changes cannot silently break
 // authentication.
 
+#include <QDir>
+#include <QFileInfo>
+#include <QSettings>
+#include <QStandardPaths>
+#include <QTemporaryDir>
 #include <QtTest/QtTest>
 #include <chrono>
 #include <QtNetwork/QSslCertificate>
@@ -33,15 +38,21 @@
 #include <QDesktopServices>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QRegularExpression>
 #include <QUrlQuery>
 #include <functional>
 
+#include "PortableModeTestHelper.h"
+#include "ProfileTestHelper.h"
 #include "CredentialManager.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
+#include "utils.h"
+
+#include "GroupedTest.h"
 
 using namespace std::chrono_literals;
 
@@ -94,13 +105,6 @@ i850uRyh7X6whywY8gm0VLO+xzCVsCR6CvgZY1MwwFuDwu2d/d5jdJXLpHueQwNU
 3HipTI77OuIRv4ykXwPOIemT9VmL/N21CgrckJGA6dYywTnc/JNpOKxdTM9srOyr
 Rcsgla9jttJevaHI71x2jLNBaKk=
 -----END PRIVATE KEY-----)PEM";
-
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-static void initializeQRCResources();
 
 // Hands out QSslSocket connections when asked to, so the stub can offer an encrypted transport.
 class GmcpTcpServer : public QTcpServer
@@ -165,7 +169,13 @@ public:
         return sslClient && sslClient->isEncrypted();
     }
     QStringList receivedGmcp() const { return mReceivedGmcp; }
-    void clearReceived() { mReceivedGmcp.clear(); }
+    // Client bytes outside telnet sequences - what the timer-driven auto-login types.
+    QByteArray receivedText() const { return mReceivedText; }
+    void clearReceived()
+    {
+        mReceivedGmcp.clear();
+        mReceivedText.clear();
+    }
 
     // Send one GMCP message as IAC SB GMCP <message> IAC SE.
     void sendGmcp(const QString& message)
@@ -254,6 +264,7 @@ private:
         int i = 0;
         while (i < mBuffer.size()) {
             if (static_cast<unsigned char>(mBuffer.at(i)) != static_cast<unsigned char>(TN_IAC)) {
+                mReceivedText.append(mBuffer.at(i));
                 ++i;
                 continue;
             }
@@ -301,8 +312,37 @@ private:
     QPointer<QTcpSocket> mClient;
     QByteArray mBuffer;
     QStringList mReceivedGmcp;
+    QByteArray mReceivedText;
     bool mGmcpEnabled = false;
     int mConnectionCount = 0;
+};
+
+// The auto-login delays live in a QSettings file shared by every case in this binary, so they have to
+// go back however a QVERIFY leaves the test body.
+class ScopedAutoLoginDelays
+{
+public:
+    ScopedAutoLoginDelays(int usernameMs, int passwordMs)
+    : mpSettings(mudlet::getQSettings())
+    , mSavedUsername(mpSettings->value(qsl("autoLoginUsernameDelay")))
+    , mSavedPassword(mpSettings->value(qsl("autoLoginPasswordDelay")))
+    {
+        mpSettings->setValue(qsl("autoLoginUsernameDelay"), usernameMs);
+        mpSettings->setValue(qsl("autoLoginPasswordDelay"), passwordMs);
+    }
+
+    ~ScopedAutoLoginDelays()
+    {
+        restore(qsl("autoLoginUsernameDelay"), mSavedUsername);
+        restore(qsl("autoLoginPasswordDelay"), mSavedPassword);
+    }
+
+private:
+    void restore(const QString& key, const QVariant& saved) { saved.isValid() ? mpSettings->setValue(key, saved) : mpSettings->remove(key); }
+
+    QSettings* mpSettings;
+    QVariant mSavedUsername;
+    QVariant mSavedPassword;
 };
 
 // Serves a static OpenID Connect discovery document over loopback http, which
@@ -355,6 +395,8 @@ public slots:
     void captureOpenedUrl(const QUrl& url) { mOpenedUrls.append(url); }
 
 private:
+    QTemporaryDir mConfigDir;
+    QByteArray mSavedXdg;
     GmcpServerStub* mpServer = nullptr;
     DiscoveryServerStub* mpDiscovery = nullptr;
     const QString mHostname = qsl("Test-CharLogin");
@@ -364,14 +406,30 @@ private:
 private slots:
     void initTestCase()
     {
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
+        // A config root of this process's own. Sharing the developer's
+        // ~/.config/mudlet means sharing a profile list, so a second copy of
+        // this test running at the same time is told the name it types is
+        // already in use and never gets an enabled Connect button. Since #9712
+        // the opt-in that makes setupConfig() adopt a directory is
+        // $XDG_CONFIG_HOME/mudlet/profiles, not the mudlet directory alone.
+        QVERIFY(mConfigDir.isValid());
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+        qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
+
         // Intercept browser opens so an auto-opened Char.Login.URL does not launch a real browser.
         QDesktopServices::setUrlHandler(qsl("http"), this, "captureOpenedUrl");
         QDesktopServices::setUrlHandler(qsl("https"), this, "captureOpenedUrl");
         // Force CredentialManager to use its deterministic encrypted-file backend rather than the
         // system keychain, so reconnect-token storage/retrieval is synchronous and observable in tests.
         qputenv("MUDLET_TEST_MODE", "1");
-        initializeQRCResources();
     }
+
+    void cleanupTestCase() { mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg); }
 
     void init()
     {
@@ -380,18 +438,27 @@ private slots:
         mPort = mpServer->serverPort();
         mudlet::start();
         mudlet::self()->setupConfig();
+        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
         mOpenedUrls.clear();
         // Start each test from a clean credential state so a reconnect token saved by an earlier test
         // cannot leak into one that expects none (which would make the client replay it instead).
+        // Clearing the blocking directory here as well as in cleanup() is what makes a hard death - a CI
+        // timeout, a sanitizer abort - survivable: the credential store lives under AppConfigLocation,
+        // which follows XDG_CONFIG_HOME only on Linux, so on macOS and Windows it outlives this run's
+        // temporary config directory, and removeCredential below cannot delete a directory.
+        removeBlockingCredentialDirectory();
         CredentialManager::removeCredential(mHostname, qsl("reconnect"));
         deleteProfileDirectory(mHostname);
     }
 
     void cleanup()
     {
+        // A test that blocked the credential store with a directory must not leave it standing, even
+        // when it failed part way through: every later test's save would be blocked too.
+        removeBlockingCredentialDirectory();
         delete mpServer;
         mpServer = nullptr;
         delete mpDiscovery;
@@ -417,6 +484,9 @@ private slots:
         QCOMPARE(sent.value(qsl("account")).toString(), qsl("player"));
         QCOMPARE(sent.value(qsl("password")).toString(), qsl("secret"));
         QCOMPARE(sent.value(qsl("version")).toInt(), 2);
+        // A real JSON boolean, not the string "true": Qt can serialise one, so the leniency the
+        // standard allows for driver-limited peers is not ours to spend.
+        QCOMPARE(sent.value(qsl("token_storage")), QJsonValue(true));
     }
 
     void testAbsentServerVersionEchoesVersionOne()
@@ -434,9 +504,10 @@ private slots:
         QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "client did not send Char.Login.Credentials");
         QCOMPARE(sent.value(qsl("account")).toString(), qsl("player"));
         QCOMPARE(sent.value(qsl("version")).toInt(), 1);
+        QCOMPARE(sent.value(qsl("token_storage")), QJsonValue(true));
     }
 
-    void testNoCredentialsHandsOffWithEmptyCredentials()
+    void testNoCredentialsHandsOffToTheGamesSignInScreen()
     {
         Host* host = connectAndNegotiate();
         QVERIFY(host);
@@ -448,7 +519,77 @@ private slots:
 
         QJsonObject sent;
         QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "client did not hand off with Char.Login.Credentials");
-        QVERIFY2(sent.isEmpty(), "hand-off Char.Login.Credentials should be an empty object");
+        QVERIFY2(isVersionTwoHandoff(sent), qPrintable(qsl("expected the version 2 hand-off, got %1").arg(describe(sent))));
+    }
+
+    void testVersionOneHandoffStaysABareEmptyObject()
+    {
+        // Keeping the bare {} on a version 1 exchange is a compatibility choice, not a protocol rule:
+        // the empty hand-off is itself a version 2 addition, so no version 1 server was specified to
+        // expect one. Mudlet has sent {} to such servers since before the standard, and some may have
+        // been written against that, so this pins the behaviour rather than the standard.
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"type\": [\"oauth\", \"password-credentials\"]}"));
+
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "client did not hand off with Char.Login.Credentials");
+        QVERIFY2(sent.isEmpty(), qPrintable(qsl("a version 1 hand-off must stay the bare {} object, got %1").arg(describe(sent))));
+    }
+
+    void testDefaultWithoutAuthTypesLeavesTimerAutoLoginAlone_data()
+    {
+        QTest::addColumn<QString>("frame");
+        // Federation 2 sends the first of these.
+        QTest::newRow("no type key") << qsl("Char.Login.Default {}");
+        QTest::newRow("empty type array") << qsl("Char.Login.Default {\"type\": []}");
+        QTest::newRow("every type entry malformed") << qsl("Char.Login.Default {\"type\": [\"\", 5, null]}");
+        QTest::newRow("unparseable payload") << qsl("Char.Login.Default {");
+    }
+
+    void testDefaultWithoutAuthTypesLeavesTimerAutoLoginAlone()
+    {
+        // A Char.Login.Default naming no usable method cannot be driven over GMCP, so the timer-driven
+        // auto-login has to survive the frame and type the credentials itself.
+        QFETCH(QString, frame);
+        // mTimerLogin is already running by now - it starts when the socket connects - so this budget
+        // has to cover the GMCP round trip below as well.
+        ScopedAutoLoginDelays delays(1500, 200);
+
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        host->setLogin(qsl("player"));
+        host->setPass(qsl("secret"));
+
+        // Without this the assertions below would also pass on a runner slow enough that the timer beat
+        // the frame, which would prove nothing about how the frame was handled.
+        QVERIFY2(!mpServer->receivedText().contains("player\r\n"), "the auto-login fired before the test frame was sent");
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(frame);
+
+        // Wait for whichever comes first: the hand-off a build that drives this frame sends (which
+        // arrives in milliseconds), or the name the timer types. That way a regression fails on the
+        // line below rather than after the full timeout.
+        const bool typedName = QTest::qWaitFor(
+                [this]() {
+                    return mpServer->countReceived(qsl("Char.Login.Credentials")) > 0 || mpServer->receivedText().contains("player\r\n");
+                },
+                8000);
+        QCOMPARE(mpServer->countReceived(qsl("Char.Login.Credentials")), 0);
+        QVERIFY2(typedName, "the timer auto-login did not send the character name");
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return mpServer->receivedText().contains("secret\r\n");
+                         },
+                         4000),
+                 "the timer auto-login did not send the password");
+        const QByteArray typed = mpServer->receivedText();
+        QVERIFY2(typed.indexOf("player\r\n") < typed.indexOf("secret\r\n"), "the password was typed before the character name");
     }
 
     void testPartialCredentialsAreNotSent()
@@ -463,7 +604,7 @@ private slots:
 
         QJsonObject sent;
         QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "client did not respond");
-        QVERIFY2(sent.isEmpty(), "a partial credential pair must not be autofilled");
+        QVERIFY2(isVersionTwoHandoff(sent), qPrintable(qsl("a partial credential pair must not be autofilled, got %1").arg(describe(sent))));
     }
 
     void testClientDrivenOAuthFieldsIgnoredOnCleartext()
@@ -481,7 +622,7 @@ private slots:
 
         QJsonObject sent;
         QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "client did not hand off");
-        QVERIFY2(sent.isEmpty(), "client-driven OAuth fields must be ignored on cleartext, yielding an empty hand-off");
+        QVERIFY2(isVersionTwoHandoff(sent), qPrintable(qsl("client-driven OAuth fields must be ignored on cleartext, yielding a hand-off, got %1").arg(describe(sent))));
     }
 
     // ---- Char.Login.URL safety ---------------------------------------------
@@ -513,11 +654,194 @@ private slots:
         QVERIFY(host);
         mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:char\", \"token\": \"opaque-token\"}"));
         QVERIFY2(waitForConsoleContains(host, qsl("signed in automatically next time")), "saving a reconnect token should be announced once");
+        // Asserted separately rather than as one sentence, which the console wraps across lines. The page
+        // name is pinned because it can silently drift away from where the "Forget saved sign-in" control
+        // actually lives - which is exactly how the notice came to name the wrong page before.
+        QVERIFY2(waitForConsoleContainsUnwrapped(host, qsl("Manage this under Preferences, Privacy and security.")), "the notice should name the preferences page that manages the saved sign-in");
         QVERIFY2(waitForStoredReconnect(host,
                                         [](const QJsonObject& entry) {
                                             return entry.value(qsl("account")).toString() == qsl("acct:char") && entry.value(qsl("token")).toString() == qsl("opaque-token");
                                         }),
                  "the reconnect token should be persisted with the announced account and token");
+
+        // A server may mint repeatedly on one sign-in; the player only needs telling once.
+        mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:char\", \"token\": \"second-token\"}"));
+        QVERIFY2(waitForStoredReconnect(host,
+                                        [](const QJsonObject& entry) {
+                                            return entry.value(qsl("token")).toString() == qsl("second-token");
+                                        }),
+                 "the second token should overwrite the first");
+        QCOMPARE(consoleOccurrences(host, qsl("signed in automatically next time")), 1);
+    }
+
+    void testATokenMintedOverTlsIsAnnounced()
+    {
+        // The ordinary encrypted sign-in: secure_only defaults to true from the transport, and this
+        // connection satisfies it, so the promise holds and is worth making. This is the case that
+        // pins the transport half of worthAnnouncing - drop it and reduce the test to the cleartext
+        // ones and the notice could stop appearing on TLS entirely without anything noticing.
+        Host* host = connectAndNegotiate(true);
+        QVERIFY(host);
+        QVERIFY2(host->mTelnet.currentlySecure(), "precondition: this connection is encrypted");
+
+        mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:char\", \"token\": \"opaque-token\"}"));
+
+        QVERIFY2(waitForStoredReconnect(host,
+                                        [](const QJsonObject& entry) {
+                                            return entry.value(qsl("secure_only")) == QJsonValue(true);
+                                        }),
+                 "a token minted over TLS should be stored as encrypted-only");
+        QVERIFY2(waitForConsoleContains(host, qsl("signed in automatically next time")), "a token this connection is able to replay should be announced");
+    }
+
+    void testATokenThisTransportCannotReplayIsNotAnnounced()
+    {
+        // Minted in the clear but scoped by the server to an encrypted transport. Every later connect
+        // on this transport refuses it (see sendReconnect), so promising an automatic sign-in would be
+        // knowably false at the moment it was written. The token is still stored: the requirement may
+        // be met by some future connection.
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        QVERIFY2(!host->mTelnet.currentlySecure(), "precondition: this connection is unencrypted");
+
+        mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:char\", \"token\": \"opaque-token\", \"secure_only\": true}"));
+
+        QVERIFY2(waitForStoredReconnect(host,
+                                        [](const QJsonObject& entry) {
+                                            return entry.value(qsl("token")).toString() == qsl("opaque-token") && entry.value(qsl("secure_only")) == QJsonValue(true);
+                                        }),
+                 "the token should still be stored, carrying the requirement the server set");
+        QVERIFY2(!waitForConsoleContains(host, qsl("signed in automatically next time"), 500), "a token this transport cannot replay must not be announced as one that will be");
+    }
+
+    void testAFailedSaveIsNotAnnouncedAsASuccess()
+    {
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+
+        // Block the save by putting a directory exactly where the credential file has to be written -
+        // surgical, removed again by cleanup(), and behaves the same on every platform, unlike revoking
+        // write permission, which is a no-op for root in a container and for an Administrator on Windows.
+        // Seeding a real credential first proves the computed path is the one
+        // actually in use, so a change to the storage scheme fails this test rather than quietly
+        // blocking nothing and letting it pass for the wrong reason.
+        const QString credentialPath = reconnectCredentialPath(host->getName());
+        QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect"), qsl("seed")));
+        QVERIFY2(QFileInfo::exists(credentialPath), qPrintable(qsl("the credential store no longer files entries at %1").arg(credentialPath)));
+        QVERIFY(CredentialManager::removeCredential(host->getName(), qsl("reconnect")));
+        QVERIFY(QDir().mkpath(credentialPath));
+
+        mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:char\", \"token\": \"opaque-token\"}"));
+
+        QVERIFY2(waitForConsoleContains(host, qsl("Could not save your sign-in")), "a save that failed should be reported to the player");
+        // Waits for a message that must never arrive, rather than sampling once: the file-backed store
+        // resolving inline is an implementation detail of MUDLET_TEST_MODE, and this assertion should not
+        // quietly become a race if that ever changes.
+        QVERIFY2(!waitForConsoleContains(host, qsl("signed in automatically next time"), 500), "a failed save must not also be announced as a success");
+    }
+
+    void testTokenMintedInTheClearIsReplayedInTheClear()
+    {
+        // Issue #10585 end to end: remember-me was unusable on a plain telnet game, because a token
+        // the server had explicitly marked replayable on either transport was stored and then refused
+        // on every later connection. secure_only arrives as a JSON string here because the server that
+        // found this (LDMud) has no JSON boolean to send.
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        QVERIFY2(!host->mTelnet.currentlySecure(), "precondition: this connection is unencrypted");
+        host->setLogin(QString());
+        host->setPass(QString());
+
+        mpServer->sendGmcp(qsl("Char.Login.Token {\"secure_only\": \"false\", \"token\": \"opaque-token\", \"account\": \"acct:char\"}"));
+        QVERIFY2(waitForStoredReconnect(host,
+                                        [](const QJsonObject& entry) {
+                                            return entry.value(qsl("token")).toString() == qsl("opaque-token") && entry.value(qsl("secure_only")) == QJsonValue(false);
+                                        }),
+                 "the token's transport requirement should be stored alongside it");
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\", \"password-credentials\"]}"));
+
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Reconnect"), sent), "a token the server marked replayable in the clear should be replayed");
+        QCOMPARE(sent.value(qsl("token")).toString(), qsl("opaque-token"));
+    }
+
+    void testAbsentSecureOnlyInheritsTheIssuingTransport_data()
+    {
+        QTest::addColumn<bool>("encrypted");
+        QTest::newRow("minted in the clear") << false;
+        QTest::newRow("minted over TLS") << true;
+    }
+
+    void testAbsentSecureOnlyInheritsTheIssuingTransport()
+    {
+        QFETCH(bool, encrypted);
+        Host* host = connectAndNegotiate(encrypted);
+        QVERIFY(host);
+        QCOMPARE(host->mTelnet.currentlySecure(), encrypted);
+
+        mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:char\", \"token\": \"opaque-token\"}"));
+        QVERIFY2(waitForStoredReconnect(host,
+                                        [encrypted](const QJsonObject& entry) {
+                                            return entry.value(qsl("token")).toString() == qsl("opaque-token") && entry.value(qsl("secure_only")) == QJsonValue(encrypted);
+                                        }),
+                 "an absent secure_only should be defaulted from the transport the token arrived on");
+    }
+
+    void testSecureOnlyIsDecodedInEveryFormTheStandardAllows_data()
+    {
+        QTest::addColumn<QString>("literal");
+        QTest::addColumn<bool>("encrypted");
+        QTest::addColumn<bool>("secureOnly");
+        QTest::addColumn<bool>("decodable");
+        // Every row is minted on the transport whose inherited default is the OPPOSITE of what it
+        // expects, so no row can pass unless the value was really decoded. Run them all over TLS and the
+        // true-expecting rows would pass against a decoder that always returned "undecodable".
+        //
+        // Decodable false, minted over TLS, where an undecoded value would have inherited true:
+        QTest::newRow("JSON false") << qsl("false") << true << false << true;
+        QTest::newRow("string false") << qsl("\"false\"") << true << false << true;
+        QTest::newRow("string FALSE") << qsl("\"FALSE\"") << true << false << true;
+        QTest::newRow("string zero") << qsl("\"0\"") << true << false << true;
+        QTest::newRow("number zero") << qsl("0") << true << false << true;
+        // Decodable true, minted in the clear, where an undecoded value would have inherited false:
+        QTest::newRow("JSON true") << qsl("true") << false << true << true;
+        QTest::newRow("string true") << qsl("\"true\"") << false << true << true;
+        QTest::newRow("padded string True") << qsl("\" True \"") << false << true << true;
+        QTest::newRow("number one") << qsl("1") << false << true << true;
+        // Undecodable is absent, never a guess: each of these must land on the transport's own default,
+        // which is only demonstrated by pinning it in both directions.
+        QTest::newRow("unrecognised string") << qsl("\"maybe\"") << true << true << false;
+        QTest::newRow("null") << qsl("null") << true << true << false;
+        QTest::newRow("array") << qsl("[false]") << true << true << false;
+        QTest::newRow("out-of-range number") << qsl("2") << false << false << false;
+        QTest::newRow("fractional number") << qsl("1.5") << false << false << false;
+        QTest::newRow("object") << qsl("{}") << false << false << false;
+    }
+
+    void testSecureOnlyIsDecodedInEveryFormTheStandardAllows()
+    {
+        QFETCH(QString, literal);
+        QFETCH(bool, encrypted);
+        QFETCH(bool, secureOnly);
+        QFETCH(bool, decodable);
+        Host* host = connectAndNegotiate(encrypted);
+        QVERIFY(host);
+        QCOMPARE(host->mTelnet.currentlySecure(), encrypted);
+        if (!decodable) {
+            // ignoreMessage fails the test if the message never arrives, so this asserts the diagnostic
+            // rather than merely silencing it: a value no conformant client can read is the one thing the
+            // server operator needs told, and nothing else would tell them.
+            QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("'secure_only' value of type .* is not a boolean")));
+        }
+
+        mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:char\", \"token\": \"opaque-token\", \"secure_only\": %1}").arg(literal));
+        QVERIFY2(waitForStoredReconnect(host,
+                                        [secureOnly](const QJsonObject& entry) {
+                                            return entry.value(qsl("token")).toString() == qsl("opaque-token") && entry.value(qsl("secure_only")) == QJsonValue(secureOnly);
+                                        }),
+                 qPrintable(qsl("secure_only %1 should have been stored as %2").arg(literal, secureOnly ? qsl("true") : qsl("false"))));
     }
 
     // ---- Char.Login.Reconnect ----------------------------------------------
@@ -540,6 +864,18 @@ private slots:
         QCOMPARE(sent.value(qsl("account")).toString(), qsl("acct:char"));
         QCOMPARE(sent.value(qsl("token")).toString(), qsl("saved-token"));
         QCOMPARE(sent.value(qsl("version")).toInt(), 2);
+        QCOMPARE(sent.value(qsl("token_storage")), QJsonValue(true));
+
+        // A token arriving on a connection that signed in by replaying one is a silent rotation, not a
+        // fresh opt-in, so it is saved without telling the player they will be remembered next time -
+        // they already were.
+        mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:char\", \"token\": \"rotated-token\"}"));
+        QVERIFY2(waitForStoredReconnect(host,
+                                        [](const QJsonObject& entry) {
+                                            return entry.value(qsl("token")).toString() == qsl("rotated-token");
+                                        }),
+                 "the rotated token should still be persisted");
+        QVERIFY2(!waitForConsoleContains(host, qsl("signed in automatically next time"), 500), "a silent rotation must not be announced as a new opt-in");
     }
 
     void testSavedTokenIsNotReplayedOverCleartext()
@@ -557,7 +893,7 @@ private slots:
 
         QJsonObject sent;
         QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "the sign-in should fall back to the interactive hand-off");
-        QVERIFY2(sent.isEmpty(), "the fall-back must be the empty {} hand-off");
+        QVERIFY2(isVersionTwoHandoff(sent), qPrintable(qsl("the fall-back must be the hand-off, got %1").arg(describe(sent))));
         QCOMPARE(mpServer->countReceived(qsl("Char.Login.Reconnect")), 0);
         QVERIFY2(waitForConsoleContains(host, qsl("not encrypted")), "the user should be told why their saved sign-in was not used");
         QVERIFY2(!CredentialManager::retrieveCredential(host->getName(), qsl("reconnect")).isEmpty(), "refusing to send the token must not destroy it");
@@ -567,6 +903,44 @@ private slots:
         mpServer->sendGmcp(qsl("Char.Login.Result {\"success\": false, \"message\": \"Invalid credentials\"}"));
         QVERIFY2(waitForConsoleContains(host, qsl("Could not log in to the game")), "a failed interactive sign-in should be reported as one");
         QVERIFY2(!CredentialManager::retrieveCredential(host->getName(), qsl("reconnect")).isEmpty(), "the stored sign-in must survive an unrelated login failure");
+    }
+
+    void testStoredTransportRequirementGatesReplay_data()
+    {
+        QTest::addColumn<QString>("entry");
+        QTest::addColumn<bool>("replayed");
+        QTest::newRow("replayable in the clear") << qsl("{\"account\": \"acct:char\", \"token\": \"saved-token\", \"secure_only\": false}") << true;
+        QTest::newRow("encrypted only") << qsl("{\"account\": \"acct:char\", \"token\": \"saved-token\", \"secure_only\": true}") << false;
+        // Written by a Mudlet from before the requirement was stored: keep the strict reading, so
+        // upgrading never widens the exposure of a token already on disk. It gains the field on the
+        // next rotation.
+        QTest::newRow("no requirement stored") << qsl("{\"account\": \"acct:char\", \"token\": \"saved-token\"}") << false;
+    }
+
+    void testStoredTransportRequirementGatesReplay()
+    {
+        QFETCH(QString, entry);
+        QFETCH(bool, replayed);
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        QVERIFY2(!host->mTelnet.currentlySecure(), "precondition: this connection is unencrypted");
+        host->setLogin(QString());
+        host->setPass(QString());
+        QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect"), entry));
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\", \"password-credentials\"]}"));
+
+        QJsonObject sent;
+        if (replayed) {
+            QVERIFY2(waitForClientGmcp(qsl("Char.Login.Reconnect"), sent), "a token this transport is allowed to carry should have been replayed");
+            QCOMPARE(sent.value(qsl("token")).toString(), qsl("saved-token"));
+            return;
+        }
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "a token this transport may not carry should fall through to the hand-off");
+        QCOMPARE(mpServer->countReceived(qsl("Char.Login.Reconnect")), 0);
+        QVERIFY2(waitForConsoleContains(host, qsl("not encrypted")), "the user should be told why their saved sign-in was not used");
+        QVERIFY2(!CredentialManager::retrieveCredential(host->getName(), qsl("reconnect")).isEmpty(), "a token refused on this transport must not be destroyed");
     }
 
     void testCleartextTokenFallsBackToProviderResume()
@@ -656,6 +1030,7 @@ private slots:
         QCOMPARE(sent.value(qsl("provider")).toString(), qsl("discord"));
         QVERIFY2(!sent.contains(qsl("password")), "the resume form must not carry a password");
         QCOMPARE(sent.value(qsl("version")).toInt(), 2);
+        QCOMPARE(sent.value(qsl("token_storage")), QJsonValue(true));
     }
 
     void testProviderFromUrlIsPersistedWithToken()
@@ -716,6 +1091,72 @@ private slots:
         QCOMPARE(mpServer->countReceived(qsl("Char.Login.Reconnect")), 0);
     }
 
+    void testRotatedTokenIsReplayedInTheClearWhenTheServerAllowsIt()
+    {
+        // The rotation path reads the stored requirement for itself. On a plain-telnet game that mints
+        // replayable-in-the-clear tokens - the configuration issue #10585 was reported from - a second
+        // Mudlet instance sharing the store rotates the single-use token, and the retry has to honour
+        // that stored false rather than refuse on transport grounds.
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        QVERIFY2(!host->mTelnet.currentlySecure(), "precondition: this connection is unencrypted");
+        host->setLogin(QString());
+        host->setPass(QString());
+        QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect"), qsl("{\"account\": \"acct:char\", \"token\": \"token-A\", \"secure_only\": false}")));
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\", \"password-credentials\"]}"));
+
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Reconnect"), sent), "client did not replay the saved token");
+        QCOMPARE(sent.value(qsl("token")).toString(), qsl("token-A"));
+
+        QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect"), qsl("{\"account\": \"acct:char\", \"provider\": \"discord\", \"token\": \"token-B\", \"secure_only\": false}")));
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Result {\"success\": false, \"message\": \"Reconnect token expired\"}"));
+
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Reconnect"), sent), "the rotated token should be replayed on a transport its requirement allows");
+        QCOMPARE(sent.value(qsl("token")).toString(), qsl("token-B"));
+    }
+
+    void testRotatedTokenRefusedOnTransportGroundsIsLeftAlone_data()
+    {
+        QTest::addColumn<QString>("rotatedEntry");
+        QTest::newRow("explicitly encrypted-only") << qsl("{\"account\": \"acct:char\", \"provider\": \"discord\", \"token\": \"token-B\", \"secure_only\": true}");
+        // An instance running an older Mudlet shares the store and writes no requirement at all. The
+        // rotation path has to read that strictly for itself, exactly as readStoredSignIn does.
+        QTest::newRow("written by a Mudlet that stored no requirement") << qsl("{\"account\": \"acct:char\", \"provider\": \"discord\", \"token\": \"token-B\"}");
+    }
+
+    void testRotatedTokenRefusedOnTransportGroundsIsLeftAlone()
+    {
+        QFETCH(QString, rotatedEntry);
+        // The mirror of the case above: the other instance's fresh token requires encryption that this
+        // connection does not have. It must not be replayed, and - because it is another instance's live
+        // token, not a dead one - must not be destroyed either.
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        QVERIFY2(!host->mTelnet.currentlySecure(), "precondition: this connection is unencrypted");
+        host->setLogin(QString());
+        host->setPass(QString());
+        QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect"), qsl("{\"account\": \"acct:char\", \"token\": \"token-A\", \"secure_only\": false}")));
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\", \"password-credentials\"]}"));
+
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Reconnect"), sent), "client did not replay the saved token");
+        QCOMPARE(sent.value(qsl("token")).toString(), qsl("token-A"));
+
+        QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect"), rotatedEntry));
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Result {\"success\": false, \"message\": \"Reconnect token expired\"}"));
+
+        QVERIFY2(waitForConsoleContains(host, qsl("not encrypted")), "the user should be told why the rotated token was not used");
+        QCOMPARE(mpServer->countReceived(qsl("Char.Login.Reconnect")), 0);
+        QCOMPARE(readStoredReconnect(host).value(qsl("token")).toString(), qsl("token-B"));
+    }
+
     void testRotationReplayClearsTheRejectionLatch()
     {
         Host* host = connectAndNegotiate(true);
@@ -766,7 +1207,7 @@ private slots:
 
         QJsonObject sent;
         QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "a corrupt stored entry should fall through to the hand-off");
-        QVERIFY2(sent.isEmpty(), "the fall-through must be the empty {} hand-off, not a reconnect or a partial replay");
+        QVERIFY2(isVersionTwoHandoff(sent), qPrintable(qsl("the fall-through must be the hand-off, not a reconnect or a partial replay, got %1").arg(describe(sent))));
         QCOMPARE(mpServer->countReceived(qsl("Char.Login.Reconnect")), 0);
     }
 
@@ -969,6 +1410,10 @@ private slots:
         QVERIFY(!sent.value(qsl("code_verifier")).toString().isEmpty());
         QCOMPARE(sent.value(qsl("redirect_uri")).toString(), redirectUri.toString());
         QCOMPARE(sent.value(qsl("nonce")).toString(), nonce);
+        // The common fields ride on AuthCode too. Asserted here because this is the only test that
+        // completes a client-driven sign-in, and so the only place the message's shape is observable.
+        QCOMPARE(sent.value(qsl("version")).toInt(), 2);
+        QCOMPARE(sent.value(qsl("token_storage")), QJsonValue(true));
     }
 
     void testAuthCodeOmitsTheNonceWhenTheServerDidNotAskForIt()
@@ -1021,6 +1466,27 @@ private slots:
         const int attempts = mpServer->countReceived(qsl("Char.Login.Credentials"));
         QVERIFY2(attempts >= 2, qPrintable(qsl("a throttled burst must still be answered, saw %1 attempts").arg(attempts)));
         QVERIFY2(attempts <= 4, qPrintable(qsl("200 frames should not buy 200 sign-in attempts, saw %1").arg(attempts)));
+    }
+
+    void testTypelessDefaultDropsAnAlreadyArmedAttempt()
+    {
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        host->setLogin(qsl("player"));
+        host->setPass(qsl("secret"));
+
+        mpServer->clearReceived();
+        // One burst: the first frame is answered straight away, the second falls inside the throttle
+        // window and arms an attempt for when it closes, and the third leaves no capabilities for that
+        // attempt to act on.
+        const auto typed = qsl("Char.Login.Default {\"version\": 2, \"type\": [\"password-credentials\"]}");
+        mpServer->sendGmcp(typed);
+        mpServer->sendGmcp(typed);
+        mpServer->sendGmcp(qsl("Char.Login.Default {}"));
+
+        QTest::qWait(2500ms);
+        const int attempts = mpServer->countReceived(qsl("Char.Login.Credentials"));
+        QCOMPARE(attempts, 1);
     }
 
     // ---- Char.Login.Result --------------------------------------------------
@@ -1082,31 +1548,8 @@ private:
     Host* createProfileAndConnect()
     {
         const QString port = QString::number(mPort);
-        QTimer::singleShot(0ms, qApp, [this, port]() {
-            mudlet::self()->startAutoLogin({});
-            QTest::qWait(100ms);
-            QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button, Qt::LeftButton);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), mHostname);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), qsl("localhost"));
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), port);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
-        });
-
         // A fresh mudlet and profile per test on an instrumented, loaded runner is slow.
-        QSignalSpy loaded(mudlet::self(), &mudlet::signal_profileLoaded);
-        if (!loaded.wait(20000)) {
-            qWarning("Profile took too long to load");
-            return nullptr;
-        }
-        Host* host = mudlet::self()->getActiveHost();
+        Host* host = TestProfile::create(mHostname, qsl("localhost"), port, 20s);
         if (!host) {
             qWarning("No active host");
             return nullptr;
@@ -1153,22 +1596,90 @@ private:
         return true;
     }
 
-    bool waitForConsoleContains(Host* host, const QString& substring, int timeoutMs = 4000)
+    static int consoleOccurrences(Host* host, const QString& substring)
+    {
+        if (!host || !host->mpConsole) {
+            return 0;
+        }
+        auto& buffer = host->mpConsole->buffer;
+        int seen = 0;
+        for (int i = 0; i <= buffer.getLastLineNumber(); ++i) {
+            if (buffer.line(i).contains(substring)) {
+                ++seen;
+            }
+        }
+        return seen;
+    }
+
+    static bool consoleContains(Host* host, const QString& substring)
     {
         if (!host || !host->mpConsole) {
             return false;
         }
         auto& buffer = host->mpConsole->buffer;
+        QString all;
+        for (int i = 0; i <= buffer.getLastLineNumber(); ++i) {
+            all.append(buffer.line(i));
+            all.append(QChar::Space);
+        }
+        return all.contains(substring);
+    }
+
+    // Matches ignoring every space and line break on both sides, so an assertion on a whole sentence does
+    // not depend on where the console happened to wrap it. Use it only where the wording itself is the
+    // thing under test; waitForConsoleContains is the right tool for a short distinctive phrase.
+    bool waitForConsoleContainsUnwrapped(Host* host, const QString& sentence, int timeoutMs = 4000)
+    {
+        static const QRegularExpression whitespace(qsl("\\s+"));
+        const QString needle = QString(sentence).remove(whitespace);
         return QTest::qWaitFor(
                 [&]() {
+                    if (!host || !host->mpConsole) {
+                        return false;
+                    }
+                    auto& buffer = host->mpConsole->buffer;
                     QString all;
                     for (int i = 0; i <= buffer.getLastLineNumber(); ++i) {
                         all.append(buffer.line(i));
-                        all.append(QChar::Space);
                     }
-                    return all.contains(substring);
+                    return all.remove(whitespace).contains(needle);
                 },
                 timeoutMs);
+    }
+
+    bool waitForConsoleContains(Host* host, const QString& substring, int timeoutMs = 4000)
+    {
+        return QTest::qWaitFor(
+                [&]() {
+                    return consoleContains(host, substring);
+                },
+                timeoutMs);
+    }
+
+    void removeBlockingCredentialDirectory()
+    {
+        QDir blockedCredential(reconnectCredentialPath(mHostname));
+        if (blockedCredential.exists()) {
+            blockedCredential.removeRecursively();
+        }
+    }
+
+    // Where the file-backed credential store files this profile's reconnect entry. Blocking that exact
+    // path is how a test makes a save fail; see testAFailedSaveIsNotAnnouncedAsASuccess.
+    static QString reconnectCredentialPath(const QString& profileName)
+    {
+        return qsl("%1/profiles/%2/passwords/%3")
+                .arg(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation), utils::sanitizeForPath(profileName), utils::sanitizeForPath(qsl("reconnect")));
+    }
+
+    static QString describe(const QJsonObject& obj) { return QString::fromUtf8(QJsonDocument(obj).toJson(QJsonDocument::Compact)); }
+
+    // The version 2 interactive hand-off is identified by the absence of account, not by the payload
+    // being literally {}: the common fields ride on it, and token_storage riding there is the whole
+    // point - it reaches the game before the game writes a line of its sign-in screen.
+    static bool isVersionTwoHandoff(const QJsonObject& sent)
+    {
+        return !sent.contains(qsl("account")) && !sent.contains(qsl("password")) && sent.value(qsl("version")).toInt() == 2 && sent.value(qsl("token_storage")) == QJsonValue(true);
     }
 
     // Parse the stored reconnect entry as JSON so tests can assert its exact shape rather than
@@ -1215,20 +1726,5 @@ private:
     }
 };
 
-static void initializeQRCResources()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "GMCPCharLoginTest.moc"
-QTEST_MAIN(GMCPCharLoginTest)
+MUDLET_GROUPED_TEST_MAIN(GMCPCharLoginTest)

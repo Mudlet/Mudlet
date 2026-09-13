@@ -25,6 +25,7 @@
  * Run with: ctest -R ConnectionDialogCrashTest -V
  */
 
+#include "PortableModeTestHelper.h"
 #include "MudletInstanceCoordinator.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
@@ -38,28 +39,9 @@
 #include <QTabBar>
 #include <chrono>
 
+#include "GroupedTest.h"
+
 using namespace std::chrono_literals;
-
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-
-static void initializeQRCResources()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
 
 class ConnectionDialogCrashTest : public QObject
 {
@@ -82,13 +64,6 @@ private:
     static constexpr int scmTestMarkerRole = Qt::UserRole + 99;
     const QString mProfileUrl = qsl("mudlet.org");
     const QString mProfilePort = qsl("23");
-
-    // setupConfig() consults portable.txt before the XDG logic, so its presence
-    // would put this test on the user's real config dir (see ConfigDirOverrideTest)
-    bool portableMarkerPresent() const
-    {
-        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
-    }
 
     // by name: QTabWidget gives the dialog a second QTabBar
     QTabBar* gamesTabBar(dlgConnectionProfiles* dialog) const { return dialog->findChild<QTabBar*>(qsl("gamesTabBar")); }
@@ -148,6 +123,7 @@ private:
     void rightClickBelowTheLastItem(QAbstractScrollArea* view) const
     {
         auto* viewport = view->viewport();
+        QVERIFY(viewport);
         const QPoint pos(viewport->width() / 2, viewport->height() - 4);
         QContextMenuEvent event(QContextMenuEvent::Mouse, pos, viewport->mapToGlobal(pos));
         QApplication::sendEvent(viewport, &event);
@@ -166,7 +142,6 @@ private slots:
         if (portableMarkerPresent()) {
             QSKIP("portable.txt present - cannot redirect the config dir for this test");
         }
-        initializeQRCResources();
 
         mSavedXdg = qgetenv("XDG_CONFIG_HOME");
         QVERIFY(mXdgDir.isValid());
@@ -408,5 +383,5 @@ private slots:
     }
 };
 
-QTEST_MAIN(ConnectionDialogCrashTest)
 #include "ConnectionDialogCrashTest.moc"
+MUDLET_GROUPED_TEST_MAIN(ConnectionDialogCrashTest)

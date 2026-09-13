@@ -40,9 +40,19 @@ if(APPLE)
         set(ARCH_LIST "arm64;x86_64")
     endif()
 
+    # ExternalProject does not inherit the parent build's cache, so without this
+    # the sentry-native/crashpad sub-build gets no -mmacosx-version-min at all
+    # and clang silently targets the *build machine's* macOS version. That makes
+    # __builtin_available(macOS 14.4, *) inside sentry_sync.h fold to a constant
+    # true and turns os_sync_wait_on_address_with_timeout() into a strong import,
+    # so the batcher thread called a symbol that does not exist on the macOS 12
+    # we still ship for and dyld aborted with "missing symbol called".
+    # Passing our deployment target down restores the weak import plus the real
+    # runtime check, so older releases take sentry's poll-wait fallback instead.
     list(APPEND SENTRY_COMMON_ARGS
         "-DCMAKE_OSX_ARCHITECTURES=${ARCH_LIST}"
         "-DCMAKE_OSX_SYSROOT=${MACOSX_SYSROOT}"
+        "-DCMAKE_OSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET}"
     )
 endif()
 
@@ -199,8 +209,11 @@ if(SENTRY_SEND_DEBUG)
             "Fix: try exporting SENTRY_AUTH_TOKEN=\"...\""
         )
     else()
+        # Qt6_DIR points at <prefix>/lib/cmake/Qt6; the script needs the prefix
+        # itself to reach Qt's libraries and its runtime-loaded plugins.
+        get_filename_component(QT_INSTALL_PREFIX "${Qt6_DIR}/../../.." ABSOLUTE)
         add_custom_command(TARGET ${EXE_MUDLET_TARGET} POST_BUILD
-        COMMAND bash "${CMAKE_SOURCE_DIR}/CI/send_debug_files_to_sentry.sh" "$<TARGET_FILE:${EXE_MUDLET_TARGET}>"
+        COMMAND bash "${CMAKE_SOURCE_DIR}/CI/send_debug_files_to_sentry.sh" "$<TARGET_FILE:${EXE_MUDLET_TARGET}>" "${QT_INSTALL_PREFIX}"
         VERBATIM
     )
     endif()

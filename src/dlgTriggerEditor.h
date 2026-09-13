@@ -96,6 +96,7 @@ class QFrame;
 class QToolButton;
 class TAction;
 class TKey;
+class TVar;
 class TConsole;
 class dlgVarsMainArea;
 class QShortcut;
@@ -105,9 +106,15 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
 {
     Q_OBJECT
 
-    // Allow QTest-based test class to access private members
+    // Allow QTest-based test classes to access private members
     friend class dlgTriggerEditorUndoRedoTest;
     friend class EditorBannerViewSwitchTest;
+    friend class EditorClipboardXmlTest;
+    friend class EditorSearchTest;
+    friend class ScriptEventHandlerLifetimeTest;
+    friend class TreeWidgetItemMoveTest;
+    friend class TriggerEditorDisclosureTest;
+    friend class VariableEditorWriteBackTest;
 
     enum SearchDataRole {
         // Value is the ID of the item found MUST BE Qt::UserRole to avoid
@@ -203,6 +210,7 @@ public:
     void addVar(bool);
     int canRecast(QTreeWidgetItem*, int newNameType, int newValueType);
     void saveVar();
+    void showVariableRenameRefused(TVar*);
     void repopulateVars();
     void changeView(EditorViewType);
     void recurseVariablesUp(QTreeWidgetItem* const, QList<QTreeWidgetItem*>&);
@@ -645,6 +653,8 @@ private:
     dlgSystemMessageArea* mpSystemMessageArea = nullptr;
 
     bool mIsScriptsMainAreaEditHandler = false;
+    // Not owned, and does not outlive a
+    // listWidget_script_registered_event_handlers->clear()
     QListWidgetItem* mpScriptsMainAreaEditHandlerItem = nullptr;
     bool mIsGrabKey = false;
     QPointer<Host> mpHost;
@@ -716,6 +726,11 @@ private:
     // keeps track of the dialog reset being queued
     bool mCleanResetQueued = false;
 
+    // One QIcon per resource path: a tree of thousands of items would otherwise
+    // decode the same handful of PNGs once per item, every time it is rebuilt
+    const QIcon& cachedIcon(const QString& path) const;
+    mutable QHash<QString, QIcon> mIconCache;
+
     // tracks whether the initial profile load has completed (to avoid clearing undo stack on refreshes)
     bool mInitialLoadDone = false;
 
@@ -735,6 +750,10 @@ private:
     // changed by explicit clicks on the toggle button, not by the transient
     // space-driven auto-collapse:
     bool mShowAllTriggerControls = false;
+
+    // Every profile builds an editor when it loads but they share one saved
+    // window position, so one that was never opened must not write over it:
+    bool mHasBeenShown = false;
 
     // tracks location of the splitter in the trigger editor for each tab
     QByteArray mTriggerEditorSplitterState;

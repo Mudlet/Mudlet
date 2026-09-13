@@ -24,10 +24,21 @@
 #include "TimerUnit.h"
 
 
+#include "Host.h"
+#include "Tree.h"
 #include "mudlet.h"
 #include "TTimer.h"
+#include "utils.h"
+
+#include <QLatin1String>
+#include <QMutableSetIterator>
+#include <QSetIterator>
+#include <QStringList>
+#include <QTimer>
+#include <QVariant>
 
 #include <functional>
+#include <utility>
 
 /* We need an explicit constructor in this file as the Host class is forward
  * declared in the header file and it is problematic to define any dereferencing
@@ -46,7 +57,8 @@ TimerUnit::~TimerUnit()
         timer->mpHost = nullptr;
         // Also set mpHost to null on all children recursively
         std::function<void(TTimer*)> nullifyChildren = [&nullifyChildren](TTimer* t) {
-            for (auto child : *t->mpMyChildrenList) {
+            for (auto* childNode : *t->mpMyChildrenList) {
+                auto* child = static_cast<TTimer*>(childNode);
                 child->mpHost = nullptr;
                 nullifyChildren(child);
             }
@@ -68,8 +80,9 @@ void TimerUnit::resetStats()
 
 void TimerUnit::_uninstall(TTimer* pChild, const QString& packageName)
 {
-    std::list<TTimer*>* childrenList = pChild->mpMyChildrenList;
-    for (auto timer : *childrenList) {
+    std::list<Tree<TTimer>*>* childrenList = pChild->mpMyChildrenList;
+    for (auto* timerNode : *childrenList) {
+        auto* timer = static_cast<TTimer*>(timerNode);
         _uninstall(timer, packageName);
         uninstallList.append(timer);
     }
@@ -310,6 +323,14 @@ bool TimerUnit::enableTimer(const QString& name)
     const auto [begin, end] = mLookupTable.equal_range(name);
     for (auto it = begin; it != end; ++it) {
         TTimer* pT = it.value();
+        // A timer queued for deletion stays in the lookup table until
+        // doCleanup() frees it - re-activating one restarts the QTimer that
+        // killTimer() stopped, that a spent one-shot stopped itself (see
+        // TTimer::execute(), which markCleanup()s without deactivating, so that
+        // corpse is still isActive()), or that an uninstall is waiting to free.
+        if (mCleanupSet.contains(pT) || uninstallList.contains(pT)) {
+            continue;
+        }
 
         if (!pT->isOffsetTimer()) {
             pT->setIsActive(true);
@@ -320,7 +341,11 @@ bool TimerUnit::enableTimer(const QString& name)
 
         if (pT->isFolder()) {
             // disable or enable all timers in the respective branch
-            // irrespective of the user defined state.
+            // irrespective of the user defined state - and without re-checking
+            // the skip above. That is only safe while no child timer is ever
+            // queued for deletion under a live parent: only temporary root
+            // timers are ever queued (doCleanup() relies on the same thing) and
+            // _uninstall() queues whole subtrees.
             if (pT->shouldBeActive()) {
                 pT->enableTimer();
             } else {
@@ -448,6 +473,12 @@ void TimerUnit::doCleanup()
         return;
     }
 
+    // Called once per unit for every line of game text, and next to never has
+    // anything queued, so skip setting up the flush below.
+    if (!hasPendingDeletes()) {
+        return;
+    }
+
     QSet<TTimer*> deletedTimers;
     QMutableSetIterator<TTimer*> itTimer(mCleanupSet);
     while (itTimer.hasNext()) {
@@ -458,6 +489,10 @@ void TimerUnit::doCleanup()
         deletedTimers.insert(pTimer);
         delete pTimer;
     }
+    // Not a no-op: the drain above frees no buckets, so without this every later
+    // flush re-scans an array sized for the largest batch the set has ever held.
+    // squeeze() keeps whatever the drain left behind; clear() would drop it.
+    mCleanupSet.squeeze();
     // Flush the deletes uninstall() deferred (#9337). uninstallList is ordered
     // children-before-parents and each ~Tree unlinks from its parent, so deleting
     // children first empties the parent's child list (no double free); the seen
@@ -482,8 +517,9 @@ void TimerUnit::markCleanup(TTimer* pT)
 
 void TimerUnit::assembleReport(TTimer* pItem)
 {
-    std::list<TTimer*>* childrenList = pItem->mpMyChildrenList;
-    for (auto pChild : *childrenList) {
+    std::list<Tree<TTimer>*>* childrenList = pItem->mpMyChildrenList;
+    for (auto* pChildNode : *childrenList) {
+        auto* pChild = static_cast<TTimer*>(pChildNode);
         ++statsItemsTotal;
         if (pChild->isOffsetTimer() ? pChild->shouldBeActive() : pChild->isActive()) {
             ++statsActiveItems;

@@ -43,17 +43,25 @@ public:
 
     void showAnchored();
 
+public slots:
+    // A balloon is a tooltip window, which the platforms Mudlet ships on keep
+    // above ordinary windows - including those of whatever application the
+    // player switched to. Public so that the tests can drive the transitions
+    // instead of waiting on a real one:
+    void slot_applicationStateChanged(const Qt::ApplicationState state);
+
 protected:
     void paintEvent(QPaintEvent* event) override;
     bool eventFilter(QObject* watched, QEvent* event) override;
 
 private:
+    void place();
     void reposition();
     void markDismissed();
 
     QString mFeatureId;
     QPointer<QWidget> mpAnchor;
-    // Read out to screen readers when the balloon appears
+    // Read out to screen readers the first time the balloon appears
     QString mAnnouncement;
     // Horizontal position of the arrow tip within the balloon, kept in sync
     // with wherever the anchor currently sits on screen
@@ -61,6 +69,11 @@ private:
     // The balloon prefers hanging below the anchor, but flips above it when
     // there is not enough screen space underneath
     bool mArrowOnTop = true;
+    // The balloon is waiting for Mudlet to become the active application
+    // again, rather than having been dealt with by the player
+    bool mWaitingForActivation = false;
+    bool mApplicationActive = true;
+    bool mAnnounced = false;
 
     // Features already pointed out this session, also used to keep several
     // freshly shipped features from ganging up on the player at once

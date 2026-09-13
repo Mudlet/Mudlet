@@ -24,6 +24,8 @@
 
 #include "TMedia.h"
 
+#include "TDebug.h"
+
 #include <QDir>
 #include <QFileInfo>
 #include <QJsonDocument>
@@ -315,6 +317,15 @@ void TMedia::stopMedia(TMediaData& mediaData)
         return;
     }
 
+    // MSP asks for a stop by naming the file "Off", which is not a file to match
+    // players against, and the request carries the priority every MSP request is
+    // given - which would then refuse to stop anything playing at that priority
+    // or above. Neither belongs on a stop, so take both off it.
+    if (mediaData.mediaProtocol() == TMediaData::MediaProtocolMSP && mediaData.mediaFileName() == qsl("Off")) {
+        mediaData.setMediaFileName(QString());
+        mediaData.setMediaPriority(TMediaData::MediaPriorityNotSet);
+    }
+
     QList<std::shared_ptr<TMediaPlayer>> mediaPlayerList = findMediaPlayersByCriteria(mediaData);
 
     if (mediaPlayerList.isEmpty()) {
@@ -374,18 +385,24 @@ void TMedia::stopMedia(TMediaData& mediaData)
             const int fadeOut = pPlayer->mediaData().mediaFadeOut() ? pPlayer->mediaData().mediaFadeOut() : mediaData.mediaFadeOut();
             const int remainingDuration = (finishPosition != TMediaData::MediaFinishNotSet ? finishPosition : duration) - currentPosition;
             const int endDuration = fadeOut != TMediaData::MediaFadeNotSet ? std::min(remainingDuration, fadeOut) : std::min(remainingDuration, 5000);
-            const int endPosition = currentPosition + endDuration;
 
-            //: This word is part of a sentence like "Music fades" when the music is about to stop.
-            printClosedCaption(pPlayer->mediaData(), tr("fades"));
+            // Only a playing track can be faded out: the position changes a fade is applied from
+            // do not come for a player that is still loading or paused, and a track already past
+            // its finish position has no stretch left to fade over, which is what a non-positive
+            // endDuration says. Either way the stop is performed outright below, as a stop
+            // without a fade-away is, and there is nothing to announce as fading.
+            if (endDuration > 0 && pPlayer->getPlaybackState() == QMediaPlayer::PlayingState) {
+                //: This word is part of a sentence like "Music fades" when the music is about to stop.
+                printClosedCaption(pPlayer->mediaData(), tr("fades"));
 
-            TMediaData updateMediaData = pPlayer->mediaData();
-            updateMediaData.setMediaFadeOut(endDuration);
-            updateMediaData.setMediaEnd(endPosition);
-            pPlayer->setMediaData(updateMediaData);
-            TMedia::updateMediaPlayerList(std::move(pPlayer));
+                TMediaData updateMediaData = pPlayer->mediaData();
+                updateMediaData.setMediaFadeOut(endDuration);
+                updateMediaData.setMediaEnd(currentPosition + endDuration);
+                pPlayer->setMediaData(updateMediaData);
+                TMedia::updateMediaPlayerList(std::move(pPlayer));
 
-            continue;
+                continue;
+            }
         }
 
         // **Stop the player but keep it for reuse**
@@ -1094,7 +1111,12 @@ void TMedia::slot_writeFile(QNetworkReply* reply)
                 reply->deleteLater();
                 mpHost->raiseEvent(event);
 
-                TMedia::play(mediaData);
+                // A preload (volume 0) asked for the file to be in the cache, not to be
+                // heard: playMedia() returns before playing one it already has, so a
+                // download must not play the copy it has just made either.
+                if (mediaData.mediaVolume() != TMediaData::MediaVolumePreload) {
+                    TMedia::play(mediaData);
+                }
             } else {
                 event.mArgumentList << QLatin1String("sysDownloadError");
                 event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
@@ -1257,7 +1279,7 @@ void TMedia::connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player)
         qWarning().noquote() << qsl("TMedia::connectMediaPlayer() WARNING - media player error %1 on \"%2\": %3")
                                         .arg(QString::number(static_cast<int>(error)), lockedPlayer->mediaPlayer()->source().toString(), errorString);
 
-        if (mudlet::smDebugMode && mpHost && mpHost->mpConsole) {
+        if (TDebug::smDebugMode && mpHost && mpHost->mpConsole) {
             //: %1 is the media backend's own description of what went wrong, e.g. "Failed to load media".
             mpHost->mpConsole->printSystemMessage(qsl("%1\n").arg(tr("Media error: %1").arg(errorString)));
         }
@@ -1396,7 +1418,7 @@ void TMedia::updateList(QList<std::shared_ptr<T>>& list, int index, std::shared_
         qDebug() << "TMedia::updateList() - List exceeded max allowed size (" << mediaInstance->getMaxUnprunedPlayers() << "). Purging stopped players.";
         TMedia::purgeStoppedMediaPlayers(list);
 
-        if (mudlet::smDebugMode && mediaInstance && mediaInstance->mpHost && mediaInstance->mpHost->mpConsole) {
+        if (TDebug::smDebugMode && mediaInstance && mediaInstance->mpHost && mediaInstance->mpHost->mpConsole) {
             mediaInstance->mpHost->mpConsole->printSystemMessage(qsl("%1\n").arg(tr("Too many stopped media players. Purging stopped players.")));
         }
 
@@ -1404,7 +1426,7 @@ void TMedia::updateList(QList<std::shared_ptr<T>>& list, int index, std::shared_
             qWarning() << "TMedia::updateList() - List still exceeds max size after purging. Removing oldest active player.";
             list.removeFirst(); // Evict the oldest player to enforce cap
 
-            if (mudlet::smDebugMode && mediaInstance && mediaInstance->mpHost && mediaInstance->mpHost->mpConsole) {
+            if (TDebug::smDebugMode && mediaInstance && mediaInstance->mpHost && mediaInstance->mpHost->mpConsole) {
                 mediaInstance->mpHost->mpConsole->printSystemMessage(qsl("%1\n").arg(tr("Too many stopped media players. Removed oldest active player.")));
             }
         }
@@ -1499,7 +1521,7 @@ std::shared_ptr<TMediaPlayer> TMedia::getMediaPlayer(TMediaData& mediaData)
     if (mediaPlayerList.size() >= maxAllowed) {
         qWarning() << "TMedia::getMediaPlayer() - Too many active players for media type. Skipping creation.";
 
-        if (mudlet::smDebugMode && mpHost && mpHost->mpConsole) {
+        if (TDebug::smDebugMode && mpHost && mpHost->mpConsole) {
             mpHost->mpConsole->printSystemMessage(qsl("%1\n").arg(tr("Maximum allowed active media players reached for media type. Cannot play additional media.")));
         }
 
@@ -1507,6 +1529,7 @@ std::shared_ptr<TMediaPlayer> TMedia::getMediaPlayer(TMediaData& mediaData)
     }
 
     // No available player, create a new one
+    mudlet::self()->watchAudioOutputDevices();
     auto newPlayer = std::make_shared<TMediaPlayer>(mpHost, mediaData);
 
     if (!newPlayer || !newPlayer->mediaPlayer()) {

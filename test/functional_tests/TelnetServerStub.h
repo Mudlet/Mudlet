@@ -21,10 +21,12 @@
 #define TELNET_SERVER_STUB_H
 
 #include <QPointer>
+#include <QSize>
 #include <QtNetwork/QTcpServer>
 #include <QtNetwork/QTcpSocket>
 #include <QTimer>
 #include <QDebug>
+#include <QVector>
 
 class TelnetServerStub : public QTcpServer
 {
@@ -32,9 +34,14 @@ class TelnetServerStub : public QTcpServer
 
     QString mpWelcomeMessage = "";
     QPointer<QTcpSocket> mpClient;
+    QByteArray mPendingData;
+    bool mHadClient = false;
+    QByteArray mReceived;
+    QVector<QSize> mNawsUpdates;
 
 public:
     explicit TelnetServerStub(QObject* parent = nullptr);
+    ~TelnetServerStub() override;
 
     // Bind to a caller-chosen port, or to an ephemeral OS-assigned port when port is 0 (the default).
     // Binding 0 lets concurrent test runs avoid colliding on a shared fixed port; the caller reads the
@@ -46,8 +53,18 @@ public:
     void sendRaw(const QByteArray& data);
     bool clientConnected() const { return !mpClient.isNull(); }
 
+    // Every NAWS subnegotiation the client has sent since the last
+    // clearNawsUpdates(), in the order they arrived. Tests that care about what
+    // a game is told about the window read this rather than the client's own
+    // idea of its size - only what reaches the wire can wrap the game's output.
+    const QVector<QSize>& nawsUpdates() const { return mNawsUpdates; }
+    void clearNawsUpdates() { mNawsUpdates.clear(); }
+
 private slots:
     void onNewConnection();
+
+private:
+    void collectNawsUpdates(QTcpSocket* socket);
 };
 
 #endif // TELNET_SERVER_STUB_H

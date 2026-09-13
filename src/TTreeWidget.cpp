@@ -51,6 +51,19 @@ TTreeWidget::TTreeWidget(QWidget* pW)
 void TTreeWidget::setTreeType(TreeType type)
 {
     mTreeType = type;
+
+    // A variables tree is a view of what Lua holds, and moving an item in it
+    // moves nothing in Lua - the item lands inside the table it was dropped on
+    // while the variable stays where it was, so the view ends up showing
+    // something that is not true (#9958). Until a move can be carried through to
+    // Lua, the tree does not offer one.
+    if (mTreeType == TreeType::Var) {
+        setDragDropMode(QAbstractItemView::NoDragDrop);
+        setDragEnabled(false);
+        setAcceptDrops(false);
+        setDropIndicatorShown(false);
+        viewport()->setAcceptDrops(false);
+    }
 }
 
 void TTreeWidget::setHost(Host* pH)

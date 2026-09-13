@@ -36,6 +36,13 @@
  * them right. A test that means it says so with an "xdg-recipe-guard: allow"
  * comment on the line its call starts on, or the line above.
  *
+ * The other half is doing it at all: a test that drives setupConfig() and never
+ * redirects runs against the developer's own ~/.config/mudlet, and two copies of
+ * one then collide on a profile name - the second is told the name is in use,
+ * its Connect button never enables and it times out (#9999, which found 49 such
+ * tests). So a file calling setupConfig() has to qputenv() XDG_CONFIG_HOME and
+ * create the opt-in as well.
+ *
  * The path has to be spelled out in the call. A file that builds the config
  * root through a helper or a local first is out of range; ConfigDirOverrideTest
  * does that, and creates every shape of config root deliberately, the
@@ -66,6 +73,12 @@ class XdgRecipeConsistencyTest : public QObject
     {
         int line = 0;
         QString argument;
+    };
+
+    struct TestSource
+    {
+        QString name;
+        QString text;
     };
 
     static QString testDir() { return QStringLiteral(MUDLET_TEST_DIR); }
@@ -265,6 +278,87 @@ class XdgRecipeConsistencyTest : public QObject
         return problems;
     }
 
+    static bool callsSetupConfig(const QString& code)
+    {
+        static const QRegularExpression call(QStringLiteral("\\bsetupConfig\\s*\\("));
+        return code.contains(call);
+    }
+
+    static bool redirectsConfigHome(const QString& code)
+    {
+        static const QRegularExpression call(QStringLiteral("\\bqputenv\\s*\\(\\s*\"XDG_CONFIG_HOME\""));
+        return code.contains(call);
+    }
+
+    // Only that a profiles/ directory is created, not where: ConfigDirOverrideTest
+    // and ExperiencedPlayerGateTest assemble their config roots from locals, so
+    // the whole opt-in path is never spelled in one call. Which of the two
+    // shapes was spelled is test_everyTestSourceOptsInTheCurrentWay's subject.
+    static bool createsProfilesDirectory(const QString& code)
+    {
+        static const QRegularExpression profiles(QStringLiteral("\"(?:[^\"]*/)?profiles(?:/[^\"]*)?\""));
+        const QVector<DirectoryCreation> creations = directoryCreations(code);
+        for (const DirectoryCreation& creation : creations) {
+            if (creation.argument.contains(profiles)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    static bool drivesSetupConfig(const QString& source)
+    {
+        QSet<int> allowedLines;
+        return callsSetupConfig(withoutComments(source, allowedLines));
+    }
+
+    // Both halves of getting a config root of one's own, for a file that drives
+    // setupConfig(). Coarse in the same way as staleRecipes(): anywhere in the
+    // file counts, since a helper of its own is a perfectly good place for
+    // either call.
+    static QStringList missingIsolation(const QString& source)
+    {
+        QSet<int> allowedLines;
+        const QString code = withoutComments(source, allowedLines);
+        if (!callsSetupConfig(code)) {
+            return {};
+        }
+
+        QStringList problems;
+        if (!redirectsConfigHome(code)) {
+            problems.append(QStringLiteral("drives setupConfig() without qputenv(\"XDG_CONFIG_HOME\", ...), so it shares the developer's own config directory"));
+        }
+        if (!createsProfilesDirectory(code)) {
+            problems.append(QStringLiteral("drives setupConfig() without creating a profiles/ directory, and since #9712 that is the opt-in a redirected config root needs"));
+        }
+        return problems;
+    }
+
+    // Every .cpp of both test directories, the subject of the two sweeps at the
+    // end. Returns false having described the trouble rather than an empty list,
+    // so an unreadable file cannot read as a clean sweep.
+    static bool readTestSources(QVector<TestSource>& sources, QString& problem)
+    {
+        const QStringList directories = {testDir(), QStringLiteral("%1/functional_tests").arg(testDir())};
+        for (const QString& directory : directories) {
+            const QDir dir(directory);
+            if (!dir.exists()) {
+                problem = QStringLiteral("no such directory: %1 - is MUDLET_TEST_DIR right?").arg(directory);
+                return false;
+            }
+            const QStringList names = dir.entryList({QStringLiteral("*.cpp")}, QDir::Files, QDir::Name);
+            for (const QString& name : names) {
+                QFile source(dir.filePath(name));
+                if (!source.open(QIODevice::ReadOnly | QIODevice::Text)) {
+                    problem = QStringLiteral("could not read %1").arg(source.fileName());
+                    return false;
+                }
+                sources.append({name, QString::fromUtf8(source.readAll())});
+            }
+        }
+        return true;
+    }
+
 private slots:
     void test_theStaleRecipeIsFlagged()
     {
@@ -348,30 +442,82 @@ private slots:
         QVERIFY2(problems.first().startsWith(QStringLiteral("line 1 ")), qPrintable(problems.first()));
     }
 
+    void test_aTestDrivingSetupConfigWithNoConfigRootOfItsOwnIsFlagged()
+    {
+        const QString source = QStringLiteral("void init()\n{\n    mudlet::start();\n    mudlet::self()->setupConfig();\n}\n");
+        const QStringList problems = missingIsolation(source);
+        QCOMPARE(problems.size(), 2);
+        QVERIFY2(problems.first().contains(QStringLiteral("qputenv")), qPrintable(problems.first()));
+        QVERIFY2(problems.last().contains(QStringLiteral("profiles/")), qPrintable(problems.last()));
+    }
+
+    void test_theIsolationRecipeIsAccepted()
+    {
+        const QString source = QStringLiteral("QVERIFY(QDir().mkpath(qsl(\"%1/mudlet/profiles\").arg(mConfigDir.path())));\n"
+                                              "qputenv(\"XDG_CONFIG_HOME\", mConfigDir.path().toUtf8());\n"
+                                              "mudlet::self()->setupConfig();\n");
+        QVERIFY2(missingIsolation(source).isEmpty(), qPrintable(missingIsolation(source).join(QChar(u'\n'))));
+    }
+
+    // The opt-in on its own resolves to the temporary directory only where the
+    // machine has no config directory to prefer, which is why it is not enough
+    void test_theOptInWithoutTheRedirectionIsFlagged()
+    {
+        const QString source = QStringLiteral("QVERIFY(QDir().mkpath(qsl(\"%1/mudlet/profiles\").arg(mConfigDir.path())));\nmudlet::self()->setupConfig();\n");
+        const QStringList problems = missingIsolation(source);
+        QCOMPARE(problems.size(), 1);
+        QVERIFY2(problems.first().contains(QStringLiteral("qputenv")), qPrintable(problems.first()));
+    }
+
+    void test_aSourceThatNeverDrivesSetupConfigIsNotTheSubject()
+    {
+        QVERIFY(missingIsolation(QStringLiteral("void test_somethingElse()\n{\n    QCOMPARE(1, 1);\n}\n")).isEmpty());
+        QVERIFY(missingIsolation(QStringLiteral("// mudlet::self()->setupConfig() is what this would drive\n")).isEmpty());
+    }
+
     void test_everyTestSourceOptsInTheCurrentWay()
     {
-        const QStringList directories = {testDir(), QStringLiteral("%1/functional_tests").arg(testDir())};
+        QVector<TestSource> sources;
+        QString trouble;
+        QVERIFY2(readTestSources(sources, trouble), qPrintable(trouble));
+        QVERIFY2(sources.size() > 50, qPrintable(QStringLiteral("only %1 sources scanned, so this test would pass whatever they hold").arg(sources.size())));
+
+        // This file is scanned along with the rest: its fixtures spell the stale
+        // recipe out inside string literals, so the sweep staying green is what
+        // says a quoted recipe does not read as a call.
         QStringList problems;
-        int scanned = 0;
-        for (const QString& directory : directories) {
-            const QDir dir(directory);
-            QVERIFY2(dir.exists(), qPrintable(QStringLiteral("no such directory: %1 - is MUDLET_TEST_DIR right?").arg(directory)));
-            const QStringList sources = dir.entryList({QStringLiteral("*.cpp")}, QDir::Files, QDir::Name);
-            // This file is scanned along with the rest: its fixtures spell the
-            // stale recipe out inside string literals, so the sweep staying
-            // green is what says a quoted recipe does not read as a call.
-            for (const QString& name : sources) {
-                QFile source(dir.filePath(name));
-                QVERIFY2(source.open(QIODevice::ReadOnly | QIODevice::Text), qPrintable(source.fileName()));
-                ++scanned;
-                const QStringList stale = staleRecipes(QString::fromUtf8(source.readAll()));
-                for (const QString& problem : stale) {
-                    problems.append(QStringLiteral("%1 %2").arg(name, problem));
-                }
+        for (const TestSource& source : sources) {
+            for (const QString& problem : staleRecipes(source.text)) {
+                problems.append(QStringLiteral("%1 %2").arg(source.name, problem));
             }
         }
-        QVERIFY2(scanned > 50, qPrintable(QStringLiteral("only %1 sources scanned, so this test would pass whatever they hold").arg(scanned)));
         QVERIFY2(problems.isEmpty(), qPrintable(QStringLiteral("tests seeding the pre-#9712 XDG opt-in, which can resolve to the real ~/.config/mudlet:\n%1").arg(problems.join(QChar(u'\n')))));
+    }
+
+    void test_everySetupConfigCallerGetsAConfigRootOfItsOwn()
+    {
+        QVector<TestSource> sources;
+        QString trouble;
+        QVERIFY2(readTestSources(sources, trouble), qPrintable(trouble));
+        QVERIFY2(sources.size() > 50, qPrintable(QStringLiteral("only %1 sources scanned, so this test would pass whatever they hold").arg(sources.size())));
+
+        QStringList problems;
+        int drivers = 0;
+        for (const TestSource& source : sources) {
+            // Unlike the sweep above, this one cannot include the file it is
+            // written in: the fixtures below quote setupConfig() as ordinary
+            // text while the recipes beside them are escaped, which the argument
+            // scan reads straight past - and this file links no Mudlet to drive.
+            if (source.name == QStringLiteral("XdgRecipeConsistencyTest.cpp") || !drivesSetupConfig(source.text)) {
+                continue;
+            }
+            ++drivers;
+            for (const QString& problem : missingIsolation(source.text)) {
+                problems.append(QStringLiteral("%1 %2").arg(source.name, problem));
+            }
+        }
+        QVERIFY2(drivers > 40, qPrintable(QStringLiteral("only %1 sources drive setupConfig(), so this test would pass whatever they hold").arg(drivers)));
+        QVERIFY2(problems.isEmpty(), qPrintable(QStringLiteral("tests running against whatever config directory the machine has:\n%1").arg(problems.join(QChar(u'\n')))));
     }
 };
 

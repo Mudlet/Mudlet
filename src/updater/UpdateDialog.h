@@ -24,11 +24,13 @@
 #include "Release.h"
 
 #include <QDialog>
+#include <QHash>
 #include <QVariant>
 
 #include <memory>
 
 class QAbstractButton;
+class QLabel;
 class QPixmap;
 class QSettings;
 
@@ -57,6 +59,9 @@ public:
     void setMaxVersion(const QString& version);
     void setPreviousVersion(const QString& version);
 
+    // The download this dialog will reuse on the next launch instead of
+    // fetching it again - Updater's cleanup has to leave it alone (#9985)
+    static QString pendingDownloadPath(QSettings* settings);
     static bool autoDownloadEnabled(QVariant defaultValue, QSettings* settings);
     static bool autoDownloadEnabled(QSettings* settings);
     static void enableAutoDownload(bool enabled, QSettings* settings);
@@ -85,7 +90,9 @@ private:
 
     QSettings* mSettings;
     void replaceAppVars(QString& string);
+    void applyAppVars(QLabel* label);
     QString generateChangelogDocument();
+    QString generateCompareLink() const;
 
     void disableButtons(bool disable = true);
     void resetUi();
@@ -112,6 +119,11 @@ private:
     QString mMinVersion;
     QString mMaxVersion;
     QString mPreviousVersion;
+    // The %APPNAME%/%UPDATE_VERSION%/%CURRENT_VERSION% text update_dialog.ui
+    // starts out with, kept because substituting into the widget itself would
+    // consume the placeholders and freeze what the next check can say
+    QHash<QLabel*, QString> mLabelTemplates;
+    QString mWindowTitleTemplate;
 
     static void setSettingsValue(const QString& key, const QVariant& value, QSettings* settings);
     static QVariant settingsValue(const QString& key, const QVariant& defaultValue, QSettings* settings);
