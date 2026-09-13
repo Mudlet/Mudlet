@@ -2,7 +2,7 @@
 
 ## Building on macOS
 
-For complete setup instructions, see: https://wiki.mudlet.org/w/Compiling_Mudlet#Compiling_on_macOS
+For complete setup instructions, see: https://wiki.mudlet.org/w/Compiling_Mudlet#macOS
 
 **Essential build commands:**
 
@@ -37,7 +37,7 @@ reached `Max cache size`, raise it with `ccache -M <n>G`.
 
 ## Building on Windows
 
-For complete setup instructions, see: https://wiki.mudlet.org/w/Compiling_Mudlet#Compiling_on_Windows
+For complete setup instructions, see: https://wiki.mudlet.org/w/Compiling_Mudlet#Windows
 
 Builds run under MSYS2, in the **CLANG64** environment — open a CLANG64 shell, not MINGW64, and
 check it is a real MSYS2 shell rather than Git for Windows' bash carrying an inherited `MSYSTEM`
