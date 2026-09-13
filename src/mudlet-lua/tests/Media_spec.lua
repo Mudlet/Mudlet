@@ -22,7 +22,7 @@ end
 local function assertArgError(fn, needle)
   local ok, err = pcall(fn)
   assert.is_false(ok)
-  assert.is_true(contains(err, needle))
+  assert.is_true(contains(err, needle), tostring(err))
 end
 
 describe("Media playback functions validate their parameters", function()
@@ -39,6 +39,12 @@ describe("Media playback functions validate their parameters", function()
 
     it("raises a Lua error for a negative fadein in the table form", function()
       assert.has_error(function() playSoundFile({name = "x.wav", fadein = -1}) end)
+    end)
+
+    it("raises a Lua error naming the field for a negative fadeout, start or finish in the table form", function()
+      assertArgError(function() playSoundFile({name = "x.wav", fadeout = -1}) end, "playSoundFile: bad argument range for fadeout")
+      assertArgError(function() playSoundFile({name = "x.wav", start = -1}) end, "playSoundFile: bad argument range for start")
+      assertArgError(function() playSoundFile({name = "x.wav", finish = -1}) end, "playSoundFile: bad argument range for finish")
     end)
 
     it("returns nil when the ordered form supplies no filename", function()
@@ -59,6 +65,12 @@ describe("Media playback functions validate their parameters", function()
 
     it("raises a Lua error for a negative fadeout in the table form", function()
       assert.has_error(function() playMusicFile({name = "x.mp3", fadeout = -5}) end)
+    end)
+
+    it("raises a Lua error naming the field for a negative fadein, start or finish in the table form", function()
+      assertArgError(function() playMusicFile({name = "x.mp3", fadein = -1}) end, "playMusicFile: bad argument range for fadein")
+      assertArgError(function() playMusicFile({name = "x.mp3", start = -1}) end, "playMusicFile: bad argument range for start")
+      assertArgError(function() playMusicFile({name = "x.mp3", finish = -1}) end, "playMusicFile: bad argument range for finish")
     end)
 
     it("raises a clean, non-doubled error when continue is not a boolean", function()
@@ -93,6 +105,20 @@ describe("Media playback functions validate their parameters", function()
       assert.is_false(ok)
       assert.is_true(contains(err, "value for close as boolean expected, got string!"), tostring(err))
       assert.is_false(contains(err, "must be boolean"), tostring(err))
+    end)
+
+    it("raises a Lua error when the table form has no name", function()
+      assertArgError(function() playVideoFile({key = "k"}) end, "playVideoFile: missing name")
+    end)
+
+    it("raises a Lua error naming the field for a negative start or finish in the table form", function()
+      assertArgError(function() playVideoFile({name = "x.mp4", start = -1}) end, "playVideoFile: bad argument range for start")
+      assertArgError(function() playVideoFile({name = "x.mp4", finish = -1}) end, "playVideoFile: bad argument range for finish")
+    end)
+
+    it("raises a Lua error when a numeric field in the table form is not a number", function()
+      assertArgError(function() playVideoFile({name = "x.mp4", volume = "loud"}) end, "value for volume as number expected, got string!")
+      assertArgError(function() playVideoFile({name = "x.mp4", loops = {}}) end, "value for loops as number expected, got table!")
     end)
   end)
 
@@ -173,10 +199,10 @@ end)
 
 describe("Media load functions validate their parameters", function()
   -- loadMusicFile/loadSoundFile/loadVideoFile are one preload request behind
-  -- three names: they share a pair of parsers which set no media type at all,
-  -- so what actually differs between them is the name in their error messages
-  -- and loadVideoFile taking the table form only. Nothing here names a file
-  -- that exists, so no preload gets as far as the media engine.
+  -- three names: they share a pair of parsers, each call stamping its own media
+  -- type on the request, and loadVideoFile takes the table form only. Nothing
+  -- here names a file that exists, so no preload gets as far as the media
+  -- engine.
   it("each raises a Lua error when called with no arguments", function()
     assertArgError(function() loadMusicFile() end, "loadMusicFile: need at least one argument")
     assertArgError(function() loadSoundFile() end, "loadSoundFile: need at least one argument")
@@ -198,11 +224,11 @@ describe("Media load functions validate their parameters", function()
     assert.is_true(contains(err, "missing argument 1"), tostring(err))
   end)
 
-  it("the table form raises a Lua error when it is given no name", function()
-    -- Only the tail of the message: all three loads report this one as
-    -- loadMusicFile, whichever was called, and pinning that here would hold
-    -- that in place.
-    assertArgError(function() loadSoundFile({}) end, "missing name")
+  it("the table form raises a Lua error naming the load that was called", function()
+    -- the three share one table parser, so each has to name its own caller
+    assertArgError(function() loadSoundFile({}) end, "loadSoundFile: missing name")
+    assertArgError(function() loadMusicFile({}) end, "loadMusicFile: missing name")
+    assertArgError(function() loadVideoFile({}) end, "loadVideoFile: missing name")
   end)
 
   it("the ordered form raises a Lua error when the url is not a string", function()
@@ -276,12 +302,22 @@ describe("Media query and stop functions validate their parameters", function()
     assert.is_table(getPausedVideos({[1] = "junk", key = "busted-media-no-such-key"}))
   end)
 
-  it("the ordered play forms refuse a negative fade", function()
-    -- Only the range refusal, not the whole message: the music parser's fade
-    -- messages name playSoundFile, and pinning that here would hold it in
-    -- place.
-    assertArgError(function() playMusicFile("busted-media-absent.mp3", 50, -1) end, "bad argument range for fadein")
-    assertArgError(function() playSoundFile("busted-media-absent.wav", 50, 0, -1) end, "bad argument range for fadeout")
+  it("the ordered play forms refuse a negative fade, start or finish and name the call", function()
+    -- #9785: the music parser's four range messages all named playSoundFile
+    -- name[,volume][,fadein][,fadeout][,start][,loops][,key][,tag][,continue][,url][,finish]
+    assertArgError(function() playMusicFile("busted-media-absent.mp3", 50, -1) end, "playMusicFile: bad argument range for fadein")
+    assertArgError(function() playMusicFile("busted-media-absent.mp3", 50, 0, -1) end, "playMusicFile: bad argument range for fadeout")
+    assertArgError(function() playMusicFile("busted-media-absent.mp3", 50, 0, 0, -1) end, "playMusicFile: bad argument range for start")
+    assertArgError(function() playMusicFile("busted-media-absent.mp3", 50, 0, 0, 0, 1, "k", "t", false, nil, -1) end, "playMusicFile: bad argument range for finish")
+    assertArgError(function() playSoundFile("busted-media-absent.wav", 50, 0, -1) end, "playSoundFile: bad argument range for fadeout")
+  end)
+
+  it("the ordered play forms refuse a wrongly typed priority or url and a negative finish", function()
+    -- the tail of the ordered forms, past the arguments every other spec stops at
+    assertArgError(function() playSoundFile("busted-media-absent.wav", 50, 0, 0, 0, 1, "k", "t", "loud") end, "priority as number expected, got string!")
+    assertArgError(function() playSoundFile("busted-media-absent.wav", 50, 0, 0, 0, 1, "k", "t", 50, {}) end, "url as string expected, got table!")
+    assertArgError(function() playSoundFile("busted-media-absent.wav", 50, 0, 0, 0, 1, "k", "t", 50, "http://127.0.0.1:1/media", -1) end, "playSoundFile: bad argument range for finish")
+    assertArgError(function() playMusicFile("busted-media-absent.mp3", 50, 0, 0, 0, 1, "k", "t", false, {}) end, "url as string expected, got table!")
   end)
 
   it("every query returns an empty table while nothing is playing", function()
@@ -460,9 +496,11 @@ describe("Media playback effects with a generated sound file", function()
   end
 
   -- The fixture server of CI/http-fixture-server.py, when the harness started
-  -- one and handed its ephemeral port over. A preload's only observable effect
-  -- is the fetch it starts for a file the profile does not have, so the two
-  -- load specs below are the media ones that need a server to talk to.
+  -- one and handed its ephemeral port over. A preload's observable effect is
+  -- the fetch it starts for a file the profile does not have, so the specs
+  -- below that name a url are the media ones that need a server to talk to. A
+  -- GET below /media for a .wav is answered with generated silence rather than
+  -- from disk.
   local httpPort = os.getenv("MUDLET_TEST_HTTP_PORT")
   local requireFixture = os.getenv("MUDLET_TEST_REQUIRE_HTTP_FIXTURE")
   -- the file CI/http-fixtures/ serves, and its contents
@@ -984,6 +1022,90 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(fixtureBody, readFile(downloaded))
   end)
 
+  it("a preload from a url keeps the file without playing it", function()
+    if noFixtureServer() then
+      return
+    end
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    -- #9783: the download's completion played what it had just written. The
+    -- fixture server answers this path with MEDIA_SECONDS of silence, long
+    -- enough that a playback which started would still be running here.
+    local downloadName = "busted-media-download.wav"
+    local downloaded = mediaDirectory .. "/" .. downloadName
+    lfs.mkdir(mediaDirectory)
+    os.remove(downloaded)
+    onCleanup(function() os.remove(downloaded) end)
+
+    local done = {}
+    collect("sysDownloadDone", done)
+    assert.is_true(loadSoundFile({name = downloadName, url = fixtureUrl() .. "/media"}))
+    waitForCount("sysDownloadDone", done, 1)
+    assert.equals(1, #done)
+
+    -- the playback this must not start would begin after the event above, and a
+    -- preloaded one raises no sysMediaStarted to wait for, so give the player
+    -- the turns it would need to reach the playing state
+    pumpEvents(1000)
+    assert.equals(0, #getPlayingSounds())
+    assert.equals(0, #getPlayingMusic())
+    assert.equals(0, #getPlayingVideos())
+
+    assert.is_not_nil(lfs.attributes(downloaded, "mode"), "the preload did not keep the file it downloaded")
+  end)
+
+  it("a sound preload leaves paused music of the same name paused", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    -- #9784: what a load is filed as decides which players it can reach.
+    -- playMedia() looks for a paused player to resume before it does anything
+    -- else, among the players of the type the request carries - and a load that
+    -- carried no type at all searched all three of the API lists, so a sound
+    -- preload took over music.
+    local paused = {}
+    collect("sysMediaPaused", paused)
+
+    writeSoundFiles()
+    assert.is_true(playMusicFile({name = longSoundFile, key = "busted-load-typed"}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+    assert.is_true(pauseMusic())
+    waitForCount("sysMediaPaused", paused, 1)
+    assert.equals(1, #getPausedMusic())
+
+    -- both parsers stamp the type, and each has its own copy of that line
+    assert.is_true(loadSoundFile({name = longSoundFile}))
+    assert.is_true(loadSoundFile(longSoundFile))
+    assert.equals(1, #getPausedMusic())
+    assert.equals(0, #getPlayingMusic())
+    assert.equals(0, #getPlayingSounds())
+  end)
+
+  it("a play with a url plays the file once the download lands", function()
+    if noFixtureServer() then
+      return
+    end
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    -- the other half of #9783's guard: a request that is not a preload still
+    -- has to play what it fetched, or the fix would have taken playback away
+    -- from every play*File() that names a url
+    local downloadName = "busted-media-play.wav"
+    local downloaded = mediaDirectory .. "/" .. downloadName
+    lfs.mkdir(mediaDirectory)
+    os.remove(downloaded)
+    onCleanup(function() os.remove(downloaded) end)
+
+    assert.is_true(playSoundFile({name = downloadName, url = fixtureUrl() .. "/media", volume = 60, key = "busted-media-played"}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 10000)))
+
+    local playing = getPlayingSounds()
+    assert.equals(1, #playing)
+    assert.equals(downloadName, playing[1].name)
+  end)
+
   it("loadVideoFile reports a download error for a url it cannot fetch from", function()
     -- The preload reaches the same fetch as a play would, so the refusal of a
     -- url that is not http(s) is where a spec can see a load act on its url
@@ -1101,6 +1223,34 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(otherLongSoundFile, music[1].name)
   end)
 
+  it("stopMusic stops only the track its table form names", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    -- stopMusic's table parser had only ever been reached with an argument it
+    -- refuses, so the filter it builds - and the stop it then performs - had
+    -- nothing holding them.
+    local started = {}
+    collect("sysMediaStarted", started)
+
+    writeSoundFiles()
+    assert.is_true(playMusicFile({name = longSoundFile, key = "busted-music-table-stopped"}))
+    waitForCount("sysMediaStarted", started, 1)
+    assert.is_true(playMusicFile({name = otherLongSoundFile, key = "busted-music-table-spared"}))
+    waitForCount("sysMediaStarted", started, 2)
+    assert.equals(2, #getPlayingMusic())
+
+    -- a key that matches nothing stops nothing
+    assert.is_true(stopMusic({key = "busted-music-table-absent"}))
+    assert.equals(2, #getPlayingMusic())
+
+    assert.is_true(stopMusic({key = "busted-music-table-stopped"}))
+    local music = getPlayingMusic()
+    assert.equals(1, #music)
+    assert.equals(otherLongSoundFile, music[1].name)
+    assert.equals("busted-music-table-spared", music[1].key)
+  end)
+
   it("pauseMusic and getPausedMusic take the same key filter", function()
     if mediaPlaybackUnavailable() then
       return
@@ -1186,6 +1336,184 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(0, #getPlayingVideos())
   end)
 
+  it("the video pause and stop table forms act only on the key they name", function()
+    if videoWidgetUnavailable() or mediaPlaybackUnavailable() then
+      return
+    end
+    -- pauseVideos and stopVideos take a table and nothing else, and every spec
+    -- so far reached their parsers either with an argument they refuse or with
+    -- no argument at all - which is a different branch of the public call that
+    -- never enters the parser. Neither filter had a covering assertion.
+    withVideoLabel()
+    writeSoundFiles()
+    assert.is_true(playVideoFile({name = longSoundFile, key = videoLabel}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+    assert.equals(1, #getPlayingVideos())
+
+    -- a filter naming another key leaves the video playing
+    assert.is_true(pauseVideos({key = "busted-video-table-absent"}))
+    assert.equals(1, #getPlayingVideos())
+    assert.equals(0, #getPausedVideos())
+
+    assert.is_true(pauseVideos({key = videoLabel}))
+    assert.equals(0, #getPlayingVideos())
+    assert.equals(1, #getPausedVideos())
+
+    -- resumed by playing the same file again, so the stop below has something
+    -- left to stop
+    assert.is_true(playVideoFile({name = longSoundFile, key = videoLabel}))
+    assert.equals(1, #getPlayingVideos())
+
+    assert.is_true(stopVideos({key = "busted-video-table-absent"}))
+    assert.equals(1, #getPlayingVideos())
+
+    assert.is_true(stopVideos({key = videoLabel}))
+    assert.equals(0, #getPlayingVideos())
+  end)
+
+  it("a video asked to close takes its label off screen when it ends", function()
+    if videoWidgetUnavailable() or mediaPlaybackUnavailable() then
+      return
+    end
+    -- close = true asks for the label the video is drawn into to be taken back
+    -- when the track ends, and no other spec passes it - so without this one
+    -- TMedia never reaches the emit behind it. What TMainConsole does with that
+    -- is hide the label, not the video widget on it, which is why windowVisible
+    -- can see the far end of the wire at all: cut the emit or the connect and
+    -- the assertion below stays true.
+    withVideoLabel()
+    writeSoundFiles()
+
+    local finished = {}
+    collect("sysMediaFinished", finished)
+
+    assert.is_true(playVideoFile({name = longSoundFile, key = videoLabel, tag = "busted-video-close", close = true}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+    assert.equals(1, #getPlayingVideos())
+    assert.is_true(windowVisible(videoLabel), "the label was off screen while the video played, so hiding it again could not be observed")
+
+    assert.is_true(stopVideos())
+    assert.equals(0, #getPlayingVideos())
+
+    -- Waited on by tag, not by count: nothing says the only ending this handler
+    -- hears is this spec's, and a wait for one event would return on someone
+    -- else's and then look for a tag that has not arrived yet.
+    local ended
+    for _ = 1, 5 do
+      for _, event in ipairs(finished) do
+        if event.tag == "busted-video-close" then
+          ended = event
+        end
+      end
+      if ended then
+        break
+      end
+      waitForEvent("sysMediaFinished", 1000)
+    end
+    assert.is_not_nil(ended, "the video that asked to close raised no sysMediaFinished of its own")
+    assert.equals(longSoundFile, ended.file)
+    assert.equals("video", ended.mediaType)
+    assert.equals(videoLabel, ended.key)
+
+    -- The ending is announced from inside the stop, but the hide is not: it runs
+    -- a turn later from the deferred release, so it needs a wait of its own.
+    local hidden = false
+    for _ = 1, 10 do
+      if not windowVisible(videoLabel) then
+        hidden = true
+        break
+      end
+      pumpEvents(100)
+    end
+    assert.is_true(hidden, "a stopped video left its label on screen: TMedia::signal_hideVideoOutput no longer reaches TMainConsole::hideVideoOutput")
+  end)
+
+  it("a video that never asked to close leaves its label on screen", function()
+    if videoWidgetUnavailable() or mediaPlaybackUnavailable() then
+      return
+    end
+    -- The other side of the same gate. Without it, a hide that fired for every
+    -- ending would satisfy the spec above just as well.
+    withVideoLabel()
+    writeSoundFiles()
+
+    assert.is_true(playVideoFile({name = longSoundFile, key = videoLabel}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+    assert.is_true(windowVisible(videoLabel))
+
+    assert.is_true(stopVideos())
+    assert.equals(0, #getPlayingVideos())
+
+    -- Long enough to outlast a deferred turn that ran and did nothing - it is a
+    -- singleShot(0), so a second of event loop is many turns. VideoOutputHideTest
+    -- pins the same case against the release actually having happened, which is
+    -- not observable from here.
+    pumpEvents(1000)
+    assert.is_true(windowVisible(videoLabel), "a video that never asked to close still took its label off screen when it stopped")
+  end)
+
+  it("the closing caption of a stop is printed a turn after the call, not inside it", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    -- TMedia::releaseMediaSourceAfterEvents() ends a playback one event-loop
+    -- turn late, so that a looping track's EndOfMedia can still restart it
+    -- (#9566). No event can see that deferral - on a backend that reports the
+    -- stop synchronously sysMediaFinished is raised from inside the call, and
+    -- on one that does not it merely arrives later - but the closing caption is
+    -- the other half of the same ending, and the deferred turn is what prints
+    -- it. Closed captions are off by default, so turning them on is what makes
+    -- it reachable at all.
+    local captionKey = "busted-caption-deferred"
+    local wasCaptioned = getConfig("enableClosedCaption")
+    onCleanup(function() setConfig("enableClosedCaption", wasCaptioned) end)
+    assert.is_true(setConfig("enableClosedCaption", true))
+
+    -- Counted by key, not by line delta: the window between mark and the last
+    -- line does receive captions from other specs, because a playback stopped
+    -- in an earlier one prints its own caption a turn later, by which time
+    -- captions are on. The key filter is what keeps those out, so do not
+    -- simplify this into a line count. Counted from the buffer's last line
+    -- rather than from the one after it, too: that line is still open, so the
+    -- first caption completes it instead of starting a line of its own.
+    local mark = getLastLineNumber("main")
+    local function captionCount()
+      local last = getLastLineNumber("main")
+      if last < mark then
+        return 0
+      end
+      local seen = 0
+      for _, line in ipairs(getLines("main", mark, last + 1)) do
+        if line:find(captionKey, 1, true) then
+          seen = seen + 1
+        end
+      end
+      return seen
+    end
+
+    local finished = {}
+    collect("sysMediaFinished", finished)
+
+    writeSoundFiles()
+    assert.is_true(playSoundFile({name = longSoundFile, key = captionKey}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+    -- the opening caption is printed by the same handler that raised the event
+    -- waited for above, so let that turn run out before counting
+    pumpEvents(250)
+    local opened = captionCount()
+    assert.equals(1, opened, "the opening caption did not reach the console")
+
+    assert.is_true(stopSounds())
+    -- checked before anything is waited on: nothing may have printed yet
+    assert.equals(opened, captionCount(), "the closing caption was printed inside the stop instead of a turn later")
+
+    if #finished == 0 then
+      waitForEvent("sysMediaFinished", 5000)
+    end
+    pumpEvents(250)
+    assert.equals(opened + 1, captionCount(), "the deferred turn printed no closing caption")
+  end)
+
   it("playVideoFile starts nothing when its key names no widget to draw into", function()
     if mediaPlaybackUnavailable() then
       return
@@ -1197,6 +1525,785 @@ describe("Media playback effects with a generated sound file", function()
     assert.is_true(playVideoFile({name = longSoundFile, key = "busted-media-no-such-widget"}))
     assert.equals(0, #getPlayingVideos())
     assert.equals(0, #getPausedVideos())
+  end)
+
+  it("playSoundFile clamps a volume outside 1 to 100 and reports the clamped value", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    -- the table form and the ordered form clamp in parsers of their own, so
+    -- each is asked for a volume no player could be set to
+    assert.is_true(playSoundFile({name = longSoundFile, key = "busted-volume-high", volume = 150}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+    local loud = getPlayingSounds({key = "busted-volume-high"})
+    assert.equals(1, #loud)
+    assert.equals(100, loud[1].volume)
+
+    assert.is_true(stopSounds())
+    assert.equals(0, #getPlayingSounds())
+
+    assert.is_true(playSoundFile(longSoundFile, -20, nil, nil, nil, nil, "busted-volume-low"))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+    local quiet = getPlayingSounds({key = "busted-volume-low"})
+    assert.equals(1, #quiet)
+    assert.equals(1, quiet[1].volume)
+  end)
+
+  it("playSoundFile clamps a priority outside 1 to 100 and reports the clamped value", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    assert.is_true(playSoundFile({name = longSoundFile, key = "busted-priority-high", priority = 500}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+    local top = getPlayingSounds({key = "busted-priority-high"})
+    assert.equals(1, #top)
+    assert.equals(100, top[1].priority)
+
+    assert.is_true(stopSounds())
+    assert.equals(0, #getPlayingSounds())
+
+    assert.is_true(playSoundFile({name = longSoundFile, key = "busted-priority-low", priority = -5}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+    local bottom = getPlayingSounds({key = "busted-priority-low"})
+    assert.equals(1, #bottom)
+    assert.equals(1, bottom[1].priority)
+  end)
+
+  it("a loop count of zero or below minus one plays a single pass", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local finished, started = {}, {}
+    collect("sysMediaFinished", finished)
+    collect("sysMediaStarted", started)
+
+    writeSoundFiles()
+    -- -1 asks for an endless repeat and anything above zero for that many
+    -- passes; zero and everything below -1 mean nothing, and fall back to a
+    -- single pass rather than to a playlist with no entries in it
+    assert.is_true(playSoundFile({name = soundFile, key = "busted-loops-zero", loops = 0}))
+    waitForCount("sysMediaFinished", finished, 1)
+    assert.equals(1, #started)
+    assert.equals(1, #finished)
+
+    assert.is_true(playSoundFile(soundFile, 50, nil, nil, nil, -5, "busted-loops-negative"))
+    waitForCount("sysMediaFinished", finished, 2)
+    assert.equals(2, #started)
+    assert.equals(2, #finished)
+  end)
+
+  it("the priority filter names a ceiling for which sound is listed and stopped", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local finished = {}
+    collect("sysMediaFinished", finished)
+
+    writeSoundFiles()
+    assert.is_true(playSoundFile({name = longSoundFile, key = "busted-priority-ceiling", priority = 90}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+
+    -- name[,key][,tag][,priority]: a player whose own priority is above the one
+    -- asked for is passed over, by the query and by the stop alike
+    assert.equals(0, #getPlayingSounds(nil, nil, nil, 10))
+    assert.equals(1, #getPlayingSounds(nil, nil, nil, 95))
+
+    assert.is_true(stopSounds(nil, nil, nil, 10))
+    pumpEvents(250)
+    assert.equals(0, #finished)
+    assert.equals(1, #getPlayingSounds())
+
+    assert.is_true(stopSounds(nil, nil, nil, 95))
+    waitForCount("sysMediaFinished", finished, 1)
+    assert.equals(1, #finished)
+    assert.equals("busted-priority-ceiling", finished[1].key)
+  end)
+
+  it("a sound played under the key of one already playing replaces it", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local finished, started = {}, {}
+    collect("sysMediaFinished", finished)
+    collect("sysMediaStarted", started)
+
+    writeSoundFiles()
+    -- Sounds are not matched to a player already holding one the way music is,
+    -- so two of them play at once unless something ends the first. A shared key
+    -- is what does, and only because the file behind it differs.
+    assert.is_true(playSoundFile({name = longSoundFile, key = "busted-key-swap"}))
+    waitForCount("sysMediaStarted", started, 1)
+
+    assert.is_true(playSoundFile({name = otherLongSoundFile, key = "busted-key-swap"}))
+    waitForCount("sysMediaStarted", started, 2)
+    waitForCount("sysMediaFinished", finished, 1)
+
+    assert.equals(1, #finished)
+    assert.equals(longSoundFile, finished[1].file)
+    local playing = getPlayingSounds({key = "busted-key-swap"})
+    assert.equals(1, #playing)
+    assert.equals(otherLongSoundFile, playing[1].name)
+  end)
+
+  it("a sound named by an absolute path is copied into the profile's media directory", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    -- Only the API may name a file outside the media directory. TMedia copies
+    -- it in and plays the copy, and every later request for it is answered
+    -- under the bare name the copy has.
+    local outsideName = "busted-media-outside.wav"
+    local outside = getMudletHomeDir() .. "/" .. outsideName
+    local handle = io.open(outside, "wb")
+    assert.is_not_nil(handle, "could not write the media fixture " .. outsideName)
+    handle:write(silentWav(10000))
+    handle:close()
+    onCleanup(function() os.remove(outside) end)
+
+    local copied = mediaDirectory .. "/" .. outsideName
+    lfs.mkdir(mediaDirectory)
+    os.remove(copied)
+    onCleanup(function() os.remove(copied) end)
+
+    assert.is_true(playSoundFile({name = outside, key = "busted-absolute"}))
+    local event, file, path = waitForEvent("sysMediaStarted", 5000)
+    assert.equals("sysMediaStarted", event)
+    assert.equals(outsideName, file)
+    assert.equals(copied, eventPath(path))
+    assert.is_not_nil(lfs.attributes(copied, "mode"), "the absolute path was played without being copied in")
+
+    local playing = getPlayingSounds({name = outside})
+    assert.equals(1, #playing)
+    assert.equals(outsideName, playing[1].name)
+  end)
+
+  it("a wildcard in the file name is resolved against the media directory", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local started = {}
+    collect("sysMediaStarted", started)
+
+    writeSoundFiles()
+    -- '?' stands for one character and '*' for any run of them, and what plays
+    -- is a file the pattern matched, so the event names that rather than the
+    -- pattern
+    assert.is_true(playSoundFile({name = "busted-media-h?ld.wav", key = "busted-wildcard"}))
+    local event, file = waitForEvent("sysMediaStarted", 5000)
+    assert.equals("sysMediaStarted", event)
+    assert.equals(longSoundFile, file)
+
+    assert.is_true(stopSounds())
+    assert.equals(0, #getPlayingSounds())
+
+    -- a wildcard is resolved against the directory and never falls through to
+    -- the fetch a plain name would, so one that matches nothing has nowhere
+    -- else to go and plays nothing
+    assert.is_true(playSoundFile({name = "busted-media-nothing-*.wav", key = "busted-wildcard-miss"}))
+    pumpEvents(500)
+    assert.equals(1, #started)
+    assert.equals(0, #getPlayingSounds())
+  end)
+
+  it("a wildcard under a sub-directory is searched there first and in the media root after", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    -- The media specification lets a request name a sub-directory. What is
+    -- looked for in there is the pattern with the directory taken off it, and a
+    -- pattern that matches nothing there falls back to the media root.
+    local subDirectory = mediaDirectory .. "/busted-media-sub"
+    lfs.mkdir(subDirectory)
+    local nested = subDirectory .. "/busted-media-nested.wav"
+    local handle = io.open(nested, "wb")
+    assert.is_not_nil(handle, "could not write the nested media fixture")
+    handle:write(silentWav(10000))
+    handle:close()
+    onCleanup(function()
+      os.remove(nested)
+      lfs.rmdir(subDirectory)
+    end)
+
+    assert.is_true(playSoundFile({name = "busted-media-sub/busted-media-n?sted.wav", key = "busted-sub-hit"}))
+    local event, file, path = waitForEvent("sysMediaStarted", 5000)
+    assert.equals("sysMediaStarted", event)
+    assert.equals("busted-media-nested.wav", file)
+    assert.equals(nested, eventPath(path))
+
+    assert.is_true(stopSounds())
+    assert.equals(0, #getPlayingSounds())
+
+    assert.is_true(playSoundFile({name = "busted-media-sub/busted-media-h?ld.wav", key = "busted-sub-fallback"}))
+    local fallbackEvent, fallbackFile, fallbackPath = waitForEvent("sysMediaStarted", 5000)
+    assert.equals("sysMediaStarted", fallbackEvent)
+    assert.equals(longSoundFile, fallbackFile)
+    assert.equals(mediaDirectory .. "/" .. longSoundFile, eventPath(fallbackPath))
+  end)
+
+  it("a finish position ends the sound before the file runs out", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local finished = {}
+    collect("sysMediaFinished", finished)
+
+    writeSoundFiles()
+    -- name[,volume][,fadein][,fadeout][,start][,loops][,key][,tag][,priority][,url][,finish]
+    -- The file holds ten seconds of silence, so a finish this soon is what ends
+    -- it. The url is carried but never fetched from, because the media
+    -- directory already has the file, and it names a closed local port so that
+    -- a fixture going missing cannot turn this into an outbound request.
+    assert.is_true(playSoundFile(longSoundFile, 50, nil, nil, nil, nil, "busted-finish", nil, 50, "http://127.0.0.1:1/media", 300))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+
+    waitForCount("sysMediaFinished", finished, 1)
+    assert.equals(1, #finished)
+    assert.equals("busted-finish", finished[1].key)
+    assert.equals(0, #getPlayingSounds())
+  end)
+
+  it("a stop asked to fade away leaves the sound playing until the fade runs out", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local finished = {}
+    collect("sysMediaFinished", finished)
+
+    writeSoundFiles()
+    assert.is_true(playSoundFile({name = longSoundFile, key = "busted-fadeaway"}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+
+    -- name[,key][,tag][,priority][,fadeaway][,fadeout]: a plain stop ends the
+    -- track there and then, and this one may not - the player is handed an end
+    -- position to fade towards and goes on playing until it reaches it
+    assert.is_true(stopSounds(nil, "busted-fadeaway", nil, nil, true, 300))
+    assert.equals(0, #finished, "the stop ended the sound outright instead of fading it out")
+    assert.equals(1, #getPlayingSounds())
+
+    waitForCount("sysMediaFinished", finished, 1)
+    assert.equals(1, #finished)
+    assert.equals("busted-fadeaway", finished[1].key)
+  end)
+
+  it("pauseSounds takes a name or a tag filter in the table form", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local started = {}
+    collect("sysMediaStarted", started)
+
+    writeSoundFiles()
+    assert.is_true(playSoundFile({name = longSoundFile, key = "busted-pause-a", tag = "busted-pause-tag-a"}))
+    waitForCount("sysMediaStarted", started, 1)
+    assert.is_true(playSoundFile({name = otherLongSoundFile, key = "busted-pause-b", tag = "busted-pause-tag-b"}))
+    waitForCount("sysMediaStarted", started, 2)
+    assert.equals(2, #getPlayingSounds())
+
+    assert.is_true(pauseSounds({tag = "busted-pause-tag-b"}))
+    local paused = getPausedSounds()
+    assert.equals(1, #paused)
+    assert.equals(otherLongSoundFile, paused[1].name)
+    assert.equals(1, #getPlayingSounds())
+
+    -- a filter that matches nothing pauses nothing, rather than everything
+    assert.is_true(pauseSounds({name = "busted-media-absent.wav"}))
+    assert.equals(1, #getPausedSounds())
+
+    assert.is_true(pauseSounds({name = longSoundFile}))
+    assert.equals(2, #getPausedSounds())
+    assert.equals(0, #getPlayingSounds())
+  end)
+
+  it("pauseMusic takes a name or a tag filter in the table form", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    assert.is_true(playMusicFile({name = longSoundFile, key = "busted-music-filter", tag = "busted-music-tag"}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+
+    -- a filter that names something else leaves the track playing
+    assert.is_true(pauseMusic({name = otherLongSoundFile}))
+    assert.equals(0, #getPausedMusic())
+    assert.is_true(pauseMusic({tag = "busted-music-other-tag"}))
+    assert.equals(0, #getPausedMusic())
+
+    assert.is_true(pauseMusic({tag = "busted-music-tag"}))
+    local paused = getPausedMusic()
+    assert.equals(1, #paused)
+    assert.equals(longSoundFile, paused[1].name)
+    assert.equals(0, #getPlayingMusic())
+  end)
+
+  it("a caption in the request is printed in place of the type and file name", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local wasCaptioned = getConfig("enableClosedCaption")
+    onCleanup(function() setConfig("enableClosedCaption", wasCaptioned) end)
+    assert.is_true(setConfig("enableClosedCaption", true))
+
+    local caption = "Busted media caption"
+    local mark = getLastLineNumber("main")
+    writeSoundFiles()
+    assert.is_true(playSoundFile({name = longSoundFile, key = "busted-caption-given", caption = caption}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+    -- the caption is printed by the same handler that raised the event waited
+    -- for above, so let that turn run out before reading the buffer
+    pumpEvents(250)
+
+    local line
+    for _, candidate in ipairs(getLines("main", mark, getLastLineNumber("main") + 1)) do
+      if candidate:find(caption, 1, true) then
+        line = candidate
+        break
+      end
+    end
+    assert.is_not_nil(line, "the caption the request gave never reached the console")
+    -- it replaces what would otherwise be printed rather than being added to it
+    assert.is_nil(line:find(longSoundFile, 1, true), line)
+    assert.is_nil(line:find("busted-caption-given", 1, true), line)
+  end)
+
+  it("the generated closed caption names the request's key only when it has one", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local wasCaptioned = getConfig("enableClosedCaption")
+    onCleanup(function() setConfig("enableClosedCaption", wasCaptioned) end)
+    assert.is_true(setConfig("enableClosedCaption", true))
+
+    -- A caption completes whatever line is still open rather than starting one
+    -- of its own, so it is cut out from its own opening bracket to the closing
+    -- one instead of being matched from the start of the line.
+    local mark
+    local function captionFor(fileName)
+      local last = getLastLineNumber("main")
+      if last < mark then
+        return nil
+      end
+      for _, candidate in ipairs(getLines("main", mark, last + 1)) do
+        local at = candidate:find('"' .. fileName .. '"', 1, true)
+        local open = at and select(2, candidate:sub(1, at):find(".*%["))
+        local close = at and candidate:find("]", at, true)
+        if open and close then
+          return candidate:sub(open, close)
+        end
+      end
+      return nil
+    end
+
+    writeSoundFiles()
+    mark = getLastLineNumber("main")
+    assert.is_true(playSoundFile({name = longSoundFile}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+    pumpEvents(250)
+    local keyless = captionFor(longSoundFile)
+    assert.is_not_nil(keyless, "a request without a key printed no caption")
+
+    assert.is_true(stopSounds())
+    pumpEvents(250)
+
+    local key = "busted-caption-keyed"
+    mark = getLastLineNumber("main")
+    assert.is_true(playSoundFile({name = longSoundFile, key = key}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+    pumpEvents(250)
+    local keyed = captionFor(longSoundFile)
+    assert.is_not_nil(keyed, "a request with a key printed no caption")
+
+    -- the key, and the space in front of it, is the whole of the difference
+    assert.is_not_nil(keyed:find(key .. ' "' .. longSoundFile .. '"', 1, true), keyed)
+    assert.is_nil(keyless:find(key, 1, true), keyless)
+    assert.equals(#keyless + #key + 1, #keyed)
+  end)
+
+  -- The server's half of the media API. A Client.Media.* GMCP message reaches
+  -- TMedia through a different door from the play*File() calls above: the
+  -- telnet parser hands the subnegotiation to TMedia::parseGMCP(), which picks
+  -- one of the parseJSONForMedia*() readers. Those readers had nothing holding
+  -- them, and they are what decides the media type, the file and the key a
+  -- server-driven playback runs under.
+  --
+  -- Two things shape every spec below. The subnegotiation handler dispatches on
+  -- the option byte alone, so no GMCP negotiation is needed to reach it - which
+  -- is just as well, because these run offline. And GMCP media is tracked in
+  -- player lists of its own, apart from the API's: getPlayingSounds() cannot
+  -- see it and stopSounds() cannot stop it, so each spec has to send its own
+  -- Client.Media.Stop to clean up after itself.
+  local function feedGmcp(message)
+    local ok, err = feedTelnet("<T_IAC><T_SB><O_GMCP>" .. message .. "<T_IAC><T_SE>")
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(err))
+  end
+
+  -- Deliberately not feedGmcp(): after_each drains the cleanup list without a
+  -- pcall, so an undo that raised would skip every cleanup registered before it
+  -- and the stops that follow the drain. A refused injection is the spec body's
+  -- problem, not the undo's.
+  local function stopGmcpMediaAfterwards()
+    onCleanup(function() feedTelnet("<T_IAC><T_SB><O_GMCP>Client.Media.Stop {}<T_IAC><T_SE>") end)
+  end
+
+  -- The profile's "accept media from the game" preference gates parseGMCP() and
+  -- has no getConfig key to read it back with, so a profile that has it turned
+  -- off would fail the specs below with nothing but a bare timeout to go on.
+  local gmcpRefused = "no sysMediaStarted for a Client.Media message - is the profile set to accept media from the game?"
+
+  it("a Client.Media.Play message plays the file it names and reports it", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-play", "tag": "busted-gmcp-tag"}')
+
+    local event, file, _, mediaType, key, tag = waitForEvent("sysMediaStarted", 5000)
+    assert.equals("sysMediaStarted", event, gmcpRefused)
+    assert.equals(longSoundFile, file)
+    -- a message that names no type is played as a sound
+    assert.equals("sound", mediaType)
+    assert.equals("busted-gmcp-play", key)
+    assert.equals("busted-gmcp-tag", tag)
+
+    -- Pinning today's behaviour, not asserting it is right: the API queries
+    -- filter on the API protocol, so a script cannot see server-driven media at
+    -- all. Unifying the lists one day would fail this deliberately.
+    assert.equals(0, #getPlayingSounds())
+    assert.equals(0, #getPlayingMusic())
+  end)
+
+  it("a Client.Media.Play message that names a type is played as that type", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "type": "music", "key": "busted-gmcp-music"}')
+
+    local finished = {}
+    collect("sysMediaFinished", finished)
+
+    local event, _, _, mediaType, key = waitForEvent("sysMediaStarted", 5000)
+    assert.equals("sysMediaStarted", event, gmcpRefused)
+    assert.equals("music", mediaType)
+    assert.equals("busted-gmcp-music", key)
+
+    -- The event's type is stamped on the request before the list to track it in
+    -- is chosen, so it alone cannot tell a mislabelled track from a misfiled
+    -- one. A typed stop can: it only reaches the list of the type it names.
+    feedGmcp('Client.Media.Stop {"type": "sound"}')
+    pumpEvents(250)
+    assert.equals(0, #finished, "a sound-typed stop reached the music list")
+
+    feedGmcp('Client.Media.Stop {"type": "music"}')
+    waitForCount("sysMediaFinished", finished, 1)
+    assert.equals(1, #finished)
+    assert.equals("busted-gmcp-music", finished[1].key)
+  end)
+
+  it("a Client.Media.Stop message ends what a Client.Media.Play started", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local finished = {}
+    collect("sysMediaFinished", finished)
+
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-stopped"}')
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)), gmcpRefused)
+    assert.equals(0, #finished)
+
+    feedGmcp("Client.Media.Stop {}")
+    waitForCount("sysMediaFinished", finished, 1)
+    -- the file runs for ten seconds, so a finish this soon is the stop taking
+    -- effect rather than the file running out
+    assert.equals(1, #finished)
+    assert.equals("busted-gmcp-stopped", finished[1].key)
+  end)
+
+  it("a Client.Media.Pause message parks the playback the server started", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local paused = {}
+    collect("sysMediaPaused", paused)
+
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-paused"}')
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)), gmcpRefused)
+
+    -- a key that matches nothing leaves it playing
+    feedGmcp('Client.Media.Pause {"key": "busted-gmcp-pause-absent"}')
+    pumpEvents(250)
+    assert.equals(0, #paused)
+
+    feedGmcp('Client.Media.Pause {"key": "busted-gmcp-paused"}')
+    waitForCount("sysMediaPaused", paused, 1)
+    assert.equals(1, #paused)
+    assert.equals("busted-gmcp-paused", paused[1].key)
+  end)
+
+  it("a Client.Media.Pause message with no fields pauses everything the server started", function()
+    -- #10043. Every field parseJSONForMediaPause() reads is optional, and a
+    -- request with none of them set pauses all of the server's media - which is
+    -- what Client.Media.Stop with no fields does for stopping. It never gets
+    -- there: parseGMCP() answers "client.media.stop" above its empty-object
+    -- guard and everything else below it, so an empty Client.Media.Pause is
+    -- dropped without being read at all.
+    pending("#10043: Client.Media.Pause {} is discarded by the empty-object guard in TMedia::parseGMCP()")
+  end)
+
+  it("a Client.Media.Load message fetches the file without playing it", function()
+    if noFixtureServer() then
+      return
+    end
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    -- the load reader stamps the preload volume, which is what keeps the
+    -- download from being played the moment it lands
+    local downloadName = "busted-gmcp-download.wav"
+    local downloaded = mediaDirectory .. "/" .. downloadName
+    lfs.mkdir(mediaDirectory)
+    os.remove(downloaded)
+    onCleanup(function() os.remove(downloaded) end)
+    stopGmcpMediaAfterwards()
+
+    local done, started = {}, {}
+    collect("sysDownloadDone", done)
+    collect("sysMediaStarted", started)
+
+    feedGmcp('Client.Media.Load {"name": "' .. downloadName .. '", "url": "' .. fixtureUrl() .. '/media"}')
+    waitForCount("sysDownloadDone", done, 1)
+    assert.equals(1, #done)
+    assert.is_not_nil(lfs.attributes(downloaded, "mode"), "the load did not keep the file it downloaded")
+
+    -- a playback would begin after the download event, and a preload raises no
+    -- sysMediaStarted to wait for, so give the player the turns it would need
+    pumpEvents(1000)
+    assert.equals(0, #started, "a Client.Media.Load played the file it had just fetched")
+  end)
+
+  it("a Client.Media.Play message that names the video type is played as a video", function()
+    if videoWidgetUnavailable() or mediaPlaybackUnavailable() then
+      return
+    end
+    withVideoLabel()
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+
+    -- video is the one media type the JSON reader has that no other spec asks
+    -- it for, and the label the key names is what it draws into
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "type": "video", "key": "' .. videoLabel .. '"}')
+
+    local event, file, _, mediaType, key = waitForEvent("sysMediaStarted", 5000)
+    assert.equals("sysMediaStarted", event, gmcpRefused)
+    assert.equals(longSoundFile, file)
+    assert.equals("video", mediaType)
+    assert.equals(videoLabel, key)
+    -- Pinning today's behaviour, not asserting it is right: like every other
+    -- server-driven playback this is tracked apart from what the API started,
+    -- so unifying the lists one day would fail this deliberately.
+    assert.equals(0, #getPlayingVideos())
+  end)
+
+  it("a Client.Media.Play message reads its numeric fields given as strings", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+
+    local finished, started = {}, {}
+    collect("sysMediaFinished", finished)
+    collect("sysMediaStarted", started)
+
+    -- The media protocol allows every numeric field as a JSON string and
+    -- servers do send them that way, so a string has to be read as the number
+    -- it spells rather than leave the field on its default. A full message of
+    -- them is read here for the loop count, which is what the two playbacks
+    -- below are; start, finish, priority and fade-out are each taken on their
+    -- own after this, and volume by the preload spec below them. Only fadein is
+    -- left to this: it ramps the player's own volume and nothing a Lua call or
+    -- event can see, so a message that is read without complaint is as far as a
+    -- spec can follow it.
+    feedGmcp('Client.Media.Play {"name": "' .. soundFile .. '", "key": "busted-gmcp-strings", "volume": "70", "priority": "50", "loops": "2", "fadein": "0", "fadeout": "0", "start": "0", "finish": "0"}')
+
+    waitForCount("sysMediaFinished", finished, 2)
+    assert.equals(2, #started, gmcpRefused)
+    assert.equals(2, #finished)
+  end)
+
+  it("a Client.Media.Play message reads a start position given as a string", function()
+    -- A start position has no effect in either form or on either path: the ten
+    -- second file asked to begin 9700ms in plays all ten seconds, whether the
+    -- position arrives as "9700", as 9700, or as playSoundFile{start = 9700}.
+    -- Until it does anything at all there is nothing for the string form of it
+    -- to show.
+    pending("Client.Media.Play and playSoundFile both ignore a start position (#10459)")
+  end)
+
+  it("a Client.Media.Play message reads a finish position given as a string", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+
+    local finished, started = {}, {}
+    collect("sysMediaFinished", finished)
+    collect("sysMediaStarted", started)
+
+    -- the same ten second file cut off after 300ms, which a finish left on its
+    -- default would not be
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-finish", "finish": "300"}')
+
+    waitForCount("sysMediaFinished", finished, 1)
+    assert.equals(1, #started, gmcpRefused)
+    assert.equals(1, #finished, "a finish of 300 did not end the ten second file early")
+  end)
+
+  it("a Client.Media.Play message reads a priority given as a string", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+
+    local finished, started = {}, {}
+    collect("sysMediaFinished", finished)
+    collect("sysMediaStarted", started)
+
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-priority", "priority": "50"}')
+    waitForCount("sysMediaStarted", started, 1)
+    assert.equals(1, #started, gmcpRefused)
+
+    -- a stop reaches only what is playing below the priority it names, so this
+    -- one leaves the playback alone - a priority that was not read is no
+    -- priority at all, and would be stopped here
+    feedGmcp('Client.Media.Stop {"priority": 40}')
+    pumpEvents(500)
+    assert.equals(0, #finished, "a stop of a lower priority than the playback stopped it anyway")
+
+    -- and a stop from above it does end the playback, so it is the priority the
+    -- string spelled that decided both
+    feedGmcp('Client.Media.Stop {"priority": 60}')
+    waitForCount("sysMediaFinished", finished, 1)
+    assert.equals(1, #finished)
+  end)
+
+  it("a Client.Media.Play message reads a fade-out given as a string", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+
+    local finished, started = {}, {}
+    collect("sysMediaFinished", finished)
+    collect("sysMediaStarted", started)
+
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-fadeout", "fadeout": "300"}')
+    waitForCount("sysMediaStarted", started, 1)
+    assert.equals(1, #started, gmcpRefused)
+
+    -- a fading stop plays on for the fade the playback named, and for a flat
+    -- five seconds when it named none - so an unread fade-out is what the wait
+    -- below runs out on
+    feedGmcp('Client.Media.Stop {"fadeaway": true}')
+    local waitedMs = 0
+    while #finished == 0 and waitedMs < 2500 do
+      pumpEvents(50)
+      waitedMs = waitedMs + 50
+    end
+    assert.equals(1, #finished, "a fading stop did not use the 300ms fade-out the playback named")
+  end)
+
+  it("a Client.Media.Play message with a volume of zero preloads the file instead of playing it", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+
+    local started = {}
+    collect("sysMediaStarted", started)
+
+    -- volume 0 is the media protocol's way of asking for a file to be readied
+    -- without being heard
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-preload", "volume": "0"}')
+    pumpEvents(1000)
+    assert.equals(0, #started, "a request made at volume 0 was played")
+
+    -- the same message with any other volume does play, so it is the volume and
+    -- nothing else about the request that held the first one back
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-preload", "volume": "60"}')
+    waitForCount("sysMediaStarted", started, 1)
+    assert.equals(1, #started, gmcpRefused)
+  end)
+
+  it("a Client.Media.Play message with a numeric volume of zero preloads the file too", function()
+    -- #10404. The media protocol allows a field either way round, and the
+    -- string form above preloads. The number form does not:
+    -- parseJSONByMediaVolume() uses the value itself as the test for whether
+    -- the field was given, so a volume of 0 reads as absent and the request is
+    -- played at the default volume instead of being readied silently.
+    pending("#10404: Client.Media.Play with a numeric volume of 0 plays at the default volume instead of preloading")
+  end)
+
+  it("a Client.Media.Default message sets the url the messages after it fetch from", function()
+    if noFixtureServer() then
+      return
+    end
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local downloaded = mediaDirectory .. "/" .. fixtureFile
+    lfs.mkdir(mediaDirectory)
+    os.remove(downloaded)
+    onCleanup(function() os.remove(downloaded) end)
+    stopGmcpMediaAfterwards()
+    -- The location is kept on the profile and no Lua call reads or clears it,
+    -- so the starting one is set here rather than inherited from whichever
+    -- url-carrying message ran last, and that known value is what the undo puts
+    -- back - as an undo, so a spec that fails part way through does not take the
+    -- rest of the suite's media location with it. Not feedGmcp() there, for the
+    -- reason given with it.
+    local startingLocation = fixtureUrl() .. "/media"
+    feedGmcp('Client.Media.Default {"url": "' .. startingLocation .. '"}')
+    onCleanup(function()
+      feedTelnet('<T_IAC><T_SB><O_GMCP>Client.Media.Default {"url": "' .. startingLocation .. '"}<T_IAC><T_SE>')
+    end)
+
+    local done = {}
+    collect("sysDownloadDone", done)
+
+    -- The location just set is the fixture server's /media, which answers only
+    -- for a .wav: nothing there serves the text fixture, and that is what makes
+    -- the fetch below evidence of the default this sets rather than of the one
+    -- already in force.
+    feedGmcp('Client.Media.Load {"name": "' .. fixtureFile .. '"}')
+    pumpEvents(1000)
+    assert.equals(0, #done, "the location in force already served the file, so the default below proves nothing")
+
+    -- the default is set to the fixture server's root, where the text fixture
+    -- does live, and its contents are what say the fetch went there
+    feedGmcp('Client.Media.Default {"url": "' .. fixtureUrl() .. '"}')
+    -- naming no url of its own, the load has only the default to go on
+    feedGmcp('Client.Media.Load {"name": "' .. fixtureFile .. '"}')
+
+    waitForCount("sysDownloadDone", done, 1)
+    assert.equals(1, #done)
+    assert.equals(fixtureBody, readFile(downloaded))
   end)
 end)
 

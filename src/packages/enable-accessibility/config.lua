@@ -28,5 +28,5 @@ This command configures a third-party TTS plugin called [mudlet-reader](https://
 
 See [Accessibility on OSX](https://wiki.mudlet.org/w/Accessibility_on_OSX) for more information.
 ]]
-version = [[2]]
+version = [[3]]
 created = "2025-06-07T20:44:12-04:00"

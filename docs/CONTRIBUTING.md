@@ -15,6 +15,8 @@ Check https://www.linguistic-antipatterns.com when naming anything to help ensur
 
 ## AI Coding Assistants
 
+To put an AI agent to work on Mudlet quality - test coverage, fuzzing, performance - see [Improving Mudlet with AI agents](https://wiki.mudlet.org/w/Improving_Mudlet_with_AI_agents) and the ready-made skills in [.agents/skills](https://github.com/Mudlet/Mudlet/tree/development/.agents/skills).
+
 ### Licensing and Legal Requirements
 
 All code must be compatible with Mudlet's license.
@@ -72,6 +74,7 @@ signals:
 * use `qsl()` to wrap Qt strings, this ensures they're created at compile time
 * at the same time, don't use a blank `qsl("")` - use `QString()` in that case
 * escape dynamic label information with .toHtmlEscaped() to ensure safe display ([example](https://github.com/Mudlet/Mudlet/pull/6807/files)).
+* pin every `QDataStream` that reads or writes a Mudlet file with `setVersion(QDataStream::Qt_5_12)` before any data crosses it, on both halves of a reader/writer pair. `QFont`'s binary representation changed at Qt 5.13, so an unpinned stream writes whatever format its Qt defaults to and a Mudlet built against a different Qt misparses it - and the pinned version can only change as a deliberate file format migration. For maps, `TMap::mMinVersion` is separately the oldest map format this build can write, so a Mudlet older than that cannot open what it saves.
 
 # Internationalization do's and don'ts
 

@@ -31,12 +31,15 @@
 #include "LuaInterface.h"
 #include "TGameDetails.h"
 #include "XMLimport.h"
+#include "discord.h"
 #include "mudlet.h"
 #include "CredentialManager.h"
 #include "SecureStringUtils.h"
+#include "widgetutils.h"
 #include "utils.h"
 
 #include <QtConcurrentRun>
+#include <QtMath>
 #include <QtUiTools>
 #include <QApplication>
 #include <QColorDialog>
@@ -84,6 +87,8 @@ const QRegularExpression dlgConnectionProfiles::scmUnusableProfileNameChars{qsl(
 // the side of asking. ProfileDeletionSafetyTest fails if the connection form
 // comes to write anything this does not name:
 const QStringList dlgConnectionProfiles::scmConnectionDetailFiles{qsl("url"), qsl("port"), qsl("ssl_tsl"), qsl("description"), qsl("website"), qsl("autologin"), qsl("autoreconnect")};
+
+const QString dlgConnectionProfiles::scmSelfTestProfile = qsl("Mudlet self-test");
 
 // A lone "." is made entirely of permitted characters, yet every path built
 // from it addresses the profiles directory rather than a profile of its own -
@@ -164,6 +169,10 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     mpTabBar->setAccessibleDescription(tr("Switch between showing only your own games and all of the games Mudlet knows about."));
     verticalLayout_gamesList->insertWidget(0, mpTabBar);
     setTabOrder(mpTabBar, listWidget_profiles);
+    // that also takes the games list out of the head of the focus chain, so
+    // without this the profile name field opens focused - where typing a game's
+    // name renames a profile instead of picking that game
+    listWidget_profiles->setFocus();
 
     if (!mudlet::self()->mOnlyShownPredefinedProfiles.isEmpty()) {
         // dedicated single-game builds only ever show their own game(s), so
@@ -422,7 +431,7 @@ dlgConnectionProfiles::~dlgConnectionProfiles()
     // ~QDialog hides the dialog once this destructor is done, and the profile
     // name field reacts to losing the focus by emitting editingFinished() into
     // slot_saveName() when this object is no longer a valid receiver (#9574)
-    utils::disconnectChildSignals(this);
+    widgetutils::disconnectChildSignals(this);
 
     if (mPasswordSaveTimer) {
         mPasswordSaveTimer->stop();
@@ -441,7 +450,8 @@ dlgConnectionProfiles::~dlgConnectionProfiles()
 
 // Restores the widgets that the first-launch tutorial invitation hides, so
 // every path out of the invitation (Skip button, New profile) leaves the
-// dialog in its regular state:
+// dialog in its regular state - bar the keyboard focus, which hiding those
+// widgets scatters and each caller has to claim for itself:
 void dlgConnectionProfiles::dismissTutorialInvitation()
 {
     mTutorialDismissed = true;
@@ -469,6 +479,9 @@ void dlgConnectionProfiles::slot_skipToGamesList()
     if (!items.isEmpty()) {
         listWidget_profiles->setCurrentItem(items.first());
     }
+    // dismissTutorialInvitation() hides whichever widget the invitation left
+    // holding the focus, which hands it on down the chain to the name field
+    listWidget_profiles->setFocus();
 }
 
 // the dialog can be accepted by pressing Enter on an qlineedit; this is a safeguard against it
@@ -1029,12 +1042,57 @@ void dlgConnectionProfiles::slot_addProfile()
 
 void dlgConnectionProfiles::showRemovalProblem(const QString& message)
 {
+    showNotification(message, notificationAreaIconLabelWarning);
+}
+
+void dlgConnectionProfiles::showRemovalNotice(const QString& message)
+{
+    showNotification(message, notificationAreaIconLabelInformation);
+}
+
+void dlgConnectionProfiles::showNotification(const QString& message, QLabel* pIcon)
+{
     notificationArea->show();
-    notificationAreaIconLabelWarning->show();
-    notificationAreaIconLabelError->hide();
-    notificationAreaIconLabelInformation->hide();
+    for (auto* pCandidate : {notificationAreaIconLabelWarning, notificationAreaIconLabelError, notificationAreaIconLabelInformation}) {
+        pCandidate->setVisible(pCandidate == pIcon);
+    }
     notificationAreaMessageBox->show();
     notificationAreaMessageBox->setText(message);
+}
+
+// Kept out of slot_itemClicked() because a removal has to refresh the button
+// without that whole selection path, which ignores a repeat of the same profile
+void dlgConnectionProfiles::updateRemoveButtonState(const QString& profile)
+{
+    if (mudlet::self()->getHostManager().getHost(profile)) {
+        remove_profile_button->setEnabled(false);
+        remove_profile_button->setToolTip(utils::richText(tr("A profile that is in use cannot be removed")));
+        return;
+    }
+
+    if (!profileRemovable(profile)) {
+        remove_profile_button->setEnabled(false);
+        //: %1 is a game name, e.g. Achaea, that has never been played and so has no profile to remove
+        remove_profile_button->setToolTip(utils::richText(tr("Nothing has been saved for %1 yet, so there is nothing to remove").arg(profile)));
+        return;
+    }
+
+    remove_profile_button->setEnabled(true);
+    remove_profile_button->setToolTip(QString());
+}
+
+// "Remove" deletes a profile's own data, and the games catalog goes on offering
+// a pre-installed game either way - so on one that has never been played there
+// is nothing a removal could do. Everything else in the list can be taken out
+// of it: a profile of the user's own, saved or not yet, and the self-test
+// entry, which is listed without data of its own and removed to dismiss it.
+bool dlgConnectionProfiles::profileRemovable(const QString& profile) const
+{
+    const QString profileFolder = profileFolderPath(mudlet::getMudletPath(enums::profilesPath), profile);
+    if (!profileFolder.isEmpty() && QDir(profileFolder).exists()) {
+        return true;
+    }
+    return profile == scmSelfTestProfile || TGameDetails::findGame(profile) == TGameDetails::scmDefaultGames.end();
 }
 
 void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
@@ -1052,7 +1110,11 @@ void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
     }
 
     QDir dir(profileFolder);
-    if (!dir.removeRecursively()) {
+    // QDir::removeRecursively() calls a folder that was never there a success,
+    // which for a catalog game nobody has played would leave the removal
+    // claiming to have done something
+    const bool anythingSaved = dir.exists();
+    if (anythingSaved && !dir.removeRecursively()) {
         // the profile is still on disk, so its password and its list entry stay:
         // removing either would strand the data that is left
         qWarning().nospace() << "dlgConnectionProfiles::reallyDeleteProfile(\"" << profile << "\") ERROR - could not completely remove \"" << profileFolder << "\".";
@@ -1097,18 +1159,34 @@ void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
         });
     }
 
-    // record the deletion; the games catalog deliberately ignores this list
-    // now - only the self-test entry in fillout_form() still honours it, and
+    // only the self-test entry needs its removal recorded: fillout_form() lists
+    // it without profile data of its own, so nothing else would keep it away.
     // continueProfileSave() clears the entry on profile re-creation
-    auto& settings = *mudlet::self()->mpSettings;
-    auto deletedDefaultMuds = settings.value(qsl("deletedDefaultMuds"), QStringList()).toStringList();
-    if (!deletedDefaultMuds.contains(profile)) {
-        deletedDefaultMuds.append(profile);
+    if (profile == scmSelfTestProfile) {
+        auto& settings = *mudlet::self()->mpSettings;
+        auto deletedDefaultMuds = settings.value(qsl("deletedDefaultMuds"), QStringList()).toStringList();
+        if (!deletedDefaultMuds.contains(profile)) {
+            deletedDefaultMuds.append(profile);
+            settings.setValue(qsl("deletedDefaultMuds"), deletedDefaultMuds);
+        }
     }
-    settings.setValue(qsl("deletedDefaultMuds"), deletedDefaultMuds);
 
     fillout_form();
     listWidget_profiles->setFocus();
+    if (auto* pCurrentItem = listWidget_profiles->currentItem()) {
+        updateRemoveButtonState(pCurrentItem->data(csmNameRole).toString());
+    }
+    if (!findData(*listWidget_profiles, profile, csmNameRole).isEmpty()) {
+        // the catalog still offers the game, so the list itself shows no sign
+        // of what just happened
+        if (anythingSaved) {
+            //: %1 is a game name, e.g. Achaea
+            showRemovalNotice(tr("Removed everything saved for '%1'. The game itself stays in the list, ready to play again.").arg(profile));
+        } else {
+            //: %1 is a game name, e.g. Achaea, that has never been played and so has nothing saved to remove
+            showRemovalNotice(tr("Nothing has been saved for '%1' yet, so there was nothing to remove.").arg(profile));
+        }
+    }
 }
 
 // called when the 'delete' button is pressed, raises a dialog to confirm deletion
@@ -1199,9 +1277,7 @@ QString dlgConnectionProfiles::readProfileData(const QString& profile, const QSt
     QString ret;
     if (success) {
         QDataStream ifs(&file);
-        if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
-        }
+        ifs.setVersion(QDataStream::Qt_5_12);
         ifs >> ret;
         file.close();
     }
@@ -1217,9 +1293,7 @@ QPair<bool, QString> dlgConnectionProfiles::writeProfileData(const QString& prof
     QSaveFile file(mudlet::getMudletPath(enums::profileDataItemPath, profile, item));
     if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         QDataStream ofs(&file);
-        if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            ofs.setVersion(mudlet::scmQDataStreamFormat_5_12);
-        }
+        ofs.setVersion(QDataStream::Qt_5_12);
         ofs << what;
         if (!file.commit()) {
             qDebug().noquote().nospace() << "dlgConnectionProfiles::writeProfileData(...) ERROR - writing profile: \"" << profile << "\", item: \"" << item << "\", reason: \"" << file.errorString()
@@ -1415,9 +1489,9 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
 
     const QString profileLoadedMessage = tr("This profile is currently loaded - close it before changing the connection parameters.");
 
+    updateRemoveButtonState(profile_name);
+
     if (mudlet::self()->getHostManager().getHost(profile_name)) {
-        remove_profile_button->setEnabled(false);
-        remove_profile_button->setToolTip(utils::richText(tr("A profile that is in use cannot be removed")));
         connect_button->setEnabled(false);
         offline_button->setEnabled(false);
 
@@ -1455,8 +1529,6 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
         if (notificationAreaMessageBox->text() == profileLoadedMessage) {
             clearNotificationArea();
         }
-        remove_profile_button->setEnabled(true);
-        remove_profile_button->setToolTip(QString());
     }
 }
 
@@ -1499,18 +1571,17 @@ void dlgConnectionProfiles::fillout_form()
 
     const QStringList& onlyShownPredefinedProfiles{mudlet::self()->mOnlyShownPredefinedProfiles};
     const bool showOnlyMyProfiles = showingOnlyMyProfiles();
-    const QString selfTestProfile = qsl("Mudlet self-test");
     const auto deletedDefaultMuds = mudlet::self()->mpSettings->value(qsl("deletedDefaultMuds"), QStringList()).toStringList();
     if (onlyShownPredefinedProfiles.isEmpty()) {
         const auto defaultGames = TGameDetails::keys();
         // "My games" only lists games with profile data on disk; "All games"
-        // must keep offering every pre-installed game, even ones whose
-        // profile was deleted (recorded in deletedDefaultMuds). The self-test
-        // entry is the exception: it is a testing aid rather than a game, and
-        // is offered even without profile data on disk, so dismissing it has
-        // to keep it out of both tabs
+        // must keep offering every pre-installed game, even ones whose profile
+        // was just deleted. The self-test entry is the exception: it is a
+        // testing aid rather than a game, and is offered even without profile
+        // data on disk, so dismissing it has to keep it out of both tabs -
+        // which is all deletedDefaultMuds records
         for (auto& game : defaultGames) {
-            if (game == selfTestProfile && deletedDefaultMuds.contains(game)) {
+            if (game == scmSelfTestProfile && deletedDefaultMuds.contains(game)) {
                 continue;
             }
             if (showOnlyMyProfiles && !mProfileList.contains(game, Qt::CaseInsensitive)) {
@@ -1522,14 +1593,14 @@ void dlgConnectionProfiles::fillout_form()
         }
 
 #if defined(QT_DEBUG)
-        if (!deletedDefaultMuds.contains(selfTestProfile) && !mProfileList.contains(selfTestProfile)) {
-            mProfileList.append(selfTestProfile);
+        if (!deletedDefaultMuds.contains(scmSelfTestProfile) && !mProfileList.contains(scmSelfTestProfile)) {
+            mProfileList.append(scmSelfTestProfile);
             // "All games" already listed it from TGameDetails above, only
             // "My games" is still missing an entry:
-            if (findData(*listWidget_profiles, selfTestProfile, csmNameRole).isEmpty()) {
+            if (findData(*listWidget_profiles, scmSelfTestProfile, csmNameRole).isEmpty()) {
                 pItem = new QListWidgetItem();
                 // Can't use setupMudProfile(...) here as we do not set the icon in the same way:
-                setItemName(pItem, selfTestProfile);
+                setItemName(pItem, scmSelfTestProfile);
 
                 listWidget_profiles->addItem(pItem);
                 description = getDescription(qsl("mudlet.org"));
@@ -1559,7 +1630,7 @@ void dlgConnectionProfiles::fillout_form()
     for (int i = 0; i < listWidget_profiles->count(); i++) {
         const auto profile = listWidget_profiles->item(i);
         const auto profileName = profile->data(csmNameRole).toString();
-        if (profileName == qsl("Mudlet self-test")) {
+        if (profileName == scmSelfTestProfile) {
             test_profile_row = i;
         }
         const auto fileinfo = QFileInfo(mudlet::getMudletPath(enums::profileXmlFilesPath, profileName));
@@ -1610,8 +1681,10 @@ void dlgConnectionProfiles::fillout_form()
     }
 
     // Dedicated single-game builds go straight to their game's profile instead
-    // of the Mudlet tutorial invitation:
-    if (firstMudletLaunch && noSavedProfiles && !mTutorialDismissed && onlyShownPredefinedProfiles.isEmpty()) {
+    // of the Mudlet tutorial invitation, and someone with a history of using
+    // Mudlet gets the games list rather than a beginner's invitation - the same
+    // call the UI tour makes:
+    if (firstMudletLaunch && noSavedProfiles && !mTutorialDismissed && onlyShownPredefinedProfiles.isEmpty() && !mudlet::self()->experiencedMudletPlayer()) {
         // Hide the profile list and show only the tutorial-focused welcome
         widget_topLeft->hide();
         welcome_message->show();
@@ -1620,8 +1693,36 @@ void dlgConnectionProfiles::fillout_form()
         connect_button->hide();
         offline_button->hide();
         mpSkipToGamesButton->show();
-        adjustSize();
+        if (isVisible()) {
+            fitWelcomeMessageToContents();
+        } else {
+            mFitWelcomeMessagePending = true;
+        }
     }
+}
+
+// A dialog that has not been up yet has no laid-out widgets to measure, so a
+// first launch takes its invitation sizing from here instead. It has to happen
+// before QDialog::showEvent(), which centres the dialog on its parent for the
+// size it has at that moment.
+void dlgConnectionProfiles::showEvent(QShowEvent* pEvent)
+{
+    if (mFitWelcomeMessagePending) {
+        mFitWelcomeMessagePending = false;
+        fitWelcomeMessageToContents();
+    }
+    QDialog::showEvent(pEvent);
+}
+
+// A QTextBrowser reports the same size hint whatever it holds, so shrinking the
+// dialog around the invitation with adjustSize() alone cuts off its last line
+// and leaves a scrollbar. Give it a floor its own text fits into first.
+void dlgConnectionProfiles::fitWelcomeMessageToContents()
+{
+    auto* pDocument = welcome_message->document();
+    pDocument->setTextWidth(welcome_message->viewport()->width());
+    welcome_message->setMinimumHeight(qCeil(pDocument->size().height()) + 2 * welcome_message->frameWidth());
+    adjustSize();
 }
 
 void dlgConnectionProfiles::setProfileIcon() const
@@ -2247,7 +2348,7 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
         pHost->setAutoReconnect(auto_reconnect->isChecked());
 
         // This also writes the value out to the profile's base directory:
-        mudlet::self()->mDiscord.setApplicationID(pHost, mDiscordApplicationId);
+        Discord::self()->setApplicationID(pHost, mDiscordApplicationId);
     }
 
     emit signal_load_profile(profile_name, alsoConnect);

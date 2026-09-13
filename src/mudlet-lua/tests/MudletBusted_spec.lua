@@ -1,3 +1,29 @@
+-- The spec runner sets this to the mudlet-lua it means to be testing. CI leaves
+-- it unset, where a binary and its Lua always come from the same build.
+local expectedLuaPath = os.getenv("MUDLET_TEST_EXPECTED_LUA_PATH")
+if expectedLuaPath then
+  describe("mudlet-lua under test", function()
+      it("is the copy the runner asked for", function()
+          -- loadGlobal() walks silently past a candidate that is missing,
+          -- unreadable or empty, so a binary borrowed from another build tree can
+          -- fall back to the copy compiled into it and the suite then passes
+          -- against the wrong library entirely. Compare inode and device rather
+          -- than the paths: the runner reaches this worktree's src through a
+          -- symlink when it shims, so the two paths differ even when they agree.
+          local expected = expectedLuaPath .. "/LuaGlobal.lua"
+          local loaded = tostring(luaGlobalPath) .. "/LuaGlobal.lua"
+          local expectedDevice = lfs.attributes(expected, "dev")
+          local expectedInode = lfs.attributes(expected, "ino")
+          local loadedDevice = lfs.attributes(loaded, "dev")
+          local loadedInode = lfs.attributes(loaded, "ino")
+          local what = string.format("loaded %s instead of %s", loaded, expected)
+          assert.is_not_nil(expectedInode, expected .. " is gone, so this guard cannot tell what loaded")
+          assert.equals(expectedDevice, loadedDevice, what)
+          assert.equals(expectedInode, loadedInode, what)
+        end)
+    end)
+end
+
 describe("Mudlet Busted sanity check", function()
     it("runs a simple assert", function()
         assert.truthy("Not nil or false.")

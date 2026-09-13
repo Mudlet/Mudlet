@@ -269,6 +269,8 @@ if getPlayerRoom() == 5 and (item == "apple" or item == "apples" or item == "ban
     echo(f"The vendor gives you some {fruit}s.\n")
     echo("The vendor says, 'Go give that to the Sheriff, and say hello for me.'\n")
     echo("The vendor smiles at you.\n")
+    hq.help(f"The {fruit}s are now in your inventory - see what you are carrying at any time with &lt;r&gt;&lt;b&gt;inventory&lt;r&gt;&lt;dark_sea_green&gt; or &lt;r&gt;&lt;b&gt;i&lt;r&gt;&lt;dark_sea_green&gt; for short.")
+    hq.invHint = true
     cecho(hq.prompt)
     
     table.insert(hq.char.inv, f"some {fruit}s")
@@ -276,6 +278,8 @@ if getPlayerRoom() == 5 and (item == "apple" or item == "apples" or item == "ban
 
   setRoomUserData(5, "onRoomEntry", "The fruit vendor yells, 'Fresh fruit and vegetables for sale!'\n")
   clearRoomUserDataItem(5, "onRoomHelp")
+  -- the Sheriff is where give is first needed, so hint it when the player gets back
+  setRoomUserData(1, "onRoomHelp", f"Handing something over in a MUD uses the &lt;r&gt;&lt;b&gt;give&lt;r&gt;&lt;dark_sea_green&gt; verb.\n\nHINT: try &lt;r&gt;&lt;b&gt;give {fruit}&lt;r&gt;&lt;dark_sea_green&gt;.")
 
   else
     echo("The vendor says, 'You don't have enough coins.'\n")
@@ -309,64 +313,55 @@ end</script>
 				<name>Give</name>
 				<script>if hq.state ~= "PLAYING" then return end
 
-if getPlayerRoom() == 1 then
-  local fruit = ""
-  -- Handle generic terms by checking what fruit is in inventory
-  if matches[2] == "fruit" or matches[2] == "food" or matches[2] == "lunch" then
-    if table.contains(hq.char.inv, "some apples") then
-      fruit = "some apples"
-    elseif table.contains(hq.char.inv, "some bananas") then
-      fruit = "some bananas"
-    else
-      echo("You aren't carrying any food.\n")
-      cecho(hq.prompt)
-      return
-    end
-  elseif matches[2] == "apple" or matches[2] == "apples" then
-    fruit = "some apples"
-  elseif matches[2] == "banana" or matches[2] == "bananas" then
-    fruit = "some bananas"
-  end
+local request = matches[2]
 
-  if table.contains(hq.char.inv, fruit) then
-     echo(f"You give {fruit} to the Sheriff.\n")
-     echo("The Sheriff says, 'Ah, thank you so much, I'm starving.'\n")
-     echo(f"The Sheriff scoffs down {fruit}.\n")
-     table.remove(hq.char.inv, table.index_of(hq.char.inv, fruit))
-     clearRoomUserDataItem(1, "onRoomEntry")
-     echo("The Sheriff says, 'While you were gone the librarian reported she had lost her wedding ring, perhaps you could help her find it?'\n")
-     echo("The Sheriff says, 'You'll find her at the Library of course, marked with an 'L' on your map.\n")
-     cecho(hq.prompt)
-  else
-    echo("You aren't carrying that.")
-    if not hq.invHint then
-      hq.help("To see what items you are carrying use the command &lt;r&gt;&lt;b&gt;inventory&lt;r&gt;&lt;dark_sea_green&gt; or &lt;r&gt;&lt;b&gt;i&lt;r&gt;&lt;dark_sea_green&gt; for short.")
-      hq.invHint = true
-    end
-    cecho(hq.prompt)
-  end
-    
-elseif getPlayerRoom() == 6 and (matches[2] == "ring" or matches[2] == "wedding") then
-  if table.contains(hq.char.inv, "a wedding ring") then
-    clearRoomUserDataItem(6, "onRoomEntry")
-    clearRoomUserDataItem(6, "onRoomHelp")
-    echo(f"The librarian says, 'Oh, thank you so much {hq.char.name}!  I thought it was lost forever. Can you let the Sheriff know you've found it?'\n")
-    echo("The librarian wipes away a tear and returns to her work.\n")
-    cecho(hq.prompt)
-    table.remove(hq.char.inv, table.index_of(hq.char.inv, "a wedding ring"))     
-    hq.ringQuestComplete = true
-    setRoomUserData(6, "description", "Dusty tomes line towering shelves beneath a vaulted ceiling, where the hush of whispered study and the faint rustle of turning pages echo through the candlelit stillness.  A simple woven rug lies on the floor.  The librarian smiles as she sees you.\n")
-    setRoomUserData(6, "mobiles", yajl.to_string({ librarian = "The librarian smiles as she sees you.\n" }))       
-    setRoomUserData(1, "onRoomEntry", f"The Sheriff says, 'Congratulations on finding the wedding ring!  You're becoming quite useful around here {hq.char.name}, but alas I am out of jobs for now.'\n")
-    setRoomUserData(1, "onRoomHelp", "This ends the mini-quest for Mudlet.  You've learnt some MUD basics while helping out the citizens of Whitehaven.  Feel free to wander around town or use the &lt;r&gt;&lt;b&gt;quit&lt;r&gt;&lt;dark_sea_green&gt; command to finish up.")
-  else
-    echo("You aren't carrying that.\n")
-    cecho(hq.prompt)
-  end
+if not request or request == "" then
+  echo("Give what?\n")
+  hq.help("Name the item you want to hand over, e.g. &lt;r&gt;&lt;b&gt;give apple&lt;r&gt;&lt;dark_sea_green&gt;.")
+  cecho(hq.prompt)
+  return
+end
+
+local item = hq.itemFromWords(request)
+
+if not item or not table.contains(hq.char.inv or {}, item) then
+  echo("You aren't carrying that.\n")
+  hq.inventoryHint()
+  cecho(hq.prompt)
+  return
+end
+
+if getPlayerRoom() == 1 and (item == "some apples" or item == "some bananas") then
+  echo(f"You give {item} to the Sheriff.\n")
+  echo("The Sheriff says, 'Ah, thank you so much, I'm starving.'\n")
+  echo(f"The Sheriff scoffs down {item}.\n")
+  table.remove(hq.char.inv, table.index_of(hq.char.inv, item))
+  clearRoomUserDataItem(1, "onRoomEntry")
+  clearRoomUserDataItem(1, "onRoomHelp")
+  echo("The Sheriff says, 'While you were gone the librarian reported she had lost her wedding ring, perhaps you could help her find it?'\n")
+  echo("The Sheriff says, 'You'll find her at the Library of course, marked with an 'L' on your map.\n")
+  cecho(hq.prompt)
+
+elseif getPlayerRoom() == 6 and item == "a wedding ring" then
+  clearRoomUserDataItem(6, "onRoomEntry")
+  clearRoomUserDataItem(6, "onRoomHelp")
+  echo(f"The librarian says, 'Oh, thank you so much {hq.char.name}!  I thought it was lost forever. Can you let the Sheriff know you've found it?'\n")
+  echo("The librarian wipes away a tear and returns to her work.\n")
+  cecho(hq.prompt)
+  table.remove(hq.char.inv, table.index_of(hq.char.inv, "a wedding ring"))
+  hq.ringQuestComplete = true
+  setRoomUserData(6, "description", "Dusty tomes line towering shelves beneath a vaulted ceiling, where the hush of whispered study and the faint rustle of turning pages echo through the candlelit stillness.  A simple woven rug lies on the floor.  The librarian smiles as she sees you.\n")
+  setRoomUserData(6, "mobiles", yajl.to_string({ librarian = "The librarian smiles as she sees you.\n" }))
+  setRoomUserData(1, "onRoomEntry", f"The Sheriff says, 'Congratulations on finding the wedding ring!  You're becoming quite useful around here {hq.char.name}, but alas I am out of jobs for now.'\n")
+  setRoomUserData(1, "onRoomHelp", "This ends the mini-quest for Mudlet.  You've learnt some MUD basics while helping out the citizens of Whitehaven.  Feel free to wander around town or use the &lt;r&gt;&lt;b&gt;quit&lt;r&gt;&lt;dark_sea_green&gt; command to finish up.")
+
+else
+  echo("There is no one here who wants that.\n")
+  cecho(hq.prompt)
 end</script>
 				<command></command>
 				<packageName></packageName>
-				<regex>^give (?:the |some |an? )?(apple|apples|banana|bananas|ring|wedding|fruit|food|lunch)(?: (.+))?$</regex>
+				<regex>^give(?: (.+))?$</regex>
 			</Alias>
 			<Alias isActive="yes" isFolder="no">
 				<name>Get</name>
@@ -375,11 +370,13 @@ end</script>
 if getPlayerRoom() == 6 and not hq.ringQuestRingFound then
   table.insert(hq.char.inv, "a wedding ring")
   echo("You get a wedding ring.\n")
-  hq.help("Remember you can check your inventory to see what you are carrying.\n")
+  hq.inventoryHint()
   cecho(hq.prompt)
   hq.ringQuestRingFound = true
   setRoomUserData(6, "description", "Dusty tomes line towering shelves beneath a vaulted ceiling, where the hush of whispered study and the faint rustle of turning pages echo through the candlelit stillness.  A simple woven rug lies on the floor.  The librarian waits patiently for you to give her the ring.\n")
-  setRoomUserData(6, "mobiles", yajl.to_string({ librarian = "The librarian waits patiently for you to give her the ring.\n" }))  
+  setRoomUserData(6, "mobiles", yajl.to_string({ librarian = "The librarian waits patiently for you to give her the ring.\n" }))
+  setRoomUserData(6, "onRoomEntry", "The librarian says, 'Have you found my wedding ring?'\n")
+  setRoomUserData(6, "onRoomHelp", "HINT: hand the ring over with &lt;r&gt;&lt;b&gt;give ring&lt;r&gt;&lt;dark_sea_green&gt;.")
   setRoomUserData(6, "items", yajl.to_string({ shelves = "You search the shelves for the ring, but fail to find anything.\n",
                                                shelf = "You search the shelves for the ring, but fail to find anything.\n",
                                                rug = "A simple woven rug lies on the floor.\n",
@@ -513,6 +510,45 @@ end
 
 function hq.help(str)
   cecho(f"\n&lt;green&gt;[ HELP ] &lt;dark_sea_green&gt;{str}&lt;r&gt;\n")
+end
+
+-- the quest carries a handful of items, so pick out whichever one the player's
+-- wording refers to rather than insisting on an exact name
+function hq.itemFromWords(words)
+
+  local text = words:lower()
+
+  -- whole words only, or "give pineapple" hands over the apples
+  local function mentions(...)
+    for token in text:gmatch("%a+") do
+      for _, word in ipairs({...}) do
+        if token == word or token == word .. "s" then return true end
+      end
+    end
+    return false
+  end
+
+  if mentions("ring", "wedding") then return "a wedding ring" end
+  if mentions("apple") then return "some apples" end
+  if mentions("banana") then return "some bananas" end
+  if mentions("coin", "silver") then return "some silver coins" end
+  if mentions("fruit", "food", "lunch") then
+    if table.contains(hq.char.inv or {}, "some bananas") then return "some bananas" end
+    return "some apples"
+  end
+
+end
+
+function hq.inventoryHint()
+
+  if hq.invHint then
+    hq.help("Remember you can check your inventory with &lt;r&gt;&lt;b&gt;inventory&lt;r&gt;&lt;dark_sea_green&gt; or &lt;r&gt;&lt;b&gt;i&lt;r&gt;&lt;dark_sea_green&gt; for short.")
+    return
+  end
+
+  hq.help("To see what items you are carrying use the command &lt;r&gt;&lt;b&gt;inventory&lt;r&gt;&lt;dark_sea_green&gt; or &lt;r&gt;&lt;b&gt;i&lt;r&gt;&lt;dark_sea_green&gt; for short.")
+  hq.invHint = true
+
 end
 
 function hq.showCommands()
@@ -675,7 +711,46 @@ end</script>
 				<script>hq.fgColor = "white"
 hq.bgColor = "grey"
 hq.fontSize = 14
-hq.labelCSS = [[ margin: 10px; background-color: black; border: 5px solid white; ]]
+
+-- QLabel only wraps when its wordWrap property is set, and there is no Lua setter
+-- for it - going through the stylesheet is what keeps these panels readable when
+-- the window is narrower than the text
+hq.labelCSS = [[
+  margin: 10px;
+  padding: 15px;
+  padding-bottom: 50px;
+  background-color: black;
+  border: 5px solid white;
+  qproperty-wordWrap: true;
+]]
+
+hq.buttonCSS = [[
+  background-color: #202020;
+  border: 2px solid white;
+  border-radius: 4px;
+  qproperty-alignment: AlignCenter;
+]]
+
+-- every panel is dismissed the same way, so they all get the same button in the
+-- same corner - only the button advances, a click elsewhere on the panel does
+-- nothing
+function hq.addNextButton(panel, callback)
+
+  local button = Geyser.Label:new({
+    name = f"{panel.name}.nextButton",
+    x = "-145px", y = "-50px",
+    width = "115px", height = "34px",
+    fgColor = hq.fgColor,
+    fontSize = hq.fontSize,
+    message = "Next",
+  }, panel)
+
+  button:setStyleSheet(hq.buttonCSS)
+  button:setClickCallback(callback)
+
+  return button
+
+end
 
 function hq.guiTutorialStart()
 
@@ -697,16 +772,12 @@ function hq.guiTutorialStart()
     message = [[&lt;center&gt;
     &lt;p&gt;Welcome Adventurer!  This is the Mudlet Tutorial and mini-quest.&lt;/p&gt;
     
-    This tutorial will coach you through learning how to play&lt;br&gt;
-    MUDs (Multi-User Dungeons) while exploring some of Mudlet's&lt;br&gt;
-    basic features.&lt;br&gt;
-    
-    &lt;p&gt;Click next to continue.&lt;p&gt;
-    &lt;p&gt;(next)&lt;/p&gt;&lt;/center&gt;]]
+    &lt;p&gt;This tutorial will coach you through learning how to play MUDs
+    (Multi-User Dungeons) while exploring some of Mudlet's basic features.&lt;/p&gt;&lt;/center&gt;]]
     
   }, hq.mainMenuContainer)
-  hq.mainMenuLabel:setClickCallback(hq.guiTutorialStep1)
   hq.mainMenuLabel:setStyleSheet(hq.labelCSS)
+  hq.addNextButton(hq.mainMenuLabel, hq.guiTutorialStep1)
   
   tempTimer(0.2, function() clearWindow() end)
 
@@ -731,16 +802,14 @@ function hq.guiTutorialStep1()
     color = hq.bgColor,
     message = [[
     &lt;p&gt;This large area is called the 'main window'.&lt;/p&gt;
-    It displays text coming from the game such as;&lt;br&gt;
-    - your location in the game world,&lt;br&gt;
+    &lt;p&gt;It displays text coming from the game such as;&lt;/p&gt;
+    &lt;p&gt;- your location in the game world,&lt;br&gt;
     - chat messages from other players,&lt;br&gt;
     - progress and score,&lt;br&gt;
-    - and lots more depending on the game.&lt;br&gt;
-    
-    &lt;p&gt;(next)&lt;/p&gt;]]
+    - and lots more depending on the game.&lt;/p&gt;]]
   }, hq.guiStep1Container) 
-  hq.guiStep1Label:setClickCallback(hq.guiTutorialStep2)
   hq.guiStep1Label:setStyleSheet(hq.labelCSS)
+  hq.addNextButton(hq.guiStep1Label, hq.guiTutorialStep2)
   
   tempTimer(1, function() hq.guiStep1Container:flash(0.2) end)
   tempTimer(1.5, function() hq.guiStep1Container:flash(0.2) end)
@@ -749,9 +818,6 @@ function hq.guiTutorialStep1()
   tempTimer(3, function() echo("This is the main window text.\n") end)
   tempTimer(4, function() echo("Anything coming from the game will show up here.\n") end)
   tempTimer(5, function() cecho("&lt;cyan&gt;It may also show in colour if your game supports this :)&lt;r&gt;\n") end)
---  tempTimer(6, function() echo("New game text will display on the next line and once it reaches the bottom\n") end)
---  tempTimer(7, function() echo("it will scroll up - just like a live text document.\n") end)
---  tempTimer(8, function() echo("You can use your mouse to scroll up and down to read anything you missed.\n") end)
 
 end
 
@@ -767,18 +833,18 @@ function hq.guiTutorialStep2()
   
   hq.guiStep2Label = Geyser.Label:new({
     name = "hq.guiStep2Label",
-    x = "5%", y = "80%",
-    width = "45%", height = "20%",
+    x = "5%", y = "62%",
+    width = "50%", height = "38%",
     fgColor = hq.fgColor,
     fontSize = hq.fontSize,
     color = hq.bgColor,
     message = [[
     &lt;p&gt;The area below is called the 'command line'.&lt;/p&gt;
-    &lt;p&gt;It is used for sending commands via your keyboard&lt;br&gt;
-    to the game to control your character. (next)&lt;/p&gt;]]
+    &lt;p&gt;It is used for sending commands via your keyboard to the game
+    to control your character.&lt;/p&gt;]]
   }, hq.guiStep2Container)  
-  hq.guiStep2Label:setClickCallback(hq.guiTutorialStep3)
   hq.guiStep2Label:setStyleSheet(hq.labelCSS)
+  hq.addNextButton(hq.guiStep2Label, hq.guiTutorialStep3)
   
   tempTimer(1, function() setCmdLineStyleSheet("main", [[ QPlainTextEdit { background-color: grey; }]]) end)
   tempTimer(1.2, function() setCmdLineStyleSheet("main", [[ QPlainTextEdit { background-color: black; }]]) end)
@@ -801,19 +867,18 @@ function hq.guiTutorialStep3()
   
   hq.guiStep3Label = Geyser.Label:new({
     name = "hq.guiStep3Label",
-    x = "50%", y = "80%",
-    width = "45%", height = "20%",
+    x = "45%", y = "62%",
+    width = "50%", height = "38%",
     fgColor = hq.fgColor,
     fontSize = hq.fontSize,
     color = hq.bgColor,
     message = [[
-    &lt;p&gt;The below buttons are used for searching,&lt;br&gt;
-    showing of timestamps and logging facilities.&lt;/p&gt;
-    
-    &lt;p&gt;We can learn more about them later.  (next)&lt;/p&gt;]]
+    &lt;p&gt;The below buttons are used for searching, showing of timestamps
+    and logging facilities.&lt;/p&gt;
+    &lt;p&gt;We can learn more about them later.&lt;/p&gt;]]
   }, hq.guiStep3Container)  
-  hq.guiStep3Label:setClickCallback(hq.guiTutorialStep4)
   hq.guiStep3Label:setStyleSheet(f"{hq.labelCSS} qproperty-alignment: AlignRight;")  
+  hq.addNextButton(hq.guiStep3Label, hq.guiTutorialStep4)
 
 end
 
@@ -830,18 +895,17 @@ function hq.guiTutorialStep4()
   hq.guiStep4Label = Geyser.Label:new({
     name = "hq.guiStep4Label",
     x = "5%", y = "0%",
-    width = "45%", height = "20%",
+    width = "50%", height = "38%",
     fgColor = hq.fgColor,
     fontSize = hq.fontSize,
     color = hq.bgColor,
-    message = [[&lt;p&gt;
-    The above menu bar contains options to connect and&lt;br&gt;
-    disconnect from your game, preferences and other tools.&lt;/p&gt;
-    
-    &lt;p&gt;We can learn more about them later.  (next)&lt;/p&gt;]]
+    message = [[
+    &lt;p&gt;The above menu bar contains options to connect and disconnect
+    from your game, preferences and other tools.&lt;/p&gt;
+    &lt;p&gt;We can learn more about them later.&lt;/p&gt;]]
   }, hq.guiStep4Container)  
-  hq.guiStep4Label:setClickCallback(hq.guiTutorialStepFinal)
   hq.guiStep4Label:setStyleSheet(hq.labelCSS)
+  hq.addNextButton(hq.guiStep4Label, hq.guiTutorialStepFinal)
 
 end
 
@@ -852,8 +916,8 @@ function hq.guiTutorialStepFinal()
     
   hq.guiStepFinalContainer = Geyser.Container:new({
     name = "hq.guiStepFinalContainer",
-    x = "25%", y = "15%",
-    width = "50%", height = "70%"
+    x = "15%", y = "8%",
+    width = "70%", height = "84%"
   })  
   
   hq.guiStepFinalLabel = Geyser.Label:new({
@@ -864,26 +928,25 @@ function hq.guiTutorialStepFinal()
     fontSize = hq.fontSize,
     color = hq.bgColor,
     message = [[&lt;center&gt;
-    &lt;p&gt;That covers the basics of Mudlet's screen.  More in depth&lt;br&gt;
-    information can be found on the wiki at https://wiki.mudlet.org&lt;/p&gt;
+    &lt;p&gt;That covers the basics of Mudlet's screen.  More in depth information
+    can be found on the wiki at https://wiki.mudlet.org&lt;/p&gt;
     &lt;p&gt;Let's move on to the fun stuff, playing a MUD!&lt;/p&gt;
     
-    &lt;p&gt;During this tutorial you will play the role of a young&lt;br&gt;
-    adventurer who has just arrived in the Halmet of Whitehaven where&lt;br&gt;
-    the Sheriff is looking for help, hopefully you can assist him.&lt;/p&gt;
+    &lt;p&gt;During this tutorial you will play the role of a young adventurer who has
+    just arrived in the Halmet of Whitehaven where the Sheriff is looking for
+    help, hopefully you can assist him.&lt;/p&gt;
     
-    &lt;p&gt;You will need to complete his requests to gain experience&lt;br&gt;
-    and be rewarded with fame and respect from the townsfolk.&lt;/p&gt;
+    &lt;p&gt;You will need to complete his requests to gain experience and be rewarded
+    with fame and respect from the townsfolk.&lt;/p&gt;
     
-    &lt;p&gt;You will learn how to interact with MUDs during this&lt;br&gt;
-    simulation by waiting for the game to send you information&lt;br&gt;
-    on the main window and answering with commands from the&lt;br&gt;
-    command line.  Good luck!&lt;/p&gt;
+    &lt;p&gt;You will learn how to interact with MUDs during this simulation by waiting
+    for the game to send you information on the main window and answering with
+    commands from the command line.  Good luck!&lt;/p&gt;
     
-    &lt;p&gt;Now follow along in the main window.  (next)&lt;/p&gt;&lt;/center&gt;]]
+    &lt;p&gt;Now follow along in the main window.&lt;/p&gt;&lt;/center&gt;]]
   }, hq.guiStepFinalContainer)  
-  hq.guiStepFinalLabel:setClickCallback(hq.newGameScreen)
   hq.guiStepFinalLabel:setStyleSheet(hq.labelCSS)
+  hq.addNextButton(hq.guiStepFinalLabel, hq.newGameScreen)
 
 end
 
@@ -979,16 +1042,14 @@ function hq.drawMapHint()
     message = [[&lt;center&gt;
     &lt;p&gt;The map window is shown in the upper right corner.&lt;/p&gt;
     
-    &lt;p&gt;Like other windows it can be moved and resized by&lt;br&gt;
-    mousing over the edges.&lt;br&gt;
-    Click and hold inside the map window to pan.&lt;br&gt;
-    The mouse wheel is used to zoom in and out.&lt;/p&gt;
-    
-    &lt;p&gt;(next)&lt;/p&gt;&lt;/center&gt;]]
+    &lt;p&gt;Like other windows it can be moved and resized by mousing over the edges.
+    Click and hold inside the map window to pan.
+    The mouse wheel is used to zoom in and out.&lt;/p&gt;&lt;/center&gt;]]
     
   }, hq.mapHintContainer)
-  hq.mapHintLabel:setClickCallback(function() hq.mapHintContainer:hide() end)
+  local dismissMapHint = function() hq.mapHintContainer:hide() end
   hq.mapHintLabel:setStyleSheet(hq.labelCSS)
+  hq.addNextButton(hq.mapHintLabel, dismissMapHint)
   tempTimer(1, function() hq.mapperWindow:flash(0.2) end)
   tempTimer(1.5, function() hq.mapperWindow:flash(0.2) end)
   tempTimer(2, function() hq.mapperWindow:flash(0.2) end)

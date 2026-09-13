@@ -532,6 +532,36 @@ describe("Tests TableUtils.lua functions", function()
       assert.is_false(table.contains(tbl, "five"))
     end)
 
+    it("should cope with a table that holds itself", function()
+      local tbl = {one = 1}
+      tbl.self = tbl
+      assert.is_true(table.contains(tbl, "one"))
+      assert.is_false(table.contains(tbl, "five"))
+    end)
+
+    it("should cope with a cycle between two tables", function()
+      local first, second = {}, {}
+      first.second = second
+      second.first = first
+      second.needle = "found me"
+      assert.is_true(table.contains(first, "found me"))
+      assert.is_false(table.contains(first, "not in here"))
+    end)
+
+    it("should cope with a Geyser object, which always holds itself", function()
+      -- a label knows its container and the container's windowList knows the
+      -- label, so this is the cycle ordinary scripts hit
+      local label = Geyser.Label:new({
+        name = "tableUtilsSpecCycleLabel", x = 0, y = 0, width = 50, height = 20,
+      })
+      finally(function() label:delete() end)
+      -- the search below is only worth anything while that is really a cycle
+      assert.are.equal(label, label.container.windowList[label.name])
+
+      assert.is_true(table.contains(label, "tableUtilsSpecCycleLabel"))
+      assert.is_false(table.contains(label, "no Geyser object holds this"))
+    end)
+
   end)
 
   -- table.contains is a loop over table._contains, one pass per value it was
@@ -613,6 +643,19 @@ describe("Tests TableUtils.lua functions", function()
         "three"
       }
       assert.equals(nil, table.index_of(tbl, 5))
+    end)
+
+    it("should only search the array part, so a hash value is not found", function()
+      -- it walks with ipairs, so there is no index it could return for a keyed
+      -- entry; table.contains is the function that finds those
+      assert.is_nil(table.index_of({name = "found me"}, "found me"))
+      assert.is_true(table.contains({name = "found me"}, "found me"))
+    end)
+
+    it("should stop at the first nil, so entries past a hole are not found", function()
+      local sparse = {"one", nil, "three"}
+      assert.equals(1, table.index_of(sparse, "one"))
+      assert.is_nil(table.index_of(sparse, "three"))
     end)
   end)
 
@@ -894,6 +937,30 @@ describe("Tests TableUtils.lua functions", function()
       local actual = table.update(tblA, tblB)
       assert.same(expected, actual)
     end)
+
+    it("should return a new table and leave both arguments as they were", function()
+      -- the name reads like an in-place update, so callers that rely on it
+      -- returning a copy would be broken by a well meant optimisation
+      local tblA = {a = 1}
+      local tblB = {b = 2}
+      local actual = table.update(tblA, tblB)
+      assert.are_not.equal(tblA, actual)
+      assert.are_not.equal(tblB, actual)
+      assert.same({a = 1}, tblA)
+      assert.same({b = 2}, tblB)
+      actual.c = 3
+      assert.is_nil(tblA.c)
+      assert.is_nil(tblB.c)
+    end)
+
+    it("should merge nested tables into a new table rather than into tblA's", function()
+      local tblA = {nested = {a = 1}}
+      local tblB = {nested = {b = 2}}
+      local actual = table.update(tblA, tblB)
+      assert.same({a = 1, b = 2}, actual.nested)
+      assert.same({a = 1}, tblA.nested)
+      assert.are_not.equal(tblA.nested, actual.nested)
+    end)
   end)
 
   describe("Tests the functionality of table.deepcopy nested independence", function()
@@ -921,6 +988,18 @@ describe("Tests TableUtils.lua functions", function()
       assert.equals(5, table.deepcopy(5))
       assert.equals("text", table.deepcopy("text"))
     end)
+
+    it("should preserve the metatable of a nested table too", function()
+      local mt = {__index = function() return "inherited" end}
+      local original = {inner = setmetatable({}, mt)}
+      local copy = table.deepcopy(original)
+      assert.are_not.equal(original.inner, copy.inner)
+      assert.equals(mt, getmetatable(copy.inner))
+      assert.equals("inherited", copy.inner.anything)
+    end)
+
+    -- table._contains guards against this with a "seen" set; deepcopy has none
+    pending("table.deepcopy copies a table that reaches itself - it recurses until the Lua stack overflows - issue #10414")
   end)
 
   describe("Tests the functionality of spairs on an empty table", function()

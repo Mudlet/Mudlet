@@ -59,21 +59,21 @@ leak:_dri.so
 # match) - keep the GL context from being created/destroyed under the sanitizer
 # test-side instead, as PR #9534 did for the show3dMapView test.
 #
-# A second un-suppressible flake lives on the same CI job: LeakSanitizer's
-# stop-the-world tracer - the helper process that ptrace-attaches at exit to
-# scan memory for live pointers - itself segfaults during exit-time teardown,
-# apparently racing driver/X cleanup. The job log then ends with
+# A second failure on the same CI job was never suppressible either, and is fixed
+# elsewhere rather than here (#9809): LeakSanitizer's stop-the-world tracer - the
+# helper process that ptrace-attaches at exit to scan memory for live pointers -
+# took SIGSEGV, and the run ended with
 #   Tracer caught signal 11: addr=0x... pc=0x... sp=0x...
 #   ==NNNNN==LeakSanitizer has encountered a fatal error.
-# right after "mudlet::~mudlet() INFO - uninstalling translation...", with no
-# leak report at all, and the busted summary line goes missing too (LSan's
-# Die() skips the stdio flush - the Lua tests themselves passed). Since
-# exitcode=1 the job fails. Suppressions filter leak *reports*, and this
-# aborts before reporting begins, so nothing in this file can help; it is
-# also unrelated to the change under test (the same faulting instruction was
-# observed on development-branch runs 26705214438 and 28641460889 and on PR
-# run 30744002320, at a rate of roughly 1 in 250-500 leak-job runs). If a
-# leak job fails with this signature, just re-run it.
+# straight after the test body reported itself green, and with no leak report at
+# all (run 31428353403 on TelnetTextDisplayedTest, run 31867450938 on four more).
+#
+# Nothing in this file can reach it: suppressions filter leak *reports*, and this
+# aborts before reporting begins. The cause is not a leak either - up to GCC 13
+# and LLVM 16 the sanitizer runtime misreads where a dynamic TLS block starts and
+# how long it is, and the tracer dies scanning the garbage range that leaves.
+# intercept_tls_get_addr=0 stops the misreading; test/functional_tests/
+# CMakeLists.txt has the mechanism and names every place the flag is set.
 
 # ==============================================================================
 # Fontconfig library leaks
@@ -148,3 +148,21 @@ leak:QTranslatorPrivate::do_load
 # ==============================================================================
 leak:OSSL_PROVIDER_try_load
 leak:OSSL_DECODER_do_all_provided
+
+# ==============================================================================
+# glibc DNS resolver leak
+# A lookup of a hostname - any test that points a profile at "localhost" rather
+# than 127.0.0.1 - runs getaddrinfo() on a Qt host-lookup worker thread, which
+# reaches nss_dns. LeakSanitizer's tracer sometimes finds that worker among
+# /proc/<pid>/task while it is not in the sanitizer's thread registry, says so
+# with "Thread N not found in registry", and then scans neither its stack nor
+# its TLS. The buffer glibc's resolver still owns from there loses its only
+# visible referrer and is reported as a 28-byte direct leak whose two frames
+# name no Mudlet code at all:
+#   malloc / __res_context_send (libc.so.6)
+# Which test it lands on is down to that race, not to anything the test does:
+# byte-identical reports failed MapDownloadTest in run 33002748956 and
+# StarterUiSectionsTest in run 32879955034. glibc owns and frees this buffer
+# itself, so no Mudlet allocation can hide behind the line below.
+# ==============================================================================
+leak:__res_context_send

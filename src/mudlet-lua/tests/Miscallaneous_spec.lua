@@ -337,6 +337,21 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       -- what it found: the self-test profile is reused between runs.
       local descriptionFile = getMudletHomeDir() .. "/description"
 
+      -- A game Mudlet lists in the connection dialog that has no folder here, or
+      -- nil if they all have one. Such a name resolves for a profile lookup
+      -- without being a profile, which is the case worth testing. getProfiles()
+      -- lists folders, so a bundled game missing from it has none; several are
+      -- offered so that a run against a config where some have been opened still
+      -- finds one.
+      local function unopenedBundledGame()
+        local profiles = getProfiles()
+        for _, game in ipairs({"Achaea", "Aetolia", "Lusternia", "Imperian", "StickMUD", "Materia Magica"}) do
+          if not profiles[game] then
+            return game
+          end
+        end
+      end
+
       local function restoreDescription()
         local original = getProfileInformation()
         -- a profile that has never had a description has no file for one, and
@@ -397,6 +412,16 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           assert.equals("named form", getProfileInformation())
         end)
 
+        it("matches the profile whatever case it is named in", function()
+          finally(restoreDescription())
+
+          assert.is_true(setProfileInformation(getProfileName():upper(), "shouted form"))
+          assert.equals("shouted form", getProfileInformation())
+          -- naming the profile in the wrong case must find the folder it has,
+          -- not make a second one beside it
+          assert.is_nil(getProfiles()[getProfileName():upper()])
+        end)
+
         it("is what getProfiles reports as the description", function()
           finally(restoreDescription())
           setProfileInformation("as seen by getProfiles")
@@ -405,14 +430,32 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         end)
 
         it("refuses a profile that does not exist", function()
-          -- BUG: writeProfileData() creates the profile folder it is given, so
-          -- naming a profile that is not there makes one, description file and
-          -- all - a phantom that the connection dialog and getProfiles() then
-          -- both list. Left pending rather than pinning it as correct.
-          pending("setProfileInformation() creates a folder for a profile that does not exist")
           local ok, err = setProfileInformation("mudlet-spec-never-a-profile", "text")
-          assert.is_false(ok)
-          assert.is_string(err)
+          assert.is_nil(ok)
+          assert.equals("profile 'mudlet-spec-never-a-profile' does not exist", err)
+          -- refusing is not enough on its own: the write goes through
+          -- writeProfileData(), which creates whatever folder it is handed, and
+          -- a folder here is a profile to getProfiles() and the connection dialog
+          local profiles = getProfiles()
+          assert.is_table(profiles[getProfileName()], "getProfiles() answered nothing at all")
+          assert.is_nil(profiles["mudlet-spec-never-a-profile"])
+        end)
+
+        it("refuses a game Mudlet ships with that has no profile of its own", function()
+          local game = unopenedBundledGame()
+          if not game then
+            pending("every bundled game this spec knows of has a profile here")
+            return
+          end
+
+          -- the getter answers for this name, which is what makes it the
+          -- bundled-game case rather than a second unknown-name spec
+          assert.is_string(getProfileInformation(game))
+
+          local ok, err = setProfileInformation(game, "text")
+          assert.is_nil(ok)
+          assert.equals(("profile '%s' does not exist"):format(game), err)
+          assert.is_nil(getProfiles()[game])
         end)
       end)
 
@@ -422,19 +465,37 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         end)
 
         it("refuses a profile that does not exist", function()
-          -- BUG: the same as setProfileInformation's - the write creates the
-          -- folder it was told to write into, so clearing the description of a
-          -- profile that is not there conjures one up.
-          pending("clearProfileInformation() creates a folder for a profile that does not exist")
           local ok, err = clearProfileInformation("mudlet-spec-never-a-profile")
-          assert.is_false(ok)
-          assert.is_string(err)
+          assert.is_nil(ok)
+          assert.equals("profile 'mudlet-spec-never-a-profile' does not exist", err)
+          assert.is_nil(getProfiles()["mudlet-spec-never-a-profile"])
+        end)
+
+        it("refuses a game Mudlet ships with that has no profile of its own", function()
+          local game = unopenedBundledGame()
+          if not game then
+            pending("every bundled game this spec knows of has a profile here")
+            return
+          end
+
+          assert.is_string(getProfileInformation(game))
+
+          local ok, err = clearProfileInformation(game)
+          assert.is_nil(ok)
+          assert.equals(("profile '%s' does not exist"):format(game), err)
+          -- clearing writes the description the game ships with, so a folder
+          -- made here would not merely exist, it would read as a set up profile
+          assert.is_nil(getProfiles()[game])
         end)
 
         it("puts back the description a bundled game ships with", function()
           finally(restoreDescription())
           setProfileInformation("something else entirely")
 
+          -- both forms have to restore the blurb, so the named one clears first
+          -- and the description is dirtied again for the no-argument one
+          assert.is_true(clearProfileInformation(getProfileName()))
+          setProfileInformation("something else entirely")
           assert.is_true(clearProfileInformation())
 
           -- the self-test profile is one of Mudlet's own games, so clearing
@@ -474,22 +535,47 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         end)
 
         it("turns saving on when told which command line, or none at all, but not whether to", function()
-          -- BUG: both forms are meant to default to turning saving on - the
-          -- implementation says so, and the branch that would read a second
-          -- argument after a name is unreachable without one. Both count their
-          -- arguments one too high, so they reach the type check and raise
-          -- instead. Left pending rather than pinning the raise as the contract.
-          pending("setSaveCommandHistory() and setSaveCommandHistory(name) raise instead of turning saving on")
           local original = getSaveCommandHistory()
           finally(function() setSaveCommandHistory(original) end)
-          setSaveCommandHistory(false)
+          -- turning it off first is what makes turning it on observable, so the
+          -- off state is asserted rather than assumed
+          assert.is_true(setSaveCommandHistory(false))
+          assert.is_false((getSaveCommandHistory()))
 
           assert.is_true(setSaveCommandHistory())
           assert.is_true((getSaveCommandHistory()))
 
-          setSaveCommandHistory(false)
+          assert.is_true(setSaveCommandHistory(false))
+          assert.is_false((getSaveCommandHistory()))
           assert.is_true(setSaveCommandHistory("main"))
           assert.is_true((getSaveCommandHistory()))
+        end)
+
+        it("turns saving on for the command line it is named, and no other", function()
+          -- "main" is also the name the no-argument form falls back to, so only
+          -- a second command line can tell "the name was read" from "the name
+          -- was dropped and main was used"
+          local commandLine = "mudlet-spec-save-history"
+          createCommandLine(commandLine, 10, 10, 120, 30)
+          local original = getSaveCommandHistory()
+          finally(function()
+            setSaveCommandHistory("main", original)
+            deleteCommandLine(commandLine)
+          end)
+
+          assert.is_true(setSaveCommandHistory(commandLine, false))
+          assert.is_true(setSaveCommandHistory("main", false))
+
+          assert.is_true(setSaveCommandHistory(commandLine))
+
+          assert.is_true((getSaveCommandHistory(commandLine)))
+          assert.is_false((getSaveCommandHistory("main")))
+        end)
+
+        it("returns nil+msg for a command line that does not exist", function()
+          local ok, err = setSaveCommandHistory("mudlet-spec-no-such-command-line")
+          assert.is_nil(ok)
+          assert.is_true(contains(err, "not found"), tostring(err))
         end)
 
         it("round-trips through getSaveCommandHistory", function()
@@ -519,6 +605,174 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           local ok, setterMessage = setSaveCommandHistory(true)
           assert.is_nil(ok)
           assert.equals("disabled by profile global preference", setterMessage)
+        end)
+      end)
+
+      -- Host keeps profile.ini open and lets QSettings write it out on the next
+      -- pass through the event loop instead of syncing every write, so what a
+      -- command line stores has to reach the disk without anyone asking for a
+      -- save, and two command lines created in the same pass must not be handed
+      -- the same history file.
+      describe("Tests that the command line settings reach the profile's profile.ini", function()
+        local function iniValue(key)
+          local file = io.open(getMudletHomeDir() .. "/profile.ini", "r")
+          if not file then
+            return nil
+          end
+          local ini = file:read("*a")
+          file:close()
+          -- QSettings stores CommandLines/Group/name as "Group\name=" under a
+          -- [CommandLines] header; the name can hold pattern characters, so
+          -- find it as plain text
+          local start = ini:find(key .. "=", 1, true)
+          if not start then
+            return nil
+          end
+          return ini:match("=([^\r\n]*)", start)
+        end
+
+        it("gives each command line its own history file and writes the mapping out within one pass of the event loop", function()
+          if not testMode then
+            pending("only test mode can pump the event loop")
+            return
+          end
+          local first, second = "mudlet-spec-ini-first", "mudlet-spec-ini-second"
+          finally(function()
+            deleteCommandLine(first)
+            deleteCommandLine(second)
+          end)
+          createCommandLine(first, 10, 10, 120, 30)
+          createCommandLine(second, 10, 50, 120, 30)
+          pumpEvents(50)
+
+          local firstFile = iniValue("NameMapping\\" .. first)
+          local secondFile = iniValue("NameMapping\\" .. second)
+          assert.is_string(firstFile, "the first command line's history file mapping never reached profile.ini")
+          assert.is_string(secondFile, "the second command line's history file mapping never reached profile.ini")
+          assert.are_not.equals(firstFile, secondFile)
+        end)
+
+        it("writes a changed history saving setting out with the end of session save", function()
+          if not testMode then
+            pending("only test mode can pump the event loop")
+            return
+          end
+          local commandLine = "mudlet-spec-ini-save-history"
+          -- setSaveCommandHistory() refuses while the profile-wide history size is zero
+          local savedLines = getConfig("commandLineHistorySaveSize")
+          finally(function()
+            setConfig("commandLineHistorySaveSize", savedLines)
+            deleteCommandLine(commandLine)
+          end)
+          setConfig("commandLineHistorySaveSize", 10)
+          createCommandLine(commandLine, 10, 10, 120, 30)
+          -- a new command line starts from whatever the last run left in the
+          -- file, so flipping that is what makes this a fresh write every time
+          local flipped = not getSaveCommandHistory(commandLine)
+          assert.is_true(setSaveCommandHistory(commandLine, flipped))
+
+          -- The setting only leaves the command line on
+          -- Host::signal_saveCommandLinesHistory, which saveProfile() emits when
+          -- given no arguments. A save another spec started can still be running,
+          -- and saveProfile() answers nil until it finishes.
+          local saved, message
+          for _ = 1, 100 do
+            saved, message = saveProfile()
+            if saved then
+              break
+            end
+            pumpEvents(50)
+          end
+          assert.is_true(saved, tostring(message))
+          pumpEvents(50)
+          assert.equals(tostring(flipped), iniValue("SaveHistory\\" .. commandLine))
+        end)
+      end)
+
+      -- The command lines only hear that the session is ending through
+      -- Host::signal_saveCommandLinesHistory, which Host::saveProfile() emits
+      -- only when given neither a folder nor a name, and nothing else writes
+      -- these files. Taking the file away and asking for that save back is
+      -- therefore a yes/no answer on whether the signal still reaches
+      -- TCommandLine::slot_saveHistory: cut the wire and every command line's
+      -- history is silently never written again, which the user only discovers
+      -- on the next launch.
+      describe("Tests that an end of session save writes the command line histories", function()
+        -- A save another spec started can still be running, and saveProfile()
+        -- answers nil - without emitting anything - until it finishes.
+        local function saveWaitingOutAnyOtherSave()
+          local saved, message
+          for _ = 1, 100 do
+            saved, message = saveProfile()
+            -- Of the refusals saveProfile() can answer with, an already running
+            -- save is the only one waiting clears, and only test mode can pump
+            -- the event loop to let it. The rest are permanent, so they go back
+            -- as they are rather than costing five seconds of pumping first.
+            if saved or not testMode or not tostring(message):find("a save is already in progress", 1, true) then
+              break
+            end
+            pumpEvents(50)
+          end
+          return saved, message
+        end
+
+        it("writes the main command line's history file out again", function()
+          -- slot_saveHistory() returns without writing anything unless both of
+          -- these are on, so they are what makes a missing file mean the signal
+          -- and not the settings. Putting the per-command-line one back first:
+          -- it is refused outright while the profile-wide size is zero.
+          local savedLines = getConfig("commandLineHistorySaveSize")
+          local savedSaving = getSaveCommandHistory("main")
+          finally(function()
+            setSaveCommandHistory("main", savedSaving)
+            setConfig("commandLineHistorySaveSize", savedLines)
+          end)
+
+          setConfig("commandLineHistorySaveSize", 10)
+          assert.is_true(setSaveCommandHistory("main", true))
+
+          local historyFile = getMudletHomeDir() .. "/command_history_main"
+          os.remove(historyFile)
+          assert.is_false(fileExists(historyFile), "the previous history file could not be cleared")
+
+          local saved, message = saveWaitingOutAnyOtherSave()
+          if not saved and not testMode then
+            pending("the profile save was refused and only test mode can wait one out: " .. tostring(message))
+            return
+          end
+          assert.is_true(saved, tostring(message))
+
+          -- slot_saveHistory() writes from inside the emit, so the file is
+          -- there by the time saveProfile() has returned
+          assert.is_true(fileExists(historyFile), "the end of session save never wrote the command line history out")
+        end)
+
+        it("writes nothing for a command line whose history saving is turned off", function()
+          local savedLines = getConfig("commandLineHistorySaveSize")
+          local savedSaving = getSaveCommandHistory("main")
+          finally(function()
+            setSaveCommandHistory("main", savedSaving)
+            setConfig("commandLineHistorySaveSize", savedLines)
+          end)
+
+          -- the profile-wide size stays on, so only the per-command-line
+          -- setting is left to answer for the file not coming back
+          setConfig("commandLineHistorySaveSize", 10)
+          assert.is_true(setSaveCommandHistory("main", false))
+          assert.is_false((getSaveCommandHistory("main")))
+
+          local historyFile = getMudletHomeDir() .. "/command_history_main"
+          os.remove(historyFile)
+          assert.is_false(fileExists(historyFile), "the previous history file could not be cleared")
+
+          local saved, message = saveWaitingOutAnyOtherSave()
+          if not saved and not testMode then
+            pending("the profile save was refused and only test mode can wait one out: " .. tostring(message))
+            return
+          end
+          assert.is_true(saved, tostring(message))
+
+          assert.is_false(fileExists(historyFile), "the history was written out despite saving being turned off for that command line")
         end)
       end)
     end)
@@ -622,6 +876,251 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           local contents = readFile(logPath)
           assert.is_string(contents, "the log file that was closed is not readable")
           assert.is_false(contains(contents, "mudlet-spec-never-logged"), "the text was appended to a log that was closed")
+        end)
+      end)
+
+      -- The HTML log is a whole second document format: its own file
+      -- extension, a CSS header naming the console's own font, a title, and a
+      -- closing tag pair only the stop path writes.
+      describe("Tests the functionality of logging in HTML", function()
+        it("wraps the session in a document naming the console font", function()
+          local logPath
+          local htmlLogging = getConfig("logInHTML")
+          finally(function()
+            startLogging(false)
+            setConfig("logInHTML", htmlLogging)
+            if logPath then
+              os.remove(logPath)
+            end
+          end)
+          setConfig("logInHTML", true)
+
+          logPath = select(3, startLogging(true))
+          assert.is_string(logPath)
+          assert.is_truthy(logPath:match("%.html$"), "an HTML log did not get an .html file name: " .. tostring(logPath))
+
+          echo("mudlet-spec-html-logged-line\n")
+          startLogging(false)
+
+          local contents = readFile(logPath)
+          assert.is_string(contents, "the HTML log file that was closed is not readable")
+          assert.is_true(contains(contents, "<html>"), "the HTML log has no opening document tag")
+          assert.is_true(contains(contents, "</div></body>"), "the HTML log was never closed off when logging stopped")
+          -- getFont() reports the same resolved family the log header is built
+          -- from, so this holds whatever font the profile ended up with
+          assert.is_true(contains(contents, "font-family: '" .. getFont() .. "'"),
+            "the HTML log header does not name the console font")
+          assert.is_true(contains(contents, getProfileName()), "the HTML log title does not name the profile")
+          assert.is_true(contains(contents, "mudlet-spec-html-logged-line"), "the console output did not reach the HTML log")
+        end)
+
+        it("marks the text up with the colours and attributes it carries", function()
+          local logPath
+          local htmlLogging = getConfig("logInHTML")
+          finally(function()
+            startLogging(false)
+            setConfig("logInHTML", htmlLogging)
+            if logPath then
+              os.remove(logPath)
+            end
+          end)
+          setConfig("logInHTML", true)
+
+          logPath = select(3, startLogging(true))
+
+          feedTelnet("\27[0m\27[30;47mSpecHtmlPlain\27[0m\n")
+          feedTelnet("\27[0m\27[7;30;47mSpecHtmlReverse\27[0m\n")
+          feedTelnet("\27[0m\27[1;3mSpecHtmlBoldItalic\27[0m\n")
+          feedTelnet("\27[0m\27[4;9;53mSpecHtmlDecorated\27[0m\n")
+          echo("SpecHtmlAngles a<b>c\n")
+          -- a received line is only written once the next one commits
+          feedTelnet("SpecHtmlFlush\n")
+          startLogging(false)
+
+          local contents = readFile(logPath)
+          assert.is_string(contents, "the HTML log file that was closed is not readable")
+
+          -- the style of the span that the marker's own text sits in
+          local function styleOf(marker)
+            local at = contents:find(marker, 1, true)
+            assert.is_truthy(at, marker .. " never reached the HTML log")
+            return contents:sub(1, at - 1):match(".*<span([^>]*)>")
+          end
+
+          local function coloursOf(style)
+            local fr, fg, fb, br, bg, bb = style:match("color: rgb%((%d+),(%d+),(%d+)%); background: rgb%((%d+),(%d+),(%d+)%)")
+            assert.is_truthy(fr, "no foreground and background pair in " .. tostring(style))
+            return table.concat({fr, fg, fb}, ","), table.concat({br, bg, bb}, ",")
+          end
+
+          local plainFg, plainBg = coloursOf(styleOf("SpecHtmlPlain"))
+          local reverseFg, reverseBg = coloursOf(styleOf("SpecHtmlReverse"))
+          assert.are_not.equal(plainFg, plainBg, "the precondition failed - this needs two different colours to tell a swap from a no-op")
+          assert.equal(plainBg, reverseFg, "the reverse attribute did not put the background colour in front")
+          assert.equal(plainFg, reverseBg, "the reverse attribute did not put the foreground colour behind")
+
+          local boldItalic = styleOf("SpecHtmlBoldItalic")
+          assert.is_true(contains(boldItalic, "font-weight: bold;"), boldItalic)
+          assert.is_true(contains(boldItalic, "font-style: italic;"), boldItalic)
+
+          local decorated = styleOf("SpecHtmlDecorated")
+          assert.is_true(contains(decorated, "text-decoration: underline line-through overline;"), decorated)
+
+          assert.is_true(contains(contents, "SpecHtmlAngles a&lt;b&gt;c"), "the angle brackets in the logged text were not escaped")
+        end)
+      end)
+
+      -- A received line is held back from the log until the next one commits.
+      -- That deferral is what duplicate detection needs, and it is also the
+      -- window in which a trigger can still gag the line with deleteLine().
+      -- These pin down what it must, and must not, swallow.
+      describe("Tests what the deferred logging of received lines writes out", function()
+        local htmlLogging
+
+        setup(function()
+          -- plain text, so the assertions read the lines rather than the markup
+          -- an HTML log would wrap them in
+          htmlLogging = getConfig("logInHTML")
+          setConfig("logInHTML", false)
+        end)
+
+        teardown(function()
+          setConfig("logInHTML", htmlLogging)
+        end)
+
+        -- counts plain-text occurrences, so a needle carrying a Lua pattern
+        -- character still counts what it looks like
+        local function occurrences(haystack, needle)
+          local seen, from = 0, 1
+          while true do
+            local start, stop = haystack:find(needle, from, true)
+            if not start then
+              return seen
+            end
+            seen, from = seen + 1, stop + 1
+          end
+        end
+
+        it("keeps a line the window was cleared after", function()
+          local logPath
+          finally(function()
+            startLogging(false)
+            if logPath then
+              os.remove(logPath)
+            end
+          end)
+          logPath = select(3, startLogging(true))
+
+          local mark = getLastLineNumber("main")
+          feedTelnet("You are dead.\n")
+          assert.is_true(contains(textFrom(mark), "You are dead."), "the fed line did not reach the console buffer - start the suite with --offline, see the tests README")
+
+          -- the main console is shared with every other spec file, so this is
+          -- the one place in the suite that empties it; nothing else reads
+          -- console content it did not put there itself
+          clearWindow()
+          feedTelnet("You emerge unscathed.\n")
+          startLogging(false)
+
+          local log = readFile(logPath)
+          assert.is_string(log, "the log file that was closed is not readable")
+          assert.is_true(contains(log, "You are dead."), "clearing the window dropped the line that was pending for logging")
+          assert.is_true(contains(log, "You emerge unscathed."), "the line received after the window was cleared is missing from the log")
+        end)
+
+        it("keeps a line whose own trigger cleared the window", function()
+          local logPath, triggerId
+          finally(function()
+            startLogging(false)
+            if triggerId then
+              killTrigger(triggerId)
+            end
+            if logPath then
+              os.remove(logPath)
+            end
+          end)
+          logPath = select(3, startLogging(true))
+          triggerId = tempRegexTrigger("^You perish$", [[clearWindow()]])
+
+          feedTelnet("You perish\n")
+          feedTelnet("A new dawn\n")
+          startLogging(false)
+
+          local log = readFile(logPath)
+          assert.is_string(log, "the log file that was closed is not readable")
+          assert.is_true(contains(log, "You perish"), "a line whose own trigger cleared the window was dropped from the log")
+          assert.is_true(contains(log, "A new dawn"), "the line received after the window was cleared is missing from the log")
+        end)
+
+        it("leaves out a line its trigger gagged with deleteLine", function()
+          local logPath, triggerId
+          finally(function()
+            startLogging(false)
+            if triggerId then
+              killTrigger(triggerId)
+            end
+            if logPath then
+              os.remove(logPath)
+            end
+          end)
+          logPath = select(3, startLogging(true))
+          triggerId = tempRegexTrigger("^Top secret plans$", [[deleteLine()]])
+
+          feedTelnet("Before the gag.\n")
+          feedTelnet("Top secret plans\n")
+          feedTelnet("After the gag.\n")
+          startLogging(false)
+
+          local log = readFile(logPath)
+          assert.is_string(log, "the log file that was closed is not readable")
+          assert.is_true(contains(log, "Before the gag."), "the line before the gagged one is missing from the log")
+          assert.is_false(contains(log, "Top secret plans"), "the gagged line leaked into the log")
+          assert.is_true(contains(log, "After the gag."), "the line after the gagged one is missing from the log")
+        end)
+
+        it("does not replay the last line of one session into the next", function()
+          local firstPath, secondPath
+          finally(function()
+            startLogging(false)
+            if firstPath then
+              os.remove(firstPath)
+            end
+            if secondPath and secondPath ~= firstPath then
+              os.remove(secondPath)
+            end
+          end)
+
+          firstPath = select(3, startLogging(true))
+          local mark = getLastLineNumber("main")
+          feedTelnet("Session one final line.\n")
+          assert.is_true(contains(textFrom(mark), "Session one final line."), "the fed line did not reach the console buffer - start the suite with --offline, see the tests README")
+
+          -- stopping flushes the line that was still pending
+          local stoppedState = select(4, startLogging(false))
+          assert.equals(0, stoppedState)
+          local restartedPath, restartedState = select(3, startLogging(true))
+          secondPath = restartedPath
+          assert.equals(1, restartedState)
+
+          feedTelnet("Session two line.\n")
+          startLogging(false)
+
+          local log = readFile(secondPath)
+          assert.is_string(log, "the log file that was closed is not readable")
+          -- the log file is named after the second it was opened in and there is
+          -- no Lua setter for that name, so the restart either appends to the
+          -- same file or opens a new one. Either way the first session's last
+          -- line is written exactly once, and only into the log that was open
+          -- when it arrived.
+          if secondPath == firstPath then
+            assert.equals(1, occurrences(log, "Session one final line."))
+          else
+            assert.equals(0, occurrences(log, "Session one final line."))
+            local firstLog = readFile(firstPath)
+            assert.is_string(firstLog, "the first session's log file is not readable")
+            assert.equals(1, occurrences(firstLog, "Session one final line."))
+          end
+          assert.is_true(contains(log, "Session two line."), "the second session's own line is missing from its log")
         end)
       end)
     end)
@@ -906,8 +1405,30 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         return string.char(math.floor(value / 16777216) % 256, math.floor(value / 65536) % 256, math.floor(value / 256) % 256, value % 256)
       end
 
+      -- one record: the delay in milliseconds before it, the number of bytes
+      -- in it, and then those bytes
+      local function chunk(delay, payload)
+        return bigEndian32(delay) .. bigEndian32(#payload) .. payload
+      end
+
+      -- the shape PR #4400 wrote for a while, where the delay took eight bytes
+      -- instead of four - Mudlet still reads it
+      local function wideChunk(delay, payload)
+        return string.rep("\0", 4) .. chunk(delay, payload)
+      end
+
       local function writeReplay(path, payload)
-        writeFile(path, bigEndian32(0) .. bigEndian32(#payload) .. payload)
+        writeFile(path, chunk(0, payload))
+      end
+
+      local function playedBack(mark, marker)
+        for _ = 1, 40 do
+          pumpEvents(50)
+          if contains(textFrom(mark), marker) then
+            return true
+          end
+        end
+        return false
       end
 
       it("raises a Lua error when called with no arguments", function()
@@ -948,17 +1469,77 @@ describe("Tests C++ functions in the Miscallaneous category", function()
 
         assert.is_true(loadReplay(replay))
 
-        local arrived = false
-        for _ = 1, 40 do
-          pumpEvents(50)
-          arrived = contains(textFrom(mark), "mudlet-spec-replayed-line")
-          if arrived then
-            break
-          end
-        end
-        assert.is_true(arrived, "the replay did not reach the console")
+        assert.is_true(playedBack(mark, "mudlet-spec-replayed-line"), "the replay did not reach the console")
         -- whether a replay is running is application-wide, so let this one run
         -- out before the next spec asks for one
+        pumpEvents(200)
+      end)
+
+      it("plays back a replay written with the eight byte delay", function()
+        if not testMode then
+          pending("letting the replay timer run needs MUDLET_TEST_MODE")
+          return
+        end
+        local replay = getMudletHomeDir() .. "/mudlet-spec-wide-replay.dat"
+        finally(function() os.remove(replay) end)
+        writeFile(replay, wideChunk(10, "mudlet-spec-wide-replay-line\r\n"))
+        local mark = getLastLineNumber("main")
+
+        assert.is_true(loadReplay(replay))
+
+        assert.is_true(playedBack(mark, "mudlet-spec-wide-replay-line"), "the replay did not reach the console")
+        pumpEvents(200)
+      end)
+
+      it("acts on telnet negotiation that was recorded with the text", function()
+        if not testMode then
+          pending("letting the replay timer run needs MUDLET_TEST_MODE")
+          return
+        end
+        local replay = getMudletHomeDir() .. "/mudlet-spec-gmcp-replay.dat"
+        -- the gmcp table is the profile's, so whatever was under this key before
+        -- goes back afterwards
+        local previousReplay = gmcp.Replay
+        gmcp.Replay = nil
+        finally(function()
+          os.remove(replay)
+          gmcp.Replay = previousReplay
+        end)
+        -- IAC SB <GMCP> ... IAC SE, which only the telnet state machine can pick
+        -- out of the stream - played back as text it would just be printed
+        writeFile(replay, chunk(10, "\255\250\201Replay.Marker {\"note\":\"seen\"}\255\240mudlet-spec-gmcp-replay-line\r\n"))
+        local mark = getLastLineNumber("main")
+
+        assert.is_true(loadReplay(replay))
+
+        assert.is_true(playedBack(mark, "mudlet-spec-gmcp-replay-line"), "the replay did not reach the console")
+        assert.is_truthy(gmcp.Replay and gmcp.Replay.Marker, "the subnegotiation recorded in the replay was played back as text instead of acted on")
+        assert.equals("seen", gmcp.Replay.Marker.note)
+        pumpEvents(200)
+      end)
+
+      it("refuses a second replay while one is still running", function()
+        if not testMode then
+          pending("letting the replay timer run needs MUDLET_TEST_MODE")
+          return
+        end
+        local first = getMudletHomeDir() .. "/mudlet-spec-first-replay.dat"
+        local second = getMudletHomeDir() .. "/mudlet-spec-second-replay.dat"
+        finally(function()
+          os.remove(first)
+          os.remove(second)
+        end)
+        writeFile(first, chunk(400, "mudlet-spec-first-replay-line\r\n"))
+        writeFile(second, chunk(10, "mudlet-spec-second-replay-line\r\n"))
+        local mark = getLastLineNumber("main")
+
+        assert.is_true(loadReplay(first))
+        local ok, err = loadReplay(second)
+
+        assert.is_nil(ok)
+        assert.is_true(contains(err, "already be in progress"), tostring(err))
+        assert.is_true(playedBack(mark, "mudlet-spec-first-replay-line"), "the replay that was accepted did not reach the console")
+        assert.is_false(contains(textFrom(mark), "mudlet-spec-second-replay-line"), "the replay that was refused played anyway")
         pumpEvents(200)
       end)
     end)
@@ -1095,11 +1676,36 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.equals(0, select('#', setMergeTables("MudletSpec.NeverAModule", "MudletSpec.NeverAnother")))
       end)
 
+      -- the merge only happens as GMCP arrives from a server, so feed a real
+      -- subnegotiation rather than filling the gmcp table directly
+      local function feedGmcp(message)
+        local ok, err = feedTelnet("<T_IAC><T_SB><O_GMCP>" .. message .. "<T_IAC><T_SE>")
+        assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(err))
+      end
+
       it("merges the keys it was given into an incoming GMCP table", function()
-        -- The merge only happens as GMCP or MSDP arrives from a server, and
-        -- the self-test profile's socket is never in the unconnected state that
-        -- feedTelnet() needs, so there is no way to deliver one from Lua.
-        pending("delivering GMCP to the profile needs a server connection")
+        -- gmcp outlives the spec and a merge key can never be taken off again,
+        -- so own the module outright rather than assume an untouched session
+        gmcp.MudletSpec = nil
+        finally(function() gmcp.MudletSpec = nil end)
+        setMergeTables("MudletSpec.Merged")
+
+        feedGmcp('MudletSpec.Merged {"hp": 10, "mp": 20}')
+        feedGmcp('MudletSpec.Merged {"hp": 5}')
+
+        assert.equals(5, gmcp.MudletSpec.Merged.hp)
+        assert.equals(20, gmcp.MudletSpec.Merged.mp, "the partial update replaced the table instead of merging into it")
+      end)
+
+      it("leaves a module it was not given to be replaced wholesale", function()
+        gmcp.MudletSpec = nil
+        finally(function() gmcp.MudletSpec = nil end)
+
+        feedGmcp('MudletSpec.Replaced {"hp": 10, "mp": 20}')
+        feedGmcp('MudletSpec.Replaced {"hp": 5}')
+
+        assert.equals(5, gmcp.MudletSpec.Replaced.hp)
+        assert.is_nil(gmcp.MudletSpec.Replaced.mp, "an unregistered module merged instead of being replaced")
       end)
     end)
 
@@ -1233,6 +1839,167 @@ describe("Tests C++ functions in the Miscallaneous category", function()
 
         assert.is_true(enableTrigger(parentGroup))
         assert.is_true(isAncestorsActive(childId, "trigger"))
+      end)
+    end)
+
+    describe("Tests the functionality of ancestors", function()
+      -- Nesting needs permanent items, which Lua cannot delete again, so each
+      -- item type gets one group and one child, built on first use and shared
+      -- by the specs below.
+      local nestedItems = {}
+
+      local createChild = {
+        timer = function(name, parent) return permTimer(name, parent, 0, "") end,
+        alias = function(name, parent) return permAlias(name, parent, "^mudletSpecAncestorNeverTyped$", "") end,
+        keybind = function(name, parent) return permKey(name, parent, mudlet.key.F12, "") end,
+        script = function(name, parent) return permScript(name, parent, "") end,
+      }
+      -- permGroup spells the key type "key" where ancestors() spells it "keybind"
+      local groupType = {timer = "timer", alias = "alias", keybind = "key", script = "script"}
+
+      local function nested(itemType)
+        if not nestedItems[itemType] then
+          local groupName = "mudletSpecAncestorGroup" .. itemType
+          local childName = "mudletSpecAncestorChild" .. itemType
+          -- The profile these run in is saved on exit and reused by the next
+          -- run, so a second run finds the first run's items still there. They
+          -- cannot be deleted from Lua, and creating them again just stacks up
+          -- another copy under the same name, so reuse what is already there.
+          local id = findItems(childName, itemType)[1]
+          if not id then
+            assert.is_true(permGroup(groupName, groupType[itemType]), "could not create the " .. itemType .. " group")
+            id = createChild[itemType](childName, groupName)
+          end
+          assert.is_true(type(id) == "number" and id > 0, "could not nest a " .. itemType .. " in " .. groupName)
+          nestedItems[itemType] = {id = id, group = groupName}
+        end
+        return nestedItems[itemType].id, nestedItems[itemType].group
+      end
+
+      local function assertNamesTheGroup(list, groupName)
+        assert.is_table(list)
+        assert.equals(1, #list, "expected exactly the one group the item was created in")
+        assert.equals(groupName, list[1].name)
+        assert.equals("group", list[1].node)
+        assert.is_number(list[1].id)
+        assert.is_boolean(list[1].isActive)
+      end
+
+      it("raises a Lua error when called with no arguments", function()
+        assertArgError(function() ancestors() end, "ancestors: bad argument #1 type")
+      end)
+
+      it("raises a Lua error when given no item type", function()
+        assertArgError(function() ancestors(1) end, "ancestors: bad argument #2 type")
+      end)
+
+      it("returns nil+msg for a negative item ID", function()
+        local ok, err = ancestors(-1, "alias")
+        assert.is_nil(ok)
+        assert.is_true(contains(err, "does not seem to be parseable as a positive integer"), tostring(err))
+      end)
+
+      it("returns nil+msg for an item that does not exist", function()
+        local ok, err = ancestors(9999999, "trigger")
+        assert.is_nil(ok)
+        assert.is_true(contains(err, "does not exist"), tostring(err))
+      end)
+
+      it("returns nil+msg for an item type it does not know", function()
+        local ok, err = ancestors(1, "sandwich")
+        assert.is_nil(ok)
+        assert.is_true(contains(err, "invalid item type 'sandwich' given"), tostring(err))
+      end)
+
+      it("returns an empty list for a temporary item, which has no ancestors", function()
+        local triggerId = tempTrigger("mudletSpecAncestorsTrigger", function() end)
+        local timerId = tempTimer(60, function() end)
+        finally(function()
+          killTrigger(tostring(triggerId))
+          killTimer(timerId)
+        end)
+
+        assert.same({}, ancestors(triggerId, "trigger"))
+        assert.same({}, ancestors(timerId, "timer"))
+      end)
+
+      it("names every group between a nested trigger and the top, innermost first", function()
+        -- the run-tests package (the one running these specs) is the only
+        -- hierarchy a spec can count on being there
+        local nestedTriggers = findItems("Trigger", "trigger")
+        assert.equals(1, #nestedTriggers, "expected exactly the run-tests package's nested 'Trigger'")
+        local list = ancestors(nestedTriggers[1], "trigger")
+
+        assert.is_true(#list >= 3, "expected at least the three groups the trigger is nested in, got " .. #list)
+        assert.equals("Not Filter", list[1].name)
+        assert.equals("Filter", list[2].name)
+        assert.equals("Test selectCaptureGroup with nested hierarchy", list[3].name)
+        for index, ancestor in ipairs(list) do
+          assert.is_number(ancestor.id)
+          assert.is_true(ancestor.node == "group" or ancestor.node == "package",
+            "ancestor " .. index .. " of a trigger should be a group or a package, got " .. tostring(ancestor.node))
+        end
+      end)
+
+      it("reports each ancestor's own active state, not the item's", function()
+        local nestedTriggers = findItems("Trigger", "trigger")
+        assert.equals(1, #nestedTriggers, "expected exactly the run-tests package's nested 'Trigger'")
+        local childId = nestedTriggers[1]
+        finally(function() enableTrigger("Not Filter") end)
+
+        assert.is_true(ancestors(childId, "trigger")[1].isActive)
+
+        assert.is_true(disableTrigger("Not Filter"))
+        local list = ancestors(childId, "trigger")
+        assert.is_false(list[1].isActive, "the disabled group still reported itself as active")
+        assert.is_true(list[2].isActive, "disabling one group should not touch the group above it")
+      end)
+
+      it("names the group a permanent timer sits in", function()
+        local id, groupName = nested("timer")
+        assertNamesTheGroup(ancestors(id, "timer"), groupName)
+      end)
+
+      it("names the group a permanent alias sits in", function()
+        local id, groupName = nested("alias")
+        assertNamesTheGroup(ancestors(id, "alias"), groupName)
+      end)
+
+      it("names the group a permanent keybind sits in", function()
+        local id, groupName = nested("keybind")
+        assertNamesTheGroup(ancestors(id, "keybind"), groupName)
+      end)
+
+      it("names the group a permanent script sits in", function()
+        local id, groupName = nested("script")
+        assertNamesTheGroup(ancestors(id, "script"), groupName)
+      end)
+
+      it("names the toolbar a button sits on", function()
+        local toolbar = "mudletSpecAncestorToolbar"
+        -- Lua cannot delete a toolbar again, and one left docked keeps its
+        -- share of the main window's height for the rest of the run - which is
+        -- enough to stop the window resize specs elsewhere from having room to
+        -- measure. Hiding it hands that height back.
+        finally(function() hideToolBar(toolbar) end)
+        if exists(toolbar, "button") == 0 then
+          assert.is_true(tempButtonToolbar(toolbar, 0, 0) > 0)
+        end
+        -- the toolbar and its button are saved with the profile, so a reused
+        -- profile already has both and tempButton() refuses the duplicate name
+        local buttonId = findItems("mudletSpecAncestorButton", "button")[1]
+            or tempButton(toolbar, "mudletSpecAncestorButton", 0)
+        assert.is_true(type(buttonId) == "number" and buttonId > 0, "could not put a button on " .. toolbar)
+
+        assertNamesTheGroup(ancestors(buttonId, "button"), toolbar)
+      end)
+
+      it("is case insensitive about the item type", function()
+        local id, groupName = nested("timer")
+        -- the group is named again here rather than only comparing the two
+        -- calls: two empty lists match each other just as well
+        assertNamesTheGroup(ancestors(id, "TIMER"), groupName)
+        assert.same(ancestors(id, "timer"), ancestors(id, "TIMER"))
       end)
     end)
 
@@ -1381,19 +2148,13 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       end)
 
       it("raises a Lua error for a first argument it cannot carry", function()
-        -- safe to assert, unlike the spec below: nothing has been put into the
-        -- event yet, so the raise has nothing to strand
         assertArgError(function() raiseGlobalEvent({}) end, "raiseGlobalEvent: bad argument type #1")
       end)
 
       it("raises a Lua error for a later argument it cannot carry", function()
-        -- BUG: the refusal is right, but it is raised with lua_error() after the
-        -- event has been built, and that longjmps past the destructor of the
-        -- TEvent holding the arguments read so far, which LeakSanitizer reports
-        -- and which would turn the leak-checking CI job red. Refusing the first
-        -- argument (above) is safe because nothing has been appended yet. Left
-        -- pending until the raise happens before the event is built.
-        pending("raiseGlobalEvent() leaks the event it was building when it refuses a later argument")
+        -- the arguments are all vetted before the TEvent is built, so this raise
+        -- has nothing to strand; the leak-checking CI job is what would notice
+        -- if that changed
         assertArgError(function() raiseGlobalEvent("mudletSpecGlobalEvent", {}) end, "raiseGlobalEvent: bad argument type #2")
       end)
 
@@ -1504,6 +2265,12 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           -- command line's blacklist
           assert.equals(0, select('#', clearCmdLineBlacklist()))
           assert.equals(0, select('#', clearCmdLineBlacklist("main")))
+        end)
+
+        it("still reads the command line name when something trails it", function()
+          local ok, err = clearCmdLineBlacklist("mudlet-spec-no-such-command-line", "trailing")
+          assert.is_nil(ok)
+          assert.is_true(contains(err, "not found"), tostring(err))
         end)
       end)
 

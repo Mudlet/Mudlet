@@ -1,0 +1,5 @@
+mpackage = [[mudlet-spec-manifestonly-named]]
+author = [[Mudlet test suite]]
+title = [[Fixture that is nothing but a manifest, for Package_spec.lua]]
+version = [[9.9]]
+description = [[The archive holds a config.lua and no package XML at all, so it is refused after its details have already been filed under the name this file gives.]]

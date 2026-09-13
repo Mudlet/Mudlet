@@ -8,13 +8,14 @@
 -- function returns when its precondition (a connection, a peer, an enabled
 -- protocol, an available API) is not met.
 --
--- The download, HTTP and MMCP families are the exception: their infrastructure
--- can be stood up locally, so their real effects are checked against the
--- fixture server in CI/http-fixture-server.py (ephemeral port in
--- MUDLET_TEST_HTTP_PORT) and the scripted chat peer in CI/mmcp-peer.py
--- (handover directory in MUDLET_TEST_MMCP_DIR). Both skip cleanly when absent
--- so the suite still passes without them. Nothing here mocks a real API
--- function.
+-- The download, HTTP, MMCP and MSDP families are the exception: their
+-- infrastructure can be stood up locally, so their real effects are checked
+-- against the fixture server in CI/http-fixture-server.py (ephemeral port in
+-- MUDLET_TEST_HTTP_PORT), the scripted chat peer in CI/mmcp-peer.py (handover
+-- directory in MUDLET_TEST_MMCP_DIR) and the silent game server in
+-- CI/telnet-fixture-server.py (handover directory in MUDLET_TEST_TELNET_DIR).
+-- All skip cleanly when absent so the suite still passes without them. Nothing
+-- here mocks a real API function.
 
 local function contains(haystack, needle)
   return type(haystack) == "string" and haystack:find(needle, 1, true) ~= nil
@@ -27,7 +28,7 @@ end
 local function assertArgError(fn, needle)
   local ok, err = pcall(fn)
   assert.is_false(ok)
-  assert.is_true(contains(err, needle))
+  assert.is_true(contains(err, needle), tostring(err))
 end
 
 describe("Networking send functions honour their disconnected/offline contracts", function()
@@ -1430,6 +1431,84 @@ describe("MMCP effects against a scripted chat peer", function()
     end)
   end)
 
+  describe("peek and connection requests a peer sends", function()
+    -- Sharing connections is off by default and only the preferences dialog can
+    -- turn it on, so what a peer gets back is always a refusal; what changes is
+    -- which one, and an ignored peer is told nothing at all.
+    -- the console wraps a long message, so the text is matched with its runs of
+    -- whitespace flattened rather than as the lines it landed on
+    local function displayedSince(mark)
+      return (table.concat(getLines("main", mark, getLastLineNumber("main") + 1), "\n"):gsub("%s+", " "))
+    end
+
+    local function waitForText(mark, needle)
+      waitUntil(function() return contains(displayedSince(mark), needle) end, 2000)
+      return displayedSince(mark)
+    end
+
+    it("shows the peers a peek list names", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      peerSends(29, "10.0.0.1~4050~AlphaPeer~10.0.0.2~4051~BetaPeer~")
+      local _, from, message = waitForEvent("sysMMCPChatMessage", 2000)
+      assert.equals(PEER_NAME, from)
+      for _, expected in ipairs({"AlphaPeer", "10.0.0.1", "4050", "BetaPeer", "10.0.0.2", "4051"}) do
+        assert.is_true(contains(message, expected), expected .. " missing from " .. tostring(message))
+      end
+    end)
+
+    it("says so rather than showing a peek list it cannot read", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      local mark = getLastLineNumber("main")
+      -- the entries are name, address and port, so a list that does not divide
+      -- into threes cannot be lined up with them
+      peerSends(29, "10.0.0.1~4050~")
+      local shown = waitForText(mark, "Badly formatted peek list")
+      assert.is_true(contains(shown, "Badly formatted peek list from " .. PEER_NAME), shown)
+    end)
+
+    it("turns down a request for its connections and says why", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      local mark = getLastLineNumber("main")
+      peerSends(2, "")
+      local shown = waitForText(mark, "requested your public connections")
+      assert.is_true(contains(shown, "you're ignoring connection requests"), shown)
+    end)
+
+    it("reports an ignored peer's connection request as an attempt", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      assert.is_true(mmcp.ignore(PEER_NAME))
+      local mark = getLastLineNumber("main")
+      peerSends(2, "")
+      local shown = waitForText(mark, "trying to request your connections")
+      assert.is_true(contains(shown, PEER_NAME .. " is trying to request your connections!"), shown)
+      assert.is_true(mmcp.ignore(PEER_NAME))
+    end)
+
+    it("turns down a peek at its connections and says why", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      local mark = getLastLineNumber("main")
+      peerSends(28, "")
+      local shown = waitForText(mark, "peek your connections")
+      assert.is_true(contains(shown, "you're ignoring peek requests"), shown)
+    end)
+
+    it("reports an ignored peer's peek as an attempt", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      assert.is_true(mmcp.ignore(PEER_NAME))
+      local mark = getLastLineNumber("main")
+      peerSends(28, "")
+      local shown = waitForText(mark, "trying to peek your connections")
+      assert.is_true(contains(shown, PEER_NAME .. " is trying to peek your connections!"), shown)
+      assert.is_true(mmcp.ignore(PEER_NAME))
+    end)
+  end)
+
   describe("mmcp.sendSideChannel", function()
     it("sends channel and message to the peer as one comma separated payload", function()
       if peerUnavailable() then return end
@@ -1744,16 +1823,14 @@ describe("The IRC configuration functions round-trip through the profile", funct
   -- connection anywhere in sight.
   --
   -- The profile's own IRC configuration is put back afterwards, because the
-  -- self-test profile is reused between runs. Two things the restore cannot
-  -- reach, both of which matter to a developer running the suite against a
-  -- config root that is not a throwaway one:
-  --
-  -- - the IRC password. setIrcServer() writes it on every call and blanks it
-  --   when none is passed, and no getter reads it back, so any password the
-  --   profile had is gone either way.
-  -- - the last-used nick, which setIrcNick() also writes to a file shared by
-  --   every profile (mudlet's data directory, not the profile's). Putting the
-  --   profile's nick back writes that file again rather than restoring it.
+  -- self-test profile is reused between runs. One thing the restore cannot
+  -- reach, which matters to a developer running the suite against a config root
+  -- that is not a throwaway one: the last-used nick, which setIrcNick() also
+  -- writes to a file shared by every profile (mudlet's data directory, not the
+  -- profile's). Putting the profile's nick back writes that file again rather
+  -- than restoring it. The password is left alone by every call below that does
+  -- not pass one, and the specs that do pass one put the profile's own back
+  -- through setConfig().
   local function restoreIrcConfiguration()
     local nick = getIrcNick()
     local hostName, port, secure = getIrcServer()
@@ -1762,6 +1839,22 @@ describe("The IRC configuration functions round-trip through the profile", funct
       setIrcNick(nick)
       setIrcServer(hostName, port, secure)
       setIrcChannels(channels)
+    end)
+  end
+
+  -- setIrcServer takes a password but no getter of its own reads one back, so
+  -- the specs for it go through the configuration option the same file is
+  -- behind: getConfig("ircPassword") and setConfig("ircPassword", ...).
+  local function restoreIrcConfigurationWithPassword()
+    local nick = getIrcNick()
+    local hostName, port, secure = getIrcServer()
+    local channels = getIrcChannels()
+    local password = getConfig("ircPassword")
+    finally(function()
+      setIrcNick(nick)
+      setIrcServer(hostName, port, secure)
+      setIrcChannels(channels)
+      setConfig("ircPassword", password)
     end)
   end
 
@@ -1867,6 +1960,30 @@ describe("The IRC configuration functions round-trip through the profile", funct
       assert.is_false(secure)
     end)
 
+    it("leaves the stored password alone when it is not passed", function()
+      -- #9786: every call rewrote the password, so a script that changed the
+      -- host or the port destroyed a credential it was never given.
+      restoreIrcConfigurationWithPassword()
+
+      assert.is_true(setIrcServer("irc.busted-password.invalid", 6667, false, "BustedSecret"))
+      assert.equals("BustedSecret", getConfig("ircPassword"))
+
+      -- the same server on another port, with the password argument left off
+      assert.is_true(setIrcServer("irc.busted-password.invalid", 6668))
+      assert.equals(6668, select(2, getIrcServer()))
+      assert.equals("BustedSecret", getConfig("ircPassword"))
+
+      -- and it is kept across a change of server too, because an argument that
+      -- was not passed says nothing about the credential
+      assert.is_true(setIrcServer("irc.busted-other.invalid", 6667))
+      assert.equals("irc.busted-other.invalid", (getIrcServer()))
+      assert.equals("BustedSecret", getConfig("ircPassword"))
+
+      -- an empty string is how a script asks for the password to go
+      assert.is_true(setIrcServer("irc.busted-other.invalid", 6667, false, ""))
+      assert.equals("", getConfig("ircPassword"))
+    end)
+
     it("falls back to port 6667 and an insecure connection when only a hostname is given", function()
       restoreIrcConfiguration()
       assert.is_true(setIrcServer("irc.busted-secure.invalid", 6697, true))
@@ -1876,6 +1993,24 @@ describe("The IRC configuration functions round-trip through the profile", funct
       assert.equals("irc.busted-default.invalid", hostName)
       assert.equals(6667, port)
       assert.is_false(secure)
+    end)
+
+    it("takes an explicit nil for any optional argument, as leaving it off does", function()
+      -- #9787: a script forwarding optional variables passes nil for the ones
+      -- it has no value for, and only the port accepted that
+      restoreIrcConfigurationWithPassword()
+
+      assert.is_true(setIrcServer("irc.busted-nil.invalid", 6697, true, "BustedNilSecret"))
+      assert.equals("BustedNilSecret", getConfig("ircPassword"))
+
+      assert.is_true(setIrcServer("irc.busted-nil.invalid", nil, nil, nil))
+      local storedHost, storedPort, storedSecure = getIrcServer()
+      assert.equals("irc.busted-nil.invalid", storedHost)
+      -- a nil optional is the default, the same as leaving it off
+      assert.equals(6667, storedPort)
+      assert.is_false(storedSecure)
+      -- except for the password, which a nil argument keeps as it is
+      assert.equals("BustedNilSecret", getConfig("ircPassword"))
     end)
   end)
 
@@ -1911,16 +2046,41 @@ describe("The IRC configuration functions round-trip through the profile", funct
       assert.is_true(setIrcChannels({"#busted-good", "busted-bad", "&busted-also-good"}))
       assert.same({"#busted-good", "&busted-also-good"}, getIrcChannels())
     end)
+
+    it("drops a channel name carrying a space or a comma rather than storing two", function()
+      -- #9789: the stored list is space-joined and the JOIN command is
+      -- comma-joined, so a name holding either came back as two channels. An
+      -- IRC channel name can hold neither, which puts them with the other
+      -- unusable names above: dropped, and refused outright when nothing is
+      -- left.
+      restoreIrcConfiguration()
+      assert.is_true(setIrcChannels({"#busted-spaced one", "#busted-plain"}))
+      assert.same({"#busted-plain"}, getIrcChannels())
+
+      assert.is_true(setIrcChannels({"#busted-a,#busted-b", "#busted-tabbed\tname", "#busted-plain-two"}))
+      assert.same({"#busted-plain-two"}, getIrcChannels())
+
+      local ok, err = setIrcChannels({"#busted only spaced"})
+      assert.is_nil(ok)
+      assert.is_true(contains(err, "no (valid) channel names provided"), tostring(err))
+      assert.same({"#busted-plain-two"}, getIrcChannels())
+    end)
   end)
 
   describe("getIrcConnectedHost and restartIrc without a client", function()
     -- Both of these read whether the profile has an IRC dialog, and nothing in
     -- the suite creates one - see the openIRC spec below for why. Should
     -- something start doing so, these are where it shows up first.
+    --
+    -- Which is also why only the failure half of getIrcConnectedHost's pair is
+    -- checked here, arity included: the other half needs a client connected far
+    -- enough for the server's RPL_YOURHOST, which is where #9788 was - it pushed
+    -- true and the host name but returned only one of them.
     it("getIrcConnectedHost returns false and says there is no client", function()
       local ok, err = getIrcConnectedHost()
       assert.is_false(ok)
       assert.equals("no client active", err)
+      assert.equals(2, select("#", getIrcConnectedHost()))
     end)
 
     it("restartIrc returns false", function()
@@ -1955,12 +2115,182 @@ end)
 
 describe("getNetworkLatency", function()
   it("reports zero on a profile whose game socket has never been timed", function()
-    -- The latency is measured between a command going out and the prompt that
-    -- answers it, and nothing in the suite connects the game socket - so the
+    -- The latency is measured between a command going out and the game's reply
+    -- being read, and nothing in the suite connects the game socket - so the
     -- untouched value is what this reads, which is also what pins it to the
     -- right member. A meaningful reading needs a game server.
     local latency = getNetworkLatency()
     assert.is_number(latency)
     assert.equals(0, latency)
+  end)
+end)
+
+-- The connected-but-unnegotiated state, which nothing else in the suite can
+-- reach: it runs with --offline, so every other send guard is only ever checked
+-- in its disconnected form. CI/telnet-fixture-server.py accepts the connection
+-- and then stays silent, so no telnet option is ever negotiated.
+describe("sending protocol data to a game server that has not negotiated", function()
+  local telnetDir = os.getenv("MUDLET_TEST_TELNET_DIR")
+  local fixtureRequired = os.getenv("MUDLET_TEST_REQUIRE_TELNET_FIXTURE")
+
+  -- IAC SB MSDP MSDP_VAR "REPORT" MSDP_VAL "HEALTH" IAC SE, which is what
+  -- sendMSDP("REPORT", "HEALTH") is defined to put on the wire.
+  local SUBNEGOTIATION = "fffa45015245504f5254024845414c5448fff0"
+
+  local function readFile(path)
+    local handle = io.open(path, "r")
+    if not handle then
+      return nil
+    end
+    local contents = handle:read("*a")
+    handle:close()
+    return contents
+  end
+
+  -- The fixture writes its port only once it is accepting, and removes it on the
+  -- way out, so a readable port file means it is up.
+  local function serverPort()
+    if not telnetDir then
+      return nil
+    end
+    local raw = readFile(telnetDir .. "/port")
+    return raw and tonumber(raw:match("%d+"))
+  end
+
+  local function serverUnavailable()
+    local reason
+    if not serverPort() then
+      reason = "telnet fixture not running (run CI/telnet-fixture-server.py with MUDLET_TEST_TELNET_DIR set)"
+    elseif type(yajl) ~= "table" then
+      reason = "the yajl Lua module is unavailable, so the fixture's capture file cannot be read"
+    else
+      return false
+    end
+    if fixtureRequired then
+      assert.is_true(false, "MUDLET_TEST_REQUIRE_TELNET_FIXTURE is set but " .. reason .. " (MUDLET_TEST_TELNET_DIR=" .. tostring(telnetDir) .. ")")
+    end
+    pending(reason)
+    return true
+  end
+
+  local function capture()
+    local raw = readFile(telnetDir .. "/capture.json")
+    if not raw or raw == "" then
+      return nil
+    end
+    local ok, decoded = pcall(yajl.to_value, raw)
+    if not ok or type(decoded) ~= "table" then
+      return nil
+    end
+    return decoded
+  end
+
+  local function connectionCount()
+    local seen = capture()
+    return seen and seen.connections or 0
+  end
+
+  local function wireHex()
+    local seen = capture()
+    return seen and seen.received
+  end
+
+  local function waitUntil(predicate, timeoutMs)
+    local step = 20
+    for _ = 1, math.ceil((timeoutMs or 5000) / step) do
+      if predicate() then
+        return true
+      end
+      pumpEvents(step)
+    end
+    return predicate()
+  end
+
+  local function connected()
+    local _, _, isConnected = getConnectionInfo()
+    return isConnected
+  end
+
+  -- The kernel completes the handshake from the listen backlog before the
+  -- fixture calls accept(), so Mudlet can be connected and writing while the
+  -- capture still holds the previous connection's bytes. accept() clears them
+  -- and bumps the counter in one write, so a count past the one noted before
+  -- connecting is what makes these bytes this connection's.
+  local function sawSubnegotiation(before)
+    local seen = capture()
+    return seen ~= nil and seen.connections > before and contains(seen.received, SUBNEGOTIATION)
+  end
+
+  local msdpNegotiated, protocolHandler
+
+  before_each(function()
+    disconnect()
+    waitUntil(function() return not connected() end, 2000)
+    msdpNegotiated = false
+    protocolHandler = registerAnonymousEventHandler("sysProtocolEnabled", function(_, protocol)
+      if protocol == "MSDP" then
+        msdpNegotiated = true
+      end
+    end)
+  end)
+
+  -- Leaving the socket open would hand the next spec file a connected profile,
+  -- which several of them assume they do not have.
+  after_each(function()
+    killAnonymousEventHandler(protocolHandler)
+    disconnect()
+    assert.is_true(waitUntil(function() return not connected() end, 2000),
+                   "the telnet fixture connection outlived the spec")
+  end)
+
+  it("puts the subnegotiation on the wire while MSDP is still unnegotiated", function()
+    if serverUnavailable() then return end
+    local before = connectionCount()
+    connectToServer("127.0.0.1", serverPort())
+    assert.is_true(waitUntil(connected, 5000), "never connected to the telnet fixture")
+
+    local ok, err = sendMSDP("REPORT", "HEALTH")
+    assert.is_true(ok, "sendMSDP refused a connected socket: " .. tostring(err))
+    assert.is_true(waitUntil(function() return sawSubnegotiation(before) end, 2000),
+                   "the MSDP subnegotiation never reached the wire, saw: " .. tostring(wireHex()))
+    assert.is_false(msdpNegotiated, "the fixture negotiated MSDP, so this no longer covers the unnegotiated state")
+  end)
+
+  it("is usable from a sysConnectionEvent handler, which runs before negotiation", function()
+    if serverUnavailable() then return end
+
+    -- What a package's connect handler does: subscribe to the variables it
+    -- wants. sysConnectionEvent is raised on TCP connect, before the server can
+    -- offer MSDP.
+    local ran, result, failure = false, nil, nil
+    local handler = registerAnonymousEventHandler("sysConnectionEvent", function()
+      result, failure = sendMSDP("REPORT", "HEALTH")
+      ran = true
+    end)
+    finally(function() killAnonymousEventHandler(handler) end)
+
+    local before = connectionCount()
+    connectToServer("127.0.0.1", serverPort())
+    assert.is_true(waitUntil(function() return ran end, 5000), "the sysConnectionEvent handler never ran")
+    assert.is_true(result, "sendMSDP refused inside sysConnectionEvent: " .. tostring(failure))
+    assert.is_true(waitUntil(function() return sawSubnegotiation(before) end, 2000),
+                   "the MSDP subnegotiation never reached the wire, saw: " .. tostring(wireHex()))
+    assert.is_false(msdpNegotiated, "the fixture negotiated MSDP, so this no longer covers the unnegotiated state")
+  end)
+
+  -- sendGMCP and sendATCP keep the check sendMSDP does without: theirs has been
+  -- there since 2018 and packages are written around it.
+  it("still refuses sendGMCP and sendATCP, whose enabled-checks are wanted", function()
+    if serverUnavailable() then return end
+    connectToServer("127.0.0.1", serverPort())
+    assert.is_true(waitUntil(connected, 5000), "never connected to the telnet fixture")
+
+    local gmcp, gmcpErr = sendGMCP("Core.Hello")
+    assert.is_nil(gmcp)
+    assert.is_true(contains(gmcpErr, "GMCP is not currently enabled"), tostring(gmcpErr))
+
+    local atcp, atcpErr = sendATCP("Core.Hello")
+    assert.is_nil(atcp)
+    assert.is_true(contains(atcpErr, "ATCP is not currently enabled"), tostring(atcpErr))
   end)
 end)

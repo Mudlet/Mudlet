@@ -55,6 +55,7 @@
 #include "glwidget_integration.h"
 #endif
 
+#include <algorithm>
 #include <limits>
 #include <math.h>
 
@@ -154,13 +155,13 @@ int TLuaInterpreter::downloadFile(lua_State* L)
             event.mArgumentTypeList << ARGUMENT_TYPE_NIL;
         }
         pHost->raiseEvent(event);
-        if (mudlet::smDebugMode) {
-            TDebug(Qt::white, Qt::blue) << "downloadFile: " << bytesDownloaded << "/" << totalBytes << " bytes ready for " << reply->url().toString() << "\n" >> pHost;
+        if (TDebug::wants(TDebug::Category::Network)) {
+            TDebug(Qt::white, Qt::blue, TDebug::Category::Network) << "downloadFile: " << bytesDownloaded << "/" << totalBytes << " bytes ready for " << reply->url().toString() << "\n" >> pHost;
         }
     });
 
-    if (mudlet::smDebugMode) {
-        TDebug(Qt::white, Qt::blue) << "downloadFile: start download from " << reply->url().toString() << "\n" >> &host;
+    if (TDebug::wants(TDebug::Category::Network)) {
+        TDebug(Qt::white, Qt::blue, TDebug::Category::Network) << "downloadFile: start download from " << reply->url().toString() << "\n" >> &host;
     }
 
     lua_pushboolean(L, true);
@@ -221,7 +222,7 @@ int TLuaInterpreter::getIrcConnectedHost(lua_State* L)
     lua_pushboolean(L, true);
     lua_pushstring(L, cHostName.toUtf8().constData());
 
-    return 1;
+    return 2;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getIrcNick
@@ -333,7 +334,6 @@ int TLuaInterpreter::sendATCP(lua_State* L)
     output += TN_IAC;
     output += TN_SE;
 
-    // Check connection status first (most common issue)
     if (host.mTelnet.getConnectionState() != QAbstractSocket::ConnectedState) {
         return warnArgumentValue(L, __func__, qsl("not connected to game server - connect first before sending ATCP"));
     }
@@ -384,7 +384,6 @@ int TLuaInterpreter::sendGMCP(lua_State* L)
     output += TN_IAC;
     output += TN_SE;
 
-    // Check connection status first (most common issue)
     if (host.mTelnet.getConnectionState() != QAbstractSocket::ConnectedState) {
         return warnArgumentValue(L, __func__, qsl("not connected to game server - connect first before sending GMCP"));
     }
@@ -487,14 +486,12 @@ int TLuaInterpreter::sendMSDP(lua_State* L)
     output += TN_IAC;
     output += TN_SE;
 
-    // Check connection status first (most common issue)
     if (host.mTelnet.getConnectionState() != QAbstractSocket::ConnectedState) {
         return warnArgumentValue(L, __func__, qsl("not connected to game server - connect first before sending MSDP"));
     }
 
-    if (!host.mTelnet.isMSDPEnabled()) {
-        return warnArgumentValue(L, __func__, qsl("MSDP is not currently enabled"));
-    }
+    // No isMSDPEnabled() check, unlike sendGMCP/sendATCP: sysConnectionEvent fires
+    // before negotiation, so one here silently drops packages' subscriptions.
 
     // output is in Mud Server Encoding form here:
     if (!host.mTelnet.socketOutRaw(output)) {
@@ -543,6 +540,18 @@ int TLuaInterpreter::sendTelnetChannel102(lua_State* L)
     return 1;
 }
 
+// An IRC channel name holds neither of the two characters its list is taken apart
+// on: the stored list is space-joined (dlgIRC::writeIrcChannels) and the JOIN
+// command is comma-joined, so a name carrying either would come back as two
+// channels. Every kind of whitespace is refused rather than only the space it is
+// joined on, because an IRC channel name may hold none of it.
+static bool ircChannelNameHasSeparator(const QString& channel)
+{
+    return std::any_of(channel.cbegin(), channel.cend(), [](const QChar character) {
+        return character.isSpace() || character == QLatin1Char(',');
+    });
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setIrcChannels
 int TLuaInterpreter::setIrcChannels(lua_State* L)
 {
@@ -556,7 +565,7 @@ int TLuaInterpreter::setIrcChannels(lua_State* L)
         // key at index -2 and value at index -1
         if (lua_type(L, -1) == LUA_TSTRING) {
             const QString c = lua_tostring(L, -1);
-            if (!c.isEmpty() && (c.startsWith(QLatin1String("#")) || c.startsWith(QLatin1String("&")) || c.startsWith(QLatin1String("+")))) {
+            if (!c.isEmpty() && (c.startsWith(QLatin1String("#")) || c.startsWith(QLatin1String("&")) || c.startsWith(QLatin1String("+"))) && !ircChannelNameHasSeparator(c)) {
                 newchannels << c;
             }
         }
@@ -598,7 +607,6 @@ int TLuaInterpreter::setIrcNick(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setIrcServer
 int TLuaInterpreter::setIrcServer(lua_State* L)
 {
-    const int args = lua_gettop(L);
     int secure = false;
     int port = 6667;
     if (!checkStringArg(L, __func__, 1, "hostname")) {
@@ -614,15 +622,21 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
             return warnArgumentValue(L, __func__, qsl("invalid port number %1 given, if supplied it must be in range 1 to 65535").arg(port));
         }
     }
-    if (args > 2) {
+    if (!lua_isnoneornil(L, 3)) {
         secure = getVerifiedBool(L, __func__, 3, "secure {default = false}", true);
     }
-    if (args > 3 && !checkStringArg(L, __func__, 4, "server password", true)) {
+
+    // An omitted password - and a nil one, which every optional argument here
+    // treats the same way - leaves the stored password alone: a call that only
+    // changes the host or the port must not drop a credential it was never
+    // given. Clearing one is asking for it, by passing an empty string.
+    const bool passwordGiven = !lua_isnoneornil(L, 4);
+    if (passwordGiven && !checkStringArg(L, __func__, 4, "server password", true)) {
         return lua_error(L);
     }
 
     QString password;
-    if (args > 3) {
+    if (passwordGiven) {
         password = lua_tostring(L, 4);
     }
 
@@ -642,9 +656,11 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("unable to save secure, reason: %1").arg(result.second));
     }
 
-    result = dlgIRC::writeIrcPassword(pHost, password);
-    if (!result.first) {
-        return warnArgumentValue(L, __func__, qsl("unable to save password, reason: %1").arg(result.second));
+    if (passwordGiven) {
+        result = dlgIRC::writeIrcPassword(pHost, password);
+        if (!result.first) {
+            return warnArgumentValue(L, __func__, qsl("unable to save password, reason: %1").arg(result.second));
+        }
     }
 
     lua_pushboolean(L, true);
@@ -719,8 +735,8 @@ int TLuaInterpreter::getHTTP(lua_State* L)
     host.updateProxySettings(host.mLuaInterpreter.mpFileDownloader);
     QNetworkReply* reply = host.mLuaInterpreter.mpFileDownloader->get(request);
 
-    if (mudlet::smDebugMode) {
-        TDebug(Qt::white, Qt::blue) << qsl("getHTTP: script is getting data from %1\n").arg(reply->url().toString()) >> &host;
+    if (TDebug::wants(TDebug::Category::Network)) {
+        TDebug(Qt::white, Qt::blue, TDebug::Category::Network) << qsl("getHTTP: script is getting data from %1\n").arg(reply->url().toString()) >> &host;
     }
 
     lua_pushboolean(L, true);
@@ -761,8 +777,8 @@ int TLuaInterpreter::deleteHTTP(lua_State* L)
     host.updateProxySettings(host.mLuaInterpreter.mpFileDownloader);
     QNetworkReply* reply = host.mLuaInterpreter.mpFileDownloader->deleteResource(request);
 
-    if (mudlet::smDebugMode) {
-        TDebug(Qt::white, Qt::blue) << qsl("deleteHTTP: script is sending delete request for %1\n").arg(reply->url().toString()) >> &host;
+    if (TDebug::wants(TDebug::Category::Network)) {
+        TDebug(Qt::white, Qt::blue, TDebug::Category::Network) << qsl("deleteHTTP: script is sending delete request for %1\n").arg(reply->url().toString()) >> &host;
     }
 
     lua_pushboolean(L, true);

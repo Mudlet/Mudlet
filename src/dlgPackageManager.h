@@ -47,6 +47,7 @@ public:
     explicit dlgPackageManager(QWidget* parent, Host*);
     bool readPackageRepositoryFile();
     void resetPackageList();
+    QString removePackages(const QStringList& packageNames);
 
 signals:
     void packageManagerClosing(const QString& profileName);

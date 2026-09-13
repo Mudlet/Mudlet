@@ -56,6 +56,8 @@ dlgVarsMainArea::dlgVarsMainArea(QWidget* pParentWidget)
     comboBox_variable_key_type->insertItem(2, tr("index (integer number)"), 3);              // LUA_TNUMBER
     comboBox_variable_key_type->insertItem(3, tr("table (use \"Add Group\" to create)"), 5); // LUA_TTABLE
     comboBox_variable_key_type->insertItem(4, tr("function (cannot create from GUI)"), 6);   // LUA_TFUNCTION
+    //: Shown in the Variables editor for a table member whose key is the boolean true or false, a key type that cannot be created from the GUI
+    comboBox_variable_key_type->insertItem(5, tr("key (boolean)"), LUA_TBOOLEAN);
 
     // Magic - part 2 use the features of the substitute data model to disable
     // the required entries - they can still be set programmatically for display
@@ -66,6 +68,10 @@ dlgVarsMainArea::dlgVarsMainArea(QWidget* pParentWidget)
 
     // Disable function type:
     item = contents->item(4);
+    item->setFlags(item->flags() & ~Qt::ItemIsEnabled);
+
+    // Disable boolean type:
+    item = contents->item(5);
     item->setFlags(item->flags() & ~Qt::ItemIsEnabled);
 
 

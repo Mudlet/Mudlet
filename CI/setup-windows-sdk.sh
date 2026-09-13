@@ -19,7 +19,13 @@
 #   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ###########################################################################
 
-# Version: 2.4.0    Add Python, needed by the fixture HTTP server the Lua
+# Version: 2.6.0    Drop the Info-ZIP unzip pin: libarchive 3.8.9-3 opens
+#                   extracted files with O_BINARY, so bsdunzip no longer
+#                   mangles line endings
+#          2.5.0    Pin luarocks to Info-ZIP unzip, since libarchive now
+#                   hardlinks bsdunzip over "unzip" and it mangles line
+#                   endings when it unpacks a rock
+#          2.4.0    Add Python, needed by the fixture HTTP server the Lua
 #                   tests run against
 #          2.3.0    Switch from MINGW64 to CLANG64
 #          2.2.0    Add CMake package for CMake-based builds
@@ -43,8 +49,10 @@
 
 # To be used prior to building Mudlet, after that run:
 # * build-mudlet-for-window.sh to compile the currently checked out code
-# * package-mudlet-for-windows.sh to put everything together in an archive that
-#   will be deployed from a github workflow
+# * package-mudlet-for-windows.sh to assemble everything Mudlet needs to run
+# * create-portable-zip-for-windows.sh to zip that up as the portable build
+# * deploy-mudlet-for-windows.sh to build the installer and deploy it from a
+#   github workflow
 
 # Exit codes:
 # 0 - Everything is fine. 8-)

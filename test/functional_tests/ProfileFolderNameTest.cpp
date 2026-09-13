@@ -30,32 +30,14 @@
  * Run with: ctest -R ProfileFolderNameTest -V
  */
 
+#include "PortableModeTestHelper.h"
 #include "MudletInstanceCoordinator.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
 #include <QtTest/QtTest>
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-
-static void initializeQRCResources()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
+#include "GroupedTest.h"
 
 class ProfileFolderNameTest : public QObject
 {
@@ -74,13 +56,6 @@ private:
     // Trailing whitespace: the entered name arrives trimmed, so the exemption
     // has to match against the trimmed folder name to cover this one:
     const QString mPaddedName = qsl("padded café ");
-
-    // setupConfig() consults portable.txt before the XDG logic; skip rather
-    // than run against an unexpected config dir (see ConfigDirOverrideTest).
-    bool portableMarkerPresent() const
-    {
-        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
-    }
 
     void makeExternalProfileFolder(const QString& name) const
     {
@@ -125,7 +100,6 @@ private slots:
         if (portableMarkerPresent()) {
             QSKIP("portable.txt present - cannot redirect the config dir for this test");
         }
-        initializeQRCResources();
 
         mSavedXdg = qgetenv("XDG_CONFIG_HOME");
         QVERIFY(mXdgDir.isValid());
@@ -217,5 +191,5 @@ private slots:
     }
 };
 
-QTEST_MAIN(ProfileFolderNameTest)
 #include "ProfileFolderNameTest.moc"
+MUDLET_GROUPED_TEST_MAIN(ProfileFolderNameTest)

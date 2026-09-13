@@ -60,7 +60,7 @@ int TLuaInterpreter::receiveMSP(lua_State* L)
 }
 
 // Private
-int TLuaInterpreter::loadMediaFileAsOrderedArguments(lua_State* L, const char* func)
+int TLuaInterpreter::loadMediaFileAsOrderedArguments(lua_State* L, const char* func, const TMediaData::MediaType mediaType)
 {
     const Host& host = getHostFromLua(L);
     const int numArgs = lua_gettop(L);
@@ -110,6 +110,7 @@ int TLuaInterpreter::loadMediaFileAsOrderedArguments(lua_State* L, const char* f
             }
 
             mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
+            mediaData.setMediaType(mediaType);
             mediaData.setMediaVolume(TMediaData::MediaVolumePreload);
 
             host.mpMedia->playMedia(mediaData);
@@ -125,7 +126,7 @@ int TLuaInterpreter::loadMediaFileAsOrderedArguments(lua_State* L, const char* f
 }
 
 // Private
-int TLuaInterpreter::loadMediaFileAsTableArgument(lua_State* L, const char* func)
+int TLuaInterpreter::loadMediaFileAsTableArgument(lua_State* L, const char* func, const TMediaData::MediaType mediaType)
 {
     const Host& host = getHostFromLua(L);
 
@@ -174,10 +175,11 @@ int TLuaInterpreter::loadMediaFileAsTableArgument(lua_State* L, const char* func
 
         if (!errorPushed) {
             if (mediaData.mediaFileName().isEmpty()) {
-                lua_pushstring(L, R"(loadMusicFile: missing name (add name = "file to play"))");
+                lua_pushfstring(L, R"(%s: missing name (add name = "file to play"))", func);
                 errorPushed = true;
             } else {
                 mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
+                mediaData.setMediaType(mediaType);
                 mediaData.setMediaVolume(TMediaData::MediaVolumePreload);
 
                 host.mpMedia->playMedia(mediaData);
@@ -202,10 +204,10 @@ int TLuaInterpreter::loadMusicFile(lua_State* L)
     }
 
     if (lua_istable(L, 1)) {
-        return loadMediaFileAsTableArgument(L, __func__);
+        return loadMediaFileAsTableArgument(L, __func__, TMediaData::MediaTypeMusic);
     }
 
-    return loadMediaFileAsOrderedArguments(L, __func__);
+    return loadMediaFileAsOrderedArguments(L, __func__, TMediaData::MediaTypeMusic);
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#loadSoundFile
@@ -217,10 +219,10 @@ int TLuaInterpreter::loadSoundFile(lua_State* L)
     }
 
     if (lua_istable(L, 1)) {
-        return loadMediaFileAsTableArgument(L, __func__);
+        return loadMediaFileAsTableArgument(L, __func__, TMediaData::MediaTypeSound);
     }
 
-    return loadMediaFileAsOrderedArguments(L, __func__);
+    return loadMediaFileAsOrderedArguments(L, __func__, TMediaData::MediaTypeSound);
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#loadVideoFile
@@ -236,7 +238,7 @@ int TLuaInterpreter::loadVideoFile(lua_State* L)
         return lua_error(L);
     }
 
-    return loadMediaFileAsTableArgument(L, __func__);
+    return loadMediaFileAsTableArgument(L, __func__, TMediaData::MediaTypeVideo);
 }
 
 // Private
@@ -302,7 +304,7 @@ int TLuaInterpreter::playMusicFileAsOrderedArguments(lua_State* L, const char* f
                 intValue = static_cast<int>(lua_tointeger(L, i));
 
                 if (intValue < 0) {
-                    lua_pushfstring(L, "playSoundFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "fadein", intValue);
+                    lua_pushfstring(L, "%s: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", func, "fadein", intValue);
                     errorPushed = true;
                     break;
                 }
@@ -318,7 +320,7 @@ int TLuaInterpreter::playMusicFileAsOrderedArguments(lua_State* L, const char* f
                 intValue = static_cast<int>(lua_tointeger(L, i));
 
                 if (intValue < 0) {
-                    lua_pushfstring(L, "playSoundFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "fadeout", intValue);
+                    lua_pushfstring(L, "%s: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", func, "fadeout", intValue);
                     errorPushed = true;
                     break;
                 }
@@ -334,7 +336,7 @@ int TLuaInterpreter::playMusicFileAsOrderedArguments(lua_State* L, const char* f
                 intValue = static_cast<int>(lua_tointeger(L, i));
 
                 if (intValue < 0) {
-                    lua_pushfstring(L, "playSoundFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "start", intValue);
+                    lua_pushfstring(L, "%s: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", func, "start", intValue);
                     errorPushed = true;
                     break;
                 }
@@ -396,7 +398,7 @@ int TLuaInterpreter::playMusicFileAsOrderedArguments(lua_State* L, const char* f
                 intValue = static_cast<int>(lua_tointeger(L, i));
 
                 if (intValue < 0) {
-                    lua_pushfstring(L, "playSoundFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "finish", intValue);
+                    lua_pushfstring(L, "%s: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", func, "finish", intValue);
                     errorPushed = true;
                     break;
                 }

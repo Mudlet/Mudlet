@@ -30,16 +30,12 @@
 
 #include <QtTest/QtTest>
 
+#include "PortableModeTestHelper.h"
 #include "MudletInstanceCoordinator.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForProfileDeletionSafetyTest();
+#include "GroupedTest.h"
 
 class ProfileDeletionSafetyTest : public QObject
 {
@@ -51,13 +47,6 @@ private:
     const QString mKeeper = qsl("QA Keeper");
 
     QString profilePath(const QString& profile) const { return mudlet::getMudletPath(enums::profileHomePath, profile); }
-
-    // setupConfig() consults portable.txt ahead of the XDG logic; skip rather
-    // than run against an unexpected config dir (see ConfigDirOverrideTest)
-    bool portableMarkerPresent() const
-    {
-        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
-    }
 
     void makeProfileWithSavedGame(const QString& profile) const
     {
@@ -146,7 +135,6 @@ private slots:
         if (portableMarkerPresent()) {
             QSKIP("portable.txt present - cannot redirect the config dir for this test");
         }
-        initializeQRCResourcesForProfileDeletionSafetyTest();
 
         QVERIFY(mConfigDir.isValid());
         // $XDG_CONFIG_HOME/mudlet/profiles is the opt-in that makes setupConfig()
@@ -505,20 +493,5 @@ private slots:
     }
 };
 
-void initializeQRCResourcesForProfileDeletionSafetyTest()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "ProfileDeletionSafetyTest.moc"
-QTEST_MAIN(ProfileDeletionSafetyTest)
+MUDLET_GROUPED_TEST_MAIN(ProfileDeletionSafetyTest)

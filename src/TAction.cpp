@@ -24,16 +24,24 @@
 #include "TAction.h"
 
 
+#include "ActionUnit.h"
 #include "EAction.h"
 #include "Host.h"
-#include "TConsole.h"
 #include "TDebug.h"
 #include "TEasyButtonBar.h"
 #include "TFlipButton.h"
+#include "TLuaInterpreter.h"
 #include "TToolBar.h"
-#include "mudlet.h"
+#include "TMainConsole.h"
+#include "utils.h"
 
+#include <QColor>
+#include <QDebug>
+#include <QMap>
+#include <QMenu>
 #include <QScopeGuard>
+
+#include <list>
 
 TAction::TAction(TAction* parent, Host* pHost)
 : Tree<TAction>(parent)
@@ -84,12 +92,13 @@ void TAction::compileAll()
 {
     mNeedsToBeCompiled = true;
     if (!compileScript()) {
-        if (mudlet::smDebugMode) {
-            TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of action:" << mName << "\n" >> mpHost;
+        if (TDebug::wants(TDebug::Category::Error)) {
+            TDebug(Qt::white, Qt::red, TDebug::Category::Error, mName) << "ERROR: Lua compile error. compiling script of action:" << mName << "\n" >> mpHost;
         }
         mOK_code = false;
     }
-    for (auto pTAction : *mpMyChildrenList) {
+    for (auto* pTActionNode : *mpMyChildrenList) {
+        auto* pTAction = static_cast<TAction*>(pTActionNode);
         pTAction->compileAll();
     }
 }
@@ -98,13 +107,14 @@ void TAction::compile()
 {
     if (mNeedsToBeCompiled) {
         if (!compileScript()) {
-            if (mudlet::smDebugMode) {
-                TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of action:" << mName << "\n" >> mpHost;
+            if (TDebug::wants(TDebug::Category::Error)) {
+                TDebug(Qt::white, Qt::red, TDebug::Category::Error, mName) << "ERROR: Lua compile error. compiling script of action:" << mName << "\n" >> mpHost;
             }
             mOK_code = false;
         }
     }
-    for (auto pTAction : *mpMyChildrenList) {
+    for (auto* pTActionNode : *mpMyChildrenList) {
+        auto* pTAction = static_cast<TAction*>(pTActionNode);
         pTAction->compile();
     }
 }
@@ -184,7 +194,8 @@ void TAction::expandToolbar(TToolBar* pT)
 {
     // The -1 is needed to compensate for the initial pre-increment to TToolBar::mItemCount
     pT->resetItemCount(mButtonFillerOffset - 1);
-    for (auto pTAction : *mpMyChildrenList) {
+    for (auto* pTActionNode : *mpMyChildrenList) {
+        auto* pTAction = static_cast<TAction*>(pTActionNode);
         if (!pTAction->isActive()) {
             // This test and conditional loop abort was missing from this method
             // but is needed so that disabled buttons do not appear on
@@ -260,7 +271,8 @@ void TAction::insertActions(TToolBar* pT, QMenu* pMenu)
         pNewMenu->setStyleSheet(css);
         pEAction->setMenu(pNewMenu);
 
-        for (auto childAction : *mpMyChildrenList) {
+        for (auto* childActionNode : *mpMyChildrenList) {
+            auto* childAction = static_cast<TAction*>(childActionNode);
             childAction->insertActions(pT, pNewMenu);
         }
     }
@@ -271,7 +283,8 @@ void TAction::expandToolbar(TEasyButtonBar* pT)
 {
     // The -1 is needed to compensate for the initial pre-increment to TEasyButtonBar::mItemCount
     pT->resetItemCount(mButtonFillerOffset - 1);
-    for (auto pTAction : *mpMyChildrenList) {
+    for (auto* pTActionNode : *mpMyChildrenList) {
+        auto* pTAction = static_cast<TAction*>(pTActionNode);
         if (!pTAction->isActive()) {
             continue;
         }
@@ -336,7 +349,8 @@ void TAction::expandToolbar(TEasyButtonBar* pT)
 // the need for the split is not yet clear to me! - Slysven
 void TAction::fillMenu(TEasyButtonBar* pT, QMenu* pMenu)
 {
-    for (auto pTAction : *mpMyChildrenList) {
+    for (auto* pTActionNode : *mpMyChildrenList) {
+        auto* pTAction = static_cast<TAction*>(pTActionNode);
         if (!pTAction->isActive()) {
             continue;
         }
