@@ -679,7 +679,7 @@ int mudlet::addAddonCommand(const CommandRequest& request, Host* pHost, QString&
 
     applyAddonIcon(command.button, command.menuAction, request.icon);
     mAddonCommands[commandId] = command;
-    warnProfilesLosingBindingTo(shortcut, pHost);
+    warnProfilesLosingBindingTo(shortcut, pHost, request.name);
     return commandId;
 }
 
@@ -689,9 +689,14 @@ int mudlet::addAddonCommand(const CommandRequest& request, Host* pHost, QString&
 // would then depend on which other profiles the player happens to have open,
 // which its author can neither see nor diagnose - so the command is placed and
 // the profile losing its binding is told, the same call the buffer search makes
-// when it takes a key a package has. The command is not named: that is the
-// other profile's business, the rule addonCommandsUsingShortcut() follows.
-void mudlet::warnProfilesLosingBindingTo(const QKeySequence& sequence, const Host* pHost)
+// when it takes a key a package has.
+//
+// Both the command and the profile it came from are named, unlike the refusal
+// addonCommandsUsingShortcut() builds. That one withholds them to stop a
+// package learning what a profile it cannot see has installed; this is read by
+// the player, who owns every profile here, and without the two names there is
+// nothing for them to go and change.
+void mudlet::warnProfilesLosingBindingTo(const QKeySequence& sequence, Host* pHost, const QString& commandName)
 {
     if (sequence.count() != 1) {
         return;
@@ -705,9 +710,10 @@ void mudlet::warnProfilesLosingBindingTo(const QKeySequence& sequence, const Hos
         if (!pOtherHost->getKeyUnit()->wouldMatch(combination.key(), combination.keyboardModifiers())) {
             continue;
         }
-        //: Warning posted to a profile when another profile's add-on command takes a key one of this profile's key bindings uses. %1 is a key such as "Alt+F9".
-        pOtherHost->postMessage(tr("[ WARN ]  - %1 is now used by a command another profile installed, which will get the key first, so this profile's key binding on it will not fire.")
-                                        .arg(sequence.toString(QKeySequence::NativeText)));
+        //: Warning posted to a profile when an add-on command in another of the player's profiles takes a key one of this profile's key bindings uses. %1 is a key such as "Alt+F9", %2 the name of the command and %3 the name of the profile it was added in.
+        pOtherHost->postMessage(
+                tr("[ WARN ]  - %1 is now used by the \"%2\" command in your \"%3\" profile, so this profile's key binding on it will not fire. Put one of the two on a different key to use both.")
+                        .arg(sequence.toString(QKeySequence::NativeText), commandName, pHost ? pHost->getName() : QString()));
     }
 }
 

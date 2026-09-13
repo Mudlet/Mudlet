@@ -353,9 +353,12 @@ private slots:
     // profile is in front and takes the key from a binding another profile has
     // on it. Refusing the command over that would make a package's success
     // depend on which profiles the player happens to have open, so the command
-    // is placed and the profile losing its binding is told instead - without
-    // being told whose command took it, the same rule the search warning above
-    // follows.
+    // is placed and the profile losing its binding is told instead.
+    //
+    // Both names have to be in that warning. The refusal a package receives
+    // withholds them, to stop it learning what a profile it cannot see has
+    // installed - but this line is read by the player, who owns both profiles,
+    // and naming neither leaves them nothing to go and change.
     void test_anotherProfileIsToldWhenACommandTakesItsKeyBinding()
     {
         const QString sequence = QKeySequence(QKeyCombination(Qt::AltModifier, Qt::Key_F9)).toString(QKeySequence::NativeText);
@@ -375,7 +378,8 @@ private slots:
 
         QVERIFY2(commandId > 0, "the command was refused over a binding belonging to a different profile");
         QVERIFY2(text.contains(sequence), qPrintable(qsl("a command took another profile's key binding without saying so: %1").arg(text)));
-        QVERIFY2(!text.contains(qsl("OtherProfileBinding")), qPrintable(qsl("the warning names a command belonging to another profile: %1").arg(text)));
+        QVERIFY2(text.contains(qsl("OtherProfileBinding")), qPrintable(qsl("the warning does not say which command took the key: %1").arg(text)));
+        QVERIFY2(text.contains(mFirstProfile), qPrintable(qsl("the warning does not say which profile the command is in: %1").arg(text)));
     }
 
     // docs/addon-ui-api.md gives the click event the id as addCommand returned
