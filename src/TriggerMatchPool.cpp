@@ -207,15 +207,6 @@ TriggerMatchPool::TriggerMatchPool()
             workerLoop(slot);
         }));
         thread->setObjectName(qsl("TriggerMatch-%1").arg(slot));
-#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
-        // The caller spin-waits for the chunk this thread has claimed, and a
-        // spin on an atomic gets none of the priority boost the kernel gives a
-        // lock, so a helper scheduled below the main thread can be descheduled
-        // underneath it - on Apple Silicon possibly onto an efficiency core.
-        // High is the main thread's class on macOS (user-interactive) and no
-        // power throttling on Windows.
-        thread->setServiceLevel(QThread::QualityOfService::High);
-#endif
         thread->start();
         if (!thread->isRunning()) {
             // Qt has already warned. The pool works with however many helpers
