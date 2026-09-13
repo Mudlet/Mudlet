@@ -24,6 +24,7 @@
  ***************************************************************************/
 
 
+#include "TTriggerPrescan.h"
 #include "utils.h"
 
 #include <QByteArray>
@@ -79,6 +80,17 @@ public:
     int getNewID();
     QMultiMap<QString, TTrigger*> mLookupTable;
     void markCleanup(TTrigger* pT);
+    // Called by anything that changes whether one trigger can be ruled out of a
+    // line by its text alone.
+    void markPrescanStale(TTrigger* pT);
+    // As above, but for the changes that make a trigger fire without matching
+    // text. Those have to reach the line already being processed, whose
+    // candidate list was settled before the change - see processDataStream().
+    void markRootUnfilterable()
+    {
+        ++mUnfilterableEpoch;
+        markRootNodeListReordered();
+    }
     void doCleanup();
     void uninstall(const QString&);
     void _uninstall(TTrigger* pChild, const QString& packageName);
@@ -135,6 +147,16 @@ private:
     void removeTrigger(TTrigger*);
     void startOrExtendSameLineChain(TTrigger* pT);
     void stopSameLineCreationLoop(const int chainId);
+    void markRootNodeAppended(TTrigger* pT);
+    void markRootNodeRemoved(TTrigger* pT);
+    // For the changes that move existing triggers around, which the snapshot
+    // and its index can only follow by being built again.
+    void markRootNodeListReordered()
+    {
+        mRootNodeSnapshotStale = true;
+        mRootNodeSnapshotNeedsRebuild = true;
+    }
+    void refreshRootNodeSnapshot();
 
     QPointer<Host> mpHost;
     // Storage processDataStream() lends out for the UTF-8 form of the line it is
@@ -153,8 +175,27 @@ private:
     // mid-pass leaves that one alone and only the next pass sees the rebuilt
     // one. Every mutation of mTriggerRootNodeList must set the flag below, or a
     // pass would go on walking triggers that have since been freed.
-    std::shared_ptr<std::vector<TTrigger*>> mpRootNodeSnapshot;
+    // The prescan files triggers by their position in the snapshot, so the two
+    // are rebuilt and pinned together.
+    struct RootNodeSnapshot
+    {
+        std::vector<TTrigger*> mNodes;
+        TTriggerPrescan mPrescan;
+    };
+    std::shared_ptr<RootNodeSnapshot> mpRootNodeSnapshot;
     bool mRootNodeSnapshotStale = true;
+    bool mRootNodeSnapshotNeedsRebuild = true;
+    // What the snapshot has yet to be told about, so that the ordinary churn of
+    // a script arming and killing temporary triggers costs the snapshot one
+    // entry each rather than a rebuild per line. Removals and refilings name a
+    // position because the trigger they refer to may be freed before the next
+    // line reads them; positions outlive it, and a removed one is never reused.
+    std::vector<TTrigger*> mRootNodesAppended;
+    std::vector<int> mRootNodesRemoved;
+    std::vector<int> mRootNodesRefiled;
+    std::vector<int> mCandidateScratch;
+    std::vector<int> mCandidates;
+    quint32 mUnfilterableEpoch = 0;
     int mMaxID;
     bool mModuleMember;
     int statsItemsTotal = 0;

@@ -3192,4 +3192,289 @@ describe("Trigger processing", function()
         end)
 
     end)
+
+    -- Once a profile holds enough plain-text triggers, the engine files them by
+    -- their own characters and offers a line only the ones that could match it.
+    -- The filter is meant to be invisible, so every case here runs with enough
+    -- filler triggers to switch it on and then asserts the ordinary behaviour.
+    describe("large plain-text trigger sets", function()
+        local fillerIds = {}
+        local ids = {}
+        local permNames = {}
+
+        -- comfortably past the point where filtering switches on
+        local function addFillers()
+            for i = 1, 80 do
+                fillerIds[#fillerIds + 1] = tempTrigger("zqxjfiller" .. i .. "vkw", function() end)
+            end
+        end
+
+        local function track(id)
+            ids[#ids + 1] = id
+            return id
+        end
+
+        local function trackPerm(name, id)
+            permNames[#permNames + 1] = name
+            return id
+        end
+
+        before_each(function()
+            _G.TrigSpec = {count = 0, seen = {}}
+            addFillers()
+        end)
+
+        after_each(function()
+            for _, id in ipairs(fillerIds) do killTrigger(id) end
+            for _, id in ipairs(ids) do killTrigger(id) end
+            -- cleanup is deferred, so stop them firing before asking for it
+            for _, name in ipairs(permNames) do disableTrigger(name); killTrigger(name) end
+            fillerIds, ids, permNames = {}, {}, {}
+        end)
+
+        it("still fires a plain substring trigger", function()
+            track(tempTrigger("needle_in_haystack", function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end))
+            feedTriggers("\nsome needle_in_haystack text\n")
+            assert.are.equal(1, _G.TrigSpec.count, "a substring trigger stopped firing among many others")
+        end)
+
+        it("fires when the pattern sits at either end of the line", function()
+            track(tempTrigger("edgepattern", function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end))
+            feedTriggers("\nedgepattern trails\n")
+            feedTriggers("\nleads edgepattern\n")
+            assert.are.equal(2, _G.TrigSpec.count, "a pattern at the start or end of a line was missed")
+        end)
+
+        it("fires on a pattern that is the whole line", function()
+            track(tempTrigger("wholelinepattern", function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end))
+            feedTriggers("\nwholelinepattern\n")
+            assert.are.equal(1, _G.TrigSpec.count, "a pattern filling the whole line was missed")
+        end)
+
+        it("still fires a pattern too short to be filed by content", function()
+            track(tempTrigger("ab", function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end))
+            feedTriggers("\nc ab d\n")
+            assert.are.equal(1, _G.TrigSpec.count, "a short substring trigger stopped firing")
+        end)
+
+        it("keeps substring matching case sensitive", function()
+            track(tempTrigger("CaseSensitivePattern", function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end))
+            feedTriggers("\ncasesensitivepattern\n")
+            assert.are.equal(0, _G.TrigSpec.count, "a substring trigger fired on the wrong case")
+            feedTriggers("\nCaseSensitivePattern\n")
+            assert.are.equal(1, _G.TrigSpec.count, "a substring trigger missed its own case")
+        end)
+
+        it("still fires on a non-ASCII pattern", function()
+            track(tempTrigger("Ünicöde_pattern_ähm", function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end))
+            feedTriggers("\nsagt Ünicöde_pattern_ähm hier\n")
+            assert.are.equal(1, _G.TrigSpec.count, "a non-ASCII substring trigger stopped firing")
+        end)
+
+        it("hands a substring trigger its capture", function()
+            track(tempTrigger("capture_me_here", function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = matches[1] end))
+            feedTriggers("\npadding capture_me_here padding\n")
+            assert.are.equal("capture_me_here", _G.TrigSpec.seen[1], "a substring trigger's capture was lost")
+        end)
+
+        it("still fires exact match and begin of line triggers", function()
+            track(tempExactMatchTrigger("exact_whole_line_here", function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end))
+            track(tempBeginOfLineTrigger("startmarker", function() _G.TrigSpec.count = _G.TrigSpec.count + 100 end))
+            feedTriggers("\nexact_whole_line_here\n")
+            assert.are.equal(1, _G.TrigSpec.count, "an exact match trigger stopped firing")
+            feedTriggers("\nstartmarker and more\n")
+            assert.are.equal(101, _G.TrigSpec.count, "a begin of line trigger stopped firing")
+            feedTriggers("\nnot startmarker\n")
+            assert.are.equal(101, _G.TrigSpec.count, "a begin of line trigger fired mid-line")
+        end)
+
+        it("still fires a regex trigger", function()
+            track(tempRegexTrigger("^regex_among_many_(\\d+)$", function() _G.TrigSpec.count = _G.TrigSpec.count + tonumber(matches[2]) end))
+            feedTriggers("\nregex_among_many_7\n")
+            assert.are.equal(7, _G.TrigSpec.count, "a regex trigger stopped firing among many substring ones")
+        end)
+
+        it("still fires a line trigger on lines that match nothing", function()
+            local id = tempLineTrigger(0, 10, function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end)
+            feedTriggers("\nnothing here at all\n")
+            feedTriggers("\nnor here either\n")
+            feedTriggers("\nnor on this one\n")
+            local count = _G.TrigSpec.count
+            -- a line trigger matches by position, and killTrigger's cleanup is
+            -- deferred, so disable it before it can reach a later spec's lines
+            disableTrigger(id)
+            killTrigger(id)
+            assert.is_true(count >= 3, "a line trigger stopped firing on non-matching lines, fired " .. count .. " times")
+        end)
+
+        -- The one case where a trigger fires on a line it does not match: after
+        -- a hit it stays open for a set number of lines, so it cannot be filtered
+        -- out of them.
+        it("keeps a stay-open trigger firing on lines it does not match", function()
+            trackPerm("SpecStayOpenSubstring",
+                permSubstringTrigger("SpecStayOpenSubstring", "", {"stayopen_marker"},
+                    [[_G.TrigSpec.count = _G.TrigSpec.count + 1]]))
+            -- setTriggerStayOpen makes it fire on the next lines whether or not
+            -- they match, which is exactly the state it must not be filtered out
+            -- of. A match would end that, because matching resets the countdown
+            -- to the trigger's own stay-open length, which here is zero.
+            setTriggerStayOpen("SpecStayOpenSubstring", 3)
+            feedTriggers("\nan unrelated line\n")
+            assert.is_true(_G.TrigSpec.count >= 1,
+                "a stay-open trigger did not fire on a line that does not contain its pattern")
+            -- and it still closes: well past its window the count has to settle
+            for _ = 1, 8 do feedTriggers("\nanother unrelated line\n") end
+            local settled = _G.TrigSpec.count
+            feedTriggers("\nyet another unrelated line\n")
+            assert.are.equal(settled, _G.TrigSpec.count, "a stay-open trigger never stopped firing")
+        end)
+
+        it("offers the current line to a trigger created while it is processing", function()
+            track(tempTrigger("spawner_pattern", function()
+                track(tempTrigger("spawner_pattern", function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end))
+            end))
+            feedTriggers("\nspawner_pattern arrives\n")
+            assert.are.equal(1, _G.TrigSpec.count, "a trigger created mid-line did not see that line")
+        end)
+
+        -- Filtering hands back positions in the root list, not the order the
+        -- patterns happen to appear in the line, and an unfilterable trigger
+        -- keeps its place among the filtered ones.
+        it("fires triggers in creation order wherever their text sits", function()
+            track(tempTrigger("alpha_marker_one", function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = "A" end))
+            track(tempRegexTrigger("^beta", function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = "B" end))
+            track(tempTrigger("beta_marker_two", function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = "C" end))
+            -- C's text deliberately sits before A's on the line
+            feedTriggers("\nbeta_marker_two then alpha_marker_one\n")
+            assert.are.same({"A", "B", "C"}, _G.TrigSpec.seen, "filtering changed the order triggers fire in")
+        end)
+
+        -- A colour trigger carries a pattern string that it never matches by
+        -- text, so filing it under that text would leave it never reached.
+        it("still fires a colour trigger", function()
+            local id = tempColorTrigger(4, 2, function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end)
+            feedTriggers("\n\27[31;40mcolour among many\27[0m\n")
+            -- kill before asserting: a leaked colour trigger matches by SGR and
+            -- would fire on later specs' fed lines
+            killTrigger(id)
+            assert.are.equal(1, _G.TrigSpec.count, "a colour trigger stopped firing among many substring ones")
+        end)
+
+        -- A firing script can feed more text through the same unit, so the
+        -- candidate list the outer pass is walking has to survive the nested one.
+        it("keeps the outer line's remaining triggers across a nested feed", function()
+            track(tempTrigger("nested_inner_line", function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = "inner" end))
+            track(tempTrigger("outer_feeder_here", function()
+                _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = "feeder"
+                feedTriggers("\ncontains nested_inner_line now\n")
+            end))
+            track(tempTrigger("outer_trailer_here", function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = "trailer" end))
+            feedTriggers("\nouter_feeder_here and outer_trailer_here\n")
+            assert.are.same({"feeder", "inner", "trailer"}, _G.TrigSpec.seen,
+                "a nested feedTriggers disturbed the outer line's remaining triggers")
+        end)
+
+        -- The candidate list for a line is settled before any trigger runs, so a
+        -- script that makes a LATER trigger fire without matching has to reach
+        -- the line already in flight.
+        it("fires a trigger opened by an earlier trigger on that same line", function()
+            -- the opener is created first, so the trigger it opens is still ahead
+            -- of it in the list when the line is only part way through
+            track(tempTrigger("opener_fires_here", function()
+                setTriggerStayOpen("SpecOpenedMidLine", 3)
+            end))
+            trackPerm("SpecOpenedMidLine",
+                permSubstringTrigger("SpecOpenedMidLine", "", {"never_on_this_line"},
+                    [[_G.TrigSpec.count = _G.TrigSpec.count + 1]]))
+            feedTriggers("\nopener_fires_here now\n")
+            assert.are.equal(1, _G.TrigSpec.count,
+                "a trigger made stay-open mid-line did not fire on that line")
+        end)
+
+        it("keeps offering the right triggers after some are killed", function()
+            local doomed = tempTrigger("doomed_pattern", function() _G.TrigSpec.count = _G.TrigSpec.count + 100 end)
+            track(tempTrigger("survivor_pattern", function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end))
+            killTrigger(doomed)
+            feedTriggers("\ndoomed_pattern and survivor_pattern\n")
+            assert.are.equal(1, _G.TrigSpec.count, "killing one trigger disturbed which others a line reached")
+        end)
+
+        -- The index follows an arming or a killing rather than being built
+        -- again, and reclaims what the killings leave behind once enough have
+        -- accumulated. These four are what say the bookkeeping stayed honest
+        -- across that, since a slot pointing at the wrong trigger still
+        -- produces a plausible-looking candidate list.
+        it("keeps firing while triggers are armed and killed on every line", function()
+            track(tempTrigger("steady_pattern", function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end))
+            track(tempTrigger("churn_pattern", function()
+                killTrigger(tempTrigger("throwaway_pattern", function() end))
+            end))
+            for _ = 1, 200 do
+                feedTriggers("\nsteady_pattern and churn_pattern\n")
+            end
+            assert.are.equal(200, _G.TrigSpec.count, "a trigger stopped being offered lines once others churned around it")
+        end)
+
+        it("still fires a trigger armed after many others were killed", function()
+            local doomed = {}
+            for i = 1, 60 do
+                doomed[i] = tempTrigger("doomedchurn" .. i .. "pattern", function() _G.TrigSpec.count = _G.TrigSpec.count + 100 end)
+            end
+            for _, id in ipairs(doomed) do killTrigger(id) end
+            feedTriggers("\nnothing of interest here\n")
+            track(tempTrigger("latecomer_pattern", function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end))
+            feedTriggers("\nlatecomer_pattern arrives\n")
+            assert.are.equal(1, _G.TrigSpec.count, "a trigger armed into a slot freed by an earlier killing was not offered the line")
+        end)
+
+        it("goes on matching once killings drop the set below the filtering threshold", function()
+            track(tempTrigger("remainder_pattern", function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end))
+            for _, id in ipairs(fillerIds) do killTrigger(id) end
+            fillerIds = {}
+            feedTriggers("\nremainder_pattern survives\n")
+            assert.are.equal(1, _G.TrigSpec.count, "emptying the set out from under the filter lost a trigger")
+        end)
+
+        -- A pattern shorter than the longest n-gram is filed under one of its
+        -- own length rather than being left out of the index, so these say the
+        -- shorter lengths reach their triggers at all. Below two characters
+        -- there is nothing to file, and such a trigger is offered every line.
+        it("fires a short substring trigger among many long ones", function()
+            track(tempTrigger("orc", function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = "3" end))
+            track(tempTrigger("gold", function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = "4" end))
+            track(tempTrigger("HP", function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = "2" end))
+            track(tempTrigger("x", function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = "1" end))
+            feedTriggers("\nan orc drops gold, HP: 40, x marks it\n")
+            assert.are.same({"3", "4", "2", "1"}, _G.TrigSpec.seen, "a short pattern was not offered a line that contains it")
+        end)
+
+        it("does not offer a short pattern a line without it", function()
+            track(tempTrigger("orc", function() _G.TrigSpec.count = _G.TrigSpec.count + 100 end))
+            track(tempTrigger("gold", function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end))
+            feedTriggers("\na pile of gold and nothing else\n")
+            assert.are.equal(1, _G.TrigSpec.count, "a short pattern fired on a line that does not contain it")
+        end)
+
+        -- One trigger holding both a short and a long pattern has to be reached
+        -- by either, which means it is filed at two different gram lengths.
+        -- Patterns of different lengths are filed under n-grams of different
+        -- lengths, so a line has to be walked at each length in use for both to
+        -- be reached from the same pass.
+        it("reaches triggers of several pattern lengths on one line", function()
+            track(tempTrigger("orc", function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = "short" end))
+            track(tempTrigger("a_much_longer_pattern", function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = "long" end))
+            feedTriggers("\nan orc guards a_much_longer_pattern\n")
+            assert.are.same({"short", "long"}, _G.TrigSpec.seen, "a line did not reach triggers of both pattern lengths")
+        end)
+
+        it("keeps creation order after killings have left gaps", function()
+            _G.TrigSpec.seen = {}
+            local doomed = tempTrigger("gapmaker_pattern", function() end)
+            track(tempTrigger("orderfirst_pattern", function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = "first" end))
+            killTrigger(doomed)
+            track(tempTrigger("ordersecond_pattern", function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = "second" end))
+            feedTriggers("\nordersecond_pattern then orderfirst_pattern\n")
+            assert.are.same({"first", "second"}, _G.TrigSpec.seen, "a gap left by a killed trigger reordered the ones around it")
+        end)
+    end)
 end)
