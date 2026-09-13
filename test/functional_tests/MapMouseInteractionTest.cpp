@@ -2106,6 +2106,53 @@ private slots:
         QVERIFY2(area()->mMapLabels.isEmpty(), "cancelling the dialog left the label in the area it was made in");
     }
 
+    // A map loaded in place of the cleared one hands the same ids straight back
+    // out - areas from the lowest free one, labels from zero in each area - so
+    // the pair the dialog is holding names a label of the new map that it has
+    // nothing to do with. Cancelling it must leave that one where it is.
+    void test_cancellingTheLabelDialogAfterTheMapWasReplacedLeavesTheNewLabelAlone()
+    {
+        buildMap();
+        showMapper(false);
+        dragOutALabelBox();
+        QVERIFY(mp2dMap->mpDlgMapLabel);
+        const int replacedAreaId = mAreaId;
+        QCOMPARE(area()->mMapLabels.size(), 1);
+        QVERIFY2(area()->mMapLabels.contains(0), "the dialog's own label did not take id 0");
+
+        buildMap();
+        QCOMPARE(mAreaId, replacedAreaId);
+        const int labelId = addTestLabel();
+        QCOMPARE(labelId, 0);
+
+        mp2dMap->mpDlgMapLabel->close();
+
+        QTRY_VERIFY(!mp2dMap->mpDlgMapLabel);
+        QVERIFY2(area()->mMapLabels.contains(labelId), "cancelling the dialog took the replacement map's label out");
+    }
+
+    // Same reused ids, the other handler: typing into the dialog redraws the
+    // label it made, which is not the one the replacement map put at those ids.
+    void test_editingTheLabelDialogAfterTheMapWasReplacedLeavesTheNewLabelAlone()
+    {
+        buildMap();
+        showMapper(false);
+        dragOutALabelBox();
+        QVERIFY(mp2dMap->mpDlgMapLabel);
+        const int replacedAreaId = mAreaId;
+
+        buildMap();
+        QCOMPARE(mAreaId, replacedAreaId);
+        const int labelId = addTestLabel();
+        const TMapLabel newMapsLabel = area()->mMapLabels.value(labelId);
+
+        mp2dMap->mpDlgMapLabel->plainTextEdit_labelText->setPlainText(qsl("typed after the map was replaced"));
+
+        QCOMPARE(area()->mMapLabels.size(), 1);
+        QCOMPARE(area()->mMapLabels.value(labelId).text, newMapsLabel.text);
+        QCOMPARE(area()->mMapLabels.value(labelId).pos, newMapsLabel.pos);
+    }
+
     // Boxing several rooms puts a list of them up in the corner of the map, so
     // rooms that are drawn on top of one another can still be told apart.
     void test_boxingSeveralRoomsListsThemInTheCornerOfTheMap()

@@ -83,6 +83,12 @@ public:
 
     void buildAreas();
     void clearMapDB();
+    // Counts how many times the map has been thrown away. Anything that
+    // captured room, area or label ids and outlives a clear - a dialog left
+    // open across a loadMap() - can compare this to tell whether those ids
+    // still mean what they did, since a replacement map hands the same ones
+    // out again.
+    unsigned int mapGeneration() const { return mMapGeneration; }
     void auditRooms(QHash<int, int>&, QHash<int, int>&);
     bool addRoom(int id, TRoom* pR, bool isMapLoading = false);
     int getAreaID(TArea* pA);
@@ -118,6 +124,7 @@ private:
     QSet<int>* mpTempRoomDeletionSet{nullptr}; // Used during bulk room deletion
     // Flag to prevent expensive individual cleanup during bulk destruction
     bool mBulkDeletionMode = false;
+    unsigned int mMapGeneration = 0;
 
     friend class TRoom;
     friend class TArea;

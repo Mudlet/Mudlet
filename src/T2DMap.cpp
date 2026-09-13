@@ -4123,17 +4123,27 @@ void T2DMap::createLabel(QRectF labelRectangle)
 
     // A script can clear or replace the map while the dialog is open (the user
     // can too, as it is not modal), deleting the area from under it: look it up
-    // again by id rather than keep the pointer.
+    // again by id rather than keep the pointer. The ids alone are not enough to
+    // find it again either - a map loaded after the clear numbers its areas
+    // from the lowest free one and its labels from zero in each area, so the
+    // pair can just as well name a label of the new map that this dialog has
+    // nothing to do with. The map's generation says which map they came from.
     const int areaId = mAreaID;
-    connect(mpDlgMapLabel, &dlgMapLabel::updated, this, [this, labelRectangle, labelId, areaId]() {
+    const unsigned int mapGeneration = mpMap->mpRoomDB->mapGeneration();
+    connect(mpDlgMapLabel, &dlgMapLabel::updated, this, [this, labelRectangle, labelId, areaId, mapGeneration]() {
+        if (mpMap->mpRoomDB->mapGeneration() != mapGeneration) {
+            return;
+        }
         if (auto pLabelArea = mpMap->mpRoomDB->getArea(areaId)) {
             updateMapLabel(labelRectangle, labelId, pLabelArea);
         }
     });
 
-    connect(mpDlgMapLabel, &dlgMapLabel::rejected, this, [this, labelId, areaId]() {
-        if (auto pLabelArea = mpMap->mpRoomDB->getArea(areaId)) {
-            pLabelArea->mMapLabels.remove(labelId);
+    connect(mpDlgMapLabel, &dlgMapLabel::rejected, this, [this, labelId, areaId, mapGeneration]() {
+        if (mpMap->mpRoomDB->mapGeneration() == mapGeneration) {
+            if (auto pLabelArea = mpMap->mpRoomDB->getArea(areaId)) {
+                pLabelArea->mMapLabels.remove(labelId);
+            }
         }
         update();
     });
