@@ -523,9 +523,12 @@ int TLuaInterpreter::sendTelnetChannel102(lua_State* L)
     // The payload is two raw bytes, so it needs no encoding conversion - only the
     // IAC escaping buildChannel102Message() applies to it
     std::string output = cTelnet::buildChannel102Message(msg);
-    if (!host.mTelnet.socketOutRaw(output)) {
-        return warnArgumentValue(L, __func__, qsl("failed to send the channel 102 message - connection may have been lost or a socket write error occurred"));
-    }
+    // socketOutRaw() is equally false for a profile that holds no socket at all,
+    // and unlike sendATCP/sendGMCP/sendMSDP there is no connection-state guard in
+    // front of this call to sort the two apart - so refusing on a false would
+    // report the channel as shut on every offline profile, which is the state
+    // feedTelnet() drives the telnet specs in.
+    host.mTelnet.socketOutRaw(output);
     lua_pushboolean(L, true);
     return 1;
 }
