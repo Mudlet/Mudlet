@@ -46,6 +46,31 @@ SignInStoreReconciler::~SignInStoreReconciler()
     }
 }
 
+SignInStoreReconciler::Intent SignInStoreReconciler::Intent::full(QString account, QString provider, bool secureOnly, QString token)
+{
+    Intent intent;
+    intent.shape = Shape::Full;
+    intent.account = std::move(account);
+    intent.provider = std::move(provider);
+    intent.secureOnly = secureOnly;
+    intent.token = std::move(token);
+    return intent;
+}
+
+SignInStoreReconciler::Intent SignInStoreReconciler::Intent::hint(QString account, QString provider)
+{
+    Intent intent;
+    intent.shape = Shape::Hint;
+    intent.account = std::move(account);
+    intent.provider = std::move(provider);
+    return intent;
+}
+
+SignInStoreReconciler::Intent SignInStoreReconciler::Intent::absent()
+{
+    return Intent{};
+}
+
 std::vector<SignInStoreReconciler::Operation> SignInStoreReconciler::sequenceFor(Shape shape)
 {
     // The write goes metadata first and the token only after, so a failure part-way leaves a resume
@@ -80,9 +105,9 @@ QString SignInStoreReconciler::metadataPayload(const Intent& intent)
 void SignInStoreReconciler::scrub(Request& request)
 {
     // secureStringClear() only reaches the real bytes when the token is uniquely owned at this
-    // point - true whenever the caller std::move()s the Intent into setIntent(), as every caller
-    // in this file does, but not enforceable from here: a caller that copies an Intent in instead
-    // gets a private detach-and-zero that leaves the original bytes untouched.
+    // point. Intent is move-only, so a caller cannot copy one in by accident; it can still leave a
+    // second owner behind by assigning intent.token from a QString it keeps, which no type can
+    // prevent - that caller gets a private detach-and-zero leaving the original bytes untouched.
     SecureStringUtils::secureStringClear(request.intent.token);
 }
 
@@ -122,8 +147,8 @@ void SignInStoreReconciler::runStep()
         auto reached = std::move(*mActive);
         // mActive must already be empty when finish() runs: a completion that calls setIntent()
         // relies on finding no active request here so it can self-start via setIntent()'s own
-        // "if (!mActive) { start(); }" below - reordering these two lines would leave that
-        // self-start unreachable and the re-entrant request would never run.
+        // "if (!mActive) { start(); }" - reordering these two lines would leave that self-start
+        // unreachable and the re-entrant request would never run.
         mActive.reset();
         finish(reached, Outcome::Reached, Operation::WriteMetadata, QString());
         return;
@@ -134,11 +159,10 @@ void SignInStoreReconciler::runStep()
     if (op == Operation::WriteMetadata) {
         payload = metadataPayload(mActive->intent);
     } else if (op == Operation::WriteToken) {
-        // A genuine handover, not a copy: the store's write owns the token from here, and this
-        // request no longer holds anything to scrub. Load-bearing for scrub(): it can only zero real
-        // bytes because this move leaves no other copy of the token behind. Change this to a copy and
-        // scrub() starts zeroing a detached QString instead, silently stopping the secret from ever
-        // being wiped.
+        // A genuine handover, not a copy: the performer receives the sole copy this object held, and
+        // the request keeps nothing (scrub() then finds an empty string and does nothing, which is the
+        // intent). Load-bearing for the performer's own clear, not for scrub() - a copy here would
+        // leave the performer zeroing one of two live buffers, so the secret would outlive the write.
         payload = std::move(mActive->intent.token);
     }
 

@@ -121,20 +121,22 @@ bool readStoredTransportRequirement(const QJsonObject& entry)
 }
 
 // The two credential-store keys a profile's saved sign-in occupies: non-secret metadata under one, the
-// bearer token under the other. Every write goes metadata-then-token and every removal goes
-// token-then-metadata, each step conditional on the one before, so a store failure part way through can
-// only ever leave the harmless half without the secret - never the secret without the metadata, which is
-// the half the preferences "Forget saved sign-in" control keys off.
+// bearer token under the other. SignInStoreReconciler::sequenceFor() owns the ordering - a full save
+// writes metadata then token, a resume hint removes the token then rewrites the metadata, and a forget
+// removes token then metadata - and every step is conditional on the one before. Whichever sequence
+// fails part way, what survives is the harmless half without the secret, never the secret without the
+// metadata, which is the half the preferences "Forget saved sign-in" control keys off.
 //
-// Functions rather than repeated literals: the token key is named at five call sites, and a typo in one
-// of them would silently write where nothing ever reads.
+// Functions rather than repeated literals: a typo in one copy of a key would silently write where
+// nothing ever reads, and neither key is spelled anywhere else.
 QString metadataKey()
 {
     return qsl("reconnect");
 }
 
-// Holds the raw token and nothing else, so the secret never passes through a QJsonDocument - whose
-// parsed copy lives in heap storage Qt does not expose and cannot be zeroed.
+// Holds the raw token and nothing else, so the *stored* token never passes through a QJsonDocument -
+// whose parsed copy lives in heap storage Qt does not expose and cannot be zeroed. A token arriving on
+// the wire still does (handleAuthToken), as does a pre-split entry's inline token on the read path.
 QString tokenKey()
 {
     return qsl("reconnect-token");
@@ -256,9 +258,20 @@ void GMCPAuthenticator::saveSupportsSet(const QString& packageMessage, const QSt
         // conformant server's nonce_required was ignored and its authorization request went out with no
         // nonce for the server to check the ID token against. The old key is still accepted when the
         // standard's is absent, so a server written against the previous behaviour keeps working.
-        auto nonceRequired = decodeWireBool(jsonObj[qsl("nonce_required")]);
+        const auto declaredNonceRequired = jsonObj[qsl("nonce_required")];
+        auto nonceRequired = decodeWireBool(declaredNonceRequired);
         if (!nonceRequired.has_value()) {
             nonceRequired = decodeWireBool(jsonObj[qsl("nonce")]);
+        }
+        // Worth reporting for the same reason as success and secure_only, and more urgently: the
+        // fallback is "no nonce", and a sign-in that then fails because the server cannot bind the ID
+        // token says nothing about a nonce anywhere in the log - the one message that would (see
+        // startClientDrivenOAuth) is itself gated on the flag this just failed to read. Only the
+        // standard's own key is reported; the legacy "nonce" key is a compatibility fallback and its
+        // shape is not something to hold a server to.
+        if (!nonceRequired.has_value() && !declaredNonceRequired.isUndefined()) {
+            qWarning().noquote().nospace() << "GMCP " << packageMessage << " - a 'nonce_required' value of type " << declaredNonceRequired.type()
+                                           << " is not a boolean in any form the standard permits, so it is being ignored. The sign-in request will carry no nonce.";
         }
         mOAuthNonceRequired = nonceRequired.value_or(false);
     }
@@ -441,9 +454,13 @@ void GMCPAuthenticator::performStoreOperation(SignInStoreReconciler::Operation o
 
     if (op == Operation::WriteMetadata || op == Operation::WriteToken) {
         credentialManager->storePassword(mpHost->getName(), key, payload, std::move(onDone));
-        // Our copy is released here. For the token this is the only copy this class ever held - the
-        // reconciler moved it in - so zeroing it is real; CredentialManager's own copy is subject to
-        // the implicit-sharing caveat documented there and is not ours to clear.
+        // Releases our reference. How much that is worth depends on the backend, so do not read it as
+        // the token being gone from the process: storePassword takes a const reference, and on the
+        // keychain path CredentialManager both hands it to the QKeychain job and captures it by value in
+        // the job's completion. The buffer is shared at this point, so secureStringClear() detaches and
+        // zeroes a fresh copy while the real bytes live on until that job finishes. Only the file
+        // fallback, which keeps nothing, makes this clear reach the bytes. Hardening that last hop means
+        // changing CredentialManager's ownership model, tracked in #10587.
         SecureStringUtils::secureStringClear(payload);
         return;
     }
@@ -455,22 +472,18 @@ void GMCPAuthenticator::storeReconnectToken(const QString& account, QString toke
     // A rotation of a token this connection replayed before the player asked to forget the saved
     // sign-in belongs to the sign-in that forget discarded, so it goes no further: storing it would put
     // back, under a fresh value, exactly what was just removed - and the player has no way to tell.
-    // A token from a sign-in the player started after the forget is not a rotation and is stored.
+    // Only a rotation: reconnectingWithToken is cleared the moment a browser sign-in is offered on this
+    // connection (see offerOrOpenSignInUrl), so a token the player earned after the forget is stored.
     if (mConn.reconnectingWithToken && mConn.forgetAtReplay != mForgetGeneration) {
         SecureStringUtils::secureStringClear(token);
         return;
     }
 
-    SignInStoreReconciler::Intent intent;
-    intent.shape = SignInStoreReconciler::Shape::Full;
-    intent.account = account;
-    // Keep the provider with the entry so a later connection can resume this provider's browser
-    // sign-in if the token has expired or been revoked by then.
-    intent.provider = mConn.accountProvider;
-    // Stored with the token rather than recomputed at replay time: the requirement belongs to the
-    // connection that minted it, which by then is long gone.
-    intent.secureOnly = secureOnly;
-    intent.token = std::move(token);
+    // The provider is kept with the entry so a later connection can resume this provider's browser
+    // sign-in if the token has expired or been revoked by then. secureOnly is stored rather than
+    // recomputed at replay time: the requirement belongs to the connection that minted the token, which
+    // by then is long gone.
+    auto intent = SignInStoreReconciler::Intent::full(account, mConn.accountProvider, secureOnly, std::move(token));
 
     // Whether a successful save is worth telling the player about at all, decided now: both answers
     // belong to the moment the token arrived, and the next Char.Login.Default resets mConn while the
@@ -550,10 +563,7 @@ void GMCPAuthenticator::sendResume(const QString& account, const QString& provid
 
 void GMCPAuthenticator::storeResumeHint(const QString& account, const QString& provider)
 {
-    SignInStoreReconciler::Intent intent;
-    intent.shape = SignInStoreReconciler::Shape::Hint;
-    intent.account = account;
-    intent.provider = provider;
+    auto intent = SignInStoreReconciler::Intent::hint(account, provider);
 
     QPointer<Host> safeHost = mpHost;
     mpStoreReconciler->setIntent(std::move(intent), [this, safeHost](SignInStoreReconciler::Outcome outcome, SignInStoreReconciler::Operation, QString error) {
@@ -581,22 +591,22 @@ void GMCPAuthenticator::forgetSavedSignIn(std::function<void(bool success)> call
 
 void GMCPAuthenticator::discardReconnectToken(std::function<void(bool success)> callback)
 {
-    // An intent's default shape is Absent.
-    mpStoreReconciler->setIntent(SignInStoreReconciler::Intent{}, [callback = std::move(callback)](SignInStoreReconciler::Outcome outcome, SignInStoreReconciler::Operation failedAt, QString error) {
-        using Outcome = SignInStoreReconciler::Outcome;
-        using Operation = SignInStoreReconciler::Operation;
-        if (outcome == Outcome::Failed) {
-            // A failed removal may leave a now-invalid bearer token on disk, so make it visible rather
-            // than swallowing it.
-            qWarning().noquote() << "GMCP Char.Login - failed to remove the stored" << (failedAt == Operation::RemoveToken ? "reconnect token:" : "sign-in:") << error;
-        }
-        // Report the real outcome so callers (e.g. the preferences UI) only claim success once
-        // everything is actually gone. A superseded forget did not complete as asked - it takes a
-        // token arriving in the same instant - and is reported as such.
-        if (callback) {
-            callback(outcome == Outcome::Reached);
-        }
-    });
+    mpStoreReconciler->setIntent(SignInStoreReconciler::Intent::absent(),
+                                 [callback = std::move(callback)](SignInStoreReconciler::Outcome outcome, SignInStoreReconciler::Operation failedAt, QString error) {
+                                     using Outcome = SignInStoreReconciler::Outcome;
+                                     using Operation = SignInStoreReconciler::Operation;
+                                     if (outcome == Outcome::Failed) {
+                                         // A failed removal may leave a now-invalid bearer token on disk, so make it visible rather
+                                         // than swallowing it.
+                                         qWarning().noquote() << "GMCP Char.Login - failed to remove the stored" << (failedAt == Operation::RemoveToken ? "reconnect token:" : "sign-in:") << error;
+                                     }
+                                     // Report the real outcome so callers (e.g. the preferences UI) only claim success once
+                                     // everything is actually gone. A superseded forget did not complete as asked - it takes a
+                                     // token arriving in the same instant - and is reported as such.
+                                     if (callback) {
+                                         callback(outcome == Outcome::Reached);
+                                     }
+                                 });
 }
 
 void GMCPAuthenticator::handleAuthUrl(const QString& packageMessage, const QString& data)
@@ -643,6 +653,12 @@ void GMCPAuthenticator::handleAuthUrl(const QString& packageMessage, const QStri
 
 void GMCPAuthenticator::offerOrOpenSignInUrl(const QUrl& url, const QString& provider, bool answersTheGamesSignInOffer)
 {
+    // Every browser sign-in reaches the player through here, server-driven or client-driven, so this is
+    // where a connection stops running on the token it replayed. Both things that flag reads then become
+    // right again: a token from this sign-in is a first-time save worth announcing rather than a silent
+    // rotation, and - since the flag is what pairs with mConn.forgetAtReplay - it is no longer mistaken
+    // for a rotation of a sign-in the player forgot, which would have dropped it unstored and unsaid.
+    mConn.reconnectingWithToken = false;
     const bool mayOpen = mpHost->userSentInputThisConnection() || (answersTheGamesSignInOffer && mUnpromptedBrowserOpenAvailable);
     if (mayOpen) {
         if (openSignInUrl(url, provider)) {
@@ -1172,11 +1188,14 @@ void GMCPAuthenticator::readStoredSignInEntry(std::function<void(bool success, S
                     SecureStringUtils::secureStringClear(value);
                     return;
                 }
-                // A read failure is indistinguishable from "no stored sign-in" to the caller - both end
-                // at an interactive sign-in - so log it here to make an unreadable token visible rather
-                // than silently downgrading the player with no clue.
+                // Debug, not a warning: CredentialManager reports "nothing stored" as a failed read
+                // (see its fallbackFileRetrieval), so a profile that has simply never saved a sign-in
+                // lands here on every single connection. Warning about that would put a line in every
+                // first-run log and train the reader to skip the one case that matters - a locked,
+                // denied or timed-out keychain, which is indistinguishable from here. Telling the two
+                // apart needs CredentialManager to stop conflating them, tracked in #10587.
                 if (!success) {
-                    qWarning().noquote() << "GMCP Char.Login - could not read the stored sign-in; falling back to interactive sign-in:" << errorMessage;
+                    qDebug().noquote() << "GMCP Char.Login - no stored sign-in was read; falling back to interactive sign-in:" << errorMessage;
                     callback(false, StoredSignIn{}, attemptGeneration);
                     return;
                 }
@@ -1225,8 +1244,9 @@ void GMCPAuthenticator::readStoredSignInEntry(std::function<void(bool success, S
                             } else {
                                 // CredentialManager cannot tell an absent key from a failed read, and the common
                                 // reason to land here is the ordinary one: this entry is a resume hint with no token
-                                // to find. A genuinely broken store fails the metadata read above and warns there,
-                                // so this stays a debug note rather than claiming a failure that may not have happened.
+                                // to find. Debug rather than a warning for that reason - but note what it costs the
+                                // one caller that treats an empty token as evidence: retryOrDropRejectedToken() then
+                                // cannot see a token another instance rotated, and drops this one. Same #10587.
                                 qDebug().noquote() << "GMCP Char.Login - no saved token was read; using the stored sign-in as a resume hint only:" << tokenError;
                             }
                             callback(true, std::move(entry), attemptGeneration);

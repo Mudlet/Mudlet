@@ -41,10 +41,11 @@
 // each operation completes.
 //
 // Serialising every mutation has a cost: a stalled store operation now delays every later sign-in
-// mutation behind it, up to CredentialManager's own timeout per step - about twice that for a
-// two-step sequence. Concretely, "Forget saved sign-in" can take up to a minute to answer where it
-// previously raced ahead of a slow save. Bounded and correct, but worth knowing before you go
-// looking for why a UI action seems to hang.
+// mutation behind it. A queued request waits out the stalled step before it can even abandon it, then
+// runs its own sequence, each step bounded by CredentialManager's 30-second timeout - so "Forget saved
+// sign-in", a two-step sequence, can take about ninety seconds to answer where it previously raced
+// ahead of a slow save. Bounded and correct, but worth knowing before you go looking for why a UI
+// action seems to hang.
 class SignInStoreReconciler : public QObject
 {
     Q_OBJECT
@@ -57,8 +58,31 @@ public:
         Full    // {account, provider?, secure_only} plus the token
     };
 
+    // Build one with full(), hint() or absent() rather than by assigning the fields: each takes only
+    // the fields its shape gives meaning to, so a Hint carrying a token, or a Full whose transport
+    // requirement was never set, cannot be constructed at all.
+    //
+    // Move-only, because the token is a bearer secret. A dropped request's token is scrubbed before its
+    // completion runs, and that scrub reaches the real bytes only while this is the sole owner - so a
+    // copy would silently reduce it to zeroing a detached buffer. Deleting the copy makes the accidental
+    // version of that a compile error; it cannot stop a caller assigning token from a QString it keeps,
+    // which no type in a copy-on-write language can.
     struct Intent
     {
+        Intent() = default;
+        Intent(const Intent&) = delete;
+        Intent& operator=(const Intent&) = delete;
+        Intent(Intent&&) = default;
+        Intent& operator=(Intent&&) = default;
+
+        // The stored sign-in in full: the token plus the metadata needed to replay it later. provider
+        // may be empty when no browser sign-in was involved; account and token may not.
+        static Intent full(QString account, QString provider, bool secureOnly, QString token);
+        // Enough to restart provider's browser sign-in later, and no secret.
+        static Intent hint(QString account, QString provider);
+        // Nothing stored. Named rather than written as Intent{} so the destructive request says so.
+        static Intent absent();
+
         Shape shape = Shape::Absent;
         QString account;
         QString provider;
@@ -78,9 +102,11 @@ public:
 
     using Done = std::function<void(bool ok, QString error)>;
     // Perform one operation. payload is the metadata JSON for WriteMetadata, the token for
-    // WriteToken, and empty for the removals. Must call done exactly once, on any thread affinity the
-    // reconciler's own; a done arriving after the reconciler is destroyed is discarded. A Performer
-    // that never calls done at all leaves the reconciler permanently occupied - see setIntent().
+    // WriteToken, and empty for the removals. Must call done exactly once, and on the reconciler's own
+    // thread - nothing here is synchronised, and Mudlet is single-threaded outside Qt's networking.
+    // done may be called synchronously from inside the performer; one arriving after the reconciler is
+    // destroyed is discarded. A Performer that never calls done at all leaves the reconciler
+    // permanently occupied - see setIntent().
     using Performer = std::function<void(Operation op, QString payload, Done done)>;
     // failedAt is meaningful only when outcome is Failed.
     using Completion = std::function<void(Outcome outcome, Operation failedAt, QString error)>;

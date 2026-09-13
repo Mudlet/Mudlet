@@ -56,10 +56,13 @@ public:
     void sendCredentials(bool interactiveHandoff = false);
     void handleAuthResult(const QString& packageMessage, const QString& data);
     void handleAuthGMCP(const QString& packageMessage, const QString& data);
-    // Clears any stored password-less reconnect token for this profile, so the next connection signs in
-    // afresh. Invoked from the profile preferences "Forget saved sign-in" control. The optional callback
-    // reports whether the (asynchronous) keychain removal actually succeeded, so callers do not report
-    // success before the token is gone.
+    // Removes the whole stored sign-in for this profile - the token and the {account, provider} metadata
+    // that would otherwise resume the same provider - so the next connection signs in from scratch.
+    // Invoked from the profile preferences "Forget saved sign-in" control. It also bumps
+    // mForgetGeneration, so work already in flight stops putting back what it is removing. The optional
+    // callback reports whether the store really did end up empty, so callers do not report success
+    // before it is; a forget that a newer request supersedes reports false, since it did not complete as
+    // asked.
     void forgetSavedSignIn(std::function<void(bool success)> callback = {});
 
 private:
@@ -124,8 +127,10 @@ private:
     // a Char.Login.Default arriving mid-read cannot clear mConn and turn this into a full discard.
     void dropTokenKeepResumeHint(const QString& account, const QString& provider);
     // Requests that the stored sign-in become a resume hint - {account, provider} and no token. Runs
-    // because a token is dead, so the token is removed before the metadata is rewritten; a failure to
-    // remove it falls back to forgetting the whole entry rather than leaving it replayable.
+    // because a token is dead, so the token is removed before the metadata is rewritten. Any failure of
+    // that sequence falls back to forgetting the whole entry rather than risk leaving a dead token
+    // replayable - deliberately without checking which step failed, since the reconciler reports the
+    // outcome and the cost of an unnecessary forget is one provider menu.
     void storeResumeHint(const QString& account, const QString& provider);
     // Requests that nothing be stored. The token goes first, and a failure to remove it leaves the
     // metadata alone: deleting that half would hide the surviving token from the only UI that can
@@ -221,10 +226,11 @@ private:
     // instead, and Char.Login 2 forbids replaying a token rejected on it - hence latching synchronously at
     // the rejection rather than when the read returns.
     //
-    // Consumed in one place (attemptReconnect()) but cleared or re-armed in two others, so audit all three
-    // together: retryOrDropRejectedToken() clears it when it replays a live rotated token, and re-arms it
-    // when a superseded recovery leaves the rejected token stored - by then the superseding Default has
-    // already consumed the latch, so without re-arming the Default after that could replay the dead token.
+    // Consumed in one place (attemptReconnect()) but cleared or re-armed at two further points, both
+    // inside retryOrDropRejectedToken(), so audit all three together: it is cleared when a live rotated
+    // token is replayed, and re-armed when a superseded recovery leaves the rejected token stored - by
+    // then the superseding Default has already consumed the latch, so without re-arming it the Default
+    // after that could replay the dead token.
     bool mReconnectRejected = false;
     // Incremented on every per-connection auth reset - each Char.Login.Default, and each socket connect
     // or disconnect. The asynchronous reconnect-token keychain read captures the value current when it
@@ -246,11 +252,14 @@ private:
     unsigned int mAnnouncedSaveForAttempt = 0;
     // Incremented by forgetSavedSignIn(). "Forget saved sign-in" has to beat whatever the sign-in
     // machinery already had in flight, and none of that is a new sign-in attempt, so it cannot ride on
-    // mAuthAttemptGeneration - which also gates work the forget must not cancel. Each store read that
-    // goes on to act captures this value beforehand and compares it afterwards: without that, a read
-    // still in flight replays the token being discarded, and a rejection recovery still in flight writes
-    // a resume hint back over the entry just removed, leaving Forget with nothing to show for itself.
-    // Not part of mConn: it must monotonically increase, never reset.
+    // mAuthAttemptGeneration - which also gates work the forget must not cancel. Three sites compare
+    // against it, and not all of them read the store: readStoredSignIn() captures it before its read and
+    // re-checks after, while retryOrDropRejectedToken() and storeReconnectToken() compare against
+    // mConn.forgetAtReplay - the value at the time this connection replayed its token, which is what
+    // makes a forget landing anywhere after that replay count. Without them a read still in flight
+    // replays the token being discarded, a rejection recovery writes a resume hint back over the entry
+    // just removed, and a rotation re-saves it under a fresh value - leaving Forget with nothing to show
+    // for itself. Not part of mConn: it must monotonically increase, never reset.
     unsigned int mForgetGeneration = 0;
 
     // A server can pack thousands of Char.Login.Default frames into one packet and every sign-in

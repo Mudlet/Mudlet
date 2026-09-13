@@ -132,27 +132,17 @@ struct SyncStore
 
 static Intent fullIntent(const QString& token, const QString& provider = QString())
 {
-    Intent intent;
-    intent.shape = Shape::Full;
-    intent.account = qsl("acct:char");
-    intent.provider = provider;
-    intent.secureOnly = true;
-    intent.token = token;
-    return intent;
+    return Intent::full(qsl("acct:char"), provider, true, token);
 }
 
 static Intent hintIntent()
 {
-    Intent intent;
-    intent.shape = Shape::Hint;
-    intent.account = qsl("acct:char");
-    intent.provider = qsl("discord");
-    return intent;
+    return Intent::hint(qsl("acct:char"), qsl("discord"));
 }
 
 static Intent absentIntent()
 {
-    return Intent{};
+    return Intent::absent();
 }
 
 class SignInStoreReconcilerTest : public QObject
@@ -478,11 +468,18 @@ private slots:
         Outcomes outcomes;
         SignInStoreReconciler reconciler(store.performer());
         std::vector<std::unique_ptr<unsigned int>> ids;
-        const std::vector<Intent> burst{fullIntent(qsl("t1")), hintIntent(), absentIntent(), fullIntent(qsl("t4")), hintIntent()};
-        for (const auto& intent : burst) {
+        // Built one at a time and moved in: an Intent cannot be copied, and holding the burst in a
+        // container first would have meant the reconciler scrubbing its own copy while the container
+        // kept the token whole - the exact mistake the move-only Intent exists to make impossible.
+        const auto submit = [&](Intent intent) {
             ids.push_back(std::make_unique<unsigned int>(0));
-            *ids.back() = reconciler.setIntent(intent, outcomes.recorder(ids.back().get()));
-        }
+            *ids.back() = reconciler.setIntent(std::move(intent), outcomes.recorder(ids.back().get()));
+        };
+        submit(fullIntent(qsl("t1")));
+        submit(hintIntent());
+        submit(absentIntent());
+        submit(fullIntent(qsl("t4")));
+        submit(hintIntent());
         // Drain whatever the reconciler issues until it is idle.
         std::size_t next = 0;
         while (reconciler.inFlight()) {
@@ -503,7 +500,7 @@ private slots:
 
     void aDoneArrivingAfterDestructionIsDiscarded()
     {
-        // Only bites under a sanitizer build: swap the QPointer guard in runStep() for a bare `this`
+        // Only bites under a sanitizer build: swap the QPointer guard in issue() for a bare `this`
         // capture and this still passes under the -nosan preset, because the use-after-free happens
         // to be benign there. CI's Linux ASan job is what actually enforces this one.
         FakeStore store;
