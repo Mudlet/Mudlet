@@ -1,4 +1,13 @@
 describe("Tests DebugTools.lua functions", function()
+  describe("Tests the functionality of prettywrite", function()
+    it("Should still format the way inspect does", function()
+      -- prettywrite is the old name for inspect, kept for old scripts; nothing
+      -- inside Mudlet calls it, so nothing else would notice it drifting
+      assert.equals(inspect({1, 2}), prettywrite({1, 2}))
+      assert.equals(inspect({a = {b = 1}}), prettywrite({a = {b = 1}}))
+    end)
+  end)
+
   describe("Tests the functionality of printDebug", function()
     local s
     before_each(function()
@@ -127,6 +136,11 @@ describe("Tests DebugTools.lua functions", function()
       assert.is_truthy(nilAt)
       assert.is_truthy(after)
       assert.is_true(before < nilAt and nilAt < after, "the nil should keep its place between the two strings")
+    end)
+
+    it("Should return nothing, so its result cannot be echoed by accident", function()
+      assert.equals(0, select("#", display("hello")))
+      assert.equals(0, select("#", display("one", "two")))
     end)
   end)
 

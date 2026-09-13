@@ -198,6 +198,27 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
              qsl(":/icons/batmud_mud.png"),
              QString()},
 
+            {qsl("DarkMists"),
+             qsl("darkmists.org"),
+             2222,
+             false,
+             qsl("<a href='https://darkmists.org'>https://darkmists.org</a>"),
+             qsl(":/icons/banner_darkmists.png"),
+             qsl("Dark Mists is a persistent online fantasy world featuring 24 races "
+                 "and 11 classes, 9 of which branch into distinct subclasses, with "
+                 "dozens of quests and hundreds of skills and spells tied to class, "
+                 "subclass, or race. The world is shaped by the players through "
+                 "active clans and a worship system with direct interaction with "
+                 "the Gods of Dark Mists. The Immortals are present in-game and "
+                 "continue developing new content for the world. The community is "
+                 "welcoming and helpful to newcomers while encouraging competition "
+                 "and growth. Houses remain active and provide guidance and support "
+                 "for new and returning players. Roleplay is required and "
+                 "playerkilling is an integral part of character growth, rewarding "
+                 "wit, courage, and ambition. The world continues to evolve with "
+                 "new discoveries and challenges. Come carve out your legacy in "
+                 "Dark Mists.")},
+
             {qsl("God Wars II"),
              qsl("godwars2.org"),
              3000,
@@ -303,6 +324,32 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "for changes, and the Newbie Council assists new players. Our team of Immortals "
                  "are always willing to answer questions and to help out however necessary. Best "
                  "of all, playing the Realms of Despair is totally FREE!")},
+
+            {qsl("Rites of Passage MUD"),
+             qsl("play.ropmud.com"),
+             4443,
+             false,
+             qsl("<a href='https://ropmud.com/index.html'>Website</a><br>"
+                 "<a href='https://discord.gg/CkYm9WRnyw'>Discord</a>"),
+             qsl(":/icons/banner_ropmud.png"),
+             qsl("Rites of Passage is a PVPVE (Player vs Player vs Environment) MUD where Good "
+                 "and Evil are locked in eternal war. Hunt powerful monsters for legendary "
+                 "loot, then defend it from enemy players hunting you. Every expedition into "
+                 "dangerous territory carries the thrill of both PvE challenge and PvP risk."
+                 "\n\n"
+                 "The environment is deadly - 80+ areas filled with creatures guarding "
+                 "valuable equipment, quests that reward the bold, and a remort system that "
+                 "lets you grow stronger with each life. But the real tension comes from "
+                 "other players. That raid boss you're fighting? The enemy faction might be "
+                 "watching, waiting for you to weaken before they strike. That rare gem "
+                 "you just looted? You'll need to make it home alive."
+                 "\n\n"
+                 "This is a PK MUD. Combat between Good and Evil players isn't just allowed "
+                 "- it's encouraged. Killing enemies earns warpoints, experience, and their "
+                 "gear. Climb the ranks. Make the topten list. Build your reputation through "
+                 "conquest. If you want the risk of PvP combined with challenging "
+                 "environment combat, you've found your home."),
+             true}, // ROP loader installs its own custom interface
 
             {qsl("ZombieMUD"),
              qsl("zombiemud.org"),
@@ -607,7 +654,7 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
              qsl(":/icons/carrionfields.png"),
              qsl("Carrion Fields is a unique blend of high-caliber roleplay and complex, hardcore "
                  "player-versus-player combat that has been running continuously, and 100% free, "
-                 "for over 25 years."
+                 "for over 30 years."
                  "\n\n"
                  "Choose from among 21 races, 17 highly customizable classes, and several cabals "
                  "and religions to suit your playstyle and the story you want to tell. Our "
@@ -616,7 +663,7 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "\n\n"
                  "We like to think of ourselves as the Dark Souls of MUDs, with a community that "
                  "is supportive of new players - unforgiving though our world may be. Join us for a "
-                 "real challenge and real rewards: adrenalin-pumping battles, memorable quests run "
+                 "real challenge and real rewards: adrenaline-pumping battles, memorable quests run "
                  "by our volunteer immortal staff, and stories that will stick with you for a "
                  "lifetime."),
              true}, // CF-loader installs CFGUI
@@ -830,6 +877,24 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "\n\n"
                  "Old-school depth. Modern access. New players welcome."),
              true}, // icesus-loader installs Icesus' own interface
+            {qsl("PhoenixMUD"),
+             qsl("phoenixmud.net"),
+             4000,
+             false,
+             qsl("<a href='https://phoenixmud.net'>Website</a><br>"
+                 "<a href='https://phoenixmud.net/PhoenixMUD.mpackage'>Mudlet package</a>"),
+             qsl(":/icons/phoenixmud_480x120.png"),
+             qsl("PhoenixMUD is a free classic DikuMUD, online since 1996. 20,685 rooms across "
+                 "276 zones, 16 classes and 15 races, and 400+ levels of progression: 1-100 to "
+                 "Hero, then three full remort climbs."
+                 "\n\n"
+                 "Our official Mudlet package installs itself on connect: GMCP vitals and effects "
+                 "panes, channel routing into chat windows, and an embedded mapper preloaded with "
+                 "the whole world. The browser client adds a World Atlas: a live map with "
+                 "fog-of-war and route-finding."
+                 "\n\n"
+                 "No payment of any kind, and character creation is open. Actively developed, with "
+                 "a friendly community that makes room for newcomers. New players welcome.")},
             };
     // clang-format on
 };

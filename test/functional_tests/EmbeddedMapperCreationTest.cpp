@@ -20,17 +20,24 @@
 /*
  * Covers TMainConsole::createMapper() - the embedded mapper behind Lua
  * createMapper() and Geyser.Mapper{embedded = true} - on both sides of its
- * already-loaded-map branch.
+ * already-loaded-map branch, and that the main toolbar map action leaves an
+ * embedded mapper in charge of TMap::mpMapper instead of building a
+ * competing main window dock over it.
  *
  * An embedded mapper and the dockable map widget are mutually exclusive for the
  * life of a profile and neither can be destroyed, so the busted suite cannot go
  * here and each test method needs a mudlet of its own.
  */
 
+#include <QDockWidget>
+#include <QFileInfo>
 #include <QSignalSpy>
+#include <QTemporaryDir>
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include "PortableModeTestHelper.h"
+#include "ProfileTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TMainConsole.h"
@@ -42,20 +49,17 @@
 #include "dlgMapper.h"
 #include "mudlet.h"
 
-using namespace std::chrono_literals;
+#include "GroupedTest.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForEmbeddedMapperTest();
+using namespace std::chrono_literals;
 
 class EmbeddedMapperCreationTest : public QObject
 {
     Q_OBJECT
 
 private:
+    QTemporaryDir mConfigDir;
+    QByteArray mSavedXdg;
     TelnetServerStub* mpServer = nullptr;
     Host* mpHost = nullptr;
     const QString mHostname = qsl("Embedded-Mapper-Test-Host");
@@ -65,7 +69,25 @@ private:
     const QString mPlayerAreaName = qsl("QAArea");
 
 private slots:
-    void initTestCase() { initializeQRCResourcesForEmbeddedMapperTest(); }
+    void initTestCase()
+    {
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
+        // A config root of this process's own. Sharing the developer's
+        // ~/.config/mudlet means sharing a profile list, so a second copy of
+        // this test running at the same time is told the name it types is
+        // already in use and never gets an enabled Connect button. Since #9712
+        // the opt-in that makes setupConfig() adopt a directory is
+        // $XDG_CONFIG_HOME/mudlet/profiles, not the mudlet directory alone.
+        QVERIFY(mConfigDir.isValid());
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+        qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
+    }
+
+    void cleanupTestCase() { mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg); }
 
     void init()
     {
@@ -74,34 +96,13 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
+        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
         deleteProfileDirectory();
 
-        QTimer::singleShot(0ms, qApp, [this]() {
-            mudlet::self()->startAutoLogin({});
-            QTest::qWait(100ms);
-            QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button, Qt::LeftButton);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), mHostname);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), mLocalhost);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), mPort);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
-        });
-
-        QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-        if (!spy.wait(5000)) {
-            QFAIL("Profile took too long to load.");
-        }
-        mpHost = mudlet::self()->getActiveHost();
+        mpHost = TestProfile::create(mHostname, mLocalhost, mPort);
         if (!mpHost) {
             QFAIL("No active host available for the test.");
         }
@@ -134,7 +135,7 @@ private slots:
         const int playerAreaId = pRoomDB->addArea(mPlayerAreaName);
         QVERIFY(playerAreaId > 0);
         QVERIFY(pMap->addRoom(1));
-        QVERIFY(pMap->setRoomArea(1, playerAreaId, false));
+        QVERIFY(pMap->setRoomArea(1, playerAreaId));
         pMap->mRoomIdHash[pMap->mProfileName] = 1;
         pMap->setDefaultAreaShown(false);
         QVERIFY2(!pRoomDB->isEmpty(), "the map has to be non-empty for this to be the returning-user path");
@@ -155,6 +156,46 @@ private slots:
         QVERIFY2(mapOpenEventCountIs(1), "a repeat createMapper() raised mapOpenEvent again");
     }
 
+    // An embedded mapper stops redrawing once the toolbar's own map dock has
+    // been opened and closed again. slot_showMapperDialog() repoints
+    // TMap::mpMapper at the mapper it puts in that dock, and on hide restores
+    // it only from mpConsole->mpDockableMapWidget - which is never where
+    // createMapper() put the embedded one, so the restore matches nothing and
+    // the QPointer is left null once the dock's own mapper dies with it. What
+    // the player sees is rooms being created and never drawn until the profile
+    // is reloaded.
+    void test_theEmbeddedMapperSurvivesTheToolbarMapDockClosing()
+    {
+        // The toolbar refuses to build a dock over an existing embedded
+        // mapper, so the dock has to predate it. Once both exist, toggling the
+        // dock visible repoints TMap::mpMapper at the dock's own mapper, and
+        // hiding it again has to hand the map back to the embedded one.
+        mudlet::self()->slot_showMapperDialog();
+        const QString mapKey = qsl("map_%1").arg(mHostname);
+        QDockWidget* pDock = mudlet::self()->getMainWindowDockWidget(mapKey);
+        QVERIFY2(pDock, "the toolbar action created no map dock, so this case covers nothing");
+
+        auto [created, message] = mpHost->mpConsole->createMapper(QString(), 0, 0, 300, 300);
+        QVERIFY2(created, qPrintable(message));
+        dlgMapper* pEmbedded = mpHost->mpConsole->mpMapper.data();
+        QVERIFY2(pEmbedded, "createMapper() left no embedded mapper to lose");
+        QCOMPARE(mpHost->mpMap->mpMapper.data(), pEmbedded);
+
+        // Toggle the dock off and on again through the toolbar entry point:
+        // showing it is what takes TMap::mpMapper over.
+        mudlet::self()->slot_showMapperDialog();
+        qApp->processEvents();
+        mudlet::self()->slot_showMapperDialog();
+        qApp->processEvents();
+        QVERIFY2(mpHost->mpMap->mpMapper.data() != pEmbedded, "the dock did not take the map over, so restoring it below would prove nothing");
+
+        mudlet::self()->slot_showMapperDialog();
+        qApp->processEvents();
+
+        QVERIFY2(mpHost->mpMap->mpMapper, "closing the toolbar map dock left the map with no mapper at all, so nothing redraws it");
+        QCOMPARE(mpHost->mpMap->mpMapper.data(), pEmbedded);
+    }
+
     void test_createMapperWithNoMapToLoad()
     {
         QVERIFY2(mpHost->mpMap->mpRoomDB->isEmpty(), "a freshly created profile was expected to have no rooms");
@@ -164,6 +205,47 @@ private slots:
         QVERIFY(mpHost->mpConsole->mpMapper);
 
         QVERIFY2(mapOpenEventCountIs(1), "createMapper() did not raise mapOpenEvent exactly once for a first-run profile");
+    }
+
+    // The main toolbar map button runs mudlet::slot_showMapperDialog(). With a
+    // script-embedded mapper alive it must not build the per-profile main
+    // window dock: that dock takes over TMap::mpMapper - the only widget map
+    // updates are painted through - and the embedded mapper then only repaints
+    // on direct interaction, even after the dock is closed again.
+    void test_toolbarMapActionLeavesEmbeddedMapperInCharge()
+    {
+        auto [created, message] = mpHost->mpConsole->createMapper(QString(), 0, 0, 300, 300);
+        QVERIFY2(created, qPrintable(message));
+        QVERIFY(mpHost->mpConsole->mpMapper);
+        QCOMPARE(mpHost->mpMap->mpMapper.data(), mpHost->mpConsole->mpMapper.data());
+
+        mudlet::self()->slot_showMapperDialog();
+
+        QVERIFY2(!mudlet::self()->findChild<QDockWidget*>(qsl("dockMap_%1_main").arg(mHostname)), "the toolbar map action built a competing main window map dock over an embedded mapper");
+        QCOMPARE(mpHost->mpMap->mpMapper.data(), mpHost->mpConsole->mpMapper.data());
+        QVERIFY2(mapOpenEventCountIs(1), "the toolbar map action raised mapOpenEvent over an existing embedded mapper");
+    }
+
+    // The Toolbox map entry's label is recomputed as the menu opens so that it
+    // says what the next activation will do. The update slot is driven
+    // directly here - opening the real menu needs a user.
+    void test_showMapMenuLabelSaysWhatTheNextActivationDoes()
+    {
+        mudlet::self()->slot_updateShowMapActionText();
+        QCOMPARE(mudlet::self()->dactionShowMap->text(), mudlet::tr("Show map"));
+
+        mudlet::self()->show();
+        auto [created, message] = mpHost->mpConsole->createMapper(QString(), 0, 0, 300, 300);
+        QVERIFY2(created, qPrintable(message));
+        qApp->processEvents();
+        QVERIFY2(mpHost->mapperShown(), "the embedded mapper did not come up on screen, so the Hide map branch cannot be exercised");
+        mudlet::self()->slot_updateShowMapActionText();
+        QCOMPARE(mudlet::self()->dactionShowMap->text(), mudlet::tr("Hide map"));
+
+        // What the menu entry itself runs - with a mapper alive this toggles it away
+        mudlet::self()->slot_mapper();
+        mudlet::self()->slot_updateShowMapActionText();
+        QCOMPARE(mudlet::self()->dactionShowMap->text(), mudlet::tr("Show map"));
     }
 
 private:
@@ -184,20 +266,5 @@ private:
     }
 };
 
-void initializeQRCResourcesForEmbeddedMapperTest()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "EmbeddedMapperCreationTest.moc"
-QTEST_MAIN(EmbeddedMapperCreationTest)
+MUDLET_GROUPED_TEST_MAIN(EmbeddedMapperCreationTest)

@@ -48,6 +48,13 @@
     and getMudletHomeDir()..slash..".."..slash..".."..slash.."moduleBackups"
     or getMudletHomeDir()..slash..to_folder[delete_folder]
 
+  -- these folders are created lazily, with the first file saved into one, and
+  -- lfs.dir() raises rather than listing nothing when the folder is not there
+  if lfs.attributes(dirpath, "mode") ~= "directory" then
+    echo(string.format("\nNo %s have been backed up yet, nothing to delete.", delete_folder))
+    return
+  end
+
   -- Traverse the profiles folder and create a table of files:
   for filename in lfs.dir(dirpath) do
     if filename~="." and filename~=".." then

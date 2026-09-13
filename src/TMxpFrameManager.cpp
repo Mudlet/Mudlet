@@ -167,10 +167,9 @@ bool TMxpFrameManager::closeFrame(const QString& name)
             // Remove the tab from the parent's tab widget
             parentTabWidget->removeTab(tabIndex);
 
-            // Clean up console registration
             if (mpHost && mpHost->mpConsole) {
-                mpHost->mpConsole->mSubConsoleMap.remove(name);
-                mpHost->mpConsole->mDockWidgetMap.remove(name);
+                mpHost->mpConsole->deregisterSubConsole(name);
+                mpHost->mpConsole->deregisterDockWidget(name);
             }
 
             // Remove from hierarchy
@@ -196,8 +195,8 @@ bool TMxpFrameManager::closeFrame(const QString& name)
     }
 
     if (mpHost && mpHost->mpConsole) {
-        mpHost->mpConsole->mSubConsoleMap.remove(name);
-        mpHost->mpConsole->mDockWidgetMap.remove(name);
+        mpHost->mpConsole->deregisterSubConsole(name);
+        mpHost->mpConsole->deregisterDockWidget(name);
     }
 
     removeFrameFromHierarchy(frame);
@@ -304,13 +303,13 @@ void TMxpFrameManager::setDestination(const QString& frameName, bool eol, bool e
 
     mCurrentDestination = frameName;
 
-    auto* console = getCurrentDestinationConsole();
+    auto* sink = currentDestinationSink();
 
-    if (console) {
+    if (sink) {
         if (eof) {
-            console->buffer.clear();
+            sink->discardAll();
         } else if (eol) {
-            console->buffer.clearLastLine();
+            sink->discardLastLine();
         }
     }
 }
@@ -330,14 +329,23 @@ QWidget* TMxpFrameManager::getCurrentDestinationWidget() const
     return frame ? frame->widget.data() : nullptr;
 }
 
-TConsole* TMxpFrameManager::getCurrentDestinationConsole() const
+TPrintSink* TMxpFrameManager::currentDestinationSink() const
 {
     if (mCurrentDestination.isEmpty()) {
-        return qobject_cast<TConsole*>(mpHost->mpConsole);
+        return nullptr;
     }
 
     const auto* frame = getFrame(mCurrentDestination);
-    return frame ? frame->console.data() : nullptr;
+    if (!frame) {
+        return nullptr;
+    }
+
+    TConsole* console = frame->console.data();
+    if (!console || console == mpHost->mpConsole) {
+        return nullptr;
+    }
+
+    return console;
 }
 
 TMxpFrame* TMxpFrameManager::getFrame(const QString& name)
@@ -464,10 +472,10 @@ QRect TMxpFrameManager::calculateFrameGeometry(TMxpFrame* frame, TMxpFrame* pare
     // Add small padding compensation for character-based frames to ensure full character visibility
     // This accounts for any internal widget padding or text rendering margins
     if (isCharacterHeight || isCharacterWidth) {
-        if (isCharacterWidth && frameWidth > 0) {
+        if (isCharacterWidth) {
             frameWidth += 4; // Add 4px horizontal padding for character visibility
         }
-        if (isCharacterHeight && frameHeight > 0) {
+        if (isCharacterHeight) {
             frameHeight += 4; // Add 4px vertical padding for character visibility
         }
     }
@@ -711,8 +719,7 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
         console->setStyleSheet(qsl("QWidget { border: 1px solid #444444; }"));
     }
 
-    // Register console
-    mainConsole->mSubConsoleMap.insert(frame->name, console);
+    mainConsole->registerSubConsole(frame->name, console);
 
     // Force layout to calculate sizes
     containerWidget->layout()->activate();
@@ -851,8 +858,7 @@ void TMxpFrameManager::layoutTabFrame(TMxpFrame* frame)
         console->setScrolling(false);
     }
 
-    // Register console in map
-    mainConsole->mSubConsoleMap.insert(frame->name, console);
+    mainConsole->registerSubConsole(frame->name, console);
 
     // Add as new tab - if this is the first child tab, select it
     // (The parent frame's own tab at index 0 is typically unused for content)
@@ -1043,8 +1049,7 @@ void TMxpFrameManager::layoutTabIntoExistingFrame(TMxpFrame* frame, TMxpFrame* t
     frameBgColor = frameBgColor.lighter(115);
     console->setBgColor(frameBgColor);
 
-    // Register console
-    mainConsole->mSubConsoleMap.insert(frame->name, console);
+    mainConsole->registerSubConsole(frame->name, console);
 
     // Optionally switch to the new tab
     tabWidget->setCurrentIndex(tabIndex);

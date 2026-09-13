@@ -53,5 +53,5 @@ Like cecho, but you can add color information using hex #RRGGBB format.
 ```
 See [hecho](https://wiki.mudlet.org/w/Manual:Lua_Functions#hecho), [hfeedTriggers](https://wiki.mudlet.org/w/Manual:Lua_Functions#hfeedTriggers).
 ]]
-version = [[1]]
+version = [[2]]
 created = "2024-08-24T08:27:19+02:00"

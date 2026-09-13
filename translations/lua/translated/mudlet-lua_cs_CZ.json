@@ -1,0 +1,102 @@
+{
+  "AdjustableContainer.attach": {
+    "message": "Připojit k:",
+    "description": "attaches your container to a border"
+  },
+  "AdjustableContainer.bottom": {
+    "message": "dole",
+    "description": "one of the borders the container can be attached to"
+  },
+  "AdjustableContainer.top": {
+    "message": "nahoře",
+    "description": "one of the borders the container can be attached to"
+  },
+  "AdjustableContainer.left": {
+    "message": "vlevo",
+    "description": "one of the borders the container can be attached to"
+  },
+  "AdjustableContainer.right": {
+    "message": "vpravo",
+    "description": "one of the borders the container can be attached to"
+  },
+  "AdjustableContainer.custom": {
+    "message": "Vlastní:",
+    "description": "a menu item in the right click menu. it contains user/package made custom items"
+  },
+  "AdjustableContainer.lock": {
+    "message": "Zamknout",
+    "description": "locks your container. Which means it's not movable/resizable anymore and changes some other properties depending on the Lockstyle (like hiding the borders)"
+  },
+  "AdjustableContainer.lockstyle": {
+    "message": "Styl zámku:",
+    "description": "different modes/styles to choose which will be the lock behaviour of the container"
+  },
+  "AdjustableContainer.standard": {
+    "message": "standardní",
+    "description": "one of the Lockstyles. This Lockstyle is the standard setting, with a small margin on top to keep the right click menu usable"
+  },
+  "AdjustableContainer.light": {
+    "message": "jednoduchý",
+    "description": "one of the Lockstyles. Can also be translated as simple. It is only hiding the min/restore labels the borders and margin stay intact"
+  },
+  "AdjustableContainer.full": {
+    "message": "úplný",
+    "description": "one of the Lockstyles. Can also be translated as complete as it's locking the container without any margin left for the right click menu."
+  },
+  "AdjustableContainer.border": {
+    "message": "okraj",
+    "description": "one of the Lockstyles which keeps the borders of the container visible."
+  },
+  "AdjustableContainer.save": {
+    "message": "Uložit",
+    "description": "saves the containers settings"
+  },
+  "AdjustableContainer.load": {
+    "message": "Načíst",
+    "description": "loads the previously saved settings of the container"
+  },
+  "AdjustableContainer.min_restore": {
+    "message": "Min./obnovit",
+    "description": "label to minimize/restore the container"
+  },
+  "AdjustableContainer.connectTo": {
+    "message": "Připojit k: ",
+    "description": "connect your container to a border to create a frame"
+  },
+  "AdjustableContainer.disconnect": {
+    "message": "Odpojit ",
+    "description": "disconnect your container from the border frame"
+  },
+  "Mudlet.packageInstallSuccess": {
+    "message": "Balíček „%s“ byl úspěšně nainstalován.",
+    "description": "Success message after drag&drop of package file onto Mudlet - %s is the file name"
+  },
+  "Mudlet.packageInstallFail": {
+    "message": "Instalace „%s“ selhala: %s",
+    "description": "Failure message after drag&drop of package file onto Mudlet - %s is the file name"
+  },
+  "Mudlet.moduleInstallSuccess": {
+    "message": "Modul „%s“ byl úspěšně nainstalován.",
+    "description": "Success message after drag&drop of module file onto Mudlet - %s is the file name"
+  },
+  "Mudlet.moduleInstallFail": {
+    "message": "Instalace „%s“ selhala: %s",
+    "description": "Failure message after drag&drop of module file onto Mudlet - %s is the file name"
+  },
+  "Mudlet.packageDownloading": {
+    "message": "Stahuje se balíček z %s.",
+    "description": "Download package from Url for installation - %s is source url"
+  },
+  "Mudlet.prefixOk": {
+    "message": "[  OK  ]  - ",
+    "description": "Start of the line for messages telling the player something is okay. Keep at 12 characters length for nice alignment!"
+  },
+  "Mudlet.prefixWarn": {
+    "message": "[ WARN ]  - ",
+    "description": "Start of the line for messages warning the player about something. Keep at 12 characters length for nice alignment!"
+  },
+  "Mudlet.prefixInfo": {
+    "message": "[ INFO ]  - ",
+    "description": "Start of the line for messages informing the player about something. Keep at 12 characters length for nice alignment!"
+  }
+}

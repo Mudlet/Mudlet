@@ -130,12 +130,11 @@ bool RoomContextMenuHandler::handle(T2DMap::MapInteractionContext& context)
             mMapWidget.mMultiSelectionHighlightRoomId = context.clickedRoomId;
             selectionChanged = true;
         }
-    } else if (previousSelectionSize <= 1 && previousSelectionSize > 0) {
-        mMapWidget.clearSelection();
-        mMapWidget.mMultiSelectionSet.clear();
-        mMapWidget.mMultiSelectionHighlightRoomId = 0;
-        selectionChanged = true;
     }
+    // Deliberately no else branch: a right-click that hits no room leaves the
+    // selection alone, whatever its size. Mappers select a room (or box-select
+    // one from a stack) and then right-click on empty space to edit it, because
+    // hitting the room itself is hard when zoomed out (#9915).
 
     context.multiSelectionSet = &mMapWidget.mMultiSelectionSet;
     context.hasMultiSelection = !mMapWidget.mMultiSelectionSet.isEmpty();

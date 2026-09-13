@@ -77,7 +77,9 @@ public:
 
     static constexpr int MediaFadeNotSet = 0;
     static constexpr int MediaStartDefault = 0;
-    static constexpr int MediaEndNotSet = 0;
+    // An end is a position in the track, and 0 is one of those, so unlike its neighbours this
+    // sentinel has to sit outside the range it stands in for.
+    static constexpr int MediaEndNotSet = -1;
     static constexpr int MediaFinishNotSet = 0;
 
     static constexpr const char* MediaWidgetLabel = "label";

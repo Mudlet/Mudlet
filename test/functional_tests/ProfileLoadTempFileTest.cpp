@@ -40,6 +40,7 @@
 
 #include <QTemporaryDir>
 
+#include "PortableModeTestHelper.h"
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
@@ -47,12 +48,7 @@
 #include "TriggerUnit.h"
 #include "mudlet.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForProfileLoadTempFileTest();
+#include "GroupedTest.h"
 
 namespace {
 // A minimal but complete profile save holding one trigger - the "guts" whose
@@ -105,18 +101,9 @@ private:
         return file.setFileTime(when, QFileDevice::FileModificationTime);
     }
 
-    // setupConfig() prefers a portable.txt marker over the XDG override; skip
-    // rather than report a baffling failure if one is present:
-    bool portableMarkerPresent() const
-    {
-        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
-    }
-
 private slots:
     void initTestCase()
     {
-        initializeQRCResourcesForProfileLoadTempFileTest();
-
         // Keep the test hermetic: point the config dir resolution at a
         // temporary directory instead of the user's real profiles.
         QVERIFY(mConfigDir.isValid());
@@ -174,20 +161,5 @@ private slots:
     }
 };
 
-void initializeQRCResourcesForProfileLoadTempFileTest()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "ProfileLoadTempFileTest.moc"
-QTEST_MAIN(ProfileLoadTempFileTest)
+MUDLET_GROUPED_TEST_MAIN(ProfileLoadTempFileTest)

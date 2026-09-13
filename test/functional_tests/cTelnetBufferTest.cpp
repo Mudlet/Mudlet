@@ -40,6 +40,8 @@
  * Run with: ctest -R cTelnetBufferTest -V
  */
 
+#include <QFileInfo>
+#include <QTemporaryDir>
 #include <QtTest/QtTest>
 
 #include <QScopeGuard>
@@ -48,6 +50,8 @@
 #include <cstring>
 #include <memory>
 
+#include "PortableModeTestHelper.h"
+#include "ProfileTestHelper.h"
 #include "MudletInstanceCoordinator.h"
 #include "TMainConsole.h"
 #include "TelnetServerStub.h"
@@ -55,20 +59,17 @@
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
-using namespace std::chrono_literals;
+#include "GroupedTest.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForBufferTest();
+using namespace std::chrono_literals;
 
 class cTelnetBufferTest : public QObject
 {
     Q_OBJECT
 
 private:
+    QTemporaryDir mConfigDir;
+    QByteArray mSavedXdg;
     TelnetServerStub* mpServer = nullptr;
     Host* mpHost = nullptr;
     const QString mHostname = qsl("BufferTest-Host");
@@ -95,13 +96,27 @@ private:
 private slots:
     void initTestCase()
     {
-        initializeQRCResourcesForBufferTest();
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
+        // A config root of this process's own. Sharing the developer's
+        // ~/.config/mudlet means sharing a profile list, so a second copy of
+        // this test running at the same time is told the name it types is
+        // already in use and never gets an enabled Connect button. Since #9712
+        // the opt-in that makes setupConfig() adopt a directory is
+        // $XDG_CONFIG_HOME/mudlet/profiles, not the mudlet directory alone.
+        QVERIFY(mConfigDir.isValid());
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+        qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
 
         mpServer = new TelnetServerStub(qApp);
         mpServer->start(mLocalhost, 0); // ephemeral OS-assigned port avoids collisions across concurrent test runs
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
+        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -109,29 +124,7 @@ private slots:
         const QString path = mudlet::getMudletPath(enums::profileHomePath, mHostname);
         QDir(path).removeRecursively();
 
-        QTimer::singleShot(0ms, qApp, [this]() {
-            mudlet::self()->startAutoLogin({});
-            QTest::qWait(100ms);
-            QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button, Qt::LeftButton);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), mHostname);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), mLocalhost);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), mPort);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
-        });
-
-        QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-        if (!spy.wait(1000)) {
-            QFAIL("Profile took too long to load.");
-        }
-        mpHost = mudlet::self()->getActiveHost();
+        mpHost = TestProfile::create(mHostname, mLocalhost, mPort);
         if (!mpHost) {
             QFAIL("No active host available for the test.");
         }
@@ -191,6 +184,41 @@ private slots:
             QVERIFY2(backing.at(payloadSize) == '\0', qPrintable(qsl("processSocketData() did not terminate a %1 byte payload at all.").arg(payloadSize)));
             QVERIFY2(backing.at(payloadSize + 1) == scmPastTheEnd, qPrintable(qsl("processSocketData() wrote past the end of a %1 byte payload.").arg(payloadSize)));
         }
+    }
+
+    // With "Force telnet GA signal interpretation off" the GA branch appended a
+    // newline without clearing recvdGA, so every remaining byte of the read
+    // re-entered it and got its own newline. One buffer is fed here because that
+    // guarantees the GA and the text after it share a read, which is the condition
+    // - a socket write could in principle be split. mFORCE_GA_OFF is set directly
+    // because that is what the preference does: cTelnet copies it from the Host at
+    // connect time.
+    void forcedGaOffKeepsTheRestOfTheReadOnOneLine()
+    {
+        const bool savedForceGaOff = mpHost->mTelnet.mFORCE_GA_OFF;
+        const bool savedGaDriver = mpHost->mTelnet.mGA_Driver;
+        auto restoreFlags = qScopeGuard([this, savedForceGaOff, savedGaDriver]() {
+            mpHost->mTelnet.mFORCE_GA_OFF = savedForceGaOff;
+            mpHost->mTelnet.mGA_Driver = savedGaDriver;
+        });
+        mpHost->mTelnet.mFORCE_GA_OFF = true;
+
+        const QString trailing = qsl("AFTER-THE-GA this must stay on one line");
+        // A leading newline commits any partial line an earlier test left behind,
+        // so the prompt below cannot be glued onto residue.
+        QByteArray data("\r\nHP:100 MP:50 > ");
+        data += TN_IAC;
+        data += TN_GA;
+        data += trailing.toUtf8();
+        data += "\r\n";
+
+        mpHost->mTelnet.processSocketData(data.data(), data.size(), true);
+
+        // Pre-fix every byte after the GA became its own line, so no single line
+        // could hold the whole string: this assertion is the regression guard.
+        QVERIFY2(bufferContains(trailing),
+                 "the text following a GA was split up - recvdGA was not cleared in the "
+                 "mFORCE_GA_OFF branch, so every byte after the GA got its own newline");
     }
 
     // The production route from Lua: feedTelnet() -> loopbackTest() ->
@@ -308,26 +336,16 @@ private slots:
         mpHost = nullptr;
         delete mpServer;
         mpServer = nullptr;
-        const QString path = mudlet::getMudletPath(enums::profileHomePath, mHostname);
-        QDir(path).removeRecursively();
-        delete mudlet::self();
+        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
+        // getMudletPath() dereferences the instance rather than checking it
+        if (mudlet::self()) {
+            const QString path = mudlet::getMudletPath(enums::profileHomePath, mHostname);
+            QDir(path).removeRecursively();
+            delete mudlet::self();
+        }
+        mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
     }
 };
 
-void initializeQRCResourcesForBufferTest()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "cTelnetBufferTest.moc"
-QTEST_MAIN(cTelnetBufferTest)
+MUDLET_GROUPED_TEST_MAIN(cTelnetBufferTest)

@@ -87,8 +87,8 @@ function Geyser.VBox:organize()
   end
 end
 
-function Geyser.VBox:reposition()
-  Geyser.Container.reposition(self)
+function Geyser.VBox:reposition(skipChildren)
+  Geyser.Container.reposition(self, skipChildren)
   -- contains_fixed prevents gaps when items have fixed size and is deliberately
   -- not deferred, pending_organize
   -- flushes a layout that was skipped while updates were deferred. Clearing it

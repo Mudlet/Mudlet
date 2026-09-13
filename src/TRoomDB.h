@@ -72,6 +72,7 @@ public:
     const QHash<int, TRoom*>& getRoomMap() const { return rooms; }
     const QMap<int, TArea*>& getAreaMap() const { return areas; }
     QList<int> getRoomIDList();
+    bool hasRoom(int id) const { return rooms.contains(id); }
     QList<int> getAreaIDList();
     const QMap<int, QString>& getAreaNamesMap() const { return areaNamesMap; }
     void updateEntranceMap(TRoom*, bool isMapLoading = false);

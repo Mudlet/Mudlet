@@ -1,0 +1,146 @@
+# The `stt.*` Speech-to-Text Bridge API
+
+This document is the contract for Mudlet's speech-to-text bridge: the `stt.*`
+Lua table, the `sysSTT*` events, and the semantics a client must honour to
+call itself an implementation. It is written to be implementable by clients
+other than desktop Mudlet — a client with a Lua runtime and any speech engine
+(native, WebAssembly, or platform API) can provide this surface, and packages
+written against it run unchanged.
+
+Design contract, before the tables:
+
+- **Inert until called.** Nothing listens, downloads, or runs until a script
+  calls `stt.*`. The bridge ships no UI; buttons, routing and policy belong to
+  packages consuming the events.
+- **One recognizer per client.** There is one microphone and one decoder,
+  shared across profiles. Events are raised on the **active profile**;
+  routing text anywhere else is consumer policy, not bridge behaviour.
+- **The recognizer's state is the single truth.** There is no parallel
+  "active" flag; `stt.listening()` and `stt.getInfo().state` read the
+  engine.
+- **Honest capabilities.** `getInfo().capabilities` reports what the loaded
+  backend genuinely does. Consumers MUST adapt to the flags rather than
+  assume; implementations MUST NOT claim capabilities they do not deliver —
+  in particular `onDevice = true` is a privacy statement that audio never
+  leaves the machine.
+
+## Functions — core recognition (every implementation)
+
+| Function | Returns | Behaviour |
+| --- | --- | --- |
+| `stt.init([modelPath])` | `true` \| `nil, error` | Load a model and reach `ready`. With no argument, uses the default installed model. The three ways it can have nothing to load are distinguished, because they send the reader to different places: no engine library (naming where it was looked for), no model installed (naming the directory one belongs in), and a path that does not exist. When the configured model is missing and another is loaded in its place, the substitution is reported through `sysSTTError` rather than made quietly — the call still succeeds. |
+| `stt.start()` | `true` \| `nil, error` | Begin listening. `true` means the request was accepted, not always that audio is already flowing: a client that must ask permission first reports `starting`, and the outcome arrives as `sysSTTStateChanged`. A request refused outright — no model, a phrase still processing, a microphone that will not open, permission already denied — returns `nil` and an error, with the detail in `sysSTTError`. Starting while already listening, or while `starting`, succeeds without asking twice. |
+| `stt.stop()` | `true` \| `nil, error` | Stop listening and **finalise**: remaining audio is decoded and reported via `sysSTTResult` before the state returns to `ready`. Stopping when nothing is listening succeeds; stopping in `error` returns `nil` and a message, since "stopped" and "was never running because it failed" are different answers. |
+| `stt.toggle()` | `true`=now listening, `false`=stopped \| `nil, error` | Convenience start/stop. |
+| `stt.close()` | `true` | Release the model and native resources; state returns to `uninitialized`. Safe when nothing is initialized. |
+| `stt.available()` | boolean | The engine is present and loadable. False is the normal state on a machine with nothing installed. |
+| `stt.initialized()` | boolean | A model is loaded (`state` is neither `uninitialized` nor `error`). |
+| `stt.listening()` | boolean | The engine is capturing now. Reads the engine, always in step with `getInfo().listening`. |
+| `stt.setSilenceTimeout(msec)` | `true` \| `nil, error` | After `msec` of continuous silence, listening ends exactly as `stt.stop()` would — finalised, never discarded. `0` (the default) keeps listening open-ended. Holds across listening sessions, not across restarts - neither this nor `setSensitivity` is saved. |
+| `stt.setSensitivity(mode)` | `true` \| `nil, error` | How quickly an utterance is judged finished: `"short"` for commands, `"default"` for balanced use, `"long"` for dictation. Engines map this onto their own end-of-speech detection, so the effect is comparable rather than identical between them; an engine that must rebuild to apply it may pause briefly when a model is already loaded. |
+| `stt.setVocabulary(words)` | boolean \| `nil, error` | Tell the engine which words to expect, so it favours them when a sound could be several things — a game's command verbs, its exits, the names of what is in front of you. Takes an array of words or short phrases; keep it to a shortlist rather than a dictionary, since applying one can make the engine rebuild and pause briefly. `true` means the engine took them. `false` is not an error: it means this backend cannot use vocabulary at all (see capabilities), so correct the results yourself instead. A backend that *can* and failed this time also returns `false`, reporting the fault through `sysSTTError`, so a caller branching only on the boolean still degrades gracefully while the failure stays visible. `nil, error` means there was no engine to offer the words to. |
+| `stt.getInfo()` | table | Everything the engine can say about itself at this moment: what is loaded, what it is capable of, and what it is doing right now. The keys are listed below. Always a table, even with no engine installed: every key below is present except `version` and `language`, which need a recognizer to exist, and every capability reads `false` - so a caller can read it without guarding. |
+
+## Functions — model and library management (platform-tier)
+
+These manage on-disk engine artifacts and are inherently platform-specific.
+A client whose engine ships differently (for example a browser client using
+WebAssembly builds or a platform speech API) MAY implement them as honest
+stubs: `getPlatformKey` returning `nil`, `reloadLibrary`/`unloadLibrary`
+returning `false` with a message, `listModels` returning `{}`.
+
+| Function | Returns | Behaviour |
+| --- | --- | --- |
+| `stt.getModelPath()` | string | Directory models are installed into. |
+| `stt.getLibraryPath()` | string | User-writable directory the engine library is installed into. |
+| `stt.listModels()` | table | Array of `{name, path}` for installed models. Deliberately works without the engine library, so downloaded models stay visible. |
+| `stt.getPlatformKey()` | string \| `nil` | Platform/architecture key for selecting an engine build (`"macos"`, `"windows-x64"`, `"windows-x86"`, `"linux-x86_64"`, `"linux-aarch64"`); `nil` when no published build exists. |
+| `stt.reloadLibrary()` | boolean \| `false, error` | Re-run engine detection after an install. Refuses while the recognizer is in use or holds live native resources. |
+| `stt.unloadLibrary()` | `true` \| `false, error` | Unload the engine so its file can be deleted (Windows cannot delete a mapped module). Same refusal rules. |
+
+## `stt.getInfo()`
+
+| Key | Type | Meaning |
+| --- | --- | --- |
+| `backend` | string | Engine name (`"Vosk"`). |
+| `available` | boolean | Engine present and loadable. |
+| `initialized` | boolean | Model loaded. |
+| `listening` | boolean | Capturing now. |
+| `state` | string | `"uninitialized"`, `"ready"`, `"starting"`, `"listening"`, `"processing"`, `"error"`. Distinguishes `error` from `uninitialized`, which `initialized` alone cannot. `"starting"` means listening was asked for and something outside the client — permission, typically — has still to answer; a consumer shows "waiting" rather than "listening". |
+| `modelPath` | string | The model actually loaded (empty when none) — not the install directory. |
+| `silenceTimeout` | integer | Current timeout in ms; `0` while disabled. |
+| `audioLevel` | number | Level last received from the microphone, `0.0`–`1.0`; `0` while not listening. Sampled during speech, it distinguishes a phrase the engine misheard from one it barely received — failures that look identical in the text and need opposite remedies. |
+| `sensitivity` | string | `"short"`, `"default"` or `"long"`; how quickly an utterance is judged finished. |
+| `capabilities` | table | See below. **May change when a model is loaded**, or when the engine library is unloaded or reloaded — on some backends biasing is a property of the model rather than of the engine. Re-read after `stt.init()` rather than caching at startup, or follow `sysSTTCapabilitiesChanged`. |
+| `version`, `language` | string | Present once a recognizer instance exists. |
+| `searchPaths` | table | Where the engine library is looked for (platform-tier; may be empty). |
+
+### `capabilities`
+
+| Key | Meaning when `true` |
+| --- | --- |
+| `biasing` | `setVocabulary` biases recognition toward the supplied words. |
+| `grammar` | `setVocabulary` can constrain recognition to the supplied words. |
+| `words` | `sysSTTWords` fires with per-word detail alongside each final. |
+| `onDevice` | Audio is processed on this machine and never leaves it. An implementation backed by a remote service MUST report `false`. |
+
+Desktop Mudlet's Vosk backend reports `{biasing = false, grammar = false,
+words = true, onDevice = true}`.
+
+## Events
+
+All events are raised on the **active profile**, and every handler receives
+**two string arguments**: the event name, then the payload below. String
+arguments only — the one type every client event system carries.
+
+| Event | Argument | When |
+| --- | --- | --- |
+| `sysSTTPartialResult` | text so far | During recognition; may revise as more audio arrives. Never final. |
+| `sysSTTResult` | final text | An utterance completed — by endpointing, `stt.stop()`, or the silence timeout. The consumer's cue to act on the text. |
+| `sysSTTWords` | JSON string | Alongside each `sysSTTResult`, on backends whose `words` capability is true. Describes **the text as emitted**: an implementation that drops a word from the result must drop it here too, or the two events describe different phrases. Schema below. |
+| `sysSTTStateChanged` | state name | Any transition between the six states. |
+| `sysSTTError` | message | Anything the user should know went wrong: refusals to start, capture faults, model failures, and a configured model quietly replaced by another. The state moves to `error` for faults, but refusal messages can arrive without a state change. Refusals carry the same text the call returned as its second value; faults reported by the engine are translated. **Raised with no engine installed too** — a consumer driving the bridge from events alone must be able to tell "no engine" from "nothing said yet". |
+| `sysSTTCapabilitiesChanged` | JSON string | The `capabilities` table changed: a model loaded, or the engine library was unloaded or reloaded underneath it. Same keys as `getInfo().capabilities`. |
+
+### `sysSTTWords` schema
+
+A JSON array, one object per word of the accompanying final result:
+
+```json
+[{"word": "quick", "conf": 1.0, "start": 0.75, "end": 1.02}, ...]
+```
+
+`conf` is 0–1; `start`/`end` are seconds on the session's audio clock. The
+timings are load-bearing: a word whose span covers pooled silence rather than
+speech is how decoder hallucinations are told apart from spoken words, so an
+implementation that cannot supply real timings must not claim the `words`
+capability.
+
+## Semantics implementations must preserve
+
+1. **Stop finalises; only errors and engine artifacts discard.** `stt.stop()`
+   and the silence timeout both deliver the pending utterance via
+   `sysSTTResult`. No path silently drops recognised speech except a fault,
+   which reports via `sysSTTError` — and except what the engine produced from
+   silence rather than from a person. Desktop Mudlet's Vosk backend discards a
+   lone filler word the decoder itself scored below 0.8 confidence, or that it
+   returned no confidence for at all, and a leading word whose timings show it
+   spanned a pause rather than being spoken. Neither reports, because neither
+   was said. A lone filler word the decoder is confident about is delivered,
+   however the utterance finished - "i" is a command, not an artifact.
+2. **Refusals the engine caused speak.** A call the engine could not satisfy
+   says why through `sysSTTError` as well as in its return value. This holds
+   when there is no engine at all: an implementation with nothing installed
+   still raises the event, or a consumer written against events alone cannot
+   tell a missing engine from a quiet microphone. A refusal caused by the
+   script's own arguments is returned but not announced, since one package's
+   mistake is not news for every other package on the profile.
+3. **`setVocabulary`'s boolean is a capability answer**, not a success flag.
+   Packages branch on it: `true` → engine handles vocabulary; `false` → apply
+   client-side correction.
+4. **Permission prompts are the implementation's problem.** The first
+   `start()` may trigger an OS microphone consent flow; a denial reports as
+   `sysSTTError` with the state moving to `error`, never as a hang.
+5. **No recognition telemetry.** Nothing recognised, partial or final, is
+   sent anywhere by the bridge. What packages do with the text is their
+   declared business, but the bridge itself is local-only.

@@ -50,6 +50,15 @@
 void initSentry()
 {
 #ifdef WITH_SENTRY
+    // Never arm crashpad for a test run. The Lua suite drives this very binary with
+    // MUDLET_TEST_MODE set, and an armed crashpad answers a crash there by launching
+    // MudletCrashReporter, which blocks on a modal dialog unless "autoSendCrashReports" is already
+    // AlwaysSend. No CI runner has that setting, so a crash would hang the job to its timeout
+    // rather than fail it - and the report would go out as if a player had hit it.
+    if (qEnvironmentVariableIsSet("MUDLET_TEST_MODE")) {
+        return;
+    }
+
     sentry_options_t* options = sentry_options_new();
     std::string runtimeAppDir = getExeDir();
     QString path = QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + "/mudlet/sentry";
@@ -129,7 +138,10 @@ void crashIfRequested()
     const char* environmentVariable = std::getenv("MUDLET_CRASH_TEST");
 
     if (environmentVariable && *environmentVariable == '1') {
-        int* p = nullptr;
+        // volatile is important: a null write is undefined behaviour and
+        // clang -O2 deletes the branch without it, so the hook would do nothing
+        // on every Windows and macOS release.
+        volatile int* p = nullptr;
         *p = 42;
     }
 }

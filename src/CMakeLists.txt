@@ -120,17 +120,23 @@ set(mudlet_SRCS
     SentryWrapper.cpp
     ShortcutsManager.cpp
     SingleLineTextEdit.cpp
+    SpeechAudioCapture.cpp
+    SpeechRecognizerFactory.cpp
     T2DMap.cpp
     TAccessibleTextEdit.cpp
     TAction.cpp
     TAlias.cpp
     TArea.cpp
     TAreaGridIndex.cpp
+    TAreaLodExitIndex.cpp
+    TAreaSpanIndex.cpp
     TAreaZLevelIndex.cpp
     TBuffer.cpp
     TCommandLine.cpp
     TConsole.cpp
+    TConsoleModel.cpp
     TDebug.cpp
+    TDebugFilterBar.cpp
     TDetachedWindow.cpp
     TDockWidget.cpp
     TEasyButtonBar.cpp
@@ -148,6 +154,7 @@ set(mudlet_SRCS
     TKey.cpp
     TKeySequenceEdit.cpp
     TLabel.cpp
+    TLabelModel.cpp
     TLinkStore.cpp
     TLuaInterpreter.cpp
     TLuaInterpreterDiscord.cpp
@@ -157,6 +164,7 @@ set(mudlet_SRCS
     TLuaInterpreterMudletObjects.cpp
     TLuaInterpreterNetworking.cpp
     TLuaInterpreterTextToSpeech.cpp
+    TLuaInterpreterSpeechToText.cpp
     TLuaInterpreterUI.cpp
     TMainConsole.cpp
     TMap.cpp
@@ -215,6 +223,7 @@ set(mudlet_SRCS
     TVar.cpp
     UntrustedText.cpp
     VarUnit.cpp
+    VoskRecognizer.cpp
     WideComboBox.cpp
     XMLexport.cpp
     XMLimport.cpp)
@@ -232,6 +241,18 @@ if(APPLE)
       COMPILE_OPTIONS "-fobjc-arc"
   )
   endif()
+
+  # Native macOS microphone permission handling for speech recognition. Only
+  # the .mm is appended here: appending the header would achieve nothing, since
+  # the set(mudlet_HDRS ...) above already lists it and would overwrite this
+  # anyway. Only the .mm is compiled, so only it carries the language settings.
+  list(APPEND mudlet_SRCS MacMicrophonePermission.mm)
+  set_source_files_properties(
+    MacMicrophonePermission.mm
+    PROPERTIES
+    LANGUAGE OBJCXX
+    COMPILE_OPTIONS "-fobjc-arc"
+  )
 endif()
 
 # This is for compiled UI files, not those used at runtime
@@ -331,6 +352,7 @@ set(mudlet_HDRS
     LabelInteractionHandler.h
     LuaInterface.h
     LuaLiteral.h
+    MacMicrophonePermission.h
     mapInfoContributorManager.h
     MiddleMousePanHandler.h
     MMCP.h
@@ -351,6 +373,9 @@ set(mudlet_HDRS
     SentryWrapper.h
     ShortcutsManager.h
     SingleLineTextEdit.h
+    SpeechAudioCapture.h
+    SpeechRecognizer.h
+    SpeechRecognizerFactory.h
     T2DMap.h
     TAccessibleConsole.h
     TAccessibleTextEdit.h
@@ -358,12 +383,16 @@ set(mudlet_HDRS
     TAlias.h
     TArea.h
     TAreaGridIndex.h
+    TAreaLodExitIndex.h
+    TAreaSpanIndex.h
     TAreaZLevelIndex.h
     TAstar.h
     TBuffer.h
     TCommandLine.h
     TConsole.h
+    TConsoleModel.h
     TDebug.h
+    TDebugFilterBar.h
     TDetachedWindow.h
     TDockWidget.h
     TEasyButtonBar.h
@@ -384,6 +413,7 @@ set(mudlet_HDRS
     TKey.h
     TKeySequenceEdit.h
     TLabel.h
+    TLabelModel.h
     TLinkStore.h
     TLuaInterpreter.h
     TMainConsole.h
@@ -427,6 +457,7 @@ set(mudlet_HDRS
     TMxpTagProcessor.h
     TMxpVarTagHandler.h
     TMxpVersionTagHandler.h
+    TPrintSink.h
     TrailingWhitespaceMarker.h
     Tree.h
     TriggerHighlighter.h
@@ -449,11 +480,14 @@ set(mudlet_HDRS
     TTrigger.h
     TUiTour.h
     TVar.h
+    TWindowRegistry.h
     UntrustedText.h
     utils.h
     VarUnit.h
+    VoskRecognizer.h
     widechar_width.h
     WideComboBox.h
+    widgetutils.h
     XMLexport.h
     XMLimport.h)
 
@@ -494,28 +528,6 @@ if(USE_3DMAPPER)
   list(APPEND mudlet_HDRS glwidget_integration.h)
   list(APPEND mudlet_SRCS glwidget_integration.cpp)
 endif(USE_3DMAPPER)
-
-# credit to https://github.com/heavyai/heavydb/blob/72c90bc290b79dd30240da41c103a00720f6b050/CMakeLists.txt#L119
-macro(set_alternate_linker linker)
-  find_program(LINKER_EXECUTABLE ld.${USE_ALTERNATE_LINKER} ${USE_ALTERNATE_LINKER})
-  if(LINKER_EXECUTABLE)
-    if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" AND "${CMAKE_CXX_COMPILER_VERSION}" VERSION_LESS 12.1.0 AND "${USE_ALTERNATE_LINKER}" STREQUAL "mold")
-      # LINKER_EXECUTABLE will be a full path to ld.mold, so we replace the end of the path, resulting in the relative
-      # libexec/mold dir, and tell GCC to look there first for an override version of executables, in this case, ld
-      string(REPLACE "bin/ld.mold" "libexec/mold" PATH_TO_LIBEXEC_MOLD ${LINKER_EXECUTABLE})
-      add_link_options("-B${PATH_TO_LIBEXEC_MOLD}")
-    else()
-      add_link_options("-fuse-ld=${USE_ALTERNATE_LINKER}")
-    endif()
-  else()
-    set(USE_ALTERNATE_LINKER "" CACHE STRING "Use alternate linker" FORCE)
-  endif()
-endmacro()
-
-set(USE_ALTERNATE_LINKER "" CACHE STRING "Use alternate linker. Leave empty for system default; alternatives are 'gold', 'lld', 'bfd', 'mold'")
-if(NOT "${USE_ALTERNATE_LINKER}" STREQUAL "")
-  set_alternate_linker(${USE_ALTERNATE_LINKER})
-endif()
 
 if(NOT WIN32)
   include(cmake/EnableSanitizers.cmake)
@@ -561,7 +573,9 @@ find_package(ZIP REQUIRED)
 find_package(Lua51 REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(zstd REQUIRED)
-find_package(PCRE2 REQUIRED)
+# 10.36 is the floor for PCRE2_MATCH_INVALID_UTF: it arrived in 10.34, and 10.36
+# fixed it mis-optimising the start of a match in 8-bit mode with PCRE2_CASELESS
+find_package(PCRE2 10.36 REQUIRED)
 find_package(PUGIXML REQUIRED)
 find_package(HUNSPELL REQUIRED)
 find_package(Boost 1.44 CONFIG REQUIRED)
@@ -639,6 +653,11 @@ add_library(${LIB_MUDLET_TARGET} STATIC
 #   the single bytes of pure ASCII text:
 # target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_EUC_KR_PROCESSING)
 #
+# * Produce qDebug() messages about private/reserved ANSI CSI sequences that
+#   Mudlet does not interpret, e.g. the `\x1b[?25l` a game may send around each
+#   prompt to hide the cursor - which is frequent enough to be noisy:
+# target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_CSI_PROCESSING)
+#
 # * Produce qDebug() messages about the decoding of ANSI SGR sequences:
 #   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_SGR_PROCESSING)
 #
@@ -669,6 +688,10 @@ add_library(${LIB_MUDLET_TARGET} STATIC
 # * Produce qDebug() messages about the GMCP Char.Login authentication flow:
 # target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_GMCP_AUTHENTICATION)
 
+# * Produce qDebug() messages about speech-to-text recognition, including
+#   hallucination filtering, partial/final results, and audio level monitoring:
+# target_compile_definitions(${LIB_MUDLET_TARGET} PRIVATE DEBUG_STT)
+
 # target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_PLAYER_ICON_CONTROLS)
 
 target_sources(${LIB_MUDLET_TARGET} PUBLIC "${mudlet_BINARY_DIR}/translations/translated/qm.qrc")
@@ -677,6 +700,20 @@ set_target_properties(${LIB_MUDLET_TARGET} PROPERTIES
   AUTOUIC ON AUTOUIC_SEARCH_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/ui"
   AUTOMOC ON AUTORCC ON POSITION_INDEPENDENT_CODE ON
   AUTOGEN_ORIGIN_DEPENDS OFF)
+
+# AUTOMOC concatenates every moc_*.cpp into one mocs_compilation.cpp whose
+# include order it controls. With GCC 16's -Wsfinae-incomplete that trips false
+# positives: qmetatype.h's is_complete SFINAE trait is instantiated from one
+# moc file while types defined in a later moc file are still incomplete, so
+# defining them later warns. The generated TU is not hand-written code, so
+# silence the warning there rather than rearranging includes across moc files.
+# Scoped to GCC: -Wsfinae-incomplete is a GCC-only flag (GCC 15+), and GCC
+# silently ignores unknown -Wno- options on older versions, but Clang/MSVC
+# would diagnose the unknown flag.
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  set_property(SOURCE "${CMAKE_CURRENT_BINARY_DIR}/${LIB_MUDLET_TARGET}_autogen/mocs_compilation.cpp"
+               APPEND PROPERTY COMPILE_OPTIONS -Wno-sfinae-incomplete)
+endif()
 
 if(USE_FONTS)
   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_FONTS)
@@ -699,6 +736,23 @@ target_compile_definitions(${LIB_MUDLET_TARGET}
 if(USE_OWN_QTKEYCHAIN)
     target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_OWN_QT6_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
     target_include_directories(${LIB_MUDLET_TARGET} PUBLIC ${CMAKE_SOURCE_DIR}/3rdparty/qtkeychain)
+endif()
+
+if(DEFINED ENV{QT_NO_SSL})
+  message(STATUS "Not including OpenSSL 3.x licence details as that library has been explicitly excluded from the build")
+else()
+  if (DEFINED ENV{CI} AND "$ENV{CI}" STREQUAL "true" )
+    # This is ONLY used to include the Licence details for the OpenSSL 3
+    # library - as such it only needs to/should be present for builds that
+    # "package" Mudlet i.e. installer builds (for MacOS and Windows) and
+    # AppImages (for Linux) in our CI procees all other builds will use a
+    # "system-provided" libssl.so.3 library and we do not then NEED to mention
+    # them in the "Third-party" libraries.
+    target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_OPENSSL3)
+    message(STATUS "Including OpenSSL 3.x licence details for a package build")
+  else()
+    message(STATUS "Not including OpenSSL 3.x licence details as this seem to be a local build")
+  endif()
 endif()
 
 # Surface the linked qtkeychain version for diagnostics - the QTKEYCHAIN_VERSION macro in
@@ -846,6 +900,10 @@ endif()
 
 if(APPLE)
   target_link_libraries(${EXE_MUDLET_TARGET} "-framework AppKit")
+  target_link_libraries(${EXE_MUDLET_TARGET} "-framework AVFoundation")
+
+  # Microphone permission sources are already added via mudlet_SRCS/mudlet_HDRS
+  target_link_libraries(${LIB_MUDLET_TARGET} "-framework AVFoundation")
 
   if(USE_UPDATER)
     # need to specifically call out Objective-C sources so that automoc builds them.
@@ -946,7 +1004,11 @@ if(UNIX AND NOT APPLE)
     PATTERN "*.mpackage" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
                                      WORLD_READ
     PATTERN "*.xml" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
-    PATTERN "*.txt" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
+    PATTERN "*.txt" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+    # the map fixture the pathfinding specs need. It stays zipped rather than
+    # joining the *.xml above because unpacked it is 5.5MiB rather than 633KiB,
+    # and every package built from this tree would carry the difference
+    PATTERN "*.zip" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
   install(
     DIRECTORY "../3rdparty/lcf"
     DESTINATION "share/mudlet/lua"
