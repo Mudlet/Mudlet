@@ -113,7 +113,6 @@ public:
     bool exportItem = true;
     bool mModuleMasterFolder = false;
 
-    static const char* scmProperty_HostName;
     static const char* scmProperty_TTimerId;
 
     // temporary timers are single-shot by default, unless repeating is set

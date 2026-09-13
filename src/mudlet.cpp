@@ -3331,61 +3331,6 @@ void mudlet::addConsoleForNewHost(Host* pH)
     QTimer::singleShot(3s, this, &mudlet::slot_refreshTabIndicatorsDelayed);
 }
 
-
-void mudlet::slot_timerFires()
-{
-    QTimer* pQT = qobject_cast<QTimer*>(sender());
-    if (Q_UNLIKELY(!pQT)) {
-        return;
-    }
-
-    // Pull the Host name and TTimer::id from the properties:
-    const QString hostName(pQT->property(TTimer::scmProperty_HostName).toString());
-    if (Q_UNLIKELY(hostName.isEmpty())) {
-        qWarning().nospace().noquote() << "mudlet::slot_timerFires() INFO - Host name is empty - so TTimer has probably been deleted.";
-        pQT->deleteLater();
-        return;
-    }
-
-    Host* pHost = mHostManager.getHost(hostName);
-    Q_ASSERT_X(pHost, "mudlet::slot_timerFires()", "Unable to deduce Host pointer from data in QTimer");
-    const int id = pQT->property(TTimer::scmProperty_TTimerId).toInt();
-    if (Q_UNLIKELY(!id)) {
-        qWarning().nospace().noquote() << "mudlet::slot_timerFires() INFO - TTimer ID is zero - so TTimer has probably been deleted.";
-        pQT->deleteLater();
-        return;
-    }
-    TTimer* pTT = pHost->getTimerUnit()->getTimer(id);
-    if (Q_LIKELY(pTT)) {
-        // commented out as it will be spammy in normal situations but saved as useful
-        // during timer debugging... 8-)
-        //        qDebug().nospace().noquote() << "mudlet::slot_timerFires() INFO - Host: \"" << hostName << "\" QTimer firing for TTimer Id:" << id;
-        //        qDebug().nospace().noquote() << "    (objectName:\"" << pQT->objectName() << "\")";
-        pTT->execute();
-        // Re-verify timer still exists after execute (script may have killed it)
-        pTT = pHost->getTimerUnit()->getTimer(id);
-        if (pTT && pTT->checkRestart()) {
-            pTT->start();
-        }
-
-        // Flush any deletes TimerUnit::uninstall() deferred whilst execute() was
-        // on the stack (a timer script uninstalling its own package). Doing it
-        // here - after the last use of pTT - keeps the window in which the
-        // "uninstalled" timers linger down to this event loop iteration, before
-        // the profile save that Host::uninstallPackage() queues for the next
-        // event loop pass can serialize them back into the profile:
-        pHost->getTimerUnit()->doCleanup();
-
-        // Okay now we've found it we are done:
-        return;
-    }
-
-    qWarning().nospace().noquote() << "mudlet::slot_timerFires() ERROR - Timer not registered, it seems to have been called: \"" << pQT->objectName() << "\" - automatically deleting it!";
-    // Clean up any bogus ones:
-    pQT->stop();
-    pQT->deleteLater();
-}
-
 // Applies the active profile's "mapperButton" setConfig mode on top of the
 // baseline the toolbar management functions computed, and lets each detached
 // window re-derive the same for its own profile. Called by those functions and

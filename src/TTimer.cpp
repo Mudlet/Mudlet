@@ -41,7 +41,6 @@
 
 #include <list>
 
-const char* TTimer::scmProperty_HostName = "HostName";
 const char* TTimer::scmProperty_TTimerId = "TTimerId";
 
 TTimer::TTimer(TTimer* parent, Host* pHost)
@@ -50,8 +49,6 @@ TTimer::TTimer(TTimer* parent, Host* pHost)
 , mpQTimer(new QTimer)
 {
     mpQTimer->stop();
-    mpQTimer->setProperty(scmProperty_HostName, mpHost->getName());
-    mpHost->getTimerUnit()->mQTimerSet.insert(mpQTimer);
     mpQTimer->setProperty(scmProperty_TTimerId, 0);
     mpQTimer->setTimerType(Qt::PreciseTimer);
 }
@@ -64,8 +61,6 @@ TTimer::TTimer(const QString& name, QTime time, Host* pHost, bool repeating)
 , mpQTimer(new QTimer)
 {
     mpQTimer->stop();
-    mpQTimer->setProperty(scmProperty_HostName, mpHost->getName());
-    mpHost->getTimerUnit()->mQTimerSet.insert(mpQTimer);
     mpQTimer->setProperty(scmProperty_TTimerId, 0);
     mRepeating = repeating;
     mpQTimer->setTimerType(Qt::PreciseTimer);
@@ -85,7 +80,6 @@ TTimer::~TTimer()
             }
         }
 
-        mpHost->getTimerUnit()->mQTimerSet.remove(mpQTimer);
         // During normal operation, use deleteLater() for safety
         mpQTimer->deleteLater();
     } else {
@@ -238,8 +232,8 @@ void TTimer::execute()
     pUnit->beginProcessing();
     // NB: deliberately only decrements the depth - do NOT add a doCleanup() call
     // here: it would delete `this` (and other deferred timers) while
-    // mudlet::slot_timerFires() still holds the pointer. Deferred deletes are
-    // flushed by slot_timerFires() itself once it is finished with the timer
+    // TimerUnit::timerFired() still holds the pointer. Deferred deletes are
+    // flushed by timerFired() itself once it is finished with the timer
     // (and by the doCleanup() calls in Host::incomingStreamProcessor() and
     // Host::slot_purgeTemps()):
     const auto processingGuard = qScopeGuard([pUnit] {
