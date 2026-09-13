@@ -42,8 +42,12 @@
 
 #include <QtTest/QtTest>
 
+#include <QDir>
+#include <QFile>
+#include <QFileInfo>
 #include <QJsonArray>
 #include <QJsonObject>
+#include <QLibrary>
 #include <QSettings>
 #include <QSignalSpy>
 #include <QTemporaryDir>
@@ -64,6 +68,84 @@ class SpeechRecognizerContractTest : public QObject
 private:
     QTemporaryDir mConfigDir;
     QByteArray mSavedXdg;
+
+    // Puts the stand-in engine where librarySearchPaths() looks first, so the
+    // paths below initialize()'s library guard become reachable on a machine
+    // with no speech engine. Returns false when the copy could not be made,
+    // which a case reports rather than skips - the stub is built by this
+    // project, so its absence is a build fault and not an environment one.
+    bool installStubEngine()
+    {
+        const QString destination = installedStubPath();
+        if (!QDir().mkpath(VoskRecognizer::userLibraryPath())) {
+            return false;
+        }
+        QFile::remove(destination);
+        // Fresh probe: libraryAvailable() caches, and an earlier case in this
+        // shared process may have answered "no" before the file existed.
+        VoskRecognizer::resetLibraryLoadState();
+        VoskRecognizer::unloadLibraryByRequest(false);
+        if (!QFile::copy(qsl(MUDLET_VOSK_STUB_LIBRARY), destination)) {
+            return false;
+        }
+        // A copy that loads but exports nothing is the failure worth catching
+        // here rather than three assertions later: it is what a Windows build
+        // without WINDOWS_EXPORT_ALL_SYMBOLS produces, and every case would then
+        // be testing a recognizer that never got past its library guard - two of
+        // them failing obscurely and one passing for the wrong reason.
+        QLibrary installed(destination);
+        if (!installed.load() || !installed.resolve("vosk_recognizer_set_words")) {
+            return false;
+        }
+        // Its counters are process-global and live as long as the image stays
+        // mapped, so they are zeroed here rather than trusted to be zero. Without
+        // this, a case asserting "no null handles" would be asserting that no
+        // earlier case caused one either, and would start failing when the cases
+        // are reordered.
+        using resetFn = void (*)();
+        auto* reset = reinterpret_cast<resetFn>(installed.resolve("voskStubReset"));
+        if (!reset) {
+            return false;
+        }
+        reset();
+        return true;
+    }
+
+    // Takes the stub back out. Called from cleanup() rather than by the cases
+    // themselves: two cases here QSKIP when a library is available, so a stub
+    // left behind would silently disable them - and an assertion that fails part
+    // way through a case returns before any tidying that case does for itself.
+    // Runs after cleanup()'s load-state reset so the file is not still mapped
+    // when it goes; Windows refuses to delete a module that is.
+    void removeInstalledStub() { QFile::remove(installedStubPath()); }
+
+    // Where installStubEngine() put the copy VoskRecognizer actually loads.
+    static QString installedStubPath() { return QDir(VoskRecognizer::userLibraryPath()).filePath(QFileInfo(qsl(MUDLET_VOSK_STUB_LIBRARY)).fileName()); }
+
+    // The stub's own record of what it was handed, resolved by name because the
+    // library is loaded by path rather than linked.
+    //
+    // From the installed copy, not the one in the build tree: they are two files,
+    // so the loader maps them as two images with a counter each, and reading the
+    // build copy's would answer 0 however many nulls the recognizer handed the
+    // one it loaded - an assertion that could never fail.
+    static int stubNullHandleCalls()
+    {
+        QLibrary stub(installedStubPath());
+        using countFn = int (*)();
+        auto* counter = reinterpret_cast<countFn>(stub.resolve("voskStubNullHandleCalls"));
+        return counter ? counter() : -1;
+    }
+
+    // A directory that exists and holds no model, which the stub accepts as one
+    // - it answers for any non-empty path, so a load gets as far as the
+    // configuration calls this file is about.
+    QString stubModelDirectory()
+    {
+        const QString path = QDir(mConfigDir.path()).filePath(qsl("stub-model"));
+        QDir().mkpath(path);
+        return path;
+    }
 
     // One word of Vosk's "result" array
     static QJsonObject word(const QString& text, const double start, const double end)
@@ -115,6 +197,7 @@ private slots:
         // since a refused release would leave the flags it reads still set.
         VoskRecognizer::resetLibraryLoadState();
         VoskRecognizer::unloadLibraryByRequest(false);
+        removeInstalledStub();
     }
 
     // A capability is a promise that an event will arrive. Claimed without the
@@ -203,6 +286,86 @@ private slots:
         QCOMPARE(errors.count(), 1);
         const QString message = errors.first().first().toString();
         QVERIFY2(message.contains(qsl("reloadLibrary")), qPrintable(qsl("the refusal did not name what lifts the latch: %1").arg(message)));
+    }
+
+    // #10759. initialize() reaches Lua twice before it returns - setState() and
+    // the capabilities announcement both do - and a handler is free to call
+    // stt.close(), which frees the handles the rest of the function is about to
+    // configure. The announcement used to sit above that configuration, so the
+    // freed handle went to vosk_recognizer_set_words() as a null; real libvosk
+    // dereferences it, which is why the stub counts nulls rather than crashing.
+    void aHandlerClosingTheBridgeMidLoadIsNotHandedANullEngine()
+    {
+        QVERIFY2(installStubEngine(), "the stand-in engine could not be installed, so nothing below the library guard is reachable");
+        VoskRecognizer recognizer;
+
+        // capabilitiesChanged is a direct connection, so this stands in for a
+        // Lua handler calling stt.close() exactly - same synchronous re-entry,
+        // without needing a profile or an interpreter.
+        bool closed = false;
+        connect(&recognizer, &SpeechRecognizer::capabilitiesChanged, &recognizer, [&recognizer, &closed]() {
+            if (!closed) {
+                closed = true;
+                recognizer.releaseResources();
+            }
+        });
+
+        const bool loaded = recognizer.initialize(stubModelDirectory());
+
+        const int nullsSeen = stubNullHandleCalls();
+        QVERIFY2(nullsSeen >= 0, "the stand-in engine's counter could not be read, so a null hand-off would go unnoticed");
+        QCOMPARE(nullsSeen, 0);
+        QVERIFY2(!loaded, "a load a handler closed under it reported success, so the next start() would find nothing loaded");
+        QVERIFY2(!recognizer.initialized(), "initialized() stayed true with the model freed");
+        QVERIFY2(recognizer.modelPath().isEmpty(), "modelPath() named a model that had been freed");
+    }
+
+    // The other half of #10759: a handler that loads a different model instead
+    // of closing leaves both handles valid, so the pointers alone call the
+    // outer load a success and stt.init() answers true for a model it did not
+    // load. Only the path it was asked for can settle that.
+    void aHandlerLoadingAnotherModelDoesNotCountAsThisLoadSucceeding()
+    {
+        QVERIFY2(installStubEngine(), "the stand-in engine could not be installed, so nothing below the library guard is reachable");
+        VoskRecognizer recognizer;
+
+        const QString wanted = stubModelDirectory();
+        const QString other = QDir(mConfigDir.path()).filePath(qsl("stub-model-other"));
+        QVERIFY(QDir().mkpath(other));
+
+        bool reentered = false;
+        connect(&recognizer, &SpeechRecognizer::capabilitiesChanged, &recognizer, [&recognizer, &reentered, other]() {
+            if (!reentered) {
+                reentered = true;
+                recognizer.initialize(other);
+            }
+        });
+
+        QVERIFY2(!recognizer.initialize(wanted), "a load answered true for a model a handler had already replaced");
+        QCOMPARE(recognizer.modelPath(), other);
+    }
+
+    // Every other refusal in initialize() reports through errorOccurred before
+    // returning false, and stt.init() relies on that: it answers a false with
+    // "failed to initialize model from X" and nothing else. A refusal a script
+    // caused is the one it should hear most about, not least.
+    void aLoadUndoneByAHandlerSaysSo()
+    {
+        QVERIFY2(installStubEngine(), "the stand-in engine could not be installed, so nothing below the library guard is reachable");
+        VoskRecognizer recognizer;
+        QSignalSpy errors(&recognizer, &SpeechRecognizer::errorOccurred);
+        QVERIFY(errors.isValid());
+
+        bool closed = false;
+        connect(&recognizer, &SpeechRecognizer::capabilitiesChanged, &recognizer, [&recognizer, &closed]() {
+            if (!closed) {
+                closed = true;
+                recognizer.releaseResources();
+            }
+        });
+
+        QVERIFY(!recognizer.initialize(stubModelDirectory()));
+        QVERIFY2(!errors.isEmpty(), "the only refusal a script can cause is the one that said nothing");
     }
 
     // Documented as re-readable rather than cacheable, which needs the change

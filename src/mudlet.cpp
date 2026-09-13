@@ -205,6 +205,12 @@ void mudlet::initSpeechRecognition()
     if (!mpSpeechRecognizer) {
         return;
     }
+    // Announced at the end of this function, once the connections are up: a
+    // recognizer existing is itself a change to what stt.getInfo() reports,
+    // because every capability reads false while there is none. It is reached
+    // by any stt call that needs an engine - stt.setSilenceTimeout() and
+    // stt.start() among them - so a package following the event rather than
+    // re-reading used to believe words = false long after it had become true.
 
     // Bridge glue only: recognizer signals surface as Lua events on the active
     // profile. Text routing, UI state and policy all belong to the packages
@@ -229,14 +235,11 @@ void mudlet::initSpeechRecognition()
         raiseSpeechEvent(qsl("sysSTTWords"), QString::fromUtf8(QJsonDocument(array).toJson(QJsonDocument::Compact)));
     });
     // Documented as re-readable rather than cached, so the change has to reach
-    // a consumer that did read it once - which is the obvious thing to do
-    connect(mpSpeechRecognizer, &SpeechRecognizer::capabilitiesChanged, this, [this](SpeechRecognizer::Capabilities newCapabilities) {
-        QJsonObject capabilities;
-        capabilities.insert(qsl("biasing"), newCapabilities.biasing);
-        capabilities.insert(qsl("grammar"), newCapabilities.grammar);
-        capabilities.insert(qsl("words"), newCapabilities.wordResults);
-        capabilities.insert(qsl("onDevice"), newCapabilities.onDevice);
-        raiseSpeechEvent(qsl("sysSTTCapabilitiesChanged"), QString::fromUtf8(QJsonDocument(capabilities).toJson(QJsonDocument::Compact)));
+    // a consumer that did read it once - which is the obvious thing to do. The
+    // recognizer noticing its own view move is a trigger, not the decision:
+    // whether Lua saw a change is decided against what Lua was last told.
+    connect(mpSpeechRecognizer, &SpeechRecognizer::capabilitiesChanged, this, [this](SpeechRecognizer::Capabilities) {
+        announceSpeechCapabilitiesIfChanged();
     });
     connect(mpSpeechRecognizer, &SpeechRecognizer::stateChanged, this, [this](SpeechRecognizer::State newState) {
         QString stateName;
@@ -262,6 +265,49 @@ void mudlet::initSpeechRecognition()
         }
         raiseSpeechEvent(qsl("sysSTTStateChanged"), stateName);
     });
+
+    announceSpeechCapabilitiesIfChanged();
+}
+
+// The capabilities payload as stt.getInfo() would report them: with no
+// recognizer every one is false, which is what sttGetInfo() pushes and so what
+// a consumer reads before anything has created one.
+static QString speechCapabilitiesPayload(const SpeechRecognizer* pRecognizer)
+{
+    const SpeechRecognizer::Capabilities current = pRecognizer ? pRecognizer->capabilities() : SpeechRecognizer::Capabilities{};
+    QJsonObject capabilities;
+    capabilities.insert(qsl("biasing"), current.biasing);
+    capabilities.insert(qsl("grammar"), current.grammar);
+    capabilities.insert(qsl("words"), current.wordResults);
+    capabilities.insert(qsl("onDevice"), current.onDevice);
+    return QString::fromUtf8(QJsonDocument(capabilities).toJson(QJsonDocument::Compact));
+}
+
+void mudlet::announceSpeechCapabilitiesIfChanged()
+{
+    if (mAnnouncedSpeechCapabilities.isEmpty()) {
+        // What Lua has been reading from getInfo() all along, so that a
+        // recognizer coming into existence registers as the change it is. See
+        // the member's declaration for why the seed rather than an empty string.
+        mAnnouncedSpeechCapabilities = speechCapabilitiesPayload(nullptr);
+    }
+
+    const QString current = speechCapabilitiesPayload(mpSpeechRecognizer);
+    if (current == mAnnouncedSpeechCapabilities) {
+        return;
+    }
+    // Nothing to deliver to means nothing is announced and nothing is recorded.
+    // raiseSpeechEvent() would drop the event, and recording it as announced
+    // anyway loses it for good: nothing re-derives the change, so every later
+    // comparison finds the baseline already equal and stays silent.
+    if (!getActiveHost()) {
+        return;
+    }
+    // Before the raise, not after: the raise runs Lua synchronously, and a
+    // handler that calls back in here has to find the baseline already moved or
+    // it announces the same change again and recurses.
+    mAnnouncedSpeechCapabilities = current;
+    raiseSpeechEvent(qsl("sysSTTCapabilitiesChanged"), current);
 }
 
 // Where a command's menu item hangs, building the path's submenus as needed.

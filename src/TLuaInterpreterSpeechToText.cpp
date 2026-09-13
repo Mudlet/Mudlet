@@ -96,10 +96,19 @@ static QString noEngineMessage()
 // change rather than cache them, which needs the change to be announced at all.
 static void announceSpeechCapabilities(mudlet* pMudlet)
 {
-    auto* pRecognizer = pMudlet ? qobject_cast<VoskRecognizer*>(pMudlet->speechRecognizer()) : nullptr;
-    if (pRecognizer) {
+    if (!pMudlet) {
+        return;
+    }
+    if (auto* pRecognizer = qobject_cast<VoskRecognizer*>(pMudlet->speechRecognizer())) {
+        // Keeps the recognizer's own baseline in step. It no longer decides what
+        // Lua hears - the bridge does - so this cannot produce an announcement
+        // the call below would not.
         pRecognizer->announceCapabilitiesIfChanged();
     }
+    // The bridge decides. Its view can move without the recognizer's doing so,
+    // since getInfo() reports every capability as false while there is no
+    // recognizer at all.
+    pMudlet->announceSpeechCapabilitiesIfChanged();
 }
 
 // Whether a startListening() request was accepted. The call returns nothing
@@ -264,7 +273,16 @@ int TLuaInterpreter::sttStop(lua_State* L)
     // answers, and returning true for both told a caller its session had ended
     // cleanly when the engine had faulted and produced nothing.
     if (pRecognizer->state() == SpeechRecognizer::State::Error) {
-        return warnArgumentValue(L, funcName, "nothing was stopped - speech recognition is in an error state; the sysSTTError event carries the reason");
+        // Raised, not just returned. This is an engine-caused refusal, which
+        // docs/stt-api.md says must speak through sysSTTError as well as in the
+        // return value - and the message names that event as where the reason
+        // is, so staying silent made it describe something that never happened.
+        // The sibling refusals in start() and toggle() have always raised it; a
+        // consumer driving the bridge from events alone, the case the contract
+        // calls out, saw this one as a session that simply stopped answering.
+        const QString refusal = qsl("nothing was stopped - speech recognition is in an error state; the sysSTTError event carries the reason");
+        reportSpeechRefusal(refusal);
+        return warnArgumentValue(L, funcName, refusal);
     }
 
     if (pRecognizer->listening()) {
@@ -717,7 +735,14 @@ int TLuaInterpreter::sttReloadLibrary(lua_State* L)
         // allocated also leaves the recognizer in Error, and that case must
         // stay reloadable since it's exactly what stt.reloadLibrary() is for.
         if (pRecognizer && (pRecognizer->listening() || pRecognizer->initialized() || pRecognizer->hasLiveNativeResources())) {
-            return warnArgumentValue(L, __func__, "cannot reload the speech recognition library while it is in use, close speech recognition first", true);
+            // stt.reloadLibrary() takes no arguments, so this cannot be a caller's
+            // own mistake - it is a call the engine could not satisfy, and rule 2
+            // in docs/stt-api.md says those speak through sysSTTError too. The
+            // package that left the recognizer in use is usually not the one that
+            // asked for the reload, and it is the one that needs to hear this.
+            const QString refusal = qsl("cannot reload the speech recognition library while it is in use, close speech recognition first");
+            reportSpeechRefusal(refusal);
+            return warnArgumentValue(L, "stt.reloadLibrary", refusal, true);
         }
     }
 
@@ -725,7 +750,11 @@ int TLuaInterpreter::sttReloadLibrary(lua_State* L)
     // libraryAvailable() below would skip the probe and answer from cache -
     // reporting a successful reload of a module that was never released
     if (!VoskRecognizer::resetLibraryLoadState()) {
-        return warnArgumentValue(L, "stt.reloadLibrary", "the speech recognition library is still mapped and could not be released, so detection could not be re-run", true);
+        // The loader still holds the module: an engine fault rather than a state
+        // guard, and the one an installer replacing the file most needs told.
+        const QString refusal = qsl("the speech recognition library is still mapped and could not be released, so detection could not be re-run");
+        reportSpeechRefusal(refusal);
+        return warnArgumentValue(L, "stt.reloadLibrary", refusal, true);
     }
     // Lift the latch stt.unloadLibrary() set, since asking for a reload is
     // exactly the caller saying they are done replacing the file
@@ -750,12 +779,22 @@ int TLuaInterpreter::sttUnloadLibrary(lua_State* L)
         // Same guard as stt.reloadLibrary(): see the comment there for why
         // hasLiveNativeResources() is checked rather than state alone.
         if (pRecognizer && (pRecognizer->listening() || pRecognizer->initialized() || pRecognizer->hasLiveNativeResources())) {
-            return warnArgumentValue(L, __func__, "cannot unload the speech recognition library while it is in use, close speech recognition first", true);
+            // Announced for the same reason as the sibling refusal in
+            // stt.reloadLibrary(): no arguments to get wrong, so this is the
+            // engine refusing, and other packages on the profile are affected.
+            const QString refusal = qsl("cannot unload the speech recognition library while it is in use, close speech recognition first");
+            reportSpeechRefusal(refusal);
+            return warnArgumentValue(L, "stt.unloadLibrary", refusal, true);
         }
     }
 
     if (!VoskRecognizer::resetLibraryLoadState()) {
-        return warnArgumentValue(L, "stt.unloadLibrary", "the speech recognition library is still mapped and could not be unloaded, so its file cannot be replaced yet", true);
+        // The whole point of this call is to let the file be replaced, so a
+        // failure here is precisely what the caller - and anything else about to
+        // touch that file - has to hear about.
+        const QString refusal = qsl("the speech recognition library is still mapped and could not be unloaded, so its file cannot be replaced yet");
+        reportSpeechRefusal(refusal);
+        return warnArgumentValue(L, "stt.unloadLibrary", refusal, true);
     }
 
     // Stays unloaded until stt.reloadLibrary() asks for it back: without this

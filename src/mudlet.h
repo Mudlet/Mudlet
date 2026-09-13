@@ -224,6 +224,12 @@ public:
     // and exposes it to the Lua stt.* API. Recognizer results surface as Lua
     // events; all routing and UI policy lives in packages consuming them.
     void initSpeechRecognition();
+    // Raise sysSTTCapabilitiesChanged if what Lua would read from
+    // stt.getInfo().capabilities has moved since it was last announced. The
+    // baseline lives here rather than in the recognizer because this is where
+    // Lua's view is assembled: with no recognizer every capability reads false,
+    // so one being created is a change the recognizer cannot see in itself.
+    void announceSpeechCapabilitiesIfChanged();
     SpeechRecognizer* speechRecognizer() const;
     // Raise one sysSTT* event on the active profile. Public because the stt.*
     // bindings refuse before a recognizer exists - with no engine installed
@@ -747,6 +753,17 @@ private:
     // The single shared speech recognizer (one microphone, one decoder);
     // created lazily by initSpeechRecognition()
     QPointer<SpeechRecognizer> mpSpeechRecognizer;
+    // The capabilities payload Lua was last told about, held as the JSON that
+    // was sent rather than as a Capabilities value: it is exactly what the
+    // consumer saw, and it keeps SpeechRecognizer.h out of this header.
+    //
+    // Seeded on first use with the payload for no recognizer at all - every
+    // capability false - because that is what Lua has already been reading from
+    // getInfo(). Seeding is what makes a recognizer coming into existence
+    // register as the change it is; an empty string would compare unequal to
+    // everything and announce on the first read whatever had happened. Empty is
+    // safe as the "not seeded yet" mark only because the payload never is.
+    QString mAnnouncedSpeechCapabilities;
     QPointer<QToolButton> mpButtonPackageManagers;
     QHBoxLayout* mpHBoxLayout_profileContainer = nullptr;
     QPointer<QLabel> mpLabelReplaySpeedDisplay;
