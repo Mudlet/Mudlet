@@ -791,11 +791,13 @@ void TConsole::resizeEvent(QResizeEvent* event)
         mpMainDisplay->resize(x - mBorders.left() - mBorders.right(), y - mBorders.top() - mBorders.bottom() - mpCommandLine->height());
     } else {
         mpMainFrame->resize(x, y);
-        // The debug console's top bar holds its search box, so unlike the other
-        // types that reach here it is not zero-height - without this the display
-        // overruns its parent and the newest lines are clipped off the bottom:
+        // A console is sized as it is created, before this frame's layout has
+        // ever run, and a child widget still carries Qt's 100x30 default
+        // geometry until then, so ask the bar for the height it will be given.
+        // The hint is exact: the bar's vertical size policy is Fixed inside a
+        // QVBoxLayout.
         if (!mpTopToolBar->isHidden()) {
-            y -= mpTopToolBar->height();
+            y -= mpTopToolBar->sizeHint().height();
         }
         mpMainDisplay->resize(x, y);
     }
