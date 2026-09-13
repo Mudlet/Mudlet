@@ -18,14 +18,10 @@
  ***************************************************************************/
 
 /*
- * Three MMCP settings - auto-start the chat server, auto-accept incoming calls
- * and allow peek requests - have no controls on the settings form: the check
- * boxes are commented out of profile_preferences.ui pending a future release.
- * applyAll() nonetheless wrote all three back as false, outside the dirty
- * guards, so every apply reset them. Once Esc became a close rather than a
- * discard (#10237), merely looking at the settings turned off a setting the
- * profile XML is the only way to set - and, with no control to turn it back on,
- * unrecoverably from the UI.
+ * Three MMCP settings - auto-start the chat server, auto-accept incoming calls and
+ * allow peek requests - have no controls on the settings form: their check boxes are
+ * commented out of profile_preferences.ui. The profile's own XML is the only thing
+ * that sets them, so an apply has to leave them as it found them.
  *
  * Run with: ctest -R SettingsMmcpFlagsTest -V
  */
@@ -74,11 +70,6 @@ private:
         QVERIFY(QTest::qWaitForWindowExposed(mpPreferences));
     }
 
-    // Auto-accept calls is on unless a profile XML says otherwise, which is what
-    // makes it the one of the three an apply can be seen to lose on a new profile.
-    // The other two are off by default, and the lines this fix removed wrote false,
-    // so only a profile that has turned them on can show them being lost - which is
-    // what test_theMmcpOptionsAProfileTurnedOnSurviveAnApply is for.
     void verifyTheOptionsSurvived(Host* pHost, const bool autostartServer, const bool allowPeekRequests, const char* what)
     {
         QVERIFY2(pHost->getMMCPAutoAcceptCalls(), what);
@@ -93,9 +84,6 @@ private:
         QVERIFY2(!mpHost->getMMCPAutoStartServer() && !mpHost->getMMCPAllowPeekRequests(), "the other two MMCP options are not at their defaults");
     }
 
-    // The three MMCP options can only be set by the profile's own XML, since the
-    // form has no controls for them, so a save that turns all three on is the only
-    // way to stage the two that are off by default.
     bool writeProfileSaveWithEveryMmcpOptionOn(const QString& profileName)
     {
         const QString folder = mudlet::getMudletPath(enums::profileXmlFilesPath, profileName);
@@ -168,8 +156,6 @@ private slots:
         mpHost->waitForProfileSave();
     }
 
-    // The finding: open the settings, press Esc, and the profile's MMCP options
-    // are gone.
     void test_dismissingWithEscapeKeepsTheMmcpOptions()
     {
         verifyTheFixtureIsUsable();
@@ -178,16 +164,11 @@ private slots:
         QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
         QTest::keyClick(mpPreferences, Qt::Key_Escape);
         QVERIFY2(!mpPreferences->isVisible(), "Escape did not close the settings, so the apply it triggers never ran");
-        // Escape closing rather than discarding (#10237) is what made this finding a
-        // regression, so a case that only watched the dialog close would go on passing
-        // while covering nothing at all
         QVERIFY2(TestSettings::waitForApply(applySpy), "Escape closed the settings without applying them, so this case no longer covers the finding");
 
         verifyTheOptionsSurvived(mpHost, false, false, "dismissing the settings with Escape turned auto-accept calls off, and no control on the form can turn it back on");
     }
 
-    // ...and the same for an apply the user really did ask for, by editing
-    // something else entirely.
     void test_anUnrelatedEditKeepsTheMmcpOptions()
     {
         verifyTheFixtureIsUsable();
@@ -203,8 +184,6 @@ private slots:
         mpHost->mAnnounceIncomingText = announceBefore;
     }
 
-    // The MMCP settings that do have controls still have to be written, or this
-    // would be a fix that simply stopped applying the page.
     void test_theMmcpSettingsWithControlsAreStillApplied()
     {
         openPreferences();
@@ -218,12 +197,8 @@ private slots:
         QVERIFY2(mpHost->getMMCPPrefixEmotes() == !before, "an MMCP option the user really did tick was not applied");
     }
 
-    // Two of the three options are off on a new profile and the removed lines wrote
-    // false, so a case against a new profile can only ever show auto-accept calls
-    // being lost. This one opens a profile whose save has all three on - the state a
-    // user who edited their XML is in, which is the only way to set them - so that
-    // every one of the three has somewhere to fall from. Last in the file because it
-    // opens a second profile, which the cases above should not have to allow for.
+    // Last in the file because it opens a second profile, which the cases above
+    // should not have to allow for.
     void test_theMmcpOptionsAProfileTurnedOnSurviveAnApply()
     {
         const QString profileName = qsl("SettingsMmcpFlags-Staged-Test");

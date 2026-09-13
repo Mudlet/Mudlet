@@ -6815,9 +6815,7 @@ void dlgProfilePreferences::applyAll()
 
         // The three MMCP options below have no controls on the form - their check boxes
         // are commented out of profile_preferences.ui - so an apply has nothing to read
-        // them from and has to leave the values the profile was loaded with alone.
-        // Writing them back regardless is what turned auto-accept calls off for anyone
-        // who merely opened the settings.
+        // them from.
         /* restore these along with the check boxes:
         pHost->mMMCPAutostartServer = checkBox_mmcpAutostartServer->isChecked();
         pHost->mMMCPAutoAcceptCalls = checkBox_mmcpAutoAcceptCalls->isChecked();
