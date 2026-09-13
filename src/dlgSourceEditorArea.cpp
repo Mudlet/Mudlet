@@ -26,10 +26,10 @@
 
 #include "edbee/edbee.h"
 #include "edbee/models/textdocument.h"
-#include "edbee/texteditorcomponent.h"
 #include "edbee/models/texteditorconfig.h"
 #include "edbee/models/textgrammar.h"
 #include "edbee/views/components/texteditorautocompletecomponent.h"
+#include "edbee/views/components/texteditorcomponent.h"
 #include "edbee/views/texteditorscrollarea.h"
 #include "edbee/views/textrenderer.h"
 #include "edbee/views/texttheme.h"
