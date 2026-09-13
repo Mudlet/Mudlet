@@ -312,12 +312,12 @@ void TTimer::enableTimer(int id)
     if (mID == id) {
         if (canBeUnlocked()) {
             if (activate()) {
-                // A tempTimer() given a Lua function has no script - its callback
-                // lives in the Lua registry instead - so restarting only the timers
-                // that have one left every function timer of the profile stopped for
-                // the rest of the session once the emergency stop had been used (#10751).
-                // CHECKME: Should this not also check for a non-empty "command" as well?
-                if (!mScript.isEmpty() || mRegisteredAnonymousLuaFunction) {
+                // Restarting only the timers that hold a script left the other
+                // two kinds stopped for the rest of the session once the
+                // emergency stop had been used: a tempTimer() given a Lua
+                // function keeps its callback in the Lua registry and a timer
+                // that only sends a command has nothing to compile (#10751)
+                if (hasPayload()) {
                     mpQTimer->start();
                 }
             } else {
@@ -356,10 +356,10 @@ void TTimer::enableTimer()
 {
     if (canBeUnlocked()) {
         if (activate()) {
-            // A function timer's callback lives in the Lua registry rather than in
-            // its script, which stays empty - see enableTimer(int) above (#10751).
-            // CHECKME: Should this not also check for a non-empty "command" as well?
-            if (!mScript.isEmpty() || mRegisteredAnonymousLuaFunction) {
+            // enableTimer(name) comes through here for the children of a
+            // folder, where a command-only timer is an everyday thing - see
+            // enableTimer(int) above (#10751)
+            if (hasPayload()) {
                 mpQTimer->start();
             }
         } else {
