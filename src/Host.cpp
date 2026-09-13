@@ -4053,8 +4053,8 @@ void Host::setEnableSpellCheck(const bool enable)
     // nothing to do: the handle is warmed once at the end, after the profile's
     // own settings have been read - which is what setSystemSpellDictionary()
     // next door defends against too.
-    if (enable && !mIsProfileLoadingSequence && mpConsole) {
-        QTimer::singleShot(0, mpConsole.data(), &TMainConsole::slot_warmSystemSpellDictionary);
+    if (enable && !mIsProfileLoadingSequence) {
+        emit signal_spellCheckEnabled();
     }
 }
 

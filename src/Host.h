@@ -976,6 +976,9 @@ signals:
     void profileSaveStarted();
     void profileSaveFinished();
     void signal_changeSpellDict(const QString&);
+    // Spell check has just been turned on, so the system dictionary is wanted
+    // where it was not before. The main console reads it off the event loop.
+    void signal_spellCheckEnabled();
     // To tell all TConsole's upper TTextEdit panes to report all Codepoint
     // problems as they arrive as well as a summary upon destruction:
     void signal_changeDebugShowAllProblemCodepoints(const bool);

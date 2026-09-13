@@ -105,6 +105,9 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
     // first word typed, so a queued connection has the event loop do it once
     // the profile has finished loading:
     connect(mudlet::self(), &mudlet::signal_profileLoaded, this, &TMainConsole::slot_warmSystemSpellDictionary, Qt::QueuedConnection);
+    // ...and turning spell check on mid-session is the other moment the
+    // dictionary goes from unwanted to wanted, so it is read the same way
+    connect(mpHost, &Host::signal_spellCheckEnabled, this, &TMainConsole::slot_warmSystemSpellDictionary, Qt::QueuedConnection);
 
     // Load up the spelling dictionary for the profile - needs to handle the
     // absence of files for the first run in a new profile or from an older
