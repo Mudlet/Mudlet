@@ -82,7 +82,14 @@ void IrcMessageComposer::composeMessage(IrcNumericMessage* message)
         d.messages.top()->setParameters(QStringList(message->parameters().value(0)));
         break;
     case Irc::RPL_MOTD:
-        d.messages.top()->setParameters(d.messages.top()->parameters() << message->parameters().value(1));
+        // A server is free to send an RPL_MOTD outside an RPL_MOTDSTART...RPL_ENDOFMOTD
+        // block, or to repeat one after that block has closed, and then there is no
+        // IrcMotdMessage under construction to add the line to. top() on an empty
+        // stack is undefined behaviour, and appending to whatever else happens to be
+        // being composed would corrupt that message, so leave the numeric to be
+        // delivered on its own - as the neighbouring cases already do.
+        if (!d.messages.isEmpty() && d.messages.top()->type() == IrcMessage::Motd)
+            d.messages.top()->setParameters(d.messages.top()->parameters() << message->parameters().value(1));
         break;
     case Irc::RPL_ENDOFMOTD:
         finishCompose(message);
@@ -246,7 +253,11 @@ void IrcMessageComposer::finishCompose(IrcMessage* message)
 
 void IrcMessageComposer::replaceParam(int index, const QString& param)
 {
-    if (!d.messages.isEmpty()) {
+    // Every caller is a WHOIS or WHOWAS numeric, and the indexes are the slots
+    // IrcMessageComposer::composeMessage() lays those two out in. Sent by a server
+    // while something else is being composed - a MOTD, a names list - they would
+    // otherwise overwrite a line of it.
+    if (!d.messages.isEmpty() && (d.messages.top()->type() == IrcMessage::Whois || d.messages.top()->type() == IrcMessage::Whowas)) {
         QStringList params = d.messages.top()->parameters();
         if (index < params.count())
             params.replace(index, param);
