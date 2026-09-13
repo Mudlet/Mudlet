@@ -36,9 +36,12 @@
 
 #include <list>
 
+class TAction;
+class TEasyButtonBar;
 class TMediaPlayer;
 class TScrollBox;
 class TTextBox;
+class TToolBar;
 class QDialog;
 class QDockWidget;
 class QProgressDialog;
@@ -55,6 +58,7 @@ public:
     void resetMainConsole();
     void closeEvent(QCloseEvent*) override;
     TConsole* createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height);
+    TConsole* createSubConsole(const QString& name, QWidget* parent);
     bool createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height);
     bool raiseWindow(const QString& name);
     bool lowerWindow(const QString& name);
@@ -182,6 +186,12 @@ public:
     void disableMapProgressDialogCancel();
     void closeMapProgressDialog();
     void createMapperDock(const QString& title, const QString& objectName);
+    TToolBar* createToolBar(TAction* pAction, const QString& name);
+    TEasyButtonBar* createEasyButtonBar(TAction* pRootAction, const QString& name);
+    void attachEasyButtonBar(TEasyButtonBar* pBar, int location);
+    void detachEasyButtonBar(TEasyButtonBar* pBar, int location);
+    void dockToolBar(TToolBar* pToolBar, Qt::DockWidgetArea area);
+    void undockToolBar(TToolBar* pToolBar);
     void showMapperScriptReminder();
     void showUnpackingProgress(const QString& message, const QString& title);
     void closeUnpackingProgress();

@@ -72,7 +72,7 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `dlgRoomProperties.cpp` | 2 | 51 | QColorDialog, QMenu, QWidget, QDialog, QLineEdit, QComboBox, QAbstractButton, QSpinBox, QListWidgetItem, QVBoxLayout, QSizePolicy, QListWidget, QListView, QHBoxLayout, QPushButton |
 | `dlgMapper.cpp` | 10 | 41 | QFileDialog, QFrame, QLabel, QListWidget, QMenu, QMessageBox, QProgressBar, QProgressDialog, QPushButton, QVBoxLayout, QWidget, QAbstractButton, QToolButton, QComboBox, QApplication, QDialog, QSizePolicy |
 | `dlgRoomExits.h` | 2 | 49 | QDialog, QStyledItemDelegate, QCheckBox, QWidget, QStyleOptionViewItem, QLineEdit, QTreeWidgetItem, QRadioButton, QSpinBox |
-| `TMainConsole.cpp` | 8 | 39 | QDialog, QDockWidget, QLabel, QLineEdit, QMessageBox, QProgressDialog, QScrollBar, QSizePolicy, QWidget, QApplication |
+| `TMainConsole.cpp` | 9 | 40 | QDialog, QDockWidget, QLabel, QLayout, QLineEdit, QMessageBox, QProgressDialog, QScrollBar, QSizePolicy, QWidget, QApplication |
 | `dlgPackageManager.cpp` | 3 | 42 | QFileDialog, QMessageBox, QProgressDialog, QWidget, QDialog, QLineEdit, QListWidget, QAbstractButton, QListWidgetItem, QButtonGroup |
 | `dlgNotepad.cpp` | 8 | 36 | QApplication, QHBoxLayout, QInputDialog, QLabel, QLineEdit, QMenu, QPlainTextEdit, QToolButton, QWidget, QTabWidget, QMainWindow, QTextEdit |
 | `TTreeWidget.cpp` | 2 | 38 | QHeaderView, QToolTip, QWidget, QTreeWidget, QAbstractItemView, QTreeWidgetItem, QStyle |
@@ -104,9 +104,9 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `dlgNotepad.h` | 0 | 14 | QLabel, QLineEdit, QPlainTextEdit, QToolButton, QMainWindow, QWidget |
 | `dlgMapper.h` | 0 | 13 | QFrame, QLabel, QProgressBar, QPushButton, QWidget, QMenu |
 | `TDebugFilterBar.h` | 1 | 12 | QToolBar, QLabel, QLineEdit, QMenu, QToolButton, QWidget |
+| `TMainConsole.h` | 1 | 11 | QWidget, QDialog, QDockWidget, QProgressDialog |
 | `TUiTour.h` | 1 | 11 | QWidget, QFrame, QLabel, QPushButton |
 | `updater.cpp` | 2 | 10 | QMessageBox, QPushButton, QApplication, QAbstractButton |
-| `TMainConsole.h` | 1 | 10 | QWidget, QDialog, QDockWidget, QProgressDialog |
 | `updater/UpdateDialog.h` | 1 | 10 | QDialog, QAbstractButton, QLabel, QWidget |
 | `VarUnit.cpp` | 1 | 10 | QTreeWidgetItem |
 | `VarUnit.h` | 0 | 11 | QTreeWidgetItem |
@@ -129,7 +129,6 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `TCommandLine.h` | 2 | 4 | QPlainTextEdit, QToolButton, QWidget, QMenu |
 | `TEasyButtonBar.h` | 1 | 5 | QWidget, QGridLayout |
 | `TToolBar.h` | 1 | 5 | QDockWidget, QGridLayout, QWidget |
-| `ActionUnit.cpp` | 3 | 2 | QDockWidget, QLayout, QWidget |
 | `dlgActionMainArea.cpp` | 0 | 5 | QWidget, QLineEdit, QSpinBox, QComboBox |
 | `dlgModuleManager.h` | 1 | 4 | QDialog, QWidget, QTableWidgetItem |
 | `LuaInterface.h` | 0 | 5 | QTreeWidgetItem |
@@ -140,6 +139,7 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `TrailingWhitespaceMarker.cpp` | 1 | 4 | QLineEdit, QPlainTextEdit |
 | `TrailingWhitespaceMarker.h` | 1 | 4 | QLineEdit, QPlainTextEdit |
 | `TScrollBox.h` | 1 | 4 | QScrollArea, QWidget |
+| `ActionUnit.cpp` | 2 | 2 | QDockWidget, QWidget |
 | `DarkTheme.h` | 2 | 2 | QProxyStyle, QStyleFactory, QStyle |
 | `dlgAliasMainArea.cpp` | 0 | 4 | QWidget, QLineEdit |
 | `dlgRoomProperties.h` | 1 | 3 | QListWidget, QDialog, QWidget, QListWidgetItem |
