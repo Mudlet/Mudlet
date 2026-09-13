@@ -93,6 +93,8 @@ const QString scmFirstCollidingProfile = scmCollidingPrefix + qsl("FirstOfTwoCol
 const QString scmSecondCollidingProfile = scmCollidingPrefix + qsl("SecondOfTwoCollidingNames");
 const QString scmNeverFiledPrefix(50, QChar('f'));
 const QString scmNeverFiledProfile = scmNeverFiledPrefix + qsl("NeverFiledUnderTheTruncatedPath");
+const QString scmFailedStorePrefix(50, QChar('x'));
+const QString scmFailedStoreProfile = scmFailedStorePrefix + qsl("StoreThatCannotReachItsOwnFile");
 
 // Modification time decides between two copies of one credential, and a filesystem's
 // timestamp resolution cannot be trusted to separate two writes made a moment apart
@@ -127,6 +129,7 @@ private slots:
     void testAPasswordSavedHereReachesTheTruncatedPathToo();
     void testAnEmptyCredentialTakesTheTruncatedPathAwayRatherThanEmptyingIt();
     void testTheTruncatedPathIsNeverCreatedNorTakenOver();
+    void testAStoreThatFailsLeavesTheTruncatedPathAlone();
     void testPathTraversalPrevention();
     void testConcurrentAccess();
     void testAsyncStoreAndRetrieve();
@@ -541,10 +544,20 @@ void CredentialManagerTest::testAPasswordSavedHereReachesTheTruncatedPathToo()
     QCOMPARE(plantedCredential(legacyPath, profile), QString("the_password_changed_here"));
     QCOMPARE(CredentialManager::retrieveCredential(profile, key), QString("the_password_changed_here"));
 
-    // Which of the two a later read prefers is deliberately not pinned: a store writes both
-    // inside one millisecond, all the resolution QFileInfo::lastModified() has, so neither is
-    // "written after" the other and a tie answers for the file under the current naming.
+    // Which of the two a later read prefers is deliberately not pinned: the copy for the
+    // older Mudlet is written last, so it is either the newer of the two or - within the one
+    // millisecond QFileInfo::lastModified() can tell apart - a tie, which answers for the
+    // file under the current naming.
     QCOMPARE(plantedCredential(currentPath, profile), QString("the_password_changed_here"));
+
+    // Either way a read settles it: where the copy for the older Mudlet is the newer, that
+    // read takes it and copies it across once, leaving the file under the current naming the
+    // newer again rather than every read going back to the older path
+    QVERIFY(setModificationTime(currentPath, -30));
+    QCOMPARE(CredentialManager::retrieveCredential(profile, key), QString("the_password_changed_here"));
+    QVERIFY2(QFileInfo(currentPath).lastModified() >= QFileInfo(legacyPath).lastModified(), "the copy under the current naming was not brought up to date by the read that took the older path");
+    QCOMPARE(CredentialManager::retrieveCredential(profile, key), QString("the_password_changed_here"));
+    QCOMPARE(plantedCredential(legacyPath, profile), QString("the_password_changed_here"));
 
     // Removing the password takes both copies with it in file storage, which is what these
     // cases run on; a removal that goes to a system keychain leaves both files where they are
@@ -611,6 +624,40 @@ void CredentialManagerTest::testTheTruncatedPathIsNeverCreatedNorTakenOver()
     CredentialManager::removeCredential(first, key);
     CredentialManager::removeCredential(second, key);
     CredentialManager::removeCredential(neverFiledThere, key);
+}
+
+// The two files sit in directories of their own, so the copy an older Mudlet reads can be
+// written even where the file under the current naming cannot be. A store that reports
+// failure has to leave that copy as it found it, or the two Mudlets are left holding
+// different passwords for the same profile.
+void CredentialManagerTest::testAStoreThatFailsLeavesTheTruncatedPathAlone()
+{
+    const QString profile = scmFailedStoreProfile;
+    const QString key = "character";
+    const QString legacyPath = credentialPath(scmFailedStorePrefix, key);
+    const QString currentPath = credentialPath(utils::sanitizeForPath(profile), key);
+
+    QVERIFY(plantCredential(legacyPath, profile, "the_password_both_started_with"));
+    QCOMPARE(CredentialManager::retrieveCredential(profile, key), QString("the_password_both_started_with"));
+    QVERIFY(QFile::exists(currentPath));
+
+    // A directory where the credential file belongs: QSaveFile writes beside it and renames,
+    // and a rename onto a directory is refused whoever is running - a read-only directory
+    // would not be, since these cases can run as root
+    QVERIFY(QFile::remove(currentPath));
+    QVERIFY(QDir().mkpath(currentPath));
+
+    QVERIFY2(!CredentialManager::storeCredential(profile, key, "the_password_that_never_landed"), "a store that could not write its own file reported success");
+    QCOMPARE(plantedCredential(legacyPath, profile), QString("the_password_both_started_with"));
+
+    // and the same for the empty credential that clearing the password field stores, which
+    // takes the older Mudlet's copy away rather than emptying it
+    QVERIFY2(!CredentialManager::storeCredential(profile, key, QString("")), "a store that could not write its own file reported success");
+    QVERIFY2(QFile::exists(legacyPath), "a store that failed still took away the copy an older Mudlet reads");
+    QCOMPARE(plantedCredential(legacyPath, profile), QString("the_password_both_started_with"));
+
+    QVERIFY(QDir().rmdir(currentPath));
+    CredentialManager::removeCredential(profile, key);
 }
 
 void CredentialManagerTest::testPathTraversalPrevention()
@@ -983,7 +1030,7 @@ void CredentialManagerTest::cleanupTestCase()
     CredentialManager::removeCredential(truncatedPrefix + "StoredAfterwards", "character");
 
     for (const QString& profile :
-         {scmKeptProfile, scmNewerCopyProfile, scmWrittenThroughProfile, scmEmptyCredentialProfile, scmFirstCollidingProfile, scmSecondCollidingProfile, scmNeverFiledProfile}) {
+         {scmKeptProfile, scmNewerCopyProfile, scmWrittenThroughProfile, scmEmptyCredentialProfile, scmFirstCollidingProfile, scmSecondCollidingProfile, scmNeverFiledProfile, scmFailedStoreProfile}) {
         CredentialManager::removeCredential(profile, "character");
     }
 }

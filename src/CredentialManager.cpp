@@ -1305,11 +1305,18 @@ bool CredentialManager::storeCredentialToFile(const QString& profileName, const 
         return false;
     }
 
-    // Refreshed before the file under the current naming rather than after it, so that the
-    // current one stays the more recently written of the two and a later read keeps taking it
+    if (!writeCredentialFile(filePath, profileName, credential)) {
+        return false;
+    }
+
+    // Only once the file under the current naming is committed: the two sit in directories
+    // of their own, so this one can be written where that one cannot, and a store that
+    // reports failure must not leave the two Mudlets holding different passwords. Writing it
+    // last can leave it the newer of the two, which the next read settles by taking it and
+    // copying it across once.
     refreshLegacyFileCredential(profileName, key, credential);
 
-    return writeCredentialFile(filePath, profileName, credential);
+    return true;
 }
 
 QString CredentialManager::retrieveCredentialFromFile(const QString& profileName, const QString& key)
