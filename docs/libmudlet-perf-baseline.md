@@ -116,7 +116,21 @@ METRIC display_paints_per_sec ...
 METRIC display_paint_ms ...
 METRIC display_rows_per_paint ...
 METRIC display_cols_per_paint ...
+METRIC display_device_pixel_ratio ...
 METRIC display_lines_per_sec ...
+METRIC display_tail_small_paint_ms ...
+METRIC display_tail_large_paint_ms ...
+METRIC display_tail_small_cells ...
+METRIC display_tail_large_cells ...
+METRIC display_tail_area_ratio ...
+METRIC display_tail_cost_ratio ...
+METRIC display_overlay_small_paint_ms ...
+METRIC display_overlay_large_paint_ms ...
+METRIC display_overlay_small_cells ...
+METRIC display_overlay_large_cells ...
+METRIC display_overlay_area_ratio ...
+METRIC display_overlay_cost_ratio ...
+METRIC display_overlay_cache_reused ...
 ```
 
 ### Two profile configurations, and why the split matters
@@ -208,11 +222,22 @@ than silently passing whenever it cannot trust the comparison:
 
 - an invariant (`text_corpus_lines`, `text_corpus_bytes`, `trigger_count`,
   `build_asan`, `corpus_version`, `display_rows_per_paint`,
-  `display_cols_per_paint`) is missing from either run, or differs between them -
-  the two runs used different corpora, trigger sets, screen geometry or build
+  `display_cols_per_paint`, `display_device_pixel_ratio`,
+  `display_tail_small_cells`, `display_tail_large_cells`,
+  `display_overlay_small_cells`, `display_overlay_large_cells`,
+  `display_overlay_cache_reused`) is missing from
+  either run, or differs between them - the two runs used different corpora,
+  trigger sets, screen geometry, display scaling or build
   flavours. `build_asan` specifically stops an ASan build being compared against
   a release build, `corpus_version` stops a comparison across a retuned corpus,
-  and the two `display_*` invariants stop one across a differently-sized screen.
+  and the `display_*` cell and geometry invariants stop one across a
+  differently-sized screen. `display_device_pixel_ratio` stops one across a
+  different scale factor: the paint timings are paid per device pixel while every
+  other display invariant is logical, so without it a 1.0 run against a 2.0 run
+  agrees on every check and reports the ratio as a paint regression - measured
+  here as `display_paint_ms` +55% and `display_tail_large_paint_ms` +194% with no
+  code change at all. `display_overlay_cache_reused` is the odd one out and
+  is explained under the display benchmark below.
   Because the invariants come from several slots, compare **full runs**: a
   single-slot run on both sides is refused for the missing ones.
 - a **gated** metric is missing from either run, or its "before" value is not
@@ -261,9 +286,53 @@ workload, and comparing their throughput would report a geometry difference as a
 code change. That is the same role `text_corpus_lines` and `text_corpus_bytes`
 play for the text bench.
 
-The slot runs last so that its render target and the paint path's cached screen
-pixmap fall outside both `peak_rss_kb` and `defaults_peak_rss_kb`, whose
-difference is documented above as what the default packages cost.
+Every drawing slot runs after the memory ones so that their render targets and
+the paint path's cached screen pixmap fall outside both `peak_rss_kb` and
+`defaults_peak_rss_kb`, whose difference is documented above as what the default
+packages cost.
+
+### The cached screen (`display_tail_*`, `display_overlay_*`)
+
+`benchDisplay` above measures the worst case, a full redraw every paint. The two
+benchmarks after it measure the two ways `drawForeground()` avoids one by reusing
+the screen it drew last time, because between them they are what a console
+actually spends its time doing:
+
+- **`display_tail_*`** - one line of new text per paint, a console following a
+  game. Served by the scroll shortcut.
+- **`display_overlay_*`** - a three-row band repainted with no new text and no
+  scroll, the damage a window edge or a Geyser label dragged across the console
+  leaves behind. Served by the cached-screen blit, which is a separate branch
+  with its own guard.
+
+Each runs the same workload in a 640x400 and a 1600x1000 window and reports
+`*_area_ratio` (how much bigger the screen got, ~4.9) against `*_cost_ratio` (how
+much dearer one paint got with it, ~1.6). Read the pair as context for a change,
+not as proof the cache is working - the blit is itself proportional to the screen,
+so a broken path does not announce itself in the ratio. That is what the metric
+below is for.
+
+`display_overlay_cache_reused` is an **invariant, not a timing**: 1 only when
+both windows really took the cached-screen blit. It exists because the timings
+are not merely noisy when that branch breaks, they are inverted. A repaint whose
+cached-screen guard fails falls through to the scroll shortcut, which blits and
+then redraws nothing - so the damaged band is never drawn and the paint gets
+faster. Issue #10341 measured here at `QT_SCALE_FACTOR=1.25` reports **0.17ms
+against a fixed build's 0.37ms**. A percentage would call the regression a 2x
+speedup.
+
+It is checked against 1, not merely for agreement between the two runs: two
+builds that have both lost the path are equal, not comparable. The benchmark also
+warns on stderr naming the window that lost it, so a single run says so too.
+
+What it does **not** see is #10341 at the ratio the invocation above actually
+runs at. That truncation only loses the branch where the device pixel product
+comes out fractional, so the buggy build reads 1 at 1.0 - which is what
+`QT_QPA_PLATFORM=offscreen` gives - and 0 at 1.25 or 1.75. Reproducing that class
+of bug takes a fractional `QT_SCALE_FACTOR`, and since `REGISTER_PERF_BENCHMARK`
+is off by default, nothing runs this unattended to catch one either way. It costs
+the metric less than it sounds: any *other* way of losing the branch reads 0 at
+any ratio, which is most of what it guards.
 
 The `display_*` metrics are reported, not gated by default. They measure at
 least as tightly as the text metrics do on an unloaded machine, so gate on them
