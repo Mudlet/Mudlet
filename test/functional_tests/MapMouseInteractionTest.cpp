@@ -49,6 +49,7 @@
 #include "MiddleMousePanHandler.h"
 #include "T2DMap.h"
 #include "TArea.h"
+#include "TLuaInterpreter.h"
 #include "TMap.h"
 #include "TMapLabel.h"
 #include "TRoom.h"
@@ -362,6 +363,23 @@ private:
         return true;
     }
 
+    // An item on one of the menus a script added to the map's context menu.
+    QAction* userMenuItem(const QString& menuText, const QString& itemText) const
+    {
+        QAction* pMenu = contextMenuItem(menuText);
+        if (!pMenu || !pMenu->menu()) {
+            return nullptr;
+        }
+        for (QAction* pAction : pMenu->menu()->actions()) {
+            if (pAction->text() == itemText) {
+                return pAction;
+            }
+        }
+        return nullptr;
+    }
+
+    bool runLua(const QString& code) const { return mpHost->getLuaInterpreter()->compileAndExecuteScript(code); }
+
 private slots:
     void initTestCase()
     {
@@ -426,6 +444,9 @@ private slots:
         QCoreApplication::removePostedEvents(mp2dMap, QEvent::MouseButtonPress);
         QCoreApplication::removePostedEvents(mp2dMap, QEvent::MouseButtonRelease);
         mp2dMap->slot_setSnapCustomLinePointsToGrid(false);
+        map()->mUserMenus.clear();
+        map()->mUserActions.clear();
+        map()->setMmpMapLocation(QString());
         mp2dMap->mCustomLinesRoomFrom = 0;
         mp2dMap->mCustomLinesRoomTo = 0;
         mp2dMap->mCustomLinesRoomExit.clear();
@@ -1242,6 +1263,234 @@ private slots:
         QAction* pMove = contextMenuItem(qsl("Move last point to target room"));
         QVERIFY(pMove);
         QVERIFY2(!pMove->isEnabled(), "the move is offered for a line whose exit leads nowhere");
+    }
+
+    void test_rightClickingARoomWhileEditingSelectsItAndOffersTheRoomItems()
+    {
+        buildMap();
+        showMapper(false);
+        rightClickAt(pointUnitsFromCentre(1, 0));
+
+        QCOMPARE(mp2dMap->mMultiSelectionSet, QSet<int>{kEastRoomId});
+        QCOMPARE(mp2dMap->mMultiSelectionHighlightRoomId, kEastRoomId);
+        QVERIFY(contextMenuItem(qsl("Set exits...")));
+        QAction* pExitLine = contextMenuItem(qsl("Create exit line..."));
+        QVERIFY(pExitLine);
+        QVERIFY(pExitLine->isEnabled());
+        QVERIFY(contextMenuItem(qsl("Delete")));
+        QVERIFY(contextMenuItem(qsl("Set player location")));
+        QVERIFY(contextMenuItem(qsl("Switch to viewing mode")));
+        QVERIFY(!contextMenuItem(qsl("Create new room here")));
+        QVERIFY(!contextMenuItem(qsl("Spread...")));
+    }
+
+    // Mappers select a room and then right click on empty space to work on
+    // it, since hitting the room itself is hard when zoomed out (#9915).
+    void test_rightClickingEmptySpaceKeepsTheSelectedRoomAndItsItems()
+    {
+        buildMap();
+        showMapper(false);
+        clickAt(pointUnitsFromCentre(1, 0));
+        QCOMPARE(mp2dMap->mMultiSelectionSet, QSet<int>{kEastRoomId});
+
+        rightClickAt(pointUnitsFromCentre(2, 0.5));
+        QCOMPARE(mp2dMap->mMultiSelectionSet, QSet<int>{kEastRoomId});
+        QVERIFY(contextMenuItem(qsl("Set exits...")));
+        QVERIFY(!contextMenuItem(qsl("Create new room here")));
+    }
+
+    void test_rightClickingEmptySpaceWithNothingSelectedOffersToCreateARoomThere()
+    {
+        buildMap();
+        showMapper(false);
+        const QPoint here = pointUnitsFromCentre(3, 2);
+        // The new room goes where the pointer is rather than where the click
+        // was, and the two are only the same when the pointer can be parked.
+        QCursor::setPos(mp2dMap->mapToGlobal(here));
+        if (QCursor::pos() != mp2dMap->mapToGlobal(here)) {
+            QSKIP("this platform does not let a test park the pointer");
+        }
+        rightClickAt(here);
+        QVERIFY(mp2dMap->mMultiSelectionSet.isEmpty());
+        QVERIFY(!contextMenuItem(qsl("Delete")));
+        QVERIFY(pickContextMenuItem(qsl("Create new room here")));
+
+        QCOMPARE(map()->mpRoomDB->size(), 10);
+        TRoom* pRoom = map()->mpRoomDB->getRoom(10);
+        QVERIFY(pRoom);
+        QCOMPARE(pRoom->x(), 3);
+        QCOMPARE(pRoom->y(), 2);
+        QCOMPARE(pRoom->getArea(), mAreaId);
+    }
+
+    void test_rightClickingARoomWhileViewingOffersOnlyTheViewingItems()
+    {
+        buildMap();
+        showMapper(true);
+        rightClickAt(pointUnitsFromCentre(1, 0));
+
+        QCOMPARE(mp2dMap->mMultiSelectionSet, QSet<int>{kEastRoomId});
+        QVERIFY(contextMenuItem(qsl("Set player location")));
+        QVERIFY(contextMenuItem(qsl("Switch to editing mode")));
+        QVERIFY(!contextMenuItem(qsl("Delete")));
+        QVERIFY(!contextMenuItem(qsl("Set exits...")));
+        QVERIFY(!contextMenuItem(qsl("Create label...")));
+    }
+
+    void test_settingThePlayerLocationFromTheMenuMovesThePlayerThere()
+    {
+        buildMap();
+        showMapper(true);
+        QVERIFY(runLua(qsl("manualLocationSetTo = nil\n"
+                           "registerAnonymousEventHandler('sysManualLocationSetEvent', function(_, roomId) manualLocationSetTo = roomId end)")));
+        rightClickAt(pointUnitsFromCentre(1, 0));
+        QVERIFY(pickContextMenuItem(qsl("Set player location")));
+
+        QCOMPARE(map()->mRoomIdHash.value(map()->mProfileName), kEastRoomId);
+        QVERIFY(runLua(qsl("assert(manualLocationSetTo == %1)").arg(kEastRoomId)));
+    }
+
+    void test_theMenuSwitchesBetweenViewingAndEditing()
+    {
+        buildMap();
+        showMapper(true);
+        QVERIFY(runLua(qsl("mapModeSeen = nil\n"
+                           "registerAnonymousEventHandler('mapModeChangeEvent', function(_, mode) mapModeSeen = mode end)")));
+        rightClickAt(pointUnitsFromCentre(1, 0));
+        QVERIFY(pickContextMenuItem(qsl("Switch to editing mode")));
+        QVERIFY(!mp2dMap->mMapViewOnly);
+        QVERIFY(!mpHost->mMapViewOnly);
+        QVERIFY(runLua(qsl("assert(mapModeSeen == 'editing')")));
+
+        rightClickAt(pointUnitsFromCentre(1, 0));
+        QVERIFY(pickContextMenuItem(qsl("Switch to viewing mode")));
+        QVERIFY(mp2dMap->mMapViewOnly);
+        QVERIFY(mpHost->mMapViewOnly);
+        QVERIFY(runLua(qsl("assert(mapModeSeen == 'viewing')")));
+    }
+
+    void test_rightClickingOneOfSeveralSelectedRoomsOffersTheGroupItems()
+    {
+        buildMap();
+        showMapper(false);
+        clickAt(pointUnitsFromCentre(1, 0));
+        clickAt(pointUnitsFromCentre(-1, 0), Qt::ShiftModifier);
+        const QSet<int> both{kWestRoomId, kEastRoomId};
+        QCOMPARE(mp2dMap->mMultiSelectionSet, both);
+
+        rightClickAt(pointUnitsFromCentre(1, 0));
+        QCOMPARE(mp2dMap->mMultiSelectionSet, both);
+        QVERIFY(contextMenuItem(qsl("Spread...")));
+        QVERIFY(contextMenuItem(qsl("Shrink...")));
+        QVERIFY(contextMenuItem(qsl("Delete")));
+        QVERIFY(!contextMenuItem(qsl("Set exits...")));
+        QVERIFY(!contextMenuItem(qsl("Set player location")));
+    }
+
+    void test_rightClickingARoomOutsideTheSelectionSelectsThatRoomInstead()
+    {
+        buildMap();
+        showMapper(false);
+        clickAt(pointUnitsFromCentre(1, 0));
+        clickAt(pointUnitsFromCentre(-1, 0), Qt::ShiftModifier);
+
+        rightClickAt(pointUnitsFromCentre(0, 1));
+        QCOMPARE(mp2dMap->mMultiSelectionSet, QSet<int>{kNorthRoomId});
+        QCOMPARE(mp2dMap->mMultiSelectionHighlightRoomId, kNorthRoomId);
+        QVERIFY(contextMenuItem(qsl("Set exits...")));
+    }
+
+    void test_theExitLineItemIsGreyedOutInGridMode()
+    {
+        buildMap(true);
+        showMapper(false);
+        rightClickAt(pointUnitsFromCentre(1, 0));
+
+        QAction* pItem = contextMenuItem(qsl("Create exit line..."));
+        QVERIFY(pItem);
+        QVERIFY(!pItem->isEnabled());
+    }
+
+    void test_deletingFromTheMenuRemovesEverySelectedRoom()
+    {
+        buildMap();
+        showMapper(false);
+        clickAt(pointUnitsFromCentre(1, 0));
+        clickAt(pointUnitsFromCentre(-1, 0), Qt::ShiftModifier);
+        map()->resetUnsaved();
+        rightClickAt(pointUnitsFromCentre(1, 0));
+        QVERIFY(pickContextMenuItem(qsl("Delete")));
+
+        QVERIFY(!map()->mpRoomDB->getRoom(kEastRoomId));
+        QVERIFY(!map()->mpRoomDB->getRoom(kWestRoomId));
+        QCOMPARE(map()->mpRoomDB->size(), 7);
+        QVERIFY(mp2dMap->mMultiSelectionSet.isEmpty());
+        QVERIFY(map()->isUnsaved());
+    }
+
+    void test_aMenuAndEventAddedFromLuaFireWithTheSelectedRooms()
+    {
+        buildMap();
+        showMapper(false);
+        QVERIFY(runLua(qsl("addMapMenu('mouseTestMenu', '', 'Mouse tests')\n"
+                           "addMapEvent('mouseTestAction', 'mouseTestEvent', 'mouseTestMenu', 'Do the thing')\n"
+                           "mouseTestRooms = nil\n"
+                           "registerAnonymousEventHandler('mouseTestEvent', function(_, uniqueName, ...) mouseTestName = uniqueName mouseTestRooms = {...} end)")));
+        clickAt(pointUnitsFromCentre(1, 0));
+        clickAt(pointUnitsFromCentre(-1, 0), Qt::ShiftModifier);
+        rightClickAt(pointUnitsFromCentre(1, 0));
+
+        QAction* pAction = userMenuItem(qsl("Mouse tests"), qsl("Do the thing"));
+        QVERIFY2(pAction, "the script's menu and item are not on the context menu");
+        pAction->trigger();
+        closeContextMenu();
+        QVERIFY(runLua(qsl("assert(mouseTestRooms, 'the event never fired')\n"
+                           "assert(mouseTestName == 'mouseTestAction', mouseTestName)\n"
+                           "table.sort(mouseTestRooms)\n"
+                           "assert(#mouseTestRooms == 2 and mouseTestRooms[1] == %1 and mouseTestRooms[2] == %2, table.concat(mouseTestRooms, ','))")
+                               .arg(kWestRoomId)
+                               .arg(kEastRoomId)));
+    }
+
+    void test_theMenuOnAnEmptyMapOffersToLoadOrCreateOne()
+    {
+        buildMap();
+        showMapper(true);
+        map()->mapClear();
+        rightClickAt(viewCentre());
+
+        QVERIFY(contextMenuItem(qsl("Load map...")));
+        QVERIFY(contextMenuItem(qsl("Create new map")));
+        QVERIFY(!contextMenuItem(qsl("Download from game")));
+        QVERIFY(!contextMenuItem(qsl("Set player location")));
+    }
+
+    void test_theMenuOnAnEmptyMapOffersTheGamesMapWhenItHasOne()
+    {
+        buildMap();
+        showMapper(true);
+        map()->mapClear();
+        map()->setMmpMapLocation(qsl("https://example.com/map.xml"));
+        rightClickAt(viewCentre());
+
+        QVERIFY(contextMenuItem(qsl("Download from game")));
+    }
+
+    void test_creatingAMapFromTheMenuMakesARoomToStandInAndOpensItForEditing()
+    {
+        buildMap();
+        showMapper(true);
+        map()->mapClear();
+        rightClickAt(viewCentre());
+        QVERIFY(pickContextMenuItem(qsl("Create new map")));
+
+        QCOMPARE(map()->mpRoomDB->size(), 1);
+        const int roomId = map()->mRoomIdHash.value(map()->mProfileName);
+        TRoom* pRoom = map()->mpRoomDB->getRoom(roomId);
+        QVERIFY(pRoom);
+        QCOMPARE(pRoom->x(), 0);
+        QCOMPARE(pRoom->y(), 0);
+        QVERIFY2(!mp2dMap->mMapViewOnly, "a brand new map should open ready to edit");
     }
 };
 
