@@ -75,6 +75,7 @@ public:
     static QPair<bool, QString> writeIrcHostPort(Host* pH, int port);
     static QPair<bool, QString> writeIrcHostSecure(Host* pH, bool secure);
     static QPair<bool, QString> writeIrcNickName(Host* pH, const QString& nickname);
+    static QPair<bool, QString> validateIrcPassword(const QString& password);
     static QPair<bool, QString> writeIrcPassword(Host* pH, const QString& password);
     static QPair<bool, QString> writeIrcChannels(Host* pH, const QStringList& channels);
 

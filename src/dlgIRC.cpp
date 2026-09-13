@@ -950,13 +950,23 @@ QPair<bool, QString> dlgIRC::writeIrcNickName(Host* pH, const QString& nickname)
     return pH->writeProfileData(dlgIRC::NickNameCfgItem, nickname);
 }
 
-QPair<bool, QString> dlgIRC::writeIrcPassword(Host* pH, const QString& password)
+QPair<bool, QString> dlgIRC::validateIrcPassword(const QString& password)
 {
     // as for the nick name above, except that this goes out as the trailing
     // parameter of "PASS :<password>", so an injected line could hold spaces too.
     // The password itself is never quoted back.
     if (textBreaksIrcLine(password)) {
         return {false, qsl("password must not contain a line break or a null character")};
+    }
+
+    return {true, QString()};
+}
+
+QPair<bool, QString> dlgIRC::writeIrcPassword(Host* pH, const QString& password)
+{
+    const QPair<bool, QString> valid = validateIrcPassword(password);
+    if (!valid.first) {
+        return valid;
     }
 
     return pH->writeProfileData(dlgIRC::PasswordCfgItem, password);

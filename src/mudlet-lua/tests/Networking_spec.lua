@@ -2017,6 +2017,24 @@ describe("The IRC configuration functions round-trip through the profile", funct
       assert.equals("BustedKeptSecret", getConfig("ircPassword"))
     end)
 
+    it("stores nothing at all when the password is refused, not just the password", function()
+      -- #10770 follow-up: the host, port and secure flag were written before the
+      -- password was judged, so a refused call left the new server address paired
+      -- with the old credential - a partial update, where the contract is that a
+      -- refused call stores nothing.
+      restoreIrcConfigurationWithPassword()
+      assert.is_true(setIrcServer("irc.busted-allornothing.invalid", 6667, false, "BustedKeptSecret"))
+
+      local ok = setIrcServer("irc.busted-changed.invalid", 6697, true, "hunter2\r\nPRIVMSG #evil :injected")
+      assert.is_nil(ok)
+
+      local hostName, port, secure = getIrcServer()
+      assert.equals("irc.busted-allornothing.invalid", hostName)
+      assert.equals(6667, port)
+      assert.is_false(secure)
+      assert.equals("BustedKeptSecret", getConfig("ircPassword"))
+    end)
+
     it("falls back to port 6667 and an insecure connection when only a hostname is given", function()
       restoreIrcConfiguration()
       assert.is_true(setIrcServer("irc.busted-secure.invalid", 6697, true))

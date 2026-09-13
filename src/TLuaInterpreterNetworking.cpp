@@ -665,6 +665,17 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
         password = QString::fromUtf8(passwordText, static_cast<qsizetype>(passwordLength));
     }
 
+    // Everything that can be judged without touching the profile is judged here,
+    // before the first write: setIrcServer stores either all of what it was given
+    // or none of it, and a password refused after the host and port had been
+    // written would leave the new server paired with the old credential.
+    if (passwordGiven) {
+        const QPair<bool, QString> passwordValid = dlgIRC::validateIrcPassword(password);
+        if (!passwordValid.first) {
+            return warnArgumentValue(L, __func__, qsl("unable to save password, reason: %1").arg(passwordValid.second));
+        }
+    }
+
     Host* pHost = &getHostFromLua(L);
     QPair<bool, QString> result = dlgIRC::writeIrcHostName(pHost, QString::fromUtf8(hostName));
     if (!result.first) {
