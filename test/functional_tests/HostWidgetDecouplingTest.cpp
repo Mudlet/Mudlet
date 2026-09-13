@@ -486,6 +486,49 @@ private slots:
         host->waitForProfileSave();
     }
 
+    // closeChildren() releases the editor and the notepad by nulling their
+    // QPointers, but close() only posts the deletion, so both are still alive
+    // for the rest of the turn. The connections have to go with the pointer:
+    // an emit in that window would otherwise run doCleanReset() on an editor
+    // the Host has let go of, rebuilding its trees from units that ~Host() is
+    // about to dismantle. Before the signals, the `if (mpEditorDialog)` guards
+    // did this job.
+    void test_releasedDialogsStopHearingTheHost()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        const QPointer<dlgTriggerEditor> editor(host->mpEditorDialog.data());
+        QVERIFY2(editor, "The profile came up without its editor dialog.");
+        mudlet::self()->slot_notes();
+        const QPointer<dlgNotepad> notepad(host->mpNotePad.data());
+        QVERIFY2(notepad, "The notepad was not opened.");
+
+        const QString heldStyleSheet = qsl("QWidget { color: #123456; }");
+        QVERIFY(host->setProfileStyleSheet(heldStyleSheet));
+        QCOMPARE(editor->styleSheet(), heldStyleSheet);
+        QCOMPARE(notepad->styleSheet(), heldStyleSheet);
+        QVERIFY2(!editor->mCleanResetQueued, "SETUP: the editor already has a clean reset queued, so the assertion below cannot fail.");
+
+        host->closeChildren();
+        QVERIFY2(!host->mpEditorDialog, "closeChildren() did not release the editor.");
+        QVERIFY2(!host->mpNotePad, "closeChildren() did not release the notepad.");
+        // Deliberately no event loop turn from here on: the deletions
+        // closeChildren() posted are what would end the window being tested,
+        // and both dialogs have to still be there for the emits to have
+        // something to reach.
+        QVERIFY2(editor, "SETUP: the editor was destroyed outright, so nothing could reach it anyway.");
+        QVERIFY2(notepad, "SETUP: the notepad was destroyed outright, so nothing could reach it anyway.");
+
+        const QString releasedStyleSheet = qsl("QWidget { color: #654321; }");
+        QVERIFY(host->setProfileStyleSheet(releasedStyleSheet));
+        QVERIFY(QMetaObject::invokeMethod(host, "signal_editorCleanResetRequested"));
+
+        QCOMPARE(editor->styleSheet(), heldStyleSheet);
+        QCOMPARE(notepad->styleSheet(), heldStyleSheet);
+        QVERIFY2(!editor->mCleanResetQueued, "A released editor was still asked to rebuild its trees.");
+    }
+
     void cleanup()
     {
         delete mpServer;

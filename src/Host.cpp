@@ -484,6 +484,7 @@ Host::~Host()
     // mpEditorDialog mid-teardown would find a half-destroyed widget:
     if (auto* pEditor = mpEditorDialog.data()) {
         mpEditorDialog = nullptr;
+        disconnect(this, nullptr, pEditor, nullptr);
         delete pEditor;
     }
 
@@ -493,6 +494,7 @@ Host::~Host()
             pNotePad->close();
         }
         mpNotePad = nullptr;
+        disconnect(this, nullptr, pNotePad, nullptr);
         delete pNotePad;
     }
 
@@ -587,6 +589,10 @@ void Host::closeChildren()
     if (mpEditorDialog) {
         mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
         mpEditorDialog->close();
+        // close() only posts the deletion, so the dialog outlives this release.
+        // Cutting the signals with the pointer is what keeps an emit from
+        // reaching an editor the Host has already let go of:
+        disconnect(this, nullptr, mpEditorDialog, nullptr);
         mpEditorDialog = nullptr;
     }
 
@@ -600,6 +606,7 @@ void Host::closeChildren()
         mpNotePad->save();
         mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
         mpNotePad->close();
+        disconnect(this, nullptr, mpNotePad, nullptr);
         mpNotePad = nullptr;
     }
 

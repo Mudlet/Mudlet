@@ -160,6 +160,8 @@ class Host : public QObject
     friend class dlgProfilePreferences;
     // Allows the functional test to set the Discord username restriction:
     friend class TDiscordModeTest;
+    // Allows the functional test to call closeChildren() on its own:
+    friend class HostWidgetDecouplingTest;
 
 public:
     Host(int port, const QString& mHostName, const QString& login, const QString& pass, int host_id);
