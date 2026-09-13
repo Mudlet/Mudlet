@@ -127,14 +127,27 @@ private:
     // compose stack.
     void say(const QByteArrayList& lines)
     {
+        QVERIFY2(mpServer->clientPresent(), "the loopback server never accepted a connection");
         for (const QByteArray& line : lines) {
             mpServer->send(line);
         }
         const QByteArray marker = QByteArray::number(++mMarker);
         mpServer->send(":qa.irc.test 999 QAtester :marker " + marker);
         const QString expected = QStringLiteral("marker %1").arg(QString::fromUtf8(marker));
-        QTRY_VERIFY_WITH_TIMEOUT(!mSeen.isEmpty() && mSeen.constLast().code == 999 && mSeen.constLast().parameters.contains(expected), 5000);
-        mSeen.removeLast();
+        // Anywhere in what has been seen, not only last: a case that composes a
+        // message would otherwise spend the whole timeout and report nothing.
+        QTRY_VERIFY_WITH_TIMEOUT(markerIndex(expected) != -1, 5000);
+        mSeen.removeAt(markerIndex(expected));
+    }
+
+    int markerIndex(const QString& expected) const
+    {
+        for (int i = 0; i < mSeen.count(); ++i) {
+            if (mSeen.at(i).code == 999 && mSeen.at(i).parameters.contains(expected)) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     QList<SeenMessage> ofType(const IrcMessage::Type type) const
@@ -173,6 +186,9 @@ private slots:
 
         mpConnection->open();
         QTRY_VERIFY_WITH_TIMEOUT(mpConnection->isConnected(), 5000);
+        // isConnected() goes true on the 001, so the rest of the registration burst
+        // may still be in flight. A marker round trip puts it all behind us.
+        say({});
         mSeen.clear();
     }
 
@@ -186,8 +202,8 @@ private slots:
 
     // #10769: one RPL_MOTD with no RPL_MOTDSTART before it took the whole
     // application down, because the branch that appends the line called top() on
-    // an empty stack. The line still has to be delivered as the plain numeric it
-    // is, and the connection has to survive to hear the next one.
+    // an empty stack. The connection has to survive to hear the next line, and the
+    // stray one has to still reach a reader.
     void motdLine_withNothingBeingComposed_doesNotCrash()
     {
         say({":qa.irc.test 372 QAtester :- a stray MOTD line"});
@@ -195,13 +211,19 @@ private slots:
         const QList<SeenMessage> numerics = ofType(IrcMessage::Numeric);
         QCOMPARE(numerics.count(), 1);
         QCOMPARE(numerics.constFirst().code, 372);
-        QVERIFY(ofType(IrcMessage::Motd).isEmpty());
         QVERIFY(mpConnection->isConnected());
+
+        // Every client suppresses a bare RPL_MOTD, because IrcNumericMessage::isComposed()
+        // answers per code, so the line only reaches a reader as part of a MOTD message
+        const QList<SeenMessage> motds = ofType(IrcMessage::Motd);
+        QCOMPARE(motds.count(), 1);
+        QVERIFY2(motds.constFirst().parameters.contains(QStringLiteral("- a stray MOTD line")), qPrintable(motds.constFirst().parameters.join(QLatin1Char('|'))));
     }
 
-    // The compose stack is empty again once RPL_ENDOFMOTD has emitted the MOTD,
-    // so a server that replays a line after the block has closed reaches the same
-    // empty top() as one that never opened a block at all.
+    // The compose stack is empty again once RPL_ENDOFMOTD has emitted the MOTD, so
+    // this is the same empty top() as the case above - but it is the second variant
+    // the report describes, and it is the one that shows the guard does not simply
+    // fold the stray line back into the MOTD that has already been delivered.
     void motdLine_afterACompletedMotd_doesNotCrash()
     {
         say({":qa.irc.test 375 QAtester :- qa.irc.test Message of the Day -", ":qa.irc.test 372 QAtester :- first line", ":qa.irc.test 376 QAtester :End of /MOTD command."});
@@ -209,7 +231,10 @@ private slots:
 
         say({":qa.irc.test 372 QAtester :- a stray MOTD line"});
 
-        QCOMPARE(ofType(IrcMessage::Motd).count(), 1);
+        const QList<SeenMessage> motds = ofType(IrcMessage::Motd);
+        QCOMPARE(motds.count(), 2);
+        QVERIFY2(motds.constLast().parameters.contains(QStringLiteral("- a stray MOTD line")), qPrintable(motds.constLast().parameters.join(QLatin1Char('|'))));
+        QVERIFY2(!motds.constFirst().parameters.contains(QStringLiteral("- a stray MOTD line")), qPrintable(motds.constFirst().parameters.join(QLatin1Char('|'))));
         QVERIFY(mpConnection->isConnected());
     }
 
@@ -266,6 +291,17 @@ private slots:
         const QList<SeenMessage> whoises = ofType(IrcMessage::Whois);
         QCOMPARE(whoises.count(), 1);
         QVERIFY2(whoises.constFirst().parameters.contains(QStringLiteral("other.example")), qPrintable(whoises.constFirst().parameters.join(QLatin1Char('|'))));
+    }
+
+    // A WHOWAS is composed the same way and a server sends RPL_WHOISSERVER inside
+    // one too, so the guard has to admit that message type as well as a WHOIS
+    void whoisServerNumeric_duringAWhowas_stillFillsItIn()
+    {
+        say({":qa.irc.test 314 QAtester bob ident host.example * :Bob Example", ":qa.irc.test 312 QAtester bob other.example :Some other server", ":qa.irc.test 369 QAtester bob :End of WHOWAS"});
+
+        const QList<SeenMessage> whowases = ofType(IrcMessage::Whowas);
+        QCOMPARE(whowases.count(), 1);
+        QVERIFY2(whowases.constFirst().parameters.contains(QStringLiteral("other.example")), qPrintable(whowases.constFirst().parameters.join(QLatin1Char('|'))));
     }
 };
 
