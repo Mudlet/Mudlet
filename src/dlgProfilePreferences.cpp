@@ -3878,7 +3878,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
 
     comboBox_dictionary->clear();
-    checkBox_spellCheck->setChecked(pHost->mEnableSpellCheck);
+    checkBox_spellCheck->setChecked(pHost->getEnableSpellCheck());
     bool useUserDictionary = false;
     pHost->getUserDictionaryOptions(useUserDictionary, mUseSharedDictionary);
     // Always set the true radio button first - avoids any problems with
@@ -6413,7 +6413,7 @@ void dlgProfilePreferences::applyAll()
         }
 
         if (mSnapshot.dirty(checkBox_spellCheck)) {
-            pHost->mEnableSpellCheck = checkBox_spellCheck->isChecked();
+            pHost->setEnableSpellCheck(checkBox_spellCheck->isChecked());
         }
         if (mSnapshot.anyDirty({radioButton_userDictionary_common, radioButton_userDictionary_profile})) {
             if (radioButton_userDictionary_common->isChecked()) {

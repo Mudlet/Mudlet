@@ -737,7 +737,7 @@ void TCommandLine::adjustHeight()
 
 void TCommandLine::spellCheck()
 {
-    if (!mpHost || !mpHost->mEnableSpellCheck) {
+    if (!mpHost || !mpHost->getEnableSpellCheck()) {
         return;
     }
 
@@ -986,7 +986,7 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
 
     if (event->button() == Qt::RightButton) {
         auto popup = createStandardContextMenu(event->globalPosition().toPoint());
-        if (mpHost->mEnableSpellCheck) {
+        if (mpHost->getEnableSpellCheck()) {
             fillSpellCheckList(event, popup);
             // else the word is in the dictionary - in either case show the context
             // menu - either the one with the prefixed spellings, or the standard one
@@ -1303,7 +1303,7 @@ void TCommandLine::slot_addWord()
 
 void TCommandLine::spellCheckWord(QTextCursor& c)
 {
-    if (!mpHost || !mpHost->mEnableSpellCheck) {
+    if (!mpHost || !mpHost->getEnableSpellCheck()) {
         return;
     }
 
@@ -1403,7 +1403,7 @@ bool TCommandLine::handleCtrlTabChange(QKeyEvent* ke, int tabNumber)
 
 void TCommandLine::recheckWholeLine()
 {
-    if (!mpHost || !mpHost->mEnableSpellCheck) {
+    if (!mpHost || !mpHost->getEnableSpellCheck()) {
         return;
     }
 

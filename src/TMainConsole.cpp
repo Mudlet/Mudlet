@@ -99,13 +99,15 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
     connect(mudlet::self(), &mudlet::signal_profileMapReloadRequested, this, &TMainConsole::slot_reloadMap, Qt::UniqueConnection);
     connect(this, &TMainConsole::signal_newDataAlert, mudlet::self(), &mudlet::slot_newDataOnHost, Qt::UniqueConnection);
 
-    // Load up the spelling dictionary from the system:
     setSystemSpellDictionary(mpHost->getSpellDic());
     // Reading it costs tens of milliseconds, so it is not read here - but
     // leaving it for the first spell-check would put that wait in front of the
     // first word typed, so a queued connection has the event loop do it once
     // the profile has finished loading:
     connect(mudlet::self(), &mudlet::signal_profileLoaded, this, &TMainConsole::slot_warmSystemSpellDictionary, Qt::QueuedConnection);
+    // ...and turning spell check on mid-session is the other moment the
+    // dictionary goes from unwanted to wanted, so it is read the same way
+    connect(mpHost, &Host::signal_spellCheckEnabled, this, &TMainConsole::slot_warmSystemSpellDictionary, Qt::QueuedConnection);
 
     // Load up the spelling dictionary for the profile - needs to handle the
     // absence of files for the first run in a new profile or from an older
@@ -1884,7 +1886,7 @@ void TMainConsole::slot_warmSystemSpellDictionary()
 {
     // spellCheck() and spellSuggestWord() do not consult this flag, so the
     // lazy getter still serves a script in a profile that has spell check off:
-    if (mpHost->mEnableSpellCheck) {
+    if (mpHost && mpHost->getEnableSpellCheck()) {
         getHunspellHandle_system();
     }
 }

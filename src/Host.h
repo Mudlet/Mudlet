@@ -229,6 +229,8 @@ public:
     void setDiscordInviteURL(const QString& s);
     const QString& getDiscordInviteURL() const { return mDiscordInviteURL; }
     void setSpellDic(const QString&);
+    void setEnableSpellCheck(const bool enable);
+    bool getEnableSpellCheck() const { return mEnableSpellCheck; }
     QString getSpellDic() const;
     void setUserDictionaryOptions(const bool useDictionary, const bool useShared);
     void getUserDictionaryOptions(bool& useDictionary, bool& useShared)
@@ -869,7 +871,6 @@ public:
     QStringList mGMCP_merge_table_keys;
     bool mLogStatus = false;
     bool mTimeStampStatus = false;
-    bool mEnableSpellCheck = true;
     QStringList mInstalledPackages;
     // module name = location on disk, sync to other profiles?, priority
     QMap<QString, QStringList> mInstalledModules;
@@ -982,6 +983,9 @@ signals:
     void profileSaveStarted();
     void profileSaveFinished();
     void signal_changeSpellDict(const QString&);
+    // Spell check has just been turned on, so the system dictionary is wanted
+    // where it was not before. The main console reads it off the event loop.
+    void signal_spellCheckEnabled();
     // To tell all TConsole's upper TTextEdit panes to report all Codepoint
     // problems as they arrive as well as a summary upon destruction:
     void signal_changeDebugShowAllProblemCodepoints(const bool);
@@ -1188,6 +1192,7 @@ private:
     // These are hidden to prevent them being changed directly, they are also
     // mirrored/cached in the main TConsole's instance so they do not need to be
     // looked up directly by that class:
+    bool mEnableSpellCheck = true;
     bool mEnableUserDictionary = true;
     bool mUseSharedDictionary = false;
 

@@ -4040,6 +4040,22 @@ void Host::setSpellDic(const QString& newDict)
     }
 }
 
+void Host::setEnableSpellCheck(const bool enable)
+{
+    if (mEnableSpellCheck == enable) {
+        return;
+    }
+    mEnableSpellCheck = enable;
+    // The load-end warm skips a profile with spell check off, so this is when
+    // the dictionary first becomes wanted. During a profile load there is
+    // nothing to do: the handle is warmed once at the end, after the profile's
+    // own settings have been read - which is what setSystemSpellDictionary()
+    // next door defends against too.
+    if (enable && !mIsProfileLoadingSequence) {
+        emit signal_spellCheckEnabled();
+    }
+}
+
 // When called from dlgProfilePreferences the second flag will only be changed
 // if necessary:
 // DISABLED: - Prevent "None" option for user dictionary - modified to prevent original useDictionary argument from being false:

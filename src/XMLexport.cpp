@@ -443,7 +443,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mEnableCHARSET") = pHost->mEnableCHARSET ? "yes" : "no";
     host.append_attribute("mEnableNEWENVIRON") = pHost->mEnableNEWENVIRON ? "yes" : "no";
     host.append_attribute("mMapStrongHighlight") = pHost->mMapStrongHighlight ? "yes" : "no";
-    host.append_attribute("mEnableSpellCheck") = pHost->mEnableSpellCheck ? "yes" : "no";
+    host.append_attribute("mEnableSpellCheck") = pHost->getEnableSpellCheck() ? "yes" : "no";
     bool enableUserDictionary;
     bool useSharedDictionary;
     pHost->getUserDictionaryOptions(enableUserDictionary, useSharedDictionary);
