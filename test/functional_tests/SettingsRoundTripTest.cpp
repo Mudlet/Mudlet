@@ -48,6 +48,7 @@
 #include "MMCP.h"
 #include "MudletInstanceCoordinator.h"
 #include "TConsole.h"
+#include "TLuaInterpreter.h"
 #include "TMap.h"
 #include "TelnetServerStub.h"
 #include "dlgProfilePreferences.h"
@@ -106,6 +107,31 @@ private:
         emit mpPreferences->lineEdit_mmcpPort->editingFinished();
         applyAndWait(applySpy);
         closePreferences();
+    }
+
+    bool runLua(const QString& code) const { return mpHost->getLuaInterpreter()->compileAndExecuteScript(code); }
+
+    int settingChangedCount(const char* key) const
+    {
+        lua_State* L = mpHost->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, "settingChangedCounts");
+        lua_getfield(L, -1, key);
+        const int count = lua_isnumber(L, -1) ? static_cast<int>(lua_tointeger(L, -1)) : 0;
+        lua_pop(L, 2);
+        return count;
+    }
+
+    // Lua type and value of the last event for that key, as "boolean:true";
+    // empty when no event ever arrived for it
+    QString settingChangedValue(const char* key) const
+    {
+        lua_State* L = mpHost->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, "settingChangedValues");
+        lua_getfield(L, -1, key);
+        const char* value = lua_tostring(L, -1);
+        const QString result = value ? QString::fromUtf8(value) : QString();
+        lua_pop(L, 2);
+        return result;
     }
 
     static bool comboItemEnabled(const QComboBox* pComboBox, const int row)
@@ -771,6 +797,55 @@ private slots:
         for (const ColorReset& reset : resets) {
             QVERIFY2(*reset.pColor == reset.expected, reset.name);
         }
+    }
+
+    // sysSettingChanged is what a script watches to follow a setting it does not
+    // own. A Lua spec can only reach setConfig; the dialog is the other writer,
+    // and it writes twice - the live slot as the box is ticked, then the
+    // debounced apply, which rewrites every control it finds dirty. The second
+    // write must not raise a second event.
+    void test_theAccessibilityCheckboxesEachRaiseOneSettingChangedEvent()
+    {
+        const bool priorClosedCaption = mpHost->mEnableClosedCaption;
+        const bool priorScreenReader = mpHost->mAdvertiseScreenReader;
+        const bool priorAnnounce = mpHost->mAnnounceIncomingText;
+        restoreLater([=, this]() {
+            mpHost->mEnableClosedCaption = priorClosedCaption;
+            mpHost->mAdvertiseScreenReader = priorScreenReader;
+            mpHost->mAnnounceIncomingText = priorAnnounce;
+        });
+
+        QVERIFY(runLua(qsl("settingChangedCounts = {}\n"
+                           "settingChangedValues = {}\n"
+                           "settingChangedHandler = registerAnonymousEventHandler('sysSettingChanged', function(_, key, value)\n"
+                           "  settingChangedCounts[key] = (settingChangedCounts[key] or 0) + 1\n"
+                           "  settingChangedValues[key] = type(value) .. ':' .. tostring(value)\n"
+                           "end)\n")));
+        restoreLater([this]() {
+            runLua(qsl("killAnonymousEventHandler(settingChangedHandler)"));
+        });
+
+        openPreferences();
+        QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+
+        // Nothing spins the event loop between these three, so the debounce
+        // cannot have run by the time the counts below are read
+        mpPreferences->checkBox_enableClosedCaption->setChecked(!priorClosedCaption);
+        mpPreferences->checkBox_advertiseScreenReader->setChecked(!priorScreenReader);
+        mpPreferences->checkBox_announceIncomingText->setChecked(!priorAnnounce);
+
+        QCOMPARE(settingChangedCount("enableClosedCaption"), 1);
+        QCOMPARE(settingChangedValue("enableClosedCaption"), priorClosedCaption ? qsl("boolean:false") : qsl("boolean:true"));
+        QCOMPARE(settingChangedCount("advertiseScreenReader"), 1);
+        QCOMPARE(settingChangedValue("advertiseScreenReader"), priorScreenReader ? qsl("boolean:false") : qsl("boolean:true"));
+        QCOMPARE(settingChangedCount("announceIncomingText"), 0);
+
+        QVERIFY2(applyAndWait(applySpy), "the debounce never wrote the settings back");
+
+        QCOMPARE(settingChangedCount("announceIncomingText"), 1);
+        QCOMPARE(settingChangedValue("announceIncomingText"), priorAnnounce ? qsl("boolean:false") : qsl("boolean:true"));
+        QVERIFY2(settingChangedCount("enableClosedCaption") == 1, "the apply raised enableClosedCaption again for a value the live slot had already stored");
+        QVERIFY2(settingChangedCount("advertiseScreenReader") == 1, "the apply raised advertiseScreenReader again for a value the live slot had already stored");
     }
 };
 

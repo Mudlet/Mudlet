@@ -250,6 +250,29 @@ private:
         return EnvironVariable{};
     }
 
+    // The named variable out of every INFO captured since the last clear. One
+    // preference can stand behind several variables - the screen reader one is
+    // also a bit in MTTS - so each gets its own INFO and this looks across them
+    // rather than insisting on a single reply the way soleReplyVariables does.
+    EnvironVariable infoVariableNamed(const QByteArray& name, QString& problem)
+    {
+        problem.clear();
+        QList<EnvironVariable> updates;
+        const QList<Subnegotiation> replies = newEnvironReplies();
+        for (const Subnegotiation& reply : replies) {
+            if (reply.payload.isEmpty() || reply.payload.at(0) != NEW_ENVIRON_INFO) {
+                problem = qsl("a captured NEW_ENVIRON reply was not an INFO");
+                return {};
+            }
+            updates.append(variablesIn(reply.payload.mid(1)));
+        }
+        const EnvironVariable found = variableNamed(updates, name);
+        if (found.name.isEmpty()) {
+            problem = qsl("no INFO carried %1, out of %2 variable(s) in %3 reply(s)").arg(QString::fromUtf8(name), QString::number(updates.size()), QString::number(replies.size()));
+        }
+        return found;
+    }
+
 private slots:
     void initTestCase()
     {
@@ -648,6 +671,36 @@ private slots:
         QCOMPARE(updated.type, NEW_ENVIRON_USERVAR);
         QCOMPARE(updated.name, QByteArray("SCREEN_READER"));
         QCOMPARE(updated.value, QByteArray("1"));
+    }
+
+    // Telling the game is the setter's job, not each caller's: the preferences
+    // dialog, setConfig() from a script and anything added later all inform the
+    // game by storing the value, with no send of their own.
+    void test_theScreenReaderSetterInformsTheGameOnItsOwn()
+    {
+        enableNewEnviron();
+        requestSend({});
+        QCOMPARE(newEnvironReplies().size(), 1);
+
+        mpServer->forgetReceived();
+        mpHost->setAdvertiseScreenReader(true);
+
+        QString problem;
+        EnvironVariable screenReader = infoVariableNamed("SCREEN_READER", problem);
+        QVERIFY2(problem.isEmpty(), qPrintable(problem));
+        QCOMPARE(screenReader.value, QByteArray("1"));
+
+        // Written the value it already holds, the setter has nothing to report,
+        // so the game is not handed an update that says nothing changed.
+        mpServer->forgetReceived();
+        mpHost->setAdvertiseScreenReader(true);
+        QVERIFY2(newEnvironReplies().isEmpty(), "an INFO went out for a value the setting already held");
+
+        mpServer->forgetReceived();
+        mpHost->setAdvertiseScreenReader(false);
+        screenReader = infoVariableNamed("SCREEN_READER", problem);
+        QVERIFY2(problem.isEmpty(), qPrintable(problem));
+        QCOMPARE(screenReader.value, QByteArray("0"));
     }
 
     // An INFO is only owed to a game that asked for the variable in the first

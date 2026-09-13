@@ -113,6 +113,28 @@ QString TRoom::dirCodeToDisplayName(const int dirCode) const
     }
 }
 
+// A second, separately-translated set of direction names existed here before
+// auditExit() started sharing dirCodeToDisplayName(): "Northeast" rather than
+// "North-east", and so on for the other three diagonals. Reusing the shared
+// one changed the source string a translation is keyed on, so an existing
+// translation of "Northeast" no longer matched "North-east" and silently fell
+// back to English. This keeps auditExit()'s messages on the original strings.
+QString TRoom::auditExitDisplayName(const int dirCode) const
+{
+    switch (dirCode) {
+    case DIR_NORTHEAST:
+        return tr("Northeast");
+    case DIR_NORTHWEST:
+        return tr("Northwest");
+    case DIR_SOUTHEAST:
+        return tr("Southeast");
+    case DIR_SOUTHWEST:
+        return tr("Southwest");
+    default:
+        return dirCodeToDisplayName(dirCode);
+    }
+}
+
 /* static */ QString TRoom::dirCodeToShortString(const int dirCode)
 {
     switch (dirCode) {
@@ -1135,8 +1157,7 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
 
     auditExit(north,
               DIR_NORTH,
-              tr("North"),
-              QLatin1String("n"),
+              qsl("n"),
               exitWeightsCopy,
               exitStubsCopy,
               exitLocksCopy,
@@ -1149,8 +1170,7 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
 
     auditExit(northeast,
               DIR_NORTHEAST,
-              tr("Northeast"),
-              QLatin1String("ne"),
+              qsl("ne"),
               exitWeightsCopy,
               exitStubsCopy,
               exitLocksCopy,
@@ -1163,8 +1183,7 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
 
     auditExit(northwest,
               DIR_NORTHWEST,
-              tr("Northwest"),
-              QLatin1String("nw"),
+              qsl("nw"),
               exitWeightsCopy,
               exitStubsCopy,
               exitLocksCopy,
@@ -1177,8 +1196,7 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
 
     auditExit(south,
               DIR_SOUTH,
-              tr("South"),
-              QLatin1String("s"),
+              qsl("s"),
               exitWeightsCopy,
               exitStubsCopy,
               exitLocksCopy,
@@ -1191,8 +1209,7 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
 
     auditExit(southeast,
               DIR_SOUTHEAST,
-              tr("Southeast"),
-              QLatin1String("se"),
+              qsl("se"),
               exitWeightsCopy,
               exitStubsCopy,
               exitLocksCopy,
@@ -1205,8 +1222,7 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
 
     auditExit(southwest,
               DIR_SOUTHWEST,
-              tr("Southwest"),
-              QLatin1String("sw"),
+              qsl("sw"),
               exitWeightsCopy,
               exitStubsCopy,
               exitLocksCopy,
@@ -1219,8 +1235,7 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
 
     auditExit(east,
               DIR_EAST,
-              tr("East"),
-              QLatin1String("e"),
+              qsl("e"),
               exitWeightsCopy,
               exitStubsCopy,
               exitLocksCopy,
@@ -1233,8 +1248,7 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
 
     auditExit(west,
               DIR_WEST,
-              tr("West"),
-              QLatin1String("w"),
+              qsl("w"),
               exitWeightsCopy,
               exitStubsCopy,
               exitLocksCopy,
@@ -1247,8 +1261,7 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
 
     auditExit(up,
               DIR_UP,
-              tr("Up"),
-              QLatin1String("up"),
+              qsl("up"),
               exitWeightsCopy,
               exitStubsCopy,
               exitLocksCopy,
@@ -1261,8 +1274,7 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
 
     auditExit(down,
               DIR_DOWN,
-              tr("Down"),
-              QLatin1String("down"),
+              qsl("down"),
               exitWeightsCopy,
               exitStubsCopy,
               exitLocksCopy,
@@ -1275,8 +1287,7 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
 
     auditExit(in,
               DIR_IN,
-              tr("In"),
-              QLatin1String("in"),
+              qsl("in"),
               exitWeightsCopy,
               exitStubsCopy,
               exitLocksCopy,
@@ -1289,8 +1300,7 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
 
     auditExit(out,
               DIR_OUT,
-              tr("Out"),
-              QLatin1String("out"),
+              qsl("out"),
               exitWeightsCopy,
               exitStubsCopy,
               exitLocksCopy,
@@ -1583,7 +1593,6 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
 
 void TRoom::auditExit(int& exitRoomId,                     // Reference to where exit goes to
                       const int dirCode,                   // DIR_xxx code for this exit - to access stubs & locks
-                      const QString displayName,           // What to present as the name of the exit
                       const QString exitKey,               // To access doors, weights and custom exit line elements
                       QMap<QString, int>& exitWeightsPool, // References to working copies of things - valid ones will be removed
                       QSet<int>& exitStubsPool,
@@ -1601,7 +1610,7 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
         //: %1 is the room ID, %2 is the exit direction, %3 is the old destination room ID, %4 is the new destination room ID
         const QString infoMsg = tr(R"([ INFO ]  - In room with ID: %1 correcting exit "%2" that was to room with an exit to invalid room: %3 to now go to: %4.)")
                                         .arg(id)
-                                        .arg(displayName)
+                                        .arg(auditExitDisplayName(dirCode))
                                         .arg(exitRoomId)
                                         .arg(roomRemapping.value(exitRoomId));
         if (TMap::smShowMapAuditErrors) {
@@ -1620,7 +1629,7 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
             const QString warnMsg =
                     tr(R"([ WARN ]  - Room with ID: %1 has an exit "%2" to: %3 but that room does not exist.  The exit will be removed (but the destination room ID will be stored in the room user data under a key: "%4") and the exit will be turned into a stub.)")
                             .arg(id)
-                            .arg(displayName)
+                            .arg(auditExitDisplayName(dirCode))
                             .arg(exitRoomId)
                             .arg(auditKey);
             if (TMap::smShowMapAuditErrors) {
@@ -1668,7 +1677,7 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
                 const QString warnMsg =
                         tr(R"([ ALERT ] - Room with ID: %1 has an exit "%2" to: %3 but also has a stub exit in the same direction!  As a real exit precludes a stub, the latter will be removed.)")
                                 .arg(id)
-                                .arg(displayName)
+                                .arg(auditExitDisplayName(dirCode))
                                 .arg(exitRoomId);
                 if (TMap::smShowMapAuditErrors) {
                     mpRoomDB->mpMap->postMessage(warnMsg);
@@ -1726,7 +1735,7 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
         QString infoMsg =
                 tr(R"([ INFO ]  - In room with ID: %1 exit "%2" that was to room with an invalid ID: %3 that does not exist.  The exit will be removed (the bad destination room ID will be stored in the room user data under a key: "%4") and the exit will be turned into a stub.)")
                         .arg(id)
-                        .arg(displayName)
+                        .arg(auditExitDisplayName(dirCode))
                         .arg(exitRoomId)
                         .arg(auditKey);
         exitRoomId = -1;
