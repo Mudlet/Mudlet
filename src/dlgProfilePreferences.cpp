@@ -6813,15 +6813,14 @@ void dlgProfilePreferences::applyAll()
             pHost->mMMCPChatPort = ok ? port : csDefaultMMCPHostPort;
         }
 
-        /* Possible inclusion in 4.21
+        // The three MMCP options below have no controls on the form - their check boxes
+        // are commented out of profile_preferences.ui - so an apply has nothing to read
+        // them from.
+        /* restore these along with the check boxes:
         pHost->mMMCPAutostartServer = checkBox_mmcpAutostartServer->isChecked();
         pHost->mMMCPAutoAcceptCalls = checkBox_mmcpAutoAcceptCalls->isChecked();
         pHost->mMMCPAllowPeekRequests = checkBox_mmcpAllowPeekReq->isChecked();
         */
-        // remove these when the above is restored
-        pHost->mMMCPAutostartServer = false;
-        pHost->mMMCPAutoAcceptCalls = false;
-        pHost->mMMCPAllowPeekRequests = false;
 
         if (mSnapshot.dirty(checkBox_mmcpPrefixEmotes)) {
             pHost->mMMCPPrefixEmotes = checkBox_mmcpPrefixEmotes->isChecked();
