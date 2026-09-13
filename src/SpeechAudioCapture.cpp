@@ -271,7 +271,7 @@ void SpeechAudioCapture::convertAndEmit(const QByteArray& audioData)
     // read.
     const int consumedFrames = qMin(static_cast<int>(phase), availableFrames);
     if (consumedFrames > 0) {
-        mCarryBuffer.remove(0, consumedFrames * frameBytes);
+        mCarryBuffer.remove(0, static_cast<qsizetype>(consumedFrames) * frameBytes);
     }
     mResamplePhase = phase - consumedFrames;
 

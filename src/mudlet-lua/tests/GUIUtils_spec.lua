@@ -435,6 +435,51 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
   end)
 
+  describe("Tests the functionality of copy2html", function()
+    local windowName = "guiUtilsCopyHtmlBuffer"
+
+    setup(function()
+      createBuffer(windowName)
+    end)
+
+    teardown(function()
+      deleteMiniConsole(windowName)
+    end)
+
+    before_each(function()
+      clearWindow(windowName)
+      setFgColor(windowName, 255, 0, 0)
+      setBgColor(windowName, 0, 0, 0)
+      echo(windowName, "a<b&c\n")
+      moveCursor(windowName, 0, 0)
+    end)
+
+    it("Should wrap the line in a span carrying its foreground and background", function()
+      local html = copy2html(windowName)
+      assert.is_truthy(html:find("color: rgb(255,0,0)", 1, true), html)
+      assert.is_truthy(html:find("background: rgb(0,0,0)", 1, true), html)
+      assert.is_truthy(html:find("</span>", 1, true), html)
+    end)
+
+    it("Should escape the characters that would otherwise be markup", function()
+      -- a < in game text must not open a tag, which is why copy2html exists
+      -- rather than callers running copy2decho and swapping the tags
+      local html = copy2html(windowName)
+      assert.is_truthy(html:find("a&lt;b&amp;c", 1, true), html)
+      assert.is_falsy(html:find("a<b&c", 1, true), html)
+      -- copy2decho reads the same line and leaves those characters alone
+      assert.is_truthy(copy2decho(windowName):find("a<b&c", 1, true))
+    end)
+
+    it("Should copy only the substring it was asked for", function()
+      assert.is_truthy(copy2html(windowName, "b&c"):find(">b&amp;c<", 1, true))
+    end)
+
+    it("Should return an empty string for text that is not on the current line", function()
+      assert.equals("", copy2html(windowName, "not on this line"))
+    end)
+  end)
+
   describe("Tests the functionality of _Echoes.Process", function()
     it("Should parse hex patterns correctly", function()
       assert.are.same(

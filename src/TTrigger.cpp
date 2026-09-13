@@ -109,24 +109,6 @@ int indexOfNeedle(const QString& haystack, const QString& needle, const int from
     return -1;
 }
 
-// QColor::operator==() is an exported, out-of-line comparison of a colour spec
-// and five component words, and a colour trigger makes one of those per
-// character of every line it is offered. For two RGB colours that is exactly a
-// comparison of the front of the object, so do it here where it can be
-// inlined. HSL and HSV both compare approximately - HSV counts hue 0 and hue
-// 36000 as the same red - so they are left to Qt. Every colour a trigger
-// actually sees is RGB, which makes the fast path the predicted one.
-constexpr size_t COLOR_COMPARED_BYTES = sizeof(QColor::Spec) + 5 * sizeof(ushort);
-static_assert(sizeof(QColor) == 16 && COLOR_COMPARED_BYTES == 14, "QColor is no longer a spec word followed by five component words - use QColor::operator==() instead of sameColor()");
-
-inline bool sameColor(const QColor& left, const QColor& right)
-{
-    if (Q_LIKELY(left.spec() == QColor::Rgb && right.spec() == QColor::Rgb)) {
-        return std::memcmp(&left, &right, COLOR_COMPARED_BYTES) == 0;
-    }
-    return left == right;
-}
-
 // Holds the capture list and position list of one fire, taking their nodes
 // from TCaptureNodePool and handing them back when the fire is over.
 //
@@ -261,6 +243,23 @@ static void pcre2_code_deleter(pcre2_code* pointer)
     pcre2_code_free(pointer);
 }
 
+// A pattern of fewer than two characters sets no bits, so it is never filtered
+// out.
+TBigramFilter::Bits TBigramFilter::bitsFor(const QString& text)
+{
+    static_assert(Bits::scmWords * 64 == 256, "the hash below yields a bit number of 0-255, which has to be exactly the number of bits Bits holds");
+    Bits bits;
+    const QChar* data = text.constData();
+    for (qsizetype i = 1, size = text.size(); i < size; ++i) {
+        const quint32 pair = (static_cast<quint32>(data[i - 1].unicode()) << 16) | data[i].unicode();
+        // Knuth's multiplicative hash: only the top bits of the product depend
+        // on every bit of the pair
+        const quint32 bit = (pair * 2654435761u) >> 24;
+        bits.words[bit / 64] |= (quint64(1) << (bit % 64));
+    }
+    return bits;
+}
+
 static void pcre2_match_data_deleter(pcre2_match_data* pointer)
 {
     pcre2_match_data_free(pointer);
@@ -271,7 +270,7 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
 {
     patterns.replaceInStrings("\n", "");
     mPatterns.clear();
-    mSubstringMatchers.clear();
+    mSubstringPatterns.clear();
     mRegexes.clear();
     mMatchData.clear();
     mRegexJitCompiled.clear();
@@ -326,9 +325,11 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
             mRegexJitCompiled.push_back(false);
 
             if (patternKinds.at(i) == REGEX_SUBSTRING) {
-                mSubstringMatchers.emplace_back(std::make_unique<QStringMatcher>(patterns.at(i)));
+                // Qt::CaseSensitive is the default, spelt out because bitsFor() summarises
+                // this same string case-sensitively: change one and the other has to follow
+                mSubstringPatterns.emplace_back(TSubstringPattern{std::make_unique<QStringMatcher>(patterns.at(i), Qt::CaseSensitive), TBigramFilter::bitsFor(patterns.at(i))});
             } else {
-                mSubstringMatchers.emplace_back(nullptr);
+                mSubstringPatterns.emplace_back();
             }
 
             if (patternKinds.at(i) == REGEX_PERL) {
@@ -780,7 +781,8 @@ void TTrigger::filter(std::string& capture, int& posOffset, int lineNumber)
     const int captureLength = static_cast<int>(qstrnlen(capture.data(), capture.size()));
     for (auto* triggerNode : *mpMyChildrenList) {
         auto* trigger = static_cast<TTrigger*>(triggerNode);
-        trigger->match(capture.data(), captureLength, text, lineNumber, posOffset);
+        // no line filter: a capture is not the line those bits were built from
+        trigger->match(capture.data(), captureLength, text, lineNumber, posOffset, nullptr);
     }
 }
 
@@ -794,9 +796,17 @@ void TTrigger::setExpiryCount(int expiryCount)
     mExpiryCount = expiryCount;
 }
 
-bool TTrigger::match_substring(const QString& haystack, const QString& needle, int patternNumber, int posOffset, int lineNumber)
+bool TTrigger::match_substring(const QString& haystack, const QString& needle, int patternNumber, int posOffset, int lineNumber, const TBigramFilter* pLineBigrams)
 {
-    const int where = mSubstringMatchers[patternNumber]->indexIn(haystack);
+    const TSubstringPattern& pattern = mSubstringPatterns[patternNumber];
+    if (pLineBigrams && !pLineBigrams->couldContain(haystack, pattern.bigrams)) {
+        // A pattern that occurs in the line contributes only pairs the line already has, so
+        // it can never be dismissed - unless the filter and the matcher have stopped
+        // comparing the same way, which nothing else would notice
+        Q_ASSERT_X(pattern.matcher->indexIn(haystack) == -1, "TTrigger::match_substring", "the bigram filter dismissed a pattern the matcher does find in the line");
+        return false;
+    }
+    const int where = pattern.matcher->indexIn(haystack);
     if (where != -1) {
         processSubstringMatch(haystack, needle, patternNumber, posOffset, where, lineNumber);
         return true;
@@ -880,8 +890,8 @@ bool TTrigger::match_color_pattern(int line, int patternNumber, int posOffset, i
     std::vector<TChar>& bufferLine = consoleModel.buffer.buffer[line];
     const QString& lineBuffer = consoleModel.buffer.lineBuffer[line];
     // Match against the colors as they arrived from the game, not as already
-    // recolored by other triggers or scripts earlier in this trigger pass;
-    // text inserted mid-pass has no game original so it is read live:
+    // recolored by other triggers or scripts earlier in this trigger pass; with
+    // no snapshot taken, or past its end, the line itself still holds them:
     const std::vector<TChar>* pPassLine = consoleModel.buffer.preTriggerPassLine(line);
     // Filter ("only pass matches") parents hand children just the matched
     // capture, so restrict the scan to that window; for top-level triggers
@@ -914,15 +924,33 @@ bool TTrigger::match_color_pattern(int line, int patternNumber, int posOffset, i
     const QColor& defaultBg = consoleModel.mBgColor;
     const int passLineSize = pPassLine ? static_cast<int>(pPassLine->size()) : 0;
 
+    // This allows matching against the current default colours (-2) and
+    // allows ONE of the foreground or background to NOT be considered (-1)
+    // Ideally we should base the matching on only the ANSI code but not
+    // all parts of the text come from the Server and can be determined to
+    // have come from a decoded ANSI code number:
+    const auto colorsMatch = [&](const TChar& character) {
+        return ((ansiFg == scmIgnored) || ((ansiFg == scmDefault) && sameColor(defaultFg, character.foreground())) || sameColor(patternFg, character.foreground()))
+               && ((ansiBg == scmIgnored) || ((ansiBg == scmDefault) && sameColor(defaultBg, character.background())) || sameColor(patternBg, character.background()));
+    };
+
+    // A snapshot that stops short of the window cannot answer for the text past
+    // its end; with no snapshot taken the line itself still holds the game's
+    // colors for the whole of it:
+    if (end > start && (!pPassLine || passLineSize >= end)) {
+        if (const TChar* pUniformColors = consoleModel.buffer.preTriggerPassLineUniformColors(line)) {
+            if (!colorsMatch(*pUniformColors)) {
+                return false;
+            }
+            lists.add(QStringView(lineBuffer).mid(start, end - start), start);
+            processColorPattern(patternNumber, lists.mCaptures, lists.mPositions, line);
+            return true;
+        }
+    }
+
     for (auto it = bufferLine.begin() + start; pos < end; ++it, ++pos) {
         const TChar& character = (pos < passLineSize) ? (*pPassLine)[pos] : *it;
-        // This now allows matching against the current default colours (-2) and
-        // allows ONE of the foreground or background to NOT be considered (-1)
-        // Ideally we should base the matching on only the ANSI code but not
-        // all parts of the text come from the Server and can be determined to
-        // have come from a decoded ANSI code number:
-        if (((ansiFg == scmIgnored) || ((ansiFg == scmDefault) && sameColor(defaultFg, character.foreground())) || sameColor(patternFg, character.foreground()))
-            && ((ansiBg == scmIgnored) || ((ansiBg == scmDefault) && sameColor(defaultBg, character.background())) || sameColor(patternBg, character.background()))) {
+        if (colorsMatch(character)) {
             if (matchBegin == -1) {
                 matchBegin = pos;
             }
@@ -1148,7 +1176,7 @@ void TTrigger::processExactMatch(int patternNumber, int posOffset, int lineNumbe
 // haystack: string to match as a QString
 // line: line number in the buffer
 // posOffset: position in the line to start matching from; used by child triggers
-bool TTrigger::match(const char* haystackC, const int haystackCLength, const QString& haystack, int line, int posOffset)
+bool TTrigger::match(const char* haystackC, const int haystackCLength, const QString& haystack, int line, int posOffset, const TBigramFilter* pLineBigrams)
 {
     // Guard against re-entrancy: cleanup may have deleted this trigger while
     // match() was still on the call stack
@@ -1196,7 +1224,7 @@ bool TTrigger::match(const char* haystackC, const int haystackCLength, const QSt
             ret = false;
             switch (mPatternKinds.at(patternNumber)) {
             case REGEX_SUBSTRING:
-                ret = match_substring(haystack, mPatterns.at(patternNumber), patternNumber, posOffset, line);
+                ret = match_substring(haystack, mPatterns.at(patternNumber), patternNumber, posOffset, line, pLineBigrams);
                 break;
 
             case REGEX_PERL:
@@ -1311,7 +1339,7 @@ bool TTrigger::match(const char* haystackC, const int haystackCLength, const QSt
             if (conditionMet || (mPatterns.empty())) {
                 for (auto* triggerNode : *mpMyChildrenList) {
                     auto* trigger = static_cast<TTrigger*>(triggerNode);
-                    ret = trigger->match(haystackC, haystackCLength, haystack, line, posOffset);
+                    ret = trigger->match(haystackC, haystackCLength, haystack, line, posOffset, pLineBigrams);
                     if (ret) {
                         conditionMet = true;
                     }
@@ -1326,7 +1354,7 @@ bool TTrigger::match(const char* haystackC, const int haystackCLength, const QSt
             }
             for (auto* triggerNode : *mpMyChildrenList) {
                 auto* trigger = static_cast<TTrigger*>(triggerNode);
-                ret = trigger->match(haystackC, haystackCLength, haystack, line, posOffset);
+                ret = trigger->match(haystackC, haystackCLength, haystack, line, posOffset, pLineBigrams);
                 if (ret) {
                     conditionMet = true;
                 }
@@ -1453,7 +1481,7 @@ bool TTrigger::setupTmpColorTrigger(int ansiFg, int ansiBg)
     // Everything setRegexCodeList() fills is indexed by pattern number, so a
     // pattern added here has to extend all of it - even though a colour
     // pattern is matched out of mColorPatternList and compiles no regex.
-    mSubstringMatchers.emplace_back(nullptr);
+    mSubstringPatterns.emplace_back();
     mPatternsUtf8.emplace_back(patternText.toUtf8().constData());
     mRegexes.emplace_back();
     mMatchData.emplace_back();

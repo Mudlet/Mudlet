@@ -24,6 +24,8 @@
 
 #include "TMedia.h"
 
+#include "TDebug.h"
+
 #include <QDir>
 #include <QFileInfo>
 #include <QJsonDocument>
@@ -313,6 +315,15 @@ void TMedia::stopMedia(TMediaData& mediaData)
 {
     if (!isMediaProtocolAllowed(mediaData)) {
         return;
+    }
+
+    // MSP asks for a stop by naming the file "Off", which is not a file to match
+    // players against, and the request carries the priority every MSP request is
+    // given - which would then refuse to stop anything playing at that priority
+    // or above. Neither belongs on a stop, so take both off it.
+    if (mediaData.mediaProtocol() == TMediaData::MediaProtocolMSP && mediaData.mediaFileName() == qsl("Off")) {
+        mediaData.setMediaFileName(QString());
+        mediaData.setMediaPriority(TMediaData::MediaPriorityNotSet);
     }
 
     QList<std::shared_ptr<TMediaPlayer>> mediaPlayerList = findMediaPlayersByCriteria(mediaData);
@@ -1268,7 +1279,7 @@ void TMedia::connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player)
         qWarning().noquote() << qsl("TMedia::connectMediaPlayer() WARNING - media player error %1 on \"%2\": %3")
                                         .arg(QString::number(static_cast<int>(error)), lockedPlayer->mediaPlayer()->source().toString(), errorString);
 
-        if (mudlet::smDebugMode && mpHost && mpHost->mpConsole) {
+        if (TDebug::smDebugMode && mpHost && mpHost->mpConsole) {
             //: %1 is the media backend's own description of what went wrong, e.g. "Failed to load media".
             mpHost->mpConsole->printSystemMessage(qsl("%1\n").arg(tr("Media error: %1").arg(errorString)));
         }
@@ -1407,7 +1418,7 @@ void TMedia::updateList(QList<std::shared_ptr<T>>& list, int index, std::shared_
         qDebug() << "TMedia::updateList() - List exceeded max allowed size (" << mediaInstance->getMaxUnprunedPlayers() << "). Purging stopped players.";
         TMedia::purgeStoppedMediaPlayers(list);
 
-        if (mudlet::smDebugMode && mediaInstance && mediaInstance->mpHost && mediaInstance->mpHost->mpConsole) {
+        if (TDebug::smDebugMode && mediaInstance && mediaInstance->mpHost && mediaInstance->mpHost->mpConsole) {
             mediaInstance->mpHost->mpConsole->printSystemMessage(qsl("%1\n").arg(tr("Too many stopped media players. Purging stopped players.")));
         }
 
@@ -1415,7 +1426,7 @@ void TMedia::updateList(QList<std::shared_ptr<T>>& list, int index, std::shared_
             qWarning() << "TMedia::updateList() - List still exceeds max size after purging. Removing oldest active player.";
             list.removeFirst(); // Evict the oldest player to enforce cap
 
-            if (mudlet::smDebugMode && mediaInstance && mediaInstance->mpHost && mediaInstance->mpHost->mpConsole) {
+            if (TDebug::smDebugMode && mediaInstance && mediaInstance->mpHost && mediaInstance->mpHost->mpConsole) {
                 mediaInstance->mpHost->mpConsole->printSystemMessage(qsl("%1\n").arg(tr("Too many stopped media players. Removed oldest active player.")));
             }
         }
@@ -1510,7 +1521,7 @@ std::shared_ptr<TMediaPlayer> TMedia::getMediaPlayer(TMediaData& mediaData)
     if (mediaPlayerList.size() >= maxAllowed) {
         qWarning() << "TMedia::getMediaPlayer() - Too many active players for media type. Skipping creation.";
 
-        if (mudlet::smDebugMode && mpHost && mpHost->mpConsole) {
+        if (TDebug::smDebugMode && mpHost && mpHost->mpConsole) {
             mpHost->mpConsole->printSystemMessage(qsl("%1\n").arg(tr("Maximum allowed active media players reached for media type. Cannot play additional media.")));
         }
 
@@ -1518,6 +1529,7 @@ std::shared_ptr<TMediaPlayer> TMedia::getMediaPlayer(TMediaData& mediaData)
     }
 
     // No available player, create a new one
+    mudlet::self()->watchAudioOutputDevices();
     auto newPlayer = std::make_shared<TMediaPlayer>(mpHost, mediaData);
 
     if (!newPlayer || !newPlayer->mediaPlayer()) {

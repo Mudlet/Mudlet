@@ -42,6 +42,7 @@
 #include "TTimer.h"
 #include "TTrigger.h"
 #include "ctelnet.h"
+#include "discord.h"
 #include "dlgIRC.h"
 #include "dlgMapper.h"
 #include "dlgTriggerEditor.h"
@@ -3895,7 +3896,7 @@ void dlgProfilePreferences::populateApplicationSettings()
     checkBox_showSpacesAndTabs->setChecked(pMudlet->mEditorTextOptions & QTextOption::ShowTabsAndSpaces);
     checkBox_showLineFeedsAndParagraphs->setChecked(pMudlet->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
 
-    checkBox_reportMapIssuesOnScreen->setChecked(pMudlet->showMapAuditErrors());
+    checkBox_reportMapIssuesOnScreen->setChecked(TMap::smShowMapAuditErrors);
     checkBox_showIconsOnMenus->setCheckState(pMudlet->mShowIconsOnMenuCheckedState);
 
     MainIconSize->setValue(pMudlet->mToolbarIconSize);
@@ -4184,7 +4185,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         break;
     }
 
-    if (mudlet::self()->mDiscord.libraryLoaded()) {
+    if (Discord::self()->libraryLoaded()) {
         Host::DiscordOptionFlags const discordFlags = pHost->mDiscordAccessFlags;
         groupBox_discordPrivacy->show();
         mpCard_discord->show();
@@ -5257,8 +5258,8 @@ void dlgProfilePreferences::setColors2()
 
         setButtonColor(pushButton_foreground_color_2, pHost->mFgColor_2);
         setButtonColor(pushButton_background_color_2, pHost->mBgColor_2);
-        setButtonColor(pushButton_lowerLevelColor, pHost->mLowerLevelColor);
-        setButtonColor(pushButton_upperLevelColor, pHost->mUpperLevelColor);
+        setButtonColor(pushButton_lowerLevelColor, pHost->mLowerLevelColor, true);
+        setButtonColor(pushButton_upperLevelColor, pHost->mUpperLevelColor, true);
         setButtonColor(pushButton_roomBorderColor, pHost->mRoomBorderColor);
         setButtonColor(pushButton_mapInfoBg, pHost->mMapInfoBg, true);
         setButtonColor(pushButton_roomCollisionBorderColor, pHost->mRoomCollisionBorderColor);
@@ -5711,7 +5712,7 @@ void dlgProfilePreferences::slot_setLowerLevelColor()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_lowerLevelColor, pHost->mLowerLevelColor);
+        setButtonAndProfileColor(pushButton_lowerLevelColor, pHost->mLowerLevelColor, true);
     }
 }
 
@@ -5719,7 +5720,7 @@ void dlgProfilePreferences::slot_setUpperLevelColor()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_upperLevelColor, pHost->mUpperLevelColor);
+        setButtonAndProfileColor(pushButton_upperLevelColor, pHost->mUpperLevelColor, true);
     }
 }
 
@@ -6061,7 +6062,7 @@ void dlgProfilePreferences::loadMap(const QString& fileName)
 
     // Ensure the setting is already made as the TConsole::loadMap(...) uses
     // the set value:
-    const bool showAuditErrors = mudlet::self()->showMapAuditErrors();
+    const bool showAuditErrors = TMap::smShowMapAuditErrors;
     mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
 
     bool success = false;
@@ -6189,7 +6190,7 @@ void dlgProfilePreferences::slot_saveMap()
         // show up when saving big maps
 
         // Ensure the setting is already made as the saveMap(...) uses the set value
-        const bool showAuditErrors = mudlet::self()->showMapAuditErrors();
+        const bool showAuditErrors = TMap::smShowMapAuditErrors;
         mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
 
         bool success = false;
@@ -6302,7 +6303,7 @@ void dlgProfilePreferences::slot_copyMap()
 
     // Ensure the setting is already made as the value could be used in the
     // code following after
-    const bool savedOldAuditErrorsToConsoleEnabledSetting = mudlet::self()->showMapAuditErrors();
+    const bool savedOldAuditErrorsToConsoleEnabledSetting = TMap::smShowMapAuditErrors;
     mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
 
     // We now KNOW there are places where the destination profiles will/have
@@ -6918,7 +6919,7 @@ void dlgProfilePreferences::applyAll()
             const QString newDiscordUserName = lineEdit_discordUserName->text().trimmed().toLower();
             if (pHost->mRequiredDiscordUserName != newDiscordUserName) {
                 pHost->mRequiredDiscordUserName = newDiscordUserName;
-                pMudlet->mDiscord.UpdatePresence();
+                Discord::self()->UpdatePresence();
             }
         }
 
@@ -6954,17 +6955,8 @@ void dlgProfilePreferences::applyAll()
         if (mSnapshot.dirty(checkBox_mmcpSnoopInMainConsole)) {
             pHost->mMMCPShowSnoopInMainConsole = checkBox_mmcpSnoopInMainConsole->isChecked();
         }
-        if (mSnapshot.dirty(checkBox_announceIncomingText)) {
-            pHost->mAnnounceIncomingText = checkBox_announceIncomingText->isChecked();
-        }
-        if (mSnapshot.dirty(checkBox_advertiseScreenReader)) {
-            pHost->mAdvertiseScreenReader = checkBox_advertiseScreenReader->isChecked();
-        }
         if (mSnapshot.dirty(checkBox_enableOSC8Hyperlinks)) {
             pHost->mEnableOSC8Hyperlinks = checkBox_enableOSC8Hyperlinks->isChecked();
-        }
-        if (mSnapshot.dirty(checkBox_enableClosedCaption)) {
-            pHost->mEnableClosedCaption = checkBox_enableClosedCaption->isChecked();
         }
 
         if (mSnapshot.dirty(checkBox_expectCSpaceIdInColonLessMColorCode)) {
@@ -7018,6 +7010,18 @@ void dlgProfilePreferences::applyAll()
                     it->second->swap(sequence);
                 }
             }
+        }
+
+        // Last, because these setters run script handlers synchronously, which
+        // may do anything to the Host this block is still writing to
+        if (mSnapshot.dirty(checkBox_announceIncomingText)) {
+            pHost->setAnnounceIncomingText(checkBox_announceIncomingText->isChecked());
+        }
+        if (mSnapshot.dirty(checkBox_advertiseScreenReader)) {
+            pHost->setAdvertiseScreenReader(checkBox_advertiseScreenReader->isChecked());
+        }
+        if (mSnapshot.dirty(checkBox_enableClosedCaption)) {
+            pHost->setEnableClosedCaption(checkBox_enableClosedCaption->isChecked());
         }
     }
 
@@ -7079,7 +7083,7 @@ void dlgProfilePreferences::applyAll()
         pMudlet->setAppearance(static_cast<enums::Appearance>(comboBox_appearance->currentIndex()));
     }
 
-    pMudlet->mDiscord.UpdatePresence();
+    Discord::self()->UpdatePresence();
 
     emit signal_preferencesSaved();
 
@@ -7870,14 +7874,12 @@ void dlgProfilePreferences::generateDiscordTooltips()
         return;
     }
 
-    auto* mudlet = mudlet::self();
-
-    auto detail = mudlet->mDiscord.getDetailText(mpHost);
+    auto detail = Discord::self()->getDetailText(mpHost);
     if (!detail.isEmpty()) {
         detail = qsl("<br/>(\"%1\")").arg(detail);
     }
 
-    auto state = mudlet->mDiscord.getStateText(mpHost);
+    auto state = Discord::self()->getStateText(mpHost);
     if (!state.isEmpty()) {
         state = qsl("<br/>(\"%1\")").arg(state);
     }
@@ -8767,16 +8769,8 @@ void dlgProfilePreferences::slot_changeControlCharacterHandling()
 
 void dlgProfilePreferences::slot_toggleAdvertiseScreenReader(const bool state)
 {
-    Host* pHost = mpHost;
-
-    if (!pHost) {
-        return;
-    }
-
-    if (pHost->mAdvertiseScreenReader != state) {
-        pHost->mAdvertiseScreenReader = state;
-        pHost->mTelnet.sendInfoNewEnvironValue(qsl("SCREEN_READER"));
-        pHost->mTelnet.sendInfoNewEnvironValue(qsl("MTTS"));
+    if (mpHost) {
+        mpHost->setAdvertiseScreenReader(state);
     }
 }
 
@@ -8796,8 +8790,8 @@ void dlgProfilePreferences::slot_toggleEnableOSC8Hyperlinks(const bool state)
 
 void dlgProfilePreferences::slot_toggleEnableClosedCaption(const bool state)
 {
-    if (mpHost && mpHost->mEnableClosedCaption != state) {
-        mpHost->mEnableClosedCaption = state;
+    if (mpHost) {
+        mpHost->setEnableClosedCaption(state);
     }
 }
 

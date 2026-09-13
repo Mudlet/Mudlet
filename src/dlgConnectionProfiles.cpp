@@ -31,6 +31,7 @@
 #include "LuaInterface.h"
 #include "TGameDetails.h"
 #include "XMLimport.h"
+#include "discord.h"
 #include "mudlet.h"
 #include "CredentialManager.h"
 #include "SecureStringUtils.h"
@@ -1276,9 +1277,7 @@ QString dlgConnectionProfiles::readProfileData(const QString& profile, const QSt
     QString ret;
     if (success) {
         QDataStream ifs(&file);
-        if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
-        }
+        ifs.setVersion(QDataStream::Qt_5_12);
         ifs >> ret;
         file.close();
     }
@@ -1294,9 +1293,7 @@ QPair<bool, QString> dlgConnectionProfiles::writeProfileData(const QString& prof
     QSaveFile file(mudlet::getMudletPath(enums::profileDataItemPath, profile, item));
     if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         QDataStream ofs(&file);
-        if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            ofs.setVersion(mudlet::scmQDataStreamFormat_5_12);
-        }
+        ofs.setVersion(QDataStream::Qt_5_12);
         ofs << what;
         if (!file.commit()) {
             qDebug().noquote().nospace() << "dlgConnectionProfiles::writeProfileData(...) ERROR - writing profile: \"" << profile << "\", item: \"" << item << "\", reason: \"" << file.errorString()
@@ -2351,7 +2348,7 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
         pHost->setAutoReconnect(auto_reconnect->isChecked());
 
         // This also writes the value out to the profile's base directory:
-        mudlet::self()->mDiscord.setApplicationID(pHost, mDiscordApplicationId);
+        Discord::self()->setApplicationID(pHost, mDiscordApplicationId);
     }
 
     emit signal_load_profile(profile_name, alsoConnect);
