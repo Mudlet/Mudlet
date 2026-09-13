@@ -26,6 +26,10 @@ very welcome - please extend this file.
   worktrees are the easiest way to keep both build trees alive at once. When
   the change is toggled by a setting rather than code, one binary is enough.
 
+Xvfb is an X server, so on a **Wayland desktop** both toolkits have to be
+pointed at X11 - the reference script sets `QT_QPA_PLATFORM=xcb` and
+`GDK_BACKEND=x11` on Mudlet for that.
+
 ## Workflow overview
 
 1. **Plan the money shots first.** Decide exactly what on-screen evidence
@@ -89,7 +93,9 @@ session() { # $1 = mudlet binary, $2 = tag ("before"/"after"), $3 = extra Mudlet
     # uiTourShown skips the first-run UI tour; $3 carries per-session settings,
     # e.g. appearance=2 for dark mode (themes the app chrome, not the console)
     printf '[General]\nuiTourShown=true\n%s\n' "$3" > "$home/.config/mudlet/Mudlet.ini"
-    HOME=$home QT_QPA_PLATFORM=xcb "$1" --profile "Mudlet Tutorial" &
+    # on a Wayland desktop, Qt's GTK3 platform theme calls gtk_init(), which
+    # exits the process outright if GTK is left looking for wayland
+    HOME=$home QT_QPA_PLATFORM=xcb GDK_BACKEND=x11 "$1" --profile "Mudlet Tutorial" &
     MUDLET_PID=$!    # global so the EXIT trap can reach it
     # --profile opens a small window; normalize the geometry as soon as the
     # window exists so the profile finishes loading at full size on camera

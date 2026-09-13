@@ -220,6 +220,31 @@ describe("Tests functionality of Geyser.Mapper", function()
       assert.are.equal("", mapper.titleText)
     end)
 
+    it("puts the title on the map window while it is on screen", function()
+      local mapper = track(Geyser.Mapper:new({name = "gmpLiveTitle", x = 10, y = 20, width = 300, height = 200, embedded = false}))
+      -- an untitled mapper resets the map window as it is built, so it starts
+      -- on the generated default
+      local generated = getMapWindowTitle()
+      assert.is_truthy(generated:find(getProfileName(), 1, true))
+      assert.is_true(mapper:setTitle("On screen"))
+      assert.are.equal("On screen", getMapWindowTitle())
+      assert.is_true(mapper:resetTitle())
+      assert.are.equal(generated, getMapWindowTitle())
+    end)
+
+    it("titles the map window it opens with the title it was constructed with", function()
+      -- nil means no map window is open, so the one the constructor opens below
+      -- is the one the title is read back from
+      assert.is_nil(getMapWindowTitle())
+      track(Geyser.Mapper:new({
+        name = "gmpBornTitled",
+        x = 10, y = 20, width = 300, height = 200,
+        embedded = false,
+        titleText = "Titled at birth",
+      }))
+      assert.are.equal("Titled at birth", getMapWindowTitle())
+    end)
+
     it("applies a title that was set while the mapper was hidden", function()
       local mapper = track(Geyser.Mapper:new({name = "gmpHiddenTitle", x = 10, y = 20, width = 300, height = 200, embedded = false}))
       mapper:hide()
@@ -266,8 +291,6 @@ describe("Tests functionality of Geyser.Mapper", function()
       assert.are.equal("", mapper.titleText)
     end)
   end)
-
-  pending("Geyser.Mapper:setTitle/resetTitle put the text on the map window's title bar - needs a getMapWindowTitle getter")
 
   pending("Geyser.Mapper:setDockPosition docks the map widget against the edge it names - which edge it ended up on is not readable from Lua")
 

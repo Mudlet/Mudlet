@@ -380,9 +380,42 @@ describe("Tests functionality of Geyser.UserWindow", function()
       local userWindow = track(Geyser.UserWindow:new({name = "guwNoTitle", x = 10, y = 20, width = 200, height = 150}))
       assert.are.equal("", userWindow.titleText)
     end)
-  end)
 
-  pending("Geyser.UserWindow:setTitle/resetTitle put the text on the dock's title bar - needs a getUserWindowTitle getter")
+    it("puts the title on the dock's title bar, and a reset puts Mudlet's own back", function()
+      local userWindow = track(Geyser.UserWindow:new({name = "guwTitleBar", x = 10, y = 20, width = 200, height = 150, titleText = "Named at creation"}))
+      assert.are.equal("Named at creation", getUserWindowTitle("guwTitleBar"))
+
+      assert.is_true(userWindow:setTitle("Renamed"))
+      assert.are.equal("Renamed", getUserWindowTitle("guwTitleBar"))
+
+      -- an empty titleText is not an empty title bar: the dock goes back to the
+      -- title Mudlet generates from the profile and window names
+      assert.is_true(userWindow:resetTitle())
+      local title = getUserWindowTitle("guwTitleBar")
+      assert.are_not.equal("Renamed", title)
+      assert.is_truthy(title:find(getProfileName(), 1, true))
+      assert.is_truthy(title:find("guwTitleBar", 1, true))
+    end)
+
+    -- a user window's dock stays in Mudlet's dock registry while it is hidden,
+    -- so the title lands straight away rather than waiting for the window back
+    it("retitles a hidden window's dock, which keeps it when the window comes back", function()
+      local userWindow = track(Geyser.UserWindow:new({name = "guwHiddenTitleBar", x = 10, y = 20, width = 200, height = 150, titleText = "Named before hiding"}))
+      userWindow:hide()
+
+      assert.is_true(userWindow:setTitle("Named while hidden"))
+      assert.are.equal("Named while hidden", getUserWindowTitle("guwHiddenTitleBar"))
+      userWindow:show()
+      assert.are.equal("Named while hidden", getUserWindowTitle("guwHiddenTitleBar"))
+
+      userWindow:hide()
+      assert.is_true(userWindow:resetTitle())
+      userWindow:show()
+      local title = getUserWindowTitle("guwHiddenTitleBar")
+      assert.are_not.equal("Named while hidden", title)
+      assert.is_truthy(title:find(getProfileName(), 1, true))
+    end)
+  end)
 
   describe("Geyser.UserWindow:setStyleSheet", function()
     it("remembers the stylesheet it was given", function()
@@ -395,11 +428,20 @@ describe("Tests functionality of Geyser.UserWindow", function()
       userWindow:setStyleSheet("background-color: green;")
       assert.are.equal("background-color: green;", userWindow.stylesheet)
     end)
+
+    it("applies the stylesheet to the dock itself", function()
+      local userWindow = track(Geyser.UserWindow:new({
+        name = "guwCssDock",
+        x = 10, y = 20, width = 200, height = 150,
+        stylesheet = "border: 1px solid red;",
+      }))
+      -- the constructor reaches this through setStyleSheet's no-argument fallback
+      assert.are.equal("border: 1px solid red;", getUserWindowStyleSheet("guwCssDock"))
+
+      userWindow:setStyleSheet("background-color: green;")
+      assert.are.equal("background-color: green;", getUserWindowStyleSheet("guwCssDock"))
+    end)
   end)
-
-  pending("Geyser.UserWindow:setStyleSheet applies the stylesheet to the dock - needs a getUserWindowStyleSheet getter")
-
-  pending("Geyser.UserWindow scrollBar constraint puts a scroll bar on screen - the wrap it leaves room for is covered above, but the scroll bar's own visibility is not readable from Lua and needs a scroll bar getter")
 
   describe("Geyser.UserWindow:enableAutoDock/disableAutoDock", function()
     it("turns automatic docking off and on again without disturbing the window", function()

@@ -572,6 +572,7 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     // Entries below this index were added by outer (nested-feedTriggers) passes
     // and are already part of this pass's snapshot.
     const qsizetype firstNodeAddedThisPass = mRootNodesAddedWhileProcessing.size();
+    const TBigramFilter lineBigrams(data, mSubstringQuestionsOnTheLastLine);
     if (pinnedSnapshot->mPrescan.active()) {
         // Borrowed from the unit so that only a longer line than any before it
         // allocates, and moved out so a nested pass grows its own.
@@ -602,14 +603,14 @@ void TriggerUnit::processDataStream(const QString& data, int line)
             if (!trigger || !trigger->isActive()) {
                 continue;
             }
-            trigger->match(subject, subjectLength, data, line);
+            trigger->match(subject, subjectLength, data, line, 0, &lineBigrams);
         }
     } else {
         for (auto trigger : pinnedNodeList) {
             if (!trigger || !trigger->isActive()) {
                 continue;
             }
-            trigger->match(subject, subjectLength, data, line);
+            trigger->match(subject, subjectLength, data, line, 0, &lineBigrams);
         }
     }
     // A match here can register more triggers, which also get a shot at the
@@ -635,8 +636,9 @@ void TriggerUnit::processDataStream(const QString& data, int line)
             stopSameLineCreationLoop(trigger->sameLineChainId());
             continue;
         }
-        trigger->match(subject, subjectLength, data, line);
+        trigger->match(subject, subjectLength, data, line, 0, &lineBigrams);
     }
+    mSubstringQuestionsOnTheLastLine = lineBigrams.questionsAsked();
 }
 
 void TriggerUnit::compileAll()

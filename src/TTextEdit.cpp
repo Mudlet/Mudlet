@@ -46,6 +46,7 @@
 #include <cmath>
 #include <QtEvents>
 #include <QtGlobal>
+#include <QtMath>
 #include <QAccessible>
 #include <QAccessibleTextCursorEvent>
 #include <QAccessibleTextInsertEvent>
@@ -78,7 +79,6 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 , mEnableBlinkText(pH->getEnableBlinkText())
 , mMouseWheelRemainder()
 {
-    mLastClickTimer.start();
     Q_ASSERT_X(mpHost, "TTextEdit::TTextEdit(...)", "mpHost is a nullptr");
     Q_ASSERT_X(mSearchHighlightFgColor != mSearchHighlightBgColor, "TTextEdit::TTextEdit(...)", "search highlight foreground and background colors must not be the same");
     setFont(mpHost->getDisplayFont());
@@ -1231,7 +1231,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     // the bottom cell - descenders and underscores do at many font sizes - has
     // somewhere to go instead of being cut off by the edge of the pixmap.
     const int pixmapHeight = (mScreenHeight + 1) * mFontHeight;
-    const QSize surfaceSize(static_cast<int>(mScreenWidth * mFontWidth * dpr), static_cast<int>(pixmapHeight * dpr));
+    const QSize surfaceSize = smallestEnclosingSurfaceSize(mScreenWidth, mFontWidth, pixmapHeight, dpr);
     // Building a pane-sized pixmap costs the same whether one line changed or
     // all of them did, so it is only done when there is no buffer to reuse -
     // the pane changed size or resolution, or nothing has been painted yet.
@@ -1257,10 +1257,18 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
 
     int lineOffset = imageTopLine();
     int from = 0;
+
+    // A scroll moves every row, so the region handed to us is a floor and not a
+    // ceiling: taken as a ceiling it redraws only the rows named in it, leaving
+    // the rows the scroll exposed still showing pre-scroll ink.
+    const bool scrolledSinceLastPaint = (lineOffset != mLastRenderedOffset);
+    if (scrolledSinceLastPaint) {
+        y_bottom = mScreenHeight;
+    }
+
     if (lineOffset == 0) {
         mScrollVector = 0;
     } else {
-        // Was: mScrollVector = lineOffset - mLastRenderedOffset;
         if (mLastRenderedOffset) {
             mScrollVector = lineOffset - mLastRenderedOffset;
         } else {
@@ -1274,7 +1282,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
         mScrollVector = 0;
         noScroll = true;
     }
-    if ((r.height() < rect().height()) && (lineOffset > 0) && (mScreenWidth * mFontWidth * dpr <= mScreenMap.width()) && (pixmapHeight * dpr <= mScreenMap.height())) {
+    if (!scrolledSinceLastPaint && (r.height() < rect().height()) && (lineOffset > 0) && (mScreenMap.width() >= surfaceSize.width()) && (mScreenMap.height() >= surfaceSize.height())) {
         p.drawPixmap(0, 0, mScreenMap);
         reusedCachedScreenContent = true;
         from = y_top;
@@ -1432,6 +1440,11 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
             mIsBlinkClientRegistered = false;
         }
     }
+}
+
+QSize TTextEdit::smallestEnclosingSurfaceSize(const int screenWidth, const int fontWidth, const int pixmapHeight, const qreal devicePixelRatio)
+{
+    return QSize(qCeil(screenWidth * fontWidth * devicePixelRatio), qCeil(pixmapHeight * devicePixelRatio));
 }
 
 bool TTextEdit::shouldRegisterBlinkClient(const bool enableBlinkText, const bool hasBlinkingContentInRedrawnRegion, const bool isBlinkClientRegistered, const bool reusedCachedScreenContent)
@@ -1750,51 +1763,49 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
 
 void TTextEdit::updateTextCursor(const QMouseEvent* event, int lineIndex, int tCharIndex, bool isOutOfbounds)
 {
-    if (lineIndex < static_cast<int>(mpBuffer->buffer.size())) {
-        if (tCharIndex < static_cast<int>(mpBuffer->buffer[lineIndex].size())) {
-            if (mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex() && !isOutOfbounds) {
-                int linkIndex = mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex();
+    const int lineCount = static_cast<int>(mpBuffer->buffer.size());
+    const int charCount = lineIndex < lineCount ? static_cast<int>(mpBuffer->buffer.at(lineIndex).size()) : 0;
+    if (lineIndex < lineCount && tCharIndex < charCount && mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex() && !isOutOfbounds) {
+        int linkIndex = mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex();
 
-                setCursor(Qt::PointingHandCursor);
-                QStringList tooltip = mpBuffer->mLinkStore.getHints(linkIndex);
-                QStringList commands = mpBuffer->mLinkStore.getLinks(linkIndex);
-                // If a special tooltip hint was given, use that one.
-                // The server chooses this text and QToolTip renders anything
-                // Qt::mightBeRichText() accepts as HTML, so escape it and wrap it
-                // in an explicit document rather than letting that guess decide
-                // whether the markup is live. white-space:pre keeps the line
-                // breaks the plain-text path used to give.
-                // An empty string is how QToolTip is told to hide, so it has to
-                // stay empty rather than becoming an empty document.
-                const QString tooltipText = tooltip.size() > commands.size() ? tooltip[0] : tooltip.join(QChar::LineFeed);
-                const QString tooltipMarkup = tooltipText.isEmpty() ? QString() : qsl("<html><body style='white-space:pre'>%1</body></html>").arg(tooltipText.toHtmlEscaped());
-                QToolTip::showText(event->globalPosition().toPoint(), tooltipMarkup);
+        setCursor(Qt::PointingHandCursor);
+        QStringList tooltip = mpBuffer->mLinkStore.getHints(linkIndex);
+        QStringList commands = mpBuffer->mLinkStore.getLinks(linkIndex);
+        // If a special tooltip hint was given, use that one.
+        // The server chooses this text and QToolTip renders anything
+        // Qt::mightBeRichText() accepts as HTML, so escape it and wrap it
+        // in an explicit document rather than letting that guess decide
+        // whether the markup is live. white-space:pre keeps the line
+        // breaks the plain-text path used to give.
+        // An empty string is how QToolTip is told to hide, so it has to
+        // stay empty rather than becoming an empty document.
+        const QString tooltipText = tooltip.size() > commands.size() ? tooltip[0] : tooltip.join(QChar::LineFeed);
+        const QString tooltipMarkup = tooltipText.isEmpty() ? QString() : qsl("<html><body style='white-space:pre'>%1</body></html>").arg(tooltipText.toHtmlEscaped());
+        QToolTip::showText(event->globalPosition().toPoint(), tooltipMarkup);
 
-                // Update hover state for CSS pseudo-class support
-                // Don't set hover state for disabled links - they should stay disabled
-                // Also don't set hover if this link was just clicked - wait for mouse to leave first
-                if (mpBuffer->getHoveredLink() != linkIndex) {
-                    auto currentState = mpBuffer->getLinkState(linkIndex);
-                    if (currentState != Mudlet::HyperlinkStyling::StateDisabled && linkIndex != mpBuffer->getLastClickedLinkIndex()) {
-                        mpBuffer->setHoveredLink(linkIndex);
-                        forceUpdate(); // Trigger re-render with new hover state
-                    }
-                }
-            } else {
-                setCursor(Qt::IBeamCursor);
-                QToolTip::hideText();
-
-                // Clear hover state if we're not over a link
-                if (mpBuffer->getHoveredLink() != 0) {
-                    mpBuffer->setHoveredLink(0);
-                    forceUpdate(); // Trigger re-render
-                }
-
-                // Clear last clicked link when mouse leaves - allows hover to work again
-                if (mpBuffer->getLastClickedLinkIndex() != 0) {
-                    mpBuffer->clearLastClickedLinkIndex();
-                }
+        // Update hover state for CSS pseudo-class support
+        // Don't set hover state for disabled links - they should stay disabled
+        // Also don't set hover if this link was just clicked - wait for mouse to leave first
+        if (mpBuffer->getHoveredLink() != linkIndex) {
+            auto currentState = mpBuffer->getLinkState(linkIndex);
+            if (currentState != Mudlet::HyperlinkStyling::StateDisabled && linkIndex != mpBuffer->getLastClickedLinkIndex()) {
+                mpBuffer->setHoveredLink(linkIndex);
+                forceUpdate(); // Trigger re-render with new hover state
             }
+        }
+    } else {
+        setCursor(Qt::IBeamCursor);
+        QToolTip::hideText();
+
+        // Clear hover state if we're not over a link
+        if (mpBuffer->getHoveredLink() != 0) {
+            mpBuffer->setHoveredLink(0);
+            forceUpdate(); // Trigger re-render
+        }
+
+        // Clear last clicked link when mouse leaves - allows hover to work again
+        if (mpBuffer->getLastClickedLinkIndex() != 0) {
+            mpBuffer->clearLastClickedLinkIndex();
         }
     }
 }
@@ -2136,7 +2147,9 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             forceUpdate();
         }
         mSelectedRegion = QRegion(0, 0, 0, 0);
-        if (mLastClickTimer.elapsed() < 300) {
+        // Invalid until the first click, so a click soon after the console
+        // appears does not count as the second half of a double-click:
+        if (mLastClickTimer.isValid() && mLastClickTimer.elapsed() < 300) {
             mMouseTracking = true;
             mMouseTrackLevel++;
             if (mMouseTrackLevel > 3) {
@@ -2953,7 +2966,7 @@ void TTextEdit::showEvent(QShowEvent* event)
 {
     updateScreenView();
     mScrollVector = 0;
-    repaint();
+    update();
     QWidget::showEvent(event);
 }
 
