@@ -64,8 +64,11 @@ HARNESSES = {
             # Every display timing is paid per device pixel while every other
             # display invariant is logical, so two runs at different scale
             # factors agree on the workload and disagree on every paint metric -
-            # the ratio reported as a code change. Formatted %.2f, so 1.00 and
-            # 1.25 stay distinct.
+            # the ratio reported as a code change. Invariants are compared by
+            # exact equality on the parsed value, so the %.2f the benchmark
+            # prints is what gives this one any tolerance: two runs whose real
+            # ratios differ below the second decimal both read 1.00 and compare
+            # equal, while a genuinely different scale factor still does not.
             "display_device_pixel_ratio",
             "display_tail_small_cells",
             "display_tail_large_cells",
