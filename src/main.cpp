@@ -372,8 +372,15 @@ int main(int argc, char* argv[])
     // has Qt parse every system CA certificate on the constructing thread,
     // which lands squarely inside profile load. Doing the same initialisation
     // on a pool thread now means the parse is normally over before a profile
-    // opens:
-    QThreadPool::globalInstance()->start([]() {
+    // opens.
+    // The pool is a local so that every early return from main() joins the
+    // thread on the way out: the warm-up holds Qt's TLS backend mutex while it
+    // loads the backend plugin, and static destruction pulls that mutex and the
+    // plugin machinery out from under it. The global pool cannot serve here -
+    // waiting on it would also wait for whatever QtConcurrent work a profile
+    // left running.
+    QThreadPool sslWarmupPool;
+    sslWarmupPool.start([]() {
         QSslConfiguration::defaultConfiguration();
     });
 
@@ -1151,6 +1158,11 @@ int main(int argc, char* argv[])
     // with some OS's choice of wait cursor - you might wish to temporarily disable
     // the earlier setOverrideCursor() line and this one.
     int result = app->exec();
+
+    // Before the QApplication goes, not just before main() returns: the TLS
+    // plugin loader connects to qApp, so a warm-up still running here would
+    // reach for one that has already been deleted.
+    sslWarmupPool.waitForDone();
 
     // Explicitly delete QApplication BEFORE main() returns to ensure Qt cleanup
     // happens before __cxa_finalize_ranges runs static destructors. This prevents
