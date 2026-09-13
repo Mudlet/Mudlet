@@ -386,6 +386,10 @@ public:
     QColor& mFgColor;
     QColor mSystemMessageFgColor = QColorConstants::Red;
     QColor mCommandBgColor = QColorConstants::Black;
+    // Transparent so a system message blends into the console's real background
+    // instead of an opaque bar; TTextEdit's selection swap and TBuffer's HTML
+    // export both resolve alpha-0 against getConsoleBgColor() so the text stays
+    // visible when selected and the same colour is kept in copied/exported HTML.
     QColor mSystemMessageBgColor = QColorConstants::Transparent;
     QColor mCommandFgColor = QColor(213, 195, 0);
 
