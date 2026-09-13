@@ -170,19 +170,30 @@ describe("Tests Other.lua functions", function()
 
     describe("the state a new group is created in", function()
       -- What a group arrives as is not visible through a spy, so these need real
-      -- items - created once and then reused by later runs, since Lua cannot
-      -- delete a permanent item and nothing here changes a group's state after
-      -- creating it, so a leftover one is still in the state its creation put it
-      -- in. (The key group specs in KeyBinds_spec.lua pin a creation-time
-      -- regression instead, so those need a name no earlier run has used.)
-      -- permGroup spells the key type "key" where exists() and isActive() spell
-      -- it "keybind".
+      -- items, and what they pin is the state *creation* leaves a group in. Lua
+      -- cannot delete a permanent item, so take the first name no earlier run
+      -- has used rather than reusing what one left behind: a group this build
+      -- never made would be reporting the state some earlier build created it
+      -- in, and an already-correct leftover would cover for creation code that
+      -- had since broken. permGroup spells the key type "key" where exists()
+      -- and isActive() spell it "keybind".
+      --
+      -- The search runs as far as it needs to: giving up would mean asserting
+      -- over an old item or skipping the check, both of which leave this green
+      -- while testing nothing. The bound only stops a broken exists() spinning
+      -- forever, and reaching it raises rather than skips.
+      local searchLimit = 100000
+
       local function group(groupType, itemType)
-        local name = "permGroupSpecState" .. groupType
-        if exists(name, itemType) == 0 then
-          assert.is_true(permGroup(name, groupType), "could not create the " .. groupType .. " group")
+        local stem = "permGroupSpecState" .. groupType
+        for index = 1, searchLimit do
+          local name = ("%s%d"):format(stem, index)
+          if exists(name, itemType) == 0 then
+            assert.is_true(permGroup(name, groupType), "could not create the " .. groupType .. " group")
+            return name
+          end
         end
-        return name
+        error(("no free \"%s\" name in this profile after %d tries"):format(stem, searchLimit))
       end
 
       it("creates trigger groups enabled", function()

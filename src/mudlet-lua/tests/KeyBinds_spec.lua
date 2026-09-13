@@ -180,11 +180,17 @@ describe("Tests keybind-related functions", function()
     -- unseeded in Lua 5.1, so every process deals the same sequence, and two
     -- runs sharing a profile within the same second would agree on their
     -- "unique" name and stack a second group under it.
-    local exhausted = "this profile already holds 100 runs' worth of these groups, which Lua cannot delete"
+    --
+    -- Every run of a shared profile takes one more set of names, so the search
+    -- has to go as far as it needs to: a run that gave up and skipped its
+    -- checks would leave these specs green while testing nothing. The bound is
+    -- only there so a broken exists() cannot spin forever, and reaching it
+    -- raises rather than skips.
+    local searchLimit = 100000
 
     local function freshNames(stem, ...)
       local suffixes = {...}
-      for index = 1, 100 do
+      for index = 1, searchLimit do
         local names, free = {}, true
         for _, suffix in ipairs(suffixes) do
           local name = ("%s%s%d"):format(stem, suffix, index)
@@ -198,14 +204,11 @@ describe("Tests keybind-related functions", function()
           return unpack(names)
         end
       end
+      error(("no free \"%s\" name in this profile after %d tries"):format(stem, searchLimit))
     end
 
     it("creates the group active", function()
       local groupName = freshNames("SpecPermKeyGroup", "")
-      if not groupName then
-        pending(exhausted)
-        return
-      end
       -- switching it off again is the only cleanup Lua has for a permanent item
       finally(function() disableKey(groupName) end)
 
@@ -220,10 +223,6 @@ describe("Tests keybind-related functions", function()
     -- put in the group reported itself active but could never fire
     it("creates a group whose keys are not held back by it", function()
       local groupName, childName = freshNames("SpecPermKeyGroupParent", "", "Key")
-      if not groupName then
-        pending(exhausted)
-        return
-      end
       finally(function()
         disableKey(childName)
         disableKey(groupName)
@@ -249,10 +248,6 @@ describe("Tests keybind-related functions", function()
 
     it("creates a group inside a group active at every level", function()
       local outerName, innerName, childName = freshNames("SpecPermKeyNested", "Outer", "Inner", "Key")
-      if not outerName then
-        pending(exhausted)
-        return
-      end
       finally(function()
         disableKey(childName)
         disableKey(innerName)
