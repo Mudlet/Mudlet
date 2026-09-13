@@ -122,7 +122,6 @@ public:
     void auditExit(int&,
                    int,
                    QString,
-                   QString,
                    QMap<QString, int>&,
                    QSet<int>&,
                    QSet<int>&,
@@ -133,6 +132,10 @@ public:
                    QMap<QString, bool>&,
                    QHash<int, int>);
     QString dirCodeToDisplayName(int) const;
+    // As above but for auditExit()'s messages specifically, which predate
+    // dirCodeToDisplayName() and spell the diagonals without a hyphen -
+    // separate translatable strings, so this is not just a style choice.
+    QString auditExitDisplayName(int) const;
     static QString dirCodeToShortString(const int);
     static QString dirCodeToString(const int);
     inline int stringToDirCode(const QString&) const;

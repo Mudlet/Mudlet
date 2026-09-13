@@ -1247,6 +1247,22 @@ private slots:
         verifyNothingPansAnyMore();
     }
 
+    // Clicking a room while editing selects it, and that press has to end a
+    // hands-free pan like any other rather than being used up by the selection.
+    void test_clickingARoomWhileEditingEndsAHandsFreePan()
+    {
+        buildMap();
+        showMapper(false);
+
+        middlePressAt(viewCentre());
+        middleReleaseAt(viewCentre());
+        QVERIFY(panning());
+
+        clickAt(pointUnitsFromCentre(1, 0));
+        QVERIFY2(mp2dMap->mMultiSelectionSet.contains(kEastRoomId), "the click that ends the pan should still select the room");
+        verifyNothingPansAnyMore();
+    }
+
     // Editing does not need the middle button for anything else, so it pans
     // there too.
     void test_theMiddleButtonPansWhileEditingToo()
@@ -2005,6 +2021,18 @@ private slots:
 
         QVERIFY(runLua(qsl("assert(not walked, 'doSpeedWalk was called for a double-click on nothing')")));
         QVERIFY(!consoleText().contains(qsl("Cannot find a path")));
+    }
+
+    void test_creatingAMapFromTheMenuWhileAlreadyEditingStaysInEditing()
+    {
+        buildMap();
+        showMapper(false);
+        map()->mapClear();
+        rightClickAt(viewCentre());
+        QVERIFY(pickContextMenuItem(qsl("Create new map")));
+
+        QCOMPARE(map()->mpRoomDB->size(), 1);
+        QVERIFY2(!mp2dMap->mMapViewOnly, "creating a map flipped the mapper into viewing mode");
     }
 
     // A right click on a label is about the label, not the rooms: it drops
