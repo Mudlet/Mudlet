@@ -18,6 +18,7 @@
 #include "Host.h"
 #include "SingleLineTextEdit.h"
 #include "TrailingWhitespaceMarker.h"
+#include "edbee/edbee.h"
 
 #include <QColor>
 #include <QKeyEvent>

@@ -21,6 +21,7 @@
 #include "Host.h"
 #include "TrailingWhitespaceMarker.h"
 #include "TriggerHighlighter.h"
+#include "edbee/edbee.h"
 #include "edbee/views/texttheme.h"
 #include "edbee/models/textdocumentscopes.h"
 

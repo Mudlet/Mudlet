@@ -57,6 +57,8 @@
 #include "dlgPackageExporter.h"
 #include "dlgPackageManager.h"
 #include "dlgProfilePreferences.h"
+#include "dlgTriggerEditor.h"
+#include "edbee/edbee.h"
 #include "MMCPServer.h"
 #include "widgetutils.h"
 
@@ -9860,6 +9862,11 @@ void mudlet::moveProfileFromDetachedToMainWindow(const QString& profileName, TDe
 
     // Update main window title to reflect moved profile
     updateMainWindowTitle();
+}
+
+QDockWidget* mudlet::getMainWindowDockWidget(const QString& mapKey) const
+{
+    return mMainWindowDockWidgetMap.value(mapKey);
 }
 
 void mudlet::updateMainWindowDockWidgetVisibilityForProfile(const QString& profileName)

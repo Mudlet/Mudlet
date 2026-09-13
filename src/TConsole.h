@@ -30,6 +30,7 @@
 #include "TBuffer.h"
 #include "TConsoleModel.h"
 #include "TPrintSink.h"
+#include "enums.h"
 
 #include <QDataStream>
 #include <QElapsedTimer>
@@ -177,13 +178,6 @@ public:
         Buffer = 0x20              // Non-visible store for data that can be copied to/from other per profile TConsoles, should be uniquely named in pool of SubConsole/UserWindow/Buffers AND Labels
     };
     Q_DECLARE_FLAGS(ConsoleType, ConsoleTypeFlag)
-
-    enum SearchOption {
-        // Unset:
-        SearchOptionNone = 0x0,
-        SearchOptionCaseSensitive = 0x1
-    };
-    Q_DECLARE_FLAGS(SearchOptions, SearchOption)
 
     Q_DISABLE_COPY(TConsole)
     explicit TConsole(Host*, const QString&, const ConsoleType type = UnknownType, QWidget* parent = nullptr);
@@ -333,7 +327,7 @@ public:
     // 2 = Selection not valid
     QPair<quint8, TChar> getTextAttributes() const;
     void setCaretMode(bool enabled);
-    void setSearchOptions(const SearchOptions);
+    void setSearchOptions(const enums::BufferSearchOptions);
     void setF3SearchEnabled(const bool enabled);
     void setProxyForFocus(TCommandLine*);
     void raiseMudletSysWindowResizeEvent(const int overallWidth, const int overallHeight);
@@ -513,7 +507,7 @@ private:
     // getMainWindowSize() falls back to while the console is hidden or too small
     // to measure cannot be a size the window never had
     mutable QSize mLastMeasuredSize;
-    SearchOptions mSearchOptions = SearchOptionNone;
+    enums::BufferSearchOptions mSearchOptions = enums::BufferSearchOptionNone;
     QAction* mpAction_searchOptions = nullptr;
     QIcon mIcon_searchOptions;
     bool mScrollingEnabled = true;
