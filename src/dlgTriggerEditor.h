@@ -749,6 +749,13 @@ private:
 
     // keeps track of the dialog reset being queued
     bool mCleanResetQueued = false;
+    // Trigger IDs whose tree icon is stale; painted in one tree walk on the
+    // next event-loop turn rather than one O(tree) lookup per Lua toggle.
+    QSet<int> mPendingTriggerIconRefresh;
+    bool mTriggerIconRefreshQueued = false;
+    void flushPendingTriggerIconRefresh();
+    void refreshTriggerIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, int& remaining);
+    void paintTriggerItem(QTreeWidgetItem* pItem, TTrigger* pT);
 
     // One QIcon per resource path: a tree of thousands of items would otherwise
     // decode the same handful of PNGs once per item, every time it is rebuilt

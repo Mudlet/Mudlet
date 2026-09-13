@@ -578,3 +578,7 @@ else()
 endif()
 set_property(TEST TDiscordModeTest APPEND PROPERTY
     ENVIRONMENT_MODIFICATION "${DISCORD_RPC_PATH_VARIABLE}=path_list_prepend:${CMAKE_SOURCE_DIR}/3rdparty/discord/rpc/lib")
+# Report-only: what a Lua enableTrigger()/disableTrigger() call costs on a large
+# trigger tree with the script editor closed and open. Never registered with
+# ctest; run it directly and read the METRIC lines.
+add_functional_test_binary(TriggerToggleEditorBenchmark TriggerToggleEditorBenchmark.cpp)
