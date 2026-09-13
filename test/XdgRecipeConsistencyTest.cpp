@@ -48,6 +48,15 @@
  * does that, and creates every shape of config root deliberately, the
  * resolution rules being its subject.
  *
+ * setupConfig() is not the only way into the config directory. CredentialManager
+ * and SecureStringUtils file per-profile encryption keys and passwords under
+ * QStandardPaths::AppConfigLocation directly, without asking Mudlet where its
+ * config root is - so for a QTEST_MAIN program that is $HOME/.config/<test class>,
+ * a directory the setupConfig() sweep above cannot see because nothing about it
+ * is named "mudlet". Two tests wrote key material there on every run for a year
+ * (#10777). So a file reaching for either class has to redirect XDG_CONFIG_HOME
+ * as well, whether or not it ever drives setupConfig().
+ *
  * The test directory is provided at configure time via MUDLET_TEST_DIR. Like
  * CMakeListsConsistencyTest this pulls in no Mudlet headers, hence QStringLiteral
  * rather than utils.h's qsl().
@@ -284,6 +293,15 @@ class XdgRecipeConsistencyTest : public QObject
         return code.contains(call);
     }
 
+    // Whichever way a test reaches the credential store, both classes end up writing
+    // under QStandardPaths::AppConfigLocation, so either name is enough to need a
+    // config root of one's own.
+    static bool usesCredentialStore(const QString& code)
+    {
+        static const QRegularExpression call(QStringLiteral("\\b(?:CredentialManager|SecureStringUtils)\\s*::"));
+        return code.contains(call);
+    }
+
     static bool redirectsConfigHome(const QString& code)
     {
         static const QRegularExpression call(QStringLiteral("\\bqputenv\\s*\\(\\s*\"XDG_CONFIG_HOME\""));
@@ -334,7 +352,20 @@ class XdgRecipeConsistencyTest : public QObject
         return problems;
     }
 
-    // Every .cpp of both test directories, the subject of the two sweeps at the
+    // The one half of getting a config root of one's own that a credential-store
+    // user needs: it never calls setupConfig(), so the profiles/ opt-in that makes
+    // setupConfig() prefer a redirected root has nothing to say to it.
+    static QStringList missingCredentialStoreIsolation(const QString& source)
+    {
+        QSet<int> allowedLines;
+        const QString code = withoutComments(source, allowedLines);
+        if (!usesCredentialStore(code) || redirectsConfigHome(code)) {
+            return {};
+        }
+        return {QStringLiteral("stores credentials without qputenv(\"XDG_CONFIG_HOME\", ...), so it leaves encryption keys in the home directory of whoever runs it")};
+    }
+
+    // Every .cpp of both test directories, the subject of the three sweeps at the
     // end. Returns false having described the trouble rather than an empty list,
     // so an unreadable file cannot read as a clean sweep.
     static bool readTestSources(QVector<TestSource>& sources, QString& problem)
@@ -469,6 +500,40 @@ private slots:
         QVERIFY2(problems.first().contains(QStringLiteral("qputenv")), qPrintable(problems.first()));
     }
 
+    void test_aCredentialStoreUserWithNoConfigRootOfItsOwnIsFlagged()
+    {
+        const QString source = QStringLiteral("void initTestCase()\n{\n    QVERIFY(CredentialManager::storeCredential(profile, key, password));\n}\n");
+        const QStringList problems = missingCredentialStoreIsolation(source);
+        QCOMPARE(problems.size(), 1);
+        QVERIFY2(problems.first().contains(QStringLiteral("qputenv")), qPrintable(problems.first()));
+
+        const QString throughSecureStringUtils = QStringLiteral("SecureStringUtils::encryptStringForProfile(plaintext, profileName);\n");
+        QCOMPARE(missingCredentialStoreIsolation(throughSecureStringUtils).size(), 1);
+    }
+
+    void test_aCredentialStoreUserThatRedirectsIsAccepted()
+    {
+        const QString source = QStringLiteral("qputenv(\"XDG_CONFIG_HOME\", mConfigDir.path().toUtf8());\n"
+                                              "QVERIFY(CredentialManager::storeCredential(profile, key, password));\n");
+        QVERIFY2(missingCredentialStoreIsolation(source).isEmpty(), qPrintable(missingCredentialStoreIsolation(source).join(QChar(u'\n'))));
+    }
+
+    // The opt-in is setupConfig()'s business, and these never call it, so it is
+    // not what tells these apart
+    void test_aCredentialStoreUserNeedsNoOptIn()
+    {
+        const QString source = QStringLiteral("qputenv(\"XDG_CONFIG_HOME\", mConfigDir.path().toUtf8());\n"
+                                              "CredentialManager::retrieveCredential(profile, key);\n");
+        QVERIFY(missingCredentialStoreIsolation(source).isEmpty());
+        QVERIFY(missingIsolation(source).isEmpty());
+    }
+
+    void test_aSourceThatOnlyNamesTheCredentialStoreInProseIsNotTheSubject()
+    {
+        QVERIFY(missingCredentialStoreIsolation(QStringLiteral("// CredentialManager::storeCredential() is what this would drive\n")).isEmpty());
+        QVERIFY(missingCredentialStoreIsolation(QStringLiteral("void test_somethingElse()\n{\n    QCOMPARE(1, 1);\n}\n")).isEmpty());
+    }
+
     void test_aSourceThatNeverDrivesSetupConfigIsNotTheSubject()
     {
         QVERIFY(missingIsolation(QStringLiteral("void test_somethingElse()\n{\n    QCOMPARE(1, 1);\n}\n")).isEmpty());
@@ -518,6 +583,34 @@ private slots:
         }
         QVERIFY2(drivers > 40, qPrintable(QStringLiteral("only %1 sources drive setupConfig(), so this test would pass whatever they hold").arg(drivers)));
         QVERIFY2(problems.isEmpty(), qPrintable(QStringLiteral("tests running against whatever config directory the machine has:\n%1").arg(problems.join(QChar(u'\n')))));
+    }
+
+    void test_everyCredentialStoreUserGetsAConfigRootOfItsOwn()
+    {
+        QVector<TestSource> sources;
+        QString trouble;
+        QVERIFY2(readTestSources(sources, trouble), qPrintable(trouble));
+
+        QStringList problems;
+        int users = 0;
+        for (const TestSource& source : sources) {
+            // Self-excluded for the same reason as the sweep above: the fixtures
+            // there name both classes as ordinary text inside string literals,
+            // which is exactly what this scan is looking for.
+            if (source.name == QStringLiteral("XdgRecipeConsistencyTest.cpp")) {
+                continue;
+            }
+            QSet<int> allowedLines;
+            if (!usesCredentialStore(withoutComments(source.text, allowedLines))) {
+                continue;
+            }
+            ++users;
+            for (const QString& problem : missingCredentialStoreIsolation(source.text)) {
+                problems.append(QStringLiteral("%1 %2").arg(source.name, problem));
+            }
+        }
+        QVERIFY2(users > 3, qPrintable(QStringLiteral("only %1 sources reach the credential store, so this test would pass whatever they hold").arg(users)));
+        QVERIFY2(problems.isEmpty(), qPrintable(QStringLiteral("tests filing credentials in the real home directory:\n%1").arg(problems.join(QChar(u'\n')))));
     }
 };
 
