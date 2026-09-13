@@ -64,6 +64,7 @@ public:
     inline static int DefaultMessageBufferLimit = 5000;
 
 
+    static QPair<bool, QString> validateMsgArguments(const QString& target, const QString& message);
     static QString readIrcHostName(Host* pH);
     static int readIrcHostPort(Host* pH);
     static bool readIrcHostSecure(Host* pH);

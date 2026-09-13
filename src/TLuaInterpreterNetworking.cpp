@@ -408,8 +408,21 @@ int TLuaInterpreter::sendIrc(lua_State* L)
         return lua_error(L);
     }
 
-    const QString target{lua_tostring(L, 1)};
-    const QString msg{lua_tostring(L, 2)};
+    // read with the length rather than as a C string, so that an embedded NUL is
+    // seen by the check below instead of silently truncating what gets sent
+    size_t targetLength = 0;
+    const char* targetText = lua_tolstring(L, 1, &targetLength);
+    const QString target{QString::fromUtf8(targetText, static_cast<qsizetype>(targetLength))};
+    size_t msgLength = 0;
+    const char* msgText = lua_tolstring(L, 2, &msgLength);
+    const QString msg{QString::fromUtf8(msgText, static_cast<qsizetype>(msgLength))};
+
+    // checked here as well as in dlgIRC::sendMsg() so that a call which cannot be
+    // sent is refused before it brings an IRC client into being
+    const auto arguments = dlgIRC::validateMsgArguments(target, msg);
+    if (!arguments.first) {
+        return warnArgumentValue(L, __func__, arguments.second);
+    }
 
     Host* pHost = &getHostFromLua(L);
     if (!pHost->mpDlgIRC) {

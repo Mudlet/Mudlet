@@ -2100,6 +2100,43 @@ describe("The IRC configuration functions round-trip through the profile", funct
       assertArgError(function() sendIrc({}, "hello") end, "sendIrc: bad argument #1 type (target as string expected, got table!)")
       assertArgError(function() sendIrc("#mudlet", {}) end, "sendIrc: bad argument #2 type (message as string expected, got table!)")
     end)
+
+    -- #10770: one sendIrc() is meant to be one IRC command, but a CR or an LF
+    -- ends a command and a space separates a command's parameters, so either
+    -- argument carrying one used to put a second, caller-chosen command on the
+    -- wire - "MARK\r\nQUIT :injected-quit" sent the PRIVMSG and then the QUIT,
+    -- and sendIrc returned true for it. The realistic caller is a script
+    -- relaying game text to a channel, which hands the choice of commands to
+    -- the game server. Each of these is refused with nil plus a message.
+    it("refuses a target or message that would inject a second IRC command", function()
+      local function refused(target, message, needle)
+        local ok, err = sendIrc(target, message)
+        assert.is_nil(ok, "sendIrc accepted " .. string.format("%q, %q", target, message))
+        assert.is_true(contains(err, needle), tostring(err))
+      end
+
+      refused("#mudlet", "MARK before\r\nQUIT :injected-quit", "message must not contain a line break")
+      refused("#mudlet", "MARK before\nPRIVMSG #evil :injected-lf", "message must not contain a line break")
+      refused("#mudlet", "MARK before\rinjected-cr", "message must not contain a line break")
+      refused("#mudlet", "MARK before\0injected-nul", "message must not contain a line break")
+      refused("#mudlet\r\nJOIN #evil", "MARK target injection", "target must not contain a line break")
+      refused("#mudlet\0#evil", "MARK target nul", "target must not contain a line break")
+
+      -- the rest of the ways a target can confuse the line protocol: a space
+      -- or a comma makes the server read more parameters than were meant, a
+      -- leading colon makes the whole rest of the line one trailing parameter,
+      -- and an empty target used to be swapped for the first configured channel
+      refused("#mudlet #evil", "MARK spaced target", "single nick or channel name")
+      refused("#mudlet,#evil", "MARK comma target", "single nick or channel name")
+      refused(":#mudlet", "MARK colon target", "must not start with a colon")
+      refused("", "MARK empty target", "no target given")
+
+      -- the refusals come before the IRC client is created, so none of the
+      -- above left this run with one - which is what the specs above rely on
+      local ok, err = getIrcConnectedHost()
+      assert.is_false(ok, "a refused sendIrc opened an IRC client")
+      assert.equals("no client active", err)
+    end)
   end)
 
   describe("openIRC", function()

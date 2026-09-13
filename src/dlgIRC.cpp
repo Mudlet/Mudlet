@@ -37,6 +37,8 @@
 #include <QSettings>
 #include <QShortcut>
 
+#include <algorithm>
+
 
 dlgIRC::dlgIRC(Host* pHost)
 : mpHost(pHost)
@@ -140,23 +142,68 @@ void dlgIRC::startClient()
     mIrcStarted = true;
 }
 
+// A CR or an LF ends an IRC command and a NUL may not appear in one at all, so
+// text holding any of them cannot go on the wire as it stands.
+static bool textBreaksIrcLine(const QString& text)
+{
+    return std::any_of(text.cbegin(), text.cend(), [](const QChar character) {
+        return character == QChar::CarriageReturn || character == QChar::LineFeed || character == QChar::Null;
+    });
+}
+
+// What sendMsg() will put on the wire is one IRC command whose parameters are
+// separated by spaces and ended by a CR LF, so either argument carrying one of
+// those separators makes the server read a second, caller-chosen command - a
+// QUIT, or a PRIVMSG to somewhere else - out of a single sendMsg(). The caller is
+// often relaying text that a game server chose, which would put those commands in
+// the game's hands.
+//
+// They are refused rather than stripped: a stripped message is not the one the
+// caller asked to send and nothing says so, whereas a refusal leaves the caller
+// with what it needs to split the text itself, which is what the protocol wants
+// anyway. The formatting codes an IRC message may legitimately carry (bold,
+// colour, the CTCP delimiter) are left alone - only what the line protocol itself
+// forbids is refused.
+QPair<bool, QString> dlgIRC::validateMsgArguments(const QString& target, const QString& message)
+{
+    if (target.isEmpty()) {
+        return {false, qsl("no target given to send the message to")};
+    }
+    if (textBreaksIrcLine(target)) {
+        return {false, qsl("target must not contain a line break or a null character")};
+    }
+    const bool targetHasSeparator = std::any_of(target.cbegin(), target.cend(), [](const QChar character) {
+        return character.isSpace() || character == QLatin1Char(',');
+    });
+    if (targetHasSeparator) {
+        return {false, qsl("target must be a single nick or channel name, without spaces or commas")};
+    }
+    if (target.startsWith(QLatin1Char(':'))) {
+        return {false, qsl("target must not start with a colon")};
+    }
+    if (textBreaksIrcLine(message)) {
+        return {false, qsl("message must not contain a line break or a null character")};
+    }
+    return {true, QString()};
+}
+
 // Only the Lua sub-system call to this method even looks at the return values
 // and even then it only uses the second one if the first is false:
 QPair<bool, QString> dlgIRC::sendMsg(const QString& target, const QString& message)
 {
-    if (message.isEmpty()) {
-        return {true, QString()};
+    const auto arguments = validateMsgArguments(target, message);
+    if (!arguments.first) {
+        return arguments;
     }
 
-    QString msgTarget = target;
-    if (target.isEmpty()) {
-        msgTarget = mChannels.first();
+    if (message.isEmpty()) {
+        return {true, QString()};
     }
 
     // inform the command parser of the target for this message.
     // parses the message and then reverts the target to avoid confusing our UI.
     const QString lastParserTarget = commandParser->target();
-    commandParser->setTarget(msgTarget);
+    commandParser->setTarget(target);
     IrcCommand* command = commandParser->parse(message);
     commandParser->setTarget(lastParserTarget);
 
