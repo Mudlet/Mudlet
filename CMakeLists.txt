@@ -300,6 +300,17 @@ if(NOT "${USE_ALTERNATE_LINKER}" STREQUAL "")
 endif()
 
 add_subdirectory(3rdparty/edbee-lib/edbee-lib)
+# edbee-lib's AUTOMOC mocs_compilation.cpp hits the same GCC 16
+# -Wsfinae-incomplete false positives as mudlet_core's (qmetatype.h's
+# is_complete SFINAE instantiated from one moc file while a type defined in a
+# later moc file is incomplete). The per-source property used for mudlet_core
+# does not cross the add_subdirectory() boundary for a generated AUTOMOC file,
+# so silence the warning on the edbee-lib target itself - PRIVATE so it does
+# not propagate to mudlet_core. Scoped to GCC: the flag is GCC-only (GCC 15+)
+# and Clang/MSVC would diagnose the unknown option.
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  target_compile_options(edbee-lib PRIVATE -Wno-sfinae-incomplete)
+endif()
 add_subdirectory(3rdparty/communi)
 add_subdirectory(3rdparty/qt-tags-widget)
 add_subdirectory(translations/translated)
