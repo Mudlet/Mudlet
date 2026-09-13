@@ -928,7 +928,14 @@ int TTextEdit::layoutGrapheme(LineLayout& layout, const QPoint& cursor, const QS
             // Invert background: use white for dark colors, black for light colors
             run.bgColor = (charStyle.background().lightness() < 128) ? Qt::white : Qt::black;
         } else {
-            run.fgColor = charStyle.background();
+            // A transparent cell (e.g. a system message) has no colour of its own
+            // to swap in as the text pen - painting with alpha 0 would make the
+            // glyph invisible - so fall back to the console's real background.
+            QColor background = charStyle.background();
+            if (background.alpha() == 0) {
+                background = mpConsole->getConsoleBgColor();
+            }
+            run.fgColor = background;
             run.bgColor = charStyle.foreground();
         }
     } else {

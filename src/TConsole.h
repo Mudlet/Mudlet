@@ -386,10 +386,11 @@ public:
     QColor& mFgColor;
     QColor mSystemMessageFgColor = QColorConstants::Red;
     QColor mCommandBgColor = QColorConstants::Black;
-    // Not mBgColor: captured once and never updated, so it only ever held the
-    // built-in default - which the model can now have replaced with the
-    // profile's before the console is built.
-    QColor mSystemMessageBgColor = QColorConstants::Black;
+    // Transparent so a system message blends into the console's real background
+    // instead of an opaque bar; TTextEdit's selection swap and TBuffer's HTML
+    // export both resolve alpha-0 against getConsoleBgColor() so the text stays
+    // visible when selected and the same colour is kept in copied/exported HTML.
+    QColor mSystemMessageBgColor = QColorConstants::Transparent;
     QColor mCommandFgColor = QColor(213, 195, 0);
 
     //1 = unclicked/up; 2 = clicked/down, 0 is NOT valid:
