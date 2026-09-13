@@ -523,7 +523,9 @@ int TLuaInterpreter::sendTelnetChannel102(lua_State* L)
     // The payload is two raw bytes, so it needs no encoding conversion - only the
     // IAC escaping buildChannel102Message() applies to it
     std::string output = cTelnet::buildChannel102Message(msg);
-    host.mTelnet.socketOutRaw(output);
+    if (!host.mTelnet.socketOutRaw(output)) {
+        return warnArgumentValue(L, __func__, qsl("failed to send the channel 102 message - connection may have been lost or a socket write error occurred"));
+    }
     lua_pushboolean(L, true);
     return 1;
 }
