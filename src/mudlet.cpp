@@ -679,7 +679,36 @@ int mudlet::addAddonCommand(const CommandRequest& request, Host* pHost, QString&
 
     applyAddonIcon(command.button, command.menuAction, request.icon);
     mAddonCommands[commandId] = command;
+    warnProfilesLosingBindingTo(shortcut, pHost);
     return commandId;
+}
+
+// The command went onto a menu of this window, so its key fires whichever
+// profile is in front: a binding another profile has on that key stops working
+// too. Refusing the command over it is not the answer - a package's success
+// would then depend on which other profiles the player happens to have open,
+// which its author can neither see nor diagnose - so the command is placed and
+// the profile losing its binding is told, the same call the buffer search makes
+// when it takes a key a package has. The command is not named: that is the
+// other profile's business, the rule addonCommandsUsingShortcut() follows.
+void mudlet::warnProfilesLosingBindingTo(const QKeySequence& sequence, const Host* pHost)
+{
+    if (sequence.count() != 1) {
+        return;
+    }
+    const QKeyCombination combination = sequence[0];
+    // A copy, because postMessage() runs Lua that may open or close a profile
+    for (auto& pOtherHost : getHostManager().hostList()) {
+        if (pOtherHost.isNull() || pOtherHost.data() == pHost || pOtherHost->isClosingDown()) {
+            continue;
+        }
+        if (!pOtherHost->getKeyUnit()->wouldMatch(combination.key(), combination.keyboardModifiers())) {
+            continue;
+        }
+        //: Warning posted to a profile when another profile's add-on command takes a key one of this profile's key bindings uses. %1 is a key such as "Alt+F9".
+        pOtherHost->postMessage(tr("[ WARN ]  - %1 is now used by a command another profile installed, which will get the key first, so this profile's key binding on it will not fire.")
+                                        .arg(sequence.toString(QKeySequence::NativeText)));
+    }
 }
 
 // Qt toggles only the control the user activated, so a checkable command shown

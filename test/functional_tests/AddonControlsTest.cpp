@@ -348,6 +348,36 @@ private slots:
         QVERIFY2(!text.contains(qsl("OtherProfileF3")), qPrintable(qsl("the warning names a command belonging to another profile: %1").arg(text)));
     }
 
+    // The same clash the other way up, and across the profile boundary. A
+    // command's shortcut sits on this window's menu, so it fires whichever
+    // profile is in front and takes the key from a binding another profile has
+    // on it. Refusing the command over that would make a package's success
+    // depend on which profiles the player happens to have open, so the command
+    // is placed and the profile losing its binding is told instead - without
+    // being told whose command took it, the same rule the search warning above
+    // follows.
+    void test_anotherProfileIsToldWhenACommandTakesItsKeyBinding()
+    {
+        const QString sequence = QKeySequence(QKeyCombination(Qt::AltModifier, Qt::Key_F9)).toString(QKeySequence::NativeText);
+
+        QVERIFY2(runLua(mpSecondHost, qsl("_clashKeyId = tempKey(mudlet.keymodifier.Alt, mudlet.key.F9, [[echo('bound')]])")).isNull(), "the second profile's key binding could not be made");
+        runLua(mpSecondHost, qsl("clearWindow()"));
+
+        const int commandId = addCommand(mpFirstHost, qsl("name = 'OtherProfileBinding', menuPath = 'ClashTest', shortcut = 'Alt+F9'"));
+
+        runLua(mpSecondHost, qsl("_clashText = table.concat(getLines('main', 0, getLastLineNumber('main') + 1), '\\n')"));
+        const QString text = luaGlobalString(mpSecondHost, qsl("_clashText"));
+
+        runLua(mpSecondHost, qsl("killKey(_clashKeyId)"));
+        if (commandId > 0) {
+            runLua(mpFirstHost, qsl("removeCommand(%1)").arg(commandId));
+        }
+
+        QVERIFY2(commandId > 0, "the command was refused over a binding belonging to a different profile");
+        QVERIFY2(text.contains(sequence), qPrintable(qsl("a command took another profile's key binding without saying so: %1").arg(text)));
+        QVERIFY2(!text.contains(qsl("OtherProfileBinding")), qPrintable(qsl("the warning names a command belonging to another profile: %1").arg(text)));
+    }
+
     // docs/addon-ui-api.md gives the click event the id as addCommand returned
     // it, which is a number - the same as every other Mudlet event carrying one
     void test_aClickHandsTheHandlerTheIdAsANumber()

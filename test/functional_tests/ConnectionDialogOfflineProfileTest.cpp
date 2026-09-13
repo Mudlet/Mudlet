@@ -18,11 +18,13 @@
  ***************************************************************************/
 
 /*
- * Whether the connection dialog will open a profile that has no game server
- * address. Mudlet itself opens one perfectly well - "--profile <name> --offline"
- * against a profile with no url does - and the dialog creates such profiles
- * itself, so refusing them left them listed under My games and unreachable, with
- * nothing said: a disabled button cannot show its own tooltip. See issue #10756.
+ * Whether the connection dialog offers to open a profile that has no game server
+ * address, and says why Connect is unavailable. Loading one was never the broken
+ * half - "--profile <name> --offline" against a profile with no url already
+ * worked - so what is measured here is what the dialog makes reachable, not the
+ * load path behind the button: the dialog creates such profiles itself, and
+ * dimming Offline left them listed under My games and unreachable, with nothing
+ * said, as a disabled button cannot show its own tooltip. See issue #10756.
  *
  * Run with: ctest -R ConnectionDialogOfflineProfileTest -V
  */
@@ -99,7 +101,7 @@ private slots:
         delete mudlet::self();
     }
 
-    void test_offlineOpensAProfileWithNoServerAddress()
+    void test_offlineIsOfferedForAProfileWithNoServerAddress()
     {
         QVERIFY2(dialog(), "No connection dialog to test against");
         selectTestProfile();
