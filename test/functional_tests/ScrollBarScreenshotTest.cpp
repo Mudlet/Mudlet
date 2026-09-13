@@ -21,6 +21,7 @@
 #include <QDir>
 #include <QImage>
 #include <QPainter>
+#include <QProxyStyle>
 #include <QScrollBar>
 #include <QSignalSpy>
 #include <QStyleOptionSlider>
@@ -65,10 +66,10 @@ private:
     QString mPort;
     const QString mLocalhost = "localhost";
     QString mOutputDir;
-    // The style the fix installs on the scroll bar, kept so a capture can take it
-    // off and put it back: it lives in an anonymous namespace, so this pointer is
-    // the only handle a test has on it.
-    QStyle* mpFixStyle = nullptr;
+
+    // Kept in step with ConsoleScrollBarStyle in TConsole.cpp by hand: the style
+    // lives in an anonymous namespace, so the name cannot be shared.
+    static constexpr const char* csHandleColorProperty = "mudletScrollBarHandleColor";
 
     void runLua(const QString& script) { QVERIFY2(mpHost->getLuaInterpreter()->compileAndExecuteScript(script), qPrintable(script)); }
 
@@ -101,21 +102,33 @@ private:
     QScrollBar* scrollBar() const { return mpHost->mpConsole->mpScrollBar; }
     QWidget* display() const { return mpHost->mpConsole->mpMainDisplay; }
 
-    // The platform's own style, which is what the "before" render has to use: the
-    // scroll bar carries the fix's style, so QWidget::style() is not it.
-    static QString baseStyleName() { return QApplication::style()->objectName(); }
-
-    void useFix(const bool enabled)
+    // What the platform actually draws with. Mudlet's application style is a proxy
+    // with no object name of its own, so the name has to come from the style it
+    // wraps - "fusion", "macOS", "windows11".
+    static QString baseStyleName()
     {
-        scrollBar()->setStyle(enabled ? mpFixStyle : nullptr);
+        const QStyle* pStyle = QApplication::style();
+        const auto* pProxy = qobject_cast<const QProxyStyle*>(pStyle);
+        const QString name = pStyle->objectName().isEmpty() && pProxy ? pProxy->baseStyle()->objectName() : pStyle->objectName();
+        return name.isEmpty() ? QString::fromLatin1(pStyle->metaObject()->className()) : name;
+    }
+
+    // Clearing the handle colour is how the "before" render is taken: the style the
+    // fix installs falls straight through to the platform's own drawing when the
+    // property is not a valid colour, so the bar paints exactly as it did before
+    // the fix. Taking the style off the widget instead would not survive an
+    // application style sheet, which wraps a widget's own style in a QStyleSheetStyle
+    // that setStyle(nullptr) then destroys.
+    void useFix(const bool enabled, const QVariant& handleColor)
+    {
+        scrollBar()->setProperty(csHandleColorProperty, enabled ? handleColor : QVariant());
         scrollBar()->update();
         QTest::qWait(50ms);
     }
 
-    QRect handleRect() const
+    void initOption(QStyleOptionSlider& option) const
     {
         QScrollBar* pScrollBar = scrollBar();
-        QStyleOptionSlider option;
         option.initFrom(pScrollBar);
         option.orientation = pScrollBar->orientation();
         option.minimum = pScrollBar->minimum();
@@ -124,16 +137,40 @@ private:
         option.singleStep = pScrollBar->singleStep();
         option.sliderPosition = pScrollBar->sliderPosition();
         option.sliderValue = pScrollBar->value();
-        return pScrollBar->style()->subControlRect(QStyle::CC_ScrollBar, &option, QStyle::SC_ScrollBarSlider, pScrollBar);
+    }
+
+    QRect handleRect() const
+    {
+        QStyleOptionSlider option;
+        initOption(option);
+        return scrollBar()->style()->subControlRect(QStyle::CC_ScrollBar, &option, QStyle::SC_ScrollBarSlider, scrollBar());
     }
 
     // Magenta, so anything the widget tree leaves unpainted is obvious in the image
     // rather than passing for a colour a console could have.
-    QImage renderDisplay() const
+    //
+    // A widget render can only show the state the bar is really in, and no pointer
+    // is going anywhere near it in a headless run - so the hovered render is drawn
+    // through the style over the top of the bar instead. That matters because the
+    // hover feedback belongs to the handle the fix masks out.
+    QImage renderDisplay(const bool hovered) const
     {
         QImage shot(display()->size(), QImage::Format_RGB32);
         shot.fill(Qt::magenta);
         display()->render(&shot, QPoint(), QRegion(), QWidget::DrawChildren);
+        if (!hovered) {
+            return shot;
+        }
+
+        QPainter painter(&shot);
+        painter.translate(scrollBar()->mapTo(display(), QPoint()));
+        QStyleOptionSlider option;
+        initOption(option);
+        option.rect = QRect(QPoint(), scrollBar()->size());
+        option.state |= QStyle::State_MouseOver;
+        option.activeSubControls = QStyle::SC_ScrollBarSlider;
+        option.subControls = QStyle::SC_All;
+        scrollBar()->style()->drawComplexControl(QStyle::CC_ScrollBar, &option, &painter, scrollBar());
         return shot;
     }
 
@@ -150,17 +187,22 @@ private:
     static constexpr int csContextWidth = 300;
     static constexpr int csContextHeight = 340;
     static constexpr int csZoomFactor = 5;
+    // csContextHeight / csZoomFactor, so the enlargement ends up as tall as the crop
+    // it sits beside
+    static constexpr int csZoomHeight = csContextHeight / csZoomFactor;
 
-    Capture capture(const QColor& background)
+    Capture capture(const QColor& background, const bool hovered = false)
     {
-        const QImage shot = renderDisplay();
+        const QImage shot = renderDisplay(hovered);
         const QRect bar(scrollBar()->mapTo(display(), QPoint()), scrollBar()->size());
         const QRect handle = handleRect().translated(bar.topLeft());
 
         // Centred on the handle so the crop shows it wherever the console put it.
         const int top = qBound(0, handle.center().y() - csContextHeight / 2, qMax(0, shot.height() - csContextHeight));
         const QRect context(qMax(0, bar.right() + 1 - csContextWidth), top, qMin(csContextWidth, bar.right() + 1), qMin(csContextHeight, shot.height() - top));
-        const QRect strip(bar.left() - 1, top, bar.width() + 2, context.height());
+        // A window around the handle rather than the whole crop: the point of the
+        // enlargement is the handle's shape and edges.
+        const QRect strip(bar.left() - 1, qBound(0, handle.center().y() - csZoomHeight / 2, qMax(0, shot.height() - csZoomHeight)), bar.width() + 2, csZoomHeight);
 
         Capture result;
         result.context = shot.copy(context);
@@ -233,18 +275,23 @@ private:
                                      .arg(after.handleOnBackground, 0, 'f', 2);
     }
 
-    void captureScenario(const QString& tag, const QString& what, const QColor& background)
+    void captureScenario(const QString& tag, const QString& what, const QColor& background, const bool hovered = false)
     {
-        useFix(false);
-        const Capture before = capture(background);
-        useFix(true);
-        const Capture after = capture(background);
+        const QVariant handleColor = scrollBar()->property(csHandleColorProperty);
+        QVERIFY2(handleColor.value<QColor>().isValid(), "the console never gave its scroll bar a handle colour - is this build missing the fix?");
+
+        useFix(false, handleColor);
+        const Capture before = capture(background, hovered);
+        useFix(true, handleColor);
+        const Capture after = capture(background, hovered);
         writeComparison(tag, qsl("%1 - %2 style - %3").arg(platformName(), baseStyleName(), what), before, after);
     }
 
     void fillConsoleSoTheHandleHasSomewhereToSit()
     {
-        runLua(qsl("for i = 1, 500 do echo('the quick brown fox jumps over the lazy dog - line ' .. i .. '\\n') end"));
+        // Long enough to reach the right-hand edge of the console, so the crop beside
+        // the scroll bar shows text rather than empty background.
+        runLua(qsl("for i = 1, 500 do echo(('the quick brown fox jumps over the lazy dog '):rep(3) .. 'line ' .. i .. '\\n') end"));
         QTRY_VERIFY(scrollBar()->maximum() > scrollBar()->minimum());
         // Half way up the scrollback, so the handle sits in the middle of the crop
         // rather than parked against an end stop.
@@ -296,7 +343,6 @@ private slots:
         // Which is also the assertion that this build carries the fix at all - an
         // unpatched console leaves the scroll bar on the application's style.
         QVERIFY2(scrollBar()->testAttribute(Qt::WA_SetStyle), "the console's scroll bar has no style of its own - is this build missing the fix?");
-        mpFixStyle = scrollBar()->style();
 
         fillConsoleSoTheHandleHasSomewhereToSit();
         qInfo().noquote() << qsl("%1: application style %2, writing to %3").arg(platformName(), baseStyleName(), mOutputDir);
@@ -331,6 +377,15 @@ private slots:
         runLua(qsl("setBackgroundColor(255, 255, 255)"));
         QTest::qWait(50ms);
         captureScenario(qsl("white-console"), qsl("white console, light appearance"), QColor(255, 255, 255));
+    }
+
+    // The platform draws its hover feedback on the handle, and the fix masks that
+    // handle out - so this is where any feedback lost to the fix shows up.
+    void test_captureHoveredHandle()
+    {
+        runLua(qsl("setBackgroundColor(0, 0, 0)"));
+        QTest::qWait(50ms);
+        captureScenario(qsl("black-console-hovered"), qsl("black console, pointer over the handle"), QColor(0, 0, 0), true);
     }
 
     // Dark appearance repaints the groove around the handle, so the pairing the
