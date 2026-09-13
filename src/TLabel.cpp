@@ -37,27 +37,40 @@
 
 using namespace std::chrono_literals;
 
-// A case-insensitive text.contains("<a ") answers the same, but it case-folds every
-// character it walks, and Lua UIs echo into labels on every prompt. Any whitespace
-// counts as the separator because HTML allows any; the styling pass in setText()
-// recognises only the ASCII ones, so an anchor split by a non-breaking space comes
-// out clickable but unstyled.
+// Hand-rolled because a case-insensitive text.contains("<a ") cannot tell a tag
+// from prose that happens to hold "<a ", and case-folds every character it walks.
+// Any whitespace counts as the separator because HTML allows any; the styling pass
+// in setText() recognises only the ASCII ones, so an anchor split by a non-breaking
+// space comes out clickable but unstyled.
 static bool containsAnchorTag(const QString& text)
 {
-    qsizetype from = 0;
-    while (true) {
-        const qsizetype at = text.indexOf(QLatin1Char('<'), from);
-        // Too near the end for a tag name and a separator, and every later '<' is
-        // nearer still, so there is nothing left to find
-        if (at < 0 || at + 2 >= text.size()) {
-            return false;
-        }
+    qsizetype close = -1;
+    // Every later '<' is nearer the end still, so a '<' too close to it for a tag
+    // name and a separator ends the walk rather than being skipped over.
+    for (qsizetype at = text.indexOf(QLatin1Char('<')); at >= 0 && at + 2 < text.size(); at = text.indexOf(QLatin1Char('<'), at + 1)) {
         const char16_t tagName = text.at(at + 1).unicode();
-        if ((tagName == u'a' || tagName == u'A') && text.at(at + 2).isSpace()) {
+        if ((tagName != u'a' && tagName != u'A') || !text.at(at + 2).isSpace()) {
+            continue;
+        }
+        // Prose holds "<a" and a space too, so it is only a tag once the '>' that
+        // closes it turns up; another '<' on the way there means this one never was
+        // one. That also turns away an attribute value carrying a '<' of its own,
+        // which HTML asks to be written &lt; anyway.
+        if (close < at) {
+            // Searched for again only once the walk has passed the last one found,
+            // so the '>' scans stay linear over the whole text
+            close = text.indexOf(QLatin1Char('>'), at + 3);
+            if (close < 0) {
+                // no tag anywhere past here can be closed either
+                return false;
+            }
+        }
+        const qsizetype nextOpen = text.indexOf(QLatin1Char('<'), at + 3);
+        if (nextOpen < 0 || close < nextOpen) {
             return true;
         }
-        from = at + 1;
     }
+    return false;
 }
 
 TLabel::TLabel(Host* pH, const QString& name, QWidget* pW)
@@ -111,13 +124,7 @@ void TLabel::setText(const QString& text)
 {
     const bool hasAnchor = containsAnchorTag(text);
 
-    // Enable TextBrowserInteraction only when the label contains hyperlinks
-    // This prevents Qt's default context menu from appearing on labels without links
-    if (hasAnchor) {
-        setTextInteractionFlags(Qt::TextBrowserInteraction);
-    } else {
-        setTextInteractionFlags(Qt::NoTextInteraction);
-    }
+    setTextInteractionFlags(hasAnchor ? scmLinkInteraction : Qt::TextInteractionFlags(Qt::NoTextInteraction));
 
     // If we have link styling configured and the text contains HTML links,
     // we need to inject inline styles because QTextDocument doesn't use
@@ -188,16 +195,20 @@ void TLabel::setText(const QString& text)
     }
 }
 
+bool TLabel::carriesLink() const
+{
+    return textFormat() == Qt::RichText && containsAnchorTag(text());
+}
+
 void TLabel::mousePressEvent(QMouseEvent* event)
 {
-    // If the label has rich text with potential hyperlinks, let QLabel handle the event first
-    // QLabel will emit linkActivated if a link was clicked
-    if (!text().isEmpty() && textFormat() == Qt::RichText && containsAnchorTag(text())) {
+    // QLabel needs the press to note which link it landed on, so the matching
+    // release can activate it; with links-only flags it records the anchor and
+    // leaves the press ignored, so the label's own click callback still runs.
+    bool takenByQt = false;
+    if (carriesLink()) {
         QLabel::mousePressEvent(event);
-        // If QLabel didn't accept the event, then it wasn't a link click
-        if (event->isAccepted()) {
-            return;
-        }
+        takenByQt = event->isAccepted();
     }
 
     if (mpHost && mClickFunction) {
@@ -206,7 +217,7 @@ void TLabel::mousePressEvent(QMouseEvent* event)
         // any parent, e.g. the containing TConsole
         event->accept();
         mudlet::self()->activateProfile(mpHost);
-    } else {
+    } else if (!takenByQt) {
         QWidget::mousePressEvent(event);
     }
 }
@@ -223,13 +234,11 @@ void TLabel::mouseDoubleClickEvent(QMouseEvent* event)
 
 void TLabel::mouseReleaseEvent(QMouseEvent* event)
 {
-    // If the label has rich text with potential hyperlinks, let QLabel handle the event first
-    if (!text().isEmpty() && textFormat() == Qt::RichText && containsAnchorTag(text())) {
+    // The release is where QLabel activates a link
+    bool takenByQt = false;
+    if (carriesLink()) {
         QLabel::mouseReleaseEvent(event);
-        // If QLabel accepted the event, it was handling a link click
-        if (event->isAccepted()) {
-            return;
-        }
+        takenByQt = event->isAccepted();
     }
 
     auto labelParent = qobject_cast<TConsole*>(parent());
@@ -241,7 +250,7 @@ void TLabel::mouseReleaseEvent(QMouseEvent* event)
     if (mpHost && mReleaseFunction) {
         mpHost->getLuaInterpreter()->callLabelCallbackEvent(mReleaseFunction, event);
         event->accept();
-    } else {
+    } else if (!takenByQt) {
         QWidget::mouseReleaseEvent(event);
     }
 }
@@ -292,6 +301,14 @@ void TLabel::resizeEvent(QResizeEvent* event)
     QWidget::resizeEvent(event);
 }
 
+// A label is game UI with its own right-click handling, so Qt's "Copy Link
+// Location" menu over a link is left out. QWidget's rather than QLabel's: passing
+// the event on untouched is what a plain widget does.
+void TLabel::contextMenuEvent(QContextMenuEvent* event)
+{
+    QWidget::contextMenuEvent(event);
+}
+
 
 void TLabel::setClickThrough(bool clickthrough)
 {
@@ -303,11 +320,7 @@ void TLabel::setClickThrough(bool clickthrough)
         setTextInteractionFlags(Qt::NoTextInteraction);
     } else {
         // Re-enable text interaction only if the current text has hyperlinks
-        if (containsAnchorTag(text())) {
-            setTextInteractionFlags(Qt::TextBrowserInteraction);
-        } else {
-            setTextInteractionFlags(Qt::NoTextInteraction);
-        }
+        setTextInteractionFlags(containsAnchorTag(text()) ? scmLinkInteraction : Qt::TextInteractionFlags(Qt::NoTextInteraction));
     }
 }
 
