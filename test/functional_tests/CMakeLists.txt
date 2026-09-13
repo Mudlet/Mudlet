@@ -167,6 +167,7 @@ set(PACKAGE_GROUP_TEST_SOURCES
     PackageRemovalSaveTeardownTest.cpp
     PackageRepositoryDownloadTest.cpp
     PackageSelfRemovalTest.cpp
+    UnzipBadArchiveTest.cpp
 )
 
 # Onboarding and in-app guidance: the starter UI, the tutorial invitation,

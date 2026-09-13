@@ -61,7 +61,10 @@ bool utils::unzip(const QString& archivePath, const QString& destination, const 
     //   Key is: relative path stored in archive
     // Value is: absolute path needed when extracting files
     for (zip_int64_t i = 0, total = zip_get_num_entries(archive, 0); i < total; ++i) {
-        if (!zip_stat_index(archive, static_cast<zip_uint64_t>(i), 0, &zs)) {
+        // Only the fields zs.valid marks as filled may be read, so an entry
+        // whose name libzip could not work out is passed over rather than
+        // reaching QString() with whatever the previous entry left behind
+        if (!zip_stat_index(archive, static_cast<zip_uint64_t>(i), 0, &zs) && (zs.valid & ZIP_STAT_NAME)) {
             const QString entryInArchive(zs.name);
             const QString pathInArchive(entryInArchive.section(qsl("/"), 0, -2));
             if (entryInArchive.endsWith(QLatin1Char('/'))) {
@@ -92,8 +95,15 @@ bool utils::unzip(const QString& archivePath, const QString& destination, const 
 
     // Now extract the files
     for (zip_int64_t i = 0, total = zip_get_num_entries(archive, 0); i < total; ++i) {
-        // No need to check return value as we've already done it first time
-        zip_stat_index(archive, static_cast<zip_uint64_t>(i), 0, &zs);
+        // Unlike the pass above, a failure here cannot be skipped over: zs would
+        // still hold the previous entry's name and size, so that entry would be
+        // extracted a second time - from this entry's zip_file - over the file
+        // just written. An archive libzip cannot describe is not extractable.
+        constexpr zip_uint64_t neededFields = ZIP_STAT_NAME | ZIP_STAT_SIZE;
+        if (zip_stat_index(archive, static_cast<zip_uint64_t>(i), 0, &zs) || (zs.valid & neededFields) != neededFields) {
+            zip_close(archive);
+            return false;
+        }
         const QString entryInArchive(zs.name);
         if (!entryInArchive.endsWith(QLatin1Char('/'))) {
             zf = zip_fopen_index(archive, static_cast<zip_uint64_t>(i), 0);
@@ -115,7 +125,11 @@ bool utils::unzip(const QString& archivePath, const QString& destination, const 
             while (bytesRead < bytesExpected && fd.error() == QFileDevice::NoError) {
                 char buf[4096]; // Was 100 but that seems unduly stingy...!
                 zip_int64_t const len = zip_fread(zf, buf, sizeof(buf));
-                if (len < 0) {
+                // zip_fread() reports the end of the entry's data as 0 rather
+                // than as an error, so an archive declaring a size larger than
+                // the data behind it would spin here forever - the loop runs in
+                // unzipAsync()'s worker thread, where nothing can interrupt it
+                if (len <= 0) {
                     fd.close();
                     zip_fclose(zf);
                     zip_close(archive);
