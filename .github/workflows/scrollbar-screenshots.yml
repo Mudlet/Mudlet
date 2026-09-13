@@ -266,13 +266,25 @@ jobs:
         MUDLET_TEST_MODE: 1
       run: |
         set -x
+        # Whether the runner is on overlay scroll bars decides which of two quite
+        # different things the macOS style draws, so it goes in the log
+        defaults read -g AppleShowScrollBars 2>/dev/null || echo "AppleShowScrollBars unset (Automatic)"
+
         # Cocoa rather than the offscreen platform the ctest suite uses: the macOS
         # style comes from the platform theme, so offscreen would quietly measure
         # Fusion and say nothing about what a Mac user sees. Each run prints the
         # style it actually got, and the images carry it in their caption.
         mkdir -p "${{github.workspace}}/screenshots/macos-cocoa"
-        QT_QPA_PLATFORM=cocoa MUDLET_SCREENSHOT_DIR="${{github.workspace}}/screenshots/macos-cocoa" \
-          ./functional_window_tests ScrollBarScreenshotTest
+        if ! QT_QPA_PLATFORM=cocoa MUDLET_SCREENSHOT_DIR="${{github.workspace}}/screenshots/macos-cocoa" \
+            ./functional_window_tests ScrollBarScreenshotTest; then
+          # A runner with no window session cannot run cocoa at all. Offscreen still
+          # says what Mudlet's own painting does, just against Fusion rather than the
+          # macOS style - worth having, as long as nobody mistakes it for the latter.
+          echo "::warning::the cocoa run failed - falling back to the offscreen platform, which does NOT use the macOS style"
+          mkdir -p "${{github.workspace}}/screenshots/macos-offscreen-fallback"
+          QT_QPA_PLATFORM=offscreen MUDLET_SCREENSHOT_DIR="${{github.workspace}}/screenshots/macos-offscreen-fallback" \
+            ./functional_window_tests ScrollBarScreenshotTest
+        fi
 
     - name: Upload the screenshots
       if: always()
