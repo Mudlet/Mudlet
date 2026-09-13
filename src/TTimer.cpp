@@ -358,8 +358,15 @@ void TTimer::enableTimer()
         if (activate()) {
             // enableTimer(name) comes through here for the children of a
             // folder, where a command-only timer is an everyday thing - see
-            // enableTimer(int) above (#10751)
-            if (hasPayload()) {
+            // enableTimer(int) above (#10751). TimerUnit::enableTimer(name)
+            // hands an offset timer straight to this as well, and an offset
+            // timer's schedule is its parent's: the parent firing arms it, by
+            // way of enableTimer(int). Arming a command-only one here would
+            // hand it a schedule of its own that it has never had, so those
+            // keep the narrower test - what a script offset timer does here is
+            // long-standing behaviour and a separate question from #10751
+            const bool startable = isOffsetTimer() ? (!mScript.isEmpty() || mRegisteredAnonymousLuaFunction) : hasPayload();
+            if (startable) {
                 mpQTimer->start();
             }
         } else {

@@ -74,10 +74,19 @@ private:
     // reading below is of what the emergency stop did and not of a tick
     static constexpr double scmTimerSeconds = 600.0;
 
+    // The offset timer case needs two real intervals: a parent slow enough that
+    // the case can watch the offset elapse before it fires, and a child offset
+    // well inside it
+    static constexpr double scmOffsetParentSeconds = 1.0;
+    static constexpr double scmOffsetChildSeconds = 0.2;
+
     // The one timer here with a real interval, cleared once it has been killed.
     // A case that fails part way through would otherwise leave it ticking
     // through every case after it.
     int mTickerId = 0;
+
+    // Timers left running by a case, switched off again however that case ended
+    QStringList mRunningTimerNames;
 
 private slots:
     void initTestCase()
@@ -116,6 +125,14 @@ private slots:
             mpHost->getTimerUnit()->doCleanup();
             mTickerId = 0;
         }
+        for (const QString& name : mRunningTimerNames) {
+            mpHost->getTimerUnit()->disableTimer(name);
+        }
+        mRunningTimerNames.clear();
+        // A case that ends with the bomb still pressed would take the next one's
+        // events with it - Host::raiseEvent() is silent while mEmergencyStop is
+        // set - so every case starts from the resumed state
+        mpHost->reenableAllTriggers();
     }
 
     void cleanupTestCase()
@@ -309,6 +326,54 @@ private slots:
 
         QVERIFY(unit->enableTimer(folderName));
         QVERIFY2(unit->remainingTime(childId) > 0, "enabling a folder must arm its command-only child again");
+    }
+
+    // The other timer the no-argument overload is handed: an offset timer, which
+    // TimerUnit::enableTimer(name) passes to it directly. Its interval is an
+    // offset from its parent firing rather than a schedule of its own, and the
+    // parent arms it through enableTimer(int) - so widening the payload test
+    // must not let switching one on by name start it early, while the parent
+    // firing must still get a command-only one going (it never did before
+    // #10751, which is the half of this the widening fixes).
+    void test_commandOnlyOffsetTimerWaitsForItsParent()
+    {
+        auto* unit = mpHost->getTimerUnit();
+        QVERIFY(mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("offsetParentTicks = 0\noffsetChildTicks = 0\n"
+                                                                    "function onOffsetTimerSend(_, what)\n"
+                                                                    "  if what == 'offsetParentCommand' then offsetParentTicks = offsetParentTicks + 1 end\n"
+                                                                    "  if what == 'offsetChildCommand' then offsetChildTicks = offsetChildTicks + 1 end\n"
+                                                                    "end\n"
+                                                                    "registerAnonymousEventHandler('sysDataSendRequest', 'onOffsetTimerSend')")));
+        QVERIFY2(globalIsNumber(qsl("offsetChildTicks")), "the send counters should be numbers before anything is counted into them");
+
+        const QString parentName = qsl("emergency stop offset parent");
+        auto [parentId, parentMessage] = mpHost->mLuaInterpreter.startPermTimer(parentName, QString(), scmOffsetParentSeconds, QString());
+        QVERIFY2(parentId > 0, qPrintable(parentMessage));
+        unit->getTimer(parentId)->setCommand(qsl("offsetParentCommand"));
+
+        const QString childName = qsl("emergency stop offset command timer");
+        auto [childId, childMessage] = mpHost->mLuaInterpreter.startPermTimer(childName, parentName, scmOffsetChildSeconds, QString());
+        QVERIFY2(childId > 0, qPrintable(childMessage));
+        auto* pChild = unit->getTimer(childId);
+        pChild->setCommand(qsl("offsetChildCommand"));
+        QVERIFY2(pChild->isOffsetTimer(), "a timer whose parent is not a folder is an offset timer");
+        QVERIFY2(pChild->getScript().isEmpty(), "this one's only payload is its command");
+
+        mRunningTimerNames << parentName << childName;
+        QVERIFY(unit->enableTimer(parentName));
+        QVERIFY(unit->enableTimer(childName));
+        QVERIFY2(unit->remainingTime(childId) == -1, "switching an offset timer on by name must not give it a schedule of its own - its parent firing is what arms it");
+
+        // long enough that an offset timer running on its own would have sent
+        // by now, and short enough that the parent has not fired yet
+        QTest::qWait(static_cast<int>(scmOffsetChildSeconds * 2500));
+        QCOMPARE(readGlobalInt(qsl("offsetParentTicks")), 0);
+        QVERIFY2(readGlobalInt(qsl("offsetChildTicks")) == 0, "a command-only offset timer must not fire before its parent has");
+
+        // and the half the widened guard is there for: once the parent does
+        // fire, the command-only child has to arm and send
+        QTRY_VERIFY_WITH_TIMEOUT(readGlobalInt(qsl("offsetParentTicks")) > 0, 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(readGlobalInt(qsl("offsetChildTicks")) > 0, 5000);
     }
 
     // The uninstallList half of the resume's skip: an uninstall with a timer
