@@ -27,6 +27,7 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QPointer>
 #include <QSaveFile>
 #include <QDataStream>
 #include <QProcessEnvironment>
@@ -35,6 +36,9 @@
 #include <QStandardPaths>
 #include <QTimer>
 #include <QVersionNumber>
+
+#include <memory>
+#include <utility>
 #if defined(INCLUDE_OWN_QT6_KEYCHAIN)
 #include <qtkeychain/keychain.h>
 #else
@@ -403,7 +407,16 @@ void CredentialManager::attemptCollidingMigration(const QString& profileName, co
 {
     qDebug() << "CredentialManager: Migrating password from colliding format for" << profileName;
 
-    storePassword(profileName, key, password, [this, legacyService, key, profileName, callback, password](bool migrationSuccess, const QString& migrationError) {
+    // A migration is its own operation, not part of the retrieval that reached it. Running it on
+    // this manager calls cleanupCurrentOperation() and setupTimeout() on single-operation state that
+    // a newer, unrelated lookup may already own - wiping that caller's callback and guard and leaving
+    // them waiting for good. A cascade whose guard has already fired still runs to completion and can
+    // arrive here long afterwards, so this is not hypothetical. Parented, so it cannot outlive us.
+    QPointer<CredentialManager> migrator = new CredentialManager(this);
+    migrator->storePassword(profileName, key, password, [this, migrator, legacyService, key, profileName, callback, password](bool migrationSuccess, const QString& migrationError) {
+        if (migrator) {
+            migrator->deleteLater();
+        }
         if (migrationSuccess) {
             // Only clean up old colliding entry if version > 4.20.1
             // The colliding format bug existed in 4.20.0 and 4.20.1
@@ -425,7 +438,13 @@ void CredentialManager::attemptCollidingMigration(const QString& profileName, co
             }
 
             if (appVersion > collidingFormatVersion) {
-                removeCredential(legacyService, key, profileName, [](bool, const QString&) {});
+                // Its own manager too, for the same reason as the store above.
+                QPointer<CredentialManager> sweeper = new CredentialManager(this);
+                sweeper->removeCredential(legacyService, key, profileName, [sweeper](bool, const QString&) {
+                    if (sweeper) {
+                        sweeper->deleteLater();
+                    }
+                });
             }
 #endif
         } else {
@@ -445,7 +464,13 @@ void CredentialManager::attemptLegacyKeychainMigration(const QString& profileNam
         if (legacySuccess && !legacyPassword.isEmpty()) {
             qDebug() << "CredentialManager: Migrating password from legacy format for" << profileName;
 
-            storePassword(profileName, key, legacyPassword, [this, profileName, callback, legacyPassword](bool migrationSuccess, const QString& migrationError) {
+            // Its own manager: see attemptCollidingMigration() for why a migration must not run on
+            // the shared single-operation state.
+            QPointer<CredentialManager> migrator = new CredentialManager(this);
+            migrator->storePassword(profileName, key, legacyPassword, [this, migrator, profileName, callback, legacyPassword](bool migrationSuccess, const QString& migrationError) {
+                if (migrator) {
+                    migrator->deleteLater();
+                }
                 if (!migrationSuccess) {
                     qWarning() << "CredentialManager: Migration failed:" << migrationError;
                 } else {
@@ -797,9 +822,16 @@ void CredentialManager::storeCredential(const QString& service, const QString& a
             &QKeychain::WritePasswordJob::finished,
             this,
             [this, writeJob, service, account, password, profileName]() {
-                // Early exit if operation is no longer valid
+                // The operation was abandoned - the caller timed out, started another, or the
+                // application is closing - so its callback is not invoked here: during teardown it may
+                // have captured objects that are already half destroyed. That makes this line the only
+                // record of what became of the write, so it carries the job's real outcome rather than
+                // just the fact of the abandonment, and names the entry so it can be told apart from
+                // the other keychain entries the same profile owns.
                 if (!isOperationValid()) {
-                    qWarning() << "CredentialManager: Ignoring keychain callback - operation no longer valid";
+                    const bool stored = (writeJob->error() == QKeychain::NoError);
+                    qWarning().noquote().nospace() << "CredentialManager: abandoned the keychain write for profile \"" << profileName << "\", key \"" << account << "\" (entry \"" << service
+                                                   << "\"). The write itself " << (stored ? qsl("succeeded") : qsl("failed: ") + writeJob->errorString()) << ", but no caller is left to tell.";
                     writeJob->deleteLater();
                     return;
                 }
@@ -884,9 +916,11 @@ void CredentialManager::retrieveCredential(const QString& service, const QString
             &QKeychain::ReadPasswordJob::finished,
             this,
             [this, readJob, service, account, profileName]() {
-                // Early exit if operation is no longer valid
+                // Abandoned; see the write path above for why the caller's callback is not invoked.
                 if (!isOperationValid()) {
-                    qWarning() << "CredentialManager: Ignoring keychain callback - operation no longer valid";
+                    const bool read = (readJob->error() == QKeychain::NoError);
+                    qWarning().noquote().nospace() << "CredentialManager: abandoned the keychain read for profile \"" << profileName << "\", key \"" << account << "\" (entry \"" << service
+                                                   << "\"). The read itself " << (read ? qsl("succeeded") : qsl("failed: ") + readJob->errorString()) << ", but no caller is left to tell.";
                     readJob->deleteLater();
                     return;
                 }
@@ -927,18 +961,71 @@ void CredentialManager::retrieveCredential(const QString& service, const QString
                     }
                     qDebug() << "CredentialManager:" << errorContext << ", trying fallback storage";
 
-                    // Try old format first (before Windows keychain fix), then legacy formats
-                    // Clear state to prevent callback being called twice and keep member state consistent
+                    // Try old format first (before Windows keychain fix), then legacy formats.
+                    //
+                    // The cascade below is several more keychain jobs deep and used to run with
+                    // nothing watching it: the timer above was stopped when this read answered, and
+                    // none of the cascade's own jobs arms one. A job that never answered therefore
+                    // left the caller waiting for good - and dlgConnectionProfiles latches
+                    // mKeychainOperationInProgress on exactly this kind of read, clearing it only from
+                    // the callback, so the profiles dialog could never be accepted again.
+                    //
+                    // The guard belongs to the cascade rather than to the manager's current operation,
+                    // because the cascade nests further operations on this same manager: recovering a
+                    // password from the legacy or colliding format calls storePassword(), which runs
+                    // cleanupCurrentOperation() and setupTimeout(), wiping the shared callback and
+                    // replacing the shared timer mid-cascade. Anything anchored to those would reject
+                    // or lose the migration's own result. The caller's callback therefore travels by
+                    // value down the cascade, as it always has, and this timer only has to outlive it.
                     auto originalCallback = mCurrentRetrievalCallback;
                     mCurrentRetrievalCallback = nullptr;
                     mCurrentJob = nullptr;
+                    cleanupTimeout();
+
+                    QPointer<CredentialManager> self = this;
+                    auto* cascadeGuard = new QTimer(this);
+                    cascadeGuard->setSingleShot(true);
+                    cascadeGuard->setInterval(OPERATION_TIMEOUT_MS);
+                    // Whichever of the cascade and its guard gets there first answers; the other finds
+                    // this set and stands down. The caller hears exactly one outcome either way.
+                    auto answered = std::make_shared<bool>(false);
+
+                    CredentialRetrievalCallback chainCallback = [self, cascadeGuard, answered, originalCallback](bool chainSuccess, QString chainPassword, const QString& chainError) {
+                        if (*answered) {
+                            SecureStringUtils::secureStringClear(chainPassword);
+                            return;
+                        }
+                        *answered = true;
+                        if (self && cascadeGuard) {
+                            cascadeGuard->stop();
+                            cascadeGuard->deleteLater();
+                        }
+                        if (originalCallback) {
+                            originalCallback(chainSuccess, std::move(chainPassword), chainError);
+                        } else {
+                            SecureStringUtils::secureStringClear(chainPassword);
+                        }
+                    };
+
+                    connect(cascadeGuard, &QTimer::timeout, this, [cascadeGuard, answered, originalCallback]() {
+                        if (*answered) {
+                            return;
+                        }
+                        *answered = true;
+                        cascadeGuard->deleteLater();
+                        qWarning() << "CredentialManager: the saved-password fallback chain stalled; giving up so the caller is not left waiting";
+                        if (originalCallback) {
+                            originalCallback(false, QString(), qsl("Operation timed out"));
+                        }
+                    });
+                    cascadeGuard->start();
 #if defined(Q_OS_WIN)
                     // qtkeychain 0.17.0 started honouring the service name on Windows, moving
                     // entries from TargetName "<key>" to "<key>@<service>" - recover entries
                     // written by builds linked against older qtkeychain first
-                    attemptCompatNamingMigration(service, account, profileName, originalCallback);
+                    attemptCompatNamingMigration(service, account, profileName, chainCallback);
 #else
-                    attemptOldFormatMigration(service, account, profileName, originalCallback);
+                    attemptOldFormatMigration(service, account, profileName, chainCallback);
 #endif
                     readJob->deleteLater();
                     return;
@@ -1003,9 +1090,11 @@ void CredentialManager::removeCredential(const QString& service, const QString& 
             &QKeychain::DeletePasswordJob::finished,
             this,
             [this, deleteJob, service, account, profileName]() {
-                // Early exit if operation is no longer valid
+                // Abandoned; see the write path above for why the caller's callback is not invoked.
                 if (!isOperationValid()) {
-                    qWarning() << "CredentialManager: Ignoring keychain callback - operation no longer valid";
+                    const bool removed = keychainDeleteSucceeded(deleteJob->error());
+                    qWarning().noquote().nospace() << "CredentialManager: abandoned the keychain removal for profile \"" << profileName << "\", key \"" << account << "\" (entry \"" << service
+                                                   << "\"). The removal itself " << (removed ? qsl("succeeded") : qsl("failed: ") + deleteJob->errorString()) << ", but no caller is left to tell.";
                     deleteJob->deleteLater();
                     return;
                 }
@@ -1036,8 +1125,14 @@ void CredentialManager::removeCredential(const QString& service, const QString& 
                         &QKeychain::DeletePasswordJob::finished,
                         this,
                         [this, bareJob, service, account, profileName, primarySuccess, primaryError]() {
+                            // Abandoned after the primary removal already ran, so a pre-0.17 bare entry
+                            // may survive - and a later read's compat migration would resurrect the
+                            // credential from it. Worth saying plainly, since nobody is left to be told.
                             if (!isOperationValid()) {
-                                qWarning() << "CredentialManager: Ignoring keychain callback - operation no longer valid";
+                                const bool swept = keychainDeleteSucceeded(bareJob->error());
+                                qWarning().noquote().nospace() << "CredentialManager: abandoned the bare-name keychain sweep for profile \"" << profileName << "\", key \"" << account
+                                                               << "\". The sweep itself " << (swept ? qsl("succeeded") : qsl("failed: ") + bareJob->errorString())
+                                                               << "; a surviving old-format entry can restore this credential on a later read.";
                                 bareJob->deleteLater();
                                 return;
                             }
@@ -1130,9 +1225,12 @@ void CredentialManager::isKeychainAvailable(AvailabilityCallback callback)
             &QKeychain::ReadPasswordJob::finished,
             this,
             [this, testJob]() {
-                // Early exit if operation is no longer valid
+                // Abandoned; see the write path above. (Nothing calls isKeychainAvailable today, but
+                // this is the shape the next author copies.)
                 if (!isOperationValid()) {
-                    qWarning() << "CredentialManager: Ignoring keychain callback - operation no longer valid";
+                    const bool probed = (testJob->error() == QKeychain::NoError || testJob->error() == QKeychain::EntryNotFound);
+                    qWarning().noquote().nospace() << "CredentialManager: abandoned the keychain availability probe. The probe itself "
+                                                   << (probed ? qsl("answered") : qsl("failed: ") + testJob->errorString()) << ", but no caller is left to tell.";
                     testJob->deleteLater();
                     return;
                 }
