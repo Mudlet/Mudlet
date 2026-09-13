@@ -26,13 +26,17 @@
 
 #include "utils.h"
 
+#include <QList>
 #include <QMap>
+#include <QMultiMap>
 #include <QObject>
 #include <QPointer>
 #include <QSet>
 #include <QString>
 
 #include <list>
+#include <tuple>
+#include <vector>
 
 class Host;
 class TKey;
@@ -81,6 +85,7 @@ public:
     QMultiMap<QString, TKey*> mLookupTable;
     QSet<TKey*> mCleanupSet;
     QList<TKey*> uninstallList;
+    bool hasPendingDeletes() const { return !mCleanupSet.isEmpty() || !uninstallList.isEmpty(); }
     // Past behaviour is to only process the first key binding that matches,
     // ignoring any duplicates - but changing that behaviour unconditionally
     // could break things - so only do it if this flag is set:

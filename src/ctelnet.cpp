@@ -45,6 +45,7 @@
 #include "TEncodingHelper.h"
 #include "utils.h"
 #include "TTextEdit.h"
+#include "discord.h"
 #include "dlgComposer.h"
 #include "dlgMapper.h"
 #include "mudlet.h"
@@ -77,6 +78,12 @@ constexpr int AUTO_LOGIN_MAX_DELAY_MS = 60000;
 // character-at-a-time rather than a password mask - see
 // cTelnet::checkCharacterModePattern():
 constexpr auto CHARACTER_MODE_DETECT = 3s;
+
+// How long the console has to hold still before its size is reported to the
+// game - see cTelnet::checkNAWS(). Has to outlast the 0.2s timer an adjustable
+// Geyser container re-reserves its border on, which is the longest step of a
+// resize:
+constexpr auto NAWS_SETTLE_TIME = 300ms;
 
 // How long to leave a game alone after a connection attempt to it failed, before
 // trying again for a profile that reconnects automatically. A refused connection
@@ -156,9 +163,6 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
         mAcceptableEncodings << TBuffer::getEncodingNames();
     }
 
-    // initialize telnet session
-    reset();
-
     mpPostingTimer->setInterval(mTimeOut);
     connect(mpPostingTimer, &QTimer::timeout, this, &cTelnet::slot_timerPosting);
 
@@ -204,6 +208,11 @@ void cTelnet::reset()
     if (mTimerCharacterModeDetect) {
         mTimerCharacterModeDetect->stop();
     }
+    // A window size waiting to be reported belongs to the connection being
+    // reset, and mNaws_x/mNaws_y are about to be zeroed for the next one
+    if (mTimerNawsUpdate) {
+        mTimerNawsUpdate->stop();
+    }
     // Ensure we do not think that the game server is echoing for us:
     mpHost->setRemoteEchoingActive(false);
     mGA_Driver = false;
@@ -241,7 +250,7 @@ void cTelnet::reset()
     // Half of an ANSI sequence left over from the previous connection can only
     // ever be completed by bytes that will never arrive, so drop it instead of
     // letting it consume the new connection's output. There is nothing to drop
-    // when this runs from the constructor, before the profile has a console:
+    // when this runs from the Host constructor, before the profile has a console:
     if (mpHost->mpConsole) {
         mpHost->mpConsole->buffer.resetSequenceParserState();
     }
@@ -249,13 +258,7 @@ void cTelnet::reset()
     // A fresh connection: the player has not interacted yet, so an unsolicited Char.Login.URL must
     // not auto-open the browser until they do (see Host::userSentInputThisConnection()).
     mpHost->setUserSentInputThisConnection(false);
-}
 
-// The same forgetting, for the parts of a game's story about itself that are kept on the Host.
-// Kept out of reset() because the cTelnet constructor calls that, and cTelnet is declared ahead of
-// these members, so at that point they have not been constructed yet.
-void cTelnet::forgetGameSuppliedHostState()
-{
     // Every other place that turns enableMXP off does this too. Without it the processor is left
     // enabled holding a half-built tag from the last game, and TBuffer's tag watchdog answers to
     // the processor alone, so the next escape code spills that tag into the next game's output.
@@ -668,7 +671,9 @@ void cTelnet::connectIt(const QString& address, int port)
     const QString displayAddress = isRawIPv6Address(mHostUrl) ? tr("[%1]").arg(mHostUrl) : mHostUrl;
     /*: %1 is the URL or an IP address (suitably wrapped if it is an IPv6 one)
  of the Game Server (or Proxy); %2 is the port number.*/
-    TDebug(QColorConstants::Blue, QColorConstants::White) << tr("Looking up the details of server: %1:%2 ...").arg(displayAddress, QString::number(port)).append(QChar::LineFeed) >> mpHost;
+    TDebug(QColorConstants::Blue, QColorConstants::White, TDebug::Category::Network)
+                    << tr("Looking up the details of server: %1:%2 ...").arg(displayAddress, QString::number(port)).append(QChar::LineFeed)
+            >> mpHost;
     // We can now use a compile-time slot for this as:
     // https://bugreports.qt.io/browse/QTBUG-67646 was (finally) fixed in
     // Qt 5.12.5:
@@ -919,7 +924,6 @@ void cTelnet::slot_socketConnected()
 
     mpSocket->setSocketOption(QAbstractSocket::LowDelayOption, 1);
     reset();
-    forgetGameSuppliedHostState();
     setKeepAlive(mpSocket->socketDescriptor());
 
 #if !defined(QT_NO_SSL)
@@ -1010,7 +1014,6 @@ void cTelnet::slot_socketDisconnected()
     }
     mNeedDecompression = false;
     reset();
-    forgetGameSuppliedHostState();
 
     if (!mpHost->isClosingDown()) {
 #if !defined(QT_NO_SSL)
@@ -1261,9 +1264,9 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
  a URL for the Game Server rather than (unusually) an IP address.
  After a DNS lookup however, we have NOT found any IP addresses which
  means that we cannot proceed further to connect to the Game server.*/
-        TDebug(QColorConstants::Red, QColorConstants::White) << tr("Host name lookup Failure! A connection cannot be established.\n"
-                                                                   "The server name is not correct, or your nameservers are not\n"
-                                                                   "working properly.\n")
+        TDebug(QColorConstants::Red, QColorConstants::White, TDebug::Category::Network) << tr("Host name lookup Failure! A connection cannot be established.\n"
+                                                                                              "The server name is not correct, or your nameservers are not\n"
+                                                                                              "working properly.\n")
                 >> mpHost;
         //: %1 is the URL of the Game Server
         postMessage(tr("[ ERROR ] - Unable to connect to \"%1\".\n"
@@ -1308,16 +1311,16 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
  perform a "reverse-lookup" to see if we can identify the URL that
  matches it - but nothing useful was found and we've got the original
  address back.*/
-            TDebug(QColorConstants::Svg::orange, QColorConstants::White) << tr("A host name could not be found for the given IP address.").append(QChar::LineFeed) >> mpHost;
+            TDebug(QColorConstants::Svg::orange, QColorConstants::White, TDebug::Category::Network) << tr("A host name could not be found for the given IP address.").append(QChar::LineFeed) >> mpHost;
         } else {
             /*: This text is used when the user has provided a raw IP address
  for the Game Server rather than a URL. In this case we try to
  perform a "reverse-lookup" to see if we can identify the URL that
  matches it - and this is used when we have something (%1) to
  show.*/
-            TDebug(QColorConstants::Blue, QColorConstants::White) << tr("A host name for the IP address has been found.\n"
-                                                                        "It is: \"%1\"\n")
-                                                                             .arg(hostInfo.hostName())
+            TDebug(QColorConstants::Blue, QColorConstants::White, TDebug::Category::Network) << tr("A host name for the IP address has been found.\n"
+                                                                                                   "It is: \"%1\"\n")
+                                                                                                        .arg(hostInfo.hostName())
                     >> mpHost;
         }
     } else {
@@ -1326,14 +1329,14 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
  After a DNS lookup we have found at least one but possibly more (%n)
  IP addresses, which will be listed (one per line) immediately
  afterwards.*/
-        TDebug(QColorConstants::Blue, QColorConstants::White) << tr("The %n IP address(es) of %1 has/have been found. It/They are:",
-                                                                    // Intentional comment to separate arguments
-                                                                    "",
-                                                                    addressesToReport.count())
-                                                                         .arg(hostInfo.hostName())
-                                                                         .append(QChar::LineFeed)
+        TDebug(QColorConstants::Blue, QColorConstants::White, TDebug::Category::Network) << tr("The %n IP address(es) of %1 has/have been found. It/They are:",
+                                                                                               // Intentional comment to separate arguments
+                                                                                               "",
+                                                                                               addressesToReport.count())
+                                                                                                    .arg(hostInfo.hostName())
+                                                                                                    .append(QChar::LineFeed)
                 >> mpHost;
-        TDebug(QColorConstants::Green, QColorConstants::White) << addressesToReport.join(QChar::LineFeed).prepend(TDebug::csmContinue).append(QChar::LineFeed) >> mpHost;
+        TDebug(QColorConstants::Green, QColorConstants::White, TDebug::Category::Network) << addressesToReport.join(QChar::LineFeed).prepend(TDebug::csmContinue).append(QChar::LineFeed) >> mpHost;
     }
 
 #if !defined(QT_NO_SSL)
@@ -1362,7 +1365,7 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
                 /*: Happy-Eyeballs (both IPv4 and IPv6 addresses available)
  case. %1 is the URL for the server and %2 is the port number
  (on BOTH addresses) for the connection.*/
-                TDebug(QColorConstants::Blue, QColorConstants::White)
+                TDebug(QColorConstants::Blue, QColorConstants::White, TDebug::Category::Network)
                                 << tr("Trying secure (IPv4 and IPv6) connections to proxy %1:%2 ...").arg(hostInfo.hostName(), QString::number(mHostPort)).append(QChar::LineFeed)
                         >> mpHost;
                 /*: We don't need to worry about %1 being a raw IPv6 address here
@@ -1373,7 +1376,7 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
                 /*: Happy-Eyeballs (both IPv4 and IPv6 addresses available)
  case. %1 is the URL for the Server and %2 is the port number
  (on BOTH addresses) for the connection.*/
-                TDebug(QColorConstants::Blue, QColorConstants::White)
+                TDebug(QColorConstants::Blue, QColorConstants::White, TDebug::Category::Network)
                                 << tr("Trying secure (IPv4 and IPv6) connections to %1:%2 ...").arg(hostInfo.hostName(), QString::number(mHostPort)).append(QChar::LineFeed)
                         >> mpHost;
                 /*: We don't need to worry about %1 being a raw IPv6 address here
@@ -1395,7 +1398,7 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
                 if (mConnectViaProxy) {
                     /*: %1 is the URL for the Server and %2 is the port number
  for the connection.*/
-                    TDebug(QColorConstants::Blue, QColorConstants::White)
+                    TDebug(QColorConstants::Blue, QColorConstants::White, TDebug::Category::Network)
                                     << tr("Trying secure (IPv6) connection to %1:%2 via proxy...").arg(hostInfo.hostName(), QString::number(mHostPort)).append(QChar::LineFeed)
                             >> mpHost;
                     /*: We don't need to worry about %1 being a raw IPv6 address here
@@ -1405,7 +1408,7 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
                 } else {
                     /*: %1 is the URL for the Server and %2 is the port number
  for the connection.*/
-                    TDebug(QColorConstants::Blue, QColorConstants::White)
+                    TDebug(QColorConstants::Blue, QColorConstants::White, TDebug::Category::Network)
                                     << tr("Trying secure (IPv4 and IPv6) connections to %1:%2 ...").arg(hostInfo.hostName(), QString::number(mHostPort)).append(QChar::LineFeed)
                             >> mpHost;
                     /*: We don't need to worry about %1 being a raw IPv6 address here
@@ -1424,7 +1427,7 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
                 if (mConnectViaProxy) {
                     /*: %1 is the URL for the Server and %2 is the port number
  for the connection.*/
-                    TDebug(QColorConstants::Blue, QColorConstants::White)
+                    TDebug(QColorConstants::Blue, QColorConstants::White, TDebug::Category::Network)
                                     << tr("Trying secure (IPv4) connection to %1:%2 via proxy...").arg(hostInfo.hostName(), QString::number(mHostPort)).append(QChar::LineFeed)
                             >> mpHost;
                     //: %1 is a URL for the Game Server; %2 is the port number.
@@ -1432,7 +1435,7 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
                 } else {
                     /*: %1 is the URL for the Server and %2 is the port number
  for the connection.*/
-                    TDebug(QColorConstants::Blue, QColorConstants::White)
+                    TDebug(QColorConstants::Blue, QColorConstants::White, TDebug::Category::Network)
                                     << tr("Trying secure (IPv4) connection to %1:%2 ...").arg(hostInfo.hostName(), QString::number(mHostPort)).append(QChar::LineFeed)
                             >> mpHost;
                     //: %1 is a URL for the Game Server; %2 is the port number.
@@ -1456,7 +1459,7 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
                 /*: Happy-Eyeballs (both IPv4 and IPv6 addresses available)
  case. %1 is the URL for the proxy and %2 is the port number
  (on BOTH addresses) for the connection.*/
-                TDebug(QColorConstants::Blue, QColorConstants::White)
+                TDebug(QColorConstants::Blue, QColorConstants::White, TDebug::Category::Network)
                                 << tr("Trying open (IPv4 and IPv6) connections to %1:%2 via proxy...").arg(hostInfo.hostName(), QString::number(mHostPort)).append(QChar::LineFeed)
                         >> mpHost;
                 //: %1 is a URL for the Game Server; %2 is the port number.
@@ -1465,7 +1468,7 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
                 /*: Happy-Eyeballs (both IPv4 and IPv6 addresses available)
  case. %1 is the URL for the Server and %2 is the port number
  (on BOTH addresses) for the connection.*/
-                TDebug(QColorConstants::Blue, QColorConstants::White)
+                TDebug(QColorConstants::Blue, QColorConstants::White, TDebug::Category::Network)
                                 << tr("Trying open (IPv4 and IPv6) connections to %1:%2 ...").arg(hostInfo.hostName(), QString::number(mHostPort)).append(QChar::LineFeed)
                         >> mpHost;
                 //: %1 is a URL for the Game Server; %2 is the port number.
@@ -1486,7 +1489,7 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
                 if (mConnectViaProxy) {
                     /*: %1 is the URL or IPv6 address (suitably wrapped) for the
  Game Server and %2 is the port number for the connection.*/
-                    TDebug(QColorConstants::Blue, QColorConstants::White)
+                    TDebug(QColorConstants::Blue, QColorConstants::White, TDebug::Category::Network)
                                     << tr("Trying open (IPv6) connection to %1:%2 via proxy...").arg(displayAddress, QString::number(mHostPort)).append(QChar::LineFeed)
                             >> mpHost;
                     /*: %1 is the URL or IPv6 address (suitably wrapped) for the
@@ -1495,7 +1498,8 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
                 } else {
                     /*: %1 is the URL or IPv6 address (suitably wrapped) for the
  Game Server and %2 is the port number for the connection.*/
-                    TDebug(QColorConstants::Blue, QColorConstants::White) << tr("Trying open (IPv6) connection to %1:%2 ...").arg(displayAddress, QString::number(mHostPort)).append(QChar::LineFeed)
+                    TDebug(QColorConstants::Blue, QColorConstants::White, TDebug::Category::Network)
+                                    << tr("Trying open (IPv6) connection to %1:%2 ...").arg(displayAddress, QString::number(mHostPort)).append(QChar::LineFeed)
                             >> mpHost;
                     /*: %1 is the URL or IPv6 address (suitably wrapped) for the
  Game Server and %2 is the port number for the connection.*/
@@ -1513,7 +1517,7 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
                 if (mConnectViaProxy) {
                     /*: %1 is the URL or IPv4 address for the Game Server and %2
  is the port number for the connection.*/
-                    TDebug(QColorConstants::Blue, QColorConstants::White)
+                    TDebug(QColorConstants::Blue, QColorConstants::White, TDebug::Category::Network)
                                     << tr("Trying open (IPv4) connection to %1:%2 via proxy...").arg(displayAddress, QString::number(mHostPort)).append(QChar::LineFeed)
                             >> mpHost;
                     /*: %1 is the URL or IPv4 address for the Game Server and %2
@@ -1523,7 +1527,8 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
                 } else {
                     /*: %1 is the URL or IPv4 address for the Game Server and %2
  is the port number for the connection.*/
-                    TDebug(QColorConstants::Blue, QColorConstants::White) << tr("Trying open (IPv4) connection to %1:%2 ...").arg(displayAddress, QString::number(mHostPort)).append(QChar::LineFeed)
+                    TDebug(QColorConstants::Blue, QColorConstants::White, TDebug::Category::Network)
+                                    << tr("Trying open (IPv4) connection to %1:%2 ...").arg(displayAddress, QString::number(mHostPort)).append(QChar::LineFeed)
                             >> mpHost;
                     /*: %1 is the URL or IPv4 address for the Game Server and %2
  is the port number for the connection.*/
@@ -1731,13 +1736,29 @@ void cTelnet::abandonNetworkLatencyMeasurement()
 
 void cTelnet::checkNAWS()
 {
+    // A window resize reaches the console as a burst rather than as one event:
+    // Qt lays it out, then any Geyser container attached to a border re-reserves
+    // that border from a timer of its own, which lays the console out again.
+    // Reporting each step would publish widths the window only ever had in
+    // passing - and the game wraps whatever it sends next to them - so wait for
+    // the burst to finish and report the size once.
+    if (!mTimerNawsUpdate) {
+        mTimerNawsUpdate = new QTimer(this);
+        mTimerNawsUpdate->setSingleShot(true);
+        connect(mTimerNawsUpdate, &QTimer::timeout, this, &cTelnet::sendCurrentNAWS);
+    }
+    mTimerNawsUpdate->start(NAWS_SETTLE_TIME);
+}
+
+void cTelnet::sendCurrentNAWS()
+{
     Host* pHost = mpHost;
     if (!pHost || !pHost->mpConsole) {
         return;
     }
     // Use the smaller of the screen width or the wrapAt, then subtract the
     // width of the time stamps if they are showing:
-    int naws_x = std::min(pHost->mScreenWidth, pHost->mWrapAt) - (pHost->mpConsole->showTimeStamps() ? mudlet::smTimeStampFormat.size() : 0);
+    int naws_x = std::min(pHost->mScreenWidth, pHost->mWrapAt) - (pHost->mpConsole->showTimeStamps() ? TBuffer::smTimeStampFormat.size() : 0);
     int naws_y = pHost->mScreenHeight;
     if ((naws_y > 0) && (myOptionState.test(static_cast<size_t>(OPT_NAWS))) && ((mNaws_x != naws_x) || (mNaws_y != naws_y))) {
         sendNAWS(naws_x, naws_y);
@@ -1895,10 +1916,8 @@ void cTelnet::slot_replyFinished(QNetworkReply* reply)
         reply->deleteLater();
         mpPackageDownloadReply = nullptr;
 
-        // Install the package and handle any installation errors
-        if (auto [success, message] = mpHost->installPackage(mServerPackage, enums::PackageModuleType::Package); !success) {
-            //: %1 is the package file path, %2 is the error message
-            postMessage(tr("[ WARN ]  - Package installation failed for '%1', reason: %2").arg(mServerPackage, message));
+        // installPackage() reports the reason to the profile itself
+        if (!mpHost->installPackage(mServerPackage, enums::PackageModuleType::Package).first) {
             return;
         }
 
@@ -2772,9 +2791,9 @@ void cTelnet::sendMNESValue(const QString& var, const QMap<QString, QPair<bool, 
         }
     } else {
         // RFC 1572: If a "type" is not followed by a VALUE (e.g., by another VAR,
-        // USERVAR, or IAC SE) then that variable is undefined.
+        // USERVAR, or IAC SE) then that variable is undefined. A VAL with nothing
+        // after it would instead say the variable is defined and merely empty.
         output += prepareNewEnvironData(var).toStdString();
-        output += NEW_ENVIRON_VAL;
 
         qDebug() << "WE send that we do not maintain NEW_ENVIRON (MNES) VAR" << var;
     }
@@ -3193,7 +3212,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             output += OPT_GMCP;
             {
                 std::string supportsList = R"(Core.Supports.Set [ "Char 1", "Char.Skills 1", "Char.Items 1", "Room 1", "IRE.Rift 1", "IRE.Composer 1")";
-                if (mpHost->mDiscordMode == Host::DiscordShowGameDetails && mudlet::self()->mDiscord.libraryLoaded()) {
+                if (mpHost->mDiscordMode == Host::DiscordShowGameDetails && Discord::self()->libraryLoaded()) {
                     supportsList += R"(, "External.Discord 1")";
                 }
                 supportsList += R"(, "Client.Media 1", "Char.Login 2"])";
@@ -3203,7 +3222,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             output += TN_SE;
             socketOutRaw(output);
 
-            if (mpHost->mDiscordMode == Host::DiscordShowGameDetails && mudlet::self()->mDiscord.libraryLoaded()) {
+            if (mpHost->mDiscordMode == Host::DiscordShowGameDetails && Discord::self()->libraryLoaded()) {
                 sendDiscordHello();
                 sendDiscordGet();
             }
@@ -3727,8 +3746,10 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             // used values:
             mNaws_x = 0;
             mNaws_y = 0;
-            // thus sending of the values is performed when we check them:
-            checkNAWS();
+            // Answer the negotiation itself rather than going through the
+            // resize debounce: the game asked for the size now, and games that
+            // draw their login screen from it get one chance to be told.
+            sendCurrentNAWS();
         }
         break;
     }
@@ -3819,8 +3840,11 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
         }
         option = telnetCommand[2];
 
-        // NEW_ENVIRON
-        if (option == OPT_NEW_ENVIRON && enableNewEnviron) {
+        // NEW_ENVIRON. The negotiated flag alone is not enough: turning the
+        // preference off mid-session leaves the option negotiated, and answering
+        // a SEND then hands the game the variables the player just withheld. The
+        // INFO path gates on the same pair, so both halves stop together.
+        if (option == OPT_NEW_ENVIRON && enableNewEnviron && mpHost->mEnableNEWENVIRON) {
             QByteArray payload = QByteArray::fromRawData(telnetCommand.c_str(), telnetCommand.size());
 
             if (telnetCommand.size() < 6) {
@@ -3942,10 +3966,6 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 return;
             }
 
-            rawData = rawData.replace(TN_BELL, QByteArray("\\\\007"));
-
-            rawData = rawData.replace("\x1b", QByteArray("\\\\027"));
-
             // rawData is in the Mud Server's encoding, trim off the Telnet suboption
             // bytes from beginning (3) and end (2):
             rawData = rawData.mid(3, static_cast<int>(rawData.size()) - 5);
@@ -4015,12 +4035,21 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                                    "(url='%3').")
                                         .arg(version, mpHost->mServerGUI_Package_version, url));
 
-                    // Uninstall the old version
-                    mpHost->uninstallPackage(mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName, enums::PackageModuleType::Package);
-
-                    // Download and install the new version
-                    mpHost->mServerGUI_Package_version = version;
-                    downloadAndInstallGUIPackage(packageName, fileName, url);
+                    // Uninstall the old version, and leave the installed one alone if that is
+                    // refused: installing over it fails as "already installed", so the upgrade
+                    // would go missing while the version recorded below claimed otherwise. A
+                    // name that is not installed has nothing to refuse and nothing to remove,
+                    // and must not hold the upgrade up.
+                    const QString oldPackageName = mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName;
+                    const bool clearedTheWay = !mpHost->mInstalledPackages.contains(oldPackageName) || mpHost->uninstallPackage(oldPackageName, enums::PackageModuleType::Package);
+                    if (clearedTheWay) {
+                        // Download and install the new version
+                        mpHost->mServerGUI_Package_version = version;
+                        downloadAndInstallGUIPackage(packageName, fileName, url);
+                    } else {
+                        //: %1 is the name of the GUI package the game offered to upgrade
+                        postMessage(tr("[ WARN ]  - Could not remove \"%1\" to upgrade it while the profile is being saved. The game will offer the upgrade again.").arg(oldPackageName));
+                    }
                 }
             }
             return;
@@ -4344,6 +4373,23 @@ QString cTelnet::parseGUIUrlFromJSON(const QJsonObject& json)
     return url;
 }
 
+// A game that brings its own interface can tell Mudlet up front not to activate
+// the built-in starter UI, with Client.GUI {"baseui": false} - useful when that
+// interface is not delivered as a Client.GUI package, or to keep the starter UI
+// down without waiting for the package download. The string "false" is taken
+// too, for the same reason the version field above takes a number: some games'
+// GMCP serializers can only spell values as strings.
+bool cTelnet::parseGUIBaseUiDeclinedFromJSON(const QJsonObject& json)
+{
+    const auto baseUiJSON = json.value(qsl("baseui"));
+
+    if (baseUiJSON.isBool()) {
+        return !baseUiJSON.toBool();
+    }
+
+    return baseUiJSON.isString() && !baseUiJSON.toString().trimmed().compare(qsl("false"), Qt::CaseInsensitive);
+}
+
 // Helper function to download and install the GUI package
 void cTelnet::downloadAndInstallGUIPackage(const QString& packageName, const QString& fileName, const QString& url)
 {
@@ -4414,12 +4460,21 @@ void cTelnet::handleGUIPackageInstallationAndUpgrade(QJsonDocument document)
                        "(url='%3').")
                             .arg(version, mpHost->mServerGUI_Package_version, url));
 
-        // Uninstall the old version
-        mpHost->uninstallPackage(mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName, enums::PackageModuleType::Package);
-
-        // Download and install the new version
-        mpHost->mServerGUI_Package_version = version;
-        downloadAndInstallGUIPackage(packageName, fileName, url);
+        // Uninstall the old version, and leave the installed one alone if that is
+        // refused: installing over it fails as "already installed", so the upgrade
+        // would go missing while the version recorded below claimed otherwise. A
+        // name that is not installed has nothing to refuse and nothing to remove,
+        // and must not hold the upgrade up.
+        const QString oldPackageName = mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName;
+        const bool clearedTheWay = !mpHost->mInstalledPackages.contains(oldPackageName) || mpHost->uninstallPackage(oldPackageName, enums::PackageModuleType::Package);
+        if (clearedTheWay) {
+            // Download and install the new version
+            mpHost->mServerGUI_Package_version = version;
+            downloadAndInstallGUIPackage(packageName, fileName, url);
+        } else {
+            //: %1 is the name of the GUI package the game offered to upgrade
+            postMessage(tr("[ WARN ]  - Could not remove \"%1\" to upgrade it while the profile is being saved. The game will offer the upgrade again.").arg(oldPackageName));
+        }
     }
 }
 
@@ -4450,6 +4505,7 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         return;
     }
 
+    bool serverDeclinedBaseUi = false;
     if (transcodedMsg.startsWith(qsl("Client.GUI"), Qt::CaseInsensitive)) {
         if (!mpHost->mAcceptServerGUI) {
             return;
@@ -4484,6 +4540,12 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
             document = QJsonDocument(QJsonObject{{"version", version}, {"url", url}});
         }
 
+        // Raw Telnet carries a version and a url and nothing else, so only the
+        // JSON form can decline; the event itself is raised at the end of this
+        // function, once setGMCPTable() has run, so a handler reading
+        // gmcp.Client.GUI sees the decline it is being told about.
+        serverDeclinedBaseUi = !rawTelnet && parseGUIBaseUiDeclinedFromJSON(document.object());
+
         handleGUIPackageInstallationAndUpgrade(document);
 
         if (rawTelnet) {
@@ -4512,6 +4574,25 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
     }
 
     mpHost->mLuaInterpreter.setGMCPTable(packageMessage, data);
+
+    // A game that brings its own interface can decline the built-in starter UI
+    // up front with Client.GUI {"baseui": false}. The same event an installed
+    // interface package raises is used, with no package named: the decline is
+    // the game claiming the screen space for its own interface, which is
+    // exactly the statement that event already makes. Raised only now, after
+    // setGMCPTable() above, so handlers read the gmcp table this message built
+    // - the package-install path fires it after the table update too.
+    //
+    // The starter UI builds its dock on the first game data it recognises
+    // rather than on install, so a decline arriving before that data leaves
+    // the dock never built - which is why a game wanting none of it should
+    // send this ahead of its first vitals.
+    if (serverDeclinedBaseUi) {
+        TEvent event{};
+        event.mArgumentList.append(qsl("sysServerGuiInstalled"));
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mpHost->raiseEvent(event);
+    }
 }
 
 void cTelnet::setMSSPVariables(const QByteArray& msg)
@@ -4709,7 +4790,7 @@ void cTelnet::slot_tlsUpgradeResponse(const bool accepted)
 
     if (accepted) {
         // Read before disconnecting: a socket with nothing pending can emit disconnected() from
-        // inside disconnectFromHost(), and forgetGameSuppliedHostState() drops the advertised port.
+        // inside disconnectFromHost(), and reset() drops the advertised port.
         const int securePort = mpHost->mMSSPTlsPort;
         // The socket test above passes for a connection made *after* the one that advertised, so
         // it does not catch an answer that outlived its offer - but the port is forgotten with the
@@ -5224,9 +5305,7 @@ bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
             mIsReplayRunFromLua = true;
         }
         replayStream.setDevice(&replayFile);
-        if (QVersionNumber::fromString(QString(qVersion())) >= QVersionNumber(5, 13, 0)) {
-            replayStream.setVersion(mudlet::scmQDataStreamFormat_5_12);
-        }
+        replayStream.setVersion(QDataStream::Qt_5_12);
         loadingReplay = true;
         if (mudlet::self()->replayStart()) {
             auto [ok, modifiedFormat] = testReadReplayFile();
@@ -5411,11 +5490,35 @@ void cTelnet::slot_socketReadyToBeRead()
         finishNetworkLatencyMeasurement();
     }
 
+    readPendingSocketData();
+}
+
+// Reads one BUFFER_SIZE chunk, and comes back through the event loop for
+// whatever is left. readyRead() is only emitted when fresh bytes reach the
+// socket, so a burst's remainder past one read would sit unseen until the
+// server happened to send again - a game that pushes 100 KB in one go and then
+// waits for input stops part-way through it. The leftovers are deliberately
+// drained from here rather than from slot_socketReadyToBeRead(): they were
+// already buffered before any command a trigger has since sent, so treating
+// them as that command's reply would report a latency of nearly nothing.
+void cTelnet::readPendingSocketData()
+{
+    if (!mpHost || mpHost->isClosingDown() || !mpSocket || mDeferredReconnect) {
+        return;
+    }
+
     // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (2 of 7) - investigate switching from using `char[]` to `std::array<char>`
     char in_buffer[BUFFER_SIZE + 10];
 
     int amount = mpSocket->read(in_buffer, BUFFER_SIZE);
     processSocketData(in_buffer, amount);
+
+    // amount > 0 as well as bytesAvailable(): a read that yields nothing while the
+    // socket still reports bytes would otherwise requeue forever, spinning a core
+    // for as long as the connection stayed in that state.
+    if (amount > 0 && mpSocket && mpSocket->bytesAvailable() > 0) {
+        QMetaObject::invokeMethod(this, &cTelnet::readPendingSocketData, Qt::QueuedConnection);
+    }
 }
 
 void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopbackTesting)

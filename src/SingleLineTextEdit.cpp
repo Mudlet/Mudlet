@@ -70,10 +70,16 @@ void SingleLineTextEdit::insertFromMimeData(const QMimeData* source)
     }
 }
 
-// remove selection when focus is lost
+// Like QLineEdit: deselect when focus moves to another widget, but not when a
+// popup or another window merely borrows it - the context menu's own Copy runs
+// after this FocusOut
 void SingleLineTextEdit::focusOutEvent(QFocusEvent* event)
 {
     QPlainTextEdit::focusOutEvent(event);
+    const Qt::FocusReason reason = event->reason();
+    if (reason == Qt::ActiveWindowFocusReason || reason == Qt::PopupFocusReason) {
+        return;
+    }
     QTextCursor cursor = textCursor();
     cursor.clearSelection();
     setTextCursor(cursor);
@@ -87,8 +93,13 @@ void SingleLineTextEdit::setHighlightingEnabled(bool enabled)
 
 void SingleLineTextEdit::setTheme(const QString& themeName)
 {
-    auto edbee = edbee::Edbee::instance();
-    edbee::TextTheme* theme = edbee->themeManager()->theme(themeName);
+    auto themeManager = edbee::Edbee::instance()->themeManager();
+    edbee::TextTheme* theme = themeManager->theme(themeName);
+    if (!theme) {
+        // The profile names a theme whose file was never downloaded to this
+        // machine; use the fallback edbee's own editor paints with so the two agree
+        theme = themeManager->fallbackTheme();
+    }
 
     // set the textedit background and text the same as edbee base settings
     QPalette p = palette();

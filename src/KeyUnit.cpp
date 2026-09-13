@@ -26,10 +26,19 @@
 
 #include "Host.h"
 #include "TKey.h"
+#include "Tree.h"
+#include "utils.h"
 
+#include <QFlags>
+#include <QLatin1Char>
+#include <QLatin1String>
+#include <QMutableSetIterator>
 #include <QScopeGuard>
+#include <QStringBuilder>
+#include <QStringList>
 
 #include <functional>
+#include <utility>
 
 KeyUnit::KeyUnit(Host* pHost)
 : mRunAllKeyMatches(false)
@@ -49,7 +58,8 @@ KeyUnit::~KeyUnit()
         key->mpHost = nullptr;
         // Also set mpHost to null on all children recursively
         std::function<void(TKey*)> nullifyChildren = [&nullifyChildren](TKey* k) {
-            for (auto child : *k->mpMyChildrenList) {
+            for (auto* childNode : *k->mpMyChildrenList) {
+                auto* child = static_cast<TKey*>(childNode);
                 child->mpHost = nullptr;
                 nullifyChildren(child);
             }
@@ -70,8 +80,9 @@ void KeyUnit::resetStats()
 
 void KeyUnit::_uninstall(TKey* pChild, const QString& packageName)
 {
-    std::list<TKey*>* childrenList = pChild->mpMyChildrenList;
-    for (auto key : *childrenList) {
+    std::list<Tree<TKey>*>* childrenList = pChild->mpMyChildrenList;
+    for (auto* keyNode : *childrenList) {
+        auto* key = static_cast<TKey*>(keyNode);
         _uninstall(key, packageName);
         uninstallList.append(key);
     }
@@ -456,8 +467,9 @@ QString KeyUnit::getKeyName(const Qt::Key keyCode, const Qt::KeyboardModifiers m
 
 void KeyUnit::assembleReport(TKey* pItem)
 {
-    std::list<TKey*>* childrenList = pItem->mpMyChildrenList;
-    for (auto pChild : *childrenList) {
+    std::list<Tree<TKey>*>* childrenList = pItem->mpMyChildrenList;
+    for (auto* pChildNode : *childrenList) {
+        auto* pChild = static_cast<TKey*>(pChildNode);
         ++statsItemsTotal;
         if (pChild->isActive()) {
             ++statsActiveItems;
@@ -500,6 +512,12 @@ void KeyUnit::doCleanup()
         return;
     }
 
+    // Called once per unit for every line of game text, and next to never has
+    // anything queued, so skip setting up the flush below.
+    if (!hasPendingDeletes()) {
+        return;
+    }
+
     QSet<TKey*> deletedKeys;
     QMutableSetIterator<TKey*> itKey(mCleanupSet);
     while (itKey.hasNext()) {
@@ -508,6 +526,10 @@ void KeyUnit::doCleanup()
         deletedKeys.insert(pKey);
         delete pKey;
     }
+    // Not a no-op: the drain above frees no buckets, so without this every later
+    // flush re-scans an array sized for the largest batch the set has ever held.
+    // squeeze() keeps whatever the drain left behind; clear() would drop it.
+    mCleanupSet.squeeze();
     // Flush the deletes uninstall() deferred (#9337). uninstallList is ordered
     // children-before-parents and each ~Tree unlinks from its parent, so deleting
     // children first empties the parent's child list (no double free); the seen

@@ -27,8 +27,11 @@
 
 
 #include <QDebug>
+#include <QDebugStateSaver>
 #include <QPointer>
+#include <QString>
 #include <QTime>
+#include <QtGlobal>
 
 class Host;
 

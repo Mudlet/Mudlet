@@ -12,6 +12,33 @@ license: GPL-2.0-or-later
 Read this **before** typing a build command, not after one fails. The correct invocation differs
 per platform, and the wrong one is not merely slower — see Pitfalls.
 
+## First: does this need a build at all?
+
+On Linux, a change confined to `src/mudlet-lua/lua/` or `src/mudlet-lua/tests/` needs none. Those
+are read from disk at startup, so a Mudlet binary built anywhere on the machine can run *this*
+worktree's Lua and specs:
+
+```bash
+.claude/scripts/run-lua-tests.sh ../otherworktree/build-linux-debug-nosan/src/mudlet
+```
+
+The script detects a binary from another build tree, shims around it with a `note:` line, and
+fails loudly if this worktree's Lua is not what ended up loading.
+
+These look Lua-only but still need a build:
+
+- `src/packages/` and `src/mudlet-lua/lua/utf8_filenames.lua` are compiled into the binary as Qt
+  resources (`src/mudlet.qrc`), so editing them cannot affect a borrowed binary.
+- On macOS the build copies mudlet-lua into the `.app` bundle and that copy is preferred over
+  `src/`, so a Lua change does need a rebuild there. The script is Linux-only regardless - it
+  drives Mudlet under `xvfb-run`.
+- Anything under `src/*.cpp` or `src/*.h`.
+
+Choose a donor whose branch already contains the C++ the specs rely on - one missing it fails
+specs in a way that reads exactly like a regression in the change under test. Prefer a `-nosan`
+tree: the plain `build/` preset is an AddressSanitizer build, and this script does not pass it
+the `ASAN_OPTIONS` CI uses, so a leak surfaces as a bare non-zero exit with every spec green.
+
 ## Use a preset — every platform, one command
 
 `CMakePresets.json` in the repository root encodes the generator, build type and sanitizer
@@ -37,14 +64,49 @@ ctest --preset macos-debug            # run the test suite
 | `<platform>-debug-ubsan` | macOS / Linux | UndefinedBehaviorSanitizer |
 | `<platform>-static-analysis` | macOS / Linux | Runs clang-tidy and cppcheck during compilation |
 | `linux-lowspec` | Linux | No sanitizers, no updater, no 3D mapper, 2 jobs — Raspberry Pi and similar |
+| `<platform>-release` | macOS / Linux / Windows | Release build, no sanitizers - the flags CI ships to players |
 
-Every configure preset has a matching build and test preset of the same name, and all three are
+Every developer preset has a matching build and test preset of the same name, and all three are
 conditioned on the host system — so `cmake --list-presets` on macOS will not offer `linux-debug`,
 and `ctest --preset X` always runs against the tree that `cmake --build --preset X` produced.
 
 The plain `<platform>-debug` presets build into `build/`. Every variant builds into
 `build-<preset-name>/` instead, so an AddressSanitizer tree and a sanitizer-free tree can coexist
 without forcing each other to rebuild. The `/build*` entry in `.gitignore` covers all of them.
+
+### Reproducing what CI configures
+
+`ci-linux`, `ci-macos`, `ci-macos-no-tests`, `ci-windows` and `ci-codeql` are the presets the
+workflows themselves configure with, so `cmake --preset ci-linux` reproduces a CI build rather
+than approximating one.
+They take `CMAKE_BUILD_TYPE`, `USE_SANITIZER`, `WITH_SENTRY`, `SENTRY_DSN` and
+`SENTRY_SEND_DEBUG` from the environment, since a run varies those by tag and by matrix entry.
+Leaving one unset is not the same as what CI passes: a pull request build sets `WITH_SENTRY=ON`
+on every platform and `USE_SANITIZER=Address` on Linux, and a `Mudlet-*` tag sets
+`CMAKE_BUILD_TYPE=Release` with `USE_SANITIZER` empty and `SENTRY_SEND_DEBUG=1`. So
+`USE_SANITIZER=Address cmake --preset ci-linux` reproduces the Linux PR job; `SENTRY_DSN` is a
+repository secret and cannot be matched locally. `ci-macos-no-tests` is `ci-macos` with
+`BUILD_TESTING=OFF`, for the Intel job that ships a binary and leaves the testing to the arm64
+one. `ci-windows` builds into `build-$MSYSTEM/`, but the rest build into `../b/ninja` — beside
+the checkout, not inside it, which is where the workflows' ctest and packaging steps look — so
+reach for them to investigate a CI failure, not for day-to-day work. They have no test presets:
+the workflows call `ctest` themselves, with per-platform labels and environment.
+
+### When to use a release preset
+
+Reach for `<platform>-release` when the *speed and size* of the binary are what is being measured:
+performance work, benchmarking, or reproducing something a player reports that a Debug build may
+not show. It sets `CMAKE_BUILD_TYPE=Release` and clears `USE_SANITIZER`, which is what
+`.github/workflows/build-mudlet.yml` hands the `ci-linux` and `ci-macos` presets on a
+`Mudlet-*` tag.
+`CI/build-mudlet-for-windows.sh` builds Release on every Windows run and has no sanitizer to
+clear. A `linux-debug` binary is unoptimised and close to seven times the size - 297MB against
+43MB - so timings taken on one say little about the shipped client.
+
+It is not a substitute for the CI release job. The preset stops at compiler flags: it leaves out
+the packaging, signing, Sentry DSN and `MUDLET_VERSION_BUILD` wiring, so the binary still reports
+itself as a `-dev-<sha>` build. Debug builds remain the right default for development: assertions
+and sanitizers catch what a release build quietly tolerates.
 
 ### Qt discovery
 
@@ -87,13 +149,14 @@ binary under `build-<preset-name>/` instead. Allow up to 10 minutes for a full b
 
 The `.claude/hooks/session-start.sh` SessionStart hook provisions the remote Ubuntu container:
 apt dependencies, Qt 6.9.0 via aqtinstall under `/opt/qt` (Ubuntu's packaged Qt 6.4 is older
-than the 6.8.2 minimum), submodules, and a ccache warm-up build of the `linux-debug-nosan`
-preset. The hook exports `CMAKE_PREFIX_PATH` pointing at the aqt Qt, so the documented preset
-commands work unchanged. On a warm container the hook finishes in seconds and a full build is
-mostly ccache hits — measured 5m25s wall for all targets at 99% hit rate, most of it linking —
-versus ~25 minutes cold. If the container cache is cold the hook itself takes ~30 minutes, once.
+than the 6.8.2 minimum), the Lua rocks, submodules, and a CMake configure of the
+`linux-debug-nosan` preset. The hook exports `CMAKE_PREFIX_PATH` pointing at the aqt Qt, so the
+documented preset commands work unchanged. It takes ~3 minutes on a cold container and seconds
+on a warm one. ccache starts cold, so budget ~18 minutes for the first full build of a session
+on the 4 cores these containers get.
+
 The hook also pre-configures `build-linux-debug-nosan/` with `-DUSE_ALTERNATE_LINKER=mold`:
-linking is the bulk of a warm rebuild and mold shrinks it dramatically (PR #9927 measured a CI
+linking is the bulk of a rebuild and mold shrinks it dramatically (PR #9927 measured a CI
 link tail of 4m13s → 29s). Keep that flag if you reconfigure the tree from scratch.
 Run Mudlet headlessly there with `QT_QPA_PLATFORM=offscreen`.
 
@@ -131,7 +194,8 @@ successes):
   A throwaway `HOME` keeps the real profile tree untouched. Screenshot after every
   interaction — coordinates come from looking at the previous shot, not from guessing. The
   same display serves `docs/demo-videos.md`'s before/after recording workflow via ffmpeg.
-  All of this is Linux/X11-only, and XTEST events work headlessly on Xvfb only.
+  All of this is Linux/X11-only, and XTEST events work headlessly on Xvfb only; from a
+  Wayland desktop it needs `QT_QPA_PLATFORM=xcb GDK_BACKEND=x11`.
 
 The `docker/` directory is a separate developer convenience (QtCreator-in-container); its
 Ubuntu 22.04 base only offers Qt 6.2 from apt, so it cannot build current Mudlet until it is
@@ -152,7 +216,8 @@ near-full rebuild. Run `ccache -s`; if `Cache size` has reached `Max cache size`
 
 **Sanitizers are on by default** on every non-Windows build, regardless of build type
 (`src/cmake/EnableSanitizers.cmake` defaults `USE_SANITIZER` to `address`). They cost both compile
-time and runtime speed. Use a `-nosan` preset when not chasing a memory bug.
+time and runtime speed. Use a `-nosan` or `-release` preset when not chasing a memory bug; both
+clear `USE_SANITIZER` explicitly, because a Release build type alone does not.
 
 For a combination the presets do not cover, pass a **CMake list — semicolon-separated, not
 comma-separated**: `-DUSE_SANITIZER="Address;Undefined"`. A comma-separated value is treated as one

@@ -80,7 +80,7 @@ private:
 
     QSize dockSize(const QString& name) const
     {
-        TDockWidget* pDock = mpHost->mpConsole->mDockWidgetMap.value(name);
+        TDockWidget* pDock = mpHost->mpConsole->dockWidget(name);
         return (pDock && pDock->widget()) ? pDock->widget()->size() : QSize();
     }
 
@@ -230,7 +230,7 @@ private slots:
         const QString userWindow = qsl("mwsrUserWindow");
         runLua(qsl("openUserWindow('%1', false)").arg(userWindow));
         settle();
-        QVERIFY2(mpHost->mpConsole->mDockWidgetMap.contains(userWindow), "the user window was not created");
+        QVERIFY2(mpHost->windowRegistry().hasDockWidget(userWindow), "the user window was not created");
 
         runLua(qsl("resizeWindow('%1', 600, 400)").arg(userWindow));
         settle();

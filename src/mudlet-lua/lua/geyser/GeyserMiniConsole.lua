@@ -57,13 +57,17 @@ function Geyser.MiniConsole:setBufferSize (linesLimit, sizeOfBatchDeletion)
 end
 
 --- Sets the new font to use - use a monospaced font, non-monospaced fonts aren't supported by Mudlet
--- and won't give the best results.
+-- and won't give the best results. Returns true if the font changed, nil+error if not.
 -- @param font Font family name to use (see https://doc.qt.io/qt-5/qfont.html#setFamily for details)
 function Geyser.MiniConsole:setFont (font)
-  if font then
-    self.font = font
+  -- only remember a family the miniconsole really took: setFont() refuses one
+  -- that is not installed, which Qt would otherwise silently substitute
+  local ok, err = setFont(self.name, font)
+  if not ok then
+    return nil, err
   end
-  setFont(self.name, font)
+  self.font = font
+  return true
 end
 
 --- Returns the font family in use by this miniconsole.

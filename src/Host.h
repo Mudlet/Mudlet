@@ -35,6 +35,7 @@
 #include "TLuaInterpreter.h"
 #include "TimerUnit.h"
 #include "TMainConsole.h"
+#include "TWindowRegistry.h"
 #include "TriggerUnit.h"
 #include "ctelnet.h"
 #include "dlgTriggerEditor.h"
@@ -64,6 +65,7 @@ class xml_document;
 class QDockWidget;
 class QJsonObject;
 class QKeyEvent;
+class QSettings;
 
 class TEvent;
 class TArea;
@@ -227,7 +229,7 @@ public:
     void setDiscordInviteURL(const QString& s);
     const QString& getDiscordInviteURL() const { return mDiscordInviteURL; }
     void setSpellDic(const QString&);
-    QString getSpellDic();
+    QString getSpellDic() const;
     void setUserDictionaryOptions(const bool useDictionary, const bool useShared);
     void getUserDictionaryOptions(bool& useDictionary, bool& useShared)
     {
@@ -285,6 +287,9 @@ public:
     // rather than dereference the shared_ptr.
     TConsoleModel* mainConsoleModelOrNull() { return mpMainConsoleModel.get(); }
     std::shared_ptr<TConsoleModel> sharedMainConsoleModel();
+    TWindowRegistry& windowRegistry() { return mWindowRegistry; }
+    const TWindowRegistry& windowRegistry() const { return mWindowRegistry; }
+    void refreshMainConsoleColors();
     void runTriggers(int line);
     // The log lifecycle lives in the core console model, which is a plain
     // struct and cannot emit, so it raises the two view-only halves of a
@@ -366,13 +371,19 @@ public:
     bool uninstallPackage(const QString&, enums::PackageModuleType thing);
     void refreshBundledPackages();
     bool removeDir(const QString&, const QString&);
-    void readPackageConfig(const QString&, QString&, bool);
-    QString getPackageConfig(const QString&, bool isModule = false);
+    // whyNotRead, when given, is set to why no manifest came back - telling a
+    // config.lua that would not run apart from one that simply names no package
+    void readPackageConfig(const QString&, QString&, bool, QString* whyNotRead = nullptr);
+    QString getPackageConfig(const QString&, bool isModule = false, QString* whyNotRead = nullptr);
     void postMessage(const QString message) { mTelnet.postMessage(message); }
     QColor getAnsiColor(const int ansiCode, const bool isBackground = false) const;
     QPair<bool, QString> writeProfileData(const QString&, const QString&);
-    bool writeProfileIniData(const QString& item, const QString& what);
     QString readProfileData(const QString&);
+    // Both share one QSettings kept open for the profile's lifetime; writes are
+    // left for the event loop to flush, as syncing each one cost two
+    // fdatasync()s - a ~50 ms stall for every command line a loading profile
+    // creates.
+    void writeProfileIniData(const QString& item, const QString& what);
     QString readProfileIniData(const QString& item);
     void xmlSaved(const QString& xmlName);
     bool currentlySavingProfile();
@@ -404,11 +415,39 @@ public:
     // isn't always around during profile start-up:
     QFont getDisplayFont();
     QFont getAndClearTempDisplayFont();
-    std::pair<bool, QString> setDisplayFont(const QFont&);
+    // Whether the font arriving is a fresh choice of family or only a tweak to
+    // the one already in use: the caller knows which, and comparing the fonts
+    // cannot tell them apart while a stand-in is up.
+    enum class DisplayFontChange { Adjustment, UserChoice };
+    std::pair<bool, QString> setDisplayFont(const QFont&, DisplayFontChange = DisplayFontChange::Adjustment);
     void setDisplayFontFromString(const QString&);
     void setDisplayFontSize(int size);
     QFont createFontWithSettings(const QString& fontName, int pointSize) const;
     std::pair<QString, QFont::Weight> parseFontNameAndStyle(const QString& fontName) const;
+    // The monospaced font Mudlet bundles and falls back to when a wanted one is missing:
+    inline static const QString scmDefaultFontFamily = qsl("Bitstream Vera Sans Mono");
+    struct FontFamilyResolution
+    {
+        QString family;       // family to actually use
+        QFont::Weight weight; // weight parsed from a "Family Style" name, QFont::Normal otherwise
+        bool available;       // false when neither the name nor a style-stripped base family is installed
+    };
+    // Maps a requested font name onto an installed family: the name itself when it is
+    // installed, else the base family when the name is a "Family Style" one such as
+    // "EB Garamond SemiBold" (with the style as the weight), else {requested, Normal, false}.
+    FontFamilyResolution resolveFontFamily(const QString& requested) const;
+    // A profile can name a font that is not installed on this machine; Qt would then
+    // silently draw the console in an arbitrary substitute, so switch to the bundled
+    // default (or, for an old-style "Family Style" name, to the installed base family)
+    // and tell the user. A profile asking for the bundled default itself is left
+    // alone even when that is not registered, there being nothing better to move
+    // it to. Returns true when the display font was changed.
+    bool substituteMissingDisplayFont();
+    // What to write into the profile: the display font with the family the profile
+    // asked for put back in place of any stand-in the above had to pick. Saving the
+    // stand-in instead would make this machine's lack of a font the profile's own
+    // choice, everywhere the profile is opened. Everything else wants the real font.
+    QFont getDisplayFontForSaving();
     int getConsoleBufferSize() const { return mConsoleBufferSize; }
     void setConsoleBufferSize(int size) { mConsoleBufferSize = size; }
     bool getUseMaxConsoleBufferSize() const { return mUseMaxConsoleBufferSize; }
@@ -425,6 +464,8 @@ public:
     std::pair<bool, QString> setMapperTitle(const QString&);
     std::optional<QString> getMapperTitle() const;
     QDockWidget* mapWidget() const;
+    // Gives TMap::mpMapper back to this profile's own mapper - see the definition.
+    void restoreOwnMapper();
 
     // Multiple map views support
     std::pair<int, QString> createMapView(int areaId = 0);
@@ -436,6 +477,13 @@ public:
     bool debugShowAllProblemCodepoints() const { return mDebugShowAllProblemCodepoints; }
     void setCompactInputLine(const bool state);
     bool getCompactInputLine() const { return mCompactInputLine; }
+    // Only ever raised for a setting that really changed, or a handler that
+    // writes the value back through setConfig() would loop.
+    void raiseSettingChangedEvent(const QString& settingName, const bool value);
+    void setEnableClosedCaption(const bool state);
+    void setAdvertiseScreenReader(const bool state);
+    void setAnnounceIncomingText(const bool state);
+    void setMapperPanelVisible(const bool state);
     QPointer<TConsole> findConsole(QString name);
 
     QPair<bool, QStringList> getLines(const QString& windowName, const int lineFrom, const int lineTo);
@@ -481,6 +529,8 @@ public:
     bool setBackgroundImage(const QString& name, QString& path, int mode, bool fullWindow = false);
     bool resetBackgroundImage(const QString& name, bool fullWindow = false);
     void showHideOrCreateMapper(const bool loadDefaultMap);
+    bool mapperShown() const;
+    bool interceptMapperButton();
     bool setProfileStyleSheet(const QString& styleSheet);
     void check_for_mappingscript();
     void setupIreDriverBugfix();
@@ -544,16 +594,36 @@ public:
     bool fontsAntiAlias() const { return !mNoAntiAlias; }
 
 private:
+    QSettings& profileIni();
+
     bool mNoAntiAlias = false;
     // These are used only during profile initiation to provide faked details
     // for things looking to the main console font before it gets instantiated:
     std::optional<TFontAttributes> mTempDisplayFontAttributes;
     std::optional<QFont> mTempDisplayFont;
+    // The family the profile asks for while an installed font stands in for it in
+    // the console, so that saving cannot replace the player's choice with the
+    // stand-in; empty whenever the console shows the family that was asked for.
+    QString mMissingDisplayFontFamily;
     // Co-owned with the main-console view rather than owned outright: mudlet
     // destroys the Host before the lingering console widget, so a Host-owned
     // model would leave the view's aliasing references dangling. Reached
     // through mainConsoleModel()/sharedMainConsoleModel().
     std::shared_ptr<TConsoleModel> mpMainConsoleModel;
+    // Non-owning: the views own the models it indexes and keep it in step.
+    TWindowRegistry mWindowRegistry;
+
+    // Initialised ahead of mLuaInterpreter below, whose construction reads it:
+    // initLuaGlobals() posts a message for each Lua module that fails to load, and
+    // Host::postMessage() hands that to cTelnet::postMessage(), which asks
+    // isClosingDown() whether to flush what it has stacked up. Declaration order is
+    // what decides initialisation order, the access specifier between them is not.
+    //
+    // mpConsole's position carries the same weight: it is null for the whole of
+    // construction, so that guard returns before reaching the rest of the function,
+    // which reads members declared much later - mBgColor among them. Same class of
+    // bug as #10229, which had to move a call rather than a declaration.
+    bool mIsClosingDown = false;
 
 public:
     // Make this the first public member instantiated so we can use ITS font
@@ -842,6 +912,13 @@ public:
     bool mMapperUseAntiAlias = true;
     bool mMapperShowRoomBorders = true;
     bool mMapperShowGrid = false;
+    // What the built-in map buttons (main toolbar, Show Map menu entry and its
+    // shortcut, detached window toolbar) do for this profile; scripts set it
+    // through setConfig("mapperButton", ...). Deliberately not saved with the
+    // profile: an uninstalled UI package must not leave the buttons dead for
+    // good, so a script has to re-apply its choice each session.
+    enum class MapperButtonMode { Default, Scripted, Disabled };
+    MapperButtonMode mMapperButtonMode = MapperButtonMode::Default;
     // Center the map on an area as a whole when it fits entirely in the
     // viewport, instead of following the player room. Off by default;
     // configurable via the mapCenterSmallAreas key in Mudlet.ini.
@@ -936,6 +1013,8 @@ private slots:
     void slot_saveProfileAfterPackageChange();
 
 private:
+    // Stores a boolean setting and tells scripts about it.
+    void changeSetting(bool& setting, const bool state, const QString& settingName);
     void setBorders(const QMargins);
     void installPackageFonts(const QString& packageName);
     void processGMCPDiscordStatus(const QJsonObject& discordInfo);
@@ -1022,9 +1101,15 @@ private:
     int mHostID;
     QString mHostName;
     QString mDiscordGameName; // Discord self-reported game name
-    bool mIsClosingDown = false;
 
     QString mLine;
+    // Storage runTriggers() lends out for the line it hands the trigger system,
+    // kept between lines for its capacity alone - it holds nothing meaningful
+    // outside that call. Past this length the capacity is dropped instead of
+    // kept, so one outsized line cannot hold its allocation for the rest of the
+    // session; no game line comes close to it.
+    static constexpr qsizetype scmMaxRetainedHaystack = 8192;
+    QString mTriggerHaystack;
     QString mLogin;
     QString mPass;
 
@@ -1097,8 +1182,10 @@ private:
     // 16 basic colors (and OSC "R\" to reset them).
     bool mServerMayRedefineColors = false;
 
-    // Was public but hidden to prevent it being changed without going through
-    // the process to signal to users that they need to change dictionaries:
+    // Empty until a dictionary is chosen: getSpellDic() substitutes the
+    // platform's starting one, so reading this member directly under-reports
+    // what the profile is using. Private so that setSpellDic() can push the
+    // change into a live console:
     QString mSpellDic;
     // These are hidden to prevent them being changed directly, they are also
     // mirrored/cached in the main TConsole's instance so they do not need to be
@@ -1188,6 +1275,10 @@ private:
     // Set when the mudlet singleton demands that we close - used to force an
     // attempt to save the profile and map - without asking:
     bool mForcedClose = false;
+
+    // Only reach through profileIni(): setName() nulls this so the path
+    // follows the name.
+    QSettings* mpProfileIni = nullptr;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)

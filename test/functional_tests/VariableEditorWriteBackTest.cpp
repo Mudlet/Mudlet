@@ -43,8 +43,10 @@
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
+#include "dlgSystemMessageArea.h"
 #include "dlgTriggerEditor.h"
 #include "dlgVarsMainArea.h"
+#include "edbee/models/textdocument.h"
 #include "mudlet.h"
 
 #include <QDropEvent>

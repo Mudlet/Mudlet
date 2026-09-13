@@ -25,10 +25,18 @@
 
 #include "Host.h"
 #include "TAlias.h"
+#include "TLuaInterpreter.h"
+#include "Tree.h"
+#include "utils.h"
 
+#include <QDebug>
+#include <QLatin1String>
+#include <QMutableSetIterator>
 #include <QScopeGuard>
+#include <QStringList>
 
 #include <functional>
+#include <utility>
 
 /* We need an explicit constructor in this file as the Host class is forward
  * declared in the header file and it is problematic to define any dereferencing
@@ -47,7 +55,8 @@ AliasUnit::~AliasUnit()
         alias->mpHost = nullptr;
         // Also set mpHost to null on all children recursively
         std::function<void(TAlias*)> nullifyChildren = [&nullifyChildren](TAlias* a) {
-            for (auto child : *a->mpMyChildrenList) {
+            for (auto* childNode : *a->mpMyChildrenList) {
+                auto* child = static_cast<TAlias*>(childNode);
                 child->mpHost = nullptr;
                 nullifyChildren(child);
             }
@@ -61,8 +70,9 @@ AliasUnit::~AliasUnit()
 
 void AliasUnit::_uninstall(TAlias* pChild, const QString& packageName)
 {
-    std::list<TAlias*>* childrenList = pChild->mpMyChildrenList;
-    for (auto alias : *childrenList) {
+    std::list<Tree<TAlias>*>* childrenList = pChild->mpMyChildrenList;
+    for (auto* aliasNode : *childrenList) {
+        auto* alias = static_cast<TAlias*>(aliasNode);
         _uninstall(alias, packageName);
         uninstallList.append(alias);
     }
@@ -277,6 +287,16 @@ int AliasUnit::getNewID()
 
 bool AliasUnit::processDataStream(const QString& data)
 {
+    if (mProcessingDepth >= scmMaxProcessingDepth) {
+        qWarning().nospace() << "AliasUnit::processDataStream(...) aborting: alias processing recursion reached the limit of " << scmMaxProcessingDepth
+                             << " - probably an alias that expands into itself.";
+        //: %1 is the command being expanded, %2 the depth limit. Shown in the game window when an alias keeps expanding into itself
+        mpHost->postMessage(tr("[ ERROR ] - Alias processing stopped to prevent a crash: \"%1\" was expanded by an alias %2 times in a row, each time producing a command that matched an alias "
+                               "again. It goes to the game unexpanded. Send from the alias with send() rather than expandAlias(), or give it a pattern that does not match what it sends.")
+                                    .arg(data, QString::number(scmMaxProcessingDepth)));
+        return false;
+    }
+
     TLuaInterpreter* Lua = mpHost->getLuaInterpreter();
     Lua->set_lua_string(qsl("command"), data);
     bool state = false;
@@ -419,8 +439,9 @@ bool AliasUnit::killAlias(const QString& name)
 
 void AliasUnit::assembleReport(TAlias* pItem)
 {
-    std::list<TAlias*>* childrenList = pItem->mpMyChildrenList;
-    for (auto pChild : *childrenList) {
+    std::list<Tree<TAlias>*>* childrenList = pItem->mpMyChildrenList;
+    for (auto* pChildNode : *childrenList) {
+        auto* pChild = static_cast<TAlias*>(pChildNode);
         ++statsItemsTotal;
         if (pChild->isActive()) {
             ++statsActiveItems;
@@ -457,6 +478,12 @@ void AliasUnit::doCleanup()
         return;
     }
 
+    // Called once per unit for every line of game text, and next to never has
+    // anything queued, so skip setting up the flush below.
+    if (!hasPendingDeletes()) {
+        return;
+    }
+
     QSet<TAlias*> deletedAliases;
     QMutableSetIterator<TAlias*> itAlias(mCleanupSet);
     while (itAlias.hasNext()) {
@@ -465,6 +492,10 @@ void AliasUnit::doCleanup()
         deletedAliases.insert(pAlias);
         delete pAlias;
     }
+    // Not a no-op: the drain above frees no buckets, so without this every later
+    // flush re-scans an array sized for the largest batch the set has ever held.
+    // squeeze() keeps whatever the drain left behind; clear() would drop it.
+    mCleanupSet.squeeze();
     // Flush the deletes uninstall() deferred (#9337). uninstallList is ordered
     // children-before-parents and each ~Tree unlinks from its parent, so deleting
     // children first empties the parent's child list (no double free); the seen

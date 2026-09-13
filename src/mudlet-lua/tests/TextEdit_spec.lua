@@ -99,6 +99,14 @@ describe("Tests TextEdit widget functions", function()
       assert.is_true(setTextEditFont(name, "Bitstream Vera Sans Mono"))
     end)
 
+    it("Should pass a font the database does not list through to Qt", function()
+      -- the font database leaves out names the platform still resolves, such as
+      -- the fontconfig aliases on Linux, so an unlisted name is not refused
+      assert.is_true(setTextEditFont(name, "No Such Font At All"))
+      -- Ubuntu Mono ships with Mudlet, so it is there on every platform
+      assert.is_true(setTextEditFont(name, "Ubuntu Mono"))
+    end)
+
     it("Should set font size", function()
       assert.is_true(setTextEditFontSize(name, 14))
     end)

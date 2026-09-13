@@ -185,6 +185,22 @@ describe("Tests functionality of Adjustable.Container", function()
       assert.are.same({}, leftovers)
     end)
 
+    -- #9568: add() puts the child in the Inside container, but there was no
+    -- remove() override, so removal reached only the outer container's own
+    -- lists. The child stayed tracked by Inside, and a later delete() on the
+    -- container destroyed it along with the children it really did own.
+    it("stops tracking a child that was removed from it", function()
+      local child = Geyser.MiniConsole:new({name = "gasRemovedChild"}, container)
+      assert.is_truthy(container.Inside.windowList.gasRemovedChild, "setup: the child never reached the Inside container")
+
+      container:remove(child)
+
+      assert.is_nil(container.Inside.windowList.gasRemovedChild, "the Inside container still tracks a child that was removed")
+      assert.is_nil(container.windowList.gasRemovedChild)
+
+      child:delete()
+    end)
+
     it("puts its backdrop label over the container's geometry", function()
       assert.are.equal("label", windowType("gasContaineradjLabel"))
       assert.are.same({x = 20, y = 30, width = 200, height = 200}, geometry("gasContaineradjLabel"))

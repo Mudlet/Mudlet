@@ -250,6 +250,29 @@ private:
         return EnvironVariable{};
     }
 
+    // The named variable out of every INFO captured since the last clear. One
+    // preference can stand behind several variables - the screen reader one is
+    // also a bit in MTTS - so each gets its own INFO and this looks across them
+    // rather than insisting on a single reply the way soleReplyVariables does.
+    EnvironVariable infoVariableNamed(const QByteArray& name, QString& problem)
+    {
+        problem.clear();
+        QList<EnvironVariable> updates;
+        const QList<Subnegotiation> replies = newEnvironReplies();
+        for (const Subnegotiation& reply : replies) {
+            if (reply.payload.isEmpty() || reply.payload.at(0) != NEW_ENVIRON_INFO) {
+                problem = qsl("a captured NEW_ENVIRON reply was not an INFO");
+                return {};
+            }
+            updates.append(variablesIn(reply.payload.mid(1)));
+        }
+        const EnvironVariable found = variableNamed(updates, name);
+        if (found.name.isEmpty()) {
+            problem = qsl("no INFO carried %1, out of %2 variable(s) in %3 reply(s)").arg(QString::fromUtf8(name), QString::number(updates.size()), QString::number(replies.size()));
+        }
+        return found;
+    }
+
 private slots:
     void initTestCase()
     {
@@ -585,6 +608,48 @@ private slots:
         QVERIFY2(newEnvironReplies().isEmpty(), "Mudlet kept answering NEW_ENVIRON after the game withdrew it");
     }
 
+    // Turning the protocol off mid-session is the player withdrawing it rather
+    // than the game: nothing renegotiates, so the option stays negotiated and
+    // only the preference says no. The INFO half already stops on that pair of
+    // flags and the answer to a SEND has to stop with it.
+    void test_nothingIsAnsweredOncePlayerTurnsTheProtocolOff()
+    {
+        enableNewEnviron();
+        requestSend({});
+        QCOMPARE(newEnvironReplies().size(), 1);
+
+        mpHost->mEnableNEWENVIRON = false;
+        QVERIFY2(mpHost->mTelnet.isNewEnvironEnabled(), "the option renegotiated itself, so this is no longer the mid-session case");
+
+        mpServer->forgetReceived();
+        requestSend({});
+        QVERIFY2(newEnvironReplies().isEmpty(), "a bare SEND was answered after the player turned NEW-ENVIRON off");
+
+        mpServer->forgetReceived();
+        requestSend(named(NEW_ENVIRON_USERVAR, "CHARSET"));
+        QVERIFY2(newEnvironReplies().isEmpty(), "a named SEND was answered after the player turned NEW-ENVIRON off");
+
+        mpServer->forgetReceived();
+        mpHost->mAdvertiseScreenReader = true;
+        mpHost->mTelnet.sendInfoNewEnvironValue(qsl("SCREEN_READER"));
+        QVERIFY2(newEnvironReplies().isEmpty(), "an INFO went out after the player turned NEW-ENVIRON off");
+
+        // MNES rides on the same telnet option through the same request handler,
+        // so it falls silent on the same preference.
+        mpServer->forgetReceived();
+        mpHost->mEnableMNES = true;
+        requestSend(named(NEW_ENVIRON_VAR, "CLIENT_NAME"));
+        QVERIFY2(newEnvironReplies().isEmpty(), "MNES answered a SEND after the player turned NEW-ENVIRON off");
+
+        // The control: the same request over the same connection is answered once
+        // the preference is back, so none of the silence above is a capture that
+        // quietly died.
+        mpServer->forgetReceived();
+        mpHost->mEnableNEWENVIRON = true;
+        requestSend(named(NEW_ENVIRON_VAR, "CLIENT_NAME"));
+        QCOMPARE(newEnvironReplies().size(), 1);
+    }
+
     // A preference the game has already been told about is worth an INFO when it
     // changes, carrying the new value under the same type the original answer
     // used - anything else and the game files the update under a second name.
@@ -606,6 +671,36 @@ private slots:
         QCOMPARE(updated.type, NEW_ENVIRON_USERVAR);
         QCOMPARE(updated.name, QByteArray("SCREEN_READER"));
         QCOMPARE(updated.value, QByteArray("1"));
+    }
+
+    // Telling the game is the setter's job, not each caller's: the preferences
+    // dialog, setConfig() from a script and anything added later all inform the
+    // game by storing the value, with no send of their own.
+    void test_theScreenReaderSetterInformsTheGameOnItsOwn()
+    {
+        enableNewEnviron();
+        requestSend({});
+        QCOMPARE(newEnvironReplies().size(), 1);
+
+        mpServer->forgetReceived();
+        mpHost->setAdvertiseScreenReader(true);
+
+        QString problem;
+        EnvironVariable screenReader = infoVariableNamed("SCREEN_READER", problem);
+        QVERIFY2(problem.isEmpty(), qPrintable(problem));
+        QCOMPARE(screenReader.value, QByteArray("1"));
+
+        // Written the value it already holds, the setter has nothing to report,
+        // so the game is not handed an update that says nothing changed.
+        mpServer->forgetReceived();
+        mpHost->setAdvertiseScreenReader(true);
+        QVERIFY2(newEnvironReplies().isEmpty(), "an INFO went out for a value the setting already held");
+
+        mpServer->forgetReceived();
+        mpHost->setAdvertiseScreenReader(false);
+        screenReader = infoVariableNamed("SCREEN_READER", problem);
+        QVERIFY2(problem.isEmpty(), qPrintable(problem));
+        QCOMPARE(screenReader.value, QByteArray("0"));
     }
 
     // An INFO is only owed to a game that asked for the variable in the first
@@ -686,9 +781,11 @@ private slots:
     }
 
     // Under MNES a name outside that set is not Mudlet's to answer at all, while
-    // one inside it that Mudlet chooses not to supply is answered as maintained
-    // but empty. IPADDRESS reaches the second path by being in the MNES name list
-    // and absent from the data map.
+    // one inside it that Mudlet does not maintain comes back undefined. RFC 1572
+    // spells the two apart: a name with no VAL after it is undefined, while a VAL
+    // with nothing after it says the variable exists and is merely empty.
+    // IPADDRESS reaches the second path by being in the MNES name list and absent
+    // from the data map.
     void test_mnesAnswersOnlyMnesNames()
     {
         mpHost->mEnableMNES = true;
@@ -705,7 +802,7 @@ private slots:
         QCOMPARE(addressReply.size(), 1);
         const EnvironVariable address = addressReply.first();
         QCOMPARE(address.name, QByteArray("IPADDRESS"));
-        QVERIFY2(address.hasValue, "IPADDRESS was reported as a name MNES does not know rather than one Mudlet does not fill in");
+        QVERIFY2(!address.hasValue, "IPADDRESS came back with a VAL, which tells the game Mudlet maintains the variable and it happens to be empty");
         QVERIFY2(address.value.isEmpty(), "Mudlet supplied an IP address, which it deliberately does not do");
 
         mpServer->forgetReceived();

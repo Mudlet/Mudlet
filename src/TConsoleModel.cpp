@@ -32,7 +32,18 @@
 TConsoleModel::TConsoleModel(Host* pHost)
 : buffer(pHost)
 , mpHost(pHost)
+, mHyperlinkVisibilityManager(*this)
 {
+}
+
+QStringList TConsoleModel::lines(int from, int to)
+{
+    QStringList ret;
+    const int delta = abs(from - to);
+    for (int i = 0; i < delta; i++) {
+        ret << buffer.line(from + i);
+    }
+    return ret;
 }
 
 // Two gotchas in here:

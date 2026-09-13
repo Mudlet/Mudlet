@@ -21,12 +21,16 @@
  ***************************************************************************/
 
 #include "TBuffer.h"
+#include "THyperlinkCompactManager.h"
+#include "THyperlinkSelectionManager.h"
+#include "THyperlinkVisibilityManager.h"
 
 #include <QColor>
 #include <QFile>
 #include <QPoint>
 #include <QPointer>
 #include <QString>
+#include <QStringList>
 #include <QTextStream>
 
 class Host;
@@ -34,8 +38,9 @@ class Host;
 // The per-console data model: the slice of former TConsole state that the
 // telnet -> trigger pipeline drives without needing a widget. That is the text
 // buffer, the cursor/prompt state Host::runTriggers() updates on every line,
-// the fg/bg colours colour-triggers match against, and the log lifecycle the
-// buffer writes through. Splitting it out of the widget is what lets the
+// the fg/bg colours colour-triggers match against, the log lifecycle the buffer
+// writes through, and the OSC 8 hyperlink state the buffer translation
+// registers as it goes. Splitting it out of the widget is what lets the
 // pipeline run with no view at all, which is the point of the Widgets-free
 // core (#8681).
 //
@@ -66,6 +71,11 @@ struct TConsoleModel
     // model and returns for any other.
     void toggleLogging(bool isMessageEnabled);
 
+    // The count is the distance between the two arguments, not the difference
+    // between an inclusive pair, so lines(n, n) is empty rather than one line.
+    // Not const because TBuffer::line() hands out a mutable QString&.
+    QStringList lines(int from, int to);
+
     // No 'm' prefix on purpose: TConsole::buffer aliases this one by reference and has to keep its name for the rest of the codebase, so the two match.
     TBuffer buffer;
     // A QPointer because Host and view are torn down in either order: quitting
@@ -73,13 +83,29 @@ struct TConsoleModel
     // closing one profile deletes its console first. The view co-owns the
     // model, so it can be left holding one whose Host has gone.
     QPointer<Host> mpHost;
-    // Only a cache today - the view fills these in through TConsole::changeColors(); refreshing them from the Host after the profile loads moves core-side with the colour sub-PR.
+    // On the main console model, the profile's colours, kept there by
+    // Host::refreshMainConsoleColors(); colour triggers set to "default" match
+    // against these. A sub-console model's hold that one window's own colours
+    // instead, written by TConsole::setConsoleBgColor() and read back only by
+    // that console.
     QColor mBgColor = QColorConstants::Black;
     QColor mFgColor = QColorConstants::LightGray;
     QString mCurrentLine;
     int mEngineCursor = -1;
     QPoint mUserCursor;
     bool mIsPromptLine = false;
+
+    // The OSC 8 hyperlink managers. Concealing and revealing rewrite this
+    // model's buffer, so they run with or without a view; repainting afterwards
+    // is the view's job. Registering a link is not view-free yet - TBuffer
+    // reaches the manager through its own console back-pointer.
+    //
+    // Declared after the buffer so that the manager which writes into it is
+    // destroyed first - keep it that way if a field is ever added between them.
+    THyperlinkCompactManager mHyperlinkCompactManager;
+    THyperlinkSelectionManager mHyperlinkSelectionManager;
+    THyperlinkVisibilityManager mHyperlinkVisibilityManager;
+
     // The log destination. TBuffer writes into mLogStream directly, and
     // TMainConsole keeps references aliasing all four.
     // mLogStream holds a bare pointer to mLogFile, so the declaration order

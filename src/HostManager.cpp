@@ -141,10 +141,8 @@ void HostManager::changeAllHostColour(const Host* pHost)
         if (mapper) {
             mapper->setPalette(QApplication::palette());
         }
-        QMutableMapIterator<QString, TConsole*> itSubConsole(host->mpConsole->mSubConsoleMap);
-        while (itSubConsole.hasNext()) {
-            itSubConsole.next();
-            itSubConsole.value()->changeColors();
+        for (const QString& subConsoleName : host->windowRegistry().subConsoleNames()) {
+            host->mpConsole->changeSubConsoleColors(subConsoleName);
         }
     }
 }

@@ -17,9 +17,10 @@ cmake --build --preset macos-debug
 ```
 
 Run `cmake --list-presets` to see the presets available on your machine; alongside `macos-debug`
-there are `-nosan`, `-tsan` and `-ubsan` variants and a `macos-static-analysis` preset. Variants
-build into `build-<preset-name>/` rather than `build/`, so several configurations can coexist
-without invalidating each other.
+there are `-nosan`, `-tsan` and `-ubsan` variants, a `macos-static-analysis` preset and a
+`macos-release` one carrying the flags CI ships to players. Variants build into
+`build-<preset-name>/` rather than `build/`, so several configurations can coexist without
+invalidating each other.
 
 The presets do not pin a Qt location, relying on CMake's default search path. If Qt is not found,
 pass it explicitly: `cmake --preset macos-debug -DCMAKE_PREFIX_PATH="$(brew --prefix qt6)"`.
@@ -53,15 +54,43 @@ cmake --build --preset windows-debug
 ```
 
 Sanitizers are not enabled on Windows (`src/CMakeLists.txt` guards them with `if(NOT WIN32)`),
-so there is no `-nosan` variant.
+so there is no `-nosan` variant. `windows-release` reads `MSYSTEM_PREFIX` the same way, adds
+`CMAKE_BUILD_TYPE=Release` to match `CI/build-mudlet-for-windows.sh` - which builds Release on
+every Windows run - and builds into `build-windows-release/`.
+
+## Reproducing a CI build
+
+`CMakePresets.json` also carries the presets CI configures with — `ci-linux`, `ci-macos`,
+`ci-windows` and `ci-codeql` — so a build that fails only on a runner can be reproduced with
+`cmake --preset ci-linux` instead of transcribing flags out of the workflow. The values a run
+varies by tag or matrix entry come from the environment, and leaving one unset is *not* the same
+as what CI passes — set them to match the job being reproduced:
+
+| Variable | Pull request build | `Mudlet-*` release tag |
+| --- | --- | --- |
+| `CMAKE_BUILD_TYPE` | empty | `Release` |
+| `USE_SANITIZER` | `Address` on Linux, empty on macOS | empty |
+| `WITH_SENTRY` | `ON` | `ON` |
+| `SENTRY_SEND_DEBUG` | `0` | `1` |
+
+```bash
+USE_SANITIZER=Address cmake --preset ci-linux
+```
+
+`WITH_SENTRY=ON` builds sentry-native from the submodule, so leave it unset unless the failure
+involves Sentry; `SENTRY_DSN` is a repository secret and cannot be matched locally at all.
+
+These presets build outside the checkout, into `../b/ninja`, because that is where the workflows'
+ctest and packaging steps look — `ci-windows` is the exception and uses `build-$MSYSTEM/`.
 
 ## Sanitizers and static analysis
 
-Sanitizers are enabled on every non-Windows build; `USE_SANITIZER` defaults to `address`. Use the
-`-tsan` / `-ubsan` / `-nosan` presets to change that, or pass a CMake list — semicolon-separated,
-not comma-separated — such as `-DUSE_SANITIZER="Address;Undefined"`. A comma-separated value is
-read as a single name, which silently skips the per-sanitizer options such as
-`-fno-omit-frame-pointer`.
+Sanitizers are enabled on every non-Windows build; `USE_SANITIZER` defaults to `address`, and a
+Release build type does not turn them off on its own - `<platform>-release` clears the variable
+explicitly. Use the `-tsan` / `-ubsan` / `-nosan` presets to change the choice, or pass a CMake
+list — semicolon-separated, not comma-separated — such as `-DUSE_SANITIZER="Address;Undefined"`.
+A comma-separated value is read as a single name, which silently skips the per-sanitizer options
+such as `-fno-omit-frame-pointer`.
 
 Usable names are `Address`, `Thread` and `Undefined` on macOS, plus `Memory` and `Leak` on Linux.
 `MemoryWithOrigins` appears in the `USE_SANITIZER` cache docstring but has no mapping declared in

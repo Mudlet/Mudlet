@@ -21,7 +21,7 @@
  * Someone who used Mudlet before and has no profiles left still counts as an
  * experienced player, so the connection dialog owes them the games list rather
  * than a beginner's tutorial invitation - the same answer the interface tour
- * and the starter UI give.
+ * gives.
  *
  * The gate memoises for the life of the process, so the fresh-install half of
  * this lives in TutorialInvitationLayoutTest.

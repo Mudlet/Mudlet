@@ -27,12 +27,20 @@
 #include "LuaInterface.h"
 #include "CredentialManager.h"
 #include "SecureStringUtils.h"
-#include "TConsole.h"
+#include "TAction.h"
+#include "TAlias.h"
+#include "TKey.h"
+#include "TMainConsole.h"
 #include "TMap.h"
 #include "TRoomDB.h"
 #include "TRoom.h"
+#include "TScript.h"
+#include "TTimer.h"
+#include "TTrigger.h"
+#include "TVar.h"
 #include "VarUnit.h"
 #include "mudlet.h"
+#include "dlgTriggerEditor.h"
 
 #include <QBuffer>
 #include <QClipboard>
@@ -1213,6 +1221,13 @@ void XMLimport::readHost(Host* pHost)
 
     pHost->setUserBorders(borders);
     pHost->loadPackageInfo();
+    // A package import comes through here too, into a profile that does have a
+    // console - and that one needs the whole restyle, not just the model:
+    if (pHost->mpConsole) {
+        pHost->mpConsole->changeColors();
+    } else {
+        pHost->refreshMainConsoleColors();
+    }
 }
 
 bool XMLimport::readHostColorElement(Host* pHost, QStringView elementName)
@@ -1241,8 +1256,6 @@ bool XMLimport::readHostColorElement(Host* pHost, QStringView elementName)
             {qsl("mWhite"), &Host::mWhite},
             {qsl("mLightWhite"), &Host::mLightWhite},
             {qsl("mFgColor2"), &Host::mFgColor_2},
-            {qsl("mLowerLevelColor"), &Host::mLowerLevelColor},
-            {qsl("mUpperLevelColor"), &Host::mUpperLevelColor},
             {qsl("mRoomBorderColor"), &Host::mRoomBorderColor},
             {qsl("mRoomCollisionBorderColor"), &Host::mRoomCollisionBorderColor},
             {qsl("mBlack2"), &Host::mBlack_2},
@@ -1269,6 +1282,8 @@ bool XMLimport::readHostColorElement(Host* pHost, QStringView elementName)
             {qsl("mBgColor2"), &Host::mBgColor_2},
             {qsl("mMapGridColor"), &Host::mMapGridColor},
             {qsl("mMapInfoBg"), &Host::mMapInfoBg},
+            {qsl("mLowerLevelColor"), &Host::mLowerLevelColor},
+            {qsl("mUpperLevelColor"), &Host::mUpperLevelColor},
     };
 
     const QString elemName = elementName.toString();
@@ -1934,9 +1949,11 @@ QString XMLimport::readScriptElement()
         qDebug() << "XMLimport::readScriptElement() ERROR:" << errorString();
     }
 
-    if (mVersionMajor > 1 || (mVersionMajor == 1 && mVersionMinor > 0)) {
-        // This is NOT the original version, so it will have control characters
-        // encoded up using Object Replacement and Control Symbol (for relevant ASCII control code) code-points
+    // From format 1.001 on, control characters are stored as U+FFFC (Object
+    // Replacement) followed by the matching Control Picture. Hardly any script
+    // holds a U+FFFC, so one contains() spares every script the 29 full-text
+    // replace() scans below:
+    if ((mVersionMajor > 1 || (mVersionMajor == 1 && mVersionMinor > 0)) && localScript.contains(QChar(0xFFFC))) {
         localScript.replace(qsl("\xFFFC\x2401"), QChar('\x01')); // SOH
         localScript.replace(qsl("\xFFFC\x2402"), QChar('\x02')); // STX
         localScript.replace(qsl("\xFFFC\x2403"), QChar('\x03')); // ETX

@@ -38,6 +38,7 @@
 class Host;
 class TConsole;
 class TDockWidget;
+class TPrintSink;
 
 /**
  * @brief Represents a single MXP frame for multi-window layouts.
@@ -103,7 +104,12 @@ public:
     void clearDestination();
     QString getCurrentDestination() const { return mCurrentDestination; }
     QWidget* getCurrentDestinationWidget() const;
-    TConsole* getCurrentDestinationConsole() const;
+    // Where <DEST> is redirecting output to, as a write-only sink so that the
+    // buffer translation never gets a view pointer back. Null unless a
+    // redirect is really in force: no destination set, a frame that has since
+    // gone, or a destination that resolves back to the main console - which
+    // would recurse into the very buffer being translated.
+    TPrintSink* currentDestinationSink() const;
     bool hasActiveDestination() const { return !mCurrentDestination.isEmpty(); }
     
     // Frame queries

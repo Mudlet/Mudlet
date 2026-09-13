@@ -24,22 +24,31 @@
  ***************************************************************************/
 
 
+#include "TMatchState.h"
 #include "Tree.h"
 #include "utils.h" // For NameGroupMatches
 
 #include <QColor>
 #include <QDebug>
+#include <QDebugStateSaver>
+#include <QList>
 #include <QMap>
 #include <QPointer>
 #include <QSharedPointer>
+#include <QString>
+#include <QStringList>
+#include <QStringMatcher>
+#include <QtGlobal>
 
 #define PCRE2_CODE_UNIT_WIDTH 8
 #include <pcre2.h>
 
+#include <list>
 #include <map>
 #include <memory>
 #include <string>
 #include <vector>
+#include <QCoreApplication>
 
 class Host;
 class TLuaInterpreter;
@@ -63,9 +72,74 @@ struct TColorTable
     QColor mBgColor;
 };
 
+// A 256-bit Bloom filter over the adjacent character pairs of one line: a
+// substring pattern whose own pairs are not all present cannot occur in that
+// line, so it can be dismissed without searching for it. That holds only while
+// the search it stands in for compares exactly the same way bitsFor() does -
+// a case-insensitive matcher would need a case-insensitive summary too.
+class TBigramFilter
+{
+public:
+    struct Bits
+    {
+        static constexpr int scmWords = 4;
+        quint64 words[scmWords]{};
+    };
+
+    static Bits bitsFor(const QString& text);
+
+    // Summarising a line costs about as much as searching it three or four
+    // times over, so a profile with only a couple of substring patterns pays
+    // more for the summary than the searches it saves. How many patterns asked
+    // about the previous line stands in for how many will ask about this one,
+    // a profile's trigger set hardly ever changing between two lines:
+    static constexpr int scmQuestionsWorthSummarising = 5;
+
+    TBigramFilter(const QString& line, const int questionsOnThePreviousLine)
+    : mLine(line)
+    , mSummarise(questionsOnThePreviousLine >= scmQuestionsWorthSummarising)
+    {
+    }
+    TBigramFilter(QString&&, int) = delete;
+    Q_DISABLE_COPY_MOVE(TBigramFilter)
+
+    // Takes the haystack it is standing in for only to check it really is the
+    // line these bits describe: answering about any other string - a capture,
+    // or a slice of the line - would silently stop triggers firing.
+    bool couldContain(const QString& haystack, const Bits& pattern) const
+    {
+        Q_ASSERT(haystack.constData() == mLine.constData());
+        Q_UNUSED(haystack)
+        ++mQuestionsAsked;
+        if (!mSummarise) {
+            return true;
+        }
+        if (!mBuilt) {
+            mLineBits = bitsFor(mLine);
+            mBuilt = true;
+        }
+        for (int i = 0; i < Bits::scmWords; ++i) {
+            if (pattern.words[i] & ~mLineBits.words[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    int questionsAsked() const { return mQuestionsAsked; }
+
+private:
+    const QString& mLine;
+    const bool mSummarise;
+    mutable Bits mLineBits;
+    mutable bool mBuilt = false;
+    mutable int mQuestionsAsked = 0;
+};
+
 class TTrigger : public Tree<TTrigger>
 {
     Q_DECLARE_TR_FUNCTIONS(TTrigger) // Needed so we can use tr() even though TTrigger is NOT derived from QObject
+    friend class CorruptTriggerPatternsTest;
     friend class XMLexport;
     friend class XMLimport;
 
@@ -107,7 +181,7 @@ public:
     QString getScript() const { return mScript; }
     bool setScript(const QString& script);
     bool compileScript();
-    bool match(const char* haystackC, int haystackCLength, const QString&, int line, int posOffset = 0);
+    bool match(const char* haystackC, int haystackCLength, const QString&, int line, int posOffset = 0, const TBigramFilter* pLineBigrams = nullptr);
     bool checkIfNew();
     void unmarkAsNew();
 
@@ -122,7 +196,7 @@ public:
     void enableTrigger(const QString&);
     void disableTrigger(const QString&);
     TTrigger* killTrigger(const QString&);
-    bool match_substring(const QString&, const QString&, int, int posOffset, int lineNumber);
+    bool match_substring(const QString&, const QString&, int, int posOffset, int lineNumber, const TBigramFilter* pLineBigrams);
     bool match_perl(const char* haystackC, int haystackCLength, const QString&, int, int posOffset, int lineNumber);
     bool match_exact_match(const QString&, const QString&, int, int posOffset, int lineNumber);
     bool match_begin_of_line_substring(const QString& haystack, const QString& needle, int patternNumber, int posOffset, int lineNumber);
@@ -192,7 +266,7 @@ private:
 
     inline void updateMultistates(int regexNumber, std::list<std::string>& captureList, std::list<int>& posList, const NameGroupMatches* nameMatches = nullptr);
     inline void filter(std::string&, int&, int lineNumber);
-    void processExactMatch(const QString& needle, int patternNumber, int posOffset, int lineNumber);
+    void processExactMatch(int patternNumber, int posOffset, int lineNumber);
     void processRegexMatch(const char* haystackC,
                            const QString& haystack,
                            int patternNumber,
@@ -202,15 +276,33 @@ private:
                            pcre2_match_data* match_data,
                            int rc,
                            int lineNumber);
-    void processBeginOfLine(const QString& needle, int patternNumber, int posOffset, int lineNumber);
+    void processBeginOfLine(int patternNumber, int posOffset, int lineNumber);
     void processSubstringMatch(const QString& haystack, const QString& needle, int regexNumber, int posOffset, int where, int lineNumber);
     void processColorPattern(int patternNumber, std::list<std::string>& captureList, std::list<int>& posList, int lineNumber);
     void processPromptMatch(int patternNumber);
+    const std::string& patternUtf8(int patternNumber) const;
 
 
     QList<int> mPatternKinds;
-    QMap<int, QSharedPointer<pcre2_code>> mRegexMap;
-    QMap<int, QSharedPointer<pcre2_match_data>> mMatchDataMap;
+    // The matcher is null for every pattern kind that is not a substring one;
+    // it lives beside its own filter bits so the two cannot fall out of step
+    struct TSubstringPattern
+    {
+        std::unique_ptr<QStringMatcher> matcher;
+        TBigramFilter::Bits bigrams;
+    };
+    // Indexed by pattern number rather than keyed by it: every line reaches
+    // these for every pattern of every trigger, which is no place for a tree
+    // lookup and a reference count
+    std::vector<TSubstringPattern> mSubstringPatterns;
+    std::vector<QSharedPointer<pcre2_code>> mRegexes;
+    std::vector<QSharedPointer<pcre2_match_data>> mMatchData;
+    // char rather than bool: keeps the plain element access the bit-packed
+    // specialisation takes away
+    std::vector<char> mRegexJitCompiled;
+    // The pattern text in the form the capture list wants it, converted when
+    // the trigger is compiled instead of on every match
+    std::vector<std::string> mPatternsUtf8;
 
     // Lua code as a string to run
     QString mScript;

@@ -210,12 +210,12 @@ private slots:
         QCOMPARE(mpHost->mpConsole->mWindowBgImageMode, 5);
 
         runLua(qsl("createLabel('lowerTarget', 10, 10, 100, 100, 1)"));
-        QVERIFY(mpHost->mpConsole->mLabelMap.contains(qsl("lowerTarget")));
+        QVERIFY(mpHost->mpConsole->labelWidget(qsl("lowerTarget")));
 
         runLua(qsl("lowerWindow('lowerTarget')"));
 
         verifyStackedBelow(mpHost->mpConsole->mpWindowBackground, mpHost->mpConsole->mpMainDisplay, "lowerWindow() left the full-window background painting on top of the main display");
-        verifyStackedBelow(mpHost->mpConsole->mpMainDisplay, mpHost->mpConsole->mLabelMap.value(qsl("lowerTarget")), "lowerWindow() left the lowered label hidden behind the main display");
+        verifyStackedBelow(mpHost->mpConsole->mpMainDisplay, mpHost->mpConsole->labelWidget(qsl("lowerTarget")), "lowerWindow() left the lowered label hidden behind the main display");
     }
 
     // The six branches of lowerWindow() are copy-pasted, so cover a second one.
@@ -226,7 +226,7 @@ private slots:
 
         runLua(qsl("setBackgroundImage('main', [[%1]], 'cover', true)").arg(imagePath));
         runLua(qsl("createMiniConsole('lowerConsole', 10, 10, 200, 100)"));
-        QVERIFY(mpHost->mpConsole->mSubConsoleMap.contains(qsl("lowerConsole")));
+        QVERIFY(mpHost->windowRegistry().hasSubConsole(qsl("lowerConsole")));
 
         runLua(qsl("lowerWindow('lowerConsole')"));
 
@@ -239,7 +239,7 @@ private slots:
         runLua(qsl("lowerWindow('lowerTarget')"));
 
         verifyStackedBelow(mpHost->mpConsole->mpWindowBackground, mpHost->mpConsole->mpMainDisplay, "lowerWindow() put the main display below the full-window background widget");
-        verifyStackedBelow(mpHost->mpConsole->mpMainDisplay, mpHost->mpConsole->mLabelMap.value(qsl("lowerTarget")), "lowerWindow() left the lowered label hidden behind the main display");
+        verifyStackedBelow(mpHost->mpConsole->mpMainDisplay, mpHost->mpConsole->labelWidget(qsl("lowerTarget")), "lowerWindow() left the lowered label hidden behind the main display");
     }
 
     // a game can reach changeColors() with no user action, through an OSC palette change

@@ -33,6 +33,7 @@
 #include "TEvent.h"
 #include "mudlet.h"
 
+#include <QAbstractTextDocumentLayout>
 #include <QKeyEvent>
 #include <QPainter>
 #include <QRegularExpression>
@@ -40,6 +41,9 @@
 #include <QSaveFile>
 #include <QToolButton>
 #include <QIcon>
+#include <QtMath>
+#include <QTextBlock>
+#include <algorithm>
 #include <chrono>
 
 using namespace std::chrono_literals;
@@ -668,6 +672,27 @@ void TCommandLine::hideEvent(QHideEvent* event)
     QPlainTextEdit::hideEvent(event);
 }
 
+// The height this many rows need, measured from the layout rather than from the font
+// metrics: a row is laid out a pixel or two taller than QFontMetrics::height(), and
+// coming up short is what leaves a scroll range behind. The first block stands in for
+// the rest - they all use the same font.
+int TCommandLine::heightForRows(const int rows) const
+{
+    const QTextBlock firstBlock = document()->firstBlock();
+    const qreal documentMargin = document()->documentMargin();
+    // blockBoundingRect() lays the block out if it has not been laid out yet, so this is
+    // right on the very first call too - but it also folds the document's bottom margin
+    // into whichever block is the last one, which for a one-block command line is this one
+    qreal blockHeight = document()->documentLayout()->blockBoundingRect(firstBlock).height();
+    if (!firstBlock.next().isValid()) {
+        blockHeight -= documentMargin;
+    }
+    const QTextLayout* layout = firstBlock.layout();
+    const int rowsInFirstBlock = (layout && layout->lineCount() > 0) ? layout->lineCount() : 1;
+    // a viewport that merely matches the text still keeps a row of range, so clear it by one
+    return qCeil(blockHeight / rowsInFirstBlock * rows + 2 * documentMargin) + 1 + 2 * frameWidth();
+}
+
 void TCommandLine::adjustHeight()
 {
     // Make sure adjustHeight won't crash if it's used before mpConsole->layerCommandLine has a value
@@ -691,9 +716,11 @@ void TCommandLine::adjustHeight()
         lines = 10;
     }
     const int fontH = QFontMetrics(font()).height();
-    // Adjust height margin based on font size and if it is more than one row
-    int marginH = lines > 1 ? 10 : 5;
-    int _height = (fontH + 1) * lines + marginH;
+    const int marginH = lines > 1 ? 10 : 5;
+    // Coming up short of what the text needs leaves the vertical scroll bar with a
+    // range, and a click-drag inside the command line moves into it - with the scroll
+    // bar switched off nothing shows that the text moved, or drags it back:
+    int _height = std::max((fontH + 1) * lines + marginH, heightForRows(lines));
     if (_height < mpHost->commandLineMinimumHeight) {
         _height = mpHost->commandLineMinimumHeight;
     }

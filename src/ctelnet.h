@@ -349,6 +349,11 @@ private:
     // without a real decompression bomb.
     friend class cTelnetBufferTest;
 
+    // Calls reset() from its constructor. It has to be the Host that does that,
+    // and not cTelnet itself, because reset() clears Host members declared after
+    // cTelnet, which do not exist yet while cTelnet is being constructed.
+    friend class Host;
+
 #if defined(QT_NO_SSL)
     void abortLosingSocket(QTcpSocket* losingSocket);
 #else
@@ -364,7 +369,6 @@ private:
     int decompressBuffer(char*& in_buffer, int& length, char* out_buffer);
     void reset();
     void handleFailedConnection();
-    void forgetGameSuppliedHostState();
     void sendLoginAndPass();
 
     QByteArray prepareNewEnvironData(const QString&);
@@ -427,8 +431,11 @@ private:
     void promptTlsConnectionAvailable();
 #endif
     void sendNAWS(int width, int height);
+    void sendCurrentNAWS();
+    void readPendingSocketData();
     QString parseGUIVersionFromJSON(const QJsonObject& json);
     QString parseGUIUrlFromJSON(const QJsonObject& json);
+    bool parseGUIBaseUiDeclinedFromJSON(const QJsonObject& json);
     void downloadAndInstallGUIPackage(const QString& packageName, const QString& fileName, const QString& url);
     void handleGUIPackageInstallationAndUpgrade(QJsonDocument document);
 
@@ -611,6 +618,7 @@ private:
     // never releases it. See cTelnet::checkCharacterModePattern().
     bool mCharacterModeDetected = false;
     QTimer* mTimerCharacterModeDetect = nullptr;
+    QTimer* mTimerNawsUpdate = nullptr;
 
     // KaVir protocol negotiation tracking
     QVector<unsigned char> mNegotiationOrder;

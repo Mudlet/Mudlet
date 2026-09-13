@@ -31,7 +31,6 @@
 #include "CredentialManager.h"
 #include "TAction.h"
 #include "TAlias.h"
-#include "TConsole.h"
 #include "TKey.h"
 #include "TScript.h"
 #include "TTimer.h"
@@ -39,6 +38,7 @@
 #include "VarUnit.h"
 #include "mudlet.h"
 
+#include <QRegularExpression>
 #include <QVersionNumber>
 #include <QtConcurrentRun>
 #include <QFutureWatcher>
@@ -632,9 +632,9 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         host.append_child("mLightMagenta").text().set(pHost->mLightMagenta.name().toUtf8().constData());
         host.append_child("mWhite").text().set(pHost->mWhite.name().toUtf8().constData());
         host.append_child("mLightWhite").text().set(pHost->mLightWhite.name().toUtf8().constData());
-        host.append_child("mDisplayFont").text().set(pHost->getDisplayFont().toString().toUtf8().constData());
+        host.append_child("mDisplayFont").text().set(pHost->getDisplayFontForSaving().toString().toUtf8().constData());
         // We don't use this ourselves any more but still write it out for older versions:
-        host.append_child("mCommandLineFont").text().set(pHost->getDisplayFont().toString().toUtf8().constData());
+        host.append_child("mCommandLineFont").text().set(pHost->getDisplayFontForSaving().toString().toUtf8().constData());
         // There was a mis-spelt duplicate commandSeperator above but it is now gone
         host.append_child("mCommandSeparator").text().set(pHost->mCommandSeparator.toUtf8().constData());
         host.append_child("commandLineMinimumHeight").text().set(QString::number(pHost->commandLineMinimumHeight).toUtf8().constData());
@@ -643,8 +643,12 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         auto mapBgColorNode = host.append_child("mBgColor2");
         mapBgColorNode.text().set(pHost->mBgColor_2.name().toUtf8().constData());
         mapBgColorNode.append_attribute("alpha").set_value(pHost->mBgColor_2.alpha());
-        host.append_child("mLowerLevelColor").text().set(pHost->mLowerLevelColor.name().toUtf8().constData());
-        host.append_child("mUpperLevelColor").text().set(pHost->mUpperLevelColor.name().toUtf8().constData());
+        auto lowerLevelColorNode = host.append_child("mLowerLevelColor");
+        lowerLevelColorNode.text().set(pHost->mLowerLevelColor.name().toUtf8().constData());
+        lowerLevelColorNode.append_attribute("alpha").set_value(pHost->mLowerLevelColor.alpha());
+        auto upperLevelColorNode = host.append_child("mUpperLevelColor");
+        upperLevelColorNode.text().set(pHost->mUpperLevelColor.name().toUtf8().constData());
+        upperLevelColorNode.append_attribute("alpha").set_value(pHost->mUpperLevelColor.alpha());
         host.append_child("mRoomBorderColor").text().set(pHost->mRoomBorderColor.name().toUtf8().constData());
         host.append_child("mRoomCollisionBorderColor").text().set(pHost->mRoomCollisionBorderColor.name().toUtf8().constData());
         auto mapGridColorNode = host.append_child("mMapGridColor");
@@ -669,8 +673,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         host.append_child("mLightMagenta2").text().set(pHost->mLightMagenta_2.name().toUtf8().constData());
         host.append_child("mWhite2").text().set(pHost->mWhite_2.name().toUtf8().constData());
         host.append_child("mLightWhite2").text().set(pHost->mLightWhite_2.name().toUtf8().constData());
-        // this crashes
-        host.append_child("mSpellDic").text().set(pHost->mpConsole->getSystemSpellDictionary().toUtf8().constData());
+        host.append_child("mSpellDic").text().set(pHost->getSpellDic().toUtf8().constData());
         // TODO: Consider removing these sub-elements that duplicate the same
         // attributes - which WERE bugged - when we update the XML format, must leave
         // them in place for now even though we no longer use them for compatibility
@@ -1087,8 +1090,8 @@ void XMLexport::writeTrigger(TTrigger* pT, pugi::xml_node xmlParent)
         }
     }
 
-    for (auto& it : *pT->mpMyChildrenList) {
-        writeTrigger(it, xmlParent);
+    for (auto* child : *pT->mpMyChildrenList) {
+        writeTrigger(static_cast<TTrigger*>(child), xmlParent);
     }
 }
 
@@ -1140,8 +1143,8 @@ void XMLexport::writeAlias(TAlias* pT, pugi::xml_node xmlParent)
         }
     }
 
-    for (auto& it : *pT->mpMyChildrenList) {
-        writeAlias(it, xmlParent);
+    for (auto* child : *pT->mpMyChildrenList) {
+        writeAlias(static_cast<TAlias*>(child), xmlParent);
     }
 }
 
@@ -1211,8 +1214,8 @@ void XMLexport::writeAction(TAction* pT, pugi::xml_node xmlParent)
         }
     }
 
-    for (auto& it : *pT->mpMyChildrenList) {
-        writeAction(it, xmlParent);
+    for (auto* child : *pT->mpMyChildrenList) {
+        writeAction(static_cast<TAction*>(child), xmlParent);
     }
 }
 
@@ -1267,8 +1270,8 @@ void XMLexport::writeTimer(TTimer* pT, pugi::xml_node xmlParent)
         }
     }
 
-    for (auto& it : *pT->mpMyChildrenList) {
-        writeTimer(it, xmlParent);
+    for (auto* child : *pT->mpMyChildrenList) {
+        writeTimer(static_cast<TTimer*>(child), xmlParent);
     }
 }
 
@@ -1322,8 +1325,8 @@ void XMLexport::writeScript(TScript* pT, pugi::xml_node xmlParent)
         }
     }
 
-    for (auto& it : *pT->mpMyChildrenList) {
-        writeScript(it, xmlParent);
+    for (auto* child : *pT->mpMyChildrenList) {
+        writeScript(static_cast<TScript*>(child), xmlParent);
     }
 }
 
@@ -1376,8 +1379,8 @@ void XMLexport::writeKey(TKey* pT, pugi::xml_node xmlParent)
         }
     }
 
-    for (auto& it : *pT->mpMyChildrenList) {
-        writeKey(it, xmlParent);
+    for (auto* child : *pT->mpMyChildrenList) {
+        writeKey(static_cast<TKey*>(child), xmlParent);
     }
 }
 

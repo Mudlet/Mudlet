@@ -148,3 +148,21 @@ leak:QTranslatorPrivate::do_load
 # ==============================================================================
 leak:OSSL_PROVIDER_try_load
 leak:OSSL_DECODER_do_all_provided
+
+# ==============================================================================
+# glibc DNS resolver leak
+# A lookup of a hostname - any test that points a profile at "localhost" rather
+# than 127.0.0.1 - runs getaddrinfo() on a Qt host-lookup worker thread, which
+# reaches nss_dns. LeakSanitizer's tracer sometimes finds that worker among
+# /proc/<pid>/task while it is not in the sanitizer's thread registry, says so
+# with "Thread N not found in registry", and then scans neither its stack nor
+# its TLS. The buffer glibc's resolver still owns from there loses its only
+# visible referrer and is reported as a 28-byte direct leak whose two frames
+# name no Mudlet code at all:
+#   malloc / __res_context_send (libc.so.6)
+# Which test it lands on is down to that race, not to anything the test does:
+# byte-identical reports failed MapDownloadTest in run 33002748956 and
+# StarterUiSectionsTest in run 32879955034. glibc owns and frees this buffer
+# itself, so no Mudlet allocation can hide behind the line below.
+# ==============================================================================
+leak:__res_context_send

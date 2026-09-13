@@ -40,7 +40,7 @@
  * USE_UPDATER - and CI's -testing builds are configured without it. Like
  * ReleaseChangelogSpanTest this file includes no utils.h of its own, so qsl()
  * is out of scope here and the literals below are QStringLiteral. SemVer.cpp
- * does include it, which is what the target's Qt6::Widgets link is for.
+ * does include it, which is what the target's Qt6::Gui link is for.
  *
  * Run with: ctest -R SemVerTest -V
  */
@@ -69,11 +69,14 @@ private slots:
     void aThreeComponentVersionIsReadable();
     void aTwoComponentVersionIsNotSemVerAtAll();
     void malformedVersionsAreRejected();
+    void trailingCharactersAreNotPartOfAVersion();
+    void aComponentTooLargeToStoreIsNotAVersion();
     void componentsAreComparedAsNumbersAndNotAsText();
     void majorOutranksMinorOutranksPatch();
     void aPrereleaseSortsBelowTheReleaseItLeadsTo();
     void ptbBuildsOfOneVersionAreOrderedByTheirDate();
     void buildMetadataDoesNotChangeAVersion();
+    void buildMetadataCannotBeEmpty();
     void anUnreadableVersionNeverCompares();
 };
 
@@ -105,6 +108,43 @@ void SemVerTest::malformedVersionsAreRejected()
     QVERIFY(!version(QStringLiteral("01.2.3")).isValid());
     QVERIFY(!version(QStringLiteral("1.02.3")).isValid());
     QVERIFY(!version(QStringLiteral("1.2.03")).isValid());
+}
+
+// A version is the whole of the string or it is not that version at all. The
+// regexp is what decides this, and a '$' anchor there matches just before a
+// trailing newline as well as at the end - so a version with a line ending left on
+// it would read as valid and then be offered under a spelling nothing is published
+// under.
+void SemVerTest::trailingCharactersAreNotPartOfAVersion()
+{
+    QVERIFY(!version(QStringLiteral("1.2.3\n")).isValid());
+    QVERIFY(!version(QStringLiteral("1.2.3-ptb-2026-08-08-7c6b5a49\n")).isValid());
+    QVERIFY(!version(QStringLiteral("1.2.3+build.1\n")).isValid());
+    QVERIFY(!version(QStringLiteral("1.2.3\r\n")).isValid());
+    QVERIFY(!version(QStringLiteral("1.2.3 ")).isValid());
+    QVERIFY(!version(QStringLiteral("\n1.2.3")).isValid());
+}
+
+// A component is read into an int, and a number too big for one reads back as 0 -
+// so without a range check the largest version there is sorts below every other
+// one instead of above them, and whichever side of the comparison it lands on gets
+// the update decision backwards
+void SemVerTest::aComponentTooLargeToStoreIsNotAVersion()
+{
+    QVERIFY(!version(QStringLiteral("2147483648.0.0")).isValid());
+    QVERIFY(!version(QStringLiteral("0.2147483648.0")).isValid());
+    QVERIFY(!version(QStringLiteral("0.0.2147483648")).isValid());
+    QVERIFY(!version(QStringLiteral("99999999999.0.0")).isValid());
+
+    // the largest one that does fit is still a version, and still ordered as a number
+    QVERIFY(version(QStringLiteral("2147483647.0.0")).isValid());
+    assertOlder(QStringLiteral("2147483646.0.0"), QStringLiteral("2147483647.0.0"));
+
+    // and one that does not fit compares with nothing, rather than sorting below
+    // the versions it is larger than
+    QVERIFY(!(version(QStringLiteral("2147483648.0.0")) < version(QStringLiteral("2147483647.0.0"))));
+    QVERIFY(!(version(QStringLiteral("2147483647.0.0")) < version(QStringLiteral("2147483648.0.0"))));
+    QVERIFY(!(version(QStringLiteral("99999999999.0.0")) < version(QStringLiteral("1.2.3"))));
 }
 
 // Text ordering puts "4.22.0" below "4.9.0", which would offer every 4.22.0 user
@@ -156,6 +196,23 @@ void SemVerTest::buildMetadataDoesNotChangeAVersion()
 
     // The prerelease still counts when metadata is attached to it
     assertOlder(QStringLiteral("1.2.3-alpha+build.1"), QStringLiteral("1.2.3+build.1"));
+}
+
+// SemVer 2.0 has build metadata as one or more identifiers of at least one
+// character each, so a '+' with nothing after it is a typo rather than a version
+void SemVerTest::buildMetadataCannotBeEmpty()
+{
+    QVERIFY(!version(QStringLiteral("1.2.3+")).isValid());
+    QVERIFY(!version(QStringLiteral("1.2.3+.build")).isValid());
+    QVERIFY(!version(QStringLiteral("1.2.3+build.")).isValid());
+    QVERIFY(!version(QStringLiteral("1.2.3+build..1")).isValid());
+    QVERIFY(!version(QStringLiteral("1.2.3-alpha+")).isValid());
+
+    // metadata that is actually there stays acceptable
+    QVERIFY(version(QStringLiteral("1.2.3+build")).isValid());
+    QVERIFY(version(QStringLiteral("1.2.3+build.1.2")).isValid());
+    QVERIFY(version(QStringLiteral("1.2.3+21AF26D3----117B344092BD")).isValid());
+    QVERIFY(version(QStringLiteral("1.2.3-alpha+build")).isValid());
 }
 
 // std::sort needs a strict weak ordering, and an unreadable version has no place
