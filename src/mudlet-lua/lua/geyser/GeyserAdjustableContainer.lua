@@ -411,9 +411,12 @@ function Adjustable.Container:adjustBorder()
         self.attached = false
         return
     end
-    -- the console keeps a fifth of the window: a container as big as it would reserve every pixel
-    local windowExtent = (where == "top" or where == "bottom") and winh or winw
-    self.borderSize = math.min(self.borderSize, math.floor(windowExtent * 0.8))
+    -- A container reaching the window edge would reserve the whole axis. Hold the reservation
+    -- back by two characters plus the pane's scroll bar, whose width Lua cannot measure.
+    local vertical = (where == "top" or where == "bottom")
+    local charWidth, charHeight = calcFontSize("main")
+    local minimumConsole = math.max(40, 2 * (vertical and charHeight or charWidth))
+    self.borderSize = math.min(self.borderSize, math.max(0, (vertical and winh or winw) - minimumConsole))
     local borderSize = self.borderSize
     for k,v in pairs(Adjustable.Container.Attached[where]) do
         if v.borderSize > borderSize then
