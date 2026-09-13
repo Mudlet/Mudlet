@@ -435,6 +435,7 @@ private:
     void promptTlsConnectionAvailable();
 #endif
     void sendNAWS(int width, int height);
+    void sendCurrentNAWS();
     void readPendingSocketData();
     QString parseGUIVersionFromJSON(const QJsonObject& json);
     QString parseGUIUrlFromJSON(const QJsonObject& json);
@@ -621,6 +622,7 @@ private:
     // never releases it. See cTelnet::checkCharacterModePattern().
     bool mCharacterModeDetected = false;
     QTimer* mTimerCharacterModeDetect = nullptr;
+    QTimer* mTimerNawsUpdate = nullptr;
 
     // KaVir protocol negotiation tracking
     QVector<unsigned char> mNegotiationOrder;

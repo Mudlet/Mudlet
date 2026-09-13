@@ -58,6 +58,9 @@ void TriggerHighlighter::setTheme(const QString& themeName)
     auto edbee = edbee::Edbee::instance();
     auto themeManager = edbee->themeManager();
     edbee::TextTheme* theme = themeManager->theme(themeName);
+    if (!theme) {
+        theme = themeManager->fallbackTheme();
+    }
 
     // set defaults from chosen theme
     edbee::TextThemeRule defaultRule("default", "selector", theme->foregroundColor(), theme->backgroundColor(), false, false, false);
