@@ -1120,8 +1120,8 @@ int TLuaInterpreter::feedTelnet(lua_State* L)
         return 2;
     }
 
-    // Same self-feeding-loop guard as feedTriggers(), but each nested telnet
-    // processing frame is large - see scmMaxLoopbackProcessingDepth.
+    // Same self-feeding-loop guard as feedTriggers(); the lower cap is
+    // explained at scmMaxLoopbackProcessingDepth.
     if (host.mTelnet.loopbackProcessingDepth() >= cTelnet::scmMaxLoopbackProcessingDepth) {
         qWarning().nospace() << "TLuaInterpreter::feedTelnet(...) aborting: nested telnet data processing reached the limit of " << cTelnet::scmMaxLoopbackProcessingDepth
                              << " - probably an endless feedTelnet loop.";
