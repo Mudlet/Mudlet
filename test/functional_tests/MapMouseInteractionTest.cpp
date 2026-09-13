@@ -1699,6 +1699,18 @@ private slots:
         QVERIFY(runLua(qsl("assert(not walked, 'doSpeedWalk was called for a double-click on nothing')")));
         QVERIFY(!consoleText().contains(qsl("Cannot find a path")));
     }
+
+    void test_creatingAMapFromTheMenuWhileAlreadyEditingStaysInEditing()
+    {
+        buildMap();
+        showMapper(false);
+        map()->mapClear();
+        rightClickAt(viewCentre());
+        QVERIFY(pickContextMenuItem(qsl("Create new map")));
+
+        QCOMPARE(map()->mpRoomDB->size(), 1);
+        QVERIFY2(!mp2dMap->mMapViewOnly, "creating a map flipped the mapper into viewing mode");
+    }
 };
 
 #include "MapMouseInteractionTest.moc"

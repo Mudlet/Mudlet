@@ -5426,7 +5426,9 @@ void T2DMap::slot_newMap()
 
     mpMap->mRoomIdHash[mpMap->mProfileName] = roomID;
     mpMap->mNewMove = true;
-    slot_toggleMapViewOnly();
+    if (mMapViewOnly) {
+        slot_toggleMapViewOnly();
+    }
 
     isCenterViewCall = true;
     mpMap->updateArea(-1);
