@@ -5443,7 +5443,8 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
     // line's width is its length, and a line no wider than the wrap column has
     // no break point to find. LineFeed and Tab are outside that range, so a
     // line needing an embedded break never takes this path.
-    if (lineText.size() <= (isNewline ? maxWidth - indent : maxWidth) && lineText.size() <= mWrapAt) {
+    const qsizetype widthAvailable = std::min<qsizetype>(isNewline ? maxWidth - indent : maxWidth, mWrapAt);
+    if (lineText.size() <= widthAvailable) {
         bool plainAscii = true;
         for (const QChar c : lineText) {
             if (c.unicode() < u' ' || c.unicode() > u'~') {
@@ -5454,6 +5455,14 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
         if (plainAscii) {
             return output;
         }
+    }
+    // No grapheme cluster renders wider than graphemeInfo::maxWidth columns -
+    // graphemeInfo::getWidth() in TTextProperties.h holds its return to that -
+    // and none is shorter than one QChar, so a line with at most that fraction
+    // of the width in QChars cannot reach the wrap column whatever it holds.
+    // Only an embedded line feed can still break it.
+    if (lineText.size() * graphemeInfo::maxWidth <= widthAvailable && !lineText.contains(QChar::LineFeed)) {
+        return output;
     }
 
     QTextBoundaryFinder boundaryFinder(QTextBoundaryFinder::Grapheme, lineText);
