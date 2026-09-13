@@ -79,7 +79,6 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 , mEnableBlinkText(pH->getEnableBlinkText())
 , mMouseWheelRemainder()
 {
-    mLastClickTimer.start();
     Q_ASSERT_X(mpHost, "TTextEdit::TTextEdit(...)", "mpHost is a nullptr");
     Q_ASSERT_X(mSearchHighlightFgColor != mSearchHighlightBgColor, "TTextEdit::TTextEdit(...)", "search highlight foreground and background colors must not be the same");
     setFont(mpHost->getDisplayFont());
@@ -1258,10 +1257,18 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
 
     int lineOffset = imageTopLine();
     int from = 0;
+
+    // A scroll moves every row, so the region handed to us is a floor and not a
+    // ceiling: taken as a ceiling it redraws only the rows named in it, leaving
+    // the rows the scroll exposed still showing pre-scroll ink.
+    const bool scrolledSinceLastPaint = (lineOffset != mLastRenderedOffset);
+    if (scrolledSinceLastPaint) {
+        y_bottom = mScreenHeight;
+    }
+
     if (lineOffset == 0) {
         mScrollVector = 0;
     } else {
-        // Was: mScrollVector = lineOffset - mLastRenderedOffset;
         if (mLastRenderedOffset) {
             mScrollVector = lineOffset - mLastRenderedOffset;
         } else {
@@ -1275,7 +1282,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
         mScrollVector = 0;
         noScroll = true;
     }
-    if ((r.height() < rect().height()) && (lineOffset > 0) && (mScreenMap.width() >= surfaceSize.width()) && (mScreenMap.height() >= surfaceSize.height())) {
+    if (!scrolledSinceLastPaint && (r.height() < rect().height()) && (lineOffset > 0) && (mScreenMap.width() >= surfaceSize.width()) && (mScreenMap.height() >= surfaceSize.height())) {
         p.drawPixmap(0, 0, mScreenMap);
         reusedCachedScreenContent = true;
         from = y_top;
@@ -2140,7 +2147,9 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             forceUpdate();
         }
         mSelectedRegion = QRegion(0, 0, 0, 0);
-        if (mLastClickTimer.elapsed() < 300) {
+        // Invalid until the first click, so a click soon after the console
+        // appears does not count as the second half of a double-click:
+        if (mLastClickTimer.isValid() && mLastClickTimer.elapsed() < 300) {
             mMouseTracking = true;
             mMouseTrackLevel++;
             if (mMouseTrackLevel > 3) {
@@ -2957,7 +2966,7 @@ void TTextEdit::showEvent(QShowEvent* event)
 {
     updateScreenView();
     mScrollVector = 0;
-    repaint();
+    update();
     QWidget::showEvent(event);
 }
 

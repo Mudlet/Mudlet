@@ -69,6 +69,13 @@ xvfb-run -a ./build/src/mudlet --profile "Mudlet self-test" --mirror --offline
 A failure writes a marker file (`/tmp/busted-tests-failed` on Linux/macOS) so the
 caller can detect it.
 
+On a **Wayland** desktop, prefix that with `QT_QPA_PLATFORM=xcb GDK_BACKEND=x11`.
+Xvfb is an X server and neither toolkit targets it by itself there: Qt takes the
+wayland plugin over `xvfb-run`'s `DISPLAY`, and the GTK3 platform theme Qt loads
+under GNOME calls `gtk_init()`, which exits the process when it cannot open a
+display - so the run dies before Mudlet starts, with exit code 1, nothing on
+stdout and no marker file.
+
 `--offline` opens the profile without connecting to its game server, which is
 what lets a spec use `feedTelnet()` - that function only injects while the telnet
 socket is unconnected. Specs that rely on it fail without the flag, so keep it on
@@ -159,3 +166,11 @@ end)
 ```
 
 If you have tests which it makes sense to have but would not logically fall into a describe block like this specific one, that is fine, but we use the format of the describe message as part of our method for gathering some code coverage metrics so we would like to try and include one describe for each function tested, in addition to any other logical groups of tests necessary. See existing test files for examples and ask on Discord is you still need help.
+
+### Cleaning up
+
+Around 4000 tests run in one process, so anything a test creates - a trigger, an alias, a
+window, a room, a global - has to be undone even when an assertion fails partway through.
+`finally()` is the tool for that, but busted keeps only **one** callback per `it()`: a
+second `finally()` silently replaces the first, and the cleanup it was holding never runs.
+Do all of a test's cleanup in a single `finally()`.
