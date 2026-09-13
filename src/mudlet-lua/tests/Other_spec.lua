@@ -646,6 +646,19 @@ describe("Tests Other.lua functions", function()
         string.format("expected roughly %s but got %s", tostring(expected), tostring(actual)))
     end
 
+    -- Returns once `seconds` of real time have passed, by waiting for an event
+    -- a real timer raises. Only the one spec which needs a running stopwatch to
+    -- run out of range on its own uses this; everything else is deterministic.
+    local settleCounter = 0
+    local function settle(seconds)
+      settleCounter = settleCounter + 1
+      local eventName = "stopwatchSpecSettled" .. settleCounter
+      local timerId = tempTimer(seconds, function() raiseEvent(eventName) end)
+      local name, message = waitForEvent(eventName, math.floor(seconds * 1000) + 5000)
+      pcall(killTimer, timerId)
+      assert.equals(eventName, name, "waiting for " .. eventName .. ": " .. tostring(message))
+    end
+
     teardown(function()
       for _, id in ipairs(createdIds) do
         pcall(deleteStopWatch, id)
@@ -759,6 +772,35 @@ describe("Tests Other.lua functions", function()
         assert.is_truthy(runningErr:find("past the time it can hold", 1, true),
           "unexpected message: " .. tostring(runningErr))
         assertClose(5e15, getStopWatchTime(running), 1)
+      end)
+
+      it("adjustStopWatch refuses an adjustment that overflows a running stopwatch's elapsed time", function()
+        -- A running stopwatch reports the interval from its effective start
+        -- time to now, so shifting that start time onto a date which still
+        -- exists is not on its own enough: 9223372036854775.807 s is the
+        -- largest interval it can hold, and every value from there up to the
+        -- age of the epoch itself leaves a perfectly valid start date while
+        -- putting the interval out of range. 5e15 + 4223373000000000 s is one.
+        local id = track(createStopWatch(true))
+        assert.is_true(adjustStopWatch(id, 5e15))
+        local ok, err = adjustStopWatch(id, 4223373000000000)
+        assert.is_nil(ok)
+        assert.is_truthy(err and err:find("past the time it can hold", 1, true),
+          "unexpected message: " .. tostring(err))
+        assertClose(5e15, getStopWatchTime(id), 1)
+      end)
+
+      it("a running stopwatch at the top of its range reports time rather than wrapping", function()
+        -- 9223372036854774 s is an adjustment a running stopwatch can hold, but
+        -- it leaves only about two seconds before the passage of time takes the
+        -- interval out of range on its own. Report the end of the range from
+        -- then on instead of wrapping onto a large negative time.
+        local id = track(createStopWatch(true))
+        assert.is_true(adjustStopWatch(id, 9223372036854774))
+        settle(2.5)
+        local elapsed = getStopWatchTime(id)
+        assert.is_true(elapsed > 0, "stopwatch wrapped onto " .. string.format("%.3f", elapsed))
+        assertClose(9223372036854775.807, elapsed, 2)
       end)
 
       it("getStopWatchTime resolves a stopwatch by its name", function()

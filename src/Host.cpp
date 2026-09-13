@@ -82,6 +82,7 @@
 #include <QTemporaryFile>
 #include <QTextStream>
 #include <QThread>
+#include <QtNumeric>
 #include <zip.h>
 #include <memory>
 
@@ -208,13 +209,18 @@ bool stopWatch::adjustmentFits(const qint64 adjustment) const
         return false;
     }
 
-    if (!mIsRunning) {
-        if (adjustment > 0 && mElapsedTime > std::numeric_limits<qint64>::max() - adjustment) {
-            return false;
-        }
-        if (adjustment < 0 && mElapsedTime < std::numeric_limits<qint64>::min() - adjustment) {
-            return false;
-        }
+    // The adjustment lands on the elapsed time either way - added to the stored
+    // one when stopped, and to the interval a running stopwatch measures from
+    // its effective start time - so the sum has to be a qint64 either way. A
+    // valid effective start time does not imply that: every date from the epoch
+    // back to the start of the range leaves an interval to now that no longer
+    // fits, and that interval is what gets reported:
+    const qint64 elapsed = getElapsedMilliSeconds();
+    if (adjustment > 0 && elapsed > std::numeric_limits<qint64>::max() - adjustment) {
+        return false;
+    }
+    if (adjustment < 0 && elapsed < std::numeric_limits<qint64>::min() - adjustment) {
+        return false;
     }
 
     // A stopwatch that has never run has no effective start time to shift yet:
@@ -233,8 +239,23 @@ qint64 stopWatch::getElapsedMilliSeconds() const
         return mElapsedTime;
     }
 
-    // Is running so calculate elapsed time:
-    return mEffectiveStartDateTime.msecsTo(QDateTime::currentDateTimeUtc());
+    if (!mEffectiveStartDateTime.isValid()) {
+        // Nothing to measure from:
+        return 0;
+    }
+
+    // Is running so calculate elapsed time. A stopwatch adjusted to near the
+    // end of the range runs out of it as time passes, so report the end of the
+    // range rather than let this subtraction wrap onto a time of the wrong
+    // sign:
+    const qint64 startMSecs = mEffectiveStartDateTime.toMSecsSinceEpoch();
+    const qint64 nowMSecs = QDateTime::currentDateTimeUtc().toMSecsSinceEpoch();
+    qint64 elapsed = 0;
+    if (qSubOverflow(nowMSecs, startMSecs, &elapsed)) {
+        return startMSecs < 0 ? std::numeric_limits<qint64>::max() : std::numeric_limits<qint64>::min();
+    }
+
+    return elapsed;
 }
 
 QString stopWatch::getElapsedDayTimeString() const
@@ -245,12 +266,7 @@ QString stopWatch::getElapsedDayTimeString() const
         return qsl("+:0:0:0:0:000");
     }
 
-    qint64 elapsed = 0;
-    if (mIsRunning) {
-        elapsed = mEffectiveStartDateTime.msecsTo(QDateTime::currentDateTimeUtc());
-    } else {
-        elapsed = mElapsedTime;
-    }
+    qint64 elapsed = getElapsedMilliSeconds();
 
     bool isNegative = false;
     if (elapsed < 0) {
