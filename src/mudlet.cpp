@@ -42,6 +42,7 @@
 #include "TDockWidget.h"
 #include "TEvent.h"
 #include "TFeatureCallout.h"
+#include "TKey.h"
 #include "TMap.h"
 #include "TMedia.h"
 #include "TGameDetails.h"
@@ -489,6 +490,31 @@ bool mudlet::addonShortcutUsable(const QKeySequence& sequence, const Host* pHost
         //: Refusal shown to a package, %1 is a keyboard shortcut such as "Ctrl+K" that Mudlet itself already uses
         error = tr("%1 is already taken by Mudlet").arg(sequence.toString(QKeySequence::NativeText));
         return false;
+    }
+
+    // The profile's own key bindings are the one holder none of the scans above
+    // can see: they live in the KeyUnit and are matched from the command line's
+    // key handling rather than by Qt, so a menu item placed over one takes the
+    // key away silently - the item gets the event first and the binding simply
+    // stops firing. Only a single-chunk sequence can clash, as a binding is one
+    // key and its modifiers.
+    if (pHost && sequence.count() == 1) {
+        const QKeyCombination combination = sequence[0];
+        if (const TKey* pKey = pHost->getKeyUnit()->firstMatch(combination.key(), combination.keyboardModifiers())) {
+            // A temporary binding is named after its own id and one made in the
+            // editor need never have been given a name, so there is nothing
+            // worth quoting: saying what holds the key beats quoting a label
+            // the player cannot find.
+            const QString name = pKey->isTemporary() ? QString() : pKey->getName();
+            if (name.isEmpty()) {
+                //: Refusal shown to a package, %1 is a keyboard shortcut such as "Ctrl+K" that one of the profile's own key bindings already uses
+                error = tr("%1 is already taken by a key binding in this profile").arg(sequence.toString(QKeySequence::NativeText));
+            } else {
+                //: Refusal shown to a package, %1 is a keyboard shortcut such as "Ctrl+K" and %2 the name of the profile's key binding that already uses it
+                error = tr("%1 is already taken by the \"%2\" key binding").arg(sequence.toString(QKeySequence::NativeText), name);
+            }
+            return false;
+        }
     }
     return true;
 }

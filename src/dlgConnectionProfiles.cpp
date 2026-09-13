@@ -662,11 +662,10 @@ void dlgConnectionProfiles::slot_updateLogin(const QString& login)
 void dlgConnectionProfiles::slot_updateUrl(const QString& url)
 {
     if (url.isEmpty()) {
-        validUrl = false;
-        offline_button->setEnabled(false);
-        connect_button->setEnabled(false);
-        offline_button->setAccessibleDescription(btn_connOrLoad_disabled_accessDesc);
-        connect_button->setAccessibleDescription(btn_connOrLoad_disabled_accessDesc);
+        // Nothing to write out, but the buttons and the notification area still
+        // have to be brought up to date - and Offline stays available, as
+        // opening a profile does not need a server address
+        validateProfile();
         return;
     }
 
@@ -702,15 +701,7 @@ void dlgConnectionProfiles::slot_updatePort(const QString& ignoreBlank)
     const QString port = port_entry->text().trimmed();
 
     if (ignoreBlank.isEmpty()) {
-        validPort = false;
-        if (offline_button) {
-            offline_button->setEnabled(false);
-            offline_button->setAccessibleDescription(btn_connOrLoad_disabled_accessDesc);
-        }
-        if (connect_button) {
-            connect_button->setEnabled(false);
-            connect_button->setAccessibleDescription(btn_connOrLoad_disabled_accessDesc);
-        }
+        validateProfile();
         return;
     }
 
@@ -2468,6 +2459,12 @@ bool dlgConnectionProfiles::validateProfile()
         check.setHost(url);
 
         if (url.isEmpty()) {
+            notificationAreaIconLabelWarning->show();
+            notificationAreaMessageBox->setText(
+                    qsl("%1\n%2\n\n")
+                            .arg(notificationAreaMessageBox->text(),
+                                 //: Shown in the connection dialog when a profile has no game server address. "Offline" is the dialog's own button and should be translated the same way it is
+                                 tr("Please enter the address of the game server to connect to it. Without one this profile can still be opened with the Offline button.")));
             host_name_entry->setPalette(mErrorPalette);
             validUrl = false;
             valid = false;
@@ -2527,10 +2524,19 @@ bool dlgConnectionProfiles::validateProfile()
             notificationArea->show();
             notificationAreaMessageBox->show();
         }
+        // Opening a profile needs nothing but a name that can be a folder of
+        // its own: Mudlet already opens a profile with no server address
+        // (--profile <name> --offline does), and a profile kept for package
+        // development, log reading or one whose url file was lost never has
+        // one. Refusing those left them listed under My games and unreachable,
+        // with nothing said - a disabled button cannot explain itself, as Qt
+        // does not deliver a tooltip to one. What is missing is in the
+        // notification area above instead.
         if (offline_button) {
-            offline_button->setEnabled(false);
-            offline_button->setToolTip(utils::richText(tr("Please set a valid profile name, game server address and the game port before loading.")));
-            offline_button->setAccessibleDescription(btn_connOrLoad_disabled_accessDesc);
+            const bool nameUsable = validName && !name.isEmpty();
+            offline_button->setEnabled(nameUsable);
+            offline_button->setToolTip(utils::richText(nameUsable ? tr("Load profile without connecting.") : tr("Please set a valid profile name before loading.")));
+            offline_button->setAccessibleDescription(nameUsable ? btn_load_enabled_accessDesc : btn_connOrLoad_disabled_accessDesc);
         }
         if (connect_button) {
             connect_button->setEnabled(false);

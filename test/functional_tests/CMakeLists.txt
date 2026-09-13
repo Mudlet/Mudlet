@@ -80,6 +80,7 @@ set(PROFILE_GROUP_TEST_SOURCES
     ConfigDirOverrideTest.cpp
     ConnectionDialogCrashTest.cpp
     ConnectionDialogFocusTest.cpp
+    ConnectionDialogOfflineProfileTest.cpp
     DefaultGameDeleteTest.cpp
     MissingDisplayFontTest.cpp
     ProfileDeletionSafetyTest.cpp
