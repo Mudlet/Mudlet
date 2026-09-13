@@ -790,6 +790,12 @@ describe("Tests Other.lua functions", function()
         assert.is_boolean(t.negative)
       end)
 
+      it("returns nil and a message for an unknown id", function()
+        local ok, err = getStopWatchBrokenDownTime(444444)
+        assert.is_nil(ok)
+        assert.is_string(err)
+      end)
+
       it("flags negative elapsed time with the negative field", function()
         local id = track(createStopWatch(false))
         adjustStopWatch(id, -90) -- one minute thirty seconds in the past
@@ -815,6 +821,101 @@ describe("Tests Other.lua functions", function()
         local ok, err = deleteStopWatch(555555)
         assert.is_nil(ok)
         assert.is_string(err)
+      end)
+    end)
+
+    -- Every one of these takes a name where the tests above pass an id, which
+    -- is a separate lookup in Host: an id goes straight to the stopwatch, while
+    -- a name has to be resolved to one first.
+    describe("naming a stopwatch instead of giving its id", function()
+      it("startStopWatch and stopStopWatch both take a name", function()
+        local id = track(createStopWatch("stopwatchSpecByNameRun"))
+        assert.is_true(startStopWatch("stopwatchSpecByNameRun"))
+        assert.is_true(getStopWatches()[id].isRunning)
+        adjustStopWatch(id, 6)
+
+        assertClose(6, stopStopWatch("stopwatchSpecByNameRun"))
+        assert.is_false(getStopWatches()[id].isRunning)
+      end)
+
+      it("setStopWatchName renames the stopwatch that currently has that name", function()
+        local id = track(createStopWatch("stopwatchSpecOldName"))
+
+        assert.is_true(setStopWatchName("stopwatchSpecOldName", "stopwatchSpecNewName"))
+
+        assert.equals("stopwatchSpecNewName", getStopWatches()[id].name)
+        local ok, err = getStopWatchTime("stopwatchSpecOldName")
+        assert.is_nil(ok, "the stopwatch still answers to the name it was renamed away from")
+        assert.is_string(err)
+      end)
+
+      it("getStopWatchBrokenDownTime takes a name", function()
+        local id = track(createStopWatch("stopwatchSpecBrokenDownByName"))
+        adjustStopWatch(id, 2 * 60 + 5)
+
+        local elapsed = getStopWatchBrokenDownTime("stopwatchSpecBrokenDownByName")
+
+        assert.equals(2, elapsed.minutes)
+        assert.equals(5, elapsed.seconds)
+      end)
+
+      it("says which name it could not find", function()
+        local ok, err = startStopWatch("stopwatchSpecNoSuchWatch")
+        assert.is_nil(ok)
+        assert.is_truthy(err:find("stopwatchSpecNoSuchWatch", 1, true), err)
+
+        ok, err = stopStopWatch("stopwatchSpecNoSuchWatch")
+        assert.is_nil(ok)
+        assert.is_truthy(err:find("stopwatchSpecNoSuchWatch", 1, true), err)
+
+        ok, err = setStopWatchName("stopwatchSpecNoSuchWatch", "stopwatchSpecIrrelevant")
+        assert.is_nil(ok)
+        assert.is_truthy(err:find("stopwatchSpecNoSuchWatch", 1, true), err)
+      end)
+    end)
+
+    describe("starting a stopwatch that is already running", function()
+      -- startStopWatch(id) resets the stopwatch back to zero first, which is
+      -- what it has always done; passing false asks for the elapsed time so far
+      -- to be kept, and then starting one that is already running is refused
+      it("keeps the elapsed time when asked not to reset", function()
+        local id = track(createStopWatch(false))
+        adjustStopWatch(id, 20)
+
+        assert.is_true(startStopWatch(id, false))
+
+        assertClose(20, getStopWatchTime(id))
+        stopStopWatch(id)
+      end)
+
+      it("throws the elapsed time away when not asked to keep it", function()
+        local id = track(createStopWatch(false))
+        adjustStopWatch(id, 20)
+
+        assert.is_true(startStopWatch(id))
+
+        assertClose(0, getStopWatchTime(id))
+        stopStopWatch(id)
+      end)
+
+      it("refuses a second start that would keep the elapsed time", function()
+        local id = track(createStopWatch(false))
+        assert.is_true(startStopWatch(id, false))
+        finally(function() stopStopWatch(id) end)
+
+        local ok, err = startStopWatch(id, false)
+
+        assert.is_nil(ok)
+        assert.is_truthy(err:find("already running", 1, true), err)
+      end)
+
+      it("refuses to stop one that is already stopped", function()
+        local id = track(createStopWatch("stopwatchSpecAlreadyStopped"))
+
+        local ok, err = stopStopWatch("stopwatchSpecAlreadyStopped")
+
+        assert.is_nil(ok)
+        assert.is_truthy(err:find("already stopped", 1, true), err)
       end)
     end)
 
@@ -1231,6 +1332,93 @@ describe("Tests Other.lua functions", function()
     -- caretShortcut and commandLineHistorySaveSize instead of the key that was
     -- actually rejected (#10391)
     pending("names the key it rejected in every string enum refusal")
+
+    -- A setting that changed raises sysSettingChanged with its getConfig key
+    -- and the new value. Writing the value a setting already holds raises
+    -- nothing, which is what keeps a handler that echoes the value back
+    -- through setConfig from looping.
+    describe("sysSettingChanged", function()
+      -- Each entry keeps what the handler was handed plus what getConfig()
+      -- returned from inside the handler: the second one is what says the
+      -- setting was already updated when the event went out. The handler is
+      -- killed by the caller's own finally(), because busted keeps only one of
+      -- those per test and the restore has to share it.
+      local function record()
+        local events = {}
+        local id = registerAnonymousEventHandler("sysSettingChanged", function(_, key, value)
+          events[#events + 1] = {key = key, value = value, readBack = getConfig(key)}
+        end)
+        return events, function() killAnonymousEventHandler(id) end
+      end
+
+      local function assertOneEvent(events, key, value)
+        assert.equals(1, #events, "expected one sysSettingChanged for " .. key .. ", got " .. #events)
+        assert.equals(key, events[1].key)
+        assert.equals(value, events[1].value, "the event carried " .. tostring(events[1].value) .. " for " .. key)
+        assert.equals(value, events[1].readBack, "getConfig(\"" .. key .. "\") inside the handler did not read the new value")
+      end
+
+      local booleanKeys = {
+        "muteMediaAPI",
+        "muteMediaGame",
+        "compactInputLine",
+        "mapperPanelVisible",
+        "enableClosedCaption",
+        "advertiseScreenReader",
+        "announceIncomingText",
+      }
+
+      for _, key in ipairs(booleanKeys) do
+        it("raises once when " .. key .. " changes, and not when it is set to what it holds", function()
+          snapshot(key)
+          local events, kill = record()
+          finally(function()
+            kill()
+            restore(key)
+          end)
+
+          local target = not getConfig(key)
+
+          assert.is_true(setConfig(key, target))
+          assertOneEvent(events, key, target)
+
+          assert.is_true(setConfig(key, target))
+          assert.equals(1, #events, key .. " raised again for a value that did not change")
+        end)
+      end
+
+      -- A handler is allowed to write the value back. The second write is a
+      -- real change, so it raises in turn, and stops there because the third
+      -- write would not change anything.
+      it("lets a handler write the opposite value back without looping", function()
+        snapshot("muteMediaAPI")
+        setConfig("muteMediaAPI", false)
+
+        local events = {}
+        local vetoed = false
+        local id = registerAnonymousEventHandler("sysSettingChanged", function(_, key, value)
+          if key ~= "muteMediaAPI" then
+            return
+          end
+          events[#events + 1] = value
+          if value == true and not vetoed then
+            vetoed = true
+            setConfig("muteMediaAPI", false)
+          end
+        end)
+        finally(function()
+          killAnonymousEventHandler(id)
+          restore("muteMediaAPI")
+        end)
+
+        assert.is_true(setConfig("muteMediaAPI", true))
+
+        assert.is_false(getConfig("muteMediaAPI"), "the value the handler wrote back is not the one that stuck")
+        assert.equals(2, #events, "expected the change and the handler's write-back, got " .. #events)
+        assert.equals(true, events[1])
+        assert.equals(false, events[2])
+      end)
+    end)
 
     describe("experiment keys", function()
       -- The two rendering experiments are a group, of which at most one may be

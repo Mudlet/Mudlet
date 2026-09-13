@@ -49,7 +49,13 @@ bool SelectionRectangleHandler::matches(const T2DMap::MapInteractionContext& con
     case QEvent::MouseButtonPress:
         return context.button == Qt::LeftButton && !context.isCustomLineDrawing && !context.isRoomBeingMoved && !context.modifiers.testFlag(Qt::AltModifier);
     case QEvent::MouseMove:
-        return context.isMultiSelectionActive || context.isSizingLabel;
+        if (context.isSizingLabel) {
+            return true;
+        }
+        // A label that has been picked up follows the mouse, so the selection
+        // rectangle stands aside for it - the order the single mouse move
+        // handler used to run these two in.
+        return context.isMultiSelectionActive && !context.isLabelHighlighted;
     case QEvent::MouseButtonRelease:
         return context.button == Qt::LeftButton && (context.isMultiSelectionActive || context.isSizingLabel);
     default:
