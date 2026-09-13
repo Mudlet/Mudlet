@@ -93,8 +93,15 @@ private:
         // without WINDOWS_EXPORT_ALL_SYMBOLS produces, and every case would then
         // be testing a recognizer that never got past its library guard - two of
         // them failing obscurely and one passing for the wrong reason.
+        // Every load below is given back before this returns. QLibrary refcounts
+        // and its destructor does not unload, so a probe left standing keeps the
+        // module mapped however many times the recognizer unloads its own handle
+        // - and cleanup()'s remove then silently fails on Windows, which refuses
+        // to delete a mapped module, leaving the next case's copy to find the old
+        // file still in place.
         QLibrary installed(destination);
         if (!installed.load() || !installed.resolve("vosk_recognizer_set_words")) {
+            installed.unload();
             return false;
         }
         // Its counters are process-global and live as long as the image stays
@@ -105,9 +112,11 @@ private:
         using resetFn = void (*)();
         auto* reset = reinterpret_cast<resetFn>(installed.resolve("voskStubReset"));
         if (!reset) {
+            installed.unload();
             return false;
         }
         reset();
+        installed.unload();
         return true;
     }
 
@@ -134,7 +143,12 @@ private:
         QLibrary stub(installedStubPath());
         using countFn = int (*)();
         auto* counter = reinterpret_cast<countFn>(stub.resolve("voskStubNullHandleCalls"));
-        return counter ? counter() : -1;
+        const int calls = counter ? counter() : -1;
+        // resolve() mapped the module to answer, and nothing else here would give
+        // that back. The recognizer holds its own handle, so the counters this
+        // just read stay put.
+        stub.unload();
+        return calls;
     }
 
     // A directory that exists and holds no model, which the stub accepts as one

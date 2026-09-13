@@ -301,6 +301,81 @@ describe("stt bridge", function()
       assert.are.equal(err, seen, "the event and the return value should carry the same reason")
     end)
 
+    -- #10759. stt.init() reaches Lua before it returns: setState(Ready) raises
+    -- sysSTTStateChanged from inside the load, and a handler is free to call
+    -- stt.close(), which frees the model the rest of the call is still
+    -- configuring. Answering true then hands the caller a bridge it was told was
+    -- ready and is not, so the next stt.start() fails on a model nothing loaded.
+    --
+    -- Driven through sysSTTStateChanged rather than sysSTTCapabilitiesChanged
+    -- deliberately, and that choice is the reason this spec exists. The bridge
+    -- announces capabilities when the recognizer is created, which stt.init()
+    -- does before the load begins - so a capabilities handler runs while there
+    -- is nothing loaded to close, and the load that follows is honest. Only the
+    -- state event lands inside the load. Moving where either is announced would
+    -- take this cover away with every other test still green, which is exactly
+    -- what the C++ contract test cannot see: it drives VoskRecognizer directly
+    -- and never goes through the bridge that decides the ordering.
+    --
+    -- Needs an engine: with no library the factory builds no recognizer, so
+    -- stt.init() refuses long before any of this is reachable.
+    it("refuses a load a handler closed while it was still loading", function()
+      if not stt.available() then return end
+      stt.close()
+
+      local closed = false
+      local handler = registerAnonymousEventHandler("sysSTTStateChanged", function(_, state)
+        if state == "ready" and not closed then
+          closed = true
+          stt.close()
+        end
+      end)
+      finally(function()
+        killAnonymousEventHandler(handler)
+        stt.close()
+      end)
+
+      local ok, err = stt.init()
+      -- No model installed, so the load never reached ready and the handler
+      -- never had its moment. A refusal that happened for some other reason is
+      -- not what this is about.
+      if not closed then return end
+
+      assert.is_nil(ok, "a load a handler closed under it reported success")
+      assert.is_string(err)
+      assert.is_false(stt.initialized(), "initialized() stayed true with the model closed")
+      assert.are.equal("uninitialized", stt.getInfo().state, "the state outlived the model it described")
+    end)
+
+    -- The other half of #10759: a handler that loads a different model rather
+    -- than closing leaves both handles valid, so the pointers alone would call
+    -- the outer load a success. Only the path it was asked for settles it.
+    it("answers for the model it was asked for, not the one a handler loaded", function()
+      if not stt.available() then return end
+      stt.close()
+
+      local models = stt.listModels()
+      if #models < 2 then return end
+
+      local replaced = false
+      local handler = registerAnonymousEventHandler("sysSTTStateChanged", function(_, state)
+        if state == "ready" and not replaced then
+          replaced = true
+          stt.init(models[2].path)
+        end
+      end)
+      finally(function()
+        killAnonymousEventHandler(handler)
+        stt.close()
+      end)
+
+      local ok = stt.init(models[1].path)
+      if not replaced then return end
+
+      assert.is_nil(ok, "a load answered true for a model a handler had already replaced")
+      assert.are.equal(models[2].path, stt.getInfo().modelPath, "modelPath should name the model that is actually loaded")
+    end)
+
     it("raises on a vocabulary that is not a table", function()
       assert.has_error(function() stt.setVocabulary("kill") end)
       assert.has_error(function() stt.setVocabulary(nil) end)
