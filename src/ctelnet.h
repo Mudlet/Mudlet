@@ -224,6 +224,10 @@ public:
 #endif
     QByteArray decodeBytes(const char*);
     std::string encodeAndCookBytes(const std::string&);
+    static std::string escapeIac(std::string data);
+
+    // Wraps a two-byte Aardwolf 102 subchannel payload in its subnegotiation
+    static std::string buildChannel102Message(const std::string& payload);
     bool isNewEnvironEnabled() const { return enableNewEnviron; }
     bool isCHARSETEnabled() const { return enableCHARSET; }
     bool isATCPEnabled() const { return enableATCP; }

@@ -254,6 +254,11 @@ public:
         }
         return sanitized;
     }
+
+    // Unpacks archivePath into destination, creating any folders the archive needs
+    // through tmpDir. Called from a worker thread, so nothing in here may touch the
+    // UI.
+    static bool unzip(const QString& archivePath, const QString& destination, const QDir& tmpDir);
 };
 
 #endif // MUDLET_UTILS_H
