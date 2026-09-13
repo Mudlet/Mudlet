@@ -5562,10 +5562,16 @@ void T2DMap::slot_configureAreas()
 
     repopulate();
 
-    const int currentAreaIndex = mpMap->mpMapper ? mpMap->mpMapper->getCurrentShownAreaIndex() : -1;
-    if (currentAreaIndex >= 0 && currentAreaIndex < listWidget->count()) {
-        listWidget->setCurrentRow(currentAreaIndex);
-        listWidget->scrollToItem(listWidget->currentItem(), QAbstractItemView::PositionAtCenter);
+    // mAreaID is the area the map is actually showing; the mapper's dropdown
+    // index can't be used here as it omits the default area when hidden,
+    // while this list always includes it.
+    for (int i = 0; i < listWidget->count(); ++i) {
+        auto* it = listWidget->item(i);
+        if (it && it->data(Qt::UserRole).toInt() == mAreaID) {
+            listWidget->setCurrentRow(i);
+            listWidget->scrollToItem(it, QAbstractItemView::PositionAtCenter);
+            break;
+        }
     }
 
     auto* buttonBar = new QWidget(dialog);
@@ -5633,6 +5639,7 @@ void T2DMap::slot_configureAreas()
             QMessageBox::warning(dialog, tr("Rename failed"), tr("Unable to rename area. Name may be invalid or already in use."));
             return;
         }
+        mpMap->setUnsaved(__func__);
 
         repopulate();
         for (int i = 0; i < listWidget->count(); ++i) {
@@ -5646,7 +5653,10 @@ void T2DMap::slot_configureAreas()
 
         if (mpMap && mpMap->mpMapper) {
             mpMap->mpMapper->updateAreaComboBox();
-            if (mpMap->mpMapper->comboBox_showArea) {
+            // Only follow the rename into the dropdown if it's the area the
+            // map is actually showing - otherwise this would move the
+            // dropdown to an area the map isn't displaying.
+            if (areaId == mAreaID && mpMap->mpMapper->comboBox_showArea) {
                 mpMap->mpMapper->comboBox_showArea->setCurrentText(newName);
             }
         }
@@ -5670,6 +5680,7 @@ void T2DMap::slot_configureAreas()
             QMessageBox::warning(dialog, tr("Create failed"), tr("Unable to create area. Name may be invalid or already in use."));
             return;
         }
+        mpMap->setUnsaved(__func__);
 
         repopulate();
         for (int i = 0; i < listWidget->count(); ++i) {
@@ -5713,12 +5724,23 @@ void T2DMap::slot_configureAreas()
             QMessageBox::warning(dialog, tr("Delete failed"), tr("Unable to delete area."));
             return;
         }
+        mpMap->setUnsaved(__func__);
 
         repopulate();
         if (mpMap && mpMap->mpMapper) {
             mpMap->mpMapper->updateAreaComboBox();
-            if (mpMap->mpMapper->comboBox_showArea) {
-                mpMap->mpMapper->comboBox_showArea->setCurrentIndex(mpMap->mpMapper->getCurrentShownAreaIndex());
+        }
+
+        if (areaId == mAreaID) {
+            // The area the map was showing is gone - paintEvent() can't draw
+            // an area that no longer exists, so move to another one rather
+            // than leaving the map blank until the player moves or another
+            // area is picked.
+            auto* comboBox = mpMap->mpMapper ? mpMap->mpMapper->comboBox_showArea : nullptr;
+            if (comboBox && comboBox->count() > 0) {
+                mpMap->mpMapper->slot_switchArea(comboBox->currentIndex());
+            } else {
+                switchArea(mpMap->getDefaultAreaName());
             }
         }
         update();
