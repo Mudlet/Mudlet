@@ -694,14 +694,26 @@ describe("Tests Other.lua functions", function()
 
   describe("Tests tempComplexRegexTrigger() table argument support", function()
     local testGroupName = "testTriggerGroup" .. os.time()
+    -- these triggers outlive the describe otherwise, and a live one changes
+    -- what every later spec in the session sees happen to its lines
+    local created = {}
 
     setup(function()
       permGroup(testGroupName, "trigger")
     end)
 
+    teardown(function()
+      for _, name in ipairs(created) do
+        pcall(killTrigger, name)
+      end
+      created = {}
+    end)
+
     it("should accept positional arguments with string code", function()
+      local name = "test" .. os.time()
+      created[#created + 1] = name
       local result = pcall(tempComplexRegexTrigger,
-        "test" .. os.time(), ".*test.*", "echo('found')",
+        name, ".*test.*", "echo('found')",
         0, 0, 0, 0, 0,
         0, 0, "", 0, 0, -1
       )
@@ -709,8 +721,10 @@ describe("Tests Other.lua functions", function()
     end)
 
     it("should accept table arguments with string code", function()
+      local name = "test2" .. os.time()
+      created[#created + 1] = name
       local result = pcall(tempComplexRegexTrigger, {
-        name = "test2" .. os.time(),
+        name = name,
         pattern = ".*test.*",
         code = "echo('found')",
         multiLine = false,
@@ -729,8 +743,10 @@ describe("Tests Other.lua functions", function()
 
     it("should accept table arguments with function code", function()
       local codeFunc = function() echo('found by function') end
+      local name = "test3" .. os.time()
+      created[#created + 1] = name
       local result = pcall(tempComplexRegexTrigger, {
-        triggerName = "test3" .. os.time(),
+        triggerName = name,
         regex = ".*test.*",
         code = codeFunc,
         multiline = false,
