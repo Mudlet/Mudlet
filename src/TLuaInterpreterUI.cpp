@@ -29,6 +29,7 @@
 
 #include "TLuaInterpreter.h"
 
+#include <QApplication>
 #include <QClipboard>
 #include <QGuiApplication>
 
@@ -97,6 +98,9 @@ static bool isMain(const QString& name)
     return false;
 }
 
+// variable names within these macros have trailing underscores because in
+// at least one case, masking an existing variable with the new one confused
+// GCC, leading to a crash.
 #define WINDOW_NAME(ARG_L, ARG_pos)                                                                                                                                                                    \
     ({                                                                                                                                                                                                 \
         int pos_ = (ARG_pos);                                                                                                                                                                          \
@@ -183,6 +187,26 @@ static void releaseLuaReferences(lua_State* L, const QVector<int>& luaReferences
     }
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#selectCmdLineText
+int TLuaInterpreter::addCmdLineBlacklist(lua_State* L)
+{
+    const int n = lua_gettop(L);
+    // The mandatory text is last, but with no arguments at all that would be
+    // index 0 - not a valid Lua stack index, and Lua 5.1 hands back the first
+    // free slot for it rather than complaining:
+    const int textIndex = qMax(n, 1);
+    const char* name = "main";
+    if (n > 1) {
+        name = CMDLINE_NAME(L, 1);
+    }
+    if (!checkStringArg(L, __func__, textIndex, "suggestion text")) {
+        return lua_error(L);
+    }
+    auto pN = COMMANDLINE(L, QString{name});
+    pN->addBlacklist(QString{lua_tostring(L, textIndex)});
+    return 0;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addCommandLineMenuEvent
 int TLuaInterpreter::addCommandLineMenuEvent(lua_State* L)
 {
@@ -246,6 +270,25 @@ int TLuaInterpreter::addMouseEvent(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#alert
+int TLuaInterpreter::alert(lua_State* L)
+{
+    double luaAlertDuration = 0.0;
+
+    if (lua_gettop(L) > 0) {
+        luaAlertDuration = getVerifiedDouble(L, __func__, 1, "alert duration in seconds");
+        if (luaAlertDuration < 0.000) {
+            lua_pushstring(L, "alert: duration, in seconds, is optional but if given must be zero or greater.");
+            return lua_error(L);
+        }
+    }
+
+    // QApplication::alert expects milliseconds, not seconds
+    QApplication::alert(mudlet::self(), qRound(luaAlertDuration * 1000.0));
+
+    return 0;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#appendBuffer
 int TLuaInterpreter::appendBuffer(lua_State* L)
 {
@@ -301,6 +344,19 @@ int TLuaInterpreter::calcFontSize(lua_State* L)
     return 2;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearCmdLineBlacklist
+int TLuaInterpreter::clearCmdLineBlacklist(lua_State* L)
+{
+    const int n = lua_gettop(L);
+    const char* name = "main";
+    if (n >= 1) {
+        name = CMDLINE_NAME(L, 1);
+    }
+    auto pN = COMMANDLINE(L, QString{name});
+    pN->clearBlacklist();
+    return 0;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearUserWindow
 // Note that this is registered as both clearUserWindow(...) AND clearWindow(...)
 int TLuaInterpreter::clearUserWindow(lua_State* L)
@@ -329,6 +385,17 @@ int TLuaInterpreter::copy(lua_State* L)
 
     auto console = CONSOLE(L, windowName);
     console->copy();
+    return 0;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#cut
+int TLuaInterpreter::cut(lua_State* L)
+{
+    const Host& host = getHostFromLua(L);
+    if (!host.mpConsole) {
+        return warnArgumentValue(L, __func__, no_main_window_value);
+    }
+    host.mpConsole->cut();
     return 0;
 }
 
@@ -940,6 +1007,42 @@ int TLuaInterpreter::disableTimeStamps(lua_State* L)
     }
 
     pConsole->slot_toggleTimeStamps(false);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#echo
+int TLuaInterpreter::echo(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+
+    const int n = lua_gettop(L);
+    int s = 1;
+
+    if (n > 1 && !checkStringArg(L, __func__, s++, "console name", true)) {
+        return lua_error(L);
+    }
+    if (!checkStringArg(L, __func__, s, "text to display")) {
+        return lua_error(L);
+    }
+    const QString consoleName = (n > 1) ? QString{lua_tostring(L, 1)} : QString();
+    const QString displayText{lua_tostring(L, s)};
+
+    if (isMain(consoleName)) {
+        if (!host.mpConsole) {
+            return warnArgumentValue(L, __func__, no_main_window_value);
+        }
+        host.mpConsole->buffer.mEchoingText = true;
+        host.mpConsole->echo(displayText);
+        host.mpConsole->buffer.mEchoingText = false;
+        // Writing to the main window must always succeed, but for consistent
+        // results, we now return a true for that
+        lua_pushboolean(L, true);
+        return 1;
+    }
+    if (!host.echoWindow(consoleName, displayText)) {
+        return warnArgumentValue(L, __func__, qsl("console/label '%1' does not exist").arg(consoleName));
+    }
     lua_pushboolean(L, true);
     return 1;
 }
@@ -1651,6 +1754,29 @@ int TLuaInterpreter::getRowCount(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getSaveCommandHistory
+int TLuaInterpreter::getSaveCommandHistory(lua_State* L)
+{
+    auto& host = getHostFromLua(L);
+    auto numberOfLines = host.getCommandLineHistorySaveSize();
+    if (!numberOfLines) {
+        // We do not use warnArgumentValue(...) because it is valid to have
+        // this disabled and we do not want a message to be painted on the
+        // Central Debug Console:
+        lua_pushboolean(L, false);
+        lua_pushstring(L, "disabled by profile global preference");
+        return 2;
+    }
+    const char* name = "main";
+    if (lua_gettop(L)) {
+        name = CMDLINE_NAME(L, 1);
+    }
+    auto pCommandline = COMMANDLINE(L, QString{name});
+    lua_pushboolean(L, pCommandline->mSaveCommands);
+    lua_pushstring(L, (pCommandline->mSaveCommands ? qsl("enabled (%1 lines will be saved)").arg(QString::number(numberOfLines)) : qsl("disabled")).toUtf8().constData());
+    return 2;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getScroll
 int TLuaInterpreter::getScroll(lua_State* L)
 {
@@ -2039,6 +2165,18 @@ int TLuaInterpreter::insertPopup(lua_State* L)
     return 1;
 }
 
+// No Documentation - public function but should stay undocumented -- compare https://github.com/Mudlet/Mudlet/issues/1149
+int TLuaInterpreter::insertHTML(lua_State* L)
+{
+    const QString sendText = getVerifiedString(L, __func__, 1, "sendText");
+    const Host& host = getHostFromLua(L);
+    if (!host.mpConsole) {
+        return warnArgumentValue(L, __func__, no_main_window_value);
+    }
+    host.mpConsole->insertHTML(sendText);
+    return 0;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#insertText
 int TLuaInterpreter::insertText(lua_State* L)
 {
@@ -2358,6 +2496,24 @@ int TLuaInterpreter::raiseWindow(lua_State* L)
     const Host& host = getHostFromLua(L);
     lua_pushboolean(L, host.mpConsole && host.mpConsole->raiseWindow(windowName));
     return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#removeCmdLineBlacklist
+int TLuaInterpreter::removeCmdLineBlacklist(lua_State* L)
+{
+    const int n = lua_gettop(L);
+    // See addCmdLineBlacklist() on why the index is clamped:
+    const int textIndex = qMax(n, 1);
+    const char* name = "main";
+    if (n > 1) {
+        name = CMDLINE_NAME(L, 1);
+    }
+    if (!checkStringArg(L, __func__, textIndex, "suggestion text")) {
+        return lua_error(L);
+    }
+    auto pN = COMMANDLINE(L, QString{name});
+    pN->removeBlacklist(QString{lua_tostring(L, textIndex)});
+    return 0;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#removeCommandLineMenuEvent
@@ -3607,6 +3763,47 @@ int TLuaInterpreter::setReverse(lua_State* L)
     const bool isAttributeEnabled = getVerifiedBool(L, __func__, s, "enable reverse attribute");
     auto console = CONSOLE(L, QString{windowName});
     console->setDisplayAttributes(TChar::Reverse, isAttributeEnabled);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setSaveCommandHistory
+int TLuaInterpreter::setSaveCommandHistory(lua_State* L)
+{
+    auto n = lua_gettop(L);
+    auto& host = getHostFromLua(L);
+    auto numberOfLines = host.getCommandLineHistorySaveSize();
+    if (!numberOfLines) {
+        // Unlike for the getter we do want to alert on trying to set the
+        // per-commandLine option when things are disabled globally for the
+        // profile:
+        return warnArgumentValue(L, __func__, "disabled by profile global preference");
+    }
+    // both defaults have to stand outside the argument handling below:
+    // setSaveCommandHistory() and setSaveCommandHistory(name) each turn saving
+    // on, so neither belongs inside a branch on the argument count:
+    const char* name = "main";
+    bool saveCommands = true;
+    if (n > 0) {
+        if (lua_type(L, 1) == LUA_TSTRING) {
+            // First argument is a string so is presumably a command line name
+            name = CMDLINE_NAME(L, 1);
+            if (n > 1) {
+                saveCommands = getVerifiedBool(L, __func__, 2, "save command history", true);
+            }
+
+        } else {
+            if (lua_type(L, 1) != LUA_TBOOLEAN) {
+                lua_pushfstring(L, "%s: bad argument #1 type (command line name as string or save history as boolean is optional, got %s!)", __func__, luaL_typename(L, 1));
+                return lua_error(L); // Dummy return!
+            }
+
+            saveCommands = getVerifiedBool(L, __func__, 1, "save command history", true);
+        }
+    }
+
+    auto pCommandline = COMMANDLINE(L, QString{name});
+    pCommandline->mSaveCommands = saveCommands;
     lua_pushboolean(L, true);
     return 1;
 }
