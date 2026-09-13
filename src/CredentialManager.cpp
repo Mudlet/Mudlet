@@ -206,7 +206,9 @@ bool CredentialManager::isOperationValid() const
 
 bool CredentialManager::isPortableModeActive() const
 {
-    return MudletApp::portableModeActive(MudletApp::executableDir());
+    // Two stats: this runs on every credential operation, and resolving the
+    // whole root would read the marker and walk the config dirs to answer it
+    return !MudletApp::portableMarkerPath(MudletApp::executableDir()).isEmpty();
 }
 
 bool CredentialManager::shouldUseKeychain(const QString& profileName) const

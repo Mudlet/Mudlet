@@ -50,6 +50,9 @@ public:
         // A portable.txt marker named the path; the caller decides whether what it
         // named is usable
         bool portable = false;
+        // The marker named a root that cannot be used, so path holds the
+        // non-portable location instead. The caller decides how loudly to say so.
+        bool portableRootRejected = false;
         // XDG_CONFIG_HOME is set, but an existing legacy dir was used anyway, so
         // the caller can hint at the migration
         bool migrationPending = false;
@@ -66,18 +69,27 @@ public:
     // from one
     static QString executableDir();
 
+    // ~/.config/mudlet: the pre-XDG default, and the second place a portable.txt
+    // marker is looked for
+    static QString legacyConfigDir();
+
+    // The portable.txt that governs, or an empty string when there is none - the
+    // one beside the executable outranks the one in the config dir. Two stats and
+    // no file read, so callers that only want to know whether portable mode is on
+    // can ask on every operation.
+    static QString portableMarkerPath(const QString& execDir, const QString& configDir = legacyConfigDir());
+
+    // Whether a root a portable.txt named can be used at all: it has to name
+    // something, must not already exist as anything other than a directory - a
+    // symlink with no target included, since mkpath() cannot create through one -
+    // and its parent has to exist. Says why when it refuses.
+    static bool portableRootUsable(const QString& path);
+
     // Applies the whole precedence to a given executable directory. Remembers
     // nothing, so the Mudlet.ini read that happens before QApplication exists can
-    // share it.
-    static ConfigDirResolution resolveConfigRoot(const QString& execDir);
-
-    // Only looks for the two markers, so it is cheap enough to ask on every
-    // password load and save
-    static bool portableModeActive(const QString& execDir);
-
-    // A portable root Mudlet cannot write to would start up looking like every
-    // profile had vanished, so setupConfig() aborts on one instead
-    static bool portableRootUsable(const QString& path);
+    // share it. Never hands back an empty root: a portable.txt naming an unusable
+    // one falls back to the non-portable location with portableRootRejected set.
+    static ConfigDirResolution resolveConfigRoot(const QString& execDir, const QString& configDir = legacyConfigDir());
 
     // The XDG leg on its own: $XDG_CONFIG_HOME/mudlet takes a tie with
     // legacyDefault so that a fresh install lands there
@@ -87,8 +99,10 @@ public:
     // inference is what hides profiles, so assume the strongest content instead.
     static bool configDirHoldsProfiles(const QString& dir);
 
-    // Resolves the config root itself on first use; setConfigPath() replaces it,
-    // which is how setupConfig() installs the root it has validated
+    // Resolves the config root itself on first use and then remembers it, so the
+    // resolver runs once however many paths are asked for; setConfigPath()
+    // replaces it, which is how setupConfig() installs the root it has validated.
+    // An empty path passed to setConfigPath() forgets the resolution instead.
     static QString getMudletPath(enums::mudletPathType mode, const QString& extra1 = QString(), const QString& extra2 = QString());
 
     // Whether the main dictionary files are the ones bundled with Mudlet (true) or
@@ -133,6 +147,9 @@ private:
     // validated and restarts the settings store under it, and the language follows
     // the preferences dialog through mudlet::setInterfaceLanguage()
     friend class mudlet;
+    // Resolving the root once is the point, so the only way to test it is to be
+    // able to forget the answer - which setConfigPath(QString()) does
+    friend class ConfigDirOverrideTest;
     static void setConfigPath(const QString& path);
     static void resetSettings();
     static void setInterfaceLanguage(const QString& language);

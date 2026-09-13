@@ -184,8 +184,7 @@ private slots:
         mpHost = nullptr;
         delete mpServer;
         mpServer = nullptr;
-        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
-        // getMudletPath() dereferences the instance rather than checking it
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
             QDir(MudletApp::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
             delete mudlet::self();

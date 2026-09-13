@@ -52,22 +52,13 @@
 namespace {
 QMutex configRootMutex;
 QString configRoot;
+// The resolution itself is the answer, so "not resolved yet" cannot be read off
+// configRoot: a root that resolved to nothing would be resolved again on every
+// single call
 bool configRootSettled = false;
-
-QString currentConfigRoot()
-{
-    QMutexLocker locker(&configRootMutex);
-    if (configRoot.isEmpty()) {
-        configRoot = MudletApp::resolveConfigRoot(MudletApp::executableDir()).path;
-    }
-    return configRoot;
-}
-
-bool configPathSettled()
-{
-    QMutexLocker locker(&configRootMutex);
-    return configRootSettled;
-}
+// Only setConfigPath() sets this, so getQSettings() can tell a root the startup
+// checks handed over from one getMudletPath() resolved for itself
+bool configRootInstalled = false;
 bool mudletDictionariesInUse = false;
 QPointer<QSettings> smpSettings;
 QString smInterfaceLanguage;
@@ -129,6 +120,11 @@ QString pathResolveRelative(const QString& path, const QString& base)
     return QDir::cleanPath(qsl("%1/%2").arg(base, path));
 }
 
+QString markerIn(const QString& dir)
+{
+    return qsl("%1/portable.txt").arg(dir);
+}
+
 QString readMarkerFile(const QString& path)
 {
     QString line;
@@ -139,6 +135,26 @@ QString readMarkerFile(const QString& path)
     }
     QTextStream(&file).readLineInto(&line);
     return line;
+}
+
+bool configPathInstalled()
+{
+    const QMutexLocker locker(&configRootMutex);
+    return configRootInstalled;
+}
+
+QString settledConfigRoot()
+{
+    const QMutexLocker locker(&configRootMutex);
+    if (!configRootSettled) {
+        const auto resolution = MudletApp::resolveConfigRoot(MudletApp::executableDir());
+        if (resolution.portableRootRejected) {
+            qWarning().nospace() << "MudletApp::getMudletPath(...) WARN: the portable.txt root cannot be used, so \"" << resolution.path << "\" is in use instead.";
+        }
+        configRoot = resolution.path;
+        configRootSettled = true;
+    }
+    return configRoot;
 }
 } // namespace
 
@@ -151,32 +167,19 @@ QString MudletApp::executableDir()
     return QCoreApplication::applicationDirPath();
 }
 
-MudletApp::ConfigDirResolution MudletApp::resolveConfigRoot(const QString& execDir)
+QString MudletApp::legacyConfigDir()
 {
-    const QString confDirDefault = qsl("%1/.config/mudlet").arg(QDir::homePath());
-    const QString markerExecDir = qsl("%1/portable.txt").arg(execDir);
-    const QString markerHomeDir = qsl("%1/portable.txt").arg(confDirDefault);
-    for (const QString& marker : {markerExecDir, markerHomeDir}) {
-        if (!QFileInfo(marker).isFile()) {
-            continue;
-        }
-        QString portPath = readMarkerFile(marker);
-        if (portPath.isEmpty()) {
-            portPath = qsl("./portable"); // fallback value for empty portable.txt
-            // An empty marker in the home directory used to be fatal, so say
-            // where the guess landed - a stray "touch portable.txt" beside a
-            // system install otherwise hides every profile without a word.
-            qWarning().nospace().noquote() << "MudletApp::resolveConfigRoot(...) WARNING - \"" << marker << "\" names no location, so portable mode is guessing \"" << portPath << "\" relative to \""
-                                           << execDir << "\". Profiles kept anywhere else will not be listed.";
-        }
-        return {.path = pathResolveRelative(QDir::cleanPath(portPath), execDir), .portable = true};
-    }
-    return xdgConfigDir(confDirDefault);
+    return qsl("%1/.config/mudlet").arg(QDir::homePath());
 }
 
-bool MudletApp::portableModeActive(const QString& execDir)
+QString MudletApp::portableMarkerPath(const QString& execDir, const QString& configDir)
 {
-    return QFileInfo(qsl("%1/portable.txt").arg(execDir)).isFile() || QFileInfo(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath())).isFile();
+    const QString besideExecutable = markerIn(execDir);
+    if (QFileInfo(besideExecutable).isFile()) {
+        return besideExecutable;
+    }
+    const QString inConfigDir = markerIn(configDir);
+    return QFileInfo(inConfigDir).isFile() ? inConfigDir : QString();
 }
 
 bool MudletApp::portableRootUsable(const QString& path)
@@ -186,23 +189,46 @@ bool MudletApp::portableRootUsable(const QString& path)
         return false;
     }
     const QFileInfo pathInfo(path);
-    if (pathInfo.isFile()) {
-        qWarning("WARN: specified portable data path is an existing file: %s", qPrintable(path));
+    // isFile() and isDir() both follow the link, so a symlink whose target is
+    // gone reads as neither - and mkpath() cannot create through one, so the
+    // root looks fine here and then swallows every profile
+    if ((pathInfo.exists() || pathInfo.isSymLink()) && !pathInfo.isDir()) {
+        qWarning("WARN: specified portable data path is not a directory: %s", qPrintable(path));
         return false;
     }
-    // An empty portable.txt guesses "portable" beside the executable, which for a
-    // system install lands where only root may write. Mudlet would come up with
-    // no profiles and every save failing quietly, so refuse the root outright.
-    const QFileInfo writableInfo = pathInfo.isDir() ? pathInfo : QFileInfo(pathInfo.dir().path());
-    if (!writableInfo.isDir()) {
-        qWarning("WARN: parent directory of specified portable data path doesn't exist: %s", qPrintable(writableInfo.filePath()));
-        return false;
-    }
-    if (!writableInfo.isWritable()) {
-        qWarning("WARN: portable data path cannot be written to: %s", qPrintable(writableInfo.filePath()));
+    const QString parent = pathInfo.dir().path();
+    if (!QFileInfo(parent).isDir()) {
+        qWarning("WARN: parent directory of specified portable data path doesn't exist: %s", qPrintable(parent));
         return false;
     }
     return true;
+}
+
+MudletApp::ConfigDirResolution MudletApp::resolveConfigRoot(const QString& execDir, const QString& configDir)
+{
+    const QString marker = portableMarkerPath(execDir, configDir);
+    if (marker.isEmpty()) {
+        return xdgConfigDir(configDir);
+    }
+    QString portPath = readMarkerFile(marker);
+    // Only beside the executable does an empty marker mean "the data is here
+    // too"; the one in the config dir names no such default
+    if (portPath.isEmpty() && marker == markerIn(execDir)) {
+        portPath = qsl("./portable"); // fallback value for empty portable.txt
+    }
+    const QString portableRoot = pathResolveRelative(QDir::cleanPath(portPath), execDir);
+    if (portableRootUsable(portableRoot)) {
+        return {.path = portableRoot, .portable = true};
+    }
+    // An unusable root used to be handed back as-is - and an empty one roots
+    // every path at "/", which callers then mkpath(). setupConfig() stopped on
+    // that, but a caller resolving before it has no such step, so name the
+    // non-portable location instead and let each caller decide how loudly to
+    // complain.
+    ConfigDirResolution resolution = xdgConfigDir(configDir);
+    resolution.portable = true;
+    resolution.portableRootRejected = true;
+    return resolution;
 }
 
 MudletApp::ConfigDirResolution MudletApp::xdgConfigDir(const QString& legacyDefault)
@@ -240,9 +266,11 @@ bool MudletApp::configDirHoldsProfiles(const QString& dir)
 
 void MudletApp::setConfigPath(const QString& path)
 {
-    QMutexLocker locker(&configRootMutex);
+    const QMutexLocker locker(&configRootMutex);
     configRoot = path;
-    configRootSettled = true;
+    // An empty root is not an answer, so forget it rather than settle on it
+    configRootSettled = !path.isEmpty();
+    configRootInstalled = configRootSettled;
 }
 
 bool MudletApp::usingMudletDictionaries()
@@ -264,7 +292,7 @@ QString MudletApp::sanitizeForPath(const QString& input)
 
 QString MudletApp::getMudletPath(const enums::mudletPathType mode, const QString& extra1, const QString& extra2)
 {
-    const QString confPath = currentConfigRoot();
+    const QString confPath = settledConfigRoot();
     switch (mode) {
     case enums::mainPath:
         // The root of all mudlet data for the user - does not end in a '/'
@@ -547,7 +575,7 @@ QSettings* MudletApp::getQSettings()
     // Null until setupConfig() has validated a root and passed it to
     // setConfigPath(): a store built on a self-resolved root would pin every
     // later reader to a Mudlet.ini the startup checks never saw.
-    if (!configPathSettled()) {
+    if (!configPathInstalled()) {
         return nullptr;
     }
     const QString root = MudletApp::getMudletPath(enums::mainPath);
