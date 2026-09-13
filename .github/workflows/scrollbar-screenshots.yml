@@ -1,0 +1,278 @@
+# Diagnostic workflow for PR #10574: renders the console's scroll bar with and
+# without the handle that pull request paints, on Linux and on macOS, and uploads
+# the result. #9341 is a Windows problem, but the fix draws the handle on every
+# platform - this is how the other two get looked at.
+#
+# Deliberately close to build-mudlet.yml in how it configures the build: the same
+# runner images, Qt, compilers and options, so this restores that workflow's
+# ccache from development instead of building cold. It never saves a cache back.
+name: 📸 Console scroll bar screenshots
+
+on:
+  push:
+    branches:
+      - 'claude/pr-10574-screenshots-**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  screenshots:
+    name: ${{matrix.buildname}}
+    runs-on: ${{matrix.os}}
+    # The ccache this restores lives in the base repository, so a fork run would
+    # build cold for nothing
+    if: ${{ github.repository_owner == 'Mudlet' }}
+    timeout-minutes: 90
+    concurrency:
+      group: ${{github.workflow}}-${{matrix.buildname}}-${{github.ref}}
+      cancel-in-progress: true
+    env:
+      LUA_VERSION: '5.1.5'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            buildname: 'linux'
+            compiler: gcc_64
+            gcc_compiler_version: 12
+            qt: '6.11.1'
+            preset: 'ci-linux'
+            # The key build-mudlet.yml's 'ubuntu (x86_64)' job saves on development
+            ccache_key: 'ccache-ubuntu-22.04-X64-gcc_64v12-6.11.1-plain-development'
+          - os: macos-15
+            buildname: 'macos'
+            compiler: clang_64
+            qt: '6.11.1'
+            preset: 'ci-macos'
+            # The key build-mudlet.yml's 'macos (arm64)' job saves on development
+            ccache_key: 'ccache-macos-15-ARM64-clang_64-6.11.1-plain-development'
+
+    steps:
+    - name: Checkout Mudlet source code
+      uses: actions/checkout@v7
+      with:
+        submodules: recursive
+
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v4
+      with:
+        version: ${{matrix.qt}}
+        dir: ${{runner.workspace}}
+        cache: false
+        modules: qt5compat qtmultimedia qtspeech
+
+    - name: Cache Lua build
+      uses: actions/cache@v6
+      with:
+        path: .lua
+        key: lua-${{ env.LUA_VERSION }}-${{ matrix.os }}-${{ runner.arch }}
+
+    - name: Install Lua via GitHub Actions
+      uses: leafo/gh-actions-lua@v13
+      with:
+        luaVersion: ${{ env.LUA_VERSION }}
+        buildCache: false
+
+    - name: Install Luarocks via GitHub Actions
+      uses: leafo/gh-actions-luarocks@v6
+
+    - name: (macOS) Install dependencies
+      if: runner.os == 'macOS'
+      env:
+        HOMEBREW_NO_ANALYTICS: "ON"
+        HOMEBREW_NO_AUTO_UPDATE: "ON"
+        HOMEBREW_NO_BOTTLE_SOURCE_FALLBACK: "ON"
+        HOMEBREW_NO_INSTALL_CLEANUP: "ON"
+      timeout-minutes: 15
+      run: |
+        brew uninstall --ignore-dependencies llvm@15 2>/dev/null || true
+        brew install libzzip libzip ccache assimp hunspell oniguruma pcre2 pugixml sqlite yajl boost
+
+        echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
+        echo "DEVELOPER_DIR=$(xcode-select --print-path)" >> $GITHUB_ENV
+        echo "SDKROOT=$(xcrun --sdk macosx --show-sdk-path)" >> $GITHUB_ENV
+
+        HOMEBREW_PREFIX=/opt/homebrew
+        echo "HOMEBREW_PREFIX=$HOMEBREW_PREFIX" >> $GITHUB_ENV
+        echo "CMAKE_PREFIX_PATH=${QT_ROOT_DIR}:${HOMEBREW_PREFIX}" >> $GITHUB_ENV
+        echo "LUA_DIR=$HOME/.lua" >> $GITHUB_ENV
+        echo "PKG_CONFIG_PATH=${HOMEBREW_PREFIX}/opt/pcre2/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
+
+        luarocks --lua-version 5.1 install --local lua-yajl YAJL_DIR=${HOMEBREW_PREFIX}/opt/yajl
+        eval "$(luarocks path --local --lua-version "5.1")"
+        echo "LUA_PATH=$LUA_PATH" >> $GITHUB_ENV
+        echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
+        echo "CXX=clang++" >> $GITHUB_ENV
+        echo "CC=clang" >> $GITHUB_ENV
+
+    - name: (Linux) Install dependencies
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install \
+          ccache \
+          g++-${{matrix.gcc_compiler_version}} \
+          libassimp-dev \
+          libboost-dev \
+          libcurl4-openssl-dev \
+          libglu1-mesa-dev \
+          libhunspell-dev \
+          liblua5.1-0-dev \
+          libonig-dev \
+          libpcre2-dev \
+          libpulse-dev \
+          libpugixml-dev \
+          libsecret-1-dev \
+          libspeechd-dev \
+          libsqlite3-dev \
+          libssl-dev \
+          libxkbcommon-x11-0 \
+          libxcb-render-util0-dev \
+          libxcb-image0-dev \
+          libyajl-dev \
+          libzip-dev \
+          qtkeychain-qt6-dev \
+          pcre2-utils \
+          pkg-config \
+          openssl \
+          ca-certificates \
+          libgstreamer-plugins-base1.0-0 \
+          libxcb-icccm4 \
+          libxcb-image0 \
+          libxcb-keysyms1 \
+          libxcb-render-util0 \
+          libxcb-xinerama0 \
+          xvfb \
+          -y
+
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${{matrix.gcc_compiler_version}} ${{matrix.gcc_compiler_version}}
+        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-${{matrix.gcc_compiler_version}} ${{matrix.gcc_compiler_version}}
+        sudo update-alternatives --set gcc /usr/bin/gcc-${{matrix.gcc_compiler_version}}
+        sudo update-alternatives --set g++ /usr/bin/g++-${{matrix.gcc_compiler_version}}
+
+        echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
+
+        luarocks --lua-version 5.1 install --local lua-yajl
+        eval "$(luarocks path --local --lua-version "5.1")"
+        echo "LUA_PATH=$LUA_PATH" >> $GITHUB_ENV
+        echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
+
+    - name: (Linux) Install mold linker
+      if: runner.os == 'Linux'
+      timeout-minutes: 5
+      env:
+        MOLD_VERSION: '2.41.0'
+        MOLD_SHA256: 'a3696680d99e692970590a178bc3a33d78d60d1c6dc9db7a11b557b02b751f5d'
+      run: |
+        # the ci-linux preset links with mold, and matching it is what keeps the
+        # restored ccache useful
+        curl -fsSL --retry 3 --retry-delay 5 --connect-timeout 10 --max-time 120 -o mold.tar.gz \
+          "https://github.com/rui314/mold/releases/download/v${MOLD_VERSION}/mold-${MOLD_VERSION}-x86_64-linux.tar.gz"
+        echo "${MOLD_SHA256}  mold.tar.gz" | sha256sum -c
+        sudo tar xf mold.tar.gz -C /usr/local --strip-components=1
+        rm mold.tar.gz
+
+    - name: Restore ccache
+      uses: actions/cache/restore@v6
+      with:
+        path: ${{runner.workspace}}/ccache
+        # Nothing is ever saved back from here, so this only ever reads what the
+        # build workflow left on development
+        key: ${{matrix.ccache_key}}
+        restore-keys: ${{matrix.ccache_key}}
+
+    - name: Get sentry-native commit hash
+      id: sentry-hash
+      run: echo "SENTRY_HASH=$(git -C 3rdparty/sentry-native rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+    - name: Restore sentry-native
+      uses: actions/cache/restore@v6
+      with:
+        path: |
+          3rdparty/sentry-native/install_without_transport
+          3rdparty/sentry-native/install_with_transport
+        key: sentry-${{ runner.os }}-${{ runner.arch }}-${{ steps.sentry-hash.outputs.SENTRY_HASH }}
+
+    - name: check ccache stats prior to build
+      run: ccache --zero-stats --show-stats
+
+    - name: Build the test binary
+      timeout-minutes: 60
+      env:
+        NINJA_STATUS: '[%f/%t %o/sec] '
+        CMAKE_BUILD_TYPE: ''
+        USE_SANITIZER: ''
+        # ON because that is what the cached objects were compiled with - it adds
+        # -g and compile definitions to mudlet_core, so OFF would miss every one
+        WITH_SENTRY: 'ON'
+        SENTRY_SEND_DEBUG: '0'
+        SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+      run: |
+        cmake --preset ${{matrix.preset}}
+        cmake --build ${{runner.workspace}}/b/ninja --target functional_window_tests
+
+    - name: check ccache stats post build
+      run: ccache --show-stats
+
+    - name: install the Lua rocks the functional tests load
+      run: |
+        LUAROCKS="luarocks --lua-version 5.1 install --local"
+        $LUAROCKS LuaFileSystem
+        $LUAROCKS luautf8
+        $LUAROCKS lpeg
+        if [ "$RUNNER_OS" = "macOS" ]; then
+          $LUAROCKS lua-zip ZIP_DIR=${HOMEBREW_PREFIX}/opt/libzip
+          $LUAROCKS LuaSQL-SQLite3 2.6.1 SQLITE_DIR=${HOMEBREW_PREFIX}/opt/sqlite
+          $LUAROCKS lrexlib-pcre2 PCRE2_DIR=${HOMEBREW_PREFIX}/opt/pcre2
+        else
+          $LUAROCKS lua-zip
+          $LUAROCKS LuaSQL-SQLite3 2.6.1
+          $LUAROCKS lrexlib-pcre2
+        fi
+      env:
+        RUNNER_OS: ${{runner.os}}
+
+    - name: (Linux) Take the screenshots
+      if: runner.os == 'Linux'
+      timeout-minutes: 15
+      working-directory: '${{runner.workspace}}/b/ninja/test/functional_tests'
+      env:
+        MUDLET_TEST_MODE: 1
+      run: |
+        set -x
+        # Twice over: offscreen is what ctest uses, X11 is what a player's desktop
+        # is. Both land on Fusion, so a difference between them is the platform
+        # plugin rather than the style.
+        mkdir -p "${{github.workspace}}/screenshots/linux-offscreen" "${{github.workspace}}/screenshots/linux-x11"
+        QT_QPA_PLATFORM=offscreen MUDLET_SCREENSHOT_DIR="${{github.workspace}}/screenshots/linux-offscreen" \
+          ./functional_window_tests ScrollBarScreenshotTest
+        xvfb-run --auto-servernum env QT_QPA_PLATFORM=xcb MUDLET_TEST_MODE=1 \
+          MUDLET_SCREENSHOT_DIR="${{github.workspace}}/screenshots/linux-x11" \
+          ./functional_window_tests ScrollBarScreenshotTest
+
+    - name: (macOS) Take the screenshots
+      if: runner.os == 'macOS'
+      timeout-minutes: 15
+      working-directory: '${{runner.workspace}}/b/ninja/test/functional_tests'
+      env:
+        MUDLET_TEST_MODE: 1
+      run: |
+        set -x
+        # Cocoa rather than the offscreen platform the ctest suite uses: the macOS
+        # style comes from the platform theme, so offscreen would quietly measure
+        # Fusion and say nothing about what a Mac user sees. Each run prints the
+        # style it actually got, and the images carry it in their caption.
+        mkdir -p "${{github.workspace}}/screenshots/macos-cocoa"
+        QT_QPA_PLATFORM=cocoa MUDLET_SCREENSHOT_DIR="${{github.workspace}}/screenshots/macos-cocoa" \
+          ./functional_window_tests ScrollBarScreenshotTest
+
+    - name: Upload the screenshots
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: scrollbar-screenshots-${{matrix.buildname}}
+        path: ${{github.workspace}}/screenshots
+        if-no-files-found: error
