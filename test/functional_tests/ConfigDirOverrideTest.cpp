@@ -693,6 +693,38 @@ private slots:
         QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/.config/mudlet").arg(QDir::homePath()));
         QCOMPARE(settingsFileName(), qsl("%1/.config/mudlet/Mudlet.ini").arg(QDir::homePath()));
     }
+
+    // A portable.txt naming a directory Mudlet cannot use used to end in
+    // qFatal(), which is abort(): nothing on screen, and Sentry filing a crash
+    // report for a stray "touch portable.txt". Startup carries on at the
+    // non-portable location - which is where the profiles are - and says so.
+    // Kept last: it settles the config root on a directory that goes away with
+    // the test.
+    void test_setupConfigCarriesOnWhenTheMarkerNamesAnUnusableRoot()
+    {
+#ifdef Q_OS_WIN
+        QSKIP("QDir::homePath() does not follow HOME on Windows");
+#endif
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - the real marker outranks the one this case writes");
+        }
+        QTemporaryDir home;
+        QVERIFY(home.isValid());
+        const QString configDir = qsl("%1/.config/mudlet").arg(home.path());
+        QVERIFY(QDir().mkpath(qsl("%1/profiles").arg(configDir)));
+        QVERIFY(writeMarker(configDir, ""));
+        qunsetenv("XDG_CONFIG_HOME");
+
+        const QByteArray savedHome = qgetenv("HOME");
+        qputenv("HOME", home.path().toUtf8());
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("portable data path not specified")));
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("names a data directory Mudlet cannot use")));
+        mudlet::self()->setupConfig();
+        savedHome.isNull() ? qunsetenv("HOME") : qputenv("HOME", savedHome);
+
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), configDir);
+        QCOMPARE(settingsFileName(), qsl("%1/Mudlet.ini").arg(configDir));
+    }
 };
 
 #include "ConfigDirOverrideTest.moc"

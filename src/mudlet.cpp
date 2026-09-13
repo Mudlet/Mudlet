@@ -1003,6 +1003,10 @@ void mudlet::init()
     scanForQtTranslations(MudletApp::getMudletPath(enums::qtTranslationsPath));
     loadTranslators(MudletApp::getInterfaceLanguage());
 
+    if (!mRejectedPortableMarker.isEmpty()) {
+        warnAboutRejectedPortableRoot();
+    }
+
     // Cannot assign a value in the constructor list as it requires the
     // translations to be loaded first:
     //: Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!
@@ -1649,11 +1653,18 @@ void mudlet::setupConfig()
 {
     const auto resolution = MudletApp::resolveConfigRoot(MudletApp::executableDir());
     const QString confPath = resolution.path;
-    // The resolver has already said which check the root failed, and carried on
-    // with the non-portable location - which is not what a portable install
-    // asked for, so startup still stops here rather than quietly relocating
     if (resolution.portableRootRejected) {
-        qFatal("FATAL: portable data path invalid");
+        // This used to be qFatal(), which is abort(): no message anywhere the
+        // user looks, and a crash report filed for a mistyped portable.txt. The
+        // resolver has already said which check the root failed and handed back
+        // the non-portable location, so carry on there and say so - loudly in
+        // the log now, and on screen once init() has the translations up.
+        mRejectedPortableMarker = MudletApp::portableMarkerPath(MudletApp::executableDir());
+        if (mRejectedPortableMarker.isEmpty()) {
+            mRejectedPortableMarker = qsl("portable.txt");
+        }
+        qWarning().nospace().noquote() << "mudlet::setupConfig() WARN - \"" << mRejectedPortableMarker << "\" names a data directory Mudlet cannot use, so \"" << confPath
+                                       << "\" is in use instead. Profiles kept where the marker points will not be listed until it is corrected.";
     }
     if (resolution.migrationPending) {
         qInfo().nospace() << "mudlet::setupConfig() INFO: XDG_CONFIG_HOME is set but $XDG_CONFIG_HOME/mudlet holds no profiles, so the existing " << confPath
@@ -1668,6 +1679,26 @@ void mudlet::setupConfig()
     // setupConfig() must not run again once init() has created the Updater,
     // which keeps using the settings object this discards
     MudletApp::resetSettings();
+}
+
+// Startup no longer stops on a portable.txt that names a directory Mudlet cannot
+// use, so this dialog is the only thing telling the user that the profiles they
+// are about to see are not the portable ones they asked for.
+void mudlet::warnAboutRejectedPortableRoot()
+{
+    const QString marker = mRejectedPortableMarker;
+    mRejectedPortableMarker.clear();
+    QMessageBox notice;
+    //: Title of the warning shown at startup when portable.txt names a data directory Mudlet cannot use
+    notice.setWindowTitle(tr("Portable data directory unusable"));
+    //: %1 is the full path of the portable.txt file that names the unusable directory
+    notice.setText(tr("The data directory named by %1 cannot be used.").arg(marker));
+    //: %1 is the full path of the directory Mudlet has fallen back to for profiles and settings
+    notice.setInformativeText(tr("Mudlet is using %1 instead, so profiles kept in the portable directory will not be listed. "
+                                 "Correct the file and restart Mudlet to use that directory again.")
+                                      .arg(MudletApp::getMudletPath(enums::mainPath)));
+    notice.setIcon(QMessageBox::Warning);
+    notice.exec();
 }
 
 void mudlet::initEdbee()
