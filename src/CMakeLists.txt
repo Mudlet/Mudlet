@@ -1031,23 +1031,6 @@ if(UNIX AND NOT APPLE)
     WORLD_READ)
 
   install(
-    FILES "../mudlet.desktop"
-    DESTINATION "share/applications" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
-      WORLD_READ)
-  install(
-    FILES "../org.mudlet.mudlet.metainfo.xml"
-    DESTINATION "share/metainfo" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
-      WORLD_READ)
-  install(
-    FILES "../mudlet.svg"
-    DESTINATION "share/icons/hicolor/scalable/apps" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
-    WORLD_READ)
-  install(
-    FILES "../mudlet.png"
-    DESTINATION "share/icons/hicolor/256x256/apps" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
-    WORLD_READ)
-
-  install(
     TARGETS ${EXE_MUDLET_TARGET}
     RUNTIME
       DESTINATION "bin"
