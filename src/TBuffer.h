@@ -868,6 +868,9 @@ inline QDebug& operator<<(QDebug& debug, const TChar::AttributeFlags& attributes
     if (attributes & TChar::UnderlineDashed) {
         presentAttributes << QLatin1String("UnderlineDashed (0x1000000)");
     }
+    if (attributes & TChar::Selected) {
+        presentAttributes << QLatin1String("Selected (0x2000000)");
+    }
     if (presentAttributes.isEmpty()) {
         result.append(QLatin1String("None (0x0))"));
     } else {
