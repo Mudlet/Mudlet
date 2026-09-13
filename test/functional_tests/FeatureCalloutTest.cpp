@@ -21,6 +21,7 @@
 #include <QPushButton>
 #include <QtTest/QtTest>
 
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "TFeatureCallout.h"
 #include "enums.h"
@@ -52,9 +53,9 @@ private:
 
     QString shownCountKey() const { return qsl("whatsNew/%1/shownCount").arg(mFeatureId); }
 
-    bool dismissed() const { return mudlet::getQSettings()->value(dismissedKey(), false).toBool(); }
+    bool dismissed() const { return MudletApp::getQSettings()->value(dismissedKey(), false).toBool(); }
 
-    int shownCount() const { return mudlet::getQSettings()->value(shownCountKey(), 0).toInt(); }
+    int shownCount() const { return MudletApp::getQSettings()->value(shownCountKey(), 0).toInt(); }
 
     int anchorCentre() const { return mpAnchor->mapToGlobal(QPoint(mpAnchor->width() / 2, 0)).x(); }
 
@@ -82,7 +83,7 @@ private slots:
         qputenv("XDG_CONFIG_HOME", mConfig.path().toUtf8());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfig.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfig.path()));
     }
 
     void cleanupTestCase()
@@ -93,8 +94,8 @@ private slots:
 
     void init()
     {
-        mudlet::getQSettings()->remove(dismissedKey());
-        mudlet::getQSettings()->remove(shownCountKey());
+        MudletApp::getQSettings()->remove(dismissedKey());
+        MudletApp::getQSettings()->remove(shownCountKey());
         mpWindow = new QWidget;
         mpWindow->resize(400, 300);
         mpWindow->move(80, 80);

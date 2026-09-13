@@ -57,6 +57,7 @@
 #include <chrono>
 #include <zip.h>
 
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -94,7 +95,7 @@ private:
 
     static void deleteProfileDirectory(const QString& profileName)
     {
-        QDir dir(mudlet::getMudletPath(enums::profileHomePath, profileName));
+        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, profileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }
@@ -159,7 +160,7 @@ private:
         return contents;
     }
 
-    QString moduleXmlPath() const { return mudlet::getMudletPath(enums::profilePackagePathFileName, mProfileName, mModuleName); }
+    QString moduleXmlPath() const { return MudletApp::getMudletPath(enums::profilePackagePathFileName, mProfileName, mModuleName); }
 
     static QByteArray readFile(const QString& path)
     {
@@ -191,14 +192,14 @@ private:
         return written;
     }
 
-    QStringList moduleBackupFiles() const { return QDir(mudlet::getMudletPath(enums::moduleBackupsPath)).entryList(QStringList{qsl("%1*").arg(mModuleName)}, QDir::Files); }
+    QStringList moduleBackupFiles() const { return QDir(MudletApp::getMudletPath(enums::moduleBackupsPath)).entryList(QStringList{qsl("%1*").arg(mModuleName)}, QDir::Files); }
 
     // A backup is named after the second it was taken in, and QFile::copy() will not
     // overwrite, so counting backups across two saves in the same second proves
     // nothing. Clearing them first makes "was one taken?" a plain yes or no.
     void clearModuleBackups() const
     {
-        QDir backups(mudlet::getMudletPath(enums::moduleBackupsPath));
+        QDir backups(MudletApp::getMudletPath(enums::moduleBackupsPath));
         for (const auto& backup : moduleBackupFiles()) {
             backups.remove(backup);
         }
@@ -375,8 +376,7 @@ private slots:
         mpHost = nullptr;
         delete mpServer;
         mpServer = nullptr;
-        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
-        // getMudletPath() dereferences the instance rather than checking it
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
             deleteProfileDirectory(mProfileName);
             delete mudlet::self();
