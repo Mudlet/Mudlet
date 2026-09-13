@@ -432,6 +432,29 @@ TDockWidget* TMainConsole::deregisterDockWidget(const QString& name)
     return mDockWidgetMap.take(name);
 }
 
+TDockWidget* TMainConsole::createUserWindow(const QString& name)
+{
+    auto hostName(mpHost->getName());
+    auto dockwidget = new TDockWidget(mpHost, name);
+    dockwidget->setObjectName(qsl("dockWindow_%1_%2").arg(hostName, name));
+    dockwidget->setContentsMargins(0, 0, 0, 0);
+    dockwidget->setWindowTitle(name);
+    registerDockWidget(name, dockwidget);
+    // It wasn't obvious but the parent passed to the TConsole constructor
+    // is sliced down to a QWidget and is NOT a TDockWidget pointer:
+    auto console = new TConsole(mpHost, name, TConsole::UserWindow, dockwidget->widget());
+    console->setObjectName(qsl("dockWindowConsole_%1_%2").arg(hostName, name));
+    console->setContentsMargins(0, 0, 0, 0);
+    dockwidget->setTConsole(console);
+    console->layerCommandLine->hide();
+    console->setScrollBarVisible(false);
+    registerSubConsole(name, console);
+    dockwidget->setStyleSheet(mpHost->mProfileStyleSheet);
+    mudlet::self()->addDockWidget(Qt::RightDockWidgetArea, dockwidget);
+    console->setFontSize(10);
+    return dockwidget;
+}
+
 void TMainConsole::registerScrollBox(const QString& name, TScrollBox* pScrollBox)
 {
     mScrollBoxMap[name] = pScrollBox;
@@ -2515,6 +2538,16 @@ void TMainConsole::createMapperDock(const QString& title, const QString& objectN
 {
     mpDockableMapWidget = new QDockWidget(title);
     mpDockableMapWidget->setObjectName(objectName);
+    // Arrange for TMap member values to be copied from the Host masters so they
+    // are in place when the 2D mapper is created:
+    mpHost->getPlayerRoomStyleDetails(mpHost->mpMap->mPlayerRoomStyle,
+                                      mpHost->mpMap->mPlayerRoomOuterDiameterPercentage,
+                                      mpHost->mpMap->mPlayerRoomInnerDiameterPercentage,
+                                      mpHost->mpMap->mPlayerRoomOuterColor,
+                                      mpHost->mpMap->mPlayerRoomInnerColor);
+    mpHost->mpMap->mpMapper = new dlgMapper(mpDockableMapWidget, mpHost, mpHost->mpMap.data());
+    mpHost->mpMap->mpMapper->setStyleSheet(mpHost->mProfileStyleSheet);
+    mpDockableMapWidget->setWidget(mpHost->mpMap->mpMapper);
 }
 
 void TMainConsole::showMapperScriptReminder()
