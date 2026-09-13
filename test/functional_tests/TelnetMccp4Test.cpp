@@ -19,7 +19,10 @@
 
 #include <QtTest/QtTest>
 
+#include <QScopeGuard>
+
 #include <chrono>
+#include <vector>
 
 #include <zlib.h>
 #include <zstd.h>
@@ -48,6 +51,14 @@ class TelnetMccp4Test : public QObject
     Q_OBJECT
 
 private:
+    // BUFFER_SIZE in ctelnet.cpp - the size of the buffer one decompression pass
+    // fills, and so the amount of a frame that can reach the screen per pass.
+    static constexpr int scmTelnetOutputBufferSize = 100000;
+    static constexpr int scmBulkLineLength = 20; // "MCCP4_BULK_0000000\r\n"
+    // Comfortably more than one zstd block, so the frame cannot be delivered in
+    // a single pass however zstd chooses to cut it up
+    static constexpr int scmBulkLineCount = 20000;
+
     TelnetServerStub* mpServer = nullptr;
     const QString mHostname = "Test-Telnet-MCCP4";
     QString mPort; // the stub's actual ephemeral port, assigned in init()
@@ -286,6 +297,53 @@ private slots:
                  qPrintable(qsl("Uncompressed data sent after BEGIN_ENCODING was discarded instead of being reprocessed as plain telnet. Buffer holds:\n%1").arg(bufferContents())));
     }
 
+    // A zstd frame that expands past the 100000-byte output buffer while its
+    // last delivered compressed byte is consumed: zstd keeps the overflow in its
+    // own buffer, and nothing is left over to make processSocketData() come back
+    // for it. Everything past the first buffer used to sit there until the
+    // server sent something else - which a server waiting on the player never
+    // does.
+    void test_aFrameLargerThanOneBufferArrivesInOnePass()
+    {
+        auto* host = connectedHost();
+        QVERIFY2(host, "No active host available for the test.");
+        offerCompress4(host);
+
+        // Let the stub's own greeting land before compression starts. A socket
+        // read arriving after the payload would run the decompressor again and
+        // flush the held-back output as a side effect, hiding the defect.
+        QTest::qWait(500ms);
+
+        const QByteArray plain = numberedLines(scmBulkLineCount);
+        const QByteArray compressed = zstdCompress(plain);
+        QVERIFY2(!compressed.isEmpty(), "the bulk payload did not compress");
+
+        // Cut the delivery exactly where cTelnet's output buffer fills, which is
+        // where a real read can land too: every byte handed over is consumed and
+        // the overflow stays inside the decoder.
+        qsizetype pendingBytes = 0;
+        const qsizetype prefix = consumedBeforeOutputFills(compressed, pendingBytes);
+        QVERIFY2(prefix > 0 && prefix < compressed.size() && pendingBytes > 0,
+                 qPrintable(qsl("this payload does not overflow one output buffer on a block boundary: prefix %1 of %2, %3 bytes held back")
+                                    .arg(QString::number(prefix), QString::number(compressed.size()), QString::number(pendingBytes))));
+
+        QByteArray data = beginEncoding("zstd");
+        data.append(compressed.left(prefix));
+        feed(host, data);
+
+        // The line at decoded offset 100000 is the first one entirely past what
+        // a single output buffer can carry, so it only appears if the decoder
+        // was asked for what it was still holding.
+        const QString firstHeldBackLine = bulkLine(scmTelnetOutputBufferSize / scmBulkLineLength);
+        // Read the buffer without pumping the event loop: loopbackTest() delivers
+        // synchronously, and letting a socket read in first would do the draining
+        // for us.
+        const QString displayed = bufferContents();
+        QVERIFY2(displayed.contains(bulkLine(0)), "the start of the frame never arrived, so this test cannot tell the two states apart");
+        QVERIFY2(displayed.contains(firstHeldBackLine),
+                 qPrintable(qsl("%1 was left inside the zstd decoder: a frame that expands past one output buffer only reached the screen as far as that buffer went").arg(firstHeldBackLine)));
+    }
+
     void cleanup()
     {
         delete mpServer;
@@ -307,6 +365,58 @@ private:
         data.append(TN_IAC);
         data.append(TN_SE);
         return data;
+    }
+
+    // Each line is exactly scmBulkLineLength bytes, so the decoded offset of a
+    // line is its number times that - which is what lets the test name the first
+    // line that cannot fit in one output buffer.
+    QString bulkLine(int number) const { return qsl("MCCP4_BULK_%1").arg(number, 7, 10, QLatin1Char('0')); }
+
+    QByteArray numberedLines(int count) const
+    {
+        QByteArray plain;
+        plain.reserve(count * scmBulkLineLength);
+        for (int i = 0; i < count; ++i) {
+            plain.append(bulkLine(i).toUtf8());
+            plain.append("\r\n");
+        }
+        return plain;
+    }
+
+    // How many compressed bytes zstd consumes before an output buffer the size
+    // of cTelnet's fills up, and how much decoded text it is still holding when
+    // that happens. Answered with a throwaway decoder so the test does not have
+    // to guess where zstd puts its block boundaries.
+    qsizetype consumedBeforeOutputFills(const QByteArray& compressed, qsizetype& pendingBytes) const
+    {
+        ZSTD_DStream* probe = ZSTD_createDStream();
+        if (!probe) {
+            return 0;
+        }
+        const auto probeGuard = qScopeGuard([probe]() {
+            ZSTD_freeDStream(probe);
+        });
+        if (ZSTD_isError(ZSTD_initDStream(probe))) {
+            return 0;
+        }
+
+        std::vector<char> out(scmTelnetOutputBufferSize);
+        ZSTD_inBuffer input = {compressed.constData(), static_cast<size_t>(compressed.size()), 0};
+        ZSTD_outBuffer output = {out.data(), out.size(), 0};
+        if (ZSTD_isError(ZSTD_decompressStream(probe, &output, &input))) {
+            return 0;
+        }
+        if (output.pos != output.size) {
+            return 0; // did not overflow one buffer at all
+        }
+
+        ZSTD_inBuffer nothing = {compressed.constData(), 0, 0};
+        ZSTD_outBuffer rest = {out.data(), out.size(), 0};
+        if (ZSTD_isError(ZSTD_decompressStream(probe, &rest, &nothing))) {
+            return 0;
+        }
+        pendingBytes = static_cast<qsizetype>(rest.pos);
+        return static_cast<qsizetype>(input.pos);
     }
 
     QByteArray zstdCompress(const QByteArray& plain) const

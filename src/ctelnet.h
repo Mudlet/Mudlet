@@ -380,6 +380,12 @@ private:
     void cleanupMCCP4();
     int decompressBuffer(char*& in_buffer, int& length, char* out_buffer);
     int decompressMCCP4Buffer(char*& in_buffer, int& length, char* out_buffer);
+    // True only while the zstd decoder is the one running and is still holding
+    // output from the previous pass. mZstdFlushPending on its own could outlive
+    // the decoder it describes - a disconnect clears mNeedDecompression without
+    // going through endMCCP4Compression() - and processSocketData() would then
+    // keep re-entering itself for a flush nothing can deliver.
+    bool zstdFlushPending() const { return mZstdFlushPending && mNeedDecompression && mMCCP_version_4 && mMCCP4_encoding == MCCP4_ENCODING_ZSTD && mZstdDstream != nullptr; }
     void reset();
     void handleFailedConnection();
     void sendLoginAndPass();
@@ -513,6 +519,14 @@ private:
     z_stream mZstream = {};
     ZSTD_DStream* mZstdDstream = nullptr;
     std::vector<char> mZstdOutBuffer;
+    // zstd hands back at most one output buffer per call and keeps the rest in
+    // its own; mZstdOutBuffer is BUFFER_SIZE, which is smaller than a zstd block,
+    // so a frame that expands past it leaves bytes behind even once every
+    // compressed byte has been consumed. Set when ZSTD_decompressStream() filled
+    // the output buffer completely - the documented "there might be some data
+    // left within internal buffers" signal - so processSocketData() knows it has
+    // to come back for them rather than wait for the server to send more.
+    bool mZstdFlushPending = false;
 
     bool mNeedDecompression = false;
     // mZstream outlives mNeedDecompression: the end of a compressed run clears

@@ -5383,6 +5383,10 @@ void cTelnet::endMCCP4Compression()
         endStreamDecompressor();
     }
     mZstdOutBuffer.clear();
+    // The decoder that was holding those bytes is gone, so nothing is owed a
+    // flush pass any more - and a stale flag would send processSocketData()
+    // back into a decompressor that is no longer there.
+    mZstdFlushPending = false;
     mMCCP4_encoding = MCCP4_ENCODING_NONE;
     if (mccp4WasCompressing) {
         mNeedDecompression = false;
@@ -5488,8 +5492,11 @@ int cTelnet::decompressMCCP4Buffer(char*& in_buffer, int& length, char* out_buff
     size_t totalOutput = 0;
 
     // Loop to consume all input - a single ZSTD_decompressStream call may
-    // not consume everything if the output buffer fills up
-    while (input.pos < input.size) {
+    // not consume everything if the output buffer fills up. The second half of
+    // the condition is what lets a pass carrying no input at all run: zstd can
+    // still be holding decoded bytes from the previous pass, and nothing else
+    // would ever ask for them.
+    while (input.pos < input.size || mZstdFlushPending) {
         const size_t inputPosBefore = input.pos;
         // Cap zstd output to remaining space so it never produces more than we can fit
         size_t spaceLeft = static_cast<size_t>(BUFFER_SIZE) - totalOutput;
@@ -5525,6 +5532,13 @@ int cTelnet::decompressMCCP4Buffer(char*& in_buffer, int& length, char* out_buff
         memcpy(out_buffer + totalOutput, mZstdOutBuffer.data(), output.pos);
         totalOutput += output.pos;
 
+        // "If output.pos < output.size, decoder has flushed everything it could.
+        // But if output.pos == output.size, there might be some data left within
+        // internal buffers" - zstd.h. A full output buffer is therefore the only
+        // thing that says another pass is owed, and it says nothing about whether
+        // compressed input is left, which is why this is tracked separately.
+        mZstdFlushPending = (result != 0 && output.size > 0 && output.pos == output.size);
+
         if (result == 0) {
             // Full zstd frame decoded. The end of the frame ends this
             // compression run (the MCCP4 counterpart of MCCP2's Z_STREAM_END):
@@ -5554,7 +5568,9 @@ int cTelnet::decompressMCCP4Buffer(char*& in_buffer, int& length, char* out_buff
         // forever on the main thread, so treat it as the end of what we can do
         // with this buffer and let the caller re-enter with the remainder.
         if (input.pos == inputPosBefore && output.pos == 0) {
-            qWarning() << "MCCP4: zstd made no progress on" << (input.size - input.pos) << "bytes of input, leaving them to the caller";
+            if (input.pos < input.size) {
+                qWarning() << "MCCP4: zstd made no progress on" << (input.size - input.pos) << "bytes of input, leaving them to the caller";
+            }
             break;
         }
     }
@@ -5834,7 +5850,10 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
     // narrows a qsizetype into this int, so treat every non-positive value the
     // same rather than testing for -1 exactly. Terminating before this point is
     // what wrote a NUL outside the caller's buffer - see issue #1065.
-    if (amount <= 0) {
+    // The one legitimate empty pass is the zstd flush re-entered at the bottom of
+    // this function, which carries no input because there is none left over -
+    // only output the decoder is still holding.
+    if (amount < 0 || (amount == 0 && !zstdFlushPending())) {
         return;
     }
     // Restates the input contract for decompressBuffer() below, which may swap
@@ -6125,6 +6144,16 @@ Some data loss is likely - please mention this problem to the game admins.)",
     // the loop above stopped at.
     if (remainingData && remainingAmount > 0 && !(mDeferredReconnect && !loopbackTesting)) {
         processSocketData(remainingData, remainingAmount, loopbackTesting);
+        return;
+    }
+
+    // A zstd frame can expand past one output buffer while its last compressed
+    // byte is consumed, leaving decoded text inside the decoder and no leftover
+    // input to bring us back here for it. Re-enter with an empty read so
+    // decompressMCCP4Buffer() flushes it; otherwise that text waits for the
+    // server's next packet, and a server waiting on the player never sends one.
+    if (zstdFlushPending() && !(mDeferredReconnect && !loopbackTesting)) {
+        processSocketData(in_buffer, 0, loopbackTesting);
         return;
     }
 
