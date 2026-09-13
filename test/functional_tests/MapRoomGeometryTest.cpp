@@ -105,9 +105,9 @@ private slots:
         mudlet::self()->setStorePasswordsSecurely(false);
         deleteProfileDirectory();
 
-        auto& hostManager = mudlet::self()->getHostManager();
-        QVERIFY2(hostManager.addHost(mProfileName, qsl("23"), QString(), QString()), "failed to create the test Host");
-        mpHost = hostManager.getHost(mProfileName);
+        auto* hostManager = HostManager::self();
+        QVERIFY2(hostManager->addHost(mProfileName, qsl("23"), QString(), QString()), "failed to create the test Host");
+        mpHost = hostManager->getHost(mProfileName);
         QVERIFY(mpHost);
     }
 

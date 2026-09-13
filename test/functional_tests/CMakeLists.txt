@@ -215,6 +215,7 @@ set(TEARDOWN_GROUP_TEST_SOURCES
     AppStartupTeardownTest.cpp
     DialogTeardownTest.cpp
     HostChildTeardownTest.cpp
+    HostManagerAccessorTest.cpp
     HostWidgetDecouplingTest.cpp
 )
 

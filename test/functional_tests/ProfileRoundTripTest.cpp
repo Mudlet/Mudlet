@@ -512,9 +512,9 @@ private slots:
 
         // The import target is a bare Host, matching the state a profile is
         // in when mudlet::loadProfile() imports its XML at startup:
-        auto& hostManager = mudlet::self()->getHostManager();
-        QVERIFY2(hostManager.addHost(mTargetName, mPort, QString(), QString()), "failed to create the target Host");
-        mpTarget = hostManager.getHost(mTargetName);
+        auto* hostManager = HostManager::self();
+        QVERIFY2(hostManager->addHost(mTargetName, mPort, QString(), QString()), "failed to create the target Host");
+        mpTarget = hostManager->getHost(mTargetName);
         QVERIFY(mpTarget);
 
         QFile file(xmlPath);
@@ -531,8 +531,8 @@ private slots:
         // readHostColorElement()'s hasAttribute() guard still defaults the
         // missing alpha to opaque instead of, say, an absent toInt() 0:
         deleteProfileDirectory(mLegacyTargetName);
-        QVERIFY2(hostManager.addHost(mLegacyTargetName, mPort, QString(), QString()), "failed to create the legacy target Host");
-        mpLegacyTarget = hostManager.getHost(mLegacyTargetName);
+        QVERIFY2(hostManager->addHost(mLegacyTargetName, mPort, QString(), QString()), "failed to create the legacy target Host");
+        mpLegacyTarget = hostManager->getHost(mLegacyTargetName);
         QVERIFY(mpLegacyTarget);
 
         QString legacyXml = mExportedXml;

@@ -173,8 +173,8 @@ private slots:
         mudlet::self()->setStorePasswordsSecurely(false);
         QVERIFY2(mudlet::getMudletPath(enums::profilesPath).startsWith(mConfigDir.path()), "test config dir redirection did not take effect");
 
-        QVERIFY2(mudlet::self()->getHostManager().addHost(mProfileName, QString(), QString(), QString()), "failed to create the Host");
-        mpHost = mudlet::self()->getHostManager().getHost(mProfileName);
+        QVERIFY2(HostManager::self()->addHost(mProfileName, QString(), QString(), QString()), "failed to create the Host");
+        mpHost = HostManager::self()->getHost(mProfileName);
         QVERIFY(mpHost);
 
         QVERIFY2(!bundledFontBytes().isEmpty(), "the bundled font could not be read out of the Qt resources");

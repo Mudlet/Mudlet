@@ -218,7 +218,6 @@ public:
     QStringList getAvailableFonts();
     QList<QString> getAvailableTranslationCodes() const { return mTranslationsMap.keys(); }
     const QMap<QByteArray, QString>& getEncodingNamesMap() const { return mEncodingNameMap; }
-    HostManager& getHostManager() { return mHostManager; }
     ShortcutsManager* shortcutsManager() const { return mpShortcutsManager.data(); }
     // Speech-to-text bridge: creates the single shared recognizer on first use
     // and exposes it to the Lua stt.* API. Recognizer results surface as Lua

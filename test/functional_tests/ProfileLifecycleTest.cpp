@@ -103,7 +103,7 @@ private:
     const QString mUnloadedProfile = qsl("ProfileLifecycle-Unloaded");
     const QString mAbsentProfile = qsl("ProfileLifecycle-Absent");
 
-    Host* hostFor(const QString& profileName) const { return mudlet::self()->getHostManager().getHost(profileName); }
+    Host* hostFor(const QString& profileName) const { return HostManager::self()->getHost(profileName); }
 
     bool profileHasATab(const QString& profileName) const { return mudlet::self()->mpTabBar->tabIndex(profileName) != -1; }
 
@@ -114,7 +114,7 @@ private:
         if (!pHost) {
             return false;
         }
-        for (auto pLoadedHost : mudlet::self()->getHostManager()) {
+        for (auto pLoadedHost : *HostManager::self()) {
             if (pLoadedHost == pHost) {
                 return true;
             }
@@ -348,7 +348,7 @@ private slots:
 
     void test_loadProfileRefusesAProfileThatIsAlreadyLoaded()
     {
-        const int loadedBefore = mudlet::self()->getHostManager().getHostCount();
+        const int loadedBefore = HostManager::self()->getHostCount();
 
         // asked for in the wrong case, and the refusal names the profile as it
         // is spelt on disk: the case-insensitive lookup all three of these
@@ -358,14 +358,14 @@ private slots:
         QVERIFY2(outcome.error.isNull(), qPrintable(outcome.error));
         QCOMPARE(outcome.firstType, qsl("nil"));
         QVERIFY2(outcome.message.contains(qsl("'%1' is already loaded").arg(mFirstProfile)), qPrintable(qsl("unexpected message: %1").arg(outcome.message)));
-        QCOMPARE(mudlet::self()->getHostManager().getHostCount(), loadedBefore);
+        QCOMPARE(HostManager::self()->getHostCount(), loadedBefore);
     }
 
     void test_loadProfileOpensASecondProfile()
     {
         QVERIFY(provisionProfileOnDisk(mSecondProfile));
         QVERIFY2(!hostFor(mSecondProfile), "the second profile was already loaded");
-        const int loadedBefore = mudlet::self()->getHostManager().getHostCount();
+        const int loadedBefore = HostManager::self()->getHostCount();
 
         const LuaOutcome outcome = callLua(mpFirstHost, qsl("loadProfile('%1', true)").arg(mSecondProfile));
 
@@ -377,7 +377,7 @@ private slots:
         QVERIFY2(pSecondHost, "loadProfile() reported success but the profile is not in the host pool");
         QVERIFY2(pSecondHost->mpConsole, "the loaded profile has no main console, so nothing of it is on screen");
         QVERIFY2(profileHasATab(mSecondProfile), "the loaded profile got no tab");
-        QCOMPARE(mudlet::self()->getHostManager().getHostCount(), loadedBefore + 1);
+        QCOMPARE(HostManager::self()->getHostCount(), loadedBefore + 1);
 
         // An online load reaches the game some event loop turns later, so the
         // socket is unconnected on the line after the call either way - only a
@@ -576,7 +576,7 @@ private slots:
         QVERIFY(pSecondHost);
         QPointer<TMainConsole> pSecondConsole = pSecondHost->mpConsole;
         QVERIFY(pSecondConsole);
-        const int loadedBefore = mudlet::self()->getHostManager().getHostCount();
+        const int loadedBefore = HostManager::self()->getHostCount();
 
         const LuaOutcome outcome = callLua(mpFirstHost, qsl("closeProfile('%1')").arg(mSecondProfile));
 
@@ -592,7 +592,7 @@ private slots:
                  }),
                  "the closed profile's main console was left behind");
         QVERIFY2(!profileHasATab(mSecondProfile), "the closed profile kept its tab");
-        QCOMPARE(mudlet::self()->getHostManager().getHostCount(), loadedBefore - 1);
+        QCOMPARE(HostManager::self()->getHostCount(), loadedBefore - 1);
         QVERIFY2(hostFor(mFirstProfile), "closing one profile took the other one with it");
         QVERIFY2(stillInTheHostPool(mudlet::self()->getActiveHost()), "closing a profile left the active profile pointing at a Host that has been destroyed");
     }

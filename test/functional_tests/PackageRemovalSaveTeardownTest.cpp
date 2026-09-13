@@ -524,7 +524,7 @@ private slots:
         QVERIFY2(saveSpy.count() >= 1, "Closing the profile after an uninstall saved it nowhere");
         QVERIFY2(!lastSavedProfileContains(mProfileName, packageName), "The saved profile still carries the uninstalled package");
         mpHost = nullptr;
-        mudlet::self()->getHostManager().deleteHost(mProfileName);
+        HostManager::self()->deleteHost(mProfileName);
 
         // Nothing the uninstall queued may reach the destroyed Host now. Under
         // AddressSanitizer a queued save that does reach it aborts the run here;

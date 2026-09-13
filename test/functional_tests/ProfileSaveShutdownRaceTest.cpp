@@ -213,7 +213,7 @@ private slots:
             // stored this late can only reach the disk through the Host's own
             // destruction:
             host->writeProfileIniData(qsl("Test/FlushedAtClose"), qsl("yes"));
-            mudlet::self()->getHostManager().deleteHost(mProfileName);
+            HostManager::self()->deleteHost(mProfileName);
         });
 
         auto [ok, filename, error] = mpHost->saveProfile();

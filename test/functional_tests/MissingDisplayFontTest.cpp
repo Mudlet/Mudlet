@@ -310,8 +310,8 @@ private slots:
         }
         QVERIFY2(mudlet::getMudletPath(enums::profilesPath).startsWith(mConfigDir.path()), "test config dir redirection did not take effect");
 
-        QVERIFY(mudlet::self()->getHostManager().addHost(mProfileName, QString(), QString(), QString()));
-        mpHost = mudlet::self()->getHostManager().getHost(mProfileName);
+        QVERIFY(HostManager::self()->addHost(mProfileName, QString(), QString(), QString()));
+        mpHost = HostManager::self()->getHost(mProfileName);
         QVERIFY(mpHost);
 
         QVERIFY2(!mudlet::self()->getAvailableFonts().contains(mMissingFamily, Qt::CaseInsensitive), "the stand-in for an uninstalled font turns out to be installed");

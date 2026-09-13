@@ -113,7 +113,7 @@ private:
         runLua(mpHost, qsl("loadProfile('%1', true)").arg(mSecondHostname));
         for (int attempt = 0; attempt < 20 && mpSecondHost.isNull(); ++attempt) {
             settle(300ms);
-            mpSecondHost = mudlet::self()->getHostManager().getHost(mSecondHostname);
+            mpSecondHost = HostManager::self()->getHost(mSecondHostname);
         }
         settle(600ms);
         return !mpSecondHost.isNull();
