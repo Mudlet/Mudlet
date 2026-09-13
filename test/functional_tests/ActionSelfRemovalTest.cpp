@@ -23,6 +23,7 @@
 
 #include <QPushButton>
 
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "ActionUnit.h"
@@ -131,7 +132,7 @@ private slots:
         mpPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -220,7 +221,7 @@ private slots:
 
         // A file that exists but is not an archive, which is the failure a user
         // meets most often - unzip refuses it.
-        const QString brokenPackage = qsl("%1/broken.mpackage").arg(mudlet::getMudletPath(enums::profileHomePath, mpHostname));
+        const QString brokenPackage = qsl("%1/broken.mpackage").arg(MudletApp::getMudletPath(enums::profileHomePath, mpHostname));
         QFile broken(brokenPackage);
         QVERIFY2(broken.open(QIODevice::WriteOnly), qPrintable(qsl("Could not create %1").arg(brokenPackage)));
         broken.write("this is not a zip archive");
@@ -264,7 +265,7 @@ private slots:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = mudlet::getMudletPath(enums::profileHomePath, profileName);
+        const QString path = MudletApp::getMudletPath(enums::profileHomePath, profileName);
         QDir dir(path);
         if (!dir.exists()) {
             return;

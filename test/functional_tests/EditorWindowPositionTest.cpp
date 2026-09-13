@@ -35,6 +35,7 @@
 #include <algorithm>
 #include <chrono>
 
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -69,7 +70,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = mudlet::getMudletPath(enums::profileHomePath, profileName);
+        const QString path = MudletApp::getMudletPath(enums::profileHomePath, profileName);
         QDir dir(path);
         if (dir.exists() && !dir.removeRecursively()) {
             qWarning() << "deleteProfileDirectory: could not remove" << path << "- later failures may stem from this stale state";
@@ -160,7 +161,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -182,8 +183,7 @@ private slots:
         mpHost = nullptr;
         delete mpServer;
         mpServer = nullptr;
-        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
-        // getMudletPath() dereferences the instance rather than checking it
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
             deleteProfileDirectory(mProfileName);
             deleteProfileDirectory(mSecondProfileName);
@@ -281,7 +281,7 @@ private slots:
     // middle of the screen rather than left wherever the window system drops it
     void testTheFirstEverEditorIsCentred()
     {
-        mudlet::getQSettings()->remove("script_editor_pos");
+        MudletApp::getQSettings()->remove("script_editor_pos");
         delete mpHost->mpEditorDialog.data();
 
         mpEditor = reopenEditor();
@@ -299,7 +299,7 @@ private slots:
         const QPoint left = offCentrePoint() + QPoint(29, 31);
         placeEditorAtAndClose(mpEditor, left);
         const QSize leftSize = mpEditor->size();
-        QCOMPARE(mudlet::getQSettings()->value("script_editor_pos").toPoint(), left);
+        QCOMPARE(MudletApp::getQSettings()->value("script_editor_pos").toPoint(), left);
 
         delete mpHost->mpEditorDialog.data();
         QVERIFY(mpHost->mpEditorDialog.isNull());
@@ -332,7 +332,7 @@ private slots:
         QVERIFY2(pSecondHost->requestClose(), "Closing the second profile was refused");
         mudlet::self()->getHostManager().deleteHost(mSecondProfileName);
 
-        QCOMPARE(mudlet::getQSettings()->value("script_editor_pos").toPoint(), left);
+        QCOMPARE(MudletApp::getQSettings()->value("script_editor_pos").toPoint(), left);
     }
 
     // A detached profile window reaches the editor by a route of its own that

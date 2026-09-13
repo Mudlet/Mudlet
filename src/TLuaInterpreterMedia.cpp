@@ -34,6 +34,8 @@
 #include "TMedia.h"
 #include "mudlet.h"
 
+#include <QDir>
+
 // The argument parsers below hold QStrings and TMediaData while they run, so
 // they type-check with TLuaInterpreter::check...Arg() and leave the raise until
 // the parsing scope has been left - see checkStringArg()
