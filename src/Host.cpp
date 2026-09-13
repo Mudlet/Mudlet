@@ -61,6 +61,7 @@
 #include "SecureStringUtils.h"
 
 #include <chrono>
+#include <limits>
 #include <QtConcurrentRun>
 #include <QApplication>
 #include <QCoreApplication>
@@ -193,6 +194,31 @@ void stopWatch::adjustMilliSeconds(const qint64 adjustment)
     // Is running so adjust effective start time - to increase the effective
     // elapsed time we must subtract the adjustment from the effect start time:
     mEffectiveStartDateTime = mEffectiveStartDateTime.addMSecs(-adjustment);
+}
+
+// Applying an adjustment adds it to the elapsed time and shifts the effective
+// start time by the same amount the other way, so it is only usable if both of
+// those stay inside what a qint64 and a QDateTime can hold. Without this a
+// stopwatch would silently wrap onto a wrong time, or - once its effective
+// start time no longer exists - report no time at all ever again:
+bool stopWatch::adjustmentFits(const qint64 adjustment) const
+{
+    if (adjustment == std::numeric_limits<qint64>::min()) {
+        // Applying it negates it, and this one cannot be negated:
+        return false;
+    }
+
+    if (!mIsRunning) {
+        if (adjustment > 0 && mElapsedTime > std::numeric_limits<qint64>::max() - adjustment) {
+            return false;
+        }
+        if (adjustment < 0 && mElapsedTime < std::numeric_limits<qint64>::min() - adjustment) {
+            return false;
+        }
+    }
+
+    // A stopwatch that has never run has no effective start time to shift yet:
+    return !mEffectiveStartDateTime.isValid() || mEffectiveStartDateTime.addMSecs(-adjustment).isValid();
 }
 
 qint64 stopWatch::getElapsedMilliSeconds() const

@@ -696,6 +696,71 @@ describe("Tests Other.lua functions", function()
         assert.equals(10.0, getStopWatchTime(id))
       end)
 
+      it("adjustStopWatch keeps adjustments whose milliseconds exceed a 32-bit integer", function()
+        -- 2147483.648 s is where the milliseconds stop fitting into an int
+        local id = track(createStopWatch(false))
+        assert.is_true(adjustStopWatch(id, 2147484))
+        assert.equals(2147484, getStopWatchTime(id))
+        assert.is_true(resetStopWatch(id))
+        assert.is_true(adjustStopWatch(id, 1000000000000))
+        assert.equals(1000000000000, getStopWatchTime(id))
+        assert.is_true(resetStopWatch(id))
+        assert.is_true(adjustStopWatch(id, -2147484))
+        assert.equals(-2147484, getStopWatchTime(id))
+      end)
+
+      it("adjustStopWatch shifts a running stopwatch by a large amount as well", function()
+        local id = track(createStopWatch(true))
+        assert.is_true(adjustStopWatch(id, 1e12))
+        assertClose(1e12, getStopWatchTime(id), 1)
+      end)
+
+      it("adjustStopWatch refuses an adjustment that is not a usable number of milliseconds", function()
+        local id = track(createStopWatch(false))
+        assert.is_true(adjustStopWatch(id, 5))
+        -- the last two are the ends of the range: 9223372036854775.808 s is
+        -- exactly the milliseconds a qint64 cannot hold, and its negative is
+        -- the one value that cannot be negated to apply it
+        for _, value in ipairs({0/0, math.huge, -math.huge, 1e300, 9.3e15,
+                                9223372036854775.808, -9223372036854775.808}) do
+          local ok, err = adjustStopWatch(id, value)
+          assert.is_nil(ok)
+          assert.is_truthy(err:find("must be a finite number of at most", 1, true),
+            string.format("unexpected message for %s: %s", tostring(value), tostring(err)))
+          -- and the stopwatch is left as it was
+          assert.equals(5, getStopWatchTime(id))
+        end
+      end)
+
+      it("adjustStopWatch accepts an adjustment at the top of the range it can hold", function()
+        local id = track(createStopWatch(false))
+        assert.is_true(adjustStopWatch(id, 9e15))
+        assert.equals(9e15, getStopWatchTime(id))
+        assert.is_true(resetStopWatch(id))
+        assert.is_true(adjustStopWatch(id, -9e15))
+        assert.equals(-9e15, getStopWatchTime(id))
+      end)
+
+      it("adjustStopWatch refuses an adjustment the stopwatch itself cannot hold", function()
+        local id = track(createStopWatch(false))
+        assert.is_true(adjustStopWatch(id, 5e15))
+        local ok, err = adjustStopWatch(id, 5e15)
+        assert.is_nil(ok)
+        assert.is_truthy(err:find("past the time it can hold", 1, true),
+          "unexpected message: " .. tostring(err))
+        assert.equals(5e15, getStopWatchTime(id))
+
+        -- the same on the other branch, where it is the effective start time
+        -- and not the stored elapsed time that would go out of range
+        local running = track(createStopWatch(true))
+        assert.is_true(adjustStopWatch(running, 5e15))
+        local runningOk, runningErr = adjustStopWatch(running, 5e15)
+        assert.is_nil(runningOk)
+        assert.is_truthy(runningErr:find("past the time it can hold", 1, true),
+          "unexpected message: " .. tostring(runningErr))
+        assertClose(5e15, getStopWatchTime(running), 1)
+      end)
+
       it("getStopWatchTime resolves a stopwatch by its name", function()
         local id = track(createStopWatch("stopwatchSpecByName"))
         adjustStopWatch(id, 5)

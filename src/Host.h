@@ -98,6 +98,7 @@ public:
     bool reset();
     bool running() const { return mIsRunning; }
     void adjustMilliSeconds(const qint64);
+    bool adjustmentFits(const qint64) const;
     qint64 getElapsedMilliSeconds() const;
     QString getElapsedDayTimeString() const;
     void setPersistent(const bool state) { mIsPersistent = state; }
