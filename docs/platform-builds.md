@@ -108,15 +108,44 @@ Qt Creator is enough — no per-IDE sanitizer configuration is needed.
 
 ## Optional feature modules
 
-Six feature modules are declared through `include_optional_module` in `CMakeLists.txt`: the updater,
-fonts, 3D mapper, shader hot-reloading, memory tracking and the build-type splash screen. Each has a
+Seven feature modules are declared through `include_optional_module` in `CMakeLists.txt`: the
+updater, fonts, 3D mapper, MCP server, shader hot-reloading, memory tracking and the build-type
+splash screen. Each has a
 `USE_*` option and a `WITH_*` name, and they are **not** interchangeable — `cmake/IncludeOptionalModule.cmake`
 reads the `WITH_*` name from the **environment** only. So `-DWITH_UPDATER=NO` on the command line is
 accepted by CMake and silently ignored; use `-DUSE_UPDATER=OFF`, or set `WITH_UPDATER=NO` in the
-environment. Note that shader hot-reloading and memory tracking default to OFF, the rest to ON.
+environment. Note that the MCP server, shader hot-reloading and memory tracking default to OFF, the
+rest to ON.
 
-This applies only to those six. Other `WITH_*` names are ordinary options: `WITH_SENTRY` and
+This applies only to those seven. Other `WITH_*` names are ordinary options: `WITH_SENTRY` and
 `SENTRY_SEND_DEBUG` are declared with `option()` and are set on the command line as normal.
+
+### MCP server: extra Qt modules
+
+The MCP server is the one optional module that needs Qt modules the rest of Mudlet does not, so it
+is the one that fails at configure time rather than silently doing nothing when they are missing:
+`src/CMakeLists.txt` does `find_package(Qt6 COMPONENTS HttpServer REQUIRED)` only under
+`USE_MCPSERVER`. Qt HttpServer in turn pulls in Qt WebSockets, and distributions package the two
+separately, so install both:
+
+| Environment | Packages |
+| --- | --- |
+| Debian / Ubuntu | `qt6-httpserver-dev` `qt6-websockets-dev` |
+| Arch | `qt6-httpserver` `qt6-websockets` |
+| Fedora | `qt6-qthttpserver-devel` `qt6-qtwebsockets-devel` |
+| MSYS2 (CLANG64) | `${MINGW_PACKAGE_PREFIX}-qt6-httpserver` `${MINGW_PACKAGE_PREFIX}-qt6-websockets` — `CI/setup-windows-sdk.sh` installs both |
+| macOS (Homebrew) | included in the `qt` formula, nothing extra to install |
+| aqtinstall (what CI uses) | `-m qthttpserver qtwebsockets` alongside the existing modules |
+
+Then build with the module on — remembering that the `WITH_*` name is read from the environment:
+
+```bash
+WITH_MCPSERVER=ON cmake --preset linux-debug
+```
+
+`-DUSE_MCPSERVER=ON` on the command line works too. Leaving it off is the default and needs
+neither package; the sources and the `TMCPServerTest` / `TMCPBridgeTest` ctest cases are simply
+not built.
 
 ## Debugging options
 

@@ -44,6 +44,7 @@
 #include <QMainWindow>
 #include <QMap>
 #include <QPointer>
+#include <QScopedPointer>
 #include <QSystemTrayIcon>
 #include <QTextOption>
 #include <QTime>
@@ -89,6 +90,9 @@ class dlgPackageExporter;
 class dlgProfilePreferences;
 class dlgTriggerEditor;
 class Host;
+#ifdef INCLUDE_MCPSERVER
+class TMCPServer;
+#endif
 class MudletInstanceCoordinator;
 class ShortcutManager;
 class SpeechRecognizer;
@@ -360,6 +364,20 @@ public:
     bool muteGame() const { return mMuteGame; }
     bool mediaMuted() const { return mMuteAPI && mMuteGame; }
     bool mediaUnmuted() const { return !mMuteAPI && !mMuteGame; }
+#ifdef INCLUDE_MCPSERVER
+    bool mcpEnabled() const { return mEnableMCP; }
+    quint16 mcpServerPort() const { return mMCPServerPort; }
+    // The URL to paste into an MCP client, or an empty string while the server is down.
+    QString mcpEndpoint() const;
+    // The last thing that went wrong, ready to show, or an empty string when the server
+    // is doing what was asked. Outlives the call that failed, so a start refused at
+    // launch - when no dialog is open to be told - is still explainable afterwards.
+    QString mcpLastError() const { return mMCPLastError; }
+    // Starts or stops the one application-wide MCP server. Returns false and fills error
+    // with a message ready to show when the assistant will not be able to reach Mudlet;
+    // the caller has to show it, because every reason is one the user can act on.
+    bool setMCPEnabled(bool enabled, quint16 port, QString& error);
+#endif
     bool profileExists(const QString& profileName);
     QString getCanonicalProfileName(const QString& profileName);
     bool showSplitscreenTutorial();
@@ -620,6 +638,11 @@ private slots:
 private:
     void assignKeySequences();
     QString autodetectPreferredLanguage();
+#ifdef INCLUDE_MCPSERVER
+    // Everything setMCPEnabled() does bar the discovery file, which has to be squared
+    // with whatever this leaves behind whichever way it goes
+    bool startMCPServer(bool enabled, quint16 port, QString& error);
+#endif
     void showUiTour(const bool skipIntroStep);
     static bool needsCustomDarkTheme();
     void closeHost(const QString&);
@@ -699,6 +722,12 @@ private:
     bool mMultiView = false;
     bool mMuteAPI = false;
     bool mMuteGame = false;
+#ifdef INCLUDE_MCPSERVER
+    bool mEnableMCP = false;
+    quint16 mMCPServerPort = 11235;
+    QString mMCPLastError;
+    QScopedPointer<TMCPServer> mpMCPServer;
+#endif
     QMediaDevices* mpMediaDevices = nullptr;
     QPointer<QAction> mpActionAbout;
     QPointer<QAction> mpActionAboutWithUpdates;
