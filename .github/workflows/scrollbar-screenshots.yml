@@ -12,6 +12,11 @@ on:
   push:
     branches:
       - 'claude/pr-10574-screenshots-**'
+  # So the run happens in the base repository, whose ccache this restores, even
+  # when the branch itself lives in a fork
+  pull_request:
+    branches:
+      - 'fix-invisible-console-scrollbar'
   workflow_dispatch:
 
 permissions:
