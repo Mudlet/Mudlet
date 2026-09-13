@@ -6210,6 +6210,10 @@ void mudlet::slot_multiView(const bool state)
 
 void mudlet::toggleMute(bool state, QAction* toolbarAction, QAction* menuAction, bool isAPINotGame, const QString& unmuteText, const QString& muteText)
 {
+    // Read before the flag below is assigned: the rest of this function runs
+    // either way, because it also re-syncs the actions with the flag
+    const bool changed = (isAPINotGame ? mMuteAPI : mMuteGame) != state;
+
     if (toolbarAction->isChecked() != state || menuAction->isChecked() != state) {
         toolbarAction->setChecked(state);
         menuAction->setChecked(state);
@@ -6277,6 +6281,24 @@ void mudlet::toggleMute(bool state, QAction* toolbarAction, QAction* menuAction,
             }
         }
     }
+
+    if (changed) {
+        // Muting is application-wide rather than per profile, so every open
+        // profile is told about it. The handlers run Lua synchronously and may
+        // open a profile, which inserts into the live host map, so this walks
+        // a copy the way HostManager's own broadcasts do:
+        const QString settingName = isAPINotGame ? qsl("muteMediaAPI") : qsl("muteMediaGame");
+        const QList<QSharedPointer<Host>> hosts = mHostManager.hostList();
+        for (const auto& pHost : hosts) {
+            if ((isAPINotGame ? mMuteAPI : mMuteGame) != state) {
+                // A handler in an earlier profile wrote the opposite value
+                // back; that nested call already told every profile, so the
+                // rest of this loop would report a value nothing holds any more
+                break;
+            }
+            pHost->raiseSettingChangedEvent(settingName, state);
+        }
+    }
 }
 
 void mudlet::slot_muteAPI(const bool state)
@@ -6337,20 +6359,24 @@ void mudlet::slot_toggleCompactInputLine()
 // Called by the menu-item's action itself, that DOES pass the checked state:
 void mudlet::slot_compactInputLine(const bool state)
 {
-    if (dactionInputLine->isChecked() != state) {
-        // Ensure the menu item reflectes the actual state:
-        dactionInputLine->setChecked(state);
-    }
-    if (mpCurrentActiveHost) {
-        mpCurrentActiveHost->setCompactInputLine(state);
+    // The setter runs the event handlers, which may close this profile, so the
+    // host is held and re-checked rather than read off the member each time:
+    QPointer<Host> pHost = mpCurrentActiveHost;
+    if (pHost) {
+        pHost->setCompactInputLine(state);
         // Make sure players don't get confused when accidentally hiding buttons.
-        if (QKeySequence* shortcut = mpShortcutsManager->getSequence(qsl("Compact input line"));
-            state && !mpCurrentActiveHost->mTutorialForCompactLineAlreadyShown && shortcut && !shortcut->isEmpty()) {
+        if (QKeySequence* shortcut = mpShortcutsManager->getSequence(qsl("Compact input line")); pHost && state && !pHost->mTutorialForCompactLineAlreadyShown && shortcut && !shortcut->isEmpty()) {
             //: Here %1 will be replaced with the keyboard shortcut, default is ALT+L.
             const QString infoMsg = tr("[ INFO ]  - Compact input line set. Press \"%1\" to show bottom-right buttons again.").arg(shortcut->toString(QKeySequence::NativeText));
-            mpCurrentActiveHost->postMessage(infoMsg);
-            mpCurrentActiveHost->mTutorialForCompactLineAlreadyShown = true;
+            pHost->postMessage(infoMsg);
+            pHost->mTutorialForCompactLineAlreadyShown = true;
         }
+    }
+    // Ensure the menu item reflects the actual state - a handler of the event
+    // the setter raised may have written the opposite value back:
+    const bool held = pHost ? pHost->getCompactInputLine() : state;
+    if (dactionInputLine->isChecked() != held) {
+        dactionInputLine->setChecked(held);
     }
 }
 

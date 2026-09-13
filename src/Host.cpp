@@ -4355,6 +4355,64 @@ void Host::setDebugShowAllProblemCodepoints(const bool state)
     }
 }
 
+void Host::raiseSettingChangedEvent(const QString& settingName, const bool value)
+{
+    // The profile's own file is read before the console exists, so a value arriving from it is not a change to report:
+    if (!mpConsole) {
+        return;
+    }
+
+    TEvent event{};
+    event.mArgumentList.append(qsl("sysSettingChanged"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(settingName);
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(value ? qsl("1") : qsl("0"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
+    raiseEvent(event);
+}
+
+void Host::changeSetting(bool& setting, const bool state, const QString& settingName)
+{
+    if (setting == state) {
+        return;
+    }
+    setting = state;
+    raiseSettingChangedEvent(settingName, state);
+}
+
+void Host::setEnableClosedCaption(const bool state)
+{
+    changeSetting(mEnableClosedCaption, state, qsl("enableClosedCaption"));
+}
+
+void Host::setAdvertiseScreenReader(const bool state)
+{
+    if (mAdvertiseScreenReader == state) {
+        return;
+    }
+    mAdvertiseScreenReader = state;
+    // The game hears about it before the scripts do, so a handler that writes
+    // the value back leaves it informed of the final value by the nested call
+    // rather than of a value that no longer holds:
+    mTelnet.sendInfoNewEnvironValue(qsl("SCREEN_READER"));
+    mTelnet.sendInfoNewEnvironValue(qsl("MTTS"));
+    raiseSettingChangedEvent(qsl("advertiseScreenReader"), state);
+}
+
+void Host::setAnnounceIncomingText(const bool state)
+{
+    changeSetting(mAnnounceIncomingText, state, qsl("announceIncomingText"));
+}
+
+void Host::setMapperPanelVisible(const bool state)
+{
+    if (mpMap && mpMap->mpMapper) {
+        mpMap->mpMapper->slot_setMapperPanelVisible(state);
+    }
+    changeSetting(mShowPanel, state, qsl("mapperPanelVisible"));
+}
+
 void Host::setCompactInputLine(const bool state)
 {
     if (mCompactInputLine != state) {
@@ -4366,6 +4424,7 @@ void Host::setCompactInputLine(const bool state)
         if (mpConsole && mpConsole->mpButtonMainLayer) {
             mpConsole->mpButtonMainLayer->setVisible(!state);
         }
+        raiseSettingChangedEvent(qsl("compactInputLine"), state);
     }
 }
 
@@ -5636,6 +5695,9 @@ void Host::setBorders(QMargins borders)
     if (mpConsole.isNull()) {
         return;
     }
+    // A console put away by a tab switch is zero pixels wide, so the resize
+    // event below tells it nothing about the room its new borders leave
+    mpConsole->syncHiddenScreenDimensions();
     auto x = mpConsole->width();
     auto y = mpConsole->height();
     const QSize s = QSize(x, y);
