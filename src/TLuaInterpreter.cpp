@@ -8100,10 +8100,6 @@ int TLuaInterpreter::setConfig(lua_State* L)
             return success();
         }
 #endif
-        if (key == qsl("mapperPanelVisible")) {
-            host.mpMap->mpMapper->slot_setMapperPanelVisible(getVerifiedBool(L, __func__, 2, "value"));
-            return success();
-        }
         if (key == qsl("mapShowRoomBorders")) {
             host.mMapperShowRoomBorders = getVerifiedBool(L, __func__, 2, "value");
             return success();
@@ -8397,10 +8393,11 @@ int TLuaInterpreter::setConfig(lua_State* L)
     }
 
     if (key == qsl("compactInputLine")) {
-        const bool value = getVerifiedBool(L, __func__, 2, "value");
-        host.setCompactInputLine(value);
+        host.setCompactInputLine(getVerifiedBool(L, __func__, 2, "value"));
         if (currentHost) {
-            mudlet::self()->dactionInputLine->setChecked(value);
+            // A handler of the event the setter raised may have written the
+            // opposite value back, so the menu item follows what is held now:
+            mudlet::self()->dactionInputLine->setChecked(host.getCompactInputLine());
         }
 
         return success();
@@ -8409,16 +8406,20 @@ int TLuaInterpreter::setConfig(lua_State* L)
         host.mEditorAutoComplete = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
+    if (key == qsl("mapperPanelVisible")) {
+        host.setMapperPanelVisible(getVerifiedBool(L, __func__, 2, "value"));
+        return success();
+    }
     if (key == qsl("announceIncomingText")) {
-        host.mAnnounceIncomingText = getVerifiedBool(L, __func__, 2, "value");
+        host.setAnnounceIncomingText(getVerifiedBool(L, __func__, 2, "value"));
         return success();
     }
     if (key == qsl("advertiseScreenReader")) {
-        host.mAdvertiseScreenReader = getVerifiedBool(L, __func__, 2, "value");
+        host.setAdvertiseScreenReader(getVerifiedBool(L, __func__, 2, "value"));
         return success();
     }
     if (key == qsl("enableClosedCaption")) {
-        host.mEnableClosedCaption = getVerifiedBool(L, __func__, 2, "value");
+        host.setEnableClosedCaption(getVerifiedBool(L, __func__, 2, "value"));
         return success();
     }
     if (key == qsl("blankLinesBehaviour")) {
