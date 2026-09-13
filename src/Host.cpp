@@ -4049,8 +4049,11 @@ void Host::setEnableSpellCheck(const bool enable)
     }
     mEnableSpellCheck = enable;
     // The load-end warm skips a profile with spell check off, so this is when
-    // the dictionary first becomes wanted:
-    if (enable && mpConsole) {
+    // the dictionary first becomes wanted. During a profile load there is
+    // nothing to do: the handle is warmed once at the end, after the profile's
+    // own settings have been read - which is what setSystemSpellDictionary()
+    // next door defends against too.
+    if (enable && !mIsProfileLoadingSequence && mpConsole) {
         QTimer::singleShot(0, mpConsole.data(), &TMainConsole::slot_warmSystemSpellDictionary);
     }
 }
