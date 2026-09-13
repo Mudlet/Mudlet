@@ -5456,11 +5456,12 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
             return output;
         }
     }
-    // Nothing is more than two columns wide and no grapheme cluster is shorter
-    // than one QChar, so a line with at most half the width in QChars cannot
-    // reach the wrap column whatever it holds. Only an embedded line feed can
-    // still break it.
-    if (lineText.size() * 2 <= widthAvailable && !lineText.contains(QChar::LineFeed)) {
+    // No grapheme cluster renders wider than graphemeInfo::maxWidth columns -
+    // graphemeInfo::getWidth() in TTextProperties.h holds its return to that -
+    // and none is shorter than one QChar, so a line with at most that fraction
+    // of the width in QChars cannot reach the wrap column whatever it holds.
+    // Only an embedded line feed can still break it.
+    if (lineText.size() * graphemeInfo::maxWidth <= widthAvailable && !lineText.contains(QChar::LineFeed)) {
         return output;
     }
 
