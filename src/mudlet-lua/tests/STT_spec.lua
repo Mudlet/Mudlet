@@ -73,6 +73,7 @@ describe("stt bridge", function()
       assert.is_boolean(info.capabilities.biasing)
       assert.is_boolean(info.capabilities.grammar)
       assert.is_boolean(info.capabilities.words)
+      assert.is_boolean(info.capabilities.sensitivityTuning)
       assert.is_boolean(info.capabilities.onDevice)
       assert.is_number(info.silenceTimeout, "0 while disabled, not absent")
       assert.is_number(info.audioLevel)
@@ -104,8 +105,27 @@ describe("stt bridge", function()
     it("names the engine it would use", function()
       -- Asserting "non-empty or the string none" was a test that could not
       -- fail, since every string is one or the other. The contract worth
-      -- holding is that the name is one this build actually has.
-      assert.are.equal("Vosk", stt.getInfo().backend)
+      -- holding is that the name is one this build actually has - and that it
+      -- is empty rather than a guess before any engine has been built, since
+      -- this key names whichever engine is loaded rather than a fixed value.
+      local backend = stt.getInfo().backend
+      assert.is_string(backend)
+      -- The gate is not quite the question. backend is empty when no recognizer
+      -- object exists; initialized() is also false in Error, where one does
+      -- exist and does have a name. Nothing earlier in this file builds one, so
+      -- the two agree here - but that is an ordering the file does not state,
+      -- and a case added above this one that leaves a recognizer in Error would
+      -- send it down the wrong branch.
+      if stt.initialized() then
+        assert.is_truthy(backend == "Vosk" or backend == "sherpa-onnx" or backend == "Apple Speech",
+                         "backend should name an engine this build has, got: " .. backend)
+      else
+        -- Asserted rather than skipped: with no engine built this is the whole
+        -- contract, and CI runs with none. Allowing "" *or* "Vosk" - as this
+        -- did - meant reverting the fix that stopped it guessing "Vosk" left
+        -- the spec green, which is the one case it exists to catch.
+        assert.are.equal("", backend, "backend names an engine before one is built")
+      end
     end)
   end)
 
@@ -185,12 +205,38 @@ describe("stt bridge", function()
     -- directory a model belongs in. It used to report a made-up default path
     -- as missing, which named a directory the reader never created and left
     -- the "install a model" message unreachable.
-    it("names where a model belongs when none is installed", function()
+    it("names where a model belongs when none is installed, or succeeds via a model-less backend", function()
       if not stt.available() or #stt.listModels() > 0 then return end
       local ok, err = stt.init()
+
+      -- stt.available() is true here with no model installed and no
+      -- listable models only when a model-less backend - the built-in macOS
+      -- one today - is what made it true. stt.init() must be able to reach
+      -- it with no argument, since it needs nothing installed to begin with.
+      if ok then
+        assert.is_true(ok)
+        assert.are.equal("Apple Speech", stt.getInfo().backend, "only a model-less backend should succeed with nothing installed")
+        return
+      end
+
       assert.is_nil(ok, "init with no model installed should fail")
       assert.is_string(err)
-      assert.is_truthy(err:find(stt.getModelPath(), 1, true), "the refusal should name the models directory, got: " .. tostring(err))
+      -- Two different refusals reach here, and only one has a directory to
+      -- name. A machine with a model-based engine and no model must name where
+      -- one belongs. A Mac whose built-in recogniser made available() true and
+      -- then could not start has no models directory in the picture at all -
+      -- that backend installs nothing - so requiring the path there asserts a
+      -- contract this refusal was never part of.
+      local namesADirectory = err:find("no language model is installed", 1, true)
+      local isModelLessRefusal = err:find("failed to initialize model", 1, true)
+      -- Total on purpose. Matching a literal from the C++ and doing nothing
+      -- when it misses means rewording that message turns this into a silent
+      -- pass, which is the failure mode both harnesses have.
+      assert.is_truthy(namesADirectory or isModelLessRefusal,
+                       "unrecognised refusal, so neither branch below was checked: " .. err)
+      if namesADirectory then
+        assert.is_truthy(err:find(stt.getModelPath(), 1, true), "the refusal should name the models directory, got: " .. tostring(err))
+      end
     end)
 
     it("refuses to start before a model is loaded", function()
@@ -307,8 +353,14 @@ describe("stt bridge", function()
       local hadLibrary = stt.available()
       finally(function() stt.reloadLibrary() end)
 
-      assert.is_true(stt.unloadLibrary(), "unloading with nothing in use should succeed")
-      if hadLibrary then
+      local unloaded, unloadError = stt.unloadLibrary()
+      assert.is_true(unloaded, "unloading with nothing in use should succeed, got: " .. tostring(unloadError))
+      -- The latch is about the library. Availability is not only about the
+      -- library on a Mac, where the built-in backend needs none and keeps
+      -- stt.available() true however completely Vosk's module is released -
+      -- so asserting it goes false there asks unloadLibrary() for something it
+      -- cannot deliver and was never meant to.
+      if hadLibrary and getOS() ~= "mac" then
         -- the latch is the whole point: without it the next read-shaped call
         -- maps the module straight back in and the file the caller meant to
         -- replace is locked again

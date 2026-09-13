@@ -6240,6 +6240,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "enableCommand", TLuaInterpreter::enableCommand);
     lua_register(pGlobalLua, "disableCommand", TLuaInterpreter::disableCommand);
     lua_register(pGlobalLua, "setCommandChecked", TLuaInterpreter::setCommandChecked);
+    lua_register(pGlobalLua, "setCommandPinned", TLuaInterpreter::setCommandPinned);
     lua_register(pGlobalLua, "setCommandIcon", TLuaInterpreter::setCommandIcon);
     lua_register(pGlobalLua, "setCommandTooltip", TLuaInterpreter::setCommandTooltip);
     lua_register(pGlobalLua, "setCommandPulse", TLuaInterpreter::setCommandPulse);

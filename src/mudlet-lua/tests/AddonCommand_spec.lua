@@ -334,6 +334,7 @@ describe("addon commands", function()
       assert.is_false(setCommandChecked(unknown, true))
       assert.is_false(setCommandIcon(unknown, ""))
       assert.is_false(setCommandTooltip(unknown, "nothing"))
+      assert.is_false(setCommandPinned(unknown, true))
     end)
 
     it("is what an id becomes once its command is removed", function()
@@ -368,6 +369,15 @@ describe("addon commands", function()
     it("takes a new icon, including one that resolves to nothing", function()
       assert.is_true(setCommandIcon(id, ""))
       assert.is_true(setCommandIcon(id, "/no/such/icon.png"))
+    end)
+
+    -- Where a pinned command actually appears needs a second profile and a
+    -- second window to see, which a spec has neither of; that is pinned by
+    -- SpeechAcrossProfilesTest. What belongs here is that the call exists and
+    -- answers, so a package can set it without checking the Mudlet version.
+    it("takes being pinned and unpinned", function()
+      assert.is_true(setCommandPinned(id, true))
+      assert.is_true(setCommandPinned(id, false))
     end)
   end)
 
