@@ -5938,7 +5938,7 @@ void dlgProfilePreferences::loadMap(const QString& fileName)
     }
     label_mapFileActionResult->show();
 
-    // Ensure the setting is already made as the TConsole::loadMap(...) uses
+    // Ensure the setting is already made as the Host::loadMapFile(...) uses
     // the set value:
     const bool showAuditErrors = TMap::smShowMapAuditErrors;
     mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
@@ -5948,7 +5948,7 @@ void dlgProfilePreferences::loadMap(const QString& fileName)
     qApp->processEvents(); // Needed to make the above message show up when loading big maps
     if (fileName.endsWith(qsl(".xml"), Qt::CaseInsensitive)) {
         qApp->processEvents(); // Needed to make the above message show up when loading big maps
-        success = pHost->mpConsole->importMap(fileName);
+        success = pHost->importMapFile(fileName);
 
     } else {
         if (fileName.endsWith(qsl(".json"), Qt::CaseInsensitive)) {
@@ -5961,7 +5961,7 @@ void dlgProfilePreferences::loadMap(const QString& fileName)
             }
 
         } else {
-            success = pHost->mpConsole->loadMap(fileName);
+            success = pHost->loadMapFile(fileName);
         }
     }
 
@@ -6073,7 +6073,7 @@ void dlgProfilePreferences::slot_saveMap()
 
         bool success = false;
         if (!fileName.endsWith(qsl(".json"), Qt::CaseInsensitive)) {
-            success = pHost->mpConsole->saveMap(fileName, comboBox_mapFileSaveFormatVersion->currentData().toInt());
+            success = pHost->saveMapFile(fileName, comboBox_mapFileSaveFormatVersion->currentData().toInt());
         } else {
             success = pHost->mpMap->writeJsonMapFile(fileName).first;
         }
@@ -6236,7 +6236,7 @@ void dlgProfilePreferences::slot_copyMap()
     const int oldSaveVersionFormat = pHost->mpMap->mSaveVersion;
     pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->currentData().toInt();
 
-    if (!pHost->mpConsole->saveMap(QString())) {
+    if (!pHost->saveMapFile(QString())) {
         label_mapFileActionResult->setText(tr("Could not backup the map - saving it failed."));
         QTimer::singleShot(10s, this, &dlgProfilePreferences::slot_hideActionLabel);
         return;

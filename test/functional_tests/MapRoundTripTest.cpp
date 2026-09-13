@@ -25,7 +25,7 @@
  * custom exit lines, doors, exit weights, room/area/map-level userData, room
  * environments, non-ASCII names/symbols, negative coordinates and z-levels
  * plus an area map label. It is saved with TMap::serialize (the same
- * QDataStream setup TMainConsole::saveMap uses), loaded into a fresh Host's
+ * QDataStream setup Host::saveMapFile uses), loaded into a fresh Host's
  * map via TMap::restore + audit (the production load path minus the mapper
  * UI) and compared field by field.
  *

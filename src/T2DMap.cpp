@@ -5403,9 +5403,9 @@ void T2DMap::slot_loadMap()
     settings.setValue("lastFileDialogLocation", lastDir);
 
     if (fileName.endsWith(qsl(".xml"), Qt::CaseInsensitive)) {
-        mpHost->mpConsole->importMap(fileName);
+        mpHost->importMapFile(fileName);
     } else {
-        mpHost->mpConsole->loadMap(fileName);
+        mpHost->loadMapFile(fileName);
     }
 }
 

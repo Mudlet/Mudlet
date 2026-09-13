@@ -20,7 +20,7 @@
 #include "TMxpMudlet.h"
 #include "Host.h"
 #include "TMedia.h"
-#include "TConsole.h"
+#include "TConsoleModel.h"
 #include "TLinkStore.h"
 #include "MudletApp.h"
 
@@ -167,7 +167,7 @@ void TMxpMudlet::setCaptionForSendEvent(const QString& caption)
 
 TLinkStore& TMxpMudlet::getLinkStore()
 {
-    return mpHost->mpConsole->getLinkStore();
+    return mpHost->mainConsoleModel().buffer.mLinkStore;
 }
 
 // Handle 'stacks' of attribute settings:
@@ -301,9 +301,9 @@ void TMxpMudlet::insertText(const QString& text)
 {
     // Insert text by feeding it back through the MXP processing pipeline
     // This ensures it respects the current line buffer state
-    if (mpHost && mpHost->mpConsole) {
+    if (mpHost) {
         std::string textToInsert = text.toStdString();
-        mpHost->mpConsole->buffer.translateToPlainText(textToInsert, false);
+        mpHost->mainConsoleModel().buffer.translateToPlainText(textToInsert, false);
     }
 }
 
@@ -342,10 +342,10 @@ bool TMxpMudlet::setMxpDestination(const QString& frameName, bool eol, bool eof)
 
 void TMxpMudlet::clearMxpDestination()
 {
-    if (mpHost && mpHost->mpConsole) {
-        mpHost->mpConsole->buffer.flushPendingDestinationContent();
+    if (mpHost) {
+        mpHost->mainConsoleModel().buffer.flushPendingDestinationContent();
         // Reset text formatting to prevent color bleeding from frame content to main console
-        mpHost->mpConsole->buffer.resetCurrentTextFormat();
+        mpHost->mainConsoleModel().buffer.resetCurrentTextFormat();
         mpHost->mMxpFrameManager.clearDestination();
     }
 }

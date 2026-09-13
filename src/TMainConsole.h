@@ -186,9 +186,6 @@ public:
     void toggleLogging(bool);
     void printOnDisplay(std::string&, bool isFromServer = false);
     void finalize();
-    bool saveMap(const QString&, int saveVersion = 0);
-    bool loadMap(const QString&);
-    bool importMap(const QString&, QString* errMsg = nullptr);
     void refreshSubconsoles();
 
 
