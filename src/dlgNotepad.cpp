@@ -73,6 +73,7 @@ dlgNotepad::dlgNotepad(Host* pH)
     label_prependText = new QLabel(tr("Prepend"), this);
     action_prependTextLabel = toolBar->addWidget(label_prependText);
     lineEdit_prependText = new QLineEdit(this);
+    lineEdit_prependText->setObjectName(qsl("notepadPrependText"));
     //: placeholder text for text entry box in notepad - text which gets added before sending a line
     lineEdit_prependText->setPlaceholderText(tr("Text to prepend to lines"));
     lineEdit_prependText->setClearButtonEnabled(true);
@@ -115,29 +116,34 @@ void dlgNotepad::setupAddTabButton()
 void dlgNotepad::setupFindBar()
 {
     mpFindBar = new QWidget(this);
+    mpFindBar->setObjectName(qsl("notepadFindBar"));
     auto* layout = new QHBoxLayout(mpFindBar);
     layout->setContentsMargins(4, 2, 4, 2);
     layout->setSpacing(2);
 
     mpFindLineEdit = new QLineEdit(mpFindBar);
+    mpFindLineEdit->setObjectName(qsl("notepadFindBox"));
     //: Placeholder text for the search field in notepad
     mpFindLineEdit->setPlaceholderText(tr("Find"));
     mpFindLineEdit->setClearButtonEnabled(true);
     mpFindLineEdit->installEventFilter(this);
 
     mpFindPrevButton = new QToolButton(mpFindBar);
+    mpFindPrevButton->setObjectName(qsl("notepadFindPrevious"));
     mpFindPrevButton->setIcon(QIcon(qsl(":/icons/export.png")));
     mpFindPrevButton->setToolTip(tr("Find previous"));
     mpFindPrevButton->setAutoRaise(true);
     mpFindPrevButton->setMaximumSize(24, 24);
 
     mpFindNextButton = new QToolButton(mpFindBar);
+    mpFindNextButton->setObjectName(qsl("notepadFindNext"));
     mpFindNextButton->setIcon(QIcon(qsl(":/icons/import.png")));
     mpFindNextButton->setToolTip(tr("Find next"));
     mpFindNextButton->setAutoRaise(true);
     mpFindNextButton->setMaximumSize(24, 24);
 
     mpFindCloseButton = new QToolButton(mpFindBar);
+    mpFindCloseButton->setObjectName(qsl("notepadFindClose"));
     mpFindCloseButton->setIcon(QIcon(qsl(":/icons/dialog-close.png")));
     mpFindCloseButton->setToolTip(tr("Close find bar"));
     mpFindCloseButton->setAutoRaise(true);

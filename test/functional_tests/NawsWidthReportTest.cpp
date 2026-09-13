@@ -256,6 +256,7 @@ private slots:
     // the game, so it has to be reported - and reported once.
     void showingTheTimestampGutterReportsTheColumnsItTakes()
     {
+        settle(800ms);
         QVERIFY(!mpHost->mpConsole->showTimeStamps());
         const int withoutGutter = reportableWidth(mpHost);
 
