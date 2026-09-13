@@ -168,6 +168,48 @@ describe("Tests Other.lua functions", function()
       end)
     end)
 
+    describe("the state a new group is created in", function()
+      -- What a group arrives as is not visible through a spy, so these need real
+      -- items - created once and then reused by later runs, since Lua cannot
+      -- delete a permanent item and nothing here changes a group's state after
+      -- creating it, so a leftover one is still in the state its creation put it
+      -- in. (The key group specs in KeyBinds_spec.lua pin a creation-time
+      -- regression instead, so those need a name no earlier run has used.)
+      -- permGroup spells the key type "key" where exists() and isActive() spell
+      -- it "keybind".
+      local function group(groupType, itemType)
+        local name = "permGroupSpecState" .. groupType
+        if exists(name, itemType) == 0 then
+          assert.is_true(permGroup(name, groupType), "could not create the " .. groupType .. " group")
+        end
+        return name
+      end
+
+      it("creates trigger groups enabled", function()
+        assert.are.equal(1, isActive(group("trigger", "trigger"), "trigger"))
+      end)
+
+      it("creates alias groups enabled", function()
+        assert.are.equal(1, isActive(group("alias", "alias"), "alias"))
+      end)
+
+      it("creates key groups enabled", function()
+        assert.are.equal(1, isActive(group("key", "keybind"), "keybind"))
+      end)
+
+      -- permTimer() and permScript() create every item disabled, group or not,
+      -- and permGroup() is documented as passing that on rather than papering
+      -- over it: a timer group that started itself would fire whatever is put
+      -- in it before the script that fills it has finished
+      it("creates timer groups disabled", function()
+        assert.are.equal(0, isActive(group("timer", "timer"), "timer"))
+      end)
+
+      it("creates script groups disabled", function()
+        assert.are.equal(0, isActive(group("script", "script"), "script"))
+      end)
+    end)
+
     describe("reports failure instead of raising when creation fails", function()
       -- #9545: group_creation_functions checked `perm*(...) == -1`, but the perm*
       -- bindings raise a Lua error on failure (for example a missing parent)
