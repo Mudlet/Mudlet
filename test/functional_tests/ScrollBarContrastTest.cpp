@@ -21,6 +21,7 @@
 #include <QProxyStyle>
 #include <QScrollBar>
 #include <QSignalSpy>
+#include <QStyleFactory>
 #include <QStyleOptionSlider>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
@@ -46,6 +47,11 @@ using namespace std::chrono_literals;
 class ColourSchemeOnlyScrollBarStyle : public QProxyStyle
 {
 public:
+    // Named for it as well as drawing like it: the console only paints a handle of
+    // its own when the Windows 11 style is the one that would otherwise draw it, and
+    // that is decided by the application style's name.
+    ColourSchemeOnlyScrollBarStyle() { setObjectName(qsl("windows11")); }
+
     void drawComplexControl(const ComplexControl control, const QStyleOptionComplex* pOption, QPainter* pPainter, const QWidget* pWidget) const override
     {
         if (control == CC_ScrollBar) {
@@ -383,6 +389,35 @@ private slots:
         const int painted = countPixels(renderScrollBarOn(background), wanted);
         runLua(qsl("setProfileStyleSheet[[]]"));
         QVERIFY2(painted > 0, "a profile style sheet no longer reaches the console's scroll bar");
+    }
+
+    // The other half of the fix: every other style draws a handle that is visible on
+    // its own groove and carries hover and pressed feedback with it, so the console
+    // leaves it alone - and the bar then renders identically whether it has been
+    // given a handle colour or not.
+    //
+    // Last, because it swaps the application style out and the stand-in it puts back
+    // is not the one the cases above were given.
+    void test_anOrdinaryStyleKeepsItsOwnHandle()
+    {
+        runLua(qsl("setBackgroundColor(0, 0, 0)"));
+        QStyle* pOrdinaryStyle = QStyleFactory::create(qsl("fusion"));
+        QVERIFY2(pOrdinaryStyle, "Fusion is built into Qt on every platform, so this should not happen");
+        qApp->setStyle(pOrdinaryStyle);
+        QTest::qWait(50ms);
+
+        QScrollBar* pScrollBar = mpHost->mpConsole->mpScrollBar;
+        const QVariant handleColor = pScrollBar->property(csHandleColorProperty);
+        QVERIFY2(handleColor.value<QColor>().isValid(), "the console stopped working out a handle colour at all");
+
+        const QImage painted = renderScrollBarOn(Qt::black);
+        pScrollBar->setProperty(csHandleColorProperty, QVariant());
+        const QImage styleOnly = renderScrollBarOn(Qt::black);
+        pScrollBar->setProperty(csHandleColorProperty, handleColor);
+
+        qApp->setStyle(new ColourSchemeOnlyScrollBarStyle);
+        QTest::qWait(50ms);
+        QVERIFY2(painted == styleOnly, "the console painted a handle of its own over a style whose handle was fine as it was");
     }
 };
 

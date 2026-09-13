@@ -44,6 +44,7 @@
 
 #include <QAccessibleInterface>
 #include <QAccessibleWidget>
+#include <QApplication>
 #include <QFile>
 #include <QFrame>
 #include <QHBoxLayout>
@@ -97,6 +98,32 @@ QColor readableLinkColor(const QColor& background)
 // for the surface it sits on - black at 45% alpha, invisible on a black console.
 // A style and not a style sheet: a widget's own style sheet outranks every other
 // rule, so a sheet here would drop a profile's setProfileStyleSheet() rules.
+//
+// Only that style is taken over. Every other style Mudlet meets draws its handle
+// against the groove it paints underneath it, so it is visible on any console
+// colour already, and it carries the hover and pressed feedback that this
+// painting cannot - measured on Linux/Fusion, the platform handle stands at
+// 19.8:1 against a black console where a handle drawn here reaches 20.1:1.
+bool consoleScrollBarStyleWanted()
+{
+    const QStyle* pStyle = QApplication::style();
+    if (!pStyle) {
+        return false;
+    }
+
+    // Mudlet's application style is a proxy - AltFocusMenuBarDisable, or DarkTheme -
+    // and those carry no object name of their own, so it comes from the style wrapped.
+    QString styleName = pStyle->objectName();
+    if (styleName.isEmpty()) {
+        if (const auto* pProxy = qobject_cast<const QProxyStyle*>(pStyle); pProxy && pProxy->baseStyle()) {
+            styleName = pProxy->baseStyle()->objectName();
+        }
+    }
+    // Windows 10's style is not this one: it paints an opaque handle on a light
+    // track, which has the same contrast whatever the console is set to.
+    return !styleName.compare(qsl("windows11"), Qt::CaseInsensitive);
+}
+
 class ConsoleScrollBarStyle : public QProxyStyle
 {
 public:
@@ -106,7 +133,11 @@ public:
     {
         const auto* pSlider = qstyleoption_cast<const QStyleOptionSlider*>(pOption);
         const QColor handleColor = pWidget ? pWidget->property(csHandleColorProperty).value<QColor>() : QColor();
-        if (control != CC_ScrollBar || !pSlider || !handleColor.isValid()) {
+        // Asked here rather than when the style is installed, so that replacing the
+        // application style - which the appearance setting does - is picked up without
+        // every console having to be told, and so a test can stand a Windows 11 style
+        // in on a platform that has none.
+        if (control != CC_ScrollBar || !pSlider || !handleColor.isValid() || !consoleScrollBarStyleWanted()) {
             QProxyStyle::drawComplexControl(control, pOption, pPainter, pWidget);
             return;
         }
