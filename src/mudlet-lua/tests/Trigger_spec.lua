@@ -1219,6 +1219,21 @@ describe("Trigger processing", function()
             assert.is_true(fired, "the remapped red-on-black colour trigger should fire on red-on-black text")
         end)
 
+        -- a colour argument past the 256-colour table has no colour to match
+        -- against, and it must not fall back to matching some colour instead
+        it("never matches a foreground code the colour table has no colour for", function()
+            _G.TrigSpec = {fired = false}
+            -- bg arg 4 -> index 1 (red -> SGR 41); fg 300 is outside the table
+            local id = tempColorTrigger(300, 4, function() _G.TrigSpec.fired = true end)
+            assert.is_number(id)
+            -- black on red: black is what a colour the table cannot supply
+            -- would decay to if it were compared as a colour at all
+            feedTriggers("\n\27[30;41mColorTrigNoTableColor\27[0m\n")
+            local fired = _G.TrigSpec.fired
+            killTrigger(id)
+            assert.is_false(fired, "a foreground code outside the colour table must not match any text")
+        end)
+
         it("rejects ignoring both foreground and background", function()
             local id, err = tempColorTrigger(-1, -1, function() end)
             if type(id) == "number" and id > 0 then killTrigger(id) end

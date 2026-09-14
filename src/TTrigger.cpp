@@ -913,15 +913,19 @@ bool TTrigger::match_color_pattern(int line, int patternNumber, int posOffset, i
         return false; // no color settings to match against
     }
 
-    // Nothing below changes any of these, but the colour comparison is an
-    // out-of-line call that the compiler has to assume might, so read them once
-    // rather than once per character of the line:
     const int ansiFg = pCT->ansiFg;
     const int ansiBg = pCT->ansiBg;
-    const QColor& patternFg = pCT->mFgColor;
-    const QColor& patternBg = pCT->mBgColor;
-    const QColor& defaultFg = consoleModel.mFgColor;
-    const QColor& defaultBg = consoleModel.mBgColor;
+    // Compared in the form the characters store their colors in, so that a
+    // line's worth of comparisons converts nothing. A pattern color the table
+    // has no color for (an ignored aspect, or an ANSI code outside the table)
+    // is an invalid QColor, which would convert to opaque black and match
+    // black text - it matches nothing instead, as it always has:
+    const bool patternFgValid = pCT->mFgColor.isValid();
+    const bool patternBgValid = pCT->mBgColor.isValid();
+    const QRgb patternFg = pCT->mFgColor.rgba();
+    const QRgb patternBg = pCT->mBgColor.rgba();
+    const QRgb defaultFg = consoleModel.mFgColor.rgba();
+    const QRgb defaultBg = consoleModel.mBgColor.rgba();
     const int passLineSize = pPassLine ? static_cast<int>(pPassLine->size()) : 0;
 
     // This allows matching against the current default colours (-2) and
@@ -930,8 +934,8 @@ bool TTrigger::match_color_pattern(int line, int patternNumber, int posOffset, i
     // all parts of the text come from the Server and can be determined to
     // have come from a decoded ANSI code number:
     const auto colorsMatch = [&](const TChar& character) {
-        return ((ansiFg == scmIgnored) || ((ansiFg == scmDefault) && sameColor(defaultFg, character.foreground())) || sameColor(patternFg, character.foreground()))
-               && ((ansiBg == scmIgnored) || ((ansiBg == scmDefault) && sameColor(defaultBg, character.background())) || sameColor(patternBg, character.background()));
+        return ((ansiFg == scmIgnored) || ((ansiFg == scmDefault) && character.foregroundRgba() == defaultFg) || (patternFgValid && character.foregroundRgba() == patternFg))
+               && ((ansiBg == scmIgnored) || ((ansiBg == scmDefault) && character.backgroundRgba() == defaultBg) || (patternBgValid && character.backgroundRgba() == patternBg));
     };
 
     // A snapshot that stops short of the window cannot answer for the text past
