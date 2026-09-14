@@ -278,12 +278,17 @@ private slots:
     // A colour trigger's row carries two buttons captioned with the colours
     // they set, so it is far wider than a narrow editor and the list puts up a
     // horizontal scrollbar. That scrollbar is taken out of the viewport, so the
-    // five rows have to be budgeted for with it there.
+    // five rows have to be budgeted for with it there. The buttons also stand
+    // taller than the pattern field they replace on some platforms, so the row
+    // height the budget is built from has to be the tallest a row can be laid
+    // out at rather than the one the pattern types that show a text field get.
     void test_aHorizontalScrollbarDoesNotEatARow()
     {
         QVERIFY2(selectTrigger(mNinePatternTrigger), "could not select the nine pattern trigger");
+        for (int i = 0; i < mpEditor->mVisiblePatternCount; ++i) {
+            mpEditor->mTriggerPatternEdit.at(i)->comboBox_patternType->setCurrentIndex(REGEX_COLOR_PATTERN);
+        }
         auto* pFirstRow = mpEditor->mTriggerPatternEdit.at(0);
-        pFirstRow->comboBox_patternType->setCurrentIndex(REGEX_COLOR_PATTERN);
         QCoreApplication::processEvents();
 
         // Narrow enough that the colour trigger row no longer fits across, but

@@ -1409,17 +1409,15 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     // left a single row and a sliver of the next one - hiding the very
     // patterns the room was made for. Issue #2548 settled on five.
     //
-    // Measure a row by its minimum rather than its preferred height: once the
-    // list is longer than it can show - the case this floor is here for - the
-    // scroll area lays its inner widget out at that widget's minimum, so the
-    // minimum is the height the rows really get. The frame and the horizontal
-    // scrollbar come off the viewport rather than off the rows, so they are
-    // paid for on top; a colour trigger's row is wider than a narrow editor
-    // and without that allowance its scrollbar eats the fifth row.
-    const auto* pFirstPatternItem = mTriggerPatternEdit.at(0);
-    const int patternRowHeight = pFirstPatternItem->minimumSizeHint().height();
+    // A row is measured by its minimum rather than its preferred height: once
+    // the list is longer than it can show - the case this floor is here for -
+    // the scroll area lays its inner widget out at that widget's minimum, so
+    // the minimum is the height the rows really get. The frame and the
+    // horizontal scrollbar come off the viewport rather than off the rows, so
+    // they are paid for on top; a colour trigger's row is wider than a narrow
+    // editor and without that allowance its scrollbar eats the fifth row.
     const int scrollAreaChromeHeight = 2 * mpScrollArea->frameWidth() + mpScrollArea->horizontalScrollBar()->sizeHint().height();
-    mpScrollArea->setMinimumHeight(patternRowHeight * csmMinimumVisiblePatternRows + scrollAreaChromeHeight);
+    mpScrollArea->setMinimumHeight(mPatternRowHeight * csmMinimumVisiblePatternRows + scrollAreaChromeHeight);
 
     widget_searchTerm->updateGeometry();
 
@@ -1671,6 +1669,20 @@ void dlgTriggerEditor::createPatternItem(int index)
 
     mTriggerPatternEdit.push_back(pItem);
     pItem->mRow = index;
+
+    // Measure a row here, while every control it can carry is still on show -
+    // which is how the .ui hands one over, before a pattern type hides the
+    // ones it has no use for. Each type shows a different set of them and
+    // they are not all the same height: on macOS a colour trigger's two
+    // colour buttons stand a pixel taller than the controls the other types
+    // show, so a row measured wearing one type's clothes is not the height
+    // rows are laid out at wearing another's. With all of them showing the
+    // row's own layout takes its minimum from whichever is tallest, which is
+    // the tallest a row can end up however it is later set.
+    if (!mPatternRowHeight) {
+        mPatternRowHeight = pItem->minimumSizeHint().height();
+    }
+
     pItem->pushButton_fgColor->hide();
     pItem->pushButton_bgColor->hide();
     pItem->label_prompt->hide();

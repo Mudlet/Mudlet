@@ -680,6 +680,11 @@ private:
     // the splitter and the advanced options are arranged - see issue #2548
     static constexpr int csmMinimumVisiblePatternRows = 5;
 
+    // The height a trigger pattern row is laid out at when the list is longer
+    // than it can show, taken from the tallest control any pattern type can
+    // put in a row - see createPatternItem()
+    int mPatternRowHeight = 0;
+
     QAction* mAddItem = nullptr;
     QAction* mDeleteItem = nullptr;
     QAction* mAddGroup = nullptr;
