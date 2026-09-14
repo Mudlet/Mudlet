@@ -64,6 +64,17 @@ HARNESSES = {
             "display_tail_small_cells",
             "display_tail_large_cells",
         ),
+        # Workload knobs the harness reads from the environment, as metric name
+        # to variable. Two runs that differ here did different work, so they are
+        # refused. A dump from before a knob existed did the default workload,
+        # which every knob reports as 0 - so a missing one reads as 0 rather
+        # than as "skip the check", and a chunked run cannot slip past an old
+        # dump as a regression.
+        "workload_knobs": {"feed_chunk_lines": "MUDLET_BENCH_CHUNK_LINES"},
+        # Whether the trigger prescan ran in parallel: worth a note, since it
+        # moves trigger_lines_per_sec by a lot, but a fair comparison across
+        # the change that added it needs one side without it.
+        "soft_invariants": ("prescan_workers",),
         # Throughput for the text and trigger pipelines, plus the shipped default
         # packages on the same corpus - the pipeline metrics run on a bare
         # profile, so only defaults_text_lines_per_sec can see a package costing
@@ -124,7 +135,11 @@ HARNESSES = {
 # have it - but never read as a result either, so it stays out of the table.
 MODE_METRICS = ("bench_frame_hash_mode",)
 
-INVARIANTS = COMMON_INVARIANTS + MODE_METRICS + tuple(name for harness in HARNESSES.values() for name in harness["invariants"])
+INVARIANTS = COMMON_INVARIANTS + MODE_METRICS + tuple(
+    name
+    for harness in HARNESSES.values()
+    for name in harness["invariants"] + tuple(harness.get("workload_knobs", {}))
+)
 
 # Wall-clock ceiling for a single benchmark run under --run. The ASan/offscreen
 # functional-test build feeds a huge corpus several times, so this is generous.
@@ -253,6 +268,14 @@ def check_invariants(before, after):
                 f"{name} differs ({before[name]:g} vs {after[name]:g}) - the two runs measured "
                 "different workloads or build configurations and cannot be compared. "
                 f"Rebuild both trees from the same {before_harness} harness, built the same way."
+            )
+
+    for name, knob in HARNESSES[before_harness].get("workload_knobs", {}).items():
+        old, new = before.get(name, 0), after.get(name, 0)
+        if old != new:
+            fail(
+                f"{name} differs ({old:g} vs {new:g}) - the two runs did different work and cannot "
+                f"be compared. Set {knob} the same way for both."
             )
 
     for name in HARNESSES[before_harness].get("soft_invariants", ()):
