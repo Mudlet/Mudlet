@@ -152,9 +152,13 @@ void TMedia::playMedia(TMediaData& mediaData)
             }
 
             const QString absolutePathFileName = TMedia::setupMediaAbsolutePathFileName(mediaData);
-            const QFile mediaFile(absolutePathFileName);
 
-            if (!mediaFile.exists()) {
+            // Whether there is a file to play, rather than merely something of that name: a name
+            // that resolves to a directory - "." and "./" name the media directory itself, "sub/."
+            // one below it - is something exists() answers true for, and the player handed a
+            // directory fails to load it and announces a sysMediaFinished for media that never
+            // played. Symlinks are followed, so a file linked into the media directory still plays.
+            if (!QFileInfo(absolutePathFileName).isFile()) {
                 if (fileRelative) {
                     if (!TMedia::processUrl(mediaData)) {
                         return;
@@ -2497,12 +2501,12 @@ void TMedia::parseJSONForMediaPlay(QJsonObject& json)
     mediaData.setMediaCaption(TMedia::parseJSONByMediaCaption(json));
 
     if (mediaData.mediaFileName().isEmpty()) {
-        // Without the one required field there is nothing to play: the profile's own media
-        // directory stands in for the file further down, and the load that then fails announces a
-        // sysMediaFinished for media that never played. A request carrying only a key or a tag is
+        // Without the one required field there is nothing to play, and nothing below is going to
+        // find that out: an empty name resolves to the media directory, which playMedia() would
+        // otherwise send off to be downloaded over. A request carrying only a key or a tag is
         // still how a server resumes what it paused, which playMedia() answers before it looks at
-        // the file at all, so that keeps its chance; anything else is refused here, in the silence
-        // Client.Media.Play {} already gets.
+        // the file at all, so that keeps its chance; anything else is refused here, in the same
+        // silence parseGMCP()'s empty-object guard gives a Client.Media.Play {}.
         if (!resume(mediaData)) {
             qWarning() << qsl("TMedia::parseJSONForMediaPlay() WARNING - rejected a Client.Media.Play carrying no usable media file name.");
         }
