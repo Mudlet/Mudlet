@@ -40,6 +40,7 @@
 #include <QLineEdit>
 #include <QPushButton>
 #include <QRadioButton>
+#include <QSignalSpy>
 #include <QSpinBox>
 #include <QTemporaryDir>
 #include <QTreeWidget>
@@ -672,6 +673,39 @@ private slots:
 
         QVERIFY(mpRoomIdDelegate.isNull());
         QVERIFY(mpWeightDelegate.isNull());
+    }
+
+    // Changing an exit (here flipping a door to locked) and closing the dialog
+    // must repaint the mapper and mark the map unsaved - previously the map
+    // stayed stale until the next scroll/pan, and the edit was not even marked
+    // unsaved.
+    void saveRepaintsTheMapAndMarksItUnsaved()
+    {
+        buildMap();
+        map()->resetUnsaved();
+        QCOMPARE(subject()->getDoor(qsl("n")), 2); // closed, from buildMap
+
+        auto* pDlg = openDialogOn(scmSubjectRoom);
+        QVERIFY(pDlg->doortype_closed_n->isChecked());
+        // Flip the north door to locked.
+        pDlg->doortype_locked_n->setChecked(true);
+        QVERIFY(pDlg->doortype_locked_n->isChecked());
+
+        QSignalSpy areaChangedSpy(map(), &TMap::signal_areaChanged);
+        QVERIFY(areaChangedSpy.isValid());
+        QVERIFY(!map()->isUnsaved());
+
+        pDlg->save();
+
+        // The door change was committed to the room.
+        QCOMPARE(subject()->getDoor(qsl("n")), 3); // locked
+        // The map was marked unsaved.
+        QVERIFY2(map()->isUnsaved(), "editing exits did not mark the map unsaved");
+        // updateArea() queues a throttled repaint that emits signal_areaChanged
+        // for the subject's area - drain the queued call and check it arrived.
+        QVERIFY2(areaChangedSpy.wait(1000), "updateArea() did not repaint the map (signal_areaChanged never fired)");
+        QCOMPARE(areaChangedSpy.count(), 1);
+        QCOMPARE(areaChangedSpy.takeFirst().at(0).toInt(), subject()->getArea());
     }
 };
 

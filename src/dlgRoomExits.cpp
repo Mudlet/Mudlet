@@ -1001,6 +1001,13 @@ void dlgRoomExits::save()
         pA->determineAreaExitsOfRoom(pR->getId());
     }
 
+    // Repaint the mapper so the changed exits/doors/locks show immediately -
+    // without this the map stays stale until the next scroll/pan forces a
+    // paint. updateArea() queues a throttled mp2dMap->update(). Also mark the
+    // map unsaved, since editing exits is a map change.
+    mpHost->mpMap->updateArea(pR->getArea());
+    mpHost->mpMap->setUnsaved(__func__);
+
     close();
 }
 
