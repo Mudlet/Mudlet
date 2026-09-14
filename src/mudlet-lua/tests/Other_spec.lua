@@ -1333,6 +1333,93 @@ describe("Tests Other.lua functions", function()
     -- actually rejected (#10391)
     pending("names the key it rejected in every string enum refusal")
 
+    -- A setting that changed raises sysSettingChanged with its getConfig key
+    -- and the new value. Writing the value a setting already holds raises
+    -- nothing, which is what keeps a handler that echoes the value back
+    -- through setConfig from looping.
+    describe("sysSettingChanged", function()
+      -- Each entry keeps what the handler was handed plus what getConfig()
+      -- returned from inside the handler: the second one is what says the
+      -- setting was already updated when the event went out. The handler is
+      -- killed by the caller's own finally(), because busted keeps only one of
+      -- those per test and the restore has to share it.
+      local function record()
+        local events = {}
+        local id = registerAnonymousEventHandler("sysSettingChanged", function(_, key, value)
+          events[#events + 1] = {key = key, value = value, readBack = getConfig(key)}
+        end)
+        return events, function() killAnonymousEventHandler(id) end
+      end
+
+      local function assertOneEvent(events, key, value)
+        assert.equals(1, #events, "expected one sysSettingChanged for " .. key .. ", got " .. #events)
+        assert.equals(key, events[1].key)
+        assert.equals(value, events[1].value, "the event carried " .. tostring(events[1].value) .. " for " .. key)
+        assert.equals(value, events[1].readBack, "getConfig(\"" .. key .. "\") inside the handler did not read the new value")
+      end
+
+      local booleanKeys = {
+        "muteMediaAPI",
+        "muteMediaGame",
+        "compactInputLine",
+        "mapperPanelVisible",
+        "enableClosedCaption",
+        "advertiseScreenReader",
+        "announceIncomingText",
+      }
+
+      for _, key in ipairs(booleanKeys) do
+        it("raises once when " .. key .. " changes, and not when it is set to what it holds", function()
+          snapshot(key)
+          local events, kill = record()
+          finally(function()
+            kill()
+            restore(key)
+          end)
+
+          local target = not getConfig(key)
+
+          assert.is_true(setConfig(key, target))
+          assertOneEvent(events, key, target)
+
+          assert.is_true(setConfig(key, target))
+          assert.equals(1, #events, key .. " raised again for a value that did not change")
+        end)
+      end
+
+      -- A handler is allowed to write the value back. The second write is a
+      -- real change, so it raises in turn, and stops there because the third
+      -- write would not change anything.
+      it("lets a handler write the opposite value back without looping", function()
+        snapshot("muteMediaAPI")
+        setConfig("muteMediaAPI", false)
+
+        local events = {}
+        local vetoed = false
+        local id = registerAnonymousEventHandler("sysSettingChanged", function(_, key, value)
+          if key ~= "muteMediaAPI" then
+            return
+          end
+          events[#events + 1] = value
+          if value == true and not vetoed then
+            vetoed = true
+            setConfig("muteMediaAPI", false)
+          end
+        end)
+        finally(function()
+          killAnonymousEventHandler(id)
+          restore("muteMediaAPI")
+        end)
+
+        assert.is_true(setConfig("muteMediaAPI", true))
+
+        assert.is_false(getConfig("muteMediaAPI"), "the value the handler wrote back is not the one that stuck")
+        assert.equals(2, #events, "expected the change and the handler's write-back, got " .. #events)
+        assert.equals(true, events[1])
+        assert.equals(false, events[2])
+      end)
+    end)
+
     describe("experiment keys", function()
       -- The two rendering experiments are a group, of which at most one may be
       -- on. An experiment is written to the profile, so whichever one the group

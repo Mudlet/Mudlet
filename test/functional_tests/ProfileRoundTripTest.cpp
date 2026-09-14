@@ -34,6 +34,7 @@
 #include <QFileInfo>
 #include <QtTest/QtTest>
 
+#include <QRegularExpression>
 #include <QTemporaryDir>
 
 #include <functional>
@@ -100,11 +101,14 @@ private:
     TelnetServerStub* mpServer = nullptr;
     Host* mpSource = nullptr;
     Host* mpTarget = nullptr;
+    Host* mpLegacyTarget = nullptr;
     const QString mSourceName = qsl("ProfileRoundTrip-Test");
     const QString mTargetName = qsl("ProfileRoundTripTarget-Test");
+    const QString mLegacyTargetName = qsl("ProfileRoundTripLegacyTarget-Test");
     QString mPort; // assigned the stub's actual ephemeral port in initTestCase()
     const QString mLocalhost = qsl("localhost");
     QTemporaryDir mSaveDir;
+    QString mExportedXml; // raw text of the saved profile XML, for format assertions
 
     // Expected item totals, kept explicit so an "everything got lost and both
     // sides are empty" scenario cannot pass the pairwise comparison:
@@ -244,6 +248,12 @@ private:
         auto scInner = addScript(scGroup, qsl("scripts <sub> & 'group'"), true, true, {}, QString());
         addScript(scInner, qsl("émoji🎉 script"), false, true, {qsl("emojiEvent🎉")}, qsl("-- emoji script\n"));
         addScript(nullptr, qsl("lone script"), false, false, {}, QString());
+
+        // Non-default, non-opaque map level colors, to prove the alpha
+        // channel survives XMLexport -> XMLimport rather than being dropped
+        // back to fully opaque:
+        mpSource->mLowerLevelColor = QColor(30, 60, 90, 120);
+        mpSource->mUpperLevelColor = QColor(200, 150, 100, 45);
     }
 
     // -----------------------------------------------------------------------
@@ -509,15 +519,46 @@ private slots:
 
         QFile file(xmlPath);
         QVERIFY2(file.open(QFile::ReadOnly | QFile::Text), qPrintable(file.errorString()));
+        mExportedXml = QString::fromUtf8(file.readAll());
+        file.seek(0);
         XMLimport importer(mpTarget);
         auto [imported, importError] = importer.importPackage(&file);
         QVERIFY2(imported, qPrintable(importError));
+
+        // A second import target, fed a copy of the exported XML with the
+        // level colors' "alpha" attribute stripped out, to mimic a profile
+        // saved by a Mudlet version that predates this attribute - proving
+        // readHostColorElement()'s hasAttribute() guard still defaults the
+        // missing alpha to opaque instead of, say, an absent toInt() 0:
+        deleteProfileDirectory(mLegacyTargetName);
+        QVERIFY2(hostManager.addHost(mLegacyTargetName, mPort, QString(), QString()), "failed to create the legacy target Host");
+        mpLegacyTarget = hostManager.getHost(mLegacyTargetName);
+        QVERIFY(mpLegacyTarget);
+
+        QString legacyXml = mExportedXml;
+        legacyXml.replace(QRegularExpression(qsl(R"((<m(?:Lower|Upper)LevelColor) alpha="\d+">)")), qsl("\\1>"));
+        QVERIFY2(!legacyXml.contains(qsl("LevelColor alpha=")), "failed to strip the alpha attribute from the level color elements");
+
+        QTemporaryDir legacyDir;
+        QVERIFY(legacyDir.isValid());
+        const QString legacyPath = qsl("%1/legacy.xml").arg(legacyDir.path());
+        QFile legacyWriteFile(legacyPath);
+        QVERIFY2(legacyWriteFile.open(QFile::WriteOnly | QFile::Text), qPrintable(legacyWriteFile.errorString()));
+        QVERIFY(legacyWriteFile.write(legacyXml.toUtf8()) != -1);
+        legacyWriteFile.close();
+
+        QFile legacyReadFile(legacyPath);
+        QVERIFY2(legacyReadFile.open(QFile::ReadOnly | QFile::Text), qPrintable(legacyReadFile.errorString()));
+        XMLimport legacyImporter(mpLegacyTarget);
+        auto [legacyImported, legacyImportError] = legacyImporter.importPackage(&legacyReadFile);
+        QVERIFY2(legacyImported, qPrintable(legacyImportError));
     }
 
     void cleanupTestCase()
     {
         mpSource = nullptr;
         mpTarget = nullptr;
+        mpLegacyTarget = nullptr;
         delete mpServer;
         mpServer = nullptr;
         // Null when initTestCase skipped or failed ahead of mudlet::start(), and
@@ -525,6 +566,7 @@ private slots:
         if (mudlet::self()) {
             deleteProfileDirectory(mSourceName);
             deleteProfileDirectory(mTargetName);
+            deleteProfileDirectory(mLegacyTargetName);
             delete mudlet::self();
         }
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
@@ -613,6 +655,41 @@ private slots:
                 return;
             }
         }
+    }
+
+    // mLowerLevelColor/mUpperLevelColor round-trip through XMLexport's "alpha"
+    // attribute (see readHostColorElement()'s alphaColors map) rather than
+    // being clipped back to opaque by QColor::name()'s #RRGGBB form:
+    void test_mapLevelColorsRoundTrip()
+    {
+        QCOMPARE(mpTarget->mLowerLevelColor, QColor(30, 60, 90, 120));
+        QCOMPARE(mpTarget->mUpperLevelColor, QColor(200, 150, 100, 45));
+    }
+
+    // The exporter must keep writing the RGB value and the alpha channel as
+    // two separate things - a #RRGGBB element text plus a numeric "alpha"
+    // attribute - rather than folding them into one combined ARGB hex string
+    // (e.g. via QColor::name(QColor::HexArgb)). Either form round-trips fine
+    // through this test's own XMLimport, but only the former stays readable
+    // by every Mudlet version that predates this attribute, which reads the
+    // element text as a plain #RRGGBB color.
+    void test_mapLevelColorsExportFormat()
+    {
+        QVERIFY2(mExportedXml.contains(qsl("<mLowerLevelColor alpha=\"120\">#1e3c5a</mLowerLevelColor>")), "expected mLowerLevelColor as #RRGGBB text with a separate alpha attribute");
+        QVERIFY2(mExportedXml.contains(qsl("<mUpperLevelColor alpha=\"45\">#c89664</mUpperLevelColor>")), "expected mUpperLevelColor as #RRGGBB text with a separate alpha attribute");
+        QVERIFY2(!mExportedXml.contains(qsl("#781e3c5a")), "alpha must not be folded into a combined ARGB hex color");
+        QVERIFY2(!mExportedXml.contains(qsl("#2dc89664")), "alpha must not be folded into a combined ARGB hex color");
+    }
+
+    // A profile exported by a Mudlet version that predates the "alpha"
+    // attribute on these two elements must still import as fully opaque,
+    // not as invisible: readHostColorElement()'s hasAttribute() guard is the
+    // whole of that behaviour (an absent attribute's toInt() would otherwise
+    // silently default to 0, making the mapper stop drawing these levels).
+    void test_legacyProfileWithoutAlphaAttributeDefaultsToOpaque()
+    {
+        QCOMPARE(mpLegacyTarget->mLowerLevelColor, QColor(30, 60, 90, 255));
+        QCOMPARE(mpLegacyTarget->mUpperLevelColor, QColor(200, 150, 100, 255));
     }
 
     // The imported scripts registered their event handlers in the fresh Host:
