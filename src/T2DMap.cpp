@@ -5222,6 +5222,60 @@ void T2DMap::slot_deleteRoom()
     mpMap->setUnsaved(__func__);
 }
 
+// Expanding-square-ring offset for slot_spread()'s fan-out. Slot 1 is the first
+// offset (north); slot 0 is the anchor. Walks the perimeter of [-ring,ring]^2
+// clockwise starting at (0,ring): five legs summing to 8*ring steps return just
+// shy of the start (E:r, S:2r, W:2r, N:2r, E:r). No trig, no duplicates, every
+// cell visited once.
+QPoint T2DMap::offsetForSpreadSlot(qsizetype slot)
+{
+    qsizetype ring = 1;
+    while (slot > 8 * ring) {
+        slot -= 8 * ring;
+        ++ring;
+    }
+    const int r = static_cast<int>(ring);
+    const int segLens[5] = {r, 2 * r, 2 * r, 2 * r, r};
+    const int segDX[5] = {1, 0, -1, 0, 1};
+    const int segDY[5] = {0, -1, 0, 1, 0};
+    int x = 0;
+    int y = r;
+    qsizetype moves = slot - 1;
+    for (int s = 0; s < 5; ++s) {
+        if (moves < segLens[s]) {
+            x += segDX[s] * static_cast<int>(moves);
+            y += segDY[s] * static_cast<int>(moves);
+            return QPoint(x, y);
+        }
+        x += segDX[s] * segLens[s];
+        y += segDY[s] * segLens[s];
+        moves -= segLens[s];
+    }
+    return QPoint(0, 0); // unreachable: slot <= 8*ring guarantees a hit
+}
+
+std::optional<QPoint> T2DMap::findFreeSpreadCell(TArea& area, const int roomId, const int z, const int dx, const int dy, const int spread, qsizetype& slot, const qsizetype maxSlots) const
+{
+    for (qsizetype tried = 0; tried < maxSlots; ++tried) {
+        const QPoint offset = offsetForSpreadSlot(slot);
+        const int x = dx + offset.x() * spread;
+        const int y = dy + offset.y() * spread;
+        const QList<int> occupants = area.getRoomsByPosition(x, y, z);
+        bool free = true;
+        for (const int occupantId : occupants) {
+            if (occupantId != roomId) {
+                free = false;
+                break;
+            }
+        }
+        if (free) {
+            return QPoint(x, y);
+        }
+        ++slot;
+    }
+    return std::nullopt;
+}
+
 void T2DMap::slot_spread()
 {
     if (mMultiSelectionSet.size() < 2) { // nothing to do!
@@ -5248,7 +5302,7 @@ void T2DMap::slot_spread()
                                             1000, // Maximum value
                                             1,    // Step
                                             &isOk);
-    if (spread == 1 || !isOk) {
+    if (!isOk) {
         return;
     }
 
@@ -5258,29 +5312,127 @@ void T2DMap::slot_spread()
     const int areaID = pR_centerRoom->getArea();
     auto pArea = mpMap->mpRoomDB->getArea(areaID);
     bool doneSomething = false;
-    QSetIterator<int> itSelectionRoom = mMultiSelectionSet;
-    while (itSelectionRoom.hasNext()) {
-        TRoom* pMovingR = mpMap->mpRoomDB->getRoom(itSelectionRoom.next());
-        if (!pMovingR) {
-            continue;
-        }
 
-        doneSomething = true;
-        pMovingR->setCoordinates(((pMovingR->x() - dx) * spread + dx), ((pMovingR->y() - dy) * spread + dy), pMovingR->z());
-        QMapIterator<QString, QList<QPointF>> itCustomLine(pMovingR->customLines);
-        QMap<QString, QList<QPointF>> newCustomLinePointsMap;
-        while (itCustomLine.hasNext()) {
-            itCustomLine.next();
-            QList<QPointF> customLinePoints = itCustomLine.value();
-            for (auto& customLinePoint : customLinePoints) {
-                const QPointF movingPoint = customLinePoint;
-                customLinePoint.setX(static_cast<float>((movingPoint.x() - dx) * spread + dx));
-                customLinePoint.setY(static_cast<float>((movingPoint.y() - dx) * spread + dy));
-            }
-            newCustomLinePointsMap.insert(itCustomLine.key(), customLinePoints);
+    // Scaling each room's offset from the centre is a no-op when every selected
+    // room sits on top of the highlighted one (its offset is zero, and zero
+    // times any factor is still zero). Detect that degenerate case and instead
+    // place the coincident rooms on a spreading sequence of small integer
+    // offsets around the centre, so "spread" actually separates them. The
+    // dialog's factor scales each offset, keeping its "how far apart" meaning.
+    bool allCoincident = true;
+    for (const int roomId : mMultiSelectionSet) {
+        const TRoom* pRoom = mpMap->mpRoomDB->getRoom(roomId);
+        if (!pRoom || pRoom->x() != dx || pRoom->y() != dy) {
+            allCoincident = false;
+            break;
         }
-        pMovingR->customLines = newCustomLinePointsMap;
-        pMovingR->calcRoomDimensions();
+    }
+
+    if (allCoincident) {
+        // The dialog's minimum is 1, and a factor of 1 is the natural
+        // "shuffle them onto adjacent cells" choice here - the smallest move
+        // that actually separates the stack - so unlike the scaling path it is
+        // not a no-op and must not be bailed out.
+        // Offsets enumerated as expanding square rings walked clockwise from
+        // the north cell (0,+r): (0,1),(1,1),(1,0),(1,-1),(0,-1),(-1,-1),
+        // (-1,0),(-1,1),(0,2),(1,2),... No trig, no duplicates, every cell
+        // visited once. Slot 1 is the first offset; the centre (slot 0) is the
+        // anchor room, which keeps its coordinates.
+
+        // Deterministic placement: walk the selection in ascending room-id order
+        // so repeating the action is predictable. The highlighted centre room
+        // stays put; the rest take successive offsets from the sequence.
+        //
+        // Skip any candidate cell that a different room already occupies, so
+        // spreading a stack does not bulldoze pre-existing rooms (nor rooms
+        // placed earlier in this same pass - getRoomsByPosition() reads live
+        // coordinates, so moved rooms count as occupants). The room's own z is
+        // used for the check: spread preserves z, so each floor is independent.
+        QList<int> sortedRoomIds = mMultiSelectionSet.values();
+        std::sort(sortedRoomIds.begin(), sortedRoomIds.end());
+        qsizetype slot = 0;
+        for (const int roomId : sortedRoomIds) {
+            TRoom* pMovingR = mpMap->mpRoomDB->getRoom(roomId);
+            if (!pMovingR) {
+                continue;
+            }
+            if (roomId == mMultiSelectionHighlightRoomId) {
+                pMovingR->calcRoomDimensions();
+                continue;
+            }
+            const int z = pMovingR->z();
+            QPoint offset = offsetForSpreadSlot(++slot);
+            int newX = dx + offset.x() * spread;
+            int newY = dy + offset.y() * spread;
+            if (pArea) {
+                // Advance through the sequence until the target cell is free of
+                // any other room (a pre-existing room, or one placed earlier in
+                // this pass - getRoomsByPosition() reads live coordinates, so
+                // moved rooms count as occupants). The room's own z is used: spread
+                // preserves z, so each floor is independent. Bound the search so an
+                // implausibly packed map cannot wedge the loop: ~ring 50 (a
+                // 100x100 neighbourhood) is far beyond any realistic spread. If
+                // even that many candidates are all taken, leave the room where it
+                // is rather than parking it on an occupied cell and recreating the
+                // overlap spreading is meant to resolve.
+                constexpr qsizetype scmMaxSlotsToTry = 10000;
+                const auto freeCell = findFreeSpreadCell(*pArea, roomId, z, dx, dy, spread, slot, scmMaxSlotsToTry);
+                if (!freeCell) {
+                    continue;
+                }
+                newX = freeCell->x();
+                newY = freeCell->y();
+            }
+            const int deltaWX = newX - pMovingR->x();
+            const int deltaWY = newY - pMovingR->y();
+            doneSomething = true;
+            pMovingR->setCoordinates(newX, newY, pMovingR->z());
+            // Shift any custom exit-line waypoints by the same displacement so
+            // they travel with the room rather than snapping back to the stack.
+            QMapIterator<QString, QList<QPointF>> itCustomLine(pMovingR->customLines);
+            QMap<QString, QList<QPointF>> newCustomLinePointsMap;
+            while (itCustomLine.hasNext()) {
+                itCustomLine.next();
+                QList<QPointF> customLinePoints = itCustomLine.value();
+                for (auto& customLinePoint : customLinePoints) {
+                    customLinePoint.setX(static_cast<float>(customLinePoint.x() + deltaWX));
+                    customLinePoint.setY(static_cast<float>(customLinePoint.y() + deltaWY));
+                }
+                newCustomLinePointsMap.insert(itCustomLine.key(), customLinePoints);
+            }
+            pMovingR->customLines = newCustomLinePointsMap;
+            pMovingR->calcRoomDimensions();
+        }
+    } else {
+        // For the scaling path a factor of 1 genuinely changes nothing, so bail
+        // out rather than churning the map and marking it unsaved needlessly.
+        if (spread == 1) {
+            return;
+        }
+        QSetIterator<int> itSelectionRoom = mMultiSelectionSet;
+        while (itSelectionRoom.hasNext()) {
+            TRoom* pMovingR = mpMap->mpRoomDB->getRoom(itSelectionRoom.next());
+            if (!pMovingR) {
+                continue;
+            }
+
+            doneSomething = true;
+            pMovingR->setCoordinates(((pMovingR->x() - dx) * spread + dx), ((pMovingR->y() - dy) * spread + dy), pMovingR->z());
+            QMapIterator<QString, QList<QPointF>> itCustomLine(pMovingR->customLines);
+            QMap<QString, QList<QPointF>> newCustomLinePointsMap;
+            while (itCustomLine.hasNext()) {
+                itCustomLine.next();
+                QList<QPointF> customLinePoints = itCustomLine.value();
+                for (auto& customLinePoint : customLinePoints) {
+                    const QPointF movingPoint = customLinePoint;
+                    customLinePoint.setX(static_cast<float>((movingPoint.x() - dx) * spread + dx));
+                    customLinePoint.setY(static_cast<float>((movingPoint.y() - dx) * spread + dy));
+                }
+                newCustomLinePointsMap.insert(itCustomLine.key(), customLinePoints);
+            }
+            pMovingR->customLines = newCustomLinePointsMap;
+            pMovingR->calcRoomDimensions();
+        }
     }
     if (doneSomething) {
         if (pArea) {

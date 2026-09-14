@@ -82,9 +82,27 @@ bool RoomMoveActivationHandler::handle(T2DMap::MapInteractionContext& context)
             return false;
         }
 
-        const int roomId = *clickedRoomIds.constBegin();
+        // Several rooms can sit on top of each other, so the cursor may cover a
+        // mix of selected and unselected ones. Previously this looked only at the
+        // first room under the cursor: if that one happened to be unselected it
+        // cleared the selection and re-selected the whole stack - pulling back a
+        // room the user had just deselected in the selection window. Instead, if
+        // ANY of the rooms under the cursor is already selected, leave the
+        // selection untouched and drag the existing set; only when none is
+        // selected does the click establish a fresh selection of the clicked
+        // rooms.
+        int roomId = 0;
+        bool anySelected = false;
+        for (const int id : clickedRoomIds) {
+            if (mMapWidget.mMultiSelectionSet.contains(id)) {
+                roomId = id;
+                anySelected = true;
+                break;
+            }
+        }
 
-        if (!mMapWidget.mMultiSelectionSet.contains(roomId)) {
+        if (!anySelected) {
+            roomId = *clickedRoomIds.constBegin();
             mMapWidget.mMultiSelectionSet.clear();
             mMapWidget.mMultiSelectionSet.unite(clickedRoomIds);
             mMapWidget.mMultiSelectionHighlightRoomId = roomId;
