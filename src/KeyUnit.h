@@ -75,8 +75,11 @@ public:
     bool processDataStream(const Qt::Key, const Qt::KeyboardModifiers);
     // Query-only counterpart to processDataStream(), which executes what it matches
     bool wouldMatch(const Qt::Key, const Qt::KeyboardModifiers) const;
-    // Says so when a binding has been given a key Mudlet's own shortcuts use,
-    // where Qt's matching comes first and the binding will never fire
+    // What to say when a binding has been given a key Mudlet's own shortcuts
+    // use, where Qt's matching comes first and the binding does not fire -
+    // empty when there is no such clash
+    QString mudletShortcutClashMessage(const TKey* pKey) const;
+    // That message, posted to this profile's console
     void warnIfMudletShortcutHoldsKey(const TKey* pKey) const;
     void markCleanup(TKey* pT);
     void doCleanup();
