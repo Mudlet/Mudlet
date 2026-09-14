@@ -22,20 +22,29 @@ function(restore_windows_test_output)
 endfunction()
 cmake_language(DEFER CALL restore_windows_test_output)
 
-# A backstop against a test filing data in the home directory of whoever runs it.
-# CredentialManager and SecureStringUtils write per-profile encryption keys and
-# passwords under QStandardPaths::AppConfigLocation without asking Mudlet where its
-# config root is, so for a QTEST_MAIN program that is $HOME/.config/<test class> -
-# a path no source scan can recognise and nothing in the test tree names (#10777).
-# Pointing XDG_CONFIG_HOME at a directory of the build tree instead costs the tests
+# Where a test's config root goes. CredentialManager and SecureStringUtils write
+# per-profile encryption keys and passwords under QStandardPaths::AppConfigLocation
+# without asking Mudlet where its config root is, so for a QTEST_MAIN program that
+# is a directory named after the test class in the home directory of whoever runs
+# it - a path no source scan can recognise and nothing in the test tree names
+# (#10777). Pointing it at a directory of the build tree instead costs the tests
 # that already redirect nothing, since qputenv() in initTestCase() overrides it.
 #
-# It is a backstop and not the mechanism, for two reasons. It is inert wherever
-# QStandardPaths ignores XDG, which is macOS and Windows. And a build-tree directory
-# outlives the run, where a test's own QTemporaryDir does not - so a test still has
-# to redirect for itself to get a config root that is empty at the start of every
-# run. setupConfig() is unaffected either way: it takes $XDG_CONFIG_HOME/mudlet only
-# when that directory holds profiles/ (see utils::xdgConfigDir()), which this does
+# On Linux the lever is XDG_CONFIG_HOME. macOS never reads it: AppConfigLocation there is
+# NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSUserDomainMask) plus
+# "/Preferences" and the application name, so the lever is CFFIXED_USER_HOME, the
+# home directory override CoreFoundation resolves that call against. It has to
+# arrive from here rather than from the test, because a test process cannot move it
+# once Foundation has answered - which is why the per-test qputenv() in
+# initTestCase() covers Linux only, and why HomeUntouchedTest checks this redirect
+# rather than trusting it (test/ci/home-untouched-test.sh). Windows has no such
+# override - SHGetKnownFolderPath reads no environment - so it stays uncovered.
+#
+# For XDG this is a backstop and not the mechanism: a build-tree
+# directory outlives the run, where a test's own QTemporaryDir does not - so a test
+# still has to redirect for itself to get a config root that is empty at the start
+# of every run. setupConfig() is unaffected either way: it takes $XDG_CONFIG_HOME/mudlet
+# only when that directory holds profiles/ (see utils::xdgConfigDir()), which this does
 # not create - deliberately, since seeding the opt-in here would give a test that
 # forgets a config root that accumulates profiles between runs, which is the
 # collision #9999 was about.
@@ -44,7 +53,15 @@ cmake_language(DEFER CALL restore_windows_test_output)
 function(sandbox_test_config_dirs)
     get_property(registeredTests DIRECTORY PROPERTY TESTS)
     foreach(testName ${registeredTests})
-        set_property(TEST ${testName} APPEND PROPERTY ENVIRONMENT "XDG_CONFIG_HOME=${CMAKE_CURRENT_BINARY_DIR}/xdg-config/${testName}")
+        set(testConfigDir "${CMAKE_CURRENT_BINARY_DIR}/xdg-config/${testName}")
+        set_property(TEST ${testName} APPEND PROPERTY ENVIRONMENT "XDG_CONFIG_HOME=${testConfigDir}")
+        if(APPLE)
+            # CoreFoundation is handed a home directory rather than a config root,
+            # and one that has to exist - Qt creates a config root on the way to
+            # writing into it, and no one creates a home
+            file(MAKE_DIRECTORY "${testConfigDir}")
+            set_property(TEST ${testName} APPEND PROPERTY ENVIRONMENT "CFFIXED_USER_HOME=${testConfigDir}")
+        endif()
     endforeach()
 endfunction()
 cmake_language(DEFER CALL sandbox_test_config_dirs)
@@ -213,13 +230,32 @@ set_tests_properties(XdgRecipeConsistencyTest PROPERTIES
 )
 
 # What XdgRecipeConsistencyTest's source scan cannot see: whether the bytes a test
-# writes actually stay out of the home directory. Runs the credential-store tests
-# under a throwaway HOME and looks. Not on Windows, where there is no shell for it
-# and QStandardPaths ignores XDG anyway.
+# writes actually stay out of the home directory. Sweeps the real one for a config
+# root named after any credential-store test - which covers the sources compiled
+# into the grouped functional binaries too, since that needs no binary of its own -
+# and runs the standalone ones under a home directory of their own. Not on Windows,
+# where there is no shell for it and nothing redirects AppConfigLocation anyway.
 if(NOT WIN32)
     add_test(NAME HomeUntouchedTest
         COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/ci/home-untouched-test.sh ${CMAKE_CURRENT_BINARY_DIR}
     )
+    # The home sweep reports on what has already run, so it has to run last of the
+    # tests that could leave something there - ctest -j otherwise starts it among
+    # the first few and it sweeps a home directory nothing has written to yet.
+    # Derived from the sources, and by the same rule as the script's own candidates,
+    # so a test renamed or added needs no edit here either. A name that is not a
+    # registered test is ignored by ctest, which is what lets this cover the sources
+    # compiled into the grouped functional binaries without knowing which those are.
+    file(GLOB credentialStoreSources ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/functional_tests/*.cpp)
+    set(credentialStoreTests)
+    foreach(candidateSource ${credentialStoreSources})
+        file(STRINGS ${candidateSource} credentialStoreUse REGEX "CredentialManager|SecureStringUtils" LIMIT_COUNT 1)
+        if(credentialStoreUse)
+            get_filename_component(candidateName ${candidateSource} NAME_WE)
+            list(APPEND credentialStoreTests ${candidateName})
+        endif()
+    endforeach()
+    set_tests_properties(HomeUntouchedTest PROPERTIES DEPENDS "${credentialStoreTests}")
 endif()
 
 # Checks the release-publishing scripts that keep SHA256SUMS.txt covering every
