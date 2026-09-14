@@ -1256,8 +1256,6 @@ bool XMLimport::readHostColorElement(Host* pHost, QStringView elementName)
             {qsl("mWhite"), &Host::mWhite},
             {qsl("mLightWhite"), &Host::mLightWhite},
             {qsl("mFgColor2"), &Host::mFgColor_2},
-            {qsl("mLowerLevelColor"), &Host::mLowerLevelColor},
-            {qsl("mUpperLevelColor"), &Host::mUpperLevelColor},
             {qsl("mRoomBorderColor"), &Host::mRoomBorderColor},
             {qsl("mRoomCollisionBorderColor"), &Host::mRoomCollisionBorderColor},
             {qsl("mBlack2"), &Host::mBlack_2},
@@ -1284,6 +1282,8 @@ bool XMLimport::readHostColorElement(Host* pHost, QStringView elementName)
             {qsl("mBgColor2"), &Host::mBgColor_2},
             {qsl("mMapGridColor"), &Host::mMapGridColor},
             {qsl("mMapInfoBg"), &Host::mMapInfoBg},
+            {qsl("mLowerLevelColor"), &Host::mLowerLevelColor},
+            {qsl("mUpperLevelColor"), &Host::mUpperLevelColor},
     };
 
     const QString elemName = elementName.toString();
