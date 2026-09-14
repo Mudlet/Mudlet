@@ -22,6 +22,33 @@ function(restore_windows_test_output)
 endfunction()
 cmake_language(DEFER CALL restore_windows_test_output)
 
+# A backstop against a test filing data in the home directory of whoever runs it.
+# CredentialManager and SecureStringUtils write per-profile encryption keys and
+# passwords under QStandardPaths::AppConfigLocation without asking Mudlet where its
+# config root is, so for a QTEST_MAIN program that is $HOME/.config/<test class> -
+# a path no source scan can recognise and nothing in the test tree names (#10777).
+# Pointing XDG_CONFIG_HOME at a directory of the build tree instead costs the tests
+# that already redirect nothing, since qputenv() in initTestCase() overrides it.
+#
+# It is a backstop and not the mechanism, for two reasons. It is inert wherever
+# QStandardPaths ignores XDG, which is macOS and Windows. And a build-tree directory
+# outlives the run, where a test's own QTemporaryDir does not - so a test still has
+# to redirect for itself to get a config root that is empty at the start of every
+# run. setupConfig() is unaffected either way: it takes $XDG_CONFIG_HOME/mudlet only
+# when that directory holds profiles/ (see utils::xdgConfigDir()), which this does
+# not create - deliberately, since seeding the opt-in here would give a test that
+# forgets a config root that accumulates profiles between runs, which is the
+# collision #9999 was about.
+#
+# Deferred, and per directory, for the same reason as restore_windows_test_output().
+function(sandbox_test_config_dirs)
+    get_property(registeredTests DIRECTORY PROPERTY TESTS)
+    foreach(testName ${registeredTests})
+        set_property(TEST ${testName} APPEND PROPERTY ENVIRONMENT "XDG_CONFIG_HOME=${CMAKE_CURRENT_BINARY_DIR}/xdg-config/${testName}")
+    endforeach()
+endfunction()
+cmake_language(DEFER CALL sandbox_test_config_dirs)
+
 set(UNIT_TESTS
     TEntityResolverTest
     TEntityHandlerTest
@@ -184,6 +211,16 @@ add_test(NAME XdgRecipeConsistencyTest COMMAND $<TARGET_FILE:XdgRecipeConsistenc
 set_tests_properties(XdgRecipeConsistencyTest PROPERTIES
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
 )
+
+# What XdgRecipeConsistencyTest's source scan cannot see: whether the bytes a test
+# writes actually stay out of the home directory. Runs the credential-store tests
+# under a throwaway HOME and looks. Not on Windows, where there is no shell for it
+# and QStandardPaths ignores XDG anyway.
+if(NOT WIN32)
+    add_test(NAME HomeUntouchedTest
+        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/ci/home-untouched-test.sh ${CMAKE_CURRENT_BINARY_DIR}
+    )
+endif()
 
 # Checks the release-publishing scripts that keep SHA256SUMS.txt covering every
 # release binary - a binary without an entry is one the updater refuses to install

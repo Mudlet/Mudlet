@@ -67,12 +67,16 @@
 #include <QtTest/QtTest>
 
 #include <QDir>
+#include <QDirIterator>
 #include <QFile>
+#include <QFileInfo>
 #include <QRegularExpression>
 #include <QSet>
 #include <QString>
 #include <QStringList>
 #include <QVector>
+
+#include <algorithm>
 
 class XdgRecipeConsistencyTest : public QObject
 {
@@ -295,17 +299,31 @@ class XdgRecipeConsistencyTest : public QObject
 
     // Whichever way a test reaches the credential store, both classes end up writing
     // under QStandardPaths::AppConfigLocation, so either name is enough to need a
-    // config root of one's own.
+    // config root of one's own. The bare name rather than a "::" after it on purpose:
+    // the static API is not the common one - CredentialManagerTest is written
+    // throughout as "CredentialManager manager; manager.storePassword(...)", which
+    // reaches the same file store through storeCredentialToFile() whenever the
+    // keychain is unavailable, and a functional test driving a login reaches it
+    // through Host::loadSecuredPassword() without naming either class that way.
+    // Comment stripping is what keeps a class named in prose out of this, so the
+    // bare name costs no false positives.
     static bool usesCredentialStore(const QString& code)
     {
-        static const QRegularExpression call(QStringLiteral("\\b(?:CredentialManager|SecureStringUtils)\\s*::"));
+        static const QRegularExpression call(QStringLiteral("\\b(?:CredentialManager|SecureStringUtils)\\b"));
         return code.contains(call);
     }
 
+    // Both halves, because the call alone says too little. The restore at the end of
+    // a test - qputenv("XDG_CONFIG_HOME", mSavedXdg) in cleanupTestCase() - is that
+    // same call putting the developer's own value back, and a redirect to a fixed
+    // path like "/home/me/scratch" is a call too. What separates a redirect from
+    // either is having somewhere of one's own to redirect into, and every file that
+    // redirects today declares a QTemporaryDir.
     static bool redirectsConfigHome(const QString& code)
     {
         static const QRegularExpression call(QStringLiteral("\\bqputenv\\s*\\(\\s*\"XDG_CONFIG_HOME\""));
-        return code.contains(call);
+        static const QRegularExpression temporaryDir(QStringLiteral("\\bQTemporaryDir\\b"));
+        return code.contains(call) && code.contains(temporaryDir);
     }
 
     // Only that a profiles/ directory is created, not where: ConfigDirOverrideTest
@@ -370,23 +388,26 @@ class XdgRecipeConsistencyTest : public QObject
     // so an unreadable file cannot read as a clean sweep.
     static bool readTestSources(QVector<TestSource>& sources, QString& problem)
     {
-        const QStringList directories = {testDir(), QStringLiteral("%1/functional_tests").arg(testDir())};
-        for (const QString& directory : directories) {
-            const QDir dir(directory);
-            if (!dir.exists()) {
-                problem = QStringLiteral("no such directory: %1 - is MUDLET_TEST_DIR right?").arg(directory);
+        const QDir root(testDir());
+        if (!root.exists()) {
+            problem = QStringLiteral("no such directory: %1 - is MUDLET_TEST_DIR right?").arg(testDir());
+            return false;
+        }
+        // Every subdirectory, not the two that exist today: a test directory added
+        // later would otherwise be unscanned, and a sweep that silently stops
+        // covering a file is the failure these sweeps are written against.
+        QDirIterator files(testDir(), {QStringLiteral("*.cpp")}, QDir::Files, QDirIterator::Subdirectories);
+        while (files.hasNext()) {
+            QFile source(files.next());
+            if (!source.open(QIODevice::ReadOnly | QIODevice::Text)) {
+                problem = QStringLiteral("could not read %1").arg(source.fileName());
                 return false;
             }
-            const QStringList names = dir.entryList({QStringLiteral("*.cpp")}, QDir::Files, QDir::Name);
-            for (const QString& name : names) {
-                QFile source(dir.filePath(name));
-                if (!source.open(QIODevice::ReadOnly | QIODevice::Text)) {
-                    problem = QStringLiteral("could not read %1").arg(source.fileName());
-                    return false;
-                }
-                sources.append({name, QString::fromUtf8(source.readAll())});
-            }
+            sources.append({QFileInfo(source).fileName(), QString::fromUtf8(source.readAll())});
         }
+        std::sort(sources.begin(), sources.end(), [](const TestSource& first, const TestSource& second) {
+            return first.name < second.name;
+        });
         return true;
     }
 
@@ -484,10 +505,26 @@ private slots:
 
     void test_theIsolationRecipeIsAccepted()
     {
-        const QString source = QStringLiteral("QVERIFY(QDir().mkpath(qsl(\"%1/mudlet/profiles\").arg(mConfigDir.path())));\n"
+        const QString source = QStringLiteral("QTemporaryDir mConfigDir;\n"
+                                              "QVERIFY(QDir().mkpath(qsl(\"%1/mudlet/profiles\").arg(mConfigDir.path())));\n"
                                               "qputenv(\"XDG_CONFIG_HOME\", mConfigDir.path().toUtf8());\n"
                                               "mudlet::self()->setupConfig();\n");
         QVERIFY2(missingIsolation(source).isEmpty(), qPrintable(missingIsolation(source).join(QChar(u'\n'))));
+    }
+
+    // A cleanupTestCase() restore is the same qputenv() putting the developer's own
+    // value back, and a fixed path is not a sandbox either
+    void test_aRestoreOrAFixedPathIsNotARedirect()
+    {
+        const QString restoreOnly = QStringLiteral("void cleanupTestCase()\n{\n    mSavedXdg.isNull() ? qunsetenv(\"XDG_CONFIG_HOME\") : qputenv(\"XDG_CONFIG_HOME\", mSavedXdg);\n}\n"
+                                                   "mudlet::self()->setupConfig();\n"
+                                                   "QVERIFY(QDir().mkpath(qsl(\"%1/mudlet/profiles\").arg(dir)));\n");
+        const QStringList problems = missingIsolation(restoreOnly);
+        QCOMPARE(problems.size(), 1);
+        QVERIFY2(problems.first().contains(QStringLiteral("qputenv")), qPrintable(problems.first()));
+
+        const QString fixedPath = QStringLiteral("qputenv(\"XDG_CONFIG_HOME\", \"/home/me/scratch\");\nCredentialManager::storeCredential(profile, key, password);\n");
+        QCOMPARE(missingCredentialStoreIsolation(fixedPath).size(), 1);
     }
 
     // The opt-in on its own resolves to the temporary directory only where the
@@ -513,19 +550,58 @@ private slots:
 
     void test_aCredentialStoreUserThatRedirectsIsAccepted()
     {
-        const QString source = QStringLiteral("qputenv(\"XDG_CONFIG_HOME\", mConfigDir.path().toUtf8());\n"
+        const QString source = QStringLiteral("QTemporaryDir mConfigDir;\n"
+                                              "qputenv(\"XDG_CONFIG_HOME\", mConfigDir.path().toUtf8());\n"
                                               "QVERIFY(CredentialManager::storeCredential(profile, key, password));\n");
         QVERIFY2(missingCredentialStoreIsolation(source).isEmpty(), qPrintable(missingCredentialStoreIsolation(source).join(QChar(u'\n'))));
+    }
+
+    // The static API is the minority spelling, and neither the instance API nor a
+    // test that only drives a login through Host names a class with "::" after it
+    void test_theInstanceApiAndIndirectCallersCountToo()
+    {
+        const QString instanceApi = QStringLiteral("CredentialManager manager;\nmanager.storePassword(profile, key, password, callback);\n");
+        QCOMPARE(missingCredentialStoreIsolation(instanceApi).size(), 1);
+
+        const QString justTheName = QStringLiteral("#include <CredentialManager.h>\nvoid test_login() { host->loadSecuredPassword(); }\n");
+        QCOMPARE(missingCredentialStoreIsolation(justTheName).size(), 1);
     }
 
     // The opt-in is setupConfig()'s business, and these never call it, so it is
     // not what tells these apart
     void test_aCredentialStoreUserNeedsNoOptIn()
     {
-        const QString source = QStringLiteral("qputenv(\"XDG_CONFIG_HOME\", mConfigDir.path().toUtf8());\n"
+        const QString source = QStringLiteral("QTemporaryDir mConfigDir;\n"
+                                              "qputenv(\"XDG_CONFIG_HOME\", mConfigDir.path().toUtf8());\n"
                                               "CredentialManager::retrieveCredential(profile, key);\n");
         QVERIFY(missingCredentialStoreIsolation(source).isEmpty());
         QVERIFY(missingIsolation(source).isEmpty());
+    }
+
+    // What the scan deliberately does not see, pinned so the limits are on the record
+    // rather than found later. Both sweeps are coarse on purpose: anywhere in the file
+    // counts, so a redirect installed after the writes it was meant to cover reads the
+    // same as one in initTestCase(). Deciding otherwise means following control flow,
+    // which is a different tool - what covers it instead is XDG_CONFIG_HOME arriving
+    // from test/CMakeLists.txt already pointed at the build tree, so a test that
+    // redirects late still never had the developer's config directory to write to.
+    void test_theSweepsDoNotSeeAnOutOfOrderRedirect()
+    {
+        const QString lateRedirect = QStringLiteral("QTemporaryDir mConfigDir;\n"
+                                                    "void testStoresAPassword() { CredentialManager::storeCredential(profile, key, password); }\n"
+                                                    "void testSomethingElse() { qputenv(\"XDG_CONFIG_HOME\", mConfigDir.path().toUtf8()); }\n");
+        QVERIFY(missingCredentialStoreIsolation(lateRedirect).isEmpty());
+    }
+
+    // Likewise: the config root a test hands QStandardPaths is not spelled anywhere in
+    // the test, so nothing here can tell a written-to directory from a read one
+    void test_theSweepsDoNotSeeWhereTheConfigRootActuallyLands()
+    {
+        const QString throughAHelper = QStringLiteral("QTemporaryDir mConfigDir;\n"
+                                                      "void initTestCase() { qputenv(\"XDG_CONFIG_HOME\", mConfigDir.path().toUtf8()); }\n"
+                                                      "void testWrites() { TestSettings::write(qsl(\"%1/elsewhere\").arg(QDir::homePath())); }\n");
+        QVERIFY(missingCredentialStoreIsolation(throughAHelper).isEmpty());
+        QVERIFY(missingIsolation(throughAHelper).isEmpty());
     }
 
     void test_aSourceThatOnlyNamesTheCredentialStoreInProseIsNotTheSubject()
