@@ -5482,8 +5482,17 @@ void TLuaInterpreter::set_lua_string(const QString& varName, const QString& varV
         mUtf8Scratch.resize(end - mUtf8Scratch.constData());
     }
 
+    // Raw, because this is how Mudlet hands a dispatch its own "command" and
+    // "line", and it runs with the whole dispatch on the C++ stack below it. The
+    // globals table can carry a metatable, and a __newindex a package put there
+    // runs on the first write of a name that is absent - a raise from one
+    // longjmps to the nearest pcall, skipping every C++ destructor between,
+    // which is the class CI/check-lua-error-strands.lua exists for. Setting
+    // these was never something a package could usefully intercept anyway: the
+    // name is absent only until the first dispatch writes it.
+    lua_pushstring(L, mLastGlobalNameUtf8.constData());
     lua_pushstring(L, mUtf8Scratch.constData());
-    lua_setglobal(L, mLastGlobalNameUtf8.constData());
+    lua_rawset(L, LUA_GLOBALSINDEX);
     if (mUtf8Scratch.capacity() > scmMaxRetainedUtf8Scratch) {
         mUtf8Scratch = QByteArray();
     }

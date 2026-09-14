@@ -527,15 +527,21 @@ describe("Alias processing", function()
                 assert.are.equal("meta_outer alpha", seen.outerCommand, "the outer alias was handed another caller's command")
             end)
 
-            -- Setting "command" is Mudlet's own, outside this save and restore,
-            -- so a raise there is not preventable here - but the state it strands
-            -- must be discarded rather than handed to whoever restores next
-            it("discards a nested state that a raise inside the dispatch stranded", function()
+            -- Handing the dispatch its own "command" is Mudlet's own write, and it
+            -- goes in raw for the same reason the parking does. A raise from a
+            -- package's __newindex there longjmps to the calling script's pcall
+            -- from the middle of the dispatch, past the restore below and past
+            -- every C++ destructor between - the command Host::send() split and
+            -- expandAlias()'s own copy of it leak outright, which is the class
+            -- CI/check-lua-error-strands.lua exists for.
+            it("hands the dispatch its command without running a __newindex", function()
                 local seen = {}
                 local innerId = tempAlias([[^stranded_inner$]], function()
                     seen.innerRan = true
+                    seen.innerCommand = command
                 end)
                 local midId = tempAlias([[^stranded_mid (\w+)$]], function()
+                    -- absent, so a __newindex is the only thing the write can reach
                     rawset(_G, "command", nil)
                     setmetatable(_G, {__newindex = function(globals, key, value)
                         if key == "command" then
@@ -549,6 +555,7 @@ describe("Alias processing", function()
                 local outerId = tempAlias([[^stranded_outer (\w+)$]], function()
                     expandAlias("stranded_mid beta", false)
                     seen.outerMatch = matches[2]
+                    seen.outerCommand = command
                 end)
                 finally(function()
                     killAlias(innerId)
@@ -558,9 +565,11 @@ describe("Alias processing", function()
 
                 expandAlias("stranded_outer alpha", false)
 
-                assert.is_true(seen.raised, "the __newindex should have raised, or this spec is testing nothing")
-                assert.is_nil(seen.innerRan, "the raise should have come before the nested alias ran")
-                assert.are.equal("alpha", seen.outerMatch, "the outer alias was handed the stranded state instead of its own")
+                assert.is_false(seen.raised, "setting the dispatch's command ran a package's __newindex")
+                assert.is_true(seen.innerRan, "the nested alias never ran")
+                assert.are.equal("stranded_inner", seen.innerCommand, "the nested alias was not given its own command")
+                assert.are.equal("alpha", seen.outerMatch, "the outer alias was handed another caller's captures")
+                assert.are.equal("stranded_outer alpha", seen.outerCommand, "the outer alias was handed another caller's command")
             end)
 
         end)
