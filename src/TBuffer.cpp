@@ -1114,12 +1114,26 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 continue;
             }
 
-            if (spanEnd >= localBufferLength) {
+            if (spanEnd >= localBufferDecodableLength) {
                 // We ran to the end of the buffer while still inside a CSI
                 // sequence - therefore we have got a split between data packets
-                // and are not in a position to process the current line further...
+                // and are not in a position to process the current line further.
+                // A flush marker is not part of the sequence and is not held
+                // with it (decodableLength()), the same way the OSC path below
+                // drops one out of its own payload: kept, it would never match
+                // a parameter byte when the rest of the sequence arrives, and
+                // the colour or cursor move the game asked for would be thrown
+                // away and the rest of its sequence printed as text.
 
-                mIncompleteSequenceBytes = localBuffer.substr(spanStart);
+                mIncompleteSequenceBytes = localBuffer.substr(spanStart, localBufferDecodableLength - spanStart);
+                if (localBufferDecodableLength < localBufferLength) {
+                    // The text ahead of the sequence is still a line the marker
+                    // came to flush. It cannot be left to the loop to notice:
+                    // this pass is inside a CSI, so going round again would
+                    // feed the marker back into the scan above:
+                    size_t markerPosition = localBufferDecodableLength;
+                    commitLine(CHAR_CARRIAGE_RETURN, markerPosition, isFromServer, false);
+                }
                 return;
             }
 

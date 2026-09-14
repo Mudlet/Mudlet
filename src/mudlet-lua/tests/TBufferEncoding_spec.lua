@@ -345,8 +345,10 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
   -- so the timeout has nothing left to do. Only connecting or disconnecting
   -- clears that, and other spec files sharing this profile do feed an IAC GA, so
   -- put the session back by taking a connection to the test fixture and dropping
-  -- it again. Without this every case below still passes - on the path that
-  -- never produces a flush marker at all.
+  -- it again. Without it no flush marker is produced at all, which the line
+  -- count each case asserts catches - so a reconnect that stopped working would
+  -- turn these red rather than quietly green, and that assertion is what makes
+  -- it so.
   local function restorePostingTimer()
     if postingTimerRuns() then
       return nil
@@ -393,6 +395,18 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
     return true
   end
 
+  -- The foreground colour of the first "RED" in the buffer from lineNumber on,
+  -- or nil when there is none - which is itself a result worth asserting
+  local function redForegroundFrom(lineNumber)
+    for line = lineNumber, getLastLineNumber("main") do
+      moveCursor("main", 0, line)
+      if selectString("RED", 1) >= 0 then
+        return {getFgColor("main")}
+      end
+    end
+    return nil
+  end
+
   -- Hands the pieces over with a quiet gap longer than the timeout between each,
   -- so the flush marker lands between them, and answers what reached the buffer:
   -- the text after the mark, and how many buffer lines it took. The marker ends
@@ -423,7 +437,7 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
       end
     end
     assert.is_true(#payload > 0, "no line carrying the fed bytes reached the buffer")
-    return table.concat(payload), #payload
+    return table.concat(payload), #payload, payload
   end
 
   it("breaks an ASCII line at the flush marker", function()
@@ -451,9 +465,14 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
     using("UTF-8")
 
     -- U+65E5, the character the defect was reported with
-    local text, lines = splitAcrossTimeout(bytes(0xE6, 0x97), bytes(0xA5))
+    local text, lines, perLine = splitAcrossTimeout(bytes(0xE6, 0x97), bytes(0xA5))
     assert.equals("日:end", text)
     assert.equals(2, lines)
+    -- Which line each piece lands on, not just what they add up to: the marker
+    -- ends the line the first piece opened, and the character belongs wholly to
+    -- the line the rest of its bytes opened - one byte held too many or too few
+    -- would move it and still add up the same
+    assert.same({"", "日:end"}, perLine)
   end)
 
   it("keeps a four byte UTF-8 character two markers land inside", function()
@@ -485,6 +504,28 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
     assert.equals(2, lines)
   end)
 
+  it("keeps a GBK character, and the byte after it, when the marker lands inside", function()
+    if timerUnavailable() then return end
+    using("GBK")
+
+    -- GBK holds back a lone lead byte from a different place in the decoder than
+    -- GB18030 does, so it needs a case of its own
+    local text, lines = splitAcrossTimeout(bytes(0xA4), bytes(0xA4))
+    assert.equals("い:end", text)
+    assert.equals(2, lines)
+  end)
+
+  it("keeps a GB18030 character the marker lands after its first byte", function()
+    if timerUnavailable() then return end
+    using("GB18030")
+
+    -- The other GB18030 case parts the sequence once its length is already
+    -- known; this one parts it before the second byte says how long it is
+    local text, lines = splitAcrossTimeout(bytes(0x95), bytes(0x32, 0x82, 0x36))
+    assert.equals("𠀀:end", text)
+    assert.equals(2, lines)
+  end)
+
   it("keeps an EUC-KR character the marker lands inside", function()
     if timerUnavailable() then return end
     using("EUC-KR")
@@ -493,5 +534,49 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
     local text, lines = splitAcrossTimeout(bytes(0xC7), bytes(0xD1))
     assert.equals("한:end", text)
     assert.equals(2, lines)
+  end)
+
+  it("keeps an ANSI colour sequence the marker lands inside", function()
+    if timerUnavailable() then return end
+    using("UTF-8")
+
+    -- The marker is no more part of an escape sequence than it is of a
+    -- character: held with the half of "CSI 31 m" that had arrived, it would
+    -- never match a parameter byte when the rest turned up, so the colour would
+    -- be dropped and the "1m" that completes it printed as text
+    local splitMark = getLastLineNumber("main")
+    local text, lines, perLine = splitAcrossTimeout("\27[3", "1mRED\27[m")
+    assert.equals("RED:end", text)
+    assert.equals(2, lines)
+    assert.same({"", "RED:end"}, perLine)
+
+    -- and the colour the game asked for was applied, rather than the sequence
+    -- merely being swallowed. Which colour ANSI 31 is depends on the profile's
+    -- palette, so the same sequence arriving whole says what to expect:
+    local wholeMark = getLastLineNumber("main")
+    feed("whole:\27[31mRED\27[m\n")
+    beQuiet()
+    assert.same(redForegroundFrom(wholeMark), redForegroundFrom(splitMark))
+    assert.is_not_nil(redForegroundFrom(splitMark), "no coloured text to read a colour from")
+  end)
+
+  it("takes a carriage return in locally fed text as data, not as a marker", function()
+    using("UTF-8")
+
+    -- Only cTelnet makes the marker, so a carriage return handed to
+    -- feedTriggers() is the caller's own byte and the decoder has to see it: the
+    -- truncated lead byte ahead of it is rejected together with it, in the one
+    -- replacement mark, and does not end the line.
+    local mark = getLastLineNumber("main")
+    feedTriggers("local:" .. bytes(0xC3, 0x0D))
+    feedTriggers("tail\n")
+
+    local seen
+    for _, line in ipairs(getLines("main", mark, getLastLineNumber("main") + 1)) do
+      if line:find("^local:") then
+        seen = line
+      end
+    end
+    assert.equals("local:" .. replacement .. "tail", seen)
   end)
 end)
