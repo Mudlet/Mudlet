@@ -67,6 +67,20 @@ public:
 private:
     std::shared_ptr<TMediaPlayer> mPlayer;
 };
+
+// Tells a request that leaves the media type to the protocol's default - no "type" field, a null
+// one, or an empty string - from one that names a type. parseJSONByMediaType() answers
+// MediaTypeNotSet for both, and only the first of them may be defaulted.
+bool mediaTypeNamed(const QJsonObject& json)
+{
+    const auto mediaTypeJSON = json.value(qsl("type"));
+
+    if (mediaTypeJSON.isUndefined() || mediaTypeJSON.isNull()) {
+        return false;
+    }
+
+    return !mediaTypeJSON.isString() || !mediaTypeJSON.toString().isEmpty();
+}
 } // namespace
 
 // Public
@@ -138,9 +152,13 @@ void TMedia::playMedia(TMediaData& mediaData)
             }
 
             const QString absolutePathFileName = TMedia::setupMediaAbsolutePathFileName(mediaData);
-            const QFile mediaFile(absolutePathFileName);
 
-            if (!mediaFile.exists()) {
+            // Whether there is a file to play, rather than merely something of that name: a name
+            // that resolves to a directory - "." and "./" name the media directory itself, "sub/."
+            // one below it - is something exists() answers true for, and the player handed a
+            // directory fails to load it and announces a sysMediaFinished for media that never
+            // played. Symlinks are followed, so a file linked into the media directory still plays.
+            if (!QFileInfo(absolutePathFileName).isFile()) {
                 if (fileRelative) {
                     if (!TMedia::processUrl(mediaData)) {
                         return;
@@ -2456,6 +2474,14 @@ void TMedia::parseJSONForMediaPlay(QJsonObject& json)
     mediaData.setMediaType(TMedia::parseJSONByMediaType(json));
 
     if (mediaData.mediaType() == TMediaData::MediaTypeNotSet) {
+        if (mediaTypeNamed(json)) {
+            // Sound is the default for a request that names no type at all. One that names a type
+            // Mudlet does not know is refused rather than guessed at: played as a sound, the
+            // server's own stop for the type it meant would never reach it.
+            qWarning() << qsl("TMedia::parseJSONForMediaPlay() WARNING - rejected a Client.Media.Play naming an unknown media type: %1.").arg(json.value(qsl("type")).toVariant().toString());
+            return;
+        }
+
         mediaData.setMediaType(TMediaData::MediaTypeSound);
     }
 
@@ -2473,6 +2499,20 @@ void TMedia::parseJSONForMediaPlay(QJsonObject& json)
     mediaData.setMediaContinue(TMedia::parseJSONByMediaContinue(json));
     mediaData.setMediaClose(TMedia::parseJSONByMediaClose(json));
     mediaData.setMediaCaption(TMedia::parseJSONByMediaCaption(json));
+
+    if (mediaData.mediaFileName().isEmpty()) {
+        // Without the one required field there is nothing to play, and nothing below is going to
+        // find that out: an empty name resolves to the media directory, which playMedia() would
+        // otherwise send off to be downloaded over. A request carrying only a key or a tag is
+        // still how a server resumes what it paused, which playMedia() answers before it looks at
+        // the file at all, so that keeps its chance; anything else is refused here, in the same
+        // silence parseGMCP()'s empty-object guard gives a Client.Media.Play {}.
+        if (!resume(mediaData)) {
+            qWarning() << qsl("TMedia::parseJSONForMediaPlay() WARNING - rejected a Client.Media.Play carrying no usable media file name.");
+        }
+
+        return;
+    }
 
     TMedia::playMedia(mediaData);
 }
