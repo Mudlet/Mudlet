@@ -67,6 +67,20 @@ public:
 private:
     std::shared_ptr<TMediaPlayer> mPlayer;
 };
+
+// Tells a request that leaves the media type to the protocol's default - no "type" field, a null
+// one, or an empty string - from one that names a type. parseJSONByMediaType() answers
+// MediaTypeNotSet for both, and only the first of them may be defaulted.
+bool mediaTypeNamed(const QJsonObject& json)
+{
+    const auto mediaTypeJSON = json.value(qsl("type"));
+
+    if (mediaTypeJSON.isUndefined() || mediaTypeJSON.isNull()) {
+        return false;
+    }
+
+    return !mediaTypeJSON.isString() || !mediaTypeJSON.toString().isEmpty();
+}
 } // namespace
 
 // Public
@@ -2456,6 +2470,14 @@ void TMedia::parseJSONForMediaPlay(QJsonObject& json)
     mediaData.setMediaType(TMedia::parseJSONByMediaType(json));
 
     if (mediaData.mediaType() == TMediaData::MediaTypeNotSet) {
+        if (mediaTypeNamed(json)) {
+            // Sound is the default for a request that names no type at all. One that names a type
+            // Mudlet does not know is refused rather than guessed at: played as a sound, the
+            // server's own stop for the type it meant would never reach it.
+            qWarning() << qsl("TMedia::parseJSONForMediaPlay() WARNING - rejected a Client.Media.Play naming an unknown media type: %1.").arg(json.value(qsl("type")).toVariant().toString());
+            return;
+        }
+
         mediaData.setMediaType(TMediaData::MediaTypeSound);
     }
 
@@ -2473,6 +2495,20 @@ void TMedia::parseJSONForMediaPlay(QJsonObject& json)
     mediaData.setMediaContinue(TMedia::parseJSONByMediaContinue(json));
     mediaData.setMediaClose(TMedia::parseJSONByMediaClose(json));
     mediaData.setMediaCaption(TMedia::parseJSONByMediaCaption(json));
+
+    if (mediaData.mediaFileName().isEmpty()) {
+        // Without the one required field there is nothing to play: the profile's own media
+        // directory stands in for the file further down, and the load that then fails announces a
+        // sysMediaFinished for media that never played. A request carrying only a key or a tag is
+        // still how a server resumes what it paused, which playMedia() answers before it looks at
+        // the file at all, so that keeps its chance; anything else is refused here, in the silence
+        // Client.Media.Play {} already gets.
+        if (!resume(mediaData)) {
+            qWarning() << qsl("TMedia::parseJSONForMediaPlay() WARNING - rejected a Client.Media.Play carrying no usable media file name.");
+        }
+
+        return;
+    }
 
     TMedia::playMedia(mediaData);
 }

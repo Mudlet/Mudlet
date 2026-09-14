@@ -2006,6 +2006,71 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals("busted-gmcp-music", finished[1].key)
   end)
 
+  it("a Client.Media.Play message with no usable name is refused without an event", function()
+    -- #10767. name is the one required field of Client.Media.Play. A request
+    -- carrying none of it - absent, empty, or not a string - used to reach
+    -- playMedia() with an empty file name, where the profile's own media
+    -- directory stood in for the file: the load then failed, and since the
+    -- failed-load event was added a failure announces sysMediaFinished. A
+    -- script keying off that event was woken for media that never played, with
+    -- an empty file name, key and tag to attribute it by. Client.Media.Play {}
+    -- is already refused in silence by parseGMCP()'s empty-object guard, and
+    -- these are that same request with one unusable field added.
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+
+    local started, finished = {}, {}
+    collect("sysMediaStarted", started)
+    collect("sysMediaFinished", finished)
+
+    feedGmcp('Client.Media.Play {"type": "sound"}')
+    feedGmcp('Client.Media.Play {"name": "", "type": "sound"}')
+    feedGmcp('Client.Media.Play {"name": 42, "type": "sound"}')
+    feedGmcp("Client.Media.Play {}")
+    -- The bogus event arrives when the backend gives up on what it was handed,
+    -- which is asynchronous, so its absence only means something after a wait
+    -- long enough to have seen it.
+    waitForEvent("sysMediaFinished", 2000)
+    assert.equals(0, #finished, "a request with no usable name raised sysMediaFinished for media that never played")
+    assert.equals(0, #started, "a request with no usable name started a playback")
+
+    -- and the reader is not wedged by the refusals: the next well-formed
+    -- request still plays
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-nameless-control"}')
+    waitForCount("sysMediaStarted", started, 1)
+    assert.equals(1, #started, gmcpRefused)
+  end)
+
+  it("a Client.Media.Play message naming an unknown type is refused instead of played as a sound", function()
+    -- #10768. An unrecognised type used to fall back to sound, so a game that
+    -- mistyped "music" had its music started in the sound pool - where its own
+    -- Client.Media.Stop {"type": "music"} could not reach it. The protocol's
+    -- sound default belongs to a request that names no type at all, so that
+    -- case is left alone and only a type naming something Mudlet does not know
+    -- is refused.
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+
+    local started = {}
+    collect("sysMediaStarted", started)
+
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "type": "musci", "key": "busted-gmcp-unknown-type"}')
+    waitForEvent("sysMediaStarted", 2000)
+    assert.equals(0, #started, "a request naming an unknown media type was played anyway")
+
+    -- an empty type is not an unknown one: it still means sound
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "type": "", "key": "busted-gmcp-empty-type"}')
+    waitForCount("sysMediaStarted", started, 1)
+    assert.equals(1, #started, gmcpRefused)
+    assert.equals("sound", started[1].mediaType)
+  end)
+
   it("a Client.Media.Stop message ends what a Client.Media.Play started", function()
     if mediaPlaybackUnavailable() then
       return
@@ -2050,6 +2115,37 @@ describe("Media playback effects with a generated sound file", function()
     waitForCount("sysMediaPaused", paused, 1)
     assert.equals(1, #paused)
     assert.equals("busted-gmcp-paused", paused[1].key)
+  end)
+
+  it("a Client.Media.Play message carrying only a key resumes what the server paused", function()
+    -- Pinning the one Client.Media.Play that has no name and still has
+    -- something to do: playMedia() looks for a paused player matching the key
+    -- before it looks at the file at all, so a server can resume by key alone
+    -- without repeating the file name. Refusing every name-less request for
+    -- #10767 would have taken this with it.
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+
+    local paused = {}
+    collect("sysMediaPaused", paused)
+
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-resumed"}')
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)), gmcpRefused)
+
+    feedGmcp('Client.Media.Pause {"key": "busted-gmcp-resumed"}')
+    waitForCount("sysMediaPaused", paused, 1)
+    assert.equals(1, #paused)
+
+    feedGmcp('Client.Media.Play {"key": "busted-gmcp-resumed"}')
+
+    -- pauseMedia() passes over a player that is not playing, so a second pause
+    -- that lands is the resume being visible from here.
+    feedGmcp('Client.Media.Pause {"key": "busted-gmcp-resumed"}')
+    waitForCount("sysMediaPaused", paused, 2)
+    assert.equals(2, #paused, "a key-only Client.Media.Play did not resume the paused playback")
   end)
 
   it("a Client.Media.Pause message with no fields pauses everything the server started", function()
