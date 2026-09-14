@@ -67,6 +67,7 @@
 #include <cmath>
 #include <limits>
 #include <math.h>
+#include <utility>
 
 #ifdef MUDLET_MEMORY_TRACKING
 #if defined(Q_OS_LINUX)
@@ -129,20 +130,21 @@ static bool timerDelayFits(const double time)
     return msec >= 0 && msec < 86400000;
 }
 
-// A stopwatch keeps its time as a qint64 count of milliseconds, so an
-// adjustment is only usable if the milliseconds it rounds to is one as well.
-// Doing that rounding here in the double domain avoids converting an
-// out-of-range double to an integer, which is undefined behaviour, and written
-// this way a NaN or infinite adjustment fails the comparison too. 2^63 is
-// exactly representable as a double and is the first value past qint64's
-// maximum; the bound is symmetric because applying an adjustment negates it,
-// and qint64's own minimum of -2^63 cannot be negated. Handing the rounded
-// value back keeps the caller from rounding the same product a second time:
+// A stopwatch holds stopWatch::csmMaximumMilliSeconds of time in either
+// direction and clamps to that end of its range whatever accumulates past it,
+// but an adjustment asking outright for more than the whole range is a mistake
+// worth reporting rather than quietly flattening. It is the milliseconds the
+// adjustment rounds to that have to be bounded, as the stopwatch keeps its time
+// in those, and repeating that rounding here in the double domain keeps an
+// enormous adjustment from being converted to an integer it does not fit, which
+// is undefined behaviour. The comparison is written so that a NaN or infinite
+// adjustment fails it as well. Handing the rounded value back saves the caller
+// rounding the same product a second time:
 static std::pair<bool, qint64> stopWatchAdjustmentAsMilliSeconds(const double adjustment)
 {
-    constexpr double limit = 9223372036854775808.0;
+    constexpr double limit = static_cast<double>(stopWatch::csmMaximumMilliSeconds);
     const double milliSeconds = std::round(adjustment * 1000.0);
-    if (!(milliSeconds > -limit && milliSeconds < limit)) {
+    if (!(milliSeconds >= -limit && milliSeconds <= limit)) {
         return {false, 0};
     }
 
@@ -255,13 +257,10 @@ int TLuaInterpreter::adjustStopWatch(lua_State* L)
     const double adjustment = getVerifiedDouble(L, __func__, 2, "modification in seconds");
     auto [fits, milliSeconds] = stopWatchAdjustmentAsMilliSeconds(adjustment);
     if (!fits) {
-        return warnArgumentValue(L, __func__, qsl("modification in seconds must be a finite number of at most 9223372036854774.784 in magnitude, got %1").arg(adjustment, 0, 'g', 17));
-    }
-
-    auto pStopWatch = host.getStopWatch(watchId);
-    if (pStopWatch && !pStopWatch->adjustmentFits(milliSeconds)) {
         return warnArgumentValue(
-                L, __func__, qsl("modification in seconds of %1 would take stopwatch %2 past the time it can hold").arg(QString::number(adjustment, 'g', 17), QString::number(watchId)));
+                L,
+                __func__,
+                qsl("modification in seconds must be a finite number from -%1 to %1, got %2").arg(QString::number(stopWatch::csmMaximumMilliSeconds / 1000)).arg(QString::number(adjustment, 'g', 17)));
     }
 
     const bool result = host.adjustStopWatch(watchId, milliSeconds);

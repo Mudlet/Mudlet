@@ -61,7 +61,6 @@
 #include "SecureStringUtils.h"
 
 #include <chrono>
-#include <limits>
 #include <QtConcurrentRun>
 #include <QApplication>
 #include <QCoreApplication>
@@ -82,7 +81,6 @@
 #include <QTemporaryFile>
 #include <QTextStream>
 #include <QThread>
-#include <QtNumeric>
 #include <zip.h>
 #include <memory>
 
@@ -151,8 +149,8 @@ bool stopWatch::stop()
         return false;
     }
 
-    // Is running - so stop and note time:
-    mElapsedTime = mEffectiveStartDateTime.msecsTo(QDateTime::currentDateTimeUtc());
+    // Is running - so stop and note time, while it still counts as running:
+    mElapsedTime = getElapsedMilliSeconds();
     mIsRunning = false;
     return true;
 }
@@ -178,6 +176,11 @@ bool stopWatch::reset()
     return true;
 }
 
+qint64 stopWatch::clampToRange(const qint64 milliSeconds)
+{
+    return qBound(-csmMaximumMilliSeconds, milliSeconds, csmMaximumMilliSeconds);
+}
+
 void stopWatch::adjustMilliSeconds(const qint64 adjustment)
 {
     if (!mIsInitialised) {
@@ -189,42 +192,20 @@ void stopWatch::adjustMilliSeconds(const qint64 adjustment)
 
     if (!mIsRunning) {
         // Not running so adjust stored elapsed time:
-        mElapsedTime += adjustment;
+        mElapsedTime = clampToRange(mElapsedTime + adjustment);
+        return;
     }
 
     // Is running so adjust effective start time - to increase the effective
-    // elapsed time we must subtract the adjustment from the effect start time:
-    mEffectiveStartDateTime = mEffectiveStartDateTime.addMSecs(-adjustment);
-}
-
-// Applying an adjustment adds it to the elapsed time and shifts the effective
-// start time by the same amount the other way, so it is only usable if both of
-// those stay inside what a qint64 and a QDateTime can hold. Without this a
-// stopwatch would silently wrap onto a wrong time, or - once its effective
-// start time no longer exists - report no time at all ever again:
-bool stopWatch::adjustmentFits(const qint64 adjustment) const
-{
-    if (adjustment == std::numeric_limits<qint64>::min()) {
-        // Applying it negates it, and this one cannot be negated:
-        return false;
-    }
-
-    // The adjustment lands on the elapsed time either way - added to the stored
-    // one when stopped, and to the interval a running stopwatch measures from
-    // its effective start time - so the sum has to be a qint64 either way. A
-    // valid effective start time does not imply that: every date from the epoch
-    // back to the start of the range leaves an interval to now that no longer
-    // fits, and that interval is what gets reported:
-    const qint64 elapsed = getElapsedMilliSeconds();
-    if (adjustment > 0 && elapsed > std::numeric_limits<qint64>::max() - adjustment) {
-        return false;
-    }
-    if (adjustment < 0 && elapsed < std::numeric_limits<qint64>::min() - adjustment) {
-        return false;
-    }
-
-    // A stopwatch that has never run has no effective start time to shift yet:
-    return !mEffectiveStartDateTime.isValid() || mEffectiveStartDateTime.addMSecs(-adjustment).isValid();
+    // elapsed time we must subtract the adjustment from the effective start
+    // time. Going via the total elapsed time is what puts the clamp at the end
+    // of the range: shifting the existing start time by the adjustment would
+    // carry it past instead. Both the time this reads and the adjustment are
+    // themselves bounded by the range, so their sum cannot overflow before it
+    // is clamped:
+    const qint64 nowMSecs = QDateTime::currentMSecsSinceEpoch();
+    const qint64 elapsed = clampToRange(clampToRange(nowMSecs - mEffectiveStartDateTime.toMSecsSinceEpoch()) + adjustment);
+    mEffectiveStartDateTime.setMSecsSinceEpoch(nowMSecs - elapsed);
 }
 
 qint64 stopWatch::getElapsedMilliSeconds() const
@@ -239,23 +220,9 @@ qint64 stopWatch::getElapsedMilliSeconds() const
         return mElapsedTime;
     }
 
-    if (!mEffectiveStartDateTime.isValid()) {
-        // Nothing to measure from:
-        return 0;
-    }
-
-    // Is running so calculate elapsed time. A stopwatch adjusted to near the
-    // end of the range runs out of it as time passes, so report the end of the
-    // range rather than let this subtraction wrap onto a time of the wrong
-    // sign:
-    const qint64 startMSecs = mEffectiveStartDateTime.toMSecsSinceEpoch();
-    const qint64 nowMSecs = QDateTime::currentDateTimeUtc().toMSecsSinceEpoch();
-    qint64 elapsed = 0;
-    if (qSubOverflow(nowMSecs, startMSecs, &elapsed)) {
-        return startMSecs < 0 ? std::numeric_limits<qint64>::max() : std::numeric_limits<qint64>::min();
-    }
-
-    return elapsed;
+    // Is running so calculate elapsed time - clamped, as a stopwatch adjusted
+    // close to the end of the range runs out of it as time passes:
+    return clampToRange(mEffectiveStartDateTime.msecsTo(QDateTime::currentDateTimeUtc()));
 }
 
 QString stopWatch::getElapsedDayTimeString() const

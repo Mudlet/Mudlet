@@ -1516,6 +1516,51 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       container:resetBorder("left")
       assert.are.equal(0, getBorderLeft())
     end)
+
+    it("leaves the console some of the window when the container is as big as it", function()
+      local winw = getMainWindowSize()
+      local container = make("gapFullWidth", {width = winw})
+      container:attachToBorder("left")
+      assert.is_true(getBorderLeft() < winw, "the container reserved the whole window")
+      assert.is_true(getColumnCount() > 0, "no columns were left for text")
+    end)
+
+    -- the top and bottom borders are bounded against the window's height, which
+    -- the left-attached cases above never reach
+    it("leaves the console some of the window when the container is as tall as it", function()
+      local _, winh = getMainWindowSize()
+      local topBefore = getBorderTop()
+      finally(function() setBorderTop(topBefore) end)
+      local container = make("gapFullHeight", {height = winh})
+      container:attachToBorder("top")
+      assert.is_true(getBorderTop() < winh, "the container reserved the whole window")
+      assert.is_true(getRowCount() > 0, "no rows were left for text")
+    end)
+
+    -- a container that stops short of the edge keeps the reservation that clears
+    -- its own far edge, so no text is laid out underneath it
+    it("leaves a container that does not reach the edge reserving its whole width", function()
+      local winw = getMainWindowSize()
+      local container = make("gapShortOfEdge", {width = math.floor(winw * 0.85)})
+      container:attachToBorder("left")
+      assert.are.equal(container:get_width() + container:get_x() + container.attachedMargin, getBorderLeft())
+    end)
+
+    -- the cap belongs on the container's own reservation rather than on the
+    -- widest one applied, so resetBorder hands back a capped figure too
+    it("keeps the capped reservation when a smaller container detaches", function()
+      local winw = getMainWindowSize()
+      local narrow = make("gapCapNarrow", {width = 100})
+      local wide = make("gapCapWide", {width = winw})
+      narrow:attachToBorder("left")
+      wide:attachToBorder("left")
+      local capped = getBorderLeft()
+
+      narrow:detach()
+
+      assert.are.equal(capped, getBorderLeft())
+      assert.is_true(getColumnCount() > 0, "no columns were left for text")
+    end)
   end)
 
   describe("Adjustable.Container:connectToBorder/disconnect", function()
