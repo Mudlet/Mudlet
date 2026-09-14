@@ -676,8 +676,8 @@ private:
 
     inline static const QRegularExpression csmSimplifyStatusBarRegex{qsl(R"(^(?:\[\*\] )?(.+?) \|)")};
 
-    // How many trigger pattern rows the pattern list has room for however the
-    // splitter and the advanced options are arranged - see issue #2548
+    // How many trigger pattern rows fit in the pattern list in full, however
+    // the splitter and the advanced options are arranged - see issue #2548
     static constexpr int csmMinimumVisiblePatternRows = 5;
 
     QAction* mAddItem = nullptr;

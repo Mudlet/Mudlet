@@ -1407,13 +1407,19 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     // enough for a useful number of them. The right hand column of advanced
     // options used to provide that height as a side effect, so collapsing it
     // left a single row and a sliver of the next one - hiding the very
-    // patterns the room was made for. Issue #2548 settled on five. It is the
-    // laid out height a row takes rather than the smaller height it could be
-    // squeezed to that decides how many of them fit, and the frame has to be
-    // paid for on top, or the last row is clipped:
+    // patterns the room was made for. Issue #2548 settled on five.
+    //
+    // Measure a row by its minimum rather than its preferred height: once the
+    // list is longer than it can show - the case this floor is here for - the
+    // scroll area lays its inner widget out at that widget's minimum, so the
+    // minimum is the height the rows really get. The frame and the horizontal
+    // scrollbar come off the viewport rather than off the rows, so they are
+    // paid for on top; a colour trigger's row is wider than a narrow editor
+    // and without that allowance its scrollbar eats the fifth row.
     const auto* pFirstPatternItem = mTriggerPatternEdit.at(0);
-    const int triggerWidgetItemHeight = qMax(pFirstPatternItem->sizeHint().height(), pFirstPatternItem->minimumSizeHint().height());
-    mpScrollArea->setMinimumHeight(triggerWidgetItemHeight * csmMinimumVisiblePatternRows + 2 * mpScrollArea->frameWidth());
+    const int patternRowHeight = pFirstPatternItem->minimumSizeHint().height();
+    const int scrollAreaChromeHeight = 2 * mpScrollArea->frameWidth() + mpScrollArea->horizontalScrollBar()->sizeHint().height();
+    mpScrollArea->setMinimumHeight(patternRowHeight * csmMinimumVisiblePatternRows + scrollAreaChromeHeight);
 
     widget_searchTerm->updateGeometry();
 

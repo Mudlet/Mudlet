@@ -113,23 +113,31 @@ private:
     }
 
     // Rows that a user can read and type into in full - a row clipped by the
-    // viewport edge is the "half row" the bug was about, so it does not count
+    // top or bottom of the viewport is the "half row" the bug was about, so it
+    // does not count. Only the vertical fit is asked about: a row wider than
+    // the viewport is reached by scrolling sideways and is not this bug, and
+    // testing both axes at once would report no visible rows at all whenever
+    // the horizontal scrollbar is up.
     int fullyVisiblePatternRows() const
     {
-        auto* viewport = mpEditor->mpScrollArea->viewport();
-        const QRect visible = viewport->rect();
         int count = 0;
         for (int i = 0; i < mpEditor->mVisiblePatternCount && i < mpEditor->mTriggerPatternEdit.size(); ++i) {
             auto* pRow = mpEditor->mTriggerPatternEdit.at(i);
             if (!pRow || !pRow->isVisible()) {
                 continue;
             }
-            const QRect rowRect(pRow->mapTo(viewport, QPoint(0, 0)), pRow->size());
-            if (visible.contains(rowRect)) {
+            if (rowIsFullyVisible(pRow)) {
                 ++count;
             }
         }
         return count;
+    }
+
+    bool rowIsFullyVisible(const dlgTriggerPatternEdit* pRow) const
+    {
+        auto* viewport = mpEditor->mpScrollArea->viewport();
+        const int top = pRow->mapTo(viewport, QPoint(0, 0)).y();
+        return top >= 0 && top + pRow->height() <= viewport->height();
     }
 
 private slots:
@@ -212,8 +220,11 @@ private slots:
     void init()
     {
         // Every test here is about the collapsed state - expanding the advanced
-        // options gives the main area enough height that the list is fine
+        // options gives the main area enough height that the list is fine. The
+        // size is reset too, so a case that resizes cannot hand the next one a
+        // window it did not ask for, even when it fails part way through.
         mpEditor->slot_showAllTriggerControls(false);
+        mpEditor->resize(1100, 700);
         QCoreApplication::processEvents();
     }
 
@@ -262,10 +273,35 @@ private slots:
         QVERIFY2(selectTrigger(mNinePatternTrigger), "could not re-select the nine pattern trigger");
 
         QCOMPARE(pScrollBar->value(), 0);
-        auto* viewport = mpEditor->mpScrollArea->viewport();
+        QVERIFY2(rowIsFullyVisible(mpEditor->mTriggerPatternEdit.at(0)), "pattern 1 should be fully in view when a trigger is opened");
+    }
+    // A colour trigger's row carries two buttons captioned with the colours
+    // they set, so it is far wider than a narrow editor and the list puts up a
+    // horizontal scrollbar. That scrollbar is taken out of the viewport, so the
+    // five rows have to be budgeted for with it there.
+    void test_aHorizontalScrollbarDoesNotEatARow()
+    {
+        QVERIFY2(selectTrigger(mNinePatternTrigger), "could not select the nine pattern trigger");
         auto* pFirstRow = mpEditor->mTriggerPatternEdit.at(0);
-        const QRect firstRowRect(pFirstRow->mapTo(viewport, QPoint(0, 0)), pFirstRow->size());
-        QVERIFY2(viewport->rect().contains(firstRowRect), "pattern 1 should be fully in view when a trigger is opened");
+        pFirstRow->comboBox_patternType->setCurrentIndex(REGEX_COLOR_PATTERN);
+        QCoreApplication::processEvents();
+
+        // Narrow enough that the colour trigger row no longer fits across, but
+        // still wider than the editor will go - this is a reachable window size
+        mpEditor->resize(800, 700);
+        QCoreApplication::processEvents();
+        auto* pScrollArea = mpEditor->mpScrollArea;
+        QVERIFY2(pScrollArea->horizontalScrollBar()->isVisible(),
+                 qPrintable(qsl("this test needs the horizontal scrollbar up to mean anything - the row wants %1 pixels across and the viewport has %2")
+                                    .arg(QString::number(pFirstRow->minimumSizeHint().width()), QString::number(pScrollArea->viewport()->width()))));
+
+        const int shown = fullyVisiblePatternRows();
+        QVERIFY2(shown >= dlgTriggerEditor::csmMinimumVisiblePatternRows,
+                 qPrintable(qsl("%1 rows should still be readable with the horizontal scrollbar up, but %2 are - the viewport is %3 pixels tall and a row is %4")
+                                    .arg(QString::number(dlgTriggerEditor::csmMinimumVisiblePatternRows),
+                                         QString::number(shown),
+                                         QString::number(pScrollArea->viewport()->height()),
+                                         QString::number(pFirstRow->height()))));
     }
 };
 
