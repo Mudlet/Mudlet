@@ -114,6 +114,7 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
     friend class ScriptEventHandlerLifetimeTest;
     friend class TreeWidgetItemMoveTest;
     friend class TriggerEditorDisclosureTest;
+    friend class TriggerPatternListLayoutTest;
     friend class VariableEditorWriteBackTest;
 
     enum SearchDataRole {
@@ -674,6 +675,10 @@ private:
     edbee::TextSearcher* mpSourceEditorSearcher = nullptr;
 
     inline static const QRegularExpression csmSimplifyStatusBarRegex{qsl(R"(^(?:\[\*\] )?(.+?) \|)")};
+
+    // How many trigger pattern rows the pattern list has room for however the
+    // splitter and the advanced options are arranged - see issue #2548
+    static constexpr int csmMinimumVisiblePatternRows = 5;
 
     QAction* mAddItem = nullptr;
     QAction* mDeleteItem = nullptr;

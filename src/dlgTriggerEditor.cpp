@@ -1403,10 +1403,17 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     // fire this now as the theme has already been set and we need the syntax highlighter to pick it up
     mpHost->editorThemeChanged();
 
-    // force the minimum size of the scroll area for the trigger items to be one
-    // and a half trigger item widgets:
-    const int triggerWidgetItemMinHeight = qRound(mTriggerPatternEdit.at(0)->minimumSizeHint().height() * 1.5);
-    mpScrollArea->setMinimumHeight(triggerWidgetItemMinHeight);
+    // Force the minimum size of the scroll area for the trigger items to be
+    // enough for a useful number of them. The right hand column of advanced
+    // options used to provide that height as a side effect, so collapsing it
+    // left a single row and a sliver of the next one - hiding the very
+    // patterns the room was made for. Issue #2548 settled on five. It is the
+    // laid out height a row takes rather than the smaller height it could be
+    // squeezed to that decides how many of them fit, and the frame has to be
+    // paid for on top, or the last row is clipped:
+    const auto* pFirstPatternItem = mTriggerPatternEdit.at(0);
+    const int triggerWidgetItemHeight = qMax(pFirstPatternItem->sizeHint().height(), pFirstPatternItem->minimumSizeHint().height());
+    mpScrollArea->setMinimumHeight(triggerWidgetItemHeight * csmMinimumVisiblePatternRows + 2 * mpScrollArea->frameWidth());
 
     widget_searchTerm->updateGeometry();
 
@@ -7819,8 +7826,13 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
             patternItem->spinBox_lineSpacer->hide();
             patternItem->comboBox_patternType->setCurrentIndex(0);
         }
-        // Scroll to the last used pattern:
-        mpScrollArea->ensureWidgetVisible(mTriggerPatternEdit.at(qBound(0, patternList.size(), mVisiblePatternCount - 1)));
+        // Open the pattern list on pattern 1 - that is the one wanted first, and
+        // it is the row a trigger's own name and command sit next to. Setting
+        // the scrollbar rather than calling ensureWidgetVisible() also settles
+        // where the list opens: the widget is asked for its position before the
+        // layout that follows this selection has run, so scrolling to a row
+        // further down landed on a different row from one opening to the next.
+        mpScrollArea->verticalScrollBar()->setValue(0);
         const QString command = pT->getCommand();
         mpTriggersMainArea->lineEdit_trigger_name->setText(pItem->text(0));
         mpTriggersMainArea->label_idNumber->setText(QString::number(ID));
