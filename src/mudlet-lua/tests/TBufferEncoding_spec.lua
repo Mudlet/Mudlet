@@ -279,3 +279,219 @@ describe("Tests EUC-KR decoding", function()
     assert.equals(replacement, decoded(bytes(0xC7, 0x20)))
   end)
 end)
+
+describe("Tests a character whose bytes are split by the posting timeout", function()
+
+  -- cTelnet holds on to a line the game has not finished sending, and flushes
+  -- what it has by appending a carriage return of its own once the game has been
+  -- quiet for the network packet timeout (cTelnet::mTimeOut, 300ms by default).
+  -- That marker used to be decoded as though it were the rest of the multi-byte
+  -- character the same pause had split, which cost the character a pair of
+  -- replacement marks and, in Big5 and the GB encodings, the byte after it as
+  -- well - see issue #10766.
+
+  local telnetDirectory = os.getenv("MUDLET_TEST_TELNET_DIR")
+  local fixtureRequired = os.getenv("MUDLET_TEST_REQUIRE_TELNET_FIXTURE")
+
+  local function feed(data)
+    local ok, msg = feedTelnet(data)
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+  end
+
+  -- Comfortably past the timeout, in slices, so the posting timer gets to run:
+  local function beQuiet()
+    local waited = 0
+    while waited < 500 do
+      assert.is_true(pumpEvents(50), "pumpEvents needs MUDLET_TEST_MODE set, see the tests README")
+      waited = waited + 50
+    end
+  end
+
+  local function connected()
+    local _, _, isConnected = getConnectionInfo()
+    return isConnected
+  end
+
+  local function waitFor(predicate)
+    for _ = 1, 100 do
+      if predicate() then
+        return true
+      end
+      pumpEvents(50)
+    end
+    return predicate()
+  end
+
+  -- Feeds part of a line and answers whether the flush committed it, which is
+  -- the whole precondition of the cases below.
+  local function postingTimerRuns()
+    local mark = getLastLineNumber("main")
+    feed("timercheck")
+    beQuiet()
+    local flushed = false
+    for _, line in ipairs(getLines("main", mark, getLastLineNumber("main") + 1)) do
+      if line:find("timercheck", 1, true) then
+        flushed = true
+      end
+    end
+    -- Held rather than flushed, the probe would otherwise open the next line:
+    feed("\n")
+    beQuiet()
+    return flushed
+  end
+
+  -- The posting timer stops for the rest of the session once a game has ended a
+  -- line with IAC GA (cTelnet::mGA_Driver): such a game marks its own line ends,
+  -- so the timeout has nothing left to do. Only connecting or disconnecting
+  -- clears that, and other spec files sharing this profile do feed an IAC GA, so
+  -- put the session back by taking a connection to the test fixture and dropping
+  -- it again. Without this every case below still passes - on the path that
+  -- never produces a flush marker at all.
+  local function restorePostingTimer()
+    if postingTimerRuns() then
+      return nil
+    end
+    local handle = telnetDirectory and io.open(telnetDirectory .. "/port", "r")
+    if not handle then
+      return "an earlier spec stopped cTelnet's posting timer and the telnet fixture is not running to "
+             .. "restart it (run CI/telnet-fixture-server.py with MUDLET_TEST_TELNET_DIR set)"
+    end
+    local port = tonumber((handle:read("*a") or ""):match("%d+") or "")
+    handle:close()
+    if not port then
+      return "the telnet fixture wrote no port to " .. telnetDirectory .. "/port"
+    end
+    connectToServer("127.0.0.1", port)
+    if not waitFor(connected) then
+      return "never connected to the telnet fixture on port " .. port
+    end
+    disconnect()
+    if not waitFor(function() return not connected() end) then
+      return "the telnet fixture connection outlived the reconnect"
+    end
+    if not postingTimerRuns() then
+      return "cTelnet's posting timer did not start again after a reconnect"
+    end
+    return nil
+  end
+
+  -- nil once the timer is running again, otherwise why it could not be
+  local unavailable
+
+  setup(function()
+    unavailable = restorePostingTimer()
+  end)
+
+  local function timerUnavailable()
+    if not unavailable then
+      return false
+    end
+    if fixtureRequired then
+      assert.is_true(false, "MUDLET_TEST_REQUIRE_TELNET_FIXTURE is set but " .. unavailable)
+    end
+    pending(unavailable)
+    return true
+  end
+
+  -- Hands the pieces over with a quiet gap longer than the timeout between each,
+  -- so the flush marker lands between them, and answers what reached the buffer:
+  -- the text after the mark, and how many buffer lines it took. The marker ends
+  -- a line, so a feed the timer really did interrupt spans more than one - every
+  -- case checks that too, or a gap too short to reach the timeout would pass
+  -- them without ever exercising the flush.
+  local function splitAcrossTimeout(...)
+    local pieces = {...}
+    local mark = getLastLineNumber("main")
+    feed("split:" .. pieces[1])
+    for i = 2, #pieces do
+      beQuiet()
+      feed(i == #pieces and (pieces[i] .. ":end\n") or pieces[i])
+    end
+    beQuiet()
+
+    local payload = {}
+    for _, line in ipairs(getLines("main", mark, getLastLineNumber("main") + 1)) do
+      if #payload > 0 then
+        if line ~= "" then
+          payload[#payload + 1] = line
+        end
+      else
+        local first = line:match("^split:(.*)$")
+        if first then
+          payload[1] = first
+        end
+      end
+    end
+    assert.is_true(#payload > 0, "no line carrying the fed bytes reached the buffer")
+    return table.concat(payload), #payload
+  end
+
+  it("breaks an ASCII line at the flush marker", function()
+    if timerUnavailable() then return end
+    using("UTF-8")
+
+    -- the shape every case below is measured against: the marker ends the line
+    -- the first piece arrived on, and the rest opens the next one
+    local text, lines = splitAcrossTimeout("AB", "CD")
+    assert.equals("ABCD:end", text)
+    assert.equals(2, lines)
+  end)
+
+  it("keeps a two byte UTF-8 character the marker lands inside", function()
+    if timerUnavailable() then return end
+    using("UTF-8")
+
+    local text, lines = splitAcrossTimeout(bytes(0xC3), bytes(0xA9))
+    assert.equals("é:end", text)
+    assert.equals(2, lines)
+  end)
+
+  it("keeps a three byte UTF-8 character the marker lands inside", function()
+    if timerUnavailable() then return end
+    using("UTF-8")
+
+    -- U+65E5, the character the defect was reported with
+    local text, lines = splitAcrossTimeout(bytes(0xE6, 0x97), bytes(0xA5))
+    assert.equals("日:end", text)
+    assert.equals(2, lines)
+  end)
+
+  it("keeps a four byte UTF-8 character two markers land inside", function()
+    if timerUnavailable() then return end
+    using("UTF-8")
+
+    local text, lines = splitAcrossTimeout(bytes(0xF0, 0x9F), bytes(0x98), bytes(0x80))
+    assert.equals("😀:end", text)
+    assert.equals(2, lines)
+  end)
+
+  it("keeps a Big5 character, and the byte after it, when the marker lands inside", function()
+    if timerUnavailable() then return end
+    using("BIG5")
+
+    -- U+4E2D; the rejected pair used to take the ":" following it as well
+    local text, lines = splitAcrossTimeout(bytes(0xA4), bytes(0xA4))
+    assert.equals("中:end", text)
+    assert.equals(2, lines)
+  end)
+
+  it("keeps a GB18030 four byte character the marker lands inside", function()
+    if timerUnavailable() then return end
+    using("GB18030")
+
+    -- U+20000; the rejected sequence used to print the "6" of its last pair
+    local text, lines = splitAcrossTimeout(bytes(0x95, 0x32), bytes(0x82, 0x36))
+    assert.equals("𠀀:end", text)
+    assert.equals(2, lines)
+  end)
+
+  it("keeps an EUC-KR character the marker lands inside", function()
+    if timerUnavailable() then return end
+    using("EUC-KR")
+
+    -- the rejected pair used to take the ":" following it as well
+    local text, lines = splitAcrossTimeout(bytes(0xC7), bytes(0xD1))
+    assert.equals("한:end", text)
+    assert.equals(2, lines)
+  end)
+end)
