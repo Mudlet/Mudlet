@@ -1017,6 +1017,12 @@ void XMLimport::readHost(Host* pHost)
         pHost->mMapGridLineSize = 0.5; // Same value as is in Host class initializer list
     }
 
+    if (attributes().hasAttribute(qsl("mMapperTooltipDelay"))) {
+        // Clamp negatives to 0 (disabled); cap at the spinbox maximum so a
+        // hand-edited or migrated value can't exceed the UI's range.
+        pHost->mMapperTooltipDelay = qBound(0, attributes().value(qsl("mMapperTooltipDelay")).toString().toInt(), 5000);
+    }
+
     const QStringView ignore(attributes().value(qsl("mDoubleClickIgnore")));
 
     for (auto character : ignore) {

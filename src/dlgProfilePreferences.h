@@ -240,6 +240,7 @@ private slots:
     void slot_exitSizeChanged(int size);
     void slot_borderSizeChanged(int size);
     void slot_gridSizeChanged(double size);
+    void slot_tooltipDelayChanged(int delay);
     void slot_displayFontChanged();
     void slot_displayFontSizeChanged();
     void slot_displayFontAliasingChanged();

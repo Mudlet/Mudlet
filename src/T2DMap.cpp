@@ -79,6 +79,7 @@
 #include <QMenu>
 #include <QStandardPaths>
 #include <QTimer>
+#include <QToolTip>
 #include <QtEvents>
 #include <QtUiTools>
 #include <QWidget>
@@ -486,6 +487,16 @@ T2DMap::T2DMap(QWidget* parent)
     mpRenderThrottleTimer->setSingleShot(true);
     connect(mpRenderThrottleTimer, &QTimer::timeout, this, qOverload<>(&T2DMap::update));
 
+    mRoomHoverTimer = new QTimer(this);
+    mRoomHoverTimer->setSingleShot(true);
+    connect(mRoomHoverTimer, &QTimer::timeout, this, &T2DMap::slot_showRoomHover);
+
+    // Hover tooltips need mouse-move events with no button held, which only
+    // arrive while mouse tracking is on. Enable it permanently: the drag and
+    // label-move handlers toggle it too, but their own moves tolerate no-button
+    // events, so leaving it on does not disturb them.
+    setMouseTracking(true);
+
     mMultiSelectionListWidget.setParent(this);
     mMultiSelectionListWidget.setColumnCount(2);
     mMultiSelectionListWidget.hideColumn(1);
@@ -580,6 +591,7 @@ void T2DMap::init()
     flushSymbolPixmapCache();
     flushTextLabelPixmapCache();
     mLargeAreaExitArrows = mpHost->getLargeAreaExitArrows();
+    setRoomHoverDelay(mpHost->mMapperTooltipDelay);
 }
 
 void T2DMap::scheduleRender()
@@ -646,7 +658,9 @@ void T2DMap::switchArea(const QString& newAreaName)
 
     if (mMoveLabel) {
         mMoveLabel = false;
-        setMouseTracking(false);
+        // The label-move handler turned mouse tracking on for its drag; turn it
+        // back off unless room hover tooltips are enabled (delay > 0).
+        setMouseTracking(roomHoverEnabled());
         mLabelHighlighted = false;
         mHelpMsg.clear();
     }
@@ -683,6 +697,7 @@ void T2DMap::switchArea(const QString& newAreaName)
                 pruneRoomSelectionToArea(areaID);
                 mAreaID = areaID;
                 mLastViewedAreaID = mAreaID;
+                clearRoomHover();
             }
 
             mShiftMode = true;
@@ -927,6 +942,7 @@ std::pair<bool, QString> T2DMap::centerview(int roomId)
     }
     mAreaID = areaId;
     mLastViewedAreaID = areaId;
+    clearRoomHover();
     mRoomID = roomId;
     mMapCenterX = pR->x();
     mMapCenterY = -pR->y(); // Map y coordinates are reversed
@@ -2698,6 +2714,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
         const int playerAreaID = pPlayerRoom->getArea();
         if (mAreaID != playerAreaID) {
             pruneRoomSelectionToArea(playerAreaID);
+            clearRoomHover();
         }
         mAreaID = playerAreaID;
         if (mLastViewedAreaID != mAreaID) {
@@ -5741,7 +5758,152 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
 
     auto context = buildInteractionContext(event);
     mInteractionDispatcher.dispatch(context);
+
+    // Track which rooms the cursor is over to drive the hover tooltip. The
+    // dispatcher above may pan or move rooms, so recompute the hit set from the
+    // freshest widget position rather than caching it before dispatch. Skipped
+    // entirely when the feature is disabled (delay 0) - mouse tracking is off
+    // then, but move events can still arrive during a drag.
+    if (mRoomHoverDelay > 0) {
+        if (auto* area = mpMap->mpRoomDB->getArea(mAreaID)) {
+            const QSet<int> hovered = roomIdsAtWidgetPosition(event->pos(), area);
+            if (hovered != mCurrentHoveredRooms) {
+                mCurrentHoveredRooms = hovered;
+                QToolTip::hideText();
+                if (mCurrentHoveredRooms.isEmpty()) {
+                    mRoomHoverTimer->stop();
+                } else {
+                    mLastHoverGlobalPos = event->globalPosition().toPoint();
+                    mRoomHoverTimer->start(mRoomHoverDelay);
+                }
+            } else if (!mCurrentHoveredRooms.isEmpty()) {
+                // Same rooms - keep the tooltip following the cursor for the next show.
+                mLastHoverGlobalPos = event->globalPosition().toPoint();
+            }
+        }
+    }
+
     event->accept();
+}
+
+void T2DMap::leaveEvent(QEvent* event)
+{
+    clearRoomHover();
+    QWidget::leaveEvent(event);
+}
+
+void T2DMap::clearRoomHover()
+{
+    if (mRoomHoverTimer) {
+        mRoomHoverTimer->stop();
+    }
+    mCurrentHoveredRooms.clear();
+    QToolTip::hideText();
+}
+
+void T2DMap::setRoomHoverDelay(int delayMs)
+{
+    mRoomHoverDelay = qMax(0, delayMs);
+    if (mRoomHoverDelay == 0) {
+        // Feature off: no tooltip, no ongoing hover state, and stop paying for
+        // mouse-move events with no button held.
+        clearRoomHover();
+        setMouseTracking(false);
+    } else {
+        setMouseTracking(true);
+    }
+}
+
+// Builds the second line of a room's hover tooltip: the directions it has
+// exits in, planar compass ones first (in a fixed order) then up/down/in/out,
+// then any special exits by their command string. Empty if the room has none.
+QString T2DMap::roomHoverExits(const TRoom* room) const
+{
+    static const int planarDirs[] = {DIR_NORTH, DIR_NORTHEAST, DIR_EAST, DIR_SOUTHEAST, DIR_SOUTH, DIR_SOUTHWEST, DIR_WEST, DIR_NORTHWEST};
+    QStringList exits;
+    for (const int dir : planarDirs) {
+        if (room->getExit(dir) > 0) {
+            exits << TRoom::dirCodeToShortString(dir);
+        }
+    }
+    if (room->getUp() > 0) {
+        exits << TRoom::dirCodeToShortString(DIR_UP);
+    }
+    if (room->getDown() > 0) {
+        exits << TRoom::dirCodeToShortString(DIR_DOWN);
+    }
+    if (room->getIn() > 0) {
+        exits << TRoom::dirCodeToShortString(DIR_IN);
+    }
+    if (room->getOut() > 0) {
+        exits << TRoom::dirCodeToShortString(DIR_OUT);
+    }
+    for (auto it = room->getSpecialExits().constBegin(); it != room->getSpecialExits().constEnd(); ++it) {
+        exits << it.key();
+    }
+    return exits.join(tr(", "));
+}
+
+QString T2DMap::roomHoverTooltip(const QSet<int>& roomIds) const
+{
+    if (!mpMap || !mpMap->mpRoomDB || roomIds.isEmpty()) {
+        return {};
+    }
+
+    // Stable order so the tooltip does not reshuffle as the cursor rests.
+    QList<int> sortedIds = roomIds.values();
+    std::sort(sortedIds.begin(), sortedIds.end());
+
+    QStringList blocks;
+    for (const int roomId : sortedIds) {
+        const TRoom* room = mpMap->mpRoomDB->getRoom(roomId);
+        if (!room) {
+            continue;
+        }
+        // Defence in depth: only describe rooms in the area currently on
+        // screen. The hovered-room set is cleared on every area change, but if
+        // a timer armed over the previous area ever fires late, resolving room
+        // ids through the global database would otherwise surface a tooltip for
+        // rooms that are not visible here.
+        if (room->getArea() != mAreaID) {
+            continue;
+        }
+        // First line: room number and name (name omitted if empty).
+        QString firstLine = QStringLiteral("#%1").arg(roomId);
+        if (!room->name.isEmpty()) {
+            firstLine += QStringLiteral(": %1").arg(room->name.toHtmlEscaped());
+        }
+        // Second line: the exit directions, bare (no label). A dash stands in
+        // for a room with no exits so the line is not blank.
+        const QString exits = roomHoverExits(room);
+        const QString secondLine = exits.isEmpty() ? tr("(no exits)") : tr("Exits: %1").arg(exits.toHtmlEscaped());
+        blocks << firstLine + QStringLiteral("<br>") + secondLine;
+    }
+    if (blocks.isEmpty()) {
+        return {};
+    }
+
+    // A horizontal rule between rooms when more than one is under the cursor.
+    // Wrapped in white-space:pre rather than utils::richText's <p>: pre keeps the
+    // explicit <br>/<hr> line breaks and, crucially, does NOT wrap long lines
+    // (a room name with a hyphen would otherwise wrap at it). The tooltip grows
+    // to fit the widest line instead.
+    return qsl("<html><body style='white-space:pre'>%1</body></html>").arg(blocks.join(QStringLiteral("<hr>")));
+}
+
+void T2DMap::slot_showRoomHover()
+{
+    if (mCurrentHoveredRooms.isEmpty() || !mpMap || !mpMap->mpRoomDB) {
+        QToolTip::hideText();
+        return;
+    }
+
+    const QString tooltip = roomHoverTooltip(mCurrentHoveredRooms);
+    if (tooltip.isEmpty()) {
+        QToolTip::hideText();
+        return;
+    }
+    QToolTip::showText(mLastHoverGlobalPos, tooltip, this);
 }
 
 // Replacement for getTopLeftCenter - determines a room closest to geometrical
