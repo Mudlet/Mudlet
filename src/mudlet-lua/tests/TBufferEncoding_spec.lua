@@ -498,9 +498,13 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
     if timerUnavailable() then return end
     using("GB18030")
 
-    -- U+20000; the rejected sequence used to print the "6" of its last pair
-    local text, lines = splitAcrossTimeout(bytes(0x95, 0x32), bytes(0x82, 0x36))
-    assert.equals("𠀀:end", text)
+    -- U+00A5; the rejected sequence used to print the "6" of its last pair.
+    -- A four byte sequence that lands inside the BMP, because one above it
+    -- reaches the buffer as nothing at all on macOS whether it was split or
+    -- not (#10408) - the split is what this case is about, and the hold is the
+    -- same code either way
+    local text, lines = splitAcrossTimeout(bytes(0x81, 0x30), bytes(0x84, 0x36))
+    assert.equals("¥:end", text)
     assert.equals(2, lines)
   end)
 
@@ -521,8 +525,8 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
 
     -- The other GB18030 case parts the sequence once its length is already
     -- known; this one parts it before the second byte says how long it is
-    local text, lines = splitAcrossTimeout(bytes(0x95), bytes(0x32, 0x82, 0x36))
-    assert.equals("𠀀:end", text)
+    local text, lines = splitAcrossTimeout(bytes(0x81), bytes(0x30, 0x84, 0x36))
+    assert.equals("¥:end", text)
     assert.equals(2, lines)
   end)
 
