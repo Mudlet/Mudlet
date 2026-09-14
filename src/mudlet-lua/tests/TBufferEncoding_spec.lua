@@ -381,6 +381,14 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
   local unavailable
 
   setup(function()
+    if not os.getenv("MUDLET_TEST_MODE") then
+      -- beQuiet() leans on pumpEvents() to let the posting timer run, and that
+      -- returns nothing at all outside test mode - so the flush these cases are
+      -- about never happens, and the profile opened by hand through runTests
+      -- would meet an assertion rather than a skip
+      unavailable = "waiting out the posting timeout needs MUDLET_TEST_MODE (pumpEvents() does nothing without it)"
+      return
+    end
     unavailable = restorePostingTimer()
   end)
 
