@@ -108,6 +108,25 @@ bool endsStringSequence(const char byte)
     return byte != CHAR_CARRIAGE_RETURN && CHAR_IS_COMMIT_CHAR(byte);
 }
 
+// How much of a chunk of game data the multi-byte decoders may look at. cTelnet
+// strips every carriage return the game itself sends (cTelnet::readPipe()) and,
+// once the game has fallen quiet part way through a line, appends one of its own
+// as the last byte of the chunk to flush what has arrived so far
+// (cTelnet::slot_timerPosting()). So a carriage return reaching here is Mudlet's
+// own marker rather than data, and a multi-byte sequence must not be decoded
+// against it: it fails the continuation byte test, which loses the character to a
+// replacement mark and, in Big5 and the GB encodings, eats the byte that follows
+// it as well. Held out of the decoders' reach the marker behaves like any other
+// chunk boundary - the unfinished sequence waits for the rest of its bytes - and
+// it still commits the line it came to flush
+size_t decodableLength(const std::string& data, const size_t length, const bool isFromServer)
+{
+    if (isFromServer && length && data[length - 1] == CHAR_CARRIAGE_RETURN) {
+        return length - 1;
+    }
+    return length;
+}
+
 // A byte the decoder's main loop would turn into exactly one QChar of the same
 // value whatever the session's encoding, so runs of them can be copied in one
 // go. That is every 7-bit byte except the four the loop acts on itself: the
@@ -967,6 +986,8 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
     if (!localBufferLength) {
         return;
     }
+    // Kept in step with localBufferLength - see decodableLength():
+    size_t localBufferDecodableLength = decodableLength(localBuffer, localBufferLength, isFromServer);
 
     // If we are resolving/interpolating an MXP entity, the interpolated text
     // ends at localBuffer[endOfMXPEntity - 1]. This variable used to avoid an
@@ -1093,12 +1114,26 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 continue;
             }
 
-            if (spanEnd >= localBufferLength) {
+            if (spanEnd >= localBufferDecodableLength) {
                 // We ran to the end of the buffer while still inside a CSI
                 // sequence - therefore we have got a split between data packets
-                // and are not in a position to process the current line further...
+                // and are not in a position to process the current line further.
+                // A flush marker is not part of the sequence and is not held
+                // with it (decodableLength()), the same way the OSC path below
+                // drops one out of its own payload: kept, it would never match
+                // a parameter byte when the rest of the sequence arrives, and
+                // the colour or cursor move the game asked for would be thrown
+                // away and the rest of its sequence printed as text.
 
-                mIncompleteSequenceBytes = localBuffer.substr(spanStart);
+                mIncompleteSequenceBytes = localBuffer.substr(spanStart, localBufferDecodableLength - spanStart);
+                if (localBufferDecodableLength < localBufferLength) {
+                    // The text ahead of the sequence is still a line the marker
+                    // came to flush. It cannot be left to the loop to notice:
+                    // this pass is inside a CSI, so going round again would
+                    // feed the marker back into the scan above:
+                    size_t markerPosition = localBufferDecodableLength;
+                    commitLine(CHAR_CARRIAGE_RETURN, markerPosition, isFromServer, false);
+                }
                 return;
             }
 
@@ -1425,6 +1460,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
 
                         // Now restart the loop to parse the newly inserted text
                         localBufferLength = localBuffer.length();
+                        localBufferDecodableLength = decodableLength(localBuffer, localBufferLength, isFromServer);
                         localBufferPosition = 0;
                         continue;
                     }
@@ -1529,6 +1565,9 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
         // Used to double up the TChars for Utf-8 byte sequences that produce
         // a surrogate pair (non-BMP):
         bool isTwoTCharsNeeded = false;
+        // Set when a decoder has run out of bytes part way through a sequence
+        // and stored the ones it had for the next chunk to complete:
+        bool heldIncompleteSequence = false;
 
         if (!encodingLookupTable.isEmpty()) {
             auto index = static_cast<quint8>(ch);
@@ -1540,35 +1579,15 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
         } else if (mEncoding == "ISO 8859-1") {
             mMudLine.append(QChar::fromLatin1(ch));
         } else if (mEncoding == "GBK") {
-            if (!processGBSequence(localBuffer, isFromServer, false, localBufferLength, localBufferPosition, isTwoTCharsNeeded)) {
-                // We have run out of bytes and we have stored the unprocessed
-                // ones but we need to bail out NOW!
-                return;
-            }
+            heldIncompleteSequence = !processGBSequence(localBuffer, isFromServer, false, localBufferDecodableLength, localBufferPosition, isTwoTCharsNeeded);
         } else if (mEncoding == "GB18030") {
-            if (!processGBSequence(localBuffer, isFromServer, true, localBufferLength, localBufferPosition, isTwoTCharsNeeded)) {
-                // We have run out of bytes and we have stored the unprocessed
-                // ones but we need to bail out NOW!
-                return;
-            }
+            heldIncompleteSequence = !processGBSequence(localBuffer, isFromServer, true, localBufferDecodableLength, localBufferPosition, isTwoTCharsNeeded);
         } else if (mEncoding == "EUC-KR") {
-            if (!processEUC_KRSequence(localBuffer, isFromServer, localBufferLength, localBufferPosition, isTwoTCharsNeeded)) {
-                // We have run out of bytes and we have stored the unprocessed
-                // ones but we need to bail out NOW!
-                return;
-            }
+            heldIncompleteSequence = !processEUC_KRSequence(localBuffer, isFromServer, localBufferDecodableLength, localBufferPosition, isTwoTCharsNeeded);
         } else if (mEncoding == "BIG5" || mEncoding == "BIG5-HKSCS") {
-            if (!processBig5Sequence(localBuffer, isFromServer, localBufferLength, localBufferPosition, isTwoTCharsNeeded)) {
-                // We have run out of bytes and we have stored the unprocessed
-                // ones but we need to bail out NOW!
-                return;
-            }
+            heldIncompleteSequence = !processBig5Sequence(localBuffer, isFromServer, localBufferDecodableLength, localBufferPosition, isTwoTCharsNeeded);
         } else if (mEncoding == "UTF-8") {
-            if (!processUtf8Sequence(localBuffer, isFromServer, localBufferLength, localBufferPosition, isTwoTCharsNeeded)) {
-                // We have run out of bytes and we have stored the unprocessed
-                // ones but we need to bail out NOW!
-                return;
-            }
+            heldIncompleteSequence = !processUtf8Sequence(localBuffer, isFromServer, localBufferDecodableLength, localBufferPosition, isTwoTCharsNeeded);
         } else {
             // Default - no encoding case - reject anything that has MS Bit set
             // as that isn't ASCII which is what no encoding specifies!
@@ -1582,6 +1601,18 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
             } else {
                 mMudLine.append(ch);
             }
+        }
+
+        if (heldIncompleteSequence) {
+            // Nothing more can be decoded from this chunk - the rest of the
+            // sequence is in the next one. A flush marker kept out of the
+            // decoder's reach still has this line to commit though, so go round
+            // once more for it rather than bailing out with it unread:
+            if (localBufferDecodableLength < localBufferLength) {
+                localBufferPosition = localBufferDecodableLength;
+                continue;
+            }
+            return;
         }
 
         TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, computeCurrentAttributeFlags());
@@ -6630,15 +6661,16 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
             // Not enough bytes left in bufferData to complete the utf-8
             // sequence - need to save and prepend onto incoming data next
             // time around.
-            // The absence of a second argument takes all the available
-            // bytes - this is only for data from the Server NOT from
+            // Everything the decoder was allowed to look at is taken - see
+            // decodableLength() for why that can stop short of the end of
+            // bufferData. This is only for data from the Server NOT from
             // locally generated material from Lua feedTriggers(...)
             if (isFromServer) {
 #if defined(DEBUG_UTF8_PROCESSING)
                 qDebug() << "TBuffer::processUtf8Sequence(...) Insufficient bytes in buffer to complete UTF-8 sequence, need:" << utf8SequenceLength
-                         << " but we currently only have: " << bufferData.substr(pos).length() << " bytes (which we will store for next call to this method)...";
+                         << " but we currently only have: " << bufferData.substr(pos, len - pos).length() << " bytes (which we will store for next call to this method)...";
 #endif
-                mIncompleteSequenceBytes = bufferData.substr(pos);
+                mIncompleteSequenceBytes = bufferData.substr(pos, len - pos);
             }
             return false; // Bail out
         }
@@ -6985,9 +7017,10 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
 #if defined(DEBUG_GB_PROCESSING)
                 qDebug().nospace() << "TBuffer::processGBSequence(...) Insufficient bytes in buffer to "
                                       "complete GB2312/GBK sequence, need at least: "
-                                   << gbSequenceLength << " but we currently only have: " << bufferData.substr(pos).length() << " bytes (which we will store for next call to this method)...";
+                                   << gbSequenceLength << " but we currently only have: " << bufferData.substr(pos, len - pos).length()
+                                   << " bytes (which we will store for next call to this method)...";
 #endif
-                mIncompleteSequenceBytes = bufferData.substr(pos);
+                mIncompleteSequenceBytes = bufferData.substr(pos, len - pos);
             }
             return false; // Bail out
         }
@@ -7019,9 +7052,10 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
 #if defined(DEBUG_GB_PROCESSING)
                         qDebug().nospace() << "TBuffer::processGBSequence(...) Insufficient bytes in buffer to "
                                               "complete GB18030 sequence, need at least: "
-                                           << gbSequenceLength << " but we currently only have: " << bufferData.substr(pos).length() << " bytes (which we will store for next call to this method)...";
+                                           << gbSequenceLength << " but we currently only have: " << bufferData.substr(pos, len - pos).length()
+                                           << " bytes (which we will store for next call to this method)...";
 #endif
-                        mIncompleteSequenceBytes = bufferData.substr(pos);
+                        mIncompleteSequenceBytes = bufferData.substr(pos, len - pos);
                     }
 
                     return false; // Bail out
@@ -7142,9 +7176,9 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
             if (isFromServer) {
 #if defined(DEBUG_GB_PROCESSING)
                 qDebug().nospace() << "TBuffer::processGBSequence(...) Insufficient bytes in buffer to complete GB18030 sequence, need at least:" << gbSequenceLength
-                                   << " but we currently only have: " << bufferData.substr(pos).length() << " bytes (which we will store for next call to this method)...";
+                                   << " but we currently only have: " << bufferData.substr(pos, len - pos).length() << " bytes (which we will store for next call to this method)...";
 #endif
-                mIncompleteSequenceBytes = bufferData.substr(pos);
+                mIncompleteSequenceBytes = bufferData.substr(pos, len - pos);
             }
             return false; // Bail out
         }
@@ -7248,9 +7282,10 @@ bool TBuffer::processBig5Sequence(const std::string& bufferData, const bool isFr
 #if defined(DEBUG_BIG5_PROCESSING)
                 qDebug().nospace() << "TBuffer::processBig5Sequence(...) Insufficient bytes in buffer to "
                                       "complete Big5 sequence, need at least: "
-                                   << big5SequenceLength << " but we currently only have: " << bufferData.substr(pos).length() << " bytes (which we will store for next call to this method)...";
+                                   << big5SequenceLength << " but we currently only have: " << bufferData.substr(pos, len - pos).length()
+                                   << " bytes (which we will store for next call to this method)...";
 #endif
-                mIncompleteSequenceBytes = bufferData.substr(pos);
+                mIncompleteSequenceBytes = bufferData.substr(pos, len - pos);
             }
             return false; // Bail out
         } else {          // NOLINT(readability-else-after-return)
@@ -7369,9 +7404,10 @@ bool TBuffer::processEUC_KRSequence(const std::string& bufferData, const bool is
 #if defined(DEBUG_EUC_KR_PROCESSING)
                 qDebug().nospace() << "TBuffer::processEUC_KRSequence(...) Insufficient bytes in buffer to "
                                       "complete EUC-KR sequence, need at least: "
-                                   << eucSequenceLength << " but we currently only have: " << bufferData.substr(pos).length() << " bytes (which we will store for next call to this method)...";
+                                   << eucSequenceLength << " but we currently only have: " << bufferData.substr(pos, len - pos).length()
+                                   << " bytes (which we will store for next call to this method)...";
 #endif
-                mIncompleteSequenceBytes = bufferData.substr(pos);
+                mIncompleteSequenceBytes = bufferData.substr(pos, len - pos);
             }
             return false; // Bail out
         } else {          // NOLINT(readability-else-after-return)
