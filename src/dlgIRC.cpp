@@ -263,28 +263,40 @@ QPair<bool, QString> dlgIRC::sendMsg(const QString& target, const QString& messa
         return {false, qsl("message could not be parsed")};
     }
 
+    // parse() hands back a command this function owns, and only sendCommand()
+    // takes that ownership on - so a path that returns before reaching it has to
+    // free the command itself
     const bool isCustomCommand = processCustomCommand(command);
     if (isCustomCommand) {
+        delete command;
         return {true, QString()};
     }
 
+    // read once, and build the local echo (servers do not send our own messages
+    // back), before the command is handed over: sendCommand() takes ownership of
+    // a parentless command, and Communi states it is not safe to access one after
+    // that
+    const IrcCommand::Type commandType = command->type();
+    IrcMessage* msg = nullptr;
+    if (commandType == IrcCommand::Message || commandType == IrcCommand::CtcpAction) {
+        msg = command->toMessage(connection->nickName(), connection);
+    }
+
     // update ping-started time if this command was a ping
-    if (command->type() == IrcCommand::Ping) {
+    if (commandType == IrcCommand::Ping) {
         mPingStarted = QDateTime::currentMSecsSinceEpoch();
     }
 
     connection->sendCommand(command);
 
     // if the command was a quit command we should close the IRC window.
-    if (command->type() == IrcCommand::Quit) {
+    if (commandType == IrcCommand::Quit) {
         setAttribute(Qt::WA_DeleteOnClose);
         close();
         return {true, QString()};
     }
 
-    // echo own messages (servers do not send our own messages back)
-    if (command->type() == IrcCommand::Message || command->type() == IrcCommand::CtcpAction) {
-        IrcMessage* msg = command->toMessage(connection->nickName(), connection);
+    if (msg) {
         slot_receiveMessage(msg);
         delete msg;
     }
@@ -558,15 +570,23 @@ void dlgIRC::slot_onTextEntered()
 
     IrcCommand* command = commandParser->parse(input);
     if (command) {
-        // handle custom commands
+        // as in sendMsg(): the parsed command is owned here until sendCommand()
+        // takes it, so a custom command - which never gets there - is freed here
         const bool isCustomCommand = processCustomCommand(command);
         if (isCustomCommand) {
+            delete command;
             lineEdit->clear();
             return;
         }
 
+        const IrcCommand::Type commandType = command->type();
+        IrcMessage* msg = nullptr;
+        if (commandType == IrcCommand::Message || commandType == IrcCommand::CtcpAction) {
+            msg = command->toMessage(connection->nickName(), connection);
+        }
+
         // update ping-started time if this command was a ping
-        if (command->type() == IrcCommand::Ping) {
+        if (commandType == IrcCommand::Ping) {
             mPingStarted = QDateTime::currentMSecsSinceEpoch();
         }
 
@@ -574,15 +594,14 @@ void dlgIRC::slot_onTextEntered()
         connection->sendCommand(command);
 
         // if the command was a quit command we should close this window.
-        if (command->type() == IrcCommand::Quit) {
+        if (commandType == IrcCommand::Quit) {
             setAttribute(Qt::WA_DeleteOnClose);
             close();
             return;
         }
 
         // echo own messages (servers do not send our own messages back)
-        if (command->type() == IrcCommand::Message || command->type() == IrcCommand::CtcpAction) {
-            IrcMessage* msg = command->toMessage(connection->nickName(), connection);
+        if (msg) {
             slot_receiveMessage(msg);
             delete msg;
         }
