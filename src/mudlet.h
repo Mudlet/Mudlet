@@ -193,6 +193,7 @@ public:
     void activateProfile(Host*);
     void switchToProfileTab(int index);
     bool profileSwitchShortcutMatches(const QKeyEvent*) const;
+    bool profileSwitchShortcutMatches(const Qt::Key, const Qt::KeyboardModifiers) const;
     void takeOwnershipOfInstanceCoordinator(std::unique_ptr<MudletInstanceCoordinator>);
     MudletInstanceCoordinator* getInstanceCoordinator();
     void addConsoleForNewHost(Host*);
@@ -343,6 +344,11 @@ public:
     // that is the other package's business and nothing this profile can act
     // on, the same rule addonShortcutUsable() follows.
     QStringList addonCommandsUsingShortcut(const QKeySequence& sequence, const Host* pHost) const;
+    // What Mudlet's own shortcut on this key is called, empty when Mudlet has
+    // nothing on it. For a key binding, which arrives too late to be offered
+    // the refusal a package gets: Qt matches Mudlet's own shortcuts before a
+    // key press reaches the command line, so the binding never fires.
+    QString ownShortcutUsingKey(const Qt::Key, const Qt::KeyboardModifiers) const;
     void applyToolBarStyleToAddonCommands();
 
     // Brings up the preferences dialog and selects the tab whos objectName is

@@ -27,9 +27,11 @@
 #include "Host.h"
 #include "TKey.h"
 #include "Tree.h"
+#include "mudlet.h"
 #include "utils.h"
 
 #include <QFlags>
+#include <QKeySequence>
 #include <QLatin1Char>
 #include <QLatin1String>
 #include <QMutableSetIterator>
@@ -162,6 +164,31 @@ bool KeyUnit::wouldMatch(const Qt::Key key, const Qt::KeyboardModifiers modifier
     }
 
     return false;
+}
+
+// Mudlet's own menu and window shortcuts are matched by Qt, which is offered a
+// key press before the command line that matches key bindings ever sees one -
+// so a binding placed on one of those keys never fires, and until now nothing
+// said so. The binding is still made: it is the player's own item, and refusing
+// it is what a package asking for a key already taken gets. As with the buffer
+// search taking a key a package holds, the only thing owed is saying so.
+void KeyUnit::warnIfMudletShortcutHoldsKey(const TKey* pKey) const
+{
+    auto* pMudlet = mudlet::self();
+    if (!pKey || mpHost.isNull() || !pMudlet || pKey->isFolder() || pKey->getKeyCode() == Qt::Key_unknown) {
+        return;
+    }
+
+    const QString holder = pMudlet->ownShortcutUsingKey(pKey->getKeyCode(), pKey->getKeyModifiers());
+    if (holder.isEmpty()) {
+        return;
+    }
+
+    const QKeySequence sequence(QKeyCombination(pKey->getKeyModifiers(), pKey->getKeyCode()));
+    //: Warning posted to the profile when a key binding is given a key one of Mudlet's own shortcuts already uses. %1 is a key such as "Alt+M", %2 the name of the Mudlet action holding it, as the shortcuts preferences show it.
+    mpHost->postMessage(tr("[ WARN ]  - %1 is already used by Mudlet for \"%2\", which gets the key first, so this key binding will not fire. Put one of the two on a different key to "
+                           "use both - Mudlet's own are in the preferences, under Shortcuts.")
+                                .arg(sequence.toString(QKeySequence::NativeText), holder));
 }
 
 void KeyUnit::compileAll()

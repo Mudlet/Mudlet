@@ -813,6 +813,41 @@ QStringList mudlet::addonCommandsUsingShortcut(const QKeySequence& sequence, con
     return holders;
 }
 
+// The key bindings of a profile are matched from the command line's key
+// handling, which a key press only reaches once Qt has finished offering it to
+// the shortcuts of this window - so Mudlet's own take precedence and a binding
+// placed on one of them never fires.
+QString mudlet::ownShortcutUsingKey(const Qt::Key key, const Qt::KeyboardModifiers modifiers) const
+{
+    if (!mpShortcutsManager || key == Qt::Key_unknown) {
+        return {};
+    }
+    // The profile switching keys are the exception: TCommandLine claims the
+    // ShortcutOverride for a key press a binding would match, so the press
+    // arrives after all and the binding is the one that fires.
+    if (profileSwitchShortcutMatches(key, modifiers)) {
+        return {};
+    }
+
+    // The registered sequences are the authority rather than whatever is
+    // currently wired up, for the reason addonShortcutUsable() gives: hiding
+    // the menu bar moves every menu key onto a QShortcut and clears the action
+    // it came from, so a scan of the widgets answers differently for the same
+    // key depending on a setting.
+    const QKeySequence sequence(QKeyCombination(modifiers, key));
+    QStringListIterator keys = mpShortcutsManager->iterator();
+    while (keys.hasNext()) {
+        const QString name = keys.next();
+        const QKeySequence* pMudletSequence = mpShortcutsManager->getSequence(name);
+        // A shortcut cleared in the preferences holds an empty sequence, which
+        // is nobody's key - the same reading profileSwitchShortcutMatches() takes
+        if (pMudletSequence && !pMudletSequence->isEmpty() && *pMudletSequence == sequence) {
+            return mpShortcutsManager->getLabel(name);
+        }
+    }
+    return {};
+}
+
 void mudlet::removeAddonCommandsForHost(Host* pHost)
 {
     QList<int> doomed;
@@ -3020,9 +3055,11 @@ bool mudlet::profileSwitchShortcutMatches(const QKeyEvent* ke) const
         return false;
     }
 
-    const auto key = static_cast<Qt::Key>(ke->key());
-    const Qt::KeyboardModifiers modifiers = ke->modifiers();
+    return profileSwitchShortcutMatches(static_cast<Qt::Key>(ke->key()), ke->modifiers());
+}
 
+bool mudlet::profileSwitchShortcutMatches(const Qt::Key key, const Qt::KeyboardModifiers modifiers) const
+{
     // QShortcutMap retries with the modifiers the platform consumed producing
     // the character stripped off, so Ctrl and a numpad digit activates Ctrl+1,
     // and so does Ctrl+Shift+1 on layouts needing Shift for a top-row digit

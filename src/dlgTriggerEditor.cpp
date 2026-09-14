@@ -12806,6 +12806,8 @@ void dlgTriggerEditor::keyGrabCallback(const Qt::Key key, const Qt::KeyboardModi
             pT->setKeyModifiers(modifier);
             QString newStateXML = exportKeyToXML(pT);
 
+            pKeyUnit->warnIfMudletShortcutHoldsKey(pT);
+
             pushKeyPropertyCommand(mpUndoStack, mpHost, keyID, pT->getName(), qsl("keyBinding"), oldStateXML, newStateXML);
         }
     }
