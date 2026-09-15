@@ -101,6 +101,7 @@ set(TELNET_GROUP_TEST_SOURCES
     CsiCursorForwardTest.cpp
     cTelnetBufferTest.cpp
     GMCPCharLoginTest.cpp
+    SignInStoreReconcilerTest.cpp
     TelnetAtcpMspTest.cpp
     TelnetLargeBurstTest.cpp
     TelnetLatencyMeasurementTest.cpp
