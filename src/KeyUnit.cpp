@@ -27,9 +27,11 @@
 #include "Host.h"
 #include "TKey.h"
 #include "Tree.h"
+#include "mudlet.h"
 #include "utils.h"
 
 #include <QFlags>
+#include <QKeySequence>
 #include <QLatin1Char>
 #include <QLatin1String>
 #include <QMutableSetIterator>
@@ -151,17 +153,45 @@ bool KeyUnit::processDataStream(const Qt::Key key, const Qt::KeyboardModifiers m
 
 bool KeyUnit::wouldMatch(const Qt::Key key, const Qt::KeyboardModifiers modifiers) const
 {
+    return firstMatch(key, modifiers) != nullptr;
+}
+
+const TKey* KeyUnit::firstMatch(const Qt::Key key, const Qt::KeyboardModifiers modifiers) const
+{
     for (auto keyObject : mKeyRootNodeList) {
         if (!keyObject || !keyObject->isActive() || (keyObject->mpHost && keyObject->mpHost->isClosingDown())) {
             continue;
         }
 
-        if (keyObject->wouldMatch(key, modifiers)) {
-            return true;
+        if (const TKey* match = keyObject->firstMatch(key, modifiers)) {
+            return match;
         }
     }
 
-    return false;
+    return nullptr;
+}
+
+void KeyUnit::warnIfAddonCommandHoldsKey(const TKey* pKey) const
+{
+    auto* pMudlet = mudlet::self();
+    if (!pKey || mpHost.isNull() || !pMudlet || pKey->isFolder() || pKey->getKeyCode() == Qt::Key_unknown) {
+        return;
+    }
+    // A keypad or group-switch binding cannot be written as a key sequence, so
+    // no command's shortcut can be the one holding it
+    constexpr Qt::KeyboardModifiers sequenceModifiers = Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier;
+    if (pKey->getKeyModifiers() & ~sequenceModifiers) {
+        return;
+    }
+
+    const QKeySequence sequence(QKeyCombination(pKey->getKeyModifiers(), pKey->getKeyCode()));
+    const QStringList holders = pMudlet->addonCommandsUsingShortcut(sequence, mpHost);
+    if (holders.isEmpty()) {
+        return;
+    }
+    //: Warning posted to the profile when a key binding is given a key an add-on command already holds. %1 is a key such as "Alt+F9", %2 a comma separated list of the commands holding it.
+    mpHost->postMessage(
+            tr("[ WARN ]  - %1 is already used by %2, which will get the key first, so this key binding will not fire.").arg(sequence.toString(QKeySequence::NativeText), holders.join(qsl(", "))));
 }
 
 void KeyUnit::compileAll()

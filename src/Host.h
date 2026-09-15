@@ -267,6 +267,7 @@ public:
     AliasUnit* getAliasUnit() { return &mAliasUnit; }
     ActionUnit* getActionUnit() { return &mActionUnit; }
     KeyUnit* getKeyUnit() { return &mKeyUnit; }
+    const KeyUnit* getKeyUnit() const { return &mKeyUnit; }
     ScriptUnit* getScriptUnit() { return &mScriptUnit; }
     GifTracker* getGifTracker() { return &mGifTracker; }
 
