@@ -50,6 +50,7 @@
 #include "ctelnet.h"
 #include "dlgPackageExporter.h"
 #include "mudlet.h"
+#include "utils.h"
 
 #include "GroupedTest.h"
 
@@ -159,9 +160,9 @@ private:
         return settled;
     }
 
-    // mudlet::unzip() joins its destination onto each archive entry without a
+    // utils::unzip() joins its destination onto each archive entry without a
     // separator, so the trailing slash is load-bearing
-    bool unpackInto(const QString& packageFile, const QTemporaryDir& destination) const { return mudlet::unzip(packageFile, qsl("%1/").arg(destination.path()), QDir(destination.path())); }
+    bool unpackInto(const QString& packageFile, const QTemporaryDir& destination) const { return utils::unzip(packageFile, qsl("%1/").arg(destination.path()), QDir(destination.path())); }
 
 private slots:
     void initTestCase()
