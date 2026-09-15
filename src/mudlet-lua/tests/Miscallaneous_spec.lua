@@ -157,6 +157,22 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       end)
     end)
 
+    describe("Tests the functionality of getSubsystemMemoryStats", function()
+      it("counts the main console's buffer lines", function()
+        if not getSubsystemMemoryStats then
+          pending("only a USE_MEMORY_TRACKING build registers getSubsystemMemoryStats")
+        end
+        local before = getSubsystemMemoryStats().console_buffer_lines
+        -- the buffer keeps an empty line ready after the last line feed, which
+        -- getLineCount() leaves out
+        assert.equals(getLineCount() + 1, before)
+
+        echo("getSubsystemMemoryStats test line\n")
+
+        assert.equals(before + 1, getSubsystemMemoryStats().console_buffer_lines)
+      end)
+    end)
+
     describe("Tests the functionality of getModulePath", function()
       it("should return nil+msg for a module that does not exist", function()
         local path, err = getModulePath("busted-nonexistent-module")
@@ -913,6 +929,61 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           assert.is_true(contains(contents, getProfileName()), "the HTML log title does not name the profile")
           assert.is_true(contains(contents, "mudlet-spec-html-logged-line"), "the console output did not reach the HTML log")
         end)
+
+        it("marks the text up with the colours and attributes it carries", function()
+          local logPath
+          local htmlLogging = getConfig("logInHTML")
+          finally(function()
+            startLogging(false)
+            setConfig("logInHTML", htmlLogging)
+            if logPath then
+              os.remove(logPath)
+            end
+          end)
+          setConfig("logInHTML", true)
+
+          logPath = select(3, startLogging(true))
+
+          feedTelnet("\27[0m\27[30;47mSpecHtmlPlain\27[0m\n")
+          feedTelnet("\27[0m\27[7;30;47mSpecHtmlReverse\27[0m\n")
+          feedTelnet("\27[0m\27[1;3mSpecHtmlBoldItalic\27[0m\n")
+          feedTelnet("\27[0m\27[4;9;53mSpecHtmlDecorated\27[0m\n")
+          echo("SpecHtmlAngles a<b>c\n")
+          -- a received line is only written once the next one commits
+          feedTelnet("SpecHtmlFlush\n")
+          startLogging(false)
+
+          local contents = readFile(logPath)
+          assert.is_string(contents, "the HTML log file that was closed is not readable")
+
+          -- the style of the span that the marker's own text sits in
+          local function styleOf(marker)
+            local at = contents:find(marker, 1, true)
+            assert.is_truthy(at, marker .. " never reached the HTML log")
+            return contents:sub(1, at - 1):match(".*<span([^>]*)>")
+          end
+
+          local function coloursOf(style)
+            local fr, fg, fb, br, bg, bb = style:match("color: rgb%((%d+),(%d+),(%d+)%); background: rgb%((%d+),(%d+),(%d+)%)")
+            assert.is_truthy(fr, "no foreground and background pair in " .. tostring(style))
+            return table.concat({fr, fg, fb}, ","), table.concat({br, bg, bb}, ",")
+          end
+
+          local plainFg, plainBg = coloursOf(styleOf("SpecHtmlPlain"))
+          local reverseFg, reverseBg = coloursOf(styleOf("SpecHtmlReverse"))
+          assert.are_not.equal(plainFg, plainBg, "the precondition failed - this needs two different colours to tell a swap from a no-op")
+          assert.equal(plainBg, reverseFg, "the reverse attribute did not put the background colour in front")
+          assert.equal(plainFg, reverseBg, "the reverse attribute did not put the foreground colour behind")
+
+          local boldItalic = styleOf("SpecHtmlBoldItalic")
+          assert.is_true(contains(boldItalic, "font-weight: bold;"), boldItalic)
+          assert.is_true(contains(boldItalic, "font-style: italic;"), boldItalic)
+
+          local decorated = styleOf("SpecHtmlDecorated")
+          assert.is_true(contains(decorated, "text-decoration: underline line-through overline;"), decorated)
+
+          assert.is_true(contains(contents, "SpecHtmlAngles a&lt;b&gt;c"), "the angle brackets in the logged text were not escaped")
+        end)
       end)
 
       -- A received line is held back from the log until the next one commits.
@@ -1350,8 +1421,30 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         return string.char(math.floor(value / 16777216) % 256, math.floor(value / 65536) % 256, math.floor(value / 256) % 256, value % 256)
       end
 
+      -- one record: the delay in milliseconds before it, the number of bytes
+      -- in it, and then those bytes
+      local function chunk(delay, payload)
+        return bigEndian32(delay) .. bigEndian32(#payload) .. payload
+      end
+
+      -- the shape PR #4400 wrote for a while, where the delay took eight bytes
+      -- instead of four - Mudlet still reads it
+      local function wideChunk(delay, payload)
+        return string.rep("\0", 4) .. chunk(delay, payload)
+      end
+
       local function writeReplay(path, payload)
-        writeFile(path, bigEndian32(0) .. bigEndian32(#payload) .. payload)
+        writeFile(path, chunk(0, payload))
+      end
+
+      local function playedBack(mark, marker)
+        for _ = 1, 40 do
+          pumpEvents(50)
+          if contains(textFrom(mark), marker) then
+            return true
+          end
+        end
+        return false
       end
 
       it("raises a Lua error when called with no arguments", function()
@@ -1392,17 +1485,77 @@ describe("Tests C++ functions in the Miscallaneous category", function()
 
         assert.is_true(loadReplay(replay))
 
-        local arrived = false
-        for _ = 1, 40 do
-          pumpEvents(50)
-          arrived = contains(textFrom(mark), "mudlet-spec-replayed-line")
-          if arrived then
-            break
-          end
-        end
-        assert.is_true(arrived, "the replay did not reach the console")
+        assert.is_true(playedBack(mark, "mudlet-spec-replayed-line"), "the replay did not reach the console")
         -- whether a replay is running is application-wide, so let this one run
         -- out before the next spec asks for one
+        pumpEvents(200)
+      end)
+
+      it("plays back a replay written with the eight byte delay", function()
+        if not testMode then
+          pending("letting the replay timer run needs MUDLET_TEST_MODE")
+          return
+        end
+        local replay = getMudletHomeDir() .. "/mudlet-spec-wide-replay.dat"
+        finally(function() os.remove(replay) end)
+        writeFile(replay, wideChunk(10, "mudlet-spec-wide-replay-line\r\n"))
+        local mark = getLastLineNumber("main")
+
+        assert.is_true(loadReplay(replay))
+
+        assert.is_true(playedBack(mark, "mudlet-spec-wide-replay-line"), "the replay did not reach the console")
+        pumpEvents(200)
+      end)
+
+      it("acts on telnet negotiation that was recorded with the text", function()
+        if not testMode then
+          pending("letting the replay timer run needs MUDLET_TEST_MODE")
+          return
+        end
+        local replay = getMudletHomeDir() .. "/mudlet-spec-gmcp-replay.dat"
+        -- the gmcp table is the profile's, so whatever was under this key before
+        -- goes back afterwards
+        local previousReplay = gmcp.Replay
+        gmcp.Replay = nil
+        finally(function()
+          os.remove(replay)
+          gmcp.Replay = previousReplay
+        end)
+        -- IAC SB <GMCP> ... IAC SE, which only the telnet state machine can pick
+        -- out of the stream - played back as text it would just be printed
+        writeFile(replay, chunk(10, "\255\250\201Replay.Marker {\"note\":\"seen\"}\255\240mudlet-spec-gmcp-replay-line\r\n"))
+        local mark = getLastLineNumber("main")
+
+        assert.is_true(loadReplay(replay))
+
+        assert.is_true(playedBack(mark, "mudlet-spec-gmcp-replay-line"), "the replay did not reach the console")
+        assert.is_truthy(gmcp.Replay and gmcp.Replay.Marker, "the subnegotiation recorded in the replay was played back as text instead of acted on")
+        assert.equals("seen", gmcp.Replay.Marker.note)
+        pumpEvents(200)
+      end)
+
+      it("refuses a second replay while one is still running", function()
+        if not testMode then
+          pending("letting the replay timer run needs MUDLET_TEST_MODE")
+          return
+        end
+        local first = getMudletHomeDir() .. "/mudlet-spec-first-replay.dat"
+        local second = getMudletHomeDir() .. "/mudlet-spec-second-replay.dat"
+        finally(function()
+          os.remove(first)
+          os.remove(second)
+        end)
+        writeFile(first, chunk(400, "mudlet-spec-first-replay-line\r\n"))
+        writeFile(second, chunk(10, "mudlet-spec-second-replay-line\r\n"))
+        local mark = getLastLineNumber("main")
+
+        assert.is_true(loadReplay(first))
+        local ok, err = loadReplay(second)
+
+        assert.is_nil(ok)
+        assert.is_true(contains(err, "already be in progress"), tostring(err))
+        assert.is_true(playedBack(mark, "mudlet-spec-first-replay-line"), "the replay that was accepted did not reach the console")
+        assert.is_false(contains(textFrom(mark), "mudlet-spec-second-replay-line"), "the replay that was refused played anyway")
         pumpEvents(200)
       end)
     end)
