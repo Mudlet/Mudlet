@@ -12812,6 +12812,13 @@ void dlgTriggerEditor::keyGrabCallback(const Qt::Key key, const Qt::KeyboardModi
             pT->setKeyModifiers(modifier);
             QString newStateXML = exportKeyToXML(pT);
 
+            // The editor's own message area rather than the profile console,
+            // which this dialog is sitting in front of
+            const QString clash = pKeyUnit->mudletShortcutClashMessage(pT);
+            if (!clash.isEmpty()) {
+                showWarning(clash);
+            }
+
             pushKeyPropertyCommand(mpUndoStack, mpHost, keyID, pT->getName(), qsl("keyBinding"), oldStateXML, newStateXML);
         }
     }
