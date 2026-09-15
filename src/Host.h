@@ -92,6 +92,17 @@ class stopWatch
     friend class XMLimport;
 
 public:
+    // A stopwatch keeps its time as a count of milliseconds and, while it runs,
+    // as an effective start time that many milliseconds back from now. Both are
+    // bounded to this in either direction - a little under 31,700 years, which
+    // is past any use a stopwatch has while still leaving four orders of
+    // magnitude of what a qint64 of milliseconds holds spare - so that no
+    // arithmetic on a stopwatch's time can run out of that range and wrap
+    // around onto a time of the opposite sign. Time reaching the bound is
+    // clamped to it; a script asking for more than the whole range outright is
+    // told so instead:
+    static constexpr qint64 csmMaximumMilliSeconds = 1'000'000'000'000'000;
+
     stopWatch();
 
     bool start();
@@ -100,6 +111,7 @@ public:
     bool running() const { return mIsRunning; }
     void adjustMilliSeconds(const qint64);
     qint64 getElapsedMilliSeconds() const;
+    static qint64 clampToRange(const qint64);
     QString getElapsedDayTimeString() const;
     void setPersistent(const bool state) { mIsPersistent = state; }
     bool persistent() const { return mIsPersistent; }

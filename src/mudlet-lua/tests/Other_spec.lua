@@ -646,6 +646,18 @@ describe("Tests Other.lua functions", function()
         string.format("expected roughly %s but got %s", tostring(expected), tostring(actual)))
     end
 
+    -- Returns once at least `milliseconds` of real time have gone by, by
+    -- waiting on an event a real timer raises. Only the one spec which needs a
+    -- running stopwatch's reported time to move on its own uses this;
+    -- everything else here is deterministic without waiting.
+    local pumpCounter = 0
+    local function pump(milliseconds)
+      pumpCounter = pumpCounter + 1
+      local eventName = "stopwatchSpecPump" .. pumpCounter
+      tempTimer(milliseconds / 1000, function() raiseEvent(eventName) end)
+      waitForEvent(eventName, milliseconds + 1000)
+    end
+
     teardown(function()
       for _, id in ipairs(createdIds) do
         pcall(deleteStopWatch, id)
@@ -694,6 +706,65 @@ describe("Tests Other.lua functions", function()
         assert.equals(12.5, getStopWatchTime(id))
         assert.is_true(adjustStopWatch(id, -2.5))
         assert.equals(10.0, getStopWatchTime(id))
+      end)
+
+      it("adjustStopWatch keeps adjustments whose milliseconds exceed a 32-bit integer", function()
+        -- 2147483.648 s is where the milliseconds stop fitting into an int,
+        -- which is what the adjustment used to be converted through
+        local id = track(createStopWatch(false))
+        assert.is_true(adjustStopWatch(id, 2147484))
+        assert.equals(2147484, getStopWatchTime(id))
+        assert.is_true(resetStopWatch(id))
+        assert.is_true(adjustStopWatch(id, -2147484))
+        assert.equals(-2147484, getStopWatchTime(id))
+      end)
+
+      it("adjustStopWatch shifts a running stopwatch by a large amount as well", function()
+        local id = track(createStopWatch(true))
+        assert.is_true(adjustStopWatch(id, 1e11))
+        assertClose(1e11, getStopWatchTime(id), 1)
+      end)
+
+      it("adjustStopWatch clamps a stopped stopwatch to the time it can hold", function()
+        -- 1e12 s is the declared limit, and accumulating past it stops there
+        -- rather than wrapping around onto a time of the opposite sign
+        local id = track(createStopWatch(false))
+        assert.is_true(adjustStopWatch(id, 1e12))
+        assert.equals(1e12, getStopWatchTime(id))
+        assert.is_true(adjustStopWatch(id, 1e12))
+        assert.equals(1e12, getStopWatchTime(id))
+        assert.is_true(resetStopWatch(id))
+        assert.is_true(adjustStopWatch(id, -1e12))
+        assert.is_true(adjustStopWatch(id, -1e12))
+        assert.equals(-1e12, getStopWatchTime(id))
+      end)
+
+      it("adjustStopWatch clamps a running stopwatch to the time it can hold", function()
+        -- a running stopwatch measures from an effective start time, so this
+        -- takes the other branch: both the shift itself and the time passing
+        -- afterwards have to stop at the limit
+        local id = track(createStopWatch(true))
+        assert.is_true(adjustStopWatch(id, 1e12))
+        -- the time that goes by here would carry a stopwatch sitting on the
+        -- limit past it, so this is the clamp on what a running stopwatch
+        -- reports and not just the one on the adjustment
+        pump(50)
+        assert.equals(1e12, getStopWatchTime(id))
+        assert.is_true(adjustStopWatch(id, 1e12))
+        assert.equals(1e12, getStopWatchTime(id))
+      end)
+
+      it("adjustStopWatch refuses an adjustment beyond the whole range", function()
+        local id = track(createStopWatch(false))
+        assert.is_true(adjustStopWatch(id, 5))
+        for _, value in ipairs({0/0, math.huge, -math.huge, 1e300, 1e12 + 1, -1e12 - 1}) do
+          local ok, err = adjustStopWatch(id, value)
+          assert.is_nil(ok)
+          assert.is_truthy(err:find("must be a finite number from", 1, true),
+            string.format("unexpected message for %s: %s", tostring(value), tostring(err)))
+          -- and the stopwatch is left as it was
+          assert.equals(5, getStopWatchTime(id))
+        end
       end)
 
       it("getStopWatchTime resolves a stopwatch by its name", function()
