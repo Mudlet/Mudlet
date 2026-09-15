@@ -28,10 +28,8 @@
 #include "discord.h"
 #include "dlgIRC.h"
 #include "dlgMapper.h"
-#include "dlgModuleManager.h"
 #include "dlgNotepad.h"
-#include "dlgPackageManager.h"
-#include "dlgProfilePreferences.h"
+#include "dlgTriggerEditor.h"
 #include "GifTracker.h"
 #include "GMCPAuthenticator.h"
 #include "LuaInterface.h"
@@ -259,8 +257,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mpMedia(new TMedia(this, hostname))
 , mpAuth(new GMCPAuthenticator(this))
 , mTimerDebugOutputSuppressionInterval(QTime())
-, mSearchOptions(dlgTriggerEditor::SearchOption::SearchOptionNone)
-, mBufferSearchOptions(TConsole::SearchOption::SearchOptionNone)
+, mSearchOptions(enums::EditorSearchOptionNone)
+, mBufferSearchOptions(enums::BufferSearchOptionNone)
 , mpDlgIRC(nullptr)
 , mMMCPServer(nullptr)
 , mpDlgProfilePreferences(nullptr)
@@ -486,6 +484,7 @@ Host::~Host()
     // mpEditorDialog mid-teardown would find a half-destroyed widget:
     if (auto* pEditor = mpEditorDialog.data()) {
         mpEditorDialog = nullptr;
+        disconnect(this, nullptr, pEditor, nullptr);
         delete pEditor;
     }
 
@@ -495,6 +494,7 @@ Host::~Host()
             pNotePad->close();
         }
         mpNotePad = nullptr;
+        disconnect(this, nullptr, pNotePad, nullptr);
         delete pNotePad;
     }
 
@@ -589,6 +589,10 @@ void Host::closeChildren()
     if (mpEditorDialog) {
         mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
         mpEditorDialog->close();
+        // close() only posts the deletion, so the dialog outlives this release.
+        // Cutting the signals with the pointer is what keeps an emit from
+        // reaching an editor the Host has already let go of:
+        disconnect(this, nullptr, mpEditorDialog, nullptr);
         mpEditorDialog = nullptr;
     }
 
@@ -602,6 +606,7 @@ void Host::closeChildren()
         mpNotePad->save();
         mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
         mpNotePad->close();
+        disconnect(this, nullptr, mpNotePad, nullptr);
         mpNotePad = nullptr;
     }
 
@@ -1315,16 +1320,10 @@ void Host::updateConsolesFont()
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
     raiseEvent(event);
 
-    if (mpEditorDialog) {
-        mpEditorDialog->setDisplayFont(mpConsole->font());
-    }
+    emit signal_consoleFontChanged(mpConsole->font());
 
     if (mudlet::self()->smpDebugArea && mudlet::self()->smpDebugConsole) {
         mudlet::self()->smpDebugConsole->setFont(mpConsole->font());
-    }
-
-    if (mpNotePad) {
-        mpNotePad->setFont(mpConsole->font());
     }
 }
 
@@ -2074,6 +2073,36 @@ void Host::refreshMainConsoleColors()
     mpMainConsoleModel->buffer.updateColors();
 }
 
+void Host::printToMainConsole(const QString& msg)
+{
+    mpConsole->print(msg);
+}
+
+void Host::printToMainConsole(const QString& msg, QColor fgColor, QColor bgColor)
+{
+    mpConsole->print(msg, fgColor, bgColor);
+}
+
+void Host::printSystemMessage(const QString& msg)
+{
+    mpConsole->printSystemMessage(msg);
+}
+
+void Host::printOnDisplay(std::string& data, bool isFromServer)
+{
+    mpConsole->printOnDisplay(data, isFromServer);
+}
+
+void Host::finalizeMainConsole()
+{
+    mpConsole->finalize();
+}
+
+bool Host::mainConsoleShowsTimeStamps() const
+{
+    return mpConsole->showTimeStamps();
+}
+
 void Host::raiseLoggingAnnouncement(const bool isLogging, const QString& logFileName)
 {
     emit signal_loggingAnnouncement(isLogging, logFileName);
@@ -2598,8 +2627,8 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         }
     }
     //the extra module check is needed here to prevent infinite loops from script loaded modules
-    if (mpEditorDialog && thing != enums::PackageModuleType::ModuleFromScript) {
-        mpEditorDialog->doCleanReset();
+    if (thing != enums::PackageModuleType::ModuleFromScript) {
+        emit signal_editorCleanResetRequested();
     }
     QFile file2;
     if (packageUnpacksAFolder(fileName)) {
@@ -2897,9 +2926,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         }
         file2.close();
     }
-    if (mpEditorDialog) {
-        mpEditorDialog->doCleanReset();
-    }
+    emit signal_editorCleanResetRequested();
     if (thing == enums::PackageModuleType::Package) {
         saveProfile();
     }
@@ -2961,12 +2988,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         raiseEvent(detailedInstallEvent);
     });
 
-    if (mpPackageManager) {
-        mpPackageManager->resetPackageList();
-    }
-    if (mpModuleManager) {
-        mpModuleManager->layoutModules();
-    }
+    emit signal_packageListChanged();
 
     // Save profile to ensure modules persist and appear in module manager
     if (thing != enums::PackageModuleType::Package) {
@@ -3128,8 +3150,8 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
 
     //we check for ModuleFromScript because if we reset the editor, we will re-execute the
     //module uninstall, thus creating an infinite loop.
-    if (mpEditorDialog && thing != enums::PackageModuleType::ModuleFromScript) {
-        mpEditorDialog->doCleanReset();
+    if (thing != enums::PackageModuleType::ModuleFromScript) {
+        emit signal_editorCleanResetRequested();
     }
 
     mTriggerUnit.uninstall(packageName);
@@ -3167,8 +3189,8 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
         return true;
     }
 
-    if (mpEditorDialog && thing != enums::PackageModuleType::ModuleFromScript) {
-        mpEditorDialog->doCleanReset();
+    if (thing != enums::PackageModuleType::ModuleFromScript) {
+        emit signal_editorCleanResetRequested();
     }
 
     getActionUnit()->updateAllToolbars();
@@ -3190,18 +3212,13 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
     mDeferredSaveTimer.start(0ms);
 
     //NOW we reset if we're uninstalling a module
-    if (mpEditorDialog && thing == enums::PackageModuleType::ModuleFromScript) {
-        mpEditorDialog->doCleanReset();
-    }
-    if (mpPackageManager) {
-        mpPackageManager->resetPackageList();
+    if (thing == enums::PackageModuleType::ModuleFromScript) {
+        emit signal_editorCleanResetRequested();
     }
     // the Module Manager lists what a script can take away behind its back, and
     // a row left over from a module that has gone offers a removal that can only
     // be refused - installPackage() already puts the listing straight this way
-    if (mpModuleManager) {
-        mpModuleManager->layoutModules();
-    }
+    emit signal_packageListChanged();
     return true;
 }
 
@@ -3385,8 +3402,13 @@ QSettings& Host::profileIni()
 {
     if (!mpProfileIni) {
         mpProfileIni = new QSettings(mudlet::getMudletPath(enums::profileDataItemPath, getName(), qsl("profile.ini")), QSettings::IniFormat, this);
+        // Constructing it only splits the file into sections, and each section is
+        // parsed by the first lookup that needs it, so status() cannot see damage
+        // inside one until allKeys() has parsed them all
+        static_cast<void>(mpProfileIni->allKeys());
         if (mpProfileIni->status() == QSettings::FormatError) {
-            qWarning().nospace().noquote() << "Host::profileIni() ERROR - the profile's \"profile.ini\" file could not be parsed, the settings it held will be replaced.";
+            qWarning().nospace().noquote() << "Host::profileIni() ERROR - the \"profile.ini\" file of profile \"" << getName() << "\" (" << mpProfileIni->fileName()
+                                           << ") could not be parsed, the settings it held will be replaced.";
         }
     }
     return *mpProfileIni;
@@ -4215,17 +4237,21 @@ void Host::getPlayerRoomStyleDetails(quint8& styleCode, quint8& outerDiameter, q
 
 // Used to set the searchOptions here and the one in the editor if present, for
 // use by the XMLimporter class:
-void Host::setSearchOptions(const dlgTriggerEditor::SearchOptions optionsState)
+void Host::setSearchOptions(const enums::EditorSearchOptions optionsState)
 {
     mSearchOptions = optionsState;
-    if (mpEditorDialog) {
-        mpEditorDialog->setSearchOptions(optionsState);
-    }
+    emit signal_editorSearchOptionsChanged(optionsState);
 }
 
-void Host::setBufferSearchOptions(const TConsole::SearchOptions optionsState)
+void Host::setBufferSearchOptions(const enums::BufferSearchOptions optionsState)
 {
     mBufferSearchOptions = optionsState;
+}
+
+void Host::setShowIdsInEditor(const bool isShown)
+{
+    mShowIDsInEditor = isShown;
+    emit signal_showIdsInEditorChanged(isShown);
 }
 
 // The single answer to "does this profile have a map widget on screen right
@@ -5105,17 +5131,7 @@ bool Host::setProfileStyleSheet(const QString& styleSheet)
 
     mProfileStyleSheet = styleSheet;
     mpConsole->setStyleSheet(styleSheet);
-    if (mpEditorDialog) {
-        mpEditorDialog->setStyleSheet(styleSheet);
-    }
-
-    if (mpDlgProfilePreferences) {
-        mpDlgProfilePreferences->setStyleSheet(styleSheet);
-    }
-    if (mpNotePad) {
-        mpNotePad->setStyleSheet(styleSheet);
-        mpNotePad->setTabsStyleSheet(styleSheet);
-    }
+    emit signal_profileStyleSheetChanged(styleSheet);
     if (mpConsole->mpDockableMapWidget) {
         mpConsole->mpDockableMapWidget->setStyleSheet(styleSheet);
     }
@@ -5542,9 +5558,7 @@ void Host::setEditorShowBidi(const bool state)
 {
     if (mEditorShowBidi != state) {
         mEditorShowBidi = state;
-        if (mpEditorDialog) {
-            mpEditorDialog->setEditorShowBidi(state);
-        }
+        emit signal_editorShowBidiChanged(state);
     }
 }
 
