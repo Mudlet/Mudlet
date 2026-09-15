@@ -44,8 +44,9 @@
 // colliding-format layouts can all be planted and verified regardless of which qtkeychain
 // is linked, and the expected outcomes branch on QTKEYCHAIN_LINKED_VERSION.
 //
-// The scenarios only exist on Windows, so every test skips elsewhere (the bodies still
-// compile on all platforms).
+// The migration scenarios only exist on Windows, so those tests skip elsewhere (the bodies
+// still compile on all platforms). testFallbackChainRunsUnderATimeout is the exception: the
+// fallback chain it guards runs on every platform, so it does not skip.
 
 class CredentialManagerKeychainTest : public QObject
 {
@@ -60,6 +61,8 @@ private slots:
     void testRemoveSweepsBareEntry();
     void testOldFormatMigration();
     void testCollidingFormatRecovery();
+    void testFallbackChainRunsUnderATimeout();
+    void testANestedOperationDoesNotSwallowTheCascadeResult();
 
 private:
     QString mProfile;
@@ -263,6 +266,37 @@ OperationResult removePassword(CredentialManager& manager, const QString& profil
             kWaitMs);
     return *state;
 }
+
+// Records children appearing on a watched object. QChildEvent is delivered synchronously from the
+// QObject constructor, so this notices a guard being armed even on a backend that answers the whole
+// cascade in the same event-loop pass - which polling for an *active* timer cannot. The child is only
+// a QObject at that point (its QTimer constructor has not run), so the type is decided later, on
+// demand, rather than in the filter.
+class ChildArrivalWatcher : public QObject
+{
+public:
+    bool sawTimer() const
+    {
+        for (const auto& child : mChildren) {
+            if (qobject_cast<QTimer*>(child)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+protected:
+    bool eventFilter(QObject* watched, QEvent* event) override
+    {
+        if (event->type() == QEvent::ChildAdded) {
+            mChildren.append(QPointer<QObject>(static_cast<QChildEvent*>(event)->child()));
+        }
+        return QObject::eventFilter(watched, event);
+    }
+
+private:
+    QList<QPointer<QObject>> mChildren;
+};
 
 } // namespace
 
@@ -473,6 +507,149 @@ void CredentialManagerKeychainTest::testCollidingFormatRecovery()
     QVERIFY(again.success);
     QCOMPARE(again.password, secret);
     QVERIFY(!readTarget(legacyService));
+}
+
+void CredentialManagerKeychainTest::testFallbackChainRunsUnderATimeout()
+{
+    // Not Windows-gated: every platform runs the fallback chain, and this is about the chain being
+    // guarded at all rather than about any historical entry layout.
+    //
+    // retrieveCredential arms a timeout for its first read and cancels it the moment that read
+    // answers. A read answering "no entry in the new format" - the ordinary case for any profile that
+    // has never saved a password - then hands off to a chain several more keychain jobs deep. Those
+    // jobs used to run with nothing armed, so one that never answered left the caller waiting for
+    // good: dlgConnectionProfiles latches mKeychainOperationInProgress on such a read and clears it
+    // only from the callback, so the profiles dialog could never be accepted again.
+    //
+    // The stall is not hypothetical on a developer machine - the old-format probe below routinely
+    // fails to answer on macOS - which is why this asserts the guard rather than waiting one out.
+    QPointer<CredentialManager> manager = new CredentialManager;
+
+    bool answered = false;
+    bool reportedSuccess = true;
+    QString reportedError;
+    manager->retrievePassword(mProfile, mKey, [&](bool success, QString, const QString& errorMessage) {
+        answered = true;
+        reportedSuccess = success;
+        reportedError = errorMessage;
+    });
+
+    auto* readJob = manager->findChild<QKeychain::ReadPasswordJob*>();
+    QVERIFY2(readJob, "retrievePassword should have started a keychain read");
+
+    // Watch for the guard being armed rather than trying to catch it between event-loop passes. A
+    // backend that answers the whole cascade promptly - a CI box with no secret service, say - would
+    // otherwise leave nothing active to observe, and the test would fail for being fast rather than
+    // for being unguarded.
+    ChildArrivalWatcher armingWatcher;
+    manager->installEventFilter(&armingWatcher);
+
+    // Drive the hand-off deterministically rather than depending on what this machine's store says
+    // about an entry that does not exist.
+    readJob->emitFinishedWithError(QKeychain::EntryNotFound, QStringLiteral("synthetic: no such entry"));
+    // The completion is a queued connection, so one pass delivers it and starts the cascade.
+    QCoreApplication::processEvents();
+
+    // Collapse each guard as it appears, standing in for a stage whose keychain job never answers.
+    // Waiting the real interval out would cost half a minute per stage.
+    //
+    // retrievePassword is a cascade: each stage's failure starts the next, and only the last -
+    // encrypted file storage, which is synchronous - answers the caller. So a timeout does not report
+    // failure directly, it advances the cascade. The property that matters is that the cascade still
+    // reaches its end when every keychain stage stalls, instead of stopping on one that never answers.
+    for (int stage = 0; stage < 20 && !answered; ++stage) {
+        QTimer* guard = nullptr;
+        const auto timers = manager ? manager->findChildren<QTimer*>() : QList<QTimer*>{};
+        for (auto* candidate : timers) {
+            // The armed one specifically: setupTimeout() replaces the timer by disconnecting the old
+            // one and deleteLater()ing it, so for one event-loop pass both are children.
+            if (candidate->isActive()) {
+                guard = candidate;
+                break;
+            }
+        }
+        if (!guard) {
+            // No stage in flight and nobody has answered: either the cascade is between stages, or it
+            // is stuck on an unguarded one. qWaitFor decides which.
+            QTest::qWait(20);
+            continue;
+        }
+        guard->setInterval(0);
+        guard->start();
+        QTest::qWait(20);
+    }
+
+    // A cascade that has already answered never needed a guard, and on a backend with no secret
+    // service the whole thing can resolve in one pass. Requiring the guard unconditionally would fail
+    // such a run for being fast rather than for being unguarded, so the assertion is that the cascade
+    // did one or the other - and on any machine where a stage actually stalls, only the guard can
+    // satisfy it.
+    QVERIFY2(armingWatcher.sawTimer() || answered, "the fallback cascade neither armed a timeout nor answered, so a keychain job that never answers would strand the caller");
+    QVERIFY2(QTest::qWaitFor(
+                     [&answered]() {
+                         return answered;
+                     },
+                     5000),
+             "a fallback cascade whose keychain stages all stall must still report an outcome to its caller");
+    QVERIFY2(!reportedSuccess, "a retrieval that found nothing must be reported as a failure, not as an empty success");
+
+    delete manager;
+}
+
+void CredentialManagerKeychainTest::testANestedOperationDoesNotSwallowTheCascadeResult()
+{
+    // A cascade that recovers a password from the legacy or colliding format calls storePassword()
+    // part-way through itself, and that runs cleanupCurrentOperation() and setupTimeout() on the same
+    // manager - wiping the shared retrieval callback and replacing the shared timer while the cascade
+    // is still running. A cascade anchored to either loses its own result: the password is recovered
+    // and then dropped, and the caller waits for good, which is the very hang this class is meant to
+    // have stopped.
+    //
+    // A second retrieval stands in for that nested operation. It clobbers exactly the same shared
+    // state, and unlike a store it writes nothing to the keychain of whoever runs the suite.
+    QPointer<CredentialManager> manager = new CredentialManager;
+
+    bool answered = false;
+    manager->retrievePassword(mProfile, mKey, [&answered](bool, QString, const QString&) {
+        answered = true;
+    });
+
+    auto* readJob = manager->findChild<QKeychain::ReadPasswordJob*>();
+    QVERIFY2(readJob, "retrievePassword should have started a keychain read");
+    readJob->emitFinishedWithError(QKeychain::EntryNotFound, QStringLiteral("synthetic: no such entry"));
+    QCoreApplication::processEvents();
+
+    // Mid-cascade, exactly where a migration would store what it recovered.
+    manager->retrievePassword(mProfile + QStringLiteral("-nested"), mKey, [](bool, QString, const QString&) {});
+    QCoreApplication::processEvents();
+
+    // Collapse guards as they appear so no stage has to be waited out.
+    for (int stage = 0; stage < 40 && !answered; ++stage) {
+        QTimer* guard = nullptr;
+        const auto timers = manager ? manager->findChildren<QTimer*>() : QList<QTimer*>{};
+        for (auto* candidate : timers) {
+            if (candidate->isActive()) {
+                guard = candidate;
+                break;
+            }
+        }
+        if (!guard) {
+            QTest::qWait(20);
+            continue;
+        }
+        guard->setInterval(0);
+        guard->start();
+        QTest::qWait(20);
+    }
+
+    QVERIFY2(QTest::qWaitFor(
+                     [&answered]() {
+                         return answered;
+                     },
+                     5000),
+             "a cascade must still answer its caller after another operation reset the manager's shared state");
+
+    delete manager;
 }
 
 QTEST_GUILESS_MAIN(CredentialManagerKeychainTest)
