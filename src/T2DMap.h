@@ -104,6 +104,8 @@ public:
     friend class PanInteractionHandler;
     friend class MiddleMousePanHandler;
 
+    friend class MapMouseInteractionTest;
+
     struct MapInteractionContext
     {
         QMouseEvent* event = nullptr;
