@@ -40,8 +40,6 @@
 #include <QSaveFile>
 #include <QWidget>
 
-#include <hunspell/hunspell.h>
-
 #include <list>
 #include <map>
 #include <memory>
