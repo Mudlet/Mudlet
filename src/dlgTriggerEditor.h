@@ -747,6 +747,32 @@ private:
     void refreshTriggerIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, int& remaining);
     void paintTriggerItem(QTreeWidgetItem* pItem, TTrigger* pT);
 
+    // Same coalescing as mPendingTriggerIconRefresh, for the other four unit
+    // types refreshXIcon() covers.
+    QSet<int> mPendingAliasIconRefresh;
+    bool mAliasIconRefreshQueued = false;
+    void flushPendingAliasIconRefresh();
+    void refreshAliasIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, int& remaining);
+    void paintAliasItem(QTreeWidgetItem* pItem, TAlias* pT);
+
+    QSet<int> mPendingTimerIconRefresh;
+    bool mTimerIconRefreshQueued = false;
+    void flushPendingTimerIconRefresh();
+    void refreshTimerIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, int& remaining);
+    void paintTimerItem(QTreeWidgetItem* pItem, TTimer* pT);
+
+    QSet<int> mPendingScriptIconRefresh;
+    bool mScriptIconRefreshQueued = false;
+    void flushPendingScriptIconRefresh();
+    void refreshScriptIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, int& remaining);
+    void paintScriptItem(QTreeWidgetItem* pItem, TScript* pT);
+
+    QSet<int> mPendingKeyIconRefresh;
+    bool mKeyIconRefreshQueued = false;
+    void flushPendingKeyIconRefresh();
+    void refreshKeyIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, int& remaining);
+    void paintKeyItem(QTreeWidgetItem* pItem, TKey* pT);
+
     // One QIcon per resource path: a tree of thousands of items would otherwise
     // decode the same handful of PNGs once per item, every time it is rebuilt
     const QIcon& cachedIcon(const QString& path) const;

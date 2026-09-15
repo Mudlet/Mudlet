@@ -276,6 +276,78 @@ private slots:
     QTRY_COMPARE(description(pFolder), activeFolder);
     QCOMPARE(description(pLeaf), active);
   }
+
+  // refreshAliasIcon()/refreshTimerIcon()/refreshScriptIcon()/refreshKeyIcon()
+  // were coalesced the same way as refreshTriggerIcon() above. The alias case
+  // is the one worth guarding specifically: a fresh alias stays TAlias::mIsNew
+  // until explicitly saved in the editor, and an earlier version of this fix
+  // painted that "unsaved" disk icon over the active/inactive one on every
+  // Lua-triggered repaint instead of the checkbox this asserts on.
+  void test_luaToggleRepaintsAliasTimerScriptKeyIcons() {
+    mudlet::self()->slot_showScriptDialog();
+    QTest::qWait(100ms);
+    dlgTriggerEditor *pEditor = mpHost->mpEditorDialog;
+    QVERIFY2(pEditor, "the editor dialog was not created");
+    TLuaInterpreter *pLua = mpHost->getLuaInterpreter();
+    QVERIFY(pLua->compileAndExecuteScript(
+        qsl("permAlias(\"qaToggleAlias\", \"\", \"^qa toggle alias$\", \"\")\n"
+            "permTimer(\"qaToggleTimer\", \"\", 3600, \"\")\n"
+            "permScript(\"qaToggleScript\", \"\", \"-- deliberately does nothing\")\n"
+            "permKey(\"qaToggleKey\", \"\", mudlet.key.F7, \"\")\n"
+            // permScript()/permTimer() create their item disabled (unlike
+            // permAlias()/permKey()) - enable explicitly for a common baseline.
+            "enableTimer(\"qaToggleTimer\")\n"
+            "enableScript(\"qaToggleScript\")")));
+    pEditor->doCleanReset();
+
+    auto description = [](QTreeWidgetItem *pItem) {
+      return pItem->data(0, Qt::AccessibleDescriptionRole).toString();
+    };
+    const QString active = dlgTriggerEditor::tr("activated");
+    const QString inactive = dlgTriggerEditor::tr("deactivated");
+
+    struct Target {
+      const char *treeName;
+      const char *itemName;
+      const char *enableFn;
+      const char *disableFn;
+    };
+    const Target targets[] = {
+        {"treeWidget_aliases", "qaToggleAlias", "enableAlias", "disableAlias"},
+        {"treeWidget_timers", "qaToggleTimer", "enableTimer", "disableTimer"},
+        {"treeWidget_scripts", "qaToggleScript", "enableScript", "disableScript"},
+        {"treeWidget_keys", "qaToggleKey", "enableKey", "disableKey"},
+    };
+
+    for (const auto &target : targets) {
+      auto *pTree = pEditor->findChild<QTreeWidget *>(QString::fromLatin1(target.treeName));
+      QVERIFY(pTree);
+      QTreeWidgetItem *pItem = nullptr;
+      QVERIFY2(QTest::qWaitFor([&]() {
+        const auto found = pTree->findItems(
+            QString::fromLatin1(target.itemName),
+            Qt::MatchCaseSensitive | Qt::MatchFixedString | Qt::MatchRecursive,
+            0);
+        pItem = found.isEmpty() ? nullptr : found.first();
+        return pItem != nullptr;
+      }), qPrintable(qsl("the editor never rebuilt its tree around %1").arg(target.itemName)));
+      QCOMPARE(description(pItem), active);
+
+      QVERIFY(pLua->compileAndExecuteScript(
+          qsl("%1(\"%2\")").arg(target.disableFn, target.itemName)));
+      QTRY_COMPARE(description(pItem), inactive);
+
+      QVERIFY(pLua->compileAndExecuteScript(
+          qsl("%1(\"%2\")").arg(target.enableFn, target.itemName)));
+      QTRY_COMPARE(description(pItem), active);
+
+      // Toggled off and back on within one turn: coalescing must still land
+      // on the correct final state, not the state before the flush ran.
+      QVERIFY(pLua->compileAndExecuteScript(
+          qsl("%1(\"%3\")\n%2(\"%3\")").arg(target.disableFn, target.enableFn, target.itemName)));
+      QTRY_COMPARE(description(pItem), active);
+    }
+  }
 };
 
 #include "TriggerEditorTest.moc"
