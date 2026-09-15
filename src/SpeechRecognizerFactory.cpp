@@ -19,9 +19,16 @@
 
 #include "SpeechRecognizerFactory.h"
 
-#include "utils.h"
+#include "SherpaRecognizer.h"
 #include "SpeechRecognizer.h"
+#include "utils.h"
 #include "VoskRecognizer.h"
+
+#include <QDir>
+
+#if defined(Q_OS_MACOS)
+#include "AppleSpeechRecognizer.h"
+#endif
 
 SpeechRecognizer* SpeechRecognizerFactory::create(Backend backend, QObject* parent)
 {
@@ -42,13 +49,28 @@ SpeechRecognizer* SpeechRecognizerFactory::create(Backend backend, QObject* pare
         }
         return new VoskRecognizer(parent);
 
+    case Backend::Sherpa:
+        if (!SherpaRecognizer::sherpaAvailable()) {
+            qWarning() << "SpeechRecognizerFactory: sherpa-onnx backend requested but not available";
+            return nullptr;
+        }
+        return new SherpaRecognizer(parent);
+
     case Backend::Whisper:
         // The Whisper backend has no implementation yet
         return nullptr;
 
     case Backend::Platform:
-        // Future: return platform-specific implementation
+#if defined(Q_OS_MACOS)
+        if (!AppleSpeechRecognizer::speechAvailable()) {
+            qWarning() << "SpeechRecognizerFactory: the macOS speech backend was requested but the system reports no recognizer for this locale";
+            return nullptr;
+        }
+        return new AppleSpeechRecognizer(parent);
+#else
+        // Future: Windows SAPI, and whatever Linux settles on
         return nullptr;
+#endif
 
     case Backend::Auto:
         // Already handled above, but needed for compiler warning
@@ -62,14 +84,92 @@ QList<SpeechRecognizerFactory::Backend> SpeechRecognizerFactory::availableBacken
 {
     QList<Backend> backends;
 
+    // sherpa first: it is the actively released engine (weekly-ish releases),
+    // where Vosk has not shipped since v0.3.50 in April 2024. Auto resolves to
+    // availableBackends().first(), so this order is what makes Auto prefer
+    // sherpa over Vosk when both are installed.
+    if (SherpaRecognizer::sherpaAvailable()) {
+        backends.append(Backend::Sherpa);
+    }
+
     if (VoskRecognizer::libraryAvailable()) {
         backends.append(Backend::Vosk);
     }
 
     // Future: Check for Whisper availability
-    // Future: Check for platform API availability
+
+    // Backend::Platform is deliberately absent, even where it is available:
+    // Auto resolves to first(), and stt.init() still requires a model
+    // directory that exists, which this engine has none of. Listing it would
+    // make Auto pick a backend the Lua entry point then refuses to load.
+    // backendAvailable(Backend::Platform) answers for it honestly in the
+    // meantime, and create(Backend::Platform) builds it on request.
 
     return backends;
+}
+
+bool SpeechRecognizerFactory::backendAvailable(Backend backend)
+{
+    switch (backend) {
+    case Backend::Vosk:
+        return VoskRecognizer::libraryAvailable();
+
+    case Backend::Sherpa:
+        return SherpaRecognizer::sherpaAvailable();
+
+    case Backend::Whisper:
+        return false; // Not yet implemented
+
+    case Backend::Platform:
+#if defined(Q_OS_MACOS)
+        // Not gated on authorisation: a player who has not been asked yet
+        // still has a perfectly usable backend
+        return AppleSpeechRecognizer::speechAvailable();
+#else
+        return false; // Not yet implemented
+#endif
+
+    case Backend::Auto:
+        return !availableBackends().isEmpty();
+    }
+
+    return false;
+}
+
+QString SpeechRecognizerFactory::backendIdentifier(Backend backend)
+{
+    switch (backend) {
+    case Backend::Vosk:
+        return qsl("vosk");
+    case Backend::Sherpa:
+        return qsl("sherpa");
+    case Backend::Whisper:
+        return qsl("whisper");
+    case Backend::Platform:
+        return qsl("platform");
+    case Backend::Auto:
+        return qsl("auto");
+    }
+
+    return qsl("auto");
+}
+
+SpeechRecognizerFactory::Backend SpeechRecognizerFactory::backendFromIdentifier(const QString& identifier)
+{
+    if (identifier == QLatin1String("vosk")) {
+        return Backend::Vosk;
+    }
+    if (identifier == QLatin1String("sherpa")) {
+        return Backend::Sherpa;
+    }
+    if (identifier == QLatin1String("whisper")) {
+        return Backend::Whisper;
+    }
+    if (identifier == QLatin1String("platform")) {
+        return Backend::Platform;
+    }
+
+    return Backend::Auto;
 }
 
 QString SpeechRecognizerFactory::defaultModelPath(Backend backend)
@@ -87,6 +187,9 @@ QString SpeechRecognizerFactory::defaultModelPath(Backend backend)
     case Backend::Vosk:
         return VoskRecognizer::defaultModelPath();
 
+    case Backend::Sherpa:
+        return SherpaRecognizer::defaultModelPath();
+
     case Backend::Whisper:
         // The Whisper backend has no implementation yet
         return QString();
@@ -101,4 +204,19 @@ QString SpeechRecognizerFactory::defaultModelPath(Backend backend)
     }
 
     return QString();
+}
+
+SpeechRecognizerFactory::Backend SpeechRecognizerFactory::backendForModelDir(const QString& modelPath)
+{
+    if (SherpaRecognizer::looksLikeModelDir(modelPath)) {
+        return Backend::Sherpa;
+    }
+
+    // Vosk/Kaldi models carry their acoustic model in an "am" subdirectory
+    const QDir modelDir(modelPath);
+    if (modelDir.exists(qsl("am")) || modelDir.exists(qsl("conf"))) {
+        return Backend::Vosk;
+    }
+
+    return Backend::Auto;
 }

@@ -277,6 +277,7 @@ public:
     static int enableCommand(lua_State*);
     static int disableCommand(lua_State*);
     static int setCommandChecked(lua_State*);
+    static int setCommandPinned(lua_State*);
     static int setCommandIcon(lua_State*);
     static int setCommandTooltip(lua_State*);
     static int setCommandPulse(lua_State*);

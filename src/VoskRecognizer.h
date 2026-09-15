@@ -64,16 +64,13 @@ public:
 
     // SpeechRecognizer interface implementation
     bool initialize(const QString& modelPath) override;
-    void startListening() override;
-    void stopListening() override;
-    void cancel() override;
     void setSilenceTimeout(int msec) override;
     int silenceTimeout() const override;
-    // Vosk delivers per-word confidence and timing; it has no biasing, and
-    // grammar constraint (vosk_recognizer_new_grm) is not wired up yet, so
-    // only word results are claimed
-    // Word detail is the one thing this engine offers beyond plain text: it
-    // cannot be biased, takes no grammar, and decodes on this machine.
+    // Vosk delivers per-word confidence and timing, and can be tuned for
+    // end-of-speech; it has no biasing, and grammar constraint
+    // (vosk_recognizer_new_grm) is not wired up yet. Both of the claimed
+    // abilities follow a resolved library symbol, so an older or partial
+    // libvosk answers false for either.
     Capabilities capabilities() const override
     {
         Capabilities answer;
@@ -82,13 +79,17 @@ public:
         // supply real ones must not claim this, and a package that waits for
         // sysSTTWords before acting on a result would wait forever.
         answer.wordResults = (s_vosk_recognizer_set_words != nullptr);
+        // Same reasoning as wordResults above: an older libvosk without the
+        // endpointer symbol cannot be tuned at all, and setEndpointerMode()
+        // refuses rather than remembering a request the engine never got. That
+        // is a property of the installed library, not of the attempt.
+        answer.sensitivityTuning = (s_vosk_recognizer_set_endpointer_mode != nullptr);
         answer.onDevice = true;
         return answer;
     }
 
     float audioLevel() const override { return listening() ? mRecentAudioLevel : 0.0f; }
     bool hasLiveNativeResources() const override { return mVoskModel || mVoskRecognizer; }
-    void releaseResources() override;
     // Both read through the live model handle rather than answering from a
     // remembered string. getInfo() documents modelPath as "the model actually
     // loaded (empty when none)" and a package reads it to decide whether setup
@@ -113,11 +114,6 @@ public:
     // Whether the Vosk library can be used, loading it on the first ask
     static bool libraryAvailable();
 
-    // Re-read capabilities and emit capabilitiesChanged() if they moved. Called
-    // when a model loads, and again when the library is unloaded or reloaded
-    // underneath this instance - wordResults follows a symbol from it, so that
-    // is the other moment what this backend can do genuinely changes.
-    void announceCapabilitiesIfChanged();
 
     // Whether stt.unloadLibrary() has latched the library out, so a refusal can
     // say that rather than "not installed"
@@ -129,6 +125,10 @@ public:
     // unloadLibrary() latches "stay unloaded"; reloadLibrary() lifts it. Both
     // go through resetLibraryLoadState(), which does the unmapping itself.
     static bool resetLibraryLoadState();
+    // Why the library would not load or could not be used, when one was found.
+    // Empty when it loaded and when nothing was there - the same contract as
+    // SherpaRecognizer::libraryLoadError(), so noEngineMessage() can ask both.
+    static QString libraryLoadError() { return sLibraryLoadError; }
     static void unloadLibraryByRequest(bool unloaded) { sLibraryUnloadedByRequest = unloaded; }
 
     static QStringList librarySearchPaths();
@@ -181,6 +181,17 @@ public:
     // Public for the same reason as the two above: it decides whether a word
     // the player said survives, and "i" is a MUD player's inventory command.
     static bool loneFillerWordWasNotSpoken(const QString& text, const std::optional<double>& confidence);
+
+protected:
+    // SpeechRecognizer declares these protected: a holder of a concrete
+    // VoskRecognizer* must go through startListening()/stopListening()/
+    // cancel() like every other caller, not reach around the state machine.
+    // doReleaseResources() is protected for its own reason: releaseResources()
+    // on the base does the state and the announcement around it.
+    void doReleaseResources() override;
+    void doStartListening() override;
+    void doStopListening() override;
+    void doCancel() override;
 
 private slots:
     // Consumes 16kHz mono Int16 PCM from the shared capture component
@@ -236,15 +247,12 @@ private:
     // Vosk library and function pointers (for dynamic loading)
     static QLibrary sVoskLibrary;
     static bool sLibraryLoaded;
+    static QString sLibraryLoadError;
     static bool sLibraryLoadAttempted;
     // Set by unloadLibrary(), cleared by reloadLibrary(): while it stands, no
     // read-shaped call may map the library back in behind the caller's back
     static bool sLibraryUnloadedByRequest;
 
-    // What capabilities() last reported, so a change is announced once rather
-    // than on every read. wordResults follows a symbol that only resolves when
-    // the library loads, so it genuinely changes during initialize().
-    Capabilities mAnnouncedCapabilities;
 
     // Vosk API function pointers
     using vosk_model_new_fn = VoskModel* (*)(const char*);

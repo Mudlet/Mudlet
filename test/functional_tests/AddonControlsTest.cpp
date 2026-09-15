@@ -317,13 +317,19 @@ private slots:
         }
     }
 
+    // A command is only on screen while the window is showing the profile that
+    // created it, so a case asserting on one has to say which profile it means
+    // to be looking at. Most of these are the first profile's, and without this
+    // they read whatever the last case happened to leave active.
+    void init() { mudlet::self()->activateProfile(mpFirstHost); }
+
     // The clash check only runs when a package asks for a key, and a package
-    // on another profile can hold one when the search is switched on: the
-    // menu carries every profile's commands, so this clash crosses profiles
-    // even though a package can never see it coming. Qt answers an ambiguous
-    // shortcut by disabling both, so the profile that switched the search on
-    // has to be told - without being told whose command it was, which is the
-    // other package's business and nothing this profile can act on.
+    // on another profile can hold one when the search is switched on: the key
+    // is checked against every window's commands, so this clash crosses
+    // profiles even though a package can never see it coming. The profile that
+    // switched the search on has to be told - without being told whose command
+    // it was, which is the other package's business and nothing this profile
+    // can act on.
     void test_theSearchSaysSoWhenAnotherProfilesCommandHoldsItsKey()
     {
         runLua(mpSecondHost, qsl("setConfig('f3SearchEnabled', false)"));
@@ -332,9 +338,9 @@ private slots:
         const int commandId = addCommand(mpFirstHost, qsl("name = 'OtherProfileF3', menuPath = 'ClashTest', shortcut = 'F3'"));
         QVERIFY2(commandId > 0, "F3 could not be taken even with the search off");
 
-        // on the second profile because that is the visible one: a
-        // Qt::WindowShortcut candidate has to be visible to be ambiguous at
-        // all, and a console on a background tab is not
+        // Driven from the second profile because the message is raised on
+        // whichever profile switched the search on, and that is the profile
+        // whose console is read below
         runLua(mpSecondHost, qsl("clearWindow()"));
         runLua(mpSecondHost, qsl("setConfig('f3SearchEnabled', true)"));
         QTest::qWait(200ms);
