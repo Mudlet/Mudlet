@@ -394,11 +394,6 @@ bool VoskRecognizer::initialize(const QString& modelPath)
     // paths above leave it empty, which is what getInfo() promises
     mModelPath = modelPath;
 
-    // wordResults is derived from a symbol that resolves when the library
-    // loads, so what this backend can do has just changed. The header promises
-    // consumers hear about that rather than having to re-read on spec.
-    announceCapabilitiesIfChanged();
-
     if (s_vosk_recognizer_set_endpointer_mode && mEndpointerMode != EndpointerMode::Default) {
         s_vosk_recognizer_set_endpointer_mode(mVoskRecognizer, static_cast<int>(mEndpointerMode));
 #ifdef DEBUG_STT
@@ -429,6 +424,46 @@ bool VoskRecognizer::initialize(const QString& modelPath)
     }
 
     setState(State::Ready);
+
+    // Announced last, and after the state is settled, because both this and
+    // setState() reach Lua synchronously. A handler may call stt.close(), which
+    // frees the very handles configured above:
+    //
+    //  - announcing before the configuration handed a null recognizer handle to
+    //    vosk_recognizer_set_words(), which real libvosk is expected to
+    //    dereference (inferred from its sources; not observed - #10759 was seen
+    //    with a stand-in library that logs null handles instead);
+    //  - announcing before setState(Ready) meant Ready was written *after* the
+    //    close, leaving initialized() true and state "ready" with no model.
+    announceCapabilitiesIfChanged();
+
+    // A handler for either event may have undone this load. Reporting success
+    // when it did is what sent the next start() into a state its caller had
+    // been told was ready, so answer for what is true now rather than for what
+    // was true before the handler ran. Whatever state the handler left is the
+    // honest one, so none of this overwrites it.
+    //
+    // Two ways it can be untrue, and a handler can reach both: the handles are
+    // gone (stt.close()), or another model was loaded over this one - a
+    // re-entrant stt.init() leaves the handles valid and modelPath naming
+    // something the caller never asked for, so the pointers alone would call
+    // that a success.
+    //
+    // Deliberately not a state check. A handler that starts listening and finds
+    // no microphone faults the bridge, which says nothing about whether this
+    // load took - and failing here for that would report a model that is loaded,
+    // and that getInfo() still names, as having failed to load.
+    if (!mVoskModel || !mVoskRecognizer || mModelPath != modelPath) {
+        // Every other refusal in this function reports through errorOccurred
+        // before returning, and the caller relies on that: stt.init() answers a
+        // false with "failed to initialize model from X" and nothing else, so
+        // without this the one refusal a script can actually cause is the one it
+        // is told least about.
+        //: Shown when a script's own handler for a speech event closed or replaced the model while stt.init() was still loading it
+        emit errorOccurred(tr("The speech model loaded, but a handler for one of this call's own events closed or replaced it before it could be used."));
+        return false;
+    }
+
     return true;
 }
 
