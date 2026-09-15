@@ -1269,7 +1269,7 @@ int TLuaInterpreter::deleteArea(lua_State* L)
         if (name.isEmpty()) {
             return warnArgumentValue(L, __func__, "an empty string is not a valid area name");
         }
-        if (!host.mpMap->mpRoomDB->getAreaNamesMap().values().contains(name)) {
+        if (!host.mpMap->mpRoomDB->isAreaNameInUse(name)) {
             return warnArgumentValue(L, __func__, qsl("string '%1' is not a valid area name").arg(name));
         }
         if (name == host.mpMap->getDefaultAreaName()) {
@@ -3474,7 +3474,7 @@ int TLuaInterpreter::setAreaName(lua_State* L)
         if (existingName.isEmpty()) {
             return warnArgumentValue(L, __func__, "area name cannot be empty");
         }
-        if (!host.mpMap->mpRoomDB->getAreaNamesMap().values().contains(existingName)) {
+        if (!host.mpMap->mpRoomDB->isAreaNameInUse(existingName)) {
             return warnArgumentValue(L, __func__, csmInvalidAreaName.arg(existingName));
         }
         if (host.mpMap->mpRoomDB->getAreaNamesMap().value(-1).contains(existingName)) {
