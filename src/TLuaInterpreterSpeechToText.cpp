@@ -367,6 +367,11 @@ int TLuaInterpreter::sttInit(lua_State* L)
         }
     }
 
+    // Resolved for the refusals below: sttInit() had none, so a fault it
+    // raised went to the microphone's owner rather than to the profile whose
+    // call was refused - the routing reportSpeechRefusalTo() exists to fix.
+    Host& host = getHostFromLua(L);
+
     auto* pMudlet = mudlet::self();
     if (!pMudlet) {
         return warnArgumentValue(L, funcName, "mudlet instance not available");
@@ -432,43 +437,42 @@ int TLuaInterpreter::sttInit(lua_State* L)
     // caller a bridge it was told was ready and is not: the next stt.start()
     // fails on a session nothing loaded (#10759).
     //
-    // Checked here rather than inside each initialize(): there are three
-    // backends now, the hazard is identical in all of them because it comes
-    // from the events the bridge raises rather than from anything Vosk, sherpa
-    // or Apple does, and a guard in one of them is a guard the other two are
-    // silently missing.
+    // Asked here rather than inside each initialize(): there are three backends
+    // and the hazard is in none of them - it is in the events this bridge
+    // raises while a backend loads, so a guard in one backend is a guard the
+    // other two silently lack.
     //
-    // Deliberately not a state check. A handler that starts listening and finds
-    // no microphone faults the bridge, which says nothing about whether this
-    // load took - failing for that would report a model that is loaded, and
-    // that getInfo() still names, as having failed to load.
-    const QString undone = [&]() -> QString {
-        // An engine swap retires this recognizer and publishes another, so the
-        // pointer this call has been working through is no longer the one Lua
-        // reads. Its resources are already released and it is awaiting
-        // deleteLater(), so nothing below would be asking about the live engine.
-        if (pMudlet->speechRecognizer() != pRecognizer) {
-            return qsl("a handler for one of this call's own events changed the speech engine while the model was still loading");
-        }
-        if (!pRecognizer->initialized()) {
-            return qsl("the speech model loaded, but a handler for one of this call's own events closed it before it could be used");
-        }
-        // Model-less backends answer an empty modelPath() by design, so there
-        // is nothing here to compare - a handler replacing that load is caught
-        // by the two checks above.
-        if (!useModelLessBackend && pRecognizer->modelPath() != modelPath) {
-            return qsl("the speech model loaded, but a handler for one of this call's own events replaced it with another before it could be used");
-        }
-        return QString();
-    }();
-    if (!undone.isEmpty()) {
-        // Every other refusal here reports through sysSTTError before
-        // returning, and a caller relies on that: a false is answered with
-        // "failed to initialize model from X" and nothing else, so without this
-        // the one refusal a script can actually cause is the one it is told
-        // least about.
-        reportSpeechRefusal(undone);
-        return warnArgumentValue(L, funcName, undone);
+    // Each is raised as well as returned. A load undone from inside a script's
+    // own handler is the one refusal a script can actually cause, so a consumer
+    // driving the bridge from events would otherwise see the load simply not
+    // take, with nothing said.
+
+    // The engine was swapped: this call's recognizer has been retired and
+    // another published, so the pointer it has been working through is no
+    // longer the one Lua reads. Asked first, and by identity, so nothing below
+    // dereferences a recognizer on its way out.
+    if (pMudlet->speechRecognizer() != pRecognizer) {
+        const QString message = qsl("a handler for one of this call's own events changed the speech engine while the model was still loading");
+        reportSpeechRefusalTo(host, message);
+        return warnArgumentValue(L, funcName, message);
+    }
+    // Uninitialized rather than !initialized(), which is also false in the
+    // error state. A handler that starts listening and finds no microphone
+    // faults the bridge, and that says nothing about whether this load took -
+    // refusing for it would report a model that is loaded, and that getInfo()
+    // still names, as having failed to load. stt.close() is what this catches,
+    // and releaseResources() leaves exactly this state.
+    if (pRecognizer->state() == SpeechRecognizer::State::Uninitialized) {
+        const QString message = qsl("the speech model loaded, but a handler for one of this call's own events closed it before it could be used");
+        reportSpeechRefusalTo(host, message);
+        return warnArgumentValue(L, funcName, message);
+    }
+    // Model-less backends answer an empty modelPath() by design, so there is
+    // nothing here to compare - a handler replacing that load is caught above.
+    if (!useModelLessBackend && pRecognizer->modelPath() != modelPath) {
+        const QString message = qsl("the speech model loaded, but a handler for one of this call's own events replaced it with another before it could be used");
+        reportSpeechRefusalTo(host, message);
+        return warnArgumentValue(L, funcName, message);
     }
 
     // Settings can name a model that is no longer installed, and

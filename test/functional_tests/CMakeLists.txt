@@ -359,14 +359,14 @@ set_target_properties(vosk_stub PROPERTIES
     # the bare name "vosk" before it tries any search path, and the dynamic
     # loader answers that from the executable's own directory - so a stub built
     # next to the binaries is found by every test in it, from process start,
-    # whether or not the test installed one. That silently skipped the two cases
-    # here that require no library and failed a third, all before any case ran.
+    # whether or not the test installed one - which decides the answer for every
+    # case in that binary before any of them runs.
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/vosk-stub"
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/vosk-stub"
     # The stub's entry points are plain extern "C" with no __declspec(dllexport),
     # so without this a Windows build produces a DLL that loads and resolves
-    # nothing - QLibrary::resolve() returns null for every symbol and the cases
-    # below would fail for a reason that has nothing to do with what they test.
+    # nothing - QLibrary::resolve() returns null for every symbol, and a test
+    # would fail for a reason that has nothing to do with what it is checking.
     WINDOWS_EXPORT_ALL_SYMBOLS ON)
 if(APPLE)
     set_target_properties(vosk_stub PROPERTIES SUFFIX ".dylib")
@@ -375,16 +375,11 @@ elseif(WIN32)
 else()
     set_target_properties(vosk_stub PROPERTIES SUFFIX ".so")
 endif()
-add_dependencies(functional_media_tests vosk_stub)
-# SpeechAcrossProfilesTest installs the same stand-in engine, so that it can
-# build a recognizer on a runner with none - which is every CI runner.
 add_dependencies(functional_window_tests vosk_stub)
-target_compile_definitions(functional_window_tests PRIVATE
-    MUDLET_VOSK_STUB_LIBRARY="$<TARGET_FILE:vosk_stub>")
 # Passed rather than reconstructed in the test: the suffix rules above are the
 # only place the platform naming is decided, and a test guessing at it would
 # silently skip instead of failing when they change.
-target_compile_definitions(functional_media_tests PRIVATE
+target_compile_definitions(functional_window_tests PRIVATE
     MUDLET_VOSK_STUB_LIBRARY="$<TARGET_FILE:vosk_stub>")
 
 # AppStartupTeardownTest runs the shipped application instead of linking it, so it

@@ -185,9 +185,10 @@ that a package should not assume one behaves like another:
 
 Events are raised on the profile **holding the microphone** — the one whose
 `stt.start()` began the session — and on the **active profile** when no session
-is running. Those are the same profile in the ordinary case. They differ when
-the player moves to another game mid-session, and the session's results belong
-to the game they were spoken to rather than to the one now in front.
+is running, with one exception noted below. Those are the same profile in the
+ordinary case. They differ when the player moves to another game mid-session,
+and the session's results belong to the game they were spoken to rather than to
+the one now in front.
 
 There is one recognizer per client, so at most one profile can be listening.
 A second profile calling `stt.start()` or `stt.toggle()` **takes** the
@@ -207,10 +208,8 @@ else — the case a "keep listening while another application is
 in front" setting creates, which no in-window signal can cover. Desktop Mudlet
 puts "(listening)" in the window title.
 
-Every event below reaches one profile: the one holding the microphone, or the
-profile in front when nobody holds it. `sysSTTCapabilitiesChanged` is the single
-exception and reaches **every open profile**, because it is the only one that
-does not describe a session. What a backend can do is a property of the engine,
+`sysSTTCapabilitiesChanged` is that exception, and reaches **every open
+profile**, because it is the only event here that does not describe a session. What a backend can do is a property of the engine,
 and every profile reads the same answer back from `stt.getInfo()`, so telling
 only the profile that happens to hold the microphone would change what the
 others read while leaving them no way to hear about it.

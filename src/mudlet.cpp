@@ -197,7 +197,9 @@ void mudlet::raiseSpeechEvent(const QString& name, const QString& value)
     // result, state change and fault belongs to the session that is running,
     // whatever the player has since tabbed to. Only with nobody listening does
     // "the profile in front" become the right answer - that is where a refusal
-    // from stt.init() or a capability change with no session goes.
+    // from stt.init() goes. Capability changes are not here at all: they
+    // describe the engine rather than a session, so announceSpeechCapabilities-
+    // IfChanged() raises them on every profile.
     Host* pHost = mpMicrophoneOwner ? mpMicrophoneOwner.data() : getActiveHost();
     raiseSpeechEventOn(pHost, name, value);
 }
@@ -436,10 +438,12 @@ void mudlet::initSpeechRecognition(SpeechRecognizerFactory::Backend backend)
     }
 
     // Last, once mpSpeechRecognizer names the engine Lua will read and the old
-    // one is gone. A recognizer existing at all changes what getInfo() answers,
+    // one is released and detached - it is awaiting deleteLater() rather than
+    // already destroyed, which is what lets stt.init() compare against it. A recognizer existing at all changes what getInfo() answers,
     // and so does replacing one engine with another that can do different
     // things - neither of which any recognizer is in a position to announce for
-    // itself. Reached by any stt call that needs an engine, so a package
+    // itself. Reached whenever an engine is created or swapped - any stt call
+    // that finds none built, or asks for a different one - so a package
     // following the event rather than re-reading no longer believes an engine's
     // first answer for ever (#10760).
     announceSpeechCapabilitiesIfChanged();
@@ -487,9 +491,10 @@ void mudlet::announceSpeechCapabilitiesIfChanged()
     // Over a copy of the list, because each raise runs Lua and a handler may
     // open or close a profile while this is walking it.
     const QList<QSharedPointer<Host>> profiles = mHostManager.hostList();
-    // Nothing to deliver to means nothing is announced and nothing is recorded.
-    // Recording it as announced anyway would lose the change for good, and the
-    // next profile to open would read capabilities it was never told about.
+    // Nothing to deliver to means nothing is announced and nothing is recorded:
+    // the baseline must only ever name what was actually delivered. Recording an
+    // announcement that went nowhere would leave every later comparison finding
+    // the baseline already equal, and the change would never be made good.
     if (profiles.isEmpty()) {
         return;
     }
@@ -498,6 +503,16 @@ void mudlet::announceSpeechCapabilitiesIfChanged()
     // baseline would let it announce the same move again.
     mAnnouncedSpeechCapabilities = current;
     for (const auto& pHost : profiles) {
+        // Each raise runs Lua, and reacting to a capability change by calling
+        // stt.reloadLibrary() or stt.init() is the documented thing to do - so a
+        // handler can land back in here, announce a newer payload to every
+        // profile, and return. Carrying on would then deliver this older one to
+        // the profiles the outer loop has not reached, leaving them holding a
+        // value nothing will correct: the baseline already names the newer one.
+        // The same shape as toggleMute()'s guard over this list.
+        if (mAnnouncedSpeechCapabilities != current) {
+            break;
+        }
         if (pHost) {
             raiseSpeechEventOn(pHost.data(), qsl("sysSTTCapabilitiesChanged"), current);
         }

@@ -291,16 +291,6 @@ private:
     QTemporaryDir mConfigDir;
     QByteArray mSavedXdg;
 
-    // A directory that exists and holds no model, which the stub accepts as one
-    // - it answers for any non-empty path, so a load gets as far as the
-    // configuration calls this file is about.
-    QString stubModelDirectory()
-    {
-        const QString path = QDir(mConfigDir.path()).filePath(qsl("stub-model"));
-        QDir().mkpath(path);
-        return path;
-    }
-
     // One word of Vosk's "result" array
     static QJsonObject word(const QString& text, const double start, const double end)
     {

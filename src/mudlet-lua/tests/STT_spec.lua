@@ -150,7 +150,7 @@ describe("stt bridge", function()
 
       local function capabilities()
         local current = stt.getInfo().capabilities
-        return ("%s|%s|%s|%s"):format(tostring(current.biasing), tostring(current.grammar), tostring(current.words), tostring(current.onDevice))
+        return ("%s|%s|%s|%s|%s"):format(tostring(current.biasing), tostring(current.grammar), tostring(current.words), tostring(current.sensitivityTuning), tostring(current.onDevice))
       end
 
       local before, announced = capabilities(), events
@@ -351,7 +351,12 @@ describe("stt bridge", function()
       if not closed then return end
 
       assert.is_nil(ok, "a load a handler closed under it reported success")
+      -- The wording, not merely that something was refused: a backend refusing
+      -- for its own reasons answers "failed to initialize model from ...", so
+      -- asserting is_string(err) alone would be satisfied without the bridge
+      -- ever asking the question this case is about.
       assert.is_string(err)
+      assert.is_truthy(err:find("closed it before it could be used", 1, true), "the refusal did not come from the bridge's own check: " .. err)
       assert.is_false(stt.initialized(), "initialized() stayed true with the model closed")
       assert.are.equal("uninitialized", stt.getInfo().state, "the state outlived the model it described")
     end)
@@ -377,10 +382,11 @@ describe("stt bridge", function()
         stt.close()
       end)
 
-      local ok = stt.init(models[1].path)
+      local ok, err = stt.init(models[1].path)
       if not replaced then return end
 
       assert.is_nil(ok, "a load answered true for a model a handler had already replaced")
+      assert.is_truthy(err:find("replaced it with another", 1, true), "the refusal did not come from the bridge's own check: " .. tostring(err))
       assert.are.equal(models[2].path, stt.getInfo().modelPath, "modelPath should name the model that is actually loaded")
     end)
 
