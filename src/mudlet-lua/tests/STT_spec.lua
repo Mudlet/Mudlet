@@ -330,8 +330,14 @@ describe("stt bridge", function()
           stt.close()
         end
       end)
+      -- The reason travels as sysSTTError: stt.init() answers a refused load
+      -- with its own summary, so the return value alone cannot tell this
+      -- refusal from any other and asserting on it would pass either way.
+      local reported
+      local errors = registerAnonymousEventHandler("sysSTTError", function(_, message) reported = message end)
       finally(function()
         killAnonymousEventHandler(handler)
+        killAnonymousEventHandler(errors)
         stt.close()
       end)
 
@@ -343,6 +349,8 @@ describe("stt bridge", function()
 
       assert.is_nil(ok, "a load a handler closed under it reported success")
       assert.is_string(err)
+      assert.is_truthy(reported and reported:find("closed or replaced it before it could be used", 1, true),
+        "the load was refused, but not for the reason this case is about: " .. tostring(reported))
       assert.is_false(stt.initialized(), "initialized() stayed true with the model closed")
       assert.are.equal("uninitialized", stt.getInfo().state, "the state outlived the model it described")
     end)
@@ -364,8 +372,11 @@ describe("stt bridge", function()
           stt.init(models[2].path)
         end
       end)
+      local reported
+      local errors = registerAnonymousEventHandler("sysSTTError", function(_, message) reported = message end)
       finally(function()
         killAnonymousEventHandler(handler)
+        killAnonymousEventHandler(errors)
         stt.close()
       end)
 
@@ -373,6 +384,8 @@ describe("stt bridge", function()
       if not replaced then return end
 
       assert.is_nil(ok, "a load answered true for a model a handler had already replaced")
+      assert.is_truthy(reported and reported:find("closed or replaced it before it could be used", 1, true),
+        "the load was refused, but not for the reason this case is about: " .. tostring(reported))
       assert.are.equal(models[2].path, stt.getInfo().modelPath, "modelPath should name the model that is actually loaded")
     end)
 
