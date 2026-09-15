@@ -82,6 +82,7 @@ set(PROFILE_GROUP_TEST_SOURCES
     ConnectionDialogCrashTest.cpp
     ConnectionDialogFocusTest.cpp
     DefaultGameDeleteTest.cpp
+    DictionaryRoundTripTest.cpp
     MissingDisplayFontTest.cpp
     ProfileDeletionSafetyTest.cpp
     ProfileFolderNameTest.cpp

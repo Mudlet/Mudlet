@@ -1218,8 +1218,11 @@ describe("Tests C++ functions in the Miscallaneous category", function()
     end)
 
     describe("Tests the dictionary functions", function()
-      -- The words go into the profile's own dictionary file, which outlives the
-      -- run, so every spec takes back out what it put in.
+      -- The words stay in the profile's word list for the rest of the run, and
+      -- go into the profile's dictionary file when it closes - which outlives
+      -- the run whenever the specs are pointed at a real profile tree rather
+      -- than the throwaway HOME run-lua-tests.sh makes. So every spec takes
+      -- back out what it put in, on the way out of a failure as well.
       local function withWords(...)
         local words = {...}
         finally(function()
@@ -1258,6 +1261,47 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           assert.is_nil(ok)
           assert.is_true(contains(err, "already seems to be in the user dictionary"), tostring(err))
         end)
+
+        -- The dictionary file is one word per line below a count of how many
+        -- lines follow, and hunspell reads a "/" as the start of the affix
+        -- flags and a tab as the start of the morphological description. Each
+        -- of these comes back from the file as a different word, or as no word
+        -- at all, so the list a script reads and what the spell checker knows
+        -- part company at the next start. A word of nothing but spaces, and one
+        -- with a trailing space, do survive the file intact - those two are
+        -- refused for not being words.
+        it("returns nil+msg for a word the dictionary file cannot carry", function()
+          local unstorable = {"", "   ", "qa\nword", "qa\rword", "qa\r\nword",
+                              " qapadded", "qapadded ", "qapadded\t",
+                              "qatab\tword", "qaslash/word"}
+          -- a regression leaves them stored, and every other dictionary spec
+          -- then runs against a word list this one dirtied
+          finally(function()
+            for _, word in ipairs(unstorable) do
+              removeWordFromDictionary(word)
+            end
+          end)
+
+          for _, word in ipairs(unstorable) do
+            local ok, err = addWordToDictionary(word)
+            assert.is_nil(ok, ("addWordToDictionary accepted %q"):format(word))
+            assert.is_true(contains(err, "cannot be stored in the user dictionary"), tostring(err))
+            assert.is_nil(indexOf(getDictionaryWordList(), word), ("%q reached the word list"):format(word))
+          end
+        end)
+
+        -- The refusals above must not take the words a user dictionary exists
+        -- for with them: all of these do survive the file and hunspell.
+        it("still takes the everyday words a dictionary is for", function()
+          local storable = {"mudletspecdon't", "mudletspec-hyphen", "mudletspecnaïve",
+                            "mudletspec two words", "mudletspec日本語"}
+          withWords(unpack(storable))
+
+          local words = getDictionaryWordList()
+          for _, word in ipairs(storable) do
+            assert.is_not_nil(indexOf(words, word), ("%q did not reach the word list"):format(word))
+          end
+        end)
       end)
 
       describe("Tests the functionality of removeWordFromDictionary", function()
@@ -1278,6 +1322,12 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           local ok, err = removeWordFromDictionary("mudletspecnosuchword")
           assert.is_nil(ok)
           assert.is_true(contains(err, "does not seem to be in the user dictionary"), tostring(err))
+        end)
+
+        it("says why a word that cannot be stored is not there", function()
+          local ok, err = removeWordFromDictionary("qa\nword")
+          assert.is_nil(ok)
+          assert.is_true(contains(err, "cannot be stored in the user dictionary"), tostring(err))
         end)
       end)
 
