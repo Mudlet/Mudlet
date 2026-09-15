@@ -112,6 +112,13 @@ private:
 
     QHash<int, TRoom*> rooms;
     QMultiHash<int, int> entranceMap; // key is exit target, value is exit source
+    // Mirrors entranceMap with key and value swapped (key is exit source, value
+    // is exit target), kept in lockstep at every entranceMap mutation. Lets
+    // deleteValuesFromEntranceMap() find the handful of entries a room
+    // contributed directly, rather than scanning every entry in entranceMap to
+    // find them - the difference between O(exits for this room) and
+    // O(exits in the whole map) on every setExit() and room deletion.
+    QMultiHash<int, int> entranceMapBySource;
     QMap<int, TArea*> areas;
     QMap<int, QString> areaNamesMap;
     TMap* mpMap;
