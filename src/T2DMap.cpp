@@ -520,6 +520,12 @@ T2DMap::T2DMap(QWidget* parent)
 
     mCustomLineSession = std::make_unique<CustomLineSession>(*this);
 
+    // A hands-free pan ends on the next press of any other button, so this
+    // handler has to see every press before one of the others consumes it.
+    // It only takes middle-button events for itself and passes the rest on.
+    mMiddleMousePanHandler = std::make_unique<MiddleMousePanHandler>(*this);
+    registerInteractionHandler(mMiddleMousePanHandler.get(), 500);
+
     mCustomLineDrawContextMenuHandler = std::make_unique<CustomLineDrawContextMenuHandler>(*this);
     registerInteractionHandler(mCustomLineDrawContextMenuHandler.get(), 450);
 
@@ -546,9 +552,6 @@ T2DMap::T2DMap(QWidget* parent)
 
     mLabelInteractionHandler = std::make_unique<LabelInteractionHandler>(*this);
     registerInteractionHandler(mLabelInteractionHandler.get(), 150);
-
-    mMiddleMousePanHandler = std::make_unique<MiddleMousePanHandler>(*this);
-    registerInteractionHandler(mMiddleMousePanHandler.get(), 110);
 
     mPanInteractionHandler = std::make_unique<PanInteractionHandler>(*this);
     registerInteractionHandler(mPanInteractionHandler.get(), 100);
