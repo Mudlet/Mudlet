@@ -34,6 +34,7 @@
 
 #include <QFileInfo>
 #include <QSignalSpy>
+#include <QWindow>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -108,6 +109,28 @@ private:
         }
 #endif
         QTest::keyClick(pCommandLine, key, sentModifiers);
+    }
+
+    // press() sends straight to the widget, which never reaches Qt's shortcut
+    // map: that runs only for key events arriving through the window system, so
+    // a QAction's shortcut cannot claim a widget-targeted event. Anything whose
+    // subject is a shortcut competing with a key binding has to come in the way
+    // a real key does - through the window, to whatever holds the focus.
+    static bool pressAtWindow(TCommandLine* pCommandLine, const Qt::Key key, const Qt::KeyboardModifiers modifiers = Qt::NoModifier)
+    {
+        QWidget* pTopLevel = pCommandLine->window();
+        QWindow* pWindow = pTopLevel ? pTopLevel->windowHandle() : nullptr;
+        if (!pWindow) {
+            return false;
+        }
+        pTopLevel->activateWindow();
+        pCommandLine->setFocus(Qt::OtherFocusReason);
+        QTest::qWaitForWindowActive(pTopLevel);
+        if (QGuiApplication::focusWindow() != pWindow) {
+            return false;
+        }
+        QTest::keyClick(pWindow, key, modifiers);
+        return true;
     }
 
     static QString selection(const TCommandLine* pCommandLine) { return pCommandLine->textCursor().selectedText(); }
@@ -758,6 +781,80 @@ private slots:
         QCOMPARE(luaGlobal("keyGroupFired"), QString());
         // nothing claimed the press, so it is the command line's again
         QCOMPARE(pCommandLine->toPlainText(), qsl("k"));
+    }
+
+    // The control for the pair below: this is the same binding on the same kind
+    // of key with no command anywhere near it, so if this one does not fire the
+    // pair proves nothing about commands and everything about the harness.
+    void test_aBindingOnAPlainLetterFiresWithNoCommandHoldingIt()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QVERIFY(runLua(qsl("keyTakenFired = ''")));
+
+        QString name = qsl("keyTakenControlKey");
+        QString noParent;
+        QString script = qsl("keyTakenFired = 'yes'");
+        int noModifier = Qt::NoModifier;
+        int letterY = Qt::Key_Y;
+        auto [keyId, keyMessage] = mpHost->mLuaInterpreter.startPermKey(name, noParent, letterY, noModifier, script);
+        QVERIFY2(keyId > 0, qPrintable(keyMessage));
+        switchOffAfterwards({name});
+
+        if (!pressAtWindow(pCommandLine, Qt::Key_Y)) {
+            QSKIP("no window handle to route a key through, so the shortcut map cannot be exercised here");
+        }
+
+        QCOMPARE(luaGlobal("keyTakenFired"), qsl("yes"));
+    }
+
+    // #10757: placing a command over a binding's key posts a warning saying the
+    // binding "will not fire". That is a claim about what the key then does, and
+    // only a real key press can stand behind it - the specs either side of this
+    // read the wording of the warning and nothing more. If this ever fails while
+    // the control above passes, the warning is telling players something untrue
+    // and it is the wording that has to change, not this test.
+    //
+    // The press has to arrive through the window: a menu item's shortcut is
+    // claimed from Qt's shortcut map, which only sees key events coming in from
+    // the window system, so press() - which posts straight to the widget - lets
+    // the binding win and would have this passing for the wrong reason.
+    void test_aCommandTakesThePressFromABindingOnItsKey()
+    {
+#if defined(Q_OS_MACOS)
+        // Mudlet never sets AA_DontUseNativeMenuBar, so the menu bar here is the
+        // system one and AppKit owns an item's shortcut - outside Qt's shortcut
+        // map, where no synthesised key can reach it. The clash itself is the
+        // same; it is only this way of provoking it that macOS cannot run.
+        QSKIP("the menu bar is the system one here, so a synthesised key cannot reach a menu item's shortcut");
+#endif
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QVERIFY(runLua(qsl("keyTakenFired = ''")));
+
+        // The command first: the other order is refused, which is the whole of
+        // the forward half of #10757
+        QVERIFY2(runLua(qsl("keyTakenCommandId = addCommand{name = 'KeyTaker', menuPath = 'KeyTakerTest', shortcut = 'Z'}")), "the command could not be placed");
+        QVERIFY2(luaGlobal("keyTakenCommandId") != QString(), "addCommand refused a key nothing was holding");
+
+        QString name = qsl("keyTakenLosingKey");
+        QString noParent;
+        QString script = qsl("keyTakenFired = 'yes'");
+        int noModifier = Qt::NoModifier;
+        int letterZ = Qt::Key_Z;
+        auto [keyId, keyMessage] = mpHost->mLuaInterpreter.startPermKey(name, noParent, letterZ, noModifier, script);
+        QVERIFY2(keyId > 0, qPrintable(keyMessage));
+        switchOffAfterwards({name});
+
+        const bool pressed = pressAtWindow(pCommandLine, Qt::Key_Z);
+        const QString fired = luaGlobal("keyTakenFired");
+
+        runLua(qsl("removeCommand(keyTakenCommandId)"));
+
+        if (!pressed) {
+            QSKIP("no window handle to route a key through, so the shortcut map cannot be exercised here");
+        }
+        QCOMPARE(fired, QString());
     }
 };
 
