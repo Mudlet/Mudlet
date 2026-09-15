@@ -6453,7 +6453,13 @@ void dlgTriggerEditor::setAliasNormalIcon(QTreeWidgetItem* pItem, TAlias* pT, bo
     QIcon icon;
     QString itemDescription;
     computeAliasIcon(pT, icon, itemDescription);
-    pItem->setIcon(0, icon);
+    // QIcon has no operator==, so setIcon() always emits dataChanged() and the
+    // view re-measures the row - skip it when the icon is the cached one
+    // already shown, which is every alias toggled off and back on within one
+    // coalesced refresh.
+    if (pItem->icon(0).cacheKey() != icon.cacheKey()) {
+        pItem->setIcon(0, icon);
+    }
     pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
 }
 
@@ -6462,7 +6468,9 @@ void dlgTriggerEditor::showAliasError(QTreeWidgetItem* pItem, const QString& nam
 {
     QIcon iconError;
     iconError = cachedIcon(qsl(":/icons/tools-report-bug.png"));
-    pItem->setIcon(0, iconError);
+    if (pItem->icon(0).cacheKey() != iconError.cacheKey()) {
+        pItem->setIcon(0, iconError);
+    }
     pItem->setText(0, name);
     pItem->setData(0, Qt::AccessibleDescriptionRole, descError);
     if (touchNotification) {
@@ -6498,30 +6506,63 @@ void dlgTriggerEditor::applyAliasState(QTreeWidgetItem* pItem, TAlias* pT, bool 
 // user is actually looking at in a different view.
 void dlgTriggerEditor::refreshAliasIcon(int aliasID)
 {
-    // The dialog is never deleted once opened (see closeEvent()), so a script
-    // toggling items per prompt line would otherwise pay a tree walk on every
-    // call for the rest of the session even with the editor closed.
+    // See refreshTriggerIcon() - coalesced into one tree walk per turn rather
+    // than a findItemByID() scan per Lua call.
     if (!isVisible()) {
         return;
     }
-    TAlias* pT = mpHost->getAliasUnit()->getAlias(aliasID);
-    if (!pT) {
-        return;
+    mPendingAliasIconRefresh.insert(aliasID);
+    if (!mAliasIconRefreshQueued) {
+        mAliasIconRefreshQueued = true;
+        QTimer::singleShot(0ms, this, &dlgTriggerEditor::flushPendingAliasIconRefresh);
     }
-    QTreeWidgetItem* pItem = findItemByID(mpAliasBaseItem, aliasID);
-    if (!pItem) {
-        return;
-    }
+}
 
-    const bool touchNotification = pItem == mpCurrentAliasItem && mCurrentView == EditorViewType::cmAliasView;
+void dlgTriggerEditor::flushPendingAliasIconRefresh()
+{
+    mAliasIconRefreshQueued = false;
+    if (mPendingAliasIconRefresh.isEmpty()) {
+        return;
+    }
+    if (mpAliasBaseItem && isVisible()) {
+        int remaining = mPendingAliasIconRefresh.size();
+        refreshAliasIconsIn(mpAliasBaseItem, false, remaining);
+    }
+    mPendingAliasIconRefresh.clear();
+}
+
+// See refreshTriggerIconsIn() for the shape of this walk.
+void dlgTriggerEditor::refreshAliasIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, int& remaining)
+{
+    for (int i = 0, n = pParent->childCount(); i < n; ++i) {
+        QTreeWidgetItem* pItem = pParent->child(i);
+        const int id = pItem->data(0, Qt::UserRole).toInt();
+        const bool pending = mPendingAliasIconRefresh.contains(id);
+        if (pending) {
+            --remaining;
+        }
+        const bool dirty = ancestorDirty || pending;
+        if (dirty) {
+            if (TAlias* pT = mpHost->getAliasUnit()->getAlias(id)) {
+                paintAliasItem(pItem, pT);
+            }
+        }
+        if (pItem->childCount() > 0 && (dirty || remaining > 0)) {
+            refreshAliasIconsIn(pItem, dirty, remaining);
+        }
+        if (!ancestorDirty && remaining <= 0) {
+            return;
+        }
+    }
+}
+
+void dlgTriggerEditor::paintAliasItem(QTreeWidgetItem* pItem, TAlias* pT)
+{
+    const bool touchNotification = (pItem == mpCurrentAliasItem) && (mCurrentView == EditorViewType::cmAliasView);
     // A profile's aliases stay TAlias::mIsNew until explicitly saved in the
     // editor, so respecting that here would paint every Lua-toggled alias
     // with the "unsaved" icon instead of reporting its actual state.
     applyAliasState(pItem, pT, touchNotification, false);
-
-    if (pItem->childCount() > 0) {
-        children_icon_alias(pItem, touchNotification);
-    }
 }
 
 void dlgTriggerEditor::saveAction()
@@ -8970,19 +9011,58 @@ void dlgTriggerEditor::computeKeyIcon(TKey* pT, QIcon& icon, QString& itemDescri
 // background state change could clobber a diagnostic in a different view.
 void dlgTriggerEditor::refreshKeyIcon(int keyID)
 {
-    // See refreshAliasIcon() - the dialog outlives its own visibility.
+    // See refreshTriggerIcon() - coalesced into one tree walk per turn rather
+    // than a findItemByID() scan per Lua call.
     if (!isVisible()) {
         return;
     }
-    TKey* pT = mpHost->getKeyUnit()->getKey(keyID);
-    if (!pT) {
-        return;
+    mPendingKeyIconRefresh.insert(keyID);
+    if (!mKeyIconRefreshQueued) {
+        mKeyIconRefreshQueued = true;
+        QTimer::singleShot(0ms, this, &dlgTriggerEditor::flushPendingKeyIconRefresh);
     }
-    QTreeWidgetItem* pItem = findItemByID(mpKeyBaseItem, keyID);
-    if (!pItem) {
-        return;
-    }
+}
 
+void dlgTriggerEditor::flushPendingKeyIconRefresh()
+{
+    mKeyIconRefreshQueued = false;
+    if (mPendingKeyIconRefresh.isEmpty()) {
+        return;
+    }
+    if (mpKeyBaseItem && isVisible()) {
+        int remaining = mPendingKeyIconRefresh.size();
+        refreshKeyIconsIn(mpKeyBaseItem, false, remaining);
+    }
+    mPendingKeyIconRefresh.clear();
+}
+
+// See refreshTriggerIconsIn() for the shape of this walk.
+void dlgTriggerEditor::refreshKeyIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, int& remaining)
+{
+    for (int i = 0, n = pParent->childCount(); i < n; ++i) {
+        QTreeWidgetItem* pItem = pParent->child(i);
+        const int id = pItem->data(0, Qt::UserRole).toInt();
+        const bool pending = mPendingKeyIconRefresh.contains(id);
+        if (pending) {
+            --remaining;
+        }
+        const bool dirty = ancestorDirty || pending;
+        if (dirty) {
+            if (TKey* pT = mpHost->getKeyUnit()->getKey(id)) {
+                paintKeyItem(pItem, pT);
+            }
+        }
+        if (pItem->childCount() > 0 && (dirty || remaining > 0)) {
+            refreshKeyIconsIn(pItem, dirty, remaining);
+        }
+        if (!ancestorDirty && remaining <= 0) {
+            return;
+        }
+    }
+}
+
+void dlgTriggerEditor::paintKeyItem(QTreeWidgetItem* pItem, TKey* pT)
+{
     const bool isCurrentItem = (pItem == mpCurrentKeyItem) && (mCurrentView == EditorViewType::cmKeysView);
     QIcon icon;
     QString itemDescription;
@@ -8998,12 +9078,10 @@ void dlgTriggerEditor::refreshKeyIcon(int keyID)
             showError(pT->getError());
         }
     }
-    pItem->setIcon(0, icon);
-    pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
-
-    if (pItem->childCount() > 0) {
-        children_icon_key(pItem, isCurrentItem);
+    if (pItem->icon(0).cacheKey() != icon.cacheKey()) {
+        pItem->setIcon(0, icon);
     }
+    pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
 }
 
 void dlgTriggerEditor::populateActions()
@@ -9239,19 +9317,58 @@ void dlgTriggerEditor::computeScriptIcon(TScript* pT, QIcon& icon, QString& item
 // different view.
 void dlgTriggerEditor::refreshScriptIcon(int scriptID)
 {
-    // See refreshAliasIcon() - the dialog outlives its own visibility.
+    // See refreshTriggerIcon() - coalesced into one tree walk per turn rather
+    // than a findItemByID() scan per Lua call.
     if (!isVisible()) {
         return;
     }
-    TScript* pT = mpHost->getScriptUnit()->getScript(scriptID);
-    if (!pT) {
-        return;
+    mPendingScriptIconRefresh.insert(scriptID);
+    if (!mScriptIconRefreshQueued) {
+        mScriptIconRefreshQueued = true;
+        QTimer::singleShot(0ms, this, &dlgTriggerEditor::flushPendingScriptIconRefresh);
     }
-    QTreeWidgetItem* pItem = findItemByID(mpScriptsBaseItem, scriptID);
-    if (!pItem) {
-        return;
-    }
+}
 
+void dlgTriggerEditor::flushPendingScriptIconRefresh()
+{
+    mScriptIconRefreshQueued = false;
+    if (mPendingScriptIconRefresh.isEmpty()) {
+        return;
+    }
+    if (mpScriptsBaseItem && isVisible()) {
+        int remaining = mPendingScriptIconRefresh.size();
+        refreshScriptIconsIn(mpScriptsBaseItem, false, remaining);
+    }
+    mPendingScriptIconRefresh.clear();
+}
+
+// See refreshTriggerIconsIn() for the shape of this walk.
+void dlgTriggerEditor::refreshScriptIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, int& remaining)
+{
+    for (int i = 0, n = pParent->childCount(); i < n; ++i) {
+        QTreeWidgetItem* pItem = pParent->child(i);
+        const int id = pItem->data(0, Qt::UserRole).toInt();
+        const bool pending = mPendingScriptIconRefresh.contains(id);
+        if (pending) {
+            --remaining;
+        }
+        const bool dirty = ancestorDirty || pending;
+        if (dirty) {
+            if (TScript* pT = mpHost->getScriptUnit()->getScript(id)) {
+                paintScriptItem(pItem, pT);
+            }
+        }
+        if (pItem->childCount() > 0 && (dirty || remaining > 0)) {
+            refreshScriptIconsIn(pItem, dirty, remaining);
+        }
+        if (!ancestorDirty && remaining <= 0) {
+            return;
+        }
+    }
+}
+
+void dlgTriggerEditor::paintScriptItem(QTreeWidgetItem* pItem, TScript* pT)
+{
     const bool isCurrentItem = (pItem == mpCurrentScriptItem) && (mCurrentView == EditorViewType::cmScriptView);
     QIcon icon;
     QString itemDescription;
@@ -9267,12 +9384,10 @@ void dlgTriggerEditor::refreshScriptIcon(int scriptID)
             showError(pT->getError());
         }
     }
-    pItem->setIcon(0, icon);
-    pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
-
-    if (pItem->childCount() > 0) {
-        children_icon_script(pItem, isCurrentItem);
+    if (pItem->icon(0).cacheKey() != icon.cacheKey()) {
+        pItem->setIcon(0, icon);
     }
+    pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
 }
 void dlgTriggerEditor::populateTimers()
 {
@@ -9380,19 +9495,58 @@ void dlgTriggerEditor::computeTimerIcon(TTimer* pT, QIcon& icon, QString& itemDe
 // different view.
 void dlgTriggerEditor::refreshTimerIcon(int timerID)
 {
-    // See refreshAliasIcon() - the dialog outlives its own visibility.
+    // See refreshTriggerIcon() - coalesced into one tree walk per turn rather
+    // than a findItemByID() scan per Lua call.
     if (!isVisible()) {
         return;
     }
-    TTimer* pT = mpHost->getTimerUnit()->getTimer(timerID);
-    if (!pT) {
-        return;
+    mPendingTimerIconRefresh.insert(timerID);
+    if (!mTimerIconRefreshQueued) {
+        mTimerIconRefreshQueued = true;
+        QTimer::singleShot(0ms, this, &dlgTriggerEditor::flushPendingTimerIconRefresh);
     }
-    QTreeWidgetItem* pItem = findItemByID(mpTimerBaseItem, timerID);
-    if (!pItem) {
-        return;
-    }
+}
 
+void dlgTriggerEditor::flushPendingTimerIconRefresh()
+{
+    mTimerIconRefreshQueued = false;
+    if (mPendingTimerIconRefresh.isEmpty()) {
+        return;
+    }
+    if (mpTimerBaseItem && isVisible()) {
+        int remaining = mPendingTimerIconRefresh.size();
+        refreshTimerIconsIn(mpTimerBaseItem, false, remaining);
+    }
+    mPendingTimerIconRefresh.clear();
+}
+
+// See refreshTriggerIconsIn() for the shape of this walk.
+void dlgTriggerEditor::refreshTimerIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, int& remaining)
+{
+    for (int i = 0, n = pParent->childCount(); i < n; ++i) {
+        QTreeWidgetItem* pItem = pParent->child(i);
+        const int id = pItem->data(0, Qt::UserRole).toInt();
+        const bool pending = mPendingTimerIconRefresh.contains(id);
+        if (pending) {
+            --remaining;
+        }
+        const bool dirty = ancestorDirty || pending;
+        if (dirty) {
+            if (TTimer* pT = mpHost->getTimerUnit()->getTimer(id)) {
+                paintTimerItem(pItem, pT);
+            }
+        }
+        if (pItem->childCount() > 0 && (dirty || remaining > 0)) {
+            refreshTimerIconsIn(pItem, dirty, remaining);
+        }
+        if (!ancestorDirty && remaining <= 0) {
+            return;
+        }
+    }
+}
+
+void dlgTriggerEditor::paintTimerItem(QTreeWidgetItem* pItem, TTimer* pT)
+{
     const bool isCurrentItem = (pItem == mpCurrentTimerItem) && (mCurrentView == EditorViewType::cmTimerView);
     QIcon icon;
     QString itemDescription;
@@ -9408,12 +9562,10 @@ void dlgTriggerEditor::refreshTimerIcon(int timerID)
             showError(pT->getError());
         }
     }
-    pItem->setIcon(0, icon);
-    pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
-
-    if (pItem->childCount() > 0) {
-        children_icon_timer(pItem, isCurrentItem);
+    if (pItem->icon(0).cacheKey() != icon.cacheKey()) {
+        pItem->setIcon(0, icon);
     }
+    pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
 }
 
 void dlgTriggerEditor::populateTriggers()
