@@ -251,6 +251,9 @@ public:
     // profile that asked for it, which is not the profile the microphone's own
     // traffic goes to once somebody else is listening.
     void raiseSpeechEventOn(Host* pHost, const QString& name, const QString& value);
+    // Raises sysSTTCapabilitiesChanged when, and only when, what Lua reads from
+    // stt.getInfo().capabilities has actually moved since it was last told.
+    void announceSpeechCapabilitiesIfChanged();
     // Which profile the microphone currently belongs to, or nullptr
     Host* microphoneOwner() const;
     // Re-place and re-show add-on commands: called whenever the profile a window
@@ -785,6 +788,15 @@ private:
     // The single shared speech recognizer (one microphone, one decoder);
     // created lazily by initSpeechRecognition()
     QPointer<SpeechRecognizer> mpSpeechRecognizer;
+    // What Lua was last told stt.getInfo().capabilities are, as the event's own
+    // payload. The baseline lives here rather than in the recognizer because
+    // this is where Lua's view is assembled: every capability reads false while
+    // no recognizer exists, so one coming into existence - or being swapped for
+    // another engine - is itself a change to what getInfo() answers, and a
+    // recognizer cannot notice a transition that happened before it did. Seeded
+    // on first use with the all-false payload rather than left empty, so that
+    // first appearance registers as the change it is (#10760).
+    QString mAnnouncedSpeechCapabilities;
     // The profile that asked for the microphone, for as long as the session it
     // asked for lasts. Results belong to whoever started listening rather than
     // to whoever happens to be in front when a phrase lands: those are the same

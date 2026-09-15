@@ -45,6 +45,7 @@
 
 #include <QtTest/QtTest>
 
+#include <QDir>
 #include <QFile>
 #include <QJsonArray>
 #include <QJsonObject>
@@ -289,6 +290,16 @@ class SpeechRecognizerContractTest : public QObject
 private:
     QTemporaryDir mConfigDir;
     QByteArray mSavedXdg;
+
+    // A directory that exists and holds no model, which the stub accepts as one
+    // - it answers for any non-empty path, so a load gets as far as the
+    // configuration calls this file is about.
+    QString stubModelDirectory()
+    {
+        const QString path = QDir(mConfigDir.path()).filePath(qsl("stub-model"));
+        QDir().mkpath(path);
+        return path;
+    }
 
     // One word of Vosk's "result" array
     static QJsonObject word(const QString& text, const double start, const double end)
@@ -811,8 +822,7 @@ private slots:
         // Platform included deliberately: it is the value stt.availableBackends()
         // returns on macOS, and leaving it out let backendIdentifier(Platform)
         // answer "vosk" with the suite still green.
-        for (const auto backend : {SpeechRecognizerFactory::Backend::Vosk, SpeechRecognizerFactory::Backend::Sherpa,
-                                   SpeechRecognizerFactory::Backend::Platform}) {
+        for (const auto backend : {SpeechRecognizerFactory::Backend::Vosk, SpeechRecognizerFactory::Backend::Sherpa, SpeechRecognizerFactory::Backend::Platform}) {
             const QString identifier = SpeechRecognizerFactory::backendIdentifier(backend);
             QVERIFY2(!identifier.isEmpty(), "a backend the player can choose needs a name to store");
             QCOMPARE(SpeechRecognizerFactory::backendFromIdentifier(identifier), backend);
@@ -1196,8 +1206,7 @@ private slots:
     void aVocabularyCannotCarryHotwordSyntaxIntoTheParser()
     {
         QStringList rejected;
-        const QStringList usable = SherpaRecognizer::usableHotwords(
-                {qsl("kill goblin"), qsl("heal :self"), qsl("#north"), qsl("look")}, &rejected);
+        const QStringList usable = SherpaRecognizer::usableHotwords({qsl("kill goblin"), qsl("heal :self"), qsl("#north"), qsl("look")}, &rejected);
 
         QCOMPARE(usable, QStringList({qsl("kill goblin"), qsl("look")}));
         QCOMPARE(rejected, QStringList({qsl("heal :self"), qsl("#north")}));
@@ -1244,13 +1253,11 @@ private slots:
     void anEngineSaysWhetherSensitivityCanBeTunedAtAll()
     {
         SherpaRecognizer sherpa;
-        QVERIFY2(sherpa.supportsSensitivityTuning(),
-                 "sherpa-onnx bakes its own endpoint rules, so a refusal from it is this attempt failing, not a limit");
+        QVERIFY2(sherpa.supportsSensitivityTuning(), "sherpa-onnx bakes its own endpoint rules, so a refusal from it is this attempt failing, not a limit");
 
 #if defined(Q_OS_MACOS)
         AppleSpeechRecognizer apple;
-        QVERIFY2(!apple.supportsSensitivityTuning(),
-                 "the built-in macOS backend decides its own endpointing and exposes nothing to tune");
+        QVERIFY2(!apple.supportsSensitivityTuning(), "the built-in macOS backend decides its own endpointing and exposes nothing to tune");
 #endif
     }
 
@@ -1363,8 +1370,7 @@ private slots:
         if (VoskRecognizer::libraryAvailable()) {
             QSKIP("a libvosk is installed here, so the nothing-to-load case cannot be reached");
         }
-        QVERIFY2(VoskRecognizer::libraryLoadError().isEmpty(),
-                 "a machine with no library reported one that could not be loaded");
+        QVERIFY2(VoskRecognizer::libraryLoadError().isEmpty(), "a machine with no library reported one that could not be loaded");
     }
 
     // The guard compares the stored list against the offered one, so a
@@ -1381,8 +1387,7 @@ private slots:
 
         const int callsBefore = recognizer.mApplyCalls;
         recognizer.setVocabulary({qsl("same")});
-        QVERIFY2(recognizer.mApplyCalls > callsBefore,
-                 "an offer the backend last refused was answered from the flag instead of being retried");
+        QVERIFY2(recognizer.mApplyCalls > callsBefore, "an offer the backend last refused was answered from the flag instead of being retried");
     }
 
     // The outcome startListening() now returns, in place of the before/after
@@ -1401,12 +1406,11 @@ private slots:
 
         PendingStartStubRecognizer stopsOnItsOwnStateChange;
         stopsOnItsOwnStateChange.initialize(QString());
-        connect(&stopsOnItsOwnStateChange, &SpeechRecognizer::stateChanged, &stopsOnItsOwnStateChange,
-                [&](SpeechRecognizer::State newState) {
-                    if (newState == SpeechRecognizer::State::Starting) {
-                        stopsOnItsOwnStateChange.stopListening();
-                    }
-                });
+        connect(&stopsOnItsOwnStateChange, &SpeechRecognizer::stateChanged, &stopsOnItsOwnStateChange, [&](SpeechRecognizer::State newState) {
+            if (newState == SpeechRecognizer::State::Starting) {
+                stopsOnItsOwnStateChange.stopListening();
+            }
+        });
         QCOMPARE(stopsOnItsOwnStateChange.startListening(), SpeechRecognizer::StartResult::Started);
     }
 

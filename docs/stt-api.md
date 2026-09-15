@@ -207,6 +207,14 @@ else — the case a "keep listening while another application is
 in front" setting creates, which no in-window signal can cover. Desktop Mudlet
 puts "(listening)" in the window title.
 
+Every event below reaches one profile: the one holding the microphone, or the
+profile in front when nobody holds it. `sysSTTCapabilitiesChanged` is the single
+exception and reaches **every open profile**, because it is the only one that
+does not describe a session. What a backend can do is a property of the engine,
+and every profile reads the same answer back from `stt.getInfo()`, so telling
+only the profile that happens to hold the microphone would change what the
+others read while leaving them no way to hear about it.
+
 | Event | Argument | When |
 | --- | --- | --- |
 | `sysSTTPartialResult` | text so far | During recognition; may revise as more audio arrives. Never final. |
@@ -215,7 +223,7 @@ puts "(listening)" in the window title.
 | `sysSTTStateChanged` | state name | Any transition between the six states. |
 | `sysSTTError` | message | Anything the user should know went wrong: refusals to start, capture faults, model failures, and a configured model quietly replaced by another. The state moves to `error` for faults, but refusal messages can arrive without a state change. Most refusals carry the same text the call returned as its second value; a refused `stt.start()` is the exception, since the engine's own reason is what the event carries while the call returns only a pointer to it. **Raised with no engine installed too** — a consumer driving the bridge from events alone must be able to tell "no engine" from "nothing said yet". |
 | `sysSTTHandover` | profile name | Another profile took the microphone and this session is over. Raised on the profile that lost it, naming the one that now holds it. Nothing else says why a session stopped: the state change that follows looks like any other stop. |
-| `sysSTTCapabilitiesChanged` | JSON string | The `capabilities` table changed: a model loaded, a model was released — including by `stt.close()` — or the engine library was unloaded or reloaded underneath it. Same keys as `getInfo().capabilities`. Which of those actually fire it differs by backend, because different backends hang different capabilities off different things: sherpa-onnx's `biasing` follows the loaded model, so releasing one changes it, while Vosk's `words` follows a library symbol and releasing a model changes nothing. |
+| `sysSTTCapabilitiesChanged` | JSON string | The `capabilities` table changed: a model loaded, a model was released — including by `stt.close()` — an engine was created or swapped for another, or the engine library was unloaded or reloaded underneath it. **Raised on every open profile**, unlike every other event here, for the reason given above. Same keys as `getInfo().capabilities`. Which of those actually fire it differs by backend, because different backends hang different capabilities off different things: sherpa-onnx's `biasing` follows the loaded model, so releasing one changes it, while Vosk's `words` follows a library symbol and releasing a model changes nothing. |
 
 ### `sysSTTWords` schema
 

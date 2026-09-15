@@ -129,6 +129,44 @@ describe("stt bridge", function()
     end)
   end)
 
+  describe("capability announcements", function()
+
+    -- getInfo().capabilities and sysSTTCapabilitiesChanged have to describe the
+    -- same thing in both directions. docs/stt-api.md offers following the event
+    -- as an equivalent to re-reading after init(), so a package that follows it
+    -- must not be told about a change getInfo() cannot see, nor left unaware of
+    -- one it can. The asymmetry that broke this was a recognizer coming into
+    -- existence: every capability reads false while there is none, so the
+    -- transition is real to Lua even though the recognizer is not asked until
+    -- the next init(), long after Lua's answer changed.
+    --
+    -- With no engine installed nothing here creates a recognizer, so this
+    -- degrades to asserting that nothing was announced either - true, but
+    -- proving little. It bites where an engine exists.
+    it("agrees with getInfo about what counts as a change", function()
+      local events = 0
+      local handler = registerAnonymousEventHandler("sysSTTCapabilitiesChanged", function() events = events + 1 end)
+      finally(function() killAnonymousEventHandler(handler) end)
+
+      local function capabilities()
+        local current = stt.getInfo().capabilities
+        return ("%s|%s|%s|%s"):format(tostring(current.biasing), tostring(current.grammar), tostring(current.words), tostring(current.onDevice))
+      end
+
+      local before, announced = capabilities(), events
+      -- Enough to create the recognizer if nothing has yet, and harmless if
+      -- something already did
+      stt.setSilenceTimeout(1500)
+      local after = capabilities()
+
+      if after ~= before then
+        assert.is_true(events > announced, "capabilities changed with no sysSTTCapabilitiesChanged to say so")
+      else
+        assert.are.equal(announced, events, "sysSTTCapabilitiesChanged announced a change getInfo() cannot see")
+      end
+    end)
+  end)
+
   describe("refusals", function()
 
     -- A raise through the binding must not strand anything it built first:
@@ -272,6 +310,78 @@ describe("stt bridge", function()
       assert.is_string(err)
       assert.are.equal(err, seen, "the refusal was returned to the caller but never announced")
       assert.is_false(stt.listening(), "a refused toggle must leave nothing listening")
+    end)
+
+    -- #10759. stt.init() reaches Lua before it returns: setState(Ready) raises
+    -- sysSTTStateChanged from inside the load, and a handler is free to call
+    -- stt.close(), to load another model, or to ask for another engine. Any of
+    -- those leaves the caller holding a bridge it was told was ready and is
+    -- not, so the next stt.start() fails on a session nothing loaded.
+    --
+    -- Checked at the bridge rather than in a backend, which is why these are
+    -- worth having as specs: there are three engines now, and the hazard is in
+    -- the events the bridge raises while one of them loads, not in anything
+    -- Vosk, sherpa or Apple does. A guard in one backend is a guard the other
+    -- two silently lack.
+    --
+    -- A named model rather than stt.init(), so this is the engine under test
+    -- rather than whichever one Auto settles on - on a Mac that is the built-in
+    -- recogniser, which loads no model and so cannot be asked this question.
+    it("refuses a load a handler closed while it was still loading", function()
+      if not stt.available() then return end
+      local models = stt.listModels()
+      if #models < 1 then return end
+      stt.close()
+
+      local closed = false
+      local handler = registerAnonymousEventHandler("sysSTTStateChanged", function(_, state)
+        if state == "ready" and not closed then
+          closed = true
+          stt.close()
+        end
+      end)
+      finally(function()
+        killAnonymousEventHandler(handler)
+        stt.close()
+      end)
+
+      local ok, err = stt.init(models[1].path)
+      -- The load never reached ready, so the handler never had its moment. A
+      -- refusal for some other reason is not what this is about.
+      if not closed then return end
+
+      assert.is_nil(ok, "a load a handler closed under it reported success")
+      assert.is_string(err)
+      assert.is_false(stt.initialized(), "initialized() stayed true with the model closed")
+      assert.are.equal("uninitialized", stt.getInfo().state, "the state outlived the model it described")
+    end)
+
+    -- The other half of #10759: a handler that loads a different model rather
+    -- than closing leaves a working engine behind, so state alone would call
+    -- the outer load a success. Only the path it was asked for settles it.
+    it("answers for the model it was asked for, not the one a handler loaded", function()
+      if not stt.available() then return end
+      local models = stt.listModels()
+      if #models < 2 then return end
+      stt.close()
+
+      local replaced = false
+      local handler = registerAnonymousEventHandler("sysSTTStateChanged", function(_, state)
+        if state == "ready" and not replaced then
+          replaced = true
+          stt.init(models[2].path)
+        end
+      end)
+      finally(function()
+        killAnonymousEventHandler(handler)
+        stt.close()
+      end)
+
+      local ok = stt.init(models[1].path)
+      if not replaced then return end
+
+      assert.is_nil(ok, "a load answered true for a model a handler had already replaced")
+      assert.are.equal(models[2].path, stt.getInfo().modelPath, "modelPath should name the model that is actually loaded")
     end)
 
     it("raises on a vocabulary that is not a table", function()

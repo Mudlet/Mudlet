@@ -357,21 +357,12 @@ void mudlet::initSpeechRecognition(SpeechRecognizerFactory::Backend backend)
         }
         raiseSpeechEvent(qsl("sysSTTWords"), QString::fromUtf8(QJsonDocument(array).toJson(QJsonDocument::Compact)));
     });
-    // Documented as re-readable rather than cached, so the change has to reach
-    // a consumer that did read it once - which is the obvious thing to do
-    connect(pReplacement, &SpeechRecognizer::capabilitiesChanged, this, [this](SpeechRecognizer::Capabilities newCapabilities) {
-        QJsonObject capabilities;
-        capabilities.insert(qsl("biasing"), newCapabilities.biasing);
-        capabilities.insert(qsl("grammar"), newCapabilities.grammar);
-        capabilities.insert(qsl("words"), newCapabilities.wordResults);
-        // Carried like the rest: docs/stt-api.md promises this event the same
-        // keys as getInfo().capabilities, and a package rebuilding from the
-        // event would otherwise read a missing key as "this engine never can"
-        // - on Vosk, exactly the flag that moves when the library is unloaded
-        // or reloaded, which is one of the moments this fires.
-        capabilities.insert(qsl("sensitivityTuning"), newCapabilities.sensitivityTuning);
-        capabilities.insert(qsl("onDevice"), newCapabilities.onDevice);
-        raiseSpeechEvent(qsl("sysSTTCapabilitiesChanged"), QString::fromUtf8(QJsonDocument(capabilities).toJson(QJsonDocument::Compact)));
+    // Documented as re-readable rather than cached, so the change has to reach a
+    // consumer that did read it once. The recognizer noticing its own view move
+    // is a trigger, not the decision: whether Lua saw a change is decided
+    // against what Lua was last told, which is what the engine cannot know.
+    connect(pReplacement, &SpeechRecognizer::capabilitiesChanged, this, [this](SpeechRecognizer::Capabilities) {
+        announceSpeechCapabilitiesIfChanged();
     });
     connect(pReplacement, &SpeechRecognizer::stateChanged, this, [this](SpeechRecognizer::State newState) {
         QString stateName;
@@ -442,6 +433,74 @@ void mudlet::initSpeechRecognition(SpeechRecognizerFactory::Backend backend)
         pRetiring->disconnect();
         pRetiring->releaseResources();
         pRetiring->deleteLater();
+    }
+
+    // Last, once mpSpeechRecognizer names the engine Lua will read and the old
+    // one is gone. A recognizer existing at all changes what getInfo() answers,
+    // and so does replacing one engine with another that can do different
+    // things - neither of which any recognizer is in a position to announce for
+    // itself. Reached by any stt call that needs an engine, so a package
+    // following the event rather than re-reading no longer believes an engine's
+    // first answer for ever (#10760).
+    announceSpeechCapabilitiesIfChanged();
+}
+
+// The capabilities payload as stt.getInfo() would report them: with no
+// recognizer every one is false, which is what sttGetInfo() pushes and so what
+// a consumer reads before anything has created one.
+static QString speechCapabilitiesPayload(const SpeechRecognizer* pRecognizer)
+{
+    const SpeechRecognizer::Capabilities current = pRecognizer ? pRecognizer->capabilities() : SpeechRecognizer::Capabilities{};
+    QJsonObject capabilities;
+    capabilities.insert(qsl("biasing"), current.biasing);
+    capabilities.insert(qsl("grammar"), current.grammar);
+    capabilities.insert(qsl("words"), current.wordResults);
+    // Carried like the rest: docs/stt-api.md promises this event the same keys
+    // as getInfo().capabilities, and a package rebuilding from the event would
+    // otherwise read a missing key as "this engine never can" - on Vosk,
+    // exactly the flag that moves when the library is unloaded or reloaded.
+    capabilities.insert(qsl("sensitivityTuning"), current.sensitivityTuning);
+    capabilities.insert(qsl("onDevice"), current.onDevice);
+    return QString::fromUtf8(QJsonDocument(capabilities).toJson(QJsonDocument::Compact));
+}
+
+void mudlet::announceSpeechCapabilitiesIfChanged()
+{
+    if (mAnnouncedSpeechCapabilities.isEmpty()) {
+        // What Lua has been reading from getInfo() all along, so that a
+        // recognizer coming into existence registers as the change it is
+        mAnnouncedSpeechCapabilities = speechCapabilitiesPayload(nullptr);
+    }
+
+    const QString current = speechCapabilitiesPayload(mpSpeechRecognizer);
+    if (current == mAnnouncedSpeechCapabilities) {
+        return;
+    }
+    // Every profile, not just the microphone's owner - the one event here that
+    // is broadcast. Results, state and faults belong to the session that is
+    // running, so they go to whoever holds the microphone. Capabilities are not
+    // a property of a session at all: they describe the engine, and every
+    // profile reads the same ones back from stt.getInfo(). Sending this to the
+    // owner alone would change what the other profiles read while telling only
+    // one of them, which is the same fault this function exists to fix.
+    //
+    // Over a copy of the list, because each raise runs Lua and a handler may
+    // open or close a profile while this is walking it.
+    const QList<QSharedPointer<Host>> profiles = mHostManager.hostList();
+    // Nothing to deliver to means nothing is announced and nothing is recorded.
+    // Recording it as announced anyway would lose the change for good, and the
+    // next profile to open would read capabilities it was never told about.
+    if (profiles.isEmpty()) {
+        return;
+    }
+    // Recorded before the first raise, not after the last: a handler reached
+    // from one of these is free to call back in here, and an unrecorded
+    // baseline would let it announce the same move again.
+    mAnnouncedSpeechCapabilities = current;
+    for (const auto& pHost : profiles) {
+        if (pHost) {
+            raiseSpeechEventOn(pHost.data(), qsl("sysSTTCapabilitiesChanged"), current);
+        }
     }
 }
 

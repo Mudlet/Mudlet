@@ -144,10 +144,19 @@ static QString noEngineMessage()
 // change rather than cache them, which needs the change to be announced at all.
 static void announceSpeechCapabilities(mudlet* pMudlet)
 {
-    auto* pRecognizer = pMudlet ? qobject_cast<VoskRecognizer*>(pMudlet->speechRecognizer()) : nullptr;
-    if (pRecognizer) {
+    if (!pMudlet) {
+        return;
+    }
+    if (auto* pRecognizer = qobject_cast<VoskRecognizer*>(pMudlet->speechRecognizer())) {
+        // Keeps the recognizer's own baseline in step. It no longer decides what
+        // Lua hears - the bridge does - so this cannot produce an announcement
+        // the call below would not.
         pRecognizer->announceCapabilitiesIfChanged();
     }
+    // The bridge decides. Its view can move without the recognizer's doing so,
+    // since getInfo() reports every capability as false while there is no
+    // recognizer at all.
+    pMudlet->announceSpeechCapabilitiesIfChanged();
 }
 
 // Whether any speech engine at all is present and loadable: a model-based
@@ -413,6 +422,53 @@ int TLuaInterpreter::sttInit(lua_State* L)
         // Whatever went wrong reached sysSTTError from the backend, except the
         // model-less case answered just above, which never gets this far
         return warnArgumentValue(L, funcName, qsl("failed to initialize model from: %1").arg(modelPath));
+    }
+
+    // A handler for any event this call raised may have undone the load before
+    // it returned. initialize() reaches Lua while it runs - setState() does,
+    // and so does a backend announcing capabilities it only learns from the
+    // model - and a handler is free to call stt.close(), to load another model,
+    // or to ask for another engine entirely. Answering true then hands the
+    // caller a bridge it was told was ready and is not: the next stt.start()
+    // fails on a session nothing loaded (#10759).
+    //
+    // Checked here rather than inside each initialize(): there are three
+    // backends now, the hazard is identical in all of them because it comes
+    // from the events the bridge raises rather than from anything Vosk, sherpa
+    // or Apple does, and a guard in one of them is a guard the other two are
+    // silently missing.
+    //
+    // Deliberately not a state check. A handler that starts listening and finds
+    // no microphone faults the bridge, which says nothing about whether this
+    // load took - failing for that would report a model that is loaded, and
+    // that getInfo() still names, as having failed to load.
+    const QString undone = [&]() -> QString {
+        // An engine swap retires this recognizer and publishes another, so the
+        // pointer this call has been working through is no longer the one Lua
+        // reads. Its resources are already released and it is awaiting
+        // deleteLater(), so nothing below would be asking about the live engine.
+        if (pMudlet->speechRecognizer() != pRecognizer) {
+            return qsl("a handler for one of this call's own events changed the speech engine while the model was still loading");
+        }
+        if (!pRecognizer->initialized()) {
+            return qsl("the speech model loaded, but a handler for one of this call's own events closed it before it could be used");
+        }
+        // Model-less backends answer an empty modelPath() by design, so there
+        // is nothing here to compare - a handler replacing that load is caught
+        // by the two checks above.
+        if (!useModelLessBackend && pRecognizer->modelPath() != modelPath) {
+            return qsl("the speech model loaded, but a handler for one of this call's own events replaced it with another before it could be used");
+        }
+        return QString();
+    }();
+    if (!undone.isEmpty()) {
+        // Every other refusal here reports through sysSTTError before
+        // returning, and a caller relies on that: a false is answered with
+        // "failed to initialize model from X" and nothing else, so without this
+        // the one refusal a script can actually cause is the one it is told
+        // least about.
+        reportSpeechRefusal(undone);
+        return warnArgumentValue(L, funcName, undone);
     }
 
     // Settings can name a model that is no longer installed, and

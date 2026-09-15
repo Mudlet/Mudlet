@@ -45,7 +45,9 @@
  */
 
 #include <QAction>
+#include <QDir>
 #include <QFileInfo>
+#include <QLibrary>
 #include <QMenu>
 #include <QToolBar>
 #include <QToolButton>
@@ -62,6 +64,7 @@
 #include "TDetachedWindow.h"
 #include "TTabBar.h"
 #include "TelnetServerStub.h"
+#include "VoskRecognizer.h"
 #include "mudlet.h"
 
 extern "C" {
@@ -94,6 +97,43 @@ private:
     const QString mLocalhost = qsl("localhost");
     const QString mFirstHostname = qsl("SpeechAcrossProfiles-First");
     const QString mSecondHostname = qsl("SpeechAcrossProfiles-Second");
+
+    bool mSystemEngineWins = false;
+
+    // Where installStubEngine() puts the copy VoskRecognizer actually loads.
+    static QString installedStubPath() { return QDir(VoskRecognizer::userLibraryPath()).filePath(QFileInfo(qsl(MUDLET_VOSK_STUB_LIBRARY)).fileName()); }
+
+    // Puts the stand-in engine where librarySearchPaths() looks first, so a
+    // recognizer can be built on a runner that has no speech engine at all -
+    // which is every CI runner, and this test's own redirected config directory
+    // even on a developer machine that has one installed.
+    bool installStubEngine()
+    {
+        const QString destination = installedStubPath();
+        if (!QDir().mkpath(VoskRecognizer::userLibraryPath())) {
+            return false;
+        }
+        QFile::remove(destination);
+        // Fresh probe: libraryAvailable() caches, and an earlier case may have
+        // answered "no" before the file existed.
+        VoskRecognizer::resetLibraryLoadState();
+        VoskRecognizer::unloadLibraryByRequest(false);
+        if (!QFile::copy(qsl(MUDLET_VOSK_STUB_LIBRARY), destination)) {
+            return false;
+        }
+        // A copy that loads but exports nothing is the failure worth catching
+        // here rather than three assertions later: it is what a Windows build
+        // without WINDOWS_EXPORT_ALL_SYMBOLS produces.
+        QLibrary installed(destination);
+        if (!installed.load() || !installed.resolve("vosk_recognizer_set_words")) {
+            // Balances the load: QLibrary refcounts and its destructor does not
+            // unload, and Windows will not delete a module that is still mapped.
+            installed.unload();
+            return false;
+        }
+        installed.unload();
+        return true;
+    }
 
     Host* hostFor(const QString& profileName) const { return mudlet::self()->getHostManager().getHost(profileName); }
 
@@ -243,6 +283,18 @@ private slots:
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
 
+        // Decided once, before anything has installed or loaded a stub.
+        // loadVoskLibrary() asks QLibrary for the bare name "vosk" and only
+        // falls back to librarySearchPaths() when that fails, so a machine with
+        // libvosk on the loader's own path never reaches the copy installed
+        // below. The probe has to happen while nothing is mapped: dlopen() and
+        // LoadLibrary() both answer a bare name out of what is already loaded.
+        QLibrary bare(qsl("vosk"));
+        mSystemEngineWins = bare.load();
+        if (mSystemEngineWins) {
+            bare.unload();
+        }
+
         deleteProfileDirectory(mFirstHostname);
         deleteProfileDirectory(mSecondHostname);
 
@@ -286,6 +338,42 @@ private slots:
             QTest::qWait(200ms);
         }
         mudlet::self()->activateWindow();
+    }
+
+    // The one speech event that is not a session's own. What a backend can do
+    // is a property of the engine, and every profile reads the same answer back
+    // from stt.getInfo() - so announcing to the profile holding the microphone
+    // alone would move what the others read with nothing said to them, which is
+    // #10760 one profile further out.
+    //
+    // Declared first among these cases because the change it turns on is a
+    // recognizer coming into existence, and that happens once per process.
+    void test_aCapabilityChangeReachesEveryProfile()
+    {
+        if (mSystemEngineWins) {
+            QSKIP("libvosk answers the bare name here, so the loader would reach it before the stand-in this case installs");
+        }
+        if (mudlet::self()->speechRecognizer()) {
+            QSKIP("a recognizer already exists, so its arrival - the change this case is about - is already behind us");
+        }
+        QVERIFY2(installStubEngine(), "the stand-in engine could not be installed, so no recognizer can be built here");
+
+        listenFor(mpFirstHost, qsl("sysSTTCapabilitiesChanged"), qsl("_capsFirst"));
+        listenFor(mpSecondHost, qsl("sysSTTCapabilitiesChanged"), qsl("_capsSecond"));
+
+        // Held deliberately: the owner is what every other speech event routes
+        // by, so a broadcast that had quietly gone back to owner-routing would
+        // still look right with nobody holding the microphone.
+        mudlet::self()->claimMicrophoneFor(mpFirstHost);
+
+        mudlet::self()->initSpeechRecognition(SpeechRecognizerFactory::Backend::Vosk);
+        QVERIFY2(mudlet::self()->speechRecognizer(), "the stand-in engine was installed but no recognizer was built from it");
+
+        const QString owner = luaGlobalString(mpFirstHost, qsl("_capsFirst"));
+        const QString other = luaGlobalString(mpSecondHost, qsl("_capsSecond"));
+        QVERIFY2(!owner.isEmpty(), "the profile holding the microphone was not told the capabilities changed");
+        QVERIFY2(!other.isEmpty(), "a profile holding no microphone reads the same capabilities and was not told they changed");
+        QCOMPARE(other, owner);
     }
 
     // The case the whole ownership model exists for. Listening starts in one
