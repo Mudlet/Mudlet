@@ -1400,6 +1400,12 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     updatePatternTabOrder();
 
     connect(mpHost, &Host::signal_editorThemeChanged, this, &dlgTriggerEditor::slot_editorThemeChanged);
+    connect(mpHost, &Host::signal_editorCleanResetRequested, this, &dlgTriggerEditor::doCleanReset);
+    connect(mpHost, &Host::signal_profileStyleSheetChanged, this, &dlgTriggerEditor::setStyleSheet);
+    connect(mpHost, &Host::signal_consoleFontChanged, this, &dlgTriggerEditor::setDisplayFont);
+    connect(mpHost, &Host::signal_editorSearchOptionsChanged, this, &dlgTriggerEditor::setSearchOptions);
+    connect(mpHost, &Host::signal_editorShowBidiChanged, this, &dlgTriggerEditor::setEditorShowBidi);
+    connect(mpHost, &Host::signal_showIdsInEditorChanged, this, &dlgTriggerEditor::showIDLabels);
     // fire this now as the theme has already been set and we need the syntax highlighter to pick it up
     mpHost->editorThemeChanged();
 
