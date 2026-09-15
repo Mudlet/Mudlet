@@ -26,6 +26,7 @@
 
 #include "Host.h"
 #include "HostManager.h"
+#include "MudletApp.h"
 #include "MudletInstanceCoordinator.h"
 #include "PortableModeTestHelper.h"
 #include "mudlet.h"
@@ -52,8 +53,8 @@ private:
 
     static bool provisionProfileOnDisk(const QString& name)
     {
-        return QDir().mkpath(mudlet::getMudletPath(enums::profileHomePath, name)) && mudlet::self()->writeProfileData(name, qsl("url"), qsl("localhost")).first
-               && mudlet::self()->writeProfileData(name, qsl("port"), qsl("23")).first;
+        return QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, name)) && MudletApp::writeProfileData(name, qsl("url"), qsl("localhost")).first
+               && MudletApp::writeProfileData(name, qsl("port"), qsl("23")).first;
     }
 
     // Fires from the first event-loop pump inside a load, as the window's
@@ -103,12 +104,12 @@ private slots:
     {
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         // A settings file that already holds something is how
         // mudletUsedBefore() recognises an existing player, which keeps the
         // first-run UI tour and the starter UI package out of this test
-        mudlet::getQSettings()->setValue(qsl("uiTourShown"), true);
-        mudlet::getQSettings()->sync();
+        MudletApp::getQSettings()->setValue(qsl("uiTourShown"), true);
+        MudletApp::getQSettings()->sync();
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);

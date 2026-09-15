@@ -26,6 +26,7 @@
 #include "Host.h"
 
 #include "discord.h"
+#include "MudletApp.h"
 #include "dlgIRC.h"
 #include "dlgMapper.h"
 #include "dlgModuleManager.h"
@@ -299,16 +300,16 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     // plain text or HTML is immediately resumed on profile loading. Do not
     // confuse it with the "autologin" item, which controls whether the profile
     // is automatically started when the Mudlet application is run!
-    mLogStatus = QFile::exists(mudlet::getMudletPath(enums::profileDataItemPath, mHostName, qsl("autolog")));
+    mLogStatus = QFile::exists(MudletApp::getMudletPath(enums::profileDataItemPath, mHostName, qsl("autolog")));
     // "autotimestamp" determines if profile loads with timestamps enabled
-    mTimeStampStatus = QFile::exists(mudlet::getMudletPath(enums::profileDataItemPath, mHostName, qsl("autotimestamp")));
+    mTimeStampStatus = QFile::exists(MudletApp::getMudletPath(enums::profileDataItemPath, mHostName, qsl("autotimestamp")));
     mLuaInterface.reset(new LuaInterface(this->getLuaInterpreter()->getLuaGlobalState()));
 
     // Copy across the details needed for the "color_table":
     mLuaInterpreter.updateAnsi16ColorsInTable();
     mLuaInterpreter.updateExtendedAnsiColorsInTable();
 
-    const QString directoryLogFile = mudlet::getMudletPath(enums::profileDataItemPath, mHostName, qsl("log"));
+    const QString directoryLogFile = MudletApp::getMudletPath(enums::profileDataItemPath, mHostName, qsl("log"));
     const QString logFileName = qsl("%1/errors.txt").arg(directoryLogFile);
     const QDir dirLogFile;
     if (!dirLogFile.exists(directoryLogFile)) {
@@ -394,7 +395,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         }
     }
 
-    if (mudlet::self()->publicTestVersion) {
+    if (MudletApp::publicTest()) {
         thankForUsingPTB();
     }
 
@@ -456,7 +457,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         profileShortcuts[entry] = std::make_unique<QKeySequence>(*mudlet::self()->mpShortcutsManager->getSequence(entry));
     }
 
-    auto settings = mudlet::self()->getQSettings();
+    auto settings = MudletApp::getQSettings();
     const auto interval = settings->value("autosaveIntervalMinutes", 2).toInt();
     startMapAutosave(interval);
 
@@ -658,7 +659,7 @@ void Host::autoSaveMap()
 #if defined(DEBUG_MAPAUTOSAVE)
             qDebug().nospace().noquote() << "Host::autoSaveMap() INFO - map auto save initiated at:" << nowString << ".";
 #endif
-            if (!mpConsole->saveMap(mudlet::getMudletPath(enums::profileMapPathFileName, mHostName, qsl("autosave.dat")))) {
+            if (!mpConsole->saveMap(MudletApp::getMudletPath(enums::profileMapPathFileName, mHostName, qsl("autosave.dat")))) {
                 mpMap->setSaveError(true);
             } else {
                 mpMap->setSaveError(false);
@@ -674,7 +675,7 @@ void Host::autoSaveMap()
 void Host::loadPackageInfo()
 {
     for (const auto& package : std::as_const(mInstalledPackages)) {
-        const QDir dir(mudlet::self()->getMudletPath(enums::profilePackagePath, getName(), package));
+        const QDir dir(MudletApp::getMudletPath(enums::profilePackagePath, getName(), package));
         if (dir.exists(qsl("config.lua"))) {
             getPackageConfig(dir.absoluteFilePath(qsl("config.lua")));
         }
@@ -714,7 +715,7 @@ QList<Host::ModuleWriteJob> Host::prepareModuleSaves(bool backup)
     // state nor the Host, which may well be destroyed before the task even starts.
     QList<ModuleWriteJob> jobs;
     mModulesToSync.clear();
-    const QString backupPath = backup ? mudlet::getMudletPath(enums::moduleBackupsPath) : QString();
+    const QString backupPath = backup ? MudletApp::getMudletPath(enums::moduleBackupsPath) : QString();
     QMapIterator<QString, QStringList> it(modulesToWrite);
     while (it.hasNext()) {
         it.next();
@@ -728,12 +729,12 @@ QList<Host::ModuleWriteJob> Host::prepareModuleSaves(bool backup)
 
         QString xmlFilename = filename;
         if (filename.endsWith(qsl("mpackage"), Qt::CaseInsensitive) || filename.endsWith(qsl("zip"), Qt::CaseInsensitive)) {
-            xmlFilename = mudlet::getMudletPath(enums::profilePackagePathFileName, mHostName, moduleName);
+            xmlFilename = MudletApp::getMudletPath(enums::profilePackagePathFileName, mHostName, moduleName);
             // The write below goes into this folder, so it has to exist before the
             // write and not - as it used to - after it: a module whose unpacked folder
             // the user has removed would otherwise fail to write, and then have its
             // now-stale XML dropped from its archive without a replacement going in.
-            const QString packagePath = mudlet::getMudletPath(enums::profilePackagePath, mHostName, moduleName);
+            const QString packagePath = MudletApp::getMudletPath(enums::profilePackagePath, mHostName, moduleName);
             if (auto packageDir = QDir(packagePath); !packageDir.exists()) {
                 packageDir.mkpath(packagePath);
             }
@@ -888,7 +889,7 @@ void Host::reloadModule(const QString& syncModuleName, const QString& syncingFro
         if (moduleName == syncModuleName) {
             if (!syncingFromHost.isEmpty() && (fileName.endsWith(qsl(".zip"), Qt::CaseInsensitive) || fileName.endsWith(qsl(".mpackage"), Qt::CaseInsensitive))) {
                 uninstallPackage(moduleName, enums::PackageModuleType::ModuleSync);
-                fileName = mudlet::getMudletPath(enums::profilePackagePathFileName, syncingFromHost, moduleName);
+                fileName = MudletApp::getMudletPath(enums::profilePackagePathFileName, syncingFromHost, moduleName);
                 installPackage(fileName, enums::PackageModuleType::ModuleSync);
                 QStringList moduleEntry;
                 moduleEntry << moduleLocation;
@@ -1063,7 +1064,7 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
 {
     QString directory_xml;
     if (saveFolder.isEmpty()) {
-        directory_xml = mudlet::getMudletPath(enums::profileXmlFilesPath, getName());
+        directory_xml = MudletApp::getMudletPath(enums::profileXmlFilesPath, getName());
     } else {
         directory_xml = saveFolder;
     }
@@ -2603,14 +2604,14 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     }
     QFile file2;
     if (packageUnpacksAFolder(fileName)) {
-        const QString _home = mudlet::getMudletPath(enums::profileHomePath, getName());
+        const QString _home = MudletApp::getMudletPath(enums::profileHomePath, getName());
         // Unpacking into a folder the other half of this name owns would write over
         // its files, and the rename below would then carry that folder off under
         // whatever the manifest asked for. An archive whose name is already spoken
         // for is unpacked beside it instead, and moved into place only once its
         // manifest has been read and the name it really wants turns out to be free.
-        const QString _dest = crossKindRefusalOnTheFileName.isEmpty() ? mudlet::getMudletPath(enums::profilePackagePath, getName(), packageName)
-                                                                      : mudlet::getMudletPath(enums::profilePackagePath, getName(), packageName + qsl(".mudlet-installing"));
+        const QString _dest = crossKindRefusalOnTheFileName.isEmpty() ? MudletApp::getMudletPath(enums::profilePackagePath, getName(), packageName)
+                                                                      : MudletApp::getMudletPath(enums::profilePackagePath, getName(), packageName + qsl(".mudlet-installing"));
         // home directory for the PROFILE
         const QDir _tmpDir(_home);
         // directory to store the expanded archive file contents
@@ -3173,7 +3174,7 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
 
     getActionUnit()->updateAllToolbars();
 
-    const QString dest = mudlet::getMudletPath(enums::profilePackagePath, getName(), packageName);
+    const QString dest = MudletApp::getMudletPath(enums::profilePackagePath, getName(), packageName);
     removeDir(dest, dest);
 
     // The fonts this package brought went out with it, so a display font that
@@ -3384,7 +3385,7 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule, QString*
 QSettings& Host::profileIni()
 {
     if (!mpProfileIni) {
-        mpProfileIni = new QSettings(mudlet::getMudletPath(enums::profileDataItemPath, getName(), qsl("profile.ini")), QSettings::IniFormat, this);
+        mpProfileIni = new QSettings(MudletApp::getMudletPath(enums::profileDataItemPath, getName(), qsl("profile.ini")), QSettings::IniFormat, this);
         if (mpProfileIni->status() == QSettings::FormatError) {
             qWarning().nospace().noquote() << "Host::profileIni() ERROR - the profile's \"profile.ini\" file could not be parsed, the settings it held will be replaced.";
         }
@@ -3480,7 +3481,7 @@ void Host::setCmdLineSettings(const TCommandLine::CommandLineType type, const bo
 // host name argument...
 QPair<bool, QString> Host::writeProfileData(const QString& item, const QString& what)
 {
-    QSaveFile file(mudlet::getMudletPath(enums::profileDataItemPath, getName(), item));
+    QSaveFile file(MudletApp::getMudletPath(enums::profileDataItemPath, getName(), item));
     if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         QDataStream ofs(&file);
         ofs.setVersion(QDataStream::Qt_5_12);
@@ -3499,7 +3500,7 @@ QPair<bool, QString> Host::writeProfileData(const QString& item, const QString& 
 // Similar to the above, a convenience for reading profile data for this host.
 QString Host::readProfileData(const QString& item)
 {
-    QFile file(mudlet::getMudletPath(enums::profileDataItemPath, getName(), item));
+    QFile file(MudletApp::getMudletPath(enums::profileDataItemPath, getName(), item));
     const bool success = file.open(QIODevice::ReadOnly);
     QString ret;
     if (success) {
@@ -3516,7 +3517,7 @@ QString Host::readProfileData(const QString& item)
 // does not install font system-wide
 void Host::installPackageFonts(const QString& packageName)
 {
-    auto packagePath = mudlet::getMudletPath(enums::profilePackagePath, getName(), packageName);
+    auto packagePath = MudletApp::getMudletPath(enums::profilePackagePath, getName(), packageName);
 
     QDirIterator it(packagePath, QDirIterator::Subdirectories);
     while (it.hasNext()) {

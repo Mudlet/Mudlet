@@ -25,7 +25,7 @@
 #include "ui_dlgPackageExporter.h"
 
 #include "Host.h"
-#include "mudlet.h"
+#include "MudletApp.h"
 #include "TAction.h"
 #include "TAlias.h"
 #include "TKey.h"
@@ -142,7 +142,7 @@ dlgPackageExporter::dlgPackageExporter(QWidget* parent, Host* pHost)
     setWindowTitle(tr("Package Exporter - %1").arg(mpHost->getName()));
 
     // Set the previous details if saved
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletApp::getQSettings();
     auto packageAuthor = settings.value(qsl("packageAuthor"), QString()).toString();
     if (!packageAuthor.isEmpty()) {
         ui->lineEdit_author->setText(packageAuthor);
@@ -534,7 +534,7 @@ void dlgPackageExporter::slot_packageChanged(int index)
         }
     }
 
-    const QString packagePath{mudlet::getMudletPath(enums::profileHomePath, mpHost->getName())};
+    const QString packagePath{MudletApp::getMudletPath(enums::profileHomePath, mpHost->getName())};
     //fill package metadata
     mPackageIconPath.clear();
     QMap<QString, QString> const packageInfo = mpHost->mPackageInfo.value(packageName);
@@ -634,7 +634,7 @@ void dlgPackageExporter::checkToEnableExportButton()
 
 void dlgPackageExporter::slot_importIcon()
 {
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletApp::getQSettings();
     QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
 
     const QString fileName = QFileDialog::getOpenFileName(this, tr("Open Icon"), lastDir, tr("Image Files (*.png *.jpg *.jpeg *.bmp *.tif *.ico *.icns)"));
@@ -692,7 +692,7 @@ bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
             //during package creation it uses the profile folder. But once the package is created it will use
             //profile folder/packagename
             QString plainText{mPlainDescription};
-            const QString profilePath{mudlet::getMudletPath(enums::profileHomePath, mpHost->getName())};
+            const QString profilePath{MudletApp::getMudletPath(enums::profileHomePath, mpHost->getName())};
             //$packagePath will be replaced by the resource path if an existing package is selected
             if (ui->packageList->currentIndex() != 0) {
                 const QString packageName = ui->packageList->currentText();
@@ -866,7 +866,7 @@ void dlgPackageExporter::slot_exportPackage()
     // if packageName changed allow to create a new package in the same path
     if (mIsModuleCreationMode) {
         // Modules default to the profile directory unless the user picked a save location
-        const QString moduleDir = mPackagePath.isEmpty() ? mudlet::getMudletPath(enums::profileHomePath, mpHost->getName()) : mPackagePath;
+        const QString moduleDir = mPackagePath.isEmpty() ? MudletApp::getMudletPath(enums::profileHomePath, mpHost->getName()) : mPackagePath;
         mPackagePathFileName = qsl("%1/%2.mpackage").arg(moduleDir, mPackageName);
     } else {
         mPackagePathFileName = qsl("%1/%2.mpackage").arg(getActualPath(), mPackageName);
@@ -1062,7 +1062,7 @@ void dlgPackageExporter::slot_exportPackage()
     }
 
     // save settings for future reuse
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletApp::getQSettings();
     settings.setValue("packageAuthor", ui->lineEdit_author->text());
 }
 
@@ -1563,7 +1563,7 @@ void dlgPackageExporter::slot_addFiles()
     fDialog->setFileMode(QFileDialog::Directory);
     fDialog->setOption(QFileDialog::DontUseNativeDialog);
 
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletApp::getQSettings();
     QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
     fDialog->setDirectory(lastDir);
 
@@ -1610,7 +1610,7 @@ void dlgPackageExporter::slot_addFiles()
 
 void dlgPackageExporter::slot_openPackageLocation()
 {
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletApp::getQSettings();
     QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
 
     const QString chosenPath = QFileDialog::getExistingDirectory(nullptr, tr("Where do you want to save the package?"), lastDir, QFileDialog::DontUseNativeDialog | QFileDialog::ShowDirsOnly);
@@ -2022,7 +2022,7 @@ void dlgPackageExporter::slot_rightClickOnItems(const QPoint& point)
 
 QString dlgPackageExporter::getActualPath() const
 {
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletApp::getQSettings();
     QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
 
     return mPackagePath.isEmpty() ? lastDir : mPackagePath;

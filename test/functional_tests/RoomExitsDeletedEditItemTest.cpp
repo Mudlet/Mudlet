@@ -27,6 +27,7 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "TMap.h"
 #include "TRoomDB.h"
@@ -63,7 +64,7 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -83,7 +84,7 @@ private slots:
     {
         mpHost = nullptr;
         if (mudlet::self()) {
-            QDir(mudlet::getMudletPath(enums::profileHomePath, mProfileName)).removeRecursively();
+            QDir(MudletApp::getMudletPath(enums::profileHomePath, mProfileName)).removeRecursively();
         }
         delete mudlet::self();
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);

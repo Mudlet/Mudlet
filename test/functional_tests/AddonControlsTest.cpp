@@ -42,6 +42,7 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "TMainConsole.h"
 #include "Host.h"
@@ -89,8 +90,8 @@ private:
 
     bool provisionProfileOnDisk(const QString& profileName) const
     {
-        return QDir().mkpath(mudlet::getMudletPath(enums::profileHomePath, profileName)) && mudlet::self()->writeProfileData(profileName, qsl("url"), mLocalhost).first
-               && mudlet::self()->writeProfileData(profileName, qsl("port"), mPort).first;
+        return QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, profileName)) && MudletApp::writeProfileData(profileName, qsl("url"), mLocalhost).first
+               && MudletApp::writeProfileData(profileName, qsl("port"), mPort).first;
     }
 
     // Returns the Lua error, or a null QString when the chunk ran
@@ -262,9 +263,9 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
-        mudlet::getQSettings()->setValue(qsl("uiTourShown"), true);
-        mudlet::getQSettings()->sync();
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        MudletApp::getQSettings()->setValue(qsl("uiTourShown"), true);
+        MudletApp::getQSettings()->sync();
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);

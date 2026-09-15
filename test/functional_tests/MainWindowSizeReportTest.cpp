@@ -23,6 +23,7 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
@@ -122,7 +123,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -131,7 +132,7 @@ private slots:
         // makes a main window nobody has sized
         mudlet::self()->resize(1200, 800);
 
-        QDir(mudlet::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
+        QDir(MudletApp::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
 
         QTimer::singleShot(0ms, qApp, [this]() {
             mudlet::self()->startAutoLogin({});
@@ -172,10 +173,9 @@ private slots:
         delete mpServer;
         mpServer = nullptr;
         mpHost = nullptr;
-        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
-        // getMudletPath() dereferences the instance rather than checking it
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
-            const QString path = mudlet::getMudletPath(enums::profileHomePath, mHostname);
+            const QString path = MudletApp::getMudletPath(enums::profileHomePath, mHostname);
             delete mudlet::self();
             QDir(path).removeRecursively();
         }

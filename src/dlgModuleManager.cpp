@@ -24,6 +24,7 @@
 #include "dlgModuleManager.h"
 
 #include "mudlet.h"
+#include "MudletApp.h"
 
 #include <QFileDialog>
 #include <QMessageBox>
@@ -132,7 +133,7 @@ void dlgModuleManager::slot_installModule()
         return;
     }
 
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletApp::getQSettings();
     QString lastDir = settings.value(qsl("lastFileDialogLocation"), QDir::homePath()).toString();
 
     //: Module manager - import modules from file dialog (multi-select enabled)

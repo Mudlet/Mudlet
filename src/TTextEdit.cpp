@@ -37,6 +37,7 @@
 #include "THyperlinkSelectionManager.h"
 #include "THyperlinkVisibilityManager.h"
 #include "mudlet.h"
+#include "MudletApp.h"
 #include "utils.h"
 #include "widechar_width.h"
 #include "TTextProperties.h"
@@ -2287,7 +2288,7 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
     // switches away from the ASCII default
     text.append("  <meta name='generator' content='Mudlet MUD Client version: ");
     text.append(APP_VERSION);
-    text.append(mudlet::self()->mAppBuild);
+    text.append(MudletApp::buildSuffix());
     text.append("'>\n");
     // Nice to identify what made the file!
     text.append("  <title>");

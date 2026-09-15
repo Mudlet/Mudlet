@@ -39,6 +39,7 @@
 #include "AliasUnit.h"
 #include "Host.h"
 #include "KeyUnit.h"
+#include "MudletApp.h"
 #include "MudletInstanceCoordinator.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
@@ -91,7 +92,7 @@ private:
     QTimer* mpModalAnswerTimer = nullptr;
     QStringList mStagedPackageNames;
 
-    QString profileHome() const { return mudlet::getMudletPath(enums::profileHomePath, mProfileName); }
+    QString profileHome() const { return MudletApp::getMudletPath(enums::profileHomePath, mProfileName); }
 
     QString packagePath(const QString& packageName) const { return qsl("%1/%2.mpackage").arg(mExportDir, packageName); }
 
@@ -328,7 +329,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -348,7 +349,7 @@ private slots:
         // pointing it here is how the export is aimed without a file dialog.
         mExportDir = qsl("%1/%2").arg(mExportRoot.path(), QString::fromUtf8(QTest::currentTestFunction()));
         QVERIFY(QDir().mkpath(mExportDir));
-        mudlet::getQSettings()->setValue(qsl("lastFileDialogLocation"), mExportDir);
+        MudletApp::getQSettings()->setValue(qsl("lastFileDialogLocation"), mExportDir);
     }
 
     void cleanup()
@@ -698,7 +699,7 @@ private slots:
         QVERIFY2(!info.value(qsl("created")).isEmpty(), "the package was not stamped with when it was made");
 
         // the author is the one field offered back the next time round
-        QCOMPARE(mudlet::getQSettings()->value(qsl("packageAuthor")).toString(), qsl("A Test Author"));
+        QCOMPARE(MudletApp::getQSettings()->value(qsl("packageAuthor")).toString(), qsl("A Test Author"));
     }
 
     // A help URL that already names a scheme is left exactly as it is, so the
