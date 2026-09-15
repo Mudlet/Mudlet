@@ -647,6 +647,44 @@ describe("Tests the Adjustable.Container mouse handlers", function()
       -- the mouse did not move, so the left edge it grabbed stays where it was
       assert.is_true(math.abs(container:get_width() - 200) <= 1)
     end)
+
+    -- the border an attached container reserves is the container's own size, so
+    -- it has to be measured from the geometry the drag applied and not from the
+    -- geometry that drag replaced
+    it("leaves the border matching the size the drag just applied", function()
+      local topBefore = getBorderTop()
+      finally(function() setBorderTop(topBefore) end)
+      -- resizeBorder arms a timer on the resize event that setBorder raises, and
+      -- nothing keeps its id, so it would fire on a deleted container later
+      local realTempTimer = tempTimer
+      _G.tempTimer = function() return -1 end
+      finally(function() _G.tempTimer = realTempTimer end)
+
+      container:move(0, 0)
+      container:attachToBorder("top")
+
+      -- adjust_Info reads the grabbed edge from the pointer against the label,
+      -- so a click within ten pixels of the bottom takes the bottom edge
+      local grabY = container:get_height() - 5
+      local pointerY = 300
+      local realMousePosition = getMousePosition
+      _G.getMousePosition = function() return 100, pointerY end
+      finally(function() _G.getMousePosition = realMousePosition end)
+
+      container:onClick(container.adjLabel, mouseEvent("LeftButton", 5, grabY))
+      container:onClick(container.adjLabel, mouseEvent("LeftButton", 5, grabY))
+      -- the drag pulls the bottom edge thirty pixels further down
+      pointerY = pointerY + 30
+      container:onMove(container.adjLabel, mouseEvent("LeftButton", 5, grabY))
+
+      assert.are.equal("top", container.attached)
+      -- the drag stores the height as a percentage, so it comes back as a
+      -- fraction of a pixel and setBorderTop takes the whole part of it
+      local reserved = container:get_height() + container:get_y() + container.attachedMargin
+      assert.are.equal(math.floor(reserved), getBorderTop())
+      -- and it really did follow the drag: the height it replaced was 200
+      assert.is_true(container:get_height() > 200)
+    end)
   end)
 
   describe("Adjustable.Container:onClickL", function()
