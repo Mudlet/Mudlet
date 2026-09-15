@@ -41,6 +41,7 @@
 #include "mudlet.h"
 #include "GifTracker.h"
 
+#include <QDataStream>
 #include <QDialog>
 #include <QDockWidget>
 #include <QIcon>
@@ -50,6 +51,7 @@
 #include <QMimeData>
 #include <QProgressDialog>
 #include <QUiLoader>
+#include <QSaveFile>
 #include <QScrollBar>
 #include <QShortcut>
 #include <QSizePolicy>
