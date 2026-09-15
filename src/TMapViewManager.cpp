@@ -27,6 +27,8 @@
 #include "TRoomDB.h"
 #include "utils.h"
 
+#include <QApplication>
+
 TMapViewManager::TMapViewManager(Host* pHost, TMap* pMap)
 : QObject(pMap)
 , mpHost(pHost)
@@ -147,6 +149,16 @@ void TMapViewManager::updateAllViews()
         if (view && view->get2DMap()) {
             view->get2DMap()->update();
             view->updateAreaComboBox();
+        }
+    }
+}
+
+void TMapViewManager::changeViewsColour()
+{
+    for (const auto& [viewId, view] : mViews.asKeyValueRange()) {
+        Q_UNUSED(viewId)
+        if (view) {
+            view->setPalette(QApplication::palette());
         }
     }
 }
