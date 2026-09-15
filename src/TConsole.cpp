@@ -52,6 +52,7 @@
 #include <QMessageBox>
 #include <QMimeData>
 #include <QPainter>
+#include <QSaveFile>
 #include <QScrollBar>
 #include <QSettings>
 #include <QShortcut>
@@ -439,6 +440,13 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     //: Button tooltip for the replay recording toggle button
     replayButton->setToolTip(utils::richText(tr("Start recording of replay")));
     connect(replayButton, &QAbstractButton::clicked, this, &TConsole::slot_toggleReplayRecording);
+    // cTelnet commits and stops a recording when the connection ends, so the
+    // button must not be left pressed as though one were still running:
+    connect(&mpHost->mTelnet, &cTelnet::signal_disconnected, this, [this]() {
+        replayButton->setChecked(false);
+        //: Button tooltip for the replay recording toggle button
+        replayButton->setToolTip(utils::richText(tr("Start recording of replay")));
+    });
 
     logButton = new QToolButton;
     logButton->setMinimumSize(QSize(30, 30));
@@ -702,6 +710,12 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 
 TConsole::~TConsole()
 {
+    // TDebug holds its sink raw, and a closing profile emits debug lines from
+    // inside teardown, so unhook before any of this console is gone.
+    if (TDebug::sink() == this) {
+        TDebug::setSink(nullptr);
+    }
+
     // Host co-owns the main console's model, so the model - and its buffer -
     // can outlive this view. The buffer's QPointer back-pointer would only null
     // itself once ~QObject() runs, leaving it aimed at a half-destroyed widget
@@ -1061,36 +1075,35 @@ void TConsole::slot_toggleReplayRecording()
     if (mType & CentralDebugConsole) {
         return;
     }
-    mRecordReplay = !mRecordReplay;
-    if (mRecordReplay) {
+    cTelnet& telnet = mpHost->mTelnet;
+    if (!telnet.recordingReplay()) {
         const QString directoryLogFile = mudlet::getMudletPath(enums::profileReplayAndLogFilesPath, mProfileName);
         const QString mLogFileName = qsl("%1/%2.dat").arg(directoryLogFile, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
         const QDir dirLogFile;
         if (!dirLogFile.exists(directoryLogFile)) {
             dirLogFile.mkpath(directoryLogFile);
         }
-        mReplayFile.setFileName(mLogFileName);
-        if (!mReplayFile.open(QIODevice::WriteOnly)) {
-            qWarning() << "TConsole: failed to open replay file for writing:" << mReplayFile.errorString();
-            mRecordReplay = false;
-            //: Informational message displayed when replay recording file could not be opened
-            printSystemMessage(tr("Failed to open replay recording file for writing.") % QChar::LineFeed);
+        if (!telnet.startReplayRecording(mLogFileName)) {
+            // The button has already toggled itself on - clicked() fires after
+            // that - so put it back rather than leave it looking pressed with
+            // no recording behind it:
+            replayButton->setChecked(false);
+            qWarning() << "TConsole: failed to open replay file for writing:" << telnet.replayRecordingErrorString();
+            //: Informational message displayed when replay recording file could not be opened. %1 is the reason
+            printSystemMessage(tr("Failed to open replay recording file for writing: %1").arg(telnet.replayRecordingErrorString()) % QChar::LineFeed);
             return;
         }
-        mReplayStream.setVersion(QDataStream::Qt_5_12);
-        mReplayStream.setDevice(&mReplayFile);
-        mpHost->mTelnet.recordReplay();
-        printSystemMessage(tr("Replay recording has started. File: %1").arg(mReplayFile.fileName()) % QChar::LineFeed);
+        printSystemMessage(tr("Replay recording has started. File: %1").arg(telnet.replayRecordingFileName()) % QChar::LineFeed);
         //: Button tooltip for the replay recording toggle button
         replayButton->setToolTip(utils::richText(tr("Stop recording of replay")));
     } else {
-        if (!mReplayFile.commit()) {
-            qDebug() << "TConsole::slot_toggleReplayRecording: error saving replay: " << mReplayFile.errorString();
-            //: Informational message displayed when replay recording is stopped but could not be saved
-            printSystemMessage(tr("Replay recording has been stopped, but couldn't be saved.") % QChar::LineFeed);
+        if (!telnet.stopReplayRecording()) {
+            qWarning() << "TConsole::slot_toggleReplayRecording: error saving replay: " << telnet.replayRecordingErrorString();
+            //: Informational message displayed when replay recording is stopped but could not be saved. %1 is the reason
+            printSystemMessage(tr("Replay recording has been stopped, but couldn't be saved: %1").arg(telnet.replayRecordingErrorString()) % QChar::LineFeed);
         } else {
             //: Informational message displayed when replay recording is stopped
-            printSystemMessage(tr("Replay recording has been stopped. File: %1").arg(mReplayFile.fileName()) % QChar::LineFeed);
+            printSystemMessage(tr("Replay recording has been stopped. File: %1").arg(telnet.replayRecordingFileName()) % QChar::LineFeed);
         }
         //: Button tooltip for the replay recording toggle button
         replayButton->setToolTip(utils::richText(tr("Start recording of replay")));
@@ -1974,11 +1987,19 @@ bool TConsole::selectSection(int from, int to)
     if (from < 0) {
         return false;
     }
+    // a negative length would put the selection's end before its start
+    if (to < 0) {
+        return false;
+    }
     if (mUserCursor.y() >= static_cast<int>(buffer.buffer.size())) {
         return false;
     }
     const int s = buffer.buffer[mUserCursor.y()].size();
-    if (from > s || from + to > s) {
+    // the length is compared against what is left of the line rather than
+    // added to the start: `from + to` overflows for a large `to`, and signed
+    // overflow that wraps negative sails through a check written that way,
+    // handing back a selection whose end precedes its start
+    if (from > s || to > s - from) {
         return false;
     }
     P_begin = QPoint(from, mUserCursor.y());
@@ -2203,6 +2224,11 @@ void TConsole::print(const QString& msg, const QColor fgColor, const QColor bgCo
     if (Q_UNLIKELY(mudlet::self()->smMirrorToStdOut)) {
         qDebug().nospace().noquote() << qsl("%1| %2").arg(mConsoleName, msg);
     }
+}
+
+void TConsole::printDebugLine(const QString& text, const QColor& foreground, const QColor& background, const QString& timeStamp)
+{
+    print(text, foreground, background, timeStamp);
 }
 
 void TConsole::printFormatted(const QString& text, const std::vector<TChar>& formatting, const TLinkStore& sourceLinkStore)
@@ -2451,7 +2477,7 @@ void TConsole::slot_searchBufferUp()
     for (int searchY = mCurrentSearchResult - 1; searchY >= 0; --searchY) {
         int searchX = -1;
         do {
-            searchX = buffer.lineBuffer[searchY].indexOf(mSearchQuery, searchX + 1, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive));
+            searchX = buffer.lineBuffer[searchY].indexOf(mSearchQuery, searchX + 1, ((mSearchOptions & enums::BufferSearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive));
             if (searchX > -1) {
                 buffer.applyAttribute(QPoint(searchX, searchY), QPoint(searchX + mSearchQuery.size(), searchY), TChar::Found, true);
                 if (mpHost->getF3SearchEnabled()) {
@@ -2494,7 +2520,7 @@ void TConsole::slot_searchBufferDown()
     for (int searchY = mCurrentSearchResult + 1; searchY < buffer.lineBuffer.size(); ++searchY) {
         int searchX = -1;
         do {
-            searchX = buffer.lineBuffer[searchY].indexOf(mSearchQuery, searchX + 1, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive));
+            searchX = buffer.lineBuffer[searchY].indexOf(mSearchQuery, searchX + 1, ((mSearchOptions & enums::BufferSearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive));
             if (searchX > -1) {
                 buffer.applyAttribute(QPoint(searchX, searchY), QPoint(searchX + mSearchQuery.size(), searchY), TChar::Found, true);
                 if (mpHost->getF3SearchEnabled()) {
@@ -3106,11 +3132,11 @@ void TConsole::createSearchOptionIcon()
     QIcon newIcon;
     switch (mSearchOptions) {
     // Each combination must be handled here
-    case SearchOptionCaseSensitive:
+    case enums::BufferSearchOptionCaseSensitive:
         newIcon.addPixmap(QPixmap(":/icons/searchOptions-caseSensitive.png"));
         break;
 
-    case SearchOptionNone:
+    case enums::BufferSearchOptionNone:
         // Use the grey icon as that is appropriate for the "No options set" case
         newIcon.addPixmap(QPixmap(":/icons/searchOptions-none.png"));
         break;
@@ -3124,17 +3150,17 @@ void TConsole::createSearchOptionIcon()
     mpAction_searchOptions->setIcon(newIcon);
 }
 
-void TConsole::setSearchOptions(const SearchOptions optionsState)
+void TConsole::setSearchOptions(const enums::BufferSearchOptions optionsState)
 {
     mSearchOptions = optionsState;
-    mpAction_searchCaseSensitive->setChecked(optionsState & SearchOptionCaseSensitive);
+    mpAction_searchCaseSensitive->setChecked(optionsState & enums::BufferSearchOptionCaseSensitive);
     createSearchOptionIcon();
 }
 
 void TConsole::slot_toggleSearchCaseSensitivity(const bool state)
 {
-    if ((mSearchOptions & SearchOptionCaseSensitive) != state) {
-        mSearchOptions = (mSearchOptions & ~(SearchOptionCaseSensitive)) | (state ? SearchOptionCaseSensitive : SearchOptionNone);
+    if ((mSearchOptions & enums::BufferSearchOptionCaseSensitive) != state) {
+        mSearchOptions = (mSearchOptions & ~(enums::BufferSearchOptionCaseSensitive)) | (state ? enums::BufferSearchOptionCaseSensitive : enums::BufferSearchOptionNone);
         createSearchOptionIcon();
         mpHost->mBufferSearchOptions = mSearchOptions;
     }
