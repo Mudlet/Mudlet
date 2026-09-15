@@ -105,8 +105,8 @@ private:
         if (mpSecondHost) {
             return true;
         }
-        if (!QDir().mkpath(MudletPaths::getMudletPath(enums::profileHomePath, mSecondHostname)) || !mudlet::self()->writeProfileData(mSecondHostname, qsl("url"), mLocalhost).first
-            || !mudlet::self()->writeProfileData(mSecondHostname, qsl("port"), mPort).first) {
+        if (!QDir().mkpath(MudletPaths::getMudletPath(enums::profileHomePath, mSecondHostname)) || !MudletPaths::writeProfileData(mSecondHostname, qsl("url"), mLocalhost).first
+            || !MudletPaths::writeProfileData(mSecondHostname, qsl("port"), mPort).first) {
             return false;
         }
         // the second argument is offline, so this profile never opens a
