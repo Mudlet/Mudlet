@@ -94,7 +94,7 @@ private:
     QTemporaryDir mConfigDir;
     QByteArray mSavedXdgConfigHome;
 
-    Host* hostFor(const QString& profileName) const { return mudlet::self()->getHostManager().getHost(profileName); }
+    Host* hostFor(const QString& profileName) const { return HostManager::self()->getHost(profileName); }
 
     bool provisionProfileOnDisk(const QString& profileName) const
     {

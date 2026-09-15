@@ -32,6 +32,7 @@
 
 #include "EAction.h"
 #include "Host.h"
+#include "HostManager.h"
 #include "TAlias.h"
 #include "TArea.h"
 #include "TCommandLine.h"
@@ -54,7 +55,6 @@
 #include "dlgModuleManager.h"
 #include "dlgTriggerEditor.h"
 #include "mapInfoContributorManager.h"
-#include "mudlet.h"
 #if defined(INCLUDE_3DMAPPER)
 #include "glwidget_integration.h"
 #endif
@@ -106,7 +106,7 @@ static void raiseSpeechStartedEvent(const QString& text)
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(text);
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    mudlet::self()->getHostManager().postInterHostEvent(nullptr, event, true);
+    HostManager::self()->postInterHostEvent(nullptr, event, true);
 }
 
 // No documentation available in wiki - internal function
@@ -199,7 +199,7 @@ void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
         }
 
         if (!alreadyAnnounced) {
-            mudlet::self()->getHostManager().postInterHostEvent(NULL, event, true);
+            HostManager::self()->postInterHostEvent(NULL, event, true);
         }
     }
 
@@ -531,7 +531,7 @@ int TLuaInterpreter::ttsSetPitch(lua_State* L)
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(QString::number(pitch));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    mudlet::self()->getHostManager().postInterHostEvent(NULL, event, true);
+    HostManager::self()->postInterHostEvent(NULL, event, true);
 
     return 0;
 }
@@ -557,7 +557,7 @@ int TLuaInterpreter::ttsSetRate(lua_State* L)
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(QString::number(rate));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    mudlet::self()->getHostManager().postInterHostEvent(NULL, event, true);
+    HostManager::self()->postInterHostEvent(NULL, event, true);
 
     return 0;
 }
@@ -583,7 +583,7 @@ int TLuaInterpreter::ttsSetVolume(lua_State* L)
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(QString::number(volume));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    mudlet::self()->getHostManager().postInterHostEvent(NULL, event, true);
+    HostManager::self()->postInterHostEvent(NULL, event, true);
 
     return 0;
 }
@@ -608,7 +608,7 @@ int TLuaInterpreter::ttsSetVoiceByIndex(lua_State* L)
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(speechVoices[index].name());
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    mudlet::self()->getHostManager().postInterHostEvent(NULL, event, true);
+    HostManager::self()->postInterHostEvent(NULL, event, true);
 
     lua_pushboolean(L, true);
     return 1;
@@ -630,7 +630,7 @@ int TLuaInterpreter::ttsSetVoiceByName(lua_State* L)
             event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
             event.mArgumentList.append(voice.name());
             event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-            mudlet::self()->getHostManager().postInterHostEvent(NULL, event, true);
+            HostManager::self()->postInterHostEvent(NULL, event, true);
 
             lua_pushboolean(L, true);
             return 1;

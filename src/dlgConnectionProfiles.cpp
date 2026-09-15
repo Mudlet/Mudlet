@@ -1064,7 +1064,7 @@ void dlgConnectionProfiles::showNotification(const QString& message, QLabel* pIc
 // without that whole selection path, which ignores a repeat of the same profile
 void dlgConnectionProfiles::updateRemoveButtonState(const QString& profile)
 {
-    if (mudlet::self()->getHostManager().getHost(profile)) {
+    if (HostManager::self()->getHost(profile)) {
         remove_profile_button->setEnabled(false);
         remove_profile_button->setToolTip(utils::richText(tr("A profile that is in use cannot be removed")));
         return;
@@ -1491,7 +1491,7 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
 
     updateRemoveButtonState(profile_name);
 
-    if (mudlet::self()->getHostManager().getHost(profile_name)) {
+    if (HostManager::self()->getHost(profile_name)) {
         connect_button->setEnabled(false);
         offline_button->setEnabled(false);
 
@@ -2279,7 +2279,7 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
     }
 
     // Check if the host already exists before calling mudlet::loadProfile()
-    Host* pHostBeforeLoad = mudlet::self()->getHostManager().getHost(profile_name);
+    Host* pHostBeforeLoad = HostManager::self()->getHost(profile_name);
     bool hostExistedBefore = (pHostBeforeLoad != nullptr);
 
     Host* pHost = mudlet::self()->loadProfile(profile_name, alsoConnect, profile_history->currentData().toString());

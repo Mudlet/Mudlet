@@ -34,6 +34,7 @@
 #include "dlgProfilePreferences.h"
 #include "GifTracker.h"
 #include "GMCPAuthenticator.h"
+#include "HostManager.h"
 #include "LuaInterface.h"
 #include "mapInfoContributorManager.h"
 #include "MMCP.h"
@@ -781,7 +782,7 @@ void Host::writeModuleFiles(const QList<ModuleWriteJob>& jobs)
 void Host::reloadModules()
 {
     //synchronize modules across sessions
-    for (auto otherHost : mudlet::self()->getHostManager()) {
+    for (auto otherHost : *HostManager::self()) {
         if (otherHost == this || !otherHost->mpConsole) {
             continue;
         }
