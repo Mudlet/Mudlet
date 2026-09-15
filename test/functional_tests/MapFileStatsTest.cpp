@@ -105,7 +105,7 @@ private:
         map()->mRoomIdHash[mProfileName] = 1;
     }
 
-    // The same QDataStream setup TMainConsole::saveMap uses. saveVersion 0 means
+    // The same QDataStream setup Host::saveMapFile uses. saveVersion 0 means
     // the map's own; anything else has to be within mMinVersion..mMaxVersion.
     bool writeMapFile(const QString& pathFileName, const int saveVersion = 0) const
     {

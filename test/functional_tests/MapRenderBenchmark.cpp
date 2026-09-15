@@ -276,7 +276,7 @@ private slots:
         QVERIFY2(connected.wait(3000), "could not connect to the stub");
 
         // The mapper has to exist before the map is restored into it, exactly
-        // as TMainConsole::loadMap() arranges it.
+        // as Host::loadMapFile() arranges it.
         host->showHideOrCreateMapper(false);
         QVERIFY(host->mpMap);
         QVERIFY(host->mpMap->mpMapper);

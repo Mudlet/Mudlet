@@ -3063,7 +3063,7 @@ describe("Tests saveMap and loadMap", function()
 
   -- Careful with the order of anything added here: a load that fails can still
   -- have emptied the map first, both for a missing binary file
-  -- (TMainConsole::loadMap clears before it restores) and for a map document
+  -- (Host::loadMapFile clears before it restores) and for a map document
   -- that will not parse (TMap::readXmlMapFile clears before it parses), so most
   -- of these leave no map behind for the next spec. A file that is not a map
   -- document at all is the exception: it is refused before the clear.
@@ -3113,6 +3113,21 @@ describe("Tests saveMap and loadMap", function()
       assert.is_string(message)
       assert.is_truthy(message:find("was not found", 1, true))
       assert.is_truthy(message:find("nosuchmapfile.xml", 1, true))
+    end)
+
+    -- the XML import resolves a bare name against the profile directory the
+    -- same way saveMap and loadMap do, so the message has to name where it
+    -- really looked and not the directory Mudlet happens to have been started
+    -- in, which for a spec run is the build or source tree
+    it("resolves a bare XML name against the profile directory", function()
+      local bare = "mapper_spec_norelative.xml"
+      local resolved = getMudletHomeDir() .. "/" .. bare
+      assert.is_false(io.exists(resolved), "the spec needs a name nothing has written")
+
+      local ok, message = loadMap(bare)
+      assert.is_nil(ok)
+      assert.is_string(message)
+      assert.is_truthy(message:find(resolved, 1, true), message)
     end)
 
     it("returns nil and a message for an XML file it cannot parse", function()
