@@ -331,6 +331,27 @@ describe("Tests functionality of Geyser.Container", function()
     end)
   end)
 
+  describe("Geyser.Container:reposition with nested labels", function()
+    it("opens a right click menu in the right place after its container moved", function()
+      local container = track(Adjustable.Container:new({name = "gcsAdjMenu", x = 0, y = 0,
+        width = "50%", height = "50%", autoLoad = false, autoSave = false}))
+      local menu = container.adjLabel.rightClickMenu
+      local item = menu.nestedLabels[1]
+
+      menu:displayNest()
+      local before = geometry(item.name)
+      closeNestChildren(menu)
+
+      container:move(200, 150)
+      GeyserReposition("sysWindowResizeEvent", getMainWindowSize())
+
+      menu:displayNest()
+      local after = geometry(item.name)
+      assert.are.equal(before.x + 200, after.x)
+      assert.are.equal(before.y + 150, after.y)
+    end)
+  end)
+
   describe("Geyser.Container:move/resize", function()
     local container
 
