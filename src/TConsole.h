@@ -29,15 +29,15 @@
 
 #include "TBuffer.h"
 #include "TConsoleModel.h"
+#include "TDebug.h"
 #include "TPrintSink.h"
+#include "enums.h"
 
-#include <QDataStream>
 #include <QElapsedTimer>
 #include <QFont>
 #include <QIcon>
 #include <QPixmap>
 #include <QPointer>
-#include <QSaveFile>
 #include <QWidget>
 
 #include <hunspell/hunspell.h>
@@ -160,9 +160,9 @@ class TSplitter;
 class dlgNotepad;
 
 
-// TPrintSink is the write-only face core code redirects output to; QWidget
-// stays first so moc sees the QObject base it needs.
-class TConsole : public QWidget, public TPrintSink
+// TPrintSink and TDebug::Sink are the write-only faces core code redirects
+// output to; QWidget stays first so moc sees the QObject base it needs.
+class TConsole : public QWidget, public TPrintSink, public TDebug::Sink
 {
     Q_OBJECT
 
@@ -177,13 +177,6 @@ public:
         Buffer = 0x20              // Non-visible store for data that can be copied to/from other per profile TConsoles, should be uniquely named in pool of SubConsole/UserWindow/Buffers AND Labels
     };
     Q_DECLARE_FLAGS(ConsoleType, ConsoleTypeFlag)
-
-    enum SearchOption {
-        // Unset:
-        SearchOptionNone = 0x0,
-        SearchOptionCaseSensitive = 0x1
-    };
-    Q_DECLARE_FLAGS(SearchOptions, SearchOption)
 
     Q_DISABLE_COPY(TConsole)
     explicit TConsole(Host*, const QString&, const ConsoleType type = UnknownType, QWidget* parent = nullptr);
@@ -280,6 +273,7 @@ public:
     // until its right-click menu asks for it:
     void showSearchBar();
     void printFormatted(const QString& text, const std::vector<TChar>& formatting, const TLinkStore& sourceLinkStore) override;
+    void printDebugLine(const QString& text, const QColor& foreground, const QColor& background, const QString& timeStamp) override;
     void discardAll() override;
     void discardLastLine() override;
     void printSystemMessage(const QString& msg);
@@ -333,7 +327,7 @@ public:
     // 2 = Selection not valid
     QPair<quint8, TChar> getTextAttributes() const;
     void setCaretMode(bool enabled);
-    void setSearchOptions(const SearchOptions);
+    void setSearchOptions(const enums::BufferSearchOptions);
     void setF3SearchEnabled(const bool enabled);
     void setProxyForFocus(TCommandLine*);
     void raiseMudletSysWindowResizeEvent(const int overallWidth, const int overallHeight);
@@ -424,9 +418,6 @@ public:
     QScrollBar* mpHScrollBar = nullptr;
 
     QElapsedTimer mProcessingTimer;
-    bool mRecordReplay = false;
-    QSaveFile mReplayFile;
-    QDataStream mReplayStream;
 
     bool mTriggerEngineMode = false;
 
@@ -514,7 +505,7 @@ private:
     // getMainWindowSize() falls back to while the console is hidden or too small
     // to measure cannot be a size the window never had
     mutable QSize mLastMeasuredSize;
-    SearchOptions mSearchOptions = SearchOptionNone;
+    enums::BufferSearchOptions mSearchOptions = enums::BufferSearchOptionNone;
     QAction* mpAction_searchOptions = nullptr;
     QIcon mIcon_searchOptions;
     bool mScrollingEnabled = true;
