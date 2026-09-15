@@ -57,9 +57,13 @@
 #include "dlgPackageExporter.h"
 #include "dlgPackageManager.h"
 #include "dlgProfilePreferences.h"
+#include "dlgTriggerEditor.h"
+#include "edbee/edbee.h"
 #include "MMCPServer.h"
 #include "widgetutils.h"
 
+#include <QDataStream>
+#include <QSaveFile>
 #include <QAccessible>
 #include <QAccessibleAnnouncementEvent>
 #include <QApplication>
@@ -5763,6 +5767,7 @@ void mudlet::attachDebugArea(const QString& hostname)
     smpDebugArea = new QMainWindow(nullptr);
     const auto pHost = mHostManager.getHost(hostname);
     smpDebugConsole = new TConsole(pHost, qsl("centralDebug"), TConsole::CentralDebugConsole);
+    TDebug::setSink(smpDebugConsole.data());
     smpDebugConsole->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     smpDebugConsole->setWrapAt(100);
     smpDebugArea->setCentralWidget(smpDebugConsole);
@@ -9860,6 +9865,11 @@ void mudlet::moveProfileFromDetachedToMainWindow(const QString& profileName, TDe
 
     // Update main window title to reflect moved profile
     updateMainWindowTitle();
+}
+
+QDockWidget* mudlet::getMainWindowDockWidget(const QString& mapKey) const
+{
+    return mMainWindowDockWidgetMap.value(mapKey);
 }
 
 void mudlet::updateMainWindowDockWidgetVisibilityForProfile(const QString& profileName)
