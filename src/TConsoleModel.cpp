@@ -22,6 +22,7 @@
 #include "TConsoleModel.h"
 
 #include "Host.h"
+#include "MudletPaths.h"
 #include "mudlet.h"
 
 #include <QCoreApplication>
@@ -67,7 +68,7 @@ void TConsoleModel::toggleLogging(bool isMessageEnabled)
         return;
     }
 
-    const auto loggingPath = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("autolog"));
+    const auto loggingPath = MudletPaths::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("autolog"));
     QFile file(loggingPath);
     const QDateTime logDateTime = QDateTime::currentDateTime();
     if (!mLogToLogFile) {
@@ -82,7 +83,7 @@ void TConsoleModel::toggleLogging(bool isMessageEnabled)
         QString logFileName;
         // If no log directory is set, default to Mudlet's replay and log files path
         if (mpHost->mLogDir == nullptr || mpHost->mLogDir.isEmpty()) {
-            directoryLogFile = mudlet::getMudletPath(enums::profileReplayAndLogFilesPath, mpHost->getName());
+            directoryLogFile = MudletPaths::getMudletPath(enums::profileReplayAndLogFilesPath, mpHost->getName());
         } else {
             directoryLogFile = mpHost->mLogDir;
         }

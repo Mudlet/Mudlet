@@ -27,6 +27,7 @@
 
 
 #include "Host.h"
+#include "MudletPaths.h"
 #include "TArea.h"
 #include "TConsole.h"
 #include "TEvent.h"
@@ -5385,7 +5386,7 @@ void T2DMap::slot_loadMap()
     }
 
     QSettings& settings = *mudlet::getQSettings();
-    QString lastDir = settings.value("lastFileDialogLocation", mudlet::getMudletPath(enums::profileHomePath, mpHost->getName())).toString();
+    QString lastDir = settings.value("lastFileDialogLocation", MudletPaths::getMudletPath(enums::profileHomePath, mpHost->getName())).toString();
 
 
     const QString fileName = QFileDialog::getOpenFileName(this,
@@ -7342,7 +7343,7 @@ void T2DMap::slot_exportAreaToImage()
     QString defaultFileName;
     if (!areaName.isEmpty()) {
         // Use sanitized area name for filename
-        defaultFileName = qsl("%1.png").arg(utils::sanitizeForPath(areaName));
+        defaultFileName = qsl("%1.png").arg(MudletPaths::sanitizeForPath(areaName));
     } else {
         // Fall back to area ID if no area name
         defaultFileName = qsl("area_%1.png").arg(mAreaID);

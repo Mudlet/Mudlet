@@ -396,7 +396,7 @@ private slots:
     // literal, which creates nothing
     void test_anAssertionOnTheConfigRootIsNotSeeding()
     {
-        const QString source = QStringLiteral("QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl(\"%1/mudlet\").arg(mConfigDir.path()));\n");
+        const QString source = QStringLiteral("QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl(\"%1/mudlet\").arg(mConfigDir.path()));\n");
         QVERIFY2(staleRecipes(source).isEmpty(), qPrintable(staleRecipes(source).join(QChar(u'\n'))));
     }
 
