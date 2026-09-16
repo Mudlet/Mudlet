@@ -84,6 +84,7 @@ void TelnetServerStub::onNewConnection()
     }
     mpClient = client;
     mHadClient = true;
+    mReceived.clear();
     qInfo().noquote() << qsl("🔌 Client connected: %1").arg(client->peerAddress().toString());
 
     if (!mPendingData.isEmpty()) {
@@ -108,6 +109,10 @@ void TelnetServerStub::onNewConnection()
         }
     });
 
+    connect(client, &QTcpSocket::readyRead, this, [this, client]() {
+        collectNawsUpdates(client);
+    });
+
     // ~QTcpSocket emits disconnected() from ~QAbstractSocket, by which point the
     // socket is no longer a QTcpSocket - so hold it as the base type here.
     connect(client, &QTcpSocket::disconnected, [safeSocket = QPointer<QAbstractSocket>(client)]() {
@@ -117,4 +122,56 @@ void TelnetServerStub::onNewConnection()
         qInfo().noquote() << qsl("Client disconnected: %1").arg(safeSocket->peerAddress().toString());
         safeSocket->deleteLater();
     });
+}
+
+void TelnetServerStub::collectNawsUpdates(QTcpSocket* socket)
+{
+    if (!socket) {
+        return;
+    }
+    mReceived.append(socket->readAll());
+
+    // IAC SB NAWS <width hi> <width lo> <height hi> <height lo> IAC SE, with any
+    // of those four bytes sent twice when it is 0xFF - which a width or height
+    // whose low byte is 255 is enough to produce - so the frame is not a fixed
+    // nine bytes and cannot be stepped over as though it were.
+    static const QByteArray nawsHeader = QByteArray("\xFF\xFA\x1F", 3);
+    static const QByteArray nawsFooter = QByteArray("\xFF\xF0", 2);
+    qsizetype at = 0;
+    qsizetype keepFrom = -1;
+    while ((at = mReceived.indexOf(nawsHeader, at)) >= 0) {
+        qsizetype cursor = at + nawsHeader.size();
+        int payload[4] = {};
+        bool whole = true;
+        for (int& byte : payload) {
+            if (cursor >= mReceived.size()) {
+                whole = false;
+                break;
+            }
+            byte = static_cast<unsigned char>(mReceived.at(cursor++));
+            if (byte == 0xFF) {
+                // the doubled half, which carries no value of its own
+                ++cursor;
+            }
+        }
+        if (!whole || cursor + nawsFooter.size() > mReceived.size()) {
+            // the rest of it is still in flight - hold this frame's bytes back
+            keepFrom = at;
+            break;
+        }
+        if (mReceived.mid(cursor, nawsFooter.size()) != nawsFooter) {
+            // Not a subnegotiation this stub understands. Skipping the header
+            // rather than a whole frame keeps the scan aligned on whatever
+            // really is a NAWS update further along.
+            qWarning() << "TelnetServerStub: a NAWS subnegotiation did not end in IAC SE - ignoring it";
+            at += nawsHeader.size();
+            continue;
+        }
+        mNawsUpdates.append(QSize(payload[0] * 256 + payload[1], payload[2] * 256 + payload[3]));
+        at = cursor + nawsFooter.size();
+    }
+    // Everything the client sends comes through here, so hold back only what a
+    // frame still being delivered needs: the part of it that has arrived, or
+    // failing that the couple of bytes that could be a header cut in half.
+    mReceived = keepFrom >= 0 ? mReceived.mid(keepFrom) : mReceived.right(nawsHeader.size() - 1);
 }
