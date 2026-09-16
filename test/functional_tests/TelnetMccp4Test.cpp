@@ -20,6 +20,7 @@
 #include <QtTest/QtTest>
 
 #include <QScopeGuard>
+#include <QTemporaryDir>
 
 #include <chrono>
 #include <vector>
@@ -29,6 +30,7 @@
 
 #include "GroupedTest.h"
 #include "MudletInstanceCoordinator.h"
+#include "PortableModeTestHelper.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
@@ -59,12 +61,28 @@ private:
     // a single pass however zstd chooses to cut it up
     static constexpr int scmBulkLineCount = 20000;
 
+    QTemporaryDir mConfigDir;
+    QByteArray mSavedXdg;
     TelnetServerStub* mpServer = nullptr;
     const QString mHostname = "Test-Telnet-MCCP4";
     QString mPort; // the stub's actual ephemeral port, assigned in init()
     const QString mLocalhost = "localhost";
 
 private slots:
+    void initTestCase()
+    {
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
+        QVERIFY(mConfigDir.isValid());
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+        qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
+    }
+
+    void cleanupTestCase() { mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg); }
+
     void init()
     {
         mpServer = new TelnetServerStub(qApp);
