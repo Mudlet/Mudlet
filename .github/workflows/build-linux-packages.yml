@@ -27,6 +27,8 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'Mudlet' }}
     timeout-minutes: 120
+    outputs:
+      sha: ${{ steps.build.outputs.sha }}
     strategy:
       fail-fast: false
       matrix:
@@ -53,11 +55,13 @@ jobs:
           submodules: recursive
 
       - name: Build and install-test the package
+        id: build
         env:
           FORMAT: ${{ matrix.format }}
           BASE: ${{ matrix.base }}
           TAG: ${{ inputs.tag }}
         run: |
+          echo "sha=$(git -C source rev-parse HEAD)" >> "${GITHUB_OUTPUT}"
           VERSION_ARGS=()
           ASSET_VERSION=snapshot
           if [[ "${TAG}" =~ ^Mudlet-([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
@@ -84,19 +88,19 @@ jobs:
           path: assets/
           if-no-files-found: error
 
-  publish:
+  attach:
     needs: build
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    # create-github-release.yml rewrites the same SHA256SUMS.txt in this group
     concurrency:
-      group: linux-packages-publish
+      group: create-github-release-${{ needs.build.outputs.sha }}
       cancel-in-progress: false
     env:
       TAG: ${{ inputs.tag }}
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      BASE_URL: ${{ vars.LINUX_PACKAGES_BASE_URL }}
     steps:
       - name: Check the tag is a release
         run: |
@@ -113,10 +117,10 @@ jobs:
           merge-multiple: true
           path: assets/
 
-      - name: Install repository tools
+      - name: Install rpm
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends apt-utils createrepo-c rpm
+          sudo apt-get install -y --no-install-recommends rpm
 
       - name: Import the signing key
         env:
@@ -166,21 +170,53 @@ jobs:
           done
           bash CI/verify-release-checksums.sh published-final/SHA256SUMS.txt published-final/assets.txt
 
+  publish:
+    needs: attach
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    concurrency:
+      group: linux-packages-publish
+      cancel-in-progress: false
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      BASE_URL: ${{ vars.LINUX_PACKAGES_BASE_URL }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install repository tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends apt-utils createrepo-c rpm
+
+      - name: Import the signing key
+        env:
+          SIGNING_KEY: ${{ secrets.LINUX_PACKAGES_SIGNING_KEY }}
+        run: |
+          export GNUPGHOME="${RUNNER_TEMP}/gnupg"
+          install -d -m 700 "${GNUPGHOME}"
+          printf '%s\n' "${SIGNING_KEY}" | gpg --batch --import
+          echo "GNUPGHOME=${GNUPGHOME}" >> "${GITHUB_ENV}"
+
       # The repositories are rebuilt from the releases each time, so the bucket
-      # holds no state of its own and keeps a few versions to downgrade to
+      # holds no state of its own and keeps a few versions to downgrade to. A gh
+      # failure must fail the step, as upload replaces the bucket with incoming/.
       - name: Gather packages from the latest releases
         run: |
           mkdir -p incoming/
+          tags="$(gh release list --exclude-drafts --exclude-pre-releases --limit 50 --json tagName --jq '.[].tagName')"
+          mapfile -t release_tags < <(grep -E '^Mudlet-[0-9]+\.[0-9]+\.[0-9]+$' <<< "${tags}")
           kept=0
-          while IFS= read -r tag; do
-            if gh release view "${tag}" --json assets --jq '.assets[].name' | grep -qE '\.(deb|rpm)$'; then
+          for tag in "${release_tags[@]}"; do
+            assets="$(gh release view "${tag}" --json assets --jq '.assets[].name')"
+            if grep -qE '\.(deb|rpm)$' <<< "${assets}"; then
               gh release download "${tag}" --pattern '*.deb' --pattern '*.rpm' --dir incoming/
               kept=$((kept + 1))
               if [[ "${kept}" -eq 3 ]]; then
                 break
               fi
             fi
-          done < <(gh release list --exclude-drafts --exclude-pre-releases --limit 50 --json tagName --jq '.[].tagName' | grep -E '^Mudlet-[0-9]+\.[0-9]+\.[0-9]+$')
+          done
           ls -l incoming/
 
       - name: Assemble the repositories

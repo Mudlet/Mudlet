@@ -12,8 +12,19 @@ fi
 
 . /etc/os-release
 
+# Tells a missing repository apart from one that cannot be reached
+published() {
+  code="$(curl -sI -o /dev/null -w '%{http_code}' "$1" || true)"
+  case "$code" in
+    2??) return 0 ;;
+    404) return 1 ;;
+  esac
+  echo "Could not reach $BASE_URL (HTTP ${code:-000})." >&2
+  exit 1
+}
+
 if command -v apt-get >/dev/null 2>&1; then
-  if ! curl -fsI "$BASE_URL/deb/dists/${VERSION_CODENAME:-}/InRelease" >/dev/null; then
+  if ! published "$BASE_URL/deb/dists/${VERSION_CODENAME:-}/InRelease"; then
     echo "There are no Mudlet packages for $PRETTY_NAME." >&2
     exit 1
   fi
@@ -29,7 +40,7 @@ EOF
   apt-get update
   apt-get install -y mudlet
 elif command -v dnf >/dev/null 2>&1; then
-  if [ "$ID" != fedora ] || ! curl -fsI "$BASE_URL/rpm/fedora/$VERSION_ID/$(uname -m)/repodata/repomd.xml" >/dev/null; then
+  if [ "$ID" != fedora ] || ! published "$BASE_URL/rpm/fedora/$VERSION_ID/$(uname -m)/repodata/repomd.xml"; then
     echo "There are no Mudlet packages for $PRETTY_NAME." >&2
     exit 1
   fi

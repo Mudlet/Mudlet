@@ -30,7 +30,7 @@ sign() {
 }
 
 assemble_apt() {
-  local key="$1" suite arch archs deb
+  local key="$1" suite arch archs deb listed
   cd "$SITE/deb"
   for suite in pool/*; do
     suite="${suite#pool/}"
@@ -38,6 +38,12 @@ assemble_apt() {
     for arch in $archs; do
       mkdir -p "dists/$suite/main/binary-$arch"
       apt-ftparchive --arch "$arch" packages "pool/$suite" > "dists/$suite/main/binary-$arch/Packages"
+      # --arch picks packages by the _<arch>.deb in their filename, not their control file
+      listed="$(for deb in "pool/$suite"/*.deb; do dpkg-deb -f "$deb" Architecture; done | grep -cxE "$arch|all")"
+      if [[ "$(grep -c '^Package: ' "dists/$suite/main/binary-$arch/Packages")" -ne "$listed" ]]; then
+        echo "the $suite $arch index does not list every package in pool/$suite" >&2
+        exit 1
+      fi
       gzip -9nk "dists/$suite/main/binary-$arch/Packages"
     done
     # written outside dists/ because apt-ftparchive would hash its own output
@@ -56,9 +62,12 @@ assemble_apt() {
 }
 
 assemble() {
-  local incoming="$1" key deb rpm version release dir
+  local incoming="$1" key deb rpm version release dir rpmdb
   SITE="$2"
   : "${BASE_URL:?}"
+  local packages=("$incoming"/*.deb "$incoming"/*.rpm)
+  # an empty site would make upload delete every package from the bucket
+  [[ ${#packages[@]} -gt 0 ]] || { echo "no packages in $incoming" >&2; exit 1; }
   key="$(signing_key)"
   rm -rf "$SITE"
   mkdir -p "$SITE"
@@ -68,12 +77,15 @@ assemble() {
     version="$(dpkg-deb -f "$deb" Version)"
     [[ "$version" == *~* ]] || { echo "$deb has no ~codename in its version" >&2; exit 1; }
     mkdir -p "$SITE/deb/pool/${version##*~}"
-    cp "$deb" "$SITE/deb/pool/${version##*~}/"
+    cp "$deb" "$SITE/deb/pool/${version##*~}/$(dpkg-deb -f "$deb" Package)_${version}_$(dpkg-deb -f "$deb" Architecture).deb"
   done
 
+  rpmdb="$(mktemp -d)"
+  gpg --batch --armor --export "$key" > "$rpmdb/key.asc"
+  rpmkeys --dbpath "$rpmdb" --import "$rpmdb/key.asc"
   for rpm in "$incoming"/*.rpm; do
-    if [[ "$(rpm -qp --qf '%{RSAHEADER:pgpsig}' "$rpm" 2>/dev/null)" == "(none)" ]]; then
-      echo "$rpm is unsigned - run: $0 sign $incoming" >&2
+    if [[ "$(rpmkeys --dbpath "$rpmdb" --checksig "$rpm")" != *": digests signatures OK" ]]; then
+      echo "$rpm is not signed by $key - run: $0 sign $incoming" >&2
       exit 1
     fi
     release="$(rpm -qp --qf '%{RELEASE}' "$rpm" 2>/dev/null)"
@@ -82,6 +94,7 @@ assemble() {
     mkdir -p "$dir"
     cp "$rpm" "$dir/"
   done
+  rm -rf "$rpmdb"
 
   if [[ -d "$SITE/deb" ]]; then
     (assemble_apt "$key")

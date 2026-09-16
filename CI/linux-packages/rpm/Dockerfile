@@ -46,8 +46,8 @@ FROM builder AS packager
 # lrexlib and libssh both export buffer_free; binding lrexlib's own calls locally
 # stops libssh's copy freeing a stack TBuffer
 RUN luarocks --lua-version 5.1 --tree=/build/rocks install lrexlib-pcre2 \
-      LDFLAGS="-Wl,-Bsymbolic-functions" \
- && for rock in lcf luautf8 lua-yajl luazip luasql-sqlite3; do \
+      LIBFLAG="-shared -Wl,-Bsymbolic-functions" \
+ && for rock in luautf8 lua-yajl luazip luasql-sqlite3; do \
       luarocks --lua-version 5.1 --tree=/build/rocks install "$rock" || exit 1; \
     done
 
