@@ -4,6 +4,7 @@ endif()
 
 # Defined in the parent test/CMakeLists.txt; TESTS is per-directory, so call it here too.
 cmake_language(DEFER CALL restore_windows_test_output)
+cmake_language(DEFER CALL sandbox_test_config_dirs)
 
 set(FUNCTIONAL_TEST_SOURCES
 )
