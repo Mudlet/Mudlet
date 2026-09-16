@@ -168,6 +168,59 @@ describe("Tests Other.lua functions", function()
       end)
     end)
 
+    describe("the state a new group is created in", function()
+      -- What a group arrives as is not visible through a spy, so these need real
+      -- items, and what they pin is the state *creation* leaves a group in. Lua
+      -- cannot delete a permanent item, so take the first name no earlier run
+      -- has used rather than reusing what one left behind: a group this build
+      -- never made would be reporting the state some earlier build created it
+      -- in, and an already-correct leftover would cover for creation code that
+      -- had since broken. permGroup spells the key type "key" where exists()
+      -- and isActive() spell it "keybind".
+      --
+      -- The search runs as far as it needs to: giving up would mean asserting
+      -- over an old item or skipping the check, both of which leave this green
+      -- while testing nothing. The bound only stops a broken exists() spinning
+      -- forever, and reaching it raises rather than skips.
+      local searchLimit = 100000
+
+      local function group(groupType, itemType)
+        local stem = "permGroupSpecState" .. groupType
+        for index = 1, searchLimit do
+          local name = ("%s%d"):format(stem, index)
+          if exists(name, itemType) == 0 then
+            assert.is_true(permGroup(name, groupType), "could not create the " .. groupType .. " group")
+            return name
+          end
+        end
+        error(("no free \"%s\" name in this profile after %d tries"):format(stem, searchLimit))
+      end
+
+      it("creates trigger groups enabled", function()
+        assert.are.equal(1, isActive(group("trigger", "trigger"), "trigger"))
+      end)
+
+      it("creates alias groups enabled", function()
+        assert.are.equal(1, isActive(group("alias", "alias"), "alias"))
+      end)
+
+      it("creates key groups enabled", function()
+        assert.are.equal(1, isActive(group("key", "keybind"), "keybind"))
+      end)
+
+      -- permTimer() and permScript() create every item disabled, group or not,
+      -- and permGroup() is documented as passing that on rather than papering
+      -- over it: a timer group that started itself would fire whatever is put
+      -- in it before the script that fills it has finished
+      it("creates timer groups disabled", function()
+        assert.are.equal(0, isActive(group("timer", "timer"), "timer"))
+      end)
+
+      it("creates script groups disabled", function()
+        assert.are.equal(0, isActive(group("script", "script"), "script"))
+      end)
+    end)
+
     describe("reports failure instead of raising when creation fails", function()
       -- #9545: group_creation_functions checked `perm*(...) == -1`, but the perm*
       -- bindings raise a Lua error on failure (for example a missing parent)
