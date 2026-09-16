@@ -105,6 +105,217 @@ int utf16PositionOf(const char* utf8, const PCRE2_SIZE byteOffset, PCRE2_SIZE& c
     return cursorCodeUnits;
 }
 
+// The longest run of literal text every match of a perl pattern has to
+// contain, or an empty string when none can be told with confidence. Only the
+// syntax that is understood is read - a plain, non-capturing or named group, a
+// character class, an escape, a quantifier - and anything else (alternation,
+// inline options, lookarounds, \Q, backreferences, verbs, escapes that take
+// more characters than their letter) gives up on the whole pattern rather than
+// claim a character a match could do without. A quantifier drops the
+// character it applies to, a group that may repeat zero times drops all it
+// holds, and a run never crosses a group boundary, a class or an escape, so
+// nothing joined here can be apart in the subject. The pattern is compiled
+// without PCRE2_CASELESS, which is what lets the text be searched for as it is.
+QString requiredLiteral(const QString& pattern)
+{
+    // pcre2 reads the pattern only up to a NUL; and a replacement character in
+    // the literal could match what the encoder wrote for an unpaired surrogate
+    // that the line itself does not hold
+    if (pattern.contains(QChar(u'\0')) || pattern.contains(QChar(0xFFFD))) {
+        return {};
+    }
+    const auto isAsciiAlnum = [](const QChar c) {
+        const char16_t u = c.unicode();
+        return (u >= u'a' && u <= u'z') || (u >= u'A' && u <= u'Z') || (u >= u'0' && u <= u'9');
+    };
+    // The longest mandatory run found so far, one entry per open group
+    std::vector<QString> best(1);
+    QString run;
+    const auto endRun = [&] {
+        if (run.size() > best.back().size()) {
+            best.back() = run;
+        }
+        run.clear();
+    };
+    // The character last read is quantified, so what precedes it is still
+    // required and it is not; a character outside the basic plane is two units
+    const auto dropQuantified = [&] {
+        if (run.size() >= 2 && run.at(run.size() - 1).isLowSurrogate() && run.at(run.size() - 2).isHighSurrogate()) {
+            run.chop(2);
+        } else if (!run.isEmpty()) {
+            run.chop(1);
+        }
+        endRun();
+    };
+    const qsizetype size = pattern.size();
+    // Past the lazy or possessive suffix a quantifier at i may carry
+    const auto skipSuffix = [&](qsizetype i) {
+        if (i + 1 < size && (pattern.at(i + 1) == u'?' || pattern.at(i + 1) == u'+')) {
+            ++i;
+        }
+        return i;
+    };
+
+    for (qsizetype i = 0; i < size; ++i) {
+        const QChar c = pattern.at(i);
+        switch (c.unicode()) {
+        case u'\\': {
+            if (i + 1 >= size) {
+                return {};
+            }
+            const QChar next = pattern.at(i + 1);
+            if (!isAsciiAlnum(next)) {
+                // escaped punctuation stands for itself
+                run.append(next);
+                ++i;
+                break;
+            }
+            if (next.isDigit() || next == u'c' || next == u'Q' || next == u'u' || next == u'U') {
+                return {};
+            }
+            // These read on past their letter, unless what follows is in
+            // braces, which the quantifier case below steps over
+            if (qsl("xpPoNgk").contains(next) && !(i + 2 < size && pattern.at(i + 2) == u'{')) {
+                return {};
+            }
+            endRun();
+            ++i;
+            break;
+        }
+        case u'[': {
+            endRun();
+            qsizetype j = i + 1;
+            if (j < size && pattern.at(j) == u'^') {
+                ++j;
+            }
+            // a ] first in the class is a member of it, not its end
+            if (j < size && pattern.at(j) == u']') {
+                ++j;
+            }
+            bool closed = false;
+            for (; j < size; ++j) {
+                const QChar d = pattern.at(j);
+                if (d == u'\\') {
+                    ++j;
+                } else if (d == u'[' && j + 1 < size && pattern.at(j + 1) == u':') {
+                    // a POSIX class such as [:alpha:] carries a ] of its own
+                    const qsizetype end = pattern.indexOf(qsl(":]"), j + 2);
+                    if (end < 0) {
+                        return {};
+                    }
+                    j = end + 1;
+                } else if (d == u']') {
+                    closed = true;
+                    break;
+                }
+            }
+            if (!closed) {
+                return {};
+            }
+            i = j;
+            break;
+        }
+        case u'(': {
+            qsizetype opener = i;
+            if (i + 1 < size && pattern.at(i + 1) == u'?') {
+                // Of the (? forms only the ones that merely group are read:
+                // non-capturing, and named in its three spellings
+                qsizetype nameEnd = -1;
+                if (i + 2 < size) {
+                    const QChar kind = pattern.at(i + 2);
+                    if (kind == u':') {
+                        nameEnd = i + 2;
+                    } else if (kind == u'<' && i + 3 < size && pattern.at(i + 3) != u'=' && pattern.at(i + 3) != u'!') {
+                        nameEnd = pattern.indexOf(u'>', i + 3);
+                    } else if (kind == u'P' && i + 3 < size && pattern.at(i + 3) == u'<') {
+                        nameEnd = pattern.indexOf(u'>', i + 4);
+                    } else if (kind == u'\'') {
+                        nameEnd = pattern.indexOf(u'\'', i + 3);
+                    }
+                }
+                if (nameEnd < 0) {
+                    return {};
+                }
+                opener = nameEnd;
+            } else if (i + 1 < size && pattern.at(i + 1) == u'*') {
+                return {};
+            }
+            endRun();
+            best.emplace_back();
+            i = opener;
+            break;
+        }
+        case u')': {
+            if (best.size() < 2) {
+                return {};
+            }
+            endRun();
+            const QString inner = std::move(best.back());
+            best.pop_back();
+            bool mandatory = true;
+            if (i + 1 < size) {
+                const QChar q = pattern.at(i + 1);
+                if (q == u'?' || q == u'*') {
+                    mandatory = false;
+                    i = skipSuffix(i + 1);
+                } else if (q == u'+') {
+                    i = skipSuffix(i + 1);
+                } else if (q == u'{') {
+                    // {n,m} may allow no repeat at all, and reading its bounds
+                    // is not worth it
+                    mandatory = false;
+                    const qsizetype close = pattern.indexOf(u'}', i + 1);
+                    if (close < 0) {
+                        return {};
+                    }
+                    i = skipSuffix(close);
+                }
+            }
+            if (mandatory && inner.size() > best.back().size()) {
+                best.back() = inner;
+            }
+            break;
+        }
+        case u'|':
+            return {};
+        case u'*':
+        case u'?':
+            dropQuantified();
+            i = skipSuffix(i);
+            break;
+        case u'+':
+            // at least one, so the character stays required; only what follows
+            // may no longer be next to it
+            endRun();
+            i = skipSuffix(i);
+            break;
+        case u'{': {
+            // Read as a quantifier whatever it holds: a literal brace only
+            // makes the run shorter
+            const qsizetype close = pattern.indexOf(u'}', i);
+            if (close < 0) {
+                return {};
+            }
+            dropQuantified();
+            i = skipSuffix(close);
+            break;
+        }
+        case u'.':
+        case u'^':
+        case u'$':
+            endRun();
+            break;
+        default:
+            run.append(c);
+        }
+    }
+    if (best.size() != 1) {
+        return {};
+    }
+    endRun();
+    return best.front();
+}
+
 // The /g loop's search for the next occurrence. The first search of a line
 // goes through the pattern's prepared QStringMatcher, whose skip table pays
 // for itself over every line the pattern is tried against; here the remainders
@@ -310,6 +521,7 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
     patterns.replaceInStrings("\n", "");
     mPatterns.clear();
     mSubstringPatterns.clear();
+    mRegexLiterals.clear();
     mRegexes.clear();
     mMatchData.clear();
     mRegexJitCompiled.clear();
@@ -371,6 +583,18 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
                 mSubstringPatterns.emplace_back(TSubstringPattern{std::make_unique<QStringMatcher>(patterns.at(i), Qt::CaseSensitive), TBigramFilter::bitsFor(patterns.at(i))});
             } else {
                 mSubstringPatterns.emplace_back();
+            }
+
+            TRegexLiteral& literal = mRegexLiterals.emplace_back();
+            if (patternKinds.at(i) == REGEX_PERL) {
+                literal.text = requiredLiteral(patterns.at(i));
+                // Under two characters it sets no filter bits
+                if (literal.text.size() >= 2) {
+                    literal.matcher = std::make_unique<QStringMatcher>(literal.text, Qt::CaseSensitive);
+                    literal.bigrams = TBigramFilter::bitsFor(literal.text);
+                } else {
+                    literal.text.clear();
+                }
             }
 
             if (patternKinds.at(i) == REGEX_PERL) {
@@ -519,7 +743,7 @@ const std::vector<quint64>& TTrigger::prescanGrams() const
     return mPrescanGrams;
 }
 
-bool TTrigger::match_perl(const char* haystackC, const int haystackCLength, const QString& haystack, int patternNumber, int posOffset, int lineNumber)
+bool TTrigger::match_perl(const char* haystackC, const int haystackCLength, const QString& haystack, int patternNumber, int posOffset, int lineNumber, const TBigramFilter* pLineBigrams)
 {
     if (Q_UNLIKELY(patternNumber < 0 || patternNumber >= static_cast<int>(mRegexes.size()))) {
         return false;
@@ -540,6 +764,22 @@ bool TTrigger::match_perl(const char* haystackC, const int haystackCLength, cons
                     >> mpHost;
         }
         return false; //regex compile error
+    }
+
+    // A line without the text every match has to hold is dismissed here, by
+    // the line's summary where it has one and then by a search, which is still
+    // far cheaper than the pcre2 call it saves. The QString holds the whole
+    // line where the UTF-8 stops at a NUL, so nothing pcre2 could match is lost
+    if (patternNumber < static_cast<int>(mRegexLiterals.size())) {
+        const TRegexLiteral& literal = mRegexLiterals[patternNumber];
+        if (literal.matcher) {
+            if (pLineBigrams && !pLineBigrams->couldContain(haystack, literal.bigrams)) {
+                return false;
+            }
+            if (literal.matcher->indexIn(haystack) == -1) {
+                return false;
+            }
+        }
     }
 
     QSharedPointer<pcre2_match_data>& matchData = mMatchData[patternNumber];
@@ -1012,12 +1252,13 @@ bool TTrigger::match_color_pattern(int line, int patternNumber, int posOffset, i
     // has no color for (an ignored aspect, or an ANSI code outside the table)
     // is an invalid QColor, which would convert to opaque black and match
     // black text - it matches nothing instead, as it always has:
-    const bool patternFgValid = pCT->mFgColor.isValid();
-    const bool patternBgValid = pCT->mBgColor.isValid();
-    const QRgb patternFg = pCT->mFgColor.rgba();
-    const QRgb patternBg = pCT->mBgColor.rgba();
-    const QRgb defaultFg = consoleModel.mFgColor.rgba();
-    const QRgb defaultBg = consoleModel.mBgColor.rgba();
+    const bool patternFgValid = pCT->mFgValid;
+    const bool patternBgValid = pCT->mBgValid;
+    const QRgb patternFg = pCT->mFgRgba;
+    const QRgb patternBg = pCT->mBgRgba;
+    // Only a pattern set to the default color asks what that is
+    const QRgb defaultFg = (ansiFg == scmDefault) ? consoleModel.mFgColor.rgba() : 0;
+    const QRgb defaultBg = (ansiBg == scmDefault) ? consoleModel.mBgColor.rgba() : 0;
     const int passLineSize = pPassLine ? static_cast<int>(pPassLine->size()) : 0;
 
     // This allows matching against the current default colours (-2) and
@@ -1415,7 +1656,7 @@ bool TTrigger::match(const char* haystackC, const int haystackCLength, const QSt
                 break;
 
             case REGEX_PERL:
-                ret = match_perl(haystackC, haystackCLength, haystack, patternNumber, posOffset, line);
+                ret = match_perl(haystackC, haystackCLength, haystack, patternNumber, posOffset, line, pLineBigrams);
                 break;
 
             case REGEX_BEGIN_OF_LINE_SUBSTRING:
@@ -1646,6 +1887,10 @@ std::unique_ptr<TColorTable> TTrigger::createColorPattern(int ansiFg, int ansiBg
     pCT->ansiFg = ansiFg;
     pCT->mBgColor = bgColor;
     pCT->mFgColor = fgColor;
+    pCT->mFgValid = fgColor.isValid();
+    pCT->mBgValid = bgColor.isValid();
+    pCT->mFgRgba = fgColor.rgba();
+    pCT->mBgRgba = bgColor.rgba();
     return pCT;
 }
 
@@ -1678,6 +1923,7 @@ bool TTrigger::setupTmpColorTrigger(int ansiFg, int ansiBg)
     // pattern added here has to extend all of it - even though a colour
     // pattern is matched out of mColorPatternList and compiles no regex.
     mSubstringPatterns.emplace_back();
+    mRegexLiterals.emplace_back();
     mPatternsUtf8.emplace_back(patternText.toUtf8().constData());
     mRegexes.emplace_back();
     mMatchData.emplace_back();
