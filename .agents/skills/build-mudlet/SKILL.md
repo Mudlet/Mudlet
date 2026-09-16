@@ -74,6 +74,9 @@ The plain `<platform>-debug` presets build into `build/`. Every variant builds i
 `build-<preset-name>/` instead, so an AddressSanitizer tree and a sanitizer-free tree can coexist
 without forcing each other to rebuild. The `/build*` entry in `.gitignore` covers all of them.
 
+On Linux, add `-DUSE_ALTERNATE_LINKER=mold` to the configure command when mold is installed - it cut
+CI's link tail from 4m13s to 29s (PR #9927), and only takes effect on a tree configured with it.
+
 ### Reproducing what CI configures
 
 `ci-linux`, `ci-macos`, `ci-macos-no-tests`, `ci-windows` and `ci-codeql` are the presets the
@@ -149,14 +152,14 @@ binary under `build-<preset-name>/` instead. Allow up to 10 minutes for a full b
 
 The `.claude/hooks/session-start.sh` SessionStart hook provisions the remote Ubuntu container:
 apt dependencies, Qt 6.9.0 via aqtinstall under `/opt/qt` (Ubuntu's packaged Qt 6.4 is older
-than the 6.8.2 minimum), submodules, and a ccache warm-up build of the `linux-debug-nosan`
-preset. The hook exports `CMAKE_PREFIX_PATH` pointing at the aqt Qt, so the documented preset
-commands work unchanged. On a warm container the hook finishes in seconds and a full build is
-mostly ccache hits — measured 5m25s wall for all targets at 99% hit rate, most of it linking —
-versus ~25 minutes cold. If the container cache is cold the hook itself takes ~30 minutes, once.
-The hook also pre-configures `build-linux-debug-nosan/` with `-DUSE_ALTERNATE_LINKER=mold`:
-linking is the bulk of a warm rebuild and mold shrinks it dramatically (PR #9927 measured a CI
-link tail of 4m13s → 29s). Keep that flag if you reconfigure the tree from scratch.
+than the 6.8.2 minimum), the Lua rocks, submodules, and a CMake configure of the
+`linux-debug-nosan` preset. The hook exports `CMAKE_PREFIX_PATH` pointing at the aqt Qt, so the
+documented preset commands work unchanged. It takes ~3 minutes on a cold container and seconds
+on a warm one. ccache starts cold, so budget ~18 minutes for the first full build of a session
+on the 4 cores these containers get.
+
+The hook also pre-configures `build-linux-debug-nosan/` with `-DUSE_ALTERNATE_LINKER=mold` - keep
+that flag if you reconfigure the tree from scratch.
 Run Mudlet headlessly there with `QT_QPA_PLATFORM=offscreen`.
 
 Both test harnesses work in the remote container (validated: 112/112 ctest, 3202 busted
