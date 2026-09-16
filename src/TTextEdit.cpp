@@ -62,6 +62,7 @@
 #include <QStringRef>
 #include <QTextBoundaryFinder>
 #include <QLabel>
+#include <QLineEdit>
 #include <QToolTip>
 #include <QWidgetAction>
 #include <QVersionNumber>

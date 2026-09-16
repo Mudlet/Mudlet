@@ -44,6 +44,7 @@
 #include "MudletInstanceCoordinator.h"
 #include "ProfileTestHelper.h"
 #include "RecordingTelnetServer.h"
+#include "KeyUnit.h"
 #include "TCommandLine.h"
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
@@ -68,6 +69,7 @@ private:
     const QString mLocalhost = qsl("localhost");
     int mLineCounter = 0;
     QString mLineName;
+    QStringList mPermKeyNames;
 
     // setupConfig() consults portable.txt before the XDG logic
     static bool portableMarkerPresent()
@@ -159,6 +161,11 @@ private:
         return value;
     }
 
+    // A permanent key cannot be deleted from Lua, only switched off, and one
+    // left active on a plain letter would eat that letter in every test that
+    // runs after it.
+    void switchOffAfterwards(const QStringList& names) { mPermKeyNames << names; }
+
     bool waitForServerToReceive(const QByteArray& text) const
     {
         return QTest::qWaitFor(
@@ -235,6 +242,10 @@ private slots:
             mpHost->resetCmdLineAction(mLineName);
             mLineName.clear();
         }
+        for (const QString& name : mPermKeyNames) {
+            mpHost->getKeyUnit()->disableKey(name);
+        }
+        mPermKeyNames.clear();
     }
 
     // The floor the rest of the file stands on: without this, a command line
@@ -678,6 +689,75 @@ private slots:
 
         press(pCommandLine, Qt::Key_Down, Qt::ControlModifier);
         QCOMPARE(pCommandLine->textCursor().blockNumber(), 1);
+    }
+    // #10764: a key put in a group made by permGroup(name, "key") reported
+    // itself active and still never fired, because the group above it was
+    // created switched off and KeyUnit never descends into an inactive folder.
+    // Only a real key press shows that, which is why this lives here and not in
+    // KeyBinds_spec.lua - Lua can read a key's state but cannot press one.
+    //
+    // permGroup() itself is mudlet-lua, which a functional test profile does not
+    // load, so the group is made the way permGroup(name, "key") makes it: the
+    // keycode of -1 that permKey() passes on for a folder. Other_spec.lua pins
+    // that permGroup still dispatches to permKey(name, parent, -1, "").
+    void test_aKeyInAFreshPermGroupFires()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QVERIFY(runLua(qsl("keyGroupFired = ''")));
+        QString group = qsl("keyGroupSpecGroup");
+        QString key = qsl("keyGroupSpecKey");
+        QString noParent;
+        QString noScript;
+        QString keyScript = qsl("keyGroupFired = 'yes'");
+        int folderKeycode = -1;
+        int noModifier = Qt::NoModifier;
+        int letterJ = Qt::Key_J;
+
+        auto [groupId, groupMessage] = mpHost->mLuaInterpreter.startPermKey(group, noParent, folderKeycode, noModifier, noScript);
+        QVERIFY2(groupId > 0, qPrintable(groupMessage));
+        auto [keyId, keyMessage] = mpHost->mLuaInterpreter.startPermKey(key, group, letterJ, noModifier, keyScript);
+        QVERIFY2(keyId > 0, qPrintable(keyMessage));
+        switchOffAfterwards({key, group});
+
+        press(pCommandLine, Qt::Key_J);
+
+        QCOMPARE(luaGlobal("keyGroupFired"), qsl("yes"));
+        // and the press belongs to the binding now: TCommandLine::event() takes
+        // a match as handled, so the character it was typed with never reaches
+        // the document - a binding on a plain letter costs the user that letter
+        QCOMPARE(pCommandLine->toPlainText(), QString());
+    }
+
+    // The control for the test above: a key that fired whatever state the group
+    // above it was in would pass that one just as well.
+    void test_aKeyInASwitchedOffPermGroupDoesNotFire()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+
+        QVERIFY(runLua(qsl("keyGroupFired = ''")));
+        QString group = qsl("keyGroupSpecOffGroup");
+        QString key = qsl("keyGroupSpecOffKey");
+        QString noParent;
+        QString noScript;
+        QString keyScript = qsl("keyGroupFired = 'yes'");
+        int folderKeycode = -1;
+        int noModifier = Qt::NoModifier;
+        int letterK = Qt::Key_K;
+
+        auto [groupId, groupMessage] = mpHost->mLuaInterpreter.startPermKey(group, noParent, folderKeycode, noModifier, noScript);
+        QVERIFY2(groupId > 0, qPrintable(groupMessage));
+        auto [keyId, keyMessage] = mpHost->mLuaInterpreter.startPermKey(key, group, letterK, noModifier, keyScript);
+        QVERIFY2(keyId > 0, qPrintable(keyMessage));
+        switchOffAfterwards({key, group});
+        QVERIFY(mpHost->getKeyUnit()->disableKey(group));
+
+        press(pCommandLine, Qt::Key_K);
+
+        QCOMPARE(luaGlobal("keyGroupFired"), QString());
+        // nothing claimed the press, so it is the command line's again
+        QCOMPARE(pCommandLine->toPlainText(), qsl("k"));
     }
 };
 

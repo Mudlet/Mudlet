@@ -175,6 +175,10 @@ local group_creation_functions = {
 
 --- Creates a group of a given type that will persist through sessions.
 ---
+--- Trigger, alias and key groups are created enabled. Timer and script groups
+--- are created disabled, as every permTimer() and permScript() is - enable them
+--- with enableTimer()/enableScript() once their contents are in place.
+---
 --- @param name name of the item
 --- @param itemtype type of the item - can be trigger, alias, timer, key, or script
 --- @param parent optional name of existing item which the new item
