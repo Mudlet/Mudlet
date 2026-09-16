@@ -404,6 +404,36 @@ private slots:
         QVERIFY2(text.contains(mFirstProfile), qPrintable(qsl("the warning does not say which profile the command is in: %1").arg(text)));
     }
 
+    // The same clash inside one profile, which is the direction a package meets
+    // most: its command goes on first, and a binding the player already had -
+    // or makes later - is the half that stops working. Warned about rather than
+    // refused, because the binding is the player's own item, and shown in the
+    // editor for the reason the cross-profile case above gives.
+    //
+    // This lived in AddonCommand_spec.lua while the warning went to the main
+    // window. It cannot: Lua can make the clash but cannot open the editor that
+    // now reports it.
+    void test_aProfileIsToldInItsEditorWhenACommandHoldsItsNewBindingsKey()
+    {
+        const QString sequence = QKeySequence(QKeyCombination(Qt::AltModifier, Qt::Key_F10)).toString(QKeySequence::NativeText);
+
+        const int commandId = addCommand(mpFirstHost, qsl("name = 'SameProfileBinding', menuPath = 'ClashTest', shortcut = 'Alt+F10'"));
+        QVERIFY2(commandId > 0, "the command could not be placed on a key nothing was holding");
+
+        dlgTriggerEditor* pEditor = editorFor(mpFirstHost);
+        QVERIFY2(pEditor, "the profile's editor could not be opened");
+        pEditor->showInfo(QString());
+
+        QVERIFY2(runLua(mpFirstHost, qsl("_sameClashKeyId = tempKey(mudlet.keymodifier.Alt, mudlet.key.F10, [[echo('bound')]])")).isNull(), "the key binding could not be made");
+        const QString text = editorSaid(pEditor);
+
+        runLua(mpFirstHost, qsl("killKey(_sameClashKeyId)"));
+        runLua(mpFirstHost, qsl("removeCommand(%1)").arg(commandId));
+
+        QVERIFY2(text.contains(sequence), qPrintable(qsl("a binding was made over a command's key without the editor saying so: %1").arg(text)));
+        QVERIFY2(text.contains(qsl("SameProfileBinding")), qPrintable(qsl("the warning does not name the command holding the key: %1").arg(text)));
+    }
+
     // docs/addon-ui-api.md gives the click event the id as addCommand returned
     // it, which is a number - the same as every other Mudlet event carrying one
     void test_aClickHandsTheHandlerTheIdAsANumber()

@@ -256,7 +256,8 @@ describe("addon commands", function()
     -- about rather than refused, since the binding is the player's own item.
     -- That warning is shown in the editor rather than on the main screen, so
     -- it cannot be read from here: Lua can make the clash but not open the
-    -- window that reports it. AddonControlsTest covers it instead.
+    -- window that reports it. AddonControlsTest's
+    -- aProfileIsToldInItsEditorWhenACommandHoldsItsNewBindingsKey covers it.
 
     -- Qt keeps the first four chunks of a longer sequence and drops the rest,
     -- so the command went onto a key nobody had asked for
