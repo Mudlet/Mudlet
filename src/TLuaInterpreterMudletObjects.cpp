@@ -37,6 +37,7 @@
 #include "TArea.h"
 #include "TCommandLine.h"
 #include "TConsole.h"
+#include "TConsoleModel.h"
 #include "TDebug.h"
 #include "TEvent.h"
 #include "TFlipButton.h"
@@ -402,15 +403,7 @@ int TLuaInterpreter::disableScript(lua_State* L)
     const QString name = getVerifiedString(L, __func__, 1, "script name");
 
     Host& host = getHostFromLua(L);
-    int cnt = 0;
-    QMap<int, TScript*> const scripts = host.getScriptUnit()->getScriptList();
-    for (auto script : scripts) {
-        if (script->getName() == name) {
-            cnt++;
-            script->setIsActive(false);
-        }
-    }
-    if (cnt == 0) {
+    if (!host.getScriptUnit()->disableScript(name)) {
         return warnArgumentValue(L, __func__, qsl("script '%1' not found").arg(name));
     }
 
@@ -464,15 +457,7 @@ int TLuaInterpreter::enableScript(lua_State* L)
     const QString name = getVerifiedString(L, __func__, 1, "script name");
 
     Host& host = getHostFromLua(L);
-    int cnt = 0;
-    QMap<int, TScript*> const scripts = host.getScriptUnit()->getScriptList();
-    for (auto script : scripts) {
-        if (script->getName() == name) {
-            cnt++;
-            script->setIsActive(true);
-        }
-    }
-    if (cnt == 0) {
+    if (!host.getScriptUnit()->enableScript(name)) {
         return warnArgumentValue(L, __func__, qsl("script '%1' not found").arg(name));
     }
 
@@ -3357,9 +3342,9 @@ int TLuaInterpreter::getSubsystemMemoryStats(lua_State* L)
     }
 
     // Main console buffer line count
-    if (host.mpConsole) {
+    if (auto* pModel = host.mainConsoleModelOrNull()) {
         lua_pushstring(L, "console_buffer_lines");
-        lua_pushnumber(L, host.mpConsole->buffer.size());
+        lua_pushnumber(L, pModel->buffer.size());
         lua_settable(L, -3);
     }
 
