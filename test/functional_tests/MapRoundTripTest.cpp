@@ -36,6 +36,7 @@
  * Run with: ctest -R MapRoundTripTest -V
  */
 
+#include <QDataStream>
 #include <QFileInfo>
 #include <QtTest/QtTest>
 
