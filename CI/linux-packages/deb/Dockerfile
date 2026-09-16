@@ -52,9 +52,11 @@ FROM builder AS packager
 # stops libssh's copy freeing a stack TBuffer
 RUN luarocks --lua-version 5.1 --tree=/build/rocks install lrexlib-pcre2 \
       LIBFLAG="-shared -Wl,-Bsymbolic-functions" \
- && for rock in luautf8 lua-yajl luazip luasql-sqlite3; do \
+ && for rock in luautf8 lua-yajl luazip; do \
       luarocks --lua-version 5.1 --tree=/build/rocks install "$rock" || exit 1; \
     done
+# db:create fails on luasql-sqlite3 2.7 and newer, so every Mudlet build pins it
+RUN luarocks --lua-version 5.1 --tree=/build/rocks install luasql-sqlite3 2.6.1
 
 ARG BUILD_COMMIT=
 ARG PKG_VERSION

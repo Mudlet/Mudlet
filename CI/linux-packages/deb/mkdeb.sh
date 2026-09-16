@@ -15,8 +15,9 @@ mkdir -p "$STAGE" "$OUT"
 # shellcheck disable=SC1091
 . /etc/os-release
 # Every distribution gets its own suite, and the ~codename suffix keeps the
-# versions distinct should a package ever reach the wrong one
-UPSTREAM="${PKG_VERSION}${PKG_SNAPSHOT:++git${PKG_SNAPSHOT}}"
+# versions distinct should a package ever reach the wrong one. A snapshot takes
+# ~git rather than +git so it sorts before the release of its version.
+UPSTREAM="${PKG_VERSION}${PKG_SNAPSHOT:+~git${PKG_SNAPSHOT}}"
 VERSION="${UPSTREAM}-${PKG_RELEASE:-1}~${VERSION_CODENAME}"
 ARCH="$(dpkg --print-architecture)"
 echo "==> packaging ${PACKAGE} ${VERSION} (${ARCH})"

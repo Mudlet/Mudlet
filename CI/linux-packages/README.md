@@ -12,8 +12,8 @@ CI/linux-packages/build deb --base debian:13 -j 8
 CI/linux-packages/build rpm --base fedora:44 --version 5.0.1 -o out
 ```
 
-Without `--version` the package is a snapshot of the checkout, versioned so that the
-next release sorts above it. Each build ends by installing the package into a clean
+Without `--version` the package is a snapshot of the checkout, versioned to sort
+before the release of the same version. Each build ends by installing the package into a clean
 image of the target distribution and checking that Mudlet's libraries and Lua modules
 all resolve, which `--skip-verify` turns off.
 
