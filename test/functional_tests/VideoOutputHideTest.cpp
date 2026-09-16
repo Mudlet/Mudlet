@@ -34,6 +34,7 @@
  * Run with: ctest -R VideoOutputHideTest -V
  */
 
+#include <QDataStream>
 #include <QMediaPlayer>
 #include <QPointer>
 #include <QTemporaryDir>

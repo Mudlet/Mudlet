@@ -23,6 +23,8 @@
 #include "updater/Feed.h"
 #include "updater/UpdateDialog.h"
 
+#include <QDataStream>
+#include <QSaveFile>
 #include <QCoreApplication>
 #include <QDateTime>
 #include <QMessageBox>
