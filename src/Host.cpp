@@ -29,10 +29,8 @@
 #include "MudletApp.h"
 #include "dlgIRC.h"
 #include "dlgMapper.h"
-#include "dlgModuleManager.h"
 #include "dlgNotepad.h"
-#include "dlgPackageManager.h"
-#include "dlgProfilePreferences.h"
+#include "dlgTriggerEditor.h"
 #include "GifTracker.h"
 #include "GMCPAuthenticator.h"
 #include "LuaInterface.h"
@@ -260,8 +258,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mpMedia(new TMedia(this, hostname))
 , mpAuth(new GMCPAuthenticator(this))
 , mTimerDebugOutputSuppressionInterval(QTime())
-, mSearchOptions(dlgTriggerEditor::SearchOption::SearchOptionNone)
-, mBufferSearchOptions(TConsole::SearchOption::SearchOptionNone)
+, mSearchOptions(enums::EditorSearchOptionNone)
+, mBufferSearchOptions(enums::BufferSearchOptionNone)
 , mpDlgIRC(nullptr)
 , mMMCPServer(nullptr)
 , mpDlgProfilePreferences(nullptr)
@@ -487,6 +485,7 @@ Host::~Host()
     // mpEditorDialog mid-teardown would find a half-destroyed widget:
     if (auto* pEditor = mpEditorDialog.data()) {
         mpEditorDialog = nullptr;
+        disconnect(this, nullptr, pEditor, nullptr);
         delete pEditor;
     }
 
@@ -496,6 +495,7 @@ Host::~Host()
             pNotePad->close();
         }
         mpNotePad = nullptr;
+        disconnect(this, nullptr, pNotePad, nullptr);
         delete pNotePad;
     }
 
@@ -590,6 +590,10 @@ void Host::closeChildren()
     if (mpEditorDialog) {
         mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
         mpEditorDialog->close();
+        // close() only posts the deletion, so the dialog outlives this release.
+        // Cutting the signals with the pointer is what keeps an emit from
+        // reaching an editor the Host has already let go of:
+        disconnect(this, nullptr, mpEditorDialog, nullptr);
         mpEditorDialog = nullptr;
     }
 
@@ -603,6 +607,7 @@ void Host::closeChildren()
         mpNotePad->save();
         mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
         mpNotePad->close();
+        disconnect(this, nullptr, mpNotePad, nullptr);
         mpNotePad = nullptr;
     }
 
@@ -1503,16 +1508,10 @@ void Host::updateConsolesFont()
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
     raiseEvent(event);
 
-    if (mpEditorDialog) {
-        mpEditorDialog->setDisplayFont(mpConsole->font());
-    }
+    emit signal_consoleFontChanged(mpConsole->font());
 
     if (mudlet::self()->smpDebugArea && mudlet::self()->smpDebugConsole) {
         mudlet::self()->smpDebugConsole->setFont(mpConsole->font());
-    }
-
-    if (mpNotePad) {
-        mpNotePad->setFont(mpConsole->font());
     }
 }
 
@@ -2262,6 +2261,36 @@ void Host::refreshMainConsoleColors()
     mpMainConsoleModel->buffer.updateColors();
 }
 
+void Host::printToMainConsole(const QString& msg)
+{
+    mpConsole->print(msg);
+}
+
+void Host::printToMainConsole(const QString& msg, QColor fgColor, QColor bgColor)
+{
+    mpConsole->print(msg, fgColor, bgColor);
+}
+
+void Host::printSystemMessage(const QString& msg)
+{
+    mpConsole->printSystemMessage(msg);
+}
+
+void Host::printOnDisplay(std::string& data, bool isFromServer)
+{
+    mpConsole->printOnDisplay(data, isFromServer);
+}
+
+void Host::finalizeMainConsole()
+{
+    mpConsole->finalize();
+}
+
+bool Host::mainConsoleShowsTimeStamps() const
+{
+    return mpConsole->showTimeStamps();
+}
+
 void Host::raiseLoggingAnnouncement(const bool isLogging, const QString& logFileName)
 {
     emit signal_loggingAnnouncement(isLogging, logFileName);
@@ -2786,8 +2815,8 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         }
     }
     //the extra module check is needed here to prevent infinite loops from script loaded modules
-    if (mpEditorDialog && thing != enums::PackageModuleType::ModuleFromScript) {
-        mpEditorDialog->doCleanReset();
+    if (thing != enums::PackageModuleType::ModuleFromScript) {
+        emit signal_editorCleanResetRequested();
     }
     QFile file2;
     if (packageUnpacksAFolder(fileName)) {
@@ -3085,9 +3114,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         }
         file2.close();
     }
-    if (mpEditorDialog) {
-        mpEditorDialog->doCleanReset();
-    }
+    emit signal_editorCleanResetRequested();
     if (thing == enums::PackageModuleType::Package) {
         saveProfile();
     }
@@ -3149,12 +3176,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         raiseEvent(detailedInstallEvent);
     });
 
-    if (mpPackageManager) {
-        mpPackageManager->resetPackageList();
-    }
-    if (mpModuleManager) {
-        mpModuleManager->layoutModules();
-    }
+    emit signal_packageListChanged();
 
     // Save profile to ensure modules persist and appear in module manager
     if (thing != enums::PackageModuleType::Package) {
@@ -3316,8 +3338,8 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
 
     //we check for ModuleFromScript because if we reset the editor, we will re-execute the
     //module uninstall, thus creating an infinite loop.
-    if (mpEditorDialog && thing != enums::PackageModuleType::ModuleFromScript) {
-        mpEditorDialog->doCleanReset();
+    if (thing != enums::PackageModuleType::ModuleFromScript) {
+        emit signal_editorCleanResetRequested();
     }
 
     mTriggerUnit.uninstall(packageName);
@@ -3355,8 +3377,8 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
         return true;
     }
 
-    if (mpEditorDialog && thing != enums::PackageModuleType::ModuleFromScript) {
-        mpEditorDialog->doCleanReset();
+    if (thing != enums::PackageModuleType::ModuleFromScript) {
+        emit signal_editorCleanResetRequested();
     }
 
     getActionUnit()->updateAllToolbars();
@@ -3378,18 +3400,13 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
     mDeferredSaveTimer.start(0ms);
 
     //NOW we reset if we're uninstalling a module
-    if (mpEditorDialog && thing == enums::PackageModuleType::ModuleFromScript) {
-        mpEditorDialog->doCleanReset();
-    }
-    if (mpPackageManager) {
-        mpPackageManager->resetPackageList();
+    if (thing == enums::PackageModuleType::ModuleFromScript) {
+        emit signal_editorCleanResetRequested();
     }
     // the Module Manager lists what a script can take away behind its back, and
     // a row left over from a module that has gone offers a removal that can only
     // be refused - installPackage() already puts the listing straight this way
-    if (mpModuleManager) {
-        mpModuleManager->layoutModules();
-    }
+    emit signal_packageListChanged();
     return true;
 }
 
@@ -3573,8 +3590,13 @@ QSettings& Host::profileIni()
 {
     if (!mpProfileIni) {
         mpProfileIni = new QSettings(MudletApp::getMudletPath(enums::profileDataItemPath, getName(), qsl("profile.ini")), QSettings::IniFormat, this);
+        // Constructing it only splits the file into sections, and each section is
+        // parsed by the first lookup that needs it, so status() cannot see damage
+        // inside one until allKeys() has parsed them all
+        static_cast<void>(mpProfileIni->allKeys());
         if (mpProfileIni->status() == QSettings::FormatError) {
-            qWarning().nospace().noquote() << "Host::profileIni() ERROR - the profile's \"profile.ini\" file could not be parsed, the settings it held will be replaced.";
+            qWarning().nospace().noquote() << "Host::profileIni() ERROR - the \"profile.ini\" file of profile \"" << getName() << "\" (" << mpProfileIni->fileName()
+                                           << ") could not be parsed, the settings it held will be replaced.";
         }
     }
     return *mpProfileIni;
@@ -4223,9 +4245,7 @@ void Host::setSpellDic(const QString& newDict)
         return;
     }
     mSpellDic = newDict;
-    if (mpConsole) {
-        mpConsole->setSystemSpellDictionary(newDict);
-    }
+    mSpellChecker.setSystemDictionary(newDict);
 }
 
 // When called from dlgProfilePreferences the second flag will only be changed
@@ -4248,15 +4268,12 @@ void Host::setUserDictionaryOptions(const bool _useDictionary, const bool useSha
         dictionaryChanged = true;
     }
 
-    if (!mpConsole) {
-        return;
+    if (dictionaryChanged) {
+        mSpellChecker.applyUserDictionaryOptions();
     }
 
-    if (dictionaryChanged) {
-        // This will propagate the changes in the two flags to the main
-        // TConsole's copies of them - although setProfileSpellDictionary() is
-        // also called in the main TConsole constructor:
-        mpConsole->setProfileSpellDictionary();
+    if (!mpConsole) {
+        return;
     }
 
     // This also needs to handle the spell checking against the system/mudlet
@@ -4403,17 +4420,21 @@ void Host::getPlayerRoomStyleDetails(quint8& styleCode, quint8& outerDiameter, q
 
 // Used to set the searchOptions here and the one in the editor if present, for
 // use by the XMLimporter class:
-void Host::setSearchOptions(const dlgTriggerEditor::SearchOptions optionsState)
+void Host::setSearchOptions(const enums::EditorSearchOptions optionsState)
 {
     mSearchOptions = optionsState;
-    if (mpEditorDialog) {
-        mpEditorDialog->setSearchOptions(optionsState);
-    }
+    emit signal_editorSearchOptionsChanged(optionsState);
 }
 
-void Host::setBufferSearchOptions(const TConsole::SearchOptions optionsState)
+void Host::setBufferSearchOptions(const enums::BufferSearchOptions optionsState)
 {
     mBufferSearchOptions = optionsState;
+}
+
+void Host::setShowIdsInEditor(const bool isShown)
+{
+    mShowIDsInEditor = isShown;
+    emit signal_showIdsInEditorChanged(isShown);
 }
 
 // The single answer to "does this profile have a map widget on screen right
@@ -4552,6 +4573,64 @@ void Host::setDebugShowAllProblemCodepoints(const bool state)
     }
 }
 
+void Host::raiseSettingChangedEvent(const QString& settingName, const bool value)
+{
+    // The profile's own file is read before the console exists, so a value arriving from it is not a change to report:
+    if (!mpConsole) {
+        return;
+    }
+
+    TEvent event{};
+    event.mArgumentList.append(qsl("sysSettingChanged"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(settingName);
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(value ? qsl("1") : qsl("0"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
+    raiseEvent(event);
+}
+
+void Host::changeSetting(bool& setting, const bool state, const QString& settingName)
+{
+    if (setting == state) {
+        return;
+    }
+    setting = state;
+    raiseSettingChangedEvent(settingName, state);
+}
+
+void Host::setEnableClosedCaption(const bool state)
+{
+    changeSetting(mEnableClosedCaption, state, qsl("enableClosedCaption"));
+}
+
+void Host::setAdvertiseScreenReader(const bool state)
+{
+    if (mAdvertiseScreenReader == state) {
+        return;
+    }
+    mAdvertiseScreenReader = state;
+    // The game hears about it before the scripts do, so a handler that writes
+    // the value back leaves it informed of the final value by the nested call
+    // rather than of a value that no longer holds:
+    mTelnet.sendInfoNewEnvironValue(qsl("SCREEN_READER"));
+    mTelnet.sendInfoNewEnvironValue(qsl("MTTS"));
+    raiseSettingChangedEvent(qsl("advertiseScreenReader"), state);
+}
+
+void Host::setAnnounceIncomingText(const bool state)
+{
+    changeSetting(mAnnounceIncomingText, state, qsl("announceIncomingText"));
+}
+
+void Host::setMapperPanelVisible(const bool state)
+{
+    if (mpMap && mpMap->mpMapper) {
+        mpMap->mpMapper->slot_setMapperPanelVisible(state);
+    }
+    changeSetting(mShowPanel, state, qsl("mapperPanelVisible"));
+}
+
 void Host::setCompactInputLine(const bool state)
 {
     if (mCompactInputLine != state) {
@@ -4563,6 +4642,7 @@ void Host::setCompactInputLine(const bool state)
         if (mpConsole && mpConsole->mpButtonMainLayer) {
             mpConsole->mpButtonMainLayer->setVisible(!state);
         }
+        raiseSettingChangedEvent(qsl("compactInputLine"), state);
     }
 }
 
@@ -4617,30 +4697,14 @@ std::pair<bool, QString> Host::openWindow(const QString& name, bool loadLayout, 
         return {false, qsl("label with the name '%1' already exists").arg(name)};
     }
 
-    auto hostName(getName());
     auto console = mpConsole->subConsoleWidget(name);
     auto dockwidget = mpConsole->dockWidget(name);
 
     if (!console && !dockwidget) {
         // The name is not used in either the QMaps of all user created TConsole
         // or TDockWidget instances - so we can make a NEW one:
-        dockwidget = new TDockWidget(this, name);
-        dockwidget->setObjectName(qsl("dockWindow_%1_%2").arg(hostName, name));
-        dockwidget->setContentsMargins(0, 0, 0, 0);
-        dockwidget->setWindowTitle(name);
-        mpConsole->registerDockWidget(name, dockwidget);
-        // It wasn't obvious but the parent passed to the TConsole constructor
-        // is sliced down to a QWidget and is NOT a TDockWidget pointer:
-        console = new TConsole(this, name, TConsole::UserWindow, dockwidget->widget());
-        console->setObjectName(qsl("dockWindowConsole_%1_%2").arg(hostName, name));
-        console->setContentsMargins(0, 0, 0, 0);
-        dockwidget->setTConsole(console);
-        console->layerCommandLine->hide();
-        console->setScrollBarVisible(false);
-        mpConsole->registerSubConsole(name, console);
-        dockwidget->setStyleSheet(mProfileStyleSheet);
-        mudlet::self()->addDockWidget(Qt::RightDockWidgetArea, dockwidget);
-        console->setFontSize(10);
+        dockwidget = mpConsole->createUserWindow(name);
+        console = mpConsole->subConsoleWidget(name);
     }
     if (!console || !dockwidget) {
         return {false, qsl("userwindow '%1' already exists").arg(name)};
@@ -5250,17 +5314,7 @@ bool Host::setProfileStyleSheet(const QString& styleSheet)
 
     mProfileStyleSheet = styleSheet;
     mpConsole->setStyleSheet(styleSheet);
-    if (mpEditorDialog) {
-        mpEditorDialog->setStyleSheet(styleSheet);
-    }
-
-    if (mpDlgProfilePreferences) {
-        mpDlgProfilePreferences->setStyleSheet(styleSheet);
-    }
-    if (mpNotePad) {
-        mpNotePad->setStyleSheet(styleSheet);
-        mpNotePad->setTabsStyleSheet(styleSheet);
-    }
+    emit signal_profileStyleSheetChanged(styleSheet);
     if (mpConsole->mpDockableMapWidget) {
         mpConsole->mpDockableMapWidget->setStyleSheet(styleSheet);
     }
@@ -5453,13 +5507,6 @@ void Host::createMapper(const bool loadDefaultMap)
     auto pMap = mpMap.data();
     auto hostName(getName());
     mpConsole->createMapperDock(tr("Map - %1").arg(hostName), qsl("dockMap_%1").arg(hostName));
-    // Arrange for TMap member values to be copied from the Host masters so they
-    // are in place when the 2D mapper is created:
-    getPlayerRoomStyleDetails(pMap->mPlayerRoomStyle, pMap->mPlayerRoomOuterDiameterPercentage, pMap->mPlayerRoomInnerDiameterPercentage, pMap->mPlayerRoomOuterColor, pMap->mPlayerRoomInnerColor);
-
-    pMap->mpMapper = new dlgMapper(mpConsole->mpDockableMapWidget, this, pMap); //FIXME: mpHost definieren
-    pMap->mpMapper->setStyleSheet(mProfileStyleSheet);
-    mpConsole->mpDockableMapWidget->setWidget(pMap->mpMapper);
 
     if (loadDefaultMap && pMap->mpRoomDB->isEmpty()) {
         qDebug() << "Host::create_mapper() - restore map case 3.";
@@ -5694,9 +5741,7 @@ void Host::setEditorShowBidi(const bool state)
 {
     if (mEditorShowBidi != state) {
         mEditorShowBidi = state;
-        if (mpEditorDialog) {
-            mpEditorDialog->setEditorShowBidi(state);
-        }
+        emit signal_editorShowBidiChanged(state);
     }
 }
 
@@ -5845,6 +5890,9 @@ void Host::setBorders(QMargins borders)
     if (mpConsole.isNull()) {
         return;
     }
+    // A console put away by a tab switch is zero pixels wide, so the resize
+    // event below tells it nothing about the room its new borders leave
+    mpConsole->syncHiddenScreenDimensions();
     auto x = mpConsole->width();
     auto y = mpConsole->height();
     const QSize s = QSize(x, y);

@@ -33,8 +33,10 @@
 #include "Host.h"
 #include "MudletApp.h"
 #include "TAlias.h"
+#include "TBuffer.h"
 #include "TCommandLine.h"
 #include "TConsole.h"
+#include "TConsoleModel.h"
 #include "TDebug.h"
 #include "TEvent.h"
 #include "TFlipButton.h"
@@ -56,6 +58,8 @@
 #if defined(INCLUDE_3DMAPPER)
 #include "glwidget_integration.h"
 #endif
+
+#include <hunspell/hunspell.h>
 
 #include <math.h>
 
@@ -86,14 +90,6 @@ using namespace std::chrono_literals;
 extern "C" {
 int luaopen_yajl(lua_State*);
 }
-
-
-// A Host outlives its main console: closing a profile's window destroys the view
-// while triggers, the buffer, logging and Lua all keep running. The live
-// Hunspell handles and the user dictionary's word set belong to that view, so
-// the spelling functions have to report this rather than dereference what is
-// gone.
-static const char* no_main_window_value = "the profile has no main window";
 
 // No documentation available in wiki - internal function
 static bool isMain(const QString& name)
@@ -1200,7 +1196,7 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
         if (currentEncoding == "UTF-8") {
             // Simple case: the encoding is already what we are using:
             std::string dataStdString{data.toStdString()};
-            host.mpConsole->printOnDisplay(dataStdString);
+            host.printOnDisplay(dataStdString, false);
             lua_pushboolean(L, true);
             return 1;
         }
@@ -1218,7 +1214,7 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
             }
 
             std::string encodedText{TEncodingHelper::encode(dataQString, currentEncoding).toStdString()};
-            host.mpConsole->printOnDisplay(encodedText);
+            host.printOnDisplay(encodedText, false);
             lua_pushboolean(L, true);
             return 1;
         }
@@ -1234,7 +1230,7 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
         // It is safe to use the data directly now as we have already proved it
         // to be plain ASCII
         std::string dataStdString{dataQString.toStdString()};
-        host.mpConsole->printOnDisplay(dataStdString);
+        host.printOnDisplay(dataStdString, false);
         lua_pushboolean(L, true);
         return 1;
     }
@@ -1242,7 +1238,7 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
     // else the user is assumed to have coded it themselves into the Game
     // Server's current encoding - the backwards "compatible" form:
     std::string dataStdString{data.toStdString()};
-    host.mpConsole->printOnDisplay(dataStdString);
+    host.printOnDisplay(dataStdString, false);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -1562,40 +1558,41 @@ int TLuaInterpreter::closeUserWindow(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#startLogging
 int TLuaInterpreter::startLogging(lua_State* L)
 {
-    const Host& host = getHostFromLua(L);
+    Host& host = getHostFromLua(L);
     const bool logOn = getVerifiedBool(L, __func__, 1, "turn logging on/off");
+    TConsoleModel& consoleModel = host.mainConsoleModel();
 
     QString savedLogFileName;
-    if (host.mpConsole->mLogToLogFile) {
-        savedLogFileName = host.mpConsole->mLogFileName;
+    if (consoleModel.mLogToLogFile) {
+        savedLogFileName = consoleModel.mLogFileName;
         // Don't assume we will be able to find the file name once recording has
         // stopped.
     }
 
-    if (host.mpConsole->mLogToLogFile != logOn) {
-        host.mpConsole->toggleLogging(false);
-        // Changes state of host.mpConsole->mLogToLogFile, but that can't be
-        // really be called a side-effect!
+    if (consoleModel.mLogToLogFile != logOn) {
+        consoleModel.toggleLogging(false);
+        if (consoleModel.mLogToLogFile != logOn) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "Main console output could not be logged to file: %s", consoleModel.mLogStartFailure.toUtf8().constData());
+            return 2;
+        }
 
         lua_pushboolean(L, true);
-        if (host.mpConsole->mLogToLogFile) {
-            host.mpConsole->logButton->setChecked(true);
-            // Sets the button as checked but clicked() & pressed() signals are NOT generated
-            lua_pushfstring(L, "Main console output has started to be logged to file: %s", host.mpConsole->mLogFileName.toUtf8().constData());
-            lua_pushstring(L, host.mpConsole->mLogFileName.toUtf8().constData());
+        if (consoleModel.mLogToLogFile) {
+            lua_pushfstring(L, "Main console output has started to be logged to file: %s", consoleModel.mLogFileName.toUtf8().constData());
+            lua_pushstring(L, consoleModel.mLogFileName.toUtf8().constData());
             lua_pushnumber(L, 1);
         } else {
-            host.mpConsole->logButton->setChecked(false);
             lua_pushfstring(L, "Main console output has stopped being logged to file: %s", savedLogFileName.toUtf8().constData());
-            lua_pushstring(L, host.mpConsole->mLogFileName.toUtf8().constData());
+            lua_pushstring(L, consoleModel.mLogFileName.toUtf8().constData());
             lua_pushnumber(L, 0);
         }
 
     } else {
         lua_pushnil(L);
-        if (host.mpConsole->mLogToLogFile) {
-            lua_pushfstring(L, "Main console output is already being logged to file: %s", host.mpConsole->mLogFileName.toUtf8().constData());
-            lua_pushstring(L, host.mpConsole->mLogFileName.toUtf8().constData());
+        if (consoleModel.mLogToLogFile) {
+            lua_pushfstring(L, "Main console output is already being logged to file: %s", consoleModel.mLogFileName.toUtf8().constData());
+            lua_pushstring(L, consoleModel.mLogFileName.toUtf8().constData());
             lua_pushnumber(L, -1);
         } else {
             lua_pushstring(L, "Main console output was already not being logged to a file.");
@@ -1610,9 +1607,9 @@ int TLuaInterpreter::appendLog(lua_State* L)
 {
     const QString text = getVerifiedString(L, __func__, 1, "text to append to logfile", true);
 
-    const Host& host = getHostFromLua(L);
+    Host& host = getHostFromLua(L);
 
-    host.mpConsole->buffer.appendLog(text);
+    host.mainConsoleModel().buffer.appendLog(text);
 
     return 0;
 }
@@ -1719,13 +1716,14 @@ int TLuaInterpreter::errorc(lua_State* L)
     }
 
     if (host.mEchoLuaErrors) {
-        if (!host.mpConsole->buffer.isEmpty() && !host.mpConsole->buffer.lineBuffer.at(host.mpConsole->buffer.lineBuffer.size() - 1).isEmpty()) {
+        const TBuffer& buffer = host.mainConsoleModel().buffer;
+        if (!buffer.isEmpty() && !buffer.lineBuffer.at(buffer.lineBuffer.size() - 1).isEmpty()) {
             host.postMessage(qsl("\n"));
         }
-        host.mpConsole->print(qsl("[  LUA  ] - "), QColor(80, 160, 255), QColor(Qt::black));
-        host.mpConsole->print(qsl("ERROR: "), QColor(Qt::blue), QColor(Qt::black));
-        host.mpConsole->print(qsl("%1").arg(luaFunctionInfo), QColor(Qt::green), QColor(Qt::black));
-        host.mpConsole->print(qsl("           %1").arg(luaErrorText), QColor(200, 50, 42), QColor(Qt::black));
+        host.printToMainConsole(qsl("[  LUA  ] - "), QColor(80, 160, 255), QColor(Qt::black));
+        host.printToMainConsole(qsl("ERROR: "), QColor(Qt::blue), QColor(Qt::black));
+        host.printToMainConsole(qsl("%1").arg(luaFunctionInfo), QColor(Qt::green), QColor(Qt::black));
+        host.printToMainConsole(qsl("           %1").arg(luaErrorText), QColor(200, 50, 42), QColor(Qt::black));
     }
     return 0;
 }
@@ -2329,10 +2327,11 @@ int TLuaInterpreter::getTimestamp(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("line number %1 invalid, it should be greater than zero").arg(luaLine));
     }
 
-    const Host& host = getHostFromLua(L);
+    Host& host = getHostFromLua(L);
     if (name.isEmpty()) {
-        if (luaLine < host.mpConsole->buffer.timeBuffer.size()) {
-            lua_pushstring(L, host.mpConsole->buffer.timeBuffer.at(luaLine).toUtf8().constData());
+        const TBuffer& buffer = host.mainConsoleModel().buffer;
+        if (luaLine < buffer.timeBuffer.size()) {
+            lua_pushstring(L, buffer.timeBuffer.at(luaLine).toUtf8().constData());
             return 1;
         }
         return warnArgumentValue(L, __func__, qsl("line number %1 invalid, it is beyond the last line of the buffer").arg(luaLine));
@@ -4592,10 +4591,9 @@ void TLuaInterpreter::logError(std::string& e, const QString& name, const QStrin
     // Log error to Profile's Main TConsole:
     if (mpHost->mEchoLuaErrors) {
         // ensure the Lua error is on a line of its own and is not prepended to
-        // the previous line, however there is a nasty gotcha in that during
-        // profile loading the (TMainConsole*) Host::mpConsole pointer is
-        // null - but then the buffer must itself be empty:
-        if (mpHost->mpConsole && !mpHost->mpConsole->buffer.isEmpty() && !mpHost->mpConsole->buffer.lineBuffer.at(mpHost->mpConsole->buffer.lineBuffer.size() - 1).isEmpty()) {
+        // the previous line; the model is still null while the Host is being
+        // constructed - but then there is no buffer to be mid-line in
+        if (auto* pModel = mpHost->mainConsoleModelOrNull(); pModel && !pModel->buffer.isEmpty() && !pModel->buffer.lineBuffer.at(pModel->buffer.lineBuffer.size() - 1).isEmpty()) {
             mpHost->postMessage(qsl("\n"));
         }
 
@@ -4624,7 +4622,7 @@ void TLuaInterpreter::logEventError(const QString& event, const QString& error)
     // Log error to Profile's Main TConsole:
     if (mpHost->mEchoLuaErrors) {
         // ensure the Lua error is on a line of its own and is not prepended to the previous line
-        if (!mpHost->mpConsole->buffer.isEmpty() && !mpHost->mpConsole->buffer.lineBuffer.at(mpHost->mpConsole->buffer.lineBuffer.size() - 1).isEmpty()) {
+        if (auto* pModel = mpHost->mainConsoleModelOrNull(); pModel && !pModel->buffer.isEmpty() && !pModel->buffer.lineBuffer.at(pModel->buffer.lineBuffer.size() - 1).isEmpty()) {
             mpHost->postMessage(qsl("\n"));
         }
 
@@ -6920,7 +6918,10 @@ std::pair<int, QString> TLuaInterpreter::startPermKey(QString& name, QString& pa
     pT->setKeyCode(keycode);
     pT->setKeyModifiers(modifier);
     pT->setIsFolder(keycode == -1);
-    pT->setIsActive(keycode != -1); // Folders (keycode == -1) start as inactive
+    // A folder has no key code of its own to fire, but leaving it inactive
+    // silences every key placed inside it, so groups start active here just as
+    // the alias and trigger ones do:
+    pT->setIsActive(true);
     pT->setTemporary(false);
     pT->registerKey();
     // CHECK: The lua code in function could fail to compile - but there is no feedback here to the caller.
@@ -7304,10 +7305,7 @@ int TLuaInterpreter::addWordToDictionary(lua_State* L)
     }
 
     const QString text = getVerifiedString(L, __func__, 1, "word");
-    if (!host.mpConsole) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
-    QPair<bool, QString> const result = host.mpConsole->addWordToSet(text);
+    QPair<bool, QString> const result = host.spellChecker().addWord(text);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
     }
@@ -7327,10 +7325,7 @@ int TLuaInterpreter::removeWordFromDictionary(lua_State* L)
     }
 
     const QString text = getVerifiedString(L, __func__, 1, "word");
-    if (!host.mpConsole) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
-    QPair<bool, QString> const result = host.mpConsole->removeWordFromSet(text);
+    QPair<bool, QString> const result = host.spellChecker().removeWord(text);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
     }
@@ -7359,23 +7354,24 @@ int TLuaInterpreter::spellCheckWord(lua_State* L)
     }
     const QString text{lua_tostring(L, 1)};
 
-    if (!host.mpConsole) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
     Hunhandle* handle = nullptr;
     QByteArray encodedText;
     if (useUserDictionary) {
-        handle = host.mpConsole->getHunspellHandle_user();
+        handle = host.spellChecker().userHandle();
+        if (!handle) {
+            return warnArgumentValue(
+                    L, __func__, qsl("the %1 dictionary could not be opened so is unable to check your word").arg(host.spellChecker().usingSharedDictionary() ? qsl("shared") : qsl("profile")));
+        }
+
         encodedText = text.toUtf8();
     } else {
-        handle = host.mpConsole->getHunspellHandle_system();
+        handle = host.spellChecker().systemHandle();
         if (!handle) {
             return warnArgumentValue(L, __func__, "no main dictionaries found: Mudlet has not been able to find any dictionary files to use so is unable to check your word");
         }
 
-        encodedText = TEncodingHelper::encode(text, host.mpConsole->getHunspellCodecName_system());
+        encodedText = TEncodingHelper::encode(text, host.spellChecker().systemCodecName());
     }
-    // CHECKME: Is there any danger of contention here - do we need to get mudlet::mDictionaryReadWriteLock locked for reading if we are accessing the shared user dictionary?
     lua_pushboolean(L, Hunspell_spell(handle, encodedText.constData()));
     return 1;
 }
@@ -7401,34 +7397,37 @@ int TLuaInterpreter::spellSuggestWord(lua_State* L)
     }
     const QString text{lua_tostring(L, 1)};
 
-    if (!host.mpConsole) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
     char** wordList;
     size_t wordCount = 0;
     Hunhandle* handle = nullptr;
     QByteArray encodedText;
     if (useUserDictionary) {
-        handle = host.mpConsole->getHunspellHandle_user();
+        handle = host.spellChecker().userHandle();
+        if (!handle) {
+            return warnArgumentValue(
+                    L,
+                    __func__,
+                    qsl("the %1 dictionary could not be opened so is unable to make suggestions for your word").arg(host.spellChecker().usingSharedDictionary() ? qsl("shared") : qsl("profile")));
+        }
+
         encodedText = text.toUtf8();
     } else {
-        handle = host.mpConsole->getHunspellHandle_system();
+        handle = host.spellChecker().systemHandle();
         if (!handle) {
             return warnArgumentValue(L, __func__, "no main dictionaries found: Mudlet has not been able to find any dictionary files to use so is unable to make suggestions for your word");
         }
 
-        encodedText = TEncodingHelper::encode(text, host.mpConsole->getHunspellCodecName_system());
+        encodedText = TEncodingHelper::encode(text, host.spellChecker().systemCodecName());
     }
-    // CHECKME: Is there any danger of contention here - do we need to get mudlet::mDictionaryReadWriteLock locked for reading if we are accessing the shared user dictionary?
     wordCount = Hunspell_suggest(handle, &wordList, encodedText.constData());
     lua_newtable(L);
     for (size_t i = 0; i < wordCount; ++i) {
         lua_pushnumber(L, i + 1);
         QString suggestion;
-        if (hasUserDictionary) {
+        if (useUserDictionary) {
             suggestion = QString::fromUtf8(wordList[i]);
         } else {
-            suggestion = TEncodingHelper::decode(QByteArray(wordList[i]), host.mpConsole->getHunspellCodecName_system());
+            suggestion = TEncodingHelper::decode(QByteArray(wordList[i]), host.spellChecker().systemCodecName());
         }
         lua_pushstring(L, suggestion.toUtf8().constData());
         lua_settable(L, -3);
@@ -7448,16 +7447,11 @@ int TLuaInterpreter::getDictionaryWordList(lua_State* L)
         return warnArgumentValue(L, __func__, "no user dictionary enabled in the preferences for this profile");
     }
 
-    if (!host.mpConsole) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
-    // This may stall if this is accessing the shared user dictionary and that
-    // is being updated by another profile, but it should eventually return...
     // We must keep a local reference/copy of the value returned because the
     // returned item is a deep-copy in the case of a shared dictionary and two
-    // calls to TConsole::getWordSet() can return two different instances which
-    // is fatally dangerous if used in a range based initialiser:
-    QSet<QString> wordSet{host.mpConsole->getWordSet()};
+    // calls to TSpellChecker::wordSet() can return two different instances which
+    // is fatally dangerous if used in a range based initializer:
+    QSet<QString> wordSet{host.spellChecker().wordSet()};
     QStringList wordList{wordSet.begin(), wordSet.end()};
     const int wordCount = wordList.size();
     if (wordCount > 1) {
@@ -8101,10 +8095,6 @@ int TLuaInterpreter::setConfig(lua_State* L)
             return success();
         }
 #endif
-        if (key == qsl("mapperPanelVisible")) {
-            host.mpMap->mpMapper->slot_setMapperPanelVisible(getVerifiedBool(L, __func__, 2, "value"));
-            return success();
-        }
         if (key == qsl("mapShowRoomBorders")) {
             host.mMapperShowRoomBorders = getVerifiedBool(L, __func__, 2, "value");
             return success();
@@ -8398,10 +8388,11 @@ int TLuaInterpreter::setConfig(lua_State* L)
     }
 
     if (key == qsl("compactInputLine")) {
-        const bool value = getVerifiedBool(L, __func__, 2, "value");
-        host.setCompactInputLine(value);
+        host.setCompactInputLine(getVerifiedBool(L, __func__, 2, "value"));
         if (currentHost) {
-            mudlet::self()->dactionInputLine->setChecked(value);
+            // A handler of the event the setter raised may have written the
+            // opposite value back, so the menu item follows what is held now:
+            mudlet::self()->dactionInputLine->setChecked(host.getCompactInputLine());
         }
 
         return success();
@@ -8410,16 +8401,20 @@ int TLuaInterpreter::setConfig(lua_State* L)
         host.mEditorAutoComplete = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
+    if (key == qsl("mapperPanelVisible")) {
+        host.setMapperPanelVisible(getVerifiedBool(L, __func__, 2, "value"));
+        return success();
+    }
     if (key == qsl("announceIncomingText")) {
-        host.mAnnounceIncomingText = getVerifiedBool(L, __func__, 2, "value");
+        host.setAnnounceIncomingText(getVerifiedBool(L, __func__, 2, "value"));
         return success();
     }
     if (key == qsl("advertiseScreenReader")) {
-        host.mAdvertiseScreenReader = getVerifiedBool(L, __func__, 2, "value");
+        host.setAdvertiseScreenReader(getVerifiedBool(L, __func__, 2, "value"));
         return success();
     }
     if (key == qsl("enableClosedCaption")) {
-        host.mEnableClosedCaption = getVerifiedBool(L, __func__, 2, "value");
+        host.setEnableClosedCaption(getVerifiedBool(L, __func__, 2, "value"));
         return success();
     }
     if (key == qsl("blankLinesBehaviour")) {

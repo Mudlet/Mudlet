@@ -47,6 +47,7 @@
 #include "TMedia.h"
 #include "TGameDetails.h"
 #include "TRoomDB.h"
+#include "TSpellChecker.h"
 #include "TTabBar.h"
 #include "TUiTour.h"
 #include "XMLimport.h"
@@ -58,14 +59,17 @@
 #include "dlgPackageExporter.h"
 #include "dlgPackageManager.h"
 #include "dlgProfilePreferences.h"
+#include "dlgTriggerEditor.h"
+#include "edbee/edbee.h"
 #include "MMCPServer.h"
 #include "widgetutils.h"
 
+#include <QDataStream>
+#include <QSaveFile>
 #include <QAccessible>
 #include <QAccessibleAnnouncementEvent>
 #include <QApplication>
 #include <QtUiTools/quiloader.h>
-#include <QCollator>
 #include <QDesktopServices>
 #include <QFile>
 #include <QFileDialog>
@@ -89,7 +93,6 @@
 #include <QStyleFactory>
 #include <QStyleHints>
 #include <QTableWidget>
-#include <QTextBoundaryFinder>
 #include <QTextStream>
 #include <QTimer>
 #include <QToolBar>
@@ -1003,6 +1006,10 @@ void mudlet::init()
     scanForQtTranslations(MudletApp::getMudletPath(enums::qtTranslationsPath));
     loadTranslators(MudletApp::getInterfaceLanguage());
 
+    if (!mRejectedPortableMarker.isEmpty()) {
+        warnAboutRejectedPortableRoot();
+    }
+
     // Cannot assign a value in the constructor list as it requires the
     // translations to be loaded first:
     //: Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!
@@ -1645,31 +1652,22 @@ void mudlet::init()
     //    });
 }
 
-static bool validateConfDir(const QString& path)
-{
-    if (path.isEmpty()) {
-        qWarning("WARN: portable data path not specified");
-        return false;
-    }
-    QFileInfo pathInfo(path);
-    if (pathInfo.isFile()) {
-        qWarning("WARN: specified portable data path is an existing file: %s", qPrintable(path));
-        return false;
-    }
-    QFileInfo parentInfo(pathInfo.dir().path());
-    if (!parentInfo.isDir()) {
-        qWarning("WARN: parent directory of specified portable data path doesn't exist: %s", qPrintable(parentInfo.filePath()));
-        return false;
-    }
-    return true;
-}
-
 void mudlet::setupConfig()
 {
     const auto resolution = MudletApp::resolveConfigRoot(MudletApp::executableDir());
     const QString confPath = resolution.path;
-    if (resolution.portable && !validateConfDir(confPath)) {
-        qFatal("FATAL: portable data path invalid");
+    if (resolution.portableRootRejected) {
+        // This used to be qFatal(), which is abort(): no message anywhere the
+        // user looks, and a crash report filed for a mistyped portable.txt. The
+        // resolver has already said which check the root failed and handed back
+        // the non-portable location, so carry on there and say so - loudly in
+        // the log now, and on screen once init() has the translations up.
+        mRejectedPortableMarker = MudletApp::portableMarkerPath(MudletApp::executableDir());
+        if (mRejectedPortableMarker.isEmpty()) {
+            mRejectedPortableMarker = qsl("portable.txt");
+        }
+        qWarning().nospace().noquote() << "mudlet::setupConfig() WARN - \"" << mRejectedPortableMarker << "\" names a data directory Mudlet cannot use, so \"" << confPath
+                                       << "\" is in use instead. Profiles kept where the marker points will not be listed until it is corrected.";
     }
     if (resolution.migrationPending) {
         qInfo().nospace() << "mudlet::setupConfig() INFO: XDG_CONFIG_HOME is set but $XDG_CONFIG_HOME/mudlet holds no profiles, so the existing " << confPath
@@ -1684,6 +1682,26 @@ void mudlet::setupConfig()
     // setupConfig() must not run again once init() has created the Updater,
     // which keeps using the settings object this discards
     MudletApp::resetSettings();
+}
+
+// Startup no longer stops on a portable.txt that names a directory Mudlet cannot
+// use, so this dialog is the only thing telling the user that the profiles they
+// are about to see are not the portable ones they asked for.
+void mudlet::warnAboutRejectedPortableRoot()
+{
+    const QString marker = mRejectedPortableMarker;
+    mRejectedPortableMarker.clear();
+    QMessageBox notice;
+    //: Title of the warning shown at startup when portable.txt names a data directory Mudlet cannot use
+    notice.setWindowTitle(tr("Portable data directory unusable"));
+    //: %1 is the full path of the portable.txt file that names the unusable directory
+    notice.setText(tr("The data directory named by %1 cannot be used.").arg(marker));
+    //: %1 is the full path of the directory Mudlet has fallen back to for profiles and settings
+    notice.setInformativeText(tr("Mudlet is using %1 instead, so profiles kept in the portable directory will not be listed. "
+                                 "Correct the file and restart Mudlet to use that directory again.")
+                                      .arg(MudletApp::getMudletPath(enums::mainPath)));
+    notice.setIcon(QMessageBox::Warning);
+    notice.exec();
 }
 
 void mudlet::initEdbee()
@@ -2077,7 +2095,7 @@ void mudlet::loadMaps()
             //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
             {"M_CP869", qsl("m ") % tr("CP869 (DOS Greek 2)")},
             //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-            {"CP1161", tr("CP1161 (Latin/Thai)")},
+            {"CP1162", tr("CP1162 (Latin/Thai)")},
             //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
             {"KOI8-R", tr("KOI8-R (Cyrillic)")},
             //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
@@ -5647,6 +5665,7 @@ void mudlet::attachDebugArea(const QString& hostname)
     smpDebugArea = new QMainWindow(nullptr);
     const auto pHost = mHostManager.getHost(hostname);
     smpDebugConsole = new TConsole(pHost, qsl("centralDebug"), TConsole::CentralDebugConsole);
+    TDebug::setSink(smpDebugConsole.data());
     smpDebugConsole->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     smpDebugConsole->setWrapAt(100);
     smpDebugArea->setCentralWidget(smpDebugConsole);
@@ -6092,6 +6111,10 @@ void mudlet::slot_multiView(const bool state)
 
 void mudlet::toggleMute(bool state, QAction* toolbarAction, QAction* menuAction, bool isAPINotGame, const QString& unmuteText, const QString& muteText)
 {
+    // Read before the flag below is assigned: the rest of this function runs
+    // either way, because it also re-syncs the actions with the flag
+    const bool changed = (isAPINotGame ? mMuteAPI : mMuteGame) != state;
+
     if (toolbarAction->isChecked() != state || menuAction->isChecked() != state) {
         toolbarAction->setChecked(state);
         menuAction->setChecked(state);
@@ -6159,6 +6182,24 @@ void mudlet::toggleMute(bool state, QAction* toolbarAction, QAction* menuAction,
             }
         }
     }
+
+    if (changed) {
+        // Muting is application-wide rather than per profile, so every open
+        // profile is told about it. The handlers run Lua synchronously and may
+        // open a profile, which inserts into the live host map, so this walks
+        // a copy the way HostManager's own broadcasts do:
+        const QString settingName = isAPINotGame ? qsl("muteMediaAPI") : qsl("muteMediaGame");
+        const QList<QSharedPointer<Host>> hosts = mHostManager.hostList();
+        for (const auto& pHost : hosts) {
+            if ((isAPINotGame ? mMuteAPI : mMuteGame) != state) {
+                // A handler in an earlier profile wrote the opposite value
+                // back; that nested call already told every profile, so the
+                // rest of this loop would report a value nothing holds any more
+                break;
+            }
+            pHost->raiseSettingChangedEvent(settingName, state);
+        }
+    }
 }
 
 void mudlet::slot_muteAPI(const bool state)
@@ -6219,30 +6260,30 @@ void mudlet::slot_toggleCompactInputLine()
 // Called by the menu-item's action itself, that DOES pass the checked state:
 void mudlet::slot_compactInputLine(const bool state)
 {
-    if (dactionInputLine->isChecked() != state) {
-        // Ensure the menu item reflectes the actual state:
-        dactionInputLine->setChecked(state);
-    }
-    if (mpCurrentActiveHost) {
-        mpCurrentActiveHost->setCompactInputLine(state);
+    // The setter runs the event handlers, which may close this profile, so the
+    // host is held and re-checked rather than read off the member each time:
+    QPointer<Host> pHost = mpCurrentActiveHost;
+    if (pHost) {
+        pHost->setCompactInputLine(state);
         // Make sure players don't get confused when accidentally hiding buttons.
-        if (QKeySequence* shortcut = mpShortcutsManager->getSequence(qsl("Compact input line"));
-            state && !mpCurrentActiveHost->mTutorialForCompactLineAlreadyShown && shortcut && !shortcut->isEmpty()) {
+        if (QKeySequence* shortcut = mpShortcutsManager->getSequence(qsl("Compact input line")); pHost && state && !pHost->mTutorialForCompactLineAlreadyShown && shortcut && !shortcut->isEmpty()) {
             //: Here %1 will be replaced with the keyboard shortcut, default is ALT+L.
             const QString infoMsg = tr("[ INFO ]  - Compact input line set. Press \"%1\" to show bottom-right buttons again.").arg(shortcut->toString(QKeySequence::NativeText));
-            mpCurrentActiveHost->postMessage(infoMsg);
-            mpCurrentActiveHost->mTutorialForCompactLineAlreadyShown = true;
+            pHost->postMessage(infoMsg);
+            pHost->mTutorialForCompactLineAlreadyShown = true;
         }
+    }
+    // Ensure the menu item reflects the actual state - a handler of the event
+    // the setter raised may have written the opposite value back:
+    const bool held = pHost ? pHost->getCompactInputLine() : state;
+    if (dactionInputLine->isChecked() != held) {
+        dactionInputLine->setChecked(held);
     }
 }
 
 mudlet::~mudlet()
 {
-    if (mpHunspell_sharedDictionary) {
-        saveDictionary(MudletApp::getMudletPath(enums::mainDataItemPath, qsl("mudlet")), mWordSet_shared);
-        Hunspell_destroy(mpHunspell_sharedDictionary);
-        mpHunspell_sharedDictionary = nullptr;
-    }
+    TSpellChecker::closeSharedDictionary();
     if (!mTranslatorsLoadedList.isEmpty()) {
         qDebug().nospace().noquote() << "mudlet::~mudlet() INFO - uninstalling translation...";
         QMutableListIterator<QPointer<QTranslator>> itTranslator(mTranslatorsLoadedList);
@@ -7398,392 +7439,6 @@ QString mudlet::autodetectPreferredLanguage()
     return qsl("en_US");
 }
 
-// Returns false on significant failure (where the caller will have to bail out)
-bool mudlet::scanDictionaryFile(const QString& dictionaryPath, int& oldWC, QHash<QString, unsigned int>& gc, QStringList& wl)
-{
-    QFile dict(dictionaryPath);
-    if (!dict.exists()) {
-        return true;
-    }
-
-    // First update the line count in the list of words
-    if (!dict.open(QFile::ReadOnly | QFile::Text)) {
-        qWarning().nospace().noquote() << "mudlet::scanDictionaryFile(...) ERROR - failed to open dictionary file (for reading): \"" << dict.fileName() << "\" reason: " << dict.errorString();
-        return false;
-    }
-
-    QTextStream ds(&dict);
-    QString dictionaryLine;
-    ds.readLineInto(&dictionaryLine);
-
-    bool isOk = false;
-    oldWC = dictionaryLine.toInt(&isOk);
-    do {
-        ds.readLineInto(&dictionaryLine);
-        if (!dictionaryLine.isEmpty()) {
-            // qDebug().nospace().noquote() << "    " << dictionaryLine;
-            wl << dictionaryLine;
-            QTextBoundaryFinder graphemeFinder(QTextBoundaryFinder::Grapheme, dictionaryLine);
-            // The finder will be at the start of the string
-            int startPos = 0;
-            int endPos = graphemeFinder.toNextBoundary();
-            do {
-                if (endPos > 0) {
-                    const QString grapheme(dictionaryLine.mid(startPos, endPos - startPos));
-                    if (gc.contains(grapheme)) {
-                        ++gc[grapheme];
-                    } else {
-                        gc[grapheme] = 1;
-                    }
-                    startPos = endPos;
-                    endPos = graphemeFinder.toNextBoundary();
-                }
-            } while (endPos > 0);
-        }
-    } while (!ds.atEnd() && ds.status() == QTextStream::Ok);
-
-    if (ds.status() != QTextStream::Ok) {
-        qWarning().nospace().noquote() << "mudlet::scanDictionaryFile(\"" << dict.fileName() << "\") ERROR - failed to completely read dictionary file, status: " << ds.status();
-        return false;
-    }
-
-    dict.close();
-
-    qDebug().nospace().noquote() << "Loaded custom dictionary \"" << dict.fileName() << "\" with " << wl.count() << " words.";
-    if (oldWC != wl.count()) {
-        qDebug().nospace().noquote() << "Previously, there were " << oldWC << " words recorded instead.";
-    }
-    if (wl.count() > 1) {
-        // This will use the system default locale - it might be better to use
-        // the Mudlet one...
-        QCollator sorter;
-        sorter.setCaseSensitivity(Qt::CaseSensitive);
-        std::sort(wl.begin(), wl.end(), sorter);
-        const int dupCount = wl.removeDuplicates();
-        if (dupCount) {
-            qDebug().nospace().noquote() << "  Removed " << dupCount << " duplicates.";
-        }
-    }
-
-    return true;
-}
-
-// Returns false on significant failure (where the caller will have to bail out)
-bool mudlet::overwriteDictionaryFile(const QString& dictionaryPath, const QStringList& wl)
-{
-    // (Re)Open the file to write out the cleaned/new contents
-    // QFile::WriteOnly automatically implies QFile::Truncate in the absence of
-    // certain other flags:
-    QSaveFile dict(dictionaryPath);
-    if (!dict.open(QFile::WriteOnly | QFile::Text)) {
-        qWarning().nospace().noquote() << "mudlet::overwriteDictionaryFile(...) ERROR - failed to open dictionary file (for writing): \"" << dict.fileName() << "\" reason: " << dict.errorString();
-        return false;
-    }
-
-    QTextStream ds(&dict);
-    ds << qMax(0, wl.count());
-    if (!wl.isEmpty()) {
-        ds << QChar(QChar::LineFeed);
-        ds << wl.join(QChar::LineFeed).toUtf8();
-    }
-    ds.flush();
-    dict.commit();
-    if (dict.error() != QFile::NoError) {
-        qWarning().nospace().noquote() << "mudlet::overwriteDictionaryFile(...) ERROR - failed to completely write dictionary file: \"" << dict.fileName() << "\" status: " << dict.errorString();
-        return false;
-    }
-
-    return true;
-}
-
-// Returns -1 on significant failure (where the caller will have to bail out)
-int mudlet::getDictionaryWordCount(const QString& dictionaryPath)
-{
-    QFile dict(dictionaryPath);
-    if (!dict.open(QFile::ReadOnly | QFile::Text)) {
-        qWarning().nospace().noquote() << "mudlet::saveDictionary(...) ERROR - failed to open dictionary file (for reading): \"" << dict.fileName() << "\" reason: " << dict.errorString();
-        return -1;
-    }
-
-    QTextStream ds(&dict);
-    QString dictionaryLine;
-    // Read the header line containing the word count:
-    ds.readLineInto(&dictionaryLine);
-    bool isOk = false;
-    const int oldWordCount = dictionaryLine.toInt(&isOk);
-    dict.close();
-    if (isOk) {
-        return oldWordCount;
-    }
-
-    return -1;
-}
-
-// Returns false on significant failure (where the caller will have to bail out)
-bool mudlet::overwriteAffixFile(const QString& affixPath, const QHash<QString, unsigned int>& gc)
-{
-    QMultiMap<unsigned int, QString> sortedGraphemeCounts;
-    // Sort the graphemes into a descending order list:
-    if (!gc.isEmpty()) {
-        QHashIterator<QString, unsigned int> itGraphemeCount(gc);
-        while (itGraphemeCount.hasNext()) {
-            itGraphemeCount.next();
-            sortedGraphemeCounts.insert(itGraphemeCount.value(), itGraphemeCount.key());
-        }
-    }
-
-    // Generate TRY line:
-    QString tryLine = qsl("TRY ");
-    QMultiMapIterator<unsigned int, QString> itGrapheme(sortedGraphemeCounts);
-    itGrapheme.toBack();
-    while (itGrapheme.hasPrevious()) {
-        itGrapheme.previous();
-        tryLine.append(itGrapheme.value());
-    }
-
-    QStringList affixLines;
-    affixLines << qsl("SET UTF-8");
-    affixLines << tryLine;
-
-    QSaveFile aff(affixPath);
-    // Finally, having got the needed content, write it out:
-    if (!aff.open(QFile::WriteOnly | QFile::Text)) {
-        qWarning().nospace().noquote() << "mudlet::overwriteAffixFile(...) ERROR - failed to open affix file (for writing): \"" << aff.fileName() << "\" reason: " << aff.errorString();
-        return false;
-    }
-
-    QTextStream as(&aff);
-    as << affixLines.join(QChar::LineFeed).toUtf8();
-    as << QChar(QChar::LineFeed);
-    as.flush();
-    if (!aff.commit()) {
-        qWarning().nospace().noquote() << "mudlet::overwriteAffixFile(...) ERROR - failed to commit affix file: \"" << aff.fileName() << "\" reason: " << aff.errorString();
-        return false;
-    }
-
-    return true;
-}
-
-// Returns the count of words in the first argument:
-int mudlet::scanWordList(QStringList& wl, QHash<QString, unsigned int>& gc)
-{
-    const int wordCount = wl.count();
-    if (wordCount > 1) {
-        // This will use the system default locale - it might be better to use
-        // the Mudlet one...
-        QCollator sorter;
-        sorter.setCaseSensitivity(Qt::CaseSensitive);
-        std::sort(wl.begin(), wl.end(), sorter);
-    }
-
-    for (const auto& word : wl) {
-        // qDebug().nospace().noquote() << "    " << wordList.at(index);
-        QTextBoundaryFinder graphemeFinder(QTextBoundaryFinder::Grapheme, word);
-        // The finder will be at the start of the string
-        int startPos = 0;
-        int endPos = graphemeFinder.toNextBoundary();
-        do {
-            if (endPos > 0) {
-                const QString grapheme(word.mid(startPos, endPos - startPos));
-                if (gc.contains(grapheme)) {
-                    ++gc[grapheme];
-                } else {
-                    gc[grapheme] = 1;
-                }
-                startPos = endPos;
-                endPos = graphemeFinder.toNextBoundary();
-            }
-        } while (endPos > 0);
-    }
-
-    return wordCount;
-}
-
-// This will load up the spelling dictionary for the profile - and handles the
-// absence of files for the first run in a new profile or from an older
-// Mudlet version - it processes any changes made by the user in the ".dic" file
-// and regenerates (deduplicates and sorts) it and rebuilds (the "TRY" line in)
-// the ".aff" file:
-Hunhandle* mudlet::prepareProfileDictionary(const QString& hostName, QSet<QString>& wordSet)
-{
-    // Need to check that the files exist first:
-    // full dictionary path+filename
-    QString dictionaryPath(MudletApp::getMudletPath(enums::profileDataItemPath, hostName, qsl("profile.dic")));
-    // full affix path+filename
-    QString affixPath(MudletApp::getMudletPath(enums::profileDataItemPath, hostName, qsl("profile.aff")));
-
-    int oldWordCount = 0;
-    QStringList wordList;
-    QHash<QString, unsigned int> graphemeCounts;
-
-    if (!scanDictionaryFile(dictionaryPath, oldWordCount, graphemeCounts, wordList)) {
-        return nullptr;
-    }
-
-    if (!overwriteDictionaryFile(dictionaryPath, wordList)) {
-        return nullptr;
-    }
-
-    // We have read, sorted (and deduplicated if it was) the wordlist
-    const int wordCount = wordList.count();
-    if (wordCount > oldWordCount) {
-        qDebug().nospace().noquote() << "  Considered an extra " << wordCount - oldWordCount << " words.";
-    } else if (wordCount < oldWordCount) {
-        qDebug().nospace().noquote() << "  Considered " << oldWordCount - wordCount << " fewer words.";
-    } else {
-        qDebug().nospace().noquote() << "  No change in the number of words in dictionary.";
-    }
-
-    if (!overwriteAffixFile(affixPath, graphemeCounts)) {
-        return nullptr;
-    }
-
-    // The pair of files are now usable by hunspell library and being use to make
-    // suggestions - they are also capable of being munched - but since we are
-    // using this on our own profiles' dictionaries we will not know the
-    // language that the Mud uses and thus which locale's affixes are suitable.
-
-    // Also, given how we are using the dictionary, any affix rules are going
-    // to confuse our add/remove code.  We just need the SET line to force the
-    // Hunspell API to be UTF-8 and the TRY line to allow for searching for
-    // completions. Anyhow we now need to keep the copy of the word list ourself
-    // to allow for persistent editing of it as it is not possible to obtain it
-    // from the Hunspell library:
-
-    wordSet = QSet<QString>(wordList.begin(), wordList.end());
-
-#if defined(Q_OS_WINDOWS)
-    mudlet::self()->sanitizeUtf8Path(dictionaryPath, qsl("profile.dic"));
-    mudlet::self()->sanitizeUtf8Path(affixPath, qsl("profile.aff"));
-#endif
-    return Hunspell_create(affixPath.toUtf8().constData(), dictionaryPath.toUtf8().constData());
-}
-
-// This will load up the shared spelling dictionary for profiles that want it
-// - and handles the absence of files for the first run from an older Mudlet
-// version - it processes any changes made by the user in the ".dic" file and
-// regenerates (deduplicates and sorts) it and (rebuilds the "TRY" line) in
-// the ".aff" file:
-Hunhandle* mudlet::prepareSharedDictionary()
-{
-    if (mpHunspell_sharedDictionary) {
-        return mpHunspell_sharedDictionary;
-    }
-
-    // Need to check that the files exist first:
-    QString dictionaryPath(MudletApp::getMudletPath(enums::mainDataItemPath, qsl("mudlet.dic")));
-    QString affixPath(MudletApp::getMudletPath(enums::mainDataItemPath, qsl("mudlet.aff")));
-    int oldWordCount = 0;
-    QStringList wordList;
-    QHash<QString, unsigned int> graphemeCounts;
-
-    if (!scanDictionaryFile(dictionaryPath, oldWordCount, graphemeCounts, wordList)) {
-        return nullptr;
-    }
-
-    if (!overwriteDictionaryFile(dictionaryPath, wordList)) {
-        return nullptr;
-    }
-
-    // We have read, sorted (and deduplicated if it was) the wordlist
-    const int wordCount = wordList.count();
-    if (wordCount > oldWordCount) {
-        qDebug().nospace().noquote() << "  Considered an extra " << wordCount - oldWordCount << " words.";
-    } else if (wordCount < oldWordCount) {
-        qDebug().nospace().noquote() << "  Considered " << oldWordCount - wordCount << " fewer words.";
-    } else {
-        qDebug().nospace().noquote() << "  No change in the number of words in dictionary.";
-    }
-
-    if (!overwriteAffixFile(affixPath, graphemeCounts)) {
-        return nullptr;
-    }
-
-    mWordSet_shared = QSet<QString>(wordList.begin(), wordList.end());
-
-#if defined(Q_OS_WINDOWS)
-    mudlet::self()->sanitizeUtf8Path(affixPath, qsl("profile.dic"));
-    mudlet::self()->sanitizeUtf8Path(dictionaryPath, qsl("profile.aff"));
-#endif
-    mpHunspell_sharedDictionary = Hunspell_create(affixPath.toUtf8().constData(), dictionaryPath.toUtf8().constData());
-    return mpHunspell_sharedDictionary;
-}
-
-// This commits any changes noted in the wordSet into the ".dic" file and
-// regenerates the ".aff" file.
-bool mudlet::saveDictionary(const QString& pathFileBaseName, QSet<QString>& wordSet)
-{
-    // First update the line count in the list of words
-    const QString dictionaryPath(qsl("%1.dic").arg(pathFileBaseName));
-    const QString affixPath(qsl("%1.aff").arg(pathFileBaseName));
-    QHash<QString, unsigned int> graphemeCounts;
-
-    // The file will have previously been created - for it to be missing now is
-    // not expected - thought it shouldn't really be fatal...
-    const int oldWordCount = getDictionaryWordCount(dictionaryPath);
-    if (oldWordCount == -1) {
-        return false;
-    }
-
-    QStringList wordList{wordSet.begin(), wordSet.end()};
-
-    // This also sorts wordList as a wanted side-effect:
-    const int wordCount = scanWordList(wordList, graphemeCounts);
-    // We have sorted and scanned the wordlist
-    if (wordCount > oldWordCount) {
-        qDebug().nospace().noquote() << "  Saved an extra " << wordCount - oldWordCount << " words in dictionary.";
-    } else if (wordCount < oldWordCount) {
-        qDebug().nospace().noquote() << "  Saved " << oldWordCount - wordCount << " fewer words in dictionary.";
-    } else {
-        qDebug().nospace().noquote() << "  No change in the number of words saved in dictionary.";
-    }
-
-    if (!overwriteDictionaryFile(dictionaryPath, wordList)) {
-        return false;
-    }
-
-    if (!overwriteAffixFile(affixPath, graphemeCounts)) {
-        return false;
-    }
-
-    return true;
-}
-
-QPair<bool, bool> mudlet::addWordToSet(const QString& word)
-{
-    bool isAdded = false;
-    Hunspell_add(mpHunspell_sharedDictionary, word.toUtf8().constData());
-    if (!mWordSet_shared.contains(word)) {
-        mWordSet_shared.insert(word);
-        qDebug().noquote().nospace() << "mudlet::addWordToSet(\"" << word << "\") INFO - word added to shared mWordSet.";
-        isAdded = true;
-    }
-    return qMakePair(true, isAdded);
-}
-
-QPair<bool, bool> mudlet::removeWordFromSet(const QString& word)
-{
-    bool isRemoved = false;
-    Hunspell_remove(mpHunspell_sharedDictionary, word.toUtf8().constData());
-    if (mWordSet_shared.remove(word)) {
-        qDebug().noquote().nospace() << "mudlet::removeWordFromSet(\"" << word << "\") INFO - word removed from shared mWordSet.";
-        isRemoved = true;
-    }
-    return qMakePair(true, isRemoved);
-}
-
-QSet<QString> mudlet::getWordSet()
-{
-    QSet<QString> wordSet;
-    // Got read lock within the timeout:
-    wordSet = mWordSet_shared;
-    // Ensure we make a deep copy of it so the caller is not affected by
-    // other profiles' edits.
-    wordSet.detach();
-    // Now we can unlock it:
-    return wordSet;
-}
-
 std::pair<bool, QString> mudlet::setProfileIcon(const QString& profile, const QString& newIconPath)
 {
     QDir dir;
@@ -7812,56 +7467,6 @@ std::pair<bool, QString> mudlet::resetProfileIcon(const QString& profile)
 
     return {true, QString()};
 }
-
-#if defined(Q_OS_WINDOWS)
-// credit to Qt Creator (https://github.com/qt-creator/qt-creator/blob/50d93a656789d6e776ecca4adc2e5b487bac0dbc/src/libs/utils/fileutils.cpp)
-static QString getShortPathName(const QString& name)
-{
-    if (name.isEmpty()) {
-        return name;
-    }
-
-    // Determine length, then convert.
-    const LPCTSTR nameC = reinterpret_cast<LPCTSTR>(name.utf16()); // MinGW
-    const DWORD length = GetShortPathNameW(nameC, NULL, 0);
-    if (length == 0) {
-        return name;
-    }
-    QScopedArrayPointer<TCHAR> buffer(new TCHAR[length]);
-    GetShortPathNameW(nameC, buffer.data(), length);
-    const QString rc = QString::fromWCharArray(buffer.data(), length - 1);
-
-    return rc;
-}
-
-// 'strip' non-ASCII characters from the path by copying it to a location without them
-// this is only an issue for the Win32 API; macOS and Linux don't have such issues
-void mudlet::sanitizeUtf8Path(QString& originalLocation, const QString& fileName) const
-{
-    static auto findNonAscii = QRegularExpression(qsl("([^ -~])"));
-
-    auto nonAscii = findNonAscii.match(originalLocation);
-    if (!nonAscii.hasMatch()) {
-        return;
-    }
-
-    const auto shortPath = getShortPathName(originalLocation);
-    // short path name might not always work: https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getshortpathnamew#remarks
-    if (shortPath != originalLocation) {
-        originalLocation = shortPath;
-        return;
-    }
-
-    const QString pureANSIpath = qsl("C:\\Windows\\Temp\\mudlet_%1").arg(fileName);
-    if (!QFileInfo::exists(pureANSIpath)) {
-        if (!QFile::copy(originalLocation, pureANSIpath)) {
-            qWarning() << "mudlet::sanitizeUtf8Path() ERROR: couldn't copy" << originalLocation << "to location without ASCII characters";
-        } else {
-            originalLocation = pureANSIpath;
-        }
-    }
-}
-#endif
 
 void mudlet::activateProfile(Host* pHost)
 {
@@ -9472,6 +9077,11 @@ void mudlet::moveProfileFromDetachedToMainWindow(const QString& profileName, TDe
 
     // Update main window title to reflect moved profile
     updateMainWindowTitle();
+}
+
+QDockWidget* mudlet::getMainWindowDockWidget(const QString& mapKey) const
+{
+    return mMainWindowDockWidgetMap.value(mapKey);
 }
 
 void mudlet::updateMainWindowDockWidgetVisibilityForProfile(const QString& profileName)

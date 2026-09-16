@@ -53,6 +53,8 @@
  * Run with: ctest -R MapDownloadTest -V
  */
 
+#include <QDataStream>
+#include <QSaveFile>
 #include <QFileInfo>
 #include <QFrame>
 #include <QHash>
