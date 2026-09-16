@@ -1109,10 +1109,7 @@ int TLuaInterpreter::feedTelnet(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L,
-                        "feedTelnet: bad argument #1 type (imitation game server data as string\n"
-                        "expected, got %s!)",
-                        luaL_typename(L, 1));
+        lua_pushfstring(L, "feedTelnet: bad argument #1 type (imitation game server data as string expected, got %s!)", luaL_typename(L, 1));
         lua_error(L);
         Q_UNREACHABLE();
     }
@@ -1161,10 +1158,7 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L,
-                        "feedTriggers: bad argument #1 type (imitation game server text as string\n"
-                        "expected, got %s!)",
-                        luaL_typename(L, 1));
+        lua_pushfstring(L, "feedTriggers: bad argument #1 type (imitation game server text as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
 
