@@ -28,6 +28,7 @@
 #include <QHash>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QRegularExpression>
 
 #include <memory>
 #include <vector>
@@ -288,6 +289,55 @@ private slots:
         QVERIFY(!reconciler.inFlight());
     }
 
+    void aTokenAllowedInTheClearIsOnlyMarkedSoOnceItHasLanded()
+    {
+        // Until its own token is written, the token beside the metadata is the previous one, which may
+        // be limited to encrypted connections - so the first metadata write says so, and a third step
+        // relaxes it afterwards.
+        FakeStore store;
+        Outcomes outcomes;
+        SignInStoreReconciler reconciler(store.performer());
+        unsigned int id = 0;
+        id = reconciler.setIntent(Intent::full(qsl("acct:char"), qsl("discord"), false, qsl("tok-clear")), outcomes.recorder(&id));
+
+        store.release(0);
+        store.release(1);
+        QCOMPARE(store.operations(), (std::vector<Operation>{Operation::WriteMetadata, Operation::WriteToken, Operation::WriteMetadata}));
+        QCOMPARE(QJsonDocument::fromJson(store.calls[0].payload.toUtf8()).object().value(qsl("secure_only")), QJsonValue(true));
+        QCOMPARE(store.calls[1].payload, qsl("tok-clear"));
+        const QJsonObject relaxed = QJsonDocument::fromJson(store.calls[2].payload.toUtf8()).object();
+        QCOMPARE(relaxed.value(qsl("secure_only")), QJsonValue(false));
+        QCOMPARE(relaxed.value(qsl("account")).toString(), qsl("acct:char"));
+        QCOMPARE(relaxed.value(qsl("provider")).toString(), qsl("discord"));
+        QVERIFY(!relaxed.contains(qsl("token")));
+        QVERIFY(outcomes.byId[id].empty());
+
+        store.release(2);
+        QCOMPARE(outcomes.byId[id].size(), std::size_t{1});
+        QCOMPARE(outcomes.byId[id][0].outcome, Outcome::Reached);
+    }
+
+    void aFailedSaveNeverAllowsThePreviousTokenInTheClear()
+    {
+        // The token write fails and so does removing the old token: the old token stays, so the only
+        // metadata written beside it must still be the strict one.
+        FakeStore store;
+        Outcomes outcomes;
+        SignInStoreReconciler reconciler(store.performer());
+        unsigned int id = 0;
+        id = reconciler.setIntent(Intent::full(qsl("acct:char"), QString(), false, qsl("tok-clear")), outcomes.recorder(&id));
+
+        store.release(0);
+        store.release(1, false, qsl("keychain locked"));
+        store.release(2, false, qsl("still locked"));
+
+        QCOMPARE(store.operations(), (std::vector<Operation>{Operation::WriteMetadata, Operation::WriteToken, Operation::RemoveToken}));
+        QCOMPARE(QJsonDocument::fromJson(store.calls[0].payload.toUtf8()).object().value(qsl("secure_only")), QJsonValue(true));
+        QCOMPARE(outcomes.byId[id].size(), std::size_t{1});
+        QCOMPARE(outcomes.byId[id][0].outcome, Outcome::Failed);
+        QCOMPARE(outcomes.byId[id][0].failedAt, Operation::WriteToken);
+    }
+
     void aNewerIntentDuringTheStaleTokenRemovalStillWins()
     {
         // The removal is part of the failed request's sequence, so a newer intent supersedes it on the
@@ -515,6 +565,22 @@ private slots:
         store.release(0);
         QVERIFY(outcomes.byId[id].empty());
         QCOMPARE(store.calls.size(), std::size_t{1});
+    }
+
+    void aFailureArrivingAfterDestructionIsLogged()
+    {
+        // No completion is left to hear it, so the log is the only record that the store did not end up
+        // as asked.
+        FakeStore store;
+        Outcomes outcomes;
+        auto reconciler = std::make_unique<SignInStoreReconciler>(store.performer());
+        unsigned int id = 0;
+        id = reconciler->setIntent(fullIntent(qsl("tok-1")), outcomes.recorder(&id));
+
+        reconciler.reset();
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("finished after its profile closed, and failed:.*WriteMetadata.*disk full")));
+        store.release(0, false, qsl("disk full"));
+        QVERIFY(outcomes.byId[id].empty());
     }
 
     // ---- The token only ever reaches the store by being written ---------------

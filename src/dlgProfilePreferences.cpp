@@ -4496,15 +4496,16 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     checkBox_askTlsAvailable->setChecked(pHost->mAskTlsAvailable);
 
-    // The "forget saved sign-in" button is gated on the stored sign-in's metadata key existing, not on
+    // The "forget saved sign-in" button is gated on either of the stored sign-in's keys existing, not on
     // the sign-in-choice flag: an oauth-only game never sets that flag yet still mints tokens. The
-    // metadata is the right half to test because it is the one the store can never be left without
-    // while a token survives, and because a token-less resume hint - {account, provider}, left behind
-    // when a rejected token was dropped - is still something the player may want to forget. The
-    // keychain check is asynchronous, so start hidden and reveal on a hit; the QPointer guards against
-    // the dialog closing before the store answers. credentialExists() collapses a read failure
-    // (locked/denied/timed-out keychain) to "nothing stored", so the button deliberately stays hidden on
-    // any read failure - the only cost is not offering to forget an entry that could not be read.
+    // metadata alone is not enough to test. Mudlet 5.0.1 keeps the whole sign-in under the
+    // metadata key, so forgetting it there leaves this build's token key behind with nothing to offer
+    // its removal. A token-less resume hint - {account, provider}, left behind when a rejected token was
+    // dropped - is still something the player may want to forget, too. The keychain check is
+    // asynchronous, so start hidden and reveal on a hit; the QPointer guards against the dialog closing
+    // before the store answers. credentialExists() collapses a read failure (locked/denied/timed-out
+    // keychain) to "nothing stored", so the button deliberately stays hidden on any read failure - the
+    // only cost is not offering to forget an entry that could not be read.
     pushButton_forgetSavedSignIn->setEnabled(mEnableGMCP->isChecked());
     // Once per profile rather than once per run: reading the keychain can cost
     // the user a prompt on some platforms, for an answer that hardly changes
@@ -4513,13 +4514,27 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         pushButton_forgetSavedSignIn->setVisible(false);
         QPointer<dlgProfilePreferences> safeDialog = this;
         QPointer<CredentialManager> credentialManager = new CredentialManager();
-        credentialManager->credentialExists(pHost->getName(), qsl("reconnect"), [safeDialog, credentialManager](bool exists) {
+        const QString profileName = pHost->getName();
+        credentialManager->credentialExists(profileName, qsl("reconnect"), [safeDialog, credentialManager, profileName](bool exists) {
             if (credentialManager) {
                 credentialManager->deleteLater();
             }
-            if (safeDialog && exists) {
-                safeDialog->pushButton_forgetSavedSignIn->setVisible(true);
+            if (!safeDialog) {
+                return;
             }
+            if (exists) {
+                safeDialog->pushButton_forgetSavedSignIn->setVisible(true);
+                return;
+            }
+            QPointer<CredentialManager> tokenChecker = new CredentialManager();
+            tokenChecker->credentialExists(profileName, qsl("reconnect-token"), [safeDialog, tokenChecker](bool tokenExists) {
+                if (tokenChecker) {
+                    tokenChecker->deleteLater();
+                }
+                if (safeDialog && tokenExists) {
+                    safeDialog->pushButton_forgetSavedSignIn->setVisible(true);
+                }
+            });
         });
     }
 

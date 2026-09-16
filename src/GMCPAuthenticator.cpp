@@ -122,8 +122,9 @@ bool readStoredTransportRequirement(const QJsonObject& entry)
 
 // The two credential-store keys a profile's saved sign-in occupies: non-secret metadata under one, the
 // bearer token under the other. SignInStoreReconciler::sequenceFor() owns the ordering - a full save
-// writes metadata then token, a resume hint removes the token then rewrites the metadata, and a forget
-// removes token then metadata - and every step is conditional on the one before. Whichever sequence
+// writes metadata then token (relaxing secure_only only once the token has landed), a resume hint
+// removes the token then rewrites the metadata, and a forget removes token then metadata - and every
+// step is conditional on the one before. Whichever sequence
 // fails part way, what survives is the harmless half without the secret, never the secret without the
 // metadata, which is the half the preferences "Forget saved sign-in" control keys off.
 //
@@ -495,42 +496,36 @@ void GMCPAuthenticator::storeReconnectToken(const QString& account, QString toke
     // attempt rather than whichever is live when the write lands; see mAnnouncedSaveForAttempt.
     const auto attemptGeneration = mAuthAttemptGeneration;
 
-    // safeHost stands in for `this` as well: Host owns this authenticator, and the reconciler that
-    // invokes this completion dies with the authenticator, so `this` is valid whenever safeHost is.
-    QPointer<Host> safeHost = mpHost;
-    mpStoreReconciler->setIntent(
-            std::move(intent), [this, safeHost, worthAnnouncing, attemptGeneration](SignInStoreReconciler::Outcome outcome, SignInStoreReconciler::Operation failedAt, QString error) {
-                using Outcome = SignInStoreReconciler::Outcome;
-                using Operation = SignInStoreReconciler::Operation;
-                // Log before the liveness check: a save can resolve, or time out, after the profile has
-                // closed, and that is precisely when the record of a token that never reached disk matters.
-                if (outcome == Outcome::Failed) {
-                    qWarning().noquote() << "GMCP Char.Login.Token - failed to store the" << (failedAt == Operation::WriteToken ? "reconnect token:" : "sign-in details:") << error;
-                }
-                if (!safeHost) {
-                    return;
-                }
-                switch (outcome) {
-                case Outcome::Superseded:
-                    // A newer request owns the outcome now. Saying anything here would be the stale warning
-                    // or the duplicate announcement the reconciler exists to prevent.
-                    return;
-                case Outcome::Failed:
-                    //: Shown when the user opted to stay signed in but saving the sign-in token failed, so they will have to sign in again next time.
-                    safeHost->postMessage(tr("[ WARN ]  - Could not save your sign-in for next time; you may need to sign in again."));
-                    return;
-                case Outcome::Reached:
-                    // Announced only once the token itself has landed, and at most once per sign-in attempt.
-                    if (!worthAnnouncing || mAnnouncedSaveForAttempt == attemptGeneration) {
-                        return;
-                    }
-                    mAnnouncedSaveForAttempt = attemptGeneration;
-                    //: Shown once after a browser/OAuth sign-in whose reconnect token was saved, so future connects need no sign-in.
-                    //: "Privacy and security" is the name of a page in the preferences dialog; translate it the same way there.
-                    safeHost->postMessage(tr("[ INFO ]  - You'll be signed in automatically next time. Manage this under Preferences, Privacy and security."));
-                    return;
-                }
-            });
+    // The reconciler that invokes this completion dies with this authenticator, before the Host, so
+    // neither `this` nor mpHost can be gone when it runs. A save that fails after the profile has
+    // closed is logged by the reconciler itself instead.
+    mpStoreReconciler->setIntent(std::move(intent), [this, worthAnnouncing, attemptGeneration](SignInStoreReconciler::Outcome outcome, SignInStoreReconciler::Operation failedAt, QString error) {
+        using Outcome = SignInStoreReconciler::Outcome;
+        using Operation = SignInStoreReconciler::Operation;
+        if (outcome == Outcome::Failed) {
+            qWarning().noquote() << "GMCP Char.Login.Token - failed to store the" << (failedAt == Operation::WriteToken ? "reconnect token:" : "sign-in details:") << error;
+        }
+        switch (outcome) {
+        case Outcome::Superseded:
+            // A newer request owns the outcome now. Saying anything here would be the stale warning
+            // or the duplicate announcement the reconciler exists to prevent.
+            return;
+        case Outcome::Failed:
+            //: Shown when the user opted to stay signed in but saving the sign-in token failed, so they will have to sign in again next time.
+            mpHost->postMessage(tr("[ WARN ]  - Could not save your sign-in for next time; you may need to sign in again."));
+            return;
+        case Outcome::Reached:
+            // Announced only once the token itself has landed, and at most once per sign-in attempt.
+            if (!worthAnnouncing || mAnnouncedSaveForAttempt == attemptGeneration) {
+                return;
+            }
+            mAnnouncedSaveForAttempt = attemptGeneration;
+            //: Shown once after a browser/OAuth sign-in whose reconnect token was saved, so future connects need no sign-in.
+            //: "Privacy and security" is the name of a page in the preferences dialog; translate it the same way there.
+            mpHost->postMessage(tr("[ INFO ]  - You'll be signed in automatically next time. Manage this under Preferences, Privacy and security."));
+            return;
+        }
+    });
 }
 
 void GMCPAuthenticator::sendResume(const QString& account, const QString& provider)
@@ -565,15 +560,11 @@ void GMCPAuthenticator::storeResumeHint(const QString& account, const QString& p
 {
     auto intent = SignInStoreReconciler::Intent::hint(account, provider);
 
-    QPointer<Host> safeHost = mpHost;
-    mpStoreReconciler->setIntent(std::move(intent), [this, safeHost](SignInStoreReconciler::Outcome outcome, SignInStoreReconciler::Operation, QString error) {
+    mpStoreReconciler->setIntent(std::move(intent), [this](SignInStoreReconciler::Outcome outcome, SignInStoreReconciler::Operation, QString error) {
         if (outcome != SignInStoreReconciler::Outcome::Failed) {
             return;
         }
         qWarning().noquote() << "GMCP Char.Login - failed to keep the sign-in resume hint after a rejected token:" << error;
-        if (!safeHost) {
-            return;
-        }
         // The dead token may still be stored. Drop the whole entry rather than leave it replayable;
         // losing the resume hint only costs the player one provider menu.
         discardReconnectToken();
@@ -586,7 +577,13 @@ void GMCPAuthenticator::forgetSavedSignIn(std::function<void(bool success)> call
     // awaiting the result of a token it replayed - can see that the player has since asked for all of
     // it to go, and stops short of putting any of it back.
     ++mForgetGeneration;
-    discardReconnectToken(std::move(callback));
+    ++mForgetsInFlight;
+    discardReconnectToken([this, callback = std::move(callback)](bool success) {
+        --mForgetsInFlight;
+        if (callback) {
+            callback(success);
+        }
+    });
 }
 
 void GMCPAuthenticator::discardReconnectToken(std::function<void(bool success)> callback)
@@ -971,6 +968,13 @@ void GMCPAuthenticator::retryOrDropRejectedToken()
         // the next attempt restarts the same provider's browser sign-in with no menu - unless the player
         // has since asked to forget the sign-in, in which case the hint is theirs to have removed.
         if (!forgotten) {
+            // Without a token read back there was no rotation check, so a token another instance
+            // rotated in meanwhile goes too. The readers only log at debug level, since an unreadable
+            // key is usually just an absent one, so this is the one place that says so.
+            if (!success || entry.tokenUnreadable) {
+                qWarning().noquote() << "GMCP Char.Login - could not read the saved token back after a rejected reconnect, so could not check whether another Mudlet instance had "
+                                        "replaced it; removing whatever token is stored.";
+            }
             dropTokenKeepResumeHint(reconnectAccount, accountProvider);
         }
         if (superseded) {
@@ -1242,11 +1246,12 @@ void GMCPAuthenticator::readStoredSignInEntry(std::function<void(bool success, S
                             if (tokenSuccess) {
                                 entry.token = std::move(tokenValue);
                             } else {
+                                entry.tokenUnreadable = true;
                                 // CredentialManager cannot tell an absent key from a failed read, and the common
                                 // reason to land here is the ordinary one: this entry is a resume hint with no token
                                 // to find. Debug rather than a warning for that reason - but note what it costs the
                                 // one caller that treats an empty token as evidence: retryOrDropRejectedToken() then
-                                // cannot see a token another instance rotated, and drops this one. Same #10587.
+                                // cannot see a token another instance rotated, drops it, and warns. Same #10587.
                                 qDebug().noquote() << "GMCP Char.Login - no saved token was read; using the stored sign-in as a resume hint only:" << tokenError;
                             }
                             callback(true, std::move(entry), attemptGeneration);
@@ -1258,7 +1263,8 @@ void GMCPAuthenticator::readStoredSignIn(bool allowToken)
 {
     QPointer<Host> safeHost = mpHost;
     const auto forgetGeneration = mForgetGeneration;
-    readStoredSignInEntry([this, safeHost, allowToken, forgetGeneration](bool, StoredSignIn entry, unsigned int attemptGeneration) {
+    const bool forgetInFlight = mForgetsInFlight > 0;
+    readStoredSignInEntry([this, safeHost, allowToken, forgetGeneration, forgetInFlight](bool, StoredSignIn entry, unsigned int attemptGeneration) {
         // The Host (which owns this authenticator) may have gone away while the read was in flight.
         if (!safeHost) {
             SecureStringUtils::secureStringClear(entry.token);
@@ -1270,11 +1276,12 @@ void GMCPAuthenticator::readStoredSignIn(bool allowToken)
             SecureStringUtils::secureStringClear(entry.token);
             return;
         }
-        // The player asked to forget the saved sign-in while this read was in flight, so what it
-        // returned is already on its way out of the store: treat it as nothing stored. Replaying the
-        // token would sign in with the credential being discarded, and resuming its provider would act
-        // on a hint that is going too. This connection still gets a way in, from selectAuthMethod().
-        if (forgetGeneration != mForgetGeneration) {
+        // The player asked to forget the saved sign-in while this read was in flight, or before it began
+        // with the removal not yet finished, so what it returned may already be on its way out of the
+        // store: treat it as nothing stored. Replaying the token would sign in with the credential being
+        // discarded, and resuming its provider would act on a hint that is going too. This connection
+        // still gets a way in, from selectAuthMethod().
+        if (forgetInFlight || forgetGeneration != mForgetGeneration) {
             SecureStringUtils::secureStringClear(entry.token);
             selectAuthMethod();
             return;

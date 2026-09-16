@@ -93,6 +93,7 @@ public:
     };
 
     enum class Operation { WriteMetadata, WriteToken, RemoveToken, RemoveMetadata };
+    Q_ENUM(Operation)
 
     enum class Outcome {
         Reached,   // the store now holds the requested end state
@@ -105,7 +106,7 @@ public:
     // WriteToken, and empty for the removals. Must call done exactly once, and on the reconciler's own
     // thread - nothing here is synchronised, and Mudlet is single-threaded outside Qt's networking.
     // done may be called synchronously from inside the performer; one arriving after the reconciler is
-    // destroyed is discarded. A Performer that never calls done at all leaves the reconciler
+    // destroyed is discarded, and logged if it reports a failure. A Performer that never calls done at all leaves the reconciler
     // permanently occupied - see setIntent().
     using Performer = std::function<void(Operation op, QString payload, Done done)>;
     // failedAt is meaningful only when outcome is Failed.
@@ -144,8 +145,10 @@ private:
         QString failureError;
     };
 
-    static std::vector<Operation> sequenceFor(Shape shape);
-    static QString metadataPayload(const Intent& intent);
+    static std::vector<Operation> sequenceFor(const Intent& intent);
+    // tokenWritten: this intent's own token is already stored, so its transport requirement may be
+    // written as asked rather than as the strict one that guards whichever token preceded it.
+    static QString metadataPayload(const Intent& intent, bool tokenWritten);
     static void scrub(Request& request);
     void start();
     // Hands one operation to the performer on behalf of the active request. The completion is guarded

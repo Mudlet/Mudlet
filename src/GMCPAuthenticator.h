@@ -42,6 +42,7 @@ class OAuthClientFlow;
 class GMCPAuthenticator
 {
     Q_DECLARE_TR_FUNCTIONS(GMCPAuthenticator)
+    friend class GMCPCharLoginTest;
 
 public:
     explicit GMCPAuthenticator(Host* pHost);
@@ -91,6 +92,9 @@ private:
         // unreadable never widens a stored token's exposure.
         bool secureOnly = true;
         QString token;
+        // The metadata named an account but its token could not be read - most often because a resume
+        // hint has none, but indistinguishably a store that failed to answer.
+        bool tokenUnreadable = false;
     };
     // Reads the stored sign-in as one entry, following the token wherever it lives: inline in the
     // metadata for an entry written before the split, otherwise under its own key. Reports the auth
@@ -261,6 +265,10 @@ private:
     // just removed, and a rotation re-saves it under a fresh value - leaving Forget with nothing to show
     // for itself. Not part of mConn: it must monotonically increase, never reset.
     unsigned int mForgetGeneration = 0;
+    // Forgets whose removal has not answered yet. A read that begins while one is outstanding may still
+    // find what it is removing, and the generation it captures already counts that forget, so
+    // readStoredSignIn() checks this as well.
+    unsigned int mForgetsInFlight = 0;
 
     // A server can pack thousands of Char.Login.Default frames into one packet and every sign-in
     // attempt reads the credential store. Throttling bounds that cost by wall clock rather than by how

@@ -22,6 +22,7 @@
 #include "SecureStringUtils.h"
 #include "utils.h"
 
+#include <QDebug>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QPointer>
@@ -71,14 +72,23 @@ SignInStoreReconciler::Intent SignInStoreReconciler::Intent::absent()
     return Intent{};
 }
 
-std::vector<SignInStoreReconciler::Operation> SignInStoreReconciler::sequenceFor(Shape shape)
+std::vector<SignInStoreReconciler::Operation> SignInStoreReconciler::sequenceFor(const Intent& intent)
 {
     // The write goes metadata first and the token only after, so a failure part-way leaves a resume
     // hint rather than a token paired with metadata that never landed. The removals go token first,
     // so a failure part-way leaves harmless metadata rather than an orphaned secret - and leaves the
     // metadata the preferences UI keys "Forget saved sign-in" on, so the player can retry.
-    switch (shape) {
+    //
+    // That first metadata write always says secure_only, whatever the intent asks for: until the new
+    // token lands, the token beside it is the previous one, which may be limited to encrypted
+    // connections. A token allowed in the clear gets a third step that relaxes the requirement once
+    // its own token is the one stored, so neither a read in between nor a failure part-way can pair an
+    // encrypted-only token with permission to send it in the clear.
+    switch (intent.shape) {
     case Shape::Full:
+        if (!intent.secureOnly) {
+            return {Operation::WriteMetadata, Operation::WriteToken, Operation::WriteMetadata};
+        }
         return {Operation::WriteMetadata, Operation::WriteToken};
     case Shape::Hint:
         return {Operation::RemoveToken, Operation::WriteMetadata};
@@ -88,7 +98,7 @@ std::vector<SignInStoreReconciler::Operation> SignInStoreReconciler::sequenceFor
     return {};
 }
 
-QString SignInStoreReconciler::metadataPayload(const Intent& intent)
+QString SignInStoreReconciler::metadataPayload(const Intent& intent, bool tokenWritten)
 {
     // Never the token: keeping the secret out of this JSON is the point of the split storage.
     QJsonObject obj;
@@ -97,7 +107,7 @@ QString SignInStoreReconciler::metadataPayload(const Intent& intent)
         obj[qsl("provider")] = intent.provider;
     }
     if (intent.shape == Shape::Full) {
-        obj[qsl("secure_only")] = intent.secureOnly;
+        obj[qsl("secure_only")] = !tokenWritten || intent.secureOnly;
     }
     return QString::fromUtf8(QJsonDocument(obj).toJson(QJsonDocument::Compact));
 }
@@ -140,7 +150,7 @@ void SignInStoreReconciler::start()
 
 void SignInStoreReconciler::runStep()
 {
-    const auto sequence = sequenceFor(mActive->intent.shape);
+    const auto sequence = sequenceFor(mActive->intent);
     if (mActive->step >= sequence.size()) {
         // Move the request out before reporting, so a completion that immediately sets a new intent
         // finds the reconciler idle rather than re-entering a request still marked active.
@@ -157,7 +167,7 @@ void SignInStoreReconciler::runStep()
     const auto op = sequence[mActive->step];
     QString payload;
     if (op == Operation::WriteMetadata) {
-        payload = metadataPayload(mActive->intent);
+        payload = metadataPayload(mActive->intent, mActive->intent.shape == Shape::Full && mActive->step > 1);
     } else if (op == Operation::WriteToken) {
         // A genuine handover, not a copy: the performer receives the sole copy this object held, and
         // the request keeps nothing (scrub() then finds an empty string and does nothing, which is the
@@ -178,6 +188,12 @@ void SignInStoreReconciler::issue(Operation op, QString payload)
     mPerformer(op, std::move(payload), [self, id, op](bool ok, QString error) {
         if (self) {
             self->onStepDone(id, op, ok, std::move(error));
+            return;
+        }
+        // No completion can run now - the owner went with this object - so a failure that lands after
+        // the profile closed is otherwise recorded nowhere.
+        if (!ok) {
+            qWarning().noquote() << "SignInStoreReconciler - a saved sign-in store operation finished after its profile closed, and failed:" << op << error;
         }
     });
 }
