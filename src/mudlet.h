@@ -61,6 +61,7 @@
 class QAction;
 class QCloseEvent;
 class QDateTime;
+class QDockWidget;
 class QKeyEvent;
 class QMediaDevices;
 class QMediaPlayer;
@@ -226,7 +227,9 @@ public:
     // there too or a consumer cannot tell "no engine" from "nothing said yet".
     void raiseSpeechEvent(const QString& name, const QString& value);
     const QMap<QString, QPointer<TDetachedWindow>>& getDetachedWindows() const { return mDetachedWindows; }
-    QDockWidget* getMainWindowDockWidget(const QString& mapKey) const { return mMainWindowDockWidgetMap.value(mapKey); }
+    // Out of line so mudlet.h needs no more than a forward declaration -
+    // converting the QPointer this returns wants the complete type
+    QDockWidget* getMainWindowDockWidget(const QString& mapKey) const;
     std::optional<QSize> getImageSize(const QString&);
     const QString& getInterfaceLanguage() const { return mInterfaceLanguage; }
     const QLocale& getUserLocale() const { return mUserLocale; }
