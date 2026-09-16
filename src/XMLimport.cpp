@@ -40,7 +40,7 @@
 #include "TVar.h"
 #include "VarUnit.h"
 #include "mudlet.h"
-#include "dlgTriggerEditor.h"
+#include "enums.h"
 
 #include <QBuffer>
 #include <QClipboard>
@@ -1024,7 +1024,7 @@ void XMLimport::readHost(Host* pHost)
     }
 
     if (attributes().hasAttribute(QLatin1String("EditorSearchOptions"))) {
-        pHost->setSearchOptions(static_cast<dlgTriggerEditor::SearchOptions>(attributes().value(qsl("EditorSearchOptions")).toInt()));
+        pHost->setSearchOptions(static_cast<enums::EditorSearchOptions>(attributes().value(qsl("EditorSearchOptions")).toInt()));
     }
 
     pHost->setDebugShowAllProblemCodepoints(attributes().value(qsl("DebugShowAllProblemCodepoints")) == YES);
@@ -1256,8 +1256,6 @@ bool XMLimport::readHostColorElement(Host* pHost, QStringView elementName)
             {qsl("mWhite"), &Host::mWhite},
             {qsl("mLightWhite"), &Host::mLightWhite},
             {qsl("mFgColor2"), &Host::mFgColor_2},
-            {qsl("mLowerLevelColor"), &Host::mLowerLevelColor},
-            {qsl("mUpperLevelColor"), &Host::mUpperLevelColor},
             {qsl("mRoomBorderColor"), &Host::mRoomBorderColor},
             {qsl("mRoomCollisionBorderColor"), &Host::mRoomCollisionBorderColor},
             {qsl("mBlack2"), &Host::mBlack_2},
@@ -1284,6 +1282,8 @@ bool XMLimport::readHostColorElement(Host* pHost, QStringView elementName)
             {qsl("mBgColor2"), &Host::mBgColor_2},
             {qsl("mMapGridColor"), &Host::mMapGridColor},
             {qsl("mMapInfoBg"), &Host::mMapInfoBg},
+            {qsl("mLowerLevelColor"), &Host::mLowerLevelColor},
+            {qsl("mUpperLevelColor"), &Host::mUpperLevelColor},
     };
 
     const QString elemName = elementName.toString();
