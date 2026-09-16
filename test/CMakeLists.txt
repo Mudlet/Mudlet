@@ -118,6 +118,17 @@ set_tests_properties(IrcMessageFormatterTest PROPERTIES
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
 )
 
+# What communi makes of the multi-line numerics an IRC server sends, including
+# the ones it sends out of order. Needs nothing but communi for the same reason
+# the formatter test above does not.
+add_executable(IrcMessageComposerTest IrcMessageComposerTest.cpp)
+target_link_libraries(IrcMessageComposerTest PRIVATE Qt6::Test Qt6::Network communi)
+add_test(NAME IrcMessageComposerTest COMMAND $<TARGET_FILE:IrcMessageComposerTest>)
+set_tests_properties(IrcMessageComposerTest PROPERTIES
+    ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
+    TIMEOUT 60
+)
+
 # DiscordTest checks the Lua API permission gating contract by scanning the source
 target_compile_definitions(DiscordTest PRIVATE MUDLET_SRC_DIR="${CMAKE_SOURCE_DIR}/src")
 

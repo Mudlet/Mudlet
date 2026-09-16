@@ -123,6 +123,7 @@ set(TRIGGER_GROUP_TEST_SOURCES
     CaptureGroupParkingTest.cpp
     BigramFilterTest.cpp
     CorruptTriggerPatternsTest.cpp
+    EmergencyStopResumeTest.cpp
     MultilineTriggerReentrancyTest.cpp
     SetScriptCallbackTest.cpp
     TFeedTriggersRecursionTest.cpp
@@ -154,6 +155,7 @@ set(MAP_GROUP_TEST_SOURCES
     MapAreaReassignmentTest.cpp
     MapAreaSelectionTest.cpp
     MapCloseDuringImportTest.cpp
+    MapContextMenuLifetimeTest.cpp
     MapDownloadTest.cpp
     RoomExitsDialogTest.cpp
     MapLevelOfDetailTest.cpp
