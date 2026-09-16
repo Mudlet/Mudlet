@@ -6457,6 +6457,12 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
             }
             currentFgColor = buffer.at(cookedRow).at(cookedPos).foregroundRgba();
             currentBgColor = buffer.at(cookedRow).at(cookedPos).backgroundRgba();
+            if (qAlpha(currentBgColor) == 0) {
+                // A transparent cell (e.g. a system message) has no colour of its
+                // own on screen - it shows the console's background through it -
+                // so fall back to that rather than exporting alpha-0 as black.
+                currentBgColor = (mpConsole ? mpConsole->getConsoleBgColor() : QColor(Qt::black)).rgba();
+            }
             currentFlags = buffer.at(cookedRow).at(cookedPos).mFlags & TChar::TestMask;
             currentLinkIndex = charLinkIndex;
 
