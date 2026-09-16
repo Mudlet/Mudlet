@@ -92,6 +92,17 @@ class stopWatch
     friend class XMLimport;
 
 public:
+    // A stopwatch keeps its time as a count of milliseconds and, while it runs,
+    // as an effective start time that many milliseconds back from now. Both are
+    // bounded to this in either direction - a little under 31,700 years, which
+    // is past any use a stopwatch has while still leaving four orders of
+    // magnitude of what a qint64 of milliseconds holds spare - so that no
+    // arithmetic on a stopwatch's time can run out of that range and wrap
+    // around onto a time of the opposite sign. Time reaching the bound is
+    // clamped to it; a script asking for more than the whole range outright is
+    // told so instead:
+    static constexpr qint64 csmMaximumMilliSeconds = 1'000'000'000'000'000;
+
     stopWatch();
 
     bool start();
@@ -100,6 +111,7 @@ public:
     bool running() const { return mIsRunning; }
     void adjustMilliSeconds(const qint64);
     qint64 getElapsedMilliSeconds() const;
+    static qint64 clampToRange(const qint64);
     QString getElapsedDayTimeString() const;
     void setPersistent(const bool state) { mIsPersistent = state; }
     bool persistent() const { return mIsPersistent; }
@@ -446,12 +458,16 @@ public:
     struct FontFamilyResolution
     {
         QString family;       // family to actually use
-        QFont::Weight weight; // weight parsed from a "Family Style" name, QFont::Normal otherwise
-        bool available;       // false when neither the name nor a style-stripped base family is installed
+        QFont::Weight weight; // the weight parsed off a "Family Style" name, but only where the
+                              // base family is the one being used; QFont::Normal otherwise
+        bool available;       // false when neither the font database nor the platform's own
+                              // name resolution recognises the name
     };
-    // Maps a requested font name onto an installed family: the name itself when it is
-    // installed, else the base family when the name is a "Family Style" one such as
-    // "EB Garamond SemiBold" (with the style as the weight), else {requested, Normal, false}.
+    // Maps a requested font name onto a font this machine can make of it: the name itself
+    // when it is an installed family, else the base family when the name is a "Family Style"
+    // one such as "EB Garamond SemiBold" (with the style as the weight), else either of
+    // those when the platform resolves it for itself the way fontconfig resolves
+    // "Helvetica", else {requested, Normal, false}.
     FontFamilyResolution resolveFontFamily(const QString& requested) const;
     // A profile can name a font that is not installed on this machine; Qt would then
     // silently draw the console in an arbitrary substitute, so switch to the bundled
