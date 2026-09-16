@@ -1,0 +1,41 @@
+#!/bin/sh
+# Adds the Mudlet package repository and installs Mudlet:
+#   curl -fsSL @BASE_URL@/install.sh | sudo sh
+set -eu
+
+BASE_URL="@BASE_URL@"
+
+if [ "$(id -u)" -ne 0 ]; then
+  echo "Run this as root: curl -fsSL $BASE_URL/install.sh | sudo sh" >&2
+  exit 1
+fi
+
+. /etc/os-release
+
+if command -v apt-get >/dev/null 2>&1; then
+  if ! curl -fsI "$BASE_URL/deb/dists/${VERSION_CODENAME:-}/InRelease" >/dev/null; then
+    echo "There are no Mudlet packages for $PRETTY_NAME." >&2
+    exit 1
+  fi
+  install -d -m 0755 /etc/apt/keyrings
+  curl -fsSL "$BASE_URL/mudlet.asc" -o /etc/apt/keyrings/mudlet.asc
+  cat > /etc/apt/sources.list.d/mudlet.sources <<EOF
+Types: deb
+URIs: $BASE_URL/deb
+Suites: $VERSION_CODENAME
+Components: main
+Signed-By: /etc/apt/keyrings/mudlet.asc
+EOF
+  apt-get update
+  apt-get install -y mudlet
+elif command -v dnf >/dev/null 2>&1; then
+  if [ "$ID" != fedora ] || ! curl -fsI "$BASE_URL/rpm/fedora/$VERSION_ID/$(uname -m)/repodata/repomd.xml" >/dev/null; then
+    echo "There are no Mudlet packages for $PRETTY_NAME." >&2
+    exit 1
+  fi
+  curl -fsSL "$BASE_URL/rpm/mudlet.repo" -o /etc/yum.repos.d/mudlet.repo
+  dnf install -y mudlet
+else
+  echo "Mudlet packages need apt or dnf." >&2
+  exit 1
+fi
