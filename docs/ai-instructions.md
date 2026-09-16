@@ -148,7 +148,7 @@ The project uses the `.clang-format` configuration in the repo root. This ensure
 
 ### Static analysis
 
-For complete setup instructions on how to run static analysis during a build, see: https://wiki.mudlet.org/w/Compiling_Mudlet#Static_Analysis
+For complete setup instructions on how to run static analysis during a build, see: https://wiki.mudlet.org/w/Compiling_Mudlet#Static_analysis
 
 ### Git
 

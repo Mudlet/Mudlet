@@ -50,6 +50,7 @@ QString configRoot;
 // configRoot: a root that resolved to nothing would be resolved again on every
 // single call
 bool configRootSettled = false;
+// Mudlet itself only resolves on the main thread; the lock is for engine callers that may not
 QMutex configRootMutex;
 bool mudletDictionariesInUse = false;
 

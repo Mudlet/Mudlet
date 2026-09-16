@@ -33,6 +33,8 @@
 
 #include "mudlet.h"
 
+#include <QDataStream>
+#include <QSaveFile>
 #include <QDesktopServices>
 #include <QScrollBar>
 #include <QSettings>
