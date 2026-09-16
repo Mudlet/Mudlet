@@ -252,22 +252,11 @@ describe("addon commands", function()
         "the refusal quotes the binding's id as though it were a name: " .. tostring(why))
     end)
 
-    -- The clash check only runs when a package asks for a key. A binding made
-    -- afterwards is the same clash from the other end, and the menu item still
-    -- gets the key first, so it is the player's new binding that does nothing.
-    -- The binding is not the one to refuse - it is the player's own - so, as
-    -- with the buffer search, the only thing owed is saying so.
-    it("says so when a key binding is made over a command's key", function()
-      assert.is_number(place{name = "BindingClashSpec", shortcut = "Alt+F7"})
-
-      clearWindow()
-      local key = tempKey(mudlet.keymodifier.Alt, mudlet.key.F7, [[echo("bound")]])
-      local text = table.concat(getLines("main", 0, getLastLineNumber("main") + 1), "\n")
-      killKey(key)
-
-      assert.is_truthy(text:find("BindingClashSpec", 1, true),
-        "a key binding took a command's key without saying so: " .. text)
-    end)
+    -- The other direction - a binding made over a command's key - is warned
+    -- about rather than refused, since the binding is the player's own item.
+    -- That warning is shown in the editor rather than on the main screen, so
+    -- it cannot be read from here: Lua can make the clash but not open the
+    -- window that reports it. AddonControlsTest covers it instead.
 
     -- Qt keeps the first four chunks of a longer sequence and drops the rest,
     -- so the command went onto a key nobody had asked for

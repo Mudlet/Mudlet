@@ -50,6 +50,7 @@
 #include "TLuaInterpreter.h"
 #include "TelnetServerStub.h"
 #include "dlgConnectionProfiles.h"
+#include "dlgTriggerEditor.h"
 #include "mudlet.h"
 
 extern "C" {
@@ -205,6 +206,23 @@ private:
         return !answer;
     }
 
+    // The clash warnings are shown in the editor rather than on the main
+    // screen, so reaching them means opening one. slot_showScriptDialog() acts
+    // on the active profile, which is why the host wanted has to be in front
+    // first.
+    dlgTriggerEditor* editorFor(Host* pHost) const
+    {
+        if (!pHost->mpEditorDialog) {
+            mudlet::self()->activateProfile(pHost);
+            QTest::qWait(100ms);
+            mudlet::self()->slot_showScriptDialog();
+            QTest::qWait(100ms);
+        }
+        return pHost->mpEditorDialog.data();
+    }
+
+    static QString editorSaid(dlgTriggerEditor* pEditor) { return pEditor ? pEditor->mpSystemMessageArea->notificationAreaMessageBox->text() : QString(); }
+
     // On the main toolbar rather than merely somewhere in the window: a button
     // built but never added is still findable by name, and looks from here
     // exactly like one the player can press.
@@ -338,8 +356,8 @@ private slots:
         runLua(mpSecondHost, qsl("clearWindow()"));
         runLua(mpSecondHost, qsl("setConfig('f3SearchEnabled', true)"));
         QTest::qWait(200ms);
-        runLua(mpSecondHost, qsl("_clashText = table.concat(getLines('main', 0, getLastLineNumber('main') + 1), '\\n')"));
-        const QString text = luaGlobalString(mpSecondHost, qsl("_clashText"));
+        runLua(mpSecondHost, qsl("_searchClashText = table.concat(getLines('main', 0, getLastLineNumber('main') + 1), '\\n')"));
+        const QString text = luaGlobalString(mpSecondHost, qsl("_searchClashText"));
 
         runLua(mpSecondHost, qsl("setConfig('f3SearchEnabled', false)"));
         runLua(mpFirstHost, qsl("removeCommand(%1)").arg(commandId));
@@ -353,7 +371,10 @@ private slots:
     // profile is in front and takes the key from a binding another profile has
     // on it. Refusing the command over that would make a package's success
     // depend on which profiles the player happens to have open, so the command
-    // is placed and the profile losing its binding is told instead.
+    // is placed and the profile losing its binding is told instead - in its
+    // editor, not on its main screen, because a package re-places its commands
+    // at every profile load and a startup line nobody can act on is one they
+    // learn to ignore.
     //
     // Both names have to be in that warning. The refusal a package receives
     // withholds them, to stop it learning what a profile it cannot see has
@@ -364,12 +385,13 @@ private slots:
         const QString sequence = QKeySequence(QKeyCombination(Qt::AltModifier, Qt::Key_F9)).toString(QKeySequence::NativeText);
 
         QVERIFY2(runLua(mpSecondHost, qsl("_clashKeyId = tempKey(mudlet.keymodifier.Alt, mudlet.key.F9, [[echo('bound')]])")).isNull(), "the second profile's key binding could not be made");
-        runLua(mpSecondHost, qsl("clearWindow()"));
+        dlgTriggerEditor* pEditor = editorFor(mpSecondHost);
+        QVERIFY2(pEditor, "the second profile's editor could not be opened");
+        pEditor->showInfo(QString());
 
         const int commandId = addCommand(mpFirstHost, qsl("name = 'OtherProfileBinding', menuPath = 'ClashTest', shortcut = 'Alt+F9'"));
 
-        runLua(mpSecondHost, qsl("_clashText = table.concat(getLines('main', 0, getLastLineNumber('main') + 1), '\\n')"));
-        const QString text = luaGlobalString(mpSecondHost, qsl("_clashText"));
+        const QString text = editorSaid(pEditor);
 
         runLua(mpSecondHost, qsl("killKey(_clashKeyId)"));
         if (commandId > 0) {
@@ -377,7 +399,7 @@ private slots:
         }
 
         QVERIFY2(commandId > 0, "the command was refused over a binding belonging to a different profile");
-        QVERIFY2(text.contains(sequence), qPrintable(qsl("a command took another profile's key binding without saying so: %1").arg(text)));
+        QVERIFY2(text.contains(sequence), qPrintable(qsl("a command took another profile's key binding without saying so in its editor: %1").arg(text)));
         QVERIFY2(text.contains(qsl("OtherProfileBinding")), qPrintable(qsl("the warning does not say which command took the key: %1").arg(text)));
         QVERIFY2(text.contains(mFirstProfile), qPrintable(qsl("the warning does not say which profile the command is in: %1").arg(text)));
     }

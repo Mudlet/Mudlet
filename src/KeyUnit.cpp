@@ -27,6 +27,7 @@
 #include "Host.h"
 #include "TKey.h"
 #include "Tree.h"
+#include "dlgTriggerEditor.h"
 #include "mudlet.h"
 #include "utils.h"
 
@@ -189,9 +190,16 @@ void KeyUnit::warnIfAddonCommandHoldsKey(const TKey* pKey) const
     if (holders.isEmpty()) {
         return;
     }
-    //: Warning posted to the profile when a key binding is given a key an add-on command already holds. %1 is a key such as "Alt+F9", %2 a comma separated list of the commands holding it.
-    mpHost->postMessage(
-            tr("[ WARN ]  - %1 is already used by %2, which will get the key first, so this key binding will not fire.").arg(sequence.toString(QKeySequence::NativeText), holders.join(qsl(", "))));
+    // Shown in the editor rather than on the main screen, for the reason
+    // mudlet::warnProfilesLosingBindingTo() gives: a script that makes its
+    // bindings at profile load would repeat this at every startup, and a line
+    // the player learns to ignore is worse than no line. The editor is where
+    // the binding is, and where it gets changed.
+    if (mpHost->mpEditorDialog) {
+        //: Warning shown in the editor when a key binding is given a key an add-on command already holds. %1 is a key such as "Alt+F9", %2 a comma separated list of the commands holding it.
+        mpHost->mpEditorDialog->showWarning(
+                tr("%1 is already used by %2, which will get the key first, so this key binding will not fire.").arg(sequence.toString(QKeySequence::NativeText), holders.join(qsl(", "))));
+    }
 }
 
 void KeyUnit::compileAll()
