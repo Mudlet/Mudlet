@@ -3622,6 +3622,36 @@ void TLuaInterpreter::setCaptureNameGroups(const NameGroupMatches& nameGroups, c
     mCapturedNameGroupsPosList = namePositions;
 }
 
+// Registry key of the empty table "matches" holds between dispatches. Every
+// dispatch installs its own fresh table before its script runs, so only code
+// running outside any dispatch ever sees this one, and it stays in place from
+// one fire to the next for as long as nothing has been put into it
+static int emptyMatchesKey;
+
+static void installEmptyMatchesGlobal(lua_State* L)
+{
+    lua_pushlightuserdata(L, &emptyMatchesKey);
+    lua_rawget(L, LUA_REGISTRYINDEX);
+    bool reusable = false;
+    if (lua_istable(L, -1)) {
+        lua_pushnil(L);
+        if (lua_next(L, -2)) {
+            // something outside a dispatch filled it, so it is that script's now
+            lua_pop(L, 2);
+        } else {
+            reusable = true;
+        }
+    }
+    if (!reusable) {
+        lua_pop(L, 1);
+        lua_newtable(L);
+        lua_pushlightuserdata(L, &emptyMatchesKey);
+        lua_pushvalue(L, -2);
+        lua_rawset(L, LUA_REGISTRYINDEX);
+    }
+    lua_setglobal(L, "matches");
+}
+
 // No documentation available in wiki - internal function
 void TLuaInterpreter::clearCaptureGroups()
 {
@@ -3659,8 +3689,7 @@ void TLuaInterpreter::clearCaptureGroups()
 
     lua_State* L = pGlobalLua;
     const int callerStackTop = lua_gettop(L);
-    lua_newtable(L);
-    lua_setglobal(L, "matches");
+    installEmptyMatchesGlobal(L);
     lua_newtable(L);
     lua_setglobal(L, "multimatches");
 
@@ -4446,17 +4475,16 @@ void TLuaInterpreter::setChannel102Table(int& var, int& arg)
 // No documentation available in wiki - internal function
 void TLuaInterpreter::setMatches(lua_State* L)
 {
-    if (mCaptureGroupList.empty()) {
-        return;
-    }
-
-    // presized, so filling it in does not rehash the table on the way up
+    // A fresh table on every dispatch, an empty one when there are no captures:
+    // the script may keep the table it is handed, and the one left in place
+    // between dispatches is shared across them (see installEmptyMatchesGlobal()).
+    // Presized, so filling it in does not rehash the table on the way up.
     lua_createtable(L, static_cast<int>(mCaptureGroupList.size()), static_cast<int>(mCapturedNameGroups.size()));
 
     // empty capture groups stay defined keys i.e. matches[emptyCapGroupNumber] = "" rather than nil
     int i = 1; // Lua indexes start with 1 as a general convention
     for (const auto& capture : mCaptureGroupList) {
-        lua_pushstring(L, capture.c_str());
+        lua_pushlstring(L, capture.data(), capture.size());
         lua_rawseti(L, -2, i++);
     }
     for (const auto& [name, capture] : mCapturedNameGroups) {
@@ -4798,6 +4826,7 @@ bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
 
     lua_State* L = pGlobalLua;
     const int callerStackTop = lua_gettop(L);
+    setMatches(L);
 
     if (!mMultiCaptureGroupList.empty()) {
         int k = 1;       // Lua indexes start with 1 as a general convention
@@ -4857,6 +4886,7 @@ std::pair<bool, bool> TLuaInterpreter::callMultiReturnBool(const QString& functi
 
     lua_State* L = pGlobalLua;
     const int callerStackTop = lua_gettop(L);
+    setMatches(L);
 
     bool returnValue = false;
 
