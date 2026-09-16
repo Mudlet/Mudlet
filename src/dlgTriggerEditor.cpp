@@ -6459,6 +6459,7 @@ void dlgTriggerEditor::setAliasNormalIcon(QTreeWidgetItem* pItem, TAlias* pT, bo
     // coalesced refresh.
     if (pItem->icon(0).cacheKey() != icon.cacheKey()) {
         pItem->setIcon(0, icon);
+        ++mAliasIconPaintCount;
     }
     pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
 }
@@ -6470,6 +6471,7 @@ void dlgTriggerEditor::showAliasError(QTreeWidgetItem* pItem, const QString& nam
     iconError = cachedIcon(qsl(":/icons/tools-report-bug.png"));
     if (pItem->icon(0).cacheKey() != iconError.cacheKey()) {
         pItem->setIcon(0, iconError);
+        ++mAliasIconPaintCount;
     }
     pItem->setText(0, name);
     pItem->setData(0, Qt::AccessibleDescriptionRole, descError);
@@ -6524,6 +6526,7 @@ void dlgTriggerEditor::flushPendingAliasIconRefresh()
     if (mPendingAliasIconRefresh.isEmpty()) {
         return;
     }
+    ++mAliasIconFlushCount;
     if (mpAliasBaseItem && isVisible()) {
         int remaining = mPendingAliasIconRefresh.size();
         refreshAliasIconsIn(mpAliasBaseItem, false, remaining);
@@ -6562,6 +6565,8 @@ void dlgTriggerEditor::paintAliasItem(QTreeWidgetItem* pItem, TAlias* pT)
     // A profile's aliases stay TAlias::mIsNew until explicitly saved in the
     // editor, so respecting that here would paint every Lua-toggled alias
     // with the "unsaved" icon instead of reporting its actual state.
+    // setAliasNormalIcon()/showAliasError() bump mAliasIconPaintCount
+    // themselves, at their own cacheKey() guards.
     applyAliasState(pItem, pT, touchNotification, false);
 }
 
@@ -9029,6 +9034,7 @@ void dlgTriggerEditor::flushPendingKeyIconRefresh()
     if (mPendingKeyIconRefresh.isEmpty()) {
         return;
     }
+    ++mKeyIconFlushCount;
     if (mpKeyBaseItem && isVisible()) {
         int remaining = mPendingKeyIconRefresh.size();
         refreshKeyIconsIn(mpKeyBaseItem, false, remaining);
@@ -9080,6 +9086,7 @@ void dlgTriggerEditor::paintKeyItem(QTreeWidgetItem* pItem, TKey* pT)
     }
     if (pItem->icon(0).cacheKey() != icon.cacheKey()) {
         pItem->setIcon(0, icon);
+        ++mKeyIconPaintCount;
     }
     pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
 }
@@ -9335,6 +9342,7 @@ void dlgTriggerEditor::flushPendingScriptIconRefresh()
     if (mPendingScriptIconRefresh.isEmpty()) {
         return;
     }
+    ++mScriptIconFlushCount;
     if (mpScriptsBaseItem && isVisible()) {
         int remaining = mPendingScriptIconRefresh.size();
         refreshScriptIconsIn(mpScriptsBaseItem, false, remaining);
@@ -9386,6 +9394,7 @@ void dlgTriggerEditor::paintScriptItem(QTreeWidgetItem* pItem, TScript* pT)
     }
     if (pItem->icon(0).cacheKey() != icon.cacheKey()) {
         pItem->setIcon(0, icon);
+        ++mScriptIconPaintCount;
     }
     pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
 }
@@ -9513,6 +9522,7 @@ void dlgTriggerEditor::flushPendingTimerIconRefresh()
     if (mPendingTimerIconRefresh.isEmpty()) {
         return;
     }
+    ++mTimerIconFlushCount;
     if (mpTimerBaseItem && isVisible()) {
         int remaining = mPendingTimerIconRefresh.size();
         refreshTimerIconsIn(mpTimerBaseItem, false, remaining);
@@ -9564,6 +9574,7 @@ void dlgTriggerEditor::paintTimerItem(QTreeWidgetItem* pItem, TTimer* pT)
     }
     if (pItem->icon(0).cacheKey() != icon.cacheKey()) {
         pItem->setIcon(0, icon);
+        ++mTimerIconPaintCount;
     }
     pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
 }

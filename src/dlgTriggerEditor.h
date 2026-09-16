@@ -116,6 +116,7 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
     friend class ScriptEventHandlerLifetimeTest;
     friend class TreeWidgetItemMoveTest;
     friend class TriggerEditorDisclosureTest;
+    friend class TriggerEditorTest;
     friend class VariableEditorWriteBackTest;
 
     enum SearchDataRole {
@@ -748,27 +749,38 @@ private:
     void paintTriggerItem(QTreeWidgetItem* pItem, TTrigger* pT);
 
     // Same coalescing as mPendingTriggerIconRefresh, for the other four unit
-    // types refreshXIcon() covers.
+    // types refreshXIcon() covers. The Flush/Paint counters exist only for
+    // TriggerEditorTest, to prove the queue collapses N pending toggles into
+    // one flush and that paintXItem() skips a setIcon() the cacheKey() guard
+    // finds unchanged, rather than just the end state those produce either way.
     QSet<int> mPendingAliasIconRefresh;
     bool mAliasIconRefreshQueued = false;
+    int mAliasIconFlushCount = 0;
+    int mAliasIconPaintCount = 0;
     void flushPendingAliasIconRefresh();
     void refreshAliasIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, int& remaining);
     void paintAliasItem(QTreeWidgetItem* pItem, TAlias* pT);
 
     QSet<int> mPendingTimerIconRefresh;
     bool mTimerIconRefreshQueued = false;
+    int mTimerIconFlushCount = 0;
+    int mTimerIconPaintCount = 0;
     void flushPendingTimerIconRefresh();
     void refreshTimerIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, int& remaining);
     void paintTimerItem(QTreeWidgetItem* pItem, TTimer* pT);
 
     QSet<int> mPendingScriptIconRefresh;
     bool mScriptIconRefreshQueued = false;
+    int mScriptIconFlushCount = 0;
+    int mScriptIconPaintCount = 0;
     void flushPendingScriptIconRefresh();
     void refreshScriptIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, int& remaining);
     void paintScriptItem(QTreeWidgetItem* pItem, TScript* pT);
 
     QSet<int> mPendingKeyIconRefresh;
     bool mKeyIconRefreshQueued = false;
+    int mKeyIconFlushCount = 0;
+    int mKeyIconPaintCount = 0;
     void flushPendingKeyIconRefresh();
     void refreshKeyIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, int& remaining);
     void paintKeyItem(QTreeWidgetItem* pItem, TKey* pT);
