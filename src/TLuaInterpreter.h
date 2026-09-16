@@ -83,6 +83,8 @@ class TLuaInterpreter : public QThread
 
     friend class TForkedProcess;
     friend class LuaInterface;
+    // reads the parked capture vectors' capacity, which nothing else exposes
+    friend class CaptureGroupParkingTest;
 
 public:
     Q_DISABLE_COPY(TLuaInterpreter)
@@ -953,6 +955,9 @@ private:
     // Bounds on what the parking above holds onto between fires
     static constexpr std::size_t scmMaxParkedCaptures = 512;
     static constexpr std::string::size_type scmMaxParkedCaptureBytes = 1024;
+    // Well past the cap, not at it: a trigger overshooting the cap by less than
+    // this would otherwise pay a reallocation each way per fire
+    static constexpr std::size_t scmMaxParkedCaptureSlack = 4 * scmMaxParkedCaptures;
     QString mLastGlobalName;
     QByteArray mLastGlobalNameUtf8;
     // Storage set_lua_string() encodes the line into, kept between calls for
