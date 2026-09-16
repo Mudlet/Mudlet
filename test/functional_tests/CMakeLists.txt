@@ -150,6 +150,7 @@ set(EDITOR_GROUP_TEST_SOURCES
     TreeWidgetItemMoveTest.cpp
     TriggerEditorDisclosureTest.cpp
     TriggerEditorTest.cpp
+    TriggerPatternListLayoutTest.cpp
     VariableEditorWriteBackTest.cpp
 )
 
