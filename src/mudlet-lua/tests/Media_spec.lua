@@ -2006,6 +2006,120 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals("busted-gmcp-music", finished[1].key)
   end)
 
+  it("a Client.Media.Play message with no usable name is refused without an event", function()
+    -- #10767. name is the one required field of Client.Media.Play. A request
+    -- carrying none of it - absent, empty, or not a string - used to reach
+    -- playMedia() with an empty file name, where the profile's own media
+    -- directory stood in for the file: the load then failed, and since the
+    -- failed-load event was added a failure announces sysMediaFinished. A
+    -- script keying off that event was woken for media that never played, with
+    -- an empty file name, key and tag to attribute it by. Client.Media.Play {}
+    -- is already refused in silence by parseGMCP()'s empty-object guard, and
+    -- these are that same request with one unusable field added.
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+
+    local started, finished = {}, {}
+    collect("sysMediaStarted", started)
+    collect("sysMediaFinished", finished)
+
+    feedGmcp('Client.Media.Play {"type": "sound"}')
+    feedGmcp('Client.Media.Play {"name": "", "type": "sound"}')
+    feedGmcp('Client.Media.Play {"name": 42, "type": "sound"}')
+    feedGmcp("Client.Media.Play {}")
+    -- The bogus event arrives when the backend gives up on what it was handed,
+    -- which is asynchronous, so its absence only means something after a wait
+    -- long enough to have seen it.
+    waitForEvent("sysMediaFinished", 2000)
+    assert.equals(0, #finished, "a request with no usable name raised sysMediaFinished for media that never played")
+    assert.equals(0, #started, "a request with no usable name started a playback")
+
+    -- and the reader is not wedged by the refusals: the next well-formed
+    -- request still plays
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-nameless-control"}')
+    waitForCount("sysMediaStarted", started, 1)
+    assert.equals(1, #started, gmcpRefused)
+  end)
+
+  it("a Client.Media.Play message naming an unknown type is refused instead of played as a sound", function()
+    -- #10768. An unrecognised type used to fall back to sound, so a game that
+    -- mistyped "music" had its music started in the sound pool - where its own
+    -- Client.Media.Stop {"type": "music"} could not reach it. The protocol's
+    -- sound default belongs to a request that names no type at all, so that
+    -- case is left alone and only a type naming something Mudlet does not know
+    -- is refused.
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+
+    local started = {}
+    collect("sysMediaStarted", started)
+
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "type": "musci", "key": "busted-gmcp-unknown-type"}')
+    -- a type that is not a string names nothing Mudlet knows either
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "type": 42, "key": "busted-gmcp-numeric-type"}')
+    waitForEvent("sysMediaStarted", 2000)
+    assert.equals(0, #started, "a request naming an unknown media type was played anyway")
+
+    -- Neither of the two ways of naming no type at all is an unknown one: both
+    -- still mean sound. A JSON null reads the same as leaving the field out.
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "type": "", "key": "busted-gmcp-empty-type"}')
+    waitForCount("sysMediaStarted", started, 1)
+    assert.equals(1, #started, gmcpRefused)
+    assert.equals("sound", started[1].mediaType)
+
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "type": null, "key": "busted-gmcp-null-type"}')
+    waitForCount("sysMediaStarted", started, 2)
+    assert.equals(2, #started, gmcpRefused)
+    assert.equals("sound", started[2].mediaType)
+
+    -- The match is case-insensitive, and refusing an unknown type is what makes
+    -- that load-bearing: a supported type in the wrong case used to land in the
+    -- wrong pool, where now it would be dropped outright.
+    feedGmcp('Client.Media.Play {"name": "' .. otherLongSoundFile .. '", "type": "MUSIC", "key": "busted-gmcp-upper-type"}')
+    waitForCount("sysMediaStarted", started, 3)
+    assert.equals(3, #started, gmcpRefused)
+    assert.equals("music", started[3].mediaType)
+  end)
+
+  it("a Client.Media.Play message naming the media directory itself is refused without an event", function()
+    -- #10767 again, through the other door. The empty name was only the
+    -- simplest way to reach it: "." and "./" resolve to the profile's media
+    -- directory and "sub/." to one below it, all of which QFile::exists()
+    -- answers true for, so the request used to reach a player, fail to load and
+    -- announce a sysMediaFinished for media that never played. What decides is
+    -- whether there is a file there, not whether the name resolves to
+    -- something.
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+
+    lfs.mkdir(mediaDirectory .. "/busted-media-sub")
+    onCleanup(function() lfs.rmdir(mediaDirectory .. "/busted-media-sub") end)
+
+    local started, finished = {}, {}
+    collect("sysMediaStarted", started)
+    collect("sysMediaFinished", finished)
+
+    feedGmcp('Client.Media.Play {"name": ".", "key": "busted-gmcp-dot"}')
+    feedGmcp('Client.Media.Play {"name": "./", "key": "busted-gmcp-dot-slash"}')
+    feedGmcp('Client.Media.Play {"name": "busted-media-sub/.", "key": "busted-gmcp-sub-dot"}')
+    waitForEvent("sysMediaFinished", 2000)
+    assert.equals(0, #finished, "a name resolving to a directory raised sysMediaFinished for media that never played")
+    assert.equals(0, #started, "a name resolving to a directory started a playback")
+
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-dot-control"}')
+    waitForCount("sysMediaStarted", started, 1)
+    assert.equals(1, #started, gmcpRefused)
+  end)
+
   it("a Client.Media.Stop message ends what a Client.Media.Play started", function()
     if mediaPlaybackUnavailable() then
       return
@@ -2050,6 +2164,71 @@ describe("Media playback effects with a generated sound file", function()
     waitForCount("sysMediaPaused", paused, 1)
     assert.equals(1, #paused)
     assert.equals("busted-gmcp-paused", paused[1].key)
+  end)
+
+  -- The one Client.Media.Play that carries no name and still has something to
+  -- do: playMedia() looks for a paused player matching what it was given before
+  -- it looks at the file at all, so a server can resume by key or tag alone
+  -- without repeating the file name. Refusing every name-less request for
+  -- #10767 would have taken this with it.
+  --
+  -- What proves the resume is the playback running out. A second pause landing
+  -- would be the shorter test, but it only means anything while pauseMedia()
+  -- passes over a player that is not playing - so it would keep passing if that
+  -- ever changed, without a resume happening at all. A file held past the point
+  -- it would have ended by itself can only finish if something restarted it.
+  local resumeSoundFile = "busted-media-resume.wav"
+
+  local function resumesWhatItPaused(playFields, matchFields)
+    writeMediaFile(resumeSoundFile, 2000)
+    onCleanup(function() os.remove(mediaDirectory .. "/" .. resumeSoundFile) end)
+    stopGmcpMediaAfterwards()
+
+    local started, paused, finished = {}, {}, {}
+    collect("sysMediaStarted", started)
+    collect("sysMediaPaused", paused)
+    collect("sysMediaFinished", finished)
+
+    feedGmcp('Client.Media.Play {"name": "' .. resumeSoundFile .. '", ' .. playFields .. '}')
+    waitForCount("sysMediaStarted", started, 1)
+    assert.equals(1, #started, gmcpRefused)
+
+    feedGmcp('Client.Media.Pause {' .. matchFields .. '}')
+    waitForCount("sysMediaPaused", paused, 1)
+    assert.equals(1, #paused, "the server's own pause did not reach the playback it named")
+
+    pumpEvents(2500)
+    assert.equals(0, #finished, "the paused playback ran on and ended by itself, so finishing proves nothing")
+
+    feedGmcp('Client.Media.Play {' .. matchFields .. '}')
+    waitForCount("sysMediaFinished", finished, 1)
+    assert.equals(1, #finished, "a name-less Client.Media.Play did not resume the paused playback")
+    assert.equals(resumeSoundFile, finished[1].file)
+  end
+
+  it("a Client.Media.Play message carrying only a key resumes what the server paused", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    resumesWhatItPaused('"key": "busted-gmcp-resumed"', '"key": "busted-gmcp-resumed"')
+  end)
+
+  it("a Client.Media.Play message carrying a key and a type resumes the paused music", function()
+    -- The realistic server pattern, and the one that reaches the music list
+    -- rather than the sound list the name-less default picks.
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    resumesWhatItPaused('"type": "music", "key": "busted-gmcp-resumed-music"', '"type": "music", "key": "busted-gmcp-resumed-music"')
+  end)
+
+  it("a Client.Media.Play message carrying only a tag resumes what the server paused", function()
+    -- isMediaMatch() matches on the tag as readily as on the key, so the
+    -- name-less request the guard lets through is not only the keyed one.
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    resumesWhatItPaused('"tag": "busted-gmcp-resumed-tag"', '"tag": "busted-gmcp-resumed-tag"')
   end)
 
   it("a Client.Media.Pause message with no fields pauses everything the server started", function()
@@ -2656,6 +2835,34 @@ describe("Tests the text-to-speech Lua API", function()
         ttsQueue("beyond the end", 99)
         ttsQueue("before the start", -5)
         assert.same({"before the start", "middle", "beyond the end"}, ttsGetQueue())
+      end)
+
+      it("ttsSpeechQueued reports the position the rest of the queue API uses", function()
+        if noMockEngine() then
+          return
+        end
+        -- The event is raised while the line is still on the queue, so the
+        -- index it carries has to name that line the same way ttsGetQueue()
+        -- and ttsClearQueue() do - counting from one.
+        local queued = {}
+        local handler = registerAnonymousEventHandler("ttsSpeechQueued", function(_, text, index)
+          queued[#queued + 1] = {text = text, index = index, atIndex = ttsGetQueue(index)}
+        end)
+        onCleanup(function() killAnonymousEventHandler(handler) end)
+
+        ttsClearQueue()
+        ttsSpeak("occupying the engine with a line that takes a while to speak")
+        ttsQueue("appended first")
+        ttsQueue("appended second")
+        ttsQueue("inserted at the head", 1)
+        ttsQueue("clamped past the end", 99)
+
+        assert.same({"inserted at the head", "appended first", "appended second", "clamped past the end"}, ttsGetQueue())
+        assert.equals(4, #queued)
+        assert.same({text = "appended first", index = 1, atIndex = "appended first"}, queued[1])
+        assert.same({text = "appended second", index = 2, atIndex = "appended second"}, queued[2])
+        assert.same({text = "inserted at the head", index = 1, atIndex = "inserted at the head"}, queued[3])
+        assert.same({text = "clamped past the end", index = 4, atIndex = "clamped past the end"}, queued[4])
       end)
 
       it("ttsSkip moves on to the next queued line", function()
