@@ -27,8 +27,10 @@
 #include "TAlias.h"
 #include "TLuaInterpreter.h"
 #include "Tree.h"
+#include "dlgTriggerEditor.h"
 #include "utils.h"
 
+#include <QDebug>
 #include <QLatin1String>
 #include <QMutableSetIterator>
 #include <QScopeGuard>
@@ -286,6 +288,16 @@ int AliasUnit::getNewID()
 
 bool AliasUnit::processDataStream(const QString& data)
 {
+    if (mProcessingDepth >= scmMaxProcessingDepth) {
+        qWarning().nospace() << "AliasUnit::processDataStream(...) aborting: alias processing recursion reached the limit of " << scmMaxProcessingDepth
+                             << " - probably an alias that expands into itself.";
+        //: %1 is the command being expanded, %2 the depth limit. Shown in the game window when an alias keeps expanding into itself
+        mpHost->postMessage(tr("[ ERROR ] - Alias processing stopped to prevent a crash: \"%1\" was expanded by an alias %2 times in a row, each time producing a command that matched an alias "
+                               "again. It goes to the game unexpanded. Send from the alias with send() rather than expandAlias(), or give it a pattern that does not match what it sends.")
+                                    .arg(data, QString::number(scmMaxProcessingDepth)));
+        return false;
+    }
+
     TLuaInterpreter* Lua = mpHost->getLuaInterpreter();
     Lua->set_lua_string(qsl("command"), data);
     bool state = false;
@@ -380,6 +392,9 @@ bool AliasUnit::enableAlias(const QString& name)
         }
         pT->setIsActive(true);
         found = true;
+        if (mpHost->mpEditorDialog) {
+            mpHost->mpEditorDialog->refreshAliasIcon(pT->getID());
+        }
     }
     return found;
 }
@@ -393,6 +408,9 @@ bool AliasUnit::disableAlias(const QString& name)
     for (auto it = begin; it != end; ++it) {
         it.value()->setIsActive(false);
         found = true;
+        if (mpHost->mpEditorDialog) {
+            mpHost->mpEditorDialog->refreshAliasIcon(it.value()->getID());
+        }
     }
     return found;
 }

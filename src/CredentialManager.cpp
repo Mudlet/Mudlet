@@ -23,6 +23,7 @@
 #include "utils.h"
 
 #include <QCoreApplication>
+#include <QDateTime>
 #include <QDebug>
 #include <QDir>
 #include <QFile>
@@ -79,6 +80,55 @@ QString legacyPathComponent(const QString& input)
     QString sanitized = input;
     sanitized.replace(unsafeChars, qsl("_"));
     return sanitized.left(scmLegacyMaxPathComponentLength);
+}
+
+// Decides between the two copies a long profile name can have: a Mudlet that predates the
+// digest-bearing name writes only the legacy one, so whichever copy was written last holds
+// the password the user set last. Timestamps a filesystem cannot tell apart - one that
+// records whole seconds, as FAT and some network mounts do - count as "not after", leaving
+// the copy under the current naming in charge.
+bool fileWrittenAfter(const QString& path, const QString& otherPath)
+{
+    const QFileInfo info(path);
+    const QFileInfo otherInfo(otherPath);
+
+    return info.exists() && (!otherInfo.exists() || info.lastModified() > otherInfo.lastModified());
+}
+
+bool writeCredentialFile(const QString& filePath, const QString& profileName, const QString& credential)
+{
+    if (!QDir().mkpath(QFileInfo(filePath).absolutePath())) {
+        qWarning() << "CredentialManager: Failed to create directory structure for" << filePath;
+        return false;
+    }
+
+    // an empty credential is allowed - it stands for "no password"
+    const QString encrypted = SecureStringUtils::encryptStringForProfile(credential, profileName);
+
+    if (encrypted.isEmpty() && !credential.isEmpty()) {
+        qWarning() << "CredentialManager: Failed to encrypt credential for profile" << profileName;
+        return false;
+    }
+
+    const QByteArray payload = encrypted.toUtf8();
+    // QSaveFile rather than QFile: opening a QFile for writing empties the file that is
+    // already there before a byte of the new credential is written, and a payload this small
+    // only leaves QFile's write buffer inside close(), which returns void - so a disk that
+    // fills up in between leaves an empty file where the password was and reports success.
+    QSaveFile file(filePath);
+
+    if (!file.open(QIODevice::WriteOnly)) {
+        qWarning() << "CredentialManager: Failed to open file for writing:" << filePath << "Error:" << file.errorString();
+        return false;
+    }
+
+    if (file.write(payload) != payload.size() || !file.commit()) {
+        // whatever was there before is still there: QSaveFile discards the partial write
+        qWarning() << "CredentialManager: Failed to write encrypted credential to file:" << filePath << "Error:" << file.errorString();
+        return false;
+    }
+
+    return true;
 }
 } // namespace
 
@@ -1255,39 +1305,16 @@ bool CredentialManager::storeCredentialToFile(const QString& profileName, const 
         return false;
     }
 
-    // Create directory structure if it doesn't exist
-    QFileInfo fileInfo(filePath);
-    QDir dir = fileInfo.absoluteDir();
-
-    if (!dir.mkpath(dir.absolutePath())) {
-        qWarning() << "CredentialManager: Failed to create directory structure for" << filePath;
+    if (!writeCredentialFile(filePath, profileName, credential)) {
         return false;
     }
 
-    // Encrypt credential using profile-specific key (empty credentials are allowed)
-    QString encrypted = SecureStringUtils::encryptStringForProfile(credential, profileName);
-
-    if (encrypted.isEmpty() && !credential.isEmpty()) {
-        qWarning() << "CredentialManager: Failed to encrypt credential for profile" << profileName;
-        return false;
-    }
-
-    // Write to file
-    QFile file(filePath);
-
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        qWarning() << "CredentialManager: Failed to open file for writing:" << filePath << "Error:" << file.errorString();
-        return false;
-    }
-
-    qint64 bytesWritten = file.write(encrypted.toUtf8());
-    file.close();
-
-    // Verify write operation succeeded
-    if (bytesWritten == -1) {
-        qWarning() << "CredentialManager: Failed to write encrypted credential to file:" << filePath;
-        return false;
-    }
+    // Only once the file under the current naming is committed: the two sit in directories
+    // of their own, so this one can be written where that one cannot, and a store that
+    // reports failure must not leave the two Mudlets holding different passwords. Writing it
+    // last can leave it the newer of the two, which the next read settles by taking it and
+    // copying it across once.
+    refreshLegacyFileCredential(profileName, key, credential);
 
     return true;
 }
@@ -1302,24 +1329,40 @@ QString CredentialManager::retrieveCredentialFromFile(const QString& profileName
         return QString();
     }
 
+    // A Mudlet that predates the digest-bearing name reads and writes only the truncated
+    // path, so a copy there that is newer than this one's is the password saved last
+    const QString legacyPath = generateLegacyFilePath(profileName, key);
+
+    if (!legacyPath.isEmpty() && fileWrittenAfter(legacyPath, filePath)) {
+        const QString migrated = readLegacyFileCredential(profileName, key);
+
+        if (!migrated.isEmpty()) {
+            // Copied across, not moved: that file is the only place an older Mudlet sharing
+            // this configuration directory looks, so taking it away would lose it the password
+            if (!writeCredentialFile(filePath, profileName, migrated)) {
+                qWarning() << "CredentialManager: could not copy the newer credential at" << legacyPath << "across to" << filePath << "- it will be read from the older path again next time";
+            }
+
+            return migrated;
+        }
+
+        // Nothing this profile can decrypt: a colliding profile's credential, or a damaged
+        // one. Its own copy, where it has one, is then the older of the two
+        if (QFile::exists(filePath)) {
+            qWarning() << "CredentialManager: the credential file" << legacyPath << "is newer than" << filePath << "but holds nothing profile" << profileName
+                       << "can decrypt - the older copy is being used instead";
+        }
+    }
+
     QFile file(filePath);
 
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         // Only log warning if file should exist (not for first-time access)
         if (file.exists()) {
             qWarning() << "CredentialManager: Failed to open existing file for reading:" << filePath << "Error:" << file.errorString();
-            return QString();
         }
 
-        // Nothing under the current naming, so a credential written while long names
-        // were truncated is moved across on the first read that misses it
-        const QString migrated = readLegacyFileCredential(profileName, key);
-
-        if (!migrated.isEmpty() && storeCredentialToFile(profileName, key, migrated)) {
-            removeLegacyFileCredential(profileName, key);
-        }
-
-        return migrated;
+        return QString();
     }
 
     QString encrypted = QString::fromUtf8(file.readAll());
@@ -1351,7 +1394,7 @@ bool CredentialManager::removeCredentialFromFile(const QString& profileName, con
     }
 
     // A credential still filed under the legacy truncated path has to go as well, or
-    // the next read would migrate it and resurrect the password just removed
+    // the next read would copy it back and resurrect the password just removed
     removeLegacyFileCredential(profileName, key);
 
     // Check if file exists before attempting removal
@@ -1499,23 +1542,56 @@ QString CredentialManager::readLegacyFileCredential(const QString& profileName, 
     return SecureStringUtils::decryptStringForProfile(encrypted, profileName);
 }
 
+// Whose credential the legacy file holds is the only thing that tells this profile's file
+// apart from one a profile it used to collide with left, so refreshing that file and
+// removing it both have to ask first.
+QString CredentialManager::ourLegacyFilePath(const QString& profileName, const QString& key)
+{
+    QString existing = readLegacyFileCredential(profileName, key);
+    const bool ours = !existing.isEmpty();
+    SecureStringUtils::secureStringClear(existing);
+
+    return ours ? generateLegacyFilePath(profileName, key) : QString();
+}
+
 // Deletes the legacy file, but only once it has proved to hold this profile's own
 // credential, so a profile it used to collide with never has its password removed on
 // this one's behalf.
 void CredentialManager::removeLegacyFileCredential(const QString& profileName, const QString& key)
 {
-    QString credential = readLegacyFileCredential(profileName, key);
-    const bool ours = !credential.isEmpty();
-    SecureStringUtils::secureStringClear(credential);
+    const QString legacyPath = ourLegacyFilePath(profileName, key);
 
-    if (!ours) {
+    if (!legacyPath.isEmpty() && !QFile::remove(legacyPath)) {
+        qWarning() << "CredentialManager: Failed to remove credential file left by the earlier naming scheme:" << legacyPath;
+    }
+}
+
+// Keeps a credential file left by the earlier naming scheme in step with the one under the
+// current naming, so a Mudlet old enough to read only that one does not hand the user back a
+// password they have since changed. Only a file that already holds this profile's own
+// credential is refreshed: creating one would put two profiles whose names share their first
+// 50 characters on a single file.
+void CredentialManager::refreshLegacyFileCredential(const QString& profileName, const QString& key, const QString& credential)
+{
+    const QString legacyPath = ourLegacyFilePath(profileName, key);
+
+    if (legacyPath.isEmpty()) {
         return;
     }
 
-    const QString legacyPath = generateLegacyFilePath(profileName, key);
+    // An empty credential stands for "no password": writing one would leave a file this
+    // profile can no longer prove is its own, and so could never refresh or remove again
+    if (credential.isEmpty()) {
+        if (!QFile::remove(legacyPath)) {
+            qWarning() << "CredentialManager: Failed to remove credential file left by the earlier naming scheme:" << legacyPath;
+        }
 
-    if (!QFile::remove(legacyPath)) {
-        qWarning() << "CredentialManager: Failed to remove credential file left by the earlier naming scheme:" << legacyPath;
+        return;
+    }
+
+    if (!writeCredentialFile(legacyPath, profileName, credential)) {
+        qWarning() << "CredentialManager: the copy of this profile's credential that an older Mudlet reads," << legacyPath
+                   << "could not be brought up to date - that Mudlet will go on offering the previous password for profile" << profileName;
     }
 }
 

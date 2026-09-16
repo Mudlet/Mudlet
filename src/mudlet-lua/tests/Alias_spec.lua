@@ -31,6 +31,95 @@ describe("Alias processing", function()
 
     end)
 
+    describe("runaway recursion", function()
+
+        it("stops an alias that keeps expanding into itself", function()
+            local fired = 0
+            local id = tempAlias("^expand_into_myself$", function()
+                fired = fired + 1
+                expandAlias("expand_into_myself", false)
+            end)
+            local sends = 0
+            local handler = registerAnonymousEventHandler("sysDataSendRequest", function(_, command)
+                if command == "expand_into_myself" then
+                    sends = sends + 1
+                end
+            end)
+
+            expandAlias("expand_into_myself", false)
+
+            killAnonymousEventHandler(handler)
+            assert.is_true(killAlias(id), "a temporary alias should be removable by id")
+            -- One run per level; the call past the cap is refused instead of matched
+            assert.are.equal(50, fired)
+            assert.are.equal(1, sends, "the call past the cap should go to the game once, unexpanded")
+        end)
+
+        -- The "command" field of an alias is sent as if typed, so one that
+        -- matches its own pattern recurses without any Lua in between
+        it("stops an alias whose command matches itself", function()
+            if not os.getenv("MUDLET_TEST_MODE") then
+                pending("uninstalling the fixture needs pumpEvents(), which does nothing outside MUDLET_TEST_MODE")
+                return
+            end
+            local path = getMudletHomeDir() .. "/alias-runaway-command.xml"
+            finally(function()
+                -- uninstallPackage() refuses while the profile save the install
+                -- started is still running
+                local removed = false
+                for _ = 1, 100 do
+                    if uninstallPackage("alias-runaway-command") == true then
+                        removed = true
+                        break
+                    end
+                    pumpEvents(50)
+                end
+                os.remove(path)
+                -- let the save the uninstall queues run now rather than during
+                -- the next spec
+                pumpEvents(200)
+                assert.is_true(removed, "could not uninstall the runaway alias package")
+            end)
+            local file = assert(io.open(path, "w"))
+            file:write([[<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+	<TriggerPackage />
+	<TimerPackage />
+	<AliasPackage>
+		<Alias isActive="yes" isFolder="no">
+			<name>runaway_command_alias</name>
+			<script></script>
+			<command>runaway_command</command>
+			<packageName></packageName>
+			<regex>^runaway_command$</regex>
+		</Alias>
+	</AliasPackage>
+	<ActionPackage />
+	<ScriptPackage />
+	<KeyPackage />
+	<VariablePackage>
+		<HiddenVariables />
+	</VariablePackage>
+</MudletPackage>
+]])
+            file:close()
+            assert.is_true(installPackage(path))
+
+            local mark = getLastLineNumber("main")
+            expandAlias("runaway_command", false)
+
+            local stopped = false
+            for _, line in ipairs(getLines("main", mark, getLastLineNumber("main") + 1)) do
+                if line:find('Alias processing stopped to prevent a crash: "runaway_command"', 1, true) then
+                    stopped = true
+                end
+            end
+            assert.is_true(stopped, "the runaway alias was not reported on the main console")
+        end)
+
+    end)
+
     -- Test for nested alias processing with self-deletion (GitHub issue #8817)
     -- This verifies the fix that uses mProcessingDepth counter instead of a bool flag
     --

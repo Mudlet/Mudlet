@@ -62,6 +62,7 @@ class QAction;
 class QCloseEvent;
 class QDateTime;
 class QDir;
+class QDockWidget;
 class QKeyEvent;
 class QMediaDevices;
 class QMediaPlayer;
@@ -231,7 +232,9 @@ public:
     // there too or a consumer cannot tell "no engine" from "nothing said yet".
     void raiseSpeechEvent(const QString& name, const QString& value);
     const QMap<QString, QPointer<TDetachedWindow>>& getDetachedWindows() const { return mDetachedWindows; }
-    QDockWidget* getMainWindowDockWidget(const QString& mapKey) const { return mMainWindowDockWidgetMap.value(mapKey); }
+    // Out of line so mudlet.h needs no more than a forward declaration -
+    // converting the QPointer this returns wants the complete type
+    QDockWidget* getMainWindowDockWidget(const QString& mapKey) const;
     std::optional<QSize> getImageSize(const QString&);
     const QString& getInterfaceLanguage() const { return mInterfaceLanguage; }
     int64_t getPhysicalMemoryTotal();
@@ -308,7 +311,6 @@ public:
     void setToolBarVisibility(enums::controlsVisibility);
     void showChangelogIfUpdated();
     void slot_showConnectionDialog();
-    bool showMapAuditErrors() const { return mShowMapAuditErrors; }
     bool invertMapZoom() const { return mInvertMapZoom; }
     bool showTabConnectionIndicators() const { return mShowTabConnectionIndicators; }
     // Addon toolbar button management
@@ -626,6 +628,7 @@ private:
     void closeHost(const QString&);
     int getDictionaryWordCount(const QString& dictionaryPath);
     void goingDown() { mIsGoingDown = true; }
+    void endProfileLoad();
     void initEdbee();
     void installModulesList(Host*, QStringList);
     void loadMaps();
@@ -686,6 +689,9 @@ private:
     QKeySequence mKeySequencePreviousProfile;
     std::array<QKeySequence, 9> mKeySequencesSwitchToProfile;
     bool mIsGoingDown = false;
+    // A depth, not a flag: the guarded load entry points call one another
+    int mProfileLoadsInProgress = 0;
+    bool mCloseRequestedDuringProfileLoad = false;
     // Whether multi-view is in effect:
     enums::controlsVisibility mMenuBarVisibility = enums::visibleAlways;
     // Used to ensure that mudlet::slot_updateShortcuts() only runs once each
@@ -783,7 +789,6 @@ private:
     QWidget* mpWidget_profileContainer = nullptr;
     // read-only value to see if the interface is light or dark. To set the value,
     // use setAppearance instead
-    bool mShowMapAuditErrors = false;
     bool mInvertMapZoom = false; // true = old behavior (inverted), false = modern behavior (non-inverted)
     QSplitter* mpSplitter_profileContainer = nullptr;
     bool mStorePasswordsSecurely = true;
