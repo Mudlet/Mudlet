@@ -22,7 +22,7 @@ for source in sources/*/; do
 	name=$(basename "$source")
 	# these are installed straight from their .xml file, they have no archive
 	case "$name" in
-		mudlet-spec-xmlonly|mudlet-spec-colorfilter|mudlet-spec-badxml-bare) continue ;;
+		mudlet-spec-xmlonly|mudlet-spec-colorfilter|mudlet-spec-triggerkinds|mudlet-spec-badxml-bare) continue ;;
 	esac
 	archive="$outputDirectory/$name.mpackage"
 	staging=$(mktemp -d)

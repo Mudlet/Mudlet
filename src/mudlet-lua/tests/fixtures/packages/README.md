@@ -43,3 +43,4 @@ deliberately.
 | `sources/mudlet-spec-badxml-bare` | bare package XML that is truncated, for the same failure reached without an archive around it |
 | `sources/mudlet-spec-xmlonly` | bare package XML, installed without any archive around it |
 | `sources/mudlet-spec-colorfilter` | bare package XML with colour-pattern and perl children under filter parents; the colour children are the part no Lua API can build |
+| `sources/mudlet-spec-triggerkinds` | bare package XML holding one disabled trigger per pattern kind and option that no Lua API reaches - match-all substrings, recolouring substring/exact/start-of-line matches, a lua code condition, a line spacer and a trigger command |

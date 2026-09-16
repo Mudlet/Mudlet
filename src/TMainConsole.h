@@ -127,6 +127,7 @@ public:
     TConsole* deregisterSubConsole(const QString& name);
     void registerDockWidget(const QString& name, TDockWidget* pDockWidget);
     TDockWidget* deregisterDockWidget(const QString& name);
+    TDockWidget* createUserWindow(const QString& name);
     // For callers that need the widgets themselves.
     TConsole* subConsoleWidget(const QString& name) const { return mSubConsoleMap.value(name); }
     QString subConsoleName(TConsole* pConsole) const { return mSubConsoleMap.key(pConsole); }
@@ -267,9 +268,9 @@ private:
     // and removal from the three maps goes through these, so that the Host's
     // window registry cannot fall out of step with them.
     void registerScrollBox(const QString& name, TScrollBox* pScrollBox);
-    TScrollBox* deregisterScrollBox(const QString& name);
+    void deregisterScrollBox(TScrollBox* pScrollBox);
     void registerTextBox(const QString& name, TTextBox* pTextBox);
-    TTextBox* deregisterTextBox(const QString& name);
+    void deregisterTextBox(TTextBox* pTextBox);
 
     // The view's half of the named-window bookkeeping; the core's half is the
     // Host's window registry, which this class registers into and deregisters

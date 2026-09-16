@@ -41,6 +41,7 @@
 #include "mudlet.h"
 #include "GifTracker.h"
 
+#include <QDataStream>
 #include <QDialog>
 #include <QDockWidget>
 #include <QIcon>
@@ -50,6 +51,7 @@
 #include <QMimeData>
 #include <QProgressDialog>
 #include <QUiLoader>
+#include <QSaveFile>
 #include <QScrollBar>
 #include <QShortcut>
 #include <QSizePolicy>
@@ -73,6 +75,34 @@ TWindowRegistry::SubConsoleKind subConsoleKindOf(const TConsole::ConsoleType typ
     default:
         return TWindowRegistry::SubConsoleKind::Other;
     }
+}
+
+// A ".dic" file holds one word per line, below a count of how many lines
+// follow, and hunspell reads a "/" on such a line as the start of that word's
+// affix flags and a tab as the start of its morphological description. So a
+// word can only be stored if the file gives it back as itself:
+//   - a blank word writes a line the next load skips;
+//   - a line feed writes two lines that come back as two separate words;
+//   - a carriage return is dropped by the QFile::Text reader, so "qa\rword"
+//     comes back as "qaword";
+//   - leading whitespace leaves hunspell not recognising the word at all, and a
+//     tab or a "/" leaves it knowing only the part in front - "TCP/IP" teaches
+//     the spell checker "TCP" instead - while the word list still reports the
+//     word that was added.
+// Hunspell does read "\/" as an escaped "/", but our own reader would then hand
+// the backslash back as part of the word, so escaping would mean changing both
+// halves of the format and misreading every ".dic" file already written.
+// A trailing space, and a word of nothing but spaces, do come back intact; the
+// same test refuses those because they are not words.
+bool storableWord(const QString& word)
+{
+    return !word.isEmpty() && word == word.trimmed() && !word.contains(QChar::LineFeed) && !word.contains(QChar::CarriageReturn) && !word.contains(QChar::Tabulation)
+           && !word.contains(QLatin1Char('/'));
+}
+
+QString unstorableWordMessage()
+{
+    return qsl("the word \"%1\" cannot be stored in the user dictionary, it must have some text in it, fit on a single line, not start or end with whitespace, and contain no tab or \"/\" character");
 }
 } // namespace
 
@@ -118,24 +148,29 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
 
 TMainConsole::~TMainConsole()
 {
-    // There is one window in which a command line's destroyed() handler is unsafe:
-    // after this console's members - mSubCommandLineMap among them - have been
-    // destroyed, but before ~QObject severs incoming connections. The only command
-    // lines that can be destroyed inside it are the ones QWidget::~QWidget deletes,
-    // i.e. this console's own children, so sweeping those is enough. Command lines
-    // created into a user window belong to a TDockWidget reparented onto the main
-    // window instead, and can only die after ~QObject has already dropped the
-    // connection. Children rather than map entries, because deleteCommandLine() and
-    // resetMainConsole() drop the entry while the widget lives on until its
-    // deferred delete is delivered.
+    // There is one window in which these widgets' destroyed() handlers are unsafe:
+    // after this console's members - the maps they write to among them - have been
+    // destroyed, but before ~QObject severs incoming connections. The only ones that
+    // can be destroyed inside it are the ones QWidget::~QWidget deletes, i.e. this
+    // console's own children, so sweeping those is enough. One created into a user
+    // window belongs to a TDockWidget reparented onto the main window instead, and
+    // can only die after ~QObject has already dropped the connection. Children rather
+    // than map entries, because deleteCommandLine() and resetMainConsole() drop the
+    // entry while the widget lives on until its deferred delete is delivered.
     for (auto commandLine : findChildren<TCommandLine*>()) {
         disconnect(commandLine, &QObject::destroyed, this, nullptr);
     }
+    for (auto scrollBox : findChildren<TScrollBox*>()) {
+        disconnect(scrollBox, &QObject::destroyed, this, nullptr);
+    }
+    for (auto textBox : findChildren<TTextBox*>()) {
+        disconnect(textBox, &QObject::destroyed, this, nullptr);
+    }
 
     // A label and a sub-console take themselves out of the registry from their own
-    // destructor; none of the three kinds here does. A scroll box and a text box never
-    // deregister themselves, and for the command lines that are this console's own
-    // children the handler that would have done it was disconnected just above. A dock
+    // destructor; none of the three kinds here does. For the ones that are this
+    // console's own children the handler that would have done it was disconnected just
+    // above, and the rest die after ~QObject has dropped the connection. A dock
     // widget has no destructor either but needs no sweep: one only ever exists beside a
     // user window's sub-console, and closing the profile closes every sub-console before
     // the console goes, which takes the dock out through TConsole::closeEvent(). Quitting
@@ -304,6 +339,9 @@ void TMainConsole::slot_loggingAnnouncement(const bool isLogging, const QString&
 
 void TMainConsole::slot_loggingStateChanged(const bool isLogging)
 {
+    // A click has flipped the checkable button already; this is for logging
+    // toggled from Lua, and for a start that failed
+    logButton->setChecked(isLogging);
     logButton->setToolTip(utils::richText(isLogging ? tr("Stop logging game output to log file.") : tr("Start logging game output to log file.")));
 }
 
@@ -427,28 +465,85 @@ TDockWidget* TMainConsole::deregisterDockWidget(const QString& name)
     return mDockWidgetMap.take(name);
 }
 
+TDockWidget* TMainConsole::createUserWindow(const QString& name)
+{
+    auto hostName(mpHost->getName());
+    auto dockwidget = new TDockWidget(mpHost, name);
+    dockwidget->setObjectName(qsl("dockWindow_%1_%2").arg(hostName, name));
+    dockwidget->setContentsMargins(0, 0, 0, 0);
+    dockwidget->setWindowTitle(name);
+    registerDockWidget(name, dockwidget);
+    // It wasn't obvious but the parent passed to the TConsole constructor
+    // is sliced down to a QWidget and is NOT a TDockWidget pointer:
+    auto console = new TConsole(mpHost, name, TConsole::UserWindow, dockwidget->widget());
+    console->setObjectName(qsl("dockWindowConsole_%1_%2").arg(hostName, name));
+    console->setContentsMargins(0, 0, 0, 0);
+    dockwidget->setTConsole(console);
+    console->layerCommandLine->hide();
+    console->setScrollBarVisible(false);
+    registerSubConsole(name, console);
+    dockwidget->setStyleSheet(mpHost->mProfileStyleSheet);
+    mudlet::self()->addDockWidget(Qt::RightDockWidgetArea, dockwidget);
+    console->setFontSize(10);
+    return dockwidget;
+}
+
 void TMainConsole::registerScrollBox(const QString& name, TScrollBox* pScrollBox)
 {
     mScrollBoxMap[name] = pScrollBox;
     mpHost->windowRegistry().registerScrollBox(name);
+
+    // A scroll box created into a user window dies as that window's child with
+    // deleteScrollBox() never called, and this map holds no QPointers
+    connect(pScrollBox, &QObject::destroyed, this, [this, pScrollBox]() {
+        deregisterScrollBox(pScrollBox);
+    });
 }
 
-TScrollBox* TMainConsole::deregisterScrollBox(const QString& name)
+void TMainConsole::deregisterScrollBox(TScrollBox* pScrollBox)
 {
-    mpHost->windowRegistry().deregisterScrollBox(name);
-    return mScrollBoxMap.take(name);
+    // This is the only destroyed() connection made from a scroll box to this
+    // console, so severing all of them is severing just that one.
+    disconnect(pScrollBox, &QObject::destroyed, this, nullptr);
+    // By value, not by name: a replacement may already hold the name
+    mScrollBoxMap.removeIf([this, pScrollBox](const auto& it) {
+        if (it.value() != pScrollBox) {
+            return false;
+        }
+        // Quitting destroys every Host before the deferred deletes of the widgets
+        // a user window holds, leaving no registry to take the name out of
+        if (mpHost) {
+            mpHost->windowRegistry().deregisterScrollBox(it.key());
+        }
+        return true;
+    });
 }
 
 void TMainConsole::registerTextBox(const QString& name, TTextBox* pTextBox)
 {
     mTextBoxMap[name] = pTextBox;
     mpHost->windowRegistry().registerTextBox(name);
+
+    // As for a scroll box, and every by-name getter reads this map straight through
+    connect(pTextBox, &QObject::destroyed, this, [this, pTextBox]() {
+        deregisterTextBox(pTextBox);
+    });
 }
 
-TTextBox* TMainConsole::deregisterTextBox(const QString& name)
+void TMainConsole::deregisterTextBox(TTextBox* pTextBox)
 {
-    mpHost->windowRegistry().deregisterTextBox(name);
-    return mTextBoxMap.take(name);
+    // This is the only destroyed() connection made from a text edit to this
+    // console, so severing all of them is severing just that one.
+    disconnect(pTextBox, &QObject::destroyed, this, nullptr);
+    mTextBoxMap.removeIf([this, pTextBox](const auto& it) {
+        if (it.value() != pTextBox) {
+            return false;
+        }
+        if (mpHost) {
+            mpHost->windowRegistry().deregisterTextBox(it.key());
+        }
+        return true;
+    });
 }
 
 void TMainConsole::resetMainConsole()
@@ -489,18 +584,16 @@ void TMainConsole::resetMainConsole()
         label->deleteLater();
     }
 
-    const QStringList scrollBoxNames = mScrollBoxMap.keys();
-    for (const QString& scrollBoxName : scrollBoxNames) {
-        if (auto pScrollBox = deregisterScrollBox(scrollBoxName)) {
-            pScrollBox->deleteLater();
-        }
+    const QList<TScrollBox*> scrollBoxes = mScrollBoxMap.values();
+    for (auto scrollBox : scrollBoxes) {
+        deregisterScrollBox(scrollBox);
+        scrollBox->deleteLater();
     }
 
-    const QStringList textBoxNames = mTextBoxMap.keys();
-    for (const QString& textBoxName : textBoxNames) {
-        if (auto pTextBox = deregisterTextBox(textBoxName)) {
-            pTextBox->deleteLater();
-        }
+    const QList<TTextBox*> textBoxes = mTextBoxMap.values();
+    for (auto textBox : textBoxes) {
+        deregisterTextBox(textBox);
+        textBox->deleteLater();
     }
 }
 
@@ -723,8 +816,9 @@ std::pair<bool, QString> TMainConsole::deleteTextBox(const QString& name)
         return {false, QLatin1String("a text edit cannot have an empty string as its name")};
     }
 
-    auto pTextBox = deregisterTextBox(name);
+    auto pTextBox = mTextBoxMap.value(name);
     if (pTextBox) {
+        deregisterTextBox(pTextBox);
         pTextBox->deleteLater();
 
         TEvent mudletEvent{};
@@ -745,8 +839,9 @@ std::pair<bool, QString> TMainConsole::deleteScrollBox(const QString& name)
         return {false, QLatin1String("a scrollbox cannot have an empty string as its name")};
     }
 
-    auto pScrollBox = deregisterScrollBox(name);
+    auto pScrollBox = mScrollBoxMap.value(name);
     if (pScrollBox) {
+        deregisterScrollBox(pScrollBox);
         // Using deleteLater() rather than delete as it seems a safer option
         // given that this item is likely to be linked to some events and
         // suchlike:
@@ -1746,6 +1841,10 @@ QPair<bool, QString> TMainConsole::addWordToSet(const QString& word)
         return qMakePair(false, QLatin1String("a user dictionary is not enable for this profile"));
     }
 
+    if (!storableWord(word)) {
+        return qMakePair(false, unstorableWordMessage().arg(word));
+    }
+
     if (!mUseSharedDictionary) {
         // The return value from this function is unclear - it does not seems to
         // indicate anything useful
@@ -1780,7 +1879,11 @@ QPair<bool, QString> TMainConsole::addWordToSet(const QString& word)
 
 QPair<bool, QString> TMainConsole::removeWordFromSet(const QString& word)
 {
-    const QString errMsg = qsl("the word \"%1\" does not seem to be in the user dictionary");
+    // A word that could not have been written into the ".dic" file cannot have
+    // come back out of one either, so say why it can never be in there rather
+    // than merely that it is not. Removal is not refused outright, so that a
+    // word an older version stored can still be taken out again:
+    const QString errMsg = storableWord(word) ? qsl("the word \"%1\" does not seem to be in the user dictionary") : unstorableWordMessage();
     QPair<bool, QString> result{};
     if (!mEnableUserDictionary) {
         return qMakePair(false, QLatin1String("a user dictionary is not enable for this profile"));
@@ -2476,6 +2579,16 @@ void TMainConsole::createMapperDock(const QString& title, const QString& objectN
 {
     mpDockableMapWidget = new QDockWidget(title);
     mpDockableMapWidget->setObjectName(objectName);
+    // Arrange for TMap member values to be copied from the Host masters so they
+    // are in place when the 2D mapper is created:
+    mpHost->getPlayerRoomStyleDetails(mpHost->mpMap->mPlayerRoomStyle,
+                                      mpHost->mpMap->mPlayerRoomOuterDiameterPercentage,
+                                      mpHost->mpMap->mPlayerRoomInnerDiameterPercentage,
+                                      mpHost->mpMap->mPlayerRoomOuterColor,
+                                      mpHost->mpMap->mPlayerRoomInnerColor);
+    mpHost->mpMap->mpMapper = new dlgMapper(mpDockableMapWidget, mpHost, mpHost->mpMap.data());
+    mpHost->mpMap->mpMapper->setStyleSheet(mpHost->mProfileStyleSheet);
+    mpDockableMapWidget->setWidget(mpHost->mpMap->mpMapper);
 }
 
 void TMainConsole::showMapperScriptReminder()

@@ -279,16 +279,16 @@ QList<RawQueryParameter> splitOscQueryParameters(const QString& query)
 } // anonymous namespace
 
 TChar::TChar(const QColor& foreground, const QColor& background, const TChar::AttributeFlags flags, const int linkIndex)
-: mFgColor(foreground)
-, mBgColor(background)
+: mFgColor(foreground.rgba())
+, mBgColor(background.rgba())
 , mFlags(flags)
 , mLinkIndex(linkIndex)
 {
 }
 
 TChar::TChar(TConsole* pC)
-: mFgColor(pC ? pC->mFormatCurrent.foreground() : QColorConstants::White)
-, mBgColor(pC ? pC->mFormatCurrent.background() : QColorConstants::Black)
+: mFgColor(pC ? pC->mFormatCurrent.mFgColor : QColorConstants::White.rgba())
+, mBgColor(pC ? pC->mFormatCurrent.mBgColor : QColorConstants::Black.rgba())
 , mFlags(pC ? pC->mFormatCurrent.allDisplayAttributes() : AttributeFlag::None)
 {
 }
@@ -297,33 +297,7 @@ TChar::TChar(TConsole* pC)
 // not be wanted in every case:
 bool TChar::operator==(const TChar& other)
 {
-    if (mIsSelected != other.mIsSelected) {
-        return false;
-    }
-    if (mLinkIndex != other.mLinkIndex) {
-        return false;
-    }
-    if (mFgColor != other.mFgColor) {
-        return false;
-    }
-    if (mBgColor != other.mBgColor) {
-        return false;
-    }
-    if (mFlags != other.mFlags) {
-        return false;
-    }
-    return true;
-}
-
-// Copy constructor - because it is resetting the mIsSelected flag it is NOT a
-// default copy constructor:
-TChar::TChar(const TChar& copy)
-: mFgColor(copy.mFgColor)
-, mBgColor(copy.mBgColor)
-, mFlags(copy.mFlags)
-, mIsSelected(false)
-, mLinkIndex(copy.mLinkIndex)
-{
+    return mLinkIndex == other.mLinkIndex && mFgColor == other.mFgColor && mBgColor == other.mBgColor && mFlags == other.mFlags;
 }
 
 quint8 TChar::alternateFont() const
@@ -359,6 +333,18 @@ quint8 TChar::alternateFont() const
     }
     return 1;
 }
+
+#ifndef QT_NO_DEBUG
+static quint64 colorFingerprint(const std::vector<TChar>& line)
+{
+    quint64 hash = 14695981039346656037ULL;
+    for (const TChar& character : line) {
+        hash = (hash ^ character.foreground().rgba()) * 1099511628211ULL;
+        hash = (hash ^ character.background().rgba()) * 1099511628211ULL;
+    }
+    return hash;
+}
+#endif
 
 // Store for text and attributes (such as character color) to be drawn on screen
 // Contents are rendered by a TTextEdit
@@ -490,6 +476,7 @@ TBuffer::TBuffer(const TBuffer& other)
 , lastloggedToLine(other.lastloggedToLine)
 , lastTextToLog(other.lastTextToLog)
 , mEncoding(other.mEncoding)
+, mDecoder(other.mDecoder)
 , mCurrentHyperlinkCommand(other.mCurrentHyperlinkCommand)
 , mCurrentHyperlinkHint(other.mCurrentHyperlinkHint)
 , mCurrentHyperlinkLinkId(other.mCurrentHyperlinkLinkId)
@@ -587,6 +574,7 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         lastloggedToLine = other.lastloggedToLine;
         lastTextToLog = other.lastTextToLog;
         mEncoding = other.mEncoding;
+        mDecoder = other.mDecoder;
         mCurrentHyperlinkCommand = other.mCurrentHyperlinkCommand;
         mCurrentHyperlinkHint = other.mCurrentHyperlinkHint;
         mCurrentHyperlinkLinkId = other.mCurrentHyperlinkLinkId;
@@ -711,9 +699,9 @@ void TBuffer::addLink(bool trigMode, const QString& text, QStringList& command, 
     const int id = mLinkStore.addLinks(command, hint, mpHost, luaReference);
 
     if (!trigMode) {
-        append(text, 0, text.length(), format.mFgColor, format.mBgColor, format.mFlags, id);
+        append(text, 0, text.length(), format.foreground(), format.background(), format.mFlags, id);
     } else {
-        appendLine(text, 0, text.length(), format.mFgColor, format.mBgColor, format.mFlags, id);
+        appendLine(text, 0, text.length(), format.foreground(), format.background(), format.mFlags, id);
     }
 }
 
@@ -1525,33 +1513,33 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
             } else {
                 mMudLine.append(encodingLookupTable.at(index - 128));
             }
-        } else if (mEncoding == "ISO 8859-1") {
+        } else if (mDecoder == Decoder::Latin1) {
             mMudLine.append(QChar::fromLatin1(ch));
-        } else if (mEncoding == "GBK") {
+        } else if (mDecoder == Decoder::Gbk) {
             if (!processGBSequence(localBuffer, isFromServer, false, localBufferLength, localBufferPosition, isTwoTCharsNeeded)) {
                 // We have run out of bytes and we have stored the unprocessed
                 // ones but we need to bail out NOW!
                 return;
             }
-        } else if (mEncoding == "GB18030") {
+        } else if (mDecoder == Decoder::Gb18030) {
             if (!processGBSequence(localBuffer, isFromServer, true, localBufferLength, localBufferPosition, isTwoTCharsNeeded)) {
                 // We have run out of bytes and we have stored the unprocessed
                 // ones but we need to bail out NOW!
                 return;
             }
-        } else if (mEncoding == "EUC-KR") {
+        } else if (mDecoder == Decoder::EucKr) {
             if (!processEUC_KRSequence(localBuffer, isFromServer, localBufferLength, localBufferPosition, isTwoTCharsNeeded)) {
                 // We have run out of bytes and we have stored the unprocessed
                 // ones but we need to bail out NOW!
                 return;
             }
-        } else if (mEncoding == "BIG5" || mEncoding == "BIG5-HKSCS") {
+        } else if (mDecoder == Decoder::Big5) {
             if (!processBig5Sequence(localBuffer, isFromServer, localBufferLength, localBufferPosition, isTwoTCharsNeeded)) {
                 // We have run out of bytes and we have stored the unprocessed
                 // ones but we need to bail out NOW!
                 return;
             }
-        } else if (mEncoding == "UTF-8") {
+        } else if (mDecoder == Decoder::Utf8) {
             if (!processUtf8Sequence(localBuffer, isFromServer, localBufferLength, localBufferPosition, isTwoTCharsNeeded)) {
                 // We have run out of bytes and we have stored the unprocessed
                 // ones but we need to bail out NOW!
@@ -1582,18 +1570,18 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
             if (!mLinkOriginalCharacters.contains(mCurrentHyperlinkLinkId)) {
                 mLinkOriginalCharacters[mCurrentHyperlinkLinkId] = c;
 #if defined(DEBUG_OSC_PROCESSING)
-                qDebug().nospace().noquote() << "TBuffer::translateToPlainText(): Stored original character for link " << mCurrentHyperlinkLinkId << " with ANSI colors: fg=" << c.mFgColor.name()
-                                             << " bg=" << c.mBgColor.name() << " flags=" << c.mFlags;
+                qDebug().nospace().noquote() << "TBuffer::translateToPlainText(): Stored original character for link " << mCurrentHyperlinkLinkId << " with ANSI colors: fg=" << c.foreground().name()
+                                             << " bg=" << c.background().name() << " flags=" << c.mFlags;
 #endif
             }
 
             // Apply base styling first (if any)
             if (mCurrentHyperlinkStyling.hasForegroundColor) {
-                c.mFgColor = mCurrentHyperlinkStyling.foregroundColor;
+                c.setForeground(mCurrentHyperlinkStyling.foregroundColor);
             }
 
             if (mCurrentHyperlinkStyling.hasBackgroundColor) {
-                c.mBgColor = mCurrentHyperlinkStyling.backgroundColor;
+                c.setBackground(mCurrentHyperlinkStyling.backgroundColor);
             }
 
             // For preset-only links, base styling may be empty but pseudo-class styling exists
@@ -1601,10 +1589,10 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
             Mudlet::HyperlinkStyling effectiveStyling = getEffectiveHyperlinkStyling(mCurrentHyperlinkLinkId);
             if (effectiveStyling.hasCustomStyling) {
                 if (effectiveStyling.hasForegroundColor) {
-                    c.mFgColor = effectiveStyling.foregroundColor;
+                    c.setForeground(effectiveStyling.foregroundColor);
                 }
                 if (effectiveStyling.hasBackgroundColor) {
-                    c.mBgColor = effectiveStyling.backgroundColor;
+                    c.setBackground(effectiveStyling.backgroundColor);
                 }
                 if (effectiveStyling.isBold) {
                     c.mFlags |= TChar::Bold;
@@ -1688,11 +1676,11 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
         }
 
         if (mpHost->mMxpClient.hasFgColor()) {
-            c.mFgColor = mpHost->mMxpClient.getFgColor();
+            c.setForeground(mpHost->mMxpClient.getFgColor());
         }
 
         if (mpHost->mMxpClient.hasBgColor()) {
-            c.mBgColor = mpHost->mMxpClient.getBgColor();
+            c.setBackground(mpHost->mMxpClient.getBgColor());
         }
 
         if (isTwoTCharsNeeded) {
@@ -1864,12 +1852,15 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
     // the accumulator itself is let go rather than kept. Emptying them before
     // the commit rather than after leaves them usable by any nested pass that
     // the trigger engine starts from within commitLineData().
+    // The characters are moved out rather than copied: nothing still in the
+    // accumulator can be selected, so the copy constructor's clearing of that
+    // flag on every character would be wasted work.
     QString line;
     if (!mMudLine.isEmpty()) {
         line = QString(mMudLine.constData(), mMudLine.size());
         mMudLine.resize(0);
     }
-    std::vector<TChar> chars(mMudBuffer);
+    std::vector<TChar> chars(std::make_move_iterator(mMudBuffer.begin()), std::make_move_iterator(mMudBuffer.end()));
     mMudBuffer.clear();
     if (static_cast<size_t>(mMudLine.capacity()) > csmMaxRetainedLineCapacity) {
         QString().swap(mMudLine);
@@ -1930,6 +1921,10 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
             }
             lineBuffer.back().append(QString());
         }
+        // A commit re-entered from inside a pass - feedTriggers(), MXP - fills
+        // the empty last line, which can be the one the enclosing pass is still
+        // running over:
+        materialisePreTriggerPassLine(static_cast<int>(buffer.size()) - 1);
         buffer.back() = std::move(chars);
         timeBuffer.back() = currentTimeStamp();
         if (ch == '\xff') {
@@ -1941,29 +1936,48 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
     const int lineIndex = lineBuffer.size() - 1;
     mCommitLineIndices.append(lineIndex);
     if (!mSkipTriggerProcessing) {
-        // Keep the just-committed formats around so that color triggers
-        // can match against the colors as received from the game even
-        // after earlier triggers in this pass have recolored the line;
-        // save/restore gives nested feedTriggers() passes (which re-enter
-        // this function) their own snapshot:
-        // The snapshot is taken through a spare member rather than by moving
-        // the committed formats in, so that its allocation stays in
-        // circulation instead of one being made and freed for every line:
+        // Color triggers match against the colors as received from the game, so
+        // a line an earlier trigger in this pass recolored has to keep its
+        // originals somewhere. materialisePreTriggerPassLine() copies them out
+        // when something first overwrites them rather than up front, because
+        // most lines are never touched and the copy is a whole line of TChars.
+        // Any pass already running is about to lose the pass state to this one,
+        // so its line has to be copied out now - a recolor made from inside this
+        // pass would aim the barrier at this line instead:
+        materialisePreTriggerPassLine(mPreTriggerPassLineNumber);
+        // The save/restore gives each nested pass its own snapshot; the spare
+        // member keeps that snapshot's allocation in circulation instead of one
+        // being made and freed for every line:
         std::vector<TChar> savedPassLine;
         savedPassLine.swap(mPreTriggerPassLine);
         const int savedPassLineNumber = mPreTriggerPassLineNumber;
+        const bool savedPassSnapshotTaken = mPreTriggerPassSnapshotTaken;
         const PassLineUniformity savedPassLineUniformity = mPreTriggerPassLineUniformity;
         mPreTriggerPassLine.swap(mSpareTriggerPassLine);
-        mPreTriggerPassLine.assign(buffer.back().cbegin(), buffer.back().cend());
+        mPreTriggerPassLine.clear();
+        mPreTriggerPassSnapshotTaken = false;
         mPreTriggerPassLineNumber = lineIndex;
         mPreTriggerPassLineUniformity = PassLineUniformity::Unknown;
+#ifndef QT_NO_DEBUG
+        const quint64 committedColors = colorFingerprint(buffer.back());
+#endif
         mpHost->runTriggers(lineIndex);
+#ifndef QT_NO_DEBUG
+        // A write that reaches the committed line without passing
+        // materialisePreTriggerPassLine() leaves no trace at runtime - color
+        // triggers just quietly match the recolored text - so catch it here
+        // instead of in a bug report:
+        if (!mPreTriggerPassSnapshotTaken && mPreTriggerPassLineNumber == lineIndex && lineIndex < static_cast<int>(buffer.size())) {
+            Q_ASSERT_X(colorFingerprint(buffer[lineIndex]) == committedColors, "TBuffer::commitLineData", "a trigger recolored the line without going through materialisePreTriggerPassLine()");
+        }
+#endif
         mSpareTriggerPassLine.swap(mPreTriggerPassLine);
         if (mSpareTriggerPassLine.capacity() > csmMaxRetainedLineCapacity) {
             std::vector<TChar>().swap(mSpareTriggerPassLine);
         }
         mPreTriggerPassLine.swap(savedPassLine);
         mPreTriggerPassLineNumber = savedPassLineNumber;
+        mPreTriggerPassSnapshotTaken = savedPassSnapshotTaken;
         mPreTriggerPassLineUniformity = savedPassLineUniformity;
     }
 
@@ -2240,7 +2254,7 @@ void TBuffer::startServerWrapFlushTimer()
             mpHost->mpConsole->mTriggerEngineMode = true;
             flushPendingServerWrapJoin();
             mpHost->mpConsole->mTriggerEngineMode = false;
-            mpHost->mpConsole->finalize();
+            mpHost->finalizeMainConsole();
         });
     }
     mpServerWrapFlushTimer->start();
@@ -2248,33 +2262,48 @@ void TBuffer::startServerWrapFlushTimer()
 
 const std::vector<TChar>* TBuffer::preTriggerPassLine(int lineNumber) const
 {
-    if (lineNumber >= 0 && lineNumber == mPreTriggerPassLineNumber) {
+    if (lineNumber >= 0 && lineNumber == mPreTriggerPassLineNumber && mPreTriggerPassSnapshotTaken) {
         return &mPreTriggerPassLine;
     }
     return nullptr;
 }
 
 // A structural edit to the trigger-pass line makes the edited text the new
-// baseline for color matching, as it was before the snapshot existed:
+// baseline for color matching:
 void TBuffer::syncPreTriggerPassLine(int y)
 {
     if (y >= 0 && y == mPreTriggerPassLineNumber && y < static_cast<int>(buffer.size())) {
         mPreTriggerPassLine = buffer[y];
         mPreTriggerPassLineUniformity = PassLineUniformity::Unknown;
+        mPreTriggerPassSnapshotTaken = true;
+    }
+}
+
+void TBuffer::materialisePreTriggerPassLine(int y)
+{
+    if (!mPreTriggerPassSnapshotTaken && y >= 0 && y == mPreTriggerPassLineNumber && y < static_cast<int>(buffer.size())) {
+        mPreTriggerPassLine.assign(buffer[y].cbegin(), buffer[y].cend());
+        mPreTriggerPassSnapshotTaken = true;
     }
 }
 
 const TChar* TBuffer::preTriggerPassLineUniformColors(int lineNumber)
 {
-    if (lineNumber < 0 || lineNumber != mPreTriggerPassLineNumber || mPreTriggerPassLine.empty()) {
+    if (lineNumber < 0 || lineNumber != mPreTriggerPassLineNumber || lineNumber >= static_cast<int>(buffer.size())) {
         return nullptr;
     }
-    const TChar& first = mPreTriggerPassLine.front();
+    // Until a write materialises the snapshot the line still holds the colors
+    // the game sent, so it answers for them itself - which is most lines:
+    const std::vector<TChar>& passLine = mPreTriggerPassSnapshotTaken ? mPreTriggerPassLine : buffer[lineNumber];
+    if (passLine.empty()) {
+        return nullptr;
+    }
+    const TChar& first = passLine.front();
     if (mPreTriggerPassLineUniformity == PassLineUniformity::Unknown) {
         // The first character only stands in for the rest of them while this
         // compares colors the same way the trigger it answers for does
-        const bool uniform = std::all_of(mPreTriggerPassLine.cbegin() + 1, mPreTriggerPassLine.cend(), [&first](const TChar& character) {
-            return sameColor(first.foreground(), character.foreground()) && sameColor(first.background(), character.background());
+        const bool uniform = std::all_of(passLine.cbegin() + 1, passLine.cend(), [&first](const TChar& character) {
+            return first.foregroundRgba() == character.foregroundRgba() && first.backgroundRgba() == character.backgroundRgba();
         });
         mPreTriggerPassLineUniformity = uniform ? PassLineUniformity::Uniform : PassLineUniformity::Mixed;
     }
@@ -2327,7 +2356,7 @@ void TBuffer::processMxpWatchdogCallback()
                 }
                 commitLine('\r', unusedBufferPosition);
                 hostGuard->mMxpProcessor.getMxpTagBuilder().reset();
-                hostGuard->mpConsole->finalize();
+                hostGuard->finalizeMainConsole();
             });
         }
         mWatchdogPhase = WatchdogPhase::None;
@@ -4713,6 +4742,7 @@ void TBuffer::clearLinkIndices(int lineNumber, int startColumn, int length)
         return;
     }
 
+    materialisePreTriggerPassLine(lineNumber);
     std::vector<TChar>& line = buffer[lineNumber];
 
     // Extra safety: ensure we don't go out of bounds
@@ -4759,6 +4789,7 @@ void TBuffer::restoreLinkIndices(int lineNumber, int startColumn, int length, in
         return;
     }
 
+    materialisePreTriggerPassLine(lineNumber);
     std::vector<TChar>& line = buffer[lineNumber];
 
     // Extra safety: ensure we don't go out of bounds
@@ -4992,7 +5023,7 @@ void TBuffer::resetColors()
 
 void TBuffer::append(const QString& text, int sub_start, int sub_end, const TChar& format, int linkID)
 {
-    append(text, sub_start, sub_end, format.mFgColor, format.mBgColor, format.mFlags, linkID);
+    append(text, sub_start, sub_end, format.foreground(), format.background(), format.mFlags, linkID);
 }
 
 // A link index only means anything to the store that issued it, so an index from
@@ -5042,6 +5073,8 @@ void TBuffer::appendFormatted(const QString& text, const std::vector<TChar>& for
 
     const int lastLineBeforeWrap = buffer.size() - 1;
     const int lastLineLength = lineBuffer.at(lastLineBeforeWrap).size();
+
+    materialisePreTriggerPassLine(lastLineBeforeWrap);
 
     bool firstChar = lineBuffer.back().isEmpty();
     QHash<int, int> remappedLinkIds;
@@ -5160,6 +5193,7 @@ void TBuffer::appendLine(const QString& text,
     }
 
     int lastLine = buffer.size() - 1;
+    materialisePreTriggerPassLine(lastLine);
 
     if (Q_UNLIKELY(lastLine < 0)) {
         // There are NO lines in the buffer - so initialize with a new empty line
@@ -5244,7 +5278,7 @@ bool TBuffer::insertInLine(QPoint& P, const QString& text, const TChar& format)
         buffer[y].insert(buffer[y].begin() + x, static_cast<std::size_t>(insertedText.size()), format);
         syncPreTriggerPassLine(y);
     } else {
-        appendLine(insertedText, 0, insertedText.size(), format.mFgColor, format.mBgColor, format.mFlags);
+        appendLine(insertedText, 0, insertedText.size(), format.foreground(), format.background(), format.mFlags);
     }
     return true;
 }
@@ -5305,8 +5339,8 @@ void TBuffer::paste(QPoint& P, const TBuffer& chunk)
         QPoint P_current(x + cx, y);
         insertInLine(P_current,
                      QString(chunk.lineBuffer.at(0).at(cx)),
-                     TChar(chunk.buffer.at(0).at(cx).mFgColor,
-                           chunk.buffer.at(0).at(cx).mBgColor,
+                     TChar(chunk.buffer.at(0).at(cx).foreground(),
+                           chunk.buffer.at(0).at(cx).background(),
                            chunk.buffer.at(0).at(cx).mFlags,
                            remapLinkId(chunk.mLinkStore, chunk.buffer.at(0).at(cx).linkIndex(), remappedLinkIds)));
     }
@@ -5588,6 +5622,10 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         return 0;
     }
 
+    // The Lua wrapLine() reaches here from inside a trigger pass, and rebuilding
+    // the line replaces the characters the pass is matching against:
+    materialisePreTriggerPassLine(startLine);
+
     // consider moving this upstream and returning an error if you try to set indentation higher than wrapWidth
     const int indent = (indentSize < maxWidth) ? indentSize : 0;
     const int hangingIndent = (hangingIndentSize < maxWidth) ? hangingIndentSize : 0;
@@ -5803,6 +5841,7 @@ QStringList TBuffer::split(int line, const QRegularExpression& splitter)
 
 void TBuffer::expandLine(int y, int count, TChar& pC)
 {
+    materialisePreTriggerPassLine(y);
     const int size = buffer[y].size() - 1;
     for (int i = size, total = size + count; i < total; ++i) {
         buffer[y].push_back(pC);
@@ -5825,28 +5864,28 @@ bool TBuffer::replaceInLine(QPoint& P_begin, QPoint& P_end, const QString& with,
     if (x1 < 0 || x2 < 0) {
         return false;
     }
-
-    int xb, xe, yb, ye;
-    if (y1 <= y2) {
-        yb = y1;
-        ye = y2;
-        xb = x1;
-        xe = x2;
-    } else {
-        yb = y2;
-        ye = y1;
-        xb = x2;
-        xe = x1;
+    // the erase() below is undefined behaviour when the start is past the end:
+    // it moves a range of negative length, writing beyond the allocation
+    if (y1 > y2 || (y1 == y2 && x1 > x2)) {
+        return false;
     }
 
-    for (int y = yb; y <= ye; y++) {
+    for (int y = y1; y <= y2; y++) {
         int x = 0;
-        if (y == yb) {
-            x = xb;
+        if (y == y1) {
+            x = x1;
         }
         int x_end = buffer[y].size() - 1;
-        if (y == ye) {
-            x_end = xe;
+        if (y == y2) {
+            x_end = x2;
+        }
+        // the guard above orders the range as a whole, but a line inside a
+        // multi-line one can still start past its own end: an empty line has
+        // an x_end of -1, and a first line selected from its very last column
+        // leaves x at buffer[y].size(). Either way there is nothing on the line
+        // to remove, and erase() over that range is the same reversed move.
+        if (x > x_end) {
+            continue;
         }
         lineBuffer[y].remove(x, x_end - x);
         auto it1 = buffer[y].begin() + x;
@@ -6015,6 +6054,7 @@ QSet<int> TBuffer::collectActiveLinkIds() const
 void TBuffer::clearLastLine()
 {
     if (!buffer.empty()) {
+        materialisePreTriggerPassLine(static_cast<int>(buffer.size()) - 1);
         buffer.back().clear();
         if (!lineBuffer.isEmpty()) {
             lineBuffer.back().clear();
@@ -6172,6 +6212,7 @@ bool TBuffer::applyLink(const QPoint& P_begin, const QPoint& P_end, const QStrin
          * && ( x2 < static_cast<int>(buffer.at(y2).size()) ) )
          */
         for (int y = y1; y <= y2; ++y) {
+            materialisePreTriggerPassLine(y);
             int x = 0;
             if (y == y1) {
                 x = x1;
@@ -6217,6 +6258,10 @@ bool TBuffer::applyAttribute(const QPoint& P_begin, const QPoint& P_end, const T
          * && ( x2 < static_cast<int>(buffer.at(y2).size()) ) )
          */
 
+        // Deliberately no materialisePreTriggerPassLine() here: color matching
+        // reads only foreground()/background(), so a display attribute leaves the
+        // retained colors valid, and snapshotting would put a copy back on every
+        // line for a script that styles all of them.
         for (int y = y1; y <= y2; ++y) {
             int x = 0;
             if (y == y1) {
@@ -6259,6 +6304,7 @@ bool TBuffer::applyFgColor(const QPoint& P_begin, const QPoint& P_end, const QCo
          */
 
         for (int y = y1; y <= y2; ++y) {
+            materialisePreTriggerPassLine(y);
             int x = 0;
             if (y == y1) {
                 // Override position start column if on first line to given start column
@@ -6270,7 +6316,7 @@ bool TBuffer::applyFgColor(const QPoint& P_begin, const QPoint& P_end, const QCo
                     return true;
                 }
 
-                buffer.at(y).at(x++).mFgColor = newColor;
+                buffer.at(y).at(x++).setForeground(newColor);
             }
         }
         return true;
@@ -6300,6 +6346,7 @@ bool TBuffer::applyBgColor(const QPoint& P_begin, const QPoint& P_end, const QCo
          */
 
         for (int y = y1; y <= y2; ++y) {
+            materialisePreTriggerPassLine(y);
             int x = 0;
             if (y == y1) {
                 // Override position start column if on first line to given start column
@@ -6311,7 +6358,7 @@ bool TBuffer::applyBgColor(const QPoint& P_begin, const QPoint& P_end, const QCo
                     return true;
                 }
 
-                buffer.at(y).at(x++).mBgColor = newColor;
+                buffer.at(y).at(x++).setBackground(newColor);
             }
         }
         return true;
@@ -6361,8 +6408,8 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
     }
 
     TChar::AttributeFlags currentFlags = TChar::None;
-    QColor currentFgColor(Qt::black);
-    QColor currentBgColor(Qt::black);
+    QRgb currentFgColor = qRgb(0, 0, 0);
+    QRgb currentBgColor = qRgb(0, 0, 0);
     int currentLinkIndex = 0;
     // This combination of color values (black on black) cannot usefully be used in practice
     // - so use as initialization values
@@ -6381,8 +6428,8 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
         s.append(qsl("<span style=\"color: rgb(200,150,0); background: %1; \">%2").arg(timeStampBgColor.name(), timeBuffer.at(row).left(TBuffer::smTimeStampFormat.length())));
         // Set the current idea of what the formatting is so we can spot if it
         // changes:
-        currentFgColor = QColor(200, 150, 0);
-        currentBgColor = timeStampBgColor;
+        currentFgColor = qRgb(200, 150, 0);
+        currentBgColor = timeStampBgColor.rgba();
         currentFlags = TChar::None;
         // We are no longer before the first span - so we need to flag that
         // there will be one to close:
@@ -6406,15 +6453,15 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
     for (auto cookedPos = static_cast<size_t>(pos); pos < lastPos; ++cookedPos, ++pos) {
         const int charLinkIndex = buffer.at(cookedRow).at(cookedPos).linkIndex();
         // Do we need to start a new span?
-        if (firstSpan || buffer.at(cookedRow).at(cookedPos).mFgColor != currentFgColor || buffer.at(cookedRow).at(cookedPos).mBgColor != currentBgColor
+        if (firstSpan || buffer.at(cookedRow).at(cookedPos).foregroundRgba() != currentFgColor || buffer.at(cookedRow).at(cookedPos).backgroundRgba() != currentBgColor
             || (buffer.at(cookedRow).at(cookedPos).mFlags & TChar::TestMask) != currentFlags || charLinkIndex != currentLinkIndex) {
             if (firstSpan) {
                 firstSpan = false; // The first span - won't need to close the previous one
             } else {
                 s.append(QLatin1String("</span>"));
             }
-            currentFgColor = buffer.at(cookedRow).at(cookedPos).mFgColor;
-            currentBgColor = buffer.at(cookedRow).at(cookedPos).mBgColor;
+            currentFgColor = buffer.at(cookedRow).at(cookedPos).foregroundRgba();
+            currentBgColor = buffer.at(cookedRow).at(cookedPos).backgroundRgba();
             currentFlags = buffer.at(cookedRow).at(cookedPos).mFlags & TChar::TestMask;
             currentLinkIndex = charLinkIndex;
 
@@ -6481,8 +6528,8 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
             if (currentFlags & TChar::Reverse) {
                 // Swap the fore and background colours:
                 s.append(qsl("<span%9 style=\"color: rgb(%1,%2,%3); background: rgb(%4,%5,%6);%7%8")
-                         .arg(QString::number(currentBgColor.red()), QString::number(currentBgColor.green()), QString::number(currentBgColor.blue()), // args 1 to 3
-                              QString::number(currentFgColor.red()), QString::number(currentFgColor.green()), QString::number(currentFgColor.blue()), // args 4 to 6
+                         .arg(QString::number(qRed(currentBgColor)), QString::number(qGreen(currentBgColor)), QString::number(qBlue(currentBgColor)), // args 1 to 3
+                              QString::number(qRed(currentFgColor)), QString::number(qGreen(currentFgColor)), QString::number(qBlue(currentFgColor)), // args 4 to 6
                               currentFlags & TChar::Bold ? QLatin1String(" font-weight: bold;") : QString(), // arg 7
                               currentFlags & TChar::Italic ? QLatin1String(" font-style: italic;") : QString(), // arg 8
                               blinkClass) // arg 9
@@ -6490,8 +6537,8 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
                          + qsl("\">"));
             } else {
                 s.append(qsl("<span%9 style=\"color: rgb(%1,%2,%3); background: rgb(%4,%5,%6);%7%8")
-                         .arg(QString::number(currentFgColor.red()), QString::number(currentFgColor.green()), QString::number(currentFgColor.blue()), // args 1 to 3
-                              QString::number(currentBgColor.red()), QString::number(currentBgColor.green()), QString::number(currentBgColor.blue()), // args 4 to 6
+                         .arg(QString::number(qRed(currentFgColor)), QString::number(qGreen(currentFgColor)), QString::number(qBlue(currentFgColor)), // args 1 to 3
+                              QString::number(qRed(currentBgColor)), QString::number(qGreen(currentBgColor)), QString::number(qBlue(currentBgColor)), // args 4 to 6
                               currentFlags & TChar::Bold ? QLatin1String(" font-weight: bold;") : QString(), // arg 7
                               currentFlags & TChar::Italic ? QLatin1String(" font-style: italic;") : QString(), // arg 8
                               blinkClass) // arg 9
@@ -7386,10 +7433,34 @@ bool TBuffer::processEUC_KRSequence(const std::string& bufferData, const bool is
     return true;
 }
 
+TBuffer::Decoder TBuffer::decoderFor(const QByteArray& encoding)
+{
+    if (encoding == "UTF-8") {
+        return Decoder::Utf8;
+    }
+    if (encoding == "ISO 8859-1") {
+        return Decoder::Latin1;
+    }
+    if (encoding == "GBK") {
+        return Decoder::Gbk;
+    }
+    if (encoding == "GB18030") {
+        return Decoder::Gb18030;
+    }
+    if (encoding == "EUC-KR") {
+        return Decoder::EucKr;
+    }
+    if (encoding == "BIG5" || encoding == "BIG5-HKSCS") {
+        return Decoder::Big5;
+    }
+    return Decoder::Ascii;
+}
+
 void TBuffer::encodingChanged(const QByteArray& newEncoding)
 {
     if (mEncoding != newEncoding) {
         mEncoding = newEncoding;
+        mDecoder = decoderFor(mEncoding);
         if (mEncoding == "GBK" || mEncoding == "GB18030" || mEncoding == "BIG5" || mEncoding == "BIG5-HKSCS" || mEncoding == "EUC-KR") {
             if (!TEncodingHelper::isEncodingAvailable(mEncoding)) {
                 qCritical().nospace() << "encodingChanged(" << newEncoding << ") ERROR: This encoding cannot be handled as a required codec was not found in the system!";
@@ -8047,6 +8118,7 @@ void TBuffer::revealSpoilerLink(int linkIndex)
     // Find all characters with this link index and restore their original text
     int charIndex = 0;
     for (size_t lineNum = 0; lineNum < buffer.size(); ++lineNum) {
+        materialisePreTriggerPassLine(static_cast<int>(lineNum));
         auto& line = buffer[lineNum];
         QString lineText = lineBuffer.at(static_cast<int>(lineNum));
         bool lineModified = false;
@@ -8328,7 +8400,8 @@ void TBuffer::updateLinkCharacters(int linkIndex)
 #endif
 
     // Iterate through all lines in the buffer
-    for (auto& line : buffer) {
+    for (size_t lineNumber = 0; lineNumber < buffer.size(); ++lineNumber) {
+        auto& line = buffer[lineNumber];
         // Iterate through all characters in the line
         for (auto& tchar : line) {
 #if defined(DEBUG_OSC_PROCESSING)
@@ -8336,11 +8409,12 @@ void TBuffer::updateLinkCharacters(int linkIndex)
 #endif
             // Check if this character belongs to the link we're updating
             if (tchar.linkIndex() == linkIndex) {
+                materialisePreTriggerPassLine(static_cast<int>(lineNumber));
 #if defined(DEBUG_OSC_PROCESSING)
                 matchingCharacters++;
                 static int charUpdateCount = 0;
                 if (charUpdateCount++ < 2) { // Only log first 2 characters to avoid spam
-                    qDebug() << "[OSC] Before update - char with linkIndex" << linkIndex << "- FgColor:" << tchar.mFgColor.name() << "hasFg:" << effectiveStyling.hasForegroundColor
+                    qDebug() << "[OSC] Before update - char with linkIndex" << linkIndex << "- FgColor:" << tchar.foreground().name() << "hasFg:" << effectiveStyling.hasForegroundColor
                              << "new fg:" << (effectiveStyling.hasForegroundColor ? effectiveStyling.foregroundColor.name() : "none");
                 }
 #endif
@@ -8352,13 +8426,16 @@ void TBuffer::updateLinkCharacters(int linkIndex)
                 if (useAnsiBase && mLinkOriginalCharacters.contains(linkIndex)) {
                     TChar originalChar = mLinkOriginalCharacters.value(linkIndex);
 #if defined(DEBUG_OSC_PROCESSING)
-                    qDebug() << "[OSC] Restoring ANSI base for link" << linkIndex << "- Original FgColor:" << originalChar.mFgColor.name() << "Original BgColor:" << originalChar.mBgColor.name()
-                             << "Original Bold:" << bool(originalChar.mFlags & TChar::Bold) << "Current FgColor:" << tchar.mFgColor.name() << "Current Bold:" << bool(tchar.mFlags & TChar::Bold);
+                    qDebug() << "[OSC] Restoring ANSI base for link" << linkIndex << "- Original FgColor:" << originalChar.foreground().name()
+                             << "Original BgColor:" << originalChar.background().name() << "Original Bold:" << bool(originalChar.mFlags & TChar::Bold)
+                             << "Current FgColor:" << tchar.foreground().name() << "Current Bold:" << bool(tchar.mFlags & TChar::Bold);
 #endif
                     // Restore ANSI base - these will be overridden below if styling specifies them
                     tchar.mFgColor = originalChar.mFgColor;
                     tchar.mBgColor = originalChar.mBgColor;
-                    tchar.mFlags = originalChar.mFlags; // Restore ALL ANSI formatting flags including decorations
+                    // Restore ALL ANSI formatting flags including decorations,
+                    // keeping the character selected if it is now
+                    tchar.mFlags = (tchar.mFlags & TChar::Selected) | (originalChar.mFlags & ~TChar::Selected);
 
                     // DON'T continue here - let the pseudo-class styling below override the ANSI base
                     // This allows e.g. :visited{color:#bb66dd} to work with ANSI base formatting
@@ -8368,21 +8445,21 @@ void TBuffer::updateLinkCharacters(int linkIndex)
 
                 // Update foreground color
                 if (effectiveStyling.hasForegroundColor) {
-                    tchar.mFgColor = effectiveStyling.foregroundColor;
+                    tchar.setForeground(effectiveStyling.foregroundColor);
 #if defined(DEBUG_OSC_PROCESSING)
                     static int fgUpdateCount = 0;
                     if (fgUpdateCount++ < 2) {
-                        qDebug() << "[OSC] Applied FG color to link" << linkIndex << "- New FgColor:" << tchar.mFgColor.name();
+                        qDebug() << "[OSC] Applied FG color to link" << linkIndex << "- New FgColor:" << tchar.foreground().name();
                     }
 #endif
                 }
 
                 // Update background color - restore original if not specified in styling
                 if (effectiveStyling.hasBackgroundColor) {
-                    tchar.mBgColor = effectiveStyling.backgroundColor;
+                    tchar.setBackground(effectiveStyling.backgroundColor);
                 } else {
                     // Restore the original background color from when the link was created
-                    tchar.mBgColor = mLinkOriginalBackgrounds.value(linkIndex, mBackGroundColor);
+                    tchar.setBackground(mLinkOriginalBackgrounds.value(linkIndex, mBackGroundColor));
                 }
 
                 // Update text decorations (only for CSS styling, not ANSI-base)

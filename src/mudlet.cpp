@@ -57,9 +57,13 @@
 #include "dlgPackageExporter.h"
 #include "dlgPackageManager.h"
 #include "dlgProfilePreferences.h"
+#include "dlgTriggerEditor.h"
+#include "edbee/edbee.h"
 #include "MMCPServer.h"
 #include "widgetutils.h"
 
+#include <QDataStream>
+#include <QSaveFile>
 #include <QAccessible>
 #include <QAccessibleAnnouncementEvent>
 #include <QApplication>
@@ -80,6 +84,7 @@
 #include <QMediaPlayer>
 #include <QMessageBox>
 #include <QPoint>
+#include <QScopeGuard>
 #include <QScreen>
 #include <QScrollBar>
 #include <QSettings>
@@ -2144,7 +2149,7 @@ void mudlet::loadMaps()
             //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
             {"M_CP869", qsl("m ") % tr("CP869 (DOS Greek 2)")},
             //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-            {"CP1161", tr("CP1161 (Latin/Thai)")},
+            {"CP1162", tr("CP1162 (Latin/Thai)")},
             //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
             {"KOI8-R", tr("KOI8-R (Cyrillic)")},
             //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
@@ -3869,6 +3874,15 @@ void mudlet::closeEvent(QCloseEvent* event)
 {
     qDebug() << "mudlet::closeEvent(...) INFO - called!";
 
+    if (mProfileLoadsInProgress > 0) {
+        // A profile load pumps the event loop part-way through, and accepting
+        // here would delete every Host underneath the load still using one of
+        // them. Hold the close until it returns.
+        mCloseRequestedDuringProfileLoad = true;
+        event->ignore();
+        return;
+    }
+
     QStringList hostsToDestroy;
     bool abortClose = false;
     // Due to the way that Hosts are stored we cannot do a closeHost(hostName)
@@ -3940,6 +3954,19 @@ void mudlet::closeEvent(QCloseEvent* event)
     // pass the event on so dblsqd can perform an update
     // if automatic updates have been disabled
     event->accept();
+}
+
+void mudlet::endProfileLoad()
+{
+    if (--mProfileLoadsInProgress > 0 || !mCloseRequestedDuringProfileLoad) {
+        return;
+    }
+    mCloseRequestedDuringProfileLoad = false;
+    // Queued: the load's caller is still on the stack, holding a Host this
+    // close deletes
+    QTimer::singleShot(0, this, [this]() {
+        close();
+    });
 }
 
 void mudlet::forceClose()
@@ -4068,7 +4095,7 @@ void mudlet::readLateSettings(const QSettings& settings)
 
     mEditorTextOptions = static_cast<QTextOption::Flags>(settings.value("editorTextOptions", QVariant(0)).toInt());
 
-    mShowMapAuditErrors = settings.value("reportMapIssuesToConsole", QVariant(false)).toBool();
+    TMap::smShowMapAuditErrors = settings.value("reportMapIssuesToConsole", QVariant(false)).toBool();
     mInvertMapZoom = settings.value("invertMapZoom", QVariant(false)).toBool(); // Default to false for modern (non-inverted) behavior
     mStorePasswordsSecurely = settings.value("storePasswordsSecurely", QVariant(true)).toBool();
     mShowTabConnectionIndicators = settings.value("showTabConnectionIndicators", QVariant(false)).toBool();
@@ -4280,7 +4307,7 @@ void mudlet::writeSettings()
     settings.setValue("maximized", static_cast<bool>(windowState() & Qt::WindowMaximized));
     settings.setValue("fullScreen", static_cast<bool>(windowState() & Qt::WindowFullScreen));
     settings.setValue("editorTextOptions", static_cast<int>(mEditorTextOptions));
-    settings.setValue("reportMapIssuesToConsole", mShowMapAuditErrors);
+    settings.setValue("reportMapIssuesToConsole", TMap::smShowMapAuditErrors);
     settings.setValue("invertMapZoom", mInvertMapZoom);
     settings.setValue("storePasswordsSecurely", mStorePasswordsSecurely);
     settings.setValue("showTabConnectionIndicators", mShowTabConnectionIndicators);
@@ -5607,6 +5634,10 @@ void mudlet::deleteProfileData(const QString& profile, const QString& item)
 
 void mudlet::startAutoLogin(const QStringList& cliProfiles, const bool offline)
 {
+    ++mProfileLoadsInProgress;
+    const auto loadScope = qScopeGuard([this] {
+        endProfileLoad();
+    });
     QElapsedTimer timer;
     timer.start();
 
@@ -5736,6 +5767,7 @@ void mudlet::attachDebugArea(const QString& hostname)
     smpDebugArea = new QMainWindow(nullptr);
     const auto pHost = mHostManager.getHost(hostname);
     smpDebugConsole = new TConsole(pHost, qsl("centralDebug"), TConsole::CentralDebugConsole);
+    TDebug::setSink(smpDebugConsole.data());
     smpDebugConsole->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     smpDebugConsole->setWrapAt(100);
     smpDebugArea->setCentralWidget(smpDebugConsole);
@@ -5773,6 +5805,10 @@ void mudlet::doAutoLogin(const QString& profile_name, const bool offline)
         return;
     }
 
+    ++mProfileLoadsInProgress;
+    const auto loadScope = qScopeGuard([this] {
+        endProfileLoad();
+    });
     loadProfile(profile_name, !offline);
 
     slot_connectionDialogueFinished(profile_name, !offline);
@@ -5969,6 +6005,10 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
     if (!pHost) {
         return;
     }
+    ++mProfileLoadsInProgress;
+    const auto loadScope = qScopeGuard([this] {
+        endProfileLoad();
+    });
     pHost->mIsProfileLoadingSequence = true;
     // The Host instance gets its TMainConsole here:
     addConsoleForNewHost(pHost);
@@ -6173,6 +6213,10 @@ void mudlet::slot_multiView(const bool state)
 
 void mudlet::toggleMute(bool state, QAction* toolbarAction, QAction* menuAction, bool isAPINotGame, const QString& unmuteText, const QString& muteText)
 {
+    // Read before the flag below is assigned: the rest of this function runs
+    // either way, because it also re-syncs the actions with the flag
+    const bool changed = (isAPINotGame ? mMuteAPI : mMuteGame) != state;
+
     if (toolbarAction->isChecked() != state || menuAction->isChecked() != state) {
         toolbarAction->setChecked(state);
         menuAction->setChecked(state);
@@ -6240,6 +6284,24 @@ void mudlet::toggleMute(bool state, QAction* toolbarAction, QAction* menuAction,
             }
         }
     }
+
+    if (changed) {
+        // Muting is application-wide rather than per profile, so every open
+        // profile is told about it. The handlers run Lua synchronously and may
+        // open a profile, which inserts into the live host map, so this walks
+        // a copy the way HostManager's own broadcasts do:
+        const QString settingName = isAPINotGame ? qsl("muteMediaAPI") : qsl("muteMediaGame");
+        const QList<QSharedPointer<Host>> hosts = mHostManager.hostList();
+        for (const auto& pHost : hosts) {
+            if ((isAPINotGame ? mMuteAPI : mMuteGame) != state) {
+                // A handler in an earlier profile wrote the opposite value
+                // back; that nested call already told every profile, so the
+                // rest of this loop would report a value nothing holds any more
+                break;
+            }
+            pHost->raiseSettingChangedEvent(settingName, state);
+        }
+    }
 }
 
 void mudlet::slot_muteAPI(const bool state)
@@ -6300,20 +6362,24 @@ void mudlet::slot_toggleCompactInputLine()
 // Called by the menu-item's action itself, that DOES pass the checked state:
 void mudlet::slot_compactInputLine(const bool state)
 {
-    if (dactionInputLine->isChecked() != state) {
-        // Ensure the menu item reflectes the actual state:
-        dactionInputLine->setChecked(state);
-    }
-    if (mpCurrentActiveHost) {
-        mpCurrentActiveHost->setCompactInputLine(state);
+    // The setter runs the event handlers, which may close this profile, so the
+    // host is held and re-checked rather than read off the member each time:
+    QPointer<Host> pHost = mpCurrentActiveHost;
+    if (pHost) {
+        pHost->setCompactInputLine(state);
         // Make sure players don't get confused when accidentally hiding buttons.
-        if (QKeySequence* shortcut = mpShortcutsManager->getSequence(qsl("Compact input line"));
-            state && !mpCurrentActiveHost->mTutorialForCompactLineAlreadyShown && shortcut && !shortcut->isEmpty()) {
+        if (QKeySequence* shortcut = mpShortcutsManager->getSequence(qsl("Compact input line")); pHost && state && !pHost->mTutorialForCompactLineAlreadyShown && shortcut && !shortcut->isEmpty()) {
             //: Here %1 will be replaced with the keyboard shortcut, default is ALT+L.
             const QString infoMsg = tr("[ INFO ]  - Compact input line set. Press \"%1\" to show bottom-right buttons again.").arg(shortcut->toString(QKeySequence::NativeText));
-            mpCurrentActiveHost->postMessage(infoMsg);
-            mpCurrentActiveHost->mTutorialForCompactLineAlreadyShown = true;
+            pHost->postMessage(infoMsg);
+            pHost->mTutorialForCompactLineAlreadyShown = true;
         }
+    }
+    // Ensure the menu item reflects the actual state - a handler of the event
+    // the setter raised may have written the opposite value back:
+    const bool held = pHost ? pHost->getCompactInputLine() : state;
+    if (dactionInputLine->isChecked() != held) {
+        dactionInputLine->setChecked(held);
     }
 }
 
@@ -7112,6 +7178,10 @@ void mudlet::showChangelogIfUpdated()
 
 Host* mudlet::loadProfile(const QString& profile_name, const bool playOnline, const QString& saveFileName)
 {
+    ++mProfileLoadsInProgress;
+    const auto loadScope = qScopeGuard([this] {
+        endProfileLoad();
+    });
     Host* pHost = mHostManager.getHost(profile_name);
     if (pHost) {
         if (playOnline) {
@@ -7502,8 +7572,8 @@ void mudlet::slot_passwordMigratedToSecureStorage(QKeychain::Job* job)
 
 void mudlet::setShowMapAuditErrors(const bool state)
 {
-    if (mShowMapAuditErrors != state) {
-        mShowMapAuditErrors = state;
+    if (TMap::smShowMapAuditErrors != state) {
+        TMap::smShowMapAuditErrors = state;
 
         emit signal_showMapAuditErrorsChanged(state);
     }
@@ -9795,6 +9865,11 @@ void mudlet::moveProfileFromDetachedToMainWindow(const QString& profileName, TDe
 
     // Update main window title to reflect moved profile
     updateMainWindowTitle();
+}
+
+QDockWidget* mudlet::getMainWindowDockWidget(const QString& mapKey) const
+{
+    return mMainWindowDockWidgetMap.value(mapKey);
 }
 
 void mudlet::updateMainWindowDockWidgetVisibilityForProfile(const QString& profileName)

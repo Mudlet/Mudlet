@@ -34,6 +34,7 @@
 #include "TTrigger.h"
 #include "XMLexport.h"
 
+#include <QSaveFile>
 #include <QtConcurrentRun>
 #include <QDesktopServices>
 #include <QDirIterator>
