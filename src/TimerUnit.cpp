@@ -136,6 +136,17 @@ void TimerUnit::compileAll()
 void TimerUnit::reenableAllTriggers()
 {
     for (auto timer : mTimerRootNodeList) {
+        // The same skip enableTimer(name) makes: a timer queued for deletion stays
+        // in this list until doCleanup() frees it, and killTimer() leaves it
+        // wanting to be active - as does a spent one-shot - so the resume would
+        // otherwise re-arm the corpse and it would fire again (#9887). The
+        // uninstallList half of the test is unreachable today, since uninstall()
+        // deactivates what it defers, and is kept in step with the by-name guard.
+        // Only temporary root timers are ever queued on their own and _uninstall()
+        // queues whole subtrees, so no child needs testing here.
+        if (mCleanupSet.contains(timer) || uninstallList.contains(timer)) {
+            continue;
+        }
         timer->enableTimer(timer->getID());
     }
 }
