@@ -3460,6 +3460,25 @@ void TLuaInterpreter::setMultiCaptureGroups(const std::list<std::list<std::strin
 }
 
 // No documentation available in wiki - internal function
+void TLuaInterpreter::setMultiCaptureGroups(std::list<std::list<std::string>>&& captureList, std::list<std::list<int>>&& posList, QVector<NameGroupMatches>&& nameGroups)
+{
+    mMultiCaptureGroupList = std::move(captureList);
+    mMultiCaptureGroupPosList = std::move(posList);
+    mMultiCaptureNameGroups = std::move(nameGroups);
+}
+
+// No documentation available in wiki - internal function
+// Returns what a move into setMultiCaptureGroups() handed over, so the nodes
+// go back to their pool instead of the allocator
+void TLuaInterpreter::takeBackMultiCaptureGroups(std::list<std::list<std::string>>& captureList, std::list<std::list<int>>& posList)
+{
+    captureList = std::move(mMultiCaptureGroupList);
+    posList = std::move(mMultiCaptureGroupPosList);
+    mMultiCaptureGroupList.clear();
+    mMultiCaptureGroupPosList.clear();
+}
+
+// No documentation available in wiki - internal function
 void TLuaInterpreter::setCaptureGroups(const std::list<std::string>& captureList, const std::list<int>& posList)
 {
     // Take back the storage clearCaptureGroups() parked, unless a nested pass is
