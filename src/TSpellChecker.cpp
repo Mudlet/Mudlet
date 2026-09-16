@@ -50,6 +50,36 @@ Hunhandle* TSpellChecker::smpHunspell_sharedDictionary = nullptr;
 bool TSpellChecker::smSharedDictionaryFailed = false;
 QSet<QString> TSpellChecker::smWordSet_shared;
 
+namespace {
+// A ".dic" file holds one word per line, below a count of how many lines
+// follow, and hunspell reads a "/" on such a line as the start of that word's
+// affix flags and a tab as the start of its morphological description. So a
+// word can only be stored if the file gives it back as itself:
+//   - a blank word writes a line the next load skips;
+//   - a line feed writes two lines that come back as two separate words;
+//   - a carriage return is dropped by the QFile::Text reader, so "qa\rword"
+//     comes back as "qaword";
+//   - leading whitespace leaves hunspell not recognising the word at all, and a
+//     tab or a "/" leaves it knowing only the part in front - "TCP/IP" teaches
+//     the spell checker "TCP" instead - while the word list still reports the
+//     word that was added.
+// Hunspell does read "\/" as an escaped "/", but our own reader would then hand
+// the backslash back as part of the word, so escaping would mean changing both
+// halves of the format and misreading every ".dic" file already written.
+// A trailing space, and a word of nothing but spaces, do come back intact; the
+// same test refuses those because they are not words.
+bool storableWord(const QString& word)
+{
+    return !word.isEmpty() && word == word.trimmed() && !word.contains(QChar::LineFeed) && !word.contains(QChar::CarriageReturn) && !word.contains(QChar::Tabulation)
+           && !word.contains(QLatin1Char('/'));
+}
+
+QString unstorableWordMessage()
+{
+    return qsl("the word \"%1\" cannot be stored in the user dictionary, it must have some text in it, fit on a single line, not start or end with whitespace, and contain no tab or \"/\" character");
+}
+} // namespace
+
 #if defined(Q_OS_WINDOWS)
 // credit to Qt Creator (https://github.com/qt-creator/qt-creator/blob/50d93a656789d6e776ecca4adc2e5b487bac0dbc/src/libs/utils/fileutils.cpp)
 static QString getShortPathName(const QString& name)
@@ -323,6 +353,10 @@ QPair<bool, QString> TSpellChecker::addWord(const QString& word)
         return qMakePair(false, QLatin1String("a user dictionary is not enable for this profile"));
     }
 
+    if (!storableWord(word)) {
+        return qMakePair(false, unstorableWordMessage().arg(word));
+    }
+
     if (useSharedDictionary) {
         if (!sharedDictionary()) {
             return qMakePair(false, qsl("the shared dictionary could not be opened, so \"%1\" was not added").arg(word));
@@ -356,7 +390,11 @@ QPair<bool, QString> TSpellChecker::addWord(const QString& word)
 
 QPair<bool, QString> TSpellChecker::removeWord(const QString& word)
 {
-    const QString errMsg = qsl("the word \"%1\" does not seem to be in the user dictionary");
+    // A word that could not have been written into the ".dic" file cannot have
+    // come back out of one either, so say why it can never be in there rather
+    // than merely that it is not. Removal is not refused outright, so that a
+    // word an older version stored can still be taken out again:
+    const QString errMsg = storableWord(word) ? qsl("the word \"%1\" does not seem to be in the user dictionary") : unstorableWordMessage();
     QPair<bool, QString> result{};
     bool enableUserDictionary = false;
     bool useSharedDictionary = false;

@@ -264,6 +264,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
 
     mPopulating = true;
     if (pHost) {
+        connect(pHost, &Host::signal_profileStyleSheetChanged, this, &dlgProfilePreferences::setStyleSheet);
         initWithHost(pHost);
     } else {
         disableHostDetails();
@@ -5136,8 +5137,8 @@ void dlgProfilePreferences::setColors2()
 
         setButtonColor(pushButton_foreground_color_2, pHost->mFgColor_2);
         setButtonColor(pushButton_background_color_2, pHost->mBgColor_2);
-        setButtonColor(pushButton_lowerLevelColor, pHost->mLowerLevelColor);
-        setButtonColor(pushButton_upperLevelColor, pHost->mUpperLevelColor);
+        setButtonColor(pushButton_lowerLevelColor, pHost->mLowerLevelColor, true);
+        setButtonColor(pushButton_upperLevelColor, pHost->mUpperLevelColor, true);
         setButtonColor(pushButton_roomBorderColor, pHost->mRoomBorderColor);
         setButtonColor(pushButton_mapInfoBg, pHost->mMapInfoBg, true);
         setButtonColor(pushButton_roomCollisionBorderColor, pHost->mRoomCollisionBorderColor);
@@ -5590,7 +5591,7 @@ void dlgProfilePreferences::slot_setLowerLevelColor()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_lowerLevelColor, pHost->mLowerLevelColor);
+        setButtonAndProfileColor(pushButton_lowerLevelColor, pHost->mLowerLevelColor, true);
     }
 }
 
@@ -5598,7 +5599,7 @@ void dlgProfilePreferences::slot_setUpperLevelColor()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonAndProfileColor(pushButton_upperLevelColor, pHost->mUpperLevelColor);
+        setButtonAndProfileColor(pushButton_upperLevelColor, pHost->mUpperLevelColor, true);
     }
 }
 
@@ -6814,15 +6815,14 @@ void dlgProfilePreferences::applyAll()
             pHost->mMMCPChatPort = ok ? port : csDefaultMMCPHostPort;
         }
 
-        /* Possible inclusion in 4.21
+        // The three MMCP options below have no controls on the form - their check boxes
+        // are commented out of profile_preferences.ui - so an apply has nothing to read
+        // them from.
+        /* restore these along with the check boxes:
         pHost->mMMCPAutostartServer = checkBox_mmcpAutostartServer->isChecked();
         pHost->mMMCPAutoAcceptCalls = checkBox_mmcpAutoAcceptCalls->isChecked();
         pHost->mMMCPAllowPeekRequests = checkBox_mmcpAllowPeekReq->isChecked();
         */
-        // remove these when the above is restored
-        pHost->mMMCPAutostartServer = false;
-        pHost->mMMCPAutoAcceptCalls = false;
-        pHost->mMMCPAllowPeekRequests = false;
 
         if (mSnapshot.dirty(checkBox_mmcpPrefixEmotes)) {
             pHost->mMMCPPrefixEmotes = checkBox_mmcpPrefixEmotes->isChecked();
@@ -6833,17 +6833,8 @@ void dlgProfilePreferences::applyAll()
         if (mSnapshot.dirty(checkBox_mmcpSnoopInMainConsole)) {
             pHost->mMMCPShowSnoopInMainConsole = checkBox_mmcpSnoopInMainConsole->isChecked();
         }
-        if (mSnapshot.dirty(checkBox_announceIncomingText)) {
-            pHost->mAnnounceIncomingText = checkBox_announceIncomingText->isChecked();
-        }
-        if (mSnapshot.dirty(checkBox_advertiseScreenReader)) {
-            pHost->mAdvertiseScreenReader = checkBox_advertiseScreenReader->isChecked();
-        }
         if (mSnapshot.dirty(checkBox_enableOSC8Hyperlinks)) {
             pHost->mEnableOSC8Hyperlinks = checkBox_enableOSC8Hyperlinks->isChecked();
-        }
-        if (mSnapshot.dirty(checkBox_enableClosedCaption)) {
-            pHost->mEnableClosedCaption = checkBox_enableClosedCaption->isChecked();
         }
 
         if (mSnapshot.dirty(checkBox_expectCSpaceIdInColonLessMColorCode)) {
@@ -6897,6 +6888,18 @@ void dlgProfilePreferences::applyAll()
                     it->second->swap(sequence);
                 }
             }
+        }
+
+        // Last, because these setters run script handlers synchronously, which
+        // may do anything to the Host this block is still writing to
+        if (mSnapshot.dirty(checkBox_announceIncomingText)) {
+            pHost->setAnnounceIncomingText(checkBox_announceIncomingText->isChecked());
+        }
+        if (mSnapshot.dirty(checkBox_advertiseScreenReader)) {
+            pHost->setAdvertiseScreenReader(checkBox_advertiseScreenReader->isChecked());
+        }
+        if (mSnapshot.dirty(checkBox_enableClosedCaption)) {
+            pHost->setEnableClosedCaption(checkBox_enableClosedCaption->isChecked());
         }
     }
 
@@ -8468,16 +8471,8 @@ void dlgProfilePreferences::slot_changeControlCharacterHandling()
 
 void dlgProfilePreferences::slot_toggleAdvertiseScreenReader(const bool state)
 {
-    Host* pHost = mpHost;
-
-    if (!pHost) {
-        return;
-    }
-
-    if (pHost->mAdvertiseScreenReader != state) {
-        pHost->mAdvertiseScreenReader = state;
-        pHost->mTelnet.sendInfoNewEnvironValue(qsl("SCREEN_READER"));
-        pHost->mTelnet.sendInfoNewEnvironValue(qsl("MTTS"));
+    if (mpHost) {
+        mpHost->setAdvertiseScreenReader(state);
     }
 }
 
@@ -8497,8 +8492,8 @@ void dlgProfilePreferences::slot_toggleEnableOSC8Hyperlinks(const bool state)
 
 void dlgProfilePreferences::slot_toggleEnableClosedCaption(const bool state)
 {
-    if (mpHost && mpHost->mEnableClosedCaption != state) {
-        mpHost->mEnableClosedCaption = state;
+    if (mpHost) {
+        mpHost->setEnableClosedCaption(state);
     }
 }
 

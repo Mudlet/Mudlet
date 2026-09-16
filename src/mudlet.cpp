@@ -59,9 +59,13 @@
 #include "dlgPackageExporter.h"
 #include "dlgPackageManager.h"
 #include "dlgProfilePreferences.h"
+#include "dlgTriggerEditor.h"
+#include "edbee/edbee.h"
 #include "MMCPServer.h"
 #include "widgetutils.h"
 
+#include <QDataStream>
+#include <QSaveFile>
 #include <QAccessible>
 #include <QAccessibleAnnouncementEvent>
 #include <QApplication>
@@ -1002,6 +1006,10 @@ void mudlet::init()
     scanForQtTranslations(MudletApp::getMudletPath(enums::qtTranslationsPath));
     loadTranslators(MudletApp::getInterfaceLanguage());
 
+    if (!mRejectedPortableMarker.isEmpty()) {
+        warnAboutRejectedPortableRoot();
+    }
+
     // Cannot assign a value in the constructor list as it requires the
     // translations to be loaded first:
     //: Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!
@@ -1644,31 +1652,22 @@ void mudlet::init()
     //    });
 }
 
-static bool validateConfDir(const QString& path)
-{
-    if (path.isEmpty()) {
-        qWarning("WARN: portable data path not specified");
-        return false;
-    }
-    QFileInfo pathInfo(path);
-    if (pathInfo.isFile()) {
-        qWarning("WARN: specified portable data path is an existing file: %s", qPrintable(path));
-        return false;
-    }
-    QFileInfo parentInfo(pathInfo.dir().path());
-    if (!parentInfo.isDir()) {
-        qWarning("WARN: parent directory of specified portable data path doesn't exist: %s", qPrintable(parentInfo.filePath()));
-        return false;
-    }
-    return true;
-}
-
 void mudlet::setupConfig()
 {
     const auto resolution = MudletApp::resolveConfigRoot(MudletApp::executableDir());
     const QString confPath = resolution.path;
-    if (resolution.portable && !validateConfDir(confPath)) {
-        qFatal("FATAL: portable data path invalid");
+    if (resolution.portableRootRejected) {
+        // This used to be qFatal(), which is abort(): no message anywhere the
+        // user looks, and a crash report filed for a mistyped portable.txt. The
+        // resolver has already said which check the root failed and handed back
+        // the non-portable location, so carry on there and say so - loudly in
+        // the log now, and on screen once init() has the translations up.
+        mRejectedPortableMarker = MudletApp::portableMarkerPath(MudletApp::executableDir());
+        if (mRejectedPortableMarker.isEmpty()) {
+            mRejectedPortableMarker = qsl("portable.txt");
+        }
+        qWarning().nospace().noquote() << "mudlet::setupConfig() WARN - \"" << mRejectedPortableMarker << "\" names a data directory Mudlet cannot use, so \"" << confPath
+                                       << "\" is in use instead. Profiles kept where the marker points will not be listed until it is corrected.";
     }
     if (resolution.migrationPending) {
         qInfo().nospace() << "mudlet::setupConfig() INFO: XDG_CONFIG_HOME is set but $XDG_CONFIG_HOME/mudlet holds no profiles, so the existing " << confPath
@@ -1683,6 +1682,26 @@ void mudlet::setupConfig()
     // setupConfig() must not run again once init() has created the Updater,
     // which keeps using the settings object this discards
     MudletApp::resetSettings();
+}
+
+// Startup no longer stops on a portable.txt that names a directory Mudlet cannot
+// use, so this dialog is the only thing telling the user that the profiles they
+// are about to see are not the portable ones they asked for.
+void mudlet::warnAboutRejectedPortableRoot()
+{
+    const QString marker = mRejectedPortableMarker;
+    mRejectedPortableMarker.clear();
+    QMessageBox notice;
+    //: Title of the warning shown at startup when portable.txt names a data directory Mudlet cannot use
+    notice.setWindowTitle(tr("Portable data directory unusable"));
+    //: %1 is the full path of the portable.txt file that names the unusable directory
+    notice.setText(tr("The data directory named by %1 cannot be used.").arg(marker));
+    //: %1 is the full path of the directory Mudlet has fallen back to for profiles and settings
+    notice.setInformativeText(tr("Mudlet is using %1 instead, so profiles kept in the portable directory will not be listed. "
+                                 "Correct the file and restart Mudlet to use that directory again.")
+                                      .arg(MudletApp::getMudletPath(enums::mainPath)));
+    notice.setIcon(QMessageBox::Warning);
+    notice.exec();
 }
 
 void mudlet::initEdbee()
@@ -2076,7 +2095,7 @@ void mudlet::loadMaps()
             //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
             {"M_CP869", qsl("m ") % tr("CP869 (DOS Greek 2)")},
             //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
-            {"CP1161", tr("CP1161 (Latin/Thai)")},
+            {"CP1162", tr("CP1162 (Latin/Thai)")},
             //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
             {"KOI8-R", tr("KOI8-R (Cyrillic)")},
             //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
@@ -5646,6 +5665,7 @@ void mudlet::attachDebugArea(const QString& hostname)
     smpDebugArea = new QMainWindow(nullptr);
     const auto pHost = mHostManager.getHost(hostname);
     smpDebugConsole = new TConsole(pHost, qsl("centralDebug"), TConsole::CentralDebugConsole);
+    TDebug::setSink(smpDebugConsole.data());
     smpDebugConsole->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     smpDebugConsole->setWrapAt(100);
     smpDebugArea->setCentralWidget(smpDebugConsole);
@@ -6091,6 +6111,10 @@ void mudlet::slot_multiView(const bool state)
 
 void mudlet::toggleMute(bool state, QAction* toolbarAction, QAction* menuAction, bool isAPINotGame, const QString& unmuteText, const QString& muteText)
 {
+    // Read before the flag below is assigned: the rest of this function runs
+    // either way, because it also re-syncs the actions with the flag
+    const bool changed = (isAPINotGame ? mMuteAPI : mMuteGame) != state;
+
     if (toolbarAction->isChecked() != state || menuAction->isChecked() != state) {
         toolbarAction->setChecked(state);
         menuAction->setChecked(state);
@@ -6158,6 +6182,24 @@ void mudlet::toggleMute(bool state, QAction* toolbarAction, QAction* menuAction,
             }
         }
     }
+
+    if (changed) {
+        // Muting is application-wide rather than per profile, so every open
+        // profile is told about it. The handlers run Lua synchronously and may
+        // open a profile, which inserts into the live host map, so this walks
+        // a copy the way HostManager's own broadcasts do:
+        const QString settingName = isAPINotGame ? qsl("muteMediaAPI") : qsl("muteMediaGame");
+        const QList<QSharedPointer<Host>> hosts = mHostManager.hostList();
+        for (const auto& pHost : hosts) {
+            if ((isAPINotGame ? mMuteAPI : mMuteGame) != state) {
+                // A handler in an earlier profile wrote the opposite value
+                // back; that nested call already told every profile, so the
+                // rest of this loop would report a value nothing holds any more
+                break;
+            }
+            pHost->raiseSettingChangedEvent(settingName, state);
+        }
+    }
 }
 
 void mudlet::slot_muteAPI(const bool state)
@@ -6218,20 +6260,24 @@ void mudlet::slot_toggleCompactInputLine()
 // Called by the menu-item's action itself, that DOES pass the checked state:
 void mudlet::slot_compactInputLine(const bool state)
 {
-    if (dactionInputLine->isChecked() != state) {
-        // Ensure the menu item reflectes the actual state:
-        dactionInputLine->setChecked(state);
-    }
-    if (mpCurrentActiveHost) {
-        mpCurrentActiveHost->setCompactInputLine(state);
+    // The setter runs the event handlers, which may close this profile, so the
+    // host is held and re-checked rather than read off the member each time:
+    QPointer<Host> pHost = mpCurrentActiveHost;
+    if (pHost) {
+        pHost->setCompactInputLine(state);
         // Make sure players don't get confused when accidentally hiding buttons.
-        if (QKeySequence* shortcut = mpShortcutsManager->getSequence(qsl("Compact input line"));
-            state && !mpCurrentActiveHost->mTutorialForCompactLineAlreadyShown && shortcut && !shortcut->isEmpty()) {
+        if (QKeySequence* shortcut = mpShortcutsManager->getSequence(qsl("Compact input line")); pHost && state && !pHost->mTutorialForCompactLineAlreadyShown && shortcut && !shortcut->isEmpty()) {
             //: Here %1 will be replaced with the keyboard shortcut, default is ALT+L.
             const QString infoMsg = tr("[ INFO ]  - Compact input line set. Press \"%1\" to show bottom-right buttons again.").arg(shortcut->toString(QKeySequence::NativeText));
-            mpCurrentActiveHost->postMessage(infoMsg);
-            mpCurrentActiveHost->mTutorialForCompactLineAlreadyShown = true;
+            pHost->postMessage(infoMsg);
+            pHost->mTutorialForCompactLineAlreadyShown = true;
         }
+    }
+    // Ensure the menu item reflects the actual state - a handler of the event
+    // the setter raised may have written the opposite value back:
+    const bool held = pHost ? pHost->getCompactInputLine() : state;
+    if (dactionInputLine->isChecked() != held) {
+        dactionInputLine->setChecked(held);
     }
 }
 
@@ -9031,6 +9077,11 @@ void mudlet::moveProfileFromDetachedToMainWindow(const QString& profileName, TDe
 
     // Update main window title to reflect moved profile
     updateMainWindowTitle();
+}
+
+QDockWidget* mudlet::getMainWindowDockWidget(const QString& mapKey) const
+{
+    return mMainWindowDockWidgetMap.value(mapKey);
 }
 
 void mudlet::updateMainWindowDockWidgetVisibilityForProfile(const QString& profileName)

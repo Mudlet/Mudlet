@@ -72,6 +72,8 @@ public:
     static void closeSharedDictionary();
 
 private:
+    friend class DictionaryRoundTripTest;
+
     void loadSystemDictionary();
     // Reads profile.dic in the first time it is asked for, and remembers a
     // failure rather than reading it again.

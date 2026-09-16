@@ -64,10 +64,16 @@ private:
         return ini.open(QIODevice::WriteOnly);
     }
 
-    bool writeMarker(const QString& execDir, const QByteArray& content) const
+    bool writeMarker(const QString& dir, const QByteArray& content) const
     {
-        QFile marker(qsl("%1/portable.txt").arg(execDir));
+        QFile marker(qsl("%1/portable.txt").arg(dir));
         return marker.open(QIODevice::WriteOnly) && marker.write(content) == content.size();
+    }
+
+    bool makeFile(const QString& path) const
+    {
+        QFile file(path);
+        return file.open(QIODevice::WriteOnly);
     }
 
     MudletApp::ConfigDirResolution resolveWithHome(const QString& home, const QString& execDir) const
@@ -456,26 +462,6 @@ private slots:
         QCOMPARE(r.path, mudletUnder(xdg.path()));
     }
 
-    // The marker in ~/.config/mudlet reads like the one beside the executable:
-    // an empty file names the portable/ directory beside the executable. A bare
-    // empty root here would file every profile under the filesystem root.
-    void test_resolveConfigRootEmptyHomeMarkerFallsBackToPortableSubdir()
-    {
-#ifdef Q_OS_WIN
-        QSKIP("QDir::homePath() does not follow HOME on Windows");
-#endif
-        QTemporaryDir home;
-        QTemporaryDir exec;
-        QVERIFY(home.isValid() && exec.isValid());
-        const QString markerDir = qsl("%1/.config/mudlet").arg(home.path());
-        QVERIFY(QDir().mkpath(markerDir));
-        QVERIFY(writeMarker(markerDir, ""));
-
-        const auto r = resolveWithHome(home.path(), exec.path());
-        QVERIFY(r.portable);
-        QCOMPARE(r.path, QDir::cleanPath(qsl("%1/portable").arg(exec.path())));
-    }
-
     void test_resolveConfigRootHomeMarkerPathIsUsedAsIs()
     {
 #ifdef Q_OS_WIN
@@ -494,21 +480,45 @@ private slots:
         QCOMPARE(r.path, target);
     }
 
-    // CredentialManager picks the keychain or a file on portableModeActive(), so
-    // it has to agree with the marker resolveConfigRoot() honours
-    void test_portableModeActiveFollowsTheMarker()
+    // --- MudletApp::portableMarkerPath() ----------------------------------------
+
+    // The cheap question behind isPortableModeActive(), which runs on every
+    // credential operation: two stats, and no marker read
+    void test_portableMarkerPathPrefersTheOneBesideTheExecutable()
     {
-        if (portableMarkerPresent()) {
-            QSKIP("portable.txt present - portable mode is on whatever the exec dir holds");
-        }
         QTemporaryDir exec;
-        QVERIFY(exec.isValid());
-        QVERIFY(!MudletApp::portableModeActive(exec.path()));
-        QVERIFY(!MudletApp::resolveConfigRoot(exec.path()).portable);
+        QTemporaryDir configDir;
+        QVERIFY(exec.isValid() && configDir.isValid());
+        QVERIFY(writeMarker(exec.path(), "./portable"));
+        QVERIFY(writeMarker(configDir.path(), "./elsewhere"));
+
+        QCOMPARE(MudletApp::portableMarkerPath(exec.path(), configDir.path()), qsl("%1/portable.txt").arg(exec.path()));
+    }
+
+    void test_portableMarkerPathFallsBackToTheConfigDirAndThenToNothing()
+    {
+        QTemporaryDir exec;
+        QTemporaryDir configDir;
+        QVERIFY(exec.isValid() && configDir.isValid());
+        QVERIFY(MudletApp::portableMarkerPath(exec.path(), configDir.path()).isEmpty());
+
+        QVERIFY(writeMarker(configDir.path(), ""));
+        QCOMPARE(MudletApp::portableMarkerPath(exec.path(), configDir.path()), qsl("%1/portable.txt").arg(configDir.path()));
+    }
+
+    // CredentialManager picks the keychain or a file on the marker alone, so the
+    // marker it reads has to be the one resolveConfigRoot() honours
+    void test_portableMarkerPathAgreesWithResolveConfigRoot()
+    {
+        QTemporaryDir exec;
+        QTemporaryDir configDir;
+        QVERIFY(exec.isValid() && configDir.isValid());
+        QVERIFY(MudletApp::portableMarkerPath(exec.path(), configDir.path()).isEmpty());
+        QVERIFY(!MudletApp::resolveConfigRoot(exec.path(), configDir.path()).portable);
 
         QVERIFY(writeMarker(exec.path(), ""));
-        QVERIFY(MudletApp::portableModeActive(exec.path()));
-        QVERIFY(MudletApp::resolveConfigRoot(exec.path()).portable);
+        QCOMPARE(MudletApp::portableMarkerPath(exec.path(), configDir.path()), qsl("%1/portable.txt").arg(exec.path()));
+        QVERIFY(MudletApp::resolveConfigRoot(exec.path(), configDir.path()).portable);
     }
 
     // --- MudletApp::sanitizeForPath() -----------------------------------------
@@ -523,6 +533,92 @@ private slots:
         QVERIFY(MudletApp::sanitizeForPath(a).length() <= 50);
         QCOMPARE(MudletApp::sanitizeForPath(qsl("a/b:c")), qsl("a_b_c"));
         QCOMPARE(MudletApp::sanitizeForPath(qsl("short")), qsl("short"));
+    }
+
+    // --- an unusable portable root ----------------------------------------------
+
+    void test_portableRootUsableTakesADirectoryOrOneYetToBeCreated()
+    {
+        QTemporaryDir root;
+        QVERIFY(root.isValid());
+        QVERIFY(MudletApp::portableRootUsable(root.path()));
+        QVERIFY(MudletApp::portableRootUsable(qsl("%1/notyet").arg(root.path())));
+    }
+
+    void test_portableRootUsableRefusesAnUnnamedRoot()
+    {
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("portable data path not specified")));
+        QVERIFY(!MudletApp::portableRootUsable(QString()));
+    }
+
+    void test_portableRootUsableRefusesAFile()
+    {
+        QTemporaryDir root;
+        QVERIFY(root.isValid());
+        const QString occupied = qsl("%1/portable").arg(root.path());
+        QVERIFY(makeFile(occupied));
+
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("is not a directory")));
+        QVERIFY(!MudletApp::portableRootUsable(occupied));
+    }
+
+    // mkpath() cannot create through one, so the profiles would be unreachable
+    void test_portableRootUsableRefusesASymlinkWithNoTarget()
+    {
+        QTemporaryDir root;
+        QVERIFY(root.isValid());
+        const QString dangling = qsl("%1/portable").arg(root.path());
+        if (!QFile::link(qsl("%1/gone").arg(root.path()), dangling)) {
+            QSKIP("symlinks are not available here");
+        }
+
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("is not a directory")));
+        QVERIFY(!MudletApp::portableRootUsable(dangling));
+    }
+
+    void test_portableRootUsableRefusesAMissingParent()
+    {
+        QTemporaryDir root;
+        QVERIFY(root.isValid());
+
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("parent directory")));
+        QVERIFY(!MudletApp::portableRootUsable(qsl("%1/missing/portable").arg(root.path())));
+    }
+
+    // The marker in the config dir names no fallback location, so an empty one
+    // used to resolve to "" - every path then rooted at "/", and mkpath()ed
+    // there by the first caller to ask for one
+    void test_resolveConfigRootEmptyConfigDirMarkerFallsBackToTheConfigDir()
+    {
+        QTemporaryDir exec;
+        QTemporaryDir configDir;
+        QVERIFY(exec.isValid() && configDir.isValid());
+        QVERIFY(writeMarker(configDir.path(), ""));
+        qunsetenv("XDG_CONFIG_HOME");
+
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("portable data path not specified")));
+        const auto r = MudletApp::resolveConfigRoot(exec.path(), configDir.path());
+        QVERIFY(r.portable);
+        QVERIFY(r.portableRootRejected);
+        QCOMPARE(r.path, configDir.path());
+    }
+
+    void test_resolveConfigRootFallsBackWhenTheMarkerNamesAnUnusableRoot()
+    {
+        QTemporaryDir exec;
+        QTemporaryDir configDir;
+        QVERIFY(exec.isValid() && configDir.isValid());
+        // the empty marker beside the executable guesses "./portable", which is
+        // taken here by a file
+        QVERIFY(makeFile(qsl("%1/portable").arg(exec.path())));
+        QVERIFY(writeMarker(exec.path(), ""));
+        qunsetenv("XDG_CONFIG_HOME");
+
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("is not a directory")));
+        const auto r = MudletApp::resolveConfigRoot(exec.path(), configDir.path());
+        QVERIFY(r.portable);
+        QVERIFY(r.portableRootRejected);
+        QCOMPARE(r.path, configDir.path());
     }
 
     // --- MudletApp::getMudletPath() before setupConfig() ----------------------
@@ -542,6 +638,36 @@ private slots:
 
         QCOMPARE(MudletApp::getMudletPath(enums::mainPath), target);
         QCOMPARE(MudletApp::getMudletPath(enums::profilesPath), qsl("%1/profiles").arg(target));
+    }
+
+    // Resolving costs a stat of both markers, a marker read and a walk of the
+    // config dirs, and getMudletPath() is called on nearly every profile, map,
+    // media and package operation - so the answer has to be remembered, whatever
+    // it turned out to be
+    void test_getMudletPathResolvesTheRootOnlyOnce()
+    {
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - the config root is deliberately relocated");
+        }
+        QTemporaryDir first;
+        QTemporaryDir second;
+        QVERIFY(first.isValid() && second.isValid());
+        QVERIFY(QDir().mkpath(qsl("%1/profiles").arg(mudletUnder(first.path()))));
+        QVERIFY(QDir().mkpath(qsl("%1/profiles").arg(mudletUnder(second.path()))));
+
+        MudletApp::setConfigPath(QString());
+        qputenv("XDG_CONFIG_HOME", first.path().toUtf8());
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), mudletUnder(first.path()));
+
+        // a second resolution would follow XDG_CONFIG_HOME to the other directory
+        qputenv("XDG_CONFIG_HOME", second.path().toUtf8());
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), mudletUnder(first.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::profilesPath), qsl("%1/profiles").arg(mudletUnder(first.path())));
+
+        // and an empty path is the one way to ask for the root to be resolved again
+        MudletApp::setConfigPath(QString());
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), mudletUnder(second.path()));
+        MudletApp::setConfigPath(QString());
     }
 
     // --- mudlet::setupConfig() end-to-end wiring ------------------------------
@@ -592,6 +718,38 @@ private slots:
         mudlet::self()->setupConfig();
         QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/.config/mudlet").arg(QDir::homePath()));
         QCOMPARE(settingsFileName(), qsl("%1/.config/mudlet/Mudlet.ini").arg(QDir::homePath()));
+    }
+
+    // A portable.txt naming a directory Mudlet cannot use used to end in
+    // qFatal(), which is abort(): nothing on screen, and Sentry filing a crash
+    // report for a stray "touch portable.txt". Startup carries on at the
+    // non-portable location - which is where the profiles are - and says so.
+    // Kept last: it settles the config root on a directory that goes away with
+    // the test.
+    void test_setupConfigCarriesOnWhenTheMarkerNamesAnUnusableRoot()
+    {
+#ifdef Q_OS_WIN
+        QSKIP("QDir::homePath() does not follow HOME on Windows");
+#endif
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - the real marker outranks the one this case writes");
+        }
+        QTemporaryDir home;
+        QVERIFY(home.isValid());
+        const QString configDir = qsl("%1/.config/mudlet").arg(home.path());
+        QVERIFY(QDir().mkpath(qsl("%1/profiles").arg(configDir)));
+        QVERIFY(writeMarker(configDir, ""));
+        qunsetenv("XDG_CONFIG_HOME");
+
+        const QByteArray savedHome = qgetenv("HOME");
+        qputenv("HOME", home.path().toUtf8());
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("portable data path not specified")));
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("names a data directory Mudlet cannot use")));
+        mudlet::self()->setupConfig();
+        savedHome.isNull() ? qunsetenv("HOME") : qputenv("HOME", savedHome);
+
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), configDir);
+        QCOMPARE(settingsFileName(), qsl("%1/Mudlet.ini").arg(configDir));
     }
 };
 
