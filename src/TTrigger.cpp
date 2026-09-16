@@ -1736,8 +1736,17 @@ bool TTrigger::match(const char* haystackC, const int haystackCLength, const QSt
                 }
                 conditionMet = true;
                 TLuaInterpreter* pL = mpHost->getLuaInterpreter();
-                pL->setMultiCaptureGroups(matchState->multiCaptureList, matchState->multiCapturePosList, matchState->nameCaptures);
-                execute();
+                if (mFilterTrigger) {
+                    // A filter reads the captures again once the script has run
+                    pL->setMultiCaptureGroups(matchState->multiCaptureList, matchState->multiCapturePosList, matchState->nameCaptures);
+                    execute();
+                } else {
+                    pL->setMultiCaptureGroups(std::move(matchState->multiCaptureList), std::move(matchState->multiCapturePosList), std::move(matchState->nameCaptures));
+                    execute();
+                    // Back into the state, whose destructor parks the nodes for
+                    // the next fire to reuse
+                    pL->takeBackMultiCaptureGroups(matchState->multiCaptureList, matchState->multiCapturePosList);
+                }
                 pL->clearCaptureGroups();
                 if (mFilterTrigger) {
                     const std::list<std::list<std::string>>& multiCaptureList = matchState->multiCaptureList;
