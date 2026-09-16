@@ -306,8 +306,12 @@ void TTimer::enableTimer(int id)
     if (mID == id) {
         if (canBeUnlocked()) {
             if (activate()) {
-                // CHECKME: Should this not also check for a non-empty "command" as well?
-                if (!mScript.isEmpty()) {
+                // Restarting only the timers that hold a script left the other
+                // two kinds stopped for the rest of the session once the
+                // emergency stop had been used: a tempTimer() given a Lua
+                // function keeps its callback in the Lua registry and a timer
+                // that only sends a command has nothing to compile (#10751)
+                if (hasPayload()) {
                     mpQTimer->start();
                 }
             } else {
@@ -346,8 +350,17 @@ void TTimer::enableTimer()
 {
     if (canBeUnlocked()) {
         if (activate()) {
-            // CHECKME: Should this not also check for a non-empty "command" as well?
-            if (!mScript.isEmpty()) {
+            // enableTimer(name) comes through here for the children of a
+            // folder, where a command-only timer is an everyday thing - see
+            // enableTimer(int) above (#10751). TimerUnit::enableTimer(name)
+            // hands an offset timer straight to this as well, and an offset
+            // timer's schedule is its parent's: the parent firing arms it, by
+            // way of enableTimer(int). Arming a command-only one here would
+            // hand it a schedule of its own that it has never had, so those
+            // keep the narrower test - what a script offset timer does here is
+            // long-standing behaviour and a separate question from #10751
+            const bool startable = isOffsetTimer() ? (!mScript.isEmpty() || mRegisteredAnonymousLuaFunction) : hasPayload();
+            if (startable) {
                 mpQTimer->start();
             }
         } else {
