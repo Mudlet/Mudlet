@@ -416,7 +416,7 @@ private slots:
     // Which mechanism serves one depends on the Qt build - QStringConverter
     // reaches most of them through ICU, and where it cannot, TEncodingTable's
     // own lookup tables do - so these assert the result rather than the route.
-    // CP1161 is the exception used below: no QStringConverter build offers it,
+    // CP1162 is the exception used below: no QStringConverter build offers it,
     // so it is always the lookup table that answers, on every platform.
     // -------------------------------------------------------------------------
 
@@ -447,32 +447,32 @@ private slots:
 
     void canEncode_iso8859_15_euroSign_true() { QVERIFY(TEncodingHelper::canEncode(fromCodepoints({0x20AC}), "ISO 8859-15")); }
 
-    void decode_lookupTable_cp1161Thai()
+    void decode_lookupTable_cp1162Thai()
     {
         const QByteArray bytes = QByteArray::fromHex("41a1a2f0");
         const QString expected = fromCodepoints({0x0041, 0x0E01, 0x0E02, 0x0E50});
-        QCOMPARE(TEncodingHelper::decode(bytes, "CP1161"), expected);
+        QCOMPARE(TEncodingHelper::decode(bytes, "CP1162"), expected);
     }
 
-    void decode_lookupTable_undefinedByteBecomesReplacementCharacter() { QCOMPARE(TEncodingHelper::decode(QByteArray::fromHex("81"), "CP1161"), fromCodepoints({0xFFFD})); }
+    void decode_lookupTable_undefinedByteBecomesReplacementCharacter() { QCOMPARE(TEncodingHelper::decode(QByteArray::fromHex("81"), "CP1162"), fromCodepoints({0xFFFD})); }
 
-    void roundTrip_lookupTable_cp1161()
+    void roundTrip_lookupTable_cp1162()
     {
         const QString input = fromCodepoints({0x0E01, 0x0E02, 0x0041});
-        const QByteArray encoded = TEncodingHelper::encode(input, "CP1161");
+        const QByteArray encoded = TEncodingHelper::encode(input, "CP1162");
         QCOMPARE(encoded, QByteArray::fromHex("a1a241"));
-        QCOMPARE(TEncodingHelper::decode(encoded, "CP1161"), input);
+        QCOMPARE(TEncodingHelper::decode(encoded, "CP1162"), input);
     }
 
     void encode_lookupTable_unrepresentableBecomesQuestionMark()
     {
         const QString input = fromCodepoints({0x0041, 0x4E2D, 0x0042}); // A中B
-        QCOMPARE(TEncodingHelper::encode(input, "CP1161"), QByteArrayLiteral("A?B"));
+        QCOMPARE(TEncodingHelper::encode(input, "CP1162"), QByteArrayLiteral("A?B"));
     }
 
-    void canEncode_lookupTable_thai_true() { QVERIFY(TEncodingHelper::canEncode(fromCodepoints({0x0E01, 0x0E02}), "CP1161")); }
+    void canEncode_lookupTable_thai_true() { QVERIFY(TEncodingHelper::canEncode(fromCodepoints({0x0E01, 0x0E02}), "CP1162")); }
 
-    void canEncode_lookupTable_cjk_false() { QVERIFY(!TEncodingHelper::canEncode(fromCodepoints({0x4E2D}), "CP1161")); }
+    void canEncode_lookupTable_cjk_false() { QVERIFY(!TEncodingHelper::canEncode(fromCodepoints({0x4E2D}), "CP1162")); }
 
     void isEncodingAvailable_lookupTableEncodings_true()
     {
@@ -480,7 +480,7 @@ private slots:
                                            QByteArrayLiteral("KOI8-U"),
                                            QByteArrayLiteral("CP850"),
                                            QByteArrayLiteral("CP866"),
-                                           QByteArrayLiteral("CP1161"),
+                                           QByteArrayLiteral("CP1162"),
                                            QByteArrayLiteral("WINDOWS-1251"),
                                            QByteArrayLiteral("ISO 8859-15")}) {
             QVERIFY2(TEncodingHelper::isEncodingAvailable(encoding), encoding.constData());
