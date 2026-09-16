@@ -132,6 +132,8 @@ static void sanitizeUtf8Path(QString& originalLocation)
     // whatever is not ASCII in it and still name the right copy:
     QString asciiName = QFileInfo(originalLocation).fileName();
     asciiName.remove(findNonAscii);
+    // Nothing ever deletes these copies, so one mudlet_<digest>_<name> .aff/.dic
+    // pair builds up in the temp folder per distinct non-ASCII source path
     const QString pureANSIpath = qsl("C:\\Windows\\Temp\\mudlet_%1_%2").arg(digest, asciiName);
     if (QFileInfo::exists(pureANSIpath) && !QFile::remove(pureANSIpath)) {
         qWarning() << "sanitizeUtf8Path() ERROR: couldn't remove the previous copy at" << pureANSIpath;
