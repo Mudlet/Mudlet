@@ -168,6 +168,59 @@ describe("Tests Other.lua functions", function()
       end)
     end)
 
+    describe("the state a new group is created in", function()
+      -- What a group arrives as is not visible through a spy, so these need real
+      -- items, and what they pin is the state *creation* leaves a group in. Lua
+      -- cannot delete a permanent item, so take the first name no earlier run
+      -- has used rather than reusing what one left behind: a group this build
+      -- never made would be reporting the state some earlier build created it
+      -- in, and an already-correct leftover would cover for creation code that
+      -- had since broken. permGroup spells the key type "key" where exists()
+      -- and isActive() spell it "keybind".
+      --
+      -- The search runs as far as it needs to: giving up would mean asserting
+      -- over an old item or skipping the check, both of which leave this green
+      -- while testing nothing. The bound only stops a broken exists() spinning
+      -- forever, and reaching it raises rather than skips.
+      local searchLimit = 100000
+
+      local function group(groupType, itemType)
+        local stem = "permGroupSpecState" .. groupType
+        for index = 1, searchLimit do
+          local name = ("%s%d"):format(stem, index)
+          if exists(name, itemType) == 0 then
+            assert.is_true(permGroup(name, groupType), "could not create the " .. groupType .. " group")
+            return name
+          end
+        end
+        error(("no free \"%s\" name in this profile after %d tries"):format(stem, searchLimit))
+      end
+
+      it("creates trigger groups enabled", function()
+        assert.are.equal(1, isActive(group("trigger", "trigger"), "trigger"))
+      end)
+
+      it("creates alias groups enabled", function()
+        assert.are.equal(1, isActive(group("alias", "alias"), "alias"))
+      end)
+
+      it("creates key groups enabled", function()
+        assert.are.equal(1, isActive(group("key", "keybind"), "keybind"))
+      end)
+
+      -- permTimer() and permScript() create every item disabled, group or not,
+      -- and permGroup() is documented as passing that on rather than papering
+      -- over it: a timer group that started itself would fire whatever is put
+      -- in it before the script that fills it has finished
+      it("creates timer groups disabled", function()
+        assert.are.equal(0, isActive(group("timer", "timer"), "timer"))
+      end)
+
+      it("creates script groups disabled", function()
+        assert.are.equal(0, isActive(group("script", "script"), "script"))
+      end)
+    end)
+
     describe("reports failure instead of raising when creation fails", function()
       -- #9545: group_creation_functions checked `perm*(...) == -1`, but the perm*
       -- bindings raise a Lua error on failure (for example a missing parent)
@@ -1332,6 +1385,93 @@ describe("Tests Other.lua functions", function()
     -- caretShortcut and commandLineHistorySaveSize instead of the key that was
     -- actually rejected (#10391)
     pending("names the key it rejected in every string enum refusal")
+
+    -- A setting that changed raises sysSettingChanged with its getConfig key
+    -- and the new value. Writing the value a setting already holds raises
+    -- nothing, which is what keeps a handler that echoes the value back
+    -- through setConfig from looping.
+    describe("sysSettingChanged", function()
+      -- Each entry keeps what the handler was handed plus what getConfig()
+      -- returned from inside the handler: the second one is what says the
+      -- setting was already updated when the event went out. The handler is
+      -- killed by the caller's own finally(), because busted keeps only one of
+      -- those per test and the restore has to share it.
+      local function record()
+        local events = {}
+        local id = registerAnonymousEventHandler("sysSettingChanged", function(_, key, value)
+          events[#events + 1] = {key = key, value = value, readBack = getConfig(key)}
+        end)
+        return events, function() killAnonymousEventHandler(id) end
+      end
+
+      local function assertOneEvent(events, key, value)
+        assert.equals(1, #events, "expected one sysSettingChanged for " .. key .. ", got " .. #events)
+        assert.equals(key, events[1].key)
+        assert.equals(value, events[1].value, "the event carried " .. tostring(events[1].value) .. " for " .. key)
+        assert.equals(value, events[1].readBack, "getConfig(\"" .. key .. "\") inside the handler did not read the new value")
+      end
+
+      local booleanKeys = {
+        "muteMediaAPI",
+        "muteMediaGame",
+        "compactInputLine",
+        "mapperPanelVisible",
+        "enableClosedCaption",
+        "advertiseScreenReader",
+        "announceIncomingText",
+      }
+
+      for _, key in ipairs(booleanKeys) do
+        it("raises once when " .. key .. " changes, and not when it is set to what it holds", function()
+          snapshot(key)
+          local events, kill = record()
+          finally(function()
+            kill()
+            restore(key)
+          end)
+
+          local target = not getConfig(key)
+
+          assert.is_true(setConfig(key, target))
+          assertOneEvent(events, key, target)
+
+          assert.is_true(setConfig(key, target))
+          assert.equals(1, #events, key .. " raised again for a value that did not change")
+        end)
+      end
+
+      -- A handler is allowed to write the value back. The second write is a
+      -- real change, so it raises in turn, and stops there because the third
+      -- write would not change anything.
+      it("lets a handler write the opposite value back without looping", function()
+        snapshot("muteMediaAPI")
+        setConfig("muteMediaAPI", false)
+
+        local events = {}
+        local vetoed = false
+        local id = registerAnonymousEventHandler("sysSettingChanged", function(_, key, value)
+          if key ~= "muteMediaAPI" then
+            return
+          end
+          events[#events + 1] = value
+          if value == true and not vetoed then
+            vetoed = true
+            setConfig("muteMediaAPI", false)
+          end
+        end)
+        finally(function()
+          killAnonymousEventHandler(id)
+          restore("muteMediaAPI")
+        end)
+
+        assert.is_true(setConfig("muteMediaAPI", true))
+
+        assert.is_false(getConfig("muteMediaAPI"), "the value the handler wrote back is not the one that stuck")
+        assert.equals(2, #events, "expected the change and the handler's write-back, got " .. #events)
+        assert.equals(true, events[1])
+        assert.equals(false, events[2])
+      end)
+    end)
 
     describe("experiment keys", function()
       -- The two rendering experiments are a group, of which at most one may be
