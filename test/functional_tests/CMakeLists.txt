@@ -42,6 +42,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     FramePacingTest.cpp
     GlyphOverflowTest.cpp
     HyperlinkModelSplitTest.cpp
+    HostConsolePrintTest.cpp
     LabelAnchorInteractionTest.cpp
     LabelMovieRefusalTest.cpp
     CaretNavigationTest.cpp
@@ -56,6 +57,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     LabelBackgroundPaintTest.cpp
     MxpWatchdogBufferLifetimeTest.cpp
     NarrowWindowWrapTest.cpp
+    NotepadTest.cpp
     NawsWidthReportTest.cpp
     DetachedWindowToolBarIconSizeTest.cpp
     PastedLinkStateTest.cpp
@@ -81,9 +83,11 @@ set(PROFILE_GROUP_TEST_SOURCES
     ConnectionDialogCrashTest.cpp
     ConnectionDialogFocusTest.cpp
     DefaultGameDeleteTest.cpp
+    DictionaryRoundTripTest.cpp
     MissingDisplayFontTest.cpp
     ProfileDeletionSafetyTest.cpp
     ProfileFolderNameTest.cpp
+    ProfileIniParseErrorTest.cpp
     ProfileLifecycleTest.cpp
     ProfileLoadTempFileTest.cpp
     ProfileRoundTripTest.cpp
@@ -136,6 +140,7 @@ set(EDITOR_GROUP_TEST_SOURCES
     ColorTriggerDialogTest.cpp
     PackageExporterTest.cpp
     EditorWindowPositionTest.cpp
+    MissingEditorThemeTest.cpp
     ScriptEventHandlerLifetimeTest.cpp
     EditorSearchTest.cpp
     TreeWidgetItemMoveTest.cpp
@@ -163,6 +168,7 @@ set(MAP_GROUP_TEST_SOURCES
     MapRoomGeometryTest.cpp
     MapRoundTripTest.cpp
     MapSymbolFontTest.cpp
+    RoomExitsDeletedEditItemTest.cpp
 )
 
 # Packages and modules: installing them, saving them and removing them
@@ -204,6 +210,7 @@ set(SETTINGS_GROUP_TEST_SOURCES
     SettingsHostLifecycleTest.cpp
     SettingsInstantApplyTest.cpp
     SettingsLiveSyncTest.cpp
+    SettingsMmcpFlagsTest.cpp
     SettingsRoundTripTest.cpp
     SettingsSearchTest.cpp
     SettingsShellNavigationTest.cpp
@@ -211,6 +218,7 @@ set(SETTINGS_GROUP_TEST_SOURCES
 
 # Teardown: who owns a profile's dialogs and windows, and what becomes of them when it closes
 set(TEARDOWN_GROUP_TEST_SOURCES
+    AppStartupTeardownTest.cpp
     DialogTeardownTest.cpp
     HostChildTeardownTest.cpp
     HostWidgetDecouplingTest.cpp
@@ -334,6 +342,14 @@ add_grouped_test_binary(functional_starterui_tests ${STARTERUI_GROUP_TEST_SOURCE
 add_grouped_test_binary(functional_teardown_tests ${TEARDOWN_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_media_tests ${MEDIA_GROUP_TEST_SOURCES})
 
+# AppStartupTeardownTest runs the shipped application instead of linking it, so it
+# needs that binary's path and needs it built by the time ctest runs. Naming the
+# target literally is deliberate: EXE_MUDLET_TARGET is a plain variable local to
+# src/CMakeLists.txt, so a rename there fails generation here rather than quietly
+# depending on nothing.
+add_dependencies(functional_teardown_tests mudlet_executable)
+target_compile_definitions(functional_teardown_tests PRIVATE MUDLET_APP_BINARY="$<TARGET_FILE:mudlet_executable>")
+
 # Every list's cases, so a grouped test's properties are the solo ones verbatim
 foreach(test_name ${allFunctionalTestNames})
     if(leakCheckAvailable AND NOT test_name IN_LIST leakCheckExcludedTests)
@@ -391,6 +407,10 @@ endforeach()
 # timeout than the default 60s
 set_tests_properties(ResetProfileTest PROPERTIES TIMEOUT 300)
 
+# AppStartupTeardownTest starts the whole application eight times over, and a
+# sanitiser build spends seconds on each of those start-ups
+set_tests_properties(AppStartupTeardownTest PROPERTIES TIMEOUT 300)
+
 # Undo/redo tests need a longer timeout due to large batch operations
 set_tests_properties(dlgTriggerEditorUndoRedoTest PROPERTIES TIMEOUT 300)
 
@@ -400,7 +420,7 @@ set_tests_properties(MultilineTriggerReentrancyTest PROPERTIES TIMEOUT 300)
 # GMCPCharLoginTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(GMCPCharLoginTest PROPERTIES TIMEOUT 600)
 
-# DebugConsoleFilterTest boots a fresh profile for each of its 24 methods, and timed out against
+# DebugConsoleFilterTest boots a fresh profile for most of its methods, and timed out against
 # the default 60s on the macOS x86_64 runner, where it measured 46.95s when it passed. Waiting on
 # the connection dialog instead of sleeping through it took the Linux run from 30s to 9s, so this
 # is headroom rather than a necessity now, and it is what the other per-method-profile tests use.
@@ -544,6 +564,9 @@ set_tests_properties(ConsoleSearchBarTest PROPERTIES TIMEOUT 300)
 # NarrowWindowWrapTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(NarrowWindowWrapTest PROPERTIES TIMEOUT 300)
 
+# NotepadTest creates a fresh profile per test method, so it needs a longer timeout
+set_tests_properties(NotepadTest PROPERTIES TIMEOUT 300)
+
 # WrapLineRewrapTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(WrapLineRewrapTest PROPERTIES TIMEOUT 300)
 
@@ -577,3 +600,7 @@ else()
 endif()
 set_property(TEST TDiscordModeTest APPEND PROPERTY
     ENVIRONMENT_MODIFICATION "${DISCORD_RPC_PATH_VARIABLE}=path_list_prepend:${CMAKE_SOURCE_DIR}/3rdparty/discord/rpc/lib")
+# Report-only: what a Lua enableTrigger()/disableTrigger() call costs on a large
+# trigger tree with the script editor closed and open. Never registered with
+# ctest; run it directly and read the METRIC lines.
+add_functional_test_binary(TriggerToggleEditorBenchmark TriggerToggleEditorBenchmark.cpp)

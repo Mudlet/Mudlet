@@ -61,6 +61,8 @@ public:
     Iter begin() { return Iter(this, true); }
     Iter end() { return Iter(this, false); }
     bool hostLoaded(const QString& hostname) const;
+    // A copy to walk while doing anything that may open or close a profile
+    QList<QSharedPointer<Host>> hostList() const { return mHostPool.values(); }
 
 private:
     HostMap mHostPool;
