@@ -50,6 +50,7 @@
 #include <QUrl>
 
 namespace {
+// Mudlet itself only resolves on the main thread; the lock is for engine callers that may not
 QMutex configRootMutex;
 QString configRoot;
 // The resolution itself is the answer, so "not resolved yet" cannot be read off
