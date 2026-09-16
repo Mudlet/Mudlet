@@ -66,6 +66,7 @@
 #include <QDirIterator>
 #include <QElapsedTimer>
 #include <QEventLoop>
+#include <QFontInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonValue>
@@ -79,6 +80,7 @@
 #include <QTemporaryFile>
 #include <QTextStream>
 #include <QThread>
+#include <QUuid>
 #include <zip.h>
 #include <memory>
 
@@ -147,8 +149,8 @@ bool stopWatch::stop()
         return false;
     }
 
-    // Is running - so stop and note time:
-    mElapsedTime = mEffectiveStartDateTime.msecsTo(QDateTime::currentDateTimeUtc());
+    // Is running - so stop and note time, while it still counts as running:
+    mElapsedTime = getElapsedMilliSeconds();
     mIsRunning = false;
     return true;
 }
@@ -174,6 +176,11 @@ bool stopWatch::reset()
     return true;
 }
 
+qint64 stopWatch::clampToRange(const qint64 milliSeconds)
+{
+    return qBound(-csmMaximumMilliSeconds, milliSeconds, csmMaximumMilliSeconds);
+}
+
 void stopWatch::adjustMilliSeconds(const qint64 adjustment)
 {
     if (!mIsInitialised) {
@@ -185,12 +192,20 @@ void stopWatch::adjustMilliSeconds(const qint64 adjustment)
 
     if (!mIsRunning) {
         // Not running so adjust stored elapsed time:
-        mElapsedTime += adjustment;
+        mElapsedTime = clampToRange(mElapsedTime + adjustment);
+        return;
     }
 
     // Is running so adjust effective start time - to increase the effective
-    // elapsed time we must subtract the adjustment from the effect start time:
-    mEffectiveStartDateTime = mEffectiveStartDateTime.addMSecs(-adjustment);
+    // elapsed time we must subtract the adjustment from the effective start
+    // time. Going via the total elapsed time is what puts the clamp at the end
+    // of the range: shifting the existing start time by the adjustment would
+    // carry it past instead. Both the time this reads and the adjustment are
+    // themselves bounded by the range, so their sum cannot overflow before it
+    // is clamped:
+    const qint64 nowMSecs = QDateTime::currentMSecsSinceEpoch();
+    const qint64 elapsed = clampToRange(clampToRange(nowMSecs - mEffectiveStartDateTime.toMSecsSinceEpoch()) + adjustment);
+    mEffectiveStartDateTime.setMSecsSinceEpoch(nowMSecs - elapsed);
 }
 
 qint64 stopWatch::getElapsedMilliSeconds() const
@@ -205,8 +220,9 @@ qint64 stopWatch::getElapsedMilliSeconds() const
         return mElapsedTime;
     }
 
-    // Is running so calculate elapsed time:
-    return mEffectiveStartDateTime.msecsTo(QDateTime::currentDateTimeUtc());
+    // Is running so calculate elapsed time - clamped, as a stopwatch adjusted
+    // close to the end of the range runs out of it as time passes:
+    return clampToRange(mEffectiveStartDateTime.msecsTo(QDateTime::currentDateTimeUtc()));
 }
 
 QString stopWatch::getElapsedDayTimeString() const
@@ -217,12 +233,7 @@ QString stopWatch::getElapsedDayTimeString() const
         return qsl("+:0:0:0:0:000");
     }
 
-    qint64 elapsed = 0;
-    if (mIsRunning) {
-        elapsed = mEffectiveStartDateTime.msecsTo(QDateTime::currentDateTimeUtc());
-    } else {
-        elapsed = mElapsedTime;
-    }
+    qint64 elapsed = getElapsedMilliSeconds();
 
     bool isNegative = false;
     if (elapsed < 0) {
@@ -1500,24 +1511,86 @@ std::pair<QString, QFont::Weight> Host::parseFontNameAndStyle(const QString& fon
     return {fontName, QFont::Normal};
 }
 
-Host::FontFamilyResolution Host::resolveFontFamily(const QString& requested) const
+// Whether the platform makes a font of the name itself. The font database lists
+// the families that are installed, not the names a platform resolves on top of
+// them: fontconfig turns "Helvetica", "Times" or "monospace" into a real family
+// without any of those being an installed family, and Windows has a substitution
+// table of its own. Qt answers with one fixed stand-in for a name that means
+// nothing anywhere, so a name that lands anywhere else is one the platform
+// recognised - and an alias that resolves to that very stand-in ("sans-serif" on
+// most GNU/Linux systems) cannot be told from an unknown name, so it counts as
+// missing.
+static bool platformResolvesFontFamily(const QString& requested)
 {
-    const QStringList availableFonts = mudlet::self()->getAvailableFonts();
-    // The family as the font database spells it, not as it was typed: it is what
-    // ends up reported back by getFont() and remembered by the Geyser wrappers.
+    if (requested.isEmpty()) {
+        return false;
+    }
+
+    // A UUID rather than a fixed name, so that no machine can have a font by that
+    // name and make every unknown family look resolved
+    static const QString unrecognisedName = QUuid::createUuid().toString();
+    static const QString unrecognisedFamily = QFontInfo(QFont(unrecognisedName)).family();
+
+    // A platform that hands an unrecognised name back unchanged tells an alias and an
+    // unknown name apart for nobody, so nothing the font database does not list can be
+    // taken on it - said once, because it silently turns this whole check off
+    static const bool nameResolutionIsReadable = []() {
+        if (unrecognisedFamily.compare(unrecognisedName, Qt::CaseInsensitive) == 0) {
+            qWarning().nospace().noquote() << "Host: this platform hands an unrecognised font family name back unchanged instead of naming the family it drew "
+                                              "in its place, so a name it resolves for itself cannot be told from a font nobody has - every name the font "
+                                              "database does not list will be reported as missing.";
+            return false;
+        }
+
+        return true;
+    }();
+
+    if (!nameResolutionIsReadable) {
+        return false;
+    }
+
+    return QFontInfo(QFont(requested)).family() != unrecognisedFamily;
+}
+
+// The family as the font database spells it, not as it was typed: that spelling is what
+// getFont() reports back and what the Geyser wrappers remember
+static QString installedFamily(const QStringList& availableFonts, const QString& name)
+{
     for (const QString& family : availableFonts) {
-        if (family.compare(requested, Qt::CaseInsensitive) == 0) {
-            return {family, QFont::Normal, true};
+        if (family.compare(name, Qt::CaseInsensitive) == 0) {
+            return family;
         }
     }
 
-    auto [baseName, weight] = parseFontNameAndStyle(requested);
-    if (baseName != requested) {
-        for (const QString& family : availableFonts) {
-            if (family.compare(baseName, Qt::CaseInsensitive) == 0) {
-                return {family, weight, true};
-            }
+    return QString();
+}
+
+Host::FontFamilyResolution Host::resolveFontFamily(const QString& requested) const
+{
+    const QStringList availableFonts = mudlet::self()->getAvailableFonts();
+
+    if (const QString installed = installedFamily(availableFonts, requested); !installed.isEmpty()) {
+        return {installed, QFont::Normal, true};
+    }
+
+    const auto [baseName, weight] = parseFontNameAndStyle(requested);
+    const bool carriesAStyleSuffix = baseName != requested;
+
+    if (carriesAStyleSuffix) {
+        if (const QString installed = installedFamily(availableFonts, baseName); !installed.isEmpty()) {
+            return {installed, weight, true};
         }
+    }
+
+    // Go on using the name that was asked for rather than the family it resolves to:
+    // the name is what gets saved, so pinning this machine's idea of "Helvetica" into
+    // the profile would carry it to every other machine the profile is opened on
+    if (platformResolvesFontFamily(requested)) {
+        return {requested, QFont::Normal, true};
+    }
+
+    if (carriesAStyleSuffix && platformResolvesFontFamily(baseName)) {
+        return {baseName, weight, true};
     }
 
     return {requested, QFont::Normal, false};
