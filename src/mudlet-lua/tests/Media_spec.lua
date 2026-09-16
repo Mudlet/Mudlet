@@ -2837,6 +2837,34 @@ describe("Tests the text-to-speech Lua API", function()
         assert.same({"before the start", "middle", "beyond the end"}, ttsGetQueue())
       end)
 
+      it("ttsSpeechQueued reports the position the rest of the queue API uses", function()
+        if noMockEngine() then
+          return
+        end
+        -- The event is raised while the line is still on the queue, so the
+        -- index it carries has to name that line the same way ttsGetQueue()
+        -- and ttsClearQueue() do - counting from one.
+        local queued = {}
+        local handler = registerAnonymousEventHandler("ttsSpeechQueued", function(_, text, index)
+          queued[#queued + 1] = {text = text, index = index, atIndex = ttsGetQueue(index)}
+        end)
+        onCleanup(function() killAnonymousEventHandler(handler) end)
+
+        ttsClearQueue()
+        ttsSpeak("occupying the engine with a line that takes a while to speak")
+        ttsQueue("appended first")
+        ttsQueue("appended second")
+        ttsQueue("inserted at the head", 1)
+        ttsQueue("clamped past the end", 99)
+
+        assert.same({"inserted at the head", "appended first", "appended second", "clamped past the end"}, ttsGetQueue())
+        assert.equals(4, #queued)
+        assert.same({text = "appended first", index = 1, atIndex = "appended first"}, queued[1])
+        assert.same({text = "appended second", index = 2, atIndex = "appended second"}, queued[2])
+        assert.same({text = "inserted at the head", index = 1, atIndex = "inserted at the head"}, queued[3])
+        assert.same({text = "clamped past the end", index = 4, atIndex = "clamped past the end"}, queued[4])
+      end)
+
       it("ttsSkip moves on to the next queued line", function()
         if noMockEngine() then
           return
