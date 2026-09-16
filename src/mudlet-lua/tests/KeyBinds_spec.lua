@@ -171,6 +171,109 @@ describe("Tests keybind-related functions", function()
 
   end)
 
+  describe("permGroup key groups", function()
+
+    -- Lua cannot delete a permanent item, and what these specs pin is the state
+    -- a group is *created* in, so reusing one an earlier run left behind would
+    -- quietly test that run's item instead of a new one. Hand out the first
+    -- names no run has taken yet rather than random ones: math.random is
+    -- unseeded in Lua 5.1, so every process deals the same sequence, and two
+    -- runs sharing a profile within the same second would agree on their
+    -- "unique" name and stack a second group under it.
+    --
+    -- Every run of a shared profile takes one more set of names, so the search
+    -- has to go as far as it needs to: a run that gave up and skipped its
+    -- checks would leave these specs green while testing nothing. The bound is
+    -- only there so a broken exists() cannot spin forever, and reaching it
+    -- raises rather than skips.
+    local searchLimit = 100000
+
+    local function freshNames(stem, ...)
+      local suffixes = {...}
+      for index = 1, searchLimit do
+        local names, free = {}, true
+        for _, suffix in ipairs(suffixes) do
+          local name = ("%s%s%d"):format(stem, suffix, index)
+          if exists(name, "keybind") ~= 0 then
+            free = false
+            break
+          end
+          names[#names + 1] = name
+        end
+        if free then
+          return unpack(names)
+        end
+      end
+      error(("no free \"%s\" name in this profile after %d tries"):format(stem, searchLimit))
+    end
+
+    it("creates the group active", function()
+      local groupName = freshNames("SpecPermKeyGroup", "")
+      -- switching it off again is the only cleanup Lua has for a permanent item
+      finally(function() disableKey(groupName) end)
+
+      assert.is_true(permGroup(groupName, "key"), "could not create the key group")
+      assert.are.equal(1, exists(groupName, "keybind"), "exactly one group should have been created")
+      assert.are.equal(1, isActive(groupName, "keybind"),
+        "a freshly created key group should be active, like a trigger or alias one")
+    end)
+
+    -- #10764: permGroup(name, "key") calls permKey(name, parent, -1, ""), and the
+    -- -1 that marks the item as a folder also marked it inactive, so every key
+    -- put in the group reported itself active but could never fire
+    it("creates a group whose keys are not held back by it", function()
+      local groupName, childName = freshNames("SpecPermKeyGroupParent", "", "Key")
+      finally(function()
+        disableKey(childName)
+        disableKey(groupName)
+      end)
+
+      assert.is_true(permGroup(groupName, "key"), "could not create the key group")
+      local childId = permKey(childName, groupName, mudlet.keymodifier.None, mudlet.key.F9, [[echo("x")]])
+      assert.is_true(childId > 0, "could not create the key inside the group")
+      assert.are.equal(1, isActive(childId, "keybind"), "the key itself should be active")
+      assert.is_true(isAncestorsActive(childId, "keybind"),
+        "the group above a fresh key must not be the thing stopping it from firing")
+
+      -- the control the assertion above needs: were a key group active whatever
+      -- was done to it, both of these specs would pass over a fix that only
+      -- looked right, so a group that is switched off has to be seen holding
+      -- its keys back
+      assert.is_true(disableKey(groupName))
+      assert.is_false(isAncestorsActive(childId, "keybind"),
+        "a disabled group should hold back the key inside it")
+      assert.are.equal(1, isActive(childId, "keybind"),
+        "disabling the group should not have touched the key's own state - it is the group that stops it")
+    end)
+
+    it("creates a group inside a group active at every level", function()
+      local outerName, innerName, childName = freshNames("SpecPermKeyNested", "Outer", "Inner", "Key")
+      finally(function()
+        disableKey(childName)
+        disableKey(innerName)
+        disableKey(outerName)
+      end)
+
+      assert.is_true(permGroup(outerName, "key"), "could not create the outer key group")
+      assert.is_true(permGroup(innerName, "key", outerName), "could not create a key group inside another")
+      local childId = permKey(childName, innerName, mudlet.keymodifier.None, mudlet.key.F10, [[echo("x")]])
+      assert.is_true(childId > 0, "could not create the key inside the nested group")
+
+      assert.are.equal(1, isActive(innerName, "keybind"), "a group nested in another should be created active too")
+      assert.is_true(isAncestorsActive(childId, "keybind"),
+        "neither group above a fresh key should be holding it back")
+
+      -- isAncestorsActive() walks every ancestor rather than just the parent, so
+      -- the group that is not the key's own parent has to be able to stop it too
+      assert.is_true(disableKey(outerName))
+      assert.is_false(isAncestorsActive(childId, "keybind"),
+        "the outer group should hold back a key two levels below it")
+      assert.are.equal(1, isActive(innerName, "keybind"),
+        "disabling the outer group should not have touched the group inside it")
+    end)
+
+  end)
+
   describe("enable, disable, kill, isActive and exists for keys", function()
 
     after_each(function()
