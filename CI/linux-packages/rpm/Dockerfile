@@ -6,6 +6,8 @@ ARG BASE_IMAGE=fedora:44
 
 FROM ${BASE_IMAGE} AS builder
 
+# Fedora keeps only the latest update of a package, so a pinned version stops installing
+# hadolint ignore=DL3041
 RUN dnf install -y --setopt=install_weak_deps=False \
     ccache cmake file findutils gcc gcc-c++ git make ninja-build patchelf rpm-build \
     compat-lua compat-lua-devel lua5.1-filesystem lua5.1-lpeg luarocks \
