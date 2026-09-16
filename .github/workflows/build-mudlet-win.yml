@@ -307,14 +307,20 @@ jobs:
           exit 1
         }
         $signatures = $binaries | ForEach-Object { Get-AuthenticodeSignature $_.FullName }
-        $signatures | Group-Object Status, StatusMessage | ForEach-Object { Write-Output "$($_.Count) $($_.Name)" }
-        # The test-signing certificate does not chain to a root Windows trusts,
-        # so a correctly signed PTB binary reports UnknownError rather than Valid
-        $accepted = if ($env:SIGNPATH_POLICY_SLUG -eq 'release-signing') { @('Valid') } else { @('Valid', 'UnknownError') }
+        $signatures | Group-Object Status, StatusMessage, { $_.SignerCertificate.Subject } |
+          ForEach-Object { Write-Output "$($_.Count) $($_.Name)" }
+        # Binaries signed under test-signing report UnknownError, not Valid
+        $accepted = if ($env:SIGNPATH_POLICY_SLUG -eq 'test-signing') { @('Valid', 'UnknownError') } else { @('Valid') }
         $bad = $signatures | Where-Object { $_.Status -notin $accepted -or -not $_.SignerCertificate }
         if ($bad) {
           Write-Output "::error::$($bad.Count) of $($binaries.Count) binaries are not signed under $env:SIGNPATH_POLICY_SLUG"
           $bad | ForEach-Object { Write-Output "  $($_.Status) $($_.Path)" }
+          exit 1
+        }
+        $untrustedSigners = @($signatures | Where-Object Status -eq 'UnknownError' |
+          ForEach-Object { $_.SignerCertificate.Thumbprint } | Sort-Object -Unique)
+        if ($untrustedSigners.Count -gt 1) {
+          Write-Output "::error::Binaries reporting UnknownError are signed by $($untrustedSigners.Count) different certificates"
           exit 1
         }
         Write-Output "All $($binaries.Count) binaries in the package are signed under $env:SIGNPATH_POLICY_SLUG."
