@@ -114,6 +114,26 @@ constexpr auto NETWORK_LATENCY_TIMEOUT = 10s;
 
 constexpr size_t BUFFER_SIZE = 100000L;
 
+// Where the run of ordinary text starting at buffer[from] ends: the index of
+// the first byte after it that the state machine reading the run handles on its
+// own (the start of a telnet command, a carriage return, a NUL or a bell), or
+// `to` if the run reaches that far. buffer[from] must not be one of those
+// bytes, as the caller steps back one from the result before its loop steps
+// forward - both callers therefore need a branch for every one of them, even
+// where that branch only appends the byte.
+static int textRunEnd(const char* buffer, const int from, const int to)
+{
+    int i = from;
+    while (i < to) {
+        const char ch = buffer[i];
+        if (ch == TN_IAC || ch == '\r' || ch == '\0' || ch == TN_BELL) {
+            break;
+        }
+        ++i;
+    }
+    return i;
+}
+
 // Upper bound on a single telnet subnegotiation (IAC SB ... IAC SE). Real ones
 // (GMCP/MSDP/ATCP/...) are far smaller; this only guards against a server that
 // opens an IAC SB and never sends IAC SE, which would otherwise grow the
@@ -5103,6 +5123,24 @@ void cTelnet::gotPrompt(std::string& mud_data)
     mIsTimerPosting = false;
 }
 
+// MXP escape sequences are the ONLY safe detection method.
+// Text-based tags like <version>, <send>, etc. can be faked by players
+// using illusions in games like IRE MUDs, which would cause false positives.
+// ESC sequences contain control character 0x1B which cannot be typed/illusioned.
+// Per MXP spec: "To ensure that tags are difficult to send by MUD players,
+// an escape sequence, similar to ANSI or VT100 is used: ESC[#z"
+// Valid modes: 0=open, 1=secure, 2=locked, 3=reset, 4=temp secure,
+//              5=lock open, 6=lock secure, 7=lock locked
+static bool containsMxpModeSwitch(const std::string& data)
+{
+    for (size_t pos = data.find('\x1B'); pos != std::string::npos && pos + 3 < data.size(); pos = data.find('\x1B', pos + 1)) {
+        if (data[pos + 1] == '[' && data[pos + 2] >= '0' && data[pos + 2] <= '7' && data[pos + 3] == 'z') {
+            return true;
+        }
+    }
+    return false;
+}
+
 void cTelnet::trackMXPElementDetection(const std::string& line)
 {
     if (!mpHost) {
@@ -5115,29 +5153,18 @@ void cTelnet::trackMXPElementDetection(const std::string& line)
         return;
     }
 
-    // MXP escape sequences are the ONLY safe detection method.
-    // Text-based tags like <version>, <send>, etc. can be faked by players
-    // using illusions in games like IRE MUDs, which would cause false positives.
-    // ESC sequences contain control character 0x1B which cannot be typed/illusioned.
-    // Per MXP spec: "To ensure that tags are difficult to send by MUD players,
-    // an escape sequence, similar to ANSI or VT100 is used: ESC[#z"
-    // Valid modes: 0=open, 1=secure, 2=locked, 3=reset, 4=temp secure,
-    //              5=lock open, 6=lock secure, 7=lock locked
-    static const std::vector<std::string> mxpEscapes = {"\x1B[0z", "\x1B[1z", "\x1B[2z", "\x1B[3z", "\x1B[4z", "\x1B[5z", "\x1B[6z", "\x1B[7z"};
-
-    for (const auto& esc : mxpEscapes) {
-        if (line.find(esc) != std::string::npos) {
-            // If force MXP is already enabled, this is a re-initialization (e.g., after "config mxp on")
-            // Re-apply secure mode without showing the auto-enable message
-            if (mpHost->getForceMXPProcessorOn() && mpHost->mPromptedForMXPProcessorOn) {
-                mpHost->mMxpProcessor.setMode(MXP_MODE_CODE_LOCK_SECURE);
-                return;
-            }
-            // Otherwise, this is the first time we're seeing MXP, so auto-enable it
-            autoEnableMXPProcessor();
-            return;
-        }
+    if (!containsMxpModeSwitch(line)) {
+        return;
     }
+
+    // If force MXP is already enabled, this is a re-initialization (e.g., after "config mxp on")
+    // Re-apply secure mode without showing the auto-enable message
+    if (mpHost->getForceMXPProcessorOn() && mpHost->mPromptedForMXPProcessorOn) {
+        mpHost->mMxpProcessor.setMode(MXP_MODE_CODE_LOCK_SECURE);
+        return;
+    }
+    // Otherwise, this is the first time we're seeing MXP, so auto-enable it
+    autoEnableMXPProcessor();
 }
 
 void cTelnet::gotRest(std::string& mud_data)
@@ -5492,10 +5519,19 @@ void cTelnet::slot_processReplayChunk()
                 //this could have set receivedGA to true; we'll handle that later
                 command = "";
             }
-        } else {
-            if (ch != '\r' && ch != '\0') {
-                cleandata += ch;
-            }
+        } else if (ch == TN_BELL) {
+            // Not rung here, unlike the socket path: a replay has never rung
+            // the bell, it only shows it. It still needs a branch of its own,
+            // because textRunEnd() ends a run at a bell: reaching one through
+            // the run branch below would measure an empty run and put the loop
+            // back on the same byte for ever.
+            cleandata += ch;
+        } else if (ch != '\r' && ch != '\0') {
+            // Nearly all of a chunk is text that goes straight through, so it
+            // goes across a run at a time rather than a byte at a time:
+            const int runEnd = textRunEnd(loadBuffer, i, datalen);
+            cleandata.append(loadBuffer + i, runEnd - i);
+            i = runEnd - 1;
         }
 
         if (recvdGA) {
@@ -5825,16 +5861,17 @@ Some data loss is likely - please mention this problem to the game admins.)",
                 //this could have set receivedGA to true; we'll handle that later
                 command = "";
             }
-        } else {
-            if (ch == TN_BELL) {
-                // detected here rather than in TTextEdit so it fires once per
-                // received bell, not on every screen refresh
-                emit signal_bell();
-            }
-
-            if (ch != '\r' && ch != '\0') {
-                cleandata += ch;
-            }
+        } else if (ch == TN_BELL) {
+            // detected here rather than in TTextEdit so it fires once per
+            // received bell, not on every screen refresh
+            emit signal_bell();
+            cleandata += ch;
+        } else if (ch != '\r' && ch != '\0') {
+            // Nearly all of a read is text that goes straight through, so it
+            // goes across a run at a time rather than a byte at a time:
+            const int runEnd = textRunEnd(buffer, i, datalen);
+            cleandata.append(buffer + i, runEnd - i);
+            i = runEnd - 1;
         }
     MAIN_LOOP_END:;
         if (recvdGA) {

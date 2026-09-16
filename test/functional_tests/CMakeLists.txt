@@ -82,9 +82,11 @@ set(PROFILE_GROUP_TEST_SOURCES
     ConnectionDialogCrashTest.cpp
     ConnectionDialogFocusTest.cpp
     DefaultGameDeleteTest.cpp
+    DictionaryRoundTripTest.cpp
     MissingDisplayFontTest.cpp
     ProfileDeletionSafetyTest.cpp
     ProfileFolderNameTest.cpp
+    ProfileIniParseErrorTest.cpp
     ProfileLifecycleTest.cpp
     ProfileLoadTempFileTest.cpp
     ProfileRoundTripTest.cpp
@@ -121,6 +123,7 @@ set(TRIGGER_GROUP_TEST_SOURCES
     CaptureGroupParkingTest.cpp
     BigramFilterTest.cpp
     CorruptTriggerPatternsTest.cpp
+    EmergencyStopResumeTest.cpp
     MultilineTriggerReentrancyTest.cpp
     SetScriptCallbackTest.cpp
     TFeedTriggersRecursionTest.cpp
@@ -152,6 +155,7 @@ set(MAP_GROUP_TEST_SOURCES
     MapAreaReassignmentTest.cpp
     MapAreaSelectionTest.cpp
     MapCloseDuringImportTest.cpp
+    MapContextMenuLifetimeTest.cpp
     MapDownloadTest.cpp
     RoomExitsDialogTest.cpp
     MapLevelOfDetailTest.cpp
@@ -161,6 +165,7 @@ set(MAP_GROUP_TEST_SOURCES
     MapLockNoOpTest.cpp
     RoomPropertiesDialogTest.cpp
     MapperButtonConfigTest.cpp
+    MapperPanelTest.cpp
     MapProgressDialogSeamTest.cpp
     MapRoomGeometryTest.cpp
     MapRoundTripTest.cpp
@@ -207,6 +212,7 @@ set(SETTINGS_GROUP_TEST_SOURCES
     SettingsHostLifecycleTest.cpp
     SettingsInstantApplyTest.cpp
     SettingsLiveSyncTest.cpp
+    SettingsMmcpFlagsTest.cpp
     SettingsRoundTripTest.cpp
     SettingsSearchTest.cpp
     SettingsShellNavigationTest.cpp
@@ -596,3 +602,7 @@ else()
 endif()
 set_property(TEST TDiscordModeTest APPEND PROPERTY
     ENVIRONMENT_MODIFICATION "${DISCORD_RPC_PATH_VARIABLE}=path_list_prepend:${CMAKE_SOURCE_DIR}/3rdparty/discord/rpc/lib")
+# Report-only: what a Lua enableTrigger()/disableTrigger() call costs on a large
+# trigger tree with the script editor closed and open. Never registered with
+# ctest; run it directly and read the METRIC lines.
+add_functional_test_binary(TriggerToggleEditorBenchmark TriggerToggleEditorBenchmark.cpp)

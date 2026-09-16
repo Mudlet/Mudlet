@@ -68,6 +68,7 @@
 #include <cmath>
 #include <limits>
 #include <math.h>
+#include <utility>
 
 #ifdef MUDLET_MEMORY_TRACKING
 #if defined(Q_OS_LINUX)
@@ -128,6 +129,27 @@ static bool timerDelayFits(const double time)
 {
     const double msec = std::floor(time * 1000.0 + 0.5);
     return msec >= 0 && msec < 86400000;
+}
+
+// A stopwatch holds stopWatch::csmMaximumMilliSeconds of time in either
+// direction and clamps to that end of its range whatever accumulates past it,
+// but an adjustment asking outright for more than the whole range is a mistake
+// worth reporting rather than quietly flattening. It is the milliseconds the
+// adjustment rounds to that have to be bounded, as the stopwatch keeps its time
+// in those, and repeating that rounding here in the double domain keeps an
+// enormous adjustment from being converted to an integer it does not fit, which
+// is undefined behaviour. The comparison is written so that a NaN or infinite
+// adjustment fails it as well. Handing the rounded value back saves the caller
+// rounding the same product a second time:
+static std::pair<bool, qint64> stopWatchAdjustmentAsMilliSeconds(const double adjustment)
+{
+    constexpr double limit = static_cast<double>(stopWatch::csmMaximumMilliSeconds);
+    const double milliSeconds = std::round(adjustment * 1000.0);
+    if (!(milliSeconds >= -limit && milliSeconds <= limit)) {
+        return {false, 0};
+    }
+
+    return {true, static_cast<qint64>(milliSeconds)};
 }
 
 #define WINDOW_NAME(ARG_L, ARG_pos)                                                                                                                                                                    \
@@ -234,7 +256,15 @@ int TLuaInterpreter::adjustStopWatch(lua_State* L)
     }
 
     const double adjustment = getVerifiedDouble(L, __func__, 2, "modification in seconds");
-    const bool result = host.adjustStopWatch(watchId, qRound(adjustment * 1000.0));
+    auto [fits, milliSeconds] = stopWatchAdjustmentAsMilliSeconds(adjustment);
+    if (!fits) {
+        return warnArgumentValue(
+                L,
+                __func__,
+                qsl("modification in seconds must be a finite number from -%1 to %1, got %2").arg(QString::number(stopWatch::csmMaximumMilliSeconds / 1000)).arg(QString::number(adjustment, 'g', 17)));
+    }
+
+    const bool result = host.adjustStopWatch(watchId, milliSeconds);
     // This is only likely to fail when a numeric first argument was given:
     if (!result) {
         return warnArgumentValue(L, __func__, csmInvalidStopWatchID.arg(watchId));
@@ -403,15 +433,7 @@ int TLuaInterpreter::disableScript(lua_State* L)
     const QString name = getVerifiedString(L, __func__, 1, "script name");
 
     Host& host = getHostFromLua(L);
-    int cnt = 0;
-    QMap<int, TScript*> const scripts = host.getScriptUnit()->getScriptList();
-    for (auto script : scripts) {
-        if (script->getName() == name) {
-            cnt++;
-            script->setIsActive(false);
-        }
-    }
-    if (cnt == 0) {
+    if (!host.getScriptUnit()->disableScript(name)) {
         return warnArgumentValue(L, __func__, qsl("script '%1' not found").arg(name));
     }
 
@@ -465,15 +487,7 @@ int TLuaInterpreter::enableScript(lua_State* L)
     const QString name = getVerifiedString(L, __func__, 1, "script name");
 
     Host& host = getHostFromLua(L);
-    int cnt = 0;
-    QMap<int, TScript*> const scripts = host.getScriptUnit()->getScriptList();
-    for (auto script : scripts) {
-        if (script->getName() == name) {
-            cnt++;
-            script->setIsActive(true);
-        }
-    }
-    if (cnt == 0) {
+    if (!host.getScriptUnit()->enableScript(name)) {
         return warnArgumentValue(L, __func__, qsl("script '%1' not found").arg(name));
     }
 

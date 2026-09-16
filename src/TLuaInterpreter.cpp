@@ -1109,10 +1109,7 @@ int TLuaInterpreter::feedTelnet(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L,
-                        "feedTelnet: bad argument #1 type (imitation game server data as string\n"
-                        "expected, got %s!)",
-                        luaL_typename(L, 1));
+        lua_pushfstring(L, "feedTelnet: bad argument #1 type (imitation game server data as string expected, got %s!)", luaL_typename(L, 1));
         lua_error(L);
         Q_UNREACHABLE();
     }
@@ -1161,10 +1158,7 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L,
-                        "feedTriggers: bad argument #1 type (imitation game server text as string\n"
-                        "expected, got %s!)",
-                        luaL_typename(L, 1));
+        lua_pushfstring(L, "feedTriggers: bad argument #1 type (imitation game server text as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
 
@@ -6923,7 +6917,10 @@ std::pair<int, QString> TLuaInterpreter::startPermKey(QString& name, QString& pa
     pT->setKeyCode(keycode);
     pT->setKeyModifiers(modifier);
     pT->setIsFolder(keycode == -1);
-    pT->setIsActive(keycode != -1); // Folders (keycode == -1) start as inactive
+    // A folder has no key code of its own to fire, but leaving it inactive
+    // silences every key placed inside it, so groups start active here just as
+    // the alias and trigger ones do:
+    pT->setIsActive(true);
     pT->setTemporary(false);
     pT->registerKey();
     // CHECK: The lua code in function could fail to compile - but there is no feedback here to the caller.
