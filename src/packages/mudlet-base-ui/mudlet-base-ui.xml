@@ -2640,7 +2640,10 @@ BaseUI.loadSettings()
 -- comes out of a file the player can edit - or from a later release that had a
 -- look this one does not. An unknown name would leave the palette empty and the
 -- first paint would fail on it, taking the whole interface with it, so fall back.
-if not BaseUI.setTheme(BaseUI.settings.theme, true) then
+-- `or defaultThemeName` so a first run, which has no settings file and so no
+-- name at all, is not reported as an unknown look: the fallback below stays for
+-- a name that really is unknown.
+if not BaseUI.setTheme(BaseUI.settings.theme or defaultThemeName, true) then
   BaseUI.setTheme(defaultThemeName, true)
 end
 -- the chat gates are live from the start (unless the UI is dormant) so the
@@ -2651,8 +2654,14 @@ end
 BaseUI.armChatTriggers()
 BaseUI.createVitalsTriggers()
 -- negotiate MSDP up front: it costs nothing on servers without it and gives
--- gauges to games that have it but lack GMCP
-setConfig("enableMSDP", true)
+-- gauges to games that have it but lack GMCP. Seeded once rather than asserted
+-- on every load: this script runs at every profile open, so setting it each time
+-- would quietly undo a player who turned MSDP off in Preferences.
+if not BaseUI.settings.msdpSeeded then
+  BaseUI.settings.msdpSeeded = true
+  BaseUI.saveSettings()
+  setConfig("enableMSDP", true)
+end
 
 onEvent("gmcp.Char.Vitals", "BaseUI.updateVitals")
 onEvent("gmcp.char.vitals", "BaseUI.updateVitals")
