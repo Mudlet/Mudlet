@@ -149,8 +149,8 @@ bool stopWatch::stop()
         return false;
     }
 
-    // Is running - so stop and note time:
-    mElapsedTime = mEffectiveStartDateTime.msecsTo(QDateTime::currentDateTimeUtc());
+    // Is running - so stop and note time, while it still counts as running:
+    mElapsedTime = getElapsedMilliSeconds();
     mIsRunning = false;
     return true;
 }
@@ -176,6 +176,11 @@ bool stopWatch::reset()
     return true;
 }
 
+qint64 stopWatch::clampToRange(const qint64 milliSeconds)
+{
+    return qBound(-csmMaximumMilliSeconds, milliSeconds, csmMaximumMilliSeconds);
+}
+
 void stopWatch::adjustMilliSeconds(const qint64 adjustment)
 {
     if (!mIsInitialised) {
@@ -187,12 +192,20 @@ void stopWatch::adjustMilliSeconds(const qint64 adjustment)
 
     if (!mIsRunning) {
         // Not running so adjust stored elapsed time:
-        mElapsedTime += adjustment;
+        mElapsedTime = clampToRange(mElapsedTime + adjustment);
+        return;
     }
 
     // Is running so adjust effective start time - to increase the effective
-    // elapsed time we must subtract the adjustment from the effect start time:
-    mEffectiveStartDateTime = mEffectiveStartDateTime.addMSecs(-adjustment);
+    // elapsed time we must subtract the adjustment from the effective start
+    // time. Going via the total elapsed time is what puts the clamp at the end
+    // of the range: shifting the existing start time by the adjustment would
+    // carry it past instead. Both the time this reads and the adjustment are
+    // themselves bounded by the range, so their sum cannot overflow before it
+    // is clamped:
+    const qint64 nowMSecs = QDateTime::currentMSecsSinceEpoch();
+    const qint64 elapsed = clampToRange(clampToRange(nowMSecs - mEffectiveStartDateTime.toMSecsSinceEpoch()) + adjustment);
+    mEffectiveStartDateTime.setMSecsSinceEpoch(nowMSecs - elapsed);
 }
 
 qint64 stopWatch::getElapsedMilliSeconds() const
@@ -207,8 +220,9 @@ qint64 stopWatch::getElapsedMilliSeconds() const
         return mElapsedTime;
     }
 
-    // Is running so calculate elapsed time:
-    return mEffectiveStartDateTime.msecsTo(QDateTime::currentDateTimeUtc());
+    // Is running so calculate elapsed time - clamped, as a stopwatch adjusted
+    // close to the end of the range runs out of it as time passes:
+    return clampToRange(mEffectiveStartDateTime.msecsTo(QDateTime::currentDateTimeUtc()));
 }
 
 QString stopWatch::getElapsedDayTimeString() const
@@ -219,12 +233,7 @@ QString stopWatch::getElapsedDayTimeString() const
         return qsl("+:0:0:0:0:000");
     }
 
-    qint64 elapsed = 0;
-    if (mIsRunning) {
-        elapsed = mEffectiveStartDateTime.msecsTo(QDateTime::currentDateTimeUtc());
-    } else {
-        elapsed = mElapsedTime;
-    }
+    qint64 elapsed = getElapsedMilliSeconds();
 
     bool isNegative = false;
     if (elapsed < 0) {
