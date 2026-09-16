@@ -1429,7 +1429,8 @@ int TLuaInterpreter::echoLink(lua_State* L)
                     text = lua_tostring(L, -1);
                     hasText = true;
                 } else if (!key.compare(QLatin1String("command"), Qt::CaseInsensitive)) {
-                    if (!checkCommandOrFunctionArg(L, __func__, -1)) {
+                    int valueIndex = -1;
+                    if (!checkCommandOrFunctionArg(L, __func__, valueIndex)) {
                         errorPushed = true;
                         break;
                     }
@@ -1441,7 +1442,6 @@ int TLuaInterpreter::echoLink(lua_State* L)
                         luaReference = 0;
                     }
                     command.clear();
-                    int valueIndex = -1;
                     parseCommandOrFunction(L, __func__, valueIndex, command, luaReference);
                     hasCommand = true;
                 } else if (!key.compare(QLatin1String("hint"), Qt::CaseInsensitive)) {
@@ -2523,7 +2523,8 @@ int TLuaInterpreter::insertLink(lua_State* L)
                     text = lua_tostring(L, -1);
                     hasText = true;
                 } else if (!key.compare(QLatin1String("command"), Qt::CaseInsensitive)) {
-                    if (!checkCommandOrFunctionArg(L, __func__, -1)) {
+                    int valueIndex = -1;
+                    if (!checkCommandOrFunctionArg(L, __func__, valueIndex)) {
                         errorPushed = true;
                         break;
                     }
@@ -2535,7 +2536,6 @@ int TLuaInterpreter::insertLink(lua_State* L)
                         luaReference = 0;
                     }
                     command.clear();
-                    int valueIndex = -1;
                     parseCommandOrFunction(L, __func__, valueIndex, command, luaReference);
                     hasCommand = true;
                 } else if (!key.compare(QLatin1String("hint"), Qt::CaseInsensitive) || !key.compare(QLatin1String("tooltip"), Qt::CaseInsensitive)) {
