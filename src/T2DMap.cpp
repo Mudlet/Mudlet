@@ -580,7 +580,6 @@ void T2DMap::init()
     flushSymbolPixmapCache();
     flushTextLabelPixmapCache();
     mLargeAreaExitArrows = mpHost->getLargeAreaExitArrows();
-    mCachedRoomIdDigitsValid = false;
 }
 
 void T2DMap::scheduleRender()
@@ -2778,16 +2777,14 @@ void T2DMap::paintEvent(QPaintEvent* e)
         // cost more than everything else in the frame put together, so this is
         // only redone when the area or its room membership has actually moved
         // on since the value was last cached.
-        if (!mCachedRoomIdDigitsValid || mCachedRoomIdDigitsAreaId != mAreaID || mCachedRoomIdDigitsVersion != pDrawnArea->getRoomsVersion()) {
+        if (mCachedRoomIdDigitsVersion != pDrawnArea->getRoomsVersion()) {
             int maxUsedRoomId = 0;
             QSetIterator<int> itRoomId(pDrawnArea->getAreaRooms());
             while (itRoomId.hasNext()) {
                 maxUsedRoomId = qMax(maxUsedRoomId, itRoomId.next());
             }
             mMaxRoomIdDigits = static_cast<quint8>(QString::number(maxUsedRoomId).length());
-            mCachedRoomIdDigitsAreaId = mAreaID;
             mCachedRoomIdDigitsVersion = pDrawnArea->getRoomsVersion();
-            mCachedRoomIdDigitsValid = true;
         }
 
         QRectF roomTestRect;

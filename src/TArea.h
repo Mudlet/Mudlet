@@ -102,11 +102,16 @@ public:
     // costing a scan of every room in the area - the renderer's room-ID digit
     // count uses it this way rather than rescanning every rooms() every frame.
     // Drawn from a counter shared by every TArea rather than restarting at 0
-    // per instance, so a cache keyed on (area ID, version) cannot mistake a
+    // per instance, so a cache keyed on this version alone cannot mistake a
     // new TArea for the one a recycled area ID used to name: createNewAreaID()
     // hands out the lowest free ID, so a deleted and remade area, or a second
     // map loaded over the first, can otherwise reach the exact version a stale
     // cache entry already holds.
+    // TArea::readJsonArea() and TMap::restore() fill rooms directly, without a
+    // bump - safe only because both run on a freshly constructed TArea whose
+    // seeded version (below) is itself already unused by anything a cache could
+    // be holding, so it still reads as "changed" the first time anyone compares
+    // against it.
     quint32 getRoomsVersion() const { return mRoomsVersion; }
     void bumpRoomsVersion() { mRoomsVersion = ++smRoomsVersionCounter; }
     quint32 lodExitIndexRebuildCount() const { return mLodExitIndex.rebuildCount(); }

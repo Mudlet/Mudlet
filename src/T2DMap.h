@@ -528,11 +528,13 @@ private:
     // in the players current area, how many digits does the biggest room number have?
     quint8 mMaxRoomIdDigits = 0;
     // Cache for the above: recomputing it is a scan of every room in the area,
-    // so it is only redone when the drawn area or its room membership version
-    // (TArea::getRoomsVersion()) has actually moved on since last time. Reset
-    // in init(), which runs after every full map (re)load.
-    bool mCachedRoomIdDigitsValid = false;
-    int mCachedRoomIdDigitsAreaId = 0;
+    // so it is only redone when this differs from the drawn area's current
+    // TArea::getRoomsVersion(). That single comparison is enough on its own -
+    // the version comes from a counter shared by every TArea, so no two TArea
+    // instances, past or present, are ever stamped with the same value, and it
+    // both identifies which area a cached value belongs to and invalidates on
+    // a room-membership change. 0 is never handed out to a real TArea, so it
+    // doubles as this cache's own "nothing cached yet" starting value.
     quint32 mCachedRoomIdDigitsVersion = 0;
 
     // Holds the QRadialGradient details to use for the player room:

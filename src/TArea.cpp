@@ -688,8 +688,9 @@ void TArea::removeRoom(int room)
         // its entries are stuck here until something calls calcSpan():
         qWarning() << "TArea::removeRoom(" << room << ") the room is no longer in the map, so this area's indexes cannot be updated";
     }
-    rooms.remove(room);
-    bumpRoomsVersion();
+    if (rooms.remove(room)) {
+        bumpRoomsVersion();
+    }
     mAreaExits.remove(room);
     // Exits leading here from the area's remaining rooms are handled by
     // whoever took the room away: TRoomDB::__removeRoom() clears them through

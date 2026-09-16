@@ -116,8 +116,10 @@ private:
     // is exit target), kept in lockstep at every entranceMap mutation. Lets
     // deleteValuesFromEntranceMap() find the handful of entries a room
     // contributed directly, rather than scanning every entry in entranceMap to
-    // find them - the difference between O(exits for this room) and
-    // O(exits in the whole map) on every setExit() and room deletion.
+    // find them - though each entranceMap.remove(target, value) still walks
+    // that target's own chain, so the real bound is this room's own exits plus
+    // the entries under each of their targets, not O(1) per exit. Still far
+    // cheaper than the O(exits in the whole map) scan this replaced.
     QMultiHash<int, int> entranceMapBySource;
     QMap<int, TArea*> areas;
     QMap<int, QString> areaNamesMap;

@@ -135,8 +135,6 @@ void TRoomDB::deleteValuesFromEntranceMap(int value)
 
 void TRoomDB::deleteValuesFromEntranceMap(QSet<int>& valueSet)
 {
-    QElapsedTimer timer;
-    timer.start();
     for (const int value : valueSet) {
         const QList<int> targets = entranceMapBySource.values(value);
         for (const int target : targets) {
@@ -144,7 +142,6 @@ void TRoomDB::deleteValuesFromEntranceMap(QSet<int>& valueSet)
         }
         entranceMapBySource.remove(value);
     }
-    qDebug() << "TRoomDB::deleteValuesFromEntranceMap() with a list of:" << valueSet.size() << "items, run time:" << timer.nsecsElapsed() * 1.0e-9 << "sec.";
 }
 
 void TRoomDB::updateEntranceMap(int id)
@@ -218,10 +215,12 @@ bool TRoomDB::__removeRoom(int id)
         // regardless of overall map size - unlike the QMultiHash-wide deep copy this
         // used to take, which made every single-room deletion cost O(every exit on the
         // map). The list also holds its own values rather than referencing entranceMap,
-        // so removeAllSpecialExitsToRoom()/determineAreaExitsOfRoom() below are free to
-        // mutate the live entranceMap for other rooms without disturbing this loop - see
-        // "Implicit sharing iterator problem" in "Container Class | Qt 5.x Core" for why
-        // an iterator into entranceMap itself could not have tolerated that.
+        // so removeAllSpecialExitsToRoom() below - which calls updateEntranceMap() on
+        // the entering room - is free to mutate the live entranceMap, including
+        // removing the very (id, enteringRoomId) pair this loop is currently on,
+        // without disturbing the iteration - see "Implicit sharing iterator problem"
+        // in "Container Class | Qt 5.x Core" for why an iterator into entranceMap
+        // itself could not have tolerated that.
         const QList<int> enteringRoomIds = entranceMap.values(id);
         for (const int enteringRoomId : enteringRoomIds) {
             if (enteringRoomId == id || (isBulkDelete && mpTempRoomDeletionSet->contains(enteringRoomId))) {
