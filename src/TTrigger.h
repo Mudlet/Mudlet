@@ -70,6 +70,13 @@ struct TColorTable
     int ansiBg;
     QColor mFgColor;
     QColor mBgColor;
+    // The same colors in the form the characters store theirs in, converted
+    // once here rather than on every line. An ignored aspect, or an ANSI code
+    // the table has no color for, leaves the QColor invalid and the flag clear
+    QRgb mFgRgba = 0;
+    QRgb mBgRgba = 0;
+    bool mFgValid = false;
+    bool mBgValid = false;
 };
 
 // A 256-bit Bloom filter over the adjacent character pairs of one line: a
@@ -286,7 +293,7 @@ public:
     void disableTrigger(const QString&);
     TTrigger* killTrigger(const QString&);
     bool match_substring(const QString&, const QString&, int, int posOffset, int lineNumber, const TBigramFilter* pLineBigrams);
-    bool match_perl(const char* haystackC, int haystackCLength, const QString&, int, int posOffset, int lineNumber);
+    bool match_perl(const char* haystackC, int haystackCLength, const QString&, int, int posOffset, int lineNumber, const TBigramFilter* pLineBigrams = nullptr);
     bool match_exact_match(const QString&, const QString&, int, int posOffset, int lineNumber);
     bool match_begin_of_line_substring(const QString& haystack, const QString& needle, int patternNumber, int posOffset, int lineNumber);
     bool match_lua_code(int);
@@ -386,6 +393,17 @@ private:
     // these for every pattern of every trigger, which is no place for a tree
     // lookup and a reference count
     std::vector<TSubstringPattern> mSubstringPatterns;
+    // Text every match of a perl pattern has to contain, prepared like a
+    // substring pattern so that a line without it is dismissed without asking
+    // pcre2. Empty, with a null matcher, for every other pattern kind and for a
+    // perl pattern that guarantees no such text
+    struct TRegexLiteral
+    {
+        QString text;
+        std::unique_ptr<QStringMatcher> matcher;
+        TBigramFilter::Bits bigrams;
+    };
+    std::vector<TRegexLiteral> mRegexLiterals;
     std::vector<QSharedPointer<pcre2_code>> mRegexes;
     std::vector<QSharedPointer<pcre2_match_data>> mMatchData;
     // char rather than bool: keeps the plain element access the bit-packed

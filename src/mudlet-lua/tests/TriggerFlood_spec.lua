@@ -26,7 +26,10 @@ describe("trigger matching under a flood", function()
     -- Enough regex triggers, each searching every line, to clear the prescan's
     -- threshold without depending on what else the profile happens to have
     -- loaded. Only regex searches count: the other kinds are cheap enough to
-    -- answer on the main thread.
+    -- answer on the main thread, and so is a pattern with one run of text every
+    -- match has to hold, which a line lacking it is dismissed from without
+    -- pcre2 being asked. The alternation below is what leaves these with no
+    -- such run, so that each of them really does search every line.
     local paddingTriggers = 130
 
     local ids
@@ -87,7 +90,7 @@ describe("trigger matching under a flood", function()
         -- reachable by name from it.
         _G.FloodSpecNote = note
         for index = 1, paddingTriggers do
-            track(tempRegexTrigger("^flood_padding_matches_nothing_" .. index .. "$", function() note("padding") end))
+            track(tempRegexTrigger("^(?:flood_padding_matches_nothing_" .. index .. "|flood_padding_never_" .. index .. ")$", function() note("padding") end))
         end
     end)
 
