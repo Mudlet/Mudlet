@@ -276,6 +276,138 @@ private slots:
     QTRY_COMPARE(description(pFolder), activeFolder);
     QCOMPARE(description(pLeaf), active);
   }
+
+  // refreshAliasIcon()/refreshTimerIcon()/refreshScriptIcon()/refreshKeyIcon()
+  // were coalesced the same way as refreshTriggerIcon() above. The alias case
+  // is the one worth guarding specifically: a fresh alias stays TAlias::mIsNew
+  // until explicitly saved in the editor, and an earlier version of this fix
+  // painted that "unsaved" disk icon over the active/inactive one on every
+  // Lua-triggered repaint instead of the checkbox this asserts on.
+  void test_luaToggleRepaintsAliasTimerScriptKeyIcons() {
+    mudlet::self()->slot_showScriptDialog();
+    QTest::qWait(100ms);
+    dlgTriggerEditor *pEditor = mpHost->mpEditorDialog;
+    QVERIFY2(pEditor, "the editor dialog was not created");
+    TLuaInterpreter *pLua = mpHost->getLuaInterpreter();
+    QVERIFY(pLua->compileAndExecuteScript(
+        qsl("permAlias(\"qaToggleAlias\", \"\", \"^qa toggle alias$\", \"\")\n"
+            "permTimer(\"qaToggleTimer\", \"\", 3600, \"\")\n"
+            "permScript(\"qaToggleScript\", \"\", \"-- deliberately does nothing\")\n"
+            "permKey(\"qaToggleKey\", \"\", mudlet.key.F7, \"\")\n"
+            // permScript()/permTimer() create their item disabled (unlike
+            // permAlias()/permKey()) - enable explicitly for a common baseline.
+            "enableTimer(\"qaToggleTimer\")\n"
+            "enableScript(\"qaToggleScript\")")));
+    pEditor->doCleanReset();
+
+    auto description = [](QTreeWidgetItem *pItem) {
+      return pItem->data(0, Qt::AccessibleDescriptionRole).toString();
+    };
+    const QString active = dlgTriggerEditor::tr("activated");
+    const QString inactive = dlgTriggerEditor::tr("deactivated");
+
+    struct Target {
+      const char *treeName;
+      const char *itemName;
+      const char *enableFn;
+      const char *disableFn;
+      int dlgTriggerEditor::*flushCount;
+      int dlgTriggerEditor::*paintCount;
+    };
+    const Target targets[] = {
+        {"treeWidget_aliases", "qaToggleAlias", "enableAlias", "disableAlias",
+         &dlgTriggerEditor::mAliasIconFlushCount, &dlgTriggerEditor::mAliasIconPaintCount},
+        {"treeWidget_timers", "qaToggleTimer", "enableTimer", "disableTimer",
+         &dlgTriggerEditor::mTimerIconFlushCount, &dlgTriggerEditor::mTimerIconPaintCount},
+        {"treeWidget_scripts", "qaToggleScript", "enableScript", "disableScript",
+         &dlgTriggerEditor::mScriptIconFlushCount, &dlgTriggerEditor::mScriptIconPaintCount},
+        {"treeWidget_keys", "qaToggleKey", "enableKey", "disableKey",
+         &dlgTriggerEditor::mKeyIconFlushCount, &dlgTriggerEditor::mKeyIconPaintCount},
+    };
+
+    for (const auto &target : targets) {
+      auto *pTree = pEditor->findChild<QTreeWidget *>(QString::fromLatin1(target.treeName));
+      QVERIFY(pTree);
+      QTreeWidgetItem *pItem = nullptr;
+      QVERIFY2(QTest::qWaitFor([&]() {
+        const auto found = pTree->findItems(
+            QString::fromLatin1(target.itemName),
+            Qt::MatchCaseSensitive | Qt::MatchFixedString | Qt::MatchRecursive,
+            0);
+        pItem = found.isEmpty() ? nullptr : found.first();
+        return pItem != nullptr;
+      }), qPrintable(qsl("the editor never rebuilt its tree around %1").arg(target.itemName)));
+      QCOMPARE(description(pItem), active);
+
+      // flushCount/paintCount prove the queue and the cacheKey() dedup guard
+      // actually ran, not just that the description ends up correct either
+      // way. Waiting on flushCount itself (rather than on description) is
+      // what forces the wait for the deferred flush in the off-then-on case
+      // below, where the description never changes value across it.
+      int flushBefore = pEditor->*target.flushCount;
+      int paintBefore = pEditor->*target.paintCount;
+      QVERIFY(pLua->compileAndExecuteScript(
+          qsl("%1(\"%2\")").arg(target.disableFn, target.itemName)));
+      QTRY_COMPARE(pEditor->*target.flushCount, flushBefore + 1);
+      QCOMPARE(description(pItem), inactive);
+      QCOMPARE(pEditor->*target.paintCount, paintBefore + 1);
+
+      flushBefore = pEditor->*target.flushCount;
+      paintBefore = pEditor->*target.paintCount;
+      QVERIFY(pLua->compileAndExecuteScript(
+          qsl("%1(\"%2\")").arg(target.enableFn, target.itemName)));
+      QTRY_COMPARE(pEditor->*target.flushCount, flushBefore + 1);
+      QCOMPARE(description(pItem), active);
+      QCOMPARE(pEditor->*target.paintCount, paintBefore + 1);
+
+      // Toggled off and back on within one turn: coalescing must still land
+      // on the correct final state, not the state before the flush ran - in
+      // exactly one flush, and with paintCount unchanged since the final
+      // icon matches the one already shown (the cacheKey() guard earns its
+      // keep here, not just the final description).
+      flushBefore = pEditor->*target.flushCount;
+      paintBefore = pEditor->*target.paintCount;
+      QVERIFY(pLua->compileAndExecuteScript(
+          qsl("%1(\"%3\")\n%2(\"%3\")").arg(target.disableFn, target.enableFn, target.itemName)));
+      QTRY_COMPARE(pEditor->*target.flushCount, flushBefore + 1);
+      QCOMPARE(description(pItem), active);
+      QCOMPARE(pEditor->*target.paintCount, paintBefore);
+    }
+
+    // Two different aliases toggled together must still collapse into one
+    // flush - the queue is drained in a single tree walk per turn regardless
+    // of how many distinct IDs were pending, not one walk per queued ID.
+    QVERIFY(pLua->compileAndExecuteScript(
+        qsl("permAlias(\"qaToggleAlias2\", \"\", \"^qa toggle alias 2$\", \"\")")));
+    pEditor->doCleanReset();
+    auto *pAliasTree = pEditor->findChild<QTreeWidget *>(qsl("treeWidget_aliases"));
+    QVERIFY(pAliasTree);
+    // doCleanReset() defers the actual tree rebuild, so a stale-but-still-
+    // present old item can be found on an early poll and then get deleted
+    // when the deferred rebuild finally runs mid-wait - fetch both pointers
+    // from the same successful poll rather than one qWaitFor per name, so
+    // neither can be invalidated between finding it and using it.
+    QTreeWidgetItem *pAlias1 = nullptr;
+    QTreeWidgetItem *pAlias2 = nullptr;
+    QVERIFY2(QTest::qWaitFor([&]() {
+      const auto found1 = pAliasTree->findItems(qsl("qaToggleAlias"), Qt::MatchCaseSensitive | Qt::MatchFixedString | Qt::MatchRecursive, 0);
+      const auto found2 = pAliasTree->findItems(qsl("qaToggleAlias2"), Qt::MatchCaseSensitive | Qt::MatchFixedString | Qt::MatchRecursive, 0);
+      pAlias1 = found1.isEmpty() ? nullptr : found1.first();
+      pAlias2 = found2.isEmpty() ? nullptr : found2.first();
+      return pAlias1 && pAlias2;
+    }), "the editor never rebuilt its tree around both aliases");
+    QCOMPARE(description(pAlias1), active);
+    QCOMPARE(description(pAlias2), active);
+
+    const int flushBefore = pEditor->mAliasIconFlushCount;
+    const int paintBefore = pEditor->mAliasIconPaintCount;
+    QVERIFY(pLua->compileAndExecuteScript(
+        qsl("disableAlias(\"qaToggleAlias\")\ndisableAlias(\"qaToggleAlias2\")")));
+    QTRY_COMPARE(pEditor->mAliasIconFlushCount, flushBefore + 1);
+    QCOMPARE(description(pAlias1), inactive);
+    QCOMPARE(description(pAlias2), inactive);
+    QCOMPARE(pEditor->mAliasIconPaintCount, paintBefore + 2);
+  }
 };
 
 #include "TriggerEditorTest.moc"
