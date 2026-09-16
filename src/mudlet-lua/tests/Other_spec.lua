@@ -2533,12 +2533,23 @@ describe("Tests the script API", function()
         "appendScript: bad argument #2 type (lua code as string expected, got number!)")
     end)
 
+    it("errors when the position is not a number", function()
+      assert.has_error(function() appendScript("W2aScriptAppended", [[]], {}) end,
+        "appendScript: bad argument #3 type (script position as number expected, got table!)")
+    end)
+
     it("errors instead of creating anything when the script does not exist", function()
-      -- appendScript does not check getScript's -1 sentinel, so what actually
-      -- reports the missing script is the setScript underneath it; either way
-      -- nothing may be created
-      assert.has_error(function() appendScript("w2aNoSuchScriptName", [[local w2aNew = 1]]) end)
+      assert.has_error(function() appendScript("w2aNoSuchScriptName", [[local w2aNew = 1]]) end,
+        [[appendScript: cannot append to script (script "w2aNoSuchScriptName" at position 1 not found)]])
       assert.equals(0, exists("w2aNoSuchScriptName", "script"))
+    end)
+
+    it("names the position it was given when no script is there", function()
+      local _, position = makeScript("W2aScriptAppendPosition", "", [[local w2aOriginal = 1]])
+      local beyondTheLast = position + 1
+      assert.has_error(function() appendScript("W2aScriptAppendPosition", [[local w2aNew = 1]], beyondTheLast) end,
+        [[appendScript: cannot append to script (script "W2aScriptAppendPosition" at position ]] .. beyondTheLast .. [[ not found)]])
+      assert.equals([[local w2aOriginal = 1]], (getScript("W2aScriptAppendPosition", position)))
     end)
 
     it("adds the new code on a line of its own after the existing code", function()
@@ -2557,6 +2568,26 @@ describe("Tests the script API", function()
       appendScript("W2aScriptAppendDefault", [[local w2aDefaultAppended = 2]])
       assert.equals(firstBefore .. "\n" .. [[local w2aDefaultAppended = 2]],
         (getScript("W2aScriptAppendDefault", 1)))
+    end)
+
+    it("appends to the script at the requested position when several share a name", function()
+      local _, firstPosition = makeScript("W2aScriptAppendDuplicate", "", [[local w2aFirst = 1]])
+      local secondId, secondPosition = makeScript("W2aScriptAppendDuplicate", "", [[local w2aSecond = 2]])
+      assert.equals(secondId,
+        appendScript("W2aScriptAppendDuplicate", [[local w2aSecondAppended = 3]], secondPosition))
+      assert.equals([[local w2aFirst = 1]], (getScript("W2aScriptAppendDuplicate", firstPosition)))
+      assert.equals([[local w2aSecond = 2]] .. "\n" .. [[local w2aSecondAppended = 3]],
+        (getScript("W2aScriptAppendDuplicate", secondPosition)))
+    end)
+
+    it("still separates with a newline when the script it appends to is empty", function()
+      local _, position = makeScript("W2aScriptAppendEmpty", "", [[local w2aOriginal = 1]])
+      setScript("W2aScriptAppendEmpty", "", position)
+      -- the separator goes in unconditionally, so an empty body gains a leading
+      -- newline - harmless Lua, and how appendScript has always behaved
+      appendScript("W2aScriptAppendEmpty", [[local w2aAppended = 2]], position)
+      assert.equals("\n" .. [[local w2aAppended = 2]],
+        (getScript("W2aScriptAppendEmpty", position)))
     end)
 
     it("runs the appended code", function()
