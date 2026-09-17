@@ -70,6 +70,7 @@ private slots:
     void testATimedOutRemovalDoesNotStopLaterKeychainJobs();
     void testALookupIsNotDisturbedByAnotherOnTheSameManager();
     void testDeletingAManagerMidLookupLeavesItsReadToFinish();
+    void testAWriteTheKeychainHasAnsweredIsNotOrphanedWithItsPassword();
     void testACallbackThatFlushesDeferredDeletesDoesNotDeleteTheAnsweringRead();
     void testALookupFindsThePasswordInTheEncryptedFileBeforeTheCollidingFormat_data();
     void testALookupFindsThePasswordInTheEncryptedFileBeforeTheCollidingFormat();
@@ -889,6 +890,31 @@ void CredentialManagerKeychainTest::testDeletingAManagerMidLookupLeavesItsReadTo
     QVERIFY2(keychainQueueRuns(), "QtKeychain's queue did not move on once the orphaned read answered");
     QTRY_VERIFY2(!staller.firstStalledAlive(), "an orphaned read was never deleted once it answered");
     QCOMPARE(answer->count, 0);
+}
+
+void CredentialManagerKeychainTest::testAWriteTheKeychainHasAnsweredIsNotOrphanedWithItsPassword()
+{
+    // The window between a job answering and its result handler running: the handler is queued, so
+    // closing the dialog that started the write drops it along with the manager. QtKeychain is done
+    // with the job by then, but it read autoDelete() as it answered, so nothing left will delete it -
+    // and it still holds the password it was given.
+    JobStaller staller;
+    staller.stallEvery<QKeychain::WritePasswordJob>();
+    auto manager = std::make_unique<CredentialManager>();
+    manager->mJobStartHook = staller.hook();
+
+    manager->storePassword(mProfile, mKey, QStringLiteral("orphan-secret"), [](bool, const QString&) {});
+    QPointer<QKeychain::Job> writeJob = staller.waitForStalled();
+    QVERIFY2(writeJob, "the write meant to stall was never started, so this run tested nothing");
+
+    // Answers the write without letting its queued handler run, then goes away as a closing dialog does
+    JobStaller::answer(writeJob, QKeychain::NoError, QString());
+    QVERIFY2(writeJob, "a write that had just answered was deleted while it was still emitting finished()");
+    QTest::ignoreMessage(QtWarningMsg, QRegularExpression(QStringLiteral("abandoned the keychain write for profile \"%1\"").arg(QRegularExpression::escape(mProfile))));
+    manager.reset();
+
+    QTRY_VERIFY2(!writeJob, "a write the keychain had already answered was left behind when its manager went away, with the password still in it");
+    QVERIFY2(keychainQueueRuns(), "deleting the answered write stopped every later keychain job from running");
 }
 
 void CredentialManagerKeychainTest::testACallbackThatFlushesDeferredDeletesDoesNotDeleteTheAnsweringRead()
