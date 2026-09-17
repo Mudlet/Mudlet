@@ -150,6 +150,11 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
     // Mudlet version:
     setProfileSpellDictionary();
 
+    mpLatencyBoxPacer = new QTimer(this);
+    mpLatencyBoxPacer->setSingleShot(true);
+    mpLatencyBoxPacer->setInterval(csmLatencyBoxPaceMs);
+    connect(mpLatencyBoxPacer, &QTimer::timeout, this, &TMainConsole::slot_refreshLatencyBox);
+
     // Ensure the QWidget has the profile name embedded into it
     setProperty("HostName", pH->getName());
 }
@@ -2314,15 +2319,17 @@ void TMainConsole::printOnDisplay(std::string& incomingSocketData, const bool is
     // context away from the rest of that pass.
     const bool wasInTriggerEngineMode = mTriggerEngineMode;
     mTriggerEngineMode = true;
+    const bool alertWanted = mAlertOnNewData && isFromServer;
     const int beforeTranslateLastLineNumber = buffer.getLastLineNumber();
-    const auto beforeTranslateLastLine = buffer.line(beforeTranslateLastLineNumber - 1);
+    const QString beforeTranslateLastLine = alertWanted ? buffer.line(beforeTranslateLastLineNumber - 1) : QString();
     buffer.translateToPlainText(incomingSocketData, isFromServer);
     mTriggerEngineMode = wasInTriggerEngineMode;
 
-    const int lastLineNumber = buffer.getLastLineNumber();
-    const bool bufferChanged = lastLineNumber != beforeTranslateLastLineNumber || buffer.line(lastLineNumber - 1) != beforeTranslateLastLine;
-    if (mAlertOnNewData && isFromServer && bufferChanged) {
-        QApplication::alert(mudlet::self(), 0);
+    if (alertWanted) {
+        const int lastLineNumber = buffer.getLastLineNumber();
+        if (lastLineNumber != beforeTranslateLastLineNumber || buffer.line(lastLineNumber - 1) != beforeTranslateLastLine) {
+            QApplication::alert(mudlet::self(), 0);
+        }
     }
 
     // dequeues MXP events and raise them through the LuaInterpreter
@@ -2333,26 +2340,37 @@ void TMainConsole::printOnDisplay(std::string& incomingSocketData, const bool is
         mpHost->mLuaInterpreter.signalMXPEvent(event.name, event.attrs, event.actions, event.caption);
     }
 
-    const double processT = mProcessingTimer.elapsed() / 1000.0;
-    if (mpHost->mTelnet.mGA_Driver) {
-        /*:
-        The first argument 'N' represents the 'N'etwork latency; the second 'S' the
-        'S'ystem (processing) time
-        */
-        mpLineEdit_networkLatency->setText(tr("N:%1 S:%2").arg(mpHost->mTelnet.networkLatencyTime, 0, 'f', 3).arg(processT, 0, 'f', 3));
-    } else {
-        /*:
-        The argument 'S' represents the 'S'ystem (processing) time, in this situation
-        the Game Server is not sending \"GoAhead\" signals so we cannot deduce the
-        network latency...
-        */
-        mpLineEdit_networkLatency->setText(tr("<no GA> S:%1").arg(processT, 0, 'f', 3));
+    mLatencyProcessT = mProcessingTimer.elapsed() / 1000.0;
+    if (!mpLatencyBoxPacer->isActive()) {
+        mpLatencyBoxPacer->start();
     }
     // Modify the tab text if this is not the currently active host - this
     // method is only used on the "main" console so no need to filter depending
     // on TConsole types:
 
     emit signal_newDataAlert(mProfileName);
+}
+
+void TMainConsole::slot_refreshLatencyBox()
+{
+    if (!mpHost || !mpLineEdit_networkLatency) {
+        return;
+    }
+
+    if (mpHost->mTelnet.mGA_Driver) {
+        /*:
+        The first argument 'N' represents the 'N'etwork latency; the second 'S' the
+        'S'ystem (processing) time
+        */
+        mpLineEdit_networkLatency->setText(tr("N:%1 S:%2").arg(mpHost->mTelnet.networkLatencyTime, 0, 'f', 3).arg(mLatencyProcessT, 0, 'f', 3));
+    } else {
+        /*:
+        The argument 'S' represents the 'S'ystem (processing) time, in this situation
+        the Game Server is not sending \"GoAhead\" signals so we cannot deduce the
+        network latency...
+        */
+        mpLineEdit_networkLatency->setText(tr("<no GA> S:%1").arg(mLatencyProcessT, 0, 'f', 3));
+    }
 }
 
 void TMainConsole::finalize()
