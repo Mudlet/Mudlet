@@ -4471,7 +4471,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                         break;
                     default: {
                     } // There are a significant number of other errors
-                    // that are not handled here!
+                        // that are not handled here!
                     }
                 }
             }
@@ -4497,13 +4497,16 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     checkBox_askTlsAvailable->setChecked(pHost->mAskTlsAvailable);
 
-    // The "forget saved sign-in" button is gated on a reconnect token actually existing, not on the
-    // sign-in-choice flag: an oauth-only game never sets that flag yet still mints tokens, and a token
-    // is the only thing the button acts on. The keychain check is asynchronous, so start hidden and
-    // reveal on a hit; the QPointer guards against the dialog closing before the store answers.
-    // credentialExists() collapses a read failure (locked/denied/timed-out keychain) to "no token", so
-    // the button deliberately stays hidden on any read failure - the only cost is not offering to forget
-    // a token that could not be read, and clicking would just yield a graceful "could not remove" warning.
+    // The "forget saved sign-in" button is gated on either of the stored sign-in's keys existing, not on
+    // the sign-in-choice flag: an oauth-only game never sets that flag yet still mints tokens. The
+    // metadata alone is not enough to test. Mudlet 5.0.1 keeps the whole sign-in under the
+    // metadata key, so forgetting it there leaves this build's token key behind with nothing to offer
+    // its removal. A token-less resume hint - {account, provider}, left behind when a rejected token was
+    // dropped - is still something the player may want to forget, too. The keychain check is
+    // asynchronous, so start hidden and reveal on a hit; the QPointer guards against the dialog closing
+    // before the store answers. credentialExists() collapses a read failure (locked/denied/timed-out
+    // keychain) to "nothing stored", so the button deliberately stays hidden on any read failure - the
+    // only cost is not offering to forget an entry that could not be read.
     pushButton_forgetSavedSignIn->setEnabled(mEnableGMCP->isChecked());
     // Once per profile rather than once per run: reading the keychain can cost
     // the user a prompt on some platforms, for an answer that hardly changes
@@ -4512,13 +4515,27 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         pushButton_forgetSavedSignIn->setVisible(false);
         QPointer<dlgProfilePreferences> safeDialog = this;
         QPointer<CredentialManager> credentialManager = new CredentialManager();
-        credentialManager->credentialExists(pHost->getName(), qsl("reconnect"), [safeDialog, credentialManager](bool exists) {
+        const QString profileName = pHost->getName();
+        credentialManager->credentialExists(profileName, qsl("reconnect"), [safeDialog, credentialManager, profileName](bool exists) {
             if (credentialManager) {
                 credentialManager->deleteLater();
             }
-            if (safeDialog && exists) {
-                safeDialog->pushButton_forgetSavedSignIn->setVisible(true);
+            if (!safeDialog) {
+                return;
             }
+            if (exists) {
+                safeDialog->pushButton_forgetSavedSignIn->setVisible(true);
+                return;
+            }
+            QPointer<CredentialManager> tokenChecker = new CredentialManager();
+            tokenChecker->credentialExists(profileName, qsl("reconnect-token"), [safeDialog, tokenChecker](bool tokenExists) {
+                if (tokenChecker) {
+                    tokenChecker->deleteLater();
+                }
+                if (safeDialog && tokenExists) {
+                    safeDialog->pushButton_forgetSavedSignIn->setVisible(true);
+                }
+            });
         });
     }
 
@@ -5651,6 +5668,13 @@ void dlgProfilePreferences::slot_forgetSavedSignIn()
         // host closing before the removal answers.
         QPointer<dlgProfilePreferences> safeDialog = this;
         QPointer<Host> safeHost = pHost;
+        // Disable for the duration, not only on success. The removal is asynchronous and can take tens
+        // of seconds behind a slow or prompting keychain, during which the button stayed live and a
+        // second click was easy. That second request supersedes the first, and a superseded forget
+        // reports failure - so the player got a "could not remove" warning for a forget that was about
+        // to succeed, immediately followed by the success. Re-enabled below on any outcome that leaves
+        // something still to forget.
+        pushButton_forgetSavedSignIn->setEnabled(false);
         pHost->mpAuth->forgetSavedSignIn([safeDialog, safeHost](bool success) {
             if (success) {
                 if (safeDialog) {
@@ -5665,6 +5689,8 @@ void dlgProfilePreferences::slot_forgetSavedSignIn()
                 }
             } else {
                 if (safeDialog) {
+                    // Something may still be stored, so let the player try again.
+                    safeDialog->pushButton_forgetSavedSignIn->setEnabled(true);
                     //: Shown when removing the saved sign-in failed, so it may still be present.
                     safeDialog->notificationAreaMessageBox->setText(dlgProfilePreferences::tr("Could not remove the saved sign-in; it may still be present."));
                 }
