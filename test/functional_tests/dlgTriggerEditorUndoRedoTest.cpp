@@ -1646,6 +1646,31 @@ private slots:
     cleanupAll(mItemTypes[1]);
   }
 
+  void testTimerMovedUnderATimerNeedsNoTime() {
+    TLuaInterpreter *interpreter = mpHost->getLuaInterpreter();
+    const int parentID = interpreter->startPermTimer(qsl("W2aMoveParent"), QString(), 5, qsl("-- parent")).first;
+    const int zeroID = interpreter->startPermTimer(qsl("W2aMoveZero"), QString(), 0, qsl("-- zero")).first;
+    TTimer *pParent = mpHost->getTimerUnit()->getTimer(parentID);
+    TTimer *pZero = mpHost->getTimerUnit()->getTimer(zeroID);
+    QVERIFY(pParent != nullptr);
+    QVERIFY(pZero != nullptr);
+
+    pZero->validateTime();
+    QVERIFY(!pZero->state());
+
+    // an offset timer fires when its parent does, so it needs no time of its own
+    mpHost->getTimerUnit()->reParentTimer(zeroID, 0, parentID);
+    QVERIFY(pZero->isOffsetTimer());
+    QVERIFY(pZero->state());
+
+    mpHost->getTimerUnit()->reParentTimer(zeroID, parentID, 0);
+    QVERIFY(!pZero->isOffsetTimer());
+    QVERIFY(!pZero->state());
+
+    delete pZero;
+    delete pParent;
+  }
+
   void testTriggerPatternTypeChanges() {
     mpEditor->slot_showTriggers();
     cleanupAll(mItemTypes[0]);
