@@ -1604,6 +1604,48 @@ private slots:
     cleanupAll(mItemTypes[1]);
   }
 
+  void testTimerWithoutATimeIsFlagged() {
+    mpEditor->slot_showTimers();
+    cleanupAll(mItemTypes[1]);
+
+    mpEditor->addTimer(false);
+    QVERIFY(mpEditor->mpTimerBaseItem->childCount() > 0);
+
+    QTreeWidgetItem *timer = mpEditor->mpTimerBaseItem->child(0);
+    int timerID = timer->data(0, Qt::UserRole).toInt();
+    TTimer *pTimer = mpHost->getTimerUnit()->getTimer(timerID);
+    QVERIFY(pTimer != nullptr);
+
+    mpEditor->treeWidget_timers->setCurrentItem(timer);
+    mpEditor->slot_timerSelected(timer);
+    mpEditor->mpUndoStack->clear();
+
+    // a new timer has no time yet
+    mpEditor->saveTimer();
+    QVERIFY(!pTimer->state());
+    QVERIFY(!pTimer->getError().isEmpty());
+
+    mpEditor->mpTimersMainArea->timeEdit_timer_seconds->setTime(QTime(0, 0, 2, 0));
+    mpEditor->saveTimer();
+    QVERIFY(pTimer->state());
+
+    // edits of the time made in quick succession would merge into a single undo step
+    mpEditor->mpUndoStack->clear();
+    mpEditor->mpTimersMainArea->timeEdit_timer_seconds->setTime(QTime(0, 0, 0, 0));
+    mpEditor->saveTimer();
+    QVERIFY(!pTimer->state());
+
+    mpEditor->mpUndoStack->undo();
+    QCOMPARE(pTimer->getTime(), QTime(0, 0, 2, 0));
+    QVERIFY(pTimer->state());
+
+    mpEditor->mpUndoStack->redo();
+    QCOMPARE(pTimer->getTime(), QTime(0, 0, 0, 0));
+    QVERIFY(!pTimer->state());
+
+    cleanupAll(mItemTypes[1]);
+  }
+
   void testTriggerPatternTypeChanges() {
     mpEditor->slot_showTriggers();
     cleanupAll(mItemTypes[0]);
