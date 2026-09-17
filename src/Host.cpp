@@ -25,13 +25,12 @@
 
 #include "Host.h"
 
+#include "MudletPaths.h"
 #include "discord.h"
 #include "dlgIRC.h"
 #include "dlgMapper.h"
-#include "dlgModuleManager.h"
 #include "dlgNotepad.h"
-#include "dlgPackageManager.h"
-#include "dlgProfilePreferences.h"
+#include "dlgTriggerEditor.h"
 #include "GifTracker.h"
 #include "GMCPAuthenticator.h"
 #include "LuaInterface.h"
@@ -68,6 +67,7 @@
 #include <QDirIterator>
 #include <QElapsedTimer>
 #include <QEventLoop>
+#include <QFontInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonValue>
@@ -81,6 +81,8 @@
 #include <QTemporaryFile>
 #include <QTextStream>
 #include <QThread>
+#include <QTimer>
+#include <QUuid>
 #include <zip.h>
 #include <memory>
 
@@ -149,8 +151,8 @@ bool stopWatch::stop()
         return false;
     }
 
-    // Is running - so stop and note time:
-    mElapsedTime = mEffectiveStartDateTime.msecsTo(QDateTime::currentDateTimeUtc());
+    // Is running - so stop and note time, while it still counts as running:
+    mElapsedTime = getElapsedMilliSeconds();
     mIsRunning = false;
     return true;
 }
@@ -176,6 +178,11 @@ bool stopWatch::reset()
     return true;
 }
 
+qint64 stopWatch::clampToRange(const qint64 milliSeconds)
+{
+    return qBound(-csmMaximumMilliSeconds, milliSeconds, csmMaximumMilliSeconds);
+}
+
 void stopWatch::adjustMilliSeconds(const qint64 adjustment)
 {
     if (!mIsInitialised) {
@@ -187,12 +194,20 @@ void stopWatch::adjustMilliSeconds(const qint64 adjustment)
 
     if (!mIsRunning) {
         // Not running so adjust stored elapsed time:
-        mElapsedTime += adjustment;
+        mElapsedTime = clampToRange(mElapsedTime + adjustment);
+        return;
     }
 
     // Is running so adjust effective start time - to increase the effective
-    // elapsed time we must subtract the adjustment from the effect start time:
-    mEffectiveStartDateTime = mEffectiveStartDateTime.addMSecs(-adjustment);
+    // elapsed time we must subtract the adjustment from the effective start
+    // time. Going via the total elapsed time is what puts the clamp at the end
+    // of the range: shifting the existing start time by the adjustment would
+    // carry it past instead. Both the time this reads and the adjustment are
+    // themselves bounded by the range, so their sum cannot overflow before it
+    // is clamped:
+    const qint64 nowMSecs = QDateTime::currentMSecsSinceEpoch();
+    const qint64 elapsed = clampToRange(clampToRange(nowMSecs - mEffectiveStartDateTime.toMSecsSinceEpoch()) + adjustment);
+    mEffectiveStartDateTime.setMSecsSinceEpoch(nowMSecs - elapsed);
 }
 
 qint64 stopWatch::getElapsedMilliSeconds() const
@@ -207,8 +222,9 @@ qint64 stopWatch::getElapsedMilliSeconds() const
         return mElapsedTime;
     }
 
-    // Is running so calculate elapsed time:
-    return mEffectiveStartDateTime.msecsTo(QDateTime::currentDateTimeUtc());
+    // Is running so calculate elapsed time - clamped, as a stopwatch adjusted
+    // close to the end of the range runs out of it as time passes:
+    return clampToRange(mEffectiveStartDateTime.msecsTo(QDateTime::currentDateTimeUtc()));
 }
 
 QString stopWatch::getElapsedDayTimeString() const
@@ -219,12 +235,7 @@ QString stopWatch::getElapsedDayTimeString() const
         return qsl("+:0:0:0:0:000");
     }
 
-    qint64 elapsed = 0;
-    if (mIsRunning) {
-        elapsed = mEffectiveStartDateTime.msecsTo(QDateTime::currentDateTimeUtc());
-    } else {
-        elapsed = mElapsedTime;
-    }
+    qint64 elapsed = getElapsedMilliSeconds();
 
     bool isNegative = false;
     if (elapsed < 0) {
@@ -259,8 +270,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mpMedia(new TMedia(this, hostname))
 , mpAuth(new GMCPAuthenticator(this))
 , mTimerDebugOutputSuppressionInterval(QTime())
-, mSearchOptions(dlgTriggerEditor::SearchOption::SearchOptionNone)
-, mBufferSearchOptions(TConsole::SearchOption::SearchOptionNone)
+, mSearchOptions(enums::EditorSearchOptionNone)
+, mBufferSearchOptions(enums::BufferSearchOptionNone)
 , mpDlgIRC(nullptr)
 , mMMCPServer(nullptr)
 , mpDlgProfilePreferences(nullptr)
@@ -299,16 +310,16 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     // plain text or HTML is immediately resumed on profile loading. Do not
     // confuse it with the "autologin" item, which controls whether the profile
     // is automatically started when the Mudlet application is run!
-    mLogStatus = QFile::exists(mudlet::getMudletPath(enums::profileDataItemPath, mHostName, qsl("autolog")));
+    mLogStatus = QFile::exists(MudletPaths::getMudletPath(enums::profileDataItemPath, mHostName, qsl("autolog")));
     // "autotimestamp" determines if profile loads with timestamps enabled
-    mTimeStampStatus = QFile::exists(mudlet::getMudletPath(enums::profileDataItemPath, mHostName, qsl("autotimestamp")));
+    mTimeStampStatus = QFile::exists(MudletPaths::getMudletPath(enums::profileDataItemPath, mHostName, qsl("autotimestamp")));
     mLuaInterface.reset(new LuaInterface(this->getLuaInterpreter()->getLuaGlobalState()));
 
     // Copy across the details needed for the "color_table":
     mLuaInterpreter.updateAnsi16ColorsInTable();
     mLuaInterpreter.updateExtendedAnsiColorsInTable();
 
-    const QString directoryLogFile = mudlet::getMudletPath(enums::profileDataItemPath, mHostName, qsl("log"));
+    const QString directoryLogFile = MudletPaths::getMudletPath(enums::profileDataItemPath, mHostName, qsl("log"));
     const QString logFileName = qsl("%1/errors.txt").arg(directoryLogFile);
     const QDir dirLogFile;
     if (!dirLogFile.exists(directoryLogFile)) {
@@ -486,6 +497,7 @@ Host::~Host()
     // mpEditorDialog mid-teardown would find a half-destroyed widget:
     if (auto* pEditor = mpEditorDialog.data()) {
         mpEditorDialog = nullptr;
+        disconnect(this, nullptr, pEditor, nullptr);
         delete pEditor;
     }
 
@@ -495,6 +507,7 @@ Host::~Host()
             pNotePad->close();
         }
         mpNotePad = nullptr;
+        disconnect(this, nullptr, pNotePad, nullptr);
         delete pNotePad;
     }
 
@@ -589,6 +602,10 @@ void Host::closeChildren()
     if (mpEditorDialog) {
         mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
         mpEditorDialog->close();
+        // close() only posts the deletion, so the dialog outlives this release.
+        // Cutting the signals with the pointer is what keeps an emit from
+        // reaching an editor the Host has already let go of:
+        disconnect(this, nullptr, mpEditorDialog, nullptr);
         mpEditorDialog = nullptr;
     }
 
@@ -602,6 +619,7 @@ void Host::closeChildren()
         mpNotePad->save();
         mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
         mpNotePad->close();
+        disconnect(this, nullptr, mpNotePad, nullptr);
         mpNotePad = nullptr;
     }
 
@@ -658,7 +676,7 @@ void Host::autoSaveMap()
 #if defined(DEBUG_MAPAUTOSAVE)
             qDebug().nospace().noquote() << "Host::autoSaveMap() INFO - map auto save initiated at:" << nowString << ".";
 #endif
-            if (!mpConsole->saveMap(mudlet::getMudletPath(enums::profileMapPathFileName, mHostName, qsl("autosave.dat")))) {
+            if (!mpConsole->saveMap(MudletPaths::getMudletPath(enums::profileMapPathFileName, mHostName, qsl("autosave.dat")))) {
                 mpMap->setSaveError(true);
             } else {
                 mpMap->setSaveError(false);
@@ -674,7 +692,7 @@ void Host::autoSaveMap()
 void Host::loadPackageInfo()
 {
     for (const auto& package : std::as_const(mInstalledPackages)) {
-        const QDir dir(mudlet::self()->getMudletPath(enums::profilePackagePath, getName(), package));
+        const QDir dir(MudletPaths::getMudletPath(enums::profilePackagePath, getName(), package));
         if (dir.exists(qsl("config.lua"))) {
             getPackageConfig(dir.absoluteFilePath(qsl("config.lua")));
         }
@@ -714,7 +732,7 @@ QList<Host::ModuleWriteJob> Host::prepareModuleSaves(bool backup)
     // state nor the Host, which may well be destroyed before the task even starts.
     QList<ModuleWriteJob> jobs;
     mModulesToSync.clear();
-    const QString backupPath = backup ? mudlet::getMudletPath(enums::moduleBackupsPath) : QString();
+    const QString backupPath = backup ? MudletPaths::getMudletPath(enums::moduleBackupsPath) : QString();
     QMapIterator<QString, QStringList> it(modulesToWrite);
     while (it.hasNext()) {
         it.next();
@@ -728,12 +746,12 @@ QList<Host::ModuleWriteJob> Host::prepareModuleSaves(bool backup)
 
         QString xmlFilename = filename;
         if (filename.endsWith(qsl("mpackage"), Qt::CaseInsensitive) || filename.endsWith(qsl("zip"), Qt::CaseInsensitive)) {
-            xmlFilename = mudlet::getMudletPath(enums::profilePackagePathFileName, mHostName, moduleName);
+            xmlFilename = MudletPaths::getMudletPath(enums::profilePackagePathFileName, mHostName, moduleName);
             // The write below goes into this folder, so it has to exist before the
             // write and not - as it used to - after it: a module whose unpacked folder
             // the user has removed would otherwise fail to write, and then have its
             // now-stale XML dropped from its archive without a replacement going in.
-            const QString packagePath = mudlet::getMudletPath(enums::profilePackagePath, mHostName, moduleName);
+            const QString packagePath = MudletPaths::getMudletPath(enums::profilePackagePath, mHostName, moduleName);
             if (auto packageDir = QDir(packagePath); !packageDir.exists()) {
                 packageDir.mkpath(packagePath);
             }
@@ -888,7 +906,7 @@ void Host::reloadModule(const QString& syncModuleName, const QString& syncingFro
         if (moduleName == syncModuleName) {
             if (!syncingFromHost.isEmpty() && (fileName.endsWith(qsl(".zip"), Qt::CaseInsensitive) || fileName.endsWith(qsl(".mpackage"), Qt::CaseInsensitive))) {
                 uninstallPackage(moduleName, enums::PackageModuleType::ModuleSync);
-                fileName = mudlet::getMudletPath(enums::profilePackagePathFileName, syncingFromHost, moduleName);
+                fileName = MudletPaths::getMudletPath(enums::profilePackagePathFileName, syncingFromHost, moduleName);
                 installPackage(fileName, enums::PackageModuleType::ModuleSync);
                 QStringList moduleEntry;
                 moduleEntry << moduleLocation;
@@ -1063,7 +1081,7 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
 {
     QString directory_xml;
     if (saveFolder.isEmpty()) {
-        directory_xml = mudlet::getMudletPath(enums::profileXmlFilesPath, getName());
+        directory_xml = MudletPaths::getMudletPath(enums::profileXmlFilesPath, getName());
     } else {
         directory_xml = saveFolder;
     }
@@ -1315,16 +1333,10 @@ void Host::updateConsolesFont()
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
     raiseEvent(event);
 
-    if (mpEditorDialog) {
-        mpEditorDialog->setDisplayFont(mpConsole->font());
-    }
+    emit signal_consoleFontChanged(mpConsole->font());
 
     if (mudlet::self()->smpDebugArea && mudlet::self()->smpDebugConsole) {
         mudlet::self()->smpDebugConsole->setFont(mpConsole->font());
-    }
-
-    if (mpNotePad) {
-        mpNotePad->setFont(mpConsole->font());
     }
 }
 
@@ -1501,24 +1513,86 @@ std::pair<QString, QFont::Weight> Host::parseFontNameAndStyle(const QString& fon
     return {fontName, QFont::Normal};
 }
 
-Host::FontFamilyResolution Host::resolveFontFamily(const QString& requested) const
+// Whether the platform makes a font of the name itself. The font database lists
+// the families that are installed, not the names a platform resolves on top of
+// them: fontconfig turns "Helvetica", "Times" or "monospace" into a real family
+// without any of those being an installed family, and Windows has a substitution
+// table of its own. Qt answers with one fixed stand-in for a name that means
+// nothing anywhere, so a name that lands anywhere else is one the platform
+// recognised - and an alias that resolves to that very stand-in ("sans-serif" on
+// most GNU/Linux systems) cannot be told from an unknown name, so it counts as
+// missing.
+static bool platformResolvesFontFamily(const QString& requested)
 {
-    const QStringList availableFonts = mudlet::self()->getAvailableFonts();
-    // The family as the font database spells it, not as it was typed: it is what
-    // ends up reported back by getFont() and remembered by the Geyser wrappers.
+    if (requested.isEmpty()) {
+        return false;
+    }
+
+    // A UUID rather than a fixed name, so that no machine can have a font by that
+    // name and make every unknown family look resolved
+    static const QString unrecognisedName = QUuid::createUuid().toString();
+    static const QString unrecognisedFamily = QFontInfo(QFont(unrecognisedName)).family();
+
+    // A platform that hands an unrecognised name back unchanged tells an alias and an
+    // unknown name apart for nobody, so nothing the font database does not list can be
+    // taken on it - said once, because it silently turns this whole check off
+    static const bool nameResolutionIsReadable = []() {
+        if (unrecognisedFamily.compare(unrecognisedName, Qt::CaseInsensitive) == 0) {
+            qWarning().nospace().noquote() << "Host: this platform hands an unrecognised font family name back unchanged instead of naming the family it drew "
+                                              "in its place, so a name it resolves for itself cannot be told from a font nobody has - every name the font "
+                                              "database does not list will be reported as missing.";
+            return false;
+        }
+
+        return true;
+    }();
+
+    if (!nameResolutionIsReadable) {
+        return false;
+    }
+
+    return QFontInfo(QFont(requested)).family() != unrecognisedFamily;
+}
+
+// The family as the font database spells it, not as it was typed: that spelling is what
+// getFont() reports back and what the Geyser wrappers remember
+static QString installedFamily(const QStringList& availableFonts, const QString& name)
+{
     for (const QString& family : availableFonts) {
-        if (family.compare(requested, Qt::CaseInsensitive) == 0) {
-            return {family, QFont::Normal, true};
+        if (family.compare(name, Qt::CaseInsensitive) == 0) {
+            return family;
         }
     }
 
-    auto [baseName, weight] = parseFontNameAndStyle(requested);
-    if (baseName != requested) {
-        for (const QString& family : availableFonts) {
-            if (family.compare(baseName, Qt::CaseInsensitive) == 0) {
-                return {family, weight, true};
-            }
+    return QString();
+}
+
+Host::FontFamilyResolution Host::resolveFontFamily(const QString& requested) const
+{
+    const QStringList availableFonts = mudlet::self()->getAvailableFonts();
+
+    if (const QString installed = installedFamily(availableFonts, requested); !installed.isEmpty()) {
+        return {installed, QFont::Normal, true};
+    }
+
+    const auto [baseName, weight] = parseFontNameAndStyle(requested);
+    const bool carriesAStyleSuffix = baseName != requested;
+
+    if (carriesAStyleSuffix) {
+        if (const QString installed = installedFamily(availableFonts, baseName); !installed.isEmpty()) {
+            return {installed, weight, true};
         }
+    }
+
+    // Go on using the name that was asked for rather than the family it resolves to:
+    // the name is what gets saved, so pinning this machine's idea of "Helvetica" into
+    // the profile would carry it to every other machine the profile is opened on
+    if (platformResolvesFontFamily(requested)) {
+        return {requested, QFont::Normal, true};
+    }
+
+    if (carriesAStyleSuffix && platformResolvesFontFamily(baseName)) {
+        return {baseName, weight, true};
     }
 
     return {requested, QFont::Normal, false};
@@ -2055,6 +2129,31 @@ std::shared_ptr<TConsoleModel> Host::sharedMainConsoleModel()
     return mpMainConsoleModel;
 }
 
+void Host::deselectMainConsole()
+{
+    mpConsole->deselect();
+}
+
+bool Host::selectMainConsoleSection(int from, int length)
+{
+    return mpConsole->selectSection(from, length);
+}
+
+void Host::setMainConsoleFgColor(const QColor& color)
+{
+    mpConsole->setFgColor(color);
+}
+
+void Host::setMainConsoleBgColor(const QColor& color)
+{
+    mpConsole->setBgColor(color);
+}
+
+void Host::resetMainConsoleFormat()
+{
+    mpConsole->reset();
+}
+
 // Hot: the trigger engine reads the model for every character of a colour
 // pattern, so this hands back a reference rather than a shared_ptr copy - the
 // latter costs an atomic increment and decrement per call.
@@ -2072,6 +2171,36 @@ void Host::refreshMainConsoleColors()
     mpMainConsoleModel->mFgColor = mFgColor;
     mpMainConsoleModel->mBgColor = mBgColor;
     mpMainConsoleModel->buffer.updateColors();
+}
+
+void Host::printToMainConsole(const QString& msg)
+{
+    mpConsole->print(msg);
+}
+
+void Host::printToMainConsole(const QString& msg, QColor fgColor, QColor bgColor)
+{
+    mpConsole->print(msg, fgColor, bgColor);
+}
+
+void Host::printSystemMessage(const QString& msg)
+{
+    mpConsole->printSystemMessage(msg);
+}
+
+void Host::printOnDisplay(std::string& data, bool isFromServer)
+{
+    mpConsole->printOnDisplay(data, isFromServer);
+}
+
+void Host::finalizeMainConsole()
+{
+    mpConsole->finalize();
+}
+
+bool Host::mainConsoleShowsTimeStamps() const
+{
+    return mpConsole->showTimeStamps();
 }
 
 void Host::raiseLoggingAnnouncement(const bool isLogging, const QString& logFileName)
@@ -2167,6 +2296,15 @@ void Host::incomingStreamProcessor(const QString& data, int line)
     // ScriptUnit defers deletes too (a package script uninstalling its own package
     // mid-compile or mid-event-dispatch), so flush it here alongside the others:
     mScriptUnit.doCleanup();
+}
+
+void Host::slot_timerFires()
+{
+    QTimer* pQT = qobject_cast<QTimer*>(sender());
+    if (Q_UNLIKELY(!pQT)) {
+        return;
+    }
+    mTimerUnit.timerFired(pQT);
 }
 
 // When Mudlet is running in online mode, deleted temp* objects are cleaned up in bulk
@@ -2598,19 +2736,19 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         }
     }
     //the extra module check is needed here to prevent infinite loops from script loaded modules
-    if (mpEditorDialog && thing != enums::PackageModuleType::ModuleFromScript) {
-        mpEditorDialog->doCleanReset();
+    if (thing != enums::PackageModuleType::ModuleFromScript) {
+        emit signal_editorCleanResetRequested();
     }
     QFile file2;
     if (packageUnpacksAFolder(fileName)) {
-        const QString _home = mudlet::getMudletPath(enums::profileHomePath, getName());
+        const QString _home = MudletPaths::getMudletPath(enums::profileHomePath, getName());
         // Unpacking into a folder the other half of this name owns would write over
         // its files, and the rename below would then carry that folder off under
         // whatever the manifest asked for. An archive whose name is already spoken
         // for is unpacked beside it instead, and moved into place only once its
         // manifest has been read and the name it really wants turns out to be free.
-        const QString _dest = crossKindRefusalOnTheFileName.isEmpty() ? mudlet::getMudletPath(enums::profilePackagePath, getName(), packageName)
-                                                                      : mudlet::getMudletPath(enums::profilePackagePath, getName(), packageName + qsl(".mudlet-installing"));
+        const QString _dest = crossKindRefusalOnTheFileName.isEmpty() ? MudletPaths::getMudletPath(enums::profilePackagePath, getName(), packageName)
+                                                                      : MudletPaths::getMudletPath(enums::profilePackagePath, getName(), packageName + qsl(".mudlet-installing"));
         // home directory for the PROFILE
         const QDir _tmpDir(_home);
         // directory to store the expanded archive file contents
@@ -2897,9 +3035,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         }
         file2.close();
     }
-    if (mpEditorDialog) {
-        mpEditorDialog->doCleanReset();
-    }
+    emit signal_editorCleanResetRequested();
     if (thing == enums::PackageModuleType::Package) {
         saveProfile();
     }
@@ -2961,12 +3097,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         raiseEvent(detailedInstallEvent);
     });
 
-    if (mpPackageManager) {
-        mpPackageManager->resetPackageList();
-    }
-    if (mpModuleManager) {
-        mpModuleManager->layoutModules();
-    }
+    emit signal_packageListChanged();
 
     // Save profile to ensure modules persist and appear in module manager
     if (thing != enums::PackageModuleType::Package) {
@@ -3128,8 +3259,8 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
 
     //we check for ModuleFromScript because if we reset the editor, we will re-execute the
     //module uninstall, thus creating an infinite loop.
-    if (mpEditorDialog && thing != enums::PackageModuleType::ModuleFromScript) {
-        mpEditorDialog->doCleanReset();
+    if (thing != enums::PackageModuleType::ModuleFromScript) {
+        emit signal_editorCleanResetRequested();
     }
 
     mTriggerUnit.uninstall(packageName);
@@ -3167,13 +3298,13 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
         return true;
     }
 
-    if (mpEditorDialog && thing != enums::PackageModuleType::ModuleFromScript) {
-        mpEditorDialog->doCleanReset();
+    if (thing != enums::PackageModuleType::ModuleFromScript) {
+        emit signal_editorCleanResetRequested();
     }
 
     getActionUnit()->updateAllToolbars();
 
-    const QString dest = mudlet::getMudletPath(enums::profilePackagePath, getName(), packageName);
+    const QString dest = MudletPaths::getMudletPath(enums::profilePackagePath, getName(), packageName);
     removeDir(dest, dest);
 
     // The fonts this package brought went out with it, so a display font that
@@ -3190,18 +3321,13 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
     mDeferredSaveTimer.start(0ms);
 
     //NOW we reset if we're uninstalling a module
-    if (mpEditorDialog && thing == enums::PackageModuleType::ModuleFromScript) {
-        mpEditorDialog->doCleanReset();
-    }
-    if (mpPackageManager) {
-        mpPackageManager->resetPackageList();
+    if (thing == enums::PackageModuleType::ModuleFromScript) {
+        emit signal_editorCleanResetRequested();
     }
     // the Module Manager lists what a script can take away behind its back, and
     // a row left over from a module that has gone offers a removal that can only
     // be refused - installPackage() already puts the listing straight this way
-    if (mpModuleManager) {
-        mpModuleManager->layoutModules();
-    }
+    emit signal_packageListChanged();
     return true;
 }
 
@@ -3384,9 +3510,14 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule, QString*
 QSettings& Host::profileIni()
 {
     if (!mpProfileIni) {
-        mpProfileIni = new QSettings(mudlet::getMudletPath(enums::profileDataItemPath, getName(), qsl("profile.ini")), QSettings::IniFormat, this);
+        mpProfileIni = new QSettings(MudletPaths::getMudletPath(enums::profileDataItemPath, getName(), qsl("profile.ini")), QSettings::IniFormat, this);
+        // Constructing it only splits the file into sections, and each section is
+        // parsed by the first lookup that needs it, so status() cannot see damage
+        // inside one until allKeys() has parsed them all
+        static_cast<void>(mpProfileIni->allKeys());
         if (mpProfileIni->status() == QSettings::FormatError) {
-            qWarning().nospace().noquote() << "Host::profileIni() ERROR - the profile's \"profile.ini\" file could not be parsed, the settings it held will be replaced.";
+            qWarning().nospace().noquote() << "Host::profileIni() ERROR - the \"profile.ini\" file of profile \"" << getName() << "\" (" << mpProfileIni->fileName()
+                                           << ") could not be parsed, the settings it held will be replaced.";
         }
     }
     return *mpProfileIni;
@@ -3480,7 +3611,7 @@ void Host::setCmdLineSettings(const TCommandLine::CommandLineType type, const bo
 // host name argument...
 QPair<bool, QString> Host::writeProfileData(const QString& item, const QString& what)
 {
-    QSaveFile file(mudlet::getMudletPath(enums::profileDataItemPath, getName(), item));
+    QSaveFile file(MudletPaths::getMudletPath(enums::profileDataItemPath, getName(), item));
     if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         QDataStream ofs(&file);
         ofs.setVersion(QDataStream::Qt_5_12);
@@ -3499,7 +3630,7 @@ QPair<bool, QString> Host::writeProfileData(const QString& item, const QString& 
 // Similar to the above, a convenience for reading profile data for this host.
 QString Host::readProfileData(const QString& item)
 {
-    QFile file(mudlet::getMudletPath(enums::profileDataItemPath, getName(), item));
+    QFile file(MudletPaths::getMudletPath(enums::profileDataItemPath, getName(), item));
     const bool success = file.open(QIODevice::ReadOnly);
     QString ret;
     if (success) {
@@ -3516,7 +3647,7 @@ QString Host::readProfileData(const QString& item)
 // does not install font system-wide
 void Host::installPackageFonts(const QString& packageName)
 {
-    auto packagePath = mudlet::getMudletPath(enums::profilePackagePath, getName(), packageName);
+    auto packagePath = MudletPaths::getMudletPath(enums::profilePackagePath, getName(), packageName);
 
     QDirIterator it(packagePath, QDirIterator::Subdirectories);
     while (it.hasNext()) {
@@ -4040,6 +4171,22 @@ void Host::setSpellDic(const QString& newDict)
     }
 }
 
+void Host::setEnableSpellCheck(const bool enable)
+{
+    if (mEnableSpellCheck == enable) {
+        return;
+    }
+    mEnableSpellCheck = enable;
+    // The load-end warm skips a profile with spell check off, so this is when
+    // the dictionary first becomes wanted. During a profile load there is
+    // nothing to do: the handle is warmed once at the end, after the profile's
+    // own settings have been read - which is what setSystemSpellDictionary()
+    // next door defends against too.
+    if (enable && !mIsProfileLoadingSequence) {
+        emit signal_spellCheckEnabled();
+    }
+}
+
 // When called from dlgProfilePreferences the second flag will only be changed
 // if necessary:
 // DISABLED: - Prevent "None" option for user dictionary - modified to prevent original useDictionary argument from being false:
@@ -4122,7 +4269,6 @@ void Host::setName(const QString& name)
         mpConsole->setProperty("HostName", name);
         mpConsole->setProfileName(name);
     }
-    mTimerUnit.changeHostName(name);
 }
 
 void Host::removeAllNonPersistentStopWatches()
@@ -4215,17 +4361,21 @@ void Host::getPlayerRoomStyleDetails(quint8& styleCode, quint8& outerDiameter, q
 
 // Used to set the searchOptions here and the one in the editor if present, for
 // use by the XMLimporter class:
-void Host::setSearchOptions(const dlgTriggerEditor::SearchOptions optionsState)
+void Host::setSearchOptions(const enums::EditorSearchOptions optionsState)
 {
     mSearchOptions = optionsState;
-    if (mpEditorDialog) {
-        mpEditorDialog->setSearchOptions(optionsState);
-    }
+    emit signal_editorSearchOptionsChanged(optionsState);
 }
 
-void Host::setBufferSearchOptions(const TConsole::SearchOptions optionsState)
+void Host::setBufferSearchOptions(const enums::BufferSearchOptions optionsState)
 {
     mBufferSearchOptions = optionsState;
+}
+
+void Host::setShowIdsInEditor(const bool isShown)
+{
+    mShowIDsInEditor = isShown;
+    emit signal_showIdsInEditorChanged(isShown);
 }
 
 // The single answer to "does this profile have a map widget on screen right
@@ -4488,30 +4638,14 @@ std::pair<bool, QString> Host::openWindow(const QString& name, bool loadLayout, 
         return {false, qsl("label with the name '%1' already exists").arg(name)};
     }
 
-    auto hostName(getName());
     auto console = mpConsole->subConsoleWidget(name);
     auto dockwidget = mpConsole->dockWidget(name);
 
     if (!console && !dockwidget) {
         // The name is not used in either the QMaps of all user created TConsole
         // or TDockWidget instances - so we can make a NEW one:
-        dockwidget = new TDockWidget(this, name);
-        dockwidget->setObjectName(qsl("dockWindow_%1_%2").arg(hostName, name));
-        dockwidget->setContentsMargins(0, 0, 0, 0);
-        dockwidget->setWindowTitle(name);
-        mpConsole->registerDockWidget(name, dockwidget);
-        // It wasn't obvious but the parent passed to the TConsole constructor
-        // is sliced down to a QWidget and is NOT a TDockWidget pointer:
-        console = new TConsole(this, name, TConsole::UserWindow, dockwidget->widget());
-        console->setObjectName(qsl("dockWindowConsole_%1_%2").arg(hostName, name));
-        console->setContentsMargins(0, 0, 0, 0);
-        dockwidget->setTConsole(console);
-        console->layerCommandLine->hide();
-        console->setScrollBarVisible(false);
-        mpConsole->registerSubConsole(name, console);
-        dockwidget->setStyleSheet(mProfileStyleSheet);
-        mudlet::self()->addDockWidget(Qt::RightDockWidgetArea, dockwidget);
-        console->setFontSize(10);
+        dockwidget = mpConsole->createUserWindow(name);
+        console = mpConsole->subConsoleWidget(name);
     }
     if (!console || !dockwidget) {
         return {false, qsl("userwindow '%1' already exists").arg(name)};
@@ -5121,17 +5255,7 @@ bool Host::setProfileStyleSheet(const QString& styleSheet)
 
     mProfileStyleSheet = styleSheet;
     mpConsole->setStyleSheet(styleSheet);
-    if (mpEditorDialog) {
-        mpEditorDialog->setStyleSheet(styleSheet);
-    }
-
-    if (mpDlgProfilePreferences) {
-        mpDlgProfilePreferences->setStyleSheet(styleSheet);
-    }
-    if (mpNotePad) {
-        mpNotePad->setStyleSheet(styleSheet);
-        mpNotePad->setTabsStyleSheet(styleSheet);
-    }
+    emit signal_profileStyleSheetChanged(styleSheet);
     if (mpConsole->mpDockableMapWidget) {
         mpConsole->mpDockableMapWidget->setStyleSheet(styleSheet);
     }
@@ -5324,13 +5448,6 @@ void Host::createMapper(const bool loadDefaultMap)
     auto pMap = mpMap.data();
     auto hostName(getName());
     mpConsole->createMapperDock(tr("Map - %1").arg(hostName), qsl("dockMap_%1").arg(hostName));
-    // Arrange for TMap member values to be copied from the Host masters so they
-    // are in place when the 2D mapper is created:
-    getPlayerRoomStyleDetails(pMap->mPlayerRoomStyle, pMap->mPlayerRoomOuterDiameterPercentage, pMap->mPlayerRoomInnerDiameterPercentage, pMap->mPlayerRoomOuterColor, pMap->mPlayerRoomInnerColor);
-
-    pMap->mpMapper = new dlgMapper(mpConsole->mpDockableMapWidget, this, pMap); //FIXME: mpHost definieren
-    pMap->mpMapper->setStyleSheet(mProfileStyleSheet);
-    mpConsole->mpDockableMapWidget->setWidget(pMap->mpMapper);
 
     if (loadDefaultMap && pMap->mpRoomDB->isEmpty()) {
         qDebug() << "Host::create_mapper() - restore map case 3.";
@@ -5565,9 +5682,7 @@ void Host::setEditorShowBidi(const bool state)
 {
     if (mEditorShowBidi != state) {
         mEditorShowBidi = state;
-        if (mpEditorDialog) {
-            mpEditorDialog->setEditorShowBidi(state);
-        }
+        emit signal_editorShowBidiChanged(state);
     }
 }
 

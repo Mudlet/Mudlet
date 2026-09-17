@@ -168,6 +168,59 @@ describe("Tests Other.lua functions", function()
       end)
     end)
 
+    describe("the state a new group is created in", function()
+      -- What a group arrives as is not visible through a spy, so these need real
+      -- items, and what they pin is the state *creation* leaves a group in. Lua
+      -- cannot delete a permanent item, so take the first name no earlier run
+      -- has used rather than reusing what one left behind: a group this build
+      -- never made would be reporting the state some earlier build created it
+      -- in, and an already-correct leftover would cover for creation code that
+      -- had since broken. permGroup spells the key type "key" where exists()
+      -- and isActive() spell it "keybind".
+      --
+      -- The search runs as far as it needs to: giving up would mean asserting
+      -- over an old item or skipping the check, both of which leave this green
+      -- while testing nothing. The bound only stops a broken exists() spinning
+      -- forever, and reaching it raises rather than skips.
+      local searchLimit = 100000
+
+      local function group(groupType, itemType)
+        local stem = "permGroupSpecState" .. groupType
+        for index = 1, searchLimit do
+          local name = ("%s%d"):format(stem, index)
+          if exists(name, itemType) == 0 then
+            assert.is_true(permGroup(name, groupType), "could not create the " .. groupType .. " group")
+            return name
+          end
+        end
+        error(("no free \"%s\" name in this profile after %d tries"):format(stem, searchLimit))
+      end
+
+      it("creates trigger groups enabled", function()
+        assert.are.equal(1, isActive(group("trigger", "trigger"), "trigger"))
+      end)
+
+      it("creates alias groups enabled", function()
+        assert.are.equal(1, isActive(group("alias", "alias"), "alias"))
+      end)
+
+      it("creates key groups enabled", function()
+        assert.are.equal(1, isActive(group("key", "keybind"), "keybind"))
+      end)
+
+      -- permTimer() and permScript() create every item disabled, group or not,
+      -- and permGroup() is documented as passing that on rather than papering
+      -- over it: a timer group that started itself would fire whatever is put
+      -- in it before the script that fills it has finished
+      it("creates timer groups disabled", function()
+        assert.are.equal(0, isActive(group("timer", "timer"), "timer"))
+      end)
+
+      it("creates script groups disabled", function()
+        assert.are.equal(0, isActive(group("script", "script"), "script"))
+      end)
+    end)
+
     describe("reports failure instead of raising when creation fails", function()
       -- #9545: group_creation_functions checked `perm*(...) == -1`, but the perm*
       -- bindings raise a Lua error on failure (for example a missing parent)
@@ -646,6 +699,18 @@ describe("Tests Other.lua functions", function()
         string.format("expected roughly %s but got %s", tostring(expected), tostring(actual)))
     end
 
+    -- Returns once at least `milliseconds` of real time have gone by, by
+    -- waiting on an event a real timer raises. Only the one spec which needs a
+    -- running stopwatch's reported time to move on its own uses this;
+    -- everything else here is deterministic without waiting.
+    local pumpCounter = 0
+    local function pump(milliseconds)
+      pumpCounter = pumpCounter + 1
+      local eventName = "stopwatchSpecPump" .. pumpCounter
+      tempTimer(milliseconds / 1000, function() raiseEvent(eventName) end)
+      waitForEvent(eventName, milliseconds + 1000)
+    end
+
     teardown(function()
       for _, id in ipairs(createdIds) do
         pcall(deleteStopWatch, id)
@@ -694,6 +759,65 @@ describe("Tests Other.lua functions", function()
         assert.equals(12.5, getStopWatchTime(id))
         assert.is_true(adjustStopWatch(id, -2.5))
         assert.equals(10.0, getStopWatchTime(id))
+      end)
+
+      it("adjustStopWatch keeps adjustments whose milliseconds exceed a 32-bit integer", function()
+        -- 2147483.648 s is where the milliseconds stop fitting into an int,
+        -- which is what the adjustment used to be converted through
+        local id = track(createStopWatch(false))
+        assert.is_true(adjustStopWatch(id, 2147484))
+        assert.equals(2147484, getStopWatchTime(id))
+        assert.is_true(resetStopWatch(id))
+        assert.is_true(adjustStopWatch(id, -2147484))
+        assert.equals(-2147484, getStopWatchTime(id))
+      end)
+
+      it("adjustStopWatch shifts a running stopwatch by a large amount as well", function()
+        local id = track(createStopWatch(true))
+        assert.is_true(adjustStopWatch(id, 1e11))
+        assertClose(1e11, getStopWatchTime(id), 1)
+      end)
+
+      it("adjustStopWatch clamps a stopped stopwatch to the time it can hold", function()
+        -- 1e12 s is the declared limit, and accumulating past it stops there
+        -- rather than wrapping around onto a time of the opposite sign
+        local id = track(createStopWatch(false))
+        assert.is_true(adjustStopWatch(id, 1e12))
+        assert.equals(1e12, getStopWatchTime(id))
+        assert.is_true(adjustStopWatch(id, 1e12))
+        assert.equals(1e12, getStopWatchTime(id))
+        assert.is_true(resetStopWatch(id))
+        assert.is_true(adjustStopWatch(id, -1e12))
+        assert.is_true(adjustStopWatch(id, -1e12))
+        assert.equals(-1e12, getStopWatchTime(id))
+      end)
+
+      it("adjustStopWatch clamps a running stopwatch to the time it can hold", function()
+        -- a running stopwatch measures from an effective start time, so this
+        -- takes the other branch: both the shift itself and the time passing
+        -- afterwards have to stop at the limit
+        local id = track(createStopWatch(true))
+        assert.is_true(adjustStopWatch(id, 1e12))
+        -- the time that goes by here would carry a stopwatch sitting on the
+        -- limit past it, so this is the clamp on what a running stopwatch
+        -- reports and not just the one on the adjustment
+        pump(50)
+        assert.equals(1e12, getStopWatchTime(id))
+        assert.is_true(adjustStopWatch(id, 1e12))
+        assert.equals(1e12, getStopWatchTime(id))
+      end)
+
+      it("adjustStopWatch refuses an adjustment beyond the whole range", function()
+        local id = track(createStopWatch(false))
+        assert.is_true(adjustStopWatch(id, 5))
+        for _, value in ipairs({0/0, math.huge, -math.huge, 1e300, 1e12 + 1, -1e12 - 1}) do
+          local ok, err = adjustStopWatch(id, value)
+          assert.is_nil(ok)
+          assert.is_truthy(err:find("must be a finite number from", 1, true),
+            string.format("unexpected message for %s: %s", tostring(value), tostring(err)))
+          -- and the stopwatch is left as it was
+          assert.equals(5, getStopWatchTime(id))
+        end
       end)
 
       it("getStopWatchTime resolves a stopwatch by its name", function()
@@ -2409,12 +2533,23 @@ describe("Tests the script API", function()
         "appendScript: bad argument #2 type (lua code as string expected, got number!)")
     end)
 
+    it("errors when the position is not a number", function()
+      assert.has_error(function() appendScript("W2aScriptAppended", [[]], {}) end,
+        "appendScript: bad argument #3 type (script position as number expected, got table!)")
+    end)
+
     it("errors instead of creating anything when the script does not exist", function()
-      -- appendScript does not check getScript's -1 sentinel, so what actually
-      -- reports the missing script is the setScript underneath it; either way
-      -- nothing may be created
-      assert.has_error(function() appendScript("w2aNoSuchScriptName", [[local w2aNew = 1]]) end)
+      assert.has_error(function() appendScript("w2aNoSuchScriptName", [[local w2aNew = 1]]) end,
+        [[appendScript: cannot append to script (script "w2aNoSuchScriptName" at position 1 not found)]])
       assert.equals(0, exists("w2aNoSuchScriptName", "script"))
+    end)
+
+    it("names the position it was given when no script is there", function()
+      local _, position = makeScript("W2aScriptAppendPosition", "", [[local w2aOriginal = 1]])
+      local beyondTheLast = position + 1
+      assert.has_error(function() appendScript("W2aScriptAppendPosition", [[local w2aNew = 1]], beyondTheLast) end,
+        [[appendScript: cannot append to script (script "W2aScriptAppendPosition" at position ]] .. beyondTheLast .. [[ not found)]])
+      assert.equals([[local w2aOriginal = 1]], (getScript("W2aScriptAppendPosition", position)))
     end)
 
     it("adds the new code on a line of its own after the existing code", function()
@@ -2433,6 +2568,26 @@ describe("Tests the script API", function()
       appendScript("W2aScriptAppendDefault", [[local w2aDefaultAppended = 2]])
       assert.equals(firstBefore .. "\n" .. [[local w2aDefaultAppended = 2]],
         (getScript("W2aScriptAppendDefault", 1)))
+    end)
+
+    it("appends to the script at the requested position when several share a name", function()
+      local _, firstPosition = makeScript("W2aScriptAppendDuplicate", "", [[local w2aFirst = 1]])
+      local secondId, secondPosition = makeScript("W2aScriptAppendDuplicate", "", [[local w2aSecond = 2]])
+      assert.equals(secondId,
+        appendScript("W2aScriptAppendDuplicate", [[local w2aSecondAppended = 3]], secondPosition))
+      assert.equals([[local w2aFirst = 1]], (getScript("W2aScriptAppendDuplicate", firstPosition)))
+      assert.equals([[local w2aSecond = 2]] .. "\n" .. [[local w2aSecondAppended = 3]],
+        (getScript("W2aScriptAppendDuplicate", secondPosition)))
+    end)
+
+    it("still separates with a newline when the script it appends to is empty", function()
+      local _, position = makeScript("W2aScriptAppendEmpty", "", [[local w2aOriginal = 1]])
+      setScript("W2aScriptAppendEmpty", "", position)
+      -- the separator goes in unconditionally, so an empty body gains a leading
+      -- newline - harmless Lua, and how appendScript has always behaved
+      appendScript("W2aScriptAppendEmpty", [[local w2aAppended = 2]], position)
+      assert.equals("\n" .. [[local w2aAppended = 2]],
+        (getScript("W2aScriptAppendEmpty", position)))
     end)
 
     it("runs the appended code", function()

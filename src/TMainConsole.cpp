@@ -21,6 +21,7 @@
  ***************************************************************************/
 
 
+#include "MudletPaths.h"
 #include "TConsole.h"
 
 
@@ -28,6 +29,7 @@
 #include "TCommandLine.h"
 #include "TDebug.h"
 #include "TDockWidget.h"
+#include "TEasyButtonBar.h"
 #include "TEvent.h"
 #include "THyperlinkVisibilityManager.h"
 #include "TLabel.h"
@@ -37,19 +39,25 @@
 #include "TScrollBox.h"
 #include "TTextBox.h"
 #include "TTextEdit.h"
+#include "TToolBar.h"
 #include "dlgMapper.h"
 #include "mudlet.h"
 #include "GifTracker.h"
 
+#include <QDataStream>
 #include <QDialog>
+#include <QDir>
 #include <QDockWidget>
+#include <QFileInfo>
 #include <QIcon>
 #include <QLabel>
+#include <QLayout>
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QMimeData>
 #include <QProgressDialog>
 #include <QUiLoader>
+#include <QSaveFile>
 #include <QScrollBar>
 #include <QShortcut>
 #include <QSizePolicy>
@@ -73,6 +81,34 @@ TWindowRegistry::SubConsoleKind subConsoleKindOf(const TConsole::ConsoleType typ
     default:
         return TWindowRegistry::SubConsoleKind::Other;
     }
+}
+
+// A ".dic" file holds one word per line, below a count of how many lines
+// follow, and hunspell reads a "/" on such a line as the start of that word's
+// affix flags and a tab as the start of its morphological description. So a
+// word can only be stored if the file gives it back as itself:
+//   - a blank word writes a line the next load skips;
+//   - a line feed writes two lines that come back as two separate words;
+//   - a carriage return is dropped by the QFile::Text reader, so "qa\rword"
+//     comes back as "qaword";
+//   - leading whitespace leaves hunspell not recognising the word at all, and a
+//     tab or a "/" leaves it knowing only the part in front - "TCP/IP" teaches
+//     the spell checker "TCP" instead - while the word list still reports the
+//     word that was added.
+// Hunspell does read "\/" as an escaped "/", but our own reader would then hand
+// the backslash back as part of the word, so escaping would mean changing both
+// halves of the format and misreading every ".dic" file already written.
+// A trailing space, and a word of nothing but spaces, do come back intact; the
+// same test refuses those because they are not words.
+bool storableWord(const QString& word)
+{
+    return !word.isEmpty() && word == word.trimmed() && !word.contains(QChar::LineFeed) && !word.contains(QChar::CarriageReturn) && !word.contains(QChar::Tabulation)
+           && !word.contains(QLatin1Char('/'));
+}
+
+QString unstorableWordMessage()
+{
+    return qsl("the word \"%1\" cannot be stored in the user dictionary, it must have some text in it, fit on a single line, not start or end with whitespace, and contain no tab or \"/\" character");
 }
 } // namespace
 
@@ -99,13 +135,15 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
     connect(mudlet::self(), &mudlet::signal_profileMapReloadRequested, this, &TMainConsole::slot_reloadMap, Qt::UniqueConnection);
     connect(this, &TMainConsole::signal_newDataAlert, mudlet::self(), &mudlet::slot_newDataOnHost, Qt::UniqueConnection);
 
-    // Load up the spelling dictionary from the system:
     setSystemSpellDictionary(mpHost->getSpellDic());
     // Reading it costs tens of milliseconds, so it is not read here - but
     // leaving it for the first spell-check would put that wait in front of the
     // first word typed, so a queued connection has the event loop do it once
     // the profile has finished loading:
     connect(mudlet::self(), &mudlet::signal_profileLoaded, this, &TMainConsole::slot_warmSystemSpellDictionary, Qt::QueuedConnection);
+    // ...and turning spell check on mid-session is the other moment the
+    // dictionary goes from unwanted to wanted, so it is read the same way
+    connect(mpHost, &Host::signal_spellCheckEnabled, this, &TMainConsole::slot_warmSystemSpellDictionary, Qt::QueuedConnection);
 
     // Load up the spelling dictionary for the profile - needs to handle the
     // absence of files for the first run in a new profile or from an older
@@ -188,7 +226,7 @@ TMainConsole::~TMainConsole()
         if (mudlet::self()) {
             // Need to commit any changes to personal dictionary
             qDebug() << "TCommandLine::~TConsole(...) INFO - Saving profile's own Hunspell dictionary...";
-            mudlet::self()->saveDictionary(mudlet::self()->getMudletPath(enums::profileDataItemPath, mProfileName, qsl("profile")), mWordSet_profile);
+            mudlet::self()->saveDictionary(MudletPaths::getMudletPath(enums::profileDataItemPath, mProfileName, qsl("profile")), mWordSet_profile);
         }
     }
 }
@@ -309,6 +347,9 @@ void TMainConsole::slot_loggingAnnouncement(const bool isLogging, const QString&
 
 void TMainConsole::slot_loggingStateChanged(const bool isLogging)
 {
+    // A click has flipped the checkable button already; this is for logging
+    // toggled from Lua, and for a start that failed
+    logButton->setChecked(isLogging);
     logButton->setToolTip(utils::richText(isLogging ? tr("Stop logging game output to log file.") : tr("Start logging game output to log file.")));
 }
 
@@ -432,6 +473,29 @@ TDockWidget* TMainConsole::deregisterDockWidget(const QString& name)
     return mDockWidgetMap.take(name);
 }
 
+TDockWidget* TMainConsole::createUserWindow(const QString& name)
+{
+    auto hostName(mpHost->getName());
+    auto dockwidget = new TDockWidget(mpHost, name);
+    dockwidget->setObjectName(qsl("dockWindow_%1_%2").arg(hostName, name));
+    dockwidget->setContentsMargins(0, 0, 0, 0);
+    dockwidget->setWindowTitle(name);
+    registerDockWidget(name, dockwidget);
+    // It wasn't obvious but the parent passed to the TConsole constructor
+    // is sliced down to a QWidget and is NOT a TDockWidget pointer:
+    auto console = new TConsole(mpHost, name, TConsole::UserWindow, dockwidget->widget());
+    console->setObjectName(qsl("dockWindowConsole_%1_%2").arg(hostName, name));
+    console->setContentsMargins(0, 0, 0, 0);
+    dockwidget->setTConsole(console);
+    console->layerCommandLine->hide();
+    console->setScrollBarVisible(false);
+    registerSubConsole(name, console);
+    dockwidget->setStyleSheet(mpHost->mProfileStyleSheet);
+    mudlet::self()->addDockWidget(Qt::RightDockWidgetArea, dockwidget);
+    console->setFontSize(10);
+    return dockwidget;
+}
+
 void TMainConsole::registerScrollBox(const QString& name, TScrollBox* pScrollBox)
 {
     mScrollBoxMap[name] = pScrollBox;
@@ -549,22 +613,14 @@ TConsole* TMainConsole::createMiniConsole(const QString& windowname, const QStri
     auto pC = mSubConsoleMap.value(name);
     auto pS = mScrollBoxMap.value(windowname);
     if (!pC) {
+        QWidget* parent = mpMainFrame;
         if (pS) {
-            pC = new TConsole(mpHost, name, SubConsole, pS->widget());
+            parent = pS->widget();
         } else if (pW) {
-            pC = new TConsole(mpHost, name, SubConsole, pW->widget());
-        } else {
-            pC = new TConsole(mpHost, name, SubConsole, mpMainFrame);
+            parent = pW->widget();
         }
-        if (!pC) {
-            return nullptr;
-        }
+        pC = createSubConsole(name, parent);
         registerSubConsole(name, pC);
-        pC->setObjectName(name);
-        const auto& hostCommandLine = mpHost->mpConsole->mpCommandLine;
-        pC->setFocusProxy(hostCommandLine);
-        pC->mUpperPane->setFocusProxy(hostCommandLine);
-        pC->mLowerPane->setFocusProxy(hostCommandLine);
         pC->resize(width, height);
         pC->mOldX = x;
         pC->mOldY = y;
@@ -577,6 +633,68 @@ TConsole* TMainConsole::createMiniConsole(const QString& windowname, const QStri
         return pC;
     }
     return nullptr;
+}
+
+TConsole* TMainConsole::createSubConsole(const QString& name, QWidget* parent)
+{
+    auto* pC = new TConsole(mpHost, name, SubConsole, parent);
+    pC->setObjectName(name);
+    pC->setFocusProxy(mpCommandLine);
+    pC->mUpperPane->setFocusProxy(mpCommandLine);
+    pC->mLowerPane->setFocusProxy(mpCommandLine);
+    return pC;
+}
+
+TToolBar* TMainConsole::createToolBar(TAction* pAction, const QString& name)
+{
+    return new TToolBar(mpHost, pAction, name, mudlet::self());
+}
+
+TEasyButtonBar* TMainConsole::createEasyButtonBar(TAction* pRootAction, const QString& name)
+{
+    auto* pBar = new TEasyButtonBar(pRootAction, name, mpTopToolBar);
+    mpTopToolBar->layout()->addWidget(pBar);
+    return pBar;
+}
+
+void TMainConsole::attachEasyButtonBar(TEasyButtonBar* pBar, int location)
+{
+    switch (location) {
+    case 0:
+        mpTopToolBar->layout()->addWidget(pBar);
+        break;
+    case 2:
+        mpLeftToolBar->layout()->addWidget(pBar);
+        break;
+    case 3:
+        mpRightToolBar->layout()->addWidget(pBar);
+        break;
+    }
+}
+
+void TMainConsole::detachEasyButtonBar(TEasyButtonBar* pBar, int location)
+{
+    switch (location) {
+    case 0:
+        mpTopToolBar->layout()->removeWidget(pBar);
+        break;
+    case 2:
+        mpLeftToolBar->layout()->removeWidget(pBar);
+        break;
+    case 3:
+        mpRightToolBar->layout()->removeWidget(pBar);
+        break;
+    }
+}
+
+void TMainConsole::dockToolBar(TToolBar* pToolBar, Qt::DockWidgetArea area)
+{
+    mudlet::self()->addDockWidget(area, pToolBar);
+}
+
+void TMainConsole::undockToolBar(TToolBar* pToolBar)
+{
+    mudlet::self()->removeDockWidget(pToolBar);
 }
 
 // This is a scrollBox overlaid on to the main console
@@ -1785,6 +1903,10 @@ QPair<bool, QString> TMainConsole::addWordToSet(const QString& word)
         return qMakePair(false, QLatin1String("a user dictionary is not enable for this profile"));
     }
 
+    if (!storableWord(word)) {
+        return qMakePair(false, unstorableWordMessage().arg(word));
+    }
+
     if (!mUseSharedDictionary) {
         // The return value from this function is unclear - it does not seems to
         // indicate anything useful
@@ -1819,7 +1941,11 @@ QPair<bool, QString> TMainConsole::addWordToSet(const QString& word)
 
 QPair<bool, QString> TMainConsole::removeWordFromSet(const QString& word)
 {
-    const QString errMsg = qsl("the word \"%1\" does not seem to be in the user dictionary");
+    // A word that could not have been written into the ".dic" file cannot have
+    // come back out of one either, so say why it can never be in there rather
+    // than merely that it is not. Removal is not refused outright, so that a
+    // word an older version stored can still be taken out again:
+    const QString errMsg = storableWord(word) ? qsl("the word \"%1\" does not seem to be in the user dictionary") : unstorableWordMessage();
     QPair<bool, QString> result{};
     if (!mEnableUserDictionary) {
         return qMakePair(false, QLatin1String("a user dictionary is not enable for this profile"));
@@ -1884,7 +2010,7 @@ void TMainConsole::slot_warmSystemSpellDictionary()
 {
     // spellCheck() and spellSuggestWord() do not consult this flag, so the
     // lazy getter still serves a script in a profile that has spell check off:
-    if (mpHost->mEnableSpellCheck) {
+    if (mpHost && mpHost->getEnableSpellCheck()) {
         getHunspellHandle_system();
     }
 }
@@ -1908,7 +2034,7 @@ void TMainConsole::loadSystemSpellDictionary()
     // Everywhere but macOS getMudletPath() probes for "<name>.aff" to settle
     // which directory wins, so it has to get the same name the files are then
     // loaded by.
-    const QString path = mudlet::getMudletPath(enums::hunspellDictionaryPath, mSystemDictionary);
+    const QString path = MudletPaths::getMudletPath(enums::hunspellDictionaryPath, mSystemDictionary);
     QString spell_aff = qsl("%1%2.aff").arg(path, mSystemDictionary);
     QString spell_dic = qsl("%1%2.dic").arg(path, mSystemDictionary);
 
@@ -1938,7 +2064,7 @@ void TMainConsole::setProfileSpellDictionary()
             mpHunspell_profile = nullptr;
             // Need to commit any changes to personal dictionary
             qDebug() << "TMainConsole::setProfileSpellDictionary() INFO - Saving profile's own Hunspell dictionary...";
-            mudlet::self()->saveDictionary(mudlet::self()->getMudletPath(enums::profileDataItemPath, mProfileName, qsl("profile")), mWordSet_profile);
+            mudlet::self()->saveDictionary(MudletPaths::getMudletPath(enums::profileDataItemPath, mProfileName, qsl("profile")), mWordSet_profile);
         }
         // Nothing else to do if not using the shared one
 
@@ -2141,15 +2267,15 @@ bool TMainConsole::saveMap(const QString& location, int saveVersion)
 {
     QString filename_map = location;
     if (filename_map.isEmpty()) {
-        filename_map = mudlet::getMudletPath(enums::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
+        filename_map = MudletPaths::getMudletPath(enums::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
     } else if (const QFileInfo fileInfo(location); fileInfo.isRelative()) {
         // Resolve the name relative to the profile home directory the way
         // TMainConsole::importMap does, rather than against whatever directory
         // Mudlet happens to have been started in:
-        filename_map = QDir::cleanPath(mudlet::getMudletPath(enums::profileDataItemPath, mProfileName, fileInfo.filePath()));
+        filename_map = QDir::cleanPath(MudletPaths::getMudletPath(enums::profileDataItemPath, mProfileName, fileInfo.filePath()));
     }
 
-    const QDir dir_map(mudlet::getMudletPath(enums::profileMapsPath, mProfileName));
+    const QDir dir_map(MudletPaths::getMudletPath(enums::profileMapsPath, mProfileName));
     if (!dir_map.exists() && !dir_map.mkpath(dir_map.path())) {
         qDebug().noquote() << "Error saving map: could not make the profile's map directory" << dir_map.path();
         return false;
@@ -2210,7 +2336,7 @@ bool TMainConsole::loadMap(const QString& location)
     // under a bare name is looked for where it was written:
     QString filePathName = location;
     if (const QFileInfo fileInfo(location); !location.isEmpty() && fileInfo.isRelative()) {
-        filePathName = QDir::cleanPath(mudlet::getMudletPath(enums::profileDataItemPath, mProfileName, fileInfo.filePath()));
+        filePathName = QDir::cleanPath(MudletPaths::getMudletPath(enums::profileDataItemPath, mProfileName, fileInfo.filePath()));
     }
 
     qDebug() << "TMainConsole::loadMap() - restore map case 1.";
@@ -2288,7 +2414,7 @@ bool TMainConsole::importMap(const QString& location, QString* errMsg)
     if (!fileInfo.filePath().isEmpty()) {
         if (fileInfo.isRelative()) {
             // Resolve the name relative to the profile home directory:
-            filePathNameString = QDir::cleanPath(mudlet::getMudletPath(enums::profileDataItemPath, mProfileName, fileInfo.filePath()));
+            filePathNameString = QDir::cleanPath(MudletPaths::getMudletPath(enums::profileDataItemPath, mProfileName, fileInfo.filePath()));
         } else {
             if (fileInfo.exists()) {
                 filePathNameString = fileInfo.canonicalFilePath(); // Cannot use canonical path if file doesn't exist!
@@ -2391,9 +2517,12 @@ void TMainConsole::showPackageDownloadProgress(const QString& title, const QStri
     // reconnect re-sends Client.GUI). QProgressDialog::close() emits canceled(),
     // so closing the superseded dialog while it is still wired to
     // slot_cancelPackageDownload() would abort the download this new dialog is
-    // about to track; detach it before closing.
+    // about to track; detach that connection before closing. Only that one: a
+    // wildcard disconnect() also severs the destroyed() hook Qt's style sheet
+    // support uses to evict a widget from its caches, so the closed dialog stays
+    // cached and the next setAppStyleSheet() walks a freed widget.
     if (mpPackageDownloadProgressDialog) {
-        mpPackageDownloadProgressDialog->disconnect();
+        disconnect(mpPackageDownloadProgressDialog, &QProgressDialog::canceled, &pHost->mTelnet, &cTelnet::slot_cancelPackageDownload);
         mpPackageDownloadProgressDialog->close();
     }
     // placeholder range; reset by the first download-progress update
@@ -2515,6 +2644,16 @@ void TMainConsole::createMapperDock(const QString& title, const QString& objectN
 {
     mpDockableMapWidget = new QDockWidget(title);
     mpDockableMapWidget->setObjectName(objectName);
+    // Arrange for TMap member values to be copied from the Host masters so they
+    // are in place when the 2D mapper is created:
+    mpHost->getPlayerRoomStyleDetails(mpHost->mpMap->mPlayerRoomStyle,
+                                      mpHost->mpMap->mPlayerRoomOuterDiameterPercentage,
+                                      mpHost->mpMap->mPlayerRoomInnerDiameterPercentage,
+                                      mpHost->mpMap->mPlayerRoomOuterColor,
+                                      mpHost->mpMap->mPlayerRoomInnerColor);
+    mpHost->mpMap->mpMapper = new dlgMapper(mpDockableMapWidget, mpHost, mpHost->mpMap.data());
+    mpHost->mpMap->mpMapper->setStyleSheet(mpHost->mProfileStyleSheet);
+    mpDockableMapWidget->setWidget(mpHost->mpMap->mpMapper);
 }
 
 void TMainConsole::showMapperScriptReminder()
