@@ -21,6 +21,7 @@
 #include <QtTest/QtTest>
 #include <QCryptographicHash>
 #include <QRegularExpression>
+#include <QTemporaryDir>
 #include <QUuid>
 #include <QVersionNumber>
 #if defined(INCLUDE_OWN_QT6_KEYCHAIN)
@@ -65,6 +66,7 @@ private slots:
     void testANestedOperationDoesNotSwallowTheCascadeResult();
 
 private:
+    QTemporaryDir mConfigDir;
     QString mProfile;
     QString mKey;
     bool mStoreAvailable = false;
@@ -306,6 +308,14 @@ void CredentialManagerKeychainTest::initTestCase()
     // exercise the real credential store, so make sure it is not inherited from the
     // environment
     qunsetenv("MUDLET_TEST_MODE");
+
+    // The real store is the subject here, but CredentialManager falls back to files
+    // under QStandardPaths::AppConfigLocation whenever the keychain is unavailable -
+    // which for a QTEST_MAIN program is $HOME/.config/CredentialManagerKeychainTest.
+    // Same recipe as CredentialManagerTest, and like it this only takes effect where
+    // QStandardPaths honours XDG.
+    QVERIFY(mConfigDir.isValid());
+    qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
 
     if (!onWindows()) {
         return;
