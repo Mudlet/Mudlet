@@ -198,7 +198,6 @@ public:
     void clear();
     void appendBuffer();
     void appendBuffer(const TBuffer&);
-    int getButtonState();
     void closeEvent(QCloseEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
     void pasteWindow(const TBuffer&);
@@ -384,8 +383,7 @@ public:
     QColor mSystemMessageBgColor = QColorConstants::Black;
     QColor mCommandFgColor = QColor(213, 195, 0);
 
-    //1 = unclicked/up; 2 = clicked/down, 0 is NOT valid:
-    int mButtonState = 1;
+    int& mButtonState;
 
     QString mConsoleName;
     QString& mCurrentLine;
