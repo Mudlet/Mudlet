@@ -996,11 +996,11 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
     // Mudlet has always done, whereas eating it loses real output:
     const QByteArray cShortEscape = QByteArrayLiteral("78c\\");
 
-    // As well as enabling the prepending of left-over bytes from last packet
-    // from the MUD server this may help in high frequency interactions to
-    // protect this process from the supplied string being modified
-    // asynchronously by the QNetwork code that runs in another thread:
-    std::string localBuffer;
+    // Parsed in place - an MXP entity expansion rewrites the head of the text
+    // and a forced line break overwrites a byte - so the caller's string is
+    // not meaningful afterwards (cTelnet::postData() copies it first when a
+    // snooper needs the original bytes):
+    std::string& localBuffer = incoming;
 
     Host* pHost = mpHost;
     if (!pHost) {
@@ -1032,10 +1032,8 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
 #if defined(DEBUG_SGR_PROCESSING) || defined(DEBUG_OSC_PROCESSING) || defined(DEBUG_UTF8_PROCESSING) || defined(DEBUG_GB_PROCESSING) || defined(DEBUG_BIG5_PROCESSING)
         qDebug() << "TBuffer::translateToPlainText(...) Prepending residual bytes onto incoming data!";
 #endif
-        localBuffer = mIncompleteSequenceBytes + incoming;
+        localBuffer.insert(0, mIncompleteSequenceBytes);
         mIncompleteSequenceBytes.clear();
-    } else {
-        localBuffer = incoming;
     }
 
     crashIfRequested();
