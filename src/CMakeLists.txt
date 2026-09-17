@@ -107,6 +107,7 @@ set(mudlet_SRCS
     MMCPServer.cpp
     mudlet.cpp
     MudletInstanceCoordinator.cpp
+    MudletPaths.cpp
     MxpTag.cpp
     OAuthClientFlow.cpp
     PackageItemDelegate.cpp
@@ -119,6 +120,7 @@ set(mudlet_SRCS
     SelectionRectangleHandler.cpp
     SentryWrapper.cpp
     ShortcutsManager.cpp
+    SignInStoreReconciler.cpp
     SingleLineTextEdit.cpp
     SpeechAudioCapture.cpp
     SpeechRecognizerFactory.cpp
@@ -204,6 +206,7 @@ set(mudlet_SRCS
     TrailingWhitespaceMarker.cpp
     TriggerHighlighter.cpp
     TriggerUnit.cpp
+    TTriggerPrescan.cpp
     TRoom.cpp
     TRoomDB.cpp
     TScript.cpp
@@ -360,6 +363,7 @@ set(mudlet_HDRS
     MMCPServer.h
     mudlet.h
     MudletInstanceCoordinator.h
+    MudletPaths.h
     MxpTag.h
     OAuthClientFlow.h
     PackageItemDelegate.h
@@ -372,6 +376,7 @@ set(mudlet_HDRS
     SelectionRectangleHandler.h
     SentryWrapper.h
     ShortcutsManager.h
+    SignInStoreReconciler.h
     SingleLineTextEdit.h
     SpeechAudioCapture.h
     SpeechRecognizer.h
@@ -462,6 +467,7 @@ set(mudlet_HDRS
     Tree.h
     TriggerHighlighter.h
     TriggerUnit.h
+    TTriggerPrescan.h
     TRoom.h
     TRoomDB.h
     TScript.h
@@ -699,6 +705,20 @@ set_target_properties(${LIB_MUDLET_TARGET} PROPERTIES
   AUTOUIC ON AUTOUIC_SEARCH_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/ui"
   AUTOMOC ON AUTORCC ON POSITION_INDEPENDENT_CODE ON
   AUTOGEN_ORIGIN_DEPENDS OFF)
+
+# AUTOMOC concatenates every moc_*.cpp into one mocs_compilation.cpp whose
+# include order it controls. With GCC 16's -Wsfinae-incomplete that trips false
+# positives: qmetatype.h's is_complete SFINAE trait is instantiated from one
+# moc file while types defined in a later moc file are still incomplete, so
+# defining them later warns. The generated TU is not hand-written code, so
+# silence the warning there rather than rearranging includes across moc files.
+# Scoped to GCC: -Wsfinae-incomplete is a GCC-only flag (GCC 15+), and GCC
+# silently ignores unknown -Wno- options on older versions, but Clang/MSVC
+# would diagnose the unknown flag.
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  set_property(SOURCE "${CMAKE_CURRENT_BINARY_DIR}/${LIB_MUDLET_TARGET}_autogen/mocs_compilation.cpp"
+               APPEND PROPERTY COMPILE_OPTIONS -Wno-sfinae-incomplete)
+endif()
 
 if(USE_FONTS)
   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_FONTS)

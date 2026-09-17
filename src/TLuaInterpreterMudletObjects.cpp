@@ -28,6 +28,7 @@
 // mudlet-object specific functions of TLuaInterpreter, split out separately
 // for convenience and to keep TLuaInterpreter.cpp size reasonable
 
+#include "MudletPaths.h"
 #include "TLuaInterpreter.h"
 
 #include "EAction.h"
@@ -37,6 +38,7 @@
 #include "TArea.h"
 #include "TCommandLine.h"
 #include "TConsole.h"
+#include "TConsoleModel.h"
 #include "TDebug.h"
 #include "TEvent.h"
 #include "TFlipButton.h"
@@ -67,6 +69,7 @@
 #include <cmath>
 #include <limits>
 #include <math.h>
+#include <utility>
 
 #ifdef MUDLET_MEMORY_TRACKING
 #if defined(Q_OS_LINUX)
@@ -127,6 +130,27 @@ static bool timerDelayFits(const double time)
 {
     const double msec = std::floor(time * 1000.0 + 0.5);
     return msec >= 0 && msec < 86400000;
+}
+
+// A stopwatch holds stopWatch::csmMaximumMilliSeconds of time in either
+// direction and clamps to that end of its range whatever accumulates past it,
+// but an adjustment asking outright for more than the whole range is a mistake
+// worth reporting rather than quietly flattening. It is the milliseconds the
+// adjustment rounds to that have to be bounded, as the stopwatch keeps its time
+// in those, and repeating that rounding here in the double domain keeps an
+// enormous adjustment from being converted to an integer it does not fit, which
+// is undefined behaviour. The comparison is written so that a NaN or infinite
+// adjustment fails it as well. Handing the rounded value back saves the caller
+// rounding the same product a second time:
+static std::pair<bool, qint64> stopWatchAdjustmentAsMilliSeconds(const double adjustment)
+{
+    constexpr double limit = static_cast<double>(stopWatch::csmMaximumMilliSeconds);
+    const double milliSeconds = std::round(adjustment * 1000.0);
+    if (!(milliSeconds >= -limit && milliSeconds <= limit)) {
+        return {false, 0};
+    }
+
+    return {true, static_cast<qint64>(milliSeconds)};
 }
 
 #define WINDOW_NAME(ARG_L, ARG_pos)                                                                                                                                                                    \
@@ -233,7 +257,15 @@ int TLuaInterpreter::adjustStopWatch(lua_State* L)
     }
 
     const double adjustment = getVerifiedDouble(L, __func__, 2, "modification in seconds");
-    const bool result = host.adjustStopWatch(watchId, qRound(adjustment * 1000.0));
+    auto [fits, milliSeconds] = stopWatchAdjustmentAsMilliSeconds(adjustment);
+    if (!fits) {
+        return warnArgumentValue(
+                L,
+                __func__,
+                qsl("modification in seconds must be a finite number from -%1 to %1, got %2").arg(QString::number(stopWatch::csmMaximumMilliSeconds / 1000)).arg(QString::number(adjustment, 'g', 17)));
+    }
+
+    const bool result = host.adjustStopWatch(watchId, milliSeconds);
     // This is only likely to fail when a numeric first argument was given:
     if (!result) {
         return warnArgumentValue(L, __func__, csmInvalidStopWatchID.arg(watchId));
@@ -402,15 +434,7 @@ int TLuaInterpreter::disableScript(lua_State* L)
     const QString name = getVerifiedString(L, __func__, 1, "script name");
 
     Host& host = getHostFromLua(L);
-    int cnt = 0;
-    QMap<int, TScript*> const scripts = host.getScriptUnit()->getScriptList();
-    for (auto script : scripts) {
-        if (script->getName() == name) {
-            cnt++;
-            script->setIsActive(false);
-        }
-    }
-    if (cnt == 0) {
+    if (!host.getScriptUnit()->disableScript(name)) {
         return warnArgumentValue(L, __func__, qsl("script '%1' not found").arg(name));
     }
 
@@ -464,15 +488,7 @@ int TLuaInterpreter::enableScript(lua_State* L)
     const QString name = getVerifiedString(L, __func__, 1, "script name");
 
     Host& host = getHostFromLua(L);
-    int cnt = 0;
-    QMap<int, TScript*> const scripts = host.getScriptUnit()->getScriptList();
-    for (auto script : scripts) {
-        if (script->getName() == name) {
-            cnt++;
-            script->setIsActive(true);
-        }
-    }
-    if (cnt == 0) {
+    if (!host.getScriptUnit()->enableScript(name)) {
         return warnArgumentValue(L, __func__, qsl("script '%1' not found").arg(name));
     }
 
@@ -937,7 +953,7 @@ int TLuaInterpreter::invokeFileDialog(lua_State* L)
     }
 
     Host& host = getHostFromLua(L);
-    QString location = mudlet::getMudletPath(enums::profileHomePath, host.getName());
+    QString location = MudletPaths::getMudletPath(enums::profileHomePath, host.getName());
     const bool luaDir = lua_toboolean(L, 1);
     const QString title{lua_tostring(L, 2)};
 
@@ -3081,7 +3097,7 @@ int TLuaInterpreter::tempTrigger(lua_State* L)
 int TLuaInterpreter::getProfiles(lua_State* L)
 {
     auto& hostManager = mudlet::self()->getHostManager();
-    const QStringList profiles = QDir(mudlet::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    const QStringList profiles = QDir(MudletPaths::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
 
     lua_newtable(L);
 
@@ -3089,9 +3105,9 @@ int TLuaInterpreter::getProfiles(lua_State* L)
         lua_pushstring(L, profile.toUtf8().constData());
         lua_newtable(L);
 
-        QString url = mudlet::self()->readProfileData(profile, qsl("url"));
-        QString port = mudlet::self()->readProfileData(profile, qsl("port"));
-        QString description = mudlet::self()->readProfileData(profile, qsl("description"));
+        QString url = MudletPaths::readProfileData(profile, qsl("url"));
+        QString port = MudletPaths::readProfileData(profile, qsl("port"));
+        QString description = MudletPaths::readProfileData(profile, qsl("description"));
 
         // if url/port haven't been written to disk yet (which is what happens
         // when a default profile is opened for the first time), fetch this data from game details
@@ -3164,7 +3180,7 @@ int TLuaInterpreter::loadProfile(lua_State* L)
         return 2;
     }
 
-    const QString profileName = mudlet::self()->getCanonicalProfileName(requestedName);
+    const QString profileName = MudletPaths::getCanonicalProfileName(requestedName);
     if (profileName.isEmpty()) {
         lua_pushnil(L);
         lua_pushfstring(L, "loadProfile: profile '%s' does not exist", requestedName.toUtf8().constData());
@@ -3204,7 +3220,7 @@ int TLuaInterpreter::closeProfile(lua_State* L)
         requestedName = getVerifiedString(L, __func__, 1, "profile name");
     }
 
-    const QString profileName = mudlet::self()->getCanonicalProfileName(requestedName);
+    const QString profileName = MudletPaths::getCanonicalProfileName(requestedName);
     if (profileName.isEmpty()) {
         lua_pushnil(L);
         lua_pushfstring(L, "closeProfile: profile '%s' does not exist", requestedName.toUtf8().constData());
@@ -3357,9 +3373,9 @@ int TLuaInterpreter::getSubsystemMemoryStats(lua_State* L)
     }
 
     // Main console buffer line count
-    if (host.mpConsole) {
+    if (auto* pModel = host.mainConsoleModelOrNull()) {
         lua_pushstring(L, "console_buffer_lines");
-        lua_pushnumber(L, host.mpConsole->buffer.size());
+        lua_pushnumber(L, pModel->buffer.size());
         lua_settable(L, -3);
     }
 

@@ -38,7 +38,6 @@
 #include "TWindowRegistry.h"
 #include "TriggerUnit.h"
 #include "ctelnet.h"
-#include "dlgTriggerEditor.h"
 #include "enums.h"
 
 #include <QColor>
@@ -53,6 +52,7 @@
 #include <QTextStream>
 
 #include <memory>
+#include <string>
 
 #include "TMxpMudlet.h"
 #include "TMxpProcessor.h"
@@ -78,6 +78,7 @@ class TConsole;
 class TMainConsole;
 struct TConsoleModel;
 class dlgNotepad;
+class dlgTriggerEditor;
 class TMap;
 class MMCPServer;
 class dlgIRC;
@@ -91,6 +92,17 @@ class stopWatch
     friend class XMLimport;
 
 public:
+    // A stopwatch keeps its time as a count of milliseconds and, while it runs,
+    // as an effective start time that many milliseconds back from now. Both are
+    // bounded to this in either direction - a little under 31,700 years, which
+    // is past any use a stopwatch has while still leaving four orders of
+    // magnitude of what a qint64 of milliseconds holds spare - so that no
+    // arithmetic on a stopwatch's time can run out of that range and wrap
+    // around onto a time of the opposite sign. Time reaching the bound is
+    // clamped to it; a script asking for more than the whole range outright is
+    // told so instead:
+    static constexpr qint64 csmMaximumMilliSeconds = 1'000'000'000'000'000;
+
     stopWatch();
 
     bool start();
@@ -99,6 +111,7 @@ public:
     bool running() const { return mIsRunning; }
     void adjustMilliSeconds(const qint64);
     qint64 getElapsedMilliSeconds() const;
+    static qint64 clampToRange(const qint64);
     QString getElapsedDayTimeString() const;
     void setPersistent(const bool state) { mIsPersistent = state; }
     bool persistent() const { return mIsPersistent; }
@@ -160,6 +173,8 @@ class Host : public QObject
     friend class dlgProfilePreferences;
     // Allows the functional test to set the Discord username restriction:
     friend class TDiscordModeTest;
+    // Allows the functional test to call closeChildren() on its own:
+    friend class HostWidgetDecouplingTest;
 
 public:
     Host(int port, const QString& mHostName, const QString& login, const QString& pass, int host_id);
@@ -229,6 +244,8 @@ public:
     void setDiscordInviteURL(const QString& s);
     const QString& getDiscordInviteURL() const { return mDiscordInviteURL; }
     void setSpellDic(const QString&);
+    void setEnableSpellCheck(const bool enable);
+    bool getEnableSpellCheck() const { return mEnableSpellCheck; }
     QString getSpellDic() const;
     void setUserDictionaryOptions(const bool useDictionary, const bool useShared);
     void getUserDictionaryOptions(bool& useDictionary, bool& useShared)
@@ -264,6 +281,7 @@ public:
     AliasUnit* getAliasUnit() { return &mAliasUnit; }
     ActionUnit* getActionUnit() { return &mActionUnit; }
     KeyUnit* getKeyUnit() { return &mKeyUnit; }
+    const KeyUnit* getKeyUnit() const { return &mKeyUnit; }
     ScriptUnit* getScriptUnit() { return &mScriptUnit; }
     GifTracker* getGifTracker() { return &mGifTracker; }
 
@@ -375,6 +393,12 @@ public:
     void readPackageConfig(const QString&, QString&, bool, QString* whyNotRead = nullptr);
     QString getPackageConfig(const QString&, bool isModule = false, QString* whyNotRead = nullptr);
     void postMessage(const QString message) { mTelnet.postMessage(message); }
+    void printToMainConsole(const QString& msg);
+    void printToMainConsole(const QString& msg, QColor fgColor, QColor bgColor);
+    void printSystemMessage(const QString& msg);
+    void printOnDisplay(std::string& data, bool isFromServer);
+    void finalizeMainConsole();
+    bool mainConsoleShowsTimeStamps() const;
     QColor getAnsiColor(const int ansiCode, const bool isBackground = false) const;
     QPair<bool, QString> writeProfileData(const QString&, const QString&);
     QString readProfileData(const QString&);
@@ -428,12 +452,16 @@ public:
     struct FontFamilyResolution
     {
         QString family;       // family to actually use
-        QFont::Weight weight; // weight parsed from a "Family Style" name, QFont::Normal otherwise
-        bool available;       // false when neither the name nor a style-stripped base family is installed
+        QFont::Weight weight; // the weight parsed off a "Family Style" name, but only where the
+                              // base family is the one being used; QFont::Normal otherwise
+        bool available;       // false when neither the font database nor the platform's own
+                              // name resolution recognises the name
     };
-    // Maps a requested font name onto an installed family: the name itself when it is
-    // installed, else the base family when the name is a "Family Style" one such as
-    // "EB Garamond SemiBold" (with the style as the weight), else {requested, Normal, false}.
+    // Maps a requested font name onto a font this machine can make of it: the name itself
+    // when it is an installed family, else the base family when the name is a "Family Style"
+    // one such as "EB Garamond SemiBold" (with the style as the weight), else either of
+    // those when the platform resolves it for itself the way fontconfig resolves
+    // "Helvetica", else {requested, Normal, false}.
     FontFamilyResolution resolveFontFamily(const QString& requested) const;
     // A profile can name a font that is not installed on this machine; Qt would then
     // silently draw the console in an arbitrary substitute, so switch to the bundled
@@ -458,8 +486,8 @@ public:
     // Store/retrieve all the settings in one call:
     void setPlayerRoomStyleDetails(const quint8 styleCode, const quint8 outerDiameter = 120, const quint8 innerDiameter = 70, const QColor& outerColor = QColor(), const QColor& innerColor = QColor());
     void getPlayerRoomStyleDetails(quint8& styleCode, quint8& outerDiameter, quint8& innerDiameter, QColor& outerColor, QColor& innerColor);
-    void setSearchOptions(const dlgTriggerEditor::SearchOptions);
-    void setBufferSearchOptions(const TConsole::SearchOptions);
+    void setSearchOptions(const enums::EditorSearchOptions);
+    void setBufferSearchOptions(const enums::BufferSearchOptions);
     std::pair<bool, QString> setMapperTitle(const QString&);
     std::optional<QString> getMapperTitle() const;
     QDockWidget* mapWidget() const;
@@ -476,6 +504,13 @@ public:
     bool debugShowAllProblemCodepoints() const { return mDebugShowAllProblemCodepoints; }
     void setCompactInputLine(const bool state);
     bool getCompactInputLine() const { return mCompactInputLine; }
+    // Only ever raised for a setting that really changed, or a handler that
+    // writes the value back through setConfig() would loop.
+    void raiseSettingChangedEvent(const QString& settingName, const bool value);
+    void setEnableClosedCaption(const bool state);
+    void setAdvertiseScreenReader(const bool state);
+    void setAnnounceIncomingText(const bool state);
+    void setMapperPanelVisible(const bool state);
     QPointer<TConsole> findConsole(QString name);
 
     QPair<bool, QStringList> getLines(const QString& windowName, const int lineFrom, const int lineTo);
@@ -559,13 +594,7 @@ public:
     bool showIdsInEditor() const { return mShowIDsInEditor; }
     void initMMCPServer();
     bool setMMCPChatName(const QString&);
-    void setShowIdsInEditor(const bool isShown)
-    {
-        mShowIDsInEditor = isShown;
-        if (mpEditorDialog) {
-            mpEditorDialog->showIDLabels(isShown);
-        }
-    }
+    void setShowIdsInEditor(const bool isShown);
     bool getF3SearchEnabled() const { return mF3SearchEnabled; }
     void setF3SearchEnabled(const bool enabled)
     {
@@ -862,7 +891,6 @@ public:
     QStringList mGMCP_merge_table_keys;
     bool mLogStatus = false;
     bool mTimeStampStatus = false;
-    bool mEnableSpellCheck = true;
     QStringList mInstalledPackages;
     // module name = location on disk, sync to other profiles?, priority
     QMap<QString, QStringList> mInstalledModules;
@@ -928,8 +956,8 @@ public:
     QTime mTimerDebugOutputSuppressionInterval;
     std::unique_ptr<QNetworkProxy> mpConnectionProxy;
     QString mProfileStyleSheet;
-    dlgTriggerEditor::SearchOptions mSearchOptions = dlgTriggerEditor::SearchOptionNone;
-    TConsole::SearchOptions mBufferSearchOptions = TConsole::SearchOption::SearchOptionNone;
+    enums::EditorSearchOptions mSearchOptions = enums::EditorSearchOptionNone;
+    enums::BufferSearchOptions mBufferSearchOptions = enums::BufferSearchOptionNone;
     QPointer<dlgIRC> mpDlgIRC;
     QPointer<MMCPServer> mMMCPServer;
     QPointer<dlgProfilePreferences> mpDlgProfilePreferences;
@@ -975,6 +1003,9 @@ signals:
     void profileSaveStarted();
     void profileSaveFinished();
     void signal_changeSpellDict(const QString&);
+    // Spell check has just been turned on, so the system dictionary is wanted
+    // where it was not before. The main console reads it off the event loop.
+    void signal_spellCheckEnabled();
     // To tell all TConsole's upper TTextEdit panes to report all Codepoint
     // problems as they arrive as well as a summary upon destruction:
     void signal_changeDebugShowAllProblemCodepoints(const bool);
@@ -999,12 +1030,21 @@ signals:
     void signal_loggingAnnouncement(const bool isLogging, const QString& logFileName);
     // Raised once a logging change has settled, for the frontend's log button.
     void signal_loggingStateChanged(const bool isLogging);
+    void signal_editorCleanResetRequested();
+    void signal_packageListChanged();
+    void signal_profileStyleSheetChanged(const QString& styleSheet);
+    void signal_consoleFontChanged(const QFont& font);
+    void signal_editorSearchOptionsChanged(const enums::EditorSearchOptions);
+    void signal_editorShowBidiChanged(const bool);
+    void signal_showIdsInEditorChanged(const bool);
 
 private slots:
     void slot_purgeTemps();
     void slot_saveProfileAfterPackageChange();
 
 private:
+    // Stores a boolean setting and tells scripts about it.
+    void changeSetting(bool& setting, const bool state, const QString& settingName);
     void setBorders(const QMargins);
     void installPackageFonts(const QString& packageName);
     void processGMCPDiscordStatus(const QJsonObject& discordInfo);
@@ -1179,6 +1219,7 @@ private:
     // These are hidden to prevent them being changed directly, they are also
     // mirrored/cached in the main TConsole's instance so they do not need to be
     // looked up directly by that class:
+    bool mEnableSpellCheck = true;
     bool mEnableUserDictionary = true;
     bool mUseSharedDictionary = false;
 

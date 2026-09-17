@@ -22,10 +22,12 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
+#include "TBuffer.h"
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
 #include "TTextEdit.h"
@@ -111,7 +113,7 @@ private slots:
         mpPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -343,9 +345,78 @@ private slots:
         QCOMPARE(pane->cursor().shape(), Qt::IBeamCursor);
     }
 
+    // TConsole::selectSection() refuses a length that would put a selection's
+    // end before its start, but TBuffer::replaceInLine() takes the two points
+    // as it is given them, and its own bounds checks only ask that each column
+    // is on the line. A reversed pair walked erase() over a range of negative
+    // length, which moves memory backwards out of the vector's allocation - so
+    // the guard inside replaceInLine() is what stands behind the Lua one, and
+    // no spec can reach it once selectSection() refuses first.
+    //
+    // Declared last of the slots: without the guard this corrupts the heap, and
+    // the abort that follows lands wherever the next allocation happens to be,
+    // taking the rest of the run with it.
+    void test_replaceInLineRefusesARangeThatRunsBackwards()
+    {
+        mpServer->setWelcomeMessage(qsl("selection test\r\n"));
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        QVERIFY2(waitForTextInBuffer(qsl("selection test")), "the welcome text never reached the buffer");
+
+        TMainConsole* console = mudlet::self()->getActiveHost()->mpConsole;
+        console->print(qsl("\nbackwards selection"));
+        const int y = console->buffer.getLastLineNumber();
+        QCOMPARE(console->buffer.line(y), qsl("backwards selection"));
+
+        // both columns are on the line, so only their order can reject this
+        QPoint begin(12, y);
+        QPoint end(4, y);
+        TChar format;
+        QVERIFY2(!console->buffer.replaceInLine(begin, end, qsl("XXXX"), format), "a range whose start is past its end was accepted");
+        QCOMPARE(console->buffer.line(y), qsl("backwards selection"));
+    }
+
+    // The same reversal, one line at a time rather than over the range as a
+    // whole: a range that starts at the very end of its first line leaves that
+    // line's start past the end the loop computes for it, and an empty line
+    // inside a multi-line range has an end of -1 with a start of 0. Nothing in
+    // the codebase builds a P_begin/P_end pair spanning two lines today, so
+    // this drives the buffer directly.
+    void test_replaceInLineSkipsALineWhoseStartIsPastItsOwnEnd()
+    {
+        mpServer->setWelcomeMessage(qsl("selection test\r\n"));
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        QVERIFY2(waitForTextInBuffer(qsl("selection test")), "the welcome text never reached the buffer");
+
+        TMainConsole* console = mudlet::self()->getActiveHost()->mpConsole;
+        console->print(qsl("\nfirst\nsecond"));
+        const int lastLine = console->buffer.getLastLineNumber();
+        const int firstLine = lastLine - 1;
+        QCOMPARE(console->buffer.line(firstLine), qsl("first"));
+        QCOMPARE(console->buffer.line(lastLine), qsl("second"));
+
+        // starting at the column after the last character of "first" - which
+        // the bounds check above permits - leaves nothing of that line in range
+        QPoint begin(static_cast<int>(console->buffer.line(firstLine).size()), firstLine);
+        QPoint end(3, lastLine);
+        TChar format;
+        // an empty replacement, the way TBuffer::cut() calls this, so what the
+        // lines lose is only what the range covered
+        QVERIFY(console->buffer.replaceInLine(begin, end, QString(), format));
+
+        QCOMPARE(console->buffer.line(firstLine), qsl("first"));
+        QCOMPARE(console->buffer.line(lastLine), qsl("ond"));
+
+        // the text and the TChar that carries each character's formatting are
+        // held apart, and a reversed erase() grows the vector rather than
+        // shortening it - which the text above cannot show, since it comes from
+        // the QString side alone
+        QCOMPARE(static_cast<int>(console->buffer.buffer.at(firstLine).size()), static_cast<int>(console->buffer.line(firstLine).size()));
+        QCOMPARE(static_cast<int>(console->buffer.buffer.at(lastLine).size()), static_cast<int>(console->buffer.line(lastLine).size()));
+    }
+
     void cleanup()
     {
-        const QString profilePath = mudlet::getMudletPath(enums::profileHomePath, mpHostname);
+        const QString profilePath = MudletPaths::getMudletPath(enums::profileHomePath, mpHostname);
 
         // Tear down Mudlet (and with it the live cTelnet connection) before the
         // stub server it is talking to, so the socket is closed from the client
@@ -388,7 +459,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = mudlet::getMudletPath(enums::profileHomePath, profileName);
+        const QString path = MudletPaths::getMudletPath(enums::profileHomePath, profileName);
         deleteDirectory(path);
     }
 
