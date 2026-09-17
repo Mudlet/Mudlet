@@ -37,6 +37,7 @@
 #include "TLuaInterpreter.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "TelnetServerStub.h"
@@ -181,7 +182,7 @@ private slots:
     void cleanupTestCase()
     {
         if (mudlet::self()) {
-            const QString profilePath = mudlet::getMudletPath(enums::profileHomePath, mProfileName);
+            const QString profilePath = MudletPaths::getMudletPath(enums::profileHomePath, mProfileName);
             delete mudlet::self();
             QDir(profilePath).removeRecursively();
         }

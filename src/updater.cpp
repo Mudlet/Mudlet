@@ -18,6 +18,7 @@
  ***************************************************************************/
 
 #include "updater.h"
+#include "MudletPaths.h"
 #include "mudlet.h"
 #include "updater/Feed.h"
 #include "updater/UpdateDialog.h"
@@ -748,7 +749,7 @@ void Updater::recordUpdateTime() const
     if (!mudlet::self()) {
         return;
     }
-    QSaveFile file(mudlet::getMudletPath(enums::mainDataItemPath, qsl("mudlet_updated_at")));
+    QSaveFile file(MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("mudlet_updated_at")));
     bool opened = file.open(QIODevice::WriteOnly);
     if (!opened) {
         qWarning() << "Couldn't open update timestamp file for writing.";
@@ -772,7 +773,7 @@ void Updater::recordUpdatedVersion() const
     if (!mudlet::self()) {
         return;
     }
-    QSaveFile file(mudlet::getMudletPath(enums::mainDataItemPath, qsl("mudlet_updated_from")));
+    QSaveFile file(MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("mudlet_updated_from")));
     bool opened = file.open(QIODevice::WriteOnly);
     if (!opened) {
         qWarning() << "Couldn't open update version file for writing.";
@@ -802,7 +803,7 @@ bool Updater::shouldShowChangelog()
         return false;
     }
 
-    QFile file(mudlet::self()->getMudletPath(enums::mainDataItemPath, qsl("mudlet_updated_at")));
+    QFile file(MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("mudlet_updated_at")));
     bool opened = file.open(QIODevice::ReadOnly);
     qint64 updateTimestamp;
     if (!opened) {
@@ -830,7 +831,7 @@ bool Updater::shouldShowChangelog()
     // version is still the one running, no update actually happened - don't
     // show a changelog for it:
     if (readPreviousVersionFile(false) == QCoreApplication::applicationVersion()) {
-        QFile::remove(mudlet::self()->getMudletPath(enums::mainDataItemPath, qsl("mudlet_updated_from")));
+        QFile::remove(MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("mudlet_updated_from")));
         return false;
     }
 
@@ -844,7 +845,7 @@ QString Updater::getPreviousVersion() const
 
 QString Updater::readPreviousVersionFile(const bool removeAfterRead) const
 {
-    QFile file(mudlet::self()->getMudletPath(enums::mainDataItemPath, qsl("mudlet_updated_from")));
+    QFile file(MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("mudlet_updated_from")));
     bool opened = file.open(QIODevice::ReadOnly);
     QString previousVersion;
     if (!opened) {

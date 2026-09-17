@@ -31,6 +31,7 @@
 
 
 #include "Host.h"
+#include "MudletPaths.h"
 #include "TBuffer.h"
 #include "TMxpProcessor.h"
 #include "TConsoleModel.h"
@@ -4437,7 +4438,7 @@ void cTelnet::downloadAndInstallGUIPackage(const QString& packageName, const QSt
                    "(url='%2').")
                         .arg(packageName, url));
 
-    mServerPackage = mudlet::getMudletPath(enums::profileDataItemPath, mProfileName, fileName);
+    mServerPackage = MudletPaths::getMudletPath(enums::profileDataItemPath, mProfileName, fileName);
     mpHost->updateProxySettings(mpDownloader);
 
     // Abort any in-flight predecessor while mpPackageDownloadReply still points
