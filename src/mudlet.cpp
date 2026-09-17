@@ -7125,6 +7125,10 @@ void mudlet::slot_compactInputLine(const bool state)
 
 mudlet::~mudlet()
 {
+    // qGuiApp outlives this object, and the windows torn down below hand focus
+    // around as they go. QObject only drops these connections once every member
+    // is gone, so the focus handler would otherwise walk a destroyed command list.
+    disconnect(qGuiApp, nullptr, this, nullptr);
     if (mpHunspell_sharedDictionary) {
         saveDictionary(getMudletPath(enums::mainDataItemPath, qsl("mudlet")), mWordSet_shared);
         Hunspell_destroy(mpHunspell_sharedDictionary);
