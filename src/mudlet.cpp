@@ -9701,8 +9701,8 @@ void mudlet::transferDockWidgetToDetachedWindow(const QString& profileName, TDet
     // Remove the dock widget from the main window
     removeDockWidget(mainDockWidget);
 
-    // Disconnect existing signal connections to avoid conflicts
-    mainDockWidget->disconnect();
+    // Not a wildcard disconnect(): that also severs Qt's style sheet destroyed() hook
+    disconnect(mainDockWidget, &QDockWidget::visibilityChanged, this, nullptr);
 
     // Clear from main window tracking
     mMainWindowDockWidgetMap.remove(mapKey);
@@ -9787,8 +9787,8 @@ void mudlet::transferDockWidgetFromDetachedWindow(const QString& profileName, TD
     // Remove the dock widget from the detached window
     detachedWindow->QMainWindow::removeDockWidget(detachedDockWidget);
 
-    // Disconnect existing signal connections to avoid conflicts
-    detachedDockWidget->disconnect();
+    // Not a wildcard disconnect(): that also severs Qt's style sheet destroyed() hook
+    disconnect(detachedDockWidget, &QDockWidget::visibilityChanged, detachedWindow, nullptr);
 
     // Clear from detached window tracking using the public API
     detachedWindow->removeDockWidget(mapKey);
