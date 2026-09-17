@@ -416,6 +416,14 @@ private:
     };
     std::vector<HeldStoreOperation> mHeldStoreOperations;
 
+    // Credential reads held back by holdStoreReads(), oldest first.
+    struct HeldStoreRead
+    {
+        QString key;
+        GMCPAuthenticator::StoreReadDone done;
+    };
+    std::vector<HeldStoreRead> mHeldStoreReads;
+
 private slots:
     void initTestCase()
     {
@@ -474,6 +482,7 @@ private slots:
         // when it failed part way through: every later test's save would be blocked too.
         removeBlockingCredentialDirectory();
         mHeldStoreOperations.clear();
+        mHeldStoreReads.clear();
         delete mpServer;
         mpServer = nullptr;
         delete mpDiscovery;
@@ -2014,7 +2023,7 @@ private slots:
         QCOMPARE(CredentialManager::retrieveCredential(host->getName(), qsl("reconnect-token")), qsl("encrypted-only-token"));
     }
 
-    void testASignInReadWhileAForgetIsRemovingItIsNotReplayed()
+    void testASignInReadWaitsForAForgetStillRemovingIt()
     {
         Host* host = connectAndNegotiate();
         QVERIFY(host);
@@ -2031,17 +2040,77 @@ private slots:
         });
         QVERIFY2(waitForHeldStoreOperations(1), "the forget never reached the store");
 
-        // The removal has not answered, so the store still holds everything when this read starts.
+        // The removal has not answered, so the store still holds everything if this read looks now.
         mpServer->clearReceived();
         mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\"]}"));
-        QJsonObject sent;
-        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "the connection should still be handed a way to sign in");
-        QVERIFY2(isVersionTwoHandoff(sent), qPrintable(qsl("a sign-in being forgotten should not be resumed either: %1").arg(describe(sent))));
+        QVERIFY2(waitForGmcpProcessed(host), "the sign-in offer never reached the client");
         QCOMPARE(mpServer->countReceived(qsl("Char.Login.Reconnect")), 0);
 
         releaseAllHeldStoreOperations(host);
         QVERIFY(reported);
         QVERIFY(removed);
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "the connection should still be handed a way to sign in");
+        QVERIFY2(isVersionTwoHandoff(sent), qPrintable(qsl("a forgotten sign-in should not be resumed either: %1").arg(describe(sent))));
+        QCOMPARE(mpServer->countReceived(qsl("Char.Login.Reconnect")), 0);
+    }
+
+    void testASignInForgottenDuringItsReadIsNotReplayed()
+    {
+        // The forget waits for the read, so the read returns everything it is about to remove.
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+        QVERIFY(seedSplitSignIn(host->getName(), qsl("{\"account\": \"acct:char\", \"provider\": \"discord\", \"secure_only\": false}"), qsl("being-forgotten")));
+        holdStoreReads(host);
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\"]}"));
+        QVERIFY2(waitForHeldStoreReads(1), "the sign-in offer never read the store");
+
+        bool reported = false;
+        bool removed = false;
+        host->mpAuth->forgetSavedSignIn([&](bool success) {
+            reported = true;
+            removed = success;
+        });
+        QVERIFY2(!reported, "a forget must not remove the sign-in while a read of it is in progress");
+
+        releaseAllHeldStoreReads(host);
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "the connection should still be handed a way to sign in");
+        QVERIFY2(isVersionTwoHandoff(sent), qPrintable(qsl("a sign-in forgotten during the read should not be resumed: %1").arg(describe(sent))));
+        QCOMPARE(mpServer->countReceived(qsl("Char.Login.Reconnect")), 0);
+        QVERIFY(reported);
+        QVERIFY(removed);
+    }
+
+    void testARecoveryDoesNotOverwriteASaveRequestedDuringItsRead()
+    {
+        Host* host = connectAndNegotiate(true);
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+        QVERIFY(seedSplitSignIn(host->getName(), qsl("{\"account\": \"acct:char\", \"provider\": \"discord\", \"secure_only\": true}"), qsl("rejected-token")));
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\"]}"));
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Reconnect"), sent), "client did not replay the saved token");
+        holdStoreReads(host);
+
+        // The rejection's recovery reads the store; while it does, a fresh token arrives.
+        mpServer->sendGmcp(qsl("Char.Login.Result {\"success\": false, \"message\": \"Reconnect token expired\"}"));
+        QVERIFY2(waitForHeldStoreReads(1), "the recovery never read the store");
+        mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:char\", \"token\": \"fresh-token\"}"));
+        QVERIFY2(waitForGmcpProcessed(host), "the token never reached the client");
+        QCOMPARE(CredentialManager::retrieveCredential(host->getName(), qsl("reconnect-token")), qsl("rejected-token"));
+
+        // What the read returns still shows the rejected token, but the drop it would lead to must not
+        // replace the save that is waiting for it.
+        releaseAllHeldStoreReads(host);
+        QVERIFY2(waitForStoredToken(host, qsl("fresh-token")), "a recovery must not overwrite a token saved while it was reading");
     }
 
     void testAForgetOvertakenByANewSignInReportsFailure()
@@ -2165,6 +2234,32 @@ private slots:
         QVERIFY(waitForConsoleContains(host, qsl("saved sign-in has expired")));
     }
 
+    void testASignInReadWhileASaveIsPartWayThroughReplaysTheNewToken()
+    {
+        // A save replacing one account's sign-in with another's lands its metadata before its token. A
+        // read in between must not pair the new account with the old account's token.
+        Host* host = connectAndNegotiate(true);
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+        QVERIFY(seedSplitSignIn(host->getName(), qsl("{\"account\": \"acct:old\", \"provider\": \"discord\", \"secure_only\": false}"), qsl("old-account-token")));
+        holdStoreOperations(host);
+
+        mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:new\", \"token\": \"new-account-token\", \"secure_only\": false}"));
+        QVERIFY2(waitForHeldStoreOperations(1), "the save never reached the store");
+        releaseHeldStoreOperation(host);
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\"]}"));
+        QVERIFY2(waitForGmcpProcessed(host), "the sign-in offer never reached the client");
+        releaseAllHeldStoreOperations(host);
+
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Reconnect"), sent), "client did not replay the saved token");
+        QVERIFY2(sent.value(qsl("account")).toString() == qsl("acct:new") && sent.value(qsl("token")).toString() == qsl("new-account-token"),
+                 qPrintable(qsl("a read part way through a save replayed a mismatched sign-in: %1").arg(describe(sent))));
+    }
+
     void testAResultWithoutSuccessIsAFailedLogin()
     {
         // success is required; a server that leaves it out has not said the sign-in worked.
@@ -2191,6 +2286,33 @@ private:
         host->mpAuth->mpStoreReconciler.reset(new SignInStoreReconciler([this](SignInStoreReconciler::Operation op, QString payload, SignInStoreReconciler::Done done) {
             mHeldStoreOperations.push_back({op, std::move(payload), std::move(done)});
         }));
+    }
+
+    // Swaps the authenticator's credential reader for one whose reads wait in mHeldStoreReads until
+    // released, for the same reason as holdStoreOperations().
+    void holdStoreReads(Host* host)
+    {
+        host->mpAuth->mStoreReader = [this](const QString& key, GMCPAuthenticator::StoreReadDone done) {
+            mHeldStoreReads.push_back({key, std::move(done)});
+        };
+    }
+
+    bool waitForHeldStoreReads(std::size_t count)
+    {
+        return QTest::qWaitFor(
+                [&]() {
+                    return mHeldStoreReads.size() >= count;
+                },
+                4000);
+    }
+
+    void releaseAllHeldStoreReads(Host* host)
+    {
+        while (!mHeldStoreReads.empty()) {
+            auto held = std::move(mHeldStoreReads.front());
+            mHeldStoreReads.erase(mHeldStoreReads.begin());
+            host->mpAuth->readStoreKey(held.key, std::move(held.done));
+        }
     }
 
     bool waitForHeldStoreOperations(std::size_t count)
