@@ -440,26 +440,26 @@ function Adjustable.Container:adjustConnectedContainers()
                     width = nil
                     x = nil
                 end
-                container:move(x, y)
-                container:resize(width, height)
+                Geyser.Container.move(container, x, y)
+                Geyser.Container.resize(container, width, height)
             else
                 if where == "right" then
-                    container:resize(self:get_x() - container:get_x(), nil)
+                    Geyser.Container.resize(container, self:get_x() - container:get_x(), nil)
                 end
                 if where == "left" then
                     local right_x = container:get_x() + container:get_width()
                     local left_x = self:get_x() + self:get_width()
-                    container:move(left_x, nil)
-                    container:resize(right_x - container:get_x(), nil)
+                    Geyser.Container.move(container, left_x, nil)
+                    Geyser.Container.resize(container, right_x - container:get_x(), nil)
                 end
                 if where == "bottom" then
-                    container:resize(nil, self:get_y() - container:get_y())
+                    Geyser.Container.resize(container, nil, self:get_y() - container:get_y())
                 end
                 if where == "top" then
                     local bottom_y = container:get_y() + container:get_height()
                     local top_y = self:get_y() + self:get_height()
-                    container:move(nil, top_y)
-                    container:resize(nil, bottom_y - container:get_y())
+                    Geyser.Container.move(container, nil, top_y)
+                    Geyser.Container.resize(container, nil, bottom_y - container:get_y())
                 end
             end
             container:adjustBorder()
@@ -542,13 +542,22 @@ function Adjustable.Container:setBorderMargin(margin)
     self:adjustBorder()
 end
 
+-- an attached container's border is its own geometry plus the margin, whichever handler moved or resized it
+function Adjustable.Container:move(x, y)
+    Geyser.Container.move(self, x, y)
+    if self.attached then self:adjustBorder() end
+end
+
+function Adjustable.Container:resize(width, height)
+    Geyser.Container.resize(self, width, height)
+    if self.attached then self:adjustBorder() end
+end
+
 -- internal function to resize the border automatically if the window size changes
 function Adjustable.Container:resizeBorder()
     local winw, winh = getMainWindowSize()
-    -- Check if Window resize already happened.
-    -- If that is not checked this creates an infinite loop and crashes because setBorder also causes a resize event
+    -- setBorder raises another resize event; Host::setBorders ignoring an unchanged border is what ends the chain, recording the size first only spares it a measurement
     if winw ~= self.old_w_value or winh ~= self.old_h_value then
-        -- recorded before adjusting: setBorder raises a resize event that finds nothing to do
         self.old_w_value = winw
         self.old_h_value = winh
         self:adjustBorder()

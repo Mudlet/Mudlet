@@ -420,6 +420,7 @@ describe("Tests functionality of Adjustable.Container", function()
       assert.is_nil(Adjustable.Container.Attached.left.gasAttachPlain)
       assert.is_nil(Adjustable.Container.Attached.left.gasAttachName)
       assert.is_nil(Adjustable.Container.Attached.left.gasDetachName)
+      assert.is_nil(Adjustable.Container.Attached.left.gasDetachFresh)
     end)
 
     it("reserves a border while attached and gives it back on detach", function()
@@ -432,6 +433,15 @@ describe("Tests functionality of Adjustable.Container", function()
       assert.is_false(container.attached)
       assert.is_nil(Adjustable.Container.Attached.left.gasAttachPlain)
       assert.are.equal(0, getBorderLeft())
+    end)
+
+    -- handing the border back raises a resize event, which a container with no recorded size would answer
+    it("gives the border back when detached before any resize event reached it", function()
+      local container = make("gasDetachFresh", 200)
+      container:attachToBorder("left")
+      assert.is_nil(container.old_w_value)
+      container:detach()
+      assert.are.equal(borderBefore, getBorderLeft())
     end)
 
     it("detaches a same named container it takes the registration from", function()
@@ -1580,15 +1590,8 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
   end)
 
   describe("Adjustable.Container:resizeBorder", function()
-    -- the border is re-measured on the resize event itself rather than off a
-    -- timer: a border that trails the window by 200ms is one the text visibly
-    -- lags behind for the whole of a drag. Setting a border raises another
-    -- resize event, and recording the size before the adjustment rather than
-    -- after it is what leaves that one nothing to do
-    --
-    -- tempTimer is stubbed so that a regression to the deferred form shows up
-    -- here as an armed timer, rather than as one firing on a deleted container
-    -- 0.2s into some later spec
+    -- measured on the resize event itself: a border that trails the window by a timer is one the text lags behind for a whole drag
+    -- tempTimer is stubbed so a regression to the deferred form leaves no timer to fire on a deleted container 0.2s later; armed() catches one that defers as well as measures
     local function countTimers()
       local armed = 0
       local realTempTimer = tempTimer
@@ -1597,20 +1600,21 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       return function() return armed end
     end
 
-    -- resizing the container leaves the reservation stale without renewing it,
-    -- so the border afterwards says whether the handler did the work itself
+    -- resize() renews the reservation itself now, so this goes behind the border's back: bump the margin, forget the size last seen
+    local function stale(container)
+      container.attachedMargin = container.attachedMargin + 15
+      container.old_w_value, container.old_h_value = -1, -1
+    end
+
     it("re-measures the border on the event, arming no timer", function()
       local container = make("gapResizeBorder", {width = 200})
       container:attachToBorder("left")
       local armed = countTimers()
 
-      container:resize(300, 100)
-      -- the state a window resize leaves behind: a size that is not the one
-      -- the handler last saw
-      container.old_w_value, container.old_h_value = -1, -1
+      stale(container)
       container:resizeBorder()
 
-      assert.are.equal(container:get_width() + container:get_x() + 5, getBorderLeft())
+      assert.are.equal(container:get_width() + container:get_x() + container.attachedMargin, getBorderLeft())
       assert.are.equal(0, armed())
     end)
 
@@ -1621,11 +1625,10 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       container:attachToBorder("top")
       local armed = countTimers()
 
-      container:resize(200, 150)
-      container.old_w_value, container.old_h_value = -1, -1
+      stale(container)
       container:resizeBorder()
 
-      assert.are.equal(container:get_height() + container:get_y() + 5, getBorderTop())
+      assert.are.equal(container:get_height() + container:get_y() + container.attachedMargin, getBorderTop())
       assert.are.equal(0, armed())
     end)
 
@@ -1636,34 +1639,64 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       container:resizeBorder()
       local reserved = getBorderLeft()
 
-      container:resize(300, 100)
+      container.attachedMargin = container.attachedMargin + 15
       container:resizeBorder()
 
       assert.are.equal(reserved, getBorderLeft())
     end)
 
-    -- the deferral this replaced was there because setting a border raises
-    -- another resize event: recording the size first is what stops that one
-    -- coming back round, so it is worth a spec of its own
-    it("does not come back round when setting the border raises another resize event", function()
-      local container = make("gapResizeNoLoop", {width = 200})
+    it("sets the border once, though setting it raises another resize event", function()
+      local container = make("gapResizeOnce", {width = 200})
       container:attachToBorder("left")
-      local calls = 0
-      local real = Adjustable.Container.resizeBorder
-      Adjustable.Container.resizeBorder = function(self, ...)
-        calls = calls + 1
-        return real(self, ...)
-      end
-      finally(function() Adjustable.Container.resizeBorder = real end)
+      local sets = 0
+      local real = setBorderLeft
+      _G.setBorderLeft = function(...) sets = sets + 1 return real(...) end
+      finally(function() _G.setBorderLeft = real end)
 
-      -- a stale reservation, so the adjustment really does change the border
-      -- and really does raise the event that used to loop
-      container:resize(300, 100)
-      container.old_w_value, container.old_h_value = -1, -1
+      stale(container)
       container:resizeBorder()
 
-      assert.are.equal(container:get_width() + container:get_x() + 5, getBorderLeft())
-      assert.is_true(calls <= 3, "resizeBorder re-entered " .. calls .. " times")
+      assert.are.equal(container:get_width() + container:get_x() + container.attachedMargin, getBorderLeft())
+      assert.are.equal(1, sets)
+    end)
+
+    it("is run by the resize event itself", function()
+      local container = make("gapResizeEvent", {width = 200})
+      container:attachToBorder("left")
+
+      stale(container)
+      raiseEvent("sysWindowResizeEvent", getMainWindowSize())
+
+      assert.are.equal(container:get_width() + container:get_x() + container.attachedMargin, getBorderLeft())
+    end)
+
+    -- handlers run in registration order, so one registered after attaching finds the border already measured
+    it("follows a container that a later handler of the same event resizes", function()
+      local container = make("gapResizeLater", {width = 150})
+      container:attachToBorder("left")
+      local handler = registerAnonymousEventHandler("sysWindowResizeEvent", function() container:resize(400, nil) end)
+      finally(function() killAnonymousEventHandler(handler) end)
+
+      container.old_w_value, container.old_h_value = -1, -1
+      raiseEvent("sysWindowResizeEvent", getMainWindowSize())
+
+      assert.are.equal(400 + container:get_x() + container.attachedMargin, getBorderLeft())
+    end)
+
+    it("moves a connected container along with it", function()
+      local anchor = make("gapResizeAnchor", {width = 150})
+      local follower = make("gapResizeFollower", {width = 150, y = 200})
+      anchor:attachToBorder("left")
+      follower:attachToBorder("left")
+      follower:connectToBorder("left")
+      anchor.old_w_value, anchor.old_h_value = getMainWindowSize()
+      follower.old_w_value, follower.old_h_value = getMainWindowSize()
+
+      anchor:resize(300, 100)
+      anchor.old_w_value, anchor.old_h_value = -1, -1
+      anchor:resizeBorder()
+
+      assert.are.equal(300, follower:get_width())
     end)
 
     it("remembers the size it last saw", function()
