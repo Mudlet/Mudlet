@@ -43,6 +43,7 @@ class PasswordMigrationTest : public QObject {
 
 private:
   QTemporaryDir mTempDir;
+  QTemporaryDir mConfigDir;
 
   // Mirrors the portable password file write logic from
   // dlgConnectionProfiles::writeProfileData / MudletApp::writeProfileData
@@ -81,6 +82,15 @@ private slots:
   void initTestCase() {
     qputenv("MUDLET_TEST_MODE", "1");
     QVERIFY(mTempDir.isValid());
+
+    // The credentials these tests store are filed under
+    // QStandardPaths::AppConfigLocation, which for a QTEST_MAIN program is
+    // $HOME/.config/PasswordMigrationTest - so without this the suite leaves
+    // encryption keys in the home directory of whoever runs it. Same recipe as
+    // CredentialManagerTest, and like it this only takes effect where
+    // QStandardPaths honours XDG.
+    QVERIFY(mConfigDir.isValid());
+    qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
   }
 
   // Verify the portable file round-trip: write → read is lossless
