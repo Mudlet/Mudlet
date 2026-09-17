@@ -783,7 +783,13 @@ void XMLimport::readHost(Host* pHost)
     setBoolAttribute(qsl("mEnableMSDP"), pHost->mEnableMSDP);
     setBoolAttribute(qsl("mEnableMSP"), pHost->mEnableMSP);
     setBoolAttribute(qsl("mMapStrongHighlight"), pHost->mMapStrongHighlight);
-    setBoolAttribute(qsl("mEnableSpellCheck"), pHost->mEnableSpellCheck);
+    // Through the setter rather than at the field, so that turning spell check
+    // on always queues the dictionary read. Nothing is queued here: the whole
+    // import runs inside the profile loading sequence, which the setter skips,
+    // and the warm that follows the load covers whatever was read in.
+    bool enableSpellCheck = false;
+    setBoolAttribute(qsl("mEnableSpellCheck"), enableSpellCheck);
+    pHost->setEnableSpellCheck(enableSpellCheck);
     if (attributes().hasAttribute(QLatin1String("mShowInfo"))) {
         // Old - pre Map Info versions of Mudlet (those before
         // https://github.com/Mudlet/Mudlet/pull/4718) used the above
