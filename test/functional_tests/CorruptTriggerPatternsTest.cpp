@@ -358,7 +358,8 @@ private:
     static bool matches(TTrigger* pTrigger, const QString& line)
     {
         const QByteArray utf8 = line.toUtf8();
-        return pTrigger->match(utf8.constData(), utf8.size(), line, -1);
+        const TUtf8Subject subject(utf8.constData(), utf8.size());
+        return pTrigger->match(subject, line, -1);
     }
 
     // match_substring() indexes mSubstringPatterns by pattern number and
