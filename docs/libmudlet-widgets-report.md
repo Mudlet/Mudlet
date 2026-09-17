@@ -196,7 +196,7 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `modern_glwidget.cpp` | 0 | 2 | QWidget |
 | `SelectionRectangleHandler.cpp` | 1 | 1 | QTreeWidgetItem |
 | `TDockWidget.h` | 1 | 1 | QDockWidget |
-| `TLuaInterpreter.cpp` | 1 | 1 | QApplication |
+| `TLuaInterpreterUI.cpp` | 1 | 1 | QApplication |
 | `TMapViewManager.h` | 1 | 1 | QDockWidget |
 | `TSplitterHandle.cpp` | 0 | 2 | QSplitterHandle, QSplitter |
 | `TSplitterHandle.h` | 1 | 1 | QSplitterHandle |
@@ -367,6 +367,7 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 - `TLabelModel.h`
 - `TLinkStore.cpp`
 - `TLinkStore.h`
+- `TLuaInterpreter.cpp`
 - `TLuaInterpreter.h`
 - `TLuaInterpreterDiscord.cpp`
 - `TLuaInterpreterMapper.cpp`
@@ -375,7 +376,6 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 - `TLuaInterpreterNetworking.cpp`
 - `TLuaInterpreterSpeechToText.cpp`
 - `TLuaInterpreterTextToSpeech.cpp`
-- `TLuaInterpreterUI.cpp`
 - `TMap.cpp`
 - `TMap.h`
 - `TMapLabel.cpp`
