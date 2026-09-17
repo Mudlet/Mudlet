@@ -3105,9 +3105,9 @@ int TLuaInterpreter::getProfiles(lua_State* L)
         lua_pushstring(L, profile.toUtf8().constData());
         lua_newtable(L);
 
-        QString url = mudlet::self()->readProfileData(profile, qsl("url"));
-        QString port = mudlet::self()->readProfileData(profile, qsl("port"));
-        QString description = mudlet::self()->readProfileData(profile, qsl("description"));
+        QString url = MudletPaths::readProfileData(profile, qsl("url"));
+        QString port = MudletPaths::readProfileData(profile, qsl("port"));
+        QString description = MudletPaths::readProfileData(profile, qsl("description"));
 
         // if url/port haven't been written to disk yet (which is what happens
         // when a default profile is opened for the first time), fetch this data from game details
@@ -3180,7 +3180,7 @@ int TLuaInterpreter::loadProfile(lua_State* L)
         return 2;
     }
 
-    const QString profileName = mudlet::self()->getCanonicalProfileName(requestedName);
+    const QString profileName = MudletPaths::getCanonicalProfileName(requestedName);
     if (profileName.isEmpty()) {
         lua_pushnil(L);
         lua_pushfstring(L, "loadProfile: profile '%s' does not exist", requestedName.toUtf8().constData());
@@ -3220,7 +3220,7 @@ int TLuaInterpreter::closeProfile(lua_State* L)
         requestedName = getVerifiedString(L, __func__, 1, "profile name");
     }
 
-    const QString profileName = mudlet::self()->getCanonicalProfileName(requestedName);
+    const QString profileName = MudletPaths::getCanonicalProfileName(requestedName);
     if (profileName.isEmpty()) {
         lua_pushnil(L);
         lua_pushfstring(L, "closeProfile: profile '%s' does not exist", requestedName.toUtf8().constData());
