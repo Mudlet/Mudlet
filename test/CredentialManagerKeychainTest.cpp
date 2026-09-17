@@ -877,10 +877,12 @@ void CredentialManagerKeychainTest::testDeletingAManagerMidLookupLeavesItsReadTo
 
     const auto answer = startRetrieval(*manager, mProfile, mKey);
     QVERIFY(staller.waitForAnyStalled());
-    // As a dialog does when it closes on a lookup still in progress
+    // As a dialog does when it closes on a lookup still in progress. Checked before any event runs: a
+    // manager's children are deleted synchronously as it is destroyed, whereas a detached read deletes
+    // itself only once the keychain answers - which a real backend may well do moments later.
     manager.reset();
-    QTest::qWait(100);
     QVERIFY2(staller.firstStalledAlive(), "a read still waiting on the keychain was deleted along with its manager");
+    QTest::qWait(100);
     QCOMPARE(answer->count, 0);
 
     staller.release();
