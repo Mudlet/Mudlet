@@ -676,6 +676,35 @@ void TTrigger::rebuildPrescanGrams()
         grams.push_back(gram);
     }
     mPrescanGrams = std::move(grams);
+
+    // The bigram summary reaches further than the n-gram index: a perl pattern
+    // with a required literal is decidable by it too. A start-of-line or exact
+    // match holds every pair of its pattern just as a substring match does, and
+    // all three compare case-sensitively, which is how bitsFor() summarises.
+    std::vector<TBigramFilter::Bits> patternBigrams;
+    patternBigrams.reserve(mPatterns.size());
+    for (int i = 0; i < mPatterns.size(); ++i) {
+        switch (mPatternKinds.at(i)) {
+        case REGEX_SUBSTRING:
+            patternBigrams.push_back(mSubstringPatterns[i].bigrams);
+            continue;
+        case REGEX_PERL:
+            if (mRegexLiterals[i].matcher) {
+                patternBigrams.push_back(mRegexLiterals[i].bigrams);
+                continue;
+            }
+            break;
+        case REGEX_BEGIN_OF_LINE_SUBSTRING:
+        case REGEX_EXACT_MATCH:
+            patternBigrams.push_back(TBigramFilter::bitsFor(mPatterns.at(i)));
+            continue;
+        default:
+            break;
+        }
+        patternBigrams.clear();
+        break;
+    }
+    mPatternBigrams = std::move(patternBigrams);
     invalidatePrescan();
 }
 
@@ -1657,6 +1686,9 @@ bool TTrigger::match(const char* haystackC, const int haystackCLength, const QSt
             if (conditionMet || (mPatterns.empty())) {
                 for (auto* triggerNode : *mpMyChildrenList) {
                     auto* trigger = static_cast<TTrigger*>(triggerNode);
+                    if (pLineBigrams && trigger->cannotMatch(*pLineBigrams, haystack)) {
+                        continue;
+                    }
                     ret = trigger->match(haystackC, haystackCLength, haystack, line, posOffset, pLineBigrams);
                     if (ret) {
                         conditionMet = true;
