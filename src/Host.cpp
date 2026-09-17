@@ -62,6 +62,7 @@
 #include "SecureStringUtils.h"
 
 #include <chrono>
+#include <cstring>
 #include <QtConcurrentRun>
 #include <QCoreApplication>
 #include <QDataStream>
@@ -2271,10 +2272,13 @@ void Host::runTriggers(int line)
         }
         mTriggerHaystack = std::move(haystack);
     });
-    haystack.resize(0);
-    haystack.reserve(consoleModel.mCurrentLine.size() + 1);
-    haystack.append(QStringView{consoleModel.mCurrentLine});
-    haystack.append(u'\n');
+    // Sized once and filled in place: a reserve and two appends each re-check
+    // sharing and capacity for one line's worth of characters
+    const qsizetype lineLength = consoleModel.mCurrentLine.size();
+    haystack.resize(lineLength + 1);
+    QChar* const haystackData = haystack.data();
+    memcpy(haystackData, consoleModel.mCurrentLine.constData(), lineLength * sizeof(QChar));
+    haystackData[lineLength] = u'\n';
 
     if (TDebug::wants(TDebug::Category::GameLine)) {
         TDebug(Qt::darkGreen, Qt::black, TDebug::Category::GameLine) << "new line arrived:" >> this;
@@ -2306,14 +2310,29 @@ void Host::incomingStreamProcessor(const QString& data, int line)
 {
     mTriggerUnit.processDataStream(data, line);
 
-    mAliasUnit.doCleanup();
-    mTimerUnit.doCleanup();
-    mTriggerUnit.doCleanup();
-    mKeyUnit.doCleanup();
-    mActionUnit.doCleanup();
-    // ScriptUnit defers deletes too (a package script uninstalling its own package
-    // mid-compile or mid-event-dispatch), so flush it here alongside the others:
-    mScriptUnit.doCleanup();
+    // Every unit's doCleanup() starts by asking this, and on nearly every line
+    // all six answer no; asking here keeps the six calls off the per-line path.
+    // ScriptUnit defers deletes too (a package script uninstalling its own
+    // package mid-compile or mid-event-dispatch), so it is flushed here
+    // alongside the others:
+    if (mAliasUnit.hasPendingDeletes()) {
+        mAliasUnit.doCleanup();
+    }
+    if (mTimerUnit.hasPendingDeletes()) {
+        mTimerUnit.doCleanup();
+    }
+    if (mTriggerUnit.hasPendingDeletes()) {
+        mTriggerUnit.doCleanup();
+    }
+    if (mKeyUnit.hasPendingDeletes()) {
+        mKeyUnit.doCleanup();
+    }
+    if (mActionUnit.hasPendingDeletes()) {
+        mActionUnit.doCleanup();
+    }
+    if (mScriptUnit.hasPendingDeletes()) {
+        mScriptUnit.doCleanup();
+    }
 }
 
 void Host::slot_timerFires()

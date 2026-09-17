@@ -175,6 +175,58 @@ private:
     mutable int mQuestionsAsked = 0;
 };
 
+// The UTF-8 bytes a perl pattern matches against. A line is encoded the first
+// time one asks for them, which with the literal pre-check most never do, so
+// a line no perl pattern gets as far as is not encoded at all. A filter's
+// capture is bytes already and is handed over as it is.
+class TUtf8Subject
+{
+public:
+    // Encodes line into scratch when first asked; the line has to outlive
+    // this object. Passing the storage in rather than allocating it is what
+    // lets a line no longer than any before it allocate nothing.
+    TUtf8Subject(const QString& line, QByteArray&& scratch)
+    : mpPendingLine(&line)
+    , mScratch(std::move(scratch))
+    {
+    }
+    TUtf8Subject(QString&&, QByteArray&&) = delete;
+    // Already encoded bytes, which have to outlive this object
+    TUtf8Subject(const char* data, const int length)
+    : mData(data)
+    , mLength(length)
+    {
+    }
+    Q_DISABLE_COPY_MOVE(TUtf8Subject)
+
+    const char* data() const
+    {
+        if (mpPendingLine) {
+            encode();
+        }
+        return mData;
+    }
+    // Perl patterns see the line only as far as its first NUL byte, so this
+    // is not the byte count
+    int length() const
+    {
+        if (mpPendingLine) {
+            encode();
+        }
+        return mLength;
+    }
+    // Hands the encoding storage back, to be lent to the next line
+    QByteArray takeScratch() { return std::move(mScratch); }
+
+private:
+    void encode() const;
+
+    mutable const QString* mpPendingLine = nullptr;
+    mutable QByteArray mScratch;
+    mutable const char* mData = nullptr;
+    mutable int mLength = 0;
+};
+
 class TTrigger : public Tree<TTrigger>
 {
     Q_DECLARE_TR_FUNCTIONS(TTrigger) // Needed so we can use tr() even though TTrigger is NOT derived from QObject
@@ -221,7 +273,7 @@ public:
     QString getScript() const { return mScript; }
     bool setScript(const QString& script);
     bool compileScript();
-    bool match(const char* haystackC, int haystackCLength, const QString&, int line, int posOffset = 0, const TBigramFilter* pLineBigrams = nullptr);
+    bool match(const TUtf8Subject& subject, const QString&, int line, int posOffset = 0, const TBigramFilter* pLineBigrams = nullptr);
     // Runs only the patterns that are a pure function of the line, and only far
     // enough to answer yes or no. Safe to call from another thread: it writes
     // nothing, taking the one piece of mutable state a match needs - PCRE2's
@@ -312,7 +364,7 @@ public:
     void disableTrigger(const QString&);
     TTrigger* killTrigger(const QString&);
     bool match_substring(const QString&, const QString&, int, int posOffset, int lineNumber, const TBigramFilter* pLineBigrams);
-    bool match_perl(const char* haystackC, int haystackCLength, const QString&, int, int posOffset, int lineNumber, const TBigramFilter* pLineBigrams = nullptr);
+    bool match_perl(const TUtf8Subject& subject, const QString&, int, int posOffset, int lineNumber, const TBigramFilter* pLineBigrams = nullptr);
     bool match_exact_match(const QString&, const QString&, int, int posOffset, int lineNumber);
     bool match_begin_of_line_substring(const QString& haystack, const QString& needle, int patternNumber, int posOffset, int lineNumber);
     bool match_lua_code(int);

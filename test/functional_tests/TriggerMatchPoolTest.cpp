@@ -140,7 +140,8 @@ private slots:
         QVERIFY(pool.prescan(&trigger, 1, passId, subject.constData(), static_cast<int>(subject.size()), line, unprepared));
 
         TTrigger::setPrescanPassId(passId);
-        const bool matched = trigger->match(subject.constData(), static_cast<int>(subject.size()), line, 0, 0, &unprepared);
+        const TUtf8Subject matchSubject(subject.constData(), static_cast<int>(subject.size()));
+        const bool matched = trigger->match(matchSubject, line, 0, 0, &unprepared);
         TTrigger::setPrescanPassId(0);
         QVERIFY(matched);
         QCOMPARE(luaInteger(mpHost, "bigramHits"), 1);
