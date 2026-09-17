@@ -40,6 +40,8 @@ class dlgConnectionProfiles : public QDialog, public Ui::connection_profiles
 {
     Q_OBJECT
 
+    friend class ConnectionDialogOfflineProfileTest;
+
 public:
     Q_DISABLE_COPY(dlgConnectionProfiles)
     explicit dlgConnectionProfiles(QWidget* parent = nullptr);

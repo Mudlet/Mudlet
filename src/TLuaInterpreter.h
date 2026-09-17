@@ -138,6 +138,8 @@ public:
     void setMultiCaptureGroups(const std::list<std::list<std::string>>& captureList, const std::list<std::list<int>>& posList, QVector<NameGroupMatches>& nameMatches);
     void adjustCaptureGroups(int x, int a);
     void clearCaptureGroups();
+    int pushNestedDispatchState();
+    void popNestedDispatchState(const int depth);
     bool callEventHandler(const QString& function, const TEvent& pE);
     bool callCmdLineAction(const int func, QString);
     bool callAnonymousFunction(const int func, QString name);
@@ -969,6 +971,26 @@ private:
     QVector<QPair<QString, QString>> mCapturedNameGroups;
     QMap<QString, QPair<int, int>> mCapturedNameGroupsPosList;
     QVector<QVector<QPair<QString, QString>>> mMultiCaptureNameGroups;
+    // An alias pass a script asks for - expandAlias() - sets "command" and the
+    // capture groups for the scripts that pass runs. What the calling script was
+    // given is parked here for the duration and handed back when the pass
+    // returns, so nesting does not leave the caller reading the inner pass's
+    // command and none of its own captures. One entry per level of nesting.
+    struct NestedDispatchState
+    {
+        std::vector<std::string> captureGroupList;
+        std::vector<int> captureGroupPosList;
+        std::list<std::list<std::string>> multiCaptureGroupList;
+        std::list<std::list<int>> multiCaptureGroupPosList;
+        NameGroupMatches capturedNameGroups;
+        NamedMatchesRanges capturedNameGroupsPosList;
+        QVector<NameGroupMatches> multiCaptureNameGroups;
+        int matchesRef = LUA_NOREF;
+        int multimatchesRef = LUA_NOREF;
+        int commandRef = LUA_NOREF;
+    };
+    std::vector<NestedDispatchState> mNestedDispatchStates;
+    void releaseNestedDispatchState(NestedDispatchState&);
     QMap<QNetworkReply*, QString> downloadMap;
 
     // A waitForEvent() call in progress. mArgsRef is a Lua registry reference,
