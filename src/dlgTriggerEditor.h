@@ -108,6 +108,7 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
     Q_OBJECT
 
     // Allow QTest-based test classes to access private members
+    friend class AddonControlsTest;
     friend class dlgTriggerEditorUndoRedoTest;
     friend class EditorBannerViewSwitchTest;
     friend class EditorClipboardXmlTest;
