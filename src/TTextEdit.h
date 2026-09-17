@@ -86,6 +86,7 @@ public:
     void showEvent(QShowEvent* event) override;
     void updateScreenView();
     void updateScrollBar(int);
+    void applyPendingScrollBarUpdate();
     void calculateHMaxRange();
     void updateHorizontalScrollBar();
     void highlightSelection();
@@ -313,6 +314,12 @@ private:
     QElapsedTimer mSincePaint;
     // What the deferred repaint has to cover once the pacer fires.
     QRegion mPendingPaintRegion;
+    // The scrollbar repaints on every range change, so new output moves it
+    // with the paced frame rather than with every packet.
+    bool mScrollBarUpdatePending = false;
+    // Set while updateScrollBar() is moving the bar itself, which
+    // slot_scrollBarMoved() must not mistake for the user dragging it.
+    bool mUpdatingScrollBar = false;
     std::chrono::high_resolution_clock::time_point mCopyImageStartTime;
     // How many "normal" width "characters" are each tab stop apart, while
     // there is no current mechanism to adjust this, sensible values will

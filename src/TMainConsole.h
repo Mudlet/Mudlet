@@ -45,6 +45,7 @@ class TToolBar;
 class QDialog;
 class QDockWidget;
 class QProgressDialog;
+class QTimer;
 
 class TMainConsole : public TConsole
 {
@@ -251,6 +252,7 @@ private slots:
     void slot_loggingAnnouncement(const bool isLogging, const QString& logFileName);
     void slot_loggingStateChanged(const bool isLogging);
     void slot_warmSystemSpellDictionary();
+    void slot_refreshLatencyBox();
 
 
 signals:
@@ -261,6 +263,12 @@ signals:
 
 
 private:
+    // The latency box repaints on every setText(), so a flood of packets is
+    // shown at most once per pace interval - the same cap the panes paint at.
+    static constexpr int csmLatencyBoxPaceMs = 16;
+    QTimer* mpLatencyBoxPacer = nullptr;
+    double mLatencyProcessT = 0.0;
+
     void createMapProgressDialog(const QString& title, const QString& label, const QString& cancelButtonText, int minimum, int maximum);
     void loadSystemSpellDictionary();
     // Where reparentLabel() and reparentWindow() parent an element named as a
