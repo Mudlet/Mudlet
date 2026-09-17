@@ -23,7 +23,9 @@
 
 #include "dlgNotepad.h"
 
-#include "mudlet.h"
+#include "MudletPaths.h"
+#include "Host.h"
+#include "utils.h"
 
 #include <QApplication>
 #include <QCloseEvent>
@@ -45,6 +47,7 @@
 #include <QShortcut>
 #include <QTabBar>
 #include <QStringConverter>
+#include <QTabBar>
 #include <QTextDocument>
 #include <QTextStream>
 #include <QTimer>
@@ -324,8 +327,8 @@ QPlainTextEdit* dlgNotepad::currentTextEdit() const
 
 void dlgNotepad::save()
 {
-    const QString directoryPath = mudlet::getMudletPath(enums::profileHomePath, mpHost->getName());
-    const QString fileName = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), jsonNotesFileName);
+    const QString directoryPath = MudletPaths::getMudletPath(enums::profileHomePath, mpHost->getName());
+    const QString fileName = MudletPaths::getMudletPath(enums::profileDataItemPath, mpHost->getName(), jsonNotesFileName);
 
     const QDir dir;
     if (!dir.exists(directoryPath)) {
@@ -366,11 +369,11 @@ void dlgNotepad::save()
 
 bool dlgNotepad::migrateOldNotesFile()
 {
-    QString oldFileName = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), utf8EncodedNotesFileName);
+    QString oldFileName = MudletPaths::getMudletPath(enums::profileDataItemPath, mpHost->getName(), utf8EncodedNotesFileName);
     bool useUtf8 = true;
 
     if (!QFile::exists(oldFileName)) {
-        oldFileName = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), local8BitEncodedNotesFileName);
+        oldFileName = MudletPaths::getMudletPath(enums::profileDataItemPath, mpHost->getName(), local8BitEncodedNotesFileName);
         useUtf8 = false;
 
         if (!QFile::exists(oldFileName)) {
@@ -400,7 +403,7 @@ bool dlgNotepad::migrateOldNotesFile()
 
 void dlgNotepad::restore()
 {
-    const QString fileName = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), jsonNotesFileName);
+    const QString fileName = MudletPaths::getMudletPath(enums::profileDataItemPath, mpHost->getName(), jsonNotesFileName);
 
     if (QFile::exists(fileName)) {
         QFile file(fileName);

@@ -107,6 +107,7 @@ set(mudlet_SRCS
     MMCPServer.cpp
     mudlet.cpp
     MudletInstanceCoordinator.cpp
+    MudletPaths.cpp
     MxpTag.cpp
     OAuthClientFlow.cpp
     PackageItemDelegate.cpp
@@ -119,6 +120,7 @@ set(mudlet_SRCS
     SelectionRectangleHandler.cpp
     SentryWrapper.cpp
     ShortcutsManager.cpp
+    SignInStoreReconciler.cpp
     SingleLineTextEdit.cpp
     SpeechAudioCapture.cpp
     SpeechRecognizerFactory.cpp
@@ -362,6 +364,7 @@ set(mudlet_HDRS
     MMCPServer.h
     mudlet.h
     MudletInstanceCoordinator.h
+    MudletPaths.h
     MxpTag.h
     OAuthClientFlow.h
     PackageItemDelegate.h
@@ -374,6 +377,7 @@ set(mudlet_HDRS
     SelectionRectangleHandler.h
     SentryWrapper.h
     ShortcutsManager.h
+    SignInStoreReconciler.h
     SingleLineTextEdit.h
     SpeechAudioCapture.h
     SpeechRecognizer.h
@@ -761,7 +765,7 @@ endif()
 # Surface the linked qtkeychain version for diagnostics - the QTKEYCHAIN_VERSION macro in
 # qtkeychain's own header is stale (hardcoded to 0x000100), so the CMake package version is
 # the only reliable signal. Relevant since qtkeychain 0.17.0 changed the Windows credential
-# naming scheme (see CredentialManager::attemptCompatNamingMigration).
+# naming scheme (see the "pre-0.17 qtkeychain naming" stage in CredentialManager::retrievePassword).
 if(USE_OWN_QTKEYCHAIN)
   get_directory_property(QTKEYCHAIN_LINKED_VERSION
     DIRECTORY ${CMAKE_SOURCE_DIR}/3rdparty/qtkeychain

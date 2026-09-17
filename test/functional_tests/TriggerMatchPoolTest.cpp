@@ -38,6 +38,7 @@
 #include "PortableModeTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
+#include "MudletPaths.h"
 #include "TLuaInterpreter.h"
 #include "TriggerMatchPool.h"
 #include "mudlet.h"
@@ -105,7 +106,7 @@ private slots:
 
         // An empty save, so no default packages install; the dialogue slot is
         // what gives the profile the console feedTriggers() prints through.
-        const QString folder = mudlet::getMudletPath(enums::profileXmlFilesPath, mProfileName);
+        const QString folder = MudletPaths::getMudletPath(enums::profileXmlFilesPath, mProfileName);
         QVERIFY(QDir().mkpath(folder));
         QFile save(qsl("%1/2020-01-01#00-00-00.xml").arg(folder));
         QVERIFY(save.open(QIODevice::WriteOnly | QIODevice::Text));

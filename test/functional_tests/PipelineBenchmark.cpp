@@ -82,6 +82,7 @@
 #define BENCH_BUILD_ASAN 0
 #endif
 
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -620,18 +621,19 @@ private:
         return chunks;
     }
 
-    // Unset reads as 0. A knob that is set has to parse as a positive integer,
-    // because a typo that quietly measures the default workload is exactly
-    // the kind of comparison the compare script exists to refuse.
-    static int benchKnob(const char* name, bool& ok)
+    // A knob that is set but not a positive whole number fails the run rather
+    // than being ignored, as ignoring it would stamp the run as a standard one.
+    static int positiveKnob(const char* name)
     {
-        ok = true;
         if (!qEnvironmentVariableIsSet(name)) {
             return 0;
         }
-        bool parsed = false;
-        const int value = qEnvironmentVariableIntValue(name, &parsed);
-        ok = parsed && value > 0;
+        bool ok = false;
+        const int value = qEnvironmentVariable(name).toInt(&ok);
+        if (!ok || value <= 0) {
+            QTest::qFail(qPrintable(qsl("%1=\"%2\" is not a positive whole number").arg(QString::fromLatin1(name), qEnvironmentVariable(name))), __FILE__, __LINE__);
+            return 0;
+        }
         return value;
     }
 
@@ -715,16 +717,38 @@ private slots:
         // whatever the environment or Lua startup leaves LC_NUMERIC at.
         std::setlocale(LC_NUMERIC, "C");
         initializeQRCResources();
-        mCorpus = generateCorpus(kCorpusLines, mCorpusLines);
+        // MUDLET_BENCH_LINES feeds a corpus of that many lines instead of the
+        // fixed one and MUDLET_BENCH_CHUNK_BYTES feeds it in reads of that size
+        // rather than one burst. Either makes a different workload from the
+        // standard one, so corpus_version is reported as 0 and the compare
+        // script refuses to set such a run against a standard run.
+        const int requestedLines = positiveKnob("MUDLET_BENCH_LINES");
+        const int chunkBytes = positiveKnob("MUDLET_BENCH_CHUNK_BYTES");
+        const int chunkLines = positiveKnob("MUDLET_BENCH_CHUNK_LINES");
+        mWantedTriggers = positiveKnob("MUDLET_BENCH_TRIGGERS");
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        QVERIFY2(chunkBytes == 0 || chunkLines == 0, "MUDLET_BENCH_CHUNK_BYTES and MUDLET_BENCH_CHUNK_LINES are both set - they cut the corpus two different ways, so set one");
+        const bool linesOverridden = requestedLines > 0;
+        const bool chunked = chunkBytes > 0;
+
+        mCorpus = generateCorpus(linesOverridden ? requestedLines : kCorpusLines, mCorpusLines);
         mCorpusBytes = mCorpus.size();
-        QCOMPARE(mCorpusLines, kCorpusLines);
-        QCOMPARE(mCorpusBytes, kCorpusBytesForVersion);
-        bool ok = false;
-        mWantedTriggers = benchKnob("MUDLET_BENCH_TRIGGERS", ok);
-        QVERIFY2(ok, "MUDLET_BENCH_TRIGGERS is set but is not a positive integer");
-        const int chunkLines = benchKnob("MUDLET_BENCH_CHUNK_LINES", ok);
-        QVERIFY2(ok, "MUDLET_BENCH_CHUNK_LINES is set but is not a positive integer");
-        mFeedChunks = splitCorpus(mCorpus, chunkLines);
+        if (linesOverridden) {
+            QCOMPARE(mCorpusLines, requestedLines);
+        } else {
+            QCOMPARE(mCorpusLines, kCorpusLines);
+            QCOMPARE(mCorpusBytes, kCorpusBytesForVersion);
+        }
+        if (chunked) {
+            for (qsizetype offset = 0; offset < mCorpus.size(); offset += chunkBytes) {
+                mFeedChunks.append(mCorpus.mid(offset, chunkBytes));
+            }
+            qInfo().nospace() << "Feeding in " << mFeedChunks.size() << " reads of up to " << chunkBytes << " bytes";
+        } else {
+            mFeedChunks = splitCorpus(mCorpus, chunkLines);
+        }
         qint64 fedBytes = 0;
         for (const QByteArray& chunk : mFeedChunks) {
             fedBytes += chunk.size();
@@ -735,9 +759,12 @@ private slots:
         emitMetric("feed_chunk_lines", static_cast<qint64>(mFeedChunks.size() == 1 ? 0 : chunkLines));
         // Invariants, emitted here so they are present regardless of which bench
         // slots run: the compare script rejects an ASan-vs-release comparison,
-        // and a comparison across two different corpora.
+        // and a comparison across two different corpora or workloads.
         emitMetric("build_asan", static_cast<qint64>(BENCH_BUILD_ASAN));
-        emitMetric("corpus_version", static_cast<qint64>(kCorpusVersion));
+        emitMetric("corpus_version", static_cast<qint64>((linesOverridden || chunked) ? 0 : kCorpusVersion));
+        if (chunked) {
+            emitMetric("bench_chunk_bytes", static_cast<qint64>(chunkBytes));
+        }
         qInfo().nospace() << "Corpus: " << mCorpusLines << " lines, " << mCorpusBytes << " bytes";
     }
 
@@ -758,7 +785,7 @@ private slots:
         mPort = mpServer->serverPort();
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -1354,7 +1381,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = mudlet::getMudletPath(enums::profileHomePath, profileName);
+        const QString path = MudletPaths::getMudletPath(enums::profileHomePath, profileName);
         QDir dir(path);
         if (dir.exists()) {
             dir.removeRecursively();

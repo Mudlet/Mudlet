@@ -89,11 +89,14 @@ HARNESSES = {
         "must_be_set": ("display_overlay_cache_reused",),
         # Workload knobs the harness reads from the environment, as metric name
         # to variable. Two runs that differ here did different work, so they are
-        # refused. A dump from before a knob existed did the default workload,
-        # which every knob reports as 0 - so a missing one reads as 0 rather
-        # than as "skip the check", and a chunked run cannot slip past an old
-        # dump as a regression.
-        "workload_knobs": {"feed_chunk_lines": "MUDLET_BENCH_CHUNK_LINES"},
+        # refused. A knob left unset did the default workload, whether the run
+        # reports it as 0 or leaves it out, and so did a dump from before it
+        # existed - so a missing one reads as 0 rather than as "skip the check",
+        # and a chunked run cannot slip past an old dump as a regression.
+        "workload_knobs": {
+            "feed_chunk_lines": "MUDLET_BENCH_CHUNK_LINES",
+            "bench_chunk_bytes": "MUDLET_BENCH_CHUNK_BYTES",
+        },
         # Whether the trigger prescan ran in parallel: worth a note, since it
         # moves trigger_lines_per_sec by a lot, but a fair comparison across
         # the change that added it needs one side without it.
@@ -299,6 +302,12 @@ def check_invariants(before, after):
                 f"the same {before_harness} harness/build and cannot be compared."
             )
         if before[name] != after[name]:
+            if name == "corpus_version" and 0 in (before[name], after[name]):
+                fail(
+                    "corpus_version 0 marks a run made with MUDLET_BENCH_LINES or MUDLET_BENCH_CHUNK_BYTES "
+                    "set, which reshapes the workload; such a run compares only with another made with the "
+                    "same settings."
+                )
             reason = INVARIANT_HINTS.get(
                 name,
                 "the two runs measured different workloads or build configurations and cannot be "
