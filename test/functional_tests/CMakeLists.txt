@@ -4,6 +4,7 @@ endif()
 
 # Defined in the parent test/CMakeLists.txt; TESTS is per-directory, so call it here too.
 cmake_language(DEFER CALL restore_windows_test_output)
+cmake_language(DEFER CALL sandbox_test_config_dirs)
 
 set(FUNCTIONAL_TEST_SOURCES
 )
@@ -74,6 +75,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     ConsoleSearchBarTest.cpp
     WrapLineRewrapTest.cpp
     ScrollLostOnPartialRepaintTest.cpp
+    ScrollBarContrastTest.cpp
 )
 
 # Profiles: their config dir, their folders, and loading, saving and deleting them
@@ -82,6 +84,7 @@ set(PROFILE_GROUP_TEST_SOURCES
     ConfigDirOverrideTest.cpp
     ConnectionDialogCrashTest.cpp
     ConnectionDialogFocusTest.cpp
+    ConnectionDialogOfflineProfileTest.cpp
     DefaultGameDeleteTest.cpp
     DictionaryRoundTripTest.cpp
     MissingDisplayFontTest.cpp
@@ -97,7 +100,8 @@ set(PROFILE_GROUP_TEST_SOURCES
     XMLexportVariablesTest.cpp
 )
 
-# Telnet, and the protocols and escape sequences carried over it
+# Telnet and the other network protocols Mudlet speaks, and the escape sequences
+# carried over them
 set(TELNET_GROUP_TEST_SOURCES
     CsiCursorForwardTest.cpp
     cTelnetBufferTest.cpp
@@ -117,6 +121,7 @@ set(TELNET_GROUP_TEST_SOURCES
     TelnetTlsPromptTest.cpp
     TOscTest.cpp
     MsdpMalformedDiagnosticTest.cpp
+    IrcMessageGuardTest.cpp
 )
 
 # Triggers and the other scriptable units, and what a running script does to them
@@ -124,6 +129,7 @@ set(TRIGGER_GROUP_TEST_SOURCES
     CaptureGroupParkingTest.cpp
     BigramFilterTest.cpp
     CorruptTriggerPatternsTest.cpp
+    EmergencyStopResumeTest.cpp
     MultilineTriggerReentrancyTest.cpp
     SetScriptCallbackTest.cpp
     TFeedTriggersRecursionTest.cpp
@@ -146,6 +152,7 @@ set(EDITOR_GROUP_TEST_SOURCES
     TreeWidgetItemMoveTest.cpp
     TriggerEditorDisclosureTest.cpp
     TriggerEditorTest.cpp
+    TriggerPatternListLayoutTest.cpp
     VariableEditorWriteBackTest.cpp
 )
 
@@ -155,6 +162,7 @@ set(MAP_GROUP_TEST_SOURCES
     MapAreaReassignmentTest.cpp
     MapAreaSelectionTest.cpp
     MapCloseDuringImportTest.cpp
+    MapContextMenuLifetimeTest.cpp
     MapDownloadTest.cpp
     RoomExitsDialogTest.cpp
     MapLevelOfDetailTest.cpp
@@ -164,6 +172,7 @@ set(MAP_GROUP_TEST_SOURCES
     MapLockNoOpTest.cpp
     RoomPropertiesDialogTest.cpp
     MapperButtonConfigTest.cpp
+    MapperPanelTest.cpp
     MapProgressDialogSeamTest.cpp
     MapRoomGeometryTest.cpp
     MapRoundTripTest.cpp
@@ -214,6 +223,7 @@ set(SETTINGS_GROUP_TEST_SOURCES
     SettingsRoundTripTest.cpp
     SettingsSearchTest.cpp
     SettingsShellNavigationTest.cpp
+    SettingsSpellCheckEnableTest.cpp
 )
 
 # Teardown: who owns a profile's dialogs and windows, and what becomes of them when it closes

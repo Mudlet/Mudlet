@@ -283,6 +283,7 @@ private:
     bool processUrl(TMediaData& mediaData);
     void downloadFile(TMediaData& mediaData);
     QString setupMediaAbsolutePathFileName(TMediaData& mediaData);
+    static void seekToMediaStart(const std::shared_ptr<TMediaPlayer>& player);
     void connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player);
     static void purgeStoppedMediaPlayers(QList<std::shared_ptr<TMediaPlayer>>& mediaList);
     template <typename T>

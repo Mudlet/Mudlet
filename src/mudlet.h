@@ -384,6 +384,10 @@ public:
     // that is the other package's business and nothing this profile can act
     // on, the same rule addonShortcutUsable() follows.
     QStringList addonCommandsUsingShortcut(const QKeySequence& sequence, const Host* pHost) const;
+    // Every other profile whose key binding a command just took, told about it.
+    // The clash is only refused within the profile that is asking; see the
+    // definition for why the others are told rather than turned down.
+    void warnProfilesLosingBindingTo(const QKeySequence& sequence, Host* pHost, const QString& commandName);
     void applyToolBarStyleToAddonCommands();
 
     // Brings up the preferences dialog and selects the tab whos objectName is

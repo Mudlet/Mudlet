@@ -69,14 +69,14 @@ void dlgComposer::init(const QString& newTitle, const QString& newText)
 {
     title->setText(newTitle);
     edit->setPlainText(newText);
-    if (mpHost && mpHost->mEnableSpellCheck) {
+    if (mpHost && mpHost->getEnableSpellCheck()) {
         recheckWholeLine();
     }
 }
 
 bool dlgComposer::eventFilter(QObject* obj, QEvent* event)
 {
-    if (obj == edit && event->type() == QEvent::KeyPress && mpHost && mpHost->mEnableSpellCheck) {
+    if (obj == edit && event->type() == QEvent::KeyPress && mpHost && mpHost->getEnableSpellCheck()) {
         auto* keyEvent = static_cast<QKeyEvent*>(event);
 
         QTextCursor oldCursor = edit->textCursor();
@@ -112,7 +112,7 @@ bool dlgComposer::eventFilter(QObject* obj, QEvent* event)
 
 void dlgComposer::slot_spellCheck()
 {
-    if (!mpHost || !mpHost->mEnableSpellCheck) {
+    if (!mpHost || !mpHost->getEnableSpellCheck()) {
         return;
     }
 
@@ -136,7 +136,7 @@ void dlgComposer::slot_spellCheck()
 
 void dlgComposer::spellCheckWord(QTextCursor& c)
 {
-    if (!mpHost || !mpHost->mEnableSpellCheck) {
+    if (!mpHost || !mpHost->getEnableSpellCheck()) {
         return;
     }
 
@@ -193,7 +193,7 @@ void dlgComposer::spellCheckWord(QTextCursor& c)
 
 void dlgComposer::recheckWholeLine()
 {
-    if (!mpHost || !mpHost->mEnableSpellCheck) {
+    if (!mpHost || !mpHost->getEnableSpellCheck()) {
         return;
     }
 
@@ -228,7 +228,7 @@ void dlgComposer::slot_contextMenu(const QPoint& pos)
 {
     auto* popup = edit->createStandardContextMenu();
     popup->setAttribute(Qt::WA_DeleteOnClose);
-    if (mpHost && mpHost->mEnableSpellCheck) {
+    if (mpHost && mpHost->getEnableSpellCheck()) {
         // Convert from widget coordinates to viewport coordinates
         QPoint viewportPos = edit->viewport()->mapFromParent(pos);
         QMouseEvent mouseEvent(QEvent::MouseButtonPress, viewportPos, edit->mapToGlobal(pos), Qt::RightButton, Qt::RightButton, Qt::NoModifier);
