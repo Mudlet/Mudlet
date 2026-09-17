@@ -175,6 +175,34 @@ private:
     mutable int mQuestionsAsked = 0;
 };
 
+// What TriggerUnit copies out of a root trigger, so that a line can dismiss it
+// without reading the trigger at all - see TTrigger::rootFilter(). A copy goes
+// stale the moment the trigger changes, so whatever changes one of the things
+// rootFilter() reads has to go through TTrigger::invalidatePrescan().
+struct TRootTriggerFilter
+{
+    enum class Kind : quint8 {
+        // Nothing here can dismiss it, which leaves cannotMatch() and match()
+        // to decide as they would have anyway
+        Visit,
+        // mText is all there is to cannotMatch(), so that need not be asked
+        Text,
+        // It can only match a line holding this color, which a line that is
+        // one color throughout either is or is not
+        Color
+    };
+
+    // Whether a line of just this one color pair has nothing for the trigger
+    bool lacksColors(const QRgb foreground, const QRgb background) const { return (mForegroundWanted && foreground != mForeground) || (mBackgroundWanted && background != mBackground); }
+
+    TBigramFilter::Bits mText;
+    QRgb mForeground = 0;
+    QRgb mBackground = 0;
+    bool mForegroundWanted = false;
+    bool mBackgroundWanted = false;
+    Kind mKind = Kind::Visit;
+};
+
 // The UTF-8 bytes a perl pattern matches against. A line is encoded the first
 // time one asks for them, which with the literal pre-check most never do, so
 // a line no perl pattern gets as far as is not encoded at all. A filter's
@@ -338,6 +366,15 @@ public:
         }
         return true;
     }
+    // What a line can dismiss this trigger by without calling into it - the same
+    // cases cannotMatch() and match_color_pattern() decide, which is only safe
+    // to copy for a trigger with a single pattern and nothing that makes it
+    // fire on a line it does not match.
+    TRootTriggerFilter rootFilter() const;
+    // The one color pair a root trigger's color pattern would find across the
+    // whole of this line, as match_color_pattern() reads it; false when the line
+    // has more than one, or is not one that can be answered for.
+    static bool uniformLineColors(Host* pHost, int line, int length, QRgb& foreground, QRgb& background);
     // Where TriggerUnit's root-node snapshot holds this trigger, or -1 when it
     // holds it nowhere - it is not a root node, or the snapshot has yet to be
     // told about it. Owned by TriggerUnit; nothing else may set it.
