@@ -1899,6 +1899,24 @@ describe("The IRC configuration functions round-trip through the profile", funct
       assert.equals("BustedKeptNick", getIrcNick())
     end)
 
+    it("refuses a nick that would inject a second IRC command", function()
+      -- #10770: the stored nick is put on the wire as "NICK <nick>" when the
+      -- client registers, and IrcConnection keeps only the first space-separated
+      -- word of it - which leaves a line break inside that word free to end the
+      -- NICK and start a command of the game's choosing.
+      restoreIrcConfiguration()
+      assert.is_true(setIrcNick("BustedNickKept"))
+
+      -- the NUL is in here because the nick used to be read as a C string,
+      -- which truncated it there and stored a nick nobody asked for
+      for _, bad in ipairs({"bob\r\nQUIT :injected", "bob\nJOIN #evil", "bob\0evil", "bob and jane"}) do
+        local ok, err = setIrcNick(bad)
+        assert.is_nil(ok, "setIrcNick accepted " .. string.format("%q", bad))
+        assert.is_true(contains(err, "unable to save nick name"), tostring(err))
+        assert.equals("BustedNickKept", getIrcNick())
+      end
+    end)
+
     it("stores the nick where getIrcNick reads it back", function()
       restoreIrcConfiguration()
       assert.is_true(setIrcNick("BustedNickOne"))
@@ -1982,6 +2000,39 @@ describe("The IRC configuration functions round-trip through the profile", funct
       -- an empty string is how a script asks for the password to go
       assert.is_true(setIrcServer("irc.busted-other.invalid", 6667, false, ""))
       assert.equals("", getConfig("ircPassword"))
+    end)
+
+    it("refuses a server password that would inject a second IRC command", function()
+      -- #10770: the stored password goes out as the trailing parameter of
+      -- "PASS :<password>" at registration, so a line break in it is a whole
+      -- command of its own, spaces and all.
+      restoreIrcConfigurationWithPassword()
+      assert.is_true(setIrcServer("irc.busted-passguard.invalid", 6667, false, "BustedKeptSecret"))
+
+      local ok, err = setIrcServer("irc.busted-passguard.invalid", 6667, false, "hunter2\r\nPRIVMSG #evil :injected")
+      assert.is_nil(ok)
+      assert.is_true(contains(err, "unable to save password"), tostring(err))
+      -- and the refusal does not hand the password to whoever is reading
+      assert.is_false(contains(err, "hunter2"), tostring(err))
+      assert.equals("BustedKeptSecret", getConfig("ircPassword"))
+    end)
+
+    it("stores nothing at all when the password is refused, not just the password", function()
+      -- #10770 follow-up: the host, port and secure flag were written before the
+      -- password was judged, so a refused call left the new server address paired
+      -- with the old credential - a partial update, where the contract is that a
+      -- refused call stores nothing.
+      restoreIrcConfigurationWithPassword()
+      assert.is_true(setIrcServer("irc.busted-allornothing.invalid", 6667, false, "BustedKeptSecret"))
+
+      local ok = setIrcServer("irc.busted-changed.invalid", 6697, true, "hunter2\r\nPRIVMSG #evil :injected")
+      assert.is_nil(ok)
+
+      local hostName, port, secure = getIrcServer()
+      assert.equals("irc.busted-allornothing.invalid", hostName)
+      assert.equals(6667, port)
+      assert.is_false(secure)
+      assert.equals("BustedKeptSecret", getConfig("ircPassword"))
     end)
 
     it("falls back to port 6667 and an insecure connection when only a hostname is given", function()
@@ -2099,6 +2150,56 @@ describe("The IRC configuration functions round-trip through the profile", funct
       assertArgError(function() sendIrc("#mudlet") end, "sendIrc: bad argument #2 type (message as string expected")
       assertArgError(function() sendIrc({}, "hello") end, "sendIrc: bad argument #1 type (target as string expected, got table!)")
       assertArgError(function() sendIrc("#mudlet", {}) end, "sendIrc: bad argument #2 type (message as string expected, got table!)")
+    end)
+
+    -- #10770 and #10771: one sendIrc() is meant to be one IRC message, but the
+    -- IRC line protocol ends a command at a CR or an LF, and the message used
+    -- to be run through the IRC window's command parser as well - so both
+    -- "MARK\r\nQUIT :injected-quit" and "/join #evil" put a command of the
+    -- caller's choosing on the wire, and sendIrc returned true for each. The
+    -- realistic caller is a script relaying game text to a channel, which hands
+    -- that choice to the game server. A leading slash is now sent as the text it
+    -- is (which needs a connected client, so it is checked in
+    -- IrcMessageGuardTest); what cannot be sent at all is refused here, with nil
+    -- plus a message.
+    it("refuses a target or message that would inject a second IRC command", function()
+      local function refused(target, message, needle)
+        local ok, err = sendIrc(target, message)
+        assert.is_nil(ok, "sendIrc accepted " .. string.format("%q, %q", target, message))
+        assert.is_true(contains(err, needle), tostring(err))
+      end
+
+      refused("#mudlet", "MARK before\r\nQUIT :injected-quit", "must not contain a line break")
+      refused("#mudlet", "MARK before\nPRIVMSG #evil :injected-lf", "must not contain a line break")
+      refused("#mudlet", "MARK before\rinjected-cr", "must not contain a line break")
+      refused("#mudlet", "MARK before\0injected-nul", "must not contain a line break")
+      refused("#mudlet\r\nJOIN #evil", "MARK target injection", "must not contain a line break")
+      refused("#mudlet\0#evil", "MARK target nul", "must not contain a line break")
+
+      -- the refusal quotes what it refused, so it has to show those characters
+      -- rather than break its own line with them
+      local _, err = sendIrc("#mudlet", "MARK before\r\nQUIT :injected-quit")
+      assert.is_true(contains(err, "MARK before\\r\\nQUIT"), tostring(err))
+
+      -- the rest of the ways a target can confuse the line protocol: a space or
+      -- a tab makes the server read more parameters than were meant, a leading
+      -- colon makes the whole rest of the line one trailing parameter, an empty
+      -- name in a target list is not a name, and an empty target used to be
+      -- swapped for the first configured channel
+      refused("#mudlet #evil", "MARK spaced target", "holds no spaces")
+      refused("#mudlet\t#evil", "MARK tabbed target", "holds no spaces")
+      refused(":#mudlet", "MARK colon target", "must not start with a colon")
+      refused("#mudlet,", "MARK empty name in the list", "empty name in its list")
+      refused("", "MARK empty target", "no target given")
+
+      -- nothing to send is not a send that succeeded
+      refused("#mudlet", "", "no message given to send")
+
+      -- the refusals come before the IRC client is created, so none of the
+      -- above left this run with one - which is what the specs above rely on
+      local ok, clientError = getIrcConnectedHost()
+      assert.is_false(ok, "a refused sendIrc opened an IRC client")
+      assert.equals("no client active", clientError)
     end)
   end)
 
