@@ -211,6 +211,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 , emergencyStop(new QToolButton)
 , mBgColor(mpModel->mBgColor)
 , mFgColor(mpModel->mFgColor)
+, mButtonState(mpModel->mButtonState)
 , mConsoleName(name)
 , mCurrentLine(mpModel->mCurrentLine)
 , mEngineCursor(mpModel->mEngineCursor)
@@ -1144,11 +1145,6 @@ void TConsole::closeEvent(QCloseEvent* event)
     }
 }
 
-
-int TConsole::getButtonState()
-{
-    return mButtonState;
-}
 
 // Converted into a wrapper around a separate toggleLogging() method so that
 // calls to turn logging on/off via the toolbar button - which go via this
