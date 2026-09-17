@@ -30,7 +30,6 @@
 #include "dlgTriggerEditor.h"
 
 #include <QScopeGuard>
-#include <QStringConverter>
 
 #include <algorithm>
 #include <functional>
@@ -544,38 +543,20 @@ void TriggerUnit::processDataStream(const QString& data, int line)
         return;
     }
 
-    // Encoded into storage borrowed from the unit, so the capacity outlives the
-    // line and only a line longer than any before it allocates. Moving the buffer
-    // out rather than writing into the member is what makes that safe under
-    // nesting: a pass a trigger script starts finds the member empty and grows
-    // its own, so it cannot resize the one an outer pass is still matching.
-    QByteArray utf8Data = std::move(mUtf8Scratch);
-    const auto utf8Guard = qScopeGuard([this, &utf8Data] {
-        if (utf8Data.capacity() > scmMaxRetainedUtf8Scratch) {
-            utf8Data = QByteArray();
+    // Encoded, when a perl pattern asks, into storage borrowed from the unit,
+    // so the capacity outlives the line and only a line longer than any before
+    // it allocates. Moving the buffer out rather than lending the member is
+    // what makes that safe under nesting: a pass a trigger script starts finds
+    // the member empty and grows its own, so it cannot resize the one an outer
+    // pass is still matching. subject has to outlive every match() call below.
+    TUtf8Subject subject(data, std::move(mUtf8Scratch));
+    const auto utf8Guard = qScopeGuard([this, &subject] {
+        QByteArray scratch = subject.takeScratch();
+        if (scratch.capacity() > scmMaxRetainedUtf8Scratch) {
+            scratch = QByteArray();
         }
-        mUtf8Scratch = std::move(utf8Data);
+        mUtf8Scratch = std::move(scratch);
     });
-    // Stateless so that an unpaired surrogate at the end of the line is reported
-    // here rather than held back as state for a following call.
-    QStringEncoder toUtf8(QStringEncoder::Utf8, QStringConverter::Flag::Stateless);
-    utf8Data.resizeForOverwrite(toUtf8.requiredSpace(data.size()));
-    char* const encodedBegin = utf8Data.data();
-    const char* const encodedEnd = toUtf8.appendToBuffer(encodedBegin, data);
-    if (Q_UNLIKELY(toUtf8.hasError())) {
-        // The encoder writes a replacement character where an unpaired surrogate
-        // was, while toUtf8() drops it, and the difference would move every byte
-        // offset a capture is reported at. No decoder Mudlet has puts an unpaired
-        // surrogate on a line, so that path can afford the copy and stay exact.
-        utf8Data = data.toUtf8();
-    } else {
-        utf8Data.truncate(encodedEnd - encodedBegin);
-    }
-    // subject points into utf8Data, so utf8Data has to outlive every match()
-    // call below. Perl patterns see the line only as far as its first NUL
-    // byte, so this is qstrnlen() rather than the byte count.
-    const char* subject = utf8Data.constData();
-    const int subjectLength = static_cast<int>(qstrnlen(subject, utf8Data.size()));
 
     mProcessingDepth++;
     const auto processingGuard = qScopeGuard([this] {
@@ -645,7 +626,10 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     if (inFlood && mRegexSearchesOnTheLastLine >= pool.threshold()) {
         rebuildPrescanTasksIfStale();
         const quint32 passId = TTrigger::nextPrescanPassId();
-        if (pool.prescan(mPrescanTasks.data(), static_cast<int>(mPrescanTasks.size()), passId, subject, subjectLength, data, lineBigrams)) {
+        // The helper threads run perl patterns of their own, so the line is
+        // encoded here, on this thread, before any of them can ask for it -
+        // TUtf8Subject encodes on first use, which is not a helper's to do.
+        if (pool.prescan(mPrescanTasks.data(), static_cast<int>(mPrescanTasks.size()), passId, subject.data(), subject.length(), data, lineBigrams)) {
             TTrigger::setPrescanPassId(passId);
             prescanRegexSearches = pool.regexSearchesInLastBatch();
         }
@@ -681,14 +665,14 @@ void TriggerUnit::processDataStream(const QString& data, int line)
             if (!trigger || !trigger->isActive() || trigger->cannotMatch(lineBigrams, data)) {
                 continue;
             }
-            trigger->match(subject, subjectLength, data, line, 0, &lineBigrams);
+            trigger->match(subject, data, line, 0, &lineBigrams);
         }
     } else {
         for (auto trigger : pinnedNodeList) {
             if (!trigger || !trigger->isActive() || trigger->cannotMatch(lineBigrams, data)) {
                 continue;
             }
-            trigger->match(subject, subjectLength, data, line, 0, &lineBigrams);
+            trigger->match(subject, data, line, 0, &lineBigrams);
         }
     }
     // A match here can register more triggers, which also get a shot at the
@@ -717,7 +701,7 @@ void TriggerUnit::processDataStream(const QString& data, int line)
         if (trigger->cannotMatch(lineBigrams, data)) {
             continue;
         }
-        trigger->match(subject, subjectLength, data, line, 0, &lineBigrams);
+        trigger->match(subject, data, line, 0, &lineBigrams);
     }
     mSubstringQuestionsOnTheLastLine = lineBigrams.questionsAsked();
     // A nested pass's searches land in here too; its lines are as real as

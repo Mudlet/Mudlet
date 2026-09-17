@@ -5410,7 +5410,9 @@ void TLuaInterpreter::set_lua_string(const QString& varName, const QString& varV
     // This runs once per incoming line, and both toUtf8() calls it replaces
     // allocated a QByteArray every time. The name is nearly always the same one,
     // and the value is encoded into a buffer that is kept between calls.
-    if (mLastGlobalName != varName) {
+    // The copy taken below leaves the two sharing one buffer, so on every
+    // later call the pointers settle it without a character compare:
+    if (mLastGlobalName.constData() != varName.constData() && mLastGlobalName != varName) {
         mLastGlobalName = varName;
         mLastGlobalNameUtf8 = varName.toUtf8();
     }
@@ -5434,7 +5436,7 @@ void TLuaInterpreter::set_lua_string(const QString& varName, const QString& varV
     // which is the class CI/check-lua-error-strands.lua exists for. Setting
     // these was never something a package could usefully intercept anyway: the
     // name is absent only until the first dispatch writes it.
-    lua_pushstring(L, mLastGlobalNameUtf8.constData());
+    lua_pushlstring(L, mLastGlobalNameUtf8.constData(), mLastGlobalNameUtf8.size());
     lua_pushstring(L, mUtf8Scratch.constData());
     lua_rawset(L, LUA_GLOBALSINDEX);
     if (mUtf8Scratch.capacity() > scmMaxRetainedUtf8Scratch) {
