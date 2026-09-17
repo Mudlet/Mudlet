@@ -36,6 +36,7 @@
 
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
+#include "MudletPaths.h"
 #include "ProfileTestHelper.h"
 #include "RecordingTelnetServer.h"
 #include "TLuaInterpreter.h"
@@ -122,7 +123,7 @@ private slots:
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
-        QDir(mudlet::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
+        QDir(MudletPaths::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
 
         mpHost = TestProfile::create(mHostname, qsl("localhost"), QString::number(mpServer->serverPort()));
         QVERIFY2(mpHost, "Could not create the test profile - see the warning above for the step that timed out.");
@@ -139,7 +140,7 @@ private slots:
         delete mpServer;
         mpServer = nullptr;
         if (mudlet::self()) {
-            QDir(mudlet::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
+            QDir(MudletPaths::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
             delete mudlet::self();
         }
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
