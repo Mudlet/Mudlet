@@ -4,6 +4,7 @@ endif()
 
 # Defined in the parent test/CMakeLists.txt; TESTS is per-directory, so call it here too.
 cmake_language(DEFER CALL restore_windows_test_output)
+cmake_language(DEFER CALL sandbox_test_config_dirs)
 
 set(FUNCTIONAL_TEST_SOURCES
 )
@@ -42,6 +43,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     FramePacingTest.cpp
     GlyphOverflowTest.cpp
     HyperlinkModelSplitTest.cpp
+    HostConsolePrintTest.cpp
     LabelAnchorInteractionTest.cpp
     LabelMovieRefusalTest.cpp
     CaretNavigationTest.cpp
@@ -56,6 +58,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     LabelBackgroundPaintTest.cpp
     MxpWatchdogBufferLifetimeTest.cpp
     NarrowWindowWrapTest.cpp
+    NotepadTest.cpp
     NawsWidthReportTest.cpp
     DetachedWindowToolBarIconSizeTest.cpp
     PastedLinkStateTest.cpp
@@ -71,6 +74,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     ConsoleSearchBarTest.cpp
     WrapLineRewrapTest.cpp
     ScrollLostOnPartialRepaintTest.cpp
+    ScrollBarContrastTest.cpp
 )
 
 # Profiles: their config dir, their folders, and loading, saving and deleting them
@@ -79,10 +83,13 @@ set(PROFILE_GROUP_TEST_SOURCES
     ConfigDirOverrideTest.cpp
     ConnectionDialogCrashTest.cpp
     ConnectionDialogFocusTest.cpp
+    ConnectionDialogOfflineProfileTest.cpp
     DefaultGameDeleteTest.cpp
+    DictionaryRoundTripTest.cpp
     MissingDisplayFontTest.cpp
     ProfileDeletionSafetyTest.cpp
     ProfileFolderNameTest.cpp
+    ProfileIniParseErrorTest.cpp
     ProfileLifecycleTest.cpp
     ProfileLoadTempFileTest.cpp
     ProfileRoundTripTest.cpp
@@ -92,11 +99,13 @@ set(PROFILE_GROUP_TEST_SOURCES
     XMLexportVariablesTest.cpp
 )
 
-# Telnet, and the protocols and escape sequences carried over it
+# Telnet and the other network protocols Mudlet speaks, and the escape sequences
+# carried over them
 set(TELNET_GROUP_TEST_SOURCES
     CsiCursorForwardTest.cpp
     cTelnetBufferTest.cpp
     GMCPCharLoginTest.cpp
+    SignInStoreReconcilerTest.cpp
     TelnetAtcpMspTest.cpp
     TelnetLargeBurstTest.cpp
     TelnetLatencyMeasurementTest.cpp
@@ -113,6 +122,7 @@ set(TELNET_GROUP_TEST_SOURCES
     TelnetMccp4Test.cpp
     TOscTest.cpp
     MsdpMalformedDiagnosticTest.cpp
+    IrcMessageGuardTest.cpp
 )
 
 # Triggers and the other scriptable units, and what a running script does to them
@@ -120,11 +130,13 @@ set(TRIGGER_GROUP_TEST_SOURCES
     CaptureGroupParkingTest.cpp
     BigramFilterTest.cpp
     CorruptTriggerPatternsTest.cpp
+    EmergencyStopResumeTest.cpp
     MultilineTriggerReentrancyTest.cpp
     SetScriptCallbackTest.cpp
     TFeedTriggersRecursionTest.cpp
     UnitDeferredDeleteTest.cpp
     UnitProcessingDepthTest.cpp
+    UnitsReachHostTest.cpp
 )
 
 # The script editor, and the trigger, variable and script forms it hosts
@@ -142,6 +154,7 @@ set(EDITOR_GROUP_TEST_SOURCES
     TreeWidgetItemMoveTest.cpp
     TriggerEditorDisclosureTest.cpp
     TriggerEditorTest.cpp
+    TriggerPatternListLayoutTest.cpp
     VariableEditorWriteBackTest.cpp
 )
 
@@ -151,6 +164,8 @@ set(MAP_GROUP_TEST_SOURCES
     MapAreaReassignmentTest.cpp
     MapAreaSelectionTest.cpp
     MapCloseDuringImportTest.cpp
+    MapCoordinateLimitTest.cpp
+    MapContextMenuLifetimeTest.cpp
     MapDownloadTest.cpp
     RoomExitsDialogTest.cpp
     MapLevelOfDetailTest.cpp
@@ -160,6 +175,7 @@ set(MAP_GROUP_TEST_SOURCES
     MapLockNoOpTest.cpp
     RoomPropertiesDialogTest.cpp
     MapperButtonConfigTest.cpp
+    MapperPanelTest.cpp
     MapProgressDialogSeamTest.cpp
     MapRoomGeometryTest.cpp
     MapRoundTripTest.cpp
@@ -174,6 +190,7 @@ set(PACKAGE_GROUP_TEST_SOURCES
     DualPackageModuleTest.cpp
     ModuleManagerListingTest.cpp
     ModuleSaveTeardownTest.cpp
+    PackageDownloadDialogRestyleTest.cpp
     PackageExporterDialogTest.cpp
     PackageFontsOnRefusedArchiveTest.cpp
     PackageManagerRemovalTest.cpp
@@ -206,9 +223,11 @@ set(SETTINGS_GROUP_TEST_SOURCES
     SettingsHostLifecycleTest.cpp
     SettingsInstantApplyTest.cpp
     SettingsLiveSyncTest.cpp
+    SettingsMmcpFlagsTest.cpp
     SettingsRoundTripTest.cpp
     SettingsSearchTest.cpp
     SettingsShellNavigationTest.cpp
+    SettingsSpellCheckEnableTest.cpp
 )
 
 # Teardown: who owns a profile's dialogs and windows, and what becomes of them when it closes
@@ -415,7 +434,7 @@ set_tests_properties(MultilineTriggerReentrancyTest PROPERTIES TIMEOUT 300)
 # GMCPCharLoginTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(GMCPCharLoginTest PROPERTIES TIMEOUT 600)
 
-# DebugConsoleFilterTest boots a fresh profile for each of its 24 methods, and timed out against
+# DebugConsoleFilterTest boots a fresh profile for most of its methods, and timed out against
 # the default 60s on the macOS x86_64 runner, where it measured 46.95s when it passed. Waiting on
 # the connection dialog instead of sleeping through it took the Linux run from 30s to 9s, so this
 # is headroom rather than a necessity now, and it is what the other per-method-profile tests use.
@@ -562,6 +581,9 @@ set_tests_properties(ConsoleSearchBarTest PROPERTIES TIMEOUT 300)
 # NarrowWindowWrapTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(NarrowWindowWrapTest PROPERTIES TIMEOUT 300)
 
+# NotepadTest creates a fresh profile per test method, so it needs a longer timeout
+set_tests_properties(NotepadTest PROPERTIES TIMEOUT 300)
+
 # WrapLineRewrapTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(WrapLineRewrapTest PROPERTIES TIMEOUT 300)
 
@@ -595,3 +617,7 @@ else()
 endif()
 set_property(TEST TDiscordModeTest APPEND PROPERTY
     ENVIRONMENT_MODIFICATION "${DISCORD_RPC_PATH_VARIABLE}=path_list_prepend:${CMAKE_SOURCE_DIR}/3rdparty/discord/rpc/lib")
+# Report-only: what a Lua enableTrigger()/disableTrigger() call costs on a large
+# trigger tree with the script editor closed and open. Never registered with
+# ctest; run it directly and read the METRIC lines.
+add_functional_test_binary(TriggerToggleEditorBenchmark TriggerToggleEditorBenchmark.cpp)

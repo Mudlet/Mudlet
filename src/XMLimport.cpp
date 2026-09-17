@@ -40,7 +40,7 @@
 #include "TVar.h"
 #include "VarUnit.h"
 #include "mudlet.h"
-#include "dlgTriggerEditor.h"
+#include "enums.h"
 
 #include <QBuffer>
 #include <QClipboard>
@@ -783,7 +783,13 @@ void XMLimport::readHost(Host* pHost)
     setBoolAttribute(qsl("mEnableMSDP"), pHost->mEnableMSDP);
     setBoolAttribute(qsl("mEnableMSP"), pHost->mEnableMSP);
     setBoolAttribute(qsl("mMapStrongHighlight"), pHost->mMapStrongHighlight);
-    setBoolAttribute(qsl("mEnableSpellCheck"), pHost->mEnableSpellCheck);
+    // Through the setter rather than at the field, so that turning spell check
+    // on always queues the dictionary read. Nothing is queued here: the whole
+    // import runs inside the profile loading sequence, which the setter skips,
+    // and the warm that follows the load covers whatever was read in.
+    bool enableSpellCheck = false;
+    setBoolAttribute(qsl("mEnableSpellCheck"), enableSpellCheck);
+    pHost->setEnableSpellCheck(enableSpellCheck);
     if (attributes().hasAttribute(QLatin1String("mShowInfo"))) {
         // Old - pre Map Info versions of Mudlet (those before
         // https://github.com/Mudlet/Mudlet/pull/4718) used the above
@@ -1024,7 +1030,7 @@ void XMLimport::readHost(Host* pHost)
     }
 
     if (attributes().hasAttribute(QLatin1String("EditorSearchOptions"))) {
-        pHost->setSearchOptions(static_cast<dlgTriggerEditor::SearchOptions>(attributes().value(qsl("EditorSearchOptions")).toInt()));
+        pHost->setSearchOptions(static_cast<enums::EditorSearchOptions>(attributes().value(qsl("EditorSearchOptions")).toInt()));
     }
 
     pHost->setDebugShowAllProblemCodepoints(attributes().value(qsl("DebugShowAllProblemCodepoints")) == YES);
@@ -2100,15 +2106,24 @@ void XMLimport::readStopWatchMap()
                 pStopWatch->setName(attributes().value(qsl("name")).toString());
                 pStopWatch->mIsPersistent = true;
                 pStopWatch->mIsInitialised = true;
+                // Both of the stored times come straight out of the profile
+                // file, so they are clamped to the range a stopwatch holds the
+                // same way its own operations are - otherwise an edited or
+                // damaged profile could load one whose time no longer fits:
                 if (attributes().value(qsl("running")) == YES) {
                     pStopWatch->mIsRunning = true;
                     // The stored value is the point in epoch time that the
                     // stopwatch appears to have been started so we need to
-                    // make that into a QDateTime that is the equivalent:
-                    pStopWatch->mEffectiveStartDateTime.setMSecsSinceEpoch(attributes().value(qsl("effectiveStartDateTimeEpochMSecs")).toLongLong());
+                    // make that into a QDateTime that is the equivalent.
+                    // Bounding that instant rather than the elapsed time it
+                    // implies keeps the subtraction which would work that time
+                    // out from overflowing on a wild value:
+                    const qint64 nowMSecs = QDateTime::currentMSecsSinceEpoch();
+                    pStopWatch->mEffectiveStartDateTime.setMSecsSinceEpoch(qBound(
+                            nowMSecs - stopWatch::csmMaximumMilliSeconds, attributes().value(qsl("effectiveStartDateTimeEpochMSecs")).toLongLong(), nowMSecs + stopWatch::csmMaximumMilliSeconds));
                 } else {
                     pStopWatch->mIsRunning = false;
-                    pStopWatch->mElapsedTime = attributes().value(qsl("elapsedDateTimeMSecs")).toLongLong();
+                    pStopWatch->mElapsedTime = stopWatch::clampToRange(attributes().value(qsl("elapsedDateTimeMSecs")).toLongLong());
                 }
                 mpHost->mStopWatchMap[watchId] = std::move(pStopWatch);
                 // A dummy read as there should not be any text for this element:

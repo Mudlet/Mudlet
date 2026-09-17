@@ -27,6 +27,7 @@
 #include "TConsole.h"
 
 
+#include "MudletPaths.h"
 #include "ctelnet.h"
 #include "Host.h"
 #include "TCommandLine.h"
@@ -44,7 +45,10 @@
 
 #include <QAccessibleInterface>
 #include <QAccessibleWidget>
+#include <QApplication>
+#include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -52,10 +56,13 @@
 #include <QMessageBox>
 #include <QMimeData>
 #include <QPainter>
+#include <QProxyStyle>
+#include <QSaveFile>
 #include <QScrollBar>
 #include <QSettings>
 #include <QShortcut>
 #include <QSplitter>
+#include <QStyleOptionSlider>
 #include <QTextBoundaryFinder>
 #include <QVideoWidget>
 #include <chrono>
@@ -90,6 +97,93 @@ QColor readableLinkColor(const QColor& background)
     const QColor lightBlue(80, 160, 255);
     return contrastRatio(QColor(Qt::blue), background) >= contrastRatio(lightBlue, background) ? QColor(Qt::blue) : lightBlue;
 }
+
+// Windows 11 colours the handle for the application's colour scheme rather than
+// for the surface it sits on - black at 45% alpha, invisible on a black console.
+// A style and not a style sheet: a widget's own style sheet outranks every other
+// rule, so a sheet here would drop a profile's setProfileStyleSheet() rules.
+//
+// Only that style is taken over. Every other style Mudlet meets draws its handle
+// against the groove it paints underneath it, so it is visible on any console
+// colour already, and it carries the hover and pressed feedback that this
+// painting cannot - measured on Linux/Fusion, the platform handle stands at
+// 19.8:1 against a black console where a handle drawn here reaches 20.1:1.
+bool consoleScrollBarStyleWanted()
+{
+    const QStyle* pStyle = QApplication::style();
+    if (!pStyle) {
+        return false;
+    }
+
+    // Mudlet's application style is a proxy - AltFocusMenuBarDisable, or DarkTheme -
+    // and those carry no object name of their own, so it comes from the style wrapped.
+    QString styleName = pStyle->objectName();
+    if (styleName.isEmpty()) {
+        if (const auto* pProxy = qobject_cast<const QProxyStyle*>(pStyle); pProxy && pProxy->baseStyle()) {
+            styleName = pProxy->baseStyle()->objectName();
+        }
+    }
+    // Windows 10's style is not this one: it paints an opaque handle on a light
+    // track, which has the same contrast whatever the console is set to.
+    return !styleName.compare(qsl("windows11"), Qt::CaseInsensitive);
+}
+
+class ConsoleScrollBarStyle : public QProxyStyle
+{
+public:
+    static constexpr const char* csHandleColorProperty = "mudletScrollBarHandleColor";
+
+    void drawComplexControl(const ComplexControl control, const QStyleOptionComplex* pOption, QPainter* pPainter, const QWidget* pWidget) const override
+    {
+        const auto* pSlider = qstyleoption_cast<const QStyleOptionSlider*>(pOption);
+        const QColor handleColor = pWidget ? pWidget->property(csHandleColorProperty).value<QColor>() : QColor();
+        // Asked here rather than when the style is installed, so that replacing the
+        // application style - which the appearance setting does - is picked up without
+        // every console having to be told, and so a test can stand a Windows 11 style
+        // in on a platform that has none.
+        if (control != CC_ScrollBar || !pSlider || !handleColor.isValid() || !consoleScrollBarStyleWanted()) {
+            QProxyStyle::drawComplexControl(control, pOption, pPainter, pWidget);
+            return;
+        }
+
+        // The groove and the arrows stay the base style's work, but its handle is masked
+        // out - and with it the handle's own hover state - because ours is alpha blended
+        // and would otherwise take its colour from that handle rather than the console.
+        QStyleOptionSlider baseOption(*pSlider);
+        baseOption.subControls &= ~SC_ScrollBarSlider;
+        QProxyStyle::drawComplexControl(control, &baseOption, pPainter, pWidget);
+
+        // QCommonStyle hands back a full-length handle when there is nothing to
+        // scroll, which would paint a bar down the whole console.
+        if (pSlider->minimum >= pSlider->maximum) {
+            return;
+        }
+
+        const QRect handle = subControlRect(CC_ScrollBar, pOption, SC_ScrollBarSlider, pWidget);
+        // Centres a 9 pixel handle in the 15 pixel bar the console pins.
+        constexpr int inset = 3;
+        constexpr int cornerRadius = 4;
+        const QRectF handleRect = (pSlider->orientation == Qt::Vertical) ? QRectF(handle).adjusted(inset, 0, -inset, 0) : QRectF(handle).adjusted(0, inset, 0, -inset);
+
+        // Outlined in the opposite colour because a background image on an ancestor shows
+        // through the groove: a fill alone can land on a matching image, a fill and its
+        // outline cannot both blend into one surface.
+        const QColor outlineColor(255 - handleColor.red(), 255 - handleColor.green(), 255 - handleColor.blue(), handleColor.alpha());
+
+        pPainter->save();
+        pPainter->setRenderHint(QPainter::Antialiasing);
+        pPainter->setPen(QPen(outlineColor, 1));
+        pPainter->setBrush(handleColor);
+        pPainter->drawRoundedRect(handleRect.adjusted(0.5, 0.5, -0.5, -0.5), cornerRadius, cornerRadius);
+        pPainter->restore();
+    }
+};
+
+QStyle* consoleScrollBarStyle()
+{
+    static auto* pStyle = new ConsoleScrollBarStyle;
+    return pStyle;
+}
 } // namespace
 
 const QString TConsole::cmLuaLineVariable("line");
@@ -117,6 +211,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 , emergencyStop(new QToolButton)
 , mBgColor(mpModel->mBgColor)
 , mFgColor(mpModel->mFgColor)
+, mButtonState(mpModel->mButtonState)
 , mConsoleName(name)
 , mCurrentLine(mpModel->mCurrentLine)
 , mEngineCursor(mpModel->mEngineCursor)
@@ -321,6 +416,8 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 
     mpScrollBar->setFixedWidth(15);
     mpHScrollBar->setFixedHeight(15);
+    mpScrollBar->setStyle(consoleScrollBarStyle());
+    mpHScrollBar->setStyle(consoleScrollBarStyle());
 
     splitter = new TSplitter(Qt::Vertical, layer);
     splitter->setObjectName(qsl("splitter_%1_%2").arg(mProfileName, mConsoleName));
@@ -439,6 +536,13 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     //: Button tooltip for the replay recording toggle button
     replayButton->setToolTip(utils::richText(tr("Start recording of replay")));
     connect(replayButton, &QAbstractButton::clicked, this, &TConsole::slot_toggleReplayRecording);
+    // cTelnet commits and stops a recording when the connection ends, so the
+    // button must not be left pressed as though one were still running:
+    connect(&mpHost->mTelnet, &cTelnet::signal_disconnected, this, [this]() {
+        replayButton->setChecked(false);
+        //: Button tooltip for the replay recording toggle button
+        replayButton->setToolTip(utils::richText(tr("Start recording of replay")));
+    });
 
     logButton = new QToolButton;
     logButton->setMinimumSize(QSize(30, 30));
@@ -702,6 +806,12 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 
 TConsole::~TConsole()
 {
+    // TDebug holds its sink raw, and a closing profile emits debug lines from
+    // inside teardown, so unhook before any of this console is gone.
+    if (TDebug::sink() == this) {
+        TDebug::setSink(nullptr);
+    }
+
     // Host co-owns the main console's model, so the model - and its buffer -
     // can outlive this view. The buffer's QPointer back-pointer would only null
     // itself once ~QObject() runs, leaving it aimed at a half-destroyed widget
@@ -791,11 +901,13 @@ void TConsole::resizeEvent(QResizeEvent* event)
         mpMainDisplay->resize(x - mBorders.left() - mBorders.right(), y - mBorders.top() - mBorders.bottom() - mpCommandLine->height());
     } else {
         mpMainFrame->resize(x, y);
-        // The debug console's top bar holds its search box, so unlike the other
-        // types that reach here it is not zero-height - without this the display
-        // overruns its parent and the newest lines are clipped off the bottom:
+        // A console is sized as it is created, before this frame's layout has
+        // ever run, and a child widget still carries Qt's 100x30 default
+        // geometry until then, so ask the bar for the height it will be given.
+        // The hint is exact: the bar's vertical size policy is Fixed inside a
+        // QVBoxLayout.
         if (!mpTopToolBar->isHidden()) {
-            y -= mpTopToolBar->height();
+            y -= mpTopToolBar->sizeHint().height();
         }
         mpMainDisplay->resize(x, y);
     }
@@ -1034,11 +1146,6 @@ void TConsole::closeEvent(QCloseEvent* event)
 }
 
 
-int TConsole::getButtonState()
-{
-    return mButtonState;
-}
-
 // Converted into a wrapper around a separate toggleLogging() method so that
 // calls to turn logging on/off via the toolbar button - which go via this
 // wrapper - generate messages on the console.  Requests to control logging from
@@ -1061,36 +1168,35 @@ void TConsole::slot_toggleReplayRecording()
     if (mType & CentralDebugConsole) {
         return;
     }
-    mRecordReplay = !mRecordReplay;
-    if (mRecordReplay) {
-        const QString directoryLogFile = mudlet::getMudletPath(enums::profileReplayAndLogFilesPath, mProfileName);
+    cTelnet& telnet = mpHost->mTelnet;
+    if (!telnet.recordingReplay()) {
+        const QString directoryLogFile = MudletPaths::getMudletPath(enums::profileReplayAndLogFilesPath, mProfileName);
         const QString mLogFileName = qsl("%1/%2.dat").arg(directoryLogFile, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
         const QDir dirLogFile;
         if (!dirLogFile.exists(directoryLogFile)) {
             dirLogFile.mkpath(directoryLogFile);
         }
-        mReplayFile.setFileName(mLogFileName);
-        if (!mReplayFile.open(QIODevice::WriteOnly)) {
-            qWarning() << "TConsole: failed to open replay file for writing:" << mReplayFile.errorString();
-            mRecordReplay = false;
-            //: Informational message displayed when replay recording file could not be opened
-            printSystemMessage(tr("Failed to open replay recording file for writing.") % QChar::LineFeed);
+        if (!telnet.startReplayRecording(mLogFileName)) {
+            // The button has already toggled itself on - clicked() fires after
+            // that - so put it back rather than leave it looking pressed with
+            // no recording behind it:
+            replayButton->setChecked(false);
+            qWarning() << "TConsole: failed to open replay file for writing:" << telnet.replayRecordingErrorString();
+            //: Informational message displayed when replay recording file could not be opened. %1 is the reason
+            printSystemMessage(tr("Failed to open replay recording file for writing: %1").arg(telnet.replayRecordingErrorString()) % QChar::LineFeed);
             return;
         }
-        mReplayStream.setVersion(QDataStream::Qt_5_12);
-        mReplayStream.setDevice(&mReplayFile);
-        mpHost->mTelnet.recordReplay();
-        printSystemMessage(tr("Replay recording has started. File: %1").arg(mReplayFile.fileName()) % QChar::LineFeed);
+        printSystemMessage(tr("Replay recording has started. File: %1").arg(telnet.replayRecordingFileName()) % QChar::LineFeed);
         //: Button tooltip for the replay recording toggle button
         replayButton->setToolTip(utils::richText(tr("Stop recording of replay")));
     } else {
-        if (!mReplayFile.commit()) {
-            qDebug() << "TConsole::slot_toggleReplayRecording: error saving replay: " << mReplayFile.errorString();
-            //: Informational message displayed when replay recording is stopped but could not be saved
-            printSystemMessage(tr("Replay recording has been stopped, but couldn't be saved.") % QChar::LineFeed);
+        if (!telnet.stopReplayRecording()) {
+            qWarning() << "TConsole::slot_toggleReplayRecording: error saving replay: " << telnet.replayRecordingErrorString();
+            //: Informational message displayed when replay recording is stopped but could not be saved. %1 is the reason
+            printSystemMessage(tr("Replay recording has been stopped, but couldn't be saved: %1").arg(telnet.replayRecordingErrorString()) % QChar::LineFeed);
         } else {
             //: Informational message displayed when replay recording is stopped
-            printSystemMessage(tr("Replay recording has been stopped. File: %1").arg(mReplayFile.fileName()) % QChar::LineFeed);
+            printSystemMessage(tr("Replay recording has been stopped. File: %1").arg(telnet.replayRecordingFileName()) % QChar::LineFeed);
         }
         //: Button tooltip for the replay recording toggle button
         replayButton->setToolTip(utils::richText(tr("Start recording of replay")));
@@ -1182,6 +1288,20 @@ void TConsole::changeColors()
         buffer.mWrapAt = mpHost->mWrapAt;
         buffer.mWrapIndent = mpHost->mWrapIndentCount;
         buffer.mWrapHangingIndent = mpHost->mWrapHangingIndentCount;
+    }
+
+    updateScrollBarStyle();
+}
+
+void TConsole::updateScrollBarStyle()
+{
+    const QColor background = (mType == MainConsole) ? mpHost->mBgColor : mBgColor;
+    // 200 is the lowest alpha clearing a 3:1 contrast ratio on every background a profile can set
+    const QColor handle = contrastRatio(Qt::white, background) >= contrastRatio(Qt::black, background) ? QColor(255, 255, 255, 200) : QColor(0, 0, 0, 200);
+
+    for (QScrollBar* pScrollBar : {mpScrollBar, mpHScrollBar}) {
+        pScrollBar->setProperty(ConsoleScrollBarStyle::csHandleColorProperty, handle);
+        pScrollBar->update();
     }
 }
 
@@ -1974,11 +2094,19 @@ bool TConsole::selectSection(int from, int to)
     if (from < 0) {
         return false;
     }
+    // a negative length would put the selection's end before its start
+    if (to < 0) {
+        return false;
+    }
     if (mUserCursor.y() >= static_cast<int>(buffer.buffer.size())) {
         return false;
     }
     const int s = buffer.buffer[mUserCursor.y()].size();
-    if (from > s || from + to > s) {
+    // the length is compared against what is left of the line rather than
+    // added to the start: `from + to` overflows for a large `to`, and signed
+    // overflow that wraps negative sails through a check written that way,
+    // handing back a selection whose end precedes its start
+    if (from > s || to > s - from) {
         return false;
     }
     P_begin = QPoint(from, mUserCursor.y());
@@ -2203,6 +2331,11 @@ void TConsole::print(const QString& msg, const QColor fgColor, const QColor bgCo
     if (Q_UNLIKELY(mudlet::self()->smMirrorToStdOut)) {
         qDebug().nospace().noquote() << qsl("%1| %2").arg(mConsoleName, msg);
     }
+}
+
+void TConsole::printDebugLine(const QString& text, const QColor& foreground, const QColor& background, const QString& timeStamp)
+{
+    print(text, foreground, background, timeStamp);
 }
 
 void TConsole::printFormatted(const QString& text, const std::vector<TChar>& formatting, const TLinkStore& sourceLinkStore)
@@ -2451,7 +2584,7 @@ void TConsole::slot_searchBufferUp()
     for (int searchY = mCurrentSearchResult - 1; searchY >= 0; --searchY) {
         int searchX = -1;
         do {
-            searchX = buffer.lineBuffer[searchY].indexOf(mSearchQuery, searchX + 1, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive));
+            searchX = buffer.lineBuffer[searchY].indexOf(mSearchQuery, searchX + 1, ((mSearchOptions & enums::BufferSearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive));
             if (searchX > -1) {
                 buffer.applyAttribute(QPoint(searchX, searchY), QPoint(searchX + mSearchQuery.size(), searchY), TChar::Found, true);
                 if (mpHost->getF3SearchEnabled()) {
@@ -2494,7 +2627,7 @@ void TConsole::slot_searchBufferDown()
     for (int searchY = mCurrentSearchResult + 1; searchY < buffer.lineBuffer.size(); ++searchY) {
         int searchX = -1;
         do {
-            searchX = buffer.lineBuffer[searchY].indexOf(mSearchQuery, searchX + 1, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive));
+            searchX = buffer.lineBuffer[searchY].indexOf(mSearchQuery, searchX + 1, ((mSearchOptions & enums::BufferSearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive));
             if (searchX > -1) {
                 buffer.applyAttribute(QPoint(searchX, searchY), QPoint(searchX + mSearchQuery.size(), searchY), TChar::Found, true);
                 if (mpHost->getF3SearchEnabled()) {
@@ -3106,11 +3239,11 @@ void TConsole::createSearchOptionIcon()
     QIcon newIcon;
     switch (mSearchOptions) {
     // Each combination must be handled here
-    case SearchOptionCaseSensitive:
+    case enums::BufferSearchOptionCaseSensitive:
         newIcon.addPixmap(QPixmap(":/icons/searchOptions-caseSensitive.png"));
         break;
 
-    case SearchOptionNone:
+    case enums::BufferSearchOptionNone:
         // Use the grey icon as that is appropriate for the "No options set" case
         newIcon.addPixmap(QPixmap(":/icons/searchOptions-none.png"));
         break;
@@ -3124,17 +3257,17 @@ void TConsole::createSearchOptionIcon()
     mpAction_searchOptions->setIcon(newIcon);
 }
 
-void TConsole::setSearchOptions(const SearchOptions optionsState)
+void TConsole::setSearchOptions(const enums::BufferSearchOptions optionsState)
 {
     mSearchOptions = optionsState;
-    mpAction_searchCaseSensitive->setChecked(optionsState & SearchOptionCaseSensitive);
+    mpAction_searchCaseSensitive->setChecked(optionsState & enums::BufferSearchOptionCaseSensitive);
     createSearchOptionIcon();
 }
 
 void TConsole::slot_toggleSearchCaseSensitivity(const bool state)
 {
-    if ((mSearchOptions & SearchOptionCaseSensitive) != state) {
-        mSearchOptions = (mSearchOptions & ~(SearchOptionCaseSensitive)) | (state ? SearchOptionCaseSensitive : SearchOptionNone);
+    if ((mSearchOptions & enums::BufferSearchOptionCaseSensitive) != state) {
+        mSearchOptions = (mSearchOptions & ~(enums::BufferSearchOptionCaseSensitive)) | (state ? enums::BufferSearchOptionCaseSensitive : enums::BufferSearchOptionNone);
         createSearchOptionIcon();
         mpHost->mBufferSearchOptions = mSearchOptions;
     }
@@ -3318,7 +3451,7 @@ void TConsole::slot_toggleTimeStamps(const bool state)
             // QAbstractButton::toggled one
             timeStampButton->setChecked(state);
         }
-        const auto filePath = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("autotimestamp"));
+        const auto filePath = MudletPaths::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("autotimestamp"));
         QSaveFile file(filePath);
         if (state) {
             if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {

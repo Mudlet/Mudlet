@@ -32,6 +32,7 @@
 
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "ActionUnit.h"
@@ -72,7 +73,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        QDir dir(mudlet::getMudletPath(enums::profileHomePath, profileName));
+        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, profileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }
@@ -221,7 +222,7 @@ private slots:
         // does when a package is installed
         mpEditor->doCleanReset();
         QVERIFY2(waitForTreeToHold(qsl("qaSearchTrigger")), "the editor never rebuilt its trees around the items this test planted");
-        mpEditor->setSearchOptions(dlgTriggerEditor::SearchOptionNone);
+        mpEditor->setSearchOptions(enums::EditorSearchOptionNone);
     }
 
     void cleanupTestCase()
@@ -248,7 +249,7 @@ private slots:
     void cleanup()
     {
         if (mpEditor) {
-            mpEditor->setSearchOptions(dlgTriggerEditor::SearchOptionNone);
+            mpEditor->setSearchOptions(enums::EditorSearchOptionNone);
         }
     }
 
@@ -300,7 +301,7 @@ private slots:
         const int caseInsensitiveRows = totalResultRows();
         QVERIFY2(caseInsensitiveRows > 0, "a differently-cased needle found nothing while matching case-insensitively");
 
-        mpEditor->setSearchOptions(dlgTriggerEditor::SearchOptionCaseSensitive);
+        mpEditor->setSearchOptions(enums::EditorSearchOptionCaseSensitive);
         search(qsl("QAHAYSTACK"));
         QCOMPARE(totalResultRows(), 0);
 
@@ -313,7 +314,7 @@ private slots:
         search(qsl("qaSearchTrig"));
         QVERIFY2(totalResultRows() > 0, "a partial word found nothing while matching on substrings");
 
-        mpEditor->setSearchOptions(dlgTriggerEditor::SearchOptionWholeWord);
+        mpEditor->setSearchOptions(enums::EditorSearchOptionWholeWord);
         search(qsl("qaSearchTrig"));
         QCOMPARE(totalResultRows(), 0);
 
@@ -328,7 +329,7 @@ private slots:
         search(qsl("qaSearchVariable"));
         QVERIFY2(!topLevelResultFor(qsl("Variable")), "a variable was searched without the option being set");
 
-        mpEditor->setSearchOptions(dlgTriggerEditor::SearchOptionIncludeVariables);
+        mpEditor->setSearchOptions(enums::EditorSearchOptionIncludeVariables);
         search(qsl("qaSearchVariable"));
         auto* result = topLevelResultFor(qsl("Variable"));
         QVERIFY2(result, "the variable was not found with the option set");
