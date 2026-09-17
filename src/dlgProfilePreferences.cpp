@@ -29,6 +29,7 @@
 #include "GMCPAuthenticator.h"
 #include "Host.h"
 #include "HostManager.h"
+#include "MudletPaths.h"
 #include "TAction.h"
 #include "TAlias.h"
 #include "TConsole.h"
@@ -3880,7 +3881,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
 
     comboBox_dictionary->clear();
-    checkBox_spellCheck->setChecked(pHost->mEnableSpellCheck);
+    checkBox_spellCheck->setChecked(pHost->getEnableSpellCheck());
     bool useUserDictionary = false;
     pHost->getUserDictionaryOptions(useUserDictionary, mUseSharedDictionary);
     // Always set the true radio button first - avoids any problems with
@@ -3900,11 +3901,11 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     // Unfortunately OpenBSD does not ship a dictionary for THAT language which
     // prevents us using it to find any system ones
     const QString& currentDictionary = pHost->getSpellDic();
-    // This will also set mudlet::mUsingMudletDictionaries as appropriate:
-    const QString path = mudlet::getMudletPath(enums::hunspellDictionaryPath, currentDictionary);
+    // This will also settle MudletPaths::usingMudletDictionaries():
+    const QString path = MudletPaths::getMudletPath(enums::hunspellDictionaryPath, currentDictionary);
     // Tweak the label for the provided spelling dictionaries depending on where
     // they come from:
-    if (mudlet::self()->mUsingMudletDictionaries) {
+    if (MudletPaths::usingMudletDictionaries()) {
         //: On Windows and MacOs, we have to bundle our own dictionaries with our application - and we also use them on *nix systems where we do not find the system ones
         checkBox_spellCheck->setText(tr("Enable spell check using Mudlet dictionary:"));
     } else {
@@ -4172,7 +4173,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     // pHost->mLogDir should be empty for the default location:
     mLogDirPath = pHost->mLogDir;
     lineEdit_logFileFolder->setText(mLogDirPath);
-    lineEdit_logFileFolder->setPlaceholderText(mudlet::getMudletPath(enums::profileReplayAndLogFilesPath, pHost->getName()));
+    lineEdit_logFileFolder->setPlaceholderText(MudletPaths::getMudletPath(enums::profileReplayAndLogFilesPath, pHost->getName()));
     // set the cursor position to the end of the lineEdit's text property.
     lineEdit_logFileFolder->setCursorPosition(lineEdit_logFileFolder->text().length());
     // Enable the reset button if the current location is not the default one:
@@ -4205,7 +4206,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     // load profiles into mappers "copy map to profile" combobox
     // this feature should work seamlessly both for online and offline profiles
-    const QStringList profileList = QDir(mudlet::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Time); // sort by profile "hotness"
+    const QStringList profileList = QDir(MudletPaths::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Time); // sort by profile "hotness"
     pushButton_chooseProfiles->setEnabled(false);
     pushButton_copyMap->setEnabled(false);
     if (!mpMenu) {
@@ -4471,7 +4472,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                         break;
                     default: {
                     } // There are a significant number of other errors
-                    // that are not handled here!
+                        // that are not handled here!
                     }
                 }
             }
@@ -4497,13 +4498,16 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     checkBox_askTlsAvailable->setChecked(pHost->mAskTlsAvailable);
 
-    // The "forget saved sign-in" button is gated on a reconnect token actually existing, not on the
-    // sign-in-choice flag: an oauth-only game never sets that flag yet still mints tokens, and a token
-    // is the only thing the button acts on. The keychain check is asynchronous, so start hidden and
-    // reveal on a hit; the QPointer guards against the dialog closing before the store answers.
-    // credentialExists() collapses a read failure (locked/denied/timed-out keychain) to "no token", so
-    // the button deliberately stays hidden on any read failure - the only cost is not offering to forget
-    // a token that could not be read, and clicking would just yield a graceful "could not remove" warning.
+    // The "forget saved sign-in" button is gated on either of the stored sign-in's keys existing, not on
+    // the sign-in-choice flag: an oauth-only game never sets that flag yet still mints tokens. The
+    // metadata alone is not enough to test. Mudlet 5.0.1 keeps the whole sign-in under the
+    // metadata key, so forgetting it there leaves this build's token key behind with nothing to offer
+    // its removal. A token-less resume hint - {account, provider}, left behind when a rejected token was
+    // dropped - is still something the player may want to forget, too. The keychain check is
+    // asynchronous, so start hidden and reveal on a hit; the QPointer guards against the dialog closing
+    // before the store answers. credentialExists() collapses a read failure (locked/denied/timed-out
+    // keychain) to "nothing stored", so the button deliberately stays hidden on any read failure - the
+    // only cost is not offering to forget an entry that could not be read.
     pushButton_forgetSavedSignIn->setEnabled(mEnableGMCP->isChecked());
     // Once per profile rather than once per run: reading the keychain can cost
     // the user a prompt on some platforms, for an answer that hardly changes
@@ -4512,13 +4516,27 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         pushButton_forgetSavedSignIn->setVisible(false);
         QPointer<dlgProfilePreferences> safeDialog = this;
         QPointer<CredentialManager> credentialManager = new CredentialManager();
-        credentialManager->credentialExists(pHost->getName(), qsl("reconnect"), [safeDialog, credentialManager](bool exists) {
+        const QString profileName = pHost->getName();
+        credentialManager->credentialExists(profileName, qsl("reconnect"), [safeDialog, credentialManager, profileName](bool exists) {
             if (credentialManager) {
                 credentialManager->deleteLater();
             }
-            if (safeDialog && exists) {
-                safeDialog->pushButton_forgetSavedSignIn->setVisible(true);
+            if (!safeDialog) {
+                return;
             }
+            if (exists) {
+                safeDialog->pushButton_forgetSavedSignIn->setVisible(true);
+                return;
+            }
+            QPointer<CredentialManager> tokenChecker = new CredentialManager();
+            tokenChecker->credentialExists(profileName, qsl("reconnect-token"), [safeDialog, tokenChecker](bool tokenExists) {
+                if (tokenChecker) {
+                    tokenChecker->deleteLater();
+                }
+                if (safeDialog && tokenExists) {
+                    safeDialog->pushButton_forgetSavedSignIn->setVisible(true);
+                }
+            });
         });
     }
 
@@ -5651,6 +5669,13 @@ void dlgProfilePreferences::slot_forgetSavedSignIn()
         // host closing before the removal answers.
         QPointer<dlgProfilePreferences> safeDialog = this;
         QPointer<Host> safeHost = pHost;
+        // Disable for the duration, not only on success. The removal is asynchronous and can take tens
+        // of seconds behind a slow or prompting keychain, during which the button stayed live and a
+        // second click was easy. That second request supersedes the first, and a superseded forget
+        // reports failure - so the player got a "could not remove" warning for a forget that was about
+        // to succeed, immediately followed by the success. Re-enabled below on any outcome that leaves
+        // something still to forget.
+        pushButton_forgetSavedSignIn->setEnabled(false);
         pHost->mpAuth->forgetSavedSignIn([safeDialog, safeHost](bool success) {
             if (success) {
                 if (safeDialog) {
@@ -5665,6 +5690,8 @@ void dlgProfilePreferences::slot_forgetSavedSignIn()
                 }
             } else {
                 if (safeDialog) {
+                    // Something may still be stored, so let the player try again.
+                    safeDialog->pushButton_forgetSavedSignIn->setEnabled(true);
                     //: Shown when removing the saved sign-in failed, so it may still be present.
                     safeDialog->notificationAreaMessageBox->setText(dlgProfilePreferences::tr("Could not remove the saved sign-in; it may still be present."));
                 }
@@ -5868,7 +5895,7 @@ void dlgProfilePreferences::fillOutMapHistory()
         }
     }
     const QRegularExpression mapSaveRegularExpression{qsl("(\\d+)\\-(\\d+)\\-(\\d+)#(\\d+)\\-(\\d+)\\-(\\d+)(?:map)?\\.(dat|xml|json)"), QRegularExpression::CaseInsensitiveOption};
-    QDir mapSaveDir(mudlet::getMudletPath(enums::profileMapsPath, profile_name).append(QLatin1Char('/')));
+    QDir mapSaveDir(MudletPaths::getMudletPath(enums::profileMapsPath, profile_name).append(QLatin1Char('/')));
     mapSaveDir.setSorting(QDir::Time);
     const QStringList mapSaveEntries = mapSaveDir.entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
     for (const auto& entry : mapSaveEntries) {
@@ -6006,7 +6033,7 @@ void dlgProfilePreferences::slot_loadMap()
     QFileDialog* dialog = new QFileDialog(this);
     dialog->setWindowTitle(tr("Load Mudlet map"));
     QSettings& settings = *mudlet::getQSettings();
-    QString lastDir = settings.value("lastFileDialogLocation", mudlet::getMudletPath(enums::profileHomePath, pHost->getName())).toString();
+    QString lastDir = settings.value("lastFileDialogLocation", MudletPaths::getMudletPath(enums::profileHomePath, pHost->getName())).toString();
     dialog->setDirectory(lastDir);
     dialog->setNameFilter(loadExtensions.join(qsl(";;")));
     connect(dialog, &QDialog::finished, this, [=, this](int result) {
@@ -6037,7 +6064,7 @@ void dlgProfilePreferences::slot_saveMap()
     QFileDialog* dialog = new QFileDialog(this);
     dialog->setWindowTitle(tr("Save Mudlet map"));
     QSettings& settings = *mudlet::getQSettings();
-    QString lastDir = settings.value("lastFileDialogLocation", mudlet::getMudletPath(enums::profileHomePath, pHost->getName())).toString();
+    QString lastDir = settings.value("lastFileDialogLocation", MudletPaths::getMudletPath(enums::profileHomePath, pHost->getName())).toString();
     dialog->setDirectory(lastDir);
     dialog->setNameFilter(saveExtensions.join(qsl(";;")));
     dialog->setAcceptMode(QFileDialog::AcceptSave);
@@ -6093,9 +6120,9 @@ void dlgProfilePreferences::slot_saveMap()
 
 QString dlgProfilePreferences::mapSaveLoadDirectory(Host* pHost)
 {
-    const QString mapsPath = mudlet::getMudletPath(enums::profileMapsPath, pHost->getName());
+    const QString mapsPath = MudletPaths::getMudletPath(enums::profileMapsPath, pHost->getName());
     const QDir mapsDir = QDir(mapsPath);
-    return mapsDir.exists() ? mapsPath : mudlet::getMudletPath(enums::profileHomePath, pHost->getName());
+    return mapsDir.exists() ? mapsPath : MudletPaths::getMudletPath(enums::profileHomePath, pHost->getName());
 }
 
 void dlgProfilePreferences::slot_hideActionLabel()
@@ -6149,7 +6176,7 @@ void dlgProfilePreferences::slot_copyMap()
 
             // Check for the destination directory for the other profiles
             const QDir toProfileDir;
-            const QString toProfileDirPathString = mudlet::getMudletPath(enums::profileHomePath, pHost->getName());
+            const QString toProfileDirPathString = MudletPaths::getMudletPath(enums::profileHomePath, pHost->getName());
             if (!toProfileDir.exists(toProfileDirPathString)) {
                 if (!toProfileDir.mkpath(toProfileDirPathString)) {
                     const QString errMsg = tr("[ ERROR ] - Unable to use or create directory to store map for other profile \"%1\".\n"
@@ -6250,7 +6277,7 @@ void dlgProfilePreferences::slot_copyMap()
     // we just saved!
     QString thisProfileLatestMapPathFileName;
     QFile thisProfileLatestMapFile;
-    const QString sourceMapFolder(mudlet::getMudletPath(enums::profileMapsPath, pHost->getName()));
+    const QString sourceMapFolder(MudletPaths::getMudletPath(enums::profileMapsPath, pHost->getName()));
     const QStringList mProfileList = QDir(sourceMapFolder).entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
     for (unsigned int i = 0, total = mProfileList.size(); i < total; ++i) {
         thisProfileLatestMapPathFileName = mProfileList.at(i);
@@ -6280,7 +6307,7 @@ void dlgProfilePreferences::slot_copyMap()
                                // Just in case is needed to make the above message
                                // show up when saving big maps
 
-        if (!thisProfileLatestMapFile.copy(mudlet::getMudletPath(enums::profileMapPathFileName, otherHostName, thisProfileLatestMapPathFileName))) {
+        if (!thisProfileLatestMapFile.copy(MudletPaths::getMudletPath(enums::profileMapPathFileName, otherHostName, thisProfileLatestMapPathFileName))) {
             label_mapFileActionResult->setText(tr("Could not copy the map to %1 - unable to copy the new map file over.").arg(otherHostName));
             QTimer::singleShot(10s, this, &dlgProfilePreferences::slot_hideActionLabel);
             continue; // Try again with next profile
@@ -6312,7 +6339,7 @@ void dlgProfilePreferences::slot_setLogDir()
     }
 
     QSettings& settings = *mudlet::getQSettings();
-    QString lastDir = settings.value("lastFileDialogLocation", mudlet::getMudletPath(enums::profileHomePath, pHost->getName())).toString();
+    QString lastDir = settings.value("lastFileDialogLocation", MudletPaths::getMudletPath(enums::profileHomePath, pHost->getName())).toString();
 
     /*
      * To show the files even though we are looking for a directory so that the
@@ -6341,7 +6368,7 @@ void dlgProfilePreferences::slot_setLogDir()
         // Disable pushButton_resetLogDir and clear
         // lineEdit_logFileFolder if the directory is set to the
         // default path
-        if (currentLogDir == mudlet::getMudletPath(enums::profileReplayAndLogFilesPath, pHost->getName())) {
+        if (currentLogDir == MudletPaths::getMudletPath(enums::profileReplayAndLogFilesPath, pHost->getName())) {
             // clear mLogDirPath, which sets the directory where logs are saved
             // to Mudlet's default log path.
             mLogDirPath.clear();
@@ -6415,7 +6442,7 @@ void dlgProfilePreferences::applyAll()
         }
 
         if (mSnapshot.dirty(checkBox_spellCheck)) {
-            pHost->mEnableSpellCheck = checkBox_spellCheck->isChecked();
+            pHost->setEnableSpellCheck(checkBox_spellCheck->isChecked());
         }
         if (mSnapshot.anyDirty({radioButton_userDictionary_common, radioButton_userDictionary_profile})) {
             if (radioButton_userDictionary_common->isChecked()) {
@@ -7217,7 +7244,7 @@ void dlgProfilePreferences::maybeDownloadEditorThemes()
     settings.setValue("colorSublimeThemesURL", themesURL);
     settings.setValue("themesUpdatePeriod", themesUpdatePeriod);
 
-    auto themesAge = QFileInfo(mudlet::getMudletPath(enums::editorWidgetThemeJsonFile)).lastModified().toUTC();
+    auto themesAge = QFileInfo(MudletPaths::getMudletPath(enums::editorWidgetThemeJsonFile)).lastModified().toUTC();
 
     // A test visiting the Editor category is otherwise one file modification
     // time away from a live fetch that fails slowly rather than red
@@ -7280,7 +7307,7 @@ void dlgProfilePreferences::maybeDownloadEditorThemes()
                         }
 
                         // perform unzipping in a worker thread so as not to freeze the UI
-                        auto future = QtConcurrent::run(mudlet::unzip, tempThemesArchive->fileName(), mudlet::getMudletPath(enums::mainDataItemPath, qsl("edbee/")), temporaryDir.path());
+                        auto future = QtConcurrent::run(mudlet::unzip, tempThemesArchive->fileName(), MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("edbee/")), temporaryDir.path());
                         auto watcher = new QFutureWatcher<bool>(this);
                         connect(watcher, &QFutureWatcher<bool>::finished, this, [=, this]() {
                             if (future.result()) {
@@ -7303,7 +7330,7 @@ void dlgProfilePreferences::maybeDownloadEditorThemes()
 // selection combobox with them
 void dlgProfilePreferences::populateThemesList()
 {
-    QFile themesFile(mudlet::getMudletPath(enums::editorWidgetThemeJsonFile));
+    QFile themesFile(MudletPaths::getMudletPath(enums::editorWidgetThemeJsonFile));
     QList<std::pair<QString, QString>> sortedThemes;
     QJsonArray unsortedThemes;
 

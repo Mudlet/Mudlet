@@ -38,6 +38,7 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
+#include "MudletPaths.h"
 #include "mudlet.h"
 
 #include "GroupedTest.h"
@@ -69,7 +70,7 @@ private:
     // constructed, so a broken section header is caught there instead
     static QByteArray unparseableIni() { return QByteArrayLiteral("[CommandLines]\nUsedIndexes=1\nthis line was truncated mid-write\n"); }
 
-    static QString iniPathFor(const QString& profileName) { return mudlet::getMudletPath(enums::profileDataItemPath, profileName, qsl("profile.ini")); }
+    static QString iniPathFor(const QString& profileName) { return MudletPaths::getMudletPath(enums::profileDataItemPath, profileName, qsl("profile.ini")); }
 
     // Probes a copy at a path of its own: QSettings keeps the sections it has parsed
     // per file path and shares them between instances - and beyond the life of the one
@@ -123,7 +124,7 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);

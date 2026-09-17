@@ -41,7 +41,6 @@
 
 #include <list>
 
-const char* TTimer::scmProperty_HostName = "HostName";
 const char* TTimer::scmProperty_TTimerId = "TTimerId";
 
 TTimer::TTimer(TTimer* parent, Host* pHost)
@@ -50,8 +49,6 @@ TTimer::TTimer(TTimer* parent, Host* pHost)
 , mpQTimer(new QTimer)
 {
     mpQTimer->stop();
-    mpQTimer->setProperty(scmProperty_HostName, mpHost->getName());
-    mpHost->getTimerUnit()->mQTimerSet.insert(mpQTimer);
     mpQTimer->setProperty(scmProperty_TTimerId, 0);
     mpQTimer->setTimerType(Qt::PreciseTimer);
 }
@@ -64,8 +61,6 @@ TTimer::TTimer(const QString& name, QTime time, Host* pHost, bool repeating)
 , mpQTimer(new QTimer)
 {
     mpQTimer->stop();
-    mpQTimer->setProperty(scmProperty_HostName, mpHost->getName());
-    mpHost->getTimerUnit()->mQTimerSet.insert(mpQTimer);
     mpQTimer->setProperty(scmProperty_TTimerId, 0);
     mRepeating = repeating;
     mpQTimer->setTimerType(Qt::PreciseTimer);
@@ -85,7 +80,6 @@ TTimer::~TTimer()
             }
         }
 
-        mpHost->getTimerUnit()->mQTimerSet.remove(mpQTimer);
         // During normal operation, use deleteLater() for safety
         mpQTimer->deleteLater();
     } else {
@@ -238,8 +232,8 @@ void TTimer::execute()
     pUnit->beginProcessing();
     // NB: deliberately only decrements the depth - do NOT add a doCleanup() call
     // here: it would delete `this` (and other deferred timers) while
-    // mudlet::slot_timerFires() still holds the pointer. Deferred deletes are
-    // flushed by slot_timerFires() itself once it is finished with the timer
+    // TimerUnit::timerFired() still holds the pointer. Deferred deletes are
+    // flushed by timerFired() itself once it is finished with the timer
     // (and by the doCleanup() calls in Host::incomingStreamProcessor() and
     // Host::slot_purgeTemps()):
     const auto processingGuard = qScopeGuard([pUnit] {
@@ -312,8 +306,12 @@ void TTimer::enableTimer(int id)
     if (mID == id) {
         if (canBeUnlocked()) {
             if (activate()) {
-                // CHECKME: Should this not also check for a non-empty "command" as well?
-                if (!mScript.isEmpty()) {
+                // Restarting only the timers that hold a script left the other
+                // two kinds stopped for the rest of the session once the
+                // emergency stop had been used: a tempTimer() given a Lua
+                // function keeps its callback in the Lua registry and a timer
+                // that only sends a command has nothing to compile (#10751)
+                if (hasPayload()) {
                     mpQTimer->start();
                 }
             } else {
@@ -352,8 +350,17 @@ void TTimer::enableTimer()
 {
     if (canBeUnlocked()) {
         if (activate()) {
-            // CHECKME: Should this not also check for a non-empty "command" as well?
-            if (!mScript.isEmpty()) {
+            // enableTimer(name) comes through here for the children of a
+            // folder, where a command-only timer is an everyday thing - see
+            // enableTimer(int) above (#10751). TimerUnit::enableTimer(name)
+            // hands an offset timer straight to this as well, and an offset
+            // timer's schedule is its parent's: the parent firing arms it, by
+            // way of enableTimer(int). Arming a command-only one here would
+            // hand it a schedule of its own that it has never had, so those
+            // keep the narrower test - what a script offset timer does here is
+            // long-standing behaviour and a separate question from #10751
+            const bool startable = isOffsetTimer() ? (!mScript.isEmpty() || mRegisteredAnonymousLuaFunction) : hasPayload();
+            if (startable) {
                 mpQTimer->start();
             }
         } else {

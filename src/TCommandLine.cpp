@@ -24,6 +24,7 @@
 
 #include "TCommandLine.h"
 
+#include "MudletPaths.h"
 #include "TEncodingHelper.h"
 #include "Host.h"
 #include "HostManager.h"
@@ -739,7 +740,7 @@ void TCommandLine::adjustHeight()
 
 void TCommandLine::spellCheck()
 {
-    if (!mpHost || !mpHost->mEnableSpellCheck) {
+    if (!mpHost || !mpHost->getEnableSpellCheck()) {
         return;
     }
 
@@ -811,7 +812,7 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
         action_removeWord = new QAction(tr("Remove from user dictionary"));
         action_removeWord->setEnabled(false);
         // }
-        if (mudlet::self()->mUsingMudletDictionaries) {
+        if (MudletPaths::usingMudletDictionaries()) {
             /*:
             This line is shown in the list of spelling suggestions on the profile's command
             line context menu to clearly divide up where the suggestions for correct
@@ -988,7 +989,7 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
 
     if (event->button() == Qt::RightButton) {
         auto popup = createStandardContextMenu(event->globalPosition().toPoint());
-        if (mpHost->mEnableSpellCheck) {
+        if (mpHost->getEnableSpellCheck()) {
             fillSpellCheckList(event, popup);
             // else the word is in the dictionary - in either case show the context
             // menu - either the one with the prefixed spellings, or the standard one
@@ -1305,7 +1306,7 @@ void TCommandLine::slot_addWord()
 
 void TCommandLine::spellCheckWord(QTextCursor& c)
 {
-    if (!mpHost || !mpHost->mEnableSpellCheck) {
+    if (!mpHost || !mpHost->getEnableSpellCheck()) {
         return;
     }
 
@@ -1405,7 +1406,7 @@ bool TCommandLine::handleCtrlTabChange(QKeyEvent* ke, int tabNumber)
 
 void TCommandLine::recheckWholeLine()
 {
-    if (!mpHost || !mpHost->mEnableSpellCheck) {
+    if (!mpHost || !mpHost->getEnableSpellCheck()) {
         return;
     }
 
@@ -1619,7 +1620,7 @@ void TCommandLine::restoreHistory()
         return;
     }
 
-    QString pathFileName{mudlet::self()->mudlet::getMudletPath(enums::profileDataItemPath, pHost->getName(), mBackingFileName)};
+    QString pathFileName{MudletPaths::getMudletPath(enums::profileDataItemPath, pHost->getName(), mBackingFileName)};
     QFile historyFile(pathFileName, this);
     if (historyFile.exists()) {
         if (historyFile.open(QIODevice::ReadOnly | QIODevice::Unbuffered)) {
@@ -1674,7 +1675,7 @@ void TCommandLine::slot_saveHistory()
         return;
     }
 
-    QString pathFileName{mudlet::self()->mudlet::getMudletPath(enums::profileDataItemPath, pHost->getName(), mBackingFileName)};
+    QString pathFileName{MudletPaths::getMudletPath(enums::profileDataItemPath, pHost->getName(), mBackingFileName)};
     QSaveFile historyFile(pathFileName, this);
     if (historyFile.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         QTextStream ofs(&historyFile);
