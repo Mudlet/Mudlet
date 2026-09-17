@@ -43,12 +43,24 @@ end
 -- that never reaches the decoder, so a byte in that range only goes through the
 -- decoder when something breaks the run ahead of it. An SGR reset does that and
 -- contributes no text of its own.
-local function decodedByteByByte(data)
+local function brokenUp(data)
   local broken = {}
   for i = 1, #data do
     broken[#broken + 1] = "\27[m" .. data:sub(i, i)
   end
-  return decoded(table.concat(broken))
+  return table.concat(broken)
+end
+
+local function decodedByteByByte(data)
+  return decoded(brokenUp(data))
+end
+
+-- every line a feed left behind, for data that does not stay on one line
+local function decodedLines(data)
+  local mark = getLastLineNumber("main")
+  local ok, msg = feedTelnet(data .. "\r\n")
+  assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+  return getLines("main", mark, getLastLineNumber("main") + 1), mark
 end
 
 -- Text comes back as UTF-8; code points spell out the expectations that have no
@@ -716,5 +728,114 @@ describe("Tests changing the encoding from a trigger", function()
     end)
 
     assert.equals("中", decoded("switch\r\nenc:" .. bytes(0xD6, 0xD0)))
+  end)
+end)
+
+describe("Tests the bulk copy of plain text runs", function()
+  -- The end of a run is looked for eight bytes at a time, so whatever ends one
+  -- is tried at every place within such a group it can fall on. The text that
+  -- follows it is long enough for the search to get going a second time.
+  local filler = "The quick brown fox jumps over the lazy dog"
+
+  local function atEveryOffset(check)
+    for lead = 0, 17 do
+      check(filler:sub(1, lead), filler, lead .. " characters into the run")
+    end
+  end
+
+  it("copies every printable character through unchanged", function()
+    -- in two halves, as a line holding all of them would be wrapped
+    for _, range in ipairs({{0x20, 0x4F}, {0x50, 0x7E}}) do
+      local printable = {}
+      for byte = range[1], range[2] do
+        printable[#printable + 1] = bytes(byte)
+      end
+      local text = "|" .. table.concat(printable) .. "|"
+
+      assert.equals(text, decoded(text))
+    end
+  end)
+
+  it("ends a run at a byte the code page has a character for", function()
+    using("CP437")
+
+    -- both ends of the part of the upper half that is text, 0xFF marking a prompt
+    local characters = {[0x80] = "Ç", [0x86] = "å", [0xFE] = "■"}
+    for byte, character in pairs(characters) do
+      atEveryOffset(function(before, after, where)
+        assert.equals(before .. character .. after, decoded(before .. bytes(byte) .. after), string.format("byte 0x%02X, %s", byte, where))
+      end)
+    end
+  end)
+
+  it("ends a run at the first byte of a UTF-8 sequence", function()
+    using("UTF-8")
+
+    for _, character in ipairs({"é", "€"}) do
+      atEveryOffset(function(before, after, where)
+        assert.equals(before .. character .. after, decoded(before .. character .. after), character .. ", " .. where)
+      end)
+    end
+  end)
+
+  it("ends a run at the one 7-bit byte EUC-KR rejects", function()
+    using("EUC-KR")
+
+    atEveryOffset(function(before, after, where)
+      assert.equals(before .. replacement .. after, decoded(before .. bytes(0x7F) .. after), where)
+    end)
+  end)
+
+  it("ends a run at a line feed", function()
+    atEveryOffset(function(before, after, where)
+      local lines = decodedLines("run:" .. before .. "\nrun:" .. after)
+
+      assert.equals("run:" .. before, lines[1], where)
+      assert.equals("run:" .. after, lines[2], where)
+    end)
+  end)
+
+  it("ends a run at the other bytes that end a line just as the byte by byte decoder does", function()
+    local endings = {
+      {name = "End of Transmission", fed = bytes(0x04)},
+      -- telnet's IAC as well, so it has to be doubled to arrive as data - and
+      -- a carry out of it is what a test of eight bytes at once would get wrong
+      {name = "the byte a prompt is marked with", fed = bytes(0xFF, 0xFF)},
+    }
+    for _, ending in ipairs(endings) do
+      atEveryOffset(function(before, after, where)
+        local expected = decodedLines(brokenUp("run:" .. before) .. ending.fed .. brokenUp("run:" .. after))
+
+        assert.same(expected, decodedLines("run:" .. before .. ending.fed .. "run:" .. after), ending.name .. ", " .. where)
+      end)
+    end
+  end)
+
+  it("carries a control character that is plain text along with the run", function()
+    atEveryOffset(function(before, after, where)
+      assert.equals(before .. "\t" .. after, decoded(before .. "\t" .. after), where)
+    end)
+  end)
+
+  it("starts a format change on the character right after its sequence", function()
+    finally(function()
+      deselect("main")
+    end)
+
+    local function boldAt(line, column)
+      assert.is_true(moveCursor("main", 0, line))
+      assert.is_true(selectSection("main", column, 1))
+      return getTextFormat("main").bold
+    end
+
+    atEveryOffset(function(before, after, where)
+      local lines, line = decodedLines("\27[0mfmt:" .. before .. "\27[1m" .. after .. "\27[0m")
+
+      assert.equals("fmt:" .. before .. after, lines[1], where)
+      local changeAt = #"fmt:" + #before
+      assert.is_false(boldAt(line, changeAt - 1), "bold began a character early, " .. where)
+      assert.is_true(boldAt(line, changeAt), "bold began a character late, " .. where)
+      assert.is_true(boldAt(line, changeAt + #after - 1), "bold did not reach the end of the run, " .. where)
+    end)
   end)
 end)
