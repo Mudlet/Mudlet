@@ -104,9 +104,9 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `dlgNotepad.h` | 0 | 14 | QLabel, QLineEdit, QPlainTextEdit, QToolButton, QMainWindow, QWidget |
 | `dlgMapper.h` | 0 | 13 | QFrame, QLabel, QProgressBar, QPushButton, QWidget, QMenu |
 | `TDebugFilterBar.h` | 1 | 12 | QToolBar, QLabel, QLineEdit, QMenu, QToolButton, QWidget |
+| `TMainConsole.h` | 1 | 11 | QWidget, QDialog, QDockWidget, QProgressDialog |
 | `TUiTour.h` | 1 | 11 | QWidget, QFrame, QLabel, QPushButton |
 | `updater.cpp` | 2 | 10 | QMessageBox, QPushButton, QApplication, QAbstractButton |
-| `TMainConsole.h` | 1 | 10 | QWidget, QDialog, QDockWidget, QProgressDialog |
 | `updater/UpdateDialog.h` | 1 | 10 | QDialog, QAbstractButton, QLabel, QWidget |
 | `VarUnit.cpp` | 1 | 10 | QTreeWidgetItem |
 | `VarUnit.h` | 0 | 11 | QTreeWidgetItem |
@@ -129,7 +129,6 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `TCommandLine.h` | 2 | 4 | QPlainTextEdit, QToolButton, QWidget, QMenu |
 | `TEasyButtonBar.h` | 1 | 5 | QWidget, QGridLayout |
 | `TToolBar.h` | 1 | 5 | QDockWidget, QGridLayout, QWidget |
-| `ActionUnit.cpp` | 3 | 2 | QDockWidget, QLayout, QWidget |
 | `dlgActionMainArea.cpp` | 0 | 5 | QWidget, QLineEdit, QSpinBox, QComboBox |
 | `dlgModuleManager.h` | 1 | 4 | QDialog, QWidget, QTableWidgetItem |
 | `LuaInterface.h` | 0 | 5 | QTreeWidgetItem |
@@ -140,6 +139,7 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `TrailingWhitespaceMarker.cpp` | 1 | 4 | QLineEdit, QPlainTextEdit |
 | `TrailingWhitespaceMarker.h` | 1 | 4 | QLineEdit, QPlainTextEdit |
 | `TScrollBox.h` | 1 | 4 | QScrollArea, QWidget |
+| `ActionUnit.cpp` | 2 | 2 | QDockWidget, QWidget |
 | `DarkTheme.h` | 2 | 2 | QProxyStyle, QStyleFactory, QStyle |
 | `dlgAliasMainArea.cpp` | 0 | 4 | QWidget, QLineEdit |
 | `dlgRoomProperties.h` | 1 | 3 | QListWidget, QDialog, QWidget, QListWidgetItem |
@@ -196,7 +196,7 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `modern_glwidget.cpp` | 0 | 2 | QWidget |
 | `SelectionRectangleHandler.cpp` | 1 | 1 | QTreeWidgetItem |
 | `TDockWidget.h` | 1 | 1 | QDockWidget |
-| `TLuaInterpreter.cpp` | 1 | 1 | QApplication |
+| `TLuaInterpreterUI.cpp` | 1 | 1 | QApplication |
 | `TMapViewManager.h` | 1 | 1 | QDockWidget |
 | `TSplitterHandle.cpp` | 0 | 2 | QSplitterHandle, QSplitter |
 | `TSplitterHandle.h` | 1 | 1 | QSplitterHandle |
@@ -371,6 +371,7 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 - `TLabelModel.h`
 - `TLinkStore.cpp`
 - `TLinkStore.h`
+- `TLuaInterpreter.cpp`
 - `TLuaInterpreter.h`
 - `TLuaInterpreterDiscord.cpp`
 - `TLuaInterpreterMapper.cpp`
@@ -379,7 +380,6 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 - `TLuaInterpreterNetworking.cpp`
 - `TLuaInterpreterSpeechToText.cpp`
 - `TLuaInterpreterTextToSpeech.cpp`
-- `TLuaInterpreterUI.cpp`
 - `TMap.cpp`
 - `TMap.h`
 - `TMapLabel.cpp`

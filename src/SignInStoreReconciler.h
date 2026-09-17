@@ -23,7 +23,11 @@
 #include <QObject>
 #include <QString>
 
+#include <QPointer>
+
+#include <deque>
 #include <functional>
+#include <memory>
 #include <optional>
 #include <vector>
 
@@ -40,11 +44,18 @@
 // one operation and calls back. That is what lets a test drive it with complete control over when
 // each operation completes.
 //
+// Reads of the stored sign-in are scheduled here too, through whenReadable(): a read never starts while
+// a sequence is running, and no sequence starts while a read is in progress, so a read never sees one
+// half of a sequence without the other.
+//
 // Serialising every mutation has a cost: a stalled store operation now delays every later sign-in
 // mutation behind it. A queued request waits out the stalled step before it can even abandon it, then
 // runs its own sequence, each step bounded by CredentialManager's 30-second timeout - so "Forget saved
 // sign-in", a two-step sequence, can take about ninety seconds to answer where it previously raced
-// ahead of a slow save. Bounded and correct, but worth knowing before you go looking for why a UI
+// ahead of a slow save. Reads hold mutations back the same way: GMCPAuthenticator reads the stored
+// sign-in as two CredentialManager lookups under one lease, each bounded by that same timeout, so a
+// stalled keychain can hold a save or forget - and the forget's callback - for about a minute before
+// the sequence even starts. Bounded and correct, but worth knowing before you go looking for why a UI
 // action seems to hang.
 class SignInStoreReconciler : public QObject
 {
@@ -130,6 +141,27 @@ public:
     unsigned int setIntent(Intent intent, Completion completion);
     bool inFlight() const { return mActive.has_value(); }
 
+    // Held for the duration of a read of the stored sign-in; releasing the last reference ends the read.
+    class ReadLease
+    {
+    public:
+        ~ReadLease();
+        // Whether a request was made while this lease was held. It has not reached the store yet, but it
+        // is newer than anything the read saw, so the read must not be used to overwrite it.
+        bool storeChangeRequested() const;
+
+    private:
+        friend class SignInStoreReconciler;
+        ReadLease(SignInStoreReconciler* owner, unsigned int lastRequestId);
+        QPointer<SignInStoreReconciler> mpOwner;
+        unsigned int mLastRequestId;
+    };
+    using Lease = std::shared_ptr<ReadLease>;
+    // Calls read with a lease once no sequence is running or waiting to run - at once when the store is
+    // idle. Reads may overlap each other. A read still waiting when the reconciler is destroyed is dropped
+    // without being called.
+    void whenReadable(std::function<void(Lease)> read);
+
 private:
     struct Request
     {
@@ -158,11 +190,16 @@ private:
     void runStep();
     void onStepDone(unsigned int id, Operation op, bool ok, QString error);
     void finish(Request& request, Outcome outcome, Operation failedAt, QString error);
+    void grant(std::function<void(Lease)> read);
+    void releaseRead();
+    void grantWaitingReads();
 
     Performer mPerformer;
     unsigned int mNextId = 0;
     std::optional<Request> mActive;
     std::optional<Request> mPending;
+    unsigned int mReaders = 0;
+    std::deque<std::function<void(Lease)>> mWaitingReads;
 };
 
 #endif // MUDLET_SIGNINSTORERECONCILER_H
