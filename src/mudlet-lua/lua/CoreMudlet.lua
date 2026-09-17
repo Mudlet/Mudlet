@@ -43,7 +43,8 @@ if false then
 
 
   --- The <i>command variable</i> holds initial user command e.g. unchanged by any aliases or triggers.
-  --- This is typically used in alias scripts.
+  --- This is typically used in alias scripts. It holds the command of the dispatch that ran your script, which an
+  --- expandAlias() call made from that script does not change - see expandAlias().
   ---
   --- @see line
   ---
@@ -242,6 +243,12 @@ if false then
   --- function. If you use expandAlias( command ) inside an alias script the command would be doubled. You have
   --- to use send( ) inside an alias script to prevent recursion. This will send the data directly and bypass
   --- the alias expansion.
+  ---
+  --- Note: expandAlias() leaves the variables of the script that called it alone. The aliases it runs are given the
+  --- expanded command in "command" and their own captures in "matches", and once the call returns the calling script
+  --- has back the "command", "matches" and "multimatches" it had before it - so a capture read after an expandAlias()
+  --- call is still the caller's own. A command sent at the command line is unaffected: every alias it runs sees it
+  --- in "command" as before.
   ---
   --- @see send
   function expandAlias(command, print=1)

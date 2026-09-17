@@ -40,6 +40,7 @@
 
 #include <functional>
 
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "AliasUnit.h"
@@ -463,7 +464,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = mudlet::getMudletPath(enums::profileHomePath, profileName);
+        const QString path = MudletPaths::getMudletPath(enums::profileHomePath, profileName);
         QDir dir(path);
         if (dir.exists()) {
             dir.removeRecursively();
@@ -493,7 +494,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -515,6 +516,11 @@ private slots:
         if (QTest::currentTestFailed()) {
             return;
         }
+
+        // Host attributes ride the same XML. Both are set off their defaults so
+        // an import that leaves them alone cannot pass.
+        mpSource->setSearchOptions(enums::EditorSearchOptionCaseSensitive | enums::EditorSearchOptionWholeWord);
+        mpSource->setShowIdsInEditor(true);
 
         auto [saved, xmlPath, saveError] = mpSource->saveProfile(mSaveDir.path(), qsl("roundtrip"));
         QVERIFY2(saved, qPrintable(saveError));
@@ -573,8 +579,7 @@ private slots:
         mpLegacyTarget = nullptr;
         delete mpServer;
         mpServer = nullptr;
-        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
-        // getMudletPath() dereferences the instance rather than checking it
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
             deleteProfileDirectory(mSourceName);
             deleteProfileDirectory(mTargetName);
@@ -582,6 +587,14 @@ private slots:
             delete mudlet::self();
         }
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
+    }
+
+    // The editor search options are a Host-owned enum now; the XML carries the
+    // raw value, so every renumbering would come back as a different setting
+    void test_editorSettingsRoundTrip()
+    {
+        QCOMPARE(mpTarget->mSearchOptions, enums::EditorSearchOptions(enums::EditorSearchOptionCaseSensitive | enums::EditorSearchOptionWholeWord));
+        QVERIFY(mpTarget->showIdsInEditor());
     }
 
     void test_triggersRoundTrip()

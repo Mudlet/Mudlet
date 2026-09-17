@@ -6,18 +6,11 @@
 name: "CodeQL"
 
 on:
-  push:
-    branches: [development, main]
+  # Not on push: merges to development come in bursts and a scan takes an hour,
+  # so per-push runs either pile up or leave cancelled checks on merged commits.
   schedule:
-    - cron: '0 7 * * 3'
+    - cron: '0 7 * * *'
   workflow_dispatch:
-
-# A branch scan only needs the newest commit analysed: five pushes to
-# development in quick succession otherwise hold five full builds at once, and
-# the runner concurrency is shared with every other repository in the org.
-concurrency:
-  group: codeql-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
   analyze:

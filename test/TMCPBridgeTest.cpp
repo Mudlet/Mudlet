@@ -1135,7 +1135,7 @@ void TMCPBridgeTest::codexRefreshLeavesCurrentEntryAlone()
 // The process cases below run the real `mudlet --mcp-bridge`, so they also cover
 // main.cpp's argv handling and config dir resolution. HOME and XDG_CONFIG_HOME each
 // point into the temp dir; either alone isolates the config lookup (the profiles/ dir
-// gives the XDG root the tiebreak in utils::xdgConfigDir), but with both redirected no
+// gives the XDG root the tiebreak in MudletPaths::xdgConfigDir), but with both redirected no
 // resolution path can reach the user's real configuration.
 namespace {
 struct BridgeProcess

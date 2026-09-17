@@ -21,6 +21,7 @@
 
 #include "Host.h"
 #include "HostManager.h"
+#include "MudletPaths.h"
 #include "TLuaInterpreter.h"
 #include "TMap.h"
 #include "mudlet.h"
@@ -251,7 +252,7 @@ Host* TMCPLuaBridge::targetHost(const QString& profileName, QString& failure)
     if (!profileName.isEmpty()) {
         // Match the profile name the way the rest of Mudlet does. getHost() is an exact
         // lookup, so "achaea" would not find the profile the user knows as "Achaea".
-        const QString canonical = mudlet::self()->getCanonicalProfileName(profileName);
+        const QString canonical = MudletPaths::getCanonicalProfileName(profileName);
         pTarget = mudlet::self()->getHostManager().getHost(canonical.isEmpty() ? profileName : canonical);
         if (!pTarget) {
             //: Error shown to an AI model that named a profile which is not open. %1 is the name it gave.

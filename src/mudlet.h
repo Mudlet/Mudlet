@@ -63,6 +63,7 @@ class QAction;
 class QCloseEvent;
 class QDateTime;
 class QDir;
+class QDockWidget;
 class QKeyEvent;
 class QMediaDevices;
 class QMediaPlayer;
@@ -105,7 +106,6 @@ class TLabel;
 class translation;
 class TScrollBox;
 class TTabBar;
-class TTimer;
 class TToolBar;
 class TUiTour;
 
@@ -118,7 +118,6 @@ public:
     mudlet();
     ~mudlet() override;
 
-    static QString getMudletPath(enums::mudletPathType, const QString& extra1 = QString(), const QString& extra2 = QString());
     static QSettings* getQSettings();
     // From https://stackoverflow.com/a/14678964/4805858 an answer to:
     // "How to find and replace string?" by "Czarek Tomczak":
@@ -175,7 +174,6 @@ public:
     // as well as encourage translators to maintain it
     static const int scmTranslationGoldStar = 95;
     QString scmVersion;
-    QString confPath;
     // These have to be "inline" to satisfy the ODR (One Definition Rule):
     inline static bool smFirstLaunch = false;
     inline static QVariantHash smLuaFunctionNames;
@@ -235,7 +233,9 @@ public:
     // there too or a consumer cannot tell "no engine" from "nothing said yet".
     void raiseSpeechEvent(const QString& name, const QString& value);
     const QMap<QString, QPointer<TDetachedWindow>>& getDetachedWindows() const { return mDetachedWindows; }
-    QDockWidget* getMainWindowDockWidget(const QString& mapKey) const { return mMainWindowDockWidgetMap.value(mapKey); }
+    // Out of line so mudlet.h needs no more than a forward declaration -
+    // converting the QPointer this returns wants the complete type
+    QDockWidget* getMainWindowDockWidget(const QString& mapKey) const;
     std::optional<QSize> getImageSize(const QString&);
     const QString& getInterfaceLanguage() const { return mInterfaceLanguage; }
     int64_t getPhysicalMemoryTotal();
@@ -274,7 +274,6 @@ public:
     void readEarlySettings(const QSettings&);
     void readLateSettings(const QSettings&);
     QPair<bool, bool> removeWordFromSet(const QString&);
-    QString readProfileData(const QString& profile, const QString& item);
     void refreshTabBar();
     void refreshTabBarsAfterStyleChange();
     // Used by a profile to tell the mudlet class
@@ -347,6 +346,10 @@ public:
     // that is the other package's business and nothing this profile can act
     // on, the same rule addonShortcutUsable() follows.
     QStringList addonCommandsUsingShortcut(const QKeySequence& sequence, const Host* pHost) const;
+    // Every other profile whose key binding a command just took, told about it.
+    // The clash is only refused within the profile that is asking; see the
+    // definition for why the others are told rather than turned down.
+    void warnProfilesLosingBindingTo(const QKeySequence& sequence, Host* pHost, const QString& commandName);
     void applyToolBarStyleToAddonCommands();
 
     // Brings up the preferences dialog and selects the tab whos objectName is
@@ -358,7 +361,6 @@ public:
     enums::controlsVisibility toolBarVisibility() const { return mToolbarVisibility; }
     void updateDiscordNamedIcon();
     void updateMultiViewControls();
-    QPair<bool, QString> writeProfileData(const QString& profile, const QString& item, const QString& what);
     void writeSettings();
     bool muteAPI() const { return mMuteAPI; }
     bool muteGame() const { return mMuteGame; }
@@ -379,7 +381,6 @@ public:
     bool setMCPEnabled(bool enabled, quint16 port, QString& error);
 #endif
     bool profileExists(const QString& profileName);
-    QString getCanonicalProfileName(const QString& profileName);
     bool showSplitscreenTutorial();
     void showedSplitscreenTutorial();
     bool showMuteAllMediaTutorial();
@@ -465,11 +466,7 @@ public:
     QString mTEXT_ON_BG_STYLESHEET;
     int mToolbarIconSize = 0;
     QMap<QString, translation> mTranslationsMap;
-    // This is used to keep track of where the main dictionary files are located
-    // will be true if they are ones bundled with Mudlet, false if provided by
-    // the system
     QSystemTrayIcon mTrayIcon;
-    bool mUsingMudletDictionaries = false;
     bool mWindowMinimized = false;
     std::unique_ptr<MudletInstanceCoordinator> mInstanceCoordinator;
     // How many graphemes do we need before we run the spell checker on a "word" in the command line:
@@ -540,7 +537,6 @@ public slots:
     void slot_nextProfile();
     void slot_previousProfile();
     void slot_tabChanged(int);
-    void slot_timerFires();
     void slot_toggleFullScreenView();
     void slot_toggleMultiView();
     void slot_toggleTimeStamp();

@@ -24,10 +24,11 @@
 
 #include "TTrigger.h"
 
+#include "TTriggerPrescan.h"
+
 
 #include "Host.h"
 #include "TBuffer.h"
-#include "TConsole.h"
 #include "TConsoleModel.h"
 #include "TDebug.h"
 #include "TLuaInterpreter.h"
@@ -35,7 +36,6 @@
 #include "TMedia.h"
 #include "TMediaData.h"
 #include "TriggerUnit.h"
-#include "TMainConsole.h"
 #include <QByteArray>
 #include <QChar>
 #include <QDebug>
@@ -304,6 +304,8 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
     if (existingTrigger && (patternKinds.empty()) && (!isFolder()) && (!mColorTrigger)) {
         setError(tr("error: this trigger has no patterns defined"));
         mOK_init = false;
+        // the patterns the grams were taken from are gone, so they have to go too
+        rebuildPrescanGrams();
         return false;
     }
 
@@ -421,7 +423,61 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
     }
 
     mOK_init = state;
+    rebuildPrescanGrams();
     return state;
+}
+
+// A pattern that matches by containment cannot match a line that lacks the
+// pattern's own characters, so one n-gram per pattern is enough for
+// TTriggerPrescan to rule the whole trigger out. Any other pattern kind - a
+// regex, a colour, a Lua condition - is not decidable from the line's text, so
+// one of those leaves the trigger unfilterable and it keeps seeing every line.
+void TTrigger::rebuildPrescanGrams()
+{
+    std::vector<quint64> grams;
+    grams.reserve(mPatterns.size());
+    for (int i = 0; i < mPatterns.size(); ++i) {
+        const int kind = mPatternKinds.at(i);
+        if (kind != REGEX_SUBSTRING && kind != REGEX_BEGIN_OF_LINE_SUBSTRING && kind != REGEX_EXACT_MATCH) {
+            grams.clear();
+            break;
+        }
+        const quint64 gram = TTriggerPrescan::patternGram(mPatterns.at(i));
+        if (!gram) {
+            grams.clear();
+            break;
+        }
+        grams.push_back(gram);
+    }
+    mPrescanGrams = std::move(grams);
+    invalidatePrescan();
+}
+
+// The index is rebuilt from the trigger's current state, so anything that
+// changes whether or how it can be filtered has to reach the unit that holds it.
+void TTrigger::invalidatePrescan(const bool nowFiresWithoutMatching)
+{
+    if (mpHost) {
+        if (auto* unit = mpHost->getTriggerUnit()) {
+            if (nowFiresWithoutMatching) {
+                unit->markRootUnfilterable();
+            } else {
+                unit->markPrescanStale(this);
+            }
+        }
+    }
+}
+
+const std::vector<quint64>& TTrigger::prescanGrams() const
+{
+    static const std::vector<quint64> unfilterable;
+    // A line trigger fires on a line count rather than on text, a multiline one
+    // has to see every line to advance its state, and a trigger still counting
+    // down its stay-open fires without matching at all.
+    if (mIsLineTrigger || mIsMultiline || mKeepFiring > 0) {
+        return unfilterable;
+    }
+    return mPrescanGrams;
 }
 
 bool TTrigger::match_perl(const char* haystackC, const int haystackCLength, const QString& haystack, int patternNumber, int posOffset, int lineNumber)
@@ -588,11 +644,10 @@ END: {
         const int g2 = mFgColor.green();
         const int b2 = mFgColor.blue();
         const int total = captureList.size();
-        TConsole* pC = mpHost->mpConsole;
-        if (Q_UNLIKELY(!pC)) {
+        if (Q_UNLIKELY(!mpHost->mpConsole)) {
             return;
         }
-        pC->deselect();
+        mpHost->deselectMainConsole();
         auto its = captureList.begin();
         auto iti = posList.begin();
         for (int position = 1; iti != posList.end(); ++iti, ++its, position++) {
@@ -604,25 +659,25 @@ END: {
                 // to enable people to highlight capture groups if there are any
                 // otherwise highlight complete expression match
                 if (position % numberOfCaptureGroups != 1) {
-                    pC->selectSection(begin, length);
+                    mpHost->selectMainConsoleSection(begin, length);
                     if (mBgColor != QColorConstants::Transparent) {
-                        pC->setBgColor(r1, g1, b1, 255);
+                        mpHost->setMainConsoleBgColor(QColor(r1, g1, b1));
                     }
                     if (mFgColor != QColorConstants::Transparent) {
-                        pC->setFgColor(r2, g2, b2);
+                        mpHost->setMainConsoleFgColor(QColor(r2, g2, b2));
                     }
                 }
             } else {
-                pC->selectSection(begin, length);
+                mpHost->selectMainConsoleSection(begin, length);
                 if (mBgColor != QColorConstants::Transparent) {
-                    pC->setBgColor(r1, g1, b1, 255);
+                    mpHost->setMainConsoleBgColor(QColor(r1, g1, b1));
                 }
                 if (mFgColor != QColorConstants::Transparent) {
-                    pC->setFgColor(r2, g2, b2);
+                    mpHost->setMainConsoleFgColor(QColor(r2, g2, b2));
                 }
             }
         }
-        pC->reset();
+        mpHost->resetMainConsoleFormat();
     }
     if (mIsMultiline) {
         updateMultistates(patternNumber, captureList, posList, &nameGroups);
@@ -694,8 +749,7 @@ void TTrigger::processBeginOfLine(int patternNumber, int posOffset, int lineNumb
         const int r2 = mFgColor.red();
         const int g2 = mFgColor.green();
         const int b2 = mFgColor.blue();
-        TConsole* pC = mpHost->mpConsole;
-        if (Q_UNLIKELY(!pC)) {
+        if (Q_UNLIKELY(!mpHost->mpConsole)) {
             return;
         }
         auto its = captureList.begin();
@@ -703,15 +757,15 @@ void TTrigger::processBeginOfLine(int patternNumber, int posOffset, int lineNumb
             const int begin = *iti;
             const std::string& s = *its;
             const int length = QString::fromStdString(s).size();
-            pC->selectSection(begin, length);
+            mpHost->selectMainConsoleSection(begin, length);
             if (mBgColor != QColorConstants::Transparent) {
-                pC->setBgColor(r1, g1, b1, 255);
+                mpHost->setMainConsoleBgColor(QColor(r1, g1, b1));
             }
             if (mFgColor != QColorConstants::Transparent) {
-                pC->setFgColor(r2, g2, b2);
+                mpHost->setMainConsoleFgColor(QColor(r2, g2, b2));
             }
         }
-        pC->reset();
+        mpHost->resetMainConsoleFormat();
     }
     if (mIsMultiline) {
         updateMultistates(patternNumber, captureList, posList);
@@ -836,25 +890,24 @@ void TTrigger::processSubstringMatch(const QString& haystack, const QString& nee
         const int r2 = mFgColor.red();
         const int g2 = mFgColor.green();
         const int b2 = mFgColor.blue();
-        TConsole* pC = mpHost->mpConsole;
-        if (Q_UNLIKELY(!pC)) {
+        if (Q_UNLIKELY(!mpHost->mpConsole)) {
             return;
         }
-        pC->deselect();
+        mpHost->deselectMainConsole();
         auto its = captureList.begin();
         for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
             const int begin = *iti;
             const std::string& s = *its;
             const int length = QString::fromStdString(s).size();
-            pC->selectSection(begin, length);
+            mpHost->selectMainConsoleSection(begin, length);
             if (mBgColor != QColorConstants::Transparent) {
-                pC->setBgColor(r1, g1, b1, 255);
+                mpHost->setMainConsoleBgColor(QColor(r1, g1, b1));
             }
             if (mFgColor != QColorConstants::Transparent) {
-                pC->setFgColor(r2, g2, b2);
+                mpHost->setMainConsoleFgColor(QColor(r2, g2, b2));
             }
         }
-        pC->reset();
+        mpHost->resetMainConsoleFormat();
     }
     if (mIsMultiline) {
         updateMultistates(regexNumber, captureList, posList);
@@ -913,15 +966,19 @@ bool TTrigger::match_color_pattern(int line, int patternNumber, int posOffset, i
         return false; // no color settings to match against
     }
 
-    // Nothing below changes any of these, but the colour comparison is an
-    // out-of-line call that the compiler has to assume might, so read them once
-    // rather than once per character of the line:
     const int ansiFg = pCT->ansiFg;
     const int ansiBg = pCT->ansiBg;
-    const QColor& patternFg = pCT->mFgColor;
-    const QColor& patternBg = pCT->mBgColor;
-    const QColor& defaultFg = consoleModel.mFgColor;
-    const QColor& defaultBg = consoleModel.mBgColor;
+    // Compared in the form the characters store their colors in, so that a
+    // line's worth of comparisons converts nothing. A pattern color the table
+    // has no color for (an ignored aspect, or an ANSI code outside the table)
+    // is an invalid QColor, which would convert to opaque black and match
+    // black text - it matches nothing instead, as it always has:
+    const bool patternFgValid = pCT->mFgColor.isValid();
+    const bool patternBgValid = pCT->mBgColor.isValid();
+    const QRgb patternFg = pCT->mFgColor.rgba();
+    const QRgb patternBg = pCT->mBgColor.rgba();
+    const QRgb defaultFg = consoleModel.mFgColor.rgba();
+    const QRgb defaultBg = consoleModel.mBgColor.rgba();
     const int passLineSize = pPassLine ? static_cast<int>(pPassLine->size()) : 0;
 
     // This allows matching against the current default colours (-2) and
@@ -930,8 +987,8 @@ bool TTrigger::match_color_pattern(int line, int patternNumber, int posOffset, i
     // all parts of the text come from the Server and can be determined to
     // have come from a decoded ANSI code number:
     const auto colorsMatch = [&](const TChar& character) {
-        return ((ansiFg == scmIgnored) || ((ansiFg == scmDefault) && sameColor(defaultFg, character.foreground())) || sameColor(patternFg, character.foreground()))
-               && ((ansiBg == scmIgnored) || ((ansiBg == scmDefault) && sameColor(defaultBg, character.background())) || sameColor(patternBg, character.background()));
+        return ((ansiFg == scmIgnored) || ((ansiFg == scmDefault) && character.foregroundRgba() == defaultFg) || (patternFgValid && character.foregroundRgba() == patternFg))
+               && ((ansiBg == scmIgnored) || ((ansiBg == scmDefault) && character.backgroundRgba() == defaultBg) || (patternBgValid && character.backgroundRgba() == patternBg));
     };
 
     // A snapshot that stops short of the window cannot answer for the text past
@@ -985,26 +1042,25 @@ void TTrigger::processColorPattern(int patternNumber, std::list<std::string>& ca
         const int r2 = mFgColor.red();
         const int g2 = mFgColor.green();
         const int b2 = mFgColor.blue();
-        TConsole* pC = mpHost->mpConsole;
-        if (Q_UNLIKELY(!pC)) {
+        if (Q_UNLIKELY(!mpHost->mpConsole)) {
             return;
         }
-        pC->deselect();
+        mpHost->deselectMainConsole();
         auto its = captureList.begin();
         for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
             const int begin = *iti;
             //                qDebug() << "TTrigger::match_color_pattern(" << line << "," << patternNumber << ") INFO - match found: " << (*its).c_str() << " size is:" << (*its).size();
             const std::string& s = *its;
             const int length = QString::fromStdString(s).size();
-            pC->selectSection(begin, length);
+            mpHost->selectMainConsoleSection(begin, length);
             if (mBgColor != QColorConstants::Transparent) {
-                pC->setBgColor(r1, g1, b1, 255);
+                mpHost->setMainConsoleBgColor(QColor(r1, g1, b1));
             }
             if (mFgColor != QColorConstants::Transparent) {
-                pC->setFgColor(r2, g2, b2);
+                mpHost->setMainConsoleFgColor(QColor(r2, g2, b2));
             }
         }
-        pC->reset();
+        mpHost->resetMainConsoleFormat();
     }
     if (mIsMultiline) {
         updateMultistates(patternNumber, captureList, posList);
@@ -1134,8 +1190,7 @@ void TTrigger::processExactMatch(int patternNumber, int posOffset, int lineNumbe
         const int r2 = mFgColor.red();
         const int g2 = mFgColor.green();
         const int b2 = mFgColor.blue();
-        TConsole* pC = mpHost->mpConsole;
-        if (Q_UNLIKELY(!pC)) {
+        if (Q_UNLIKELY(!mpHost->mpConsole)) {
             return;
         }
         auto its = captureList.begin();
@@ -1143,15 +1198,15 @@ void TTrigger::processExactMatch(int patternNumber, int posOffset, int lineNumbe
             const int begin = *iti;
             const std::string& s = *its;
             const int length = QString::fromStdString(s).size();
-            pC->selectSection(begin, length);
+            mpHost->selectMainConsoleSection(begin, length);
             if (mBgColor != QColorConstants::Transparent) {
-                pC->setBgColor(r1, g1, b1, 255);
+                mpHost->setMainConsoleBgColor(QColor(r1, g1, b1));
             }
             if (mFgColor != QColorConstants::Transparent) {
-                pC->setFgColor(r2, g2, b2);
+                mpHost->setMainConsoleFgColor(QColor(r2, g2, b2));
             }
         }
-        pC->reset();
+        mpHost->resetMainConsoleFormat();
     }
     if (mIsMultiline) {
         updateMultistates(patternNumber, captureList, posList);
@@ -1262,7 +1317,13 @@ bool TTrigger::match(const char* haystackC, const int haystackCLength, const QSt
             if (!mIsMultiline) {
                 if (ret) {
                     conditionMet = true;
+                    const bool wasFilterable = !mKeepFiring;
                     mKeepFiring = mStayOpen;
+                    if (wasFilterable != !mKeepFiring) {
+                        // whether it fires without matching just changed, so
+                        // whether it can be filtered out of a line changed too
+                        invalidatePrescan();
+                    }
                     break;
                 }
             } else {
@@ -1349,6 +1410,9 @@ bool TTrigger::match(const char* haystackC, const int haystackCLength, const QSt
 
         if ((mKeepFiring > 0) && (!conditionMet)) {
             mKeepFiring--;
+            if (!mKeepFiring) {
+                invalidatePrescan();
+            }
             if ((mKeepFiring == mStayOpen) || (mpMyChildrenList->empty())) {
                 execute();
             }
@@ -1487,6 +1551,7 @@ bool TTrigger::setupTmpColorTrigger(int ansiFg, int ansiBg)
     mMatchData.emplace_back();
     mRegexJitCompiled.push_back(false);
     mColorPatternList.emplace_back(std::move(pCT));
+    rebuildPrescanGrams();
     return true;
 }
 

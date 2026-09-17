@@ -31,6 +31,7 @@
 #endif
 
 #include "HostManager.h"
+#include "MudletPaths.h"
 #include "mudlet.h"
 #include "MudletInstanceCoordinator.h"
 #include <chrono>
@@ -125,19 +126,19 @@ void removeOldNoteColorEmojiFonts()
     // When adding a later version, append the path and version comment of the
     // replaced one comment to this area:
     // Tag: "v2018-04-24-pistol-update"
-    oldNotoFontDirectories << qsl("%1/notocoloremoji-unhinted-2018-04-24-pistol-update").arg(mudlet::getMudletPath(enums::mainFontsPath));
+    oldNotoFontDirectories << qsl("%1/notocoloremoji-unhinted-2018-04-24-pistol-update").arg(MudletPaths::getMudletPath(enums::mainFontsPath));
     // Release: "v2019-11-19-unicode12"
-    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2019-11-19-unicode12").arg(mudlet::getMudletPath(enums::mainFontsPath));
+    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2019-11-19-unicode12").arg(MudletPaths::getMudletPath(enums::mainFontsPath));
     // Release: "Noto Emoji v2.0238"
-    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2021-07-15-v2.028").arg(mudlet::getMudletPath(enums::mainFontsPath));
+    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2021-07-15-v2.028").arg(MudletPaths::getMudletPath(enums::mainFontsPath));
     // Release: "Unicode 14.0"
-    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2021-11-01-v2.034").arg(mudlet::getMudletPath(enums::mainFontsPath));
+    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2021-11-01-v2.034").arg(MudletPaths::getMudletPath(enums::mainFontsPath));
     // Release: "Unicode 15.0"
-    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2022-09-16-v2.038").arg(mudlet::getMudletPath(enums::mainFontsPath));
+    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2022-09-16-v2.038").arg(MudletPaths::getMudletPath(enums::mainFontsPath));
     // Release: "Unicode 15.1, take 3"
-    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2023-11-30-v2.042").arg(mudlet::getMudletPath(enums::mainFontsPath));
+    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2023-11-30-v2.042").arg(MudletPaths::getMudletPath(enums::mainFontsPath));
     // Release: "Unicode 16.0"
-    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2024-10-03-v2.047").arg(mudlet::getMudletPath(enums::mainFontsPath));
+    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2024-10-03-v2.047").arg(MudletPaths::getMudletPath(enums::mainFontsPath));
 
     QListIterator<QString> itOldNotoFontDirectory(oldNotoFontDirectories);
     while (itOldNotoFontDirectory.hasNext()) {
@@ -195,10 +196,10 @@ void msys2QtMessageHandler(QtMsgType type, const QMessageLogContext& context, co
 }
 #endif
 
-// Replicates setupConfig()'s config path detection (minus its validation) for callers
-// that run before mudlet exists. argv[0] is the last resort: a plain command name found
-// via PATH resolves relative to the current directory instead of the binary's, so
-// applicationDirPath() is preferred whenever a QCoreApplication is up to provide it.
+// The config root for callers that run before mudlet exists. argv[0] is the last resort:
+// a plain command name found via PATH resolves relative to the current directory instead
+// of the binary's, so applicationDirPath() is preferred whenever a QCoreApplication is up
+// to provide it.
 static QString earlyConfigPath(int argc, char* argv[])
 {
     QString execDir;
@@ -213,33 +214,7 @@ static QString earlyConfigPath(int argc, char* argv[])
         return {};
     }
 
-    const QString confDirDefault = qsl("%1/.config/mudlet").arg(QDir::homePath());
-
-    const QString markerExecDir = qsl("%1/portable.txt").arg(execDir);
-    const QString markerHomeDir = qsl("%1/portable.txt").arg(confDirDefault);
-
-    if (QFileInfo(markerExecDir).isFile()) {
-        QFile file(markerExecDir);
-        QString portPath;
-        if (file.open(QIODevice::ReadOnly)) {
-            QTextStream(&file).readLineInto(&portPath);
-        }
-        if (portPath.isEmpty()) {
-            portPath = qsl("./portable");
-        }
-        return utils::pathResolveRelative(QDir::cleanPath(portPath), execDir);
-    }
-    if (QFileInfo(markerHomeDir).isFile()) {
-        QFile file(markerHomeDir);
-        QString portPath;
-        if (file.open(QIODevice::ReadOnly)) {
-            QTextStream(&file).readLineInto(&portPath);
-        }
-        return utils::pathResolveRelative(QDir::cleanPath(portPath), execDir);
-    }
-    // Mirror setupConfig()'s XDG_CONFIG_HOME resolution so early config reads look
-    // in the same config root.
-    return utils::xdgConfigDir(confDirDefault).path;
+    return MudletPaths::resolveConfigRoot(execDir).path;
 }
 
 #if !defined(Q_OS_MACOS)
@@ -760,7 +735,7 @@ int main(int argc, char* argv[])
     }
     app->processEvents();
 
-    const QString homeDirectory = mudlet::getMudletPath(enums::mainPath);
+    const QString homeDirectory = MudletPaths::getMudletPath(enums::mainPath);
     const QDir dir;
     bool first_launch = false;
     if (!dir.exists(homeDirectory)) {
@@ -769,11 +744,11 @@ int main(int argc, char* argv[])
     }
 
 #if defined(INCLUDE_FONTS)
-    const QString bitstreamVeraFontDirectory(qsl("%1/ttf-bitstream-vera-1.10").arg(mudlet::getMudletPath(enums::mainFontsPath)));
+    const QString bitstreamVeraFontDirectory(qsl("%1/ttf-bitstream-vera-1.10").arg(MudletPaths::getMudletPath(enums::mainFontsPath)));
     if (!dir.exists(bitstreamVeraFontDirectory)) {
         dir.mkpath(bitstreamVeraFontDirectory);
     }
-    const QString ubuntuFontDirectory(qsl("%1/ubuntu-font-family-0.83").arg(mudlet::getMudletPath(enums::mainFontsPath)));
+    const QString ubuntuFontDirectory(qsl("%1/ubuntu-font-family-0.83").arg(MudletPaths::getMudletPath(enums::mainFontsPath)));
     if (!dir.exists(ubuntuFontDirectory)) {
         dir.mkpath(ubuntuFontDirectory);
     }
@@ -782,7 +757,7 @@ int main(int argc, char* argv[])
     removeOldNoteColorEmojiFonts();
     // PLACEMARKER: current Noto Color Emoji font directory specification:
     // Release: "Unicode 17.0 update mk1"
-    const QString notoFontDirectory{qsl("%1/noto-color-emoji-2025-09-15-v2.051").arg(mudlet::getMudletPath(enums::mainFontsPath))};
+    const QString notoFontDirectory{qsl("%1/noto-color-emoji-2025-09-15-v2.051").arg(MudletPaths::getMudletPath(enums::mainFontsPath))};
     if (!dir.exists(notoFontDirectory)) {
         dir.mkpath(notoFontDirectory);
     }
