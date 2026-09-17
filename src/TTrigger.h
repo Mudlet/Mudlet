@@ -267,6 +267,25 @@ public:
     // which case TTriggerPrescan offers it every line.
     const std::vector<quint64>& prescanGrams() const;
     void invalidatePrescan(bool nowFiresWithoutMatching = false);
+    // Whether the line's bigram summary already rules this trigger out, so
+    // match() need not be entered for it. One-sided like the summary itself:
+    // false leaves match() to decide. Only a trigger whose every pattern
+    // matches by containing text can be dismissed this way, and never one
+    // that fires on a line it does not match - the same three cases
+    // prescanGrams() reads, taken live rather than from an index so that a
+    // script changing them mid-line is seen at once.
+    bool cannotMatch(const TBigramFilter& lineBigrams, const QString& line) const
+    {
+        if (mPatternBigrams.empty() || mIsLineTrigger || mIsMultiline || mKeepFiring > 0) {
+            return false;
+        }
+        for (const TBigramFilter::Bits& bits : mPatternBigrams) {
+            if (lineBigrams.couldContain(line, bits)) {
+                return false;
+            }
+        }
+        return true;
+    }
     // Where TriggerUnit's root-node snapshot holds this trigger, or -1 when it
     // holds it nowhere - it is not a root node, or the snapshot has yet to be
     // told about it. Owned by TriggerUnit; nothing else may set it.
@@ -404,6 +423,10 @@ private:
         TBigramFilter::Bits bigrams;
     };
     std::vector<TRegexLiteral> mRegexLiterals;
+    // One entry per pattern while every pattern of the trigger can be dismissed
+    // by a line's bigram summary; empty as soon as one cannot, which hands every
+    // line to match() - see cannotMatch()
+    std::vector<TBigramFilter::Bits> mPatternBigrams;
     std::vector<QSharedPointer<pcre2_code>> mRegexes;
     std::vector<QSharedPointer<pcre2_match_data>> mMatchData;
     // char rather than bool: keeps the plain element access the bit-packed
