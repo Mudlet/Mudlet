@@ -121,6 +121,11 @@ public:
 
 private:
     TTimer() = default;
+    // Whether this timer firing would do anything: run a script, send a command,
+    // or call the Lua function tempTimer() registered for it - that one lives in
+    // the Lua registry, so such a timer's script stays empty
+    bool hasPayload() const { return !mScript.isEmpty() || !mCommand.isEmpty() || mRegisteredAnonymousLuaFunction; }
+
     QString mName;
     QString mScript;
     QTime mTime;

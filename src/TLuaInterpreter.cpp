@@ -31,6 +31,7 @@
 
 #include "EAction.h"
 #include "Host.h"
+#include "MudletPaths.h"
 #include "TAlias.h"
 #include "TBuffer.h"
 #include "TCommandLine.h"
@@ -1109,10 +1110,7 @@ int TLuaInterpreter::feedTelnet(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L,
-                        "feedTelnet: bad argument #1 type (imitation game server data as string\n"
-                        "expected, got %s!)",
-                        luaL_typename(L, 1));
+        lua_pushfstring(L, "feedTelnet: bad argument #1 type (imitation game server data as string expected, got %s!)", luaL_typename(L, 1));
         lua_error(L);
         Q_UNREACHABLE();
     }
@@ -1161,10 +1159,7 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L,
-                        "feedTriggers: bad argument #1 type (imitation game server text as string\n"
-                        "expected, got %s!)",
-                        luaL_typename(L, 1));
+        lua_pushfstring(L, "feedTriggers: bad argument #1 type (imitation game server text as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
 
@@ -1690,7 +1685,7 @@ int TLuaInterpreter::showUnzipProgress(lua_State* L)
 int TLuaInterpreter::getMudletHomeDir(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    const QString nativeHomeDirectory = mudlet::getMudletPath(enums::profileHomePath, host.getName());
+    const QString nativeHomeDirectory = MudletPaths::getMudletPath(enums::profileHomePath, host.getName());
     lua_pushstring(L, nativeHomeDirectory.toUtf8().constData());
     return 1;
 }
@@ -3170,9 +3165,17 @@ int TLuaInterpreter::expandAlias(lua_State* L)
     }
     const QString payload{lua_tostring(L, 1)};
     Host& host = getHostFromLua(L);
+    // This runs a whole alias pass inside whatever script called it, and that
+    // pass sets "command" and the capture groups for its own scripts. Park what
+    // the caller was given so it is still there when the pass returns - an alias
+    // or trigger script would otherwise resume holding the nested command and an
+    // emptied matches table:
+    TLuaInterpreter* pL = host.getLuaInterpreter();
+    const int dispatchDepth = pL->pushNestedDispatchState();
     // Host::send will encode the UTF encoded data here in the wanted Server
     // encoding:
     host.send(payload, wantPrint, false);
+    pL->popNestedDispatchState(dispatchDepth);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -3663,6 +3666,112 @@ void TLuaInterpreter::clearCaptureGroups()
     lua_setglobal(L, "multimatches");
 
     lua_settop(L, callerStackTop);
+}
+
+// No documentation available in wiki - internal function
+// Returns the depth of the entry it parked, for the matching
+// popNestedDispatchState() to unwind to.
+int TLuaInterpreter::pushNestedDispatchState()
+{
+    // Every Lua call is made before the entry goes onto the stack, and each one
+    // is raw. A package is free to put __index on the globals table, and running
+    // one here could raise past the pop this pairs with - raw reads cannot, and
+    // an entry that is not on the stack yet cannot be handed to the wrong caller
+    // by a pop that some later raise skips.
+    lua_State* L = pGlobalLua;
+    const int callerStackTop = lua_gettop(L);
+    lua_pushliteral(L, "matches");
+    lua_rawget(L, LUA_GLOBALSINDEX);
+    const int matchesRef = luaL_ref(L, LUA_REGISTRYINDEX);
+    lua_pushliteral(L, "multimatches");
+    lua_rawget(L, LUA_GLOBALSINDEX);
+    const int multimatchesRef = luaL_ref(L, LUA_REGISTRYINDEX);
+    lua_pushliteral(L, "command");
+    lua_rawget(L, LUA_GLOBALSINDEX);
+    const int commandRef = luaL_ref(L, LUA_REGISTRYINDEX);
+    lua_settop(L, callerStackTop);
+
+    NestedDispatchState& saved = mNestedDispatchStates.emplace_back();
+    saved.matchesRef = matchesRef;
+    saved.multimatchesRef = multimatchesRef;
+    saved.commandRef = commandRef;
+    // Copies rather than moves: a script the dispatch runs before any pattern has
+    // matched - a sysDataSendRequest handler, say - still reads these through
+    // selectCaptureGroup(), and setCaptureGroups() assigns over the vector left
+    // here, reusing its buffers exactly as it would have without the parking
+    saved.captureGroupList = mCaptureGroupList;
+    saved.captureGroupPosList = mCaptureGroupPosList;
+    saved.multiCaptureGroupList = mMultiCaptureGroupList;
+    saved.multiCaptureGroupPosList = mMultiCaptureGroupPosList;
+    saved.capturedNameGroups = mCapturedNameGroups;
+    saved.capturedNameGroupsPosList = mCapturedNameGroupsPosList;
+    saved.multiCaptureNameGroups = mMultiCaptureNameGroups;
+
+    return static_cast<int>(mNestedDispatchStates.size()) - 1;
+}
+
+// No documentation available in wiki - internal function
+void TLuaInterpreter::releaseNestedDispatchState(NestedDispatchState& state)
+{
+    lua_State* L = pGlobalLua;
+    luaL_unref(L, LUA_REGISTRYINDEX, state.matchesRef);
+    luaL_unref(L, LUA_REGISTRYINDEX, state.multimatchesRef);
+    luaL_unref(L, LUA_REGISTRYINDEX, state.commandRef);
+    state.matchesRef = LUA_NOREF;
+    state.multimatchesRef = LUA_NOREF;
+    state.commandRef = LUA_NOREF;
+}
+
+// No documentation available in wiki - internal function
+void TLuaInterpreter::popNestedDispatchState(const int depth)
+{
+    if (depth < 0 || static_cast<std::size_t>(depth) >= mNestedDispatchStates.size()) {
+        qWarning().nospace() << "TLuaInterpreter::popNestedDispatchState(" << depth << ") ERROR - nothing is parked at that depth, so the calling script keeps whatever the nested dispatch left it.";
+        return;
+    }
+
+    // Anything above this entry belongs to a dispatch that a Lua error raised
+    // straight past its own restore. Those are stale, and handing one back here
+    // would give this caller some other script's captures and command.
+    const std::size_t wanted = static_cast<std::size_t>(depth) + 1;
+    if (mNestedDispatchStates.size() > wanted) {
+        qWarning().nospace() << "TLuaInterpreter::popNestedDispatchState(" << depth << ") WARNING - discarding " << (mNestedDispatchStates.size() - wanted)
+                             << " parked nested dispatch state(s) that a Lua error left behind.";
+        while (mNestedDispatchStates.size() > wanted) {
+            releaseNestedDispatchState(mNestedDispatchStates.back());
+            mNestedDispatchStates.pop_back();
+        }
+    }
+
+    // Off the stack before any Lua runs, so nothing holds a reference into a
+    // vector that a re-entrant push could reallocate
+    NestedDispatchState saved = std::move(mNestedDispatchStates.back());
+    mNestedDispatchStates.pop_back();
+
+    mCaptureGroupList = std::move(saved.captureGroupList);
+    mCaptureGroupPosList = std::move(saved.captureGroupPosList);
+    mMultiCaptureGroupList = std::move(saved.multiCaptureGroupList);
+    mMultiCaptureGroupPosList = std::move(saved.multiCaptureGroupPosList);
+    mCapturedNameGroups = std::move(saved.capturedNameGroups);
+    mCapturedNameGroupsPosList = std::move(saved.capturedNameGroupsPosList);
+    mMultiCaptureNameGroups = std::move(saved.multiCaptureNameGroups);
+
+    // Raw again, and for the same reason: a reference to a global that was nil
+    // reads back as nil, which is what it has to be put back as
+    lua_State* L = pGlobalLua;
+    const int callerStackTop = lua_gettop(L);
+    lua_pushliteral(L, "matches");
+    lua_rawgeti(L, LUA_REGISTRYINDEX, saved.matchesRef);
+    lua_rawset(L, LUA_GLOBALSINDEX);
+    lua_pushliteral(L, "multimatches");
+    lua_rawgeti(L, LUA_REGISTRYINDEX, saved.multimatchesRef);
+    lua_rawset(L, LUA_GLOBALSINDEX);
+    lua_pushliteral(L, "command");
+    lua_rawgeti(L, LUA_REGISTRYINDEX, saved.commandRef);
+    lua_rawset(L, LUA_GLOBALSINDEX);
+    lua_settop(L, callerStackTop);
+
+    releaseNestedDispatchState(saved);
 }
 
 // No documentation available in wiki - internal function
@@ -5372,8 +5481,17 @@ void TLuaInterpreter::set_lua_string(const QString& varName, const QString& varV
         mUtf8Scratch.resize(end - mUtf8Scratch.constData());
     }
 
+    // Raw, because this is how Mudlet hands a dispatch its own "command" and
+    // "line", and it runs with the whole dispatch on the C++ stack below it. The
+    // globals table can carry a metatable, and a __newindex a package put there
+    // runs on the first write of a name that is absent - a raise from one
+    // longjmps to the nearest pcall, skipping every C++ destructor between,
+    // which is the class CI/check-lua-error-strands.lua exists for. Setting
+    // these was never something a package could usefully intercept anyway: the
+    // name is absent only until the first dispatch writes it.
+    lua_pushstring(L, mLastGlobalNameUtf8.constData());
     lua_pushstring(L, mUtf8Scratch.constData());
-    lua_setglobal(L, mLastGlobalNameUtf8.constData());
+    lua_rawset(L, LUA_GLOBALSINDEX);
     if (mUtf8Scratch.capacity() > scmMaxRetainedUtf8Scratch) {
         mUtf8Scratch = QByteArray();
     }
@@ -5530,6 +5648,11 @@ void TLuaInterpreter::abortAllDownloads()
 void TLuaInterpreter::initLuaGlobals()
 {
     if (pGlobalLua) {
+        // Every reference a parked nested dispatch holds belongs to the state
+        // about to go. Reusing one against the state that replaces it would
+        // corrupt a freshly-issued registry index, which is what
+        // Host::resetProfile_phase2() drains DeferredDelete to stop labels doing.
+        mNestedDispatchStates.clear();
         lua_close(pGlobalLua);
     }
 
@@ -6252,7 +6375,7 @@ void TLuaInterpreter::initLuaGlobals()
     QStringList additionalLuaPaths;
     QStringList additionalCPaths;
     const auto appPath{QCoreApplication::applicationDirPath()};
-    const auto profilePath{mudlet::getMudletPath(enums::profileHomePath, hostName)};
+    const auto profilePath{MudletPaths::getMudletPath(enums::profileHomePath, hostName)};
 
     // Allow for modules or libraries placed in the profile root directory:
     additionalLuaPaths << qsl("%1/?.lua").arg(profilePath);
@@ -6932,6 +7055,7 @@ std::pair<int, QString> TLuaInterpreter::startPermKey(QString& name, QString& pa
     // CHECK: The lua code in function could fail to compile - but there is no feedback here to the caller.
     pT->setScript(function);
     pT->setName(name);
+    mpHost->getKeyUnit()->warnIfAddonCommandHoldsKey(pT);
     updateEditor();
     return {pT->getID(), QString()};
 }
@@ -6952,6 +7076,7 @@ int TLuaInterpreter::startTempKey(int& modifier, int& keycode, const QString& fu
     }
     const int id = pT->getID();
     pT->setName(QString::number(id));
+    mpHost->getKeyUnit()->warnIfAddonCommandHoldsKey(pT);
     return id;
 }
 
@@ -7517,13 +7642,13 @@ int TLuaInterpreter::getProfileInformation(lua_State* L)
             lua_pushstring(L, "getProfileInformation: profile name cannot be empty");
             return 2;
         }
-        const QString profileName = mudlet::self()->getCanonicalProfileName(requestedName);
+        const QString profileName = MudletPaths::getCanonicalProfileName(requestedName);
         if (profileName.isEmpty()) {
             lua_pushnil(L);
             lua_pushfstring(L, "getProfileInformation: profile '%s' does not exist", requestedName.toUtf8().constData());
             return 2;
         }
-        info = mudlet::self()->readProfileData(profileName, qsl("description"));
+        info = MudletPaths::readProfileData(profileName, qsl("description"));
         break;
     }
     }
@@ -7534,15 +7659,15 @@ int TLuaInterpreter::getProfileInformation(lua_State* L)
 
 // No documentation available in wiki - internal function
 // The folder a profile name resolves to, or an empty string if there is no such
-// profile. For writers, and so stricter than mudlet::getCanonicalProfileName(),
+// profile. For writers, and so stricter than MudletPaths::getCanonicalProfileName(),
 // which also resolves a game Mudlet ships with that has never been opened:
 // writeProfileData() creates whatever folder it is handed, so writing under such
 // a name would turn that game into a profile of its own. Readers want the looser
 // call.
 static QString canonicalProfileFolder(const QString& profileName)
 {
-    const QString folder = mudlet::self()->getCanonicalProfileName(profileName);
-    if (folder.isEmpty() || !QDir(mudlet::getMudletPath(enums::profileHomePath, folder)).exists()) {
+    const QString folder = MudletPaths::getCanonicalProfileName(profileName);
+    if (folder.isEmpty() || !QDir(MudletPaths::getMudletPath(enums::profileHomePath, folder)).exists()) {
         return QString();
     }
     return folder;
@@ -7574,7 +7699,7 @@ int TLuaInterpreter::setProfileInformation(lua_State* L)
         text = lua_tostring(L, 2);
     }
 
-    const QPair<bool, QString> result = mudlet::self()->writeProfileData(profileName, qsl("description"), text);
+    const QPair<bool, QString> result = MudletPaths::writeProfileData(profileName, qsl("description"), text);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second);
     }
@@ -7608,7 +7733,7 @@ int TLuaInterpreter::clearProfileInformation(lua_State* L)
         }
     }
 
-    const QPair<bool, QString> result = mudlet::self()->writeProfileData(profileName, qsl("description"), desc);
+    const QPair<bool, QString> result = MudletPaths::writeProfileData(profileName, qsl("description"), desc);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second);
     }
@@ -8766,7 +8891,7 @@ int TLuaInterpreter::getConfig(lua_State* L)
                  const auto logDir = host.mLogDir;
 
                  if (logDir == nullptr || logDir.isEmpty()) {
-                     lua_pushstring(L, mudlet::getMudletPath(enums::profileReplayAndLogFilesPath, getHostFromLua(L).getName()).toUtf8().constData());
+                     lua_pushstring(L, MudletPaths::getMudletPath(enums::profileReplayAndLogFilesPath, getHostFromLua(L).getName()).toUtf8().constData());
                  } else {
                      lua_pushstring(L, host.mLogDir.toUtf8().constData());
                  }
