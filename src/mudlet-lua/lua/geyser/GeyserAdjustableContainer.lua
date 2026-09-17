@@ -511,8 +511,8 @@ function Adjustable.Container:adjustConnectedContainers()
                     width = nil
                     x = nil
                 end
-                container:move(x, y)
-                container:resize(width, height)
+                Geyser.Container.move(container, x, y)
+                Geyser.Container.resize(container, width, height)
             else
                 -- every size below is measured from where the move actually put the
                 -- container rather than from the position it asked for: a pixel
@@ -520,22 +520,22 @@ function Adjustable.Container:adjustConnectedContainers()
                 -- the far edge in a pixel on every mouse move
                 local px, py, pw, ph = parentFrame(container)
                 if where == "right" then
-                    container:resize(keepRelativeSize(container.width, self:get_x() - container:get_x(), pw), nil)
+                    Geyser.Container.resize(container, keepRelativeSize(container.width, self:get_x() - container:get_x(), pw), nil)
                 end
                 if where == "left" then
                     local right_x = container:get_x() + container:get_width()
                     local left_x = math.min(self:get_x() + self:get_width(), right_x)
-                    container:move(keepRelativePosition(container.x, left_x, pw, px), nil)
-                    container:resize(keepRelativeSize(container.width, right_x - container:get_x(), pw), nil)
+                    Geyser.Container.move(container, keepRelativePosition(container.x, left_x, pw, px), nil)
+                    Geyser.Container.resize(container, keepRelativeSize(container.width, right_x - container:get_x(), pw), nil)
                 end
                 if where == "bottom" then
-                    container:resize(nil, keepRelativeSize(container.height, self:get_y() - container:get_y(), ph))
+                    Geyser.Container.resize(container, nil, keepRelativeSize(container.height, self:get_y() - container:get_y(), ph))
                 end
                 if where == "top" then
                     local bottom_y = container:get_y() + container:get_height()
                     local top_y = math.min(self:get_y() + self:get_height(), bottom_y)
-                    container:move(nil, keepRelativePosition(container.y, top_y, ph, py))
-                    container:resize(nil, keepRelativeSize(container.height, bottom_y - container:get_y(), ph))
+                    Geyser.Container.move(container, nil, keepRelativePosition(container.y, top_y, ph, py))
+                    Geyser.Container.resize(container, nil, keepRelativeSize(container.height, bottom_y - container:get_y(), ph))
                 end
             end
             container:adjustBorder()
@@ -618,18 +618,27 @@ function Adjustable.Container:setBorderMargin(margin)
     self:adjustBorder()
 end
 
+-- an attached container's border is its own geometry plus the margin, whichever handler moved or resized it
+function Adjustable.Container:move(x, y)
+    Geyser.Container.move(self, x, y)
+    if self.attached then self:adjustBorder() end
+end
+
+function Adjustable.Container:resize(width, height)
+    Geyser.Container.resize(self, width, height)
+    if self.attached then self:adjustBorder() end
+end
+
 -- internal function to resize the border automatically if the window size changes
 function Adjustable.Container:resizeBorder()
     local winw, winh = getMainWindowSize()
-    self.timer_active = self.timer_active or true
-    -- Check if Window resize already happened.
-    -- If that is not checked this creates an infinite loop and crashes because setBorder also causes a resize event
-    if (winw ~= self.old_w_value or winh ~= self.old_h_value) and self.timer_active then
-        self.timer_active = false
-        tempTimer(0.2, function() self:adjustBorder() self:adjustConnectedContainers() end)
+    -- setBorder raises another resize event; Host::setBorders ignoring an unchanged border is what ends the chain, recording the size first only spares it a measurement
+    if winw ~= self.old_w_value or winh ~= self.old_h_value then
+        self.old_w_value = winw
+        self.old_h_value = winh
+        self:adjustBorder()
+        self:adjustConnectedContainers()
     end
-    self.old_w_value = winw
-    self.old_h_value = winh
 end
 
 --- attaches your container to the given border
@@ -658,14 +667,16 @@ end
 function Adjustable.Container:detach()
     -- a container of the same name may have taken over the registration, so
     -- only unregister while it is still ours - the same guard type_delete uses
-    local attachedTo = Adjustable.Container.Attached and Adjustable.Container.Attached[self.attached]
+    local where = self.attached
+    local attachedTo = Adjustable.Container.Attached and Adjustable.Container.Attached[where]
     if attachedTo and attachedTo[self.name] == self then
         attachedTo[self.name] = nil
     end
     self.borderSize = nil
-    self:resetBorder(self.attached)
-    self.attached=false
+    -- unhooked first: handing the border back raises an event we would answer by re-reserving
+    self.attached = false
     if self.resizeHandlerID then killAnonymousEventHandler(self.resizeHandlerID) end
+    self:resetBorder(where)
 end
 
 -- internal function to reset the given border

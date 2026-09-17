@@ -24,6 +24,8 @@
 #include <QString>
 #include <QPointer>
 #include <functional>
+#include <memory>
+#include <vector>
 
 class QTimer;
 
@@ -58,6 +60,7 @@ class Job;
 class CredentialManager : public QObject
 {
     Q_OBJECT
+    friend class CredentialManagerKeychainTest;
 
 public:
     explicit CredentialManager(QObject* parent = nullptr);
@@ -87,7 +90,6 @@ private:
     // Low-level async keychain methods (internal use only - use hybrid *Password methods instead)
     // profileName is used for file storage fallback (the service name is a hash that can't be reversed)
     void storeCredential(const QString& service, const QString& account, const QString& password, const QString& profileName, CredentialCallback callback);
-    void retrieveCredential(const QString& service, const QString& account, const QString& profileName, CredentialRetrievalCallback callback);
     void removeCredential(const QString& service, const QString& account, const QString& profileName, CredentialCallback callback);
     // Combines the keychain delete outcome(s) with the file-fallback removal and reports the result
     void finishRemoveCredential(const QString& account, const QString& profileName, bool keychainSuccess, const QString& keychainError);
@@ -102,6 +104,8 @@ private:
     // Portable mode detection
     bool isPortableModeActive() const;
     bool shouldUseKeychain(const QString& profileName) const;
+
+    void startJob(QKeychain::Job* job);
 
     // Timeout and cleanup management
     void setupTimeout();
@@ -126,22 +130,60 @@ private:
     static QString retrieveCredentialFromFile(const QString& profileName, const QString& key);
     static bool removeCredentialFromFile(const QString& profileName, const QString& key);
 
-    // Legacy keychain migration support
-    void checkLegacyKeychainFormat(const QString& profileName, std::function<void(bool, const QString&)> callback);
-    void deleteLegacyKeychainEntry(const QString& profileName);
+    // One place a lookup may find the password: a keychain entry, or the encrypted file. recover
+    // re-files a password found there under the current name.
+    struct LookupStage
+    {
+        QString description;
+        QString service;
+        QString key;
+        bool fromFile = false;
+        std::function<void(const QString& password)> recover;
+    };
 
-    void attemptCollidingMigration(const QString& profileName, const QString& key, const QString& legacyService, const QString& password, CredentialRetrievalCallback callback);
-    void attemptLegacyKeychainMigration(const QString& profileName, const QString& key, CredentialRetrievalCallback callback);
-    void attemptOldFormatMigration(const QString& service, const QString& account, const QString& profileName, CredentialRetrievalCallback callback);
-    void attemptCompatNamingMigration(const QString& service, const QString& account, const QString& profileName, CredentialRetrievalCallback callback);
-    void fallbackFileRetrieval(const QString& profileName, const QString& key, CredentialRetrievalCallback callback);
+    // One retrievePassword() call on the keychain path, from its first read to its one answer. It
+    // shares nothing with the single-operation state below, so lookups on one manager cannot disturb
+    // each other or a store or removal running beside them.
+    struct Lookup
+    {
+        QString profileName;
+        QString key;
+        CredentialRetrievalCallback callback;
+        std::vector<LookupStage> stages;
+        // Parent of the lookup's deadline and of every read it starts, deleted once it has answered.
+        QPointer<QObject> scope;
+        bool answered = false;
+        std::size_t currentStage = 0;
+        // The first read that failed for a reason other than there being no such entry, reported in
+        // place of "not found" if nothing turns up.
+        QString keychainError;
+    };
+    using LookupPtr = std::shared_ptr<Lookup>;
+
+    void finishLookup(const LookupPtr& lookup, bool success, QString password, const QString& errorMessage);
+    void runLookupStage(const LookupPtr& lookup, std::size_t index);
+
+    // Each re-files a password a lookup recovered from an older format. Started just before the lookup
+    // answers and independent of it, so a write that stalls cannot hold back the recovered password,
+    // and deleting this manager from the caller's callback does not cut them short.
+    void migrateCompatNamingEntry(const QString& service, const QString& password);
+    void migrateOldFormatEntry(const QString& service, const QString& lookupService, const QString& account, const QString& password);
+    // Re-files under the current name, then removes every colliding-format entry for the key.
+    void migrateCollidingEntry(const QString& profileName, const QString& key, const QString& legacyService, const QString& password);
+    void migrateLegacyEntry(const QString& profileName, const QString& key, const QString& password);
+    static void deleteLegacyKeychainEntry(const QString& profileName, const std::function<void(QKeychain::Job*)>& hook, int timeoutMs);
 
     // Current operation state
     QPointer<QKeychain::Job> mCurrentJob{nullptr};
     QTimer* mTimeoutTimer{nullptr};
     CredentialCallback mCurrentCallback;
-    CredentialRetrievalCallback mCurrentRetrievalCallback;
     AvailabilityCallback mCurrentAvailabilityCallback;
+    // What mCurrentJob is doing, for the log line if it is abandoned before it answers.
+    QString mCurrentOperationDescription;
+
+    int mOperationTimeoutMs = OPERATION_TIMEOUT_MS;
+    // Called with each keychain job just before it starts, so a test can make one stall or fail.
+    std::function<void(QKeychain::Job*)> mJobStartHook;
 
     // Destruction flag to prevent operations during cleanup
     bool mShuttingDown = false;
