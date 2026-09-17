@@ -405,6 +405,9 @@ void TriggerUnit::stopSameLineCreationLoop(const int chainId)
 void TriggerUnit::markPrescanStale(TTrigger* pT)
 {
     mRootNodeSnapshotStale = true;
+    // Whichever trigger it was: one that has left the root list since a pass
+    // pinned it no longer has a position to tell by
+    ++mRootFilterEpoch;
     if (mRootNodeSnapshotNeedsRebuild || !pT) {
         return;
     }
@@ -459,16 +462,19 @@ void TriggerUnit::refreshRootNodeSnapshot()
         RootNodeSnapshot& snapshot = *mpRootNodeSnapshot;
         for (const int position : mRootNodesRemoved) {
             snapshot.mNodes[position] = nullptr;
+            snapshot.mFilters[position] = TRootTriggerFilter();
             snapshot.mPrescan.removeSlot(position);
         }
         for (const int position : mRootNodesRefiled) {
             if (TTrigger* pT = snapshot.mNodes[position]) {
+                snapshot.mFilters[position] = pT->rootFilter();
                 snapshot.mPrescan.refileSlot(position, pT->prescanGrams());
             }
         }
         for (TTrigger* pT : mRootNodesAppended) {
             pT->setRootSnapshotPosition(static_cast<int>(snapshot.mNodes.size()));
             snapshot.mNodes.push_back(pT);
+            snapshot.mFilters.push_back(pT->rootFilter());
             snapshot.mPrescan.appendSlot(pT->prescanGrams());
         }
     } else {
@@ -481,8 +487,10 @@ void TriggerUnit::refreshRootNodeSnapshot()
         RootNodeSnapshot& snapshot = *mpRootNodeSnapshot;
         snapshot.mNodes.assign(mTriggerRootNodeList.cbegin(), mTriggerRootNodeList.cend());
         const int rootCount = static_cast<int>(snapshot.mNodes.size());
+        snapshot.mFilters.resize(rootCount);
         for (int position = 0; position < rootCount; ++position) {
             snapshot.mNodes[position]->setRootSnapshotPosition(position);
+            snapshot.mFilters[position] = snapshot.mNodes[position]->rootFilter();
         }
         snapshot.mPrescan.rebuild(snapshot.mNodes);
     }
@@ -555,44 +563,79 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     // and are already part of this pass's snapshot.
     const qsizetype firstNodeAddedThisPass = mRootNodesAddedWhileProcessing.size();
     const TBigramFilter lineBigrams(data, mSubstringQuestionsOnTheLastLine);
-    if (pinnedSnapshot->mPrescan.active()) {
+    {
+        const std::vector<TRootTriggerFilter>& pinnedFilters = pinnedSnapshot->mFilters;
+        const bool prescanActive = pinnedSnapshot->mPrescan.active();
         // Borrowed from the unit so that only a longer line than any before it
         // allocates, and moved out so a nested pass grows its own.
-        std::vector<int> scratch = std::move(mCandidateScratch);
-        std::vector<int> candidates = std::move(mCandidates);
-        const auto candidateGuard = qScopeGuard([this, &scratch, &candidates] {
-            mCandidateScratch = std::move(scratch);
-            mCandidates = std::move(candidates);
+        std::vector<int> scratch;
+        std::vector<int> candidates;
+        if (prescanActive) {
+            scratch = std::move(mCandidateScratch);
+            candidates = std::move(mCandidates);
+            pinnedSnapshot->mPrescan.candidates(data, scratch, candidates);
+        }
+        const auto candidateGuard = qScopeGuard([this, prescanActive, &scratch, &candidates] {
+            if (prescanActive) {
+                mCandidateScratch = std::move(scratch);
+                mCandidates = std::move(candidates);
+            }
         });
-        pinnedSnapshot->mPrescan.candidates(data, scratch, candidates);
         // A firing script can make a later trigger fire without matching -
         // setTriggerStayOpen() is the reachable way - and the candidate list was
         // settled before that happened. So from the moment one does, the rest of
         // the line goes to every remaining trigger, as an unfiltered pass would.
-        const quint32 epochAtStart = mUnfilterableEpoch;
+        const quint32 unfilterableEpochAtStart = mUnfilterableEpoch;
+        // The pinned filters are copies, and a firing script can change what they
+        // were copied from - a pattern, a stay-open count, a trigger made
+        // multiline. From the moment one does, the rest of the line asks the
+        // triggers themselves.
+        const quint32 filterEpochAtStart = mRootFilterEpoch;
+        // Asked for only once a color trigger wants it, and again after any
+        // script has run: that can recolor the line, edit it, delete it or feed
+        // another one through, and what match_color_pattern() would then read is
+        // not something to second-guess from here.
+        bool lineColorsKnown = false;
+        bool lineColorsUniform = false;
+        QRgb lineForeground = 0;
+        QRgb lineBackground = 0;
         const int rootCount = static_cast<int>(pinnedNodeList.size());
         size_t nextCandidate = 0;
         for (int position = 0; position < rootCount; ++position) {
-            if (mUnfilterableEpoch == epochAtStart) {
+            if (prescanActive && mUnfilterableEpoch == unfilterableEpochAtStart) {
                 if (nextCandidate >= candidates.size()) {
                     break;
                 }
                 position = candidates[nextCandidate++];
             }
+            // Read before the trigger is, as most lines are over for most
+            // triggers right here and the trigger's own memory is never touched
+            bool textDecided = false;
+            if (mRootFilterEpoch == filterEpochAtStart) {
+                const TRootTriggerFilter& filter = pinnedFilters[position];
+                if (filter.mKind == TRootTriggerFilter::Kind::Text) {
+                    if (!lineBigrams.couldContain(data, filter.mText)) {
+                        continue;
+                    }
+                    textDecided = true;
+                } else if (filter.mKind == TRootTriggerFilter::Kind::Color) {
+                    if (!lineColorsKnown) {
+                        lineColorsUniform = TTrigger::uniformLineColors(mpHost, line, static_cast<int>(data.length()), lineForeground, lineBackground);
+                        lineColorsKnown = true;
+                    }
+                    if (lineColorsUniform && filter.lacksColors(lineForeground, lineBackground)) {
+                        continue;
+                    }
+                }
+            }
             // A hole is a trigger the snapshot has outlived - see
             // refreshRootNodeSnapshot()
             TTrigger* trigger = pinnedNodeList[position];
-            if (!trigger || !trigger->isActive() || trigger->cannotMatch(lineBigrams, data)) {
+            if (!trigger || !trigger->isActive() || (!textDecided && trigger->cannotMatch(lineBigrams, data))) {
                 continue;
             }
             trigger->match(subject, data, line, 0, &lineBigrams);
-        }
-    } else {
-        for (auto trigger : pinnedNodeList) {
-            if (!trigger || !trigger->isActive() || trigger->cannotMatch(lineBigrams, data)) {
-                continue;
-            }
-            trigger->match(subject, data, line, 0, &lineBigrams);
+            lineColorsKnown = false;
         }
     }
     // A match here can register more triggers, which also get a shot at the
