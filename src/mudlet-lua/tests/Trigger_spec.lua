@@ -3492,4 +3492,91 @@ describe("Trigger processing", function()
             assert.are.same({"first", "second"}, _G.TrigSpec.seen, "a gap left by a killed trigger reordered the ones around it")
         end)
     end)
+
+    -- A line is held up against copies of what the top-level triggers look for,
+    -- taken before any script has run, and a trigger the copy rules out is never
+    -- asked. Every case here changes a trigger after its copy was taken. A copy
+    -- only rules text out once several patterns asked about the previous line,
+    -- so each case first feeds a line that all of these fillers sit in.
+    describe("triggers ruled out from a copy of their pattern", function()
+        local ids = {}
+        local warmUpLine
+
+        local function track(id)
+            ids[#ids + 1] = id
+            return id
+        end
+
+        before_each(function()
+            _G.TrigSpec = {count = 0, seen = {}}
+            local fillers = {}
+            for i = 1, 8 do
+                fillers[i] = "ruledoutfill" .. i .. "qzv"
+                track(tempTrigger(fillers[i], function() end))
+            end
+            warmUpLine = "\n" .. table.concat(fillers, " ") .. "\n"
+        end)
+
+        after_each(function()
+            for _, id in ipairs(ids) do killTrigger(id) end
+            ids = {}
+            _G.TrigSpec = nil
+        end)
+
+        it("fires a trigger that an earlier one on the line held open", function()
+            local held
+            track(tempTrigger("holder_fires_here", function() setTriggerStayOpen(tostring(held), 2) end))
+            held = track(tempTrigger("xkcdwvu_never_sent", function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end))
+            feedTriggers(warmUpLine)
+            feedTriggers("\nholder_fires_here now\n")
+            assert.are.equal(1, _G.TrigSpec.count, "a trigger held open mid-line was ruled out of that line by its pattern")
+        end)
+
+        it("fires a trigger that its own match in a nested feed held open", function()
+            track(tempTrigger("feeder_fires_here", function() feedTriggers("\njqzpwy_nested_text arrives\n") end))
+            -- not multiline, and stays open for two lines after a match; killed by
+            -- name, as the ID it returns is not what killTrigger() looks it up by
+            tempComplexRegexTrigger(track("SpecRuledOutNested"), "jqzpwy_nested_text", [[_G.TrigSpec.count = _G.TrigSpec.count + 1]], 0, 0, 0, 0, 0, 0, 0, 0, 2, 0)
+            feedTriggers(warmUpLine)
+            feedTriggers("\nfeeder_fires_here now\n")
+            assert.are.equal(2, _G.TrigSpec.count, "a trigger its nested match held open was ruled out of the outer line by its pattern")
+        end)
+
+        it("keeps a trigger firing through the lines its own match held open", function()
+            tempComplexRegexTrigger(track("SpecRuledOutWindow"), "vbnmwq_window_text", [[_G.TrigSpec.count = _G.TrigSpec.count + 1]], 0, 0, 0, 0, 0, 0, 0, 0, 2, 0)
+            feedTriggers(warmUpLine)
+            feedTriggers("\nvbnmwq_window_text arrives\n")
+            -- the blank line each feed opens with is one of the two
+            feedTriggers(warmUpLine)
+            assert.are.equal(3, _G.TrigSpec.count, "a trigger was ruled out of the lines its own match held it open for")
+            feedTriggers(warmUpLine)
+            assert.are.equal(3, _G.TrigSpec.count, "and it has to close again once they have passed")
+        end)
+
+        it("judges a color trigger afresh once an earlier trigger has edited the line", function()
+            -- whatever the profile's palette makes of ANSI 91
+            local r, g, b
+            local probe = tempTrigger("ruledoutprobe", function()
+                selectString("ruledoutprobe", 1)
+                r, g, b = getFgColor()
+                deselect()
+            end)
+            feedTriggers("\n\27[91mruledoutprobe\27[0m\n")
+            killTrigger(probe)
+            assert.is_truthy(r, "the probe line should have told the palette's light red")
+
+            -- ruled out while the line is still green throughout, which is what
+            -- works the line's colors out before the edit below changes them
+            track(tempAnsiColorTrigger(9, -1, function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = "early " .. matches[1] end))
+            track(tempTrigger("greengreen", function()
+                moveCursor(5, getLineNumber())
+                dinsertText(string.format("<%d,%d,%d>EDITED", r, g, b))
+                resetFormat()
+            end))
+            track(tempAnsiColorTrigger(9, -1, function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = matches[1] end))
+
+            feedTriggers("\n\27[32mgreengreen\27[0m\n")
+            assert.are.same({"EDITED"}, _G.TrigSpec.seen, "a color trigger was judged by the colors the line had before an earlier trigger edited it")
+        end)
+    end)
 end)
