@@ -308,6 +308,35 @@ describe("Tests what feedTriggers will and will not carry", function()
   end)
 end)
 
+-- A raised Lua error is one string, and the places that carry it onwards - the
+-- error console, a script's own logging, a scraper reading either - work a line
+-- at a time, so a newline inside one hides everything after it. The rest of the
+-- API keeps a bad-argument refusal to the single line that names what was
+-- wanted and what arrived; these two feeding functions are the pair that did not.
+describe("Tests the shape of the feeding functions' bad-argument errors", function()
+
+  local feeders = {
+    {name = "feedTriggers", wanted = "imitation game server text as string"},
+    {name = "feedTelnet", wanted = "imitation game server data as string"},
+  }
+
+  -- A case each rather than one loop inside a single it(): the first failure
+  -- ends the test it is in, so sharing one would report a regression in both
+  -- functions as a regression in whichever comes first.
+  for _, feeder in ipairs(feeders) do
+    it(feeder.name .. " refuses a missing argument on one line, in the shape the rest of the API uses", function()
+      local ok, err = pcall(_G[feeder.name])
+      assert.is_false(ok, feeder.name .. " accepted a call with no argument at all")
+      -- contains() is false for anything but a string, so without this the
+      -- newline check below would pass by default on a non-string error object
+      assert.is_string(err, feeder.name .. " raised something other than a message: " .. tostring(err))
+      assert.is_false(contains(err, "\n"), feeder.name .. " split its refusal over more than one line: " .. tostring(err))
+      local expected = feeder.name .. ": bad argument #1 type (" .. feeder.wanted .. " expected, got no value!)"
+      assert.is_true(contains(err, expected), feeder.name .. " did not say " .. expected .. " - it said: " .. tostring(err))
+    end)
+  end
+end)
+
 describe("Tests announce and showNotification", function()
 
   local processingKinds = {"importantall", "importantmostrecent", "all", "mostrecent", "currentthenmostrecent"}

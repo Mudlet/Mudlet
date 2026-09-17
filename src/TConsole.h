@@ -496,6 +496,7 @@ private:
     void createSearchOptionIcon();
     void raiseFontChangeEvent();
     void restoreCommandSearchSettings();
+    void updateScrollBarStyle();
 
     ConsoleType mType = UnknownType;
     // the size the last resize reported to Lua

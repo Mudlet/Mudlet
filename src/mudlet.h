@@ -352,6 +352,10 @@ public:
     // the refusal a package gets: Qt matches Mudlet's own shortcuts before a
     // key press reaches the command line, so the binding never fires.
     QString ownShortcutUsingKey(const Qt::Key, const Qt::KeyboardModifiers) const;
+    // Every other profile whose key binding a command just took, told about it.
+    // The clash is only refused within the profile that is asking; see the
+    // definition for why the others are told rather than turned down.
+    void warnProfilesLosingBindingTo(const QKeySequence& sequence, Host* pHost, const QString& commandName);
     void applyToolBarStyleToAddonCommands();
 
     // Brings up the preferences dialog and selects the tab whos objectName is
