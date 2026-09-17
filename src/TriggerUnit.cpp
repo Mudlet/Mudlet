@@ -678,14 +678,14 @@ void TriggerUnit::processDataStream(const QString& data, int line)
             // A hole is a trigger the snapshot has outlived - see
             // refreshRootNodeSnapshot()
             TTrigger* trigger = pinnedNodeList[position];
-            if (!trigger || !trigger->isActive()) {
+            if (!trigger || !trigger->isActive() || trigger->cannotMatch(lineBigrams, data)) {
                 continue;
             }
             trigger->match(subject, subjectLength, data, line, 0, &lineBigrams);
         }
     } else {
         for (auto trigger : pinnedNodeList) {
-            if (!trigger || !trigger->isActive()) {
+            if (!trigger || !trigger->isActive() || trigger->cannotMatch(lineBigrams, data)) {
                 continue;
             }
             trigger->match(subject, subjectLength, data, line, 0, &lineBigrams);
@@ -712,6 +712,9 @@ void TriggerUnit::processDataStream(const QString& data, int line)
         // above skips its remaining members and this loop reaches a lineage once
         if (trigger->sameLineGeneration() > scmMaxSameLineGenerations) {
             stopSameLineCreationLoop(trigger->sameLineChainId());
+            continue;
+        }
+        if (trigger->cannotMatch(lineBigrams, data)) {
             continue;
         }
         trigger->match(subject, subjectLength, data, line, 0, &lineBigrams);
