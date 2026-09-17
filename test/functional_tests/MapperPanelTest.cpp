@@ -51,6 +51,7 @@
 
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "T2DMap.h"
@@ -105,7 +106,7 @@ private:
 
     void deleteProfileDirectory() const
     {
-        QDir dir(mudlet::getMudletPath(enums::profileHomePath, mProfileName));
+        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, mProfileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }
@@ -347,7 +348,7 @@ private:
 
     QStringList savedMapFiles() const
     {
-        const QDir dir(mudlet::getMudletPath(enums::profileMapsPath, mProfileName));
+        const QDir dir(MudletPaths::getMudletPath(enums::profileMapsPath, mProfileName));
         return dir.entryList({qsl("*.dat")}, QDir::Files);
     }
 
@@ -373,7 +374,7 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         // The menu items are found by their text.
