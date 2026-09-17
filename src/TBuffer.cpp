@@ -53,6 +53,7 @@
 #include <QUrlQuery>
 
 #include <algorithm>
+#include <cstring>
 #include <iterator>
 #include <optional>
 #include <utility>
@@ -182,6 +183,24 @@ QString currentTimeStamp()
     return cachedStamp;
 }
 
+// Asks for the cache line holding the allocator's bookkeeping for a heap block,
+// which freeing it reads first and which sits just below the address the
+// allocator handed out - itself ownHeaderBytes below the contents for a
+// container that keeps a header of its own in the block. Integer arithmetic
+// because the contents may be a static's (an empty QString), where stepping a
+// pointer outside the object is undefined; a prefetch itself never faults
+// whatever it is aimed at.
+inline void prefetchAllocatorHeader(const void* contents, const quintptr ownHeaderBytes)
+{
+#if defined(__GNUC__) || defined(__clang__)
+    constexpr quintptr allocatorHeaderBytes = 8;
+    __builtin_prefetch(reinterpret_cast<const void*>(reinterpret_cast<quintptr>(contents) - ownHeaderBytes - allocatorHeaderBytes));
+#else
+    Q_UNUSED(contents)
+    Q_UNUSED(ownHeaderBytes)
+#endif
+}
+
 // How much of a string sequence (OSC, DCS, SOS, PM or APC) is held while
 // waiting for its terminator - beyond this the bytes are discarded as they
 // arrive rather than buffered, so a server that never terminates one cannot
@@ -233,6 +252,23 @@ size_t decodableLength(const std::string& data, const size_t length, const bool 
 bool bulkCopyableTextByte(const char byte)
 {
     return static_cast<unsigned char>(byte) < 0x7F && byte != CHAR_NEW_LINE && byte != CHAR_CARRIAGE_RETURN && byte != CHAR_END_OF_TRANSMISSION && byte != CHAR_ESC;
+}
+
+// True when all eight bytes are printable ASCII (space to '~'), every one of
+// which bulkCopyableTextByte() accepts. Anything else - including the control
+// characters that are copyable - answers false and is left to the byte-wise
+// test. Both halves are the classic "does any byte of the word..." tests: a
+// borrow or carry can only leave a byte that already tripped the test, so they
+// never report a clean word as dirty or the reverse.
+bool eightPrintableAsciiBytes(const char* bytes)
+{
+    quint64 word = 0;
+    std::memcpy(&word, bytes, sizeof(word));
+    constexpr quint64 ones = 0x0101010101010101ULL;
+    constexpr quint64 highBits = 0x8080808080808080ULL;
+    const quint64 belowSpace = (word - ones * 0x20) & ~word & highBits;
+    const quint64 aboveTilde = ((word + ones) | word) & highBits;
+    return !(belowSpace | aboveTilde);
 }
 
 // The byte classes of a CSI sequence, ECMA-48 5.4: a parameter string is
@@ -1867,7 +1903,11 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 // hyperlink's text is accumulated a character at a time, so
                 // neither takes this path.
                 size_t runEnd = localBufferPosition + 1;
-                while (runEnd < localBufferLength && bulkCopyableTextByte(localBuffer[runEnd])) {
+                const char* const bytes = localBuffer.data();
+                while (runEnd + 8 <= localBufferLength && eightPrintableAsciiBytes(bytes + runEnd)) {
+                    runEnd += 8;
+                }
+                while (runEnd < localBufferLength && bulkCopyableTextByte(bytes[runEnd])) {
                     ++runEnd;
                 }
                 const size_t runLength = runEnd - (localBufferPosition + 1);
@@ -6274,6 +6314,16 @@ bool TBuffer::deleteLine(int y)
 void TBuffer::shrinkBuffer()
 {
     for (int i = 0; i < mBatchDeleteSize; ++i) {
+        // The lines going away were written a whole buffer ago, so freeing each
+        // one stalls on a cache miss for its allocator header. Asking for the
+        // headers a few lines ahead overlaps those misses with the frees in
+        // front of them. Half and double this distance measured the same;
+        // four times it is early enough to lose a third of the gain again.
+        constexpr int prefetchDistance = 8;
+        if (prefetchDistance < lineBuffer.size() && static_cast<size_t>(prefetchDistance) < buffer.size()) {
+            prefetchAllocatorHeader(lineBuffer.at(prefetchDistance).constData(), sizeof(QArrayData));
+            prefetchAllocatorHeader(buffer[prefetchDistance].data(), 0);
+        }
         lineBuffer.pop_front();
         promptBuffer.pop_front();
         timeBuffer.pop_front();
