@@ -244,14 +244,17 @@ void ActionUnit::reParentAction(int childID, int oldParentID, int newParentID, i
     pChild->setDataChanged();
 
     if ((!pOldParent) && (pNewParent)) {
-        if (pChild->mpEasyButtonBar) {
-            mpHost->mpConsole->removeEasyButtonBar(pChild->mLocation, pChild->mpEasyButtonBar);
+        // The bars are the console's widgets; a profile with no view has none to take down
+        TMainConsole* pConsole = mpHost->mpConsole;
+        if (!pConsole) {
+            return;
         }
-        if (pChild->mpToolBar) {
-            if (pChild->mLocation == 4) {
-                pChild->mpToolBar->setFloating(false);
-                mudlet::self()->removeDockWidget(pChild->mpToolBar);
-            }
+        if (pChild->mpEasyButtonBar) {
+            pConsole->detachEasyButtonBar(pChild->mpEasyButtonBar, pChild->mLocation);
+        }
+        if (pChild->mpToolBar && pChild->mLocation == 4) {
+            pChild->mpToolBar->setFloating(false);
+            pConsole->undockToolBar(pChild->mpToolBar);
         }
     }
 }
@@ -314,13 +317,12 @@ void ActionUnit::unregisterAction(TAction* pT)
         updateAllToolbars();
         return;
     }
-    if (pT->mpEasyButtonBar && pT->mPackageName.isEmpty()) {
-        mpHost->mpConsole->removeEasyButtonBar(pT->mLocation, pT->mpEasyButtonBar);
-        if (pT->mLocation == 4) {
-            if (pT->mpToolBar) {
-                pT->mpToolBar->setFloating(false);
-                mudlet::self()->removeDockWidget(pT->mpToolBar);
-            }
+    TMainConsole* pConsole = mpHost->mpConsole;
+    if (pConsole && pT->mpEasyButtonBar && pT->mPackageName.isEmpty()) {
+        pConsole->detachEasyButtonBar(pT->mpEasyButtonBar, pT->mLocation);
+        if (pT->mLocation == 4 && pT->mpToolBar) {
+            pT->mpToolBar->setFloating(false);
+            pConsole->undockToolBar(pT->mpToolBar);
         }
     }
     removeAction(pT);
@@ -384,7 +386,7 @@ void ActionUnit::regenerateToolBars()
                     }
                 }
                 if (!pTB) {
-                    pTB = new TToolBar(mpHost, childAction, childAction->getName(), mudlet::self());
+                    pTB = mpHost->mpConsole->createToolBar(childAction, childAction->getName());
                     mToolBarList.push_back(pTB);
                 }
                 if (childAction->mOrientation == 1) {
@@ -407,7 +409,7 @@ void ActionUnit::regenerateToolBars()
             }
         }
         if (!pTB) {
-            pTB = new TToolBar(mpHost, action, action->getName(), mudlet::self());
+            pTB = mpHost->mpConsole->createToolBar(action, action->getName());
             mToolBarList.push_back(pTB);
         }
         if (action->mOrientation == 1) {
@@ -449,7 +451,7 @@ void ActionUnit::regenerateEasyButtonBars()
                     }
                 }
                 if (!pTB) {
-                    pTB = mpHost->mpConsole->createTopEasyButtonBar(rootAction, childAction->getName());
+                    pTB = mpHost->mpConsole->createEasyButtonBar(rootAction, childAction->getName());
                     mEasyButtonBarList.emplace_back(pTB);
                     childAction->mpEasyButtonBar = pTB; // needed for drag&drop
                 }
@@ -473,7 +475,7 @@ void ActionUnit::regenerateEasyButtonBars()
             }
         }
         if (!pTB) {
-            pTB = mpHost->mpConsole->createTopEasyButtonBar(rootAction, rootAction->getName());
+            pTB = mpHost->mpConsole->createEasyButtonBar(rootAction, rootAction->getName());
             mEasyButtonBarList.emplace_back(pTB);
             rootAction->mpEasyButtonBar = pTB; // needed for drag&drop
         }
@@ -615,7 +617,7 @@ void ActionUnit::constructToolbar(TAction* pAction, TToolBar* pToolBar)
 
     if (!pAction->isActive()) {
         pToolBar->setFloating(false);
-        mudlet::self()->removeDockWidget(pToolBar);
+        mpHost->mpConsole->undockToolBar(pToolBar);
         return;
     }
 
@@ -638,7 +640,7 @@ void ActionUnit::constructToolbar(TAction* pAction, TToolBar* pToolBar)
             qWarning().nospace().noquote() << "ActionUnit::constructToolbar(TAction*, TToolBar*) WARNING - no last dockarea was set for the TAction (\"" << pAction->getName()
                                            << "\"), for this toolbar forcing it to the Left one!";
         }
-        mudlet::self()->addDockWidget(((pAction->mToolbarLastDockArea != Qt::NoDockWidgetArea) ? pAction->mToolbarLastDockArea : Qt::LeftDockWidgetArea), pToolBar);
+        mpHost->mpConsole->dockToolBar(pToolBar, (pAction->mToolbarLastDockArea != Qt::NoDockWidgetArea) ? pAction->mToolbarLastDockArea : Qt::LeftDockWidgetArea);
         if (pAction->mToolbarLastFloatingState) {
             pToolBar->setFloating(true);
             const QPoint pos = QPoint(pAction->mPosX, pAction->mPosY);
@@ -704,7 +706,7 @@ void ActionUnit::constructToolbar(TAction* pA, TEasyButtonBar* pTB)
     } else {
         pTB->setVerticalOrientation();
     }
-    mpHost->mpConsole->addEasyButtonBar(pA->mLocation, pTB);
+    mpHost->mpConsole->attachEasyButtonBar(pTB, pA->mLocation);
 
     pTB->setStyleSheet(pTB->mpTAction->css);
     pTB->show();
@@ -713,6 +715,11 @@ void ActionUnit::constructToolbar(TAction* pA, TEasyButtonBar* pTB)
 
 void ActionUnit::updateAllToolbars()
 {
+    // The bars are the console's widgets, so a profile with no view has nothing
+    // to build; the regenerate paths below reach the console only through here
+    if (!mpHost->mpConsole) {
+        return;
+    }
     regenerateToolBars();
     regenerateEasyButtonBars();
 }
