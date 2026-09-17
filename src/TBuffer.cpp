@@ -55,6 +55,7 @@
 
 #include <algorithm>
 #include <iterator>
+#include <optional>
 #include <utility>
 #include <chrono>
 
@@ -74,7 +75,9 @@ QString currentTimeStamp()
     static QString cachedFormat;
     static QString cachedStamp;
 
-    if (QDateTime::currentMSecsSinceEpoch() != cachedMSecs || cachedFormat != TBuffer::smTimeStampFormat) {
+    // The cached format is a copy of the static, so until that is reassigned
+    // the two share one buffer and the characters need no comparing:
+    if (QDateTime::currentMSecsSinceEpoch() != cachedMSecs || cachedFormat.constData() != TBuffer::smTimeStampFormat.constData()) {
         // The stamp is filed under the millisecond it was read in rather than
         // the one the check above read, which can be the one before it if the
         // clock ticks between the two. Filing it under the earlier one would
@@ -1898,7 +1901,7 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
     }
     if (!lineBuffer.back().isEmpty()) {
         if (!line.isEmpty()) {
-            lineBuffer << line;
+            lineBuffer << std::move(line);
         } else {
             if (ch == '\r') {
                 return; //empty timer posting
@@ -1914,7 +1917,10 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
         }
     } else {
         if (!line.isEmpty()) {
-            lineBuffer.back().append(line);
+            // The last line is empty, so this is the whole of it: hand the
+            // string over rather than sharing it and dropping the local's
+            // reference on the way out.
+            lineBuffer.back() = std::move(line);
         } else {
             if (ch == '\r') {
                 return; //empty timer posting
@@ -5423,17 +5429,15 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
     // no break point to find. LineFeed and Tab are outside that range, so a
     // line needing an embedded break never takes this path.
     const qsizetype widthAvailable = std::min<qsizetype>(isNewline ? maxWidth - indent : maxWidth, mWrapAt);
-    if (lineText.size() <= widthAvailable) {
-        bool plainAscii = true;
-        for (const QChar c : lineText) {
-            if (c.unicode() < u' ' || c.unicode() > u'~') {
-                plainAscii = false;
-                break;
-            }
+    bool plainAscii = true;
+    for (const QChar c : lineText) {
+        if (c.unicode() < u' ' || c.unicode() > u'~') {
+            plainAscii = false;
+            break;
         }
-        if (plainAscii) {
-            return output;
-        }
+    }
+    if (plainAscii && lineText.size() <= widthAvailable) {
+        return output;
     }
     // No grapheme cluster renders wider than graphemeInfo::maxWidth columns -
     // graphemeInfo::getWidth() in TTextProperties.h holds its return to that -
@@ -5444,7 +5448,18 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
         return output;
     }
 
-    QTextBoundaryFinder boundaryFinder(QTextBoundaryFinder::Grapheme, lineText);
+    // Each finder runs its own analysis over the whole line. A plain-ASCII
+    // line's grapheme clusters are its characters, so it needs only the
+    // line-break one: its next grapheme boundary is the next character.
+    std::optional<QTextBoundaryFinder> graphemeFinder;
+    if (!plainAscii) {
+        graphemeFinder.emplace(QTextBoundaryFinder::Grapheme, lineText);
+    }
+    const auto setGraphemePosition = [&graphemeFinder](const int position) {
+        if (graphemeFinder) {
+            graphemeFinder->setPosition(position);
+        }
+    };
     QTextBoundaryFinder lineBreakFinder(QTextBoundaryFinder::Line, lineText);
     int xPos = 0;
     int totalWidth = 0;
@@ -5459,7 +5474,7 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
         if (xPos == 0 and !isNewline and !output.isEmpty() and c == QChar::Space) {
             indexOfChar++;
             firstChar = indexOfChar;
-            boundaryFinder.setPosition(indexOfChar);
+            setGraphemePosition(indexOfChar);
             continue;
         }
         // handle embedded linefeed
@@ -5467,14 +5482,14 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
             hasNewline = true;
             output.append(WrapInfo(isNewline, needsIndent, firstChar, indexOfChar));
             indexOfChar++;
-            boundaryFinder.setPosition(indexOfChar);
+            setGraphemePosition(indexOfChar);
             firstChar = indexOfChar;
             isNewline = true;
             needsIndent = false;
             xPos = 0;
             continue;
         }
-        const int nextBoundary = boundaryFinder.toNextBoundary();
+        const int nextBoundary = graphemeFinder ? graphemeFinder->toNextBoundary() : indexOfChar + 1;
         const uint unicode = graphemeInfo::getBaseCharacter(QStringView(lineText).mid(indexOfChar, nextBoundary - indexOfChar));
         // Safety check: during destruction, mpHost might be null
         const int charWidth = mpHost ? graphemeInfo::getWidth(unicode, mpHost->wideAmbiguousEAsianGlyphs()) : graphemeInfo::getWidth(unicode, false);
@@ -5490,10 +5505,10 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
             // at the first char after 1+ space(s)
             const int firstNonIndentChar = firstChar + (needsIndent ? 0 : indentationHere);
             if (c == QChar::Space or lineBreakFinder.isAtBoundary() or lineBreakFinder.toPreviousBoundary() <= firstNonIndentChar) {
-                boundaryFinder.setPosition(indexOfChar);
+                setGraphemePosition(indexOfChar);
             } else {
                 indexOfChar = lineBreakFinder.position();
-                boundaryFinder.setPosition(indexOfChar);
+                setGraphemePosition(indexOfChar);
             }
             if (indexOfChar <= firstChar) {
                 // no room for even one grapheme - either the wrap width is too
@@ -5502,7 +5517,7 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
                 // where it was, looping forever, so keep one grapheme on the
                 // line to guarantee the scan moves on
                 indexOfChar = (nextBoundary > firstChar) ? nextBoundary : firstChar + 1;
-                boundaryFinder.setPosition(indexOfChar);
+                setGraphemePosition(indexOfChar);
                 totalWidth += charWidth;
             }
             output.append(WrapInfo(isNewline, needsIndent, firstChar, indexOfChar));

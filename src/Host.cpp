@@ -2204,7 +2204,12 @@ void Host::runTriggers(int line)
     const QPoint previousUserCursor = consoleModel.mUserCursor;
     const int previousEngineCursor = consoleModel.mEngineCursor;
     const bool previousIsPromptLine = consoleModel.mIsPromptLine;
-    const QString previousLine = consoleModel.mCurrentLine;
+    // Only a nested pass puts the line back, and taking the copy is a
+    // reference count round trip on every line:
+    QString previousLine;
+    if (nested) {
+        previousLine = consoleModel.mCurrentLine;
+    }
 
     consoleModel.mUserCursor.setY(line);
     consoleModel.mIsPromptLine = consoleModel.buffer.promptBuffer.at(line);
