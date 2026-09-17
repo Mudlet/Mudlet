@@ -49,6 +49,7 @@
 #include <QRegularExpression>
 #include <QScopedPointer>
 #include <QSharedPointer>
+#include <QStringConverter>
 #include <QStringView>
 #include <QVector>
 
@@ -735,7 +736,30 @@ const std::vector<quint64>& TTrigger::prescanGrams() const
     return mPrescanGrams;
 }
 
-bool TTrigger::match_perl(const char* haystackC, const int haystackCLength, const QString& haystack, int patternNumber, int posOffset, int lineNumber, const TBigramFilter* pLineBigrams)
+void TUtf8Subject::encode() const
+{
+    const QString& line = *mpPendingLine;
+    // Stateless so that an unpaired surrogate at the end of the line is reported
+    // here rather than held back as state for a following call.
+    QStringEncoder toUtf8(QStringEncoder::Utf8, QStringConverter::Flag::Stateless);
+    mScratch.resizeForOverwrite(toUtf8.requiredSpace(line.size()));
+    char* const encodedBegin = mScratch.data();
+    const char* const encodedEnd = toUtf8.appendToBuffer(encodedBegin, line);
+    if (Q_UNLIKELY(toUtf8.hasError())) {
+        // The encoder writes a replacement character where an unpaired surrogate
+        // was, while toUtf8() drops it, and the difference would move every byte
+        // offset a capture is reported at. No decoder Mudlet has puts an unpaired
+        // surrogate on a line, so that path can afford the copy and stay exact.
+        mScratch = line.toUtf8();
+    } else {
+        mScratch.truncate(encodedEnd - encodedBegin);
+    }
+    mData = mScratch.constData();
+    mLength = static_cast<int>(qstrnlen(mData, mScratch.size()));
+    mpPendingLine = nullptr;
+}
+
+bool TTrigger::match_perl(const TUtf8Subject& subject, const QString& haystack, int patternNumber, int posOffset, int lineNumber, const TBigramFilter* pLineBigrams)
 {
     if (Q_UNLIKELY(patternNumber < 0 || patternNumber >= static_cast<int>(mRegexes.size()))) {
         return false;
@@ -783,6 +807,10 @@ bool TTrigger::match_perl(const char* haystackC, const int haystackCLength, cons
     }
     pcre2_match_data* match_data = matchData.data();
 
+    // Asked for only now, past the pre-check, which is what leaves most lines
+    // never encoded
+    const char* const haystackC = subject.data();
+    const int haystackCLength = subject.length();
     // pcre2_match() finds the JIT code by itself, but only after a preamble of
     // option and argument checks that a matching run repeats for every line
     const int rc = mRegexJitCompiled[patternNumber] ? pcre2_jit_match(re.data(), reinterpret_cast<PCRE2_SPTR>(haystackC), haystackCLength, 0, 0, match_data, nullptr)
@@ -1105,11 +1133,11 @@ void TTrigger::filter(std::string& capture, int& posOffset, int lineNumber)
     const QString text = QString::fromStdString(capture);
     // pcre2 takes an explicit subject length: cut it at the first NUL, so perl
     // patterns stop there while the QString-based ones still see the whole capture
-    const int captureLength = static_cast<int>(qstrnlen(capture.data(), capture.size()));
+    const TUtf8Subject subject(capture.data(), static_cast<int>(qstrnlen(capture.data(), capture.size())));
     for (auto* triggerNode : *mpMyChildrenList) {
         auto* trigger = static_cast<TTrigger*>(triggerNode);
         // no line filter: a capture is not the line those bits were built from
-        trigger->match(capture.data(), captureLength, text, lineNumber, posOffset, nullptr);
+        trigger->match(subject, text, lineNumber, posOffset, nullptr);
     }
 }
 
@@ -1501,14 +1529,12 @@ void TTrigger::processExactMatch(int patternNumber, int posOffset, int lineNumbe
     }
 }
 
-// haystackC: string to match as a char*, UTF-8 encoded
-// haystackCLength: bytes of haystackC offered to perl patterns; it stops at the
-//   first NUL, so it can be shorter than the buffer. Nothing here copies
-//   haystackC, so it has to stay alive for the whole call
+// subject: the UTF-8 form of the string to match, for the perl patterns.
+//   Nothing here copies its bytes, so it has to stay alive for the whole call
 // haystack: string to match as a QString
 // line: line number in the buffer
 // posOffset: position in the line to start matching from; used by child triggers
-bool TTrigger::match(const char* haystackC, const int haystackCLength, const QString& haystack, int line, int posOffset, const TBigramFilter* pLineBigrams)
+bool TTrigger::match(const TUtf8Subject& subject, const QString& haystack, int line, int posOffset, const TBigramFilter* pLineBigrams)
 {
     // Guard against re-entrancy: cleanup may have deleted this trigger while
     // match() was still on the call stack
@@ -1560,7 +1586,7 @@ bool TTrigger::match(const char* haystackC, const int haystackCLength, const QSt
                 break;
 
             case REGEX_PERL:
-                ret = match_perl(haystackC, haystackCLength, haystack, patternNumber, posOffset, line, pLineBigrams);
+                ret = match_perl(subject, haystack, patternNumber, posOffset, line, pLineBigrams);
                 break;
 
             case REGEX_BEGIN_OF_LINE_SUBSTRING:
@@ -1689,7 +1715,7 @@ bool TTrigger::match(const char* haystackC, const int haystackCLength, const QSt
                     if (pLineBigrams && trigger->cannotMatch(*pLineBigrams, haystack)) {
                         continue;
                     }
-                    ret = trigger->match(haystackC, haystackCLength, haystack, line, posOffset, pLineBigrams);
+                    ret = trigger->match(subject, haystack, line, posOffset, pLineBigrams);
                     if (ret) {
                         conditionMet = true;
                     }
@@ -1707,7 +1733,7 @@ bool TTrigger::match(const char* haystackC, const int haystackCLength, const QSt
             }
             for (auto* triggerNode : *mpMyChildrenList) {
                 auto* trigger = static_cast<TTrigger*>(triggerNode);
-                ret = trigger->match(haystackC, haystackCLength, haystack, line, posOffset, pLineBigrams);
+                ret = trigger->match(subject, haystack, line, posOffset, pLineBigrams);
                 if (ret) {
                     conditionMet = true;
                 }
