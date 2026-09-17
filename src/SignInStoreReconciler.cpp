@@ -155,9 +155,10 @@ void SignInStoreReconciler::runStep()
         // finds the reconciler idle rather than re-entering a request still marked active.
         auto reached = std::move(*mActive);
         // mActive must already be empty when finish() runs: a completion that calls setIntent()
-        // relies on finding no active request here so it can self-start via setIntent()'s own
-        // "if (!mActive) { start(); }" - reordering these two lines would leave that self-start
-        // unreachable and the re-entrant request would never run.
+        // relies on finding no active request here so it can start via setIntent()'s own
+        // "if (!mActive && mReaders == 0) { start(); }", or once the reads holding it back end -
+        // reordering these two lines would leave both unreachable and the re-entrant request would
+        // never run.
         mActive.reset();
         finish(reached, Outcome::Reached, Operation::WriteMetadata, QString());
         grantWaitingReads();
@@ -253,8 +254,9 @@ void SignInStoreReconciler::onStepDone(unsigned int id, Operation op, bool ok, Q
         auto failed = std::move(*mActive);
         // mActive must already be empty when finish() runs: a completion that reacts to the failure
         // by calling setIntent() (a failed hint falling back to a forget) relies on finding no
-        // active request here so it can self-start via setIntent()'s own "if (!mActive) { start(); }"
-        // - reordering these two lines would leave that self-start unreachable.
+        // active request here so it can start via setIntent()'s own
+        // "if (!mActive && mReaders == 0) { start(); }", or once the reads holding it back end -
+        // reordering these two lines would leave both unreachable.
         mActive.reset();
         finish(failed, Outcome::Failed, op, std::move(error));
         grantWaitingReads();

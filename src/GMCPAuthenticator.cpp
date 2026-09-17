@@ -1210,7 +1210,7 @@ void GMCPAuthenticator::readStoredSignInEntry(std::function<void(bool success, S
                 return changeRequested;
             };
             // Debug, not a warning: CredentialManager reports "nothing stored" as a failed read
-            // (see its fallbackFileRetrieval), so a profile that has simply never saved a sign-in
+            // (see its runLookupStage), so a profile that has simply never saved a sign-in
             // lands here on every single connection. Warning about that would put a line in every
             // first-run log and train the reader to skip the one case that matters - a locked,
             // denied or timed-out keychain, which is indistinguishable from here. Telling the two

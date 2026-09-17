@@ -52,7 +52,10 @@
 // mutation behind it. A queued request waits out the stalled step before it can even abandon it, then
 // runs its own sequence, each step bounded by CredentialManager's 30-second timeout - so "Forget saved
 // sign-in", a two-step sequence, can take about ninety seconds to answer where it previously raced
-// ahead of a slow save. Bounded and correct, but worth knowing before you go looking for why a UI
+// ahead of a slow save. Reads hold mutations back the same way: GMCPAuthenticator reads the stored
+// sign-in as two CredentialManager lookups under one lease, each bounded by that same timeout, so a
+// stalled keychain can hold a save or forget - and the forget's callback - for about a minute before
+// the sequence even starts. Bounded and correct, but worth knowing before you go looking for why a UI
 // action seems to hang.
 class SignInStoreReconciler : public QObject
 {

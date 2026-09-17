@@ -45,9 +45,9 @@
 // colliding-format layouts can all be planted and verified regardless of which qtkeychain
 // is linked, and the expected outcomes branch on QTKEYCHAIN_LINKED_VERSION.
 //
-// The migration scenarios only exist on Windows, so those tests skip elsewhere (the bodies
-// still compile on all platforms). testFallbackChainRunsUnderATimeout is the exception: the
-// fallback chain it guards runs on every platform, so it does not skip.
+// The Windows naming migrations skip elsewhere (the bodies still compile on all platforms). The
+// lookup-chain tests run on every platform; the two that plant entries under their real service
+// skip when no credential store is available.
 
 class CredentialManagerKeychainTest : public QObject
 {
@@ -62,8 +62,21 @@ private slots:
     void testRemoveSweepsBareEntry();
     void testOldFormatMigration();
     void testCollidingFormatRecovery();
-    void testFallbackChainRunsUnderATimeout();
-    void testANestedOperationDoesNotSwallowTheCascadeResult();
+    void testALookupAnswersWhenItsFirstReadStalls();
+    void testALookupAnswersWhicheverLaterReadStalls_data();
+    void testALookupAnswersWhicheverLaterReadStalls();
+    void testALookupReadsEachPlaceOnceInOrder_data();
+    void testALookupReadsEachPlaceOnceInOrder();
+    void testATimedOutRemovalDoesNotStopLaterKeychainJobs();
+    void testALookupIsNotDisturbedByAnotherOnTheSameManager();
+    void testDeletingAManagerMidLookupLeavesItsReadToFinish();
+    void testACallbackThatFlushesDeferredDeletesDoesNotDeleteTheAnsweringRead();
+    void testALookupFindsThePasswordInTheEncryptedFileBeforeTheCollidingFormat_data();
+    void testALookupFindsThePasswordInTheEncryptedFileBeforeTheCollidingFormat();
+    void testARecoveredPasswordIsReturnedWhileItsMigrationStalls();
+    void testARecoveredPasswordSurvivesAKeychainThatRefusesToStoreIt();
+    void testAKeychainErrorIsReportedRatherThanNothingFound_data();
+    void testAKeychainErrorIsReportedRatherThanNothingFound();
 
 private:
     QTemporaryDir mConfigDir;
@@ -108,7 +121,8 @@ QString combinedTargetName(const QString& service)
 }
 
 // Starts the job and pumps events until it finishes; the completion flag is shared so a
-// late finish after a timeout cannot write to a dead stack frame
+// late finish after a timeout cannot write to a dead stack frame. Callers delete the job rather than
+// disconnecting it: QtKeychain's queue waits on its own connections to a job that never answered.
 bool waitForJob(QKeychain::Job* job)
 {
     auto done = std::make_shared<bool>(false);
@@ -132,7 +146,6 @@ bool writeTarget(const QString& targetName, const QString& secret)
     job->setKey(targetName);
     job->setTextData(secret);
     const bool ok = waitForJob(job) && job->error() == QKeychain::NoError;
-    job->disconnect();
     job->deleteLater();
     return ok;
 }
@@ -146,7 +159,6 @@ bool readTarget(const QString& targetName, QString* secret = nullptr)
     if (ok && secret) {
         *secret = job->textData();
     }
-    job->disconnect();
     job->deleteLater();
     return ok;
 }
@@ -158,7 +170,6 @@ bool deleteTarget(const QString& targetName)
     job->setAutoDelete(false);
     job->setKey(targetName);
     const bool ok = waitForJob(job) && (job->error() == QKeychain::NoError || job->error() == QKeychain::EntryNotFound);
-    job->disconnect();
     job->deleteLater();
     return ok;
 }
@@ -269,38 +280,204 @@ OperationResult removePassword(CredentialManager& manager, const QString& profil
     return *state;
 }
 
-// Records children appearing on a watched object. QChildEvent is delivered synchronously from the
-// QObject constructor, so this notices a guard being armed even on a backend that answers the whole
-// cascade in the same event-loop pass - which polling for an *active* timer cannot. The child is only
-// a QObject at that point (its QTimer constructor has not run), so the type is decided later, on
-// demand, rather than in the filter.
-class ChildArrivalWatcher : public QObject
+// Writes a credential under an explicit service and key, for the layouts whose service is not empty
+bool writeEntry(const QString& service, const QString& key, const QString& secret)
 {
-public:
-    bool sawTimer() const
-    {
-        for (const auto& child : mChildren) {
-            if (qobject_cast<QTimer*>(child)) {
-                return true;
-            }
-        }
-        return false;
-    }
+    auto* job = new QKeychain::WritePasswordJob(service);
+    job->setAutoDelete(false);
+    job->setKey(key);
+    job->setTextData(secret);
+    const bool ok = waitForJob(job) && job->error() == QKeychain::NoError;
+    job->deleteLater();
+    return ok;
+}
 
-protected:
-    bool eventFilter(QObject* watched, QEvent* event) override
-    {
-        if (event->type() == QEvent::ChildAdded) {
-            mChildren.append(QPointer<QObject>(static_cast<QChildEvent*>(event)->child()));
-        }
-        return QObject::eventFilter(watched, event);
-    }
+bool deleteEntry(const QString& service, const QString& key)
+{
+    auto* job = new QKeychain::DeletePasswordJob(service);
+    job->setAutoDelete(false);
+    job->setKey(key);
+    const bool ok = waitForJob(job) && (job->error() == QKeychain::NoError || job->error() == QKeychain::EntryNotFound);
+    job->deleteLater();
+    return ok;
+}
 
-private:
-    QList<QPointer<QObject>> mChildren;
+// Whether QtKeychain still runs jobs at all. It runs one at a time for the whole process, so a job it
+// is still waiting on holds every later one back. A job with no service and no key is answered by
+// QtKeychain itself once its turn comes, so this needs no working keychain behind it.
+bool keychainQueueRuns()
+{
+    auto* job = new QKeychain::ReadPasswordJob(QString());
+    job->setAutoDelete(false);
+    const bool finished = waitForJob(job);
+    job->deleteLater();
+    return finished;
+}
+
+struct ExpectedRead
+{
+    QString name;
+    QString service;
+    QString key;
 };
 
+// Every place a lookup of key looks, in order. Spelled out independently of CredentialManager for the
+// same reason as expectedServiceName(): these are layouts already in players' keychains.
+QList<ExpectedRead> expectedReads(const QString& profileName, const QString& key)
+{
+    const QString service = expectedServiceName(profileName, key);
+    const QString legacyService = expectedLegacyServiceName(profileName, key);
+    QList<ExpectedRead> reads;
+    reads.append({QStringLiteral("current format"), service, service});
+#if defined(Q_OS_WIN)
+    reads.append({QStringLiteral("pre-0.17 naming"), QString(), service});
+    reads.append({QStringLiteral("old key=account format"), QString(), key});
+#else
+    reads.append({QStringLiteral("old key=account format"), service, key});
+#endif
+    if (key == QStringLiteral("character") || key == QStringLiteral("password")) {
+        reads.append({QStringLiteral("pre-4.20.0 format"), QStringLiteral("Mudlet profile"), profileName});
+    }
+    reads.append({QStringLiteral("colliding format"), legacyService, legacyService});
+#if defined(Q_OS_WIN)
+    reads.append({QStringLiteral("colliding format under pre-0.17 naming"), QString(), legacyService});
+#else
+    reads.append({QStringLiteral("colliding format with key=account"), legacyService, key});
+#endif
+    return reads;
+}
+
+// Makes chosen keychain jobs behave as if the keychain stopped answering them, and records every read.
+// A job whose signals are blocked still runs but never reports finishing, so QtKeychain keeps waiting
+// on it - what a stalled secret service or an unanswered unlock prompt does. It stays that way until
+// the test releases it, or until the backend really answers a job set to delete itself.
+class JobStaller
+{
+public:
+    // Stalls the nth job of type T started from now on, counting from zero.
+    template <typename T>
+    void stallNth(int n)
+    {
+        mShouldStall = [this, n](QKeychain::Job* job) {
+            return qobject_cast<T*>(job) && mSeen++ == n;
+        };
+    }
+
+    template <typename T>
+    void stallEvery()
+    {
+        mShouldStall = [](QKeychain::Job* job) {
+            return qobject_cast<T*>(job) != nullptr;
+        };
+    }
+
+    // Answers every read that is not stalled as finding nothing, so a chain can be walked on a machine
+    // whose keychain the test cannot reach.
+    void answerOtherReadsNotFound(QKeychain::Error error = QKeychain::EntryNotFound)
+    {
+        mAnswerReadsNotFound = true;
+        mNotFoundError = error;
+    }
+
+    std::function<void(QKeychain::Job*)> hook()
+    {
+        return [this](QKeychain::Job* job) {
+            const bool read = qobject_cast<QKeychain::ReadPasswordJob*>(job);
+            if (read) {
+                mReads.append({job->service(), job->key()});
+            }
+            if (mShouldStall && mShouldStall(job)) {
+                job->blockSignals(true);
+                mStalled.append(job);
+            } else if (read && mAnswerReadsNotFound) {
+                job->blockSignals(true);
+                QTimer::singleShot(0, job, [job, error = mNotFoundError]() {
+                    answer(job, error, QStringLiteral("synthetic: nothing found"));
+                });
+            }
+        };
+    }
+
+    const QList<QPair<QString, QString>>& reads() const { return mReads; }
+
+    bool waitForAnyStalled()
+    {
+        return QTest::qWaitFor(
+                [this]() {
+                    return !mStalled.isEmpty();
+                },
+                kWaitMs);
+    }
+
+    // The first stalled job, while it is still alive
+    QKeychain::Job* waitForStalled() { return waitForAnyStalled() ? mStalled.constFirst().data() : nullptr; }
+
+    bool firstStalledAlive() const { return !mStalled.isEmpty() && mStalled.constFirst(); }
+
+    // Lets a stalled job answer, with an error of the test's choosing, then silences it again so the
+    // backend's own late answer cannot arrive as a second one.
+    static void answer(QKeychain::Job* job, QKeychain::Error error, const QString& message)
+    {
+        job->blockSignals(false);
+        job->emitFinishedWithError(error, message);
+        job->blockSignals(true);
+    }
+
+    // Lets every stalled job still alive answer, which is what frees QtKeychain's queue from it
+    void release()
+    {
+        const auto stalled = mStalled;
+        for (const auto& job : stalled) {
+            if (job) {
+                answer(job, QKeychain::OtherError, QStringLiteral("synthetic: released by the test"));
+            }
+        }
+    }
+
+    ~JobStaller() { release(); }
+
+private:
+    std::function<bool(QKeychain::Job*)> mShouldStall;
+    QList<QPointer<QKeychain::Job>> mStalled;
+    QList<QPair<QString, QString>> mReads;
+    int mSeen = 0;
+    bool mAnswerReadsNotFound = false;
+    QKeychain::Error mNotFoundError = QKeychain::EntryNotFound;
+};
+
+struct Answer
+{
+    int count = 0;
+    bool success = false;
+    QString password;
+    QString error;
+};
+
+// Counts every answer, so a lookup answering twice is caught as surely as one never answering
+std::shared_ptr<Answer> startRetrieval(CredentialManager& manager, const QString& profile, const QString& key)
+{
+    auto answer = std::make_shared<Answer>();
+    manager.retrievePassword(profile, key, [answer](bool success, QString password, const QString& error) {
+        ++answer->count;
+        answer->success = success;
+        answer->password = password;
+        answer->error = error;
+    });
+    return answer;
+}
+
+bool waitForAnswer(const std::shared_ptr<Answer>& answer, int timeoutMs = kWaitMs)
+{
+    return QTest::qWaitFor(
+            [answer]() {
+                return answer->count > 0;
+            },
+            timeoutMs);
+}
+
 } // namespace
+
+Q_DECLARE_METATYPE(QKeychain::Error)
 
 void CredentialManagerKeychainTest::initTestCase()
 {
@@ -317,10 +494,8 @@ void CredentialManagerKeychainTest::initTestCase()
     QVERIFY(mConfigDir.isValid());
     qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
 
-    if (!onWindows()) {
-        return;
-    }
-
+    // On every platform: the Windows migration tests need it, and so do the tests of the lookup chain
+    // that need its reads to be answered.
     const QString probe = QStringLiteral("MudletKCTest-probe-%1").arg(QUuid::createUuid().toString(QUuid::Id128).left(8));
     mStoreAvailable = writeTarget(probe, QStringLiteral("probe")) && deleteTarget(probe);
 
@@ -338,21 +513,28 @@ void CredentialManagerKeychainTest::init()
 
 void CredentialManagerKeychainTest::cleanup()
 {
-    if (!onWindows() || !mStoreAvailable) {
+    // On every platform, and here rather than only at the end of each test, so a test that fails part
+    // way through leaves nothing behind in the keychain of whoever runs the suite. The encrypted-file
+    // copy goes too: it lives under AppConfigLocation, which does not follow XDG_CONFIG_HOME everywhere.
+    CredentialManager::removeCredential(mProfile, mKey);
+    if (!mStoreAvailable) {
         return;
     }
 
-    // Remove every TargetName a test could have created or migrated to, plus the
-    // encrypted-file fallback copy
+    // Every entry a test could have created or migrated to
     const QString service = expectedServiceName(mProfile, mKey);
     const QString legacyService = expectedLegacyServiceName(mProfile, mKey);
-    const QStringList targets = {service, combinedTargetName(service), legacyService, combinedTargetName(legacyService), mKey};
-
-    for (const QString& target : targets) {
-        deleteTarget(target);
+    if (onWindows()) {
+        const QStringList targets = {service, combinedTargetName(service), legacyService, combinedTargetName(legacyService), mKey};
+        for (const QString& target : targets) {
+            deleteTarget(target);
+        }
+        return;
     }
-
-    CredentialManager::removeCredential(mProfile, mKey);
+    const QList<QPair<QString, QString>> entries = {{service, service}, {service, mKey}, {legacyService, legacyService}, {legacyService, mKey}};
+    for (const auto& [entryService, entryKey] : entries) {
+        deleteEntry(entryService, entryKey);
+    }
 }
 
 void CredentialManagerKeychainTest::testRoundTrip()
@@ -519,147 +701,385 @@ void CredentialManagerKeychainTest::testCollidingFormatRecovery()
     QVERIFY(!readTarget(legacyService));
 }
 
-void CredentialManagerKeychainTest::testFallbackChainRunsUnderATimeout()
+void CredentialManagerKeychainTest::testALookupAnswersWhenItsFirstReadStalls()
 {
-    // Not Windows-gated: every platform runs the fallback chain, and this is about the chain being
-    // guarded at all rather than about any historical entry layout.
-    //
-    // retrieveCredential arms a timeout for its first read and cancels it the moment that read
-    // answers. A read answering "no entry in the new format" - the ordinary case for any profile that
-    // has never saved a password - then hands off to a chain several more keychain jobs deep. Those
-    // jobs used to run with nothing armed, so one that never answered left the caller waiting for
-    // good: dlgConnectionProfiles latches mKeychainOperationInProgress on such a read and clears it
-    // only from the callback, so the profiles dialog could never be accepted again.
-    //
-    // The stall is not hypothetical on a developer machine - the old-format probe below routinely
-    // fails to answer on macOS - which is why this asserts the guard rather than waiting one out.
-    QPointer<CredentialManager> manager = new CredentialManager;
+    // Needs no working keychain: nothing but the stalled read and QtKeychain's queue is involved.
+    JobStaller staller;
+    staller.stallNth<QKeychain::ReadPasswordJob>(0);
+    CredentialManager manager;
+    manager.mJobStartHook = staller.hook();
+    manager.mOperationTimeoutMs = 300;
 
-    bool answered = false;
-    bool reportedSuccess = true;
-    QString reportedError;
-    manager->retrievePassword(mProfile, mKey, [&](bool success, QString, const QString& errorMessage) {
-        answered = true;
-        reportedSuccess = success;
-        reportedError = errorMessage;
-    });
+    const auto answer = startRetrieval(manager, mProfile, mKey);
+    QVERIFY2(waitForAnswer(answer), "a lookup whose keychain read never answers must still answer its caller");
+    QVERIFY2(staller.waitForAnyStalled(), "the read meant to stall was never started, so this run tested nothing");
+    QVERIFY(!answer->success);
+    QCOMPARE(answer->error, QStringLiteral("Operation timed out"));
 
-    auto* readJob = manager->findChild<QKeychain::ReadPasswordJob*>();
-    QVERIFY2(readJob, "retrievePassword should have started a keychain read");
+    // The read is still waiting on the keychain, and a backend that answers a deleted job reads freed
+    // memory, so it has to be left to finish on its own.
+    QTest::qWait(100);
+    QVERIFY2(staller.firstStalledAlive(), "a read still waiting on the keychain was deleted");
 
-    // Watch for the guard being armed rather than trying to catch it between event-loop passes. A
-    // backend that answers the whole cascade promptly - a CI box with no secret service, say - would
-    // otherwise leave nothing active to observe, and the test would fail for being fast rather than
-    // for being unguarded.
-    ChildArrivalWatcher armingWatcher;
-    manager->installEventFilter(&armingWatcher);
-
-    // Drive the hand-off deterministically rather than depending on what this machine's store says
-    // about an entry that does not exist.
-    readJob->emitFinishedWithError(QKeychain::EntryNotFound, QStringLiteral("synthetic: no such entry"));
-    // The completion is a queued connection, so one pass delivers it and starts the cascade.
-    QCoreApplication::processEvents();
-
-    // Collapse each guard as it appears, standing in for a stage whose keychain job never answers.
-    // Waiting the real interval out would cost half a minute per stage.
-    //
-    // retrievePassword is a cascade: each stage's failure starts the next, and only the last -
-    // encrypted file storage, which is synchronous - answers the caller. So a timeout does not report
-    // failure directly, it advances the cascade. The property that matters is that the cascade still
-    // reaches its end when every keychain stage stalls, instead of stopping on one that never answers.
-    for (int stage = 0; stage < 20 && !answered; ++stage) {
-        QTimer* guard = nullptr;
-        const auto timers = manager ? manager->findChildren<QTimer*>() : QList<QTimer*>{};
-        for (auto* candidate : timers) {
-            // The armed one specifically: setupTimeout() replaces the timer by disconnecting the old
-            // one and deleteLater()ing it, so for one event-loop pass both are children.
-            if (candidate->isActive()) {
-                guard = candidate;
-                break;
-            }
-        }
-        if (!guard) {
-            // No stage in flight and nobody has answered: either the cascade is between stages, or it
-            // is stuck on an unguarded one. qWaitFor decides which.
-            QTest::qWait(20);
-            continue;
-        }
-        guard->setInterval(0);
-        guard->start();
-        QTest::qWait(20);
-    }
-
-    // A cascade that has already answered never needed a guard, and on a backend with no secret
-    // service the whole thing can resolve in one pass. Requiring the guard unconditionally would fail
-    // such a run for being fast rather than for being unguarded, so the assertion is that the cascade
-    // did one or the other - and on any machine where a stage actually stalls, only the guard can
-    // satisfy it.
-    QVERIFY2(armingWatcher.sawTimer() || answered, "the fallback cascade neither armed a timeout nor answered, so a keychain job that never answers would strand the caller");
-    QVERIFY2(QTest::qWaitFor(
-                     [&answered]() {
-                         return answered;
-                     },
-                     5000),
-             "a fallback cascade whose keychain stages all stall must still report an outcome to its caller");
-    QVERIFY2(!reportedSuccess, "a retrieval that found nothing must be reported as a failure, not as an empty success");
-
-    delete manager;
+    // Once the keychain answers, the read deletes itself and QtKeychain's queue moves on.
+    staller.release();
+    QVERIFY2(keychainQueueRuns(), "QtKeychain's queue did not move on once the stalled read answered");
+    QTRY_VERIFY2(!staller.firstStalledAlive(), "a read that answered after its lookup gave up was never deleted");
+    QCOMPARE(answer->count, 1);
 }
 
-void CredentialManagerKeychainTest::testANestedOperationDoesNotSwallowTheCascadeResult()
+void CredentialManagerKeychainTest::testALookupAnswersWhicheverLaterReadStalls_data()
 {
-    // A cascade that recovers a password from the legacy or colliding format calls storePassword()
-    // part-way through itself, and that runs cleanupCurrentOperation() and setupTimeout() on the same
-    // manager - wiping the shared retrieval callback and replacing the shared timer while the cascade
-    // is still running. A cascade anchored to either loses its own result: the password is recovered
-    // and then dropped, and the caller waits for good, which is the very hang this class is meant to
-    // have stopped.
-    //
-    // A second retrieval stands in for that nested operation. It clobbers exactly the same shared
-    // state, and unlike a store it writes nothing to the keychain of whoever runs the suite.
-    QPointer<CredentialManager> manager = new CredentialManager;
+    QTest::addColumn<QString>("key");
+    QTest::addColumn<int>("stalledRead");
 
-    bool answered = false;
-    manager->retrievePassword(mProfile, mKey, [&answered](bool, QString, const QString&) {
-        answered = true;
-    });
-
-    auto* readJob = manager->findChild<QKeychain::ReadPasswordJob*>();
-    QVERIFY2(readJob, "retrievePassword should have started a keychain read");
-    readJob->emitFinishedWithError(QKeychain::EntryNotFound, QStringLiteral("synthetic: no such entry"));
-    QCoreApplication::processEvents();
-
-    // Mid-cascade, exactly where a migration would store what it recovered.
-    manager->retrievePassword(mProfile + QStringLiteral("-nested"), mKey, [](bool, QString, const QString&) {});
-    QCoreApplication::processEvents();
-
-    // Collapse guards as they appear so no stage has to be waited out.
-    for (int stage = 0; stage < 40 && !answered; ++stage) {
-        QTimer* guard = nullptr;
-        const auto timers = manager ? manager->findChildren<QTimer*>() : QList<QTimer*>{};
-        for (auto* candidate : timers) {
-            if (candidate->isActive()) {
-                guard = candidate;
-                break;
-            }
+    // The reads depend only on the key, so any profile gives the same rows
+    for (const QString& key : {QStringLiteral("character"), QStringLiteral("kctest")}) {
+        const QList<ExpectedRead> reads = expectedReads(QStringLiteral("profile"), key);
+        for (int read = 1; read < reads.size(); ++read) {
+            QTest::addRow("%s: %s", qPrintable(key), qPrintable(reads.at(read).name)) << key << read;
         }
-        if (!guard) {
-            QTest::qWait(20);
-            continue;
-        }
-        guard->setInterval(0);
-        guard->start();
-        QTest::qWait(20);
+    }
+}
+
+void CredentialManagerKeychainTest::testALookupAnswersWhicheverLaterReadStalls()
+{
+    QFETCH(QString, key);
+    QFETCH(int, stalledRead);
+    if (key != QStringLiteral("character")) {
+        key = mKey;
     }
 
-    QVERIFY2(QTest::qWaitFor(
-                     [&answered]() {
-                         return answered;
-                     },
-                     5000),
-             "a cascade must still answer its caller after another operation reset the manager's shared state");
+    JobStaller staller;
+    staller.stallNth<QKeychain::ReadPasswordJob>(stalledRead);
+    staller.answerOtherReadsNotFound();
+    CredentialManager manager;
+    manager.mJobStartHook = staller.hook();
+    // The reads before the stalled one still run a real backend call, which on a machine without a
+    // secret service can take a while to fail
+    manager.mOperationTimeoutMs = 3000;
 
-    delete manager;
+    const auto answer = startRetrieval(manager, mProfile, key);
+    QVERIFY2(waitForAnswer(answer), "a lookup whose keychain read never answers must still answer its caller");
+    QVERIFY2(staller.waitForAnyStalled(), "the read meant to stall was never started, so this run tested nothing");
+    QVERIFY(!answer->success);
+    QCOMPARE(answer->error, QStringLiteral("Operation timed out"));
+    QCOMPARE(staller.reads().size(), stalledRead + 1);
+    QVERIFY2(staller.firstStalledAlive(), "a read still waiting on the keychain was deleted");
+
+    staller.release();
+    QVERIFY2(keychainQueueRuns(), "QtKeychain's queue did not move on once the stalled read answered");
+    QCOMPARE(answer->count, 1);
+}
+
+void CredentialManagerKeychainTest::testALookupReadsEachPlaceOnceInOrder_data()
+{
+    QTest::addColumn<QString>("key");
+    QTest::addColumn<QKeychain::Error>("nothingFound");
+    QTest::newRow("a key with a pre-4.20.0 format") << QStringLiteral("character") << QKeychain::EntryNotFound;
+    QTest::newRow("a key without one") << QString() << QKeychain::EntryNotFound;
+    // No keychain service at all is somewhere nothing is stored, not a keychain refusing to answer
+    QTest::newRow("no keychain service") << QString() << QKeychain::NoBackendAvailable;
+}
+
+void CredentialManagerKeychainTest::testALookupReadsEachPlaceOnceInOrder()
+{
+    QFETCH(QString, key);
+    QFETCH(QKeychain::Error, nothingFound);
+    if (key.isEmpty()) {
+        key = mKey;
+    }
+
+    JobStaller recorder;
+    recorder.answerOtherReadsNotFound(nothingFound);
+    CredentialManager manager;
+    manager.mJobStartHook = recorder.hook();
+
+    // A profile with nothing saved anywhere, so the lookup goes all the way down the chain
+    const auto answer = startRetrieval(manager, mProfile, key);
+    QVERIFY(waitForAnswer(answer));
+    QVERIFY(!answer->success);
+    QCOMPARE(answer->error, QStringLiteral("No stored credentials found for profile %1").arg(mProfile));
+
+    QList<QPair<QString, QString>> expected;
+    for (const auto& read : expectedReads(mProfile, key)) {
+        expected.append({read.service, read.key});
+    }
+    QCOMPARE(recorder.reads(), expected);
+    QTest::qWait(200);
+    QCOMPARE(answer->count, 1);
+}
+
+void CredentialManagerKeychainTest::testATimedOutRemovalDoesNotStopLaterKeychainJobs()
+{
+    // Every removal: once the first times out, removePassword() goes on to remove the colliding-format
+    // entry, and that job must not be left holding the queue either
+    JobStaller staller;
+    staller.stallEvery<QKeychain::DeletePasswordJob>();
+    CredentialManager manager;
+    manager.mJobStartHook = staller.hook();
+    manager.mOperationTimeoutMs = 300;
+
+    auto answered = std::make_shared<bool>(false);
+    auto succeeded = std::make_shared<bool>(true);
+    QTest::ignoreMessage(QtWarningMsg, QRegularExpression(QStringLiteral("abandoned the keychain removal for profile \"%1\"").arg(QRegularExpression::escape(mProfile))));
+    manager.removePassword(mProfile, mKey, [answered, succeeded](bool success, const QString&) {
+        *answered = true;
+        *succeeded = success;
+    });
+    QVERIFY2(QTest::qWaitFor(
+                     [answered]() {
+                         return *answered;
+                     },
+                     kWaitMs),
+             "a removal whose keychain job never answers must still answer its caller");
+    QVERIFY(!*succeeded);
+    QTest::qWait(3 * manager.mOperationTimeoutMs);
+    QVERIFY2(staller.firstStalledAlive(), "a removal still waiting on the keychain was deleted");
+
+    // Abandoning the job must leave QtKeychain's own connections to it: its queue moves on only
+    // through them, so once the job does answer, later keychain jobs have to run.
+    staller.release();
+    QVERIFY2(keychainQueueRuns(), "a timed-out removal stopped every later keychain job from running");
+}
+
+void CredentialManagerKeychainTest::testALookupIsNotDisturbedByAnotherOnTheSameManager()
+{
+    JobStaller staller;
+    staller.stallNth<QKeychain::ReadPasswordJob>(0);
+    staller.answerOtherReadsNotFound();
+    CredentialManager manager;
+    manager.mJobStartHook = staller.hook();
+    manager.mOperationTimeoutMs = 2000;
+
+    const auto first = startRetrieval(manager, mProfile, mKey);
+    QVERIFY(staller.waitForAnyStalled());
+    // A second lookup on the same manager while the first is still outstanding
+    const auto second = startRetrieval(manager, mProfile + QStringLiteral("-second"), mKey);
+
+    QVERIFY2(waitForAnswer(first), "the stalled lookup never answered once another lookup started on its manager");
+    QCOMPARE(first->error, QStringLiteral("Operation timed out"));
+    // The second lookup's reads queue behind the stalled one until it answers
+    staller.release();
+    QVERIFY2(waitForAnswer(second), "a lookup never answered once the read it was queued behind had answered");
+    QCOMPARE(second->error, QStringLiteral("No stored credentials found for profile %1").arg(mProfile + QStringLiteral("-second")));
+    QTest::qWait(200);
+    QCOMPARE(first->count, 1);
+    QCOMPARE(second->count, 1);
+}
+
+void CredentialManagerKeychainTest::testDeletingAManagerMidLookupLeavesItsReadToFinish()
+{
+    JobStaller staller;
+    staller.stallNth<QKeychain::ReadPasswordJob>(0);
+    auto manager = std::make_unique<CredentialManager>();
+    manager->mJobStartHook = staller.hook();
+
+    const auto answer = startRetrieval(*manager, mProfile, mKey);
+    QVERIFY(staller.waitForAnyStalled());
+    // As a dialog does when it closes on a lookup still in progress
+    manager.reset();
+    QTest::qWait(100);
+    QVERIFY2(staller.firstStalledAlive(), "a read still waiting on the keychain was deleted along with its manager");
+    QCOMPARE(answer->count, 0);
+
+    staller.release();
+    QVERIFY2(keychainQueueRuns(), "QtKeychain's queue did not move on once the orphaned read answered");
+    QTRY_VERIFY2(!staller.firstStalledAlive(), "an orphaned read was never deleted once it answered");
+    QCOMPARE(answer->count, 0);
+}
+
+void CredentialManagerKeychainTest::testACallbackThatFlushesDeferredDeletesDoesNotDeleteTheAnsweringRead()
+{
+    // Loading a profile flushes deferred deletes (Host.cpp), and the profiles dialog loads one straight
+    // from the lookup's callback - which runs while the read that answered is still emitting finished().
+    // A read already marked for deletion by then is freed underneath QtKeychain, which touches it again
+    // once the signal returns.
+    JobStaller recorder;
+    recorder.answerOtherReadsNotFound();
+    CredentialManager manager;
+    manager.mJobStartHook = recorder.hook();
+
+    auto answered = std::make_shared<bool>(false);
+    manager.retrievePassword(mProfile, mKey, [answered](bool, QString, const QString&) {
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        *answered = true;
+    });
+    QVERIFY2(QTest::qWaitFor(
+                     [answered]() {
+                         return *answered;
+                     },
+                     kWaitMs),
+             "the lookup never answered");
+    QTest::qWait(100);
+}
+
+void CredentialManagerKeychainTest::testALookupFindsThePasswordInTheEncryptedFileBeforeTheCollidingFormat_data()
+{
+    QTest::addColumn<bool>("firstReadRefused");
+    QTest::newRow("nothing in the keychain") << false;
+    // A refused read is reported only when nothing is found, not in place of a password that is
+    QTest::newRow("a keychain read refused") << true;
+}
+
+void CredentialManagerKeychainTest::testALookupFindsThePasswordInTheEncryptedFileBeforeTheCollidingFormat()
+{
+    QFETCH(bool, firstReadRefused);
+    const QString secret = QStringLiteral("file-secret");
+    QVERIFY(CredentialManager::storeCredential(mProfile, mKey, secret));
+
+    JobStaller recorder;
+    if (firstReadRefused) {
+        recorder.stallNth<QKeychain::ReadPasswordJob>(0);
+    }
+    recorder.answerOtherReadsNotFound();
+    CredentialManager manager;
+    manager.mJobStartHook = recorder.hook();
+
+    const auto answer = startRetrieval(manager, mProfile, mKey);
+    if (firstReadRefused) {
+        QKeychain::Job* firstRead = recorder.waitForStalled();
+        QVERIFY(firstRead);
+        JobStaller::answer(firstRead, QKeychain::AccessDenied, QStringLiteral("synthetic: access refused"));
+    }
+    const bool answered = waitForAnswer(answer);
+    CredentialManager::removeCredential(mProfile, mKey);
+
+    QVERIFY(answered);
+    QVERIFY(answer->success);
+    QCOMPARE(answer->password, secret);
+    // The colliding format may hold a password another profile shares, so a lookup that finds this
+    // profile's own in the file must stop there.
+    QList<QPair<QString, QString>> expected;
+    for (const auto& read : expectedReads(mProfile, mKey)) {
+        if (!read.name.startsWith(QStringLiteral("colliding format"))) {
+            expected.append({read.service, read.key});
+        }
+    }
+    QCOMPARE(recorder.reads(), expected);
+}
+
+void CredentialManagerKeychainTest::testARecoveredPasswordIsReturnedWhileItsMigrationStalls()
+{
+    // An entry in the old key=account layout, which a lookup recovers and then re-files
+#if defined(Q_OS_WIN)
+    const QString plantedService;
+#else
+    const QString plantedService = expectedServiceName(mProfile, mKey);
+#endif
+    if (!mStoreAvailable) {
+        QSKIP("credential store unavailable in this environment");
+    }
+    const QString secret = QStringLiteral("old-format-secret");
+    QVERIFY(writeEntry(plantedService, mKey, secret));
+
+    auto staller = std::make_unique<JobStaller>();
+    staller->stallEvery<QKeychain::WritePasswordJob>();
+    CredentialManager manager;
+    manager.mJobStartHook = staller->hook();
+
+    const auto answer = startRetrieval(manager, mProfile, mKey);
+    const bool answered = waitForAnswer(answer, 5000);
+    QKeychain::Job* migration = staller->waitForStalled();
+    const QString migratedService = migration ? migration->service() : QString();
+    const QString migratedKey = migration ? migration->key() : QString();
+
+    // Let the stalled migration answer, so it stops holding QtKeychain's queue
+    manager.mJobStartHook = nullptr;
+    staller.reset();
+    const QString service = expectedServiceName(mProfile, mKey);
+    deleteEntry(plantedService, mKey);
+    deleteEntry(service, service);
+
+    QVERIFY2(answered, "a recovered password must not wait for the write that re-files it");
+    QVERIFY(answer->success);
+    QCOMPARE(answer->password, secret);
+    QVERIFY2(migratedService == service && migratedKey == service, "a recovered password must be re-filed under the current name");
+}
+
+void CredentialManagerKeychainTest::testARecoveredPasswordSurvivesAKeychainThatRefusesToStoreIt()
+{
+    // An entry in the colliding layout. Recovering it stores the password under the current name and
+    // then removes the colliding entry.
+    const QString legacyService = expectedLegacyServiceName(mProfile, mKey);
+#if defined(Q_OS_WIN)
+    const QString plantedService;
+#else
+    const QString plantedService = legacyService;
+#endif
+    if (!mStoreAvailable) {
+        QSKIP("credential store unavailable in this environment");
+    }
+    const QString secret = QStringLiteral("colliding-secret");
+    QVERIFY(writeEntry(plantedService, legacyService, secret));
+
+    auto staller = std::make_unique<JobStaller>();
+    staller->stallEvery<QKeychain::WritePasswordJob>();
+    CredentialManager manager;
+    manager.mJobStartHook = staller->hook();
+
+    const auto answer = startRetrieval(manager, mProfile, mKey);
+    QVERIFY(waitForAnswer(answer));
+    QVERIFY(answer->success);
+    QCOMPARE(answer->password, secret);
+
+    // The keychain refuses the store, so the password goes to the encrypted file instead - and the
+    // colliding entry is still removed afterwards, since the password is safely somewhere else.
+    QKeychain::Job* store = staller->waitForStalled();
+    QVERIFY2(store, "recovering the colliding entry never tried to store it under the current name");
+    QCOMPARE(store->service(), expectedServiceName(mProfile, mKey));
+    JobStaller::answer(store, QKeychain::OtherError, QStringLiteral("synthetic: keychain refused the write"));
+    const bool swept = QTest::qWaitFor(
+            [&plantedService, &legacyService]() {
+                auto* job = new QKeychain::ReadPasswordJob(plantedService);
+                job->setAutoDelete(false);
+                job->setKey(legacyService);
+                const bool gone = waitForJob(job) && job->error() == QKeychain::EntryNotFound;
+                job->deleteLater();
+                return gone;
+            },
+            kWaitMs);
+    const QString filed = CredentialManager::retrieveCredential(mProfile, mKey);
+
+    manager.mJobStartHook = nullptr;
+    staller.reset();
+    const QString service = expectedServiceName(mProfile, mKey);
+    deleteEntry(plantedService, legacyService);
+    deleteEntry(service, service);
+    CredentialManager::removeCredential(mProfile, mKey);
+
+    QVERIFY2(swept, "the colliding entry was never removed after its password was re-filed");
+    QVERIFY2(filed == secret, "removing the colliding entry also removed the file its password had just been moved to, so the password ended up nowhere");
+}
+
+void CredentialManagerKeychainTest::testAKeychainErrorIsReportedRatherThanNothingFound_data()
+{
+    QTest::addColumn<int>("refusedRead");
+    QTest::newRow("the first read refused") << 0;
+    QTest::newRow("the last read refused") << static_cast<int>(expectedReads(QStringLiteral("profile"), QStringLiteral("kctest")).size() - 1);
+}
+
+void CredentialManagerKeychainTest::testAKeychainErrorIsReportedRatherThanNothingFound()
+{
+    QFETCH(int, refusedRead);
+    JobStaller staller;
+    staller.stallNth<QKeychain::ReadPasswordJob>(refusedRead);
+    staller.answerOtherReadsNotFound();
+    CredentialManager manager;
+    manager.mJobStartHook = staller.hook();
+
+    const auto answer = startRetrieval(manager, mProfile, mKey);
+    QKeychain::Job* refused = staller.waitForStalled();
+    QVERIFY(refused);
+    JobStaller::answer(refused, QKeychain::AccessDenied, QStringLiteral("synthetic: access refused"));
+
+    QVERIFY(waitForAnswer(answer));
+    QVERIFY(!answer->success);
+    QVERIFY2(answer->error.contains(QStringLiteral("synthetic: access refused")),
+             qPrintable(QStringLiteral("a keychain that refused the read may still hold the password, but the lookup said: %1").arg(answer->error)));
+    // A refused read is one place the password is not known to be missing from, not a reason to stop
+    // looking in the others
+    QCOMPARE(staller.reads().size(), expectedReads(mProfile, mKey).size());
 }
 
 QTEST_GUILESS_MAIN(CredentialManagerKeychainTest)

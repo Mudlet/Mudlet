@@ -102,7 +102,8 @@ private:
     // different things from a stale result - one drops it, the other still has to decide whether it
     // may rewrite the store. storeChangeRequested reports a save, forget or resume hint requested while
     // the read ran, which will replace what it saw. The callback is never invoked at all if the Host goes
-    // away while a read is in flight.
+    // away while a read is in flight, or if the read is still waiting its turn when the reconciler is
+    // destroyed.
     void readStoredSignInEntry(std::function<void(bool success, StoredSignIn entry, unsigned int attemptGeneration, bool storeChangeRequested)> callback);
     using StoreReadDone = std::function<void(bool success, QString value, const QString& errorMessage)>;
     // Reads one credential key; what mStoreReader does unless a test replaces it.
