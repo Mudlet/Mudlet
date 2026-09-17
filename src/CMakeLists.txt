@@ -120,6 +120,7 @@ set(mudlet_SRCS
     SelectionRectangleHandler.cpp
     SentryWrapper.cpp
     ShortcutsManager.cpp
+    SignInStoreReconciler.cpp
     SingleLineTextEdit.cpp
     SpeechAudioCapture.cpp
     SpeechRecognizerFactory.cpp
@@ -375,6 +376,7 @@ set(mudlet_HDRS
     SelectionRectangleHandler.h
     SentryWrapper.h
     ShortcutsManager.h
+    SignInStoreReconciler.h
     SingleLineTextEdit.h
     SpeechAudioCapture.h
     SpeechRecognizer.h
