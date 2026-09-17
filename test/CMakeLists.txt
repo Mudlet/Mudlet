@@ -44,7 +44,7 @@ cmake_language(DEFER CALL restore_windows_test_output)
 # directory outlives the run, where a test's own QTemporaryDir does not - so a test
 # still has to redirect for itself to get a config root that is empty at the start
 # of every run. setupConfig() is unaffected either way: it takes $XDG_CONFIG_HOME/mudlet
-# only when that directory holds profiles/ (see utils::xdgConfigDir()), which this does
+# only when that directory holds profiles/ (see MudletApp::xdgConfigDir()), which this does
 # not create - deliberately, since seeding the opt-in here would give a test that
 # forgets a config root that accumulates profiles between runs, which is the
 # collision #9999 was about.

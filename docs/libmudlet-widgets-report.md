@@ -316,6 +316,8 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 - `ShaderManager.h`
 - `ShortcutsManager.cpp`
 - `ShortcutsManager.h`
+- `SignInStoreReconciler.cpp`
+- `SignInStoreReconciler.h`
 - `sparkleupdater.h`
 - `sparkleupdater.mm`
 - `SpeechAudioCapture.cpp`
