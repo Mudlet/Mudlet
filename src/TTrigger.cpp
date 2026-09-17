@@ -423,6 +423,20 @@ private:
         return true;
     }
 };
+
+// The one color pair the game sent for the whole of [start, end) of a line, or
+// null when it sent several. A snapshot that stops short of the window cannot
+// answer for the text past its end; with no snapshot taken the line itself
+// still holds the game's colors for the whole of it. What dismisses a root
+// color trigger before match() and what match_color_pattern() reads have to be
+// this one answer, or the first would dismiss a line the second fires on.
+const TChar* uniformWindowColors(TBuffer& buffer, const std::vector<TChar>* pPassLine, const int line, const int start, const int end)
+{
+    if (end <= start || (pPassLine && static_cast<int>(pPassLine->size()) < end)) {
+        return nullptr;
+    }
+    return buffer.preTriggerPassLineUniformColors(line);
+}
 } // namespace
 
 // Some extraordinary numbers outside of the range (0-255) used for ANSI colors:
@@ -771,6 +785,56 @@ const std::vector<quint64>& TTrigger::prescanGrams() const
         return unfilterable;
     }
     return mPrescanGrams;
+}
+
+TRootTriggerFilter TTrigger::rootFilter() const
+{
+    TRootTriggerFilter filter;
+    if (mIsLineTrigger || mIsMultiline || mKeepFiring > 0) {
+        return filter;
+    }
+    if (mPatternBigrams.size() == 1) {
+        filter.mKind = TRootTriggerFilter::Kind::Text;
+        filter.mText = mPatternBigrams.front();
+        return filter;
+    }
+    if (mPatternKinds.size() != 1 || mPatternKinds.front() != REGEX_COLOR_PATTERN || mColorPatternList.size() != 1 || !mColorPatternList.front()) {
+        return filter;
+    }
+    const TColorTable& colors = *mColorPatternList.front();
+    const bool foregroundWanted = colors.ansiFg != scmIgnored;
+    const bool backgroundWanted = colors.ansiBg != scmIgnored;
+    // The default color is whatever the console's is when the line arrives,
+    // and a color the table has none for matches nothing at all; neither can be
+    // copied, so match_color_pattern() goes on answering for those
+    if ((!foregroundWanted && !backgroundWanted) || colors.ansiFg == scmDefault || colors.ansiBg == scmDefault || (foregroundWanted && !colors.mFgValid) || (backgroundWanted && !colors.mBgValid)) {
+        return filter;
+    }
+    filter.mKind = TRootTriggerFilter::Kind::Color;
+    filter.mForegroundWanted = foregroundWanted;
+    filter.mBackgroundWanted = backgroundWanted;
+    filter.mForeground = colors.mFgRgba;
+    filter.mBackground = colors.mBgRgba;
+    return filter;
+}
+
+bool TTrigger::uniformLineColors(Host* pHost, const int line, const int length, QRgb& foreground, QRgb& background)
+{
+    if (!pHost || line < 0) {
+        return false;
+    }
+    TBuffer& buffer = pHost->mainConsoleModel().buffer;
+    if (line >= static_cast<int>(buffer.buffer.size())) {
+        return false;
+    }
+    const int end = qBound(0, length, static_cast<int>(buffer.buffer[line].size()));
+    const TChar* pColors = uniformWindowColors(buffer, buffer.preTriggerPassLine(line), line, 0, end);
+    if (!pColors) {
+        return false;
+    }
+    foreground = pColors->foregroundRgba();
+    background = pColors->backgroundRgba();
+    return true;
 }
 
 void TUtf8Subject::encode() const
@@ -1328,18 +1392,13 @@ bool TTrigger::match_color_pattern(int line, int patternNumber, int posOffset, i
                && ((ansiBg == scmIgnored) || ((ansiBg == scmDefault) && character.backgroundRgba() == defaultBg) || (patternBgValid && character.backgroundRgba() == patternBg));
     };
 
-    // A snapshot that stops short of the window cannot answer for the text past
-    // its end; with no snapshot taken the line itself still holds the game's
-    // colors for the whole of it:
-    if (end > start && (!pPassLine || passLineSize >= end)) {
-        if (const TChar* pUniformColors = consoleModel.buffer.preTriggerPassLineUniformColors(line)) {
-            if (!colorsMatch(*pUniformColors)) {
-                return false;
-            }
-            lists.add(QStringView(lineBuffer).mid(start, end - start), start);
-            processColorPattern(patternNumber, lists.mCaptures, lists.mPositions, line);
-            return true;
+    if (const TChar* pUniformColors = uniformWindowColors(consoleModel.buffer, pPassLine, line, start, end)) {
+        if (!colorsMatch(*pUniformColors)) {
+            return false;
         }
+        lists.add(QStringView(lineBuffer).mid(start, end - start), start);
+        processColorPattern(patternNumber, lists.mCaptures, lists.mPositions, line);
+        return true;
     }
 
     for (auto it = bufferLine.begin() + start; pos < end; ++it, ++pos) {
