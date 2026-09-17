@@ -29,6 +29,7 @@
 
 #include "Host.h"
 #include "LuaInterface.h"
+#include "MudletPaths.h"
 #include "TConsole.h"
 #include "TDebug.h"
 #include "TEasyButtonBar.h"
@@ -10834,7 +10835,7 @@ QString dlgTriggerEditor::profileSettingsPrefix() const
         return QString();
     }
 
-    const QString sanitized = utils::sanitizeForPath(profileName);
+    const QString sanitized = MudletPaths::sanitizeForPath(profileName);
     if (sanitized.isEmpty()) {
         return QString();
     }

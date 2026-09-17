@@ -48,6 +48,7 @@
 #include <QSignalSpy>
 #include <QTemporaryDir>
 
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "MudletInstanceCoordinator.h"
 #include "VoskRecognizer.h"
@@ -88,8 +89,9 @@ private slots:
         QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
         qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
 
-        // VoskRecognizer's path helpers go through mudlet::getMudletPath(),
-        // which dereferences mudlet::self()
+        // VoskRecognizer's path helpers go through MudletPaths::getMudletPath(),
+        // which resolves the config root itself - so it is setupConfig() that
+        // settles it on the redirected one, not mudlet::start()
         mudlet::start();
         mudlet::self()->setupConfig();
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
