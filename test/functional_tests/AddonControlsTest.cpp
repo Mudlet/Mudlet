@@ -372,10 +372,10 @@ private slots:
         QVERIFY2(!text.contains(qsl("OtherProfileF3")), qPrintable(qsl("the warning names a command belonging to another profile: %1").arg(text)));
     }
 
-    // The same clash the other way up, and across the profile boundary. A
-    // command's shortcut sits on this window's menu, so it fires whichever
-    // profile is in front and takes the key from a binding another profile has
-    // on it. Refusing the command over that would make a package's success
+    // The same clash the other way up, and across the profile boundary. A pinned
+    // command's shortcut stays on the menu whichever profile is in front, so it
+    // takes the key from a binding another profile has on it. Unpinned, it is
+    // hidden while that profile is in front and takes nothing. Refusing the command over that would make a package's success
     // depend on which profiles the player happens to have open, so the command
     // is placed and the profile losing its binding is told instead - in its
     // editor, not on its main screen, because a package re-places its commands
@@ -396,7 +396,8 @@ private slots:
         pEditor->showInfo(QString());
 
         const int commandId = addCommand(mpFirstHost, qsl("name = 'OtherProfileBinding', menuPath = 'ClashTest', shortcut = 'Alt+F9'"));
-
+        const QString textBeforePinning = editorSaid(pEditor);
+        runLua(mpFirstHost, qsl("setCommandPinned(%1, true)").arg(commandId));
         const QString text = editorSaid(pEditor);
 
         runLua(mpSecondHost, qsl("killKey(_clashKeyId)"));
@@ -405,7 +406,8 @@ private slots:
         }
 
         QVERIFY2(commandId > 0, "the command was refused over a binding belonging to a different profile");
-        QVERIFY2(text.contains(sequence), qPrintable(qsl("a command took another profile's key binding without saying so in its editor: %1").arg(text)));
+        QVERIFY2(!textBeforePinning.contains(sequence), qPrintable(qsl("an unpinned command, which never takes another profile's key, warned that it did: %1").arg(textBeforePinning)));
+        QVERIFY2(text.contains(sequence), qPrintable(qsl("a pinned command took another profile's key binding without saying so in its editor: %1").arg(text)));
         QVERIFY2(text.contains(qsl("OtherProfileBinding")), qPrintable(qsl("the warning does not say which command took the key: %1").arg(text)));
         QVERIFY2(text.contains(mFirstProfile), qPrintable(qsl("the warning does not say which profile the command is in: %1").arg(text)));
     }

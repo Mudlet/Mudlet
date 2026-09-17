@@ -951,7 +951,6 @@ int mudlet::addAddonCommand(const CommandRequest& request, Host* pHost, QString&
 
     placeAddonCommand(commandId, command, pContainer);
     mAddonCommands[commandId] = command;
-    warnProfilesLosingBindingTo(shortcut, pHost, request.name);
     // A package places its commands when it loads, which is not necessarily a
     // moment its profile is the one on screen - so a new command is shown or
     // hidden by the same rule as every other rather than arriving visible.
@@ -1240,9 +1239,11 @@ void mudlet::applyAddonCommandState(AddonCommand& command)
     }
 }
 
-// The command went onto a menu of this window, so its key fires whichever
-// profile is in front: a binding another profile has on that key stops working
-// too. Refusing the command over it is not the answer - a package's success
+// A pinned command stays on the menu of whichever window the player is in, so
+// its key fires whichever profile is in front: a binding another profile has on
+// that key stops working too. An unpinned one is hidden while any other profile
+// is in front, and a hidden action's shortcut does not fire, so pinning is the
+// moment the key is taken from anyone else. Refusing the command over it is not the answer - a package's success
 // would then depend on which other profiles the player happens to have open,
 // which its author can neither see nor diagnose - so the command is placed and
 // the profile losing its binding is told, the same call the buffer search makes
@@ -1553,8 +1554,13 @@ bool mudlet::setAddonCommandPinned(int commandId, bool pinned, Host* pHost)
         return false;
     }
 
+    const bool newlyPinned = pinned && !mAddonCommands[commandId].pinned;
+    const CommandRequest request = mAddonCommands[commandId].request;
     mAddonCommands[commandId].pinned = pinned;
     refreshAddonPlacement();
+    if (newlyPinned && !request.shortcut.isEmpty()) {
+        warnProfilesLosingBindingTo(QKeySequence(request.shortcut), pHost, request.name);
+    }
     return true;
 }
 
