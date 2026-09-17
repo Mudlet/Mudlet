@@ -25,7 +25,6 @@
 #include <QDebug>
 #include <QJsonDocument>
 #include <QJsonObject>
-#include <QPointer>
 
 #include <utility>
 
@@ -135,7 +134,7 @@ unsigned int SignInStoreReconciler::setIntent(Intent intent, Completion completi
         // true for every request.
         finish(*replaced, Outcome::Superseded, Operation::WriteMetadata, QString());
     }
-    if (!mActive) {
+    if (!mActive && mReaders == 0) {
         start();
     }
     return id;
@@ -161,6 +160,7 @@ void SignInStoreReconciler::runStep()
         // unreachable and the re-entrant request would never run.
         mActive.reset();
         finish(reached, Outcome::Reached, Operation::WriteMetadata, QString());
+        grantWaitingReads();
         return;
     }
 
@@ -229,6 +229,7 @@ void SignInStoreReconciler::onStepDone(unsigned int id, Operation op, bool ok, Q
         auto failed = std::move(*mActive);
         mActive.reset();
         finish(failed, Outcome::Failed, failed.failedAt, std::move(failed.failureError));
+        grantWaitingReads();
         return;
     }
 
@@ -256,6 +257,7 @@ void SignInStoreReconciler::onStepDone(unsigned int id, Operation op, bool ok, Q
         // - reordering these two lines would leave that self-start unreachable.
         mActive.reset();
         finish(failed, Outcome::Failed, op, std::move(error));
+        grantWaitingReads();
         return;
     }
 
@@ -271,5 +273,59 @@ void SignInStoreReconciler::finish(Request& request, Outcome outcome, Operation 
         // std::function while it is executing.
         auto completion = std::move(request.completion);
         completion(outcome, failedAt, std::move(error));
+    }
+}
+
+SignInStoreReconciler::ReadLease::ReadLease(SignInStoreReconciler* owner, unsigned int lastRequestId)
+: mpOwner(owner)
+, mLastRequestId(lastRequestId)
+{
+}
+
+SignInStoreReconciler::ReadLease::~ReadLease()
+{
+    if (mpOwner) {
+        mpOwner->releaseRead();
+    }
+}
+
+bool SignInStoreReconciler::ReadLease::storeChangeRequested() const
+{
+    return mpOwner && mpOwner->mNextId != mLastRequestId;
+}
+
+void SignInStoreReconciler::whenReadable(std::function<void(Lease)> read)
+{
+    // A request waiting only for reads to finish goes before any read asked for after it, so a steady
+    // stream of reads cannot hold a save back indefinitely.
+    if (mActive || mPending) {
+        mWaitingReads.push_back(std::move(read));
+        return;
+    }
+    grant(std::move(read));
+}
+
+void SignInStoreReconciler::grant(std::function<void(Lease)> read)
+{
+    ++mReaders;
+    read(Lease(new ReadLease(this, mNextId)));
+}
+
+void SignInStoreReconciler::releaseRead()
+{
+    --mReaders;
+    if (mReaders == 0 && !mActive && mPending) {
+        start();
+    }
+}
+
+void SignInStoreReconciler::grantWaitingReads()
+{
+    // Checked before every grant: a read that completes inline can request a change, and the reads still
+    // waiting must then wait for that change as well.
+    while (!mActive && !mPending && !mWaitingReads.empty()) {
+        auto read = std::move(mWaitingReads.front());
+        mWaitingReads.pop_front();
+        grant(std::move(read));
     }
 }

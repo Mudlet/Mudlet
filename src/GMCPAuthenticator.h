@@ -100,9 +100,13 @@ private:
     // metadata for an entry written before the split, otherwise under its own key. Reports the auth
     // attempt current when the read began rather than acting on it, because the two callers want
     // different things from a stale result - one drops it, the other still has to decide whether it
-    // may rewrite the store. The callback is never invoked at all if the Host goes away while a read is
-    // in flight.
-    void readStoredSignInEntry(std::function<void(bool success, StoredSignIn entry, unsigned int attemptGeneration)> callback);
+    // may rewrite the store. storeChangeRequested reports a save, forget or resume hint requested while
+    // the read ran, which will replace what it saw. The callback is never invoked at all if the Host goes
+    // away while a read is in flight.
+    void readStoredSignInEntry(std::function<void(bool success, StoredSignIn entry, unsigned int attemptGeneration, bool storeChangeRequested)> callback);
+    using StoreReadDone = std::function<void(bool success, QString value, const QString& errorMessage)>;
+    // Reads one credential key; what mStoreReader does unless a test replaces it.
+    void readStoreKey(const QString& key, StoreReadDone done);
     // Reads the stored sign-in - the {account, provider?, secure_only} metadata plus the token from
     // wherever it lives, its own key or inline in a pre-split entry - and acts on it: replay the token
     // (when allowToken), else send the resume form for a remembered provider, else fall through to
@@ -162,6 +166,8 @@ private:
     // than parented to the Host: it must die with this authenticator, before the Host's own QObject
     // teardown, so no completion can ever run against a destroyed `this`.
     QScopedPointer<SignInStoreReconciler> mpStoreReconciler;
+    // Every read of the stored sign-in's keys goes through here, scheduled by mpStoreReconciler.
+    std::function<void(const QString& key, StoreReadDone done)> mStoreReader;
     QStringList mSupportedAuthTypes;
     // Version 2 client-driven OAuth capability, advertised by a server that is itself an OpenID
     // Provider. Only populated when the connection is encrypted: the flow's completing
@@ -265,10 +271,6 @@ private:
     // just removed, and a rotation re-saves it under a fresh value - leaving Forget with nothing to show
     // for itself. Not part of mConn: it must monotonically increase, never reset.
     unsigned int mForgetGeneration = 0;
-    // Forgets whose removal has not answered yet. A read that begins while one is outstanding may still
-    // find what it is removing, and the generation it captures already counts that forget, so
-    // readStoredSignIn() checks this as well.
-    unsigned int mForgetsInFlight = 0;
 
     // A server can pack thousands of Char.Login.Default frames into one packet and every sign-in
     // attempt reads the credential store. Throttling bounds that cost by wall clock rather than by how
