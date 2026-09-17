@@ -150,6 +150,9 @@ GMCPAuthenticator::GMCPAuthenticator(Host* pHost)
 , mpStoreReconciler(new SignInStoreReconciler([this](SignInStoreReconciler::Operation op, QString payload, SignInStoreReconciler::Done done) {
     performStoreOperation(op, std::move(payload), std::move(done));
 }))
+, mStoreReader([this](const QString& key, StoreReadDone done) {
+    readStoreKey(key, std::move(done));
+})
 {
     resetPerConnectionState();
     // mTelnet is declared before this authenticator in Host, so it is already constructed here.
@@ -577,13 +580,7 @@ void GMCPAuthenticator::forgetSavedSignIn(std::function<void(bool success)> call
     // awaiting the result of a token it replayed - can see that the player has since asked for all of
     // it to go, and stops short of putting any of it back.
     ++mForgetGeneration;
-    ++mForgetsInFlight;
-    discardReconnectToken([this, callback = std::move(callback)](bool success) {
-        --mForgetsInFlight;
-        if (callback) {
-            callback(success);
-        }
-    });
+    discardReconnectToken(std::move(callback));
 }
 
 void GMCPAuthenticator::discardReconnectToken(std::function<void(bool success)> callback)
@@ -894,7 +891,8 @@ void GMCPAuthenticator::retryOrDropRejectedToken()
     const auto forgetAtReplay = mConn.forgetAtReplay;
     // Latch synchronously rather than when the read returns; see mReconnectRejected's declaration.
     mReconnectRejected = true;
-    readStoredSignInEntry([this, safeHost, attemptGeneration, sentTokenHash, retriedRotatedToken, reconnectAccount, accountProvider, forgetAtReplay](bool success, StoredSignIn entry, unsigned int) {
+    readStoredSignInEntry([this, safeHost, attemptGeneration, sentTokenHash, retriedRotatedToken, reconnectAccount, accountProvider, forgetAtReplay](
+                                  bool success, StoredSignIn entry, unsigned int, bool storeChangeRequested) {
         if (!safeHost) {
             SecureStringUtils::secureStringClear(entry.token);
             return;
@@ -967,7 +965,10 @@ void GMCPAuthenticator::retryOrDropRejectedToken()
         // The token really is dead. Keep the account+provider resume hint (dropping only the token) so
         // the next attempt restarts the same provider's browser sign-in with no menu - unless the player
         // has since asked to forget the sign-in, in which case the hint is theirs to have removed.
-        if (!forgotten) {
+        // A save, forget or resume hint requested while this read ran has not reached the store yet, but
+        // it is newer than what was read, and a drop now would replace it - a token saved in the
+        // meantime included.
+        if (!forgotten && !storeChangeRequested) {
             // Without a token read back there was no rotation check, so a token another instance
             // rotated in meanwhile goes too. The readers only log at debug level, since an unreadable
             // key is usually just an absent one, so this is the one place that says so.
@@ -1178,93 +1179,106 @@ void GMCPAuthenticator::attemptReconnect()
     readStoredSignIn(true);
 }
 
-void GMCPAuthenticator::readStoredSignInEntry(std::function<void(bool success, StoredSignIn entry, unsigned int attemptGeneration)> callback)
+void GMCPAuthenticator::readStoreKey(const QString& key, StoreReadDone done)
+{
+    QPointer<CredentialManager> reader = new CredentialManager();
+    reader->retrievePassword(mpHost->getName(), key, [reader, done = std::move(done)](bool success, QString value, const QString& errorMessage) mutable {
+        if (reader) {
+            reader->deleteLater();
+        }
+        done(success, std::move(value), errorMessage);
+    });
+}
+
+void GMCPAuthenticator::readStoredSignInEntry(std::function<void(bool success, StoredSignIn entry, unsigned int attemptGeneration, bool storeChangeRequested)> callback)
 {
     QPointer<Host> safeHost = mpHost;
-    QPointer<CredentialManager> metadataReader = new CredentialManager();
     const auto attemptGeneration = mAuthAttemptGeneration;
-    metadataReader->retrievePassword(
-            mpHost->getName(), metadataKey(), [safeHost, metadataReader, attemptGeneration, callback = std::move(callback)](bool success, QString value, const QString& errorMessage) mutable {
-                if (metadataReader) {
-                    metadataReader->deleteLater();
-                }
-                if (!safeHost) {
-                    SecureStringUtils::secureStringClear(value);
-                    return;
-                }
-                // Debug, not a warning: CredentialManager reports "nothing stored" as a failed read
-                // (see its fallbackFileRetrieval), so a profile that has simply never saved a sign-in
-                // lands here on every single connection. Warning about that would put a line in every
-                // first-run log and train the reader to skip the one case that matters - a locked,
-                // denied or timed-out keychain, which is indistinguishable from here. Telling the two
-                // apart needs CredentialManager to stop conflating them, tracked in #10587.
-                if (!success) {
-                    qDebug().noquote() << "GMCP Char.Login - no stored sign-in was read; falling back to interactive sign-in:" << errorMessage;
-                    callback(false, StoredSignIn{}, attemptGeneration);
-                    return;
-                }
-                StoredSignIn entry;
-                if (value.isEmpty()) {
-                    callback(true, entry, attemptGeneration);
-                    return;
-                }
-                // An entry written before the split still carries the token inline, so parse from an
-                // owned buffer and scrub every owned copy on every path, corrupt entries included.
-                QByteArray valueBytes = value.toUtf8();
-                const auto doc = QJsonDocument::fromJson(valueBytes);
-                SecureStringUtils::secureByteArrayClear(valueBytes);
+    // The two keys are read as one entry, so the read waits for any save or forget part way through
+    // rewriting them, and holds back any requested while it runs.
+    mpStoreReconciler->whenReadable([this, safeHost, attemptGeneration, callback = std::move(callback)](SignInStoreReconciler::Lease lease) mutable {
+        mStoreReader(metadataKey(), [this, safeHost, lease = std::move(lease), attemptGeneration, callback = std::move(callback)](bool success, QString value, const QString& errorMessage) mutable {
+            if (!safeHost) {
                 SecureStringUtils::secureStringClear(value);
-                if (!doc.isObject()) {
-                    callback(true, entry, attemptGeneration);
-                    return;
-                }
-                const auto obj = doc.object();
-                entry.account = obj[qsl("account")].toString();
-                entry.provider = obj[qsl("provider")].toString();
-                entry.secureOnly = readStoredTransportRequirement(obj);
-                entry.token = obj[qsl("token")].toString();
-                // An inline token wins over the token key. Only a Mudlet from before the split writes
-                // one, and every split-format save rewrites the metadata without it - so an inline token
-                // sitting beside a token key means that instance rotated the token more recently than
-                // any split write, and its copy is the live one.
-                if (!entry.token.isEmpty() || entry.account.isEmpty()) {
-                    callback(true, std::move(entry), attemptGeneration);
-                    return;
-                }
-                QPointer<CredentialManager> tokenReader = new CredentialManager();
-                tokenReader->retrievePassword(
-                        safeHost->getName(),
-                        tokenKey(),
-                        [safeHost, tokenReader, entry = std::move(entry), attemptGeneration, callback = std::move(callback)](bool tokenSuccess, QString tokenValue, const QString& tokenError) mutable {
-                            if (tokenReader) {
-                                tokenReader->deleteLater();
-                            }
-                            if (!safeHost) {
-                                SecureStringUtils::secureStringClear(tokenValue);
-                                return;
-                            }
-                            if (tokenSuccess) {
-                                entry.token = std::move(tokenValue);
-                            } else {
-                                entry.tokenUnreadable = true;
-                                // CredentialManager cannot tell an absent key from a failed read, and the common
-                                // reason to land here is the ordinary one: this entry is a resume hint with no token
-                                // to find. Debug rather than a warning for that reason - but note what it costs the
-                                // one caller that treats an empty token as evidence: retryOrDropRejectedToken() then
-                                // cannot see a token another instance rotated, drops it, and warns. Same #10587.
-                                qDebug().noquote() << "GMCP Char.Login - no saved token was read; using the stored sign-in as a resume hint only:" << tokenError;
-                            }
-                            callback(true, std::move(entry), attemptGeneration);
-                        });
-            });
+                return;
+            }
+            // Ends the read before the caller acts on it, so a change the caller requests in response is
+            // not held back behind its own read.
+            auto endRead = [&lease]() {
+                const bool changeRequested = lease->storeChangeRequested();
+                lease.reset();
+                return changeRequested;
+            };
+            // Debug, not a warning: CredentialManager reports "nothing stored" as a failed read
+            // (see its runLookupStage), so a profile that has simply never saved a sign-in
+            // lands here on every single connection. Warning about that would put a line in every
+            // first-run log and train the reader to skip the one case that matters - a locked,
+            // denied or timed-out keychain, which is indistinguishable from here. Telling the two
+            // apart needs CredentialManager to stop conflating them, tracked in #10587.
+            if (!success) {
+                qDebug().noquote() << "GMCP Char.Login - no stored sign-in was read; falling back to interactive sign-in:" << errorMessage;
+                callback(false, StoredSignIn{}, attemptGeneration, endRead());
+                return;
+            }
+            StoredSignIn entry;
+            if (value.isEmpty()) {
+                callback(true, entry, attemptGeneration, endRead());
+                return;
+            }
+            // An entry written before the split still carries the token inline, so parse from an
+            // owned buffer and scrub every owned copy on every path, corrupt entries included.
+            QByteArray valueBytes = value.toUtf8();
+            const auto doc = QJsonDocument::fromJson(valueBytes);
+            SecureStringUtils::secureByteArrayClear(valueBytes);
+            SecureStringUtils::secureStringClear(value);
+            if (!doc.isObject()) {
+                callback(true, entry, attemptGeneration, endRead());
+                return;
+            }
+            const auto obj = doc.object();
+            entry.account = obj[qsl("account")].toString();
+            entry.provider = obj[qsl("provider")].toString();
+            entry.secureOnly = readStoredTransportRequirement(obj);
+            entry.token = obj[qsl("token")].toString();
+            // An inline token wins over the token key. Only a Mudlet from before the split writes
+            // one, and every split-format save rewrites the metadata without it - so an inline token
+            // sitting beside a token key means that instance rotated the token more recently than
+            // any split write, and its copy is the live one.
+            if (!entry.token.isEmpty() || entry.account.isEmpty()) {
+                callback(true, std::move(entry), attemptGeneration, endRead());
+                return;
+            }
+            mStoreReader(tokenKey(),
+                         [safeHost, lease = std::move(lease), entry = std::move(entry), attemptGeneration, callback = std::move(callback)](
+                                 bool tokenSuccess, QString tokenValue, const QString& tokenError) mutable {
+                             if (!safeHost) {
+                                 SecureStringUtils::secureStringClear(tokenValue);
+                                 return;
+                             }
+                             if (tokenSuccess) {
+                                 entry.token = std::move(tokenValue);
+                             } else {
+                                 entry.tokenUnreadable = true;
+                                 // CredentialManager cannot tell an absent key from a failed read, and the common
+                                 // reason to land here is the ordinary one: this entry is a resume hint with no token
+                                 // to find. Debug rather than a warning for that reason - but note what it costs the
+                                 // one caller that treats an empty token as evidence: retryOrDropRejectedToken() then
+                                 // cannot see a token another instance rotated, drops it, and warns. Same #10587.
+                                 qDebug().noquote() << "GMCP Char.Login - no saved token was read; using the stored sign-in as a resume hint only:" << tokenError;
+                             }
+                             const bool changeRequested = lease->storeChangeRequested();
+                             lease.reset();
+                             callback(true, std::move(entry), attemptGeneration, changeRequested);
+                         });
+        });
+    });
 }
 
 void GMCPAuthenticator::readStoredSignIn(bool allowToken)
 {
     QPointer<Host> safeHost = mpHost;
     const auto forgetGeneration = mForgetGeneration;
-    const bool forgetInFlight = mForgetsInFlight > 0;
-    readStoredSignInEntry([this, safeHost, allowToken, forgetGeneration, forgetInFlight](bool, StoredSignIn entry, unsigned int attemptGeneration) {
+    readStoredSignInEntry([this, safeHost, allowToken, forgetGeneration](bool, StoredSignIn entry, unsigned int attemptGeneration, bool) {
         // The Host (which owns this authenticator) may have gone away while the read was in flight.
         if (!safeHost) {
             SecureStringUtils::secureStringClear(entry.token);
@@ -1276,12 +1290,11 @@ void GMCPAuthenticator::readStoredSignIn(bool allowToken)
             SecureStringUtils::secureStringClear(entry.token);
             return;
         }
-        // The player asked to forget the saved sign-in while this read was in flight, or before it began
-        // with the removal not yet finished, so what it returned may already be on its way out of the
-        // store: treat it as nothing stored. Replaying the token would sign in with the credential being
-        // discarded, and resuming its provider would act on a hint that is going too. This connection
-        // still gets a way in, from selectAuthMethod().
-        if (forgetInFlight || forgetGeneration != mForgetGeneration) {
+        // The player asked to forget the saved sign-in while this read was in flight, so what it
+        // returned is already on its way out of the store: treat it as nothing stored. Replaying the
+        // token would sign in with the credential being discarded, and resuming its provider would act
+        // on a hint that is going too. This connection still gets a way in, from selectAuthMethod().
+        if (forgetGeneration != mForgetGeneration) {
             SecureStringUtils::secureStringClear(entry.token);
             selectAuthMethod();
             return;

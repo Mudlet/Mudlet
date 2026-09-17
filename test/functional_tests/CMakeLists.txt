@@ -136,6 +136,7 @@ set(TRIGGER_GROUP_TEST_SOURCES
     TFeedTriggersRecursionTest.cpp
     UnitDeferredDeleteTest.cpp
     UnitProcessingDepthTest.cpp
+    UnitsReachHostTest.cpp
 )
 
 # The script editor, and the trigger, variable and script forms it hosts
@@ -163,6 +164,7 @@ set(MAP_GROUP_TEST_SOURCES
     MapAreaReassignmentTest.cpp
     MapAreaSelectionTest.cpp
     MapCloseDuringImportTest.cpp
+    MapCoordinateLimitTest.cpp
     MapContextMenuLifetimeTest.cpp
     MapDownloadTest.cpp
     RoomExitsDialogTest.cpp

@@ -81,6 +81,7 @@
 #include <QTemporaryFile>
 #include <QTextStream>
 #include <QThread>
+#include <QTimer>
 #include <QUuid>
 #include <zip.h>
 #include <memory>
@@ -2128,6 +2129,31 @@ std::shared_ptr<TConsoleModel> Host::sharedMainConsoleModel()
     return mpMainConsoleModel;
 }
 
+void Host::deselectMainConsole()
+{
+    mpConsole->deselect();
+}
+
+bool Host::selectMainConsoleSection(int from, int length)
+{
+    return mpConsole->selectSection(from, length);
+}
+
+void Host::setMainConsoleFgColor(const QColor& color)
+{
+    mpConsole->setFgColor(color);
+}
+
+void Host::setMainConsoleBgColor(const QColor& color)
+{
+    mpConsole->setBgColor(color);
+}
+
+void Host::resetMainConsoleFormat()
+{
+    mpConsole->reset();
+}
+
 // Hot: the trigger engine reads the model for every character of a colour
 // pattern, so this hands back a reference rather than a shared_ptr copy - the
 // latter costs an atomic increment and decrement per call.
@@ -2270,6 +2296,15 @@ void Host::incomingStreamProcessor(const QString& data, int line)
     // ScriptUnit defers deletes too (a package script uninstalling its own package
     // mid-compile or mid-event-dispatch), so flush it here alongside the others:
     mScriptUnit.doCleanup();
+}
+
+void Host::slot_timerFires()
+{
+    QTimer* pQT = qobject_cast<QTimer*>(sender());
+    if (Q_UNLIKELY(!pQT)) {
+        return;
+    }
+    mTimerUnit.timerFired(pQT);
 }
 
 // When Mudlet is running in online mode, deleted temp* objects are cleaned up in bulk
@@ -4234,7 +4269,6 @@ void Host::setName(const QString& name)
         mpConsole->setProperty("HostName", name);
         mpConsole->setProfileName(name);
     }
-    mTimerUnit.changeHostName(name);
 }
 
 void Host::removeAllNonPersistentStopWatches()

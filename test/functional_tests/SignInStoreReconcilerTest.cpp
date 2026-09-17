@@ -583,6 +583,226 @@ private slots:
         QVERIFY(outcomes.byId[id].empty());
     }
 
+    // ---- Reads and sequences never overlap -------------------------------------
+
+    void aReadIsGrantedAtOnceWhenNothingIsRunning()
+    {
+        FakeStore store;
+        SignInStoreReconciler reconciler(store.performer());
+        SignInStoreReconciler::Lease lease;
+        reconciler.whenReadable([&](SignInStoreReconciler::Lease granted) {
+            lease = std::move(granted);
+        });
+        QVERIFY(lease);
+        QVERIFY(!lease->storeChangeRequested());
+    }
+
+    void aReadWaitsForTheRunningSequenceToFinish()
+    {
+        // A read part way through a save would see new metadata beside the previous token.
+        FakeStore store;
+        Outcomes outcomes;
+        SignInStoreReconciler reconciler(store.performer());
+        unsigned int id = 0;
+        id = reconciler.setIntent(fullIntent(qsl("tok-1")), outcomes.recorder(&id));
+
+        int reads = 0;
+        reconciler.whenReadable([&](SignInStoreReconciler::Lease) {
+            ++reads;
+        });
+        store.release(0);
+        QCOMPARE(reads, 0);
+        store.release(1);
+        QCOMPARE(outcomes.byId[id][0].outcome, Outcome::Reached);
+        QCOMPARE(reads, 1);
+    }
+
+    void aReadWaitsForTheRemovalAfterAFailedTokenWrite()
+    {
+        FakeStore store;
+        Outcomes outcomes;
+        SignInStoreReconciler reconciler(store.performer());
+        unsigned int id = 0;
+        id = reconciler.setIntent(fullIntent(qsl("tok-1")), outcomes.recorder(&id));
+
+        int reads = 0;
+        reconciler.whenReadable([&](SignInStoreReconciler::Lease) {
+            ++reads;
+        });
+        store.release(0);
+        store.release(1, false, qsl("keychain locked"));
+        QCOMPARE(reads, 0);
+        store.release(2);
+        QCOMPARE(outcomes.byId[id][0].outcome, Outcome::Failed);
+        QCOMPARE(reads, 1);
+    }
+
+    void aReadWaitsAfterAFailedStep()
+    {
+        FakeStore store;
+        Outcomes outcomes;
+        SignInStoreReconciler reconciler(store.performer());
+        unsigned int id = 0;
+        id = reconciler.setIntent(absentIntent(), outcomes.recorder(&id));
+
+        int reads = 0;
+        reconciler.whenReadable([&](SignInStoreReconciler::Lease) {
+            ++reads;
+        });
+        QCOMPARE(reads, 0);
+        store.release(0, false, qsl("keychain locked"));
+        QCOMPARE(outcomes.byId[id][0].outcome, Outcome::Failed);
+        QCOMPARE(reads, 1);
+    }
+
+    void aRequestWaitsForAReadInProgress()
+    {
+        FakeStore store;
+        Outcomes outcomes;
+        SignInStoreReconciler reconciler(store.performer());
+        SignInStoreReconciler::Lease lease;
+        reconciler.whenReadable([&](SignInStoreReconciler::Lease granted) {
+            lease = std::move(granted);
+        });
+
+        unsigned int id = 0;
+        id = reconciler.setIntent(fullIntent(qsl("tok-1")), outcomes.recorder(&id));
+        QVERIFY(store.calls.empty());
+        QVERIFY2(lease->storeChangeRequested(), "the read should learn that a newer request is waiting on it");
+
+        lease.reset();
+        QCOMPARE(store.operations(), (std::vector<Operation>{Operation::WriteMetadata}));
+    }
+
+    void aRequestWaitsForEveryOverlappingRead()
+    {
+        FakeStore store;
+        Outcomes outcomes;
+        SignInStoreReconciler reconciler(store.performer());
+        SignInStoreReconciler::Lease first;
+        SignInStoreReconciler::Lease second;
+        reconciler.whenReadable([&](SignInStoreReconciler::Lease granted) {
+            first = std::move(granted);
+        });
+        reconciler.whenReadable([&](SignInStoreReconciler::Lease granted) {
+            second = std::move(granted);
+        });
+        QVERIFY(first);
+        QVERIFY(second);
+
+        unsigned int id = 0;
+        id = reconciler.setIntent(absentIntent(), outcomes.recorder(&id));
+        first.reset();
+        QVERIFY(store.calls.empty());
+        second.reset();
+        QCOMPARE(store.operations(), (std::vector<Operation>{Operation::RemoveToken}));
+    }
+
+    void aReadAskedForBehindAWaitingRequestWaitsForItToo()
+    {
+        // Otherwise reads arriving one after another could hold a save back indefinitely.
+        FakeStore store;
+        Outcomes outcomes;
+        SignInStoreReconciler reconciler(store.performer());
+        SignInStoreReconciler::Lease lease;
+        reconciler.whenReadable([&](SignInStoreReconciler::Lease granted) {
+            lease = std::move(granted);
+        });
+        unsigned int id = 0;
+        id = reconciler.setIntent(absentIntent(), outcomes.recorder(&id));
+
+        int laterReads = 0;
+        reconciler.whenReadable([&](SignInStoreReconciler::Lease) {
+            ++laterReads;
+        });
+        QCOMPARE(laterReads, 0);
+
+        lease.reset();
+        QCOMPARE(store.operations(), (std::vector<Operation>{Operation::RemoveToken}));
+        QCOMPARE(laterReads, 0);
+        store.release(0);
+        store.release(1);
+        QCOMPARE(outcomes.byId[id][0].outcome, Outcome::Reached);
+        QCOMPARE(laterReads, 1);
+    }
+
+    void aReadThatRequestsAChangeHoldsBackTheReadsStillWaiting()
+    {
+        FakeStore store;
+        Outcomes outcomes;
+        SignInStoreReconciler reconciler(store.performer());
+        unsigned int running = 0;
+        running = reconciler.setIntent(absentIntent(), outcomes.recorder(&running));
+
+        unsigned int requested = 0;
+        int secondReads = 0;
+        reconciler.whenReadable([&](SignInStoreReconciler::Lease lease) {
+            requested = reconciler.setIntent(fullIntent(qsl("tok-1")), outcomes.recorder(&requested));
+            lease.reset();
+        });
+        reconciler.whenReadable([&](SignInStoreReconciler::Lease) {
+            ++secondReads;
+        });
+
+        store.release(0);
+        store.release(1);
+        QCOMPARE(outcomes.byId[running][0].outcome, Outcome::Reached);
+        QCOMPARE(store.operations().back(), Operation::WriteMetadata);
+        QCOMPARE(secondReads, 0);
+        store.release(2);
+        store.release(3);
+        QCOMPARE(outcomes.byId[requested][0].outcome, Outcome::Reached);
+        QCOMPARE(secondReads, 1);
+    }
+
+    void aReadStillInProgressWithARequestWaitingHoldsBackTheReadsBehindIt()
+    {
+        // The request cannot start until the read that made it ends, so the reads queued behind it must
+        // not be granted in the meantime either.
+        FakeStore store;
+        Outcomes outcomes;
+        SignInStoreReconciler reconciler(store.performer());
+        unsigned int running = 0;
+        running = reconciler.setIntent(absentIntent(), outcomes.recorder(&running));
+
+        SignInStoreReconciler::Lease stillReading;
+        unsigned int requested = 0;
+        int laterReads = 0;
+        reconciler.whenReadable([&](SignInStoreReconciler::Lease lease) {
+            requested = reconciler.setIntent(fullIntent(qsl("tok-1")), outcomes.recorder(&requested));
+            stillReading = std::move(lease);
+        });
+        reconciler.whenReadable([&](SignInStoreReconciler::Lease) {
+            ++laterReads;
+        });
+
+        store.release(0);
+        store.release(1);
+        QCOMPARE(outcomes.byId[running][0].outcome, Outcome::Reached);
+        QVERIFY(stillReading);
+        QCOMPARE(laterReads, 0);
+
+        stillReading.reset();
+        store.release(2);
+        store.release(3);
+        QCOMPARE(outcomes.byId[requested][0].outcome, Outcome::Reached);
+        QCOMPARE(laterReads, 1);
+    }
+
+    void aLeaseOutlivingTheReconcilerIsHarmless()
+    {
+        FakeStore store;
+        SignInStoreReconciler::Lease lease;
+        {
+            SignInStoreReconciler reconciler(store.performer());
+            reconciler.whenReadable([&](SignInStoreReconciler::Lease granted) {
+                lease = std::move(granted);
+            });
+        }
+        QVERIFY(!lease->storeChangeRequested());
+        lease.reset();
+    }
+
     // ---- The token only ever reaches the store by being written ---------------
 
     void aTokenDroppedBeforeItsWriteNeverReachesTheStore()

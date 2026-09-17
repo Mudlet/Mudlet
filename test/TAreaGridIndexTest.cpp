@@ -21,6 +21,8 @@
 
 #include <QtTest/QtTest>
 
+#include <climits>
+
 /*
  * Unit tests for TAreaGridIndex.
  *
@@ -35,11 +37,31 @@
  * - rebuild (per-Z): populates, overwrites prior Z level, does not affect other Z levels
  * - rebuild (full): populates all Z levels, overwrites previous state, empty map -> isEmpty
  * - roomsAt: existing cell, non-existent cell (no crash), stable empty reference
- * - roomsInViewport: all in, some out, empty Z, multiple rooms per cell, inclusive edges, narrow range over a wide index
- * - roomsInViewportWithCollisions: solo rooms, colliding rooms, out-of-viewport exclusion, empty Z, narrow range over a wide index
+ * - roomsInViewport: all in, some out, empty Z, multiple rooms per cell, inclusive edges, narrow range over a wide index, ranges reaching INT_MIN/INT_MAX
+ * - roomsInViewportWithCollisions: solo rooms, colliding rooms, out-of-viewport exclusion, empty Z, narrow range over a wide index, ranges reaching INT_MAX
  * - isEmpty / clear / size
  * - Integration: add + full rebuild + remove + move
  */
+namespace {
+// More occupied columns (rows) than any range below asks for, so the scan probes
+// the cells it wants instead of walking the ones the index has.
+constexpr int cOccupiedCells = 600;
+
+void addRoomsAlongX(TAreaGridIndex& idx)
+{
+    for (int i = 0; i < cOccupiedCells; ++i) {
+        idx.addRoom(i + 1, 0, i, 0);
+    }
+}
+
+void addRoomsAlongY(TAreaGridIndex& idx)
+{
+    for (int i = 0; i < cOccupiedCells; ++i) {
+        idx.addRoom(i + 1, 0, 0, i);
+    }
+}
+} // namespace
+
 class TAreaGridIndexTest : public QObject
 {
     Q_OBJECT
@@ -481,6 +503,101 @@ private slots:
         QVERIFY(!idToCollision[11]);
         QVERIFY(idToCollision[13]);
         QVERIFY(idToCollision[2000]);
+    }
+
+    // -------------------------------------------------------------------------
+    // Ranges that reach the limits of the coordinate space
+    //
+    // These cases hang rather than answer wrongly when they regress, so the
+    // binary needs a timeout to report them.
+    // -------------------------------------------------------------------------
+
+    void roomsInViewport_rangeEndingAtTheCoordinateLimit_returnsTheRoomsInIt()
+    {
+        TAreaGridIndex idx;
+        addRoomsAlongX(idx);
+        idx.addRoom(9999, 0, INT_MAX, 0);
+
+        // 201 of the 601 occupied columns are wanted, so probing them is the
+        // cheaper of the two ways through the range and the one taken.
+        const QList<int> result = idx.roomsInViewport(0, INT_MAX - 200, INT_MAX, -10, 10);
+
+        QCOMPARE(result, QList<int>({9999}));
+    }
+
+    void roomsInViewport_oneColumnWideAtTheCoordinateLimit_returnsTheRoomsInIt()
+    {
+        TAreaGridIndex idx;
+        addRoomsAlongX(idx);
+        idx.addRoom(9999, 0, INT_MAX, 0);
+
+        const QList<int> result = idx.roomsInViewport(0, INT_MAX, INT_MAX, -10, 10);
+
+        QCOMPARE(result, QList<int>({9999}));
+    }
+
+    void roomsInViewport_rangeStartingAtTheCoordinateLimit_returnsTheRoomsInIt()
+    {
+        TAreaGridIndex idx;
+        addRoomsAlongX(idx);
+        idx.addRoom(9999, 0, INT_MIN, 0);
+
+        const QList<int> result = idx.roomsInViewport(0, INT_MIN, INT_MIN + 200, -10, 10);
+
+        QCOMPARE(result, QList<int>({9999}));
+    }
+
+    // Three rooms is fewer than the 2^32 columns the range covers, so this takes
+    // the key-walking branch rather than the probing one.
+    void roomsInViewport_theWholeCoordinateRange_returnsEveryRoom()
+    {
+        TAreaGridIndex idx;
+        idx.addRoom(1, 0, INT_MIN, INT_MIN);
+        idx.addRoom(2, 0, 0, 0);
+        idx.addRoom(3, 0, INT_MAX, INT_MAX);
+
+        const QList<int> result = idx.roomsInViewport(0, INT_MIN, INT_MAX, INT_MIN, INT_MAX);
+        const QSet<int> visited(result.constBegin(), result.constEnd());
+
+        QCOMPARE(visited, QSet<int>({1, 2, 3}));
+    }
+
+    void roomsInViewport_yRangeEndingAtTheCoordinateLimit_returnsTheRoomsInIt()
+    {
+        TAreaGridIndex idx;
+        addRoomsAlongY(idx);
+        idx.addRoom(9999, 0, 0, INT_MAX);
+
+        const QList<int> result = idx.roomsInViewport(0, 0, 0, INT_MAX - 200, INT_MAX);
+
+        QCOMPARE(result, QList<int>({9999}));
+    }
+
+    void roomsInViewportWithCollisions_rangeEndingAtTheCoordinateLimit_returnsTheRoomsInIt()
+    {
+        TAreaGridIndex idx;
+        addRoomsAlongX(idx);
+        idx.addRoom(9998, 0, INT_MAX, 0);
+        idx.addRoom(9999, 0, INT_MAX, 0);
+
+        const auto result = idx.roomsInViewportWithCollisions(0, INT_MAX - 200, INT_MAX, -10, 10);
+
+        QCOMPARE(result.size(), 2);
+        for (const auto& [id, collision] : result) {
+            QVERIFY(collision);
+        }
+    }
+
+    void roomsInViewportWithCollisions_yRangeEndingAtTheCoordinateLimit_returnsTheRoomsInIt()
+    {
+        TAreaGridIndex idx;
+        addRoomsAlongY(idx);
+        idx.addRoom(9999, 0, 0, INT_MAX);
+
+        const auto result = idx.roomsInViewportWithCollisions(0, 0, 0, INT_MAX - 200, INT_MAX);
+
+        QCOMPARE(result.size(), 1);
+        QCOMPARE(result.first().first, 9999);
     }
 
     // -------------------------------------------------------------------------
