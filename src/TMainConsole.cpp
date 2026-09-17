@@ -109,7 +109,21 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
             &mudlet::signal_profileLoaded,
             this,
             [this]() {
-                mpHost->spellChecker().warmDictionaries();
+                if (mpHost) {
+                    mpHost->spellChecker().warmDictionaries();
+                }
+            },
+            Qt::QueuedConnection);
+    // ...and turning spell check on mid-session is the other moment the
+    // dictionary goes from unwanted to wanted, so it is read the same way
+    connect(
+            mpHost,
+            &Host::signal_spellCheckEnabled,
+            this,
+            [this]() {
+                if (mpHost) {
+                    mpHost->spellChecker().warmDictionaries();
+                }
             },
             Qt::QueuedConnection);
 

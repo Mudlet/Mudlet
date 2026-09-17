@@ -200,7 +200,7 @@ void TSpellChecker::warmDictionaries()
     // The Lua spellCheckWord() and spellSuggestWord() do not consult this flag,
     // so the lazy getter still serves a script in a profile that has spell
     // check off:
-    if (mpHost->mEnableSpellCheck) {
+    if (mpHost->getEnableSpellCheck()) {
         systemHandle();
     }
 
