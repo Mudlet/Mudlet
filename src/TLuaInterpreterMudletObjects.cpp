@@ -34,6 +34,7 @@
 #include "EAction.h"
 #include "EventLoopPump.h"
 #include "Host.h"
+#include "HostManager.h"
 #include "TAlias.h"
 #include "TArea.h"
 #include "TCommandLine.h"
@@ -1809,7 +1810,7 @@ int TLuaInterpreter::raiseGlobalEvent(lua_State* L)
     event.mArgumentList.append(host.getName());
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
 
-    mudlet::self()->getHostManager().postInterHostEvent(&host, event);
+    HostManager::self()->postInterHostEvent(&host, event);
 
     lua_pushboolean(L, true);
     return 1;
@@ -3111,7 +3112,7 @@ int TLuaInterpreter::tempTrigger(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getProfiles
 int TLuaInterpreter::getProfiles(lua_State* L)
 {
-    auto& hostManager = mudlet::self()->getHostManager();
+    auto* hostManager = HostManager::self();
     const QStringList profiles = QDir(MudletPaths::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
 
     lua_newtable(L);
@@ -3156,7 +3157,7 @@ int TLuaInterpreter::getProfiles(lua_State* L)
         lua_settable(L, -3);
 
 
-        auto host = hostManager.getHost(profile);
+        auto host = hostManager->getHost(profile);
         lua_pushstring(L, "loaded");
         lua_pushboolean(L, host != nullptr);
         lua_settable(L, -3);
@@ -3178,7 +3179,7 @@ int TLuaInterpreter::getProfiles(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#loadProfile
 int TLuaInterpreter::loadProfile(lua_State* L)
 {
-    auto& hostManager = mudlet::self()->getHostManager();
+    auto* hostManager = HostManager::self();
     if (!checkStringArg(L, __func__, 1, "profile name")) {
         return lua_error(L);
     }
@@ -3202,7 +3203,7 @@ int TLuaInterpreter::loadProfile(lua_State* L)
         return 2;
     }
 
-    if (hostManager.hostLoaded(profileName)) {
+    if (hostManager->hostLoaded(profileName)) {
         lua_pushnil(L);
         lua_pushfstring(L, "loadProfile: profile '%s' is already loaded", profileName.toUtf8().constData());
         return 2;
@@ -3225,7 +3226,7 @@ int TLuaInterpreter::loadProfile(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#closeProfile
 int TLuaInterpreter::closeProfile(lua_State* L)
 {
-    auto& hostManager = mudlet::self()->getHostManager();
+    auto* hostManager = HostManager::self();
     QString requestedName;
 
     if (lua_gettop(L) == 0) {
@@ -3242,7 +3243,7 @@ int TLuaInterpreter::closeProfile(lua_State* L)
         return 2;
     }
 
-    if (!hostManager.hostLoaded(profileName)) {
+    if (!hostManager->hostLoaded(profileName)) {
         lua_pushnil(L);
         lua_pushfstring(L, "closeProfile: profile '%s' is not loaded", profileName.toUtf8().constData());
         return 2;
