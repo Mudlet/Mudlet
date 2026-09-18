@@ -512,7 +512,7 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     // it allocates. Moving the buffer out rather than lending the member is
     // what makes that safe under nesting: a pass a trigger script starts finds
     // the member empty and grows its own, so it cannot resize the one an outer
-    // pass is still matching. subject has to outlive every match() call below.
+    // pass is still matching.
     TUtf8Subject subject(data, std::move(mUtf8Scratch));
     const auto utf8Guard = qScopeGuard([this, &subject] {
         QByteArray scratch = subject.takeScratch();
@@ -614,7 +614,7 @@ void TriggerUnit::processDataStream(const QString& data, int line)
             if (mRootFilterEpoch == filterEpochAtStart) {
                 const TRootTriggerFilter& filter = pinnedFilters[position];
                 if (filter.mKind == TRootTriggerFilter::Kind::Text) {
-                    if (!lineBigrams.couldContain(data, filter.mText)) {
+                    if (!lineBigrams.couldContain(data, filter.mText) && !subject.dropsText()) {
                         continue;
                     }
                     textDecided = true;
@@ -631,7 +631,7 @@ void TriggerUnit::processDataStream(const QString& data, int line)
             // A hole is a trigger the snapshot has outlived - see
             // refreshRootNodeSnapshot()
             TTrigger* trigger = pinnedNodeList[position];
-            if (!trigger || !trigger->isActive() || (!textDecided && trigger->cannotMatch(lineBigrams, data))) {
+            if (!trigger || !trigger->isActive() || (!textDecided && trigger->cannotMatch(lineBigrams, data) && !subject.dropsText())) {
                 continue;
             }
             trigger->match(subject, data, line, 0, &lineBigrams);
@@ -661,7 +661,7 @@ void TriggerUnit::processDataStream(const QString& data, int line)
             stopSameLineCreationLoop(trigger->sameLineChainId());
             continue;
         }
-        if (trigger->cannotMatch(lineBigrams, data)) {
+        if (trigger->cannotMatch(lineBigrams, data) && !subject.dropsText()) {
             continue;
         }
         trigger->match(subject, data, line, 0, &lineBigrams);
@@ -851,8 +851,6 @@ void TriggerUnit::doCleanup()
         return;
     }
 
-    // Called once per unit for every line of game text, and next to never has
-    // anything queued, so skip setting up the flush below.
     if (!hasPendingDeletes()) {
         return;
     }

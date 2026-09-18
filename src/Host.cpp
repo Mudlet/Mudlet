@@ -2234,8 +2234,6 @@ void Host::runTriggers(int line)
     const QPoint previousUserCursor = consoleModel.mUserCursor;
     const int previousEngineCursor = consoleModel.mEngineCursor;
     const bool previousIsPromptLine = consoleModel.mIsPromptLine;
-    // Only a nested pass puts the line back, and taking the copy is a
-    // reference count round trip on every line:
     QString previousLine;
     if (nested) {
         previousLine = consoleModel.mCurrentLine;
@@ -2261,8 +2259,6 @@ void Host::runTriggers(int line)
         }
         mTriggerHaystack = std::move(haystack);
     });
-    // Sized once and filled in place: a reserve and two appends each re-check
-    // sharing and capacity for one line's worth of characters
     const qsizetype lineLength = consoleModel.mCurrentLine.size();
     haystack.resize(lineLength + 1);
     QChar* const haystackData = haystack.data();

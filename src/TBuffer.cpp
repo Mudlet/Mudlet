@@ -184,8 +184,8 @@ QString currentTimeStamp()
 }
 
 // Asks for the cache line holding the allocator's bookkeeping for a heap block,
-// which freeing it reads first and which sits just below the address the
-// allocator handed out - itself ownHeaderBytes below the contents for a
+// which freeing it reads first and which (in glibc) sits just below the address
+// the allocator handed out - itself ownHeaderBytes below the contents for a
 // container that keeps a header of its own in the block. Integer arithmetic
 // because the contents may be a static's (an empty QString), where stepping a
 // pointer outside the object is undefined; a prefetch itself never faults
@@ -299,8 +299,8 @@ constexpr bool csiFinalByte(const char byte)
 
 // An SGR parameter is nearly always a short run of digits, which this reads
 // directly; anything else - a private byte, a number too long for an int -
-// is left to QStringView::toInt(), whose locale-aware parse costs more than
-// the rest of the sequence's handling.
+// is left to QStringView::toInt(), whose general parse costs more than the
+// rest of the sequence's handling.
 bool sgrDigits(const QStringView parameter, int& value)
 {
     if (parameter.isEmpty() || parameter.size() > 9) {
@@ -1055,8 +1055,8 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
 
     // Parsed in place - an MXP entity expansion rewrites the head of the text
     // and a forced line break overwrites a byte - so the caller's string is
-    // not meaningful afterwards (cTelnet::postData() copies it first when a
-    // snooper needs the original bytes):
+    // not meaningful afterwards (cTelnet::postData() copies it first for
+    // MMCP):
     std::string& localBuffer = incoming;
 
     Host* pHost = mpHost;
@@ -2111,9 +2111,7 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
         }
     } else {
         if (!line.isEmpty()) {
-            // The last line is empty, so this is the whole of it: hand the
-            // string over rather than sharing it and dropping the local's
-            // reference on the way out.
+            // The last line is empty, so this is the whole of it
             lineBuffer.back() = std::move(line);
         } else {
             if (ch == '\r') {
@@ -6317,8 +6315,7 @@ void TBuffer::shrinkBuffer()
         // The lines going away were written a whole buffer ago, so freeing each
         // one stalls on a cache miss for its allocator header. Asking for the
         // headers a few lines ahead overlaps those misses with the frees in
-        // front of them. Half and double this distance measured the same;
-        // four times it is early enough to lose a third of the gain again.
+        // front of them.
         constexpr int prefetchDistance = 8;
         if (prefetchDistance < lineBuffer.size() && static_cast<size_t>(prefetchDistance) < buffer.size()) {
             prefetchAllocatorHeader(lineBuffer.at(prefetchDistance).constData(), sizeof(QArrayData));

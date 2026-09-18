@@ -604,10 +604,12 @@ describe("PCRE regex cases with tempRegexTrigger", function()
             regexTrigger("colou?r", function() table.insert(seen, matches[1]) end)
             regexTrigger("^ab{0}c$", function() table.insert(seen, matches[1]) end)
             regexTrigger("^(?:xy)*z$", function() table.insert(seen, matches[1]) end)
+            regexTrigger("^(?:a(bcd))?qrs$", function() table.insert(seen, matches[1]) end)
+            regexTrigger("^ab+c$", function() table.insert(seen, matches[1]) end)
 
-            feedTriggers("\ncolor\ncolour\nac\nz\n")
+            feedTriggers("\ncolor\ncolour\nac\nz\nqrs\nabbbc\n")
 
-            assert.are.same({"color", "colour", "ac", "z"}, seen)
+            assert.are.same({"color", "colour", "ac", "z", "qrs", "abbbc"}, seen)
         end)
 
         it("reads a POSIX class and an escaped dot for what they are", function()
@@ -629,6 +631,43 @@ describe("PCRE regex cases with tempRegexTrigger", function()
             feedTriggers("\nA team 5\nfoo and foo\na.b 6\n")
 
             assert.are.same({"5", "foo", "6"}, seen)
+        end)
+
+        it("reads a brace that starts no quantifier as the brace itself", function()
+            local seen = {}
+            regexTrigger("^{OOC|IC} (\\w+) says", function() table.insert(seen, "alternation") end)
+            regexTrigger("^{(?i)x} hello world$", function() table.insert(seen, "caseless") end)
+            regexTrigger("a{[}]bc", function() table.insert(seen, "class") end)
+            regexTrigger("{[^}]}ab", function() table.insert(seen, "negated class") end)
+            regexTrigger("^ab{2}c$", function() table.insert(seen, "quantifier") end)
+            regexTrigger("^\\p{Lu}ello$", function() table.insert(seen, "property") end)
+
+            feedTriggers("\n{OOC Bob waves\n{X} HELLO WORLD\na{}bc\n{x}ab\nabbc\nHello\n")
+
+            assert.are.same({"alternation", "caseless", "class", "negated class", "quantifier", "property"}, seen)
+        end)
+
+        it("reads a class and an \\E the way pcre2 does", function()
+            local seen = {}
+            regexTrigger("^[\\Qa]\\E]bc$", function() table.insert(seen, "quoted") end)
+            regexTrigger("^xyz\\E?$", function() table.insert(seen, "stray end") end)
+
+            feedTriggers("\nabc\nxy\n")
+
+            assert.are.same({"quoted", "stray end"}, seen)
+        end)
+
+        -- pcre2 reads UTF-8 that leaves an unpaired surrogate out, which puts
+        -- the text on either side of it together
+        it("matches text an unpaired surrogate splits in the line", function()
+            local fired = false
+            regexTrigger("abcd", function() fired = true end)
+            setConfig("specialForceMXPProcessorOn", true)
+            finally(function() setConfig("specialForceMXPProcessorOn", false) end)
+
+            feedTriggers("\nzqab&#xD800;cd\n")
+
+            assert.is_true(fired)
         end)
 
         it("matches a named group in each of its spellings", function()

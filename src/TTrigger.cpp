@@ -82,24 +82,30 @@ int utf16PositionOf(const char* utf8, const PCRE2_SIZE byteOffset)
 // contain, or an empty string when none can be told with confidence. Only the
 // syntax that is understood is read - a plain, non-capturing or named group, a
 // character class, an escape, a quantifier - and anything else (alternation,
-// inline options, lookarounds, \Q, backreferences, verbs, escapes that take
-// more characters than their letter) gives up on the whole pattern rather than
-// claim a character a match could do without. A quantifier drops the
-// character it applies to, a group that may repeat zero times drops all it
-// holds, and a run never crosses a group boundary, a class or an escape, so
-// nothing joined here can be apart in the subject. The pattern is compiled
-// without PCRE2_CASELESS, which is what lets the text be searched for as it is.
+// inline options, lookarounds, \Q and \E, backreferences, verbs, escapes that
+// take more characters than their letter, a brace pcre2 versions read
+// differently) gives up on the whole pattern rather than claim a character a
+// match could do without. A quantifier drops the character it applies to, a
+// group that may repeat zero times drops all it holds, a brace that starts no
+// quantifier is the brace itself, and a run never crosses a group boundary, a
+// class or an escape other than escaped punctuation, so nothing joined here can
+// be apart in the subject. The pattern is compiled without PCRE2_CASELESS,
+// which is what lets the text be searched for as it is.
 QString requiredLiteral(const QString& pattern)
 {
-    // pcre2 reads the pattern only up to a NUL; and a replacement character in
-    // the literal could match what the encoder wrote for an unpaired surrogate
-    // that the line itself does not hold
-    if (pattern.contains(QChar(u'\0')) || pattern.contains(QChar(0xFFFD))) {
+    // pcre2 reads the pattern only up to a NUL
+    if (pattern.contains(QChar(u'\0'))) {
         return {};
     }
-    const auto isAsciiAlnum = [](const QChar c) {
+    const auto isAsciiDigit = [](const QChar c) {
+        return c.unicode() >= u'0' && c.unicode() <= u'9';
+    };
+    const auto isAsciiLetter = [](const QChar c) {
         const char16_t u = c.unicode();
-        return (u >= u'a' && u <= u'z') || (u >= u'A' && u <= u'Z') || (u >= u'0' && u <= u'9');
+        return (u >= u'a' && u <= u'z') || (u >= u'A' && u <= u'Z');
+    };
+    const auto isAsciiAlnum = [&](const QChar c) {
+        return isAsciiLetter(c) || isAsciiDigit(c);
     };
     // The longest mandatory run found so far, one entry per open group
     std::vector<QString> best(1);
@@ -128,6 +134,38 @@ QString requiredLiteral(const QString& pattern)
         }
         return i;
     };
+    // {n}, {n,} and {n,m} are quantifiers to every pcre2; {,m} and blanks
+    // inside the braces are to 10.43 on and not before; any other brace is
+    // the character itself
+    enum class Brace { Quantifier, Literal, Unsure };
+    const auto readBrace = [&](const qsizetype at, qsizetype& close) {
+        const auto inBody = [](const QChar c) {
+            const char16_t u = c.unicode();
+            return (u >= u'0' && u <= u'9') || u == u',' || u == u' ' || (u >= u'\t' && u <= u'\r');
+        };
+        qsizetype j = at + 1;
+        while (j < size && inBody(pattern.at(j))) {
+            ++j;
+        }
+        if (j >= size || pattern.at(j) != u'}') {
+            return Brace::Literal;
+        }
+        close = j;
+        qsizetype k = at + 1;
+        while (k < close && isAsciiDigit(pattern.at(k))) {
+            ++k;
+        }
+        if (k == at + 1) {
+            return Brace::Unsure;
+        }
+        if (k < close && pattern.at(k) == u',') {
+            ++k;
+            while (k < close && isAsciiDigit(pattern.at(k))) {
+                ++k;
+            }
+        }
+        return k == close ? Brace::Quantifier : Brace::Unsure;
+    };
 
     for (qsizetype i = 0; i < size; ++i) {
         const QChar c = pattern.at(i);
@@ -143,15 +181,22 @@ QString requiredLiteral(const QString& pattern)
                 ++i;
                 break;
             }
-            if (next.isDigit() || next == u'c' || next == u'Q' || next == u'u' || next == u'U') {
-                return {};
-            }
-            // These read on past their letter, unless what follows is in
-            // braces, which the quantifier case below steps over
-            if (qsl("xpPoNgk").contains(next) && !(i + 2 < size && pattern.at(i + 2) == u'{')) {
+            if (next.isDigit() || next == u'c' || next == u'Q' || next == u'E' || next == u'u' || next == u'U') {
                 return {};
             }
             endRun();
+            if (qsl("xpPoNgk").contains(next)) {
+                // these read on past their letter, which only a brace bounds
+                if (!(i + 2 < size && pattern.at(i + 2) == u'{')) {
+                    return {};
+                }
+                const qsizetype close = pattern.indexOf(u'}', i + 3);
+                if (close < 0) {
+                    return {};
+                }
+                i = close;
+                break;
+            }
             ++i;
             break;
         }
@@ -169,12 +214,28 @@ QString requiredLiteral(const QString& pattern)
             for (; j < size; ++j) {
                 const QChar d = pattern.at(j);
                 if (d == u'\\') {
+                    // \Q inside a class can quote the ] that ends it
+                    if (j + 1 < size && pattern.at(j + 1) == u'Q') {
+                        return {};
+                    }
                     ++j;
                 } else if (d == u'[' && j + 1 < size && pattern.at(j + 1) == u':') {
                     // a POSIX class such as [:alpha:] carries a ] of its own
                     const qsizetype end = pattern.indexOf(qsl(":]"), j + 2);
                     if (end < 0) {
                         return {};
+                    }
+                    qsizetype k = j + 2;
+                    if (k < end && pattern.at(k) == u'^') {
+                        ++k;
+                    }
+                    if (k == end) {
+                        return {};
+                    }
+                    for (; k < end; ++k) {
+                        if (!isAsciiLetter(pattern.at(k))) {
+                            return {};
+                        }
                     }
                     j = end + 1;
                 } else if (d == u']') {
@@ -234,14 +295,17 @@ QString requiredLiteral(const QString& pattern)
                 } else if (q == u'+') {
                     i = skipSuffix(i + 1);
                 } else if (q == u'{') {
-                    // {n,m} may allow no repeat at all, and reading its bounds
-                    // is not worth it
-                    mandatory = false;
-                    const qsizetype close = pattern.indexOf(u'}', i + 1);
-                    if (close < 0) {
+                    qsizetype close = -1;
+                    const Brace brace = readBrace(i + 1, close);
+                    if (brace == Brace::Unsure) {
                         return {};
                     }
-                    i = skipSuffix(close);
+                    // {n,m} may allow no repeat at all, and reading its bounds
+                    // is not worth it; a literal brace is read on the next pass
+                    if (brace == Brace::Quantifier) {
+                        mandatory = false;
+                        i = skipSuffix(close);
+                    }
                 }
             }
             if (mandatory && inner.size() > best.back().size()) {
@@ -263,11 +327,14 @@ QString requiredLiteral(const QString& pattern)
             i = skipSuffix(i);
             break;
         case u'{': {
-            // Read as a quantifier whatever it holds: a literal brace only
-            // makes the run shorter
-            const qsizetype close = pattern.indexOf(u'}', i);
-            if (close < 0) {
+            qsizetype close = -1;
+            const Brace brace = readBrace(i, close);
+            if (brace == Brace::Unsure) {
                 return {};
+            }
+            if (brace == Brace::Literal) {
+                run.append(c);
+                break;
             }
             dropQuantified();
             i = skipSuffix(close);
@@ -397,7 +464,7 @@ private:
 };
 
 // The one color pair the game sent for the whole of [start, end) of a line, or
-// null when it sent several. A snapshot that stops short of the window cannot
+// null when it sent several or the window is empty. A snapshot that stops short of the window cannot
 // answer for the text past its end; with no snapshot taken the line itself
 // still holds the game's colors for the whole of it. What dismisses a root
 // color trigger before match() and what match_color_pattern() reads have to be
@@ -563,13 +630,11 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
 
             TRegexLiteral& literal = mRegexLiterals.emplace_back();
             if (patternKinds.at(i) == REGEX_PERL) {
-                literal.text = requiredLiteral(patterns.at(i));
+                const QString text = requiredLiteral(patterns.at(i));
                 // Under two characters it sets no filter bits
-                if (literal.text.size() >= 2) {
-                    literal.matcher = std::make_unique<QStringMatcher>(literal.text, Qt::CaseSensitive);
-                    literal.bigrams = TBigramFilter::bitsFor(literal.text);
-                } else {
-                    literal.text.clear();
+                if (text.size() >= 2) {
+                    literal.matcher = std::make_unique<QStringMatcher>(text, Qt::CaseSensitive);
+                    literal.bigrams = TBigramFilter::bitsFor(text);
                 }
             }
 
@@ -691,7 +756,8 @@ void TTrigger::rebuildPrescanGrams()
     mPrescanGrams = std::move(grams);
 
     // The bigram summary reaches further than the n-gram index: a perl pattern
-    // with a required literal is decidable by it too. A start-of-line or exact
+    // with a required literal, which the index cannot decide, is decidable by
+    // it. A start-of-line or exact
     // match holds every pair of its pattern just as a substring match does, and
     // all three compare case-sensitively, which is how bitsFor() summarises.
     std::vector<TBigramFilter::Bits> patternBigrams;
@@ -766,7 +832,7 @@ TRootTriggerFilter TTrigger::rootFilter() const
     const bool foregroundWanted = colors.ansiFg != scmIgnored;
     const bool backgroundWanted = colors.ansiBg != scmIgnored;
     // The default color is whatever the console's is when the line arrives,
-    // and a color the table has none for matches nothing at all; neither can be
+    // and a color the table has none for matches nothing at all; neither is
     // copied, so match_color_pattern() goes on answering for those
     if ((!foregroundWanted && !backgroundWanted) || colors.ansiFg == scmDefault || colors.ansiBg == scmDefault || (foregroundWanted && !colors.mFgValid) || (backgroundWanted && !colors.mBgValid)) {
         return filter;
@@ -810,8 +876,9 @@ void TUtf8Subject::encode() const
     if (Q_UNLIKELY(toUtf8.hasError())) {
         // The encoder writes a replacement character where an unpaired surrogate
         // was, while toUtf8() drops it, and the difference would move every byte
-        // offset a capture is reported at. No decoder Mudlet has puts an unpaired
-        // surrogate on a line, so that path can afford the copy and stay exact.
+        // offset a capture is reported at. Only an MXP character reference or a
+        // script editing half a pair leaves one on a line, so that path can
+        // afford the copy and stay exact.
         mScratch = line.toUtf8();
     } else {
         mScratch.truncate(encodedEnd - encodedBegin);
@@ -848,7 +915,7 @@ bool TTrigger::match_perl(const TUtf8Subject& subject, const QString& haystack, 
     // the line's summary where it has one and then by a search, which is still
     // far cheaper than the pcre2 call it saves. The QString holds the whole
     // line where the UTF-8 stops at a NUL, so nothing pcre2 could match is lost
-    if (patternNumber < static_cast<int>(mRegexLiterals.size())) {
+    if (patternNumber < static_cast<int>(mRegexLiterals.size()) && !subject.dropsText()) {
         const TRegexLiteral& literal = mRegexLiterals[patternNumber];
         if (literal.matcher) {
             if (pLineBigrams && !pLineBigrams->couldContain(haystack, literal.bigrams)) {
@@ -1764,7 +1831,7 @@ bool TTrigger::match(const TUtf8Subject& subject, const QString& haystack, int l
             if (conditionMet || (mPatterns.empty())) {
                 for (auto* triggerNode : *mpMyChildrenList) {
                     auto* trigger = static_cast<TTrigger*>(triggerNode);
-                    if (pLineBigrams && trigger->cannotMatch(*pLineBigrams, haystack)) {
+                    if (pLineBigrams && trigger->cannotMatch(*pLineBigrams, haystack) && !subject.dropsText()) {
                         continue;
                     }
                     ret = trigger->match(subject, haystack, line, posOffset, pLineBigrams);

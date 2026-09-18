@@ -128,7 +128,9 @@ inline uint getBaseCharacter(QStringView str)
 // UAX #14 implementation with everything a printable-ASCII line can never
 // reach left out: the classes below are all that range resolves to, so the
 // rules for combining marks, East Asian text, Hebrew, emoji and Brahmic
-// scripts never apply. AsciiLineBreakTest proves the two agree on every line.
+// scripts never apply. AsciiLineBreakTest compares the two against the Qt
+// Mudlet is linked with. Derived from Qt's qunicodetools.cpp, Copyright (C)
+// The Qt Company Ltd.
 namespace lineBreakInfo {
 
 // True when every QChar is printable ASCII (0x20 to 0x7E). Four QChars are

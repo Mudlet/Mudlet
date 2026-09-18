@@ -5680,8 +5680,8 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
     // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (4 of 7) - investigate switching from using `char[]` to `std::array<char>`
     buffer[static_cast<size_t>(datalen)] = '\0';
 
-    // Stripping telnet only ever shortens the text, so the read's own size
-    // bounds it (decompression already went through out_buffer above):
+    // About what stripping telnet leaves of the read (decompression already
+    // went through out_buffer above):
     cleandata.reserve(static_cast<size_t>(datalen));
 
     if (!loopbackTesting && mRecordReplay) {
