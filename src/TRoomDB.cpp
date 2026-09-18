@@ -412,7 +412,7 @@ bool TRoomDB::removeArea(int id)
 
 bool TRoomDB::removeArea(const QString& name)
 {
-    if (areaNamesMap.values().contains(name)) {
+    if (isAreaNameInUse(name)) {
         return removeArea(areaNamesMap.key(name)); // i.e. call the removeArea(int) method
     }
     return false;
@@ -539,12 +539,12 @@ bool TRoomDB::addArea(int id)
         if (!areaNamesMap.contains(id)) {
             // Must provide a name for this new area
             QString newAreaName = mpMap->getUnnamedAreaName();
-            if (areaNamesMap.values().contains(newAreaName)) {
+            if (isAreaNameInUse(newAreaName)) {
                 // We already have an "unnamed area"
                 uint deduplicateSuffix = 0;
                 do {
                     newAreaName = qsl("%1_%2").arg(mpMap->getUnnamedAreaName()).arg(++deduplicateSuffix, 3, 10, QLatin1Char('0'));
-                } while (areaNamesMap.values().contains(newAreaName));
+                } while (isAreaNameInUse(newAreaName));
             }
             areaNamesMap.insert(id, newAreaName);
         }
@@ -554,13 +554,29 @@ bool TRoomDB::addArea(int id)
     return false;
 }
 
+// Deliberately does not hand back an ID an area used to have but no longer
+// does: rescanning from 1 every call to find the lowest free ID made bulk
+// area creation quadratic in the area count (a script creating areas one at a
+// time was the common way to hit it). mNextAreaIdHint only ever advances, so
+// once it has stepped past a taken ID it is never checked again even if that
+// ID is later freed - handing out one past the highest ID in use instead of
+// reusing the hole is an accepted trade-off here, same as room ID allocation.
 int TRoomDB::createNewAreaID()
 {
-    int id = 1;
-    while (areas.contains(id)) {
-        id++;
+    while (areas.contains(mNextAreaIdHint)) {
+        ++mNextAreaIdHint;
     }
-    return id;
+    return mNextAreaIdHint;
+}
+
+bool TRoomDB::isAreaNameInUse(const QString& name) const
+{
+    for (auto it = areaNamesMap.cbegin(), end = areaNamesMap.cend(); it != end; ++it) {
+        if (it.value() == name) {
+            return true;
+        }
+    }
+    return false;
 }
 
 int TRoomDB::addArea(QString name)
@@ -570,7 +586,7 @@ int TRoomDB::addArea(QString name)
         mpMap->logError(tr("Area not added. An unnamed area (empty area name) is (no longer) permitted!"));
         return 0;
     }
-    if (areaNamesMap.values().contains(name)) {
+    if (isAreaNameInUse(name)) {
         mpMap->logError(tr("Area not added. An area called \"%1\" already exists!").arg(name));
         return 0;
     }
@@ -591,7 +607,7 @@ int TRoomDB::addArea(QString name)
 //       Unless the area name is empty, in which case we provide one!
 bool TRoomDB::addArea(int id, QString name)
 {
-    if (((!name.isEmpty()) && areaNamesMap.values().contains(name)) || areaNamesMap.keys().contains(id)) {
+    if (((!name.isEmpty()) && isAreaNameInUse(name)) || areaNamesMap.contains(id)) {
         return false;
     }
     if (addArea(id)) {
@@ -857,12 +873,12 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
                 // if it does arise that we need a new area but do not have a
                 // provided name
                 QString newAreaName = mpMap->getUnnamedAreaName();
-                if (areaNamesMap.values().contains(newAreaName)) {
+                if (isAreaNameInUse(newAreaName)) {
                     // We already have an "unnamed area"
                     uint deduplicateSuffix = 0;
                     do {
                         newAreaName = qsl("%1_%2").arg(mpMap->getUnnamedAreaName()).arg(++deduplicateSuffix, 3, 10, QLatin1Char('0'));
-                    } while (areaNamesMap.values().contains(newAreaName));
+                    } while (isAreaNameInUse(newAreaName));
                 }
                 areaNamesMap.insert(replacementAreaId, newAreaName);
             }
@@ -1150,6 +1166,7 @@ void TRoomDB::clearMapDB()
     areaNamesMap.clear();
     hashToRoomID.clear();
     roomIDToHash.clear();
+    mNextAreaIdHint = 1;
 
     // Now delete all objects - their destructors will see mBulkDeletionMode=true
     // and skip the expensive cleanup operations
@@ -1191,7 +1208,7 @@ void TRoomDB::restoreAreaMap(QDataStream& ifs)
         } else {
             nonEmptyAreaName = itArea.value();
         }
-        if (areaNamesMap.values().contains(nonEmptyAreaName)) {
+        if (isAreaNameInUse(nonEmptyAreaName)) {
             // Oh dear, we have a duplicate
             if (nonEmptyAreaName.contains(QRegularExpression(qsl(R"(_\d\d\d$)")))) {
                 // the areaName already is of form "something_###" where # is a
@@ -1204,7 +1221,7 @@ void TRoomDB::restoreAreaMap(QDataStream& ifs)
             QString replacementName;
             do {
                 replacementName = qsl("%1_%2").arg(nonEmptyAreaName).arg(++deduplicateSuffix, 3, 10, QLatin1Char('0'));
-            } while (areaNamesMap.values().contains(replacementName));
+            } while (isAreaNameInUse(replacementName));
             if ((!itArea.value().isEmpty()) && (!renamedMap.contains(itArea.value()))) {
                 // if the renamedMap does not contain the first, unaltered value
                 // that a subsequent match has been found for, then include it
