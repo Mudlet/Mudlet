@@ -54,6 +54,7 @@
 #include "dlgModuleManager.h"
 #include "dlgTriggerEditor.h"
 #include "mudlet.h"
+#include "utils.h"
 #if defined(INCLUDE_3DMAPPER)
 #include "glwidget_integration.h"
 #endif
@@ -5264,7 +5265,7 @@ int TLuaInterpreter::unzipAsync(lua_State* L)
         return warnArgumentValue(L, __func__, "couldn't create output directory to put the extracted files into");
     }
 
-    auto future = QtConcurrent::run(mudlet::unzip, zipLocation, extractLocation, temporaryDir.path());
+    auto future = QtConcurrent::run(utils::unzip, zipLocation, extractLocation, temporaryDir.path());
     auto watcher = new QFutureWatcher<bool>;
     connect(watcher, &QFutureWatcher<bool>::finished, watcher, [=]() {
         TEvent event{};
@@ -7406,6 +7407,11 @@ int TLuaInterpreter::getDictionaryWordList(lua_State* L)
     host.getUserDictionaryOptions(hasUserDictionary, hasSharedDictionary);
     if (!hasUserDictionary) {
         return warnArgumentValue(L, __func__, "no user dictionary enabled in the preferences for this profile");
+    }
+
+    if (!host.spellChecker().userHandle()) {
+        return warnArgumentValue(
+                L, __func__, qsl("the %1 dictionary could not be opened so is unable to list its words").arg(host.spellChecker().usingSharedDictionary() ? qsl("shared") : qsl("profile")));
     }
 
     // We must keep a local reference/copy of the value returned because the

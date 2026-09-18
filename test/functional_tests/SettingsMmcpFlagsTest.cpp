@@ -227,7 +227,7 @@ private slots:
 
         delete pStagedPreferences;
         pStagedHost->waitForProfileSave();
-        mudlet::self()->getHostManager().deleteHost(profileName);
+        HostManager::self()->deleteHost(profileName);
         deleteProfileDirectory(profileName);
     }
 };

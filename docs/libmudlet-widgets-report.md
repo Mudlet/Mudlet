@@ -45,9 +45,9 @@ and the baseline are regenerated in each libmudlet PR, so drift shows up in the 
 
 | Metric | Count |
 | --- | ---: |
-| Source files in `mudlet_core` | 429 |
+| Source files in `mudlet_core` | 430 |
 | Files depending on Qt Widgets | 149 |
-| Clean files | 280 |
+| Clean files | 281 |
 | Committed baseline | 149 |
 
 ## Offending files
@@ -62,7 +62,7 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `T2DMap.cpp` | 12 | 143 | QMenu, QWidget, QAbstractItemView, QDialog, QLabel, QListWidget, QVBoxLayout, QHBoxLayout, QPushButton, QInputDialog, QMessageBox, QComboBox, QSizePolicy, QAbstractScrollArea, QFrame, QHeaderView, QTreeWidget, QTreeWidgetItem, QLineEdit, QCheckBox, QAbstractButton, QGridLayout, QFileDialog, QDialogButtonBox, QListWidgetItem, QColorDialog |
 | `dlgRoomExits.cpp` | 0 | 152 | QStyledItemDelegate, QWidget, QStyleOptionViewItem, QSpinBox, QGroupBox, QLineEdit, QDialog, QTreeWidgetItem, QCheckBox, QRadioButton, QAbstractButton, QTreeWidget, QButtonGroup |
 | `dlgPackageExporter.cpp` | 3 | 136 | QFileDialog, QInputDialog, QMessageBox, QWidget, QDialog, QTreeWidgetItem, QTreeWidget, QDialogButtonBox, QAbstractButton, QPushButton, QLineEdit, QTextEdit, QComboBox, QTreeWidgetItemIterator, QApplication, QListView, QAbstractItemView, QTreeView |
-| `mudlet.cpp` | 11 | 107 | QApplication, QFileDialog, QMessageBox, QScrollBar, QSplitter, QStyleFactory, QTableWidget, QToolBar, QToolButton, QToolTip, QStyle, QMenu, QWidget, QMainWindow, QSizePolicy, QTabBar, QVBoxLayout, QHBoxLayout, QDockWidget, QDialog, QLabel |
+| `mudlet.cpp` | 11 | 109 | QApplication, QFileDialog, QMessageBox, QScrollBar, QSplitter, QStyleFactory, QTableWidget, QToolBar, QToolButton, QToolTip, QStyle, QMenu, QWidget, QMainWindow, QSizePolicy, QTabBar, QVBoxLayout, QHBoxLayout, QDockWidget, QDialog, QLabel |
 | `TConsole.cpp` | 11 | 107 | QAccessibleWidget, QApplication, QFrame, QHBoxLayout, QLabel, QLineEdit, QMessageBox, QProxyStyle, QScrollBar, QSplitter, QStyleOptionSlider, QStyle, QStyleOptionComplex, QWidget, QToolButton, QSizePolicy, QVBoxLayout, QAbstractButton, QMenu, QAbstractSlider |
 | `dlgConnectionProfiles.cpp` | 3 | 102 | QApplication, QColorDialog, QTabBar, QWidget, QDialog, QAbstractItemView, QAbstractButton, QDialogButtonBox, QPushButton, QTextBrowser, QLineEdit, QCheckBox, QPlainTextEdit, QListWidget, QListView, QListWidgetItem, QGroupBox, QVBoxLayout, QLabel, QMenu, QFileDialog |
 | `dlgProfilePreferences.h` | 1 | 89 | QDialog, QDoubleSpinBox, QFrame, QListWidget, QListWidgetItem, QScrollArea, QStackedWidget, QToolButton, QVBoxLayout, QWidget, QLineEdit, QPushButton, QComboBox, QGroupBox, QCheckBox, QLabel, QMenu |
@@ -207,7 +207,7 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `HostManager.cpp` | 0 | 1 | QApplication |
 | `modern_glwidget.h` | 0 | 1 | QWidget |
 
-## Clean files (280)
+## Clean files (281)
 
 <details>
 <summary>Files with no Qt Widgets dependency</summary>
@@ -484,6 +484,7 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 - `updater/Release.h`
 - `updater/SemVer.cpp`
 - `updater/SemVer.h`
+- `utils.cpp`
 - `utils.h`
 - `VoskRecognizer.cpp`
 - `VoskRecognizer.h`

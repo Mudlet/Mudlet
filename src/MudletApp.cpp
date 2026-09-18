@@ -221,11 +221,9 @@ MudletApp::ConfigDirResolution MudletApp::resolveConfigRoot(const QString& execD
     if (portableRootUsable(portableRoot)) {
         return {.path = portableRoot, .portable = true};
     }
-    // An unusable root used to be handed back as-is - and an empty one roots
-    // every path at "/", which callers then mkpath(). setupConfig() stopped on
-    // that, but a caller resolving before it has no such step, so name the
-    // non-portable location instead and let each caller decide how loudly to
-    // complain.
+    // Never hand back an unusable root - an empty one roots every path at "/",
+    // which callers then mkpath() - so name the non-portable location instead
+    // and let each caller decide how loudly to complain
     ConfigDirResolution resolution = xdgConfigDir(configDir);
     resolution.portable = true;
     resolution.portableRootRejected = true;

@@ -113,8 +113,8 @@ private:
     // userHandle() sits on the per-word spell-check path, so a dictionary that
     // will not open is remembered rather than tried again: preparing it reads
     // profile.dic and rewrites it and profile.aff, which is not work to put in
-    // front of every keystroke. Cleared when the user dictionary is switched
-    // off, so switching it back on opens the dictionary afresh.
+    // front of every keystroke. Cleared, with smSharedDictionaryFailed, by
+    // applyUserDictionaryOptions().
     bool mProfileDictionaryFailed = false;
     QByteArray mHunspellCodecName_system;
     // To update the profile dictionary we actually have to track all the words

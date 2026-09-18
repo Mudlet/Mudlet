@@ -103,7 +103,7 @@ private slots:
         if (QTest::currentTestFailed()) {
             return;
         }
-        mpBackgroundHost = mudlet::self()->getHostManager().getHost(mBackgroundHostname);
+        mpBackgroundHost = HostManager::self()->getHost(mBackgroundHostname);
         QVERIFY(mpBackgroundHost);
         QVERIFY(mpBackgroundHost->mpConsole);
 
@@ -111,7 +111,7 @@ private slots:
         if (QTest::currentTestFailed()) {
             return;
         }
-        mpFrontHost = mudlet::self()->getHostManager().getHost(mFrontHostname);
+        mpFrontHost = HostManager::self()->getHost(mFrontHostname);
         QVERIFY(mpFrontHost);
         QVERIFY(mpFrontHost->mpConsole);
 

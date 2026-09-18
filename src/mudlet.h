@@ -59,7 +59,6 @@
 class QAction;
 class QCloseEvent;
 class QDateTime;
-class QDir;
 class QDockWidget;
 class QKeyEvent;
 class QMediaDevices;
@@ -112,15 +111,11 @@ public:
     mudlet();
     ~mudlet() override;
 
-    // From https://stackoverflow.com/a/14678964/4805858 an answer to:
-    // "How to find and replace string?" by "Czarek Tomczak":
     static bool loadEdbeeTheme(const QString& themeName, const QString& themeFile);
     static bool loadLuaFunctionList();
-    static std::string replaceString(std::string subject, const std::string& search, const std::string& replace);
     static mudlet* self();
     // This method allows better debugging when mudlet::self() is called inappropriately.
     static void start();
-    static bool unzip(const QString& archivePath, const QString& destination, const QDir& tmpDir);
     static QImage getSplashScreen(bool releaseVersion, bool testVersion);
 
 
@@ -176,6 +171,7 @@ public:
 
     void init();
     void setupConfig();
+    void warnAboutRejectedPortableRoot();
     void activateProfile(Host*);
     void switchToProfileTab(int index);
     bool profileSwitchShortcutMatches(const QKeyEvent*) const;
@@ -203,7 +199,6 @@ public:
     QStringList getAvailableFonts();
     QList<QString> getAvailableTranslationCodes() const { return mTranslationsMap.keys(); }
     const QMap<QByteArray, QString>& getEncodingNamesMap() const { return mEncodingNameMap; }
-    HostManager& getHostManager() { return mHostManager; }
     ShortcutsManager* shortcutsManager() const { return mpShortcutsManager.data(); }
     // Speech-to-text bridge: creates the single shared recognizer on first use
     // and exposes it to the Lua stt.* API. Recognizer results surface as Lua
@@ -220,7 +215,6 @@ public:
     // converting the QPointer this returns wants the complete type
     QDockWidget* getMainWindowDockWidget(const QString& mapKey) const;
     std::optional<QSize> getImageSize(const QString&);
-    int64_t getPhysicalMemoryTotal();
     const QLocale& getUserLocale() const { return mUserLocale; }
     bool inDarkMode() const { return mDarkMode; }
     // Used to enable "emergency" control recovery action - if Mudlet is
@@ -596,7 +590,6 @@ private:
     void loadTranslators(const QString&);
     void migrateDebugConsole(Host*);
     void setupTrayIcon();
-    void warnAboutRejectedPortableRoot();
     void reshowRequiredMainConsoles();
     void toggleMute(bool state, QAction* toolbarAction, QAction* menuAction, bool isAPINotGame, const QString& unmuteText, const QString& muteText);
     dlgTriggerEditor* createMudletEditor();
@@ -616,7 +609,7 @@ private:
     bool mDarkMode = false;
     QString mDefaultStyle;
     // The portable.txt that named a data directory Mudlet could not use, kept from
-    // setupConfig() until init() can say so in the user's own language
+    // setupConfig() until main() can say so on screen
     QString mRejectedPortableMarker;
     // Stores the translated names for the Encodings for the static and thus
     // const TBuffer::csmEncodingTable:

@@ -27,6 +27,7 @@
 #include "MudletApp.h"
 #include "TEncodingHelper.h"
 #include "Host.h"
+#include "HostManager.h"
 #include "TConsole.h"
 #include "TMainConsole.h"
 #include "TTabBar.h"
@@ -926,7 +927,7 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
 
         } else {
             QAction* pA = nullptr;
-            if (mpConsole->mpHost->spellChecker().usingSharedDictionary()) {
+            if (mpHost->spellChecker().usingSharedDictionary()) {
                 /*:
                 Used when the command spelling checker using the dictionary shared between
                 profile has no words to suggest.
@@ -1502,7 +1503,7 @@ void TCommandLine::clearBlacklist()
 
 void TCommandLine::slot_adjustAccessibleNames()
 {
-    const bool multipleProfilesActive = (mudlet::self()->getHostManager().getHostCount() > 1);
+    const bool multipleProfilesActive = (HostManager::self()->getHostCount() > 1);
     const QString hostName{mpHost ? mpHost->getName() : QString()};
     switch (mType) {
     case MainCommandLine:

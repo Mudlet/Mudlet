@@ -33,6 +33,7 @@
 #include "dlgTriggerEditor.h"
 #include "GifTracker.h"
 #include "GMCPAuthenticator.h"
+#include "HostManager.h"
 #include "LuaInterface.h"
 #include "mapInfoContributorManager.h"
 #include "MMCP.h"
@@ -53,6 +54,7 @@
 #include "TScript.h"
 #include "TTextEdit.h"
 #include "TToolBar.h"
+#include "utils.h"
 #include "VarUnit.h"
 #include "XMLexport.h"
 #include "XMLimport.h"
@@ -986,7 +988,7 @@ void Host::writeModuleFiles(const QList<ModuleWriteJob>& jobs)
 void Host::reloadModules()
 {
     //synchronize modules across sessions
-    for (auto otherHost : mudlet::self()->getHostManager()) {
+    for (auto otherHost : *HostManager::self()) {
         if (otherHost == this || !otherHost->mpConsole) {
             continue;
         }
@@ -2982,7 +2984,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             showedUnpackingDialog = true;
         }
 
-        auto unzipSuccessful = mudlet::unzip(actualFileName, _dest, _tmpDir);
+        auto unzipSuccessful = utils::unzip(actualFileName, _dest, _tmpDir);
 
         if (showedUnpackingDialog) {
             emit signal_hideUnpackingProgress();

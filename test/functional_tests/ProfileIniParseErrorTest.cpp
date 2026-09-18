@@ -101,11 +101,11 @@ private:
             ini.close();
         }
 
-        auto& hostManager = mudlet::self()->getHostManager();
-        if (!hostManager.addHost(profileName, QString(), QString(), QString())) {
+        auto* hostManager = HostManager::self();
+        if (!hostManager->addHost(profileName, QString(), QString(), QString())) {
             return nullptr;
         }
-        return hostManager.getHost(profileName);
+        return hostManager->getHost(profileName);
     }
 
 private slots:
@@ -158,7 +158,7 @@ private slots:
         // Read through the file rather than readProfileIniData(), which answers from
         // the very QSettings that has just cached the write and so would say "1"
         // whatever became of the file
-        mudlet::self()->getHostManager().deleteHost(profileName); // the Host's QSettings writes itself out as it goes
+        HostManager::self()->deleteHost(profileName); // the Host's QSettings writes itself out as it goes
         QFile written(iniPath);
         QVERIFY(written.open(QIODevice::ReadOnly | QIODevice::Text));
         const QString contents = QString::fromUtf8(written.readAll());
@@ -177,7 +177,7 @@ private slots:
         QCOMPARE(pHost->readProfileIniData(qsl("CommandLines/UsedIndexes")), qsl("3"));
         QCOMPARE(parseWarnings, 0);
 
-        mudlet::self()->getHostManager().deleteHost(profileName);
+        HostManager::self()->deleteHost(profileName);
     }
 
     void test_anAbsentProfileIniIsNotReported()
@@ -192,7 +192,7 @@ private slots:
         QCOMPARE(pHost->readProfileIniData(qsl("CommandLines/UsedIndexes")), QString());
         QCOMPARE(parseWarnings, 0);
 
-        mudlet::self()->getHostManager().deleteHost(profileName);
+        HostManager::self()->deleteHost(profileName);
     }
 };
 
