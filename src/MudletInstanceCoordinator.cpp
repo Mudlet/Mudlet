@@ -83,7 +83,7 @@ void MudletInstanceCoordinator::installPackagesToHost(Host* activeProfile)
 {
     mMutex.lock();
     for (const QString& path : std::as_const(mQueuedPackagePaths)) {
-        auto ret = activeProfile->installPackage(path, enums::PackageModuleType::Package);
+        activeProfile->installPackage(path, enums::PackageModuleType::Package);
     }
     mQueuedPackagePaths.clear();
     mMutex.unlock();
@@ -202,4 +202,3 @@ bool MudletInstanceCoordinator::forwardTelnetUriToRunningInstance()
     mQueuedTelnetUri.clear();
     return true;
 }
-

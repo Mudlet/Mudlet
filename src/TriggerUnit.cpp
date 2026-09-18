@@ -25,10 +25,11 @@
 
 
 #include "Host.h"
-#include "TConsole.h"
 #include "TTrigger.h"
+#include "dlgTriggerEditor.h"
 
 #include <QScopeGuard>
+#include <QStringConverter>
 
 #include <algorithm>
 #include <functional>
@@ -138,7 +139,9 @@ void TriggerUnit::addTriggerRootNode(TTrigger* pT, int parentPosition, int child
     }
     if ((parentPosition == -1) || (childPosition >= static_cast<int>(mTriggerRootNodeList.size()))) {
         mTriggerRootNodeList.push_back(pT);
+        markRootNodeAppended(pT);
     } else {
+        markRootNodeListReordered();
         // insert item at proper position
         int cnt = 0;
         for (auto it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it++) {
@@ -169,6 +172,7 @@ void TriggerUnit::reParentTrigger(int childID, int oldParentID, int newParentID,
     if (pOldParent) {
         pOldParent->popChild(pChild);
     } else {
+        markRootNodeRemoved(pChild);
         mTriggerRootNodeList.remove(pChild);
     }
 
@@ -208,6 +212,7 @@ void TriggerUnit::removeTriggerRootNode(TTrigger* pT)
     // so a collision needs no coincidence)
     mLookupTable.remove(pT->getName(), pT);
     mTriggerMap.remove(pT->getID());
+    markRootNodeRemoved(pT);
     mTriggerRootNodeList.remove(pT);
 }
 
@@ -323,6 +328,7 @@ void TriggerUnit::reorderTriggersAfterPackageImport()
             tempList.push_back(trigger);
         }
     }
+    markRootNodeListReordered();
     for (auto& trigger : tempList) {
         mTriggerRootNodeList.remove(trigger);
     }
@@ -397,16 +403,133 @@ void TriggerUnit::stopSameLineCreationLoop(const int chainId)
                                 .arg(triggerName, created));
 }
 
+void TriggerUnit::markPrescanStale(TTrigger* pT)
+{
+    mRootNodeSnapshotStale = true;
+    if (mRootNodeSnapshotNeedsRebuild || !pT) {
+        return;
+    }
+    // A trigger with no position is either a child, which the index never files,
+    // or a root node still queued for appending, which will be filed from its
+    // current state anyway.
+    const int position = pT->rootSnapshotPosition();
+    if (position >= 0) {
+        mRootNodesRefiled.push_back(position);
+    }
+}
+
+void TriggerUnit::markRootNodeAppended(TTrigger* pT)
+{
+    mRootNodeSnapshotStale = true;
+    if (!mRootNodeSnapshotNeedsRebuild) {
+        mRootNodesAppended.push_back(pT);
+    }
+}
+
+void TriggerUnit::markRootNodeRemoved(TTrigger* pT)
+{
+    mRootNodeSnapshotStale = true;
+    const int position = pT->rootSnapshotPosition();
+    // Cleared even when the snapshot is being rebuilt anyway: a stale position
+    // left on a trigger that is registered again later would have the next
+    // removal empty somebody else's slot.
+    pT->setRootSnapshotPosition(-1);
+    if (mRootNodeSnapshotNeedsRebuild) {
+        return;
+    }
+    if (position >= 0) {
+        mRootNodesRemoved.push_back(position);
+        return;
+    }
+    // No position and nothing queued means it was never in the root list, so
+    // the removal below it is a no-op and the snapshot already agrees.
+    const auto queued = std::find(mRootNodesAppended.begin(), mRootNodesAppended.end(), pT);
+    if (queued != mRootNodesAppended.end()) {
+        mRootNodesAppended.erase(queued);
+    }
+}
+
+// Brings the snapshot the next pass will pin back in step with the root list.
+// Arming or killing a trigger only ever appends or empties a position, so that
+// is patched in place; a rebuild is for the changes that move existing triggers,
+// and to reclaim the holes the removals leave behind.
+void TriggerUnit::refreshRootNodeSnapshot()
+{
+    const bool canPatch = mpRootNodeSnapshot && mpRootNodeSnapshot.use_count() == 1 && !mRootNodeSnapshotNeedsRebuild && !mpRootNodeSnapshot->mPrescan.shouldRebuild();
+    if (canPatch) {
+        RootNodeSnapshot& snapshot = *mpRootNodeSnapshot;
+        for (const int position : mRootNodesRemoved) {
+            snapshot.mNodes[position] = nullptr;
+            snapshot.mPrescan.removeSlot(position);
+        }
+        for (const int position : mRootNodesRefiled) {
+            if (TTrigger* pT = snapshot.mNodes[position]) {
+                snapshot.mPrescan.refileSlot(position, pT->prescanGrams());
+            }
+        }
+        for (TTrigger* pT : mRootNodesAppended) {
+            pT->setRootSnapshotPosition(static_cast<int>(snapshot.mNodes.size()));
+            snapshot.mNodes.push_back(pT);
+            snapshot.mPrescan.appendSlot(pT->prescanGrams());
+        }
+    } else {
+        // Only a snapshot an outer pass has pinned has to be left alone and
+        // replaced; refilling the vector an earlier pass built keeps a rebuild
+        // down to no allocation.
+        if (mpRootNodeSnapshot.use_count() != 1) {
+            mpRootNodeSnapshot = std::make_shared<RootNodeSnapshot>();
+        }
+        RootNodeSnapshot& snapshot = *mpRootNodeSnapshot;
+        snapshot.mNodes.assign(mTriggerRootNodeList.cbegin(), mTriggerRootNodeList.cend());
+        const int rootCount = static_cast<int>(snapshot.mNodes.size());
+        for (int position = 0; position < rootCount; ++position) {
+            snapshot.mNodes[position]->setRootSnapshotPosition(position);
+        }
+        snapshot.mPrescan.rebuild(snapshot.mNodes);
+    }
+    mRootNodesAppended.clear();
+    mRootNodesRemoved.clear();
+    mRootNodesRefiled.clear();
+    mRootNodeSnapshotNeedsRebuild = false;
+    mRootNodeSnapshotStale = false;
+}
+
 void TriggerUnit::processDataStream(const QString& data, int line)
 {
     if (data.isEmpty()) {
         return;
     }
 
+    // Encoded into storage borrowed from the unit, so the capacity outlives the
+    // line and only a line longer than any before it allocates. Moving the buffer
+    // out rather than writing into the member is what makes that safe under
+    // nesting: a pass a trigger script starts finds the member empty and grows
+    // its own, so it cannot resize the one an outer pass is still matching.
+    QByteArray utf8Data = std::move(mUtf8Scratch);
+    const auto utf8Guard = qScopeGuard([this, &utf8Data] {
+        if (utf8Data.capacity() > scmMaxRetainedUtf8Scratch) {
+            utf8Data = QByteArray();
+        }
+        mUtf8Scratch = std::move(utf8Data);
+    });
+    // Stateless so that an unpaired surrogate at the end of the line is reported
+    // here rather than held back as state for a following call.
+    QStringEncoder toUtf8(QStringEncoder::Utf8, QStringConverter::Flag::Stateless);
+    utf8Data.resizeForOverwrite(toUtf8.requiredSpace(data.size()));
+    char* const encodedBegin = utf8Data.data();
+    const char* const encodedEnd = toUtf8.appendToBuffer(encodedBegin, data);
+    if (Q_UNLIKELY(toUtf8.hasError())) {
+        // The encoder writes a replacement character where an unpaired surrogate
+        // was, while toUtf8() drops it, and the difference would move every byte
+        // offset a capture is reported at. No decoder Mudlet has puts an unpaired
+        // surrogate on a line, so that path can afford the copy and stay exact.
+        utf8Data = data.toUtf8();
+    } else {
+        utf8Data.truncate(encodedEnd - encodedBegin);
+    }
     // subject points into utf8Data, so utf8Data has to outlive every match()
     // call below. Perl patterns see the line only as far as its first NUL
     // byte, so this is qstrnlen() rather than the byte count.
-    const QByteArray utf8Data = data.toUtf8();
     const char* subject = utf8Data.constData();
     const int subjectLength = static_cast<int>(qstrnlen(subject, utf8Data.size()));
 
@@ -435,7 +558,13 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     // mid-iteration (the underlying std::list::remove frees the iterator's
     // current node → use-after-free on the next ++). AliasUnit dodges the
     // same hazard for the same reason — see Mudlet issue #4297.
-    std::vector<TTrigger*> copyOfNodeList(mTriggerRootNodeList.cbegin(), mTriggerRootNodeList.cend());
+    // Pinned for the length of this pass rather than copied: a mutation
+    // replaces the shared snapshot instead of editing the pinned one.
+    if (mRootNodeSnapshotStale) {
+        refreshRootNodeSnapshot();
+    }
+    const auto pinnedSnapshot = mpRootNodeSnapshot;
+    const std::vector<TTrigger*>& pinnedNodeList = pinnedSnapshot->mNodes;
     // Triggers registered by a script during this pass (tempTrigger() & Co.)
     // are missing from the snapshot but must still match the current line:
     // before the snapshot the loop walked the live std::list, which a push_back
@@ -444,11 +573,46 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     // Entries below this index were added by outer (nested-feedTriggers) passes
     // and are already part of this pass's snapshot.
     const qsizetype firstNodeAddedThisPass = mRootNodesAddedWhileProcessing.size();
-    for (auto trigger : copyOfNodeList) {
-        if (!trigger->isActive()) {
-            continue;
+    const TBigramFilter lineBigrams(data, mSubstringQuestionsOnTheLastLine);
+    if (pinnedSnapshot->mPrescan.active()) {
+        // Borrowed from the unit so that only a longer line than any before it
+        // allocates, and moved out so a nested pass grows its own.
+        std::vector<int> scratch = std::move(mCandidateScratch);
+        std::vector<int> candidates = std::move(mCandidates);
+        const auto candidateGuard = qScopeGuard([this, &scratch, &candidates] {
+            mCandidateScratch = std::move(scratch);
+            mCandidates = std::move(candidates);
+        });
+        pinnedSnapshot->mPrescan.candidates(data, scratch, candidates);
+        // A firing script can make a later trigger fire without matching -
+        // setTriggerStayOpen() is the reachable way - and the candidate list was
+        // settled before that happened. So from the moment one does, the rest of
+        // the line goes to every remaining trigger, as an unfiltered pass would.
+        const quint32 epochAtStart = mUnfilterableEpoch;
+        const int rootCount = static_cast<int>(pinnedNodeList.size());
+        size_t nextCandidate = 0;
+        for (int position = 0; position < rootCount; ++position) {
+            if (mUnfilterableEpoch == epochAtStart) {
+                if (nextCandidate >= candidates.size()) {
+                    break;
+                }
+                position = candidates[nextCandidate++];
+            }
+            // A hole is a trigger the snapshot has outlived - see
+            // refreshRootNodeSnapshot()
+            TTrigger* trigger = pinnedNodeList[position];
+            if (!trigger || !trigger->isActive()) {
+                continue;
+            }
+            trigger->match(subject, subjectLength, data, line, 0, &lineBigrams);
         }
-        trigger->match(subject, subjectLength, data, line);
+    } else {
+        for (auto trigger : pinnedNodeList) {
+            if (!trigger || !trigger->isActive()) {
+                continue;
+            }
+            trigger->match(subject, subjectLength, data, line, 0, &lineBigrams);
+        }
     }
     // A match here can register more triggers, which also get a shot at the
     // current line - so the list grows in front of the loop, and a trigger that
@@ -473,8 +637,9 @@ void TriggerUnit::processDataStream(const QString& data, int line)
             stopSameLineCreationLoop(trigger->sameLineChainId());
             continue;
         }
-        trigger->match(subject, subjectLength, data, line);
+        trigger->match(subject, subjectLength, data, line, 0, &lineBigrams);
     }
+    mSubstringQuestionsOnTheLastLine = lineBigrams.questionsAsked();
 }
 
 void TriggerUnit::compileAll()
@@ -546,6 +711,9 @@ bool TriggerUnit::enableTrigger(const QString& name)
         }
         it.value()->setIsActive(true);
         found = true;
+        if (mpHost->mpEditorDialog) {
+            mpHost->mpEditorDialog->refreshTriggerIcon(it.value()->getID());
+        }
     }
     return found;
 }
@@ -559,6 +727,9 @@ bool TriggerUnit::disableTrigger(const QString& name)
     for (auto it = begin; it != end; ++it) {
         it.value()->setIsActive(false);
         found = true;
+        if (mpHost->mpEditorDialog) {
+            mpHost->mpEditorDialog->refreshTriggerIcon(it.value()->getID());
+        }
     }
     return found;
 }
@@ -571,6 +742,9 @@ void TriggerUnit::setTriggerStayOpen(const QString& name, int lines)
     for (auto it = begin; it != end; ++it) {
         it.value()->mKeepFiring = lines;
     }
+    // it now fires without matching, so it can no longer be filtered out of a
+    // line - including the one being processed right now
+    markRootUnfilterable();
 }
 
 bool TriggerUnit::killTrigger(const QString& name)
@@ -650,6 +824,12 @@ void TriggerUnit::doCleanup()
         return;
     }
 
+    // Called once per unit for every line of game text, and next to never has
+    // anything queued, so skip setting up the flush below.
+    if (!hasPendingDeletes()) {
+        return;
+    }
+
     QSet<TTrigger*> deletedTriggers;
     QMutableSetIterator<TTrigger*> itTrigger(mCleanupSet);
     while (itTrigger.hasNext()) {
@@ -658,6 +838,10 @@ void TriggerUnit::doCleanup()
         deletedTriggers.insert(pTrigger);
         delete pTrigger;
     }
+    // Not a no-op: the drain above frees no buckets, so without this every later
+    // flush re-scans an array sized for the largest batch the set has ever held.
+    // squeeze() keeps whatever the drain left behind; clear() would drop it.
+    mCleanupSet.squeeze();
     // Flush the deletes uninstall() deferred (#9337). uninstallList is ordered
     // children-before-parents and each ~Tree unlinks from its parent, so deleting
     // children first empties the parent's child list (no double free); the seen

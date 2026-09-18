@@ -31,12 +31,12 @@
 
 
 #include "Host.h"
+#include "MudletPaths.h"
 #include "TBuffer.h"
 #include "TMxpProcessor.h"
-#include "TConsole.h"
+#include "TConsoleModel.h"
 #include "TDebug.h"
 #include "TEvent.h"
-#include "TMainConsole.h"
 #include "TMap.h"
 #include "TMedia.h"
 #include "TRoomDB.h"
@@ -45,6 +45,7 @@
 #include "TEncodingHelper.h"
 #include "utils.h"
 #include "TTextEdit.h"
+#include "discord.h"
 #include "dlgComposer.h"
 #include "dlgMapper.h"
 #include "mudlet.h"
@@ -67,6 +68,8 @@
 #include <QSslError>
 #include <QtGlobal>
 
+#include <memory>
+
 using namespace std::chrono_literals;
 
 constexpr int AUTO_LOGIN_USERNAME_DELAY_MS = 2000;
@@ -77,6 +80,12 @@ constexpr int AUTO_LOGIN_MAX_DELAY_MS = 60000;
 // character-at-a-time rather than a password mask - see
 // cTelnet::checkCharacterModePattern():
 constexpr auto CHARACTER_MODE_DETECT = 3s;
+
+// How long the console has to hold still before its size is reported to the
+// game - see cTelnet::checkNAWS(). Has to outlast the 0.2s timer an adjustable
+// Geyser container re-reserves its border on, which is the longest step of a
+// resize:
+constexpr auto NAWS_SETTLE_TIME = 300ms;
 
 // How long to leave a game alone after a connection attempt to it failed, before
 // trying again for a profile that reconnects automatically. A refused connection
@@ -107,6 +116,26 @@ static_assert(NETWORK_LATENCY_MAX_STALL > NETWORK_LATENCY_BEAT, "a reading has t
 constexpr auto NETWORK_LATENCY_TIMEOUT = 10s;
 
 constexpr size_t BUFFER_SIZE = 100000L;
+
+// Where the run of ordinary text starting at buffer[from] ends: the index of
+// the first byte after it that the state machine reading the run handles on its
+// own (the start of a telnet command, a carriage return, a NUL or a bell), or
+// `to` if the run reaches that far. buffer[from] must not be one of those
+// bytes, as the caller steps back one from the result before its loop steps
+// forward - both callers therefore need a branch for every one of them, even
+// where that branch only appends the byte.
+static int textRunEnd(const char* buffer, const int from, const int to)
+{
+    int i = from;
+    while (i < to) {
+        const char ch = buffer[i];
+        if (ch == TN_IAC || ch == '\r' || ch == '\0' || ch == TN_BELL) {
+            break;
+        }
+        ++i;
+    }
+    return i;
+}
 
 // Upper bound on a single telnet subnegotiation (IAC SB ... IAC SE). Real ones
 // (GMCP/MSDP/ATCP/...) are far smaller; this only guards against a server that
@@ -201,6 +230,11 @@ void cTelnet::reset()
     if (mTimerCharacterModeDetect) {
         mTimerCharacterModeDetect->stop();
     }
+    // A window size waiting to be reported belongs to the connection being
+    // reset, and mNaws_x/mNaws_y are about to be zeroed for the next one
+    if (mTimerNawsUpdate) {
+        mTimerNawsUpdate->stop();
+    }
     // Ensure we do not think that the game server is echoing for us:
     mpHost->setRemoteEchoingActive(false);
     mGA_Driver = false;
@@ -238,9 +272,9 @@ void cTelnet::reset()
     // Half of an ANSI sequence left over from the previous connection can only
     // ever be completed by bytes that will never arrive, so drop it instead of
     // letting it consume the new connection's output. There is nothing to drop
-    // when this runs from the Host constructor, before the profile has a console:
-    if (mpHost->mpConsole) {
-        mpHost->mpConsole->buffer.resetSequenceParserState();
+    // when this runs from the Host constructor, before the profile has a console model:
+    if (auto* pModel = mpHost->mainConsoleModelOrNull()) {
+        pModel->buffer.resetSequenceParserState();
     }
 
     // A fresh connection: the player has not interacted yet, so an unsolicited Char.Login.URL must
@@ -263,6 +297,13 @@ void cTelnet::reset()
 
 cTelnet::~cTelnet()
 {
+    // A recording that is still running would otherwise be thrown away:
+    // ~QSaveFile() calls cancelWriting(), which deletes the temporary file
+    // without ever producing the .dat the user has been recording into.
+    if (mRecordReplay) {
+        stopReplayRecording();
+    }
+
     // Stop all timers immediately
     if (mTimerLogin) {
         mTimerLogin->stop();
@@ -280,10 +321,10 @@ cTelnet::~cTelnet()
         mpPostingTimer->stop();
     }
 
-    // Release zlib resources if MCCP compression was still active
-    if (mNeedDecompression) {
-        inflateEnd(&mZstream);
-    }
+    // Unconditional: the end of a compressed stream re-initialises the stream
+    // for the next one while switching decompression off, so the state to free
+    // exists whether or not compression is active
+    inflateEnd(&mZstream);
 
     // Aggressively disconnect the sockets to prevent signals during destruction
     if (mpSocket && mpSocket->state() != QAbstractSocket::UnconnectedState) {
@@ -976,7 +1017,21 @@ void cTelnet::slot_socketDisconnected()
     if (mpHost->mpConsole) {
         // A line held back for server-wrap undoing is complete now that the
         // connection is gone - commit it before the disconnect messages:
-        mpHost->mpConsole->buffer.flushPendingServerWrapJoin();
+        mpHost->mainConsoleModel().buffer.flushPendingServerWrapJoin();
+    }
+
+    // The session being recorded has ended, so commit what was captured rather
+    // than leave it to ~QSaveFile(), which cancels the save and deletes the
+    // temporary file:
+    if (mRecordReplay) {
+        const QString recordedFileName = replayRecordingFileName();
+        if (stopReplayRecording()) {
+            //: Message shown when a replay recording is saved because the connection to the game ended. %1 is the file name
+            postMessage(tr("[ INFO ]  - Replay recording has been stopped and saved. File: %1").arg(recordedFileName));
+        } else {
+            //: Message shown when a replay recording could not be saved after the connection to the game ended. %1 is the reason
+            postMessage(tr("[ WARN ]  - Replay recording has been stopped, but couldn't be saved: %1").arg(replayRecordingErrorString()));
+        }
     }
 
     emit signal_disconnected(mpHost);
@@ -997,9 +1052,7 @@ void cTelnet::slot_socketDisconnected()
  the rules of the "QDateTime::toString(...)" function and may need
  modification for some locales, e.g. France, Spain.*/
                                              .toString(tr("hh:mm:ss.zzz")));
-    if (mNeedDecompression) {
-        inflateEnd(&mZstream);
-    }
+    inflateEnd(&mZstream);
     mNeedDecompression = false;
     reset();
 
@@ -1596,7 +1649,7 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent, con
         // outData is using the selected Mud Server encoding here:
         // we need to cook any byte values from the encoding process that are
         // 0xff (assuming that there are no Telnet protocol sequences in here):
-        outData = mudlet::replaceString(outData, "\xff", "\xff\xff");
+        outData = escapeIac(outData);
 
         // Character-at-a-time detection: a genuine character-at-a-time server keeps
         // ECHO (with SGA) active across every submitted line, whereas a server that
@@ -1724,13 +1777,29 @@ void cTelnet::abandonNetworkLatencyMeasurement()
 
 void cTelnet::checkNAWS()
 {
+    // A window resize reaches the console as a burst rather than as one event:
+    // Qt lays it out, then any Geyser container attached to a border re-reserves
+    // that border from a timer of its own, which lays the console out again.
+    // Reporting each step would publish widths the window only ever had in
+    // passing - and the game wraps whatever it sends next to them - so wait for
+    // the burst to finish and report the size once.
+    if (!mTimerNawsUpdate) {
+        mTimerNawsUpdate = new QTimer(this);
+        mTimerNawsUpdate->setSingleShot(true);
+        connect(mTimerNawsUpdate, &QTimer::timeout, this, &cTelnet::sendCurrentNAWS);
+    }
+    mTimerNawsUpdate->start(NAWS_SETTLE_TIME);
+}
+
+void cTelnet::sendCurrentNAWS()
+{
     Host* pHost = mpHost;
     if (!pHost || !pHost->mpConsole) {
         return;
     }
     // Use the smaller of the screen width or the wrapAt, then subtract the
     // width of the time stamps if they are showing:
-    int naws_x = std::min(pHost->mScreenWidth, pHost->mWrapAt) - (pHost->mpConsole->showTimeStamps() ? mudlet::smTimeStampFormat.size() : 0);
+    int naws_x = std::min(pHost->mScreenWidth, pHost->mWrapAt) - (pHost->mainConsoleShowsTimeStamps() ? TBuffer::smTimeStampFormat.size() : 0);
     int naws_y = pHost->mScreenHeight;
     if ((naws_y > 0) && (myOptionState.test(static_cast<size_t>(OPT_NAWS))) && ((mNaws_x != naws_x) || (mNaws_y != naws_y))) {
         sendNAWS(naws_x, naws_y);
@@ -1888,10 +1957,8 @@ void cTelnet::slot_replyFinished(QNetworkReply* reply)
         reply->deleteLater();
         mpPackageDownloadReply = nullptr;
 
-        // Install the package and handle any installation errors
-        if (auto [success, message] = mpHost->installPackage(mServerPackage, enums::PackageModuleType::Package); !success) {
-            //: %1 is the package file path, %2 is the error message
-            postMessage(tr("[ WARN ]  - Package installation failed for '%1', reason: %2").arg(mServerPackage, message));
+        // installPackage() reports the reason to the profile itself
+        if (!mpHost->installPackage(mServerPackage, enums::PackageModuleType::Package).first) {
             return;
         }
 
@@ -3186,7 +3253,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             output += OPT_GMCP;
             {
                 std::string supportsList = R"(Core.Supports.Set [ "Char 1", "Char.Skills 1", "Char.Items 1", "Room 1", "IRE.Rift 1", "IRE.Composer 1")";
-                if (mpHost->mDiscordMode == Host::DiscordShowGameDetails && mudlet::self()->mDiscord.libraryLoaded()) {
+                if (mpHost->mDiscordMode == Host::DiscordShowGameDetails && Discord::self()->libraryLoaded()) {
                     supportsList += R"(, "External.Discord 1")";
                 }
                 supportsList += R"(, "Client.Media 1", "Char.Login 2"])";
@@ -3196,7 +3263,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             output += TN_SE;
             socketOutRaw(output);
 
-            if (mpHost->mDiscordMode == Host::DiscordShowGameDetails && mudlet::self()->mDiscord.libraryLoaded()) {
+            if (mpHost->mDiscordMode == Host::DiscordShowGameDetails && Discord::self()->libraryLoaded()) {
                 sendDiscordHello();
                 sendDiscordGet();
             }
@@ -3720,8 +3787,10 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             // used values:
             mNaws_x = 0;
             mNaws_y = 0;
-            // thus sending of the values is performed when we check them:
-            checkNAWS();
+            // Answer the negotiation itself rather than going through the
+            // resize debounce: the game asked for the size now, and games that
+            // draw their login screen from it get one chance to be told.
+            sendCurrentNAWS();
         }
         break;
     }
@@ -4007,12 +4076,21 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                                    "(url='%3').")
                                         .arg(version, mpHost->mServerGUI_Package_version, url));
 
-                    // Uninstall the old version
-                    mpHost->uninstallPackage(mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName, enums::PackageModuleType::Package);
-
-                    // Download and install the new version
-                    mpHost->mServerGUI_Package_version = version;
-                    downloadAndInstallGUIPackage(packageName, fileName, url);
+                    // Uninstall the old version, and leave the installed one alone if that is
+                    // refused: installing over it fails as "already installed", so the upgrade
+                    // would go missing while the version recorded below claimed otherwise. A
+                    // name that is not installed has nothing to refuse and nothing to remove,
+                    // and must not hold the upgrade up.
+                    const QString oldPackageName = mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName;
+                    const bool clearedTheWay = !mpHost->mInstalledPackages.contains(oldPackageName) || mpHost->uninstallPackage(oldPackageName, enums::PackageModuleType::Package);
+                    if (clearedTheWay) {
+                        // Download and install the new version
+                        mpHost->mServerGUI_Package_version = version;
+                        downloadAndInstallGUIPackage(packageName, fileName, url);
+                    } else {
+                        //: %1 is the name of the GUI package the game offered to upgrade
+                        postMessage(tr("[ WARN ]  - Could not remove \"%1\" to upgrade it while the profile is being saved. The game will offer the upgrade again.").arg(oldPackageName));
+                    }
                 }
             }
             return;
@@ -4336,6 +4414,23 @@ QString cTelnet::parseGUIUrlFromJSON(const QJsonObject& json)
     return url;
 }
 
+// A game that brings its own interface can tell Mudlet up front not to activate
+// the built-in starter UI, with Client.GUI {"baseui": false} - useful when that
+// interface is not delivered as a Client.GUI package, or to keep the starter UI
+// down without waiting for the package download. The string "false" is taken
+// too, for the same reason the version field above takes a number: some games'
+// GMCP serializers can only spell values as strings.
+bool cTelnet::parseGUIBaseUiDeclinedFromJSON(const QJsonObject& json)
+{
+    const auto baseUiJSON = json.value(qsl("baseui"));
+
+    if (baseUiJSON.isBool()) {
+        return !baseUiJSON.toBool();
+    }
+
+    return baseUiJSON.isString() && !baseUiJSON.toString().trimmed().compare(qsl("false"), Qt::CaseInsensitive);
+}
+
 // Helper function to download and install the GUI package
 void cTelnet::downloadAndInstallGUIPackage(const QString& packageName, const QString& fileName, const QString& url)
 {
@@ -4343,7 +4438,7 @@ void cTelnet::downloadAndInstallGUIPackage(const QString& packageName, const QSt
                    "(url='%2').")
                         .arg(packageName, url));
 
-    mServerPackage = mudlet::getMudletPath(enums::profileDataItemPath, mProfileName, fileName);
+    mServerPackage = MudletPaths::getMudletPath(enums::profileDataItemPath, mProfileName, fileName);
     mpHost->updateProxySettings(mpDownloader);
 
     // Abort any in-flight predecessor while mpPackageDownloadReply still points
@@ -4406,12 +4501,21 @@ void cTelnet::handleGUIPackageInstallationAndUpgrade(QJsonDocument document)
                        "(url='%3').")
                             .arg(version, mpHost->mServerGUI_Package_version, url));
 
-        // Uninstall the old version
-        mpHost->uninstallPackage(mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName, enums::PackageModuleType::Package);
-
-        // Download and install the new version
-        mpHost->mServerGUI_Package_version = version;
-        downloadAndInstallGUIPackage(packageName, fileName, url);
+        // Uninstall the old version, and leave the installed one alone if that is
+        // refused: installing over it fails as "already installed", so the upgrade
+        // would go missing while the version recorded below claimed otherwise. A
+        // name that is not installed has nothing to refuse and nothing to remove,
+        // and must not hold the upgrade up.
+        const QString oldPackageName = mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName;
+        const bool clearedTheWay = !mpHost->mInstalledPackages.contains(oldPackageName) || mpHost->uninstallPackage(oldPackageName, enums::PackageModuleType::Package);
+        if (clearedTheWay) {
+            // Download and install the new version
+            mpHost->mServerGUI_Package_version = version;
+            downloadAndInstallGUIPackage(packageName, fileName, url);
+        } else {
+            //: %1 is the name of the GUI package the game offered to upgrade
+            postMessage(tr("[ WARN ]  - Could not remove \"%1\" to upgrade it while the profile is being saved. The game will offer the upgrade again.").arg(oldPackageName));
+        }
     }
 }
 
@@ -4442,6 +4546,7 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         return;
     }
 
+    bool serverDeclinedBaseUi = false;
     if (transcodedMsg.startsWith(qsl("Client.GUI"), Qt::CaseInsensitive)) {
         if (!mpHost->mAcceptServerGUI) {
             return;
@@ -4476,6 +4581,12 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
             document = QJsonDocument(QJsonObject{{"version", version}, {"url", url}});
         }
 
+        // Raw Telnet carries a version and a url and nothing else, so only the
+        // JSON form can decline; the event itself is raised at the end of this
+        // function, once setGMCPTable() has run, so a handler reading
+        // gmcp.Client.GUI sees the decline it is being told about.
+        serverDeclinedBaseUi = !rawTelnet && parseGUIBaseUiDeclinedFromJSON(document.object());
+
         handleGUIPackageInstallationAndUpgrade(document);
 
         if (rawTelnet) {
@@ -4504,6 +4615,25 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
     }
 
     mpHost->mLuaInterpreter.setGMCPTable(packageMessage, data);
+
+    // A game that brings its own interface can decline the built-in starter UI
+    // up front with Client.GUI {"baseui": false}. The same event an installed
+    // interface package raises is used, with no package named: the decline is
+    // the game claiming the screen space for its own interface, which is
+    // exactly the statement that event already makes. Raised only now, after
+    // setGMCPTable() above, so handlers read the gmcp table this message built
+    // - the package-install path fires it after the table update too.
+    //
+    // The starter UI builds its dock on the first game data it recognises
+    // rather than on install, so a decline arriving before that data leaves
+    // the dock never built - which is why a game wanting none of it should
+    // send this ahead of its first vitals.
+    if (serverDeclinedBaseUi) {
+        TEvent event{};
+        event.mArgumentList.append(qsl("sysServerGuiInstalled"));
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mpHost->raiseEvent(event);
+    }
 }
 
 void cTelnet::setMSSPVariables(const QByteArray& msg)
@@ -4847,8 +4977,8 @@ void cTelnet::postMessage(QString msg)
             body.removeFirst();
             //: Keep the capitalisation, the translated text at 7 letters max so it aligns nicely
             if (prefix.contains(tr("ERROR")) || prefix.contains(QLatin1String("ERROR"))) {
-                mpHost->mpConsole->print(prefix, Qt::red, mpHost->mBgColor);                                  // Bright Red
-                mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(255, 255, 50), mpHost->mBgColor); // Bright Yellow
+                mpHost->printToMainConsole(prefix, Qt::red, mpHost->mBgColor);                                  // Bright Red
+                mpHost->printToMainConsole(firstLineTail.append('\n'), QColor(255, 255, 50), mpHost->mBgColor); // Bright Yellow
                 for (int _i = 0; _i < body.size(); ++_i) {
                     QString temp = body.at(_i);
                     temp.replace('\t', QLatin1String("        "));
@@ -4856,93 +4986,93 @@ void cTelnet::postMessage(QString msg)
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
                 if (!body.empty()) {
-                    mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(255, 255, 50), mpHost->mBgColor); // Bright Yellow
+                    mpHost->printToMainConsole(body.join('\n').append('\n'), QColor(255, 255, 50), mpHost->mBgColor); // Bright Yellow
                 }
                 //: Keep the capisalisation, the translated text at 7 letters max so it aligns nicely
             } else if (prefix.contains(tr("LUA")) || prefix.contains(QLatin1String("LUA"))) {
-                mpHost->mpConsole->print(prefix, QColor(80, 160, 255), mpHost->mBgColor);                    // Light blue
-                mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(50, 200, 50), mpHost->mBgColor); // Light green
+                mpHost->printToMainConsole(prefix, QColor(80, 160, 255), mpHost->mBgColor);                    // Light blue
+                mpHost->printToMainConsole(firstLineTail.append('\n'), QColor(50, 200, 50), mpHost->mBgColor); // Light green
                 for (int _i = 0; _i < body.size(); ++_i) {
                     QString temp = body.at(_i);
                     temp.replace('\t', QLatin1String("        "));
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
                 if (!body.empty()) {
-                    mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(200, 50, 50), mpHost->mBgColor); // Red
+                    mpHost->printToMainConsole(body.join('\n').append('\n'), QColor(200, 50, 50), mpHost->mBgColor); // Red
                 }
                 //: Keep the capisalisation, the translated text at 7 letters max so it aligns nicely
             } else if (prefix.contains(tr("WARN")) || prefix.contains(QLatin1String("WARN"))) {
-                mpHost->mpConsole->print(prefix, QColor(0, 150, 190), mpHost->mBgColor);                     // Cyan
-                mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(190, 150, 0), mpHost->mBgColor); // Orange
+                mpHost->printToMainConsole(prefix, QColor(0, 150, 190), mpHost->mBgColor);                     // Cyan
+                mpHost->printToMainConsole(firstLineTail.append('\n'), QColor(190, 150, 0), mpHost->mBgColor); // Orange
                 for (int _i = 0; _i < body.size(); ++_i) {
                     QString temp = body.at(_i);
                     temp.replace('\t', QLatin1String("        "));
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
                 if (!body.empty()) {
-                    mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(190, 150, 0), mpHost->mBgColor);
+                    mpHost->printToMainConsole(body.join('\n').append('\n'), QColor(190, 150, 0), mpHost->mBgColor);
                 }
                 //: Keep the capisalisation, the translated text at 7 letters max so it aligns nicely
             } else if (prefix.contains(tr("ALERT")) || prefix.contains(QLatin1String("ALERT"))) {
-                mpHost->mpConsole->print(prefix, QColor(190, 100, 50), mpHost->mBgColor);                     // Orange-ish
-                mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(190, 190, 50), mpHost->mBgColor); // Yellow
+                mpHost->printToMainConsole(prefix, QColor(190, 100, 50), mpHost->mBgColor);                     // Orange-ish
+                mpHost->printToMainConsole(firstLineTail.append('\n'), QColor(190, 190, 50), mpHost->mBgColor); // Yellow
                 for (int _i = 0; _i < body.size(); ++_i) {
                     QString temp = body.at(_i);
                     temp.replace('\t', QLatin1String("        "));
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
                 if (!body.empty()) {
-                    mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(190, 190, 50), mpHost->mBgColor); // Yellow
+                    mpHost->printToMainConsole(body.join('\n').append('\n'), QColor(190, 190, 50), mpHost->mBgColor); // Yellow
                 }
                 //: Keep the capisalisation, the translated text at 7 letters max so it aligns nicely
             } else if (prefix.contains(tr("INFO")) || prefix.contains(QLatin1String("INFO"))) {
-                mpHost->mpConsole->print(prefix, QColor(0, 150, 190), mpHost->mBgColor);                   // Cyan
-                mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(0, 160, 0), mpHost->mBgColor); // Light Green
+                mpHost->printToMainConsole(prefix, QColor(0, 150, 190), mpHost->mBgColor);                   // Cyan
+                mpHost->printToMainConsole(firstLineTail.append('\n'), QColor(0, 160, 0), mpHost->mBgColor); // Light Green
                 for (int _i = 0; _i < body.size(); ++_i) {
                     QString temp = body.at(_i);
                     temp.replace('\t', QLatin1String("        "));
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
                 if (!body.empty()) {
-                    mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(0, 160, 0), mpHost->mBgColor); // Light Green
+                    mpHost->printToMainConsole(body.join('\n').append('\n'), QColor(0, 160, 0), mpHost->mBgColor); // Light Green
                 }
                 //: Keep the capisalisation, the translated text at 7 letters max so it aligns nicely
             } else if (prefix.contains(tr("OK")) || prefix.contains(QLatin1String("OK"))) {
-                mpHost->mpConsole->print(prefix, QColor(0, 160, 0), mpHost->mBgColor);                        // Light Green
-                mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(190, 100, 50), mpHost->mBgColor); // Orange-ish
+                mpHost->printToMainConsole(prefix, QColor(0, 160, 0), mpHost->mBgColor);                        // Light Green
+                mpHost->printToMainConsole(firstLineTail.append('\n'), QColor(190, 100, 50), mpHost->mBgColor); // Orange-ish
                 for (int _i = 0; _i < body.size(); ++_i) {
                     QString temp = body.at(_i);
                     temp.replace('\t', QLatin1String("        "));
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
                 if (!body.empty()) {
-                    mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(190, 100, 50), mpHost->mBgColor); // Orange-ish
+                    mpHost->printToMainConsole(body.join('\n').append('\n'), QColor(190, 100, 50), mpHost->mBgColor); // Orange-ish
                 }
             } else if (prefix.contains(tr("CHAT")) || prefix.contains(QLatin1String("CHAT"))) {
-                mpHost->mpConsole->print(prefix, QColor(255, 255, 50), mpHost->mBgColor);                  // Bright yellow
-                mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(0, 160, 0), mpHost->mBgColor); // Light Green
+                mpHost->printToMainConsole(prefix, QColor(255, 255, 50), mpHost->mBgColor);                  // Bright yellow
+                mpHost->printToMainConsole(firstLineTail.append('\n'), QColor(0, 160, 0), mpHost->mBgColor); // Light Green
                 for (int _i = 0; _i < body.size(); ++_i) {
                     QString temp = body.at(_i);
                     temp.replace('\t', QLatin1String("        "));
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
                 if (!body.empty()) {
-                    mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(255, 50, 50), mpHost->mBgColor); // Red-ish
+                    mpHost->printToMainConsole(body.join('\n').append('\n'), QColor(255, 50, 50), mpHost->mBgColor); // Red-ish
                 }
-            } else {                                                                                        // Unrecognised but still in a "[ something ] -  message..." format
-                mpHost->mpConsole->print(prefix, QColor(190, 50, 50), mpHost->mBgColor);                    // Foreground red, background bright grey
-                mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(50, 50, 50), mpHost->mBgColor); //Foreground dark grey, background bright grey
+            } else {                                                                                          // Unrecognised but still in a "[ something ] -  message..." format
+                mpHost->printToMainConsole(prefix, QColor(190, 50, 50), mpHost->mBgColor);                    // Foreground red, background bright grey
+                mpHost->printToMainConsole(firstLineTail.append('\n'), QColor(50, 50, 50), mpHost->mBgColor); //Foreground dark grey, background bright grey
                 for (int _i = 0; _i < body.size(); ++_i) {
                     QString temp = body.at(_i);
                     temp.replace('\t', QLatin1String("        "));
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
                 if (!body.empty()) {
-                    mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(50, 50, 50), mpHost->mBgColor); //Foreground dark grey, background bright grey
+                    mpHost->printToMainConsole(body.join('\n').append('\n'), QColor(50, 50, 50), mpHost->mBgColor); //Foreground dark grey, background bright grey
                 }
             }
-        } else {                                                                                             // No prefix found
-            mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(190, 190, 190), mpHost->mBgColor); //Foreground bright grey
+        } else {                                                                                               // No prefix found
+            mpHost->printToMainConsole(body.join('\n').append('\n'), QColor(190, 190, 190), mpHost->mBgColor); //Foreground bright grey
         }
         messageStack.removeFirst();
     }
@@ -4994,6 +5124,24 @@ void cTelnet::gotPrompt(std::string& mud_data)
     mIsTimerPosting = false;
 }
 
+// MXP escape sequences are the ONLY safe detection method.
+// Text-based tags like <version>, <send>, etc. can be faked by players
+// using illusions in games like IRE MUDs, which would cause false positives.
+// ESC sequences contain control character 0x1B which cannot be typed/illusioned.
+// Per MXP spec: "To ensure that tags are difficult to send by MUD players,
+// an escape sequence, similar to ANSI or VT100 is used: ESC[#z"
+// Valid modes: 0=open, 1=secure, 2=locked, 3=reset, 4=temp secure,
+//              5=lock open, 6=lock secure, 7=lock locked
+static bool containsMxpModeSwitch(const std::string& data)
+{
+    for (size_t pos = data.find('\x1B'); pos != std::string::npos && pos + 3 < data.size(); pos = data.find('\x1B', pos + 1)) {
+        if (data[pos + 1] == '[' && data[pos + 2] >= '0' && data[pos + 2] <= '7' && data[pos + 3] == 'z') {
+            return true;
+        }
+    }
+    return false;
+}
+
 void cTelnet::trackMXPElementDetection(const std::string& line)
 {
     if (!mpHost) {
@@ -5006,29 +5154,18 @@ void cTelnet::trackMXPElementDetection(const std::string& line)
         return;
     }
 
-    // MXP escape sequences are the ONLY safe detection method.
-    // Text-based tags like <version>, <send>, etc. can be faked by players
-    // using illusions in games like IRE MUDs, which would cause false positives.
-    // ESC sequences contain control character 0x1B which cannot be typed/illusioned.
-    // Per MXP spec: "To ensure that tags are difficult to send by MUD players,
-    // an escape sequence, similar to ANSI or VT100 is used: ESC[#z"
-    // Valid modes: 0=open, 1=secure, 2=locked, 3=reset, 4=temp secure,
-    //              5=lock open, 6=lock secure, 7=lock locked
-    static const std::vector<std::string> mxpEscapes = {"\x1B[0z", "\x1B[1z", "\x1B[2z", "\x1B[3z", "\x1B[4z", "\x1B[5z", "\x1B[6z", "\x1B[7z"};
-
-    for (const auto& esc : mxpEscapes) {
-        if (line.find(esc) != std::string::npos) {
-            // If force MXP is already enabled, this is a re-initialization (e.g., after "config mxp on")
-            // Re-apply secure mode without showing the auto-enable message
-            if (mpHost->getForceMXPProcessorOn() && mpHost->mPromptedForMXPProcessorOn) {
-                mpHost->mMxpProcessor.setMode(MXP_MODE_CODE_LOCK_SECURE);
-                return;
-            }
-            // Otherwise, this is the first time we're seeing MXP, so auto-enable it
-            autoEnableMXPProcessor();
-            return;
-        }
+    if (!containsMxpModeSwitch(line)) {
+        return;
     }
+
+    // If force MXP is already enabled, this is a re-initialization (e.g., after "config mxp on")
+    // Re-apply secure mode without showing the auto-enable message
+    if (mpHost->getForceMXPProcessorOn() && mpHost->mPromptedForMXPProcessorOn) {
+        mpHost->mMxpProcessor.setMode(MXP_MODE_CODE_LOCK_SECURE);
+        return;
+    }
+    // Otherwise, this is the first time we're seeing MXP, so auto-enable it
+    autoEnableMXPProcessor();
 }
 
 void cTelnet::gotRest(std::string& mud_data)
@@ -5098,7 +5235,7 @@ void cTelnet::slot_timerPosting()
     mMudData = "";
     mIsTimerPosting = false;
     if (mpHost && mpHost->mpConsole) {
-        mpHost->mpConsole->finalize();
+        mpHost->finalizeMainConsole();
     }
 }
 
@@ -5115,7 +5252,7 @@ void cTelnet::postData()
 
     // All data goes through main console's printOnDisplay which calls
     // translateToPlainText - MXP DEST routing happens inside that process
-    mpHost->mpConsole->printOnDisplay(data, true);
+    mpHost->printOnDisplay(data, true);
     if (mpHost->mMMCPServer && !mpHost->mIsRemoteEchoingActive) {
         mpHost->mMMCPServer->receiveFromPlayer(data);
     }
@@ -5195,11 +5332,36 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
 }
 
 
-void cTelnet::recordReplay()
+bool cTelnet::startReplayRecording(const QString& fileName)
 {
+    if (mRecordReplay) {
+        return false;
+    }
+    mpReplayFile = std::make_unique<QSaveFile>(fileName);
+    if (!mpReplayFile->open(QIODevice::WriteOnly)) {
+        return false;
+    }
     mRecordLastChunkMSecTimeOffset = 0;
     mRecordingChunkTimer.start();
     mRecordingChunkCount = 0;
+    mRecordReplay = true;
+    return true;
+}
+
+bool cTelnet::stopReplayRecording()
+{
+    mRecordReplay = false;
+    return mpReplayFile && mpReplayFile->commit();
+}
+
+QString cTelnet::replayRecordingFileName() const
+{
+    return mpReplayFile ? mpReplayFile->fileName() : QString();
+}
+
+QString cTelnet::replayRecordingErrorString() const
+{
+    return mpReplayFile ? mpReplayFile->errorString() : QString();
 }
 
 bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
@@ -5216,9 +5378,7 @@ bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
             mIsReplayRunFromLua = true;
         }
         replayStream.setDevice(&replayFile);
-        if (QVersionNumber::fromString(QString(qVersion())) >= QVersionNumber(5, 13, 0)) {
-            replayStream.setVersion(mudlet::scmQDataStreamFormat_5_12);
-        }
+        replayStream.setVersion(QDataStream::Qt_5_12);
         loadingReplay = true;
         if (mudlet::self()->replayStart()) {
             auto [ok, modifiedFormat] = testReadReplayFile();
@@ -5360,10 +5520,19 @@ void cTelnet::slot_processReplayChunk()
                 //this could have set receivedGA to true; we'll handle that later
                 command = "";
             }
-        } else {
-            if (ch != '\r' && ch != '\0') {
-                cleandata += ch;
-            }
+        } else if (ch == TN_BELL) {
+            // Not rung here, unlike the socket path: a replay has never rung
+            // the bell, it only shows it. It still needs a branch of its own,
+            // because textRunEnd() ends a run at a bell: reaching one through
+            // the run branch below would measure an empty run and put the loop
+            // back on the same byte for ever.
+            cleandata += ch;
+        } else if (ch != '\r' && ch != '\0') {
+            // Nearly all of a chunk is text that goes straight through, so it
+            // goes across a run at a time rather than a byte at a time:
+            const int runEnd = textRunEnd(loadBuffer, i, datalen);
+            cleandata.append(loadBuffer + i, runEnd - i);
+            i = runEnd - 1;
         }
 
         if (recvdGA) {
@@ -5380,7 +5549,7 @@ void cTelnet::slot_processReplayChunk()
     }
 
     if (mpHost && mpHost->mpConsole) {
-        mpHost->mpConsole->finalize();
+        mpHost->finalizeMainConsole();
     }
     if (loadingReplay) {
         loadReplayChunk();
@@ -5403,19 +5572,42 @@ void cTelnet::slot_socketReadyToBeRead()
         finishNetworkLatencyMeasurement();
     }
 
+    readPendingSocketData();
+}
+
+// Reads one BUFFER_SIZE chunk, and comes back through the event loop for
+// whatever is left. readyRead() is only emitted when fresh bytes reach the
+// socket, so a burst's remainder past one read would sit unseen until the
+// server happened to send again - a game that pushes 100 KB in one go and then
+// waits for input stops part-way through it. The leftovers are deliberately
+// drained from here rather than from slot_socketReadyToBeRead(): they were
+// already buffered before any command a trigger has since sent, so treating
+// them as that command's reply would report a latency of nearly nothing.
+void cTelnet::readPendingSocketData()
+{
+    if (!mpHost || mpHost->isClosingDown() || !mpSocket || mDeferredReconnect) {
+        return;
+    }
+
     // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (2 of 7) - investigate switching from using `char[]` to `std::array<char>`
     char in_buffer[BUFFER_SIZE + 10];
 
     int amount = mpSocket->read(in_buffer, BUFFER_SIZE);
     processSocketData(in_buffer, amount);
+
+    // amount > 0 as well as bytesAvailable(): a read that yields nothing while the
+    // socket still reports bytes would otherwise requeue forever, spinning a core
+    // for as long as the connection stayed in that state.
+    if (amount > 0 && mpSocket && mpSocket->bytesAvailable() > 0) {
+        QMetaObject::invokeMethod(this, &cTelnet::readPendingSocketData, Qt::QueuedConnection);
+    }
 }
 
 void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopbackTesting)
 {
-    // Guard against deep re-entry when draining leftover (de)compressed data -
-    // each level allocates ~100 KB on the stack for out_buffer. Per-connection
-    // (a member, not thread-wide) so one profile's drain - or a re-entrant
-    // feedTelnet() - cannot spend another connection's budget.
+    // The cap that bounds a decompression bomb (see scmMaxDecompressionRecursion)
+    // is per-connection - a member, not thread-wide - so one profile's drain, or
+    // a re-entrant feedTelnet(), cannot spend another connection's budget.
     // Being a member, a level leaked by an early return would be permanent:
     // scmMaxDecompressionRecursion of them and the connection refuses all further
     // data, so the count comes off in a guard rather than at each return.
@@ -5434,8 +5626,11 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
         return;
     }
 
-    // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (3 of 7) - investigate switching from using `char[]` to `std::array<char>`
-    char out_buffer[BUFFER_SIZE + 10];
+    // On the heap: the drain at the end re-enters this function once per
+    // output buffer, and nine 100 KB frames do not fit in the 1 MB main-thread
+    // stack Windows builds get. The frame is reserved in the prologue, so even
+    // the level the cap refuses pays for one.
+    const std::unique_ptr<char[]> out_buffer(new char[BUFFER_SIZE + 10]);
 
     // read() reports -1 on error and 0 when nothing was available; loopbackTest()
     // narrows a qsizetype into this int, so treat every non-positive value the
@@ -5460,8 +5655,8 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
     int remainingAmount = 0;
 
     if (mNeedDecompression) {
-        datalen = decompressBuffer(in_buffer, amount, out_buffer);
-        buffer = out_buffer;
+        datalen = decompressBuffer(in_buffer, amount, out_buffer.get());
+        buffer = out_buffer.get();
         // decompressBuffer() only fills one output buffer per call and drops
         // out of compression on stream end or a broken stream. Anything it did
         // not consume - more compressed data, or plain data past the stream -
@@ -5475,15 +5670,17 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
     // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (4 of 7) - investigate switching from using `char[]` to `std::array<char>`
     buffer[static_cast<size_t>(datalen)] = '\0';
 
-    if (!loopbackTesting && mpHost && mpHost->mpConsole && mpHost->mpConsole->mRecordReplay) {
+    if (!loopbackTesting && mRecordReplay) {
         ++mRecordingChunkCount;
         // QElapsedTimer::elapsed() returns a qint64, it replaces a
         // previous QTime::elapsed() which returns a int (effectively a
         // qint32):
         qint32 recordingChunkInterval = static_cast<qint32>(mRecordingChunkTimer.elapsed()) - mRecordLastChunkMSecTimeOffset;
-        mpHost->mpConsole->mReplayStream << recordingChunkInterval; // 4 bytes
-        mpHost->mpConsole->mReplayStream << datalen;                // 4 bytes
-        mpHost->mpConsole->mReplayStream.writeRawData(buffer, datalen);
+        QDataStream replayStream(mpReplayFile.get());
+        replayStream.setVersion(QDataStream::Qt_5_12);
+        replayStream << recordingChunkInterval; // 4 bytes
+        replayStream << datalen;                // 4 bytes
+        replayStream.writeRawData(buffer, datalen);
 #if defined(DEBUG_RECORDING)
         qDebug().noquote().nospace() << "cTelnet::processSocketData(...) INFO - recording chunk: " << mRecordingChunkCount << " is " << datalen
                                      << " bytes and has an interval of: " << recordingChunkInterval << " mSecond since the previous chunk.";
@@ -5587,7 +5784,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                             int restLength = datalen - i - 3;
 
                             if (restLength > 0) {
-                                datalen = decompressBuffer(buffer, restLength, out_buffer);
+                                datalen = decompressBuffer(buffer, restLength, out_buffer.get());
                                 // queue input left over past this compressed chunk
                                 // (decompressBuffer() advanced 'buffer' to it) for
                                 // reprocessing at the end of this pass
@@ -5595,7 +5792,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                                     remainingData = buffer;
                                     remainingAmount = restLength;
                                 }
-                                buffer = out_buffer;
+                                buffer = out_buffer.get();
                                 i = -1; // start processing buffer from the beginning.
                             } else {
                                 datalen = 0;
@@ -5667,16 +5864,17 @@ Some data loss is likely - please mention this problem to the game admins.)",
                 //this could have set receivedGA to true; we'll handle that later
                 command = "";
             }
-        } else {
-            if (ch == TN_BELL) {
-                // detected here rather than in TTextEdit so it fires once per
-                // received bell, not on every screen refresh
-                emit signal_bell();
-            }
-
-            if (ch != '\r' && ch != '\0') {
-                cleandata += ch;
-            }
+        } else if (ch == TN_BELL) {
+            // detected here rather than in TTextEdit so it fires once per
+            // received bell, not on every screen refresh
+            emit signal_bell();
+            cleandata += ch;
+        } else if (ch != '\r' && ch != '\0') {
+            // Nearly all of a read is text that goes straight through, so it
+            // goes across a run at a time rather than a byte at a time:
+            const int runEnd = textRunEnd(buffer, i, datalen);
+            cleandata.append(buffer + i, runEnd - i);
+            i = runEnd - 1;
         }
     MAIN_LOOP_END:;
         if (recvdGA) {
@@ -5709,7 +5907,7 @@ Some data loss is likely - please mention this problem to the game admins.)",
     }
 
     if (mpHost && mpHost->mpConsole) {
-        mpHost->mpConsole->finalize();
+        mpHost->finalizeMainConsole();
     }
 
     mRecordLastChunkMSecTimeOffset = mRecordingChunkTimer.elapsed();
@@ -5842,9 +6040,36 @@ std::string cTelnet::encodeAndCookBytes(const std::string& data)
 {
     if (!mEncoding.isEmpty() && mEncoding != "ASCII") {
         // Convert from UTF8 std::string to QString, then encode to Mud Server encoding
-        return mudlet::replaceString(TEncodingHelper::encode(QString::fromStdString(data), mEncoding).toStdString(), "\xff", "\xff\xff");
+        return escapeIac(TEncodingHelper::encode(QString::fromStdString(data), mEncoding).toStdString());
     }
-    return mudlet::replaceString(data, "\xff", "\xff\xff");
+    return escapeIac(data);
+}
+
+// A lone 0xff byte in outbound data would be read as the start of a telnet
+// command by the Server, so each one has to be sent doubled:
+std::string cTelnet::escapeIac(std::string data)
+{
+    auto position = data.find(TN_IAC);
+    while (position != std::string::npos) {
+        data.insert(position, 1, TN_IAC);
+        position = data.find(TN_IAC, position + 2);
+    }
+    return data;
+}
+
+std::string cTelnet::buildChannel102Message(const std::string& payload)
+{
+    std::string message;
+    message += TN_IAC;
+    message += TN_SB;
+    message += OPT_102;
+    // Only the payload is escaped. Doubling the framing IAC bytes as well would
+    // make the server read a literal 0xFF data byte followed by the rest of the
+    // subnegotiation as raw text, rather than a 102 subnegotiation at all.
+    message += escapeIac(payload);
+    message += TN_IAC;
+    message += TN_SE;
+    return message;
 }
 
 void cTelnet::setPostingTimeout(const int timeout)

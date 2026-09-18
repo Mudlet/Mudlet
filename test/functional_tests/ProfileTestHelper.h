@@ -97,17 +97,26 @@ inline Host* create(const QString& profileName,
 {
     mudlet::self()->startAutoLogin({});
 
-    // Existence is the condition, not visibility: on a pristine config Mudlet
-    // puts its first-run tutorial up instead of the profile dialog, which leaves
-    // the dialog built but never shown. QTest delivers events to it either way,
-    // and the focus waits below are what actually confirm it is driveable.
+    // Until the zero-timer in slot_showConnectionDialog() has shown and activated
+    // the dialog, the focus slot_addProfile() sets reaches only the window, never
+    // QApplication::focusWidget(), which is what the waits below read. Activation
+    // is queued, so a window an earlier test left open can be holding it.
     if (!QTest::qWaitFor(
                 []() {
                     dlgConnectionProfiles* dialog = mudlet::self()->mpConnectionDialog;
-                    return dialog != nullptr && dialog->new_profile_button != nullptr && dialog->profile_name_entry != nullptr;
+                    if (!dialog || !dialog->isVisible()) {
+                        return false;
+                    }
+                    if (!dialog->isActiveWindow()) {
+                        dialog->activateWindow();
+                        return false;
+                    }
+                    return true;
                 },
                 timeout)) {
-        qWarning() << "TestProfile::create() - the connection dialog was never built";
+        const dlgConnectionProfiles* dialog = mudlet::self()->mpConnectionDialog;
+        qWarning() << "TestProfile::create() - the connection dialog never became active. dialog:" << dialog << "visible:" << (dialog && dialog->isVisible())
+                   << "active:" << (dialog && dialog->isActiveWindow()) << "activation is held by:" << QApplication::focusWindow();
         return nullptr;
     }
 

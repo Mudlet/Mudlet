@@ -25,6 +25,7 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -60,8 +61,8 @@ private:
     static constexpr int kMaxRootTriggers = 5;
 
     // What every line of game text really pays for: the substrings the chat
-    // gates scan for before any regex runs. Measures 18. Raising this is a
-    // throughput change and wants measuring first.
+    // gates scan for before any regex runs. Measures 20, the whole budget.
+    // Raising this is a throughput change and wants measuring first.
     static constexpr int kMaxGatePatterns = 20;
 
 private slots:
@@ -93,7 +94,7 @@ private slots:
         mPort = mpServer->serverPort();
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -246,6 +247,8 @@ private slots:
                 {qsl("Bob shouts, 'to arms!'"), QString()},
                 {qsl("You yell, 'wait for me!'"), QString()},
                 {qsl("You shout, 'over here!'"), QString()},
+                {qsl("Bob chats, 'hello everyone'"), qsl("channels")},
+                {qsl("You chat, \"test.\""), qsl("channels")},
                 {qsl("[tell] Ann: are you there?"), qsl("tells")},
                 {qsl("[newbie] Ann: how do I get out of here?"), qsl("channels")},
                 {qsl("(gossip) Ann: anyone around?"), qsl("channels")},
@@ -862,7 +865,7 @@ __starterUi.shapeCount = BaseUI.vitalsShapeCount()
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        QDir dir(mudlet::getMudletPath(enums::profileHomePath, profileName));
+        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, profileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }

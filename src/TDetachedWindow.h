@@ -62,6 +62,7 @@ public:
     void refreshTabBar();                             // Update tab text to account for CDC identifiers
     void updateWindowMenu();                          // Update the window menu with current window list
     void switchToProfile(const QString& profileName); // Switch to a specific profile tab
+    void refreshAfterApplicationStyleChange();
 
     // Dock widget management methods
     QDockWidget* getDockWidget(const QString& mapKey) const { return mDockWidgetMap.value(mapKey); }

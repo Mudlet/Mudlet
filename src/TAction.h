@@ -28,9 +28,15 @@
 
 #include <QColor>
 #include <QDebug>
+#include <QDebugStateSaver>
 #include <QIcon>
 #include <QObject>
 #include <QPointer>
+#include <QSize>
+#include <QString>
+#include <QtGlobal>
+
+#include <algorithm>
 
 class EAction;
 class Host;

@@ -21,7 +21,7 @@
  * Someone who used Mudlet before and has no profiles left still counts as an
  * experienced player, so the connection dialog owes them the games list rather
  * than a beginner's tutorial invitation - the same answer the interface tour
- * and the starter UI give.
+ * gives.
  *
  * The gate memoises for the life of the process, so the fresh-install half of
  * this lives in TutorialInvitationLayoutTest.
@@ -33,6 +33,7 @@
 
 #include <QPushButton>
 
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "MudletInstanceCoordinator.h"
 #include "dlgConnectionProfiles.h"
@@ -74,13 +75,13 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
 
         QVERIFY2(mudlet::self()->experiencedMudletPlayer(), "settings on file with no recorded first launch have to read as earlier use");
-        QVERIFY2(QDir(mudlet::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot).isEmpty(), "this case is about having no profiles left");
+        QVERIFY2(QDir(MudletPaths::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot).isEmpty(), "this case is about having no profiles left");
     }
 
     void cleanupTestCase()

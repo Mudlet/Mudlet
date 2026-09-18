@@ -40,7 +40,7 @@
  * USE_UPDATER - and CI's -testing builds are configured without it. Like
  * ReleaseChangelogSpanTest this file includes no utils.h of its own, so qsl()
  * is out of scope here and the literals below are QStringLiteral. SemVer.cpp
- * does include it, which is what the target's Qt6::Widgets link is for.
+ * does include it, which is what the target's Qt6::Gui link is for.
  *
  * Run with: ctest -R SemVerTest -V
  */

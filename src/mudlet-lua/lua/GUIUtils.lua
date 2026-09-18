@@ -2460,8 +2460,9 @@ local function copy2color(name,win,str,inst)
     return ""
   end
   local start, len = selectString(win, str, inst), utf8.len(str)
-  if not start then
-    error(name..": string not found",3)
+  if start < 0 then
+    -- happens when the text is not on the current line, which is all selectString() searches
+    return ""
   end
   local style, endspan, result, r, g, b, rb, gb, bb, cr, cg, cb, crb, cgb, cbb, char
   local selectSection, getFgColor, getBgColor = selectSection, getFgColor, getBgColor

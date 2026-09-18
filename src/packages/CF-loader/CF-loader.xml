@@ -17,7 +17,7 @@
 				<script>function downloadPkg(a,b)
   if installRequested then return end
   echo("****Downloading package.")
-  downloadFile(getMudletHomeDir() .. "/CFGUI.zip", "https://github.com/carrionfields/CFGUI/releases/latest/download/CFGUI.zip")
+  downloadFile(getMudletHomeDir() .. "/CFGUI.zip", "https://mudlet-cdn.carrionfields.net/cfgui/latest/CFGUI.zip")
 end
 
 function downloadFailed(event, message, file)
@@ -25,7 +25,7 @@ function downloadFailed(event, message, file)
   cecho("\r\n&lt;maroon&gt;*&lt;gold&gt; Your Carrion Fields client could not be downloaded: &lt;gray&gt;"..tostring(message).."\r\n")
   cecho([[&lt;gold&gt;To download the Carrion Fields Mudlet client, please copy and paste the following code into the command line:
 
-lua function d(a,b)if not b:find("CFGUI",1,true)then return end installPackage(b)os.remove(b)cecho("&lt;lime_green&gt;Package installed!\n")end registerAnonymousEventHandler("sysDownloadDone","d")downloadFile(getMudletHomeDir().."/CFGUI.zip","https://github.com/carrionfields/CFGUI/releases/latest/download/CFGUI.zip")
+lua function d(a,b)if not b:find("CFGUI",1,true)then return end installPackage(b)os.remove(b)cecho("&lt;lime_green&gt;Package installed!\n")end registerAnonymousEventHandler("sysDownloadDone","d")downloadFile(getMudletHomeDir().."/CFGUI.zip","https://mudlet-cdn.carrionfields.net/cfgui/latest/CFGUI.zip")
 
 ]])
 end

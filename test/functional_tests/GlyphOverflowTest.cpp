@@ -24,6 +24,7 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -146,7 +147,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -382,7 +383,7 @@ private slots:
         Host* host = startOfflineProfile();
         QVERIFY2(host, "Could not start an offline profile");
         runLua(host, qsl("createMiniConsole('overflowMini', 0, 0, 800, 400)"));
-        auto* mini = host->mpConsole->mSubConsoleMap.value(qsl("overflowMini"));
+        auto* mini = host->mpConsole->subConsoleWidget(qsl("overflowMini"));
         QVERIFY2(mini, "The miniconsole was not created");
         TTextEdit* pane = mini->mUpperPane;
         QVERIFY2(pane, "The miniconsole has no pane");
@@ -514,7 +515,7 @@ private slots:
 
     void cleanup()
     {
-        const QString profilePath = mudlet::getMudletPath(enums::profileHomePath, mHostname);
+        const QString profilePath = MudletPaths::getMudletPath(enums::profileHomePath, mHostname);
         delete mudlet::self();
         delete mpServer;
         mpServer = nullptr;
@@ -796,7 +797,7 @@ private:
         QApplication::processEvents();
     }
 
-    void deleteProfileDirectory(const QString& profileName) { deleteDirectory(mudlet::getMudletPath(enums::profileHomePath, profileName)); }
+    void deleteProfileDirectory(const QString& profileName) { deleteDirectory(MudletPaths::getMudletPath(enums::profileHomePath, profileName)); }
 
     void deleteDirectory(const QString& path)
     {

@@ -26,11 +26,13 @@
 
 #include "utils.h"
 
+#include <QList>
 #include <QMap>
 #include <QPointer>
 #include <QString>
 #include <list>
 #include <utility>
+#include <vector>
 
 class Host;
 class mudlet;
@@ -83,6 +85,7 @@ public:
     std::pair<bool, QString> hideToolBar(const QString&);
 
     QList<TAction*> uninstallList;
+    bool hasPendingDeletes() const { return !uninstallList.isEmpty(); }
 
 private:
     ActionUnit() = default;

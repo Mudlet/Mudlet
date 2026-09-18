@@ -8,13 +8,14 @@
 -- function returns when its precondition (a connection, a peer, an enabled
 -- protocol, an available API) is not met.
 --
--- The download, HTTP and MMCP families are the exception: their infrastructure
--- can be stood up locally, so their real effects are checked against the
--- fixture server in CI/http-fixture-server.py (ephemeral port in
--- MUDLET_TEST_HTTP_PORT) and the scripted chat peer in CI/mmcp-peer.py
--- (handover directory in MUDLET_TEST_MMCP_DIR). Both skip cleanly when absent
--- so the suite still passes without them. Nothing here mocks a real API
--- function.
+-- The download, HTTP, MMCP and MSDP families are the exception: their
+-- infrastructure can be stood up locally, so their real effects are checked
+-- against the fixture server in CI/http-fixture-server.py (ephemeral port in
+-- MUDLET_TEST_HTTP_PORT), the scripted chat peer in CI/mmcp-peer.py (handover
+-- directory in MUDLET_TEST_MMCP_DIR) and the silent game server in
+-- CI/telnet-fixture-server.py (handover directory in MUDLET_TEST_TELNET_DIR).
+-- All skip cleanly when absent so the suite still passes without them. Nothing
+-- here mocks a real API function.
 
 local function contains(haystack, needle)
   return type(haystack) == "string" and haystack:find(needle, 1, true) ~= nil
@@ -1430,6 +1431,84 @@ describe("MMCP effects against a scripted chat peer", function()
     end)
   end)
 
+  describe("peek and connection requests a peer sends", function()
+    -- Sharing connections is off by default and only the preferences dialog can
+    -- turn it on, so what a peer gets back is always a refusal; what changes is
+    -- which one, and an ignored peer is told nothing at all.
+    -- the console wraps a long message, so the text is matched with its runs of
+    -- whitespace flattened rather than as the lines it landed on
+    local function displayedSince(mark)
+      return (table.concat(getLines("main", mark, getLastLineNumber("main") + 1), "\n"):gsub("%s+", " "))
+    end
+
+    local function waitForText(mark, needle)
+      waitUntil(function() return contains(displayedSince(mark), needle) end, 2000)
+      return displayedSince(mark)
+    end
+
+    it("shows the peers a peek list names", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      peerSends(29, "10.0.0.1~4050~AlphaPeer~10.0.0.2~4051~BetaPeer~")
+      local _, from, message = waitForEvent("sysMMCPChatMessage", 2000)
+      assert.equals(PEER_NAME, from)
+      for _, expected in ipairs({"AlphaPeer", "10.0.0.1", "4050", "BetaPeer", "10.0.0.2", "4051"}) do
+        assert.is_true(contains(message, expected), expected .. " missing from " .. tostring(message))
+      end
+    end)
+
+    it("says so rather than showing a peek list it cannot read", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      local mark = getLastLineNumber("main")
+      -- the entries are name, address and port, so a list that does not divide
+      -- into threes cannot be lined up with them
+      peerSends(29, "10.0.0.1~4050~")
+      local shown = waitForText(mark, "Badly formatted peek list")
+      assert.is_true(contains(shown, "Badly formatted peek list from " .. PEER_NAME), shown)
+    end)
+
+    it("turns down a request for its connections and says why", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      local mark = getLastLineNumber("main")
+      peerSends(2, "")
+      local shown = waitForText(mark, "requested your public connections")
+      assert.is_true(contains(shown, "you're ignoring connection requests"), shown)
+    end)
+
+    it("reports an ignored peer's connection request as an attempt", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      assert.is_true(mmcp.ignore(PEER_NAME))
+      local mark = getLastLineNumber("main")
+      peerSends(2, "")
+      local shown = waitForText(mark, "trying to request your connections")
+      assert.is_true(contains(shown, PEER_NAME .. " is trying to request your connections!"), shown)
+      assert.is_true(mmcp.ignore(PEER_NAME))
+    end)
+
+    it("turns down a peek at its connections and says why", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      local mark = getLastLineNumber("main")
+      peerSends(28, "")
+      local shown = waitForText(mark, "peek your connections")
+      assert.is_true(contains(shown, "you're ignoring peek requests"), shown)
+    end)
+
+    it("reports an ignored peer's peek as an attempt", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      assert.is_true(mmcp.ignore(PEER_NAME))
+      local mark = getLastLineNumber("main")
+      peerSends(28, "")
+      local shown = waitForText(mark, "trying to peek your connections")
+      assert.is_true(contains(shown, PEER_NAME .. " is trying to peek your connections!"), shown)
+      assert.is_true(mmcp.ignore(PEER_NAME))
+    end)
+  end)
+
   describe("mmcp.sendSideChannel", function()
     it("sends channel and message to the peer as one comma separated payload", function()
       if peerUnavailable() then return end
@@ -1820,6 +1899,24 @@ describe("The IRC configuration functions round-trip through the profile", funct
       assert.equals("BustedKeptNick", getIrcNick())
     end)
 
+    it("refuses a nick that would inject a second IRC command", function()
+      -- #10770: the stored nick is put on the wire as "NICK <nick>" when the
+      -- client registers, and IrcConnection keeps only the first space-separated
+      -- word of it - which leaves a line break inside that word free to end the
+      -- NICK and start a command of the game's choosing.
+      restoreIrcConfiguration()
+      assert.is_true(setIrcNick("BustedNickKept"))
+
+      -- the NUL is in here because the nick used to be read as a C string,
+      -- which truncated it there and stored a nick nobody asked for
+      for _, bad in ipairs({"bob\r\nQUIT :injected", "bob\nJOIN #evil", "bob\0evil", "bob and jane"}) do
+        local ok, err = setIrcNick(bad)
+        assert.is_nil(ok, "setIrcNick accepted " .. string.format("%q", bad))
+        assert.is_true(contains(err, "unable to save nick name"), tostring(err))
+        assert.equals("BustedNickKept", getIrcNick())
+      end
+    end)
+
     it("stores the nick where getIrcNick reads it back", function()
       restoreIrcConfiguration()
       assert.is_true(setIrcNick("BustedNickOne"))
@@ -1903,6 +2000,39 @@ describe("The IRC configuration functions round-trip through the profile", funct
       -- an empty string is how a script asks for the password to go
       assert.is_true(setIrcServer("irc.busted-other.invalid", 6667, false, ""))
       assert.equals("", getConfig("ircPassword"))
+    end)
+
+    it("refuses a server password that would inject a second IRC command", function()
+      -- #10770: the stored password goes out as the trailing parameter of
+      -- "PASS :<password>" at registration, so a line break in it is a whole
+      -- command of its own, spaces and all.
+      restoreIrcConfigurationWithPassword()
+      assert.is_true(setIrcServer("irc.busted-passguard.invalid", 6667, false, "BustedKeptSecret"))
+
+      local ok, err = setIrcServer("irc.busted-passguard.invalid", 6667, false, "hunter2\r\nPRIVMSG #evil :injected")
+      assert.is_nil(ok)
+      assert.is_true(contains(err, "unable to save password"), tostring(err))
+      -- and the refusal does not hand the password to whoever is reading
+      assert.is_false(contains(err, "hunter2"), tostring(err))
+      assert.equals("BustedKeptSecret", getConfig("ircPassword"))
+    end)
+
+    it("stores nothing at all when the password is refused, not just the password", function()
+      -- #10770 follow-up: the host, port and secure flag were written before the
+      -- password was judged, so a refused call left the new server address paired
+      -- with the old credential - a partial update, where the contract is that a
+      -- refused call stores nothing.
+      restoreIrcConfigurationWithPassword()
+      assert.is_true(setIrcServer("irc.busted-allornothing.invalid", 6667, false, "BustedKeptSecret"))
+
+      local ok = setIrcServer("irc.busted-changed.invalid", 6697, true, "hunter2\r\nPRIVMSG #evil :injected")
+      assert.is_nil(ok)
+
+      local hostName, port, secure = getIrcServer()
+      assert.equals("irc.busted-allornothing.invalid", hostName)
+      assert.equals(6667, port)
+      assert.is_false(secure)
+      assert.equals("BustedKeptSecret", getConfig("ircPassword"))
     end)
 
     it("falls back to port 6667 and an insecure connection when only a hostname is given", function()
@@ -2021,6 +2151,56 @@ describe("The IRC configuration functions round-trip through the profile", funct
       assertArgError(function() sendIrc({}, "hello") end, "sendIrc: bad argument #1 type (target as string expected, got table!)")
       assertArgError(function() sendIrc("#mudlet", {}) end, "sendIrc: bad argument #2 type (message as string expected, got table!)")
     end)
+
+    -- #10770 and #10771: one sendIrc() is meant to be one IRC message, but the
+    -- IRC line protocol ends a command at a CR or an LF, and the message used
+    -- to be run through the IRC window's command parser as well - so both
+    -- "MARK\r\nQUIT :injected-quit" and "/join #evil" put a command of the
+    -- caller's choosing on the wire, and sendIrc returned true for each. The
+    -- realistic caller is a script relaying game text to a channel, which hands
+    -- that choice to the game server. A leading slash is now sent as the text it
+    -- is (which needs a connected client, so it is checked in
+    -- IrcMessageGuardTest); what cannot be sent at all is refused here, with nil
+    -- plus a message.
+    it("refuses a target or message that would inject a second IRC command", function()
+      local function refused(target, message, needle)
+        local ok, err = sendIrc(target, message)
+        assert.is_nil(ok, "sendIrc accepted " .. string.format("%q, %q", target, message))
+        assert.is_true(contains(err, needle), tostring(err))
+      end
+
+      refused("#mudlet", "MARK before\r\nQUIT :injected-quit", "must not contain a line break")
+      refused("#mudlet", "MARK before\nPRIVMSG #evil :injected-lf", "must not contain a line break")
+      refused("#mudlet", "MARK before\rinjected-cr", "must not contain a line break")
+      refused("#mudlet", "MARK before\0injected-nul", "must not contain a line break")
+      refused("#mudlet\r\nJOIN #evil", "MARK target injection", "must not contain a line break")
+      refused("#mudlet\0#evil", "MARK target nul", "must not contain a line break")
+
+      -- the refusal quotes what it refused, so it has to show those characters
+      -- rather than break its own line with them
+      local _, err = sendIrc("#mudlet", "MARK before\r\nQUIT :injected-quit")
+      assert.is_true(contains(err, "MARK before\\r\\nQUIT"), tostring(err))
+
+      -- the rest of the ways a target can confuse the line protocol: a space or
+      -- a tab makes the server read more parameters than were meant, a leading
+      -- colon makes the whole rest of the line one trailing parameter, an empty
+      -- name in a target list is not a name, and an empty target used to be
+      -- swapped for the first configured channel
+      refused("#mudlet #evil", "MARK spaced target", "holds no spaces")
+      refused("#mudlet\t#evil", "MARK tabbed target", "holds no spaces")
+      refused(":#mudlet", "MARK colon target", "must not start with a colon")
+      refused("#mudlet,", "MARK empty name in the list", "empty name in its list")
+      refused("", "MARK empty target", "no target given")
+
+      -- nothing to send is not a send that succeeded
+      refused("#mudlet", "", "no message given to send")
+
+      -- the refusals come before the IRC client is created, so none of the
+      -- above left this run with one - which is what the specs above rely on
+      local ok, clientError = getIrcConnectedHost()
+      assert.is_false(ok, "a refused sendIrc opened an IRC client")
+      assert.equals("no client active", clientError)
+    end)
   end)
 
   describe("openIRC", function()
@@ -2043,5 +2223,175 @@ describe("getNetworkLatency", function()
     local latency = getNetworkLatency()
     assert.is_number(latency)
     assert.equals(0, latency)
+  end)
+end)
+
+-- The connected-but-unnegotiated state, which nothing else in the suite can
+-- reach: it runs with --offline, so every other send guard is only ever checked
+-- in its disconnected form. CI/telnet-fixture-server.py accepts the connection
+-- and then stays silent, so no telnet option is ever negotiated.
+describe("sending protocol data to a game server that has not negotiated", function()
+  local telnetDir = os.getenv("MUDLET_TEST_TELNET_DIR")
+  local fixtureRequired = os.getenv("MUDLET_TEST_REQUIRE_TELNET_FIXTURE")
+
+  -- IAC SB MSDP MSDP_VAR "REPORT" MSDP_VAL "HEALTH" IAC SE, which is what
+  -- sendMSDP("REPORT", "HEALTH") is defined to put on the wire.
+  local SUBNEGOTIATION = "fffa45015245504f5254024845414c5448fff0"
+
+  local function readFile(path)
+    local handle = io.open(path, "r")
+    if not handle then
+      return nil
+    end
+    local contents = handle:read("*a")
+    handle:close()
+    return contents
+  end
+
+  -- The fixture writes its port only once it is accepting, and removes it on the
+  -- way out, so a readable port file means it is up.
+  local function serverPort()
+    if not telnetDir then
+      return nil
+    end
+    local raw = readFile(telnetDir .. "/port")
+    return raw and tonumber(raw:match("%d+"))
+  end
+
+  local function serverUnavailable()
+    local reason
+    if not serverPort() then
+      reason = "telnet fixture not running (run CI/telnet-fixture-server.py with MUDLET_TEST_TELNET_DIR set)"
+    elseif type(yajl) ~= "table" then
+      reason = "the yajl Lua module is unavailable, so the fixture's capture file cannot be read"
+    else
+      return false
+    end
+    if fixtureRequired then
+      assert.is_true(false, "MUDLET_TEST_REQUIRE_TELNET_FIXTURE is set but " .. reason .. " (MUDLET_TEST_TELNET_DIR=" .. tostring(telnetDir) .. ")")
+    end
+    pending(reason)
+    return true
+  end
+
+  local function capture()
+    local raw = readFile(telnetDir .. "/capture.json")
+    if not raw or raw == "" then
+      return nil
+    end
+    local ok, decoded = pcall(yajl.to_value, raw)
+    if not ok or type(decoded) ~= "table" then
+      return nil
+    end
+    return decoded
+  end
+
+  local function connectionCount()
+    local seen = capture()
+    return seen and seen.connections or 0
+  end
+
+  local function wireHex()
+    local seen = capture()
+    return seen and seen.received
+  end
+
+  local function waitUntil(predicate, timeoutMs)
+    local step = 20
+    for _ = 1, math.ceil((timeoutMs or 5000) / step) do
+      if predicate() then
+        return true
+      end
+      pumpEvents(step)
+    end
+    return predicate()
+  end
+
+  local function connected()
+    local _, _, isConnected = getConnectionInfo()
+    return isConnected
+  end
+
+  -- The kernel completes the handshake from the listen backlog before the
+  -- fixture calls accept(), so Mudlet can be connected and writing while the
+  -- capture still holds the previous connection's bytes. accept() clears them
+  -- and bumps the counter in one write, so a count past the one noted before
+  -- connecting is what makes these bytes this connection's.
+  local function sawSubnegotiation(before)
+    local seen = capture()
+    return seen ~= nil and seen.connections > before and contains(seen.received, SUBNEGOTIATION)
+  end
+
+  local msdpNegotiated, protocolHandler
+
+  before_each(function()
+    disconnect()
+    waitUntil(function() return not connected() end, 2000)
+    msdpNegotiated = false
+    protocolHandler = registerAnonymousEventHandler("sysProtocolEnabled", function(_, protocol)
+      if protocol == "MSDP" then
+        msdpNegotiated = true
+      end
+    end)
+  end)
+
+  -- Leaving the socket open would hand the next spec file a connected profile,
+  -- which several of them assume they do not have.
+  after_each(function()
+    killAnonymousEventHandler(protocolHandler)
+    disconnect()
+    assert.is_true(waitUntil(function() return not connected() end, 2000),
+                   "the telnet fixture connection outlived the spec")
+  end)
+
+  it("puts the subnegotiation on the wire while MSDP is still unnegotiated", function()
+    if serverUnavailable() then return end
+    local before = connectionCount()
+    connectToServer("127.0.0.1", serverPort())
+    assert.is_true(waitUntil(connected, 5000), "never connected to the telnet fixture")
+
+    local ok, err = sendMSDP("REPORT", "HEALTH")
+    assert.is_true(ok, "sendMSDP refused a connected socket: " .. tostring(err))
+    assert.is_true(waitUntil(function() return sawSubnegotiation(before) end, 2000),
+                   "the MSDP subnegotiation never reached the wire, saw: " .. tostring(wireHex()))
+    assert.is_false(msdpNegotiated, "the fixture negotiated MSDP, so this no longer covers the unnegotiated state")
+  end)
+
+  it("is usable from a sysConnectionEvent handler, which runs before negotiation", function()
+    if serverUnavailable() then return end
+
+    -- What a package's connect handler does: subscribe to the variables it
+    -- wants. sysConnectionEvent is raised on TCP connect, before the server can
+    -- offer MSDP.
+    local ran, result, failure = false, nil, nil
+    local handler = registerAnonymousEventHandler("sysConnectionEvent", function()
+      result, failure = sendMSDP("REPORT", "HEALTH")
+      ran = true
+    end)
+    finally(function() killAnonymousEventHandler(handler) end)
+
+    local before = connectionCount()
+    connectToServer("127.0.0.1", serverPort())
+    assert.is_true(waitUntil(function() return ran end, 5000), "the sysConnectionEvent handler never ran")
+    assert.is_true(result, "sendMSDP refused inside sysConnectionEvent: " .. tostring(failure))
+    assert.is_true(waitUntil(function() return sawSubnegotiation(before) end, 2000),
+                   "the MSDP subnegotiation never reached the wire, saw: " .. tostring(wireHex()))
+    assert.is_false(msdpNegotiated, "the fixture negotiated MSDP, so this no longer covers the unnegotiated state")
+  end)
+
+  -- sendGMCP and sendATCP keep the check sendMSDP does without: theirs has been
+  -- there since 2018 and packages are written around it.
+  it("still refuses sendGMCP and sendATCP, whose enabled-checks are wanted", function()
+    if serverUnavailable() then return end
+    connectToServer("127.0.0.1", serverPort())
+    assert.is_true(waitUntil(connected, 5000), "never connected to the telnet fixture")
+
+    local gmcp, gmcpErr = sendGMCP("Core.Hello")
+    assert.is_nil(gmcp)
+    assert.is_true(contains(gmcpErr, "GMCP is not currently enabled"), tostring(gmcpErr))
+
+    local atcp, atcpErr = sendATCP("Core.Hello")
+    assert.is_nil(atcp)
+    assert.is_true(contains(atcpErr, "ATCP is not currently enabled"), tostring(atcpErr))
   end)
 end)

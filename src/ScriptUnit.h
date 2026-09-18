@@ -26,11 +26,15 @@
 
 #include "utils.h"
 
+#include <QList>
 #include <QMap>
 #include <QPointer>
 #include <QString>
+#include <QtGlobal>
 
 #include <list>
+#include <tuple>
+#include <vector>
 
 class Host;
 class TScript;
@@ -49,6 +53,12 @@ public:
     QMap<int, TScript*> getScriptList() { return mScriptMap; }
 
     TScript* getScript(int id);
+    // Activates/deactivates every script with this name and refreshes its
+    // editor tree icon - mirrors TriggerUnit::enableTrigger()/disableTrigger()
+    // so every caller benefits, not just the Lua enableScript()/disableScript()
+    // binding that used to do this inline.
+    bool enableScript(const QString& name);
+    bool disableScript(const QString& name);
     void compileAll(bool saveLoadingError = false);
     bool registerScript(TScript* pT);
     void unregisterScript(TScript* pT);
@@ -74,6 +84,7 @@ public:
     std::tuple<QString, int, int, int> assembleReport();
 
     QList<TScript*> uninstallList;
+    bool hasPendingDeletes() const { return !uninstallList.isEmpty(); }
 
 
 private:

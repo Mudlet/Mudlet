@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+# Builds a Mudlet .deb or .rpm in Docker and leaves the install-tested package in
+# the output directory. Nothing is installed on the host.
+set -euo pipefail
+
+HERE="$(dirname "$(readlink -f "$0")")"
+
+usage() {
+  cat <<EOF
+Usage: $0 deb|rpm [options]
+
+  -b, --base IMAGE     distribution to build for (default: ubuntu:26.04 or fedora:44)
+  -s, --source DIR     Mudlet checkout with submodules (default: the one holding this script)
+  -v, --version X.Y.Z  release version; without it the package is a snapshot of
+                       APP_VERSION stamped with the commit date and hash
+  -r, --release N      package revision (default: 1)
+  -o, --output DIR     where to put the package (default: out)
+  -j, --jobs N         parallel compile jobs (default: ninja's)
+      --skip-verify    skip install-testing the package in a clean image
+      --plain          plain build log instead of the progress display
+EOF
+}
+
+FORMAT="${1:-}"
+case "$FORMAT" in
+  deb) BASE=ubuntu:26.04 ;;
+  rpm) BASE=fedora:44 ;;
+  -h|--help) usage; exit 0 ;;
+  *) usage >&2; exit 2 ;;
+esac
+shift
+
+SOURCE="$(readlink -f "$HERE/../..")"
+VERSION=""
+RELEASE=1
+OUTPUT=out
+JOBS=""
+TARGET="export"
+PROGRESS=auto
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -b|--base) BASE="$2"; shift 2 ;;
+    -s|--source) SOURCE="$(readlink -f "$2")"; shift 2 ;;
+    -v|--version) VERSION="$2"; shift 2 ;;
+    -r|--release) RELEASE="$2"; shift 2 ;;
+    -o|--output) OUTPUT="$2"; shift 2 ;;
+    -j|--jobs) JOBS="$2"; shift 2 ;;
+    --skip-verify) TARGET=export-unverified; shift ;;
+    --plain) PROGRESS=plain; shift ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "unknown option: $1" >&2; usage >&2; exit 2 ;;
+  esac
+done
+
+# The build context carries no .git, so CMake cannot fetch a missing submodule
+if git -C "$SOURCE" submodule status --recursive | grep -q '^-'; then
+  echo "$SOURCE has uninitialised submodules - run: git submodule update --init --recursive" >&2
+  exit 1
+fi
+
+COMMIT="$(git -C "$SOURCE" rev-parse --short HEAD)"
+SNAPSHOT=""
+if [[ -z "$VERSION" ]]; then
+  VERSION="$(sed -nE 's/^set\(APP_VERSION ([0-9.]+)\)$/\1/p' "$SOURCE/CMakeLists.txt")"
+  SNAPSHOT="$(git -C "$SOURCE" show -s --format=%cd --date=format:%Y%m%d HEAD).${COMMIT}"
+fi
+if [[ ! "$VERSION" =~ ^[0-9]+(\.[0-9]+)*$ ]]; then
+  echo "unusable version '$VERSION'" >&2
+  exit 1
+fi
+
+mkdir -p "$OUTPUT"
+echo "==> building $FORMAT of $VERSION${SNAPSHOT:+ snapshot $SNAPSHOT} for $BASE"
+
+docker build \
+  --file "$HERE/$FORMAT/Dockerfile" \
+  --build-context "packaging=$HERE/$FORMAT" \
+  --target "$TARGET" \
+  --output "type=local,dest=$OUTPUT" \
+  --progress "$PROGRESS" \
+  --build-arg "BASE_IMAGE=$BASE" \
+  --build-arg "BUILD_COMMIT=$COMMIT" \
+  --build-arg "BUILD_JOBS=$JOBS" \
+  --build-arg "PKG_VERSION=$VERSION" \
+  --build-arg "PKG_SNAPSHOT=$SNAPSHOT" \
+  --build-arg "PKG_RELEASE=$RELEASE" \
+  "$SOURCE"
+
+ls -l "$OUTPUT"

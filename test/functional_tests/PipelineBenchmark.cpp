@@ -40,8 +40,11 @@
  * package; see docs/libmudlet-perf-baseline.md.
  */
 
+#include <QFile>
 #include <QFileInfo>
+#include <QPainter>
 #include <QTemporaryDir>
+#include <QTextStream>
 #include <QtTest/QtTest>
 
 #include <algorithm>
@@ -67,6 +70,7 @@
 #define BENCH_BUILD_ASAN 0
 #endif
 
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -102,6 +106,8 @@ private:
     // Both phases feed these identical bytes, so text and trigger numbers are
     // directly comparable.
     QByteArray mCorpus;
+    // The corpus cut into reads when MUDLET_BENCH_CHUNK_BYTES is set:
+    QList<QByteArray> mChunks;
     int mCorpusLines = 0;
     qint64 mCorpusBytes = 0;
     double mTextBestPassSeconds = 0.0;
@@ -141,6 +147,9 @@ private:
     static constexpr int kDisplayTailLargeWidth = 1600;
     static constexpr int kDisplayTailLargeHeight = 1000;
     static constexpr int kDisplayTailPaints = 400;
+
+    static constexpr int kDisplayOverlayBandRows = 3;
+    static constexpr int kDisplayOverlayPaints = 400;
 
     enum class LineShape {
         Prompt,
@@ -384,9 +393,64 @@ private:
     // capture path (the cost we want) but TTrigger::execute() returns before any
     // Lua runs - keeping Lua execution and buffer pollution out of the timed path.
     // Prompt triggers are omitted: they need a GA signal a loopback feed cannot send.
+    // The root list changing while text arrives is what a real profile does -
+    // any script that arms or kills a temporary trigger - and it is what decides
+    // whether the prescan index can be maintained rather than rebuilt. One
+    // trigger that matches every line and churns one temporary trigger per line
+    // is the worst case of that, so it is the arm to measure the index against.
+    int installChurnTrigger(Host* host, bool& allOk)
+    {
+        if (qgetenv("MUDLET_BENCH_CHURN").isEmpty()) {
+            return 0;
+        }
+        auto* pT = new TTrigger(qsl("bench_churn"), {qsl("e")}, {REGEX_SUBSTRING}, false, host);
+        pT->setIsFolder(false);
+        pT->setTemporary(false);
+        pT->setIsActive(true);
+        allOk = pT->registerTrigger() && allOk;
+        // The kill is held back a few lines so that the arming has been applied
+        // to the index before the killing reaches it. Arming and killing on the
+        // same line is the commoner shape, but the two cancel out before the
+        // index sees either, so it measures nothing about maintaining one.
+        allOk = pT->setScript(qsl("__bench_churn_n = (__bench_churn_n or 0) + 1 "
+                                  "__bench_churn_q = __bench_churn_q or {} "
+                                  "__bench_churn_q[#__bench_churn_q + 1] = tempTrigger('__bench_churn__', '--') "
+                                  "if #__bench_churn_q > 8 then killTrigger(table.remove(__bench_churn_q, 1)) end"))
+                && allOk;
+        allOk = pT->state() && allOk;
+        return 1;
+    }
+
     int installTriggerSet(Host* host, bool& allOk)
     {
         int n = 0;
+
+        // A plain-substring workload of arbitrary size, one pattern per line,
+        // for measuring how matching scales with trigger count.
+        const QByteArray substringFile = qgetenv("MUDLET_BENCH_SUBSTRINGS");
+        if (!substringFile.isEmpty()) {
+            QFile f(QString::fromLocal8Bit(substringFile));
+            if (!f.open(QIODevice::ReadOnly | QIODevice::Text)) {
+                allOk = false;
+                return 0;
+            }
+            QTextStream in(&f);
+            while (!in.atEnd()) {
+                const QString pattern = in.readLine();
+                if (pattern.isEmpty()) {
+                    continue;
+                }
+                auto* pT = new TTrigger(qsl("bench_%1").arg(n), {pattern}, {REGEX_SUBSTRING}, false, host);
+                pT->setIsFolder(false);
+                pT->setTemporary(false);
+                pT->setIsActive(true);
+                allOk = pT->registerTrigger() && allOk;
+                allOk = pT->setScript(QString()) && allOk;
+                allOk = pT->state() && allOk;
+                ++n;
+            }
+            return n + installChurnTrigger(host, allOk);
+        }
 
         auto addKind = [&](const QStringList& patterns, int kind, bool multiline) {
             QList<int> kinds;
@@ -467,7 +531,7 @@ private:
         addKind({qsl("The (\\w+) hits you"), qsl("damage")}, REGEX_PERL, true);
         addKind({qsl("(\\w+) tells you"), qsl("tower")}, REGEX_PERL, true);
 
-        return n;
+        return n + installChurnTrigger(host, allOk);
     }
 
     double feedCorpusBestPass(Host* host, int passes)
@@ -476,10 +540,32 @@ private:
         for (int i = 0; i < passes; ++i) {
             QElapsedTimer timer;
             timer.start();
-            host->mTelnet.loopbackTest(mCorpus);
+            if (mChunks.isEmpty()) {
+                host->mTelnet.loopbackTest(mCorpus);
+            } else {
+                for (QByteArray& chunk : mChunks) {
+                    host->mTelnet.loopbackTest(chunk);
+                }
+            }
             best = std::min(best, timer.nsecsElapsed() / 1.0e9);
         }
         return best;
+    }
+
+    // A knob that is set but not a positive whole number fails the run rather
+    // than being ignored, as ignoring it would stamp the run as a standard one.
+    static int positiveKnob(const char* name)
+    {
+        if (!qEnvironmentVariableIsSet(name)) {
+            return 0;
+        }
+        bool ok = false;
+        const int value = qEnvironmentVariable(name).toInt(&ok);
+        if (!ok || value <= 0) {
+            QTest::qFail(qPrintable(qsl("%1=\"%2\" is not a positive whole number").arg(QString::fromLatin1(name), qEnvironmentVariable(name))), __FILE__, __LINE__);
+            return 0;
+        }
+        return value;
     }
 
     static void emitMetric(const char* name, double value)
@@ -562,15 +648,41 @@ private slots:
         // whatever the environment or Lua startup leaves LC_NUMERIC at.
         std::setlocale(LC_NUMERIC, "C");
         initializeQRCResources();
-        mCorpus = generateCorpus(kCorpusLines, mCorpusLines);
+        // MUDLET_BENCH_LINES feeds a corpus of that many lines instead of the
+        // fixed one and MUDLET_BENCH_CHUNK_BYTES feeds it in reads of that size
+        // rather than one burst. Either makes a different workload from the
+        // standard one, so corpus_version is reported as 0 and the compare
+        // script refuses to set such a run against a standard run.
+        const int requestedLines = positiveKnob("MUDLET_BENCH_LINES");
+        const int chunkBytes = positiveKnob("MUDLET_BENCH_CHUNK_BYTES");
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        const bool linesOverridden = requestedLines > 0;
+        const bool chunked = chunkBytes > 0;
+
+        mCorpus = generateCorpus(linesOverridden ? requestedLines : kCorpusLines, mCorpusLines);
         mCorpusBytes = mCorpus.size();
-        QCOMPARE(mCorpusLines, kCorpusLines);
-        QCOMPARE(mCorpusBytes, kCorpusBytesForVersion);
+        if (linesOverridden) {
+            QCOMPARE(mCorpusLines, requestedLines);
+        } else {
+            QCOMPARE(mCorpusLines, kCorpusLines);
+            QCOMPARE(mCorpusBytes, kCorpusBytesForVersion);
+        }
+        if (chunked) {
+            for (qsizetype offset = 0; offset < mCorpus.size(); offset += chunkBytes) {
+                mChunks.append(mCorpus.mid(offset, chunkBytes));
+            }
+            qInfo().nospace() << "Feeding in " << mChunks.size() << " reads of up to " << chunkBytes << " bytes";
+        }
         // Invariants, emitted here so they are present regardless of which bench
         // slots run: the compare script rejects an ASan-vs-release comparison,
-        // and a comparison across two different corpora.
+        // and a comparison across two different corpora or workloads.
         emitMetric("build_asan", static_cast<qint64>(BENCH_BUILD_ASAN));
-        emitMetric("corpus_version", static_cast<qint64>(kCorpusVersion));
+        emitMetric("corpus_version", static_cast<qint64>((linesOverridden || chunked) ? 0 : kCorpusVersion));
+        if (chunked) {
+            emitMetric("bench_chunk_bytes", static_cast<qint64>(chunkBytes));
+        }
         qInfo().nospace() << "Corpus: " << mCorpusLines << " lines, " << mCorpusBytes << " bytes";
     }
 
@@ -585,7 +697,7 @@ private slots:
         mPort = mpServer->serverPort();
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -676,6 +788,17 @@ private slots:
         host->mTelnet.loopbackTest(probe);
         QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(benchSentinelFired)")), "sentinel trigger did not fire - the trigger engine is not seeing pipeline data");
 
+        // Both arms of a churn measurement have to have churned the same amount,
+        // or a cheaper number only means the root list stopped moving.
+        if (!qgetenv("MUDLET_BENCH_CHURN").isEmpty()) {
+            lua_State* L = host->getLuaInterpreter()->getLuaGlobalState();
+            lua_getglobal(L, "__bench_churn_n");
+            const qint64 churnFires = static_cast<qint64>(lua_tonumber(L, -1));
+            lua_pop(L, 1);
+            QVERIFY2(churnFires > 1000, "the churn trigger did not arm and kill anything - the measurement would compare two static indexes");
+            emitMetric("churn_fires", churnFires);
+        }
+
         emitMetric("trigger_count", static_cast<qint64>(triggerCount));
         emitMetric("trigger_lines_per_sec", mCorpusLines / seconds);
         emitMetric("trigger_mb_per_sec", (mCorpusBytes / 1.0e6) / seconds);
@@ -716,12 +839,8 @@ private slots:
         Host* host = startProfile(DefaultPackages::Install);
         QVERIFY(host);
         const int rootTriggers = static_cast<int>(host->getTriggerUnit()->getTriggerRootNodeList().size());
-        // The starter UI is gated on mudlet::experiencedMudletPlayer(), which
-        // answers from the config root's Mudlet history - the empty one
-        // initTestCase() redirects to - and without it this slot silently
-        // measures the same thing as benchTextPipeline. A trigger count would
-        // not catch that: the other default packages register root folders of
-        // their own.
+        // A trigger count would not catch a missing starter UI: the other default
+        // packages register root folders of their own.
         QVERIFY2(host->mInstalledPackages.contains(qsl("mudlet-base-ui")),
                  "the starter UI is not installed, so this profile is not the one a new user gets and defaults_* "
                  "would describe something else entirely.");
@@ -821,6 +940,12 @@ private slots:
         // difference between two builds means they did not draw the same thing.
         emitMetric("display_rows_per_paint", static_cast<qint64>(rows));
         emitMetric("display_cols_per_paint", static_cast<qint64>(pane->getColumnCount()));
+        // Not the workload but the surface under it, and an invariant for the
+        // same reason: every display timing below is paid per device pixel,
+        // while every other invariant here is logical and so identical at any
+        // scale factor. Without this a run at 1.0 and a run at 2.0 agree on
+        // everything the script checks and disagree on every paint timing.
+        emitMetric("display_device_pixel_ratio", pane->devicePixelRatioF());
         // Lines/s the display can sustain, directly comparable to text_lines_per_sec.
         emitMetric("display_lines_per_sec", paintsPerSec * rows);
     }
@@ -875,8 +1000,124 @@ private slots:
         emitMetric("display_tail_cost_ratio", large.paintMs / small.paintMs);
     }
 
+    // The third way into drawForeground(), and the one nothing else here covers:
+    // a partial repaint with no new text and no scroll, which is what a window
+    // or a Geyser label dragged over the console leaves behind.
+    //
+    // Its guard on the cached screen is separate from the scroll shortcut's, and
+    // when it rejects the cache the repaint falls through to that shortcut, which
+    // blits and then redraws nothing - so the damaged band is never drawn and the
+    // paint gets FASTER. Issue #10341 was exactly that, and both benchmarks above
+    // stayed flat through it - which is why this one exists. Reproducing it now
+    // means reverting #10343 and running at a fractional QT_SCALE_FACTOR.
+    void benchDisplayOverlay()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        QVERIFY(noTriggersAreRunningYet(host));
+
+        host->mTelnet.loopbackTest(mCorpus);
+        const int bufferedLines = host->mpConsole->buffer.getLastLineNumber();
+        QVERIFY2(bufferedLines > 1000, qPrintable(qsl("console buffer only holds %1 lines - the pipeline did not process the corpus").arg(bufferedLines)));
+
+        TTextEdit* pane = host->mpConsole->mUpperPane;
+        QVERIFY(pane);
+
+        OverlayResult small;
+        measureOverlayPaints(pane, bufferedLines, kDisplayTailSmallWidth, kDisplayTailSmallHeight, small);
+        QVERIFY2(!QTest::currentTestFailed(), "the small-window pass did not produce a usable measurement");
+
+        OverlayResult large;
+        measureOverlayPaints(pane, bufferedLines, kDisplayTailLargeWidth, kDisplayTailLargeHeight, large);
+        QVERIFY2(!QTest::currentTestFailed(), "the large-window pass did not produce a usable measurement");
+
+        QVERIFY2(large.cells > small.cells * 2.0,
+                 qPrintable(qsl("the large pane draws %1 cells against the small pane's %2, which is too close to compare - the main window did not take one of the two sizes")
+                                    .arg(large.cells)
+                                    .arg(small.cells)));
+
+        emitMetric("display_overlay_small_paint_ms", small.paintMs);
+        emitMetric("display_overlay_large_paint_ms", large.paintMs);
+        emitMetric("display_overlay_small_cells", static_cast<qint64>(small.cells));
+        emitMetric("display_overlay_large_cells", static_cast<qint64>(large.cells));
+        emitMetric("display_overlay_area_ratio", large.cells / small.cells);
+        emitMetric("display_overlay_cost_ratio", large.paintMs / small.paintMs);
+        // 1 only when both windows really took the cached-screen blit, without
+        // which the timings above are not merely noisy but inverted: the build
+        // that lost the path is the faster-looking one.
+        emitMetric("display_overlay_cache_reused", static_cast<qint64>((small.cacheReused && large.cacheReused) ? 1 : 0));
+    }
+
 private:
     enum class DefaultPackages { Skip, Install };
+
+    struct OverlayResult
+    {
+        double paintMs = 0.0;
+        double cells = 0.0;
+        int rows = 0;
+        bool cacheReused = false;
+    };
+
+    // Whether a partial repaint really took drawForeground()'s cached-screen
+    // blit, observed rather than recomputed: a copy of the guard would go on
+    // agreeing with itself long after the guard it was copied from started
+    // rejecting the cache.
+    //
+    // Blitting the cache is not on its own the answer, because the scroll
+    // shortcut below it blits the same pixmap and is what a build with a broken
+    // guard falls through to. The two are told apart by what they redraw: the
+    // cached-screen blit redraws the damaged band, the scroll shortcut starts
+    // from the bottom row and leaves the band as it found it. So the cache is
+    // marked twice, once outside the band and once inside it, and only the
+    // wanted path arrives with the first mark and without the second.
+    bool overlayPaintReusedCache(TTextEdit* pane, QPixmap& target, const QRect& band)
+    {
+        const QColor outsideMark(0, 255, 0);
+        const QColor insideMark(0, 0, 255);
+        const int insideRow = band.top() / pane->mFontHeight;
+        markCacheRow(pane, 0, outsideMark);
+        markCacheRow(pane, insideRow, insideMark);
+        pane->render(&target, QPoint(), QRegion(band));
+
+        const QImage painted = pane->mRenderBuffer.toImage();
+        const int insideTop = qRound(insideRow * pane->mFontHeight * pane->devicePixelRatioF());
+        const double insideMarkLeft = markedFraction(painted, insideTop, insideMark);
+        const bool cacheWasBlitted = markedFraction(painted, 0, outsideMark) > 0.9;
+        const bool bandWasRedrawn = insideMarkLeft >= 0.0 && insideMarkLeft < 0.1;
+        return cacheWasBlitted && bandWasRedrawn;
+    }
+
+    static void markCacheRow(TTextEdit* pane, const int row, const QColor& colour)
+    {
+        QPainter mark(&pane->mScreenMap);
+        mark.setCompositionMode(QPainter::CompositionMode_Source);
+        mark.fillRect(QRect(0, row * pane->mFontHeight, pane->width(), pane->mFontHeight), colour);
+    }
+
+    // Share of a marked row still carrying its colour, or -1.0 if the row could
+    // not be read - which the caller has to treat as a failure, since "no mark
+    // found" is one of the two answers it is asking for. Sampled a few device
+    // rows below the top edge, which keeps the reading clear of the neighbouring
+    // row whatever the device pixel ratio rounded the boundary to.
+    static double markedFraction(const QImage& image, const int deviceTop, const QColor& colour)
+    {
+        if (image.isNull() || deviceTop < 0 || deviceTop + 6 >= image.height() || image.width() < 8) {
+            return -1.0;
+        }
+        const QRgb wanted = colour.rgb() | 0xff000000u;
+        int hits = 0;
+        int seen = 0;
+        for (int y = deviceTop + 2; y < deviceTop + 6; ++y) {
+            for (int x = 0; x < image.width(); x += 8) {
+                ++seen;
+                if ((image.pixel(x, y) | 0xff000000u) == wanted) {
+                    ++hits;
+                }
+            }
+        }
+        return seen ? static_cast<double>(hits) / seen : -1.0;
+    }
 
     struct TailResult
     {
@@ -949,6 +1190,68 @@ private:
         result.paintMs = (best / kDisplayTailPaints) * 1000.0;
     }
 
+    // Fills `result` for the reason measureTailPaints() gives.
+    void measureOverlayPaints(TTextEdit* pane, const int bufferedLines, const int windowWidth, const int windowHeight, OverlayResult& result)
+    {
+        mudlet::self()->resize(windowWidth, windowHeight);
+        qApp->processEvents();
+
+        result.rows = pane->getScreenHeight();
+        QVERIFY2(result.rows > kDisplayOverlayBandRows * 3,
+                 qPrintable(qsl("the display pane draws %1 rows, too few to hold a %2-row band with screen either side of it").arg(result.rows).arg(kDisplayOverlayBandRows)));
+        result.cells = static_cast<double>(result.rows) * pane->getColumnCount();
+
+        const int firstLine = result.rows + 16;
+        QVERIFY2(bufferedLines > firstLine + result.rows, qPrintable(qsl("%1 buffered lines cannot fill a %2-row screen that far into the buffer").arg(bufferedLines).arg(result.rows)));
+
+        QPixmap target(pane->size());
+        target.fill(Qt::magenta);
+
+        // A full paint first: it is what leaves a complete screen in the cache
+        // for the partial paints below to have something to reuse.
+        pane->scrollTo(firstLine);
+        pane->render(&target);
+        QVERIFY2(frameHasContent(target.toImage()), "the rendered frame is a single flat colour - nothing was drawn, so the timings below would describe an empty widget");
+        QVERIFY2(pane->imageTopLine() > 0, "the screen is at the very start of the buffer, where drawForeground() refuses the cached-screen blit outright");
+
+        const QRect band(0, (result.rows / 3) * pane->mFontHeight, pane->width(), kDisplayOverlayBandRows * pane->mFontHeight);
+        QVERIFY2(band.height() < pane->rect().height(), "the band covers the whole pane, so these would be full repaints rather than the partial ones this measures");
+        QVERIFY2(band.top() >= pane->mFontHeight, "the band starts at the top row, leaving no row above it for the probe below to mark");
+        // Any of these makes drawForeground() write the repaint back to the
+        // cache, which swaps the two pixmaps and leaves the probe reading the
+        // pre-render cache rather than what was just painted - reporting 0 for a
+        // reason that has nothing to do with the paint path. The first two also
+        // widen the redraw to the whole screen below the band, so the timings
+        // would stop describing a band at all.
+        QVERIFY2(!pane->mMouseTracking && !pane->mForceUpdate && pane->mDirtyFirstLine < 0,
+                 "a drag, a forced redraw or a pending dirty line is in progress, so this would measure a wider repaint than the band and read the wrong pixmap back");
+        // The probe marks the cache and reads the band back out of the buffer, so
+        // a cache too small to carry the marks would report them missing - the
+        // same answer as a rejected cache, arrived at for an unrelated reason.
+        QVERIFY2(!pane->mScreenMap.isNull() && pane->mScreenMap.height() >= qRound(band.bottom() * pane->devicePixelRatioF()),
+                 "the cached screen is too small to mark, so the probe could not tell a rejected cache from an unreadable one");
+
+        double best = std::numeric_limits<double>::max();
+        for (int pass = 0; pass < kDisplayPasses; ++pass) {
+            QElapsedTimer timer;
+            timer.start();
+            for (int i = 0; i < kDisplayOverlayPaints; ++i) {
+                pane->render(&target, QPoint(), QRegion(band));
+            }
+            best = std::min(best, timer.nsecsElapsed() / 1.0e9);
+        }
+        result.paintMs = (best / kDisplayOverlayPaints) * 1000.0;
+
+        // Last, because it leaves marks in the cache: nothing is timed after it.
+        result.cacheReused = overlayPaintReusedCache(pane, target, band);
+        if (!result.cacheReused) {
+            qWarning("%s",
+                     qPrintable(qsl("the %1x%2 window's repaints did not reuse the cached screen, so the overlay timings from it describe a paint that skipped the band rather than one that drew it")
+                                        .arg(windowWidth)
+                                        .arg(windowHeight)));
+        }
+    }
+
     // Called before the benchmark installs any of its own, so anything running
     // came from elsewhere and would be timed as pipeline cost.
     bool noTriggersAreRunningYet(Host* host)
@@ -984,7 +1287,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = mudlet::getMudletPath(enums::profileHomePath, profileName);
+        const QString path = MudletPaths::getMudletPath(enums::profileHomePath, profileName);
         QDir dir(path);
         if (dir.exists()) {
             dir.removeRecursively();

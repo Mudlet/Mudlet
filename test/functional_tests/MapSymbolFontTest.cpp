@@ -33,6 +33,7 @@
  * Run with: ctest -R MapSymbolFontTest -V
  */
 
+#include <QDataStream>
 #include <QFileInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -47,6 +48,7 @@
 #include <QScopeGuard>
 #include <QTableWidget>
 
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -94,7 +96,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        QDir dir(mudlet::getMudletPath(enums::profileHomePath, profileName));
+        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, profileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }
@@ -120,15 +122,18 @@ private:
         QVERIFY2(scalingSpinBox(), "The symbol scaling spin-box was not found in the Symbols group box");
     }
 
-    void saveAndClosePreferences()
+    // Closing the dialog is what writes the last edit back, and the hidden Save
+    // button does no more than call close() - so this asks the dialog to close
+    // rather than clicking a button that is on its way out of the .ui file
+    void closePreferences()
     {
-        mpPreferences->closeButton->click();
+        mpPreferences->close();
         QVERIFY2(QTest::qWaitFor(
                          [this]() {
                              return mpHost->mpDlgProfilePreferences.isNull();
                          },
                          5000),
-                 "Preferences dialog should have been destroyed by Save");
+                 "Preferences dialog should have been destroyed by closing it");
         mpPreferences = nullptr;
     }
 
@@ -206,7 +211,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -222,8 +227,7 @@ private slots:
         mpHost = nullptr;
         delete mpServer;
         mpServer = nullptr;
-        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
-        // getMudletPath() dereferences the instance rather than checking it
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
             deleteProfileDirectory(mProfileName);
             delete mudlet::self();
@@ -357,6 +361,21 @@ private slots:
         QCOMPARE(map()->getOnlySymbolFontUsed(), onlyUseSetElsewhere);
     }
 
+    // The symbol font is the one of the three that only the dialog can set, and
+    // closing is what writes back an edit the debounce has not carried yet.
+    void test_closingPreferencesWritesTheChosenSymbolFont()
+    {
+        openPreferences();
+
+        const QString chosen = anotherFontFamily();
+        QVERIFY2(!chosen.isEmpty(), "this machine offers only the font already in use, so choosing another proves nothing");
+        mpPreferences->fontComboBox_mapSymbols->setCurrentFont(QFont(chosen));
+
+        closePreferences();
+
+        QCOMPARE(map()->getSymbolFont().family(), chosen);
+    }
+
     // The half of that which actually reverts a script's change: Save writes the
     // controls back to the map, so a stale control silently undoes it.
     void test_savingPreferencesKeepsMapSymbolSettingsSetElsewhere()
@@ -371,7 +390,7 @@ private slots:
         // half:
         QCOMPARE(scalingSpinBox()->value(), scalingSetElsewhere);
 
-        saveAndClosePreferences();
+        closePreferences();
 
         QCOMPARE(map()->getSymbolFontFudgeFactor(), scalingSetElsewhere);
     }
@@ -391,7 +410,7 @@ private slots:
         }
         QVERIFY2(!qFuzzyCompare(map()->getSymbolFontFudgeFactor(), typedIn), "the map already had the value, so Save writing it would prove nothing");
 
-        saveAndClosePreferences();
+        closePreferences();
 
         QCOMPARE(map()->getSymbolFontFudgeFactor(), typedIn);
     }
@@ -440,7 +459,7 @@ private slots:
         QVERIFY(map()->setSymbolFontFudgeFactor(preciseScaling));
         QVERIFY2(!qFuzzyCompare(scalingSpinBox()->value(), preciseScaling), "the spin-box showed the factor exactly, so rounding could not be detected");
 
-        saveAndClosePreferences();
+        closePreferences();
 
         QCOMPARE(map()->getSymbolFontFudgeFactor(), preciseScaling);
     }
@@ -537,9 +556,7 @@ private slots:
         QSaveFile mapFile(file);
         QVERIFY(mapFile.open(QIODevice::WriteOnly));
         QDataStream out(&mapFile);
-        if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            out.setVersion(mudlet::scmQDataStreamFormat_5_12);
-        }
+        out.setVersion(QDataStream::Qt_5_12);
         QVERIFY(map()->serialize(out, map()->mDefaultVersion));
         QVERIFY(mapFile.commit());
 
@@ -562,9 +579,7 @@ private slots:
         QSaveFile mapFile(binaryFile);
         QVERIFY(mapFile.open(QIODevice::WriteOnly));
         QDataStream out(&mapFile);
-        if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            out.setVersion(mudlet::scmQDataStreamFormat_5_12);
-        }
+        out.setVersion(QDataStream::Qt_5_12);
         QVERIFY(map()->serialize(out, map()->mDefaultVersion));
         QVERIFY(mapFile.commit());
 
@@ -624,7 +639,7 @@ private slots:
         QVERIFY(mpPreferences->checkBox_isOnlyMapSymbolFontToBeUsed->isChecked());
 
         // and Save must not now put the pre-load values back:
-        saveAndClosePreferences();
+        closePreferences();
         QCOMPARE(map()->getSymbolFontFudgeFactor(), scalingInFile);
         QVERIFY(map()->getOnlySymbolFontUsed());
     }

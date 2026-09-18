@@ -24,6 +24,7 @@
 #include "TMap.h"
 
 #include "Host.h"
+#include "MudletPaths.h"
 #include "TArea.h"
 #include "TConsole.h"
 #include "TEvent.h"
@@ -33,6 +34,7 @@
 #include "TRoomDB.h"
 #include "XMLimport.h"
 #include "dlgMapper.h"
+#include "dlgTriggerEditor.h"
 #include "TLuaInterpreter.h"
 #include "mapInfoContributorManager.h"
 #include "mudlet.h"
@@ -680,7 +682,7 @@ void TMap::audit()
                         // now:
                         const int newID = createMapLabel(areaID, l.text, l.pos.x(), l.pos.y(), l.pos.z(), l.fgColor, l.bgColor, true, false, false, 40.0, 50, std::nullopt, l.fgColor);
                         if (newID > -1) {
-                            if (mudlet::self()->showMapAuditErrors()) {
+                            if (smShowMapAuditErrors) {
                                 const QString msg = tr("[ INFO ] - CONVERTING: old style label, areaID:%1 labelID:%2.").arg(areaID).arg(i);
                                 postMessage(msg);
                             }
@@ -688,7 +690,7 @@ void TMap::audit()
                             pArea->mMapLabels[i] = pArea->mMapLabels.take(newID);
 
                         } else {
-                            if (mudlet::self()->showMapAuditErrors()) {
+                            if (smShowMapAuditErrors) {
                                 const QString msg = tr("[ WARN ] - CONVERTING: cannot convert old style label in area with id: %1,  label id is: %2.").arg(areaID).arg(i);
                                 postMessage(msg);
                             }
@@ -1703,19 +1705,10 @@ bool TMap::validatePotentialMapFile(QFile& file, QDataStream& ifs)
     }
 
     ifs.setDevice(&file);
-    // Is the RUN-TIME version of the Qt libraries equal to or more than
-    // Qt 5.13.0? Then force things to use the backwards compatible format
-    // - for us - of Qt 5.12.0 - this is needed because the way that the
-    // QFont class is stored in a binary format has changed at 5.13 and it
-    // causes crashes when a new version of the Qt libraries tries to read
-    // the older format:
-    if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-        // 18 is the enum value corresponding to QDataStream::Qt_5_12 which
-        // we want to force to be used but we cannot use the enum directly
-        // because it will not be defined in older versions of the Qt
-        // library when the code is compilated:
-        ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
-    }
+    // QFont's binary representation changed at Qt 5.13, so the stream version is
+    // pinned to Qt 5.12's here and everywhere else Mudlet reads or writes one,
+    // to keep the files readable across Mudlet versions:
+    ifs.setVersion(QDataStream::Qt_5_12);
     ifs >> version;
     if ((version < 1) || (version > 127)) {
         const QString errMsg = tr("[ ALERT ] - File does not seem to be a Mudlet Map file. The part that indicates\n"
@@ -1788,7 +1781,7 @@ bool TMap::restore(QString location)
     QStringList entries;
 
     if (location.isEmpty()) {
-        folder = mudlet::getMudletPath(enums::profileMapsPath, mProfileName);
+        folder = MudletPaths::getMudletPath(enums::profileMapsPath, mProfileName);
         const QDir dir(folder);
         QStringList filters;
         filters << qsl("*.[dD][aA][tT]");
@@ -2010,7 +2003,7 @@ bool TMap::restore(QString location)
             const QString defaultAreaInsertionMsg = tr("[ INFO ]  - Default (reset) area (for rooms that have not been assigned to an\n"
                                                        "area) not found, adding reserved -1 id.");
             appendErrorMsgWithNoLf(defaultAreaInsertionMsg, false);
-            if (mudlet::self()->showMapAuditErrors()) {
+            if (smShowMapAuditErrors) {
                 postMessage(defaultAreaInsertionMsg);
             }
         }
@@ -2135,7 +2128,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
 
     QString folder;
     QStringList entries;
-    folder = mudlet::getMudletPath(enums::profileMapsPath, profile);
+    folder = MudletPaths::getMudletPath(enums::profileMapsPath, profile);
     QDir dir(folder);
     dir.setSorting(QDir::Time);
     entries = dir.entryList(QDir::Filters(QDir::Files | QDir::NoDotAndDotDot), QDir::Time);
@@ -2159,14 +2152,12 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
     }
     int otherProfileVersion = 0;
     QDataStream ifs(&file);
-    if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-        ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
-    }
+    ifs.setVersion(QDataStream::Qt_5_12);
     ifs >> otherProfileVersion;
 
     const QString infoMsg = tr(R"([ INFO ]  - Checking map file "%1", format version "%2".)").arg(file.fileName()).arg(otherProfileVersion);
     appendErrorMsg(infoMsg, false);
-    if (mudlet::self()->showMapAuditErrors()) {
+    if (smShowMapAuditErrors) {
         postMessage(infoMsg);
     }
 
@@ -2667,22 +2658,22 @@ void TMap::pushErrorMessagesToFile(const QString title, const bool isACleanup)
     mapAuditErrors.clear();
     mapAuditAreaErrors.clear();
     mapAuditRoomErrors.clear();
-    if (mIsFileViewingRecommended && (!mudlet::self()->showMapAuditErrors())) {
+    if (mIsFileViewingRecommended && (!smShowMapAuditErrors)) {
         postMessage(tr("[ ALERT ] - At least one thing was detected during that last map operation\n"
                        "that it is recommended that you review the most recent report in\n"
                        "the file:\n"
                        "\"%1\"\n"
                        "- look for the (last) report with the title:\n"
                        "\"%2\".")
-                            .arg(mudlet::getMudletPath(enums::profileLogErrorsFilePath, mProfileName), title));
-    } else if (mIsFileViewingRecommended && mudlet::self()->showMapAuditErrors()) {
+                            .arg(MudletPaths::getMudletPath(enums::profileLogErrorsFilePath, mProfileName), title));
+    } else if (mIsFileViewingRecommended && smShowMapAuditErrors) {
         postMessage(tr("[ INFO ]  - The equivalent to the above information about that last map\n"
                        "operation has been saved for review as the most recent report in\n"
                        "the file:\n"
                        "\"%1\"\n"
                        "- look for the (last) report with the title:\n"
                        "\"%2\".")
-                            .arg(mudlet::getMudletPath(enums::profileLogErrorsFilePath, mProfileName), title));
+                            .arg(MudletPaths::getMudletPath(enums::profileLogErrorsFilePath, mProfileName), title));
     }
 
     mIsFileViewingRecommended = false;
@@ -2740,7 +2731,7 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
 
     // Check to ensure we have a map directory to save the map files to.
     const QDir toProfileDir;
-    const QString toProfileDirPathString = mudlet::getMudletPath(enums::profileMapsPath, mProfileName);
+    const QString toProfileDirPathString = MudletPaths::getMudletPath(enums::profileMapsPath, mProfileName);
     if (!toProfileDir.mkpath(toProfileDirPathString)) {
         const QString errMsg = tr("[ ERROR ] - Unable to use or create directory to store map.\n"
                                   "Please check that you have permissions/access to:\n"
@@ -2754,9 +2745,9 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
 
     if (localFileName.isEmpty()) {
         if (url.path().endsWith(QLatin1String("xml"), Qt::CaseInsensitive)) {
-            mLocalMapFileName = mudlet::getMudletPath(enums::profileXmlMapPathFileName, mProfileName);
+            mLocalMapFileName = MudletPaths::getMudletPath(enums::profileXmlMapPathFileName, mProfileName);
         } else {
-            mLocalMapFileName = mudlet::getMudletPath(enums::profileMapPathFileName, mProfileName, qsl("map.dat"));
+            mLocalMapFileName = MudletPaths::getMudletPath(enums::profileMapPathFileName, mProfileName, qsl("map.dat"));
         }
     } else {
         mLocalMapFileName = localFileName;
@@ -3396,12 +3387,12 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     QString destination{dest};
 
     if (destination.isEmpty()) {
-        const QString destFolder = mudlet::getMudletPath(enums::profileMapsPath, mProfileName);
+        const QString destFolder = MudletPaths::getMudletPath(enums::profileMapsPath, mProfileName);
         const QDir destDir(destFolder);
         if (!destDir.exists()) {
             destDir.mkdir(destFolder);
         }
-        destination = mudlet::getMudletPath(enums::profileDateTimeStampedJsonMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
+        destination = MudletPaths::getMudletPath(enums::profileDateTimeStampedJsonMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
     }
 
     if (!destination.endsWith(QLatin1String(".json"), Qt::CaseInsensitive)) {

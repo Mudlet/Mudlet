@@ -23,7 +23,9 @@
 
 #include "EAction.h"
 
-#include "mudlet.h" // this includes the needed Host class header
+#include "ActionUnit.h"
+#include "Host.h"
+#include "mudlet.h"
 #include "TAction.h"
 
 

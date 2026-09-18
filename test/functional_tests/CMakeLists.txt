@@ -4,6 +4,7 @@ endif()
 
 # Defined in the parent test/CMakeLists.txt; TESTS is per-directory, so call it here too.
 cmake_language(DEFER CALL restore_windows_test_output)
+cmake_language(DEFER CALL sandbox_test_config_dirs)
 
 set(FUNCTIONAL_TEST_SOURCES
 )
@@ -37,12 +38,15 @@ set(WINDOW_GROUP_TEST_SOURCES
     CopyAsImageTest.cpp
     DebugConsoleFilterTest.cpp
     FrontendRefreshSeamTest.cpp
+    CommandLineKeyHandlingTest.cpp
     DetachedWindowMenuShortcutsTest.cpp
     FramePacingTest.cpp
     GlyphOverflowTest.cpp
     HyperlinkModelSplitTest.cpp
+    HostConsolePrintTest.cpp
     LabelAnchorInteractionTest.cpp
     LabelMovieRefusalTest.cpp
+    CaretNavigationTest.cpp
     MainConsoleSelectionTest.cpp
     TabDetachThresholdTest.cpp
     DetachedWindowDiscordButtonTest.cpp
@@ -50,30 +54,42 @@ set(WINDOW_GROUP_TEST_SOURCES
     CommandLineScrollRangeTest.cpp
     DetachedWindowOwnershipTest.cpp
     MxpFramePlacementTest.cpp
+    MxpDestFrameClearTest.cpp
     LabelBackgroundPaintTest.cpp
     MxpWatchdogBufferLifetimeTest.cpp
     NarrowWindowWrapTest.cpp
+    NotepadTest.cpp
+    NawsWidthReportTest.cpp
     DetachedWindowToolBarIconSizeTest.cpp
     PastedLinkStateTest.cpp
     ProfileSwitchMiniconsoleTest.cpp
     RecolouredLineCacheTest.cpp
+    TextEditAccessibleInterfaceTest.cpp
     TrackedLinkTrimTest.cpp
     ProfileSwitchShortcutTest.cpp
     SubCommandLineLifetimeTest.cpp
     WindowBackgroundTest.cpp
     WindowLayoutSaveTest.cpp
     WindowStateGettersTest.cpp
+    ConsoleSearchBarTest.cpp
     WrapLineRewrapTest.cpp
+    ScrollLostOnPartialRepaintTest.cpp
+    ScrollBarContrastTest.cpp
 )
 
 # Profiles: their config dir, their folders, and loading, saving and deleting them
 set(PROFILE_GROUP_TEST_SOURCES
+    CloseDuringProfileLoadTest.cpp
     ConfigDirOverrideTest.cpp
     ConnectionDialogCrashTest.cpp
+    ConnectionDialogFocusTest.cpp
+    ConnectionDialogOfflineProfileTest.cpp
     DefaultGameDeleteTest.cpp
+    DictionaryRoundTripTest.cpp
     MissingDisplayFontTest.cpp
     ProfileDeletionSafetyTest.cpp
     ProfileFolderNameTest.cpp
+    ProfileIniParseErrorTest.cpp
     ProfileLifecycleTest.cpp
     ProfileLoadTempFileTest.cpp
     ProfileRoundTripTest.cpp
@@ -83,43 +99,63 @@ set(PROFILE_GROUP_TEST_SOURCES
     XMLexportVariablesTest.cpp
 )
 
-# Telnet, and the protocols and escape sequences carried over it
+# Telnet and the other network protocols Mudlet speaks, and the escape sequences
+# carried over them
 set(TELNET_GROUP_TEST_SOURCES
     CsiCursorForwardTest.cpp
     cTelnetBufferTest.cpp
     GMCPCharLoginTest.cpp
+    SignInStoreReconcilerTest.cpp
     TelnetAtcpMspTest.cpp
+    TelnetLargeBurstTest.cpp
     TelnetLatencyMeasurementTest.cpp
     TelnetBenchmark.cpp
     TelnetCharsetNegotiationTest.cpp
+    TelnetChannel102WireTest.cpp
     CrashTestHookTest.cpp
     TelnetConnectFailureTest.cpp
     TelnetConnectLookupRaceTest.cpp
+    TelnetIacEscapingTest.cpp
     TelnetNewEnvironTest.cpp
     TelnetOptionsReportTest.cpp
     TelnetReconnectStateTest.cpp
     TelnetStringSequenceRecoveryTest.cpp
     TelnetTlsPromptTest.cpp
     TOscTest.cpp
+    MsdpMalformedDiagnosticTest.cpp
+    IrcMessageGuardTest.cpp
 )
 
 # Triggers and the other scriptable units, and what a running script does to them
 set(TRIGGER_GROUP_TEST_SOURCES
+    CaptureGroupParkingTest.cpp
+    BigramFilterTest.cpp
     CorruptTriggerPatternsTest.cpp
+    EmergencyStopResumeTest.cpp
     MultilineTriggerReentrancyTest.cpp
     SetScriptCallbackTest.cpp
     TFeedTriggersRecursionTest.cpp
     UnitDeferredDeleteTest.cpp
     UnitProcessingDepthTest.cpp
+    UnitsReachHostTest.cpp
 )
 
 # The script editor, and the trigger, variable and script forms it hosts
 set(EDITOR_GROUP_TEST_SOURCES
     dlgTriggerEditorUndoRedoTest.cpp
     EdbeeReinitTest.cpp
+    EditorClipboardXmlTest.cpp
     EditorBannerViewSwitchTest.cpp
+    ColorTriggerDialogTest.cpp
+    PackageExporterTest.cpp
+    EditorWindowPositionTest.cpp
+    MissingEditorThemeTest.cpp
     ScriptEventHandlerLifetimeTest.cpp
+    EditorSearchTest.cpp
+    TreeWidgetItemMoveTest.cpp
+    TriggerEditorDisclosureTest.cpp
     TriggerEditorTest.cpp
+    TriggerPatternListLayoutTest.cpp
     VariableEditorWriteBackTest.cpp
 )
 
@@ -129,26 +165,40 @@ set(MAP_GROUP_TEST_SOURCES
     MapAreaReassignmentTest.cpp
     MapAreaSelectionTest.cpp
     MapCloseDuringImportTest.cpp
+    MapCoordinateLimitTest.cpp
+    MapContextMenuLifetimeTest.cpp
     MapDownloadTest.cpp
+    RoomExitsDialogTest.cpp
     MapLevelOfDetailTest.cpp
+    MapMouseInteractionTest.cpp
     MapOffscreenCustomLineTest.cpp
     MapFileStatsTest.cpp
     MapLockNoOpTest.cpp
+    RoomPropertiesDialogTest.cpp
     MapperButtonConfigTest.cpp
+    MapperPanelTest.cpp
     MapProgressDialogSeamTest.cpp
     MapRoomGeometryTest.cpp
     MapRoundTripTest.cpp
     MapSymbolFontTest.cpp
+    RoomExitsDeletedEditItemTest.cpp
 )
 
 # Packages and modules: installing them, saving them and removing them
 set(PACKAGE_GROUP_TEST_SOURCES
     ActionSelfRemovalTest.cpp
     DefaultPackagesTest.cpp
+    DualPackageModuleTest.cpp
+    ModuleManagerListingTest.cpp
     ModuleSaveTeardownTest.cpp
+    PackageDownloadDialogRestyleTest.cpp
+    PackageExporterDialogTest.cpp
     PackageFontsOnRefusedArchiveTest.cpp
+    PackageManagerRemovalTest.cpp
     PackageRemovalSaveTeardownTest.cpp
+    PackageRepositoryDownloadTest.cpp
     PackageSelfRemovalTest.cpp
+    UnzipBadArchiveTest.cpp
 )
 
 # Onboarding and in-app guidance: the starter UI, the tutorial invitation,
@@ -157,16 +207,37 @@ set(STARTERUI_GROUP_TEST_SOURCES
     ExperiencedPlayerGateTest.cpp
     FeatureCalloutTest.cpp
     StarterUiGaugePanelTest.cpp
+    StarterUiProtocolCatchUpTest.cpp
     StarterUiSectionsTest.cpp
     StarterUiTriggerCostTest.cpp
+    TutorialInvitationFocusTest.cpp
     TutorialInvitationGateTest.cpp
     TutorialInvitationLayoutTest.cpp
 )
 
+# The settings dialog: its sidebar-and-cards shell, the deep links into it, how
+# a change reaches the Host, and what it does with no profile loaded
+set(SETTINGS_GROUP_TEST_SOURCES
+    SettingsAppearanceTest.cpp
+    SettingsBannerTest.cpp
+    SettingsDeepLinkTest.cpp
+    SettingsDirtyApplyTest.cpp
+    SettingsHostLifecycleTest.cpp
+    SettingsInstantApplyTest.cpp
+    SettingsLiveSyncTest.cpp
+    SettingsMmcpFlagsTest.cpp
+    SettingsRoundTripTest.cpp
+    SettingsSearchTest.cpp
+    SettingsShellNavigationTest.cpp
+    SettingsSpellCheckEnableTest.cpp
+)
+
 # Teardown: who owns a profile's dialogs and windows, and what becomes of them when it closes
 set(TEARDOWN_GROUP_TEST_SOURCES
+    AppStartupTeardownTest.cpp
     DialogTeardownTest.cpp
     HostChildTeardownTest.cpp
+    HostManagerAccessorTest.cpp
     HostWidgetDecouplingTest.cpp
 )
 
@@ -283,9 +354,18 @@ add_grouped_test_binary(functional_trigger_tests ${TRIGGER_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_editor_tests ${EDITOR_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_map_tests ${MAP_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_package_tests ${PACKAGE_GROUP_TEST_SOURCES})
+add_grouped_test_binary(functional_settings_tests ${SETTINGS_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_starterui_tests ${STARTERUI_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_teardown_tests ${TEARDOWN_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_media_tests ${MEDIA_GROUP_TEST_SOURCES})
+
+# AppStartupTeardownTest runs the shipped application instead of linking it, so it
+# needs that binary's path and needs it built by the time ctest runs. Naming the
+# target literally is deliberate: EXE_MUDLET_TARGET is a plain variable local to
+# src/CMakeLists.txt, so a rename there fails generation here rather than quietly
+# depending on nothing.
+add_dependencies(functional_teardown_tests mudlet_executable)
+target_compile_definitions(functional_teardown_tests PRIVATE MUDLET_APP_BINARY="$<TARGET_FILE:mudlet_executable>")
 
 # Every list's cases, so a grouped test's properties are the solo ones verbatim
 foreach(test_name ${allFunctionalTestNames})
@@ -326,8 +406,15 @@ foreach(test_name ${allFunctionalTestNames})
     # so ctest behaves the same locally and in CI. A test that needs it unset has to
     # unset it itself - nothing here checks that, so see DefaultPackagesTest, which
     # asserts the variable arrives at all.
+    #
+    # Qt adds the xdg-desktop-portal platform theme when it believes it is running
+    # sandboxed, which it decides from $SNAP, and that theme - not the application -
+    # then owns the colour scheme, so setColorScheme() stops having any effect. A
+    # cmake installed as a snap exports $SNAP to every test it runs, which makes
+    # Mudlet look sandboxed when it is an ordinary build-tree binary, so drop it.
     set_tests_properties(${test_name} PROPERTIES
         ENVIRONMENT "QT_QPA_PLATFORM=offscreen;MUDLET_TEST_MODE=1;${leakLog}ASAN_OPTIONS=${leakCheck}"
+        ENVIRONMENT_MODIFICATION "SNAP=unset:"
         LABELS "functional"
         TIMEOUT 60  # seconds
     )
@@ -336,6 +423,10 @@ endforeach()
 # ResetProfileTest creates a full profile per test method, so it needs a longer
 # timeout than the default 60s
 set_tests_properties(ResetProfileTest PROPERTIES TIMEOUT 300)
+
+# AppStartupTeardownTest starts the whole application eight times over, and a
+# sanitiser build spends seconds on each of those start-ups
+set_tests_properties(AppStartupTeardownTest PROPERTIES TIMEOUT 300)
 
 # Undo/redo tests need a longer timeout due to large batch operations
 set_tests_properties(dlgTriggerEditorUndoRedoTest PROPERTIES TIMEOUT 300)
@@ -346,7 +437,7 @@ set_tests_properties(MultilineTriggerReentrancyTest PROPERTIES TIMEOUT 300)
 # GMCPCharLoginTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(GMCPCharLoginTest PROPERTIES TIMEOUT 600)
 
-# DebugConsoleFilterTest boots a fresh profile for each of its 24 methods, and timed out against
+# DebugConsoleFilterTest boots a fresh profile for most of its methods, and timed out against
 # the default 60s on the macOS x86_64 runner, where it measured 46.95s when it passed. Waiting on
 # the connection dialog instead of sleeping through it took the Linux run from 30s to 9s, so this
 # is headroom rather than a necessity now, and it is what the other per-method-profile tests use.
@@ -355,6 +446,13 @@ set_tests_properties(DebugConsoleFilterTest PROPERTIES TIMEOUT 300)
 # TelnetReconnectStateTest creates a fresh profile per test method and reconnects it several
 # times per method, so it needs a longer timeout
 set_tests_properties(TelnetReconnectStateTest PROPERTIES TIMEOUT 300)
+
+# MsdpMalformedDiagnosticTest creates a fresh profile per test method, so it needs a longer timeout
+set_tests_properties(MsdpMalformedDiagnosticTest PROPERTIES TIMEOUT 300)
+
+# TelnetLargeBurstTest boots a full profile and then waits out a 780 KB burst,
+# both of which sanitiser builds stretch well past the default budget.
+set_tests_properties(TelnetLargeBurstTest PROPERTIES TIMEOUT 300)
 
 # TelnetLatencyMeasurementTest boots a full profile and then spends its runtime in
 # real time by design - every round trip it times, and every stall it places, has
@@ -391,9 +489,10 @@ set_tests_properties(ProfileLifecycleTest PROPERTIES TIMEOUT 300)
 # finish, because the assertion message is the whole point of the file. Its
 # nominal budget looks like ~120s of QTRY timeouts, but QTRY waits three times
 # what it is told: once to poll, then twice more to build the "would have passed
-# after N ms" debug message. Measured with every wire it covers cut, the file
-# takes 263s, so anything below that turns a readable failure into a silent
-# ctest kill. Guarded, because without the updater the test does not exist and
+# after N ms" debug message. Measured at 263s with every wire cut, and the five
+# cases added since each stop at their first blocking wait for at most 220s
+# more, so anything below that turns a readable failure into a silent ctest
+# kill. Guarded, because without the updater the test does not exist and
 # naming a test that does not exist is a hard CMake error
 if(USE_UPDATER)
     set_tests_properties(FeedChecksumRaceTest PROPERTIES TIMEOUT 600)
@@ -432,11 +531,36 @@ set_tests_properties(ProfileRoundTripTest MapRoundTripTest MapProgressDialogSeam
 # which takes minutes rather than milliseconds if the quadratic term returns
 set_tests_properties(MapAreaReassignmentTest PROPERTIES TIMEOUT 300)
 
+# The settings tests build the whole preferences dialog once per test method,
+# and several of them wait out a quiet window to prove no apply happened
+set_tests_properties(SettingsAppearanceTest
+                     SettingsBannerTest
+                     SettingsDeepLinkTest
+                     SettingsDirtyApplyTest
+                     SettingsHostLifecycleTest
+                     SettingsInstantApplyTest
+                     SettingsLiveSyncTest
+                     SettingsRoundTripTest
+                     SettingsSearchTest
+                     SettingsShellNavigationTest
+                     PROPERTIES TIMEOUT 300)
+
+# PackageRepositoryDownloadTest passes in seconds, so this timeout is only ever
+# reached by a run that is already failing - and each of its QTRY assertions has
+# to be allowed to run out, 15s apiece, before it can say what went wrong. That
+# adds up to a couple of minutes across the cases, so a shorter timeout would
+# turn a readable failure into a silent ctest kill
+set_tests_properties(PackageRepositoryDownloadTest PROPERTIES TIMEOUT 300)
+
+# PackageExporterDialogTest creates a fresh profile per test method and several of
+# its methods export and then install a package, so it needs a longer timeout
+set_tests_properties(PackageExporterDialogTest PROPERTIES TIMEOUT 300)
+
 # HostWidgetDecouplingTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(HostWidgetDecouplingTest PROPERTIES TIMEOUT 300)
 
 # ConsoleModelExtractionTest creates a fresh profile per test method, so it needs a longer timeout
-set_tests_properties(ConsoleModelExtractionTest PROPERTIES TIMEOUT 300)
+set_tests_properties(ConsoleModelExtractionTest PROPERTIES TIMEOUT 600)
 
 # ConnectionDialogCrashTest waits out two real profile copies (15s budget each)
 # on top of a full mudlet start under ASan, so the 60s default is too tight for
@@ -451,11 +575,20 @@ set_tests_properties(FrontendRefreshSeamTest PROPERTIES TIMEOUT 300)
 # them waits out a deliberately long OSC 8 reveal delay, so it needs a longer timeout
 set_tests_properties(HyperlinkModelSplitTest PROPERTIES TIMEOUT 300)
 
+# ConsoleSearchBarTest creates a fresh profile per test method, so it needs a longer timeout
+set_tests_properties(ConsoleSearchBarTest PROPERTIES TIMEOUT 300)
+
 # NarrowWindowWrapTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(NarrowWindowWrapTest PROPERTIES TIMEOUT 300)
 
+# NotepadTest creates a fresh profile per test method, so it needs a longer timeout
+set_tests_properties(NotepadTest PROPERTIES TIMEOUT 300)
+
 # WrapLineRewrapTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(WrapLineRewrapTest PROPERTIES TIMEOUT 300)
+
+# ScrollLostOnPartialRepaintTest creates a fresh profile per test method, so it needs a longer timeout
+set_tests_properties(ScrollLostOnPartialRepaintTest PROPERTIES TIMEOUT 300)
 
 # TelnetStringSequenceRecoveryTest runs its introducer matrix over a real
 # socket, waiting out cTelnet's 300ms idle flush in several cases and
@@ -484,3 +617,7 @@ else()
 endif()
 set_property(TEST TDiscordModeTest APPEND PROPERTY
     ENVIRONMENT_MODIFICATION "${DISCORD_RPC_PATH_VARIABLE}=path_list_prepend:${CMAKE_SOURCE_DIR}/3rdparty/discord/rpc/lib")
+# Report-only: what a Lua enableTrigger()/disableTrigger() call costs on a large
+# trigger tree with the script editor closed and open. Never registered with
+# ctest; run it directly and read the METRIC lines.
+add_functional_test_binary(TriggerToggleEditorBenchmark TriggerToggleEditorBenchmark.cpp)

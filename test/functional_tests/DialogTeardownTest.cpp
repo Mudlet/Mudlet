@@ -42,11 +42,12 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
-#include <QAction>
+#include <QCheckBox>
 #include <QKeySequenceEdit>
 #include <QLineEdit>
 #include <QScopeGuard>
 
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -80,7 +81,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = mudlet::getMudletPath(enums::profileHomePath, profileName);
+        const QString path = MudletPaths::getMudletPath(enums::profileHomePath, profileName);
         QDir dir(path);
         if (dir.exists()) {
             dir.removeRecursively();
@@ -131,7 +132,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -146,8 +147,7 @@ private slots:
         mpHost = nullptr;
         delete mpServer;
         mpServer = nullptr;
-        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
-        // getMudletPath() dereferences the instance rather than checking it
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
             deleteProfileDirectory(mProfileName);
             delete mudlet::self();
@@ -225,8 +225,8 @@ private slots:
         QVERIFY2(dialog.isNull(), "Connection dialog should have been destroyed");
         // slot_saveName() renames the profile's directory, so it running on the way
         // down leaves a trace even in a build where the assert is compiled out
-        QVERIFY2(!QDir(mudlet::getMudletPath(enums::profileHomePath, renamedTo)).exists(), "Being destroyed made the dialog rename the profile");
-        QVERIFY2(QDir(mudlet::getMudletPath(enums::profileHomePath, mProfileName)).exists(), "The profile lost its directory while the dialog was destroyed");
+        QVERIFY2(!QDir(MudletPaths::getMudletPath(enums::profileHomePath, renamedTo)).exists(), "Being destroyed made the dialog rename the profile");
+        QVERIFY2(QDir(MudletPaths::getMudletPath(enums::profileHomePath, mProfileName)).exists(), "The profile lost its directory while the dialog was destroyed");
     }
 
     // The same exposure through the preferences' chat name field, which is
@@ -355,7 +355,7 @@ private slots:
         QVERIFY2(mpHost->getTriggerUnit()->findTrigger(nameBefore), "The trigger lost its name while the editor was destroyed");
     }
 
-    void test_protocolActionsFireAfterPreferencesReopen()
+    void test_protocolTogglesFireAfterPreferencesReopen()
     {
         mudlet::self()->showOptionsDialog(qsl("tab_general"), mpHost);
         QTest::qWait(100ms);
@@ -369,22 +369,17 @@ private slots:
         auto* preferences = mpHost->mpDlgProfilePreferences.data();
         QVERIFY2(preferences, "Preferences dialog was not recreated");
 
-        QAction* gmcpAction = nullptr;
-        for (auto* action : preferences->findChildren<QAction*>()) {
-            if (action->text().startsWith(qsl("GMCP"))) {
-                gmcpAction = action;
-                break;
-            }
-        }
-        QVERIFY2(gmcpAction, "GMCP protocol action not found under the reopened dialog - parenting to the menu broke discovery or population");
+        auto* gmcpCheckBox = preferences->findChild<QCheckBox*>(qsl("checkBox_enableGMCP"));
+        QVERIFY2(gmcpCheckBox, "GMCP protocol checkbox not found under the reopened dialog - the protocols subpage was not built or not populated");
 
-        // initWithHost() wires GMCP's toggled() to this button's setEnabled(),
-        // so the button flipping proves the fresh action is connected
+        // buildProtocolsSubpage() wires GMCP's toggled() to this button's
+        // setEnabled(), so the button flipping proves the fresh dialog's
+        // checkbox is connected - and that the connection was made exactly once
         const bool enabledBefore = preferences->pushButton_forgetSavedSignIn->isEnabled();
-        QCOMPARE(enabledBefore, gmcpAction->isChecked());
-        gmcpAction->toggle();
+        QCOMPARE(enabledBefore, gmcpCheckBox->isChecked());
+        gmcpCheckBox->toggle();
         QCOMPARE(preferences->pushButton_forgetSavedSignIn->isEnabled(), !enabledBefore);
-        gmcpAction->toggle();
+        gmcpCheckBox->toggle();
         QCOMPARE(preferences->pushButton_forgetSavedSignIn->isEnabled(), enabledBefore);
 
         delete preferences;

@@ -43,6 +43,7 @@
 #include <chrono>
 #include <memory>
 
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -110,7 +111,7 @@ private slots:
         mudlet::self()->setupConfig();
         // QtTest does not run cleanup() when init() fails, so a bare QCOMPARE
         // here would strand the singleton.
-        if (mudlet::getMudletPath(enums::mainPath) != qsl("%1/mudlet").arg(mConfigDir.path())) {
+        if (MudletPaths::getMudletPath(enums::mainPath) != qsl("%1/mudlet").arg(mConfigDir.path())) {
             delete mudlet::self();
             delete mpServer;
             mpServer = nullptr;
@@ -128,10 +129,8 @@ private slots:
         mpServer = nullptr;
         if (mudlet::self()) {
             // Mudlet writes the profile out as it shuts down, so removing the
-            // directory first only has it recreated. The path has to be read
-            // while the singleton is alive though - getMudletPath() reaches
-            // through self() without checking it.
-            const QString profileDir = mudlet::getMudletPath(enums::profileHomePath, mHostname);
+            // directory first only has it recreated.
+            const QString profileDir = MudletPaths::getMudletPath(enums::profileHomePath, mHostname);
             delete mudlet::self();
             QDir(profileDir).removeRecursively();
         }
@@ -162,7 +161,7 @@ private slots:
         // A user window carries a model of its own, so its managers have to be
         // its own too - Host's belong to the main console alone.
         QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("openUserWindow('hyperlinkSplitWindow')\n")), "openUserWindow() did not run");
-        TConsole* subConsole = console->mSubConsoleMap.value(qsl("hyperlinkSplitWindow"));
+        TConsole* subConsole = console->subConsoleWidget(qsl("hyperlinkSplitWindow"));
         QVERIFY2(subConsole, "the user window was not created");
         QVERIFY2(&subConsole->getHyperlinkVisibilityManager() != &model.mHyperlinkVisibilityManager, "a user window must not share the main console's tracked hyperlinks");
         QVERIFY2(!subConsole->getHyperlinkSelectionManager().isSelected(qsl("splitgroup"), qsl("splitvalue")), "a user window must not share the main console's selection state");
@@ -356,7 +355,7 @@ private:
 
     void deleteProfileDirectory()
     {
-        QDir dir(mudlet::getMudletPath(enums::profileHomePath, mHostname));
+        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, mHostname));
         if (dir.exists()) {
             dir.removeRecursively();
         }

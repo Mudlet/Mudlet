@@ -50,6 +50,7 @@
 
 #include <bitset>
 #include <iostream>
+#include <memory>
 #include <queue>
 #include <string>
 #include <utility>
@@ -71,6 +72,7 @@
 #endif
 
 class QJsonDocument;
+class QSaveFile;
 class QJsonObject;
 class QNetworkAccessManager;
 class QNetworkReply;
@@ -204,7 +206,11 @@ public:
     void set_USE_IRE_DRIVER_BUGFIX(bool b) { mUSE_IRE_DRIVER_BUGFIX = b; }
     void cacheHostSettings();
     void setDontReconnect(bool b) { mDontReconnect = b; }
-    void recordReplay();
+    bool recordingReplay() const { return mRecordReplay; }
+    bool startReplayRecording(const QString& fileName);
+    bool stopReplayRecording();
+    QString replayRecordingFileName() const;
+    QString replayRecordingErrorString() const;
     bool loadReplay(const QString&, QString* pErrMsg = nullptr);
     void loadReplayChunk();
     bool isReplaying() { return loadingReplay; }
@@ -224,6 +230,10 @@ public:
 #endif
     QByteArray decodeBytes(const char*);
     std::string encodeAndCookBytes(const std::string&);
+    static std::string escapeIac(std::string data);
+
+    // Wraps a two-byte Aardwolf 102 subchannel payload in its subnegotiation
+    static std::string buildChannel102Message(const std::string& payload);
     bool isNewEnvironEnabled() const { return enableNewEnviron; }
     bool isCHARSETEnabled() const { return enableCHARSET; }
     bool isATCPEnabled() const { return enableATCP; }
@@ -253,16 +263,16 @@ public:
         processSocketData(data.data(), data.size(), true);
     }
     int loopbackProcessingDepth() const { return mLoopbackProcessingDepth; }
-    // Each nested processSocketData() puts ~100KB of buffers on the stack, so a
-    // self-feeding feedTelnet() loop overflows a 1MB (Windows) stack in only ~8
-    // levels - hence a much lower cap than TriggerUnit::scmMaxProcessingDepth.
+    // Every feedTelnet() level nests inside processSocketData(), so it also
+    // counts against scmMaxDecompressionRecursion; keep this below it, or a
+    // runaway loop reports as dropped data instead of the trigger-named Lua error.
     inline static const int scmMaxLoopbackProcessingDepth = 5;
-    // How many times processSocketData() may re-enter itself to drain data left
-    // over after a decompression pass (compressed input that did not fit in one
+    // How deep processSocketData() may nest (the outermost call counts as one)
+    // while draining data left over after a decompression pass (compressed input that did not fit in one
     // output buffer, or plain data following the compressed stream). Each level
-    // puts ~100 KB (out_buffer) on the stack, so this also caps decompressed
-    // output at ~scmMaxDecompressionRecursion * BUFFER_SIZE per socket read,
-    // which bounds a decompression bomb.
+    // inflates at most one output buffer, so this caps decompressed output at
+    // ~scmMaxDecompressionRecursion * BUFFER_SIZE per socket read, which bounds
+    // a decompression bomb.
     inline static const int scmMaxDecompressionRecursion = 8;
     void cancelLoginTimers();
     void terminateConnection();
@@ -431,8 +441,11 @@ private:
     void promptTlsConnectionAvailable();
 #endif
     void sendNAWS(int width, int height);
+    void sendCurrentNAWS();
+    void readPendingSocketData();
     QString parseGUIVersionFromJSON(const QJsonObject& json);
     QString parseGUIUrlFromJSON(const QJsonObject& json);
+    bool parseGUIBaseUiDeclinedFromJSON(const QJsonObject& json);
     void downloadAndInstallGUIPackage(const QString& packageName, const QString& fileName, const QString& url);
     void handleGUIPackageInstallationAndUpgrade(QJsonDocument document);
 
@@ -558,6 +571,8 @@ private:
     QElapsedTimer mConnectionTimer;
     qint32 mRecordLastChunkMSecTimeOffset = 0;
     int mRecordingChunkCount = 0;
+    std::unique_ptr<QSaveFile> mpReplayFile;
+    bool mRecordReplay = false;
     int mCycleCountMTTS = 0;
     QSet<QString> newEnvironVariablesSent;
     bool mReplayHasFaultyFormat = false;
@@ -615,6 +630,7 @@ private:
     // never releases it. See cTelnet::checkCharacterModePattern().
     bool mCharacterModeDetected = false;
     QTimer* mTimerCharacterModeDetect = nullptr;
+    QTimer* mTimerNawsUpdate = nullptr;
 
     // KaVir protocol negotiation tracking
     QVector<unsigned char> mNegotiationOrder;

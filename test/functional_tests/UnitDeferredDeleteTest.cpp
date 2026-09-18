@@ -19,7 +19,7 @@
 
 /*
  * TriggerUnit, AliasUnit, KeyUnit and TimerUnit each defer the deletion of an
- * item until no script is on the call stack. Four properties of that machinery
+ * item until no script is on the call stack. Five properties of that machinery
  * are checked here for all four units:
  *
  * - freeing a temporary item must unlink only that item from the by-name lookup
@@ -31,6 +31,8 @@
  *   free the same object twice, whichever order it lands in them (#9650)
  * - enabling by name must not reactivate an item that is only waiting to be
  *   freed, while still reaching every live item filed under that name (#9877)
+ * - draining mCleanupSet must release its buckets rather than leave the set sized
+ *   for the largest batch it has ever held
  *
  * The timer half of #9649 cannot be reached from the busted Lua suite - that runs
  * inside a tempTimer, so TimerUnit's cleanup stays deferred for the whole run -
@@ -55,6 +57,7 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "AliasUnit.h"
@@ -95,6 +98,15 @@ private:
     // number against the int literals below
     static int lookupCount(qsizetype count) { return static_cast<int>(count); }
 
+    // Far above Qt's minimum QSet allocation, so an unreleased hash is unmistakable
+    static constexpr qsizetype scmCapacityProbeBatch = 4096;
+
+    static void verifyCapacityReleased(qsizetype capacity)
+    {
+        QVERIFY2(capacity < scmCapacityProbeBatch,
+                 qPrintable(qsl("mCleanupSet kept room for %1 entries after the flush, so every later flush re-scans a bucket array sized for the biggest batch it ever held").arg(capacity)));
+    }
+
 private slots:
     void initTestCase()
     {
@@ -118,7 +130,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -134,8 +146,7 @@ private slots:
         mpHost = nullptr;
         delete mpServer;
         mpServer = nullptr;
-        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
-        // getMudletPath() dereferences the instance rather than checking it
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
             deleteProfileDirectory(mHostname);
             delete mudlet::self();
@@ -822,7 +833,7 @@ private slots:
     // inactive timers would let this one fire again.
     //
     // The two calls below are exactly what TTimer::execute() does, rather than a
-    // real wait: mudlet::slot_timerFires() runs doCleanup() as soon as execute()
+    // real wait: TimerUnit::timerFired() runs doCleanup() as soon as execute()
     // returns, so a fired one-shot is freed before a test could look at it.
     void test_timerEnableByNameCannotReviveASpentOneShot()
     {
@@ -890,6 +901,92 @@ private slots:
         QVERIFY(!unit->getTimer(tempId));
     }
 
+    // QMutableSetIterator::remove() frees no buckets and the iterator's first step
+    // scans them, so an unreleased set makes every later flush re-scan the largest
+    // batch it has ever held.
+    void test_triggerCleanupReleasesSetCapacity()
+    {
+        auto* unit = mpHost->getTriggerUnit();
+        int firstId = 0;
+        int lastId = 0;
+        for (int i = 0; i < scmCapacityProbeBatch; ++i) {
+            const int id = mpHost->mLuaInterpreter.startTempTrigger(qsl("capacity_probe_%1").arg(i), QString());
+            QVERIFY(id > 0);
+            firstId = firstId ? firstId : id;
+            lastId = id;
+            unit->markCleanup(unit->getTrigger(id));
+        }
+        QCOMPARE(unit->mCleanupSet.size(), scmCapacityProbeBatch);
+
+        unit->doCleanup();
+
+        QVERIFY2(!unit->getTrigger(firstId) && !unit->getTrigger(lastId), "the flush must still delete what it drained");
+        verifyCapacityReleased(unit->mCleanupSet.capacity());
+    }
+
+    void test_aliasCleanupReleasesSetCapacity()
+    {
+        auto* unit = mpHost->getAliasUnit();
+        int firstId = 0;
+        int lastId = 0;
+        for (int i = 0; i < scmCapacityProbeBatch; ++i) {
+            const int id = mpHost->mLuaInterpreter.startTempAlias(qsl("^capacity_probe_%1$").arg(i), QString());
+            QVERIFY(id > 0);
+            firstId = firstId ? firstId : id;
+            lastId = id;
+            unit->markCleanup(unit->getAlias(id));
+        }
+        QCOMPARE(unit->mCleanupSet.size(), scmCapacityProbeBatch);
+
+        unit->doCleanup();
+
+        QVERIFY2(!unit->getAlias(firstId) && !unit->getAlias(lastId), "the flush must still delete what it drained");
+        verifyCapacityReleased(unit->mCleanupSet.capacity());
+    }
+
+    void test_keyCleanupReleasesSetCapacity()
+    {
+        auto* unit = mpHost->getKeyUnit();
+        int firstId = 0;
+        int lastId = 0;
+        int modifier = Qt::NoModifier;
+        int keyCode = Qt::Key_F1;
+        for (int i = 0; i < scmCapacityProbeBatch; ++i) {
+            keyCode = Qt::Key_F1 + i % 12;
+            const int id = mpHost->mLuaInterpreter.startTempKey(modifier, keyCode, QString());
+            QVERIFY(id > 0);
+            firstId = firstId ? firstId : id;
+            lastId = id;
+            unit->markCleanup(unit->getKey(id));
+        }
+        QCOMPARE(unit->mCleanupSet.size(), scmCapacityProbeBatch);
+
+        unit->doCleanup();
+
+        QVERIFY2(!unit->getKey(firstId) && !unit->getKey(lastId), "the flush must still delete what it drained");
+        verifyCapacityReleased(unit->mCleanupSet.capacity());
+    }
+
+    void test_timerCleanupReleasesSetCapacity()
+    {
+        auto* unit = mpHost->getTimerUnit();
+        int firstId = 0;
+        int lastId = 0;
+        for (int i = 0; i < scmCapacityProbeBatch; ++i) {
+            auto [id, message] = mpHost->mLuaInterpreter.startTempTimer(600.0, QString(), false);
+            QVERIFY2(id > 0, qPrintable(message));
+            firstId = firstId ? firstId : id;
+            lastId = id;
+            unit->markCleanup(unit->getTimer(id));
+        }
+        QCOMPARE(unit->mCleanupSet.size(), scmCapacityProbeBatch);
+
+        unit->doCleanup();
+
+        QVERIFY2(!unit->getTimer(firstId) && !unit->getTimer(lastId), "the flush must still delete what it drained");
+        verifyCapacityReleased(unit->mCleanupSet.capacity());
+    }
+
     // Helpers (reused from the ResetProfileTest pattern)
 
     int readGlobalInt(const QString& name)
@@ -925,7 +1022,7 @@ private slots:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = mudlet::getMudletPath(enums::profileHomePath, profileName);
+        const QString path = MudletPaths::getMudletPath(enums::profileHomePath, profileName);
         QDir dir(path);
 
         if (!dir.exists()) {

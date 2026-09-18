@@ -18,10 +18,13 @@
  ***************************************************************************/
 
 #include "updater.h"
+#include "MudletPaths.h"
 #include "mudlet.h"
 #include "updater/Feed.h"
 #include "updater/UpdateDialog.h"
 
+#include <QDataStream>
+#include <QSaveFile>
 #include <QCoreApplication>
 #include <QDateTime>
 #include <QMessageBox>
@@ -746,7 +749,7 @@ void Updater::recordUpdateTime() const
     if (!mudlet::self()) {
         return;
     }
-    QSaveFile file(mudlet::getMudletPath(enums::mainDataItemPath, qsl("mudlet_updated_at")));
+    QSaveFile file(MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("mudlet_updated_at")));
     bool opened = file.open(QIODevice::WriteOnly);
     if (!opened) {
         qWarning() << "Couldn't open update timestamp file for writing.";
@@ -754,9 +757,7 @@ void Updater::recordUpdateTime() const
     }
 
     QDataStream ofs(&file);
-    if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-        ofs.setVersion(mudlet::scmQDataStreamFormat_5_12);
-    }
+    ofs.setVersion(QDataStream::Qt_5_12);
     ofs << QDateTime::currentDateTime().toMSecsSinceEpoch();
     if (!file.commit()) {
         qWarning() << "Updater::recordUpdateTime: error recording update time:" << file.errorString();
@@ -772,7 +773,7 @@ void Updater::recordUpdatedVersion() const
     if (!mudlet::self()) {
         return;
     }
-    QSaveFile file(mudlet::getMudletPath(enums::mainDataItemPath, qsl("mudlet_updated_from")));
+    QSaveFile file(MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("mudlet_updated_from")));
     bool opened = file.open(QIODevice::WriteOnly);
     if (!opened) {
         qWarning() << "Couldn't open update version file for writing.";
@@ -780,9 +781,7 @@ void Updater::recordUpdatedVersion() const
     }
 
     QDataStream ofs(&file);
-    if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-        ofs.setVersion(mudlet::scmQDataStreamFormat_5_12);
-    }
+    ofs.setVersion(QDataStream::Qt_5_12);
     // The full version (including any -ptb suffix) so shouldShowChangelog()
     // can tell whether the running version actually changed:
     ofs << QCoreApplication::applicationVersion();
@@ -804,7 +803,7 @@ bool Updater::shouldShowChangelog()
         return false;
     }
 
-    QFile file(mudlet::self()->getMudletPath(enums::mainDataItemPath, qsl("mudlet_updated_at")));
+    QFile file(MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("mudlet_updated_at")));
     bool opened = file.open(QIODevice::ReadOnly);
     qint64 updateTimestamp;
     if (!opened) {
@@ -812,9 +811,7 @@ bool Updater::shouldShowChangelog()
         return false;
     }
     QDataStream ifs(&file);
-    if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-        ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
-    }
+    ifs.setVersion(QDataStream::Qt_5_12);
     ifs >> updateTimestamp;
     file.close();
 
@@ -834,7 +831,7 @@ bool Updater::shouldShowChangelog()
     // version is still the one running, no update actually happened - don't
     // show a changelog for it:
     if (readPreviousVersionFile(false) == QCoreApplication::applicationVersion()) {
-        QFile::remove(mudlet::self()->getMudletPath(enums::mainDataItemPath, qsl("mudlet_updated_from")));
+        QFile::remove(MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("mudlet_updated_from")));
         return false;
     }
 
@@ -848,7 +845,7 @@ QString Updater::getPreviousVersion() const
 
 QString Updater::readPreviousVersionFile(const bool removeAfterRead) const
 {
-    QFile file(mudlet::self()->getMudletPath(enums::mainDataItemPath, qsl("mudlet_updated_from")));
+    QFile file(MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("mudlet_updated_from")));
     bool opened = file.open(QIODevice::ReadOnly);
     QString previousVersion;
     if (!opened) {
@@ -858,9 +855,7 @@ QString Updater::readPreviousVersionFile(const bool removeAfterRead) const
         return QString();
     }
     QDataStream ifs(&file);
-    if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-        ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
-    }
+    ifs.setVersion(QDataStream::Qt_5_12);
     ifs >> previousVersion;
     file.close();
     if (removeAfterRead) {

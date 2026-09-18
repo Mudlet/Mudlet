@@ -28,11 +28,16 @@
 #include "utils.h" // For NameGroupMatches
 
 #include <QDebug>
+#include <QDebugStateSaver>
 #include <QPointer>
 #include <QSharedPointer>
+#include <QString>
+#include <QVector>
+#include <QtGlobal>
 
 #define PCRE2_CODE_UNIT_WIDTH 8
 #include <pcre2.h>
+#include <QCoreApplication>
 
 class Host;
 

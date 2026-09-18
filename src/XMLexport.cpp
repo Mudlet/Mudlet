@@ -31,7 +31,6 @@
 #include "CredentialManager.h"
 #include "TAction.h"
 #include "TAlias.h"
-#include "TConsole.h"
 #include "TKey.h"
 #include "TScript.h"
 #include "TTimer.h"
@@ -39,6 +38,8 @@
 #include "VarUnit.h"
 #include "mudlet.h"
 
+#include <QSaveFile>
+#include <QRegularExpression>
 #include <QVersionNumber>
 #include <QtConcurrentRun>
 #include <QFutureWatcher>
@@ -443,7 +444,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mEnableCHARSET") = pHost->mEnableCHARSET ? "yes" : "no";
     host.append_attribute("mEnableNEWENVIRON") = pHost->mEnableNEWENVIRON ? "yes" : "no";
     host.append_attribute("mMapStrongHighlight") = pHost->mMapStrongHighlight ? "yes" : "no";
-    host.append_attribute("mEnableSpellCheck") = pHost->mEnableSpellCheck ? "yes" : "no";
+    host.append_attribute("mEnableSpellCheck") = pHost->getEnableSpellCheck() ? "yes" : "no";
     bool enableUserDictionary;
     bool useSharedDictionary;
     pHost->getUserDictionaryOptions(enableUserDictionary, useSharedDictionary);
@@ -643,8 +644,12 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         auto mapBgColorNode = host.append_child("mBgColor2");
         mapBgColorNode.text().set(pHost->mBgColor_2.name().toUtf8().constData());
         mapBgColorNode.append_attribute("alpha").set_value(pHost->mBgColor_2.alpha());
-        host.append_child("mLowerLevelColor").text().set(pHost->mLowerLevelColor.name().toUtf8().constData());
-        host.append_child("mUpperLevelColor").text().set(pHost->mUpperLevelColor.name().toUtf8().constData());
+        auto lowerLevelColorNode = host.append_child("mLowerLevelColor");
+        lowerLevelColorNode.text().set(pHost->mLowerLevelColor.name().toUtf8().constData());
+        lowerLevelColorNode.append_attribute("alpha").set_value(pHost->mLowerLevelColor.alpha());
+        auto upperLevelColorNode = host.append_child("mUpperLevelColor");
+        upperLevelColorNode.text().set(pHost->mUpperLevelColor.name().toUtf8().constData());
+        upperLevelColorNode.append_attribute("alpha").set_value(pHost->mUpperLevelColor.alpha());
         host.append_child("mRoomBorderColor").text().set(pHost->mRoomBorderColor.name().toUtf8().constData());
         host.append_child("mRoomCollisionBorderColor").text().set(pHost->mRoomCollisionBorderColor.name().toUtf8().constData());
         auto mapGridColorNode = host.append_child("mMapGridColor");

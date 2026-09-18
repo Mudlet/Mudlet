@@ -24,7 +24,6 @@
 #include "TDockWidget.h"
 #include "TLabel.h"
 #include "TMainConsole.h"
-#include "TTextEdit.h"
 
 #include <QCoreApplication>
 #include <QDebug>
@@ -167,10 +166,9 @@ bool TMxpFrameManager::closeFrame(const QString& name)
             // Remove the tab from the parent's tab widget
             parentTabWidget->removeTab(tabIndex);
 
-            // Clean up console registration
             if (mpHost && mpHost->mpConsole) {
-                mpHost->mpConsole->mSubConsoleMap.remove(name);
-                mpHost->mpConsole->mDockWidgetMap.remove(name);
+                mpHost->mpConsole->deregisterSubConsole(name);
+                mpHost->mpConsole->deregisterDockWidget(name);
             }
 
             // Remove from hierarchy
@@ -196,8 +194,8 @@ bool TMxpFrameManager::closeFrame(const QString& name)
     }
 
     if (mpHost && mpHost->mpConsole) {
-        mpHost->mpConsole->mSubConsoleMap.remove(name);
-        mpHost->mpConsole->mDockWidgetMap.remove(name);
+        mpHost->mpConsole->deregisterSubConsole(name);
+        mpHost->mpConsole->deregisterDockWidget(name);
     }
 
     removeFrameFromHierarchy(frame);
@@ -642,16 +640,9 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
         auto* tabPageLayout = new QVBoxLayout(tabPage);
         tabPageLayout->setContentsMargins(0, 0, 0, 0);
 
-        // Create console directly with tabPage as parent to avoid flash on mpMainFrame
-        // (createMiniConsole parents to mpMainFrame and calls show() before we can intervene)
-        console = new TConsole(mpHost, frame->name, TConsole::SubConsole, tabPage);
-
-        // Setup console properties (mirroring what createMiniConsole does)
-        console->setObjectName(frame->name);
-        const auto& hostCommandLine = mpHost->mpConsole->mpCommandLine;
-        console->setFocusProxy(hostCommandLine);
-        console->mUpperPane->setFocusProxy(hostCommandLine);
-        console->mLowerPane->setFocusProxy(hostCommandLine);
+        // Parented to the tab page rather than made by createMiniConsole, which
+        // parents to mpMainFrame and calls show() before we can intervene (a flash)
+        console = mainConsole->createSubConsole(frame->name, tabPage);
         console->resize(frameWidth, frameHeight - tabBarHeight);
         console->mOldX = 0;
         console->mOldY = 0;
@@ -668,15 +659,7 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
         containerLayout->addWidget(tabWidget);
     } else {
         // Floating/borderless: console directly in container, no tab header
-        // Create console directly with containerWidget as parent to avoid flash
-        console = new TConsole(mpHost, frame->name, TConsole::SubConsole, containerWidget);
-
-        // Setup console properties (mirroring what createMiniConsole does)
-        console->setObjectName(frame->name);
-        const auto& hostCommandLine = mpHost->mpConsole->mpCommandLine;
-        console->setFocusProxy(hostCommandLine);
-        console->mUpperPane->setFocusProxy(hostCommandLine);
-        console->mLowerPane->setFocusProxy(hostCommandLine);
+        console = mainConsole->createSubConsole(frame->name, containerWidget);
         console->resize(frameWidth, frameHeight);
         console->mOldX = 0;
         console->mOldY = 0;
@@ -720,8 +703,7 @@ void TMxpFrameManager::layoutInternalFrame(TMxpFrame* frame)
         console->setStyleSheet(qsl("QWidget { border: 1px solid #444444; }"));
     }
 
-    // Register console
-    mainConsole->mSubConsoleMap.insert(frame->name, console);
+    mainConsole->registerSubConsole(frame->name, console);
 
     // Force layout to calculate sizes
     containerWidget->layout()->activate();
@@ -830,16 +812,8 @@ void TMxpFrameManager::layoutTabFrame(TMxpFrame* frame)
     auto* tabPageLayout = new QVBoxLayout(tabPage);
     tabPageLayout->setContentsMargins(0, 0, 0, 0);
 
-    // Create console directly with tabPage as parent
-    auto* console = new TConsole(mpHost, frame->name, TConsole::SubConsole, tabPage);
-
-    // Setup console properties
     TMainConsole* mainConsole = mpHost->mpConsole;
-    console->setObjectName(frame->name);
-    const auto& hostCommandLine = mainConsole->mpCommandLine;
-    console->setFocusProxy(hostCommandLine);
-    console->mUpperPane->setFocusProxy(hostCommandLine);
-    console->mLowerPane->setFocusProxy(hostCommandLine);
+    auto* console = mainConsole->createSubConsole(frame->name, tabPage);
     console->resize(frameSize.width(), frameSize.height());
     console->mOldX = 0;
     console->mOldY = 0;
@@ -860,8 +834,7 @@ void TMxpFrameManager::layoutTabFrame(TMxpFrame* frame)
         console->setScrolling(false);
     }
 
-    // Register console in map
-    mainConsole->mSubConsoleMap.insert(frame->name, console);
+    mainConsole->registerSubConsole(frame->name, console);
 
     // Add as new tab - if this is the first child tab, select it
     // (The parent frame's own tab at index 0 is typically unused for content)
@@ -1052,8 +1025,7 @@ void TMxpFrameManager::layoutTabIntoExistingFrame(TMxpFrame* frame, TMxpFrame* t
     frameBgColor = frameBgColor.lighter(115);
     console->setBgColor(frameBgColor);
 
-    // Register console
-    mainConsole->mSubConsoleMap.insert(frame->name, console);
+    mainConsole->registerSubConsole(frame->name, console);
 
     // Optionally switch to the new tab
     tabWidget->setCurrentIndex(tabIndex);
