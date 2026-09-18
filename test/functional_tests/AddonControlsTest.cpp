@@ -434,6 +434,47 @@ private slots:
         QVERIFY2(text.contains(qsl("SameProfileBinding")), qPrintable(qsl("the warning does not name the command holding the key: %1").arg(text)));
     }
 
+    // Mudlet's own shortcuts get the key first in the same way. Ctrl+Alt+T and
+    // Ctrl+Alt+L are the same on every platform, unlike the Alt+letter keys,
+    // which are Ctrl+letter on macOS.
+    void test_aBindingOnOneOfMudletsOwnKeysIsWarnedAboutInTheEditor()
+    {
+        dlgTriggerEditor* pEditor = editorFor(mpFirstHost);
+        QVERIFY2(pEditor, "the profile's editor could not be opened");
+
+        pEditor->showInfo(QString());
+        QVERIFY2(runLua(mpFirstHost, qsl("_ownClashKeyId = tempKey(mudlet.keymodifier.Control + mudlet.keymodifier.Alt, mudlet.key.T, [[echo('bound')]])")).isNull(),
+                 "the key binding could not be made");
+        const QString tempText = editorSaid(pEditor);
+        runLua(mpFirstHost, qsl("killKey(_ownClashKeyId)"));
+        QVERIFY2(tempText.contains(qsl("Toggle Time Stamps")), qPrintable(qsl("a temporary binding on one of Mudlet's own keys was not warned about: %1").arg(tempText)));
+
+        pEditor->showInfo(QString());
+        QVERIFY2(runLua(mpFirstHost, qsl("permKey('OwnClashPerm', '', mudlet.keymodifier.Control + mudlet.keymodifier.Alt, mudlet.key.L, [[echo('bound')]])")).isNull(),
+                 "the key binding could not be made");
+        const QString permText = editorSaid(pEditor);
+        runLua(mpFirstHost, qsl("disableKey('OwnClashPerm')"));
+        QVERIFY2(permText.contains(qsl("Toggle Logging")), qPrintable(qsl("a permanent binding on one of Mudlet's own keys was not warned about: %1").arg(permText)));
+    }
+
+    // A key Mudlet has nothing on, and a profile switching key, which a binding
+    // wins because TCommandLine claims the ShortcutOverride for it, must both go
+    // by in silence
+    void test_aBindingThatWillFireIsNotWarnedAbout()
+    {
+        dlgTriggerEditor* pEditor = editorFor(mpFirstHost);
+        QVERIFY2(pEditor, "the profile's editor could not be opened");
+
+        const QStringList bindings{qsl("mudlet.keymodifier.Control + mudlet.keymodifier.Alt, mudlet.key.F12"), qsl("mudlet.keymodifier.Control, mudlet.key['1']")};
+        for (const QString& binding : bindings) {
+            pEditor->showInfo(QString());
+            QVERIFY2(runLua(mpFirstHost, qsl("_quietKeyId = tempKey(%1, [[echo('bound')]])").arg(binding)).isNull(), "the key binding could not be made");
+            const QString text = editorSaid(pEditor);
+            runLua(mpFirstHost, qsl("killKey(_quietKeyId)"));
+            QVERIFY2(text.isEmpty(), qPrintable(qsl("a binding that fires (%1) was warned about: %2").arg(binding, text)));
+        }
+    }
+
     // docs/addon-ui-api.md gives the click event the id as addCommand returned
     // it, which is a number - the same as every other Mudlet event carrying one
     void test_aClickHandsTheHandlerTheIdAsANumber()

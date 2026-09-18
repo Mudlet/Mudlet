@@ -396,78 +396,22 @@ describe("Tests keybind-related functions", function()
 
 end)
 
--- Mudlet's own main window shortcuts are matched by Qt before a key press can
--- reach the command line, where key bindings are matched, so a binding placed
--- on one of them never fires. It was accepted without a word, which left a
--- package author shipping a key that does nothing on Windows and Linux and
--- works on macOS, where those actions sit on a different modifier. See #10765.
+-- A binding on one of Mudlet's own keys never fires. It is warned about in the
+-- editor, not on the main console, where a script making its bindings at
+-- profile load would repeat the warning at every startup. AddonControlsTest
+-- covers the editor warning, which Lua cannot open.
 describe("a key binding on a key Mudlet itself uses", function()
 
-  -- Everything the main console gained since it was at line `mark`, joined up.
-  -- The console wraps long lines and a wrap swallows the space it broke at, so
-  -- both halves are matched with the whitespace taken out.
-  local function textFrom(mark)
-    return table.concat(getLines("main", mark, getLastLineNumber("main") + 1), "")
-  end
-
-  local function containsWrapped(haystack, needle)
-    return (tostring(haystack):gsub("%s+", "")):find((needle:gsub("%s+", "")), 1, true) ~= nil
-  end
-
-  -- Ctrl+Alt+T is Mudlet's own "Toggle Time Stamps" shortcut on every platform
-  -- it runs on. The Alt+letter half of the main window's keys - Alt+M for the
-  -- map, Alt+O for the package manager - is Ctrl+letter on macOS, so a spec
-  -- written on one of those would only reach the clash on some platforms.
-  it("is still made, and says which of Mudlet's own keys it landed on", function()
+  it("is still made, and says nothing on the main console", function()
     local mark = getLastLineNumber("main")
 
+    -- Ctrl+Alt+T is Mudlet's "Toggle Time Stamps" on every platform
     local key = tempKey(mudlet.keymodifier.Control + mudlet.keymodifier.Alt, mudlet.key.T, [[echo("mine")]])
-    local text = textFrom(mark)
+    local text = table.concat(getLines("main", mark, getLastLineNumber("main") + 1), "")
     killKey(key)
 
-    -- the binding is the player's own item, so it is not the one to refuse
     assert.is_number(key, "the binding should still be made")
-    assert.is_true(containsWrapped(text, "[ WARN ]"), "the binding took one of Mudlet's own keys without a word: " .. text)
-    assert.is_true(containsWrapped(text, "Toggle Time Stamps"), "nothing said which of Mudlet's keys the binding landed on: " .. text)
-  end)
-
-  it("says so for a permanent binding too, not just a temporary one", function()
-    local name = "SpecMudletShortcutClash"
-    local mark = getLastLineNumber("main")
-
-    assert.is_true(permKey(name, "", mudlet.keymodifier.Control + mudlet.keymodifier.Alt, mudlet.key.L, [[echo("mine")]]) > 0)
-    finally(function() disableKey(name) end)
-
-    assert.is_true(containsWrapped(textFrom(mark), "Toggle Logging"),
-      "a permanent binding took one of Mudlet's own keys without a word: " .. textFrom(mark))
-  end)
-
-  -- The other half of the contract: a key Mudlet has nothing on must go by in
-  -- silence, or every binding anyone makes carries a warning that means nothing
-  it("says nothing about a key Mudlet does not use", function()
-    local mark = getLastLineNumber("main")
-
-    local key = tempKey(mudlet.keymodifier.Control + mudlet.keymodifier.Alt, mudlet.key.F12, [[echo("mine")]])
-    local text = textFrom(mark)
-    killKey(key)
-
-    assert.is_number(key)
-    assert.is_false(containsWrapped(text, "[ WARN ]"), "a key Mudlet does not use was warned about anyway: " .. text)
-  end)
-
-  -- Mudlet arranged for a binding to win over the profile switching keys
-  -- (Ctrl+1..9, Ctrl+Tab): TCommandLine claims the ShortcutOverride so the
-  -- KeyPress still arrives. Those bindings do fire, so warning about them
-  -- would send the player off to change a key that works.
-  it("says nothing about a profile switching key, which a binding wins", function()
-    local mark = getLastLineNumber("main")
-
-    local key = tempKey(mudlet.keymodifier.Control, mudlet.key["1"], [[echo("mine")]])
-    local text = textFrom(mark)
-    killKey(key)
-
-    assert.is_number(key)
-    assert.is_false(containsWrapped(text, "[ WARN ]"), "a binding that does fire was warned about: " .. text)
+    assert.is_nil(text:find("WARN", 1, true), "the clash was posted to the main console: " .. text)
   end)
 
 end)

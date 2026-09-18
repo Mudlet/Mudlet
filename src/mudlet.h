@@ -348,9 +348,7 @@ public:
     // on, the same rule addonShortcutUsable() follows.
     QStringList addonCommandsUsingShortcut(const QKeySequence& sequence, const Host* pHost) const;
     // What Mudlet's own shortcut on this key is called, empty when Mudlet has
-    // nothing on it. For a key binding, which arrives too late to be offered
-    // the refusal a package gets: Qt matches Mudlet's own shortcuts before a
-    // key press reaches the command line, so the binding never fires.
+    // nothing on it or a key binding there would still win
     QString ownShortcutUsingKey(const Qt::Key, const Qt::KeyboardModifiers) const;
     // Every other profile whose key binding a command just took, told about it.
     // The clash is only refused within the profile that is asking; see the

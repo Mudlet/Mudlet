@@ -887,27 +887,12 @@ QStringList mudlet::addonCommandsUsingShortcut(const QKeySequence& sequence, con
     return holders;
 }
 
-// The key bindings of a profile are matched from the command line's key
-// handling, which a key press only reaches once Qt has finished offering it to
-// the shortcuts of this window - so Mudlet's own take precedence and a binding
-// placed on one of them never fires.
-//
-// Only Mudlet's own: an add-on command's key is a different holder, reported by
-// addonCommandsUsingShortcut(), which alone knows to withhold the name of a
-// command another profile placed. That is the one thing the QAction scan in
-// addonShortcutUsable() adds over the registry read below - every shortcut of
-// Mudlet's own is hung on one of the sequences registered with the manager, as
-// assignKeySequences() is the only thing that puts one on an action.
+// No QAction scan as in addonShortcutUsable(): it would only add add-on
+// commands, which are addonCommandsUsingShortcut()'s to report. Every shortcut
+// of Mudlet's own is a sequence registered with the manager.
 QString mudlet::ownShortcutUsingKey(const Qt::Key key, const Qt::KeyboardModifiers modifiers) const
 {
     if (!mpShortcutsManager || key == Qt::Key_unknown) {
-        return {};
-    }
-    // A binding can carry modifiers no key sequence can hold, and both mislead
-    // rather than simply missing: a keypad one renders as "Ctrl+Alt+Num+T", and
-    // a group-switch one renders exactly like the sequence it is not equal to.
-    constexpr Qt::KeyboardModifiers sequenceModifiers = Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier;
-    if (modifiers & ~sequenceModifiers) {
         return {};
     }
     // The profile switching keys are the exception: TCommandLine claims the
@@ -917,11 +902,8 @@ QString mudlet::ownShortcutUsingKey(const Qt::Key key, const Qt::KeyboardModifie
         return {};
     }
 
-    // The registered sequences are the authority rather than whatever is
-    // currently wired up, for the reason addonShortcutUsable() gives: hiding
-    // the menu bar moves every menu key onto a QShortcut and clears the action
-    // it came from, so a scan of the widgets answers differently for the same
-    // key depending on a setting.
+    // The registry rather than the widgets: hiding the menu bar moves every menu
+    // key onto a QShortcut and clears the action it came from
     const QKeySequence sequence(QKeyCombination(modifiers, key));
     QStringListIterator keys = mpShortcutsManager->iterator();
     while (keys.hasNext()) {

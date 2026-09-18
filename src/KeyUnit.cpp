@@ -172,77 +172,41 @@ const TKey* KeyUnit::firstMatch(const Qt::Key key, const Qt::KeyboardModifiers m
     return nullptr;
 }
 
-void KeyUnit::warnIfAddonCommandHoldsKey(const TKey* pKey) const
+void KeyUnit::warnIfKeyIsTaken(const TKey* pKey) const
 {
     auto* pMudlet = mudlet::self();
-    if (!pKey || mpHost.isNull() || !pMudlet || pKey->isFolder() || pKey->getKeyCode() == Qt::Key_unknown) {
+    // Shown in the editor rather than on the main screen, for the reason
+    // mudlet::warnProfilesLosingBindingTo() gives: a script that makes its
+    // bindings at profile load would repeat this at every startup, and a line
+    // the player learns to ignore is worse than no line. The editor is where
+    // the binding is, and where it gets changed.
+    if (!pKey || mpHost.isNull() || !mpHost->mpEditorDialog || !pMudlet || pKey->isFolder() || pKey->getKeyCode() == Qt::Key_unknown) {
         return;
     }
     // A keypad or group-switch binding cannot be written as a key sequence, so
-    // no command's shortcut can be the one holding it
+    // no shortcut can be the one holding it
     constexpr Qt::KeyboardModifiers sequenceModifiers = Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier;
     if (pKey->getKeyModifiers() & ~sequenceModifiers) {
         return;
     }
 
     const QKeySequence sequence(QKeyCombination(pKey->getKeyModifiers(), pKey->getKeyCode()));
+    const QString keyText = sequence.toString(QKeySequence::NativeText);
+    // addCommand() refuses a key Mudlet holds, so at most one of these applies
+    if (const QString action = pMudlet->ownShortcutUsingKey(pKey->getKeyCode(), pKey->getKeyModifiers()); !action.isEmpty()) {
+        // "while that is available": a greyed-out menu item is not offered the
+        // key, so the binding does fire then
+        //: Warning shown in the editor when a key binding is given a key one of Mudlet's own shortcuts already uses. %1 is a key such as "Alt+M", %2 the name of the Mudlet action holding it, as the Shortcuts tab of the preferences shows it.
+        mpHost->mpEditorDialog->showWarning(tr("%1 is already used by Mudlet for \"%2\", which will get the key first, so this key binding will not fire while that is available. "
+                                               "Mudlet's own shortcuts can be changed in the preferences, under Shortcuts.")
+                                                    .arg(keyText, action));
+        return;
+    }
     const QStringList holders = pMudlet->addonCommandsUsingShortcut(sequence, mpHost);
-    if (holders.isEmpty()) {
-        return;
-    }
-    // Shown in the editor rather than on the main screen, for the reason
-    // mudlet::warnProfilesLosingBindingTo() gives: a script that makes its
-    // bindings at profile load would repeat this at every startup, and a line
-    // the player learns to ignore is worse than no line. The editor is where
-    // the binding is, and where it gets changed.
-    if (mpHost->mpEditorDialog) {
+    if (!holders.isEmpty()) {
         //: Warning shown in the editor when a key binding is given a key an add-on command already holds. %1 is a key such as "Alt+F9", %2 a comma separated list of the commands holding it.
-        mpHost->mpEditorDialog->showWarning(
-                tr("%1 is already used by %2, which will get the key first, so this key binding will not fire.").arg(sequence.toString(QKeySequence::NativeText), holders.join(qsl(", "))));
+        mpHost->mpEditorDialog->showWarning(tr("%1 is already used by %2, which will get the key first, so this key binding will not fire.").arg(keyText, holders.join(qsl(", "))));
     }
-}
-
-// Mudlet's own menu and window shortcuts are matched by Qt, which is offered a
-// key press before the command line that matches key bindings ever sees one -
-// so a binding placed on one of those keys does not fire, and until now nothing
-// said so. The binding is still made: it is the player's own item, and refusing
-// it is what a package asking for a key already taken gets. As with the buffer
-// search taking a key a package holds, the only thing owed is saying so.
-//
-// Handed back rather than posted, because where it has to be said depends on
-// where the key was given: the editor has its own message area in front of the
-// console the Lua functions post to.
-QString KeyUnit::mudletShortcutClashMessage(const TKey* pKey) const
-{
-    auto* pMudlet = mudlet::self();
-    if (!pKey || mpHost.isNull() || !pMudlet || pKey->isFolder() || pKey->getKeyCode() == Qt::Key_unknown) {
-        return {};
-    }
-
-    const QString holder = pMudlet->ownShortcutUsingKey(pKey->getKeyCode(), pKey->getKeyModifiers());
-    if (holder.isEmpty()) {
-        return {};
-    }
-
-    // Not "will never fire": a menu item Mudlet has greyed out - MultiView with
-    // one profile open, or the connection items with no profile in the main
-    // window - is not offered the key at all, and the binding does fire while
-    // that lasts.
-    const QKeySequence sequence(QKeyCombination(pKey->getKeyModifiers(), pKey->getKeyCode()));
-    //: Warning shown when a key binding is given a key one of Mudlet's own shortcuts already uses. %1 is a key such as "Alt+M", %2 the name of the Mudlet action holding it, as the shortcuts preferences show it.
-    return tr("%1 is already used by Mudlet for \"%2\": while that is available Mudlet gets the key first and this key binding will not fire. Put one of the two on a different key to use "
-              "both - Mudlet's own are in the preferences, under Shortcuts.")
-            .arg(sequence.toString(QKeySequence::NativeText), holder);
-}
-
-void KeyUnit::warnIfMudletShortcutHoldsKey(const TKey* pKey) const
-{
-    const QString message = mudletShortcutClashMessage(pKey);
-    if (message.isEmpty()) {
-        return;
-    }
-    // The prefix is read by cTelnet::postMessage(), which colours the line by it
-    mpHost->postMessage(qsl("[ WARN ]  - %1").arg(message));
 }
 
 void KeyUnit::compileAll()
