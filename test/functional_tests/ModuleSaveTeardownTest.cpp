@@ -461,7 +461,7 @@ private slots:
         QVERIFY2(!moduleWasWrittenOut(readFile(moduleXmlPath())), "Closing the profile waited for the module write - this test needs a close that does not");
 
         mpHost = nullptr;
-        mudlet::self()->getHostManager().deleteHost(mProfileName);
+        HostManager::self()->deleteHost(mProfileName);
 
         // Now let the write run against a profile that is gone. Before the fix this
         // kills the run under AddressSanitizer, reaching through the destroyed Host

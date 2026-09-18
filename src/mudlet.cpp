@@ -107,42 +107,11 @@
 #include <chrono>
 #include <cmath>
 #include <memory>
-#include <zip.h>
 #include <QStyle>
 
-// for system physical memory info
 #if defined(Q_OS_WINDOWS)
+// GetShortPathNameW() for getShortPathName()
 #include <Windows.h>
-#include <Psapi.h>
-#elif defined(Q_OS_MACOS)
-#include <sys/param.h>
-#include <sys/sysctl.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <array>
-#elif defined(Q_OS_HURD)
-#include <errno.h>
-#include <unistd.h>
-#elif defined(Q_OS_OPENBSD)
-// OpenBSD doesn't have a sysinfo.h
-#include <sys/sysctl.h>
-#include <unistd.h>
-#elif defined(Q_OS_UNIX)
-// Including both GNU/Linux and FreeBSD
-#include <sys/resource.h>
-#include <sys/sysinfo.h>
-#include <sys/types.h>
-#include <unistd.h>
-#else
-// Any other OS?
-#endif
-
-// We are now using code that won't work with really old versions of libzip;
-// some of the error handling was improved in 1.0 . Unfortunately libzip 1.7.0
-// (and one or two other recent versions) forgot to include the version defines
-// and thus broke a test depending on them:
-#if defined(LIBZIP_VERSION_MAJOR) && (LIBZIP_VERSION_MAJOR < 1)
-#error Mudlet requires a version of libzip of at least 1.0
 #endif
 
 #if defined(Q_OS_MACOS)
@@ -705,7 +674,7 @@ void mudlet::warnProfilesLosingBindingTo(const QKeySequence& sequence, Host* pHo
     }
     const QKeyCombination combination = sequence[0];
     // A copy, because postMessage() runs Lua that may open or close a profile
-    for (auto& pOtherHost : getHostManager().hostList()) {
+    for (auto& pOtherHost : mHostManager.hostList()) {
         if (pOtherHost.isNull() || pOtherHost.data() == pHost || pOtherHost->isClosingDown()) {
             continue;
         }
@@ -1075,10 +1044,6 @@ void mudlet::init()
     scanForMudletTranslations(qsl(":/lang"));
     scanForQtTranslations(MudletApp::getMudletPath(enums::qtTranslationsPath));
     loadTranslators(MudletApp::getInterfaceLanguage());
-
-    if (!mRejectedPortableMarker.isEmpty()) {
-        warnAboutRejectedPortableRoot();
-    }
 
     // Cannot assign a value in the constructor list as it requires the
     // translations to be loaded first:
@@ -1727,11 +1692,8 @@ void mudlet::setupConfig()
     const auto resolution = MudletApp::resolveConfigRoot(MudletApp::executableDir());
     const QString confPath = resolution.path;
     if (resolution.portableRootRejected) {
-        // This used to be qFatal(), which is abort(): no message anywhere the
-        // user looks, and a crash report filed for a mistyped portable.txt. The
-        // resolver has already said which check the root failed and handed back
-        // the non-portable location, so carry on there and say so - loudly in
-        // the log now, and on screen once init() has the translations up.
+        // Carry on at the location the resolver fell back to; main() puts this
+        // on screen once the connection dialog is up
         mRejectedPortableMarker = MudletApp::portableMarkerPath(MudletApp::executableDir());
         if (mRejectedPortableMarker.isEmpty()) {
             mRejectedPortableMarker = qsl("portable.txt");
@@ -1754,24 +1716,32 @@ void mudlet::setupConfig()
     MudletApp::resetSettings();
 }
 
-// Startup no longer stops on a portable.txt that names a directory Mudlet cannot
-// use, so this dialog is the only thing telling the user that the profiles they
-// are about to see are not the portable ones they asked for.
+// The only thing on screen telling the user that the profiles they are about to
+// see are not the portable ones they asked for
 void mudlet::warnAboutRejectedPortableRoot()
 {
+    if (mRejectedPortableMarker.isEmpty()) {
+        return;
+    }
     const QString marker = mRejectedPortableMarker;
     mRejectedPortableMarker.clear();
-    QMessageBox notice;
+    // The connection dialog covers the main window, and on macOS open() makes
+    // the notice a sheet of its parent, so it has to sit on the dialog
+    QWidget* over = mpConnectionDialog ? static_cast<QWidget*>(mpConnectionDialog) : this;
+    auto* notice = new QMessageBox(over);
+    notice->setAttribute(Qt::WA_DeleteOnClose);
     //: Title of the warning shown at startup when portable.txt names a data directory Mudlet cannot use
-    notice.setWindowTitle(tr("Portable data directory unusable"));
+    notice->setWindowTitle(tr("Portable data directory unusable"));
     //: %1 is the full path of the portable.txt file that names the unusable directory
-    notice.setText(tr("The data directory named by %1 cannot be used.").arg(marker));
+    notice->setText(tr("The data directory named by %1 cannot be used.").arg(marker));
     //: %1 is the full path of the directory Mudlet has fallen back to for profiles and settings
-    notice.setInformativeText(tr("Mudlet is using %1 instead, so profiles kept in the portable directory will not be listed. "
-                                 "Correct the file and restart Mudlet to use that directory again.")
-                                      .arg(MudletApp::getMudletPath(enums::mainPath)));
-    notice.setIcon(QMessageBox::Warning);
-    notice.exec();
+    notice->setInformativeText(tr("Mudlet is using %1 instead, so profiles kept in the portable directory will not be listed. "
+                                  "Correct the file and restart Mudlet to use that directory again.")
+                                       .arg(MudletApp::getMudletPath(enums::mainPath)));
+    notice->setIcon(QMessageBox::Warning);
+    // Never exec(): a headless run, such as mudlet --profile under CI, has
+    // nobody to dismiss it
+    notice->open();
 }
 
 void mudlet::initEdbee()
@@ -5600,76 +5570,6 @@ void mudlet::startAutoLogin(const QStringList& cliProfiles, const bool offline)
     }
 }
 
-// credit to https://github.com/DigitalInBlue/Celero/blob/master/src/Memory.cpp
-int64_t mudlet::getPhysicalMemoryTotal()
-{
-#if defined(Q_OS_WINDOWS)
-    MEMORYSTATUSEX memInfo;
-    memInfo.dwLength = sizeof(MEMORYSTATUSEX);
-    GlobalMemoryStatusEx(&memInfo);
-    return static_cast<int64_t>(memInfo.ullTotalPhys);
-#elif defined(Q_OS_HURD)
-    // GNU/Hurd does not have a sysinfo struct  yet:
-    errno = 0;
-    int64_t pageSize = sysconf(_SC_PAGESIZE);
-    if (pageSize < 0) {
-        if (errno) {
-            qDebug().nospace().noquote() << "mudlet::getPhysicalMemoryTotal() WARNING - error returned from sysconf(_SC_PAGESIZE); errno: " << errno;
-        } else {
-            qDebug().nospace().noquote() << "mudlet::getPhysicalMemoryTotal() WARNING - indeterminent limit returned from sysconf(_SC_PAGESIZE).";
-        }
-        return -1;
-    }
-    int64_t pageCount = sysconf(_SC_PHYS_PAGES);
-    if (pageCount < 0) {
-        if (errno) {
-            qDebug().nospace().noquote() << "mudlet::getPhysicalMemoryTotal() WARNING - error returned from sysconf(_SC_PHYS_PAGES); errno: " << errno;
-        } else {
-            qDebug().nospace().noquote() << "mudlet::getPhysicalMemoryTotal() WARNING - indeterminent limit returned from sysconf(_SC_PHYS_PAGES).";
-        }
-        return -1;
-    }
-    return pageSize * pageCount;
-#elif defined(Q_OS_MACOS)
-    int mib[2];
-    mib[0] = CTL_HW;
-    mib[1] = HW_MEMSIZE;
-
-    int64_t memInfo{0};
-    auto len = sizeof(memInfo);
-
-    if (!sysctl(mib, 2, &memInfo, &len, nullptr, 0)) {
-        return memInfo;
-    }
-
-    return -1;
-#elif defined(Q_OS_OPENBSD)
-    // Very similar to MacOS but uses a different second level name
-    int mib[2];
-    mib[0] = CTL_HW;
-    mib[1] = HW_PHYSMEM64; // Or do we really want HW_USERMEM64?
-
-    int64_t memInfo{0};
-    auto len = sizeof(memInfo);
-
-    if (!sysctl(mib, 2, &memInfo, &len, nullptr, 0)) {
-        return memInfo;
-    }
-
-    return -1;
-#elif defined(Q_OS_UNIX)
-    // Including both GNU/Linux and FreeBSD:
-    // Prefer sysctl() over sysconf() except sysctl() HW_REALMEM and HW_PHYSMEM
-    // return static_cast<int64_t>(sysconf(_SC_PHYS_PAGES)) * static_cast<int64_t>(sysconf(_SC_PAGE_SIZE));
-    struct sysinfo memInfo;
-    sysinfo(&memInfo);
-    int64_t const total = memInfo.totalram;
-    return total * static_cast<int64_t>(memInfo.mem_unit);
-#else
-    return -1;
-#endif
-}
-
 // Ensure the debug area is attached to at least one Host
 void mudlet::attachDebugArea(const QString& hostname)
 {
@@ -5914,7 +5814,7 @@ void mudlet::slot_processEventLoopHackTimerRun()
 
 void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connect)
 {
-    Host* pHost = getHostManager().getHost(profile);
+    Host* pHost = mHostManager.getHost(profile);
     if (!pHost) {
         return;
     }
@@ -6586,121 +6486,6 @@ void mudlet::requestProfilesToReloadMaps(QList<QString> affectedProfiles)
     emit signal_profileMapReloadRequested(affectedProfiles);
 }
 
-bool mudlet::unzip(const QString& archivePath, const QString& destination, const QDir& tmpDir)
-{
-    int err = 0;
-    //from: https://gist.github.com/mobius/1759816
-    struct zip_stat zs;
-    struct zip_file* zf;
-    zip_uint64_t bytesRead = 0;
-    zip* archive = zip_open(archivePath.toUtf8().constData(), 0, &err);
-    if (!archive) {
-        zip_error_t error;
-        zip_error_init_with_code(&error, err);
-        qWarning().noquote().nospace() << "mudlet::unzip(\"" << archivePath << "\", \"" << destination << "\", \"" << tmpDir.absolutePath() << "\") WARNING - failed to unzip file, error: \""
-                                       << zip_error_strerror(&error) << "\"";
-        zip_error_fini(&error);
-        return false;
-    }
-
-    // We now scan for directories first, and gather needed ones first, not
-    // just relying on (zero length) archive entries ending in '/' as some
-    // (possibly broken) archive building libraries seem to forget to
-    // include them.
-    QMap<QString, QString> directoriesNeededMap;
-    //   Key is: relative path stored in archive
-    // Value is: absolute path needed when extracting files
-    for (zip_int64_t i = 0, total = zip_get_num_entries(archive, 0); i < total; ++i) {
-        if (!zip_stat_index(archive, static_cast<zip_uint64_t>(i), 0, &zs)) {
-            const QString entryInArchive(zs.name);
-            const QString pathInArchive(entryInArchive.section(qsl("/"), 0, -2));
-            // TODO: We are supposed to validate the fields (except the
-            // "valid" one itself) in zs before using them:
-            // i.e. check that zs.name is valid ( zs.valid & ZIP_STAT_NAME )
-            if (entryInArchive.endsWith(QLatin1Char('/'))) {
-                if (!directoriesNeededMap.contains(pathInArchive)) {
-                    directoriesNeededMap.insert(pathInArchive, pathInArchive);
-                }
-            } else {
-                if (!pathInArchive.isEmpty() && !directoriesNeededMap.contains(pathInArchive)) {
-                    directoriesNeededMap.insert(pathInArchive, pathInArchive);
-                }
-            }
-        }
-    }
-
-    // Now create the needed directories:
-    QMapIterator<QString, QString> itPath(directoriesNeededMap);
-    while (itPath.hasNext()) {
-        itPath.next();
-        const QString folderToCreate = qsl("%1%2").arg(destination, itPath.value());
-        if (!tmpDir.exists(folderToCreate)) {
-            if (!tmpDir.mkpath(folderToCreate)) {
-                zip_close(archive);
-                return false; // Abort reading rest of archive
-            }
-            tmpDir.refresh();
-        }
-    }
-
-    // Now extract the files
-    for (zip_int64_t i = 0, total = zip_get_num_entries(archive, 0); i < total; ++i) {
-        // No need to check return value as we've already done it first time
-        zip_stat_index(archive, static_cast<zip_uint64_t>(i), 0, &zs);
-        const QString entryInArchive(zs.name);
-        if (!entryInArchive.endsWith(QLatin1Char('/'))) {
-            // TODO: check that zs.size is valid ( zs.valid & ZIP_STAT_SIZE )
-            zf = zip_fopen_index(archive, static_cast<zip_uint64_t>(i), 0);
-            if (!zf) {
-                zip_close(archive);
-                return false;
-            }
-
-            QFile fd(qsl("%1%2").arg(destination, entryInArchive));
-
-            if (!fd.open(QIODevice::ReadWrite | QIODevice::Truncate)) {
-                zip_fclose(zf);
-                zip_close(archive);
-                return false;
-            }
-
-            bytesRead = 0;
-            zip_uint64_t const bytesExpected = zs.size;
-            while (bytesRead < bytesExpected && fd.error() == QFileDevice::NoError) {
-                char buf[4096]; // Was 100 but that seems unduly stingy...!
-                zip_int64_t const len = zip_fread(zf, buf, sizeof(buf));
-                if (len < 0) {
-                    fd.close();
-                    zip_fclose(zf);
-                    zip_close(archive);
-                    return false;
-                }
-
-                if (fd.write(buf, len) == -1) {
-                    fd.close();
-                    zip_fclose(zf);
-                    zip_close(archive);
-                    return false;
-                }
-                bytesRead += static_cast<zip_uint64_t>(len);
-            }
-            fd.close();
-            zip_fclose(zf);
-        }
-    }
-
-    err = zip_close(archive);
-    if (err) {
-        zip_error_t* error = zip_get_error(archive);
-        qWarning().noquote().nospace() << "mudlet::unzip(\"" << archivePath << "\", \"" << destination << "\", \"" << tmpDir.absolutePath() << "\") Warning - " << zip_error_strerror(error);
-        zip_error_fini(error);
-        zip_discard(archive);
-        return false;
-    }
-
-    return true;
-}
-
 //loads the luaFunctionList for use by the edbee Autocompleter
 bool mudlet::loadLuaFunctionList()
 {
@@ -7040,16 +6825,6 @@ QStringList mudlet::getAvailableFonts()
     return QFontDatabase::families(QFontDatabase::Any);
 }
 
-std::string mudlet::replaceString(std::string subject, const std::string& search, const std::string& replace)
-{
-    size_t pos = 0;
-    while ((pos = subject.find(search, pos)) != std::string::npos) {
-        subject.replace(pos, search.length(), replace);
-        pos += replace.length();
-    }
-    return subject;
-}
-
 // Helper function to check if current version is >= specified version
 // Returns true if current version is >= minVersion, false otherwise
 bool mudlet::isVersionAtLeast(const QString& minVersion)
@@ -7371,7 +7146,7 @@ void mudlet::setAppearance(const enums::Appearance state, const bool& loading)
 
     refreshTabBarsAfterStyleChange();
 
-    getHostManager().changeAllHostColour(getActiveHost());
+    mHostManager.changeAllHostColour(getActiveHost());
     mAppearance = state;
     emit signal_appearanceChanged(state);
 }
