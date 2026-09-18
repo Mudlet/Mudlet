@@ -27,6 +27,7 @@
 #include "dlgMapper.h"
 #include "mudlet.h"
 #include "TMap.h"
+#include "TMapViewManager.h"
 
 #include <QDebug>
 
@@ -167,6 +168,11 @@ void HostManager::changeAllHostColour(const Host* pHost)
         auto mapper = host->mpMap->mpMapper;
         if (mapper) {
             mapper->setPalette(QApplication::palette());
+        }
+        // ...as do any secondary map views
+        auto viewManager = host->mpMap->getViewManager();
+        if (viewManager) {
+            viewManager->changeViewsColour();
         }
         for (const QString& subConsoleName : host->windowRegistry().subConsoleNames()) {
             host->mpConsole->changeSubConsoleColors(subConsoleName);

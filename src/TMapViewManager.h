@@ -55,6 +55,7 @@ public:
 
     // Bulk operations
     void updateAllViews();
+    void changeViewsColour();
 
 signals:
     void viewCreated(int viewId);
