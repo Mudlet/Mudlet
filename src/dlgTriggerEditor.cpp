@@ -8135,6 +8135,9 @@ void dlgTriggerEditor::slot_keySelected(QTreeWidgetItem* pItem)
                     firstPackageAnnounced = true;
                 }
             }
+            // A warning given while the editor was closed is replaced when it
+            // opens, so a binding a script made is only warned about here
+            mpHost->getKeyUnit()->warnIfKeyIsTaken(pT);
         }
     } else {
         clearKeyForm();

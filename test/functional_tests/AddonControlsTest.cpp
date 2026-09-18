@@ -39,6 +39,7 @@
 #include <QSignalSpy>
 #include <QToolBar>
 #include <QToolButton>
+#include <QTreeWidgetItemIterator>
 #include <QtTest/QtTest>
 #include <chrono>
 
@@ -222,7 +223,24 @@ private:
         return pHost->mpEditorDialog.data();
     }
 
-    static QString editorSaid(dlgTriggerEditor* pEditor) { return pEditor ? pEditor->mpSystemMessageArea->notificationAreaMessageBox->text() : QString(); }
+    // Clearing a message hides the area but leaves its text behind
+    static QString editorSaid(dlgTriggerEditor* pEditor)
+    {
+        if (!pEditor || pEditor->mpSystemMessageArea->isHidden()) {
+            return QString();
+        }
+        return pEditor->mpSystemMessageArea->notificationAreaMessageBox->text();
+    }
+
+    static QTreeWidgetItem* keyItem(dlgTriggerEditor* pEditor, const int keyId)
+    {
+        for (QTreeWidgetItemIterator it(pEditor->treeWidget_keys); *it; ++it) {
+            if ((*it)->data(0, Qt::UserRole).toInt() == keyId) {
+                return *it;
+            }
+        }
+        return nullptr;
+    }
 
     // On the main toolbar rather than merely somewhere in the window: a button
     // built but never added is still findable by name, and looks from here
@@ -495,6 +513,44 @@ private slots:
         pEditor->slot_deleteItemOrGroup();
         pEditor->mpUndoStack->clear();
         QVERIFY2(text.contains(qsl("Toggle Time Stamps")), qPrintable(qsl("grabbing one of Mudlet's own keys was not warned about: %1").arg(text)));
+    }
+
+    // A binding a script makes while the editor is closed is warned about on the
+    // hidden editor, which replaces the warning when it opens, so selecting the
+    // binding is where the player gets to see it
+    void test_selectingABindingOnATakenKeyInTheEditorWarnsAboutIt()
+    {
+        dlgTriggerEditor* pEditor = editorFor(mpFirstHost);
+        QVERIFY2(pEditor, "the profile's editor could not be opened");
+
+        QVERIFY2(runLua(mpFirstHost,
+                        qsl("_takenSelectId = permKey('TakenSelect', '', mudlet.keymodifier.Control + mudlet.keymodifier.Alt, mudlet.key.T, [[echo('bound')]]) "
+                            "_freeSelectId = permKey('FreeSelect', '', mudlet.keymodifier.Control + mudlet.keymodifier.Alt, mudlet.key.F12, [[echo('bound')]])"))
+                         .isNull(),
+                 "the key bindings could not be made");
+        const int takenId = luaGlobalNumber(mpFirstHost, qsl("_takenSelectId"));
+        const int freeId = luaGlobalNumber(mpFirstHost, qsl("_freeSelectId"));
+
+        // How the editor picks up items made from Lua
+        pEditor->enterEvent(nullptr);
+        pEditor->slot_showKeys();
+        QTreeWidgetItem* pTaken = keyItem(pEditor, takenId);
+        QTreeWidgetItem* pFree = keyItem(pEditor, freeId);
+        QVERIFY2(pTaken && pFree, "the key bindings are not in the editor's tree");
+
+        pEditor->showInfo(QString());
+        pEditor->slot_keySelected(pTaken);
+        const QString takenText = editorSaid(pEditor);
+        pEditor->slot_keySelected(pFree);
+        const QString freeText = editorSaid(pEditor);
+
+        for (QTreeWidgetItem* pItem : {pTaken, pFree}) {
+            pEditor->treeWidget_keys->setCurrentItem(pItem);
+            pEditor->slot_deleteItemOrGroup();
+        }
+        pEditor->mpUndoStack->clear();
+        QVERIFY2(takenText.contains(qsl("Toggle Time Stamps")), qPrintable(qsl("selecting a binding on one of Mudlet's own keys did not warn about it: %1").arg(takenText)));
+        QVERIFY2(!freeText.contains(qsl("already used")), qPrintable(qsl("selecting a binding that fires warned about it: %1").arg(freeText)));
     }
 
     // addCommand() turns down a key Mudlet holds, but the preferences will move
