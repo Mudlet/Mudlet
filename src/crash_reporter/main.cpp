@@ -27,6 +27,7 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QNetworkAccessManager>
+#include <QNetworkProxyFactory>
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QStringList>
@@ -163,6 +164,8 @@ void sendCrashReport(const char* envelopePath)
     // has been 7 since the DSN format settled.
     // https://develop.sentry.dev/sdk/overview/#authentication
     request.setRawHeader("X-Sentry-Auth", QStringLiteral("Sentry sentry_version=7, sentry_client=mudlet-crash-reporter/1.0, sentry_key=%1").arg(parsedDsn.userName()).toUtf8());
+
+    QNetworkProxyFactory::setUseSystemConfiguration(true);
 
     // The reply is parented to the manager, so it goes with it at end of scope.
     QNetworkAccessManager manager;
