@@ -121,8 +121,8 @@ private slots:
         QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileDataItemPath, mProfileName, qsl("profile.dic"))));
         QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::mainDataItemPath, qsl("mudlet.dic"))));
 
-        QVERIFY(mudlet::self()->getHostManager().addHost(mProfileName, QString(), QString(), QString()));
-        mpHost = mudlet::self()->getHostManager().getHost(mProfileName);
+        QVERIFY(HostManager::self()->addHost(mProfileName, QString(), QString(), QString()));
+        mpHost = HostManager::self()->getHost(mProfileName);
         QVERIFY(mpHost);
 
         // The profile's own dictionary, not the shared one:
