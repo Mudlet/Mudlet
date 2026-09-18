@@ -56,7 +56,7 @@ jobs:
           - os: ubuntu-latest
             buildname: 'ubuntu / clang'
             compiler: clang_64
-            gcc_compiler_version: 10
+            gcc_compiler_version: 14
             qt: '6.11.1'
           # Ships the Intel binary only: no test here branches on the host
           # architecture, so the arm64 job below is the same coverage, and this
