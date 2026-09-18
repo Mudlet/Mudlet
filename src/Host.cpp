@@ -2244,7 +2244,7 @@ void Host::runTriggers(int line)
     consoleModel.mEngineCursor = line;
     consoleModel.mUserCursor.setX(0);
     consoleModel.mCurrentLine = consoleModel.buffer.line(line);
-    getLuaInterpreter()->set_lua_string(TConsole::cmLuaLineVariable, consoleModel.mCurrentLine);
+    getLuaInterpreter()->setLineGlobal(consoleModel.mCurrentLine);
     // The matchers take the haystack by reference all the way down, so it must be
     // a local: a nested pass reassigns mCurrentLine under them. Its storage is
     // borrowed from the Host, so the capacity outlives the line and only a line
@@ -2282,7 +2282,7 @@ void Host::runTriggers(int line)
         consoleModel.mEngineCursor = qMin(previousEngineCursor, lastLine);
         consoleModel.mIsPromptLine = previousIsPromptLine;
         consoleModel.mCurrentLine = previousLine;
-        getLuaInterpreter()->set_lua_string(TConsole::cmLuaLineVariable, previousLine);
+        getLuaInterpreter()->setLineGlobal(previousLine);
     } else {
         consoleModel.mIsPromptLine = false;
     }
