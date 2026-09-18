@@ -192,20 +192,23 @@ void KeyUnit::warnIfKeyIsTaken(const TKey* pKey) const
 
     const QKeySequence sequence(QKeyCombination(pKey->getKeyModifiers(), pKey->getKeyCode()));
     const QString keyText = sequence.toString(QKeySequence::NativeText);
-    // addCommand() refuses a key Mudlet holds, so at most one of these applies
+    // Both can hold the key: addCommand() turns down a key Mudlet holds, but the
+    // preferences will move one of Mudlet's shortcuts onto a command's key
+    QStringList warnings;
     if (const QString action = pMudlet->ownShortcutUsingKey(pKey->getKeyCode(), pKey->getKeyModifiers()); !action.isEmpty()) {
         // "while that is available": a greyed-out menu item is not offered the
         // key, so the binding does fire then
         //: Warning shown in the editor when a key binding is given a key one of Mudlet's own shortcuts already uses. %1 is a key such as "Alt+M", %2 the name of the Mudlet action holding it, as the Shortcuts tab of the preferences shows it.
-        mpHost->mpEditorDialog->showWarning(tr("%1 is already used by Mudlet for \"%2\", which will get the key first, so this key binding will not fire while that is available. "
-                                               "Mudlet's own shortcuts can be changed in the preferences, under Shortcuts.")
-                                                    .arg(keyText, action));
-        return;
+        warnings.append(tr("%1 is already used by Mudlet for \"%2\", which will get the key first, so this key binding will not fire while that is available. "
+                           "Mudlet's own shortcuts can be changed in the preferences, under Shortcuts.")
+                                .arg(keyText, action));
     }
-    const QStringList holders = pMudlet->addonCommandsUsingShortcut(sequence, mpHost);
-    if (!holders.isEmpty()) {
+    if (const QStringList holders = pMudlet->addonCommandsUsingShortcut(sequence, mpHost); !holders.isEmpty()) {
         //: Warning shown in the editor when a key binding is given a key an add-on command already holds. %1 is a key such as "Alt+F9", %2 a comma separated list of the commands holding it.
-        mpHost->mpEditorDialog->showWarning(tr("%1 is already used by %2, which will get the key first, so this key binding will not fire.").arg(keyText, holders.join(qsl(", "))));
+        warnings.append(tr("%1 is already used by %2, which will get the key first, so this key binding will not fire.").arg(keyText, holders.join(qsl(", "))));
+    }
+    if (!warnings.isEmpty()) {
+        mpHost->mpEditorDialog->showWarning(warnings.join(QChar::Space));
     }
 }
 

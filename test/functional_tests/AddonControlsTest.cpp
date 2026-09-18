@@ -43,6 +43,7 @@
 #include <chrono>
 
 #include "PortableModeTestHelper.h"
+#include "ShortcutsManager.h"
 #include "TMainConsole.h"
 #include "Host.h"
 #include "HostManager.h"
@@ -473,6 +474,53 @@ private slots:
             runLua(mpFirstHost, qsl("killKey(_quietKeyId)"));
             QVERIFY2(text.isEmpty(), qPrintable(qsl("a binding that fires (%1) was warned about: %2").arg(binding, text)));
         }
+    }
+
+    // The way most bindings are made: pressing the key in the editor's grab box
+    void test_grabbingOneOfMudletsOwnKeysInTheEditorIsWarnedAbout()
+    {
+        dlgTriggerEditor* pEditor = editorFor(mpFirstHost);
+        QVERIFY2(pEditor, "the profile's editor could not be opened");
+
+        pEditor->slot_showKeys();
+        pEditor->addKey(false);
+        QTreeWidgetItem* pItem = pEditor->treeWidget_keys->currentItem();
+        QVERIFY2(pItem && pItem != pEditor->mpKeyBaseItem, "the new key binding is not the one selected");
+
+        pEditor->showInfo(QString());
+        pEditor->keyGrabCallback(Qt::Key_T, Qt::ControlModifier | Qt::AltModifier);
+        const QString text = editorSaid(pEditor);
+
+        pEditor->treeWidget_keys->setCurrentItem(pItem);
+        pEditor->slot_deleteItemOrGroup();
+        pEditor->mpUndoStack->clear();
+        QVERIFY2(text.contains(qsl("Toggle Time Stamps")), qPrintable(qsl("grabbing one of Mudlet's own keys was not warned about: %1").arg(text)));
+    }
+
+    // addCommand() turns down a key Mudlet holds, but the preferences will move
+    // one of Mudlet's shortcuts onto a command's key. Naming only Mudlet would
+    // send the player to change a shortcut that is not the only thing in the way.
+    void test_aKeyHeldByBothMudletAndACommandNamesBoth()
+    {
+        const int commandId = addCommand(mpFirstHost, qsl("name = 'BothHoldBinding', menuPath = 'ClashTest', shortcut = 'Ctrl+Alt+F11'"));
+        QVERIFY2(commandId > 0, "the command could not be placed on a key nothing was holding");
+
+        ShortcutsManager* pManager = mudlet::self()->shortcutsManager();
+        QKeySequence original = *pManager->getSequence(qsl("Toggle Time Stamps"));
+        QKeySequence moved(QKeyCombination(Qt::ControlModifier | Qt::AltModifier, Qt::Key_F11));
+        pManager->setShortcut(qsl("Toggle Time Stamps"), &moved);
+
+        dlgTriggerEditor* pEditor = editorFor(mpFirstHost);
+        QVERIFY2(pEditor, "the profile's editor could not be opened");
+        pEditor->showInfo(QString());
+        const bool made = runLua(mpFirstHost, qsl("_bothKeyId = tempKey(mudlet.keymodifier.Control + mudlet.keymodifier.Alt, mudlet.key.F11, [[echo('bound')]])")).isNull();
+        const QString text = editorSaid(pEditor);
+
+        runLua(mpFirstHost, qsl("killKey(_bothKeyId)"));
+        runLua(mpFirstHost, qsl("removeCommand(%1)").arg(commandId));
+        pManager->setShortcut(qsl("Toggle Time Stamps"), &original);
+        QVERIFY2(made, "the key binding could not be made");
+        QVERIFY2(text.contains(qsl("Toggle Time Stamps")) && text.contains(qsl("BothHoldBinding")), qPrintable(qsl("the warning does not name both holders of the key: %1").arg(text)));
     }
 
     // docs/addon-ui-api.md gives the click event the id as addCommand returned

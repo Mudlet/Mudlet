@@ -888,8 +888,8 @@ QStringList mudlet::addonCommandsUsingShortcut(const QKeySequence& sequence, con
 }
 
 // No QAction scan as in addonShortcutUsable(): it would only add add-on
-// commands, which are addonCommandsUsingShortcut()'s to report. Every shortcut
-// of Mudlet's own is a sequence registered with the manager.
+// commands, which are addonCommandsUsingShortcut()'s to report. Covers the
+// shortcuts the preferences list, not the buffer search's opt-in F3 keys.
 QString mudlet::ownShortcutUsingKey(const Qt::Key key, const Qt::KeyboardModifiers modifiers) const
 {
     if (!mpShortcutsManager || key == Qt::Key_unknown) {

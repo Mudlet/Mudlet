@@ -412,6 +412,8 @@ describe("a key binding on a key Mudlet itself uses", function()
 
     assert.is_number(key, "the binding should still be made")
     assert.is_nil(text:find("WARN", 1, true), "the clash was posted to the main console: " .. text)
+    -- the console wraps long lines, so the action's name is looked for without spaces
+    assert.is_nil(text:gsub("%s", ""):find("ToggleTimeStamps", 1, true), "the clash was posted to the main console: " .. text)
   end)
 
 end)
