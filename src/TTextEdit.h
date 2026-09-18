@@ -86,7 +86,6 @@ public:
     void showEvent(QShowEvent* event) override;
     void updateScreenView();
     void updateScrollBar(int);
-    void applyPendingScrollBarUpdate();
     void calculateHMaxRange();
     void updateHorizontalScrollBar();
     void highlightSelection();
@@ -192,6 +191,7 @@ private slots:
     void slot_copySelectionToClipboardImage();
 
 private:
+    void applyPendingScrollBarUpdate();
     QString getSelectedText(const QChar& newlineChar = QChar::LineFeed, const bool showTimestamps = false);
     inline static QString htmlCenter(const QString&);
     static QString convertWhitespaceToVisual(const QChar& first, const QChar& second = QChar::Null);

@@ -525,8 +525,6 @@ void TimerUnit::doCleanup()
         return;
     }
 
-    // Called once per unit for every line of game text, and next to never has
-    // anything queued, so skip setting up the flush below.
     if (!hasPendingDeletes()) {
         return;
     }

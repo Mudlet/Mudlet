@@ -1489,9 +1489,9 @@ void TTextEdit::paintEvent(QPaintEvent* e)
     if (!mPendingPaintRegion.isEmpty()) {
         // Whatever this paint covers is current now, so a deferred repaint of it
         // would be redundant. Only the remainder - if a partial expose left one -
-        // still needs the pacer.
+        // and a pending scrollbar update still need the pacer.
         mPendingPaintRegion -= e->region();
-        if (mPendingPaintRegion.isEmpty()) {
+        if (mPendingPaintRegion.isEmpty() && !mScrollBarUpdatePending) {
             mpPaintPacer->stop();
         }
     }
