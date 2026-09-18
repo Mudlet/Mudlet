@@ -32,7 +32,9 @@
  * dictionary retried on every call means a scan of profile.dic and a rewrite of
  * it and profile.aff in front of every misspelled word typed. Taking the rig
  * away and asking again proves the retry is not happening: a second attempt
- * would succeed, and would leave the rewritten pair on disk.
+ * would succeed, and would leave the rewritten pair on disk. Changing the
+ * dictionary options has to forget the failure, so fixing its cause does not
+ * need a restart.
  *
  * Run with: ctest -R SpellDictionaryFailureTest -V
  */
@@ -160,6 +162,14 @@ private slots:
         QVERIFY2(reason.contains(qsl("profile dictionary could not be opened")), qPrintable(qsl("spellSuggestWord() answered '%1'").arg(reason)));
     }
 
+    // An empty table would read as a dictionary that holds no words yet, while
+    // addWordToDictionary() on the same profile refuses outright.
+    void test_getDictionaryWordListRefusesWhenTheProfileDictionaryCannotBeOpened()
+    {
+        const QString reason = reasonFrom(qsl("local words, why = getDictionaryWordList(); reason = why or ('a list of ' .. tostring(words and #words) .. ' words')"));
+        QVERIFY2(reason.contains(qsl("profile dictionary could not be opened")), qPrintable(qsl("getDictionaryWordList() answered '%1'").arg(reason)));
+    }
+
     // Runs after the cases above because it takes the rig away: from here on a
     // fresh attempt at the profile dictionary would succeed.
     void test_theFailedProfileDictionaryIsNotOpenedAgain()
@@ -175,7 +185,16 @@ private slots:
         QVERIFY2(!QFileInfo::exists(affixPath), "a second attempt rewrote profile.aff, so the failed open is retried for every word checked");
     }
 
-    // The shared dictionary fails the same three ways, and reaching it is a
+    void test_changingTheDictionaryOptionsRetriesTheFailedProfileDictionary()
+    {
+        QVERIFY2(!mpHost->spellChecker().userHandle(), "SETUP: the profile dictionary is not failed, so there is nothing for the options change to retry");
+
+        mpHost->setUserDictionaryOptions(true, true);
+        mpHost->setUserDictionaryOptions(true, false);
+        QVERIFY2(mpHost->spellChecker().userHandle(), "switching to the shared dictionary and back left the profile dictionary refused, so only a restart retries it");
+    }
+
+    // The shared dictionary fails the same ways, and reaching it is a
     // matter of one profile setting, so these run last - they leave the profile
     // pointed at the shared dictionary.
     void test_addWordRefusesWhenTheSharedDictionaryCannotBeOpened()
@@ -197,6 +216,14 @@ private slots:
         QVERIFY2(result.second.contains(qsl("could not be opened")), qPrintable(qsl("removeWord() blamed the wrong thing: '%1'").arg(result.second)));
     }
 
+    void test_getDictionaryWordListRefusesWhenTheSharedDictionaryCannotBeOpened()
+    {
+        mpHost->setUserDictionaryOptions(true, true);
+
+        const QString reason = reasonFrom(qsl("local words, why = getDictionaryWordList(); reason = why or ('a list of ' .. tostring(words and #words) .. ' words')"));
+        QVERIFY2(reason.contains(qsl("shared dictionary could not be opened")), qPrintable(qsl("getDictionaryWordList() answered '%1'").arg(reason)));
+    }
+
     void test_theFailedSharedDictionaryIsNotOpenedAgain()
     {
         const QString dictionaryPath = MudletApp::getMudletPath(enums::mainDataItemPath, qsl("mudlet.dic"));
@@ -216,6 +243,22 @@ private slots:
     {
         TSpellChecker::closeSharedDictionary();
         QVERIFY2(TSpellChecker::sharedDictionary(), "the shared dictionary stayed refused after being closed, so the remembered failure outlived the handle");
+    }
+
+    // Rigs its own failure, as the one above leaves the shared dictionary open.
+    void test_changingTheDictionaryOptionsRetriesTheFailedSharedDictionary()
+    {
+        const QString dictionaryPath = MudletApp::getMudletPath(enums::mainDataItemPath, qsl("mudlet.dic"));
+        TSpellChecker::closeSharedDictionary();
+        QFile::remove(dictionaryPath);
+        QVERIFY(QDir().mkpath(dictionaryPath));
+        QVERIFY2(!TSpellChecker::sharedDictionary(), "SETUP: the re-rigged shared dictionary opened anyway");
+        QVERIFY(QDir().rmdir(dictionaryPath));
+        QVERIFY2(!TSpellChecker::sharedDictionary(), "SETUP: the shared dictionary failure was not remembered");
+
+        mpHost->setUserDictionaryOptions(true, false);
+        mpHost->setUserDictionaryOptions(true, true);
+        QVERIFY2(TSpellChecker::sharedDictionary(), "switching to the profile dictionary and back left the shared dictionary refused, so only a restart retries it");
     }
 };
 

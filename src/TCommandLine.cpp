@@ -927,7 +927,7 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
 
         } else {
             QAction* pA = nullptr;
-            if (mpConsole->mpHost->spellChecker().usingSharedDictionary()) {
+            if (mpHost->spellChecker().usingSharedDictionary()) {
                 /*:
                 Used when the command spelling checker using the dictionary shared between
                 profile has no words to suggest.

@@ -7473,6 +7473,11 @@ int TLuaInterpreter::getDictionaryWordList(lua_State* L)
         return warnArgumentValue(L, __func__, "no user dictionary enabled in the preferences for this profile");
     }
 
+    if (!host.spellChecker().userHandle()) {
+        return warnArgumentValue(
+                L, __func__, qsl("the %1 dictionary could not be opened so is unable to list its words").arg(host.spellChecker().usingSharedDictionary() ? qsl("shared") : qsl("profile")));
+    }
+
     // We must keep a local reference/copy of the value returned because the
     // returned item is a deep-copy in the case of a shared dictionary and two
     // calls to TSpellChecker::wordSet() can return two different instances which
