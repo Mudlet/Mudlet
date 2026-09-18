@@ -7306,7 +7306,7 @@ void dlgProfilePreferences::maybeDownloadEditorThemes()
                         }
 
                         // perform unzipping in a worker thread so as not to freeze the UI
-                        auto future = QtConcurrent::run(mudlet::unzip, tempThemesArchive->fileName(), MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("edbee/")), temporaryDir.path());
+                        auto future = QtConcurrent::run(utils::unzip, tempThemesArchive->fileName(), MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("edbee/")), temporaryDir.path());
                         auto watcher = new QFutureWatcher<bool>(this);
                         connect(watcher, &QFutureWatcher<bool>::finished, this, [=, this]() {
                             if (future.result()) {

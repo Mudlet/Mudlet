@@ -111,9 +111,11 @@ set(TELNET_GROUP_TEST_SOURCES
     TelnetLatencyMeasurementTest.cpp
     TelnetBenchmark.cpp
     TelnetCharsetNegotiationTest.cpp
+    TelnetChannel102WireTest.cpp
     CrashTestHookTest.cpp
     TelnetConnectFailureTest.cpp
     TelnetConnectLookupRaceTest.cpp
+    TelnetIacEscapingTest.cpp
     TelnetNewEnvironTest.cpp
     TelnetOptionsReportTest.cpp
     TelnetReconnectStateTest.cpp
@@ -135,6 +137,7 @@ set(TRIGGER_GROUP_TEST_SOURCES
     TFeedTriggersRecursionTest.cpp
     UnitDeferredDeleteTest.cpp
     UnitProcessingDepthTest.cpp
+    UnitsReachHostTest.cpp
 )
 
 # The script editor, and the trigger, variable and script forms it hosts
@@ -162,6 +165,7 @@ set(MAP_GROUP_TEST_SOURCES
     MapAreaReassignmentTest.cpp
     MapAreaSelectionTest.cpp
     MapCloseDuringImportTest.cpp
+    MapCoordinateLimitTest.cpp
     MapContextMenuLifetimeTest.cpp
     MapDownloadTest.cpp
     RoomExitsDialogTest.cpp
@@ -187,12 +191,14 @@ set(PACKAGE_GROUP_TEST_SOURCES
     DualPackageModuleTest.cpp
     ModuleManagerListingTest.cpp
     ModuleSaveTeardownTest.cpp
+    PackageDownloadDialogRestyleTest.cpp
     PackageExporterDialogTest.cpp
     PackageFontsOnRefusedArchiveTest.cpp
     PackageManagerRemovalTest.cpp
     PackageRemovalSaveTeardownTest.cpp
     PackageRepositoryDownloadTest.cpp
     PackageSelfRemovalTest.cpp
+    UnzipBadArchiveTest.cpp
 )
 
 # Onboarding and in-app guidance: the starter UI, the tutorial invitation,

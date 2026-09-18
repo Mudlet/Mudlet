@@ -61,7 +61,6 @@
 class QAction;
 class QCloseEvent;
 class QDateTime;
-class QDir;
 class QDockWidget;
 class QKeyEvent;
 class QMediaDevices;
@@ -102,7 +101,6 @@ class TLabel;
 class translation;
 class TScrollBox;
 class TTabBar;
-class TTimer;
 class TToolBar;
 class TUiTour;
 
@@ -116,16 +114,12 @@ public:
     ~mudlet() override;
 
     static QSettings* getQSettings();
-    // From https://stackoverflow.com/a/14678964/4805858 an answer to:
-    // "How to find and replace string?" by "Czarek Tomczak":
     static bool loadEdbeeTheme(const QString& themeName, const QString& themeFile);
     static bool loadLuaFunctionList();
-    static std::string replaceString(std::string subject, const std::string& search, const std::string& replace);
     static mudlet* self();
     static void setNetworkRequestDefaults(const QUrl& url, QNetworkRequest& request);
     // This method allows better debugging when mudlet::self() is called inappropriately.
     static void start();
-    static bool unzip(const QString& archivePath, const QString& destination, const QDir& tmpDir);
     static QImage getSplashScreen(bool releaseVersion, bool testVersion);
 
 
@@ -246,7 +240,6 @@ public:
     QDockWidget* getMainWindowDockWidget(const QString& mapKey) const;
     std::optional<QSize> getImageSize(const QString&);
     const QString& getInterfaceLanguage() const { return mInterfaceLanguage; }
-    int64_t getPhysicalMemoryTotal();
     const QLocale& getUserLocale() const { return mUserLocale; }
     QSet<QString> getWordSet();
     bool inDarkMode() const { return mDarkMode; }
@@ -531,7 +524,6 @@ public slots:
     void slot_nextProfile();
     void slot_previousProfile();
     void slot_tabChanged(int);
-    void slot_timerFires();
     void slot_toggleFullScreenView();
     void slot_toggleMultiView();
     void slot_toggleTimeStamp();

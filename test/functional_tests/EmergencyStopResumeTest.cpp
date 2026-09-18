@@ -261,7 +261,7 @@ private slots:
     // A spent one-shot is the corpse that is still isActive(): TTimer::execute()
     // queues it with mpQTimer->stop() + markCleanup() and no deactivate(). The
     // two calls below are what execute() does, rather than a real wait, because
-    // mudlet::slot_timerFires() frees a fired one-shot as soon as it returns.
+    // Host::slot_timerFires() frees a fired one-shot as soon as it returns.
     void test_spentOneShotFunctionTimerStaysDeadAcrossResume()
     {
         auto* unit = mpHost->getTimerUnit();
