@@ -106,15 +106,21 @@ jobs:
         cache: false
         modules: qt5compat qtmultimedia qtspeech
 
+    # The runner sets $ImageOS, and the env context holds only what the workflow
+    # sets, so the key below cannot read it without going through GITHUB_ENV
+    - name: Record the runner image
+      run: echo "IMAGE_OS=$ImageOS" >> $GITHUB_ENV
+
     - name: Cache Lua build
       uses: actions/cache@v6
       with:
         path: .lua
-        # Not gh-actions-lua's own buildCache: that shares one key across
-        # runner images, and a .lua built on ubuntu-latest cannot run on
-        # ubuntu-22.04 (newer glibc). The action skips its lua.org download
-        # whenever .lua already exists.
-        key: lua-${{ env.LUA_VERSION }}-${{ matrix.os }}-${{ runner.arch }}
+        # Not gh-actions-lua's own buildCache: that shares one key across runner
+        # images. The action skips its lua.org download whenever .lua already
+        # exists. Keyed on the image because a .lua only runs on the image it was
+        # built on (glibc), and a floating runner label names two images while
+        # one is migrating to the next.
+        key: lua-${{ env.LUA_VERSION }}-${{ env.IMAGE_OS }}-${{ runner.arch }}
 
     - name: (macOS) Install Lua via GitHub Actions
       if: runner.os == 'macOS'
