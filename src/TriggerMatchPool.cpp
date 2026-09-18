@@ -205,6 +205,7 @@ TriggerMatchPool::TriggerMatchPool()
         // floor), so a profiler or a crash report shows which thread this is.
         std::unique_ptr<QThread> thread(QThread::create([this, slot] {
             workerLoop(slot);
+            mHelpersReturned.fetch_add(1, std::memory_order_release);
         }));
         thread->setObjectName(qsl("TriggerMatch-%1").arg(slot));
         thread->start();
@@ -243,6 +244,8 @@ void TriggerMatchPool::stopHelpers()
     for (const auto& thread : mThreads) {
         thread->wait();
     }
+    [[maybe_unused]] const int returned = mHelpersReturned.load(std::memory_order_acquire);
+    Q_ASSERT(returned == static_cast<int>(mThreads.size()));
     mThreads.clear();
 }
 
@@ -321,6 +324,7 @@ bool TriggerMatchPool::prescan(
     }
 
     ++mPrescanCount;
+    lineBigrams.prepareForSharing();
     const int chunkSize = std::max(kChunkSize, (count + kMaxChunks - 1) / kMaxChunks);
     const int chunkCount = (count + chunkSize - 1) / chunkSize;
     mJob.triggers = triggers;

@@ -644,9 +644,6 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     int prescanRegexSearches = 0;
     if (inFlood && mRegexSearchesOnTheLastLine >= pool.threshold()) {
         rebuildPrescanTasksIfStale();
-        // Built here rather than by the first trigger to ask, so the helper
-        // threads find it ready and have nothing to write
-        lineBigrams.prepareForSharing();
         const quint32 passId = TTrigger::nextPrescanPassId();
         if (pool.prescan(mPrescanTasks.data(), static_cast<int>(mPrescanTasks.size()), passId, subject, subjectLength, data, lineBigrams)) {
             TTrigger::setPrescanPassId(passId);

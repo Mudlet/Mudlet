@@ -75,8 +75,7 @@ public:
     // worker threads), in which case nothing was written and the caller runs
     // its ordinary sequential pass; whether a batch is worth sharing out is
     // the caller's call, made against threshold(). One caller at a time: the
-    // batch lives in the pool until this returns. The bigram filter must
-    // already be prepared for sharing.
+    // batch lives in the pool until this returns.
     bool prescan(TTrigger* const* triggers, int count, quint32 passId, const char* subject, int subjectLength, const QString& haystack, const TBigramFilter& lineBigrams);
 
     // Below this many regex searches on a line the fork-join costs more than
@@ -132,12 +131,15 @@ private:
     // x86 and libc++ does not define.
     static constexpr std::size_t scmCacheLine = 128;
 
-    // Read by every helper on every spin and written only in the constructor,
-    // or for mStop once in stopHelpers(), so this line is never invalidated.
+    // Read by every helper on every spin and written only in the constructor
+    // or at shutdown, so this line is never invalidated while the pool works.
     int mThreshold = 0;
     int mFloodChunkLines = 0;
     std::chrono::steady_clock::duration mSpinBudget{};
     std::atomic<bool> mStop{false};
+    // macOS ThreadSanitizer does not treat QThread::wait() as a join; this edge
+    // orders a helper's last reads before ~TriggerMatchPool() frees mScratch.
+    std::atomic<int> mHelpersReturned{0};
     // One per worker plus one for the calling thread, which takes a share too.
     std::vector<pcre2_real_match_data_8*> mScratch;
     std::vector<std::unique_ptr<QThread>> mThreads;

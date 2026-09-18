@@ -23,8 +23,9 @@
  * deleting the application. A helper that has parked is asleep on the cursor
  * word, so stopping it means waking it, by the same publish that a batch uses.
  * If that wake were lost, shutdown() would wait forever and this case would
- * time out rather than fail. The matching itself is covered from Lua, in
- * TriggerFlood_spec.lua.
+ * time out rather than fail. prescan() must also build the line's bigram
+ * summary itself, since a helper only reads it. The matching itself is
+ * covered from Lua, in TriggerFlood_spec.lua.
  *
  * Run with: ctest -R TriggerMatchPoolTest -V
  */
@@ -40,6 +41,7 @@
 #include "MudletInstanceCoordinator.h"
 #include "MudletPaths.h"
 #include "TLuaInterpreter.h"
+#include "TTrigger.h"
 #include "TriggerMatchPool.h"
 #include "mudlet.h"
 
@@ -53,6 +55,7 @@ private:
     const QString mProfileName = qsl("TriggerMatchPool-Test");
     QTemporaryDir mConfigDir;
     QByteArray mSavedXdg;
+    Host* mpHost = nullptr;
 
     static int luaInteger(Host* host, const char* name)
     {
@@ -88,21 +91,6 @@ private slots:
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
-    }
-
-    void cleanupTestCase()
-    {
-        delete mudlet::self();
-        mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
-    }
-
-    void shutdownWakesParkedHelper()
-    {
-        TriggerMatchPool& pool = TriggerMatchPool::instance();
-        if (pool.workerCount() == 0) {
-            QSKIP("the pool needs a second core before it starts a helper");
-        }
-        QCOMPARE(pool.workerCount(), 2);
 
         // An empty save, so no default packages install; the dialogue slot is
         // what gives the profile the console feedTriggers() prints through.
@@ -118,23 +106,66 @@ private slots:
                 > 0);
         save.close();
 
-        Host* host = mudlet::self()->loadProfile(mProfileName, false);
-        QVERIFY(host);
-        QVERIFY(host->mLoadedOk);
+        mpHost = mudlet::self()->loadProfile(mProfileName, false);
+        QVERIFY(mpHost);
+        QVERIFY(mpHost->mLoadedOk);
         mudlet::self()->slot_connectionDialogueFinished(mProfileName, false);
-        QVERIFY(host->mpConsole);
+        QVERIFY(mpHost->mpConsole);
+    }
+
+    void cleanupTestCase()
+    {
+        delete mudlet::self();
+        mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
+    }
+
+    void prescanPreparesItsOwnBigramFilter()
+    {
+        TriggerMatchPool& pool = TriggerMatchPool::instance();
+        if (pool.workerCount() == 0) {
+            QSKIP("the pool needs a second core before it starts a helper");
+        }
+        mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("bigramTriggerId = tempTrigger('needle', [[bigramHits = 1]])"));
+        const int triggerId = luaInteger(mpHost, "bigramTriggerId");
+        TTrigger* trigger = mpHost->getTriggerUnit()->getTrigger(triggerId);
+        QVERIFY(trigger);
+
+        // Summarising and unprepared, so unless prescan() builds it a debug
+        // build asserts and a release build's all-zero summary dismisses the
+        // trigger.
+        const QString line = qsl("a needle in a haystack");
+        const QByteArray subject = line.toUtf8();
+        const TBigramFilter unprepared(line, TBigramFilter::scmQuestionsWorthSummarising);
+        const quint32 passId = TTrigger::nextPrescanPassId();
+        QVERIFY(pool.prescan(&trigger, 1, passId, subject.constData(), static_cast<int>(subject.size()), line, unprepared));
+
+        TTrigger::setPrescanPassId(passId);
+        const bool matched = trigger->match(subject.constData(), static_cast<int>(subject.size()), line, 0, 0, &unprepared);
+        TTrigger::setPrescanPassId(0);
+        QVERIFY(matched);
+        QCOMPARE(luaInteger(mpHost, "bigramHits"), 1);
+        mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("killTrigger(bigramTriggerId)"));
+    }
+
+    void shutdownWakesParkedHelper()
+    {
+        TriggerMatchPool& pool = TriggerMatchPool::instance();
+        if (pool.workerCount() == 0) {
+            QSKIP("the pool needs a second core before it starts a helper");
+        }
+        QCOMPARE(pool.workerCount(), 2);
         const quint64 prescansBefore = pool.prescanCount();
         // The pool opens for a line on the strength of the searches the line
         // before it ran, so the first line of a profile is always sequential;
         // the trigger is not given anything to match on it.
-        host->getLuaInterpreter()->compileAndExecuteScript(qsl("needleCount = 0\n"
-                                                               "tempRegexTrigger('^needle$', [[needleCount = needleCount + 1]])\n"
-                                                               "feedTriggers('haystack\\n')\n"
-                                                               "feedTriggers('needle\\n')\n"));
+        mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("needleCount = 0\n"
+                                                                 "tempRegexTrigger('^needle$', [[needleCount = needleCount + 1]])\n"
+                                                                 "feedTriggers('haystack\\n')\n"
+                                                                 "feedTriggers('needle\\n')\n"));
         // The line went through the pool and the trigger still fired, so the
         // helper has consumed a batch and is parked on its epoch.
         QCOMPARE(pool.prescanCount(), prescansBefore + 1);
-        QCOMPARE(luaInteger(host, "needleCount"), 1);
+        QCOMPARE(luaInteger(mpHost, "needleCount"), 1);
         // Gives the helper time to finish its share and park. Nothing here can
         // observe that it has, so the case is only as strong as this wait.
         QThread::msleep(50);
@@ -143,9 +174,9 @@ private slots:
         QCOMPARE(pool.workerCount(), 0);
 
         // Off for good: the same line is declined and matched sequentially.
-        host->getLuaInterpreter()->compileAndExecuteScript(qsl("feedTriggers('needle\\n')"));
+        mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("feedTriggers('needle\\n')"));
         QCOMPARE(pool.prescanCount(), prescansBefore + 1);
-        QCOMPARE(luaInteger(host, "needleCount"), 2);
+        QCOMPARE(luaInteger(mpHost, "needleCount"), 2);
 
         TriggerMatchPool::shutdown();
         QCOMPARE(pool.workerCount(), 0);
