@@ -941,9 +941,9 @@ private:
     // the named captures into it
     enum class MultimatchesSource { Untouched, Captures, CapturesWithoutNames };
     void setMatches(lua_State*, const MultimatchesSource source = MultimatchesSource::Untouched);
-    bool deferDispatchGlobals(lua_State*, const MultimatchesSource source, const bool setsMatches);
-    bool lazyGlobalsUsable(lua_State*) const;
-    bool globalsMetatablePristine(lua_State*) const;
+    void deferDispatchGlobals(lua_State*, const MultimatchesSource source, const bool setsMatches);
+    bool lazyGlobalsUsable(lua_State*);
+    static bool globalsMetatablePristine(lua_State*, const int metatable);
     void pushMatchesTable(lua_State*);
     void pushEmptyMatchesTable(lua_State*);
     void pushMultimatchesTable(lua_State*, const bool withNames);
@@ -953,7 +953,7 @@ private:
     void materialisePendingGlobals(lua_State*);
     void installBetweenDispatchMultimatches(lua_State*);
     void installLazyGlobals();
-    void installGlobalsMetatableGuard(lua_State*, const char* library, const char* function, const int slot);
+    bool installGlobalsMetatableGuard(lua_State*, const char* library, const char* function, const int slot);
     void forgetLazyGlobals();
     static int lazyGlobalsIndex(lua_State*);
     static int lazyGlobalsNewindex(lua_State*);
@@ -1013,11 +1013,10 @@ private:
     enum class PendingMultimatches { None, Spare, Captures, CapturesWithoutNames };
     PendingMultimatches mMultimatchesPending = PendingMultimatches::None;
     int mEmptyMatchesRef = LUA_NOREF;
-    // The empty table "multimatches" holds between dispatches. It is replaced
-    // once a script could have got hold of it, so no two fires are handed the
-    // same one.
+    // The empty table "multimatches" stands for between dispatches, left out of
+    // the globals table there too so that every read is noticed. It is replaced
+    // once read, so no two fires are handed the same one.
     int mSpareMultimatchesRef = LUA_NOREF;
-    const void* mSpareMultimatches = nullptr;
     bool mSpareMultimatchesSeen = false;
     // "line" is left out the same way, from the moment a line arrives until a
     // script reads it, which for most lines is never
@@ -1029,19 +1028,20 @@ private:
     int mMatchesKeyRef = LUA_NOREF;
     int mMultimatchesKeyRef = LUA_NOREF;
     int mLineKeyRef = LUA_NOREF;
-    int mIndexKeyRef = LUA_NOREF;
-    int mNewindexKeyRef = LUA_NOREF;
     const char* mMatchesKey = nullptr;
     const char* mMultimatchesKey = nullptr;
     const char* mLineKey = nullptr;
     bool mLazyGlobalsInstalled = false;
     // The globals table the handlers were put on, which setfenv(0, ...) can
-    // take away from under the thread
+    // take away from under the thread while it still owes values
     const void* mGlobalsTable = nullptr;
+    int mGlobalsTableRef = LUA_NOREF;
+    const void* mGlobalsMetatable = nullptr;
     // getmetatable(), setmetatable() and their debug library twins as Lua ships
-    // them, which globalsMetatableGuard() stands in front of. Until a script
-    // has been near the metatable of the globals table nothing can have changed
-    // on it, which spares every fire the look globalsMetatablePristine() takes.
+    // them, which globalsMetatableGuard() stands in front of. A script holding
+    // the metatable of the globals table can change it at any moment, so once
+    // it has been handed out nothing is left out until setmetatable() puts one
+    // carrying both handlers back.
     lua_CFunction mStockMetatableFunctions[4] = {};
     bool mGlobalsMetatableTouched = false;
     // An alias pass a script asks for - expandAlias() - sets "command" and the
