@@ -44,7 +44,7 @@ cmake_language(DEFER CALL restore_windows_test_output)
 # directory outlives the run, where a test's own QTemporaryDir does not - so a test
 # still has to redirect for itself to get a config root that is empty at the start
 # of every run. setupConfig() is unaffected either way: it takes $XDG_CONFIG_HOME/mudlet
-# only when that directory holds profiles/ (see utils::xdgConfigDir()), which this does
+# only when that directory holds profiles/ (see MudletPaths::xdgConfigDir()), which this does
 # not create - deliberately, since seeding the opt-in here would give a test that
 # forgets a config root that accumulates profiles between runs, which is the
 # collision #9999 was about.
@@ -113,8 +113,10 @@ foreach(test_name ${UNIT_TESTS})
 endforeach()
 
 # A regression in what EventLoopPumpTest covers hangs rather than fails, so cap
-# it well under ctest's default 25 minutes.
-set_tests_properties(EventLoopPumpTest PROPERTIES TIMEOUT 60)
+# it well under ctest's default 25 minutes. The same goes for the coordinate
+# limit cases in TAreaGridIndexTest, which never return once a viewport scan
+# stops terminating.
+set_tests_properties(EventLoopPumpTest TAreaGridIndexTest PROPERTIES TIMEOUT 60)
 
 # TKeySequenceEditTest's focus traversal cases need an active window, which an X
 # server with no window manager never gives them, so a plain `xvfb-run ctest`

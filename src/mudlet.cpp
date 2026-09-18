@@ -36,6 +36,7 @@
 #include "TDebug.h"
 #include "TDebugFilterBar.h"
 #include "MudletInstanceCoordinator.h"
+#include "MudletPaths.h"
 #include "SherpaRecognizer.h"
 #include "SpeechRecognizer.h"
 #include "SpeechRecognizerFactory.h"
@@ -86,7 +87,6 @@
 #include <QJsonObject>
 #include <QJsonValue>
 #include <QNetworkDiskCache>
-#include <QLibraryInfo>
 #include <QMediaDevices>
 #include <QMediaPlayer>
 #include <QMessageBox>
@@ -115,42 +115,11 @@
 #include <chrono>
 #include <cmath>
 #include <memory>
-#include <zip.h>
 #include <QStyle>
 
-// for system physical memory info
 #if defined(Q_OS_WINDOWS)
+// GetShortPathNameW() for getShortPathName()
 #include <Windows.h>
-#include <Psapi.h>
-#elif defined(Q_OS_MACOS)
-#include <sys/param.h>
-#include <sys/sysctl.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <array>
-#elif defined(Q_OS_HURD)
-#include <errno.h>
-#include <unistd.h>
-#elif defined(Q_OS_OPENBSD)
-// OpenBSD doesn't have a sysinfo.h
-#include <sys/sysctl.h>
-#include <unistd.h>
-#elif defined(Q_OS_UNIX)
-// Including both GNU/Linux and FreeBSD
-#include <sys/resource.h>
-#include <sys/sysinfo.h>
-#include <sys/types.h>
-#include <unistd.h>
-#else
-// Any other OS?
-#endif
-
-// We are now using code that won't work with really old versions of libzip;
-// some of the error handling was improved in 1.0 . Unfortunately libzip 1.7.0
-// (and one or two other recent versions) forgot to include the version defines
-// and thus broke a test depending on them:
-#if defined(LIBZIP_VERSION_MAJOR) && (LIBZIP_VERSION_MAJOR < 1)
-#error Mudlet requires a version of libzip of at least 1.0
 #endif
 
 #if defined(Q_OS_MACOS)
@@ -1261,7 +1230,7 @@ void mudlet::warnProfilesLosingBindingTo(const QKeySequence& sequence, Host* pHo
     }
     const QKeyCombination combination = sequence[0];
     // A copy, because postMessage() runs Lua that may open or close a profile
-    for (auto& pOtherHost : getHostManager().hostList()) {
+    for (auto& pOtherHost : mHostManager.hostList()) {
         if (pOtherHost.isNull() || pOtherHost.data() == pHost || pOtherHost->isClosingDown()) {
             continue;
         }
@@ -1653,9 +1622,9 @@ static bool anyProfilesExist(const QString& profilesPath);
 
 void mudlet::init()
 {
-    smFirstLaunch = !anyProfilesExist(mudlet::getMudletPath(enums::profilesPath));
+    smFirstLaunch = !anyProfilesExist(MudletPaths::getMudletPath(enums::profilesPath));
     // Must be after setupConfig() created mpSettings and before anything of this run is written
-    rememberFirstLaunch(*mpSettings, mudlet::getMudletPath(enums::profilesPath), QDateTime::currentDateTime());
+    rememberFirstLaunch(*mpSettings, MudletPaths::getMudletPath(enums::profilesPath), QDateTime::currentDateTime());
 
     QFile gitShaFile(":/app-build.txt");
     if (!gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
@@ -1706,7 +1675,7 @@ void mudlet::init()
     setAppearance(mAppearance, true);
 
     scanForMudletTranslations(qsl(":/lang"));
-    scanForQtTranslations(getMudletPath(enums::qtTranslationsPath));
+    scanForQtTranslations(MudletPaths::getMudletPath(enums::qtTranslationsPath));
     loadTranslators(mInterfaceLanguage);
 
     // Cannot assign a value in the constructor list as it requires the
@@ -2351,85 +2320,26 @@ void mudlet::init()
     //    });
 }
 
-static QString findExecutableDir()
-{
-    // Linux AppImage support
-    QProcessEnvironment systemEnvironment = QProcessEnvironment::systemEnvironment();
-    if (systemEnvironment.contains(qsl("APPIMAGE"))) {
-        QString appimgPath = systemEnvironment.value(qsl("APPIMAGE"), QString());
-        return QFileInfo(appimgPath).dir().path();
-    }
-    return QCoreApplication::applicationDirPath();
-}
-
-static QString readMarkerFile(const QString& path)
-{
-    QString line;
-    QFile file(path);
-    if (!file.open(QIODevice::ReadOnly)) {
-        qWarning() << "mudlet: failed to open file for reading:" << path << file.errorString();
-        return QString();
-    }
-    QTextStream(&file).readLineInto(&line);
-    file.close();
-    return line;
-}
-
-static bool validateConfDir(QString& path)
-{
-    if (path.isEmpty()) {
-        qWarning("WARN: portable data path not specified");
-        return false;
-    }
-    QFileInfo pathInfo(path);
-    if (pathInfo.isFile()) {
-        qWarning("WARN: specified portable data path is an existing file: %s", qPrintable(path));
-        return false;
-    }
-    QFileInfo parentInfo(pathInfo.dir().path());
-    if (!parentInfo.isDir()) {
-        qWarning("WARN: parent directory of specified portable data path doesn't exist: %s", qPrintable(parentInfo.filePath()));
-        return false;
-    }
-    return true;
-}
-
 void mudlet::setupConfig()
 {
-    QString confDirDefault = qsl("%1/.config/mudlet").arg(QDir::homePath());
-    QString execDir = findExecutableDir();
-    QString markerExecDir = qsl("%1/portable.txt").arg(execDir);
-    QString markerHomeDir = qsl("%1/portable.txt").arg(confDirDefault);
-    if (QFileInfo(markerExecDir).isFile()) {
-        QString portPath = readMarkerFile(markerExecDir);
-        if (portPath.isEmpty()) {
-            portPath = qsl("./portable"); // fallback value for empty portable.txt
-        }
-        portPath = utils::pathResolveRelative(QDir::cleanPath(portPath), execDir);
-        if (!validateConfDir(portPath)) {
-            qFatal("FATAL: portable data path invalid");
-        }
-        confPath = portPath;
-    } else if (QFileInfo(markerHomeDir).isFile()) {
-        QString portPath = readMarkerFile(markerHomeDir);
-        portPath = utils::pathResolveRelative(QDir::cleanPath(portPath), execDir);
-        if (!validateConfDir(portPath)) {
-            qFatal("FATAL: portable data path invalid");
-        }
-        confPath = portPath;
-    } else {
-        const auto resolution = utils::xdgConfigDir(confDirDefault);
-        confPath = resolution.path;
-        if (resolution.migrationPending) {
-            qInfo().nospace() << "mudlet::setupConfig() INFO: XDG_CONFIG_HOME is set but $XDG_CONFIG_HOME/mudlet holds no profiles, so the existing " << confPath
-                              << " is still in use. Move its contents into $XDG_CONFIG_HOME/mudlet to migrate.";
-        }
-        if (!resolution.shadowedProfilesPath.isEmpty()) {
-            qWarning().nospace() << "mudlet::setupConfig() WARN: using $XDG_CONFIG_HOME/mudlet (" << confPath << ") because it holds profiles, but " << resolution.shadowedProfilesPath
-                                 << " holds profiles as well and they will not be listed. Unset XDG_CONFIG_HOME to use that directory instead.";
-        }
+    const auto resolution = MudletPaths::resolveConfigRoot(MudletPaths::executableDir());
+    const QString confPath = resolution.path;
+    // The resolver has already said which check the root failed, and carried on
+    // with the non-portable location - which is not what a portable install
+    // asked for, so startup still stops here rather than quietly relocating
+    if (resolution.portableRootRejected) {
+        qFatal("FATAL: portable data path invalid");
+    }
+    if (resolution.migrationPending) {
+        qInfo().nospace() << "mudlet::setupConfig() INFO: XDG_CONFIG_HOME is set but $XDG_CONFIG_HOME/mudlet holds no profiles, so the existing " << confPath
+                          << " is still in use. Move its contents into $XDG_CONFIG_HOME/mudlet to migrate.";
+    }
+    if (!resolution.shadowedProfilesPath.isEmpty()) {
+        qWarning().nospace() << "mudlet::setupConfig() WARN: using $XDG_CONFIG_HOME/mudlet (" << confPath << ") because it holds profiles, but " << resolution.shadowedProfilesPath
+                             << " holds profiles as well and they will not be listed. Unset XDG_CONFIG_HOME to use that directory instead.";
     }
     qDebug() << "mudlet::setupConfig() INFO:" << "using config dir:" << confPath;
+    MudletPaths::setConfigPath(confPath);
 
     // parented to the application, not this window: the window deletes itself
     // on close and the Updater keeps using this QSettings past that point.
@@ -4039,61 +3949,6 @@ void mudlet::addConsoleForNewHost(Host* pH)
     QTimer::singleShot(3s, this, &mudlet::slot_refreshTabIndicatorsDelayed);
 }
 
-
-void mudlet::slot_timerFires()
-{
-    QTimer* pQT = qobject_cast<QTimer*>(sender());
-    if (Q_UNLIKELY(!pQT)) {
-        return;
-    }
-
-    // Pull the Host name and TTimer::id from the properties:
-    const QString hostName(pQT->property(TTimer::scmProperty_HostName).toString());
-    if (Q_UNLIKELY(hostName.isEmpty())) {
-        qWarning().nospace().noquote() << "mudlet::slot_timerFires() INFO - Host name is empty - so TTimer has probably been deleted.";
-        pQT->deleteLater();
-        return;
-    }
-
-    Host* pHost = mHostManager.getHost(hostName);
-    Q_ASSERT_X(pHost, "mudlet::slot_timerFires()", "Unable to deduce Host pointer from data in QTimer");
-    const int id = pQT->property(TTimer::scmProperty_TTimerId).toInt();
-    if (Q_UNLIKELY(!id)) {
-        qWarning().nospace().noquote() << "mudlet::slot_timerFires() INFO - TTimer ID is zero - so TTimer has probably been deleted.";
-        pQT->deleteLater();
-        return;
-    }
-    TTimer* pTT = pHost->getTimerUnit()->getTimer(id);
-    if (Q_LIKELY(pTT)) {
-        // commented out as it will be spammy in normal situations but saved as useful
-        // during timer debugging... 8-)
-        //        qDebug().nospace().noquote() << "mudlet::slot_timerFires() INFO - Host: \"" << hostName << "\" QTimer firing for TTimer Id:" << id;
-        //        qDebug().nospace().noquote() << "    (objectName:\"" << pQT->objectName() << "\")";
-        pTT->execute();
-        // Re-verify timer still exists after execute (script may have killed it)
-        pTT = pHost->getTimerUnit()->getTimer(id);
-        if (pTT && pTT->checkRestart()) {
-            pTT->start();
-        }
-
-        // Flush any deletes TimerUnit::uninstall() deferred whilst execute() was
-        // on the stack (a timer script uninstalling its own package). Doing it
-        // here - after the last use of pTT - keeps the window in which the
-        // "uninstalled" timers linger down to this event loop iteration, before
-        // the profile save that Host::uninstallPackage() queues for the next
-        // event loop pass can serialize them back into the profile:
-        pHost->getTimerUnit()->doCleanup();
-
-        // Okay now we've found it we are done:
-        return;
-    }
-
-    qWarning().nospace().noquote() << "mudlet::slot_timerFires() ERROR - Timer not registered, it seems to have been called: \"" << pQT->objectName() << "\" - automatically deleting it!";
-    // Clean up any bogus ones:
-    pQT->stop();
-    pQT->deleteLater();
-}
-
 // Applies the active profile's "mapperButton" setConfig mode on top of the
 // baseline the toolbar management functions computed, and lets each detached
 // window re-derive the same for its own profile. Called by those functions and
@@ -4416,7 +4271,7 @@ bool mudlet::saveWindowLayout()
         return false;
     }
 
-    const QString layoutFilePath = getMudletPath(enums::mainDataItemPath, qsl("windowLayout.dat"));
+    const QString layoutFilePath = MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("windowLayout.dat"));
 
     QSaveFile layoutFile(layoutFilePath);
     if (layoutFile.open(QIODevice::WriteOnly)) {
@@ -4450,7 +4305,7 @@ bool mudlet::loadWindowLayout()
     }
     qDebug() << "mudlet::loadWindowLayout() - loading layout.";
 
-    const QString layoutFilePath = getMudletPath(enums::mainDataItemPath, qsl("windowLayout.dat"));
+    const QString layoutFilePath = MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("windowLayout.dat"));
 
     QFile layoutFile(layoutFilePath);
     if (layoutFile.exists()) {
@@ -4488,7 +4343,7 @@ void mudlet::commitLayoutUpdates(bool flush)
 
 bool mudlet::saveFloatingDockGeometries()
 {
-    const QString geoFilePath = getMudletPath(enums::mainDataItemPath, qsl("windowLayoutGeometry.dat"));
+    const QString geoFilePath = MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutGeometry.dat"));
 
     QSaveFile geoFile(geoFilePath);
     if (!geoFile.open(QIODevice::WriteOnly)) {
@@ -4525,7 +4380,7 @@ bool mudlet::saveFloatingDockGeometries()
 
 void mudlet::restoreFloatingDockGeometries()
 {
-    const QString geoFilePath = getMudletPath(enums::mainDataItemPath, qsl("windowLayoutGeometry.dat"));
+    const QString geoFilePath = MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutGeometry.dat"));
 
     QFile geoFile(geoFilePath);
     if (!geoFile.exists() || !geoFile.open(QIODevice::ReadOnly)) {
@@ -6308,7 +6163,7 @@ void mudlet::slot_replay()
     }
 
     QSettings& settings = *mudlet::getQSettings();
-    QString lastDir = settings.value("lastFileDialogLocation", mudlet::getMudletPath(enums::profileHomePath, pHost->getName())).toString();
+    QString lastDir = settings.value("lastFileDialogLocation", MudletPaths::getMudletPath(enums::profileHomePath, pHost->getName())).toString();
 
 
     const QString fileName = QFileDialog::getOpenFileName(this, tr("Select Replay"), lastDir, tr("*.dat"));
@@ -6323,57 +6178,9 @@ void mudlet::slot_replay()
     loadReplay(pHost, fileName);
 }
 
-QString mudlet::readProfileData(const QString& profile, const QString& item)
-{
-    QFile file(getMudletPath(enums::profileDataItemPath, profile, item));
-    if (!file.exists()) {
-        return QString();
-    }
-
-    if (!file.open(QIODevice::ReadOnly)) {
-        qWarning() << "mudlet: failed to open profile data file for reading:" << file.fileName() << file.errorString();
-        return QString();
-    }
-
-    QDataStream ifs(&file);
-    ifs.setVersion(QDataStream::Qt_5_12);
-    QString ret;
-
-    ifs >> ret;
-    file.close();
-    return ret;
-}
-
-QPair<bool, QString> mudlet::writeProfileData(const QString& profile, const QString& item, const QString& what)
-{
-    // Ensure the profile directory exists before attempting to write profile data
-    const QDir profileDir;
-    const QString profileHomePath = getMudletPath(enums::profileHomePath, profile);
-    if (!QDir(profileHomePath).exists() && !profileDir.mkpath(profileHomePath)) {
-        qDebug().noquote().nospace() << "mudlet::writeProfileData(...) ERROR - could not create profile directory: \"" << profileHomePath << "\"";
-        return qMakePair(false, qsl("Could not create profile directory: %1").arg(profileHomePath));
-    }
-
-    QSaveFile file(getMudletPath(enums::profileDataItemPath, profile, item));
-    if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
-        QDataStream ofs(&file);
-        ofs.setVersion(QDataStream::Qt_5_12);
-        ofs << what;
-        if (!file.commit()) {
-            qDebug().noquote().nospace() << "mudlet::writeProfileData(...) ERROR - writing profile: \"" << profile << "\", item: \"" << item << "\", reason: \"" << file.errorString() << "\".";
-        }
-    }
-
-    if (file.error() == QFile::NoError) {
-        return qMakePair(true, QString());
-    }
-
-    return qMakePair(false, file.errorString());
-}
-
 void mudlet::deleteProfileData(const QString& profile, const QString& item)
 {
-    if (!QFile::remove(getMudletPath(enums::profileDataItemPath, profile, item))) {
+    if (!QFile::remove(MudletPaths::getMudletPath(enums::profileDataItemPath, profile, item))) {
         qWarning() << "Couldn't delete profile data file" << item;
     }
 }
@@ -6387,7 +6194,7 @@ void mudlet::startAutoLogin(const QStringList& cliProfiles, const bool offline)
     QElapsedTimer timer;
     timer.start();
 
-    QStringList hostList = QDir(getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    QStringList hostList = QDir(MudletPaths::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
     hostList += TGameDetails::keys();
     hostList << qsl("Mudlet self-test");
     hostList.removeDuplicates();
@@ -6416,7 +6223,7 @@ void mudlet::startAutoLogin(const QStringList& cliProfiles, const bool offline)
     }
 
     for (auto& hostName : hostList) {
-        const QString val = readProfileData(hostName, qsl("autologin"));
+        const QString val = MudletPaths::readProfileData(hostName, qsl("autologin"));
         if (val.toInt() == Qt::Checked) {
             QElapsedTimer timer;
             timer.start();
@@ -6431,76 +6238,6 @@ void mudlet::startAutoLogin(const QStringList& cliProfiles, const bool offline)
     } else {
         qDebug() << "All" << loadedProfiles << "profiles loaded in" << timer.elapsed() / 1000.0 << "seconds";
     }
-}
-
-// credit to https://github.com/DigitalInBlue/Celero/blob/master/src/Memory.cpp
-int64_t mudlet::getPhysicalMemoryTotal()
-{
-#if defined(Q_OS_WINDOWS)
-    MEMORYSTATUSEX memInfo;
-    memInfo.dwLength = sizeof(MEMORYSTATUSEX);
-    GlobalMemoryStatusEx(&memInfo);
-    return static_cast<int64_t>(memInfo.ullTotalPhys);
-#elif defined(Q_OS_HURD)
-    // GNU/Hurd does not have a sysinfo struct  yet:
-    errno = 0;
-    int64_t pageSize = sysconf(_SC_PAGESIZE);
-    if (pageSize < 0) {
-        if (errno) {
-            qDebug().nospace().noquote() << "mudlet::getPhysicalMemoryTotal() WARNING - error returned from sysconf(_SC_PAGESIZE); errno: " << errno;
-        } else {
-            qDebug().nospace().noquote() << "mudlet::getPhysicalMemoryTotal() WARNING - indeterminent limit returned from sysconf(_SC_PAGESIZE).";
-        }
-        return -1;
-    }
-    int64_t pageCount = sysconf(_SC_PHYS_PAGES);
-    if (pageCount < 0) {
-        if (errno) {
-            qDebug().nospace().noquote() << "mudlet::getPhysicalMemoryTotal() WARNING - error returned from sysconf(_SC_PHYS_PAGES); errno: " << errno;
-        } else {
-            qDebug().nospace().noquote() << "mudlet::getPhysicalMemoryTotal() WARNING - indeterminent limit returned from sysconf(_SC_PHYS_PAGES).";
-        }
-        return -1;
-    }
-    return pageSize * pageCount;
-#elif defined(Q_OS_MACOS)
-    int mib[2];
-    mib[0] = CTL_HW;
-    mib[1] = HW_MEMSIZE;
-
-    int64_t memInfo{0};
-    auto len = sizeof(memInfo);
-
-    if (!sysctl(mib, 2, &memInfo, &len, nullptr, 0)) {
-        return memInfo;
-    }
-
-    return -1;
-#elif defined(Q_OS_OPENBSD)
-    // Very similar to MacOS but uses a different second level name
-    int mib[2];
-    mib[0] = CTL_HW;
-    mib[1] = HW_PHYSMEM64; // Or do we really want HW_USERMEM64?
-
-    int64_t memInfo{0};
-    auto len = sizeof(memInfo);
-
-    if (!sysctl(mib, 2, &memInfo, &len, nullptr, 0)) {
-        return memInfo;
-    }
-
-    return -1;
-#elif defined(Q_OS_UNIX)
-    // Including both GNU/Linux and FreeBSD:
-    // Prefer sysctl() over sysconf() except sysctl() HW_REALMEM and HW_PHYSMEM
-    // return static_cast<int64_t>(sysconf(_SC_PHYS_PAGES)) * static_cast<int64_t>(sysconf(_SC_PAGE_SIZE));
-    struct sysinfo memInfo;
-    sysinfo(&memInfo);
-    int64_t const total = memInfo.totalram;
-    return total * static_cast<int64_t>(memInfo.mem_unit);
-#else
-    return -1;
-#endif
 }
 
 // Ensure the debug area is attached to at least one Host
@@ -6603,7 +6340,7 @@ std::optional<mudlet::TelnetUriData> mudlet::parseTelnetUri(const QString& uri)
 // Find existing profile matching host and port
 QString mudlet::findMatchingProfile(const QString& host, int port)
 {
-    QDir profilesDir(getMudletPath(enums::profilesPath));
+    QDir profilesDir(MudletPaths::getMudletPath(enums::profilesPath));
     QStringList profileNames = profilesDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
 
     profileNames += TGameDetails::keys();
@@ -6613,11 +6350,11 @@ QString mudlet::findMatchingProfile(const QString& host, int port)
     QDateTime latestTime;
 
     for (const auto& profileName : std::as_const(profileNames)) {
-        QString profileHost = readProfileData(profileName, qsl("url"));
-        QString profilePort = readProfileData(profileName, qsl("port"));
+        QString profileHost = MudletPaths::readProfileData(profileName, qsl("url"));
+        QString profilePort = MudletPaths::readProfileData(profileName, qsl("port"));
 
         if (!profileHost.compare(host, Qt::CaseInsensitive) && profilePort.toInt() == port) {
-            QString profilePath = getMudletPath(enums::profileHomePath, profileName);
+            QString profilePath = MudletPaths::getMudletPath(enums::profileHomePath, profileName);
             QFileInfo profileInfo(profilePath);
 
             if (matchedProfile.isEmpty() || profileInfo.lastModified() > latestTime) {
@@ -6663,15 +6400,15 @@ QString mudlet::createProfileForUri(const TelnetUriData& uriData)
 
     qDebug() << "mudlet::createProfileForUri() - Creating profile:" << profileName;
 
-    writeProfileData(profileName, qsl("url"), uriData.host);
-    writeProfileData(profileName, qsl("port"), QString::number(uriData.port));
+    MudletPaths::writeProfileData(profileName, qsl("url"), uriData.host);
+    MudletPaths::writeProfileData(profileName, qsl("port"), QString::number(uriData.port));
 
     if (!uriData.username.isEmpty()) {
-        writeProfileData(profileName, qsl("login"), uriData.username);
+        MudletPaths::writeProfileData(profileName, qsl("login"), uriData.username);
     }
 
     if (uriData.useTls) {
-        writeProfileData(profileName, qsl("ssl_tsl"), QString::number(Qt::Checked));
+        MudletPaths::writeProfileData(profileName, qsl("ssl_tsl"), QString::number(Qt::Checked));
     }
 
     return profileName;
@@ -6711,7 +6448,7 @@ void mudlet::handleTelnetUri(const QString& uri)
             return;
         }
     } else if (uriData->useTls) {
-        writeProfileData(profileName, qsl("ssl_tsl"), QString::number(Qt::Checked));
+        MudletPaths::writeProfileData(profileName, qsl("ssl_tsl"), QString::number(Qt::Checked));
     }
 
     qDebug() << "mudlet::handleTelnetUri() - Auto-loading profile:" << profileName;
@@ -6747,7 +6484,7 @@ void mudlet::slot_processEventLoopHackTimerRun()
 
 void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connect)
 {
-    Host* pHost = getHostManager().getHost(profile);
+    Host* pHost = mHostManager.getHost(profile);
     if (!pHost) {
         return;
     }
@@ -7136,7 +6873,7 @@ mudlet::~mudlet()
     // is gone, so the focus handler would otherwise walk a destroyed command list.
     disconnect(qGuiApp, nullptr, this, nullptr);
     if (mpHunspell_sharedDictionary) {
-        saveDictionary(getMudletPath(enums::mainDataItemPath, qsl("mudlet")), mWordSet_shared);
+        saveDictionary(MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("mudlet")), mWordSet_shared);
         Hunspell_destroy(mpHunspell_sharedDictionary);
         mpHunspell_sharedDictionary = nullptr;
     }
@@ -7427,121 +7164,6 @@ void mudlet::requestProfilesToReloadMaps(QList<QString> affectedProfiles)
     emit signal_profileMapReloadRequested(affectedProfiles);
 }
 
-bool mudlet::unzip(const QString& archivePath, const QString& destination, const QDir& tmpDir)
-{
-    int err = 0;
-    //from: https://gist.github.com/mobius/1759816
-    struct zip_stat zs;
-    struct zip_file* zf;
-    zip_uint64_t bytesRead = 0;
-    zip* archive = zip_open(archivePath.toUtf8().constData(), 0, &err);
-    if (!archive) {
-        zip_error_t error;
-        zip_error_init_with_code(&error, err);
-        qWarning().noquote().nospace() << "mudlet::unzip(\"" << archivePath << "\", \"" << destination << "\", \"" << tmpDir.absolutePath() << "\") WARNING - failed to unzip file, error: \""
-                                       << zip_error_strerror(&error) << "\"";
-        zip_error_fini(&error);
-        return false;
-    }
-
-    // We now scan for directories first, and gather needed ones first, not
-    // just relying on (zero length) archive entries ending in '/' as some
-    // (possibly broken) archive building libraries seem to forget to
-    // include them.
-    QMap<QString, QString> directoriesNeededMap;
-    //   Key is: relative path stored in archive
-    // Value is: absolute path needed when extracting files
-    for (zip_int64_t i = 0, total = zip_get_num_entries(archive, 0); i < total; ++i) {
-        if (!zip_stat_index(archive, static_cast<zip_uint64_t>(i), 0, &zs)) {
-            const QString entryInArchive(zs.name);
-            const QString pathInArchive(entryInArchive.section(qsl("/"), 0, -2));
-            // TODO: We are supposed to validate the fields (except the
-            // "valid" one itself) in zs before using them:
-            // i.e. check that zs.name is valid ( zs.valid & ZIP_STAT_NAME )
-            if (entryInArchive.endsWith(QLatin1Char('/'))) {
-                if (!directoriesNeededMap.contains(pathInArchive)) {
-                    directoriesNeededMap.insert(pathInArchive, pathInArchive);
-                }
-            } else {
-                if (!pathInArchive.isEmpty() && !directoriesNeededMap.contains(pathInArchive)) {
-                    directoriesNeededMap.insert(pathInArchive, pathInArchive);
-                }
-            }
-        }
-    }
-
-    // Now create the needed directories:
-    QMapIterator<QString, QString> itPath(directoriesNeededMap);
-    while (itPath.hasNext()) {
-        itPath.next();
-        const QString folderToCreate = qsl("%1%2").arg(destination, itPath.value());
-        if (!tmpDir.exists(folderToCreate)) {
-            if (!tmpDir.mkpath(folderToCreate)) {
-                zip_close(archive);
-                return false; // Abort reading rest of archive
-            }
-            tmpDir.refresh();
-        }
-    }
-
-    // Now extract the files
-    for (zip_int64_t i = 0, total = zip_get_num_entries(archive, 0); i < total; ++i) {
-        // No need to check return value as we've already done it first time
-        zip_stat_index(archive, static_cast<zip_uint64_t>(i), 0, &zs);
-        const QString entryInArchive(zs.name);
-        if (!entryInArchive.endsWith(QLatin1Char('/'))) {
-            // TODO: check that zs.size is valid ( zs.valid & ZIP_STAT_SIZE )
-            zf = zip_fopen_index(archive, static_cast<zip_uint64_t>(i), 0);
-            if (!zf) {
-                zip_close(archive);
-                return false;
-            }
-
-            QFile fd(qsl("%1%2").arg(destination, entryInArchive));
-
-            if (!fd.open(QIODevice::ReadWrite | QIODevice::Truncate)) {
-                zip_fclose(zf);
-                zip_close(archive);
-                return false;
-            }
-
-            bytesRead = 0;
-            zip_uint64_t const bytesExpected = zs.size;
-            while (bytesRead < bytesExpected && fd.error() == QFileDevice::NoError) {
-                char buf[4096]; // Was 100 but that seems unduly stingy...!
-                zip_int64_t const len = zip_fread(zf, buf, sizeof(buf));
-                if (len < 0) {
-                    fd.close();
-                    zip_fclose(zf);
-                    zip_close(archive);
-                    return false;
-                }
-
-                if (fd.write(buf, len) == -1) {
-                    fd.close();
-                    zip_fclose(zf);
-                    zip_close(archive);
-                    return false;
-                }
-                bytesRead += static_cast<zip_uint64_t>(len);
-            }
-            fd.close();
-            zip_fclose(zf);
-        }
-    }
-
-    err = zip_close(archive);
-    if (err) {
-        zip_error_t* error = zip_get_error(archive);
-        qWarning().noquote().nospace() << "mudlet::unzip(\"" << archivePath << "\", \"" << destination << "\", \"" << tmpDir.absolutePath() << "\") Warning - " << zip_error_strerror(error);
-        zip_error_fini(error);
-        zip_discard(archive);
-        return false;
-    }
-
-    return true;
-}
-
 //loads the luaFunctionList for use by the edbee Autocompleter
 bool mudlet::loadLuaFunctionList()
 {
@@ -7579,7 +7201,7 @@ bool mudlet::loadEdbeeTheme(const QString& themeName, const QString& themeFile)
     // getMudletPath(...) needs the themeFile to determine if it is the
     // "default" which is stored in the resource file and not downloaded into
     // the cache:
-    const QString themeLocation(getMudletPath(enums::editorWidgetThemePathFile, themeFile));
+    const QString themeLocation(MudletPaths::getMudletPath(enums::editorWidgetThemePathFile, themeFile));
     auto result = themeManager->readThemeFile(themeLocation, themeName);
     if (result == nullptr) {
         qWarning() << themeManager->lastErrorMessage();
@@ -7587,217 +7209,6 @@ bool mudlet::loadEdbeeTheme(const QString& themeName, const QString& themeFile)
     }
 
     return true;
-}
-
-// This is a static wrapper for singleton instance method
-// Should only be called after mudlet has been initialised
-QString mudlet::getMudletPath(const enums::mudletPathType mode, const QString& extra1, const QString& extra2)
-{
-    QString confPath = self()->confPath;
-    switch (mode) {
-    case enums::mainPath:
-        // The root of all mudlet data for the user - does not end in a '/'
-        return confPath;
-    case enums::mainDataItemPath:
-        // Takes one extra argument as a file (or directory) relating to
-        // (profile independent) mudlet data - may end with a '/' if the extra
-        // argument does:
-        return qsl("%1/%2").arg(confPath, extra1);
-    case enums::mainFontsPath:
-        // (Added for 3.5.0) a revised location to store Mudlet provided fonts
-        return qsl("%1/fonts").arg(confPath);
-    case enums::profilesPath:
-        // The directory containing all the saved user's profiles - does not end
-        // in '/'
-        return qsl("%1/profiles").arg(confPath);
-    case enums::profileHomePath:
-        // Takes one extra argument (profile name) that returns the base
-        // directory for that profile - does NOT end in a '/' unless the
-        // supplied profle name does:
-        return qsl("%1/profiles/%2").arg(confPath, extra1);
-    case enums::profileMediaPath:
-        // Takes one extra argument (profile name) that returns the directory
-        // for the profile's cached media files - does NOT end in a '/'
-        return qsl("%1/profiles/%2/media").arg(confPath, extra1);
-    case enums::profileMediaPathFileName:
-        // Takes two extra arguments (profile name, mediaFileName) that returns
-        // the pathFile name for any media file:
-        return qsl("%1/profiles/%2/media/%3").arg(confPath, extra1, extra2);
-    case enums::profileXmlFilesPath:
-        // Takes one extra argument (profile name) that returns the directory
-        // for the profile game save XML files - ends in a '/'
-        return qsl("%1/profiles/%2/current/").arg(confPath, extra1);
-    case enums::profileMapsPath:
-        // Takes one extra argument (profile name) that returns the directory
-        // for the profile game save maps files - does NOT end in a '/'
-        return qsl("%1/profiles/%2/map").arg(confPath, extra1);
-    case enums::profileDateTimeStampedMapPathFileName:
-        // Takes two extra arguments (profile name, dataTime stamp) that returns
-        // the pathFile name for a dateTime stamped map file:
-        return qsl("%1/profiles/%2/map/%3map.dat").arg(confPath, extra1, extra2);
-    case enums::profileDateTimeStampedJsonMapPathFileName:
-        // Takes two extra arguments (profile name, dataTime stamp) that returns
-        // the pathFile name for a dateTime stamped JSON map file:
-        return qsl("%1/profiles/%2/map/%3map.json").arg(confPath, extra1, extra2);
-    case enums::profileMapPathFileName:
-        // Takes two extra arguments (profile name, mapFileName) that returns
-        // the pathFile name for any map file:
-        return qsl("%1/profiles/%2/map/%3").arg(confPath, extra1, extra2);
-    case enums::profileXmlMapPathFileName:
-        // Takes one extra argument (profile name) that returns the pathFile
-        // name for the downloaded IRE Server provided XML map:
-        return qsl("%1/profiles/%2/map.xml").arg(confPath, extra1);
-    case enums::profileDataItemPath:
-        // Takes two extra arguments (profile name, data item) that gives a
-        // path file name for, typically a data item stored as a single item
-        // (binary) profile data) file (ideally these can be moved to a per
-        // profile QSettings file but that is a future pipe-dream on my part
-        // SlySven):
-        return qsl("%1/profiles/%2/%3").arg(confPath, extra1, extra2);
-    case enums::profilePackagePath:
-        // Takes two extra arguments (profile name, package name) returns the
-        // per profile directory used to store (unpacked) package contents
-        // - ends with a '/':
-        return qsl("%1/profiles/%2/%3/").arg(confPath, extra1, extra2);
-    case enums::profilePackagePathFileName:
-        // Takes two extra arguments (profile name, package name) returns the
-        // filename of the XML file that contains the (per profile, unpacked)
-        // package mudlet items in that package/module:
-        return qsl("%1/profiles/%2/%3/%3.xml").arg(confPath, extra1, extra2);
-    case enums::profileReplayAndLogFilesPath:
-        // Takes one extra argument (profile name) that returns the directory
-        // that contains replays (*.dat files) and logs (*.html or *.txt) files
-        // for that profile - does NOT end in '/':
-        return qsl("%1/profiles/%2/log").arg(confPath, extra1);
-    case enums::profileLogErrorsFilePath:
-        // Takes one extra argument (profile name) that returns the pathFileName
-        // to the map auditing report file that is appended to each time a
-        // map is loaded:
-        return qsl("%1/profiles/%2/log/errors.txt").arg(confPath, extra1);
-    case enums::editorWidgetThemePathFile:
-        // Takes two extra arguments (profile name, theme name) that returns the
-        // pathFileName of the theme file used by the edbee editor - also
-        // handles the special case of the default theme "mudlet.tmTheme" that
-        // is carried internally in the resource file:
-        if (extra1.compare(qsl("Mudlet.tmTheme"), Qt::CaseSensitive)) {
-            // No match
-            return qsl("%1/edbee/Colorsublime-Themes-master/themes/%2").arg(confPath, extra1);
-        }
-        // Match - return path to copy held in resource file
-        return qsl(":/edbee_defaults/Mudlet.tmTheme");
-    case enums::editorWidgetThemeJsonFile:
-        // Returns the pathFileName to the external JSON file needed to process
-        // an edbee editor widget theme:
-        return qsl("%1/edbee/Colorsublime-Themes-master/themes.json").arg(confPath);
-    case enums::moduleBackupsPath:
-        // Returns the directory used to store module backups that is used in
-        // when saving/resyncing packages/modules - ends in a '/'
-        return qsl("%1/moduleBackups/").arg(confPath);
-    case enums::qtTranslationsPath:
-        return QLibraryInfo::path(QLibraryInfo::TranslationsPath);
-    case enums::hunspellDictionaryPath:
-        // Added for 3.18.0 when user dictionary capability added
-#if defined(Q_OS_MACOS)
-        mudlet::self()->mUsingMudletDictionaries = true;
-        return qsl("%1/../Resources/").arg(QCoreApplication::applicationDirPath());
-#elif defined(Q_OS_FREEBSD)
-        if (QFile::exists(qsl("/usr/local/share/hunspell/%1.aff").arg(extra1))) {
-            mudlet::self()->mUsingMudletDictionaries = false;
-            return QLatin1String("/usr/local/share/hunspell/");
-        }
-        if (QFile::exists(qsl("/usr/share/hunspell/%1.aff").arg(extra1))) {
-            mudlet::self()->mUsingMudletDictionaries = false;
-            return QLatin1String("/usr/share/hunspell/");
-        }
-        if (QFile::exists(qsl("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
-            // From debug or release subdirectory of a shadow build directory alongside the ./src one:
-            mudlet::self()->mUsingMudletDictionaries = true;
-            return qsl("%1/../../src/").arg(QCoreApplication::applicationDirPath());
-        }
-        if (QFile::exists(qsl("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
-            // From shadow build directory alongside the ./src one:
-            mudlet::self()->mUsingMudletDictionaries = true;
-            return qsl("%1/../src/").arg(QCoreApplication::applicationDirPath());
-        }
-        // From build within ./src
-        mudlet::self()->mUsingMudletDictionaries = true;
-        return qsl("%1/").arg(QCoreApplication::applicationDirPath());
-#elif defined(Q_OS_OPENBSD)
-        // OpenBSD uses dictionary files from Mozilla rather than direct from,
-        // Hunspell, but it does not ship a en_us one so we cannot use that on
-        // the first run to find the rest - instead try for the en_GB one
-        // - some of the entries for some of the locale/language/other parts of
-        // the filesnames seem to be a bit random:
-        if (QFile::exists(qsl("/usr/local/share/mozilla-dicts/%1.aff").arg(extra1))) {
-            mudlet::self()->mUsingMudletDictionaries = false;
-            return QLatin1String("/usr/local/share/mozilla-dicts/");
-        }
-        if (QFile::exists(qsl("/usr/share/mozilla-dicts/%1.aff").arg(extra1))) {
-            mudlet::self()->mUsingMudletDictionaries = false;
-            return QLatin1String("/usr/share/mozilla-dicts/");
-        }
-        if (QFile::exists(qsl("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
-            // From debug or release subdirectory of a shadow build directory alongside the ./src one:
-            mudlet::self()->mUsingMudletDictionaries = true;
-            return qsl("%1/../../src/").arg(QCoreApplication::applicationDirPath());
-        }
-        if (QFile::exists(qsl("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
-            // From shadow build directory alongside the ./src one:
-            mudlet::self()->mUsingMudletDictionaries = true;
-            return qsl("%1/../src/").arg(QCoreApplication::applicationDirPath());
-        }
-        // From build within ./src
-        mudlet::self()->mUsingMudletDictionaries = true;
-        return qsl("%1/").arg(QCoreApplication::applicationDirPath());
-#elif defined(Q_OS_LINUX)
-        if (QFile::exists(qsl("/usr/share/hunspell/%1.aff").arg(extra1))) {
-            mudlet::self()->mUsingMudletDictionaries = false;
-            return QLatin1String("/usr/share/hunspell/");
-        }
-        if (QFile::exists(qsl("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
-            // From debug or release subdirectory of a shadow build directory
-            // alongside the ./src one. {Typically QMake builds from Qtcreator
-            // with CONFIG containing both 'debug_and_release' and
-            // 'debug_and_release_target' (this is normal also on Windows):
-            mudlet::self()->mUsingMudletDictionaries = true;
-            return qsl("%1/../../src/").arg(QCoreApplication::applicationDirPath());
-        }
-        if (QFile::exists(qsl("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
-            // From shadow build directory alongside the ./src one. {Typically
-            // QMake builds from Qtcreator with CONFIG NOT containing both
-            // 'debug_and_release' and 'debug_and_release_target':
-            mudlet::self()->mUsingMudletDictionaries = true;
-            return qsl("%1/../src/").arg(QCoreApplication::applicationDirPath());
-        }
-        if (QFile::exists(qsl("%1/../../mudlet/src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
-            // From shadow build directory above the ./src one. {Typically
-            // CMake builds from Qtcreator which are outside of the unpacked
-            // source code from a git repo or tarball - which has to have been
-            // unpacked/placed in a directory called 'mudlet'}:
-            mudlet::self()->mUsingMudletDictionaries = true;
-            return qsl("%1/../../mudlet/src/").arg(QCoreApplication::applicationDirPath());
-        }
-        // From build within ./src AND installer builds that bundle
-        // dictionaries in the same directory as the executable:
-        mudlet::self()->mUsingMudletDictionaries = true;
-        return qsl("%1/").arg(QCoreApplication::applicationDirPath());
-#else
-        // Probably Windows!
-        mudlet::self()->mUsingMudletDictionaries = true;
-        if (QFile::exists(qsl("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
-            // From debug or release subdirectory of a shadow build directory alongside the ./src one:
-            return qsl("%1/../../src/").arg(QCoreApplication::applicationDirPath());
-        }
-        if (QFile::exists(qsl("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
-            // From shadow build directory alongside the ./src one:
-            return qsl("%1/../src/").arg(QCoreApplication::applicationDirPath());
-        }
-        // From build within ./src
-        return qsl("%1/").arg(QCoreApplication::applicationDirPath());
-#endif
-    }
-    Q_UNREACHABLE();
-    return QString();
 }
 
 #if defined(INCLUDE_UPDATER)
@@ -7961,7 +7372,7 @@ Host* mudlet::loadProfile(const QString& profile_name, const bool playOnline, co
         pHost->mSslTsl = (*it).tlsEnabled;
     }
 
-    const QString folder = getMudletPath(enums::profileXmlFilesPath, profile_name);
+    const QString folder = MudletPaths::getMudletPath(enums::profileXmlFilesPath, profile_name);
     QDir dir(folder);
     dir.setSorting(QDir::Time);
     // Only consider profile saves (*.xml): a crash during a save can leave behind
@@ -8054,7 +7465,7 @@ bool mudlet::loadReplay(Host* pHost, const QString& replayFileName, QString* pEr
 
     QString absoluteReplayFileName;
     if (QFileInfo(replayFileName).isRelative()) {
-        absoluteReplayFileName = qsl("%1/%2").arg(mudlet::getMudletPath(enums::profileReplayAndLogFilesPath, pHost->getName()), replayFileName);
+        absoluteReplayFileName = qsl("%1/%2").arg(MudletPaths::getMudletPath(enums::profileReplayAndLogFilesPath, pHost->getName()), replayFileName);
     } else {
         absoluteReplayFileName = replayFileName;
     }
@@ -8090,16 +7501,6 @@ void mudlet::slot_newDataOnHost(const QString& hostName, const bool isLowerPrior
 QStringList mudlet::getAvailableFonts()
 {
     return QFontDatabase::families(QFontDatabase::Any);
-}
-
-std::string mudlet::replaceString(std::string subject, const std::string& search, const std::string& replace)
-{
-    size_t pos = 0;
-    while ((pos = subject.find(search, pos)) != std::string::npos) {
-        subject.replace(pos, search.length(), replace);
-        pos += replace.length();
-    }
-    return subject;
 }
 
 // Helper function to check if current version is >= specified version
@@ -8146,12 +7547,12 @@ bool mudlet::migratePasswordsToSecureStorage()
 
     mStorePasswordsSecurely = true;
 
-    const QStringList profiles = QDir(mudlet::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    const QStringList profiles = QDir(MudletPaths::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
 
     bool anyMigrationNeeded = false;
 
     for (const auto& profile : profiles) {
-        const auto password = readProfileData(profile, qsl("password"));
+        const auto password = MudletPaths::readProfileData(profile, qsl("password"));
         if (!password.isEmpty()) {
             // Use CredentialManager to store the password securely
             if (CredentialManager::storeCredential(profile, "character", password)) {
@@ -8195,7 +7596,7 @@ bool mudlet::migratePasswordsToProfileStorage()
     }
     mStorePasswordsSecurely = false;
 
-    const QStringList profiles = QDir(mudlet::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    const QStringList profiles = QDir(MudletPaths::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
 
     for (const auto& profile : profiles) {
         // Try to retrieve password from CredentialManager
@@ -8203,7 +7604,7 @@ bool mudlet::migratePasswordsToProfileStorage()
 
         if (!password.isEmpty()) {
             // Store in profile data
-            writeProfileData(profile, qsl("password"), password);
+            MudletPaths::writeProfileData(profile, qsl("password"), password);
 
             // Only remove from secure storage if this version is >= 4.20.0
             // This prevents breaking compatibility with older Mudlet versions
@@ -8252,7 +7653,7 @@ void mudlet::slot_passwordMigratedToPortableStorage(QKeychain::Job* job)
 
     } else {
         auto readJob = static_cast<QKeychain::ReadPasswordJob*>(job);
-        writeProfileData(profileName, qsl("password"), readJob->textData());
+        MudletPaths::writeProfileData(profileName, qsl("password"), readJob->textData());
 
         // Only delete from secure storage if this version is >= 4.20.0
         // This prevents breaking compatibility with older Mudlet versions
@@ -8423,7 +7824,7 @@ void mudlet::setAppearance(const enums::Appearance state, const bool& loading)
 
     refreshTabBarsAfterStyleChange();
 
-    getHostManager().changeAllHostColour(getActiveHost());
+    mHostManager.changeAllHostColour(getActiveHost());
     mAppearance = state;
     emit signal_appearanceChanged(state);
 }
@@ -8716,9 +8117,9 @@ Hunhandle* mudlet::prepareProfileDictionary(const QString& hostName, QSet<QStrin
 {
     // Need to check that the files exist first:
     // full dictionary path+filename
-    QString dictionaryPath(getMudletPath(enums::profileDataItemPath, hostName, qsl("profile.dic")));
+    QString dictionaryPath(MudletPaths::getMudletPath(enums::profileDataItemPath, hostName, qsl("profile.dic")));
     // full affix path+filename
-    QString affixPath(getMudletPath(enums::profileDataItemPath, hostName, qsl("profile.aff")));
+    QString affixPath(MudletPaths::getMudletPath(enums::profileDataItemPath, hostName, qsl("profile.aff")));
 
     int oldWordCount = 0;
     QStringList wordList;
@@ -8779,8 +8180,8 @@ Hunhandle* mudlet::prepareSharedDictionary()
     }
 
     // Need to check that the files exist first:
-    QString dictionaryPath(getMudletPath(enums::mainDataItemPath, qsl("mudlet.dic")));
-    QString affixPath(getMudletPath(enums::mainDataItemPath, qsl("mudlet.aff")));
+    QString dictionaryPath(MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("mudlet.dic")));
+    QString affixPath(MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("mudlet.aff")));
     int oldWordCount = 0;
     QStringList wordList;
     QHash<QString, unsigned int> graphemeCounts;
@@ -8895,7 +8296,7 @@ QSet<QString> mudlet::getWordSet()
 std::pair<bool, QString> mudlet::setProfileIcon(const QString& profile, const QString& newIconPath)
 {
     QDir dir;
-    auto profileIconPath = mudlet::getMudletPath(enums::profileDataItemPath, profile, qsl("profileicon"));
+    auto profileIconPath = MudletPaths::getMudletPath(enums::profileDataItemPath, profile, qsl("profileicon"));
     if (QFileInfo::exists(profileIconPath) && !dir.remove(profileIconPath)) {
         qWarning() << "mudlet::setProfileIcon() ERROR: couldn't remove existing icon" << profileIconPath;
         return {false, qsl("couldn't remove existing icon file")};
@@ -8912,7 +8313,7 @@ std::pair<bool, QString> mudlet::setProfileIcon(const QString& profile, const QS
 std::pair<bool, QString> mudlet::resetProfileIcon(const QString& profile)
 {
     QDir dir;
-    auto profileIconPath = mudlet::getMudletPath(enums::profileDataItemPath, profile, qsl("profileicon"));
+    auto profileIconPath = MudletPaths::getMudletPath(enums::profileDataItemPath, profile, qsl("profileicon"));
     if (QFileInfo::exists(profileIconPath) && !dir.remove(profileIconPath)) {
         qWarning() << "mudlet::resetProfileIcon() ERROR: couldn't remove existing icon" << profileIconPath;
         return {false, qsl("couldn't remove existing icon file")};
@@ -9537,7 +8938,7 @@ bool mudlet::experiencedMudletPlayer()
         return true;
     }
 
-    cachedResult = evaluateExperiencedPlayer(*settings, getMudletPath(enums::profilesPath), QDateTime::currentDateTime());
+    cachedResult = evaluateExperiencedPlayer(*settings, MudletPaths::getMudletPath(enums::profilesPath), QDateTime::currentDateTime());
     return cachedResult.value();
 }
 
@@ -9588,28 +8989,7 @@ void mudlet::changeEvent(QEvent* event)
 
 bool mudlet::profileExists(const QString& profileName)
 {
-    return !getCanonicalProfileName(profileName).isEmpty();
-}
-
-QString mudlet::getCanonicalProfileName(const QString& profileName)
-{
-    if (profileName.isEmpty()) {
-        return QString();
-    }
-
-    const QStringList profiles = QDir(mudlet::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
-    for (const auto& profile : profiles) {
-        if (profile.compare(profileName, Qt::CaseInsensitive) == 0) {
-            return profile;
-        }
-    }
-
-    const auto it = TGameDetails::findGame(profileName, Qt::CaseInsensitive);
-    if (it != TGameDetails::scmDefaultGames.constEnd()) {
-        return it->name;
-    }
-
-    return QString();
+    return !MudletPaths::getCanonicalProfileName(profileName).isEmpty();
 }
 
 void mudlet::saveDetachedWindowsGeometry()
@@ -10792,8 +10172,8 @@ void mudlet::transferDockWidgetToDetachedWindow(const QString& profileName, TDet
     // Remove the dock widget from the main window
     removeDockWidget(mainDockWidget);
 
-    // Disconnect existing signal connections to avoid conflicts
-    mainDockWidget->disconnect();
+    // Not a wildcard disconnect(): that also severs Qt's style sheet destroyed() hook
+    disconnect(mainDockWidget, &QDockWidget::visibilityChanged, this, nullptr);
 
     // Clear from main window tracking
     mMainWindowDockWidgetMap.remove(mapKey);
@@ -10878,8 +10258,8 @@ void mudlet::transferDockWidgetFromDetachedWindow(const QString& profileName, TD
     // Remove the dock widget from the detached window
     detachedWindow->QMainWindow::removeDockWidget(detachedDockWidget);
 
-    // Disconnect existing signal connections to avoid conflicts
-    detachedDockWidget->disconnect();
+    // Not a wildcard disconnect(): that also severs Qt's style sheet destroyed() hook
+    disconnect(detachedDockWidget, &QDockWidget::visibilityChanged, detachedWindow, nullptr);
 
     // Clear from detached window tracking using the public API
     detachedWindow->removeDockWidget(mapKey);

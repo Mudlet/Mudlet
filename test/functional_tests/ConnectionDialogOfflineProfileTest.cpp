@@ -31,6 +31,7 @@
 
 #include "PortableModeTestHelper.h"
 #include "MudletInstanceCoordinator.h"
+#include "MudletPaths.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
@@ -82,7 +83,7 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QVERIFY(mudlet::getMudletPath(enums::profilesPath).startsWith(mXdgDir.path()));
+        QVERIFY(MudletPaths::getMudletPath(enums::profilesPath).startsWith(mXdgDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);

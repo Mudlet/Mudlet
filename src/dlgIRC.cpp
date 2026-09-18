@@ -25,6 +25,7 @@
 
 #include "dlgIRC.h"
 #include "Host.h"
+#include "MudletPaths.h"
 #include "ircmessageformatter.h"
 
 #include <IrcTextFormat>
@@ -902,7 +903,7 @@ QString dlgIRC::readIrcPassword(Host* pH)
 
 QString dlgIRC::readAppDefaultIrcNick()
 {
-    QFile file(mudlet::getMudletPath(enums::mainDataItemPath, qsl("irc_nick")));
+    QFile file(MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("irc_nick")));
     const bool opened = file.open(QIODevice::ReadOnly);
     QString rstr;
     if (opened) {
@@ -916,7 +917,7 @@ QString dlgIRC::readAppDefaultIrcNick()
 
 void dlgIRC::writeAppDefaultIrcNick(const QString& nick)
 {
-    QSaveFile file(mudlet::getMudletPath(enums::mainDataItemPath, qsl("irc_nick")));
+    QSaveFile file(MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("irc_nick")));
     const bool opened = file.open(QIODevice::WriteOnly);
     if (opened) {
         QDataStream ofs(&file);
