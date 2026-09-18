@@ -1103,6 +1103,10 @@ int main(int argc, char* argv[])
         if (!telnetUri.isEmpty()) {
             mudlet::self()->handleTelnetUri(telnetUri);
         }
+
+        // Queued behind the show() slot_showConnectionDialog() queues, so the
+        // notice opens on a connection dialog that is already up
+        QTimer::singleShot(0ms, mudlet::self(), &mudlet::warnAboutRejectedPortableRoot);
     });
 
 #if defined(INCLUDE_UPDATER)

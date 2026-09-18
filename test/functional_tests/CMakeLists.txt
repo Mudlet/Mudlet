@@ -87,6 +87,7 @@ set(PROFILE_GROUP_TEST_SOURCES
     DefaultGameDeleteTest.cpp
     DictionaryRoundTripTest.cpp
     MissingDisplayFontTest.cpp
+    PortableRootNoticeTest.cpp
     ProfileDeletionSafetyTest.cpp
     ProfileFolderNameTest.cpp
     ProfileIniParseErrorTest.cpp

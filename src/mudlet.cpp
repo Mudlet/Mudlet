@@ -1077,10 +1077,6 @@ void mudlet::init()
     scanForQtTranslations(MudletApp::getMudletPath(enums::qtTranslationsPath));
     loadTranslators(MudletApp::getInterfaceLanguage());
 
-    if (!mRejectedPortableMarker.isEmpty()) {
-        warnAboutRejectedPortableRoot();
-    }
-
     // Cannot assign a value in the constructor list as it requires the
     // translations to be loaded first:
     //: Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!
@@ -1728,11 +1724,8 @@ void mudlet::setupConfig()
     const auto resolution = MudletApp::resolveConfigRoot(MudletApp::executableDir());
     const QString confPath = resolution.path;
     if (resolution.portableRootRejected) {
-        // This used to be qFatal(), which is abort(): no message anywhere the
-        // user looks, and a crash report filed for a mistyped portable.txt. The
-        // resolver has already said which check the root failed and handed back
-        // the non-portable location, so carry on there and say so - loudly in
-        // the log now, and on screen once init() has the translations up.
+        // Carry on at the location the resolver fell back to; main() puts this
+        // on screen once the connection dialog is up
         mRejectedPortableMarker = MudletApp::portableMarkerPath(MudletApp::executableDir());
         if (mRejectedPortableMarker.isEmpty()) {
             mRejectedPortableMarker = qsl("portable.txt");
@@ -1755,24 +1748,32 @@ void mudlet::setupConfig()
     MudletApp::resetSettings();
 }
 
-// Startup no longer stops on a portable.txt that names a directory Mudlet cannot
-// use, so this dialog is the only thing telling the user that the profiles they
-// are about to see are not the portable ones they asked for.
+// The only thing on screen telling the user that the profiles they are about to
+// see are not the portable ones they asked for
 void mudlet::warnAboutRejectedPortableRoot()
 {
+    if (mRejectedPortableMarker.isEmpty()) {
+        return;
+    }
     const QString marker = mRejectedPortableMarker;
     mRejectedPortableMarker.clear();
-    QMessageBox notice;
+    // The connection dialog covers the main window, and on macOS open() makes
+    // the notice a sheet of its parent, so it has to sit on the dialog
+    QWidget* over = mpConnectionDialog ? static_cast<QWidget*>(mpConnectionDialog) : this;
+    auto* notice = new QMessageBox(over);
+    notice->setAttribute(Qt::WA_DeleteOnClose);
     //: Title of the warning shown at startup when portable.txt names a data directory Mudlet cannot use
-    notice.setWindowTitle(tr("Portable data directory unusable"));
+    notice->setWindowTitle(tr("Portable data directory unusable"));
     //: %1 is the full path of the portable.txt file that names the unusable directory
-    notice.setText(tr("The data directory named by %1 cannot be used.").arg(marker));
+    notice->setText(tr("The data directory named by %1 cannot be used.").arg(marker));
     //: %1 is the full path of the directory Mudlet has fallen back to for profiles and settings
-    notice.setInformativeText(tr("Mudlet is using %1 instead, so profiles kept in the portable directory will not be listed. "
-                                 "Correct the file and restart Mudlet to use that directory again.")
-                                      .arg(MudletApp::getMudletPath(enums::mainPath)));
-    notice.setIcon(QMessageBox::Warning);
-    notice.exec();
+    notice->setInformativeText(tr("Mudlet is using %1 instead, so profiles kept in the portable directory will not be listed. "
+                                  "Correct the file and restart Mudlet to use that directory again.")
+                                       .arg(MudletApp::getMudletPath(enums::mainPath)));
+    notice->setIcon(QMessageBox::Warning);
+    // Never exec(): a headless run, such as mudlet --profile under CI, has
+    // nobody to dismiss it
+    notice->open();
 }
 
 void mudlet::initEdbee()

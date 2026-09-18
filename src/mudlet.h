@@ -178,6 +178,7 @@ public:
 
     void init();
     void setupConfig();
+    void warnAboutRejectedPortableRoot();
     void activateProfile(Host*);
     void switchToProfileTab(int index);
     bool profileSwitchShortcutMatches(const QKeyEvent*) const;
@@ -620,7 +621,6 @@ private:
     bool scanDictionaryFile(const QString& dictionaryPath, int&, QHash<QString, unsigned int>&, QStringList&);
     int scanWordList(QStringList&, QHash<QString, unsigned int>&);
     void setupTrayIcon();
-    void warnAboutRejectedPortableRoot();
     void reshowRequiredMainConsoles();
     void toggleMute(bool state, QAction* toolbarAction, QAction* menuAction, bool isAPINotGame, const QString& unmuteText, const QString& muteText);
     dlgTriggerEditor* createMudletEditor();
@@ -640,7 +640,7 @@ private:
     bool mDarkMode = false;
     QString mDefaultStyle;
     // The portable.txt that named a data directory Mudlet could not use, kept from
-    // setupConfig() until init() can say so in the user's own language
+    // setupConfig() until main() can say so on screen
     QString mRejectedPortableMarker;
     // Stores the translated names for the Encodings for the static and thus
     // const TBuffer::csmEncodingTable:

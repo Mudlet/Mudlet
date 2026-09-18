@@ -720,12 +720,9 @@ private slots:
         QCOMPARE(settingsFileName(), qsl("%1/.config/mudlet/Mudlet.ini").arg(QDir::homePath()));
     }
 
-    // A portable.txt naming a directory Mudlet cannot use used to end in
-    // qFatal(), which is abort(): nothing on screen, and Sentry filing a crash
-    // report for a stray "touch portable.txt". Startup carries on at the
-    // non-portable location - which is where the profiles are - and says so.
-    // Kept last: it settles the config root on a directory that goes away with
-    // the test.
+    // A stray portable.txt must not stop startup: it carries on at the
+    // non-portable location, which is where the profiles are. Kept last: it
+    // settles the config root on a directory that goes away with the test.
     void test_setupConfigCarriesOnWhenTheMarkerNamesAnUnusableRoot()
     {
 #ifdef Q_OS_WIN
