@@ -259,11 +259,15 @@ void TSpellChecker::loadSystemDictionary()
 // first branch here is unreachable today.
 void TSpellChecker::applyUserDictionaryOptions()
 {
+    // Runs on dictionary settings changes and profile loads, never per word, so
+    // this is where a dictionary that failed to open gets retried:
+    mProfileDictionaryFailed = false;
+    smSharedDictionaryFailed = false;
+
     bool enableUserDictionary = false;
     bool useSharedDictionary = false;
     mpHost->getUserDictionaryOptions(enableUserDictionary, useSharedDictionary);
     if (!enableUserDictionary) {
-        mProfileDictionaryFailed = false;
         if (mpHunspell_profile) {
             Hunspell_destroy(mpHunspell_profile);
             mpHunspell_profile = nullptr;
@@ -290,7 +294,7 @@ Hunhandle* TSpellChecker::profileHandle()
         qDebug() << "TSpellChecker::profileHandle() INFO - Preparing profile's own Hunspell dictionary...";
         mpHunspell_profile = prepareProfileDictionary(mpHost->getName(), mWordSet_profile);
         if (!mpHunspell_profile) {
-            qWarning() << "TSpellChecker::profileHandle() ERROR - the profile's own dictionary could not be opened, so it will not be used for the rest of this session.";
+            qWarning() << "TSpellChecker::profileHandle() ERROR - the profile's own dictionary could not be opened, so it will only be retried when a profile loads or the dictionary settings change.";
             mProfileDictionaryFailed = true;
         }
     }
@@ -446,9 +450,8 @@ QPair<bool, QString> TSpellChecker::removeWord(const QString& word)
     if (!smpHunspell_sharedDictionary) {
         // Same reason as mProfileDictionaryFailed: a shared dictionary that
         // will not open is not scanned and rewritten again for every word
-        // typed. Nothing retries it until closeSharedDictionary() runs, so say
-        // so once rather than leave the silence to be explained later.
-        qWarning() << "TSpellChecker::sharedDictionary() ERROR - the shared dictionary could not be opened, so it will not be used for the rest of this session.";
+        // typed.
+        qWarning() << "TSpellChecker::sharedDictionary() ERROR - the shared dictionary could not be opened, so it will only be retried when a profile loads or the dictionary settings change.";
         smSharedDictionaryFailed = true;
     }
     return smpHunspell_sharedDictionary;
