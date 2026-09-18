@@ -201,11 +201,23 @@ bool VoskRecognizer::loadVoskLibrary()
 
     sVoskLibrary.setFileName(libName);
 
+    // Kept as each path is tried, from the ones that are actually there: the
+    // reason a file that exists would not load is the only sentence that says
+    // what is wrong, and it is gone the moment the next path is set on the same
+    // QLibrary. Reporting whatever the last attempt left behind named a path
+    // the player does not have a file at, with "No such file" against it, for a
+    // library sitting broken in the folder Mudlet told them to install into.
+    QString existingFileError;
+
     if (!sVoskLibrary.load()) {
         for (const QString& path : librarySearchPaths()) {
+            const bool fileIsThere = QFileInfo::exists(path);
             sVoskLibrary.setFileName(path);
             if (sVoskLibrary.load()) {
                 break;
+            }
+            if (fileIsThere && existingFileError.isEmpty()) {
+                existingFileError = sVoskLibrary.errorString();
             }
         }
     }
@@ -214,11 +226,7 @@ bool VoskRecognizer::loadVoskLibrary()
         // Only when a file was actually found: QLibrary reports a failure for a
         // name that matched nothing at all, and calling that "installed but
         // broken" sends the reader after a file they do not have.
-        const QStringList searchPaths = librarySearchPaths();
-        const bool anythingToLoad = std::any_of(searchPaths.cbegin(), searchPaths.cend(), [](const QString& path) {
-            return QFileInfo::exists(path);
-        });
-        sLibraryLoadError = anythingToLoad ? sVoskLibrary.errorString() : QString();
+        sLibraryLoadError = existingFileError;
         qWarning() << "VoskRecognizer: Failed to load Vosk library:" << sVoskLibrary.errorString();
         return false;
     }
@@ -370,6 +378,9 @@ bool VoskRecognizer::initialize(const QString& modelPath)
     // again because both check listening() first. The recording light stayed
     // on for the rest of the session.
     mpCapture->stop();
+    // The caller asked to load a model, not to end a session; the phrase in
+    // flight goes with the decoder freed below, and the player is told so.
+    endSessionForModelLoad();
 
     releaseVoskResources();
     // Both describe a model that has just been freed. Leaving them standing
@@ -440,7 +451,7 @@ bool VoskRecognizer::initialize(const QString& modelPath)
         mCurrentLanguage = qsl("unknown");
     }
 
-    setState(State::Ready);
+    settleAfterModelLoad();
 
     // Announced last, and after the state is settled, because both this and
     // setState() reach Lua synchronously. A handler may call stt.close(), which

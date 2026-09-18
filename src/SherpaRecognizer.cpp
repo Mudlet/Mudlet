@@ -19,8 +19,8 @@
 
 #include "SherpaRecognizer.h"
 
+#include "MudletPaths.h"
 #include "SpeechAudioCapture.h"
-#include "mudlet.h"
 
 #include <QCoreApplication>
 #include <QDir>
@@ -223,6 +223,10 @@ bool SherpaRecognizer::loadSherpaLibrary()
     // sherpa-onnx-c-api.dll on Windows
     sSherpaLibrary.setFileName(qsl("sherpa-onnx-c-api"));
 
+    // The reason the first file that was actually there would not load - see
+    // where it is kept below
+    QString existingFileError;
+
     if (!sSherpaLibrary.load()) {
         // Try common installation paths
         for (const QString& path : librarySearchPaths()) {
@@ -243,6 +247,13 @@ bool SherpaRecognizer::loadSherpaLibrary()
             if (sSherpaLibrary.load()) {
                 break;
             }
+            // Kept here, from a path that is known to hold a file: the reason
+            // is gone the moment the next path is set on the same QLibrary, and
+            // what the last attempt leaves behind is "No such file" against a
+            // path the player has nothing at. See VoskRecognizer's copy.
+            if (existingFileError.isEmpty()) {
+                existingFileError = sSherpaLibrary.errorString();
+            }
         }
     }
 
@@ -254,11 +265,7 @@ bool SherpaRecognizer::loadSherpaLibrary()
         // Held in a local: librarySearchPaths() returns by value, so calling it
         // once per iterator built two separate temporaries and walked from one
         // into the other, both destroyed by the time any_of ran.
-        const QStringList searchPaths = librarySearchPaths();
-        const bool anythingToLoad = std::any_of(searchPaths.cbegin(), searchPaths.cend(), [](const QString& path) {
-            return QFileInfo::exists(path);
-        });
-        sLibraryLoadError = anythingToLoad ? sSherpaLibrary.errorString() : QString();
+        sLibraryLoadError = existingFileError;
         qWarning() << "SherpaRecognizer: Failed to load sherpa-onnx library:" << sSherpaLibrary.errorString();
         return false;
     }
@@ -350,7 +357,7 @@ bool SherpaRecognizer::resetLibraryLoadState()
 
 QString SherpaRecognizer::userLibraryPath()
 {
-    return mudlet::getMudletPath(enums::mainDataItemPath, qsl("sherpa-onnx-lib"));
+    return MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("sherpa-onnx-lib"));
 }
 
 QStringList SherpaRecognizer::librarySearchPaths()
@@ -521,23 +528,10 @@ bool SherpaRecognizer::loadModel(const QString& modelPath)
     // reach the microphone again because both check listening() first - the
     // recording light stayed on for the rest of the session.
     // VoskRecognizer::initialize() carries the same guard for the same reason.
-    const bool interruptedASession = (state() == State::Listening || state() == State::Processing);
     mpCapture->stop();
-    if (interruptedASession) {
-        // Settled before the emit, as on every path here that sets a state. The device is
-        // already stopped, so a sysSTTError handler reading stt.listening()
-        // would otherwise be told yes for a microphone that has gone - and
-        // calling stt.stop() on the strength of it reaches a decoder still
-        // alive, which finalises and delivers the very utterance this message
-        // is about to declare lost.
-        setState(State::Ready);
-        // The caller asked to load a model, not to stop listening, and the
-        // utterance in flight goes with the decoder. Reported rather than
-        // dropped quietly: no finalResult() is coming, so silence here is
-        // indistinguishable from the player never having said anything.
-        //: Shown when loading a speech model ends a listening session that was already under way, losing what was being said
-        emit errorOccurred(tr("Loading a speech model stopped the listening session that was under way - anything said during it is lost."));
-    }
+    // The caller asked to load a model, not to stop listening; the utterance in
+    // flight goes with the decoder released below, and the player is told so.
+    endSessionForModelLoad();
 
     releaseSherpaResources();
 
@@ -708,12 +702,21 @@ bool SherpaRecognizer::loadModel(const QString& modelPath)
     // but could not apply.
     mAppliedSensitivity = mSensitivity;
 
+    settleAfterModelLoad();
+
     // Whether this engine can bias was just decided by the model that loaded,
     // so anyone who read the capabilities before now may be holding a stale
-    // answer - announced only if this one actually differs from it
+    // answer - announced only if this one actually differs from it.
+    //
+    // After the state, not before it, exactly as VoskRecognizer::initialize()
+    // does and for the same reason: this reaches Lua synchronously, and the
+    // handler docs/stt-api.md tells a package to write - re-read the
+    // capabilities, offer the vocabulary the new model can now bias - arrived
+    // while this engine was still mid-load. applyVocabulary() answers anything
+    // but idle with "not idle", so the offer was refused for a model that had
+    // in fact finished loading, and the bookkeeping below then reported the
+    // words as being in effect when nothing had applied them.
     announceCapabilitiesIfChanged();
-
-    setState(State::Ready);
     return true;
 }
 
@@ -736,19 +739,28 @@ bool SherpaRecognizer::initialize(const QString& modelPath)
     // this model cannot bias, so whatever the flag said about the previous one
     // no longer applies, and a later identical offer must not be told Applied
     // against a model that never received it.
-    if (mSupportsBiasing) {
+    // Nothing surviving the filter is not the same as nothing being offered:
+    // a list this model rejected in full biases nothing, so recording it as
+    // applied would answer the next identical offer with "in effect" and stop
+    // a package correcting results that nothing is biasing. An empty
+    // vocabulary is applied trivially - there is nothing to be in effect.
+    const bool nothingUsable = !vocabulary().isEmpty() && usableHotwords(vocabulary(), nullptr).isEmpty();
+    if (mSupportsBiasing && !nothingUsable) {
         noteVocabularyApplied();
     } else {
         clearAppliedVocabulary();
     }
 
-    // Not "is Ready": setState() reaches Lua synchronously, so a
-    // sysSTTStateChanged handler has already run by the time this line does -
-    // and the shape docs/stt-api.md encourages, starting on ready, leaves the
-    // state Listening. Reporting that as a failed load told stt.init() to
-    // answer nil for a model that was at that moment decoding speech. Error is
-    // the one state that means the load did not happen.
-    return state() != State::Error;
+    // Whether the model loaded, which loadModel() above has already answered.
+    // Not the state: this call reaches Lua several times over - a state change,
+    // a capability announcement - and what a handler does with those says
+    // nothing about the load. Reading Error here reported a model that had
+    // loaded as one that had not, because a handler starting on "ready" found
+    // no microphone and faulted the engine; reading Listening reported a
+    // failure for a model that was at that moment decoding speech. A handler
+    // that undoes the load outright is caught by stt.init() itself, which
+    // checks what it was left with once every handler has run.
+    return true;
 }
 
 void SherpaRecognizer::doStartListening()
@@ -840,7 +852,7 @@ void SherpaRecognizer::startListeningInternal()
     }
 
     mLastPartialResult.clear();
-    mSilentChunks = 0;
+    mChunksWithoutSpeech = 0;
     mRecentAudioLevel = 0.0f;
     mMissingResultReported = false;
 
@@ -921,12 +933,6 @@ void SherpaRecognizer::slot_pcmReady(const QByteArray& pcmData)
     // reflects the phrase rather than whichever 50ms chunk was last seen
     mRecentAudioLevel = mRecentAudioLevel * 0.7f + level * 0.3f;
 
-    if (level < scmSilenceLevel) {
-        ++mSilentChunks;
-    } else {
-        mSilentChunks = 0;
-    }
-
     // sherpa-onnx consumes mono float samples in [-1, 1]
     const auto* samples = reinterpret_cast<const qint16*>(pcmData.constData());
     const int numSamples = pcmData.size() / static_cast<int>(sizeof(qint16));
@@ -966,6 +972,15 @@ void SherpaRecognizer::slot_pcmReady(const QByteArray& pcmData)
         }
     }
 
+    // Counted here, from what the decoder made of the chunk: a phrase getting
+    // under way shows up as text long before it ends, and that is what has to
+    // block the idle reset below.
+    if (text.isEmpty()) {
+        ++mChunksWithoutSpeech;
+    } else {
+        mChunksWithoutSpeech = 0;
+    }
+
     // The endpointer trips on any silence rule, including trailing silence
     // that decoded nothing - which happens over and over while nobody is
     // speaking. Resetting on one of those discards the encoder state that has
@@ -987,7 +1002,7 @@ void SherpaRecognizer::slot_pcmReady(const QByteArray& pcmData)
         s_onlineStreamReset(mRecognizer, mStream);
         mLastPartialResult.clear();
         emit finalResult(text);
-    } else if (atEndpoint && mSilentChunks >= scmSilentChunksBeforeIdleReset) {
+    } else if (atEndpoint && mChunksWithoutSpeech >= scmChunksWithoutSpeechBeforeIdleReset) {
         // Housekeeping during a real lull: without it the utterance clock runs
         // on through the silence until the maximum-length rule is permanently
         // met, which would cut the next phrase short at its first word. Safe
@@ -1212,7 +1227,7 @@ QString SherpaRecognizer::findModelPathForLanguage(const QString& languageCode) 
 
 QString SherpaRecognizer::modelsDirectoryPath()
 {
-    return mudlet::getMudletPath(enums::mainDataItemPath, qsl("sherpa-models"));
+    return MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("sherpa-models"));
 }
 
 QStringList SherpaRecognizer::getInstalledModels()

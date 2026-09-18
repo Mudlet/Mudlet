@@ -39,7 +39,7 @@ Design contract, before the tables:
 | `stt.initialized()` | boolean | A model is loaded (`state` is neither `uninitialized` nor `error`). |
 | `stt.listening()` | boolean | **This profile** is capturing now — not merely that the engine is. One recognizer is shared, so a profile that holds nothing reads `false` while another profile listens; a package asking "am I listening" is asking about its own session, and answering with the device's state would have it show a live control it does not own. Always in step with `getInfo().listening`. To learn the device is busy elsewhere, read the refusal `stt.start()` returns. |
 | `stt.setSilenceTimeout(msec)` | `true` \| `nil, error` | After `msec` of continuous silence, listening ends exactly as `stt.stop()` would — finalised, never discarded. `0` (the default) keeps listening open-ended. Holds across listening sessions, not across restarts - neither this nor `setSensitivity` is saved. |
-| `stt.setSensitivity(mode)` | `true` \| `nil, error` | How quickly an utterance is judged finished: `"short"` for commands, `"default"` for balanced use, `"long"` for dictation. Engines map this onto their own end-of-speech detection, so the effect is comparable rather than identical between them; an engine that must rebuild to apply it may pause briefly when a model is already loaded. Not every engine can, and `capabilities.sensitivityTuning` says which before you ask: the built-in macOS backend has no end-of-speech tuning at all, and an older libvosk without the endpointer symbol cannot be reached. Both report `sensitivityTuning = false` and return `nil` with a message naming the engine — a refusal to plan around, not a fault to retry, so it is returned rather than raised as `sysSTTError`. An engine that reports `sensitivityTuning = true` can still fail a single call: sherpa-onnx rebuilds the model to re-bake its endpoint rules, and a rebuild that fails returns `nil` with a message pointing at the `sysSTTError` the backend already raised. That one is worth retrying; the capability answer is not. |
+| `stt.setSensitivity(mode)` | `true` \| `nil, error` | How quickly an utterance is judged finished: `"short"` for commands, `"default"` for balanced use, `"long"` for dictation. Engines map this onto their own end-of-speech detection, so the effect is comparable rather than identical between them; an engine that must rebuild to apply it may pause briefly when a model is already loaded. Not every engine can, and `capabilities.sensitivityTuning` says which before you ask: the built-in macOS backend has no end-of-speech tuning at all, and an older libvosk without the endpointer symbol cannot be reached. Both report `sensitivityTuning = false` and return `nil` with a message naming the engine — a refusal to plan around, not a fault to retry, so it is returned rather than raised as `sysSTTError`. An engine that reports `sensitivityTuning = true` can still answer `nil` to a single call, and the message says which of two things happened. A backend that rebuilds to apply this — sherpa-onnx does — can only do so while it is idle, so a request made mid-session, or while the engine is in `error`, is **kept** and takes effect at the next model load; nothing is lost and there is nothing to retry. A rebuild that was attempted and failed points at the `sysSTTError` the backend already raised, and that one is worth retrying. The capability answer is not. |
 | `stt.setVocabulary(words)` | boolean \| `nil, error` | Tell the engine which words to expect, so it favours them when a sound could be several things — a game's command verbs, its exits, the names of what is in front of you. Takes an array of words or short phrases; keep it to a shortlist rather than a dictionary, since applying one can make the engine rebuild and pause briefly. `true` means the engine took them. `false` is not an error: it means this backend cannot use vocabulary at all (see capabilities), so correct the results yourself instead. A backend that *can* and failed this time also returns `false`, reporting the fault through `sysSTTError`, so a caller branching only on the boolean still degrades gracefully while the failure stays visible. `nil, error` means there was no engine to offer the words to. What "took them" actually means differs enough between backends that it is spelled out per engine below the `capabilities` table. |
 | `stt.getInfo()` | table | Everything the engine can say about itself at this moment: what is loaded, what it is capable of, and what it is doing right now. The keys are listed below. Always a table, even with no engine installed: every key below is present except `version` and `language`, which need a recognizer to exist, and every capability reads `false` - so a caller can read it without guarding. |
 
@@ -185,10 +185,21 @@ that a package should not assume one behaves like another:
 
 Events are raised on the profile **holding the microphone** — the one whose
 `stt.start()` began the session — and on the **active profile** when no session
-is running, with one exception noted below. Those are the same profile in the
-ordinary case. They differ when the player moves to another game mid-session,
-and the session's results belong to the game they were spoken to rather than to
-the one now in front.
+is running. Those are the same profile in the ordinary case. They differ when
+the player moves to another game mid-session, and the session's results belong
+to the game they were spoken to rather than to the one now in front.
+
+Two kinds of event are routed otherwise. A **refusal** goes to the profile whose
+call was refused, whichever profile holds the microphone: `stt.init()`,
+`stt.stop()` and `stt.close()` can all be refused while another profile is
+listening, and a fault sent to that profile would describe a session that is
+running perfectly well to a game that cannot act on it. And
+`sysSTTCapabilitiesChanged` reaches **every open profile**, for the reason given
+with it below: it describes the engine rather than a session.
+
+One sentence sits between those rules: when loading a model ends a session that
+was under way, the profile that was speaking is told, even though the session
+has already ended by the time the words reach it.
 
 There is one recognizer per client, so at most one profile can be listening.
 A second profile calling `stt.start()` or `stt.toggle()` **takes** the

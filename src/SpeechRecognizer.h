@@ -116,16 +116,22 @@ public:
             }
             return StartResult::Refused;
         }
+        mStartOpenedASession = false;
         doStartListening();
-        // Error is the only outcome that is not a start. A backend reaches
-        // Listening through setState(), which raises sysSTTStateChanged into
-        // Lua synchronously, and a handler that stops on that event - "stop
-        // after the first phrase", the ordinary push-to-talk shape - runs
-        // doStopListening() and lands back on Ready before this frame resumes.
-        // Ready on return is therefore a started session that has already
-        // finished, indistinguishable from a backend that did nothing, and
-        // reporting it as a refusal was the bug this return value removes.
-        if (state() == State::Error) {
+        // Whether audio ever flowed, rather than what the state says now. A
+        // backend reaches Listening through setState(), which raises
+        // sysSTTStateChanged into Lua synchronously, and a handler is free to
+        // act on it: one that stops on the first phrase - the ordinary
+        // push-to-talk shape - lands back on Ready before this frame resumes,
+        // and that is a session that started and finished, not a refusal.
+        //
+        // Ready on return means nothing by itself, though, and reading it as a
+        // start is how a start that failed came to report success: the fault
+        // raises sysSTTError, a handler recovers by loading a model again, and
+        // the engine is left Ready having never opened a microphone. The two
+        // are indistinguishable afterwards, so the question is answered while
+        // it still can be - did this call reach a session at all.
+        if (!mStartOpenedASession || state() == State::Error) {
             return StartResult::Refused;
         }
         return state() == State::Starting ? StartResult::Pending : StartResult::Started;
@@ -468,6 +474,48 @@ protected:
     // right call instead of setVocabulary(vocabulary()).
     void noteVocabularyApplied() { mVocabularyApplied = true; }
 
+    // What a backend owes the player when loading a model ends a session that
+    // was under way. Called once its capture device has been stopped and
+    // before it frees the decoder: one engine means a session cannot survive
+    // the model under it being replaced.
+    //
+    // The state is settled before the message, as on every path here that sets
+    // one: the device has already gone, so a sysSTTError handler asking
+    // stt.listening() must not be told yes - stopping on the strength of that
+    // answer reaches a decoder that is still alive, which finalises and
+    // delivers the very phrase this is about to declare lost.
+    //
+    // Said rather than dropped quietly: no finalResult() is coming, so silence
+    // is indistinguishable from nobody having spoken. Shared here because a
+    // backend that forgets it does not fail, it goes silent - which is what
+    // VoskRecognizer::initialize() did while SherpaRecognizer::loadModel()
+    // reported.
+    void endSessionForModelLoad()
+    {
+        if (state() != State::Listening && state() != State::Processing) {
+            return;
+        }
+        setState(State::Ready);
+        //: Shown when loading a speech model ends a listening session that was already under way, losing what was being said
+        emit errorOccurred(tr("Loading a speech model stopped the listening session that was under way - anything said during it is lost."));
+    }
+
+    // The state a backend settles into once a model has loaded. Ready, unless
+    // a handler reached from the load itself has started listening again - the
+    // lost-session message above reaches Lua, and so does a backend announcing
+    // capabilities it only learns from the model. Stamping Ready over a session
+    // a handler started leaves the device running with the state saying idle,
+    // and the bridge reads that state as a session that ended: it gives up the
+    // claim, so the microphone is open with nobody holding it and
+    // stt.listening() answers no to the profile that is listening.
+    void settleAfterModelLoad()
+    {
+        if (state() == State::Starting || state() == State::Listening || state() == State::Processing) {
+            return;
+        }
+        setState(State::Ready);
+    }
+
     // A backend's own half of releaseResources(): stop its capture device and
     // then free what it holds, in that order - the device has to go before the
     // decoder, or a caller is left with a live microphone and nothing to close
@@ -514,6 +562,11 @@ protected:
             return;
         }
         mState = newState;
+        // Latched for startListening(), which cannot read it from the state
+        // afterwards - see there.
+        if (newState == State::Starting || newState == State::Listening) {
+            mStartOpenedASession = true;
+        }
         emit stateChanged(newState);
     }
 
@@ -562,6 +615,11 @@ private:
     // is true - a backend that last answered Failed must be given another
     // chance, not agreement it never earned.
     bool mVocabularyApplied = false;
+    // Whether the start request being served reached a session at all. Read
+    // once, by the startListening() that set it: the state it leaves behind
+    // cannot answer that question, since a handler recovering from a failed
+    // start leaves exactly the state a finished session does.
+    bool mStartOpenedASession = false;
 };
 
 // Capabilities travels as a signal argument. Direct connections do not need

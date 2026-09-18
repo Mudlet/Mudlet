@@ -30,8 +30,21 @@
 #include "AppleSpeechRecognizer.h"
 #endif
 
+void SpeechRecognizerFactory::setFactoryOverride(RecognizerFactory factory)
+{
+    smFactoryOverride = std::move(factory);
+}
+
 SpeechRecognizer* SpeechRecognizerFactory::create(Backend backend, QObject* parent)
 {
+    // Ahead of the availability checks, and of the backend argument: a test
+    // asking for a stand-in engine is not asking whether a real one could have
+    // been built, and on a machine where one could be it must still get the
+    // stand-in rather than the machine's own engine.
+    if (smFactoryOverride) {
+        return smFactoryOverride(parent);
+    }
+
     // Handle Auto selection - pick the first available backend
     if (backend == Backend::Auto) {
         const auto backends = availableBackends();

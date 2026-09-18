@@ -25,6 +25,8 @@
 #include <QObject>
 #include <QString>
 
+#include <functional>
+
 class SpeechRecognizer;
 
 // Factory class for creating speech recognition backends.
@@ -74,7 +76,21 @@ public:
     // Returns Auto when the layout matches no known engine.
     static Backend backendForModelDir(const QString& modelPath);
 
+    // A stand-in engine for create() to hand back, so a test can drive the
+    // bridge that owns the microphone - what a session is worth to the profile
+    // that started it, what a refusal answers, who hears a fault - through the
+    // real wiring rather than a copy of it. No CI runner has a speech engine
+    // installed, so without this every one of those rules is only ever checked
+    // by hand on a developer's machine.
+    //
+    // A factory rather than a recognizer: mudlet retires the engine it replaces,
+    // so handing over one object would leave a second init dereferencing it.
+    using RecognizerFactory = std::function<SpeechRecognizer*(QObject* parent)>;
+    static void setFactoryOverride(RecognizerFactory factory);
+
 private:
+    inline static RecognizerFactory smFactoryOverride;
+
     SpeechRecognizerFactory() = default;
 };
 

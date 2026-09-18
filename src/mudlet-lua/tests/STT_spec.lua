@@ -328,9 +328,16 @@ describe("stt bridge", function()
     -- rather than whichever one Auto settles on - on a Mac that is the built-in
     -- recogniser, which loads no model and so cannot be asked this question.
     it("refuses a load a handler closed while it was still loading", function()
-      if not stt.available() then return end
+      -- Said rather than passed over: on a runner with nothing installed this
+      -- case cannot reach the bridge check it is about, and returning quietly
+      -- reported a green test for something nobody ran.
+      if not stt.available() then
+        pending("no speech engine is installed here, so no model can be loaded to be closed under")
+      end
       local models = stt.listModels()
-      if #models < 1 then return end
+      if #models < 1 then
+        pending("no speech model is installed here, so there is nothing to load")
+      end
       stt.close()
 
       local closed = false
@@ -348,7 +355,9 @@ describe("stt bridge", function()
       local ok, err = stt.init(models[1].path)
       -- The load never reached ready, so the handler never had its moment. A
       -- refusal for some other reason is not what this is about.
-      if not closed then return end
+      if not closed then
+        pending("the load never reached ready here, so the handler this case needs never ran")
+      end
 
       assert.is_nil(ok, "a load a handler closed under it reported success")
       -- The wording, not merely that something was refused: a backend refusing
@@ -365,9 +374,13 @@ describe("stt bridge", function()
     -- than closing leaves a working engine behind, so state alone would call
     -- the outer load a success. Only the path it was asked for settles it.
     it("answers for the model it was asked for, not the one a handler loaded", function()
-      if not stt.available() then return end
+      if not stt.available() then
+        pending("no speech engine is installed here, so no model can be loaded to be replaced")
+      end
       local models = stt.listModels()
-      if #models < 2 then return end
+      if #models < 2 then
+        pending("this case needs two installed models, so that a handler can load the other one")
+      end
       stt.close()
 
       local replaced = false
@@ -383,7 +396,9 @@ describe("stt bridge", function()
       end)
 
       local ok, err = stt.init(models[1].path)
-      if not replaced then return end
+      if not replaced then
+        pending("the load never reached ready here, so the handler this case needs never ran")
+      end
 
       assert.is_nil(ok, "a load answered true for a model a handler had already replaced")
       assert.is_truthy(err:find("replaced it with another", 1, true), "the refusal did not come from the bridge's own check: " .. tostring(err))

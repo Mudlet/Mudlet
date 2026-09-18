@@ -244,6 +244,7 @@ set(TEARDOWN_GROUP_TEST_SOURCES
 
 # Sound, music and video, speech in and out, and the rich presence published to Discord
 set(MEDIA_GROUP_TEST_SOURCES
+    SherpaEngineTest.cpp
     SpeechRecognizerContractTest.cpp
     TDiscordModeTest.cpp
     VideoOutputHideTest.cpp
@@ -396,12 +397,19 @@ elseif(WIN32)
 else()
     set_target_properties(vosk_stub PROPERTIES SUFFIX ".so")
 endif()
+# Both groups: SpeechAcrossProfilesTest builds a recognizer with it, and
+# SpeechRecognizerContractTest needs it to get below the library guard at all -
+# without it that binary's one case reaching live model handles skipped on every
+# runner, which is the same as not having it.
 add_dependencies(functional_window_tests vosk_stub)
+add_dependencies(functional_media_tests vosk_stub)
 # Passed rather than reconstructed in the test: the suffix rules above are the
 # only place the platform naming is decided, and a test guessing at it would
 # silently skip instead of failing when they change.
-target_compile_definitions(functional_window_tests PRIVATE
-    MUDLET_VOSK_STUB_LIBRARY="$<TARGET_FILE:vosk_stub>")
+foreach(stubUser functional_window_tests functional_media_tests)
+    target_compile_definitions(${stubUser} PRIVATE
+        MUDLET_VOSK_STUB_LIBRARY="$<TARGET_FILE:vosk_stub>")
+endforeach()
 
 # AppStartupTeardownTest runs the shipped application instead of linking it, so it
 # needs that binary's path and needs it built by the time ctest runs. Naming the

@@ -282,6 +282,49 @@ protected:
     void doCancel() override { ++mCancelCallCount; }
 };
 
+// A backend that can be put in each of the states a model load has to cope
+// with, so the rule every backend owes the player when a load ends a session
+// can be checked where it lives rather than three times over.
+class SessionEndingStubRecognizer : public SpeechRecognizer
+{
+public:
+    bool initialize(const QString&) override
+    {
+        setState(State::Ready);
+        return true;
+    }
+    QString currentLanguage() const override { return QString(); }
+    bool setLanguage(const QString&) override { return true; }
+    QString backendName() const override { return qsl("SessionEndingStub"); }
+    QString backendVersion() const override { return qsl("1.0"); }
+    bool setSensitivity(Sensitivity) override { return true; }
+    Sensitivity sensitivity() const override { return Sensitivity::Default; }
+
+    // Both are the base's, and a backend is the only thing that can reach
+    // them - which is what this stands in for
+    using SpeechRecognizer::endSessionForModelLoad;
+    using SpeechRecognizer::setState;
+    using SpeechRecognizer::settleAfterModelLoad;
+
+    // A start that cannot open the microphone - no input device is the way a
+    // player meets it - which faults rather than refusing
+    bool mStartFails = false;
+
+protected:
+    void doStartListening() override
+    {
+        if (mStartFails) {
+            setState(State::Error);
+            //: not shown to a player: a test backend standing in for one whose microphone could not be opened
+            emit errorOccurred(qsl("no input device"));
+            return;
+        }
+        setState(State::Listening);
+    }
+    void doStopListening() override { setState(State::Ready); }
+    void doCancel() override { setState(State::Ready); }
+};
+
 } // namespace
 
 class SpeechRecognizerContractTest : public QObject
@@ -524,6 +567,118 @@ private slots:
     // be named - releaseResources() clears mModelPath but nothing clears the
     // language, and the gate is the whole of what keeps that honest.
     //
+    // One engine, so loading a model ends whatever session is running: the
+    // decoder under it is about to be freed. The player hears about it, because
+    // no finalResult() is coming and silence looks exactly like nobody having
+    // spoken - which is what a Vosk re-init used to look like, while sherpa
+    // reported the same thing happening.
+    void aModelLoadThatEndsASessionSaysSo()
+    {
+        SessionEndingStubRecognizer recognizer;
+        QVERIFY(recognizer.initialize(QString()));
+        QCOMPARE(recognizer.startListening(), SpeechRecognizer::StartResult::Started);
+
+        QSignalSpy errors(&recognizer, &SpeechRecognizer::errorOccurred);
+        QVERIFY(errors.isValid());
+
+        // Read from inside the handler rather than after it: what this is for
+        // is a handler being told the microphone is still open when it has
+        // already gone, and stopping on the strength of that reaches a decoder
+        // that is still alive and delivers the phrase just declared lost.
+        bool listeningWhenTold = true;
+        connect(&recognizer, &SpeechRecognizer::errorOccurred, &recognizer, [&recognizer, &listeningWhenTold]() {
+            listeningWhenTold = recognizer.listening();
+        });
+
+        recognizer.endSessionForModelLoad();
+
+        QCOMPARE(errors.count(), 1);
+        QCOMPARE(recognizer.state(), SpeechRecognizer::State::Ready);
+        QVERIFY2(!listeningWhenTold, "the session was reported lost while the recognizer still answered that it was listening");
+    }
+
+    // The same call with nothing running: a model load is the ordinary way to
+    // start, and announcing a lost session on every one of those would train
+    // packages to ignore the message that matters.
+    void aModelLoadWithNoSessionRunningSaysNothing()
+    {
+        SessionEndingStubRecognizer recognizer;
+        QVERIFY(recognizer.initialize(QString()));
+
+        QSignalSpy errors(&recognizer, &SpeechRecognizer::errorOccurred);
+        QVERIFY(errors.isValid());
+
+        recognizer.endSessionForModelLoad();
+
+        QCOMPARE(errors.count(), 0);
+        QCOMPARE(recognizer.state(), SpeechRecognizer::State::Ready);
+    }
+
+    // A start that failed is not a start, however tidy the engine looks
+    // afterwards. The fault reaches Lua while this call is still on the stack,
+    // and the ordinary way a package answers it is to load the model again -
+    // which leaves the engine Ready with no microphone open, the same state a
+    // session that started and finished leaves behind. Answering "started" to
+    // that sent a package away believing it was listening.
+    void aStartThatFailedIsNotAStartEvenAfterAHandlerRecovers()
+    {
+        SessionEndingStubRecognizer recognizer;
+        QVERIFY(recognizer.initialize(QString()));
+        recognizer.mStartFails = true;
+
+        connect(&recognizer, &SpeechRecognizer::errorOccurred, &recognizer, [&recognizer]() {
+            // What a package does about a fault: load the model again, which
+            // leaves the engine ready for another try
+            recognizer.mStartFails = false;
+            recognizer.initialize(QString());
+        });
+
+        QCOMPARE(recognizer.startListening(), SpeechRecognizer::StartResult::Refused);
+        QCOMPARE(recognizer.state(), SpeechRecognizer::State::Ready);
+    }
+
+    // The other half of the same rule: a session that started and finished
+    // inside this frame - a handler stopping on the first phrase, which is what
+    // push-to-talk is - really did start, and must not be reported as refused.
+    void aSessionThatFinishedInsideTheStartCallStillStarted()
+    {
+        SessionEndingStubRecognizer recognizer;
+        QVERIFY(recognizer.initialize(QString()));
+
+        connect(&recognizer, &SpeechRecognizer::stateChanged, &recognizer, [&recognizer](SpeechRecognizer::State state) {
+            if (state == SpeechRecognizer::State::Listening) {
+                recognizer.stopListening();
+            }
+        });
+
+        QCOMPARE(recognizer.startListening(), SpeechRecognizer::StartResult::Started);
+        QCOMPARE(recognizer.state(), SpeechRecognizer::State::Ready);
+    }
+
+    // A load reaches Lua twice before it is done - the lost-session message,
+    // and the capabilities the model decides - and a handler is free to start
+    // listening from either. The state a load settles into has to take that
+    // into account: Ready over a session a handler started leaves the device
+    // running while the state says idle, and the bridge, reading the state,
+    // gives up the claim - a microphone open with nobody holding it.
+    void aModelLoadDoesNotSettleOverASessionAHandlerStarted()
+    {
+        SessionEndingStubRecognizer recognizer;
+        QVERIFY(recognizer.initialize(QString()));
+        QCOMPARE(recognizer.startListening(), SpeechRecognizer::StartResult::Started);
+
+        // The package shape this is about: told the session is gone, start another
+        connect(&recognizer, &SpeechRecognizer::errorOccurred, &recognizer, [&recognizer]() {
+            recognizer.startListening();
+        });
+
+        // What a backend does around the load, in order
+        recognizer.endSessionForModelLoad();
+        recognizer.settleAfterModelLoad();
+
+        QCOMPARE(recognizer.state(), SpeechRecognizer::State::Listening);
+    }
+
     // Needs a library and a model it accepts, which CI has neither of: with no
     // libvosk, initialize() refuses at its first guard and no handle is ever
     // taken, so there is nothing for a release to have to hide. Where they are
@@ -542,9 +697,26 @@ private slots:
             QDir(modelPath).removeRecursively();
         });
 
+        // The stand-in library this project builds, put where
+        // librarySearchPaths() looks first. Without it this case skipped on
+        // every runner - a case that never runs is the same as no case at all,
+        // which is what the gate it exists to hold was left resting on.
+        const QString stub = QDir(VoskRecognizer::userLibraryPath()).filePath(QFileInfo(qsl(MUDLET_VOSK_STUB_LIBRARY)).fileName());
+        QVERIFY(QDir().mkpath(VoskRecognizer::userLibraryPath()));
+        QFile::remove(stub);
+        VoskRecognizer::resetLibraryLoadState();
+        VoskRecognizer::unloadLibraryByRequest(false);
+        QVERIFY2(QFile::copy(qsl(MUDLET_VOSK_STUB_LIBRARY), stub), "the stand-in speech library could not be installed");
+        auto removeStub = qScopeGuard([stub]() {
+            // Unmapped before it is deleted: Windows refuses to remove a module
+            // that is still loaded, and the next case would find this one's copy
+            VoskRecognizer::resetLibraryLoadState();
+            QFile::remove(stub);
+        });
+
         VoskRecognizer recognizer;
         if (!recognizer.initialize(modelPath)) {
-            QSKIP("no Vosk library that loads a model here, so no live model handle can be taken to release");
+            QSKIP("a real libvosk answers the bare library name here and will not load this case's stand-in model directory");
         }
 
         QVERIFY2(!recognizer.modelPath().isEmpty(), "a loaded model must be named");

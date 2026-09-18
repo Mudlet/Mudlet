@@ -225,9 +225,17 @@ private:
     TokenCase mTokenCase = TokenCase::Unknown;
 
 
-    // Consecutive silent audio chunks, used to tell a genuine lull from the
-    // moment speech is starting. Chunks arrive every 50ms.
-    int mSilentChunks = 0;
+    // Consecutive audio chunks the decoder made nothing of, used to tell a
+    // genuine lull from the moment speech is starting. Chunks arrive every
+    // 50ms.
+    //
+    // Counted from what the decoder heard rather than from how loud the room
+    // is: a fan, a fridge or an open window sits above any level that could
+    // stand for silence - measured at 0.02 against a 0.01 gate - so a lull
+    // never registered at all, the utterance clock ran on until the
+    // maximum-length rule was permanently met, and the next phrase spoken came
+    // back cut in two.
+    int mChunksWithoutSpeech = 0;
     // Smoothed microphone level, reported so a consumer can see how well the
     // speech arrived rather than only what was made of it
     float mRecentAudioLevel = 0.0f;
@@ -236,11 +244,10 @@ private:
     // runs twenty times a second and a library broken enough to do this once
     // will do it on every chunk.
     bool mMissingResultReported = false;
-    static constexpr float scmSilenceLevel = 0.01f;
-    // A second of continuous silence before the decoder may be reset outside
+    // A second of the decoder hearing nothing before it may be reset outside
     // of finishing an utterance: long enough that a phrase getting under way
     // has already registered and can block it.
-    static constexpr int scmSilentChunksBeforeIdleReset = 20;
+    static constexpr int scmChunksWithoutSpeechBeforeIdleReset = 20;
 
     // sherpa-onnx handles (opaque pointers)
     const SherpaOnnxOnlineRecognizer* mRecognizer = nullptr;

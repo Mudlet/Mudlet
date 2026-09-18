@@ -78,6 +78,7 @@ class QTableWidgetItem;
 class QTextEdit;
 class QToolButton;
 class QTimer;
+class QWindow;
 
 class dlgAboutDialog;
 class dlgConnectionProfiles;
@@ -254,6 +255,10 @@ public:
     // The " (listening)" a window's title carries while this profile holds the
     // microphone, or nothing. Public because a detached window builds its own title.
     QString microphoneMarkerFor(const QString& profileName) const;
+    // Whether a recognised phrase is being handed to Lua right now. A phrase
+    // that has reached its handler is not one the engine still owes anybody,
+    // however busy the engine looks while that handler runs.
+    bool deliveringSpeechResult() const { return mSpeechResultsBeingDelivered > 0; }
     // How many windows currently have add-on chrome recorded. Public only so a
     // test can see that a closed window's entry is dropped; nothing reads it.
     int addonChromeWindowCount() const { return mAddonChrome.size(); }
@@ -556,6 +561,7 @@ public slots:
     void slot_toggleReplay();
     void slot_toggleLogging();
     void slot_toggleEmergencyStop();
+    void slot_focusWindowChanged(QWindow*);
     void slot_tabDetachRequested(int index, const QPoint& globalPos);
     void slot_tabReattachRequested(const QString& tabName, int insertIndex = -1);
     void slot_detachedWindowClosed(const QString& profileName);
@@ -789,6 +795,15 @@ private:
     // profile in the ordinary case, and routing by the second one sends a
     // phrase to the wrong game in every case where they differ.
     QPointer<Host> mpMicrophoneOwner;
+    // The profile whose session has just ended, until the event loop turns
+    // again. An engine settles the state before it says what became of the
+    // phrase that was in flight, and the release rides on the state - so
+    // without this the sentence that matters most goes to whichever profile
+    // happens to be in front. See raiseSpeechEvent().
+    QPointer<Host> mpMicrophoneOwnerEnding;
+    // How deep the delivery of a recognised phrase is - see the finalResult
+    // connection in initSpeechRecognition(), and deliveringSpeechResult()
+    int mSpeechResultsBeingDelivered = 0;
     // Raise one sysSTT* event on a named profile, which is what the handover
     // notice needs - it goes to the profile losing the microphone, and by then
     // the owner is already the profile that took it.
@@ -921,7 +936,10 @@ private:
     void placeAddonCommand(int commandId, AddonCommand& command, QMainWindow* pContainer);
     void unplaceAddonCommand(AddonCommand& command);
     void applyAddonCommandState(AddonCommand& command);
-    QMenu* addonMenuForPath(QMainWindow* pContainer, const QString& menuPath, const Host* pHost, QString& error);
+    // Whether the command is being created, which a menu path can still be
+    // refused for, or moved into another window, which must always succeed
+    enum class AddonPlacement { Creating, Moving };
+    QMenu* addonMenuForPath(QMainWindow* pContainer, const QString& menuPath, const Host* pHost, QString& error, AddonPlacement placement);
     bool addonShortcutUsable(const QKeySequence& sequence, const Host* pHost, QString& error) const;
     static QString addonTooltip(const QString& tooltip);
     static QString addonPulseStyleSheet(const QString& colour);

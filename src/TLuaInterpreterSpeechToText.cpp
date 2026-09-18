@@ -115,6 +115,26 @@ static QStringList speechLibrarySearchPaths()
 }
 
 // The message for a call that needs an engine when there is none. "failed to
+// Why a library that is there would not load, or nothing when no file was
+// found at all. A library present but unloadable - a dependency of its own
+// missing, most often - was reported as "not installed", naming the very path
+// the file is sitting at; the loader's own reason is the one string that says
+// what is actually wrong, and it used to go only to a qWarning nobody reading
+// the error would see.
+//
+// Either engine may have found a file it could not use, so both are asked, or
+// a broken libvosk reads as "not installed" while sherpa's says so - the same
+// defect, fixed for one engine and not the other.
+static QString speechLibraryLoadFailure()
+{
+    for (const QString& reason : {SherpaRecognizer::libraryLoadError(), VoskRecognizer::libraryLoadError()}) {
+        if (!reason.isEmpty()) {
+            return reason;
+        }
+    }
+    return QString();
+}
+
 // create speech recognizer" described the symptom of a missing library rather
 // than the library, and sent people looking for a fault in Mudlet.
 static QString noEngineMessage()
@@ -122,18 +142,8 @@ static QString noEngineMessage()
     if (VoskRecognizer::libraryUnloadedByRequest()) {
         return qsl("the speech engine library was unloaded on request - call stt.reloadLibrary() before using speech recognition again");
     }
-    // A library that is present but will not load - a dependency of its own
-    // missing, most often - was reported as "not installed", naming the very
-    // path the file is sitting at. The loader's own reason is the one string
-    // that says what is actually wrong, and it used to go only to a qWarning
-    // nobody reading the error would see.
-    // Either engine may have found a file it could not use. Asked of both, or
-    // a broken libvosk still reads as "not installed" while sherpa's says so -
-    // the same defect, fixed for one engine and not the other.
-    for (const QString& reason : {SherpaRecognizer::libraryLoadError(), VoskRecognizer::libraryLoadError()}) {
-        if (!reason.isEmpty()) {
-            return qsl("the speech engine library is installed but could not be loaded: %1").arg(reason);
-        }
+    if (const QString reason = speechLibraryLoadFailure(); !reason.isEmpty()) {
+        return qsl("the speech engine library is installed but could not be loaded: %1").arg(reason);
     }
     return qsl("the speech engine library is not installed, so speech recognition cannot be used - looked in: %1").arg(speechLibrarySearchPaths().join(qsl(", ")));
 }
@@ -297,6 +307,12 @@ static QString engineNotInstalledMessage(const SpeechRecognizerFactory::Backend 
 int TLuaInterpreter::sttInit(lua_State* L)
 {
     const char* funcName = "stt.init";
+    // Resolved before the first refusal rather than after several of them: a
+    // fault raised through raiseSpeechEvent() goes to the microphone's owner,
+    // so a profile refused while another one is listening sent its fault to
+    // that other profile - which cannot act on it, and reads it as a fault in a
+    // session that is running perfectly well.
+    Host& host = getHostFromLua(L);
     QString modelPath;
     bool usedDefaultModel = false;
     // Set only when no path was given and the backend this call is about to
@@ -353,24 +369,26 @@ int TLuaInterpreter::sttInit(lua_State* L)
                     useModelLessBackend = true;
                     backend = SpeechRecognizerFactory::Backend::Platform;
                 } else {
-                    const QString message = VoskRecognizer::libraryUnloadedByRequest()
-                                                    ? qsl("the speech engine library was unloaded on request - call stt.reloadLibrary() before loading a model")
-                                                    : qsl("the speech engine library is not installed, so no model can be loaded - looked in: %1").arg(speechLibrarySearchPaths().join(qsl(", ")));
-                    reportSpeechRefusal(message);
+                    QString message;
+                    if (VoskRecognizer::libraryUnloadedByRequest()) {
+                        message = qsl("the speech engine library was unloaded on request - call stt.reloadLibrary() before loading a model");
+                    } else if (const QString reason = speechLibraryLoadFailure(); !reason.isEmpty()) {
+                        // A broken library is installed, so "not installed"
+                        // sends the reader to install what they already have
+                        message = qsl("the speech engine library is installed but could not be loaded, so no model can be loaded: %1").arg(reason);
+                    } else {
+                        message = qsl("the speech engine library is not installed, so no model can be loaded - looked in: %1").arg(speechLibrarySearchPaths().join(qsl(", ")));
+                    }
+                    reportSpeechRefusalTo(host, message);
                     return warnArgumentValue(L, funcName, message);
                 }
             } else {
                 const QString message = qsl("no model path provided and no language model is installed - install one into %1").arg(speechModelsDirectory(mudlet::self()));
-                reportSpeechRefusal(message);
+                reportSpeechRefusalTo(host, message);
                 return warnArgumentValue(L, funcName, message);
             }
         }
     }
-
-    // Resolved for the refusals below: sttInit() had none, so a fault it
-    // raised went to the microphone's owner rather than to the profile whose
-    // call was refused - the routing reportSpeechRefusalTo() exists to fix.
-    Host& host = getHostFromLua(L);
 
     auto* pMudlet = mudlet::self();
     if (!pMudlet) {
@@ -386,7 +404,7 @@ int TLuaInterpreter::sttInit(lua_State* L)
         // the drive is not mounted. That is worth telling a consumer driving
         // the bridge from events, and STT_spec pins this one as announced.
         const QString message = qsl("model path does not exist: %1").arg(modelPath);
-        reportSpeechRefusal(message);
+        reportSpeechRefusalTo(host, message);
         return warnArgumentValue(L, funcName, message);
     }
 
@@ -395,7 +413,7 @@ int TLuaInterpreter::sttInit(lua_State* L)
     auto* pRecognizer = pMudlet->speechRecognizer();
     if (!pRecognizer) {
         const QString message = noEngineMessage();
-        reportSpeechRefusal(message);
+        reportSpeechRefusalTo(host, message);
         return warnArgumentValue(L, funcName, message);
     }
 
@@ -410,7 +428,7 @@ int TLuaInterpreter::sttInit(lua_State* L)
     // naming what is actually missing, with that engine left untouched.
     if (backend != SpeechRecognizerFactory::Backend::Auto && loadedSpeechBackend(pRecognizer) != backend) {
         const QString message = engineNotInstalledMessage(backend);
-        reportSpeechRefusal(message);
+        reportSpeechRefusalTo(host, message);
         return warnArgumentValue(L, funcName, message);
     }
 
@@ -489,7 +507,7 @@ int TLuaInterpreter::sttInit(lua_State* L)
     // sherpa, which has no such setting to be missing.
     if (usedDefaultModel && backend == SpeechRecognizerFactory::Backend::Vosk) {
         if (const QString missing = VoskRecognizer::missingSelectedModel(); !missing.isEmpty()) {
-            reportSpeechRefusal(qsl("the selected Vosk speech model %1 is not installed; loaded %2 instead").arg(missing, QDir(modelPath).dirName()));
+            reportSpeechRefusalTo(host, qsl("the selected Vosk speech model %1 is not installed; loaded %2 instead").arg(missing, QDir(modelPath).dirName()));
         }
     }
 
@@ -952,7 +970,12 @@ int TLuaInterpreter::sttClose(lua_State* L)
             // answering "phrase lost" by restarting would be refused by the
             // base for still processing - a second, false error about a phrase
             // that had just been declared gone.
-            const bool lostAPhraseBeingTranscribed = !pRecognizer->listening() && pRecognizer->state() == SpeechRecognizer::State::Processing;
+            // Not while the phrase is being handed to Lua: closing from a
+            // sysSTTResult handler is closing on the strength of the phrase
+            // that handler was just given, and the engine still reads as
+            // Processing while it runs. Telling that handler its phrase is
+            // lost describes the one outcome that did not happen.
+            const bool lostAPhraseBeingTranscribed = !pRecognizer->listening() && pRecognizer->state() == SpeechRecognizer::State::Processing && !pMudlet->deliveringSpeechResult();
             pRecognizer->releaseResources();
             // listening() is false in Processing, so this used to fall straight
             // through and the phrase being decoded went with the engine - no

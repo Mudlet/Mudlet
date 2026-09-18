@@ -509,6 +509,41 @@ private slots:
         QTest::qWait(100ms);
     }
 
+    // A package removes commands while its profile is in the background as a
+    // matter of course - a timer, a trigger, or the player switching tabs while
+    // a package reloads. Every one of that profile's items is hidden then, so a
+    // submenu holding nothing but its own hidden siblings must not read as one
+    // that has been emptied: taking it down takes them with it, and nothing
+    // puts them back for the rest of the session.
+    void test_removingACommandWhileItsProfileIsHiddenKeepsItsSiblings()
+    {
+        const int keptId = addCommand(mpFirstHost, qsl("name = 'KeptWhileHidden', menuPath = 'HiddenSiblings', shortcut = 'Ctrl+Alt+F8'"));
+        const int removedId = addCommand(mpFirstHost, qsl("name = 'RemovedWhileHidden', menuPath = 'HiddenSiblings'"));
+        QVERIFY2(keptId > 0 && removedId > 0, "the two commands sharing a submenu were not placed");
+
+        mudlet::self()->activateProfile(mpSecondHost);
+        QTest::qWait(100ms);
+        QVERIFY2(callReturnedTrue(mpFirstHost, qsl("removeCommand(%1)").arg(removedId)), "the hidden profile's command could not be removed");
+
+        // the deletions the removal deferred happen here
+        QTest::qWait(200ms);
+        QCoreApplication::processEvents();
+
+        mudlet::self()->activateProfile(mpFirstHost);
+        QTest::qWait(100ms);
+
+        QAction* kept = menuActionNamed(qsl("KeptWhileHidden"));
+        const bool keptSurvived = kept != nullptr;
+        const QString keptShortcut = keptSurvived ? kept->shortcut().toString(QKeySequence::NativeText) : QString();
+        if (keptSurvived) {
+            runLua(mpFirstHost, qsl("removeCommand(%1)").arg(keptId));
+            QTest::qWait(100ms);
+        }
+
+        QVERIFY2(keptSurvived, "a command was removed while its profile was in the background and took the other command in its submenu with it");
+        QVERIFY2(keptShortcut == QKeySequence(qsl("Ctrl+Alt+F8")).toString(QKeySequence::NativeText), qPrintable(qsl("the surviving command lost its shortcut: \"%1\"").arg(keptShortcut)));
+    }
+
     // Ids come from one sequence, so a second profile can name the first
     // profile's commands whether or not it created them
     void test_aProfileCannotTouchAnotherProfilesCommands()
