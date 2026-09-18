@@ -118,6 +118,37 @@ EOF
 
   gpg --batch --armor --export "$key" > "$SITE/mudlet.asc"
   sed "s|@BASE_URL@|${BASE_URL}|g" "$HERE/install.sh.in" > "$SITE/install.sh"
+  write_indexes
+}
+
+# R2 lists no directories and serves no index documents, so each directory gets
+# a page and links name index.html explicitly
+write_indexes() {
+  local dir path entry name
+  while IFS= read -r -d '' dir; do
+    path="${dir#"$SITE"}/"
+    {
+      printf '<!DOCTYPE html>\n<html lang="en">\n<head><meta charset="utf-8"><title>Mudlet packages %s</title></head>\n<body>\n' "$path"
+      printf '<h1>Mudlet packages %s</h1>\n' "$path"
+      if [[ "$path" == / ]]; then
+        printf '<p>Install with <code>curl -fsSL %s/install.sh | sudo sh</code></p>\n' "$BASE_URL"
+      fi
+      printf '<ul>\n'
+      if [[ "$path" != / ]]; then
+        printf '<li><a href="../index.html">../</a></li>\n'
+      fi
+      for entry in "$dir"/*/; do
+        name="$(basename "$entry")"
+        printf '<li><a href="%s/index.html">%s/</a></li>\n' "$name" "$name"
+      done
+      for entry in "$dir"/*; do
+        name="$(basename "$entry")"
+        [[ -f "$entry" && "$name" != index.html ]] || continue
+        printf '<li><a href="%s">%s</a> %s</li>\n' "$name" "$name" "$(numfmt --to=iec "$(stat -c %s "$entry")")"
+      done
+      printf '</ul>\n</body>\n</html>\n'
+    } > "$dir/index.html"
+  done < <(find "$SITE" -type d -print0)
 }
 
 upload() {
