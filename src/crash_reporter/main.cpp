@@ -128,7 +128,7 @@ void sendCrashReport(const char* envelopePath)
 
     // A DSN is <scheme>://<public key>@<host>/<optional path>/<project id>, and
     // the envelope endpoint is that host and path with /api/<project id>/envelope/
-    // appended: https://develop.sentry.dev/sdk/overview/#parsing-the-dsn
+    // appended: https://develop.sentry.dev/sdk/foundations/transport/authentication/#parsing-the-dsn
     const QUrl parsedDsn(dsn);
     if (!parsedDsn.isValid() || parsedDsn.userName().isEmpty() || parsedDsn.host().isEmpty()) {
         return;
@@ -162,7 +162,7 @@ void sendCrashReport(const char* envelopePath)
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/x-sentry-envelope");
     // Store endpoint auth: sentry_key is the DSN's public key, and sentry_version
     // has been 7 since the DSN format settled.
-    // https://develop.sentry.dev/sdk/overview/#authentication
+    // https://develop.sentry.dev/sdk/foundations/transport/authentication/
     request.setRawHeader("X-Sentry-Auth", QStringLiteral("Sentry sentry_version=7, sentry_client=mudlet-crash-reporter/1.0, sentry_key=%1").arg(parsedDsn.userName()).toUtf8());
 
     QNetworkProxyFactory::setUseSystemConfiguration(true);
