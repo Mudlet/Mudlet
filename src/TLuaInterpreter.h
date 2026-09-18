@@ -937,8 +937,8 @@ private:
     bool reportInvalidLuaCodeParam(lua_State* L, const char* functionName, const int index);
     QByteArray encodeBytes(const char*);
     // What a dispatch does about "multimatches": only a multiline trigger's
-    // script is handed one of its own, and callMultiReturnBool() has never put
-    // the named captures into it
+    // script is handed one of its own, and callMultiReturnBool() leaves the
+    // named captures out
     enum class MultimatchesSource { Untouched, Captures, CapturesWithoutNames };
     void setMatches(lua_State*, const MultimatchesSource source = MultimatchesSource::Untouched);
     void deferDispatchGlobals(lua_State*, const MultimatchesSource source, const bool setsMatches);
@@ -1003,11 +1003,9 @@ private:
     QVector<QPair<QString, QString>> mCapturedNameGroups;
     QMap<QString, QPair<int, int>> mCapturedNameGroupsPosList;
     QVector<QVector<QPair<QString, QString>>> mMultiCaptureNameGroups;
-    // Most scripts never read "matches" or "multimatches", so for the length of
-    // a fire both are left out of the globals table and lazyGlobalsIndex()
-    // builds them for the first script that asks. Only between
-    // setCaptureGroups() and clearCaptureGroups(): what a timer or a key script
-    // is handed stays in place afterwards, with nothing to put it back.
+    // Most scripts never read "matches" or "multimatches", so lazyGlobalsIndex()
+    // builds them on first read. They are left out only while a capture scope
+    // is open, since clearCaptureGroups() is what puts them back.
     bool mCaptureScopeOpen = false;
     bool mMatchesPending = false;
     enum class PendingMultimatches { None, Spare, Captures, CapturesWithoutNames };
@@ -1037,11 +1035,11 @@ private:
     const void* mGlobalsTable = nullptr;
     int mGlobalsTableRef = LUA_NOREF;
     const void* mGlobalsMetatable = nullptr;
-    // getmetatable(), setmetatable() and their debug library twins as Lua ships
-    // them, which globalsMetatableGuard() stands in front of. A script holding
-    // the metatable of the globals table can change it at any moment, so once
-    // it has been handed out nothing is left out until setmetatable() puts one
-    // carrying both handlers back.
+    // The C functions getmetatable(), setmetatable() and their debug library
+    // twins held before globalsMetatableGuard() took their place. A script
+    // holding the metatable of the globals table can change it at any moment,
+    // so once it has been handed out nothing is left out until either setter
+    // puts one carrying both handlers back on the globals table.
     lua_CFunction mStockMetatableFunctions[4] = {};
     bool mGlobalsMetatableTouched = false;
     // An alias pass a script asks for - expandAlias() - sets "command" and the

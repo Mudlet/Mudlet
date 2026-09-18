@@ -3366,10 +3366,9 @@ describe("Trigger processing", function()
 
     end)
 
-    -- "matches", "multimatches" and "line" are only put together for a script
-    -- that reads them, since most never do. Every case here is something a
-    -- script could rely on before that was so, and the ones that install a
-    -- metatable are the profiles it has to stand aside for.
+    -- "matches", "multimatches" and "line" are only built for a script that
+    -- reads them. These cases pin what scripts rely on, and the ones that
+    -- install a metatable are the profiles laziness has to stand aside for.
     describe("capture globals a script may never read", function()
         local triggerIds, triggerNames, aliasIds = {}, {}, {}
 
@@ -3427,7 +3426,6 @@ describe("Trigger processing", function()
             _G.LazyGlobalsSpec = nil
         end)
 
-        -- Everything below would pass as well with nothing left out
         it("leaves them out of the globals table until a script reads them", function()
             local seen = {}
             trigger(tempRegexTrigger("^LazyLeftOut (\\w+)$", function()
@@ -3447,6 +3445,7 @@ describe("Trigger processing", function()
             assert.are.equal("word", seen.capture)
         end)
 
+        -- The rest must also pass with nothing left out
         it("hands a fire its own tables however few of the fires before it looked", function()
             local fires = 0
             local kept = {}
@@ -3475,7 +3474,7 @@ describe("Trigger processing", function()
             assert.is_nil(multimatches.note, "what is in place after the fires is a table one of them was handed")
         end)
 
-        it("leaves empty tables in place between dispatches", function()
+        it("reads as empty tables between dispatches", function()
             local fires = 0
             trigger(tempRegexTrigger("^LazyIdle(\\d+)$", function()
                 fires = fires + 1
@@ -3586,6 +3585,40 @@ describe("Trigger processing", function()
 
             assert.is_true(seen.matches, "an alias pass replaced the matches the script had rawset")
             assert.are.equal("mine", seen.line, "reaching for the metatable replaced the line the script had rawset")
+        end)
+
+        it("hands a fire its captures over a matches its feeding script rawset", function()
+            local seen = {}
+            trigger(tempRegexTrigger("^LazyRawsetInner (\\w+)$", function()
+                seen.capture = matches[2]
+            end))
+            trigger(tempRegexTrigger("^LazyRawsetOuter$", function()
+                rawset(_G, "matches", {"stale", "stale"})
+                feedTriggers("\nLazyRawsetInner word\n")
+            end))
+
+            feedTriggers("\nLazyRawsetOuter\n")
+
+            assert.are.equal("word", seen.capture)
+        end)
+
+        it("hands a multiline fire its captures over a multimatches its feeding script rawset", function()
+            _G.LazyGlobalsSpec = {
+                feed = function()
+                    rawset(_G, "multimatches", {{"stale", "stale"}})
+                    feedTriggers("lazyrawsetinner one aaa\nlazyrawsetinner two bbb\n")
+                end
+            }
+            multiline("LazyRawsetInner", {[[^lazyrawsetinner one (\w+)$]], [[^lazyrawsetinner two (\w+)$]]}, [==[
+                LazyGlobalsSpec.first = multimatches[1] and multimatches[1][2]
+            ]==])
+            multiline("LazyRawsetOuter", {[[^lazyrawsetouter one$]], [[^lazyrawsetouter two$]]}, [==[
+                LazyGlobalsSpec.feed()
+            ]==])
+
+            feedTriggers("lazyrawsetouter one\nlazyrawsetouter two\n")
+
+            assert.are.equal("aaa", _G.LazyGlobalsSpec.first)
         end)
 
         it("builds a matches table that behaves like any other", function()
@@ -3828,7 +3861,7 @@ describe("Trigger processing", function()
 
             assert.are.equal("inner", seen.inner)
             assert.are.equal("table", seen.type)
-            assert.is_nil(seen.capture, "a nested trigger pass that fired has always left the empty table behind it")
+            assert.is_nil(seen.capture, "a nested trigger pass that fired leaves the empty table behind it")
             assert.are.equal("outer", seen.untouched, "a nested pass that fired nothing should leave matches alone")
         end)
 
@@ -4082,11 +4115,191 @@ describe("Trigger processing", function()
             end)
         end
 
-        -- A package that polices undeclared globals does it with __index and
-        -- __newindex on the globals table, and every name Mudlet sets has always
-        -- been there for it to find. Every way one gets installed, and both of
-        -- the moments: before the line arrives, and by one trigger's script with
-        -- another still to fire on the same line.
+        -- Code compiled before the swap still reads the table it was compiled with
+        it("leaves a fire's matches in the globals table setfenv(0) took away", function()
+            local seen = {}
+            trigger(tempRegexTrigger("^LazySwappedAway (\\w+)$", function()
+                seen.original = getfenv(0)
+                setfenv(0, setmetatable({}, {__index = seen.original}))
+            end))
+
+            local ok, message = pcall(feedTriggers, "\nLazySwappedAway word\n")
+            if seen.original then
+                setfenv(0, seen.original)
+            end
+
+            assert.is_true(ok, tostring(message))
+            local left = rawget(seen.original, "matches")
+            assert.are.equal("word", left and left[2])
+        end)
+
+        it("leaves a multiline fire's multimatches in the globals table setfenv(0) took away", function()
+            _G.LazyGlobalsSpec = {}
+            local spec = _G.LazyGlobalsSpec
+            multiline("LazySwappedAwayMulti", {[[^lazyswappedaway one (\w+)$]], [[^lazyswappedaway two (\w+)$]]}, [==[
+                LazyGlobalsSpec.original = getfenv(0)
+                setfenv(0, setmetatable({}, {__index = LazyGlobalsSpec.original}))
+            ]==])
+
+            feedTriggers("lazyswappedaway one aaa\n")
+            local ok, message = pcall(feedTriggers, "lazyswappedaway two bbb\n")
+            if spec.original then
+                setfenv(0, spec.original)
+            end
+
+            assert.is_true(ok, tostring(message))
+            local left = rawget(spec.original, "multimatches")
+            assert.are.equal("aaa", left and left[1] and left[1][2])
+        end)
+
+        -- Any allocation can run a garbage collection step, and with it a __gc
+        -- finaliser that reads or assigns these names while Mudlet is between
+        -- leaving one out and putting it back
+        describe("read by a finaliser", function()
+            local finaliser = {armed = false, watching = false, runs = 0}
+
+            -- Each finaliser leaves another proxy behind for the next step
+            local function chain()
+                local proxy = newproxy(true)
+                getmetatable(proxy).__gc = function()
+                    if not finaliser.armed then
+                        return
+                    end
+                    if finaliser.watching then
+                        finaliser.runs = finaliser.runs + 1
+                        finaliser.onRun()
+                    end
+                    chain()
+                end
+            end
+
+            -- With a pause of 0 every allocation finishes a whole cycle
+            local function withFinaliserAtEveryAllocation(run)
+                local pause = collectgarbage("setpause", 0)
+                local stepmul = collectgarbage("setstepmul", 0)
+                finaliser.armed, finaliser.watching, finaliser.runs = true, false, 0
+                chain()
+                collectgarbage()
+                local ok, message = pcall(run)
+                finaliser.armed, finaliser.watching = false, false
+                collectgarbage("setpause", pause)
+                collectgarbage("setstepmul", stepmul)
+                collectgarbage()
+                assert(ok, message)
+            end
+
+            local function recordNils(nils)
+                return function()
+                    for _, name in ipairs({"matches", "multimatches", "line"}) do
+                        if _G[name] == nil then
+                            nils[#nils + 1] = name
+                        end
+                    end
+                end
+            end
+
+            before_each(function()
+                feedTriggers("\nLazyFinaliserSettle\n")
+            end)
+
+            it("finds every name there once a fire is over", function()
+                local nils = {}
+                trigger(tempRegexTrigger("^LazyFinaliserAfter (\\w+)$", function()
+                    finaliser.watching = true
+                end))
+                finaliser.onRun = recordNils(nils)
+                matches.dirty = true
+
+                withFinaliserAtEveryAllocation(function()
+                    feedTriggers("\nLazyFinaliserAfter word\n")
+                end)
+
+                assert.is_true(finaliser.runs > 0, "no finaliser ran after the script")
+                assert.are.same({}, nils)
+            end)
+
+            it("finds every name there once a fire that read multimatches is over", function()
+                local nils = {}
+                trigger(tempRegexTrigger("^LazyFinaliserSpare (\\w+)$", function()
+                    local _ = multimatches
+                    finaliser.watching = true
+                end))
+                finaliser.onRun = recordNils(nils)
+
+                withFinaliserAtEveryAllocation(function()
+                    feedTriggers("\nLazyFinaliserSpare word\n")
+                end)
+
+                assert.is_true(finaliser.runs > 0, "no finaliser ran after the script")
+                assert.are.same({}, nils)
+            end)
+
+            it("finds every name there once an alias pass under a multiline fire is over", function()
+                local nils = {}
+                alias(tempAlias("^lazyfinaliserinner$", function()
+                    finaliser.watching = true
+                end))
+                _G.LazyGlobalsSpec = {run = function() expandAlias("lazyfinaliserinner", false) end}
+                multiline("LazyFinaliserNested", {[[^lazyfinalisernested one (\w+)$]], [[^lazyfinalisernested two (\w+)$]]}, [==[
+                    LazyGlobalsSpec.run()
+                ]==])
+                finaliser.onRun = recordNils(nils)
+
+                feedTriggers("lazyfinalisernested one aaa\n")
+                withFinaliserAtEveryAllocation(function()
+                    feedTriggers("lazyfinalisernested two bbb\n")
+                end)
+
+                assert.is_true(finaliser.runs > 0, "no finaliser ran after the script")
+                assert.are.same({}, nils)
+            end)
+
+            it("hands a script the matches a finaliser read while it was being built", function()
+                local seen = {}
+                trigger(tempRegexTrigger("^LazyFinaliserBuild (\\w+)$", function()
+                    finaliser.watching = true
+                    local read = matches
+                    seen.same = rawequal(read, seen.finaliserRead)
+                    seen.capture = read[2]
+                end))
+                finaliser.onRun = function()
+                    finaliser.watching = false
+                    seen.finaliserRead = matches
+                end
+
+                withFinaliserAtEveryAllocation(function()
+                    feedTriggers("\nLazyFinaliserBuild word\n")
+                end)
+
+                assert.is_not_nil(seen.finaliserRead, "no finaliser ran inside the read")
+                assert.are.equal("word", seen.capture)
+                assert.is_true(seen.same, "the finaliser and the script were handed different tables")
+            end)
+
+            it("keeps the line a finaliser assigned while it was being built", function()
+                local seen = {}
+                trigger(tempRegexTrigger("^LazyFinaliserLine (\\w+)$", function()
+                    finaliser.watching = true
+                    local _ = line
+                    seen.line = rawget(_G, "line")
+                end))
+                finaliser.onRun = function()
+                    finaliser.watching = false
+                    _G.line = "from the finaliser"
+                end
+
+                withFinaliserAtEveryAllocation(function()
+                    feedTriggers("\nLazyFinaliserLine word\n")
+                end)
+
+                assert.is_true(finaliser.runs > 0, "no finaliser ran inside the read")
+                assert.are.equal("from the finaliser", seen.line)
+            end)
+        end)
+
+        -- A strict-globals package polices __index and __newindex on the
+        -- globals table, and must never be asked about a name Mudlet sets. Every
+        -- way one gets installed, before the line and between two fires on it.
         describe("under a metatable that polices the globals table", function()
             local original, originalIndex, originalNewindex
             local complaints
