@@ -811,6 +811,14 @@ describe("Tests the bulk copy of plain text runs", function()
     end
   end)
 
+  it("ends a run at a carriage return just as the byte by byte decoder does", function()
+    atEveryOffset(function(before, after, where)
+      local expected = decodedLines(brokenUp("run:" .. before .. "\r" .. after))
+
+      assert.same(expected, decodedLines("run:" .. before .. "\r" .. after), where)
+    end)
+  end)
+
   it("carries a control character that is plain text along with the run", function()
     atEveryOffset(function(before, after, where)
       assert.equals(before .. "\t" .. after, decoded(before .. "\t" .. after), where)

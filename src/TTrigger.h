@@ -178,7 +178,9 @@ private:
 // What TriggerUnit copies out of a root trigger, so that a line can dismiss it
 // without reading the trigger at all - see TTrigger::rootFilter(). A copy goes
 // stale the moment the trigger changes, so whatever changes one of the things
-// rootFilter() reads has to go through TTrigger::invalidatePrescan().
+// rootFilter() reads has to go through TTrigger::invalidatePrescan(), and
+// whatever makes a trigger fire without matching through
+// TriggerUnit::markRootUnfilterable(), which bumps mRootFilterEpoch.
 struct TRootTriggerFilter
 {
     enum class Kind : quint8 {
@@ -214,7 +216,8 @@ public:
     // this object. Passing the storage in rather than allocating it is what
     // lets a line no longer than any before it allocate nothing.
     TUtf8Subject(const QString& line, QByteArray&& scratch)
-    : mpPendingLine(&line)
+    : mpLine(&line)
+    , mpPendingLine(&line)
     , mScratch(std::move(scratch))
     {
     }
@@ -245,10 +248,22 @@ public:
     }
     // Hands the encoding storage back, to be lent to the next line
     QByteArray takeScratch() { return std::move(mScratch); }
+    // An unpaired surrogate does not reach the UTF-8, which joins the text on
+    // either side of it for pcre2, so searching the QString cannot rule a
+    // pattern out on such a line
+    bool dropsText() const
+    {
+        if (mDropsText < 0) {
+            mDropsText = mpLine && !QtPrivate::isLatin1(*mpLine) && !QtPrivate::isValidUtf16(*mpLine);
+        }
+        return mDropsText;
+    }
 
 private:
     void encode() const;
 
+    const QString* const mpLine = nullptr;
+    mutable qint8 mDropsText = -1;
     mutable const QString* mpPendingLine = nullptr;
     mutable QByteArray mScratch;
     mutable const char* mData = nullptr;
@@ -367,9 +382,9 @@ public:
         return true;
     }
     // What a line can dismiss this trigger by without calling into it - the same
-    // cases cannotMatch() and match_color_pattern() decide, which is only safe
-    // to copy for a trigger with a single pattern and nothing that makes it
-    // fire on a line it does not match.
+    // cases cannotMatch() and match_color_pattern() decide, copied only for a
+    // trigger with a single pattern and nothing that makes it fire on a line it
+    // does not match.
     TRootTriggerFilter rootFilter() const;
     // The one color pair a root trigger's color pattern would find across the
     // whole of this line, as match_color_pattern() reads it; false when the line
@@ -503,11 +518,10 @@ private:
     std::vector<TSubstringPattern> mSubstringPatterns;
     // Text every match of a perl pattern has to contain, prepared like a
     // substring pattern so that a line without it is dismissed without asking
-    // pcre2. Empty, with a null matcher, for every other pattern kind and for a
-    // perl pattern that guarantees no such text
+    // pcre2. A null matcher for every other pattern kind and for a perl pattern
+    // that guarantees no text of two characters or more
     struct TRegexLiteral
     {
-        QString text;
         std::unique_ptr<QStringMatcher> matcher;
         TBigramFilter::Bits bigrams;
     };
