@@ -34,6 +34,7 @@
  */
 
 
+#include <QAccessible>
 #include <QAction>
 #include <QMenu>
 #include <QSignalSpy>
@@ -242,6 +243,42 @@ private:
         return nullptr;
     }
 
+    // What a screen reader is handed. Qt calls an installed handler in place of
+    // the platform's, but only while accessibility is active.
+    class AnnouncementRecorder
+    {
+    public:
+        AnnouncementRecorder()
+        : mWasActive(QAccessible::isActive())
+        , mpPrevious(QAccessible::installUpdateHandler(record))
+        {
+            QAccessible::setActive(true);
+            heard().clear();
+        }
+        ~AnnouncementRecorder()
+        {
+            QAccessible::installUpdateHandler(mpPrevious);
+            QAccessible::setActive(mWasActive);
+        }
+        static QStringList& heard()
+        {
+            static QStringList announcements;
+            return announcements;
+        }
+
+    private:
+        static void record(QAccessibleEvent* pEvent)
+        {
+            if (pEvent->type() == QAccessible::Announcement) {
+                heard().append(static_cast<QAccessibleAnnouncementEvent*>(pEvent)->message());
+            }
+        }
+        const bool mWasActive;
+        const QAccessible::UpdateHandler mpPrevious;
+    };
+
+    static QString accessibleDescription(const QTreeWidgetItem* pItem) { return pItem ? pItem->data(0, Qt::AccessibleDescriptionRole).toString() : QString(); }
+
     // On the main toolbar rather than merely somewhere in the window: a button
     // built but never added is still findable by name, and looks from here
     // exactly like one the player can press.
@@ -408,7 +445,17 @@ private slots:
         QVERIFY2(pEditor, "the second profile's editor could not be opened");
         pEditor->showInfo(QString());
 
-        const int commandId = addCommand(mpFirstHost, qsl("name = 'OtherProfileBinding', menuPath = 'ClashTest', shortcut = 'Alt+F9'"));
+        // Opening the editor replaces the notice, so a closed one must not
+        // have it read out either
+        QStringList heard;
+        int commandId = 0;
+        {
+            AnnouncementRecorder recorder;
+            pEditor->hide();
+            commandId = addCommand(mpFirstHost, qsl("name = 'OtherProfileBinding', menuPath = 'ClashTest', shortcut = 'Alt+F9'"));
+            heard = recorder.heard();
+            pEditor->show();
+        }
 
         const QString text = editorSaid(pEditor);
 
@@ -421,6 +468,7 @@ private slots:
         QVERIFY2(text.contains(sequence), qPrintable(qsl("a command took another profile's key binding without saying so in its editor: %1").arg(text)));
         QVERIFY2(text.contains(qsl("OtherProfileBinding")), qPrintable(qsl("the warning does not say which command took the key: %1").arg(text)));
         QVERIFY2(text.contains(mFirstProfile), qPrintable(qsl("the warning does not say which profile the command is in: %1").arg(text)));
+        QVERIFY2(!heard.contains(text), qPrintable(qsl("the warning on another profile's closed editor was read out: %1").arg(heard.join(qsl(" | ")))));
     }
 
     // The same clash inside one profile, which is the direction a package meets
@@ -505,14 +553,64 @@ private slots:
         QTreeWidgetItem* pItem = pEditor->treeWidget_keys->currentItem();
         QVERIFY2(pItem && pItem != pEditor->mpKeyBaseItem, "the new key binding is not the one selected");
 
-        pEditor->showInfo(QString());
-        pEditor->keyGrabCallback(Qt::Key_T, Qt::ControlModifier | Qt::AltModifier);
+        QStringList heard;
+        QString takenDescription;
+        {
+            AnnouncementRecorder recorder;
+            pEditor->showInfo(QString());
+            pEditor->keyGrabCallback(Qt::Key_T, Qt::ControlModifier | Qt::AltModifier);
+            heard = recorder.heard();
+            takenDescription = accessibleDescription(pItem);
+        }
         const QString text = editorSaid(pEditor);
+        pEditor->keyGrabCallback(Qt::Key_F12, Qt::ControlModifier | Qt::AltModifier);
+        const QString freedDescription = accessibleDescription(pItem);
 
         pEditor->treeWidget_keys->setCurrentItem(pItem);
         pEditor->slot_deleteItemOrGroup();
         pEditor->mpUndoStack->clear();
         QVERIFY2(text.contains(qsl("Toggle Time Stamps")), qPrintable(qsl("grabbing one of Mudlet's own keys was not warned about: %1").arg(text)));
+        // The player just pressed the key, so it is read out
+        QVERIFY2(heard.contains(text), qPrintable(qsl("grabbing a taken key was not read out, heard: %1").arg(heard.join(qsl(" | ")))));
+        QVERIFY2(takenDescription.contains(pEditor->descKeyTaken), qPrintable(qsl("a binding on a taken key does not say so to a screen reader: %1").arg(takenDescription)));
+        QVERIFY2(!freedDescription.contains(pEditor->descKeyTaken), qPrintable(qsl("a binding moved to a free key still says its key is in use: %1").arg(freedDescription)));
+    }
+
+    // Nothing is read out for a binding a script makes while the editor is
+    // closed: opening the editor replaces the warning, and a script that makes
+    // its bindings on connect would have it read out at every connect
+    void test_aScriptsBindingIsReadOutOnlyWhileTheEditorIsOpen()
+    {
+        dlgTriggerEditor* pEditor = editorFor(mpFirstHost);
+        QVERIFY2(pEditor, "the profile's editor could not be opened");
+        const QString makeBinding = qsl("_readOutKeyId = tempKey(mudlet.keymodifier.Control + mudlet.keymodifier.Alt, mudlet.key.T, [[echo('bound')]])");
+
+        QStringList heardClosed;
+        QStringList heardOpen;
+        QString closedText;
+        QString openText;
+        {
+            AnnouncementRecorder recorder;
+            pEditor->hide();
+            pEditor->showInfo(QString());
+            runLua(mpFirstHost, makeBinding);
+            heardClosed = recorder.heard();
+            closedText = pEditor->mpSystemMessageArea->notificationAreaMessageBox->text();
+            runLua(mpFirstHost, qsl("killKey(_readOutKeyId)"));
+
+            pEditor->show();
+            recorder.heard().clear();
+            pEditor->showInfo(QString());
+            runLua(mpFirstHost, makeBinding);
+            heardOpen = recorder.heard();
+            openText = editorSaid(pEditor);
+            runLua(mpFirstHost, qsl("killKey(_readOutKeyId)"));
+        }
+
+        QVERIFY2(closedText.contains(qsl("Toggle Time Stamps")), qPrintable(qsl("the closed editor was not given the warning: %1").arg(closedText)));
+        QVERIFY2(!heardClosed.contains(closedText), qPrintable(qsl("a warning on the closed editor was read out: %1").arg(heardClosed.join(qsl(" | ")))));
+        QVERIFY2(openText.contains(qsl("Toggle Time Stamps")), qPrintable(qsl("the open editor did not show the warning: %1").arg(openText)));
+        QVERIFY2(heardOpen.contains(openText), qPrintable(qsl("a warning on the open editor was not read out, heard: %1").arg(heardOpen.join(qsl(" | ")))));
     }
 
     // A binding a script makes while the editor is closed is warned about on the
@@ -538,11 +636,25 @@ private slots:
         QTreeWidgetItem* pFree = keyItem(pEditor, freeId);
         QVERIFY2(pTaken && pFree, "the key bindings are not in the editor's tree");
 
-        pEditor->showInfo(QString());
-        pEditor->slot_keySelected(pTaken);
-        const QString takenText = editorSaid(pEditor);
-        pEditor->slot_keySelected(pFree);
-        const QString freeText = editorSaid(pEditor);
+        QStringList heard;
+        QString takenText;
+        QString takenDescription;
+        QString freeText;
+        QString freeDescription;
+        {
+            AnnouncementRecorder recorder;
+            pEditor->showInfo(QString());
+            // Twice, as a click selects it twice. Leaving an item redoes its
+            // description, so it is read while the item is still selected.
+            pEditor->slot_keySelected(pTaken);
+            pEditor->slot_keySelected(pTaken);
+            takenText = editorSaid(pEditor);
+            takenDescription = accessibleDescription(pTaken);
+            pEditor->slot_keySelected(pFree);
+            freeText = editorSaid(pEditor);
+            freeDescription = accessibleDescription(pFree);
+            heard = recorder.heard();
+        }
 
         for (QTreeWidgetItem* pItem : {pTaken, pFree}) {
             pEditor->treeWidget_keys->setCurrentItem(pItem);
@@ -551,6 +663,11 @@ private slots:
         pEditor->mpUndoStack->clear();
         QVERIFY2(takenText.contains(qsl("Toggle Time Stamps")), qPrintable(qsl("selecting a binding on one of Mudlet's own keys did not warn about it: %1").arg(takenText)));
         QVERIFY2(!freeText.contains(qsl("already used")), qPrintable(qsl("selecting a binding that fires warned about it: %1").arg(freeText)));
+        // Arrowing through the bindings would be talked over at every taken
+        // key, so selection leaves it to the item's own description
+        QVERIFY2(!heard.contains(takenText), qPrintable(qsl("selecting a binding read its warning out: %1").arg(heard.join(qsl(" | ")))));
+        QVERIFY2(takenDescription.count(pEditor->descKeyTaken) == 1, qPrintable(qsl("a binding on a taken key should say so to a screen reader once: %1").arg(takenDescription)));
+        QVERIFY2(!freeDescription.contains(pEditor->descKeyTaken), qPrintable(qsl("a binding that fires says its key is in use: %1").arg(freeDescription)));
     }
 
     // addCommand() turns down a key Mudlet holds, but the preferences will move

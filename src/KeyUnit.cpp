@@ -172,22 +172,17 @@ const TKey* KeyUnit::firstMatch(const Qt::Key key, const Qt::KeyboardModifiers m
     return nullptr;
 }
 
-void KeyUnit::warnIfKeyIsTaken(const TKey* pKey) const
+QString KeyUnit::takenKeyWarning(const TKey* pKey) const
 {
     auto* pMudlet = mudlet::self();
-    // Shown in the editor rather than on the main screen, for the reason
-    // mudlet::warnProfilesLosingBindingTo() gives: a script that makes its
-    // bindings at profile load would repeat this at every startup, and a line
-    // the player learns to ignore is worse than no line. The editor is where
-    // the binding is, and where it gets changed.
-    if (!pKey || mpHost.isNull() || !mpHost->mpEditorDialog || !pMudlet || pKey->isFolder() || pKey->getKeyCode() == Qt::Key_unknown) {
-        return;
+    if (!pKey || mpHost.isNull() || !pMudlet || pKey->isFolder() || pKey->getKeyCode() == Qt::Key_unknown) {
+        return {};
     }
     // A keypad or group-switch binding cannot be written as a key sequence, so
     // no shortcut can be the one holding it
     constexpr Qt::KeyboardModifiers sequenceModifiers = Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier;
     if (pKey->getKeyModifiers() & ~sequenceModifiers) {
-        return;
+        return {};
     }
 
     const QKeySequence sequence(QKeyCombination(pKey->getKeyModifiers(), pKey->getKeyCode()));
@@ -207,8 +202,24 @@ void KeyUnit::warnIfKeyIsTaken(const TKey* pKey) const
         //: Warning shown in the editor when a key binding is given a key an add-on command already holds. %1 is a key such as "Alt+F9", %2 a comma separated list of the commands holding it.
         warnings.append(tr("%1 is already used by %2, which will get the key first, so this key binding will not fire.").arg(keyText, holders.join(qsl(", "))));
     }
-    if (!warnings.isEmpty()) {
-        mpHost->mpEditorDialog->showWarning(warnings.join(QChar::Space));
+    return warnings.join(QChar::Space);
+}
+
+void KeyUnit::warnIfKeyIsTaken(const TKey* pKey) const
+{
+    // Shown in the editor rather than on the main screen, for the reason
+    // mudlet::warnProfilesLosingBindingTo() gives: a script that makes its
+    // bindings at profile load would repeat this at every startup, and a line
+    // the player learns to ignore is worse than no line. The editor is where
+    // the binding is, and where it gets changed.
+    if (mpHost.isNull() || !mpHost->mpEditorDialog) {
+        return;
+    }
+    if (const QString warning = takenKeyWarning(pKey); !warning.isEmpty()) {
+        // Read out only when it can also be seen: a closed editor replaces it
+        // when it opens, and a script making its bindings on connect would have
+        // it read out at every connect. Selecting the binding shows it again.
+        mpHost->mpEditorDialog->showWarning(warning, mpHost->mpEditorDialog->isVisible());
     }
 }
 

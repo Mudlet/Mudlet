@@ -718,14 +718,15 @@ void mudlet::warnProfilesLosingBindingTo(const QKeySequence& sequence, Host* pHo
         // on every profile load, so this clash is found again at every startup
         // for as long as it lasts - on the main screen that is a line the
         // player is told to ignore, which is worse than not saying it. The
-        // editor is where a key binding is looked at and where it is changed,
-        // so the notice waits there for whoever goes to fix it, and says
-        // nothing to anyone who does not.
+        // editor is where a key binding is looked at and where it is changed.
+        // Opening it replaces this notice, so it is read out only if the editor
+        // is open; selecting the binding says it again.
         if (pOtherHost->mpEditorDialog) {
             //: Warning shown in the editor when an add-on command in another of the player's profiles takes a key one of this profile's key bindings uses. %1 is a key such as "Alt+F9", %2 the name of the command and %3 the name of the profile it was added in.
             pOtherHost->mpEditorDialog->showWarning(
                     tr("%1 is now used by the \"%2\" command in your \"%3\" profile, so this profile's key binding on it will not fire. Put one of the two on a different key to use both.")
-                            .arg(sequence.toString(QKeySequence::NativeText), commandName, pHost ? pHost->getName() : QString()));
+                            .arg(sequence.toString(QKeySequence::NativeText), commandName, pHost ? pHost->getName() : QString()),
+                    pOtherHost->mpEditorDialog->isVisible());
         }
     }
 }

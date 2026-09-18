@@ -82,7 +82,9 @@ public:
     // matched, so a binding on one of their keys never fires. The binding is
     // still accepted - the player's own item is not the one to refuse - so the
     // only thing owed is saying so, when it is made and when it is selected in
-    // the editor.
+    // the editor. Empty when the binding will fire.
+    QString takenKeyWarning(const TKey* pKey) const;
+    // For a binding a script made
     void warnIfKeyIsTaken(const TKey* pKey) const;
     void markCleanup(TKey* pT);
     void doCleanup();
