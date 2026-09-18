@@ -3366,6 +3366,670 @@ describe("Trigger processing", function()
 
     end)
 
+    -- "matches", "multimatches" and "line" are only put together for a script
+    -- that reads them, since most never do. Every case here is something a
+    -- script could rely on before that was so, and the ones that install a
+    -- metatable are the profiles it has to stand aside for.
+    describe("capture globals a script may never read", function()
+        local triggerIds, triggerNames, aliasIds = {}, {}, {}
+
+        local function trigger(id)
+            triggerIds[#triggerIds + 1] = id
+            return id
+        end
+
+        local function alias(id)
+            aliasIds[#aliasIds + 1] = id
+            return id
+        end
+
+        local function multiline(name, patterns, code)
+            triggerNames[#triggerNames + 1] = name
+            for _, pattern in ipairs(patterns) do
+                tempComplexRegexTrigger(name, pattern, code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3)
+            end
+        end
+
+        -- "multimatches" is nil in a profile until the first dispatch is over
+        setup(function()
+            local id = tempRegexTrigger("^LazyGlobalsPrimer$", function() end)
+            feedTriggers("\nLazyGlobalsPrimer\n")
+            killTrigger(id)
+        end)
+
+        after_each(function()
+            for _, id in ipairs(triggerIds) do
+                killTrigger(id)
+            end
+            for _, name in ipairs(triggerNames) do
+                killTrigger(name)
+            end
+            for _, id in ipairs(aliasIds) do
+                killAlias(id)
+            end
+            triggerIds, triggerNames, aliasIds = {}, {}, {}
+            _G.LazyGlobalsSpec = nil
+        end)
+
+        it("hands a fire its own tables however few of the fires before it looked", function()
+            local fires = 0
+            local kept = {}
+            trigger(tempRegexTrigger("^LazyFresh(\\d+)$", function()
+                fires = fires + 1
+                if fires ~= 2 then
+                    kept[fires] = {matches = matches, multimatches = multimatches}
+                    matches.note = "fire " .. fires
+                    multimatches.note = "fire " .. fires
+                end
+            end))
+
+            feedTriggers("\nLazyFresh1\n")
+            feedTriggers("\nLazyFresh2\n")
+            feedTriggers("\nLazyFresh3\n")
+
+            assert.are.equal(3, fires, "the trigger should have fired three times")
+            assert.are.equal("1", kept[1].matches[2], "the first fire's capture did not survive the later fires")
+            assert.are.equal("3", kept[3].matches[2], "the third fire was not handed its own capture")
+            assert.are.equal("fire 1", kept[1].matches.note, "what the first fire put into its matches was lost")
+            assert.are.equal("fire 1", kept[1].multimatches.note, "what the first fire put into its multimatches was lost")
+            assert.are.equal("fire 3", kept[3].multimatches.note)
+            assert.is_true(not rawequal(kept[1].matches, kept[3].matches), "two fires were handed one matches table")
+            assert.is_true(not rawequal(kept[1].multimatches, kept[3].multimatches), "two fires were handed one multimatches table")
+            assert.is_nil(matches.note, "what is in place after the fires is a table one of them was handed")
+            assert.is_nil(multimatches.note, "what is in place after the fires is a table one of them was handed")
+        end)
+
+        it("leaves empty tables in place between dispatches", function()
+            local fires = 0
+            trigger(tempRegexTrigger("^LazyIdle(\\d+)$", function()
+                fires = fires + 1
+            end))
+
+            feedTriggers("\nLazyIdle1\n")
+
+            assert.are.equal(1, fires)
+            for _, name in ipairs({"matches", "multimatches"}) do
+                assert.are.equal("table", type(_G[name]), name .. " should never read as nil")
+                assert.is_nil(next(_G[name]), name .. " should be empty outside a dispatch")
+                assert.are.equal("table", type(rawget(_G, name)), name .. " should be in the globals table outside a dispatch")
+            end
+        end)
+
+        -- busted gives a spec file an environment of its own, so a function
+        -- written here assigns into that. A script that is to assign to the
+        -- globals the way a profile's scripts do has to be handed over as text.
+        it("lets a script put a value of its own in place for the rest of its fire", function()
+            _G.LazyGlobalsSpec = {}
+            trigger(tempRegexTrigger("^LazyAssign (\\w+)$", [==[
+                local seen = _G.LazyGlobalsSpec
+                if seen.assigned then
+                    seen.nextFire = matches[2]
+                    seen.nextFireMultimatches = type(multimatches)
+                else
+                    matches = {"mine"}
+                    multimatches = "also mine"
+                    seen.assigned = matches[1]
+                    seen.assignedMultimatches = multimatches
+                end
+            ]==]))
+            trigger(tempRegexTrigger("^LazyAssign (\\w+)$", [==[
+                _G.LazyGlobalsSpec.sameLine = matches[2]
+                _G.LazyGlobalsSpec.sameLineMultimatches = type(multimatches)
+            ]==]))
+
+            feedTriggers("\nLazyAssign first\n")
+            local afterMatches, afterMultimatches = matches, multimatches
+            feedTriggers("\nLazyAssign second\n")
+
+            local seen = _G.LazyGlobalsSpec
+            assert.are.equal("mine", seen.assigned, "the script did not read back what it assigned to matches")
+            assert.are.equal("also mine", seen.assignedMultimatches, "the script did not read back what it assigned to multimatches")
+            assert.are.equal("second", seen.sameLine, "the next trigger on the line was not handed its own captures")
+            assert.are.equal("table", seen.sameLineMultimatches)
+            assert.are.equal("table", type(afterMatches), "the script's matches outlived the pass")
+            assert.is_nil(next(afterMatches), "the script's matches outlived the pass")
+            assert.are.equal("table", type(afterMultimatches), "the script's multimatches outlived the pass")
+            assert.are.equal("second", seen.nextFire, "the next fire was not handed its own captures")
+            assert.are.equal("table", seen.nextFireMultimatches)
+        end)
+
+        it("lets a script clear them before it has read them", function()
+            _G.LazyGlobalsSpec = {}
+            trigger(tempRegexTrigger("^LazyClear (\\w+)$", [==[
+                matches = nil
+                multimatches = nil
+                _G.LazyGlobalsSpec.matches = type(matches)
+                _G.LazyGlobalsSpec.multimatches = type(multimatches)
+            ]==]))
+
+            feedTriggers("\nLazyClear word\n")
+
+            local seen = _G.LazyGlobalsSpec
+            assert.are.equal("nil", seen.matches, "matches came back after the script cleared it")
+            assert.are.equal("nil", seen.multimatches, "multimatches came back after the script cleared it")
+            assert.are.equal("table", type(matches), "matches should be back once the fire is over")
+            assert.are.equal("table", type(multimatches), "multimatches should be back once the fire is over")
+        end)
+
+        it("lets a script clear them after it has read them", function()
+            _G.LazyGlobalsSpec = {}
+            trigger(tempRegexTrigger("^LazyClearLate (\\w+)$", [==[
+                local seen = _G.LazyGlobalsSpec
+                seen.capture = matches[2]
+                seen.before = type(multimatches)
+                matches = nil
+                multimatches = nil
+                seen.matches = type(matches)
+                seen.multimatches = type(multimatches)
+            ]==]))
+
+            feedTriggers("\nLazyClearLate word\n")
+
+            local seen = _G.LazyGlobalsSpec
+            assert.are.equal("word", seen.capture)
+            assert.are.equal("table", seen.before)
+            assert.are.equal("nil", seen.matches, "matches came back after the script cleared it")
+            assert.are.equal("nil", seen.multimatches, "multimatches came back after the script cleared it")
+            assert.are.equal("table", type(matches), "matches should be back once the fire is over")
+        end)
+
+        it("builds a matches table that behaves like any other", function()
+            local seen
+            trigger(tempRegexTrigger("^LazyShape (?<first>\\w+) (?<blank>\\w*)!(\\d+)$", function()
+                local positional, total = 0, 0
+                for _ in ipairs(matches) do
+                    positional = positional + 1
+                end
+                for _ in pairs(matches) do
+                    total = total + 1
+                end
+                seen = {
+                    length = #matches,
+                    positional = positional,
+                    total = total,
+                    first = matches.first,
+                    blank = matches.blank,
+                    blankPositional = matches[3],
+                    joined = table.concat(matches, "|"),
+                    unpacked = select("#", unpack(matches)),
+                    last = (select(4, unpack(matches))),
+                    beyond = matches[5],
+                }
+            end))
+
+            feedTriggers("\nLazyShape word !42\n")
+
+            assert.is_truthy(seen, "the trigger did not fire")
+            assert.are.equal(4, seen.length)
+            assert.are.equal(4, seen.positional, "ipairs() should stop after the last capture, not at the empty one")
+            assert.are.equal(6, seen.total, "pairs() should visit the four positions and the two names")
+            assert.are.equal("word", seen.first)
+            assert.are.equal("", seen.blank, "a capture that matched nothing is an empty string, not nil")
+            assert.are.equal("", seen.blankPositional, "a capture that matched nothing is an empty string, not nil")
+            assert.are.equal("LazyShape word !42|word||42", seen.joined)
+            assert.are.equal(4, seen.unpacked)
+            assert.are.equal("42", seen.last)
+            assert.is_nil(seen.beyond)
+        end)
+
+        it("hands a multiline trigger its multimatches and matches together", function()
+            _G.LazyGlobalsSpec = {kept = {}}
+            multiline("SpecLazyMulti", {[[^lazy one (?<alpha>\w+)$]], [[^lazy two (\w+)$]]}, [==[
+                local spec = _G.LazyGlobalsSpec
+                spec.kept[#spec.kept + 1] = multimatches
+                spec.first = multimatches[1][2]
+                spec.second = multimatches[2][2]
+                spec.named = multimatches[1].alpha
+                spec.count = #multimatches
+                spec.matches = type(matches)
+            ]==])
+
+            feedTriggers("lazy one aaa\n")
+            feedTriggers("lazy two bbb\n")
+            feedTriggers("lazy one ccc\n")
+            feedTriggers("lazy two ddd\n")
+
+            local spec = _G.LazyGlobalsSpec
+            assert.are.equal(2, #spec.kept, "the multiline trigger should have fired twice")
+            assert.are.equal("ccc", spec.first)
+            assert.are.equal("ddd", spec.second)
+            assert.are.equal("ccc", spec.named)
+            assert.are.equal(2, spec.count)
+            assert.are.equal("table", spec.matches)
+            assert.is_true(not rawequal(spec.kept[1], spec.kept[2]), "two fires were handed one multimatches table")
+            assert.are.equal("aaa", spec.kept[1][1][2], "the first fire's multimatches was overwritten by the second")
+            assert.are.equal("bbb", spec.kept[1][2][2], "the first fire's multimatches was overwritten by the second")
+            assert.is_nil(next(multimatches), "multimatches should be empty again outside the dispatch")
+        end)
+
+        it("leaves a multiline trigger's multimatches alone when the script never reads it", function()
+            _G.LazyGlobalsSpec = {fires = 0}
+            multiline("SpecLazyMultiQuiet", {[[^quiet one (\w+)$]], [[^quiet two (\w+)$]]}, [==[
+                _G.LazyGlobalsSpec.fires = _G.LazyGlobalsSpec.fires + 1
+            ]==])
+            local seen = {}
+            trigger(tempRegexTrigger("^quiet three (\\w+)$", function()
+                seen.type = type(multimatches)
+                seen.empty = next(multimatches) == nil
+            end))
+
+            feedTriggers("quiet one aaa\n")
+            feedTriggers("quiet two bbb\n")
+            feedTriggers("quiet three ccc\n")
+
+            assert.are.equal(1, _G.LazyGlobalsSpec.fires)
+            assert.are.equal("table", seen.type)
+            assert.is_true(seen.empty, "a later trigger was handed the multiline trigger's multimatches")
+        end)
+
+        it("hands a fire back its captures after an alias pass it started", function()
+            local seen = {inner = {}}
+            alias(tempAlias("^lazynested (\\w+)$", function()
+                seen.inner[#seen.inner + 1] = matches[2]
+            end))
+            alias(tempAlias("^lazynestedquiet (\\w+)$", function() end))
+            trigger(tempRegexTrigger("^LazyOuter (\\w+)$", function()
+                expandAlias("lazynested one", false)
+                expandAlias("lazynestedquiet two", false)
+                seen.unread = matches[2]
+                seen.unreadMultimatches = type(multimatches)
+            end))
+            trigger(tempRegexTrigger("^LazyOuter (\\w+)$", function()
+                local before, beforeMultimatches = matches, multimatches
+                expandAlias("lazynested three", false)
+                expandAlias("lazynestedquiet four", false)
+                seen.sameTable = rawequal(before, matches)
+                seen.sameMultimatches = rawequal(beforeMultimatches, multimatches)
+                seen.read = matches[2]
+            end))
+
+            feedTriggers("\nLazyOuter outer\n")
+
+            assert.are.equal("one,three", table.concat(seen.inner, ","), "the nested aliases were not handed their own captures")
+            assert.are.equal("outer", seen.unread, "a fire that had not looked at matches yet lost it to the nested pass")
+            assert.are.equal("table", seen.unreadMultimatches)
+            assert.are.equal("outer", seen.read, "a fire that had looked at matches lost it to the nested pass")
+            assert.is_true(seen.sameTable, "the nested pass handed back a different matches table")
+            assert.is_true(seen.sameMultimatches, "the nested pass handed back a different multimatches table")
+        end)
+
+        it("hands a multiline fire back its multimatches after an alias pass it started", function()
+            _G.LazyGlobalsSpec = {}
+            alias(tempAlias("^lazymultinested (\\w+)$", function()
+                _G.LazyGlobalsSpec.inner = matches[2]
+            end))
+            multiline("SpecLazyMultiNested", {[[^nested one (\w+)$]], [[^nested two (\w+)$]]}, [==[
+                expandAlias("lazymultinested inner", false)
+                _G.LazyGlobalsSpec.first = multimatches[1][2]
+                _G.LazyGlobalsSpec.second = multimatches[2][2]
+            ]==])
+
+            feedTriggers("nested one aaa\n")
+            feedTriggers("nested two bbb\n")
+
+            assert.are.equal("inner", _G.LazyGlobalsSpec.inner)
+            assert.are.equal("aaa", _G.LazyGlobalsSpec.first, "a fire that had not looked at multimatches yet lost it to the nested pass")
+            assert.are.equal("bbb", _G.LazyGlobalsSpec.second, "a fire that had not looked at multimatches yet lost it to the nested pass")
+        end)
+
+        it("leaves a fire the empty table after a trigger pass it started", function()
+            local seen = {}
+            trigger(tempRegexTrigger("^LazyFeedInner (\\w+)$", function()
+                seen.inner = matches[2]
+            end))
+            trigger(tempRegexTrigger("^LazyFeedOuter (\\w+)$", function()
+                feedTriggers("\nLazyFeedInner inner\n")
+                seen.type = type(matches)
+                seen.capture = matches[2]
+            end))
+            trigger(tempRegexTrigger("^LazyFeedNothing (\\w+)$", function()
+                feedTriggers("\nnothing matches this\n")
+                seen.untouched = matches[2]
+            end))
+
+            feedTriggers("\nLazyFeedOuter outer\n")
+            feedTriggers("\nLazyFeedNothing outer\n")
+
+            assert.are.equal("inner", seen.inner)
+            assert.are.equal("table", seen.type)
+            assert.is_nil(seen.capture, "a nested trigger pass that fired has always left the empty table behind it")
+            assert.are.equal("outer", seen.untouched, "a nested pass that fired nothing should leave matches alone")
+        end)
+
+        it("stays consistent after a script raises", function()
+            local seen = {}
+            trigger(tempRegexTrigger("^LazyRaise (\\w+)$", function()
+                if matches[2] == "reads" then
+                    local capture = matches[2]
+                    error("raised after reading " .. capture)
+                end
+                error("raised without reading")
+            end))
+            trigger(tempRegexTrigger("^LazyAfterRaise (\\w+)$", function()
+                seen[#seen + 1] = matches[2]
+            end))
+
+            feedTriggers("\nLazyRaise reads\n")
+            local afterRead = matches
+            feedTriggers("\nLazyAfterRaise one\n")
+            feedTriggers("\nLazyRaise quietly\n")
+            local afterUnread = matches
+            feedTriggers("\nLazyAfterRaise two\n")
+
+            assert.are.equal("table", type(afterRead))
+            assert.is_nil(next(afterRead), "a fire that raised left its captures in place")
+            assert.are.equal("table", type(afterUnread))
+            assert.is_nil(next(afterUnread), "a fire that raised left its captures in place")
+            assert.are.equal("one,two", table.concat(seen, ","), "the fires after a raise were not handed their own captures")
+        end)
+
+        it("keeps line for after the pass", function()
+            local seen = {}
+            trigger(tempRegexTrigger("^LazyLine (\\w+)$", function()
+                seen[#seen + 1] = line
+            end))
+
+            feedTriggers("\nLazyLine read\n")
+            local afterRead = line
+            feedTriggers("\nLazyLine unread by anything else\n")
+            feedTriggers("\nLazyLineNobodyReads\n")
+
+            assert.are.equal("LazyLine read", seen[1])
+            assert.are.equal("LazyLine read", afterRead, "line should outlive the pass that set it")
+            assert.are.equal("LazyLineNobodyReads", line, "line should be the last line to have arrived, read or not")
+        end)
+
+        it("lets a script put its own line in place until the next one arrives", function()
+            _G.LazyGlobalsSpec = {}
+            trigger(tempRegexTrigger("^LazyLineAssign (\\w+)$", [==[
+                local seen = _G.LazyGlobalsSpec
+                if matches[2] == "unread" then
+                    line = "mine"
+                elseif matches[2] == "read" then
+                    seen.before = line
+                    line = "mine too"
+                else
+                    line = nil
+                end
+                seen[matches[2]] = line
+            ]==]))
+
+            feedTriggers("\nLazyLineAssign unread\n")
+            local afterUnread = line
+            feedTriggers("\nLazyLineAssign read\n")
+            local afterRead = line
+            feedTriggers("\nLazyLineAssign cleared\n")
+            local afterCleared = line
+            feedTriggers("\nLazyLineAssignOver\n")
+
+            local seen = _G.LazyGlobalsSpec
+            assert.are.equal("mine", seen.unread)
+            assert.are.equal("mine", afterUnread, "the script's line should stay until the next line arrives")
+            assert.are.equal("LazyLineAssign read", seen.before)
+            assert.are.equal("mine too", seen.read)
+            assert.are.equal("mine too", afterRead)
+            assert.is_nil(seen.cleared, "line came back after the script cleared it")
+            assert.is_nil(afterCleared, "line came back after the script cleared it")
+            assert.are.equal("LazyLineAssignOver", line, "the next line should replace whatever the script left")
+        end)
+
+        it("puts line back after a nested pass whether or not anything had read it", function()
+            local seen = {}
+            trigger(tempRegexTrigger("^LazyLineInner (\\w+)$", function()
+                if matches[2] == "reads" then
+                    seen.inner = line
+                end
+            end))
+            trigger(tempRegexTrigger("^LazyLineOuter (\\w+)$", function()
+                local how = matches[2]
+                if how == "reads" then
+                    seen.outerBefore = line
+                end
+                feedTriggers("\nLazyLineInner " .. how .. "\n")
+                seen[how] = line
+            end))
+
+            feedTriggers("\nLazyLineOuter reads\n")
+            feedTriggers("\nLazyLineOuter quietly\n")
+
+            assert.are.equal("LazyLineOuter reads", seen.outerBefore)
+            assert.are.equal("LazyLineInner reads", seen.inner)
+            assert.are.equal("LazyLineOuter reads", seen.reads, "line was not put back after a nested pass that read its own")
+            assert.are.equal("LazyLineOuter quietly", seen.quietly, "line was not put back after a nested pass nobody read line in")
+        end)
+
+        it("answers a sandbox that falls back on the globals table", function()
+            local seen = {}
+            local sandbox = setmetatable({}, {__index = _G})
+            local reader = setfenv(function()
+                seen.capture = matches[2]
+                seen.line = line
+                seen.multimatches = type(multimatches)
+                seen.own = rawget(sandbox, "matches")
+            end, sandbox)
+            trigger(tempRegexTrigger("^LazySandbox (\\w+)$", reader))
+
+            feedTriggers("\nLazySandbox word\n")
+
+            assert.are.equal("word", seen.capture)
+            assert.are.equal("LazySandbox word", seen.line)
+            assert.are.equal("table", seen.multimatches)
+            assert.is_nil(seen.own, "reading through the sandbox should not write into it")
+        end)
+
+        it("hands a coroutine resumed later whatever is in place by then", function()
+            local seen = {}
+            local reader
+            trigger(tempRegexTrigger("^LazyCoroutine (\\w+)$", function()
+                reader = coroutine.create(function()
+                    seen.during = matches[2]
+                    coroutine.yield()
+                    seen.afterType = type(matches)
+                    seen.after = matches[2]
+                    seen.line = line
+                end)
+                coroutine.resume(reader)
+            end))
+
+            feedTriggers("\nLazyCoroutine word\n")
+            feedTriggers("\nLazyCoroutineOver\n")
+            coroutine.resume(reader)
+
+            assert.are.equal("word", seen.during)
+            assert.are.equal("table", seen.afterType)
+            assert.is_nil(seen.after, "a coroutine resumed after the dispatch reads the empty table like anything else")
+            assert.are.equal("LazyCoroutineOver", seen.line)
+        end)
+
+        it("answers only for the globals table, not for a table handed its metatable", function()
+            local seen = {}
+            local sharing = setmetatable({}, getmetatable(_G))
+            trigger(tempRegexTrigger("^LazySharing (\\w+)$", setfenv(function()
+                seen.fired = true
+                seen.matches = matches
+                seen.multimatches = multimatches
+                seen.line = line
+            end, sharing)))
+
+            feedTriggers("\nLazySharing word\n")
+
+            assert.is_true(seen.fired, "the trigger did not fire")
+            assert.is_nil(seen.matches, "a table that is not the globals table was handed matches")
+            assert.is_nil(seen.multimatches, "a table that is not the globals table was handed multimatches")
+            assert.is_nil(seen.line, "a table that is not the globals table was handed line")
+            assert.is_nil(next(sharing), "reading through the table wrote into it")
+        end)
+
+        -- setfenv(0, ...) gives the thread another globals table. That is where
+        -- Mudlet puts a fire's captures from then on, and where code compiled
+        -- from then on looks for them.
+        it("follows the thread to another globals table", function()
+            _G.LazyGlobalsSpec = {}
+            local original = getfenv(0)
+            local swapped = setmetatable({}, {__index = original})
+            local ok, message = pcall(function()
+                setfenv(0, swapped)
+                trigger(tempRegexTrigger("^LazySwapped (\\w+)$", [==[
+                    LazyGlobalsSpec.capture = matches[2]
+                    LazyGlobalsSpec.multimatches = type(multimatches)
+                    LazyGlobalsSpec.line = line
+                ]==]))
+                feedTriggers("\nLazySwapped word\n")
+            end)
+            setfenv(0, original)
+
+            assert.is_true(ok, tostring(message))
+            assert.are.equal("word", _G.LazyGlobalsSpec.capture)
+            assert.are.equal("table", _G.LazyGlobalsSpec.multimatches)
+            assert.are.equal("LazySwapped word", _G.LazyGlobalsSpec.line)
+            assert.are.equal("table", type(rawget(swapped, "matches")), "matches did not go where the thread's globals now are")
+        end)
+
+        -- A package that polices undeclared globals does it with __index and
+        -- __newindex on the globals table, and every name Mudlet sets has always
+        -- been there for it to find. Both of the ways one gets installed, and
+        -- both of the moments: before the line arrives, and by one trigger's
+        -- script with another still to fire on the same line.
+        describe("under a metatable that polices the globals table", function()
+            local original, originalIndex, originalNewindex
+            local complaints
+
+            local mudletSets = {matches = true, multimatches = true, line = true}
+
+            local function police(_, key)
+                if mudletSets[key] then
+                    complaints[#complaints + 1] = "read " .. key
+                end
+                return nil
+            end
+
+            local function policeNew(globals, key, value)
+                if mudletSets[key] then
+                    complaints[#complaints + 1] = "write " .. key
+                end
+                rawset(globals, key, value)
+            end
+
+            local function installByReplacing()
+                setmetatable(_G, {__index = police, __newindex = policeNew})
+            end
+
+            local function installInPlace()
+                local metatable = getmetatable(_G)
+                metatable.__index = police
+                metatable.__newindex = policeNew
+            end
+
+            before_each(function()
+                complaints = {}
+                original = getmetatable(_G)
+                originalIndex = rawget(original, "__index")
+                originalNewindex = rawget(original, "__newindex")
+            end)
+
+            after_each(function()
+                rawset(original, "__index", originalIndex)
+                rawset(original, "__newindex", originalNewindex)
+                setmetatable(_G, original)
+            end)
+
+            local function readEverything(seen, tag)
+                seen[tag] = {
+                    capture = matches[2],
+                    multimatches = type(multimatches),
+                    line = line,
+                }
+            end
+
+            for _, install in ipairs({{name = "replaced", apply = installByReplacing}, {name = "changed in place", apply = installInPlace}}) do
+
+                it("never asks it for a name Mudlet sets - " .. install.name .. " before the line", function()
+                    local seen = {}
+                    trigger(tempRegexTrigger("^LazyPoliced (\\w+)$", function()
+                        readEverything(seen, "first")
+                    end))
+                    trigger(tempRegexTrigger("^LazyPoliced (\\w+)$", function()
+                        readEverything(seen, "second")
+                    end))
+
+                    install.apply()
+                    feedTriggers("\nLazyPoliced word\n")
+                    local afterMatches, afterMultimatches, afterLine = matches, multimatches, line
+
+                    assert.are.equal("", table.concat(complaints, ","), "the package's metatable was asked for a name Mudlet sets")
+                    for _, tag in ipairs({"first", "second"}) do
+                        assert.is_truthy(seen[tag], "the " .. tag .. " trigger did not fire")
+                        assert.are.equal("word", seen[tag].capture)
+                        assert.are.equal("table", seen[tag].multimatches)
+                        assert.are.equal("LazyPoliced word", seen[tag].line)
+                    end
+                    assert.are.equal("table", type(afterMatches))
+                    assert.are.equal("table", type(afterMultimatches))
+                    assert.are.equal("LazyPoliced word", afterLine)
+                end)
+
+                it("never asks it for a name Mudlet sets - " .. install.name .. " between two fires on a line", function()
+                    local seen = {}
+                    trigger(tempRegexTrigger("^LazyPolicedMid (\\w+)$", function()
+                        if not seen.installed then
+                            seen.installed = true
+                            install.apply()
+                        end
+                        readEverything(seen, "first")
+                    end))
+                    trigger(tempRegexTrigger("^LazyPolicedMid (\\w+)$", function()
+                        readEverything(seen, "second")
+                    end))
+
+                    feedTriggers("\nLazyPolicedMid word\n")
+                    feedTriggers("\nLazyPolicedMid again\n")
+
+                    assert.are.equal("", table.concat(complaints, ","), "the package's metatable was asked for a name Mudlet sets")
+                    assert.are.equal("again", seen.first.capture)
+                    assert.are.equal("again", seen.second.capture)
+                    assert.are.equal("table", seen.second.multimatches)
+                    assert.are.equal("LazyPolicedMid again", seen.second.line)
+                end)
+
+            end
+
+            it("never asks it for a name Mudlet sets - taken off the globals table altogether", function()
+                local seen = {}
+                trigger(tempRegexTrigger("^LazyBare (\\w+)$", function()
+                    readEverything(seen, "first")
+                end))
+
+                setmetatable(_G, nil)
+                feedTriggers("\nLazyBare word\n")
+
+                assert.are.equal("word", seen.first.capture)
+                assert.are.equal("table", seen.first.multimatches)
+                assert.are.equal("LazyBare word", seen.first.line)
+                assert.are.equal("table", type(matches))
+            end)
+
+            it("never asks it for a name Mudlet sets - put in place through the debug library", function()
+                local seen = {}
+                trigger(tempRegexTrigger("^LazyDebug (\\w+)$", function()
+                    if not seen.installed then
+                        seen.installed = true
+                        debug.setmetatable(_G, {__index = police, __newindex = policeNew})
+                    end
+                    readEverything(seen, "first")
+                end))
+
+                feedTriggers("\nLazyDebug word\n")
+                feedTriggers("\nLazyDebug again\n")
+
+                assert.are.equal("", table.concat(complaints, ","), "the package's metatable was asked for a name Mudlet sets")
+                assert.are.equal("again", seen.first.capture)
+                assert.are.equal("LazyDebug again", seen.first.line)
+            end)
+
+        end)
+
+    end)
+
     -- Once a profile holds enough plain-text triggers, the engine files them by
     -- their own characters and offers a line only the ones that could match it.
     -- The filter is meant to be invisible, so every case here runs with enough

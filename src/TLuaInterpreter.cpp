@@ -3458,6 +3458,7 @@ void TLuaInterpreter::setMultiCaptureGroups(const std::list<std::list<std::strin
     mMultiCaptureGroupList = captureList;
     mMultiCaptureGroupPosList = posList;
     mMultiCaptureNameGroups = nameGroups;
+    mCaptureScopeOpen = true;
 
     /*
      * std::list< std::list<string> >::const_iterator mit = mMultiCaptureGroupList.begin();
@@ -3480,6 +3481,7 @@ void TLuaInterpreter::setMultiCaptureGroups(std::list<std::list<std::string>>&& 
     mMultiCaptureGroupList = std::move(captureList);
     mMultiCaptureGroupPosList = std::move(posList);
     mMultiCaptureNameGroups = std::move(nameGroups);
+    mCaptureScopeOpen = true;
 }
 
 // No documentation available in wiki - internal function
@@ -3505,6 +3507,7 @@ void TLuaInterpreter::setCaptureGroups(const std::list<std::string>& captureList
     }
     mCaptureGroupList.assign(captureList.begin(), captureList.end());
     mCaptureGroupPosList.assign(posList.begin(), posList.end());
+    mCaptureScopeOpen = true;
 }
 
 // No documentation available in wiki - internal function
@@ -3514,36 +3517,100 @@ void TLuaInterpreter::setCaptureNameGroups(const NameGroupMatches& nameGroups, c
     mCapturedNameGroupsPosList = namePositions;
 }
 
-// Registry key of the table "matches" holds between dispatches and through
-// one without captures. It is installed again only while it is empty and has
-// no metatable, so each clear still hands out a plain empty table, if not a
-// new one.
-static int emptyMatchesKey;
-
-static void installEmptyMatchesGlobal(lua_State* L)
+// DEVELOPMENT ONLY switch, to be removed: 0 = nothing installed, 1 = "matches"
+// alone, 2 = "matches" and "multimatches", 3 = those and "line" (the default),
+// 4 = everything installed but never used, 5 = as 3 with the metatable looked
+// at on every fire and line
+static int lazyGlobalsMode()
 {
-    lua_pushlightuserdata(L, &emptyMatchesKey);
-    lua_rawget(L, LUA_REGISTRYINDEX);
-    bool reusable = false;
-    if (lua_istable(L, -1)) {
-        lua_pushnil(L);
-        if (lua_next(L, -2)) {
-            // a script filled it, so it is that script's now
-            lua_pop(L, 2);
-        } else if (lua_getmetatable(L, -1)) {
-            lua_pop(L, 1);
-        } else {
-            reusable = true;
+    static const int mode = qEnvironmentVariableIsSet("MUDLET_LAZY_GLOBALS") ? qEnvironmentVariableIntValue("MUDLET_LAZY_GLOBALS") : 3;
+    return mode;
+}
+
+// DEVELOPMENT ONLY, to be removed: breaks one thing at a time to show which
+// spec case notices
+static int lazyGlobalsSabotage()
+{
+    static const int sabotage = qEnvironmentVariableIntValue("MUDLET_LAZY_SABOTAGE");
+    return sabotage;
+}
+
+// Whether the globals table holds anything under the key string at keyRef
+static bool globalPresent(lua_State* L, const int keyRef)
+{
+    lua_rawgeti(L, LUA_REGISTRYINDEX, keyRef);
+    lua_rawget(L, LUA_GLOBALSINDEX);
+    const bool present = !lua_isnil(L, -1);
+    lua_pop(L, 1);
+    return present;
+}
+
+// Pushes the table at ref while it is still empty and has no metatable, and
+// otherwise a new one that takes its place there: a table a script has filled
+// or given a metatable is that script's. Returns whether the table is a new one.
+static bool pushUnusedTable(lua_State* L, int& ref, const bool replace = false)
+{
+    if (ref != LUA_NOREF && !replace) {
+        lua_rawgeti(L, LUA_REGISTRYINDEX, ref);
+        if (lua_istable(L, -1)) {
+            lua_pushnil(L);
+            if (!lua_next(L, -2)) {
+                if (!lua_getmetatable(L, -1)) {
+                    return false;
+                }
+                lua_pop(L, 1);
+            } else {
+                lua_pop(L, 2);
+            }
         }
-    }
-    if (!reusable) {
         lua_pop(L, 1);
-        lua_newtable(L);
-        lua_pushlightuserdata(L, &emptyMatchesKey);
-        lua_pushvalue(L, -2);
-        lua_rawset(L, LUA_REGISTRYINDEX);
     }
-    lua_setglobal(L, "matches");
+    lua_newtable(L);
+    lua_pushvalue(L, -1);
+    if (ref == LUA_NOREF) {
+        ref = luaL_ref(L, LUA_REGISTRYINDEX);
+    } else {
+        // Over the old one rather than through luaL_unref(), which would leave
+        // the slot to be handed to somebody else in between
+        lua_rawseti(L, LUA_REGISTRYINDEX, ref);
+    }
+    return true;
+}
+
+// No documentation available in wiki - internal function
+// Pushes the table "matches" holds between dispatches and through one without
+// captures, the same one from one clear to the next for as long as it stays a
+// plain empty table
+void TLuaInterpreter::pushEmptyMatchesTable(lua_State* L)
+{
+    pushUnusedTable(L, mEmptyMatchesRef);
+}
+
+// No documentation available in wiki - internal function
+void TLuaInterpreter::installBetweenDispatchMultimatches(lua_State* L)
+{
+    const bool parked = mMultimatchesPending != PendingMultimatches::None;
+    mMultimatchesPending = PendingMultimatches::None;
+    if (!mLazyGlobalsInstalled || lazyGlobalsMode() < 2 || lazyGlobalsMode() == 4) {
+        lua_newtable(L);
+        lua_setglobal(L, "multimatches");
+        return;
+    }
+
+    if (parked) {
+        lua_rawgeti(L, LUA_REGISTRYINDEX, mMultimatchesKeyRef);
+    }
+    if (pushUnusedTable(L, mSpareMultimatchesRef, mSpareMultimatchesSeen)) {
+        mSpareMultimatches = lua_topointer(L, -1);
+        mSpareMultimatchesSeen = false;
+    }
+    if (parked) {
+        // Still out of the globals table, where lua_setglobal() would run a
+        // package's __newindex outside any protected call
+        lua_rawset(L, LUA_GLOBALSINDEX);
+    } else {
+        lua_setglobal(L, "multimatches");
+    }
 }
 
 // No documentation available in wiki - internal function
@@ -3583,9 +3650,21 @@ void TLuaInterpreter::clearCaptureGroups()
 
     lua_State* L = pGlobalLua;
     const int callerStackTop = lua_gettop(L);
-    installEmptyMatchesGlobal(L);
-    lua_newtable(L);
-    lua_setglobal(L, "multimatches");
+    mCaptureScopeOpen = false;
+    if (mMatchesPending) {
+        // Still out of the globals table, where lua_setglobal() would run a
+        // package's __newindex outside any protected call
+        mMatchesPending = false;
+        if (lazyGlobalsSabotage() != 6) {
+            lua_rawgeti(L, LUA_REGISTRYINDEX, mMatchesKeyRef);
+            pushEmptyMatchesTable(L);
+            lua_rawset(L, LUA_GLOBALSINDEX);
+        }
+    } else {
+        pushEmptyMatchesTable(L);
+        lua_setglobal(L, "matches");
+    }
+    installBetweenDispatchMultimatches(L);
 
     lua_settop(L, callerStackTop);
 }
@@ -3602,6 +3681,11 @@ int TLuaInterpreter::pushNestedDispatchState()
     // by a pop that some later raise skips.
     lua_State* L = pGlobalLua;
     const int callerStackTop = lua_gettop(L);
+    // What the caller has not read yet can only be built from its own captures,
+    // which the nested pass is about to replace
+    if (lazyGlobalsSabotage() != 4) {
+        materialisePendingCaptures(L);
+    }
     lua_pushliteral(L, "matches");
     lua_rawget(L, LUA_GLOBALSINDEX);
     const int matchesRef = luaL_ref(L, LUA_REGISTRYINDEX);
@@ -3617,6 +3701,7 @@ int TLuaInterpreter::pushNestedDispatchState()
     saved.matchesRef = matchesRef;
     saved.multimatchesRef = multimatchesRef;
     saved.commandRef = commandRef;
+    saved.captureScopeOpen = mCaptureScopeOpen;
     // Copies rather than moves: a script the dispatch runs before any pattern has
     // matched - a sysDataSendRequest handler, say - still reads these through
     // selectCaptureGroup(), and setCaptureGroups() assigns over the vector left
@@ -3677,6 +3762,9 @@ void TLuaInterpreter::popNestedDispatchState(const int depth)
     mCapturedNameGroups = std::move(saved.capturedNameGroups);
     mCapturedNameGroupsPosList = std::move(saved.capturedNameGroupsPosList);
     mMultiCaptureNameGroups = std::move(saved.multiCaptureNameGroups);
+    mCaptureScopeOpen = saved.captureScopeOpen;
+    mMatchesPending = false;
+    mMultimatchesPending = PendingMultimatches::None;
 
     // Raw again, and for the same reason: a reference to a global that was nil
     // reads back as nil, which is what it has to be put back as
@@ -4391,12 +4479,8 @@ void TLuaInterpreter::setChannel102Table(int& var, int& arg)
 }
 
 // No documentation available in wiki - internal function
-void TLuaInterpreter::setMatches(lua_State* L)
+void TLuaInterpreter::pushMatchesTable(lua_State* L)
 {
-    if (mCaptureGroupList.empty()) {
-        return;
-    }
-
     // presized, so filling it in does not rehash the table on the way up
     lua_createtable(L, static_cast<int>(mCaptureGroupList.size()), static_cast<int>(mCapturedNameGroups.size()));
 
@@ -4411,7 +4495,440 @@ void TLuaInterpreter::setMatches(lua_State* L)
         lua_pushstring(L, capture.toUtf8().constData());
         lua_rawset(L, -3);
     }
-    lua_setglobal(L, "matches");
+}
+
+// No documentation available in wiki - internal function
+void TLuaInterpreter::pushMultimatchesTable(lua_State* L, const bool withNames)
+{
+    int k = 1;       // Lua indexes start with 1 as a general convention
+    lua_newtable(L); //multimatches
+    for (auto mit = mMultiCaptureGroupList.begin(); mit != mMultiCaptureGroupList.end(); mit++, k++) {
+        // multimatches{ trigger_idx{ table_matches{ ... } } }
+        lua_pushnumber(L, k);
+        lua_newtable(L); //regex-value => table matches
+        int i = 1;       // Lua indexes start with 1 as a general convention
+        for (auto it = (*mit).begin(); it != (*mit).end(); it++, i++) {
+            lua_pushnumber(L, i);
+            lua_pushstring(L, (*it).c_str());
+            lua_settable(L, -3); //match in matches
+        }
+        if (withNames) {
+            for (const auto& [name, capture] : mMultiCaptureNameGroups.value(k - 1)) {
+                lua_pushstring(L, name.toUtf8().constData());
+                lua_pushstring(L, capture.toUtf8().constData());
+                lua_settable(L, -3);
+            }
+        }
+        lua_settable(L, -3); //matches in regex
+    }
+}
+
+// No documentation available in wiki - internal function
+// Whether the globals table still has the metatable Mudlet gave it, untouched:
+// with anybody else's __index or __newindex on it a global that is not there
+// would reach their code, so such a profile has its globals set up front
+bool TLuaInterpreter::globalsMetatablePristine(lua_State* L) const
+{
+    if (!lua_getmetatable(L, LUA_GLOBALSINDEX)) {
+        return false;
+    }
+    lua_rawgeti(L, LUA_REGISTRYINDEX, mIndexKeyRef);
+    lua_rawget(L, -2);
+    lua_rawgeti(L, LUA_REGISTRYINDEX, mNewindexKeyRef);
+    lua_rawget(L, -3);
+    const bool pristine = lua_tocfunction(L, -2) == &TLuaInterpreter::lazyGlobalsIndex && lua_tocfunction(L, -1) == &TLuaInterpreter::lazyGlobalsNewindex;
+    lua_pop(L, 3);
+    return pristine;
+}
+
+// No documentation available in wiki - internal function
+bool TLuaInterpreter::lazyGlobalsUsable(lua_State* L) const
+{
+    const int mode = lazyGlobalsMode();
+    if (!mLazyGlobalsInstalled || mode == 4) {
+        return false;
+    }
+    // setfenv(0, ...) gives the thread another globals table, which is where
+    // everything Mudlet sets goes from then on and which has no handlers on it
+    if (lua_topointer(L, LUA_GLOBALSINDEX) != mGlobalsTable && lazyGlobalsSabotage() != 7) {
+        return false;
+    }
+    if ((!mGlobalsMetatableTouched && mode != 5) || lazyGlobalsSabotage() == 9) {
+        return true;
+    }
+    return globalsMetatablePristine(L);
+}
+
+// No documentation available in wiki - internal function
+// Takes "matches", and "multimatches" where this dispatch has a say in it, out
+// of the globals table for lazyGlobalsIndex() to build on demand. Returns false
+// when it cannot, leaving the caller to build them itself.
+bool TLuaInterpreter::deferDispatchGlobals(lua_State* L, const MultimatchesSource source, const bool setsMatches)
+{
+    const int mode = lazyGlobalsMode();
+    if (!lazyGlobalsUsable(L)) {
+        return false;
+    }
+
+    if (setsMatches && !mMatchesPending) {
+        lua_rawgeti(L, LUA_REGISTRYINDEX, mMatchesKeyRef);
+        lua_pushnil(L);
+        lua_rawset(L, LUA_GLOBALSINDEX);
+        mMatchesPending = true;
+    }
+
+    if (mode == 1) {
+        mSpareMultimatchesSeen = true;
+        if (source != MultimatchesSource::Untouched) {
+            pushMultimatchesTable(L, source == MultimatchesSource::Captures);
+            lua_setglobal(L, "multimatches");
+        }
+        return true;
+    }
+
+    const bool parked = mMultimatchesPending != PendingMultimatches::None;
+    if (source != MultimatchesSource::Untouched) {
+        if (!parked) {
+            lua_rawgeti(L, LUA_REGISTRYINDEX, mMultimatchesKeyRef);
+            lua_pushnil(L);
+            lua_rawset(L, LUA_GLOBALSINDEX);
+        }
+        mMultimatchesPending = source == MultimatchesSource::Captures ? PendingMultimatches::Captures : PendingMultimatches::CapturesWithoutNames;
+        return true;
+    }
+
+    // A script that is not a multiline trigger's reads whatever is in place. Only
+    // the table Mudlet left there is worth taking out: that is how a script
+    // getting hold of it is noticed, so the next fire can be given another.
+    if (!parked) {
+        lua_rawgeti(L, LUA_REGISTRYINDEX, mMultimatchesKeyRef);
+        lua_rawget(L, LUA_GLOBALSINDEX);
+        const bool spareInPlace = mSpareMultimatches && lua_topointer(L, -1) == mSpareMultimatches;
+        lua_pop(L, 1);
+        if (spareInPlace) {
+            lua_rawgeti(L, LUA_REGISTRYINDEX, mMultimatchesKeyRef);
+            lua_pushnil(L);
+            lua_rawset(L, LUA_GLOBALSINDEX);
+            mMultimatchesPending = PendingMultimatches::Spare;
+        }
+    }
+    return true;
+}
+
+// No documentation available in wiki - internal function
+void TLuaInterpreter::pushPendingMultimatches(lua_State* L)
+{
+    switch (mMultimatchesPending) {
+    case PendingMultimatches::Spare:
+        lua_rawgeti(L, LUA_REGISTRYINDEX, mSpareMultimatchesRef);
+        break;
+    case PendingMultimatches::Captures:
+        pushMultimatchesTable(L, true);
+        break;
+    case PendingMultimatches::CapturesWithoutNames:
+        pushMultimatchesTable(L, false);
+        break;
+    case PendingMultimatches::None:
+        Q_UNREACHABLE();
+    }
+}
+
+// No documentation available in wiki - internal function
+// Puts into the globals table whatever deferDispatchGlobals() left out of it,
+// without going through any __newindex
+void TLuaInterpreter::materialisePendingCaptures(lua_State* L)
+{
+    // rawset() is the one way a script puts a value of its own under a name
+    // without lazyGlobalsNewindex() hearing of it, and that value stays
+    if (mMatchesPending) {
+        if (!globalPresent(L, mMatchesKeyRef)) {
+            lua_rawgeti(L, LUA_REGISTRYINDEX, mMatchesKeyRef);
+            pushMatchesTable(L);
+            lua_rawset(L, LUA_GLOBALSINDEX);
+        }
+        mMatchesPending = false;
+    }
+    if (mMultimatchesPending != PendingMultimatches::None) {
+        if (!globalPresent(L, mMultimatchesKeyRef)) {
+            lua_rawgeti(L, LUA_REGISTRYINDEX, mMultimatchesKeyRef);
+            pushPendingMultimatches(L);
+            lua_rawset(L, LUA_GLOBALSINDEX);
+            if (mMultimatchesPending == PendingMultimatches::Spare && lazyGlobalsSabotage() != 2) {
+                mSpareMultimatchesSeen = true;
+            }
+        }
+        mMultimatchesPending = PendingMultimatches::None;
+    }
+}
+
+// No documentation available in wiki - internal function
+void TLuaInterpreter::materialisePendingGlobals(lua_State* L)
+{
+    materialisePendingCaptures(L);
+    if (mLinePending) {
+        if (!globalPresent(L, mLineKeyRef)) {
+            lua_rawgeti(L, LUA_REGISTRYINDEX, mLineKeyRef);
+            pushUtf8String(L, mPendingLine);
+            lua_rawset(L, LUA_GLOBALSINDEX);
+        }
+        mLinePending = false;
+    }
+}
+
+// No documentation available in wiki - internal function
+// __index of the globals table's metatable: reached for a global that is not
+// there, which is every misspelt name as well as the three this is here for
+int TLuaInterpreter::lazyGlobalsIndex(lua_State* L)
+{
+    if (lua_type(L, 2) != LUA_TSTRING) {
+        return 0;
+    }
+    auto* self = static_cast<TLuaInterpreter*>(lua_touserdata(L, lua_upvalueindex(1)));
+    // Strings are interned, so the same name is the same address
+    const char* key = lua_tostring(L, 2);
+    const bool wantsMatches = key == self->mMatchesKey;
+    const bool wantsLine = key == self->mLineKey;
+    if (!wantsMatches && !wantsLine && key != self->mMultimatchesKey) {
+        return 0;
+    }
+    // A sandbox that was handed this metatable has no claim on any of them
+    if (lua_topointer(L, 1) != self->mGlobalsTable && lazyGlobalsSabotage() != 8) {
+        return 0;
+    }
+
+    if (wantsMatches) {
+        if (!self->mMatchesPending) {
+            return 0;
+        }
+        self->pushMatchesTable(L);
+    } else if (wantsLine) {
+        if (!self->mLinePending) {
+            return 0;
+        }
+        self->pushUtf8String(L, self->mPendingLine);
+    } else {
+        if (self->mMultimatchesPending == PendingMultimatches::None) {
+            return 0;
+        }
+        self->pushPendingMultimatches(L);
+    }
+    lua_pushvalue(L, 2);
+    lua_pushvalue(L, -2);
+    lua_rawset(L, 1);
+    // Only now: building the value can raise, and the next read has to find it
+    // still owed
+    if (wantsMatches) {
+        self->mMatchesPending = false;
+    } else if (wantsLine) {
+        self->mLinePending = false;
+    } else {
+        if (self->mMultimatchesPending == PendingMultimatches::Spare && lazyGlobalsSabotage() != 2) {
+            self->mSpareMultimatchesSeen = true;
+        }
+        self->mMultimatchesPending = PendingMultimatches::None;
+    }
+    return 1;
+}
+
+// No documentation available in wiki - internal function
+// __newindex of the globals table's metatable: reached for a global that is
+// not there, so for every new one. A script that assigns to a name Mudlet has
+// left out has said what it is to read from now on - nil included.
+int TLuaInterpreter::lazyGlobalsNewindex(lua_State* L)
+{
+    if (lua_type(L, 2) == LUA_TSTRING) {
+        auto* self = static_cast<TLuaInterpreter*>(lua_touserdata(L, lua_upvalueindex(1)));
+        const char* key = lua_tostring(L, 2);
+        if (lazyGlobalsSabotage() != 1 && (key == self->mMatchesKey || key == self->mMultimatchesKey || key == self->mLineKey) && lua_topointer(L, 1) == self->mGlobalsTable) {
+            if (key == self->mMatchesKey) {
+                self->mMatchesPending = false;
+            } else if (key == self->mLineKey) {
+                self->mLinePending = false;
+            } else {
+                self->mMultimatchesPending = PendingMultimatches::None;
+            }
+        }
+    }
+    lua_settop(L, 3);
+    lua_rawset(L, 1);
+    return 0;
+}
+
+// No documentation available in wiki - internal function
+// Stands in for getmetatable(), setmetatable() and the debug library's pair. A
+// script reaching for the metatable of the globals table may be about to put
+// its own __index there, which must not be asked for a global Mudlet left out.
+int TLuaInterpreter::globalsMetatableGuard(lua_State* L)
+{
+    auto* self = static_cast<TLuaInterpreter*>(lua_touserdata(L, lua_upvalueindex(1)));
+    if (lua_topointer(L, 1) == self->mGlobalsTable && lazyGlobalsSabotage() != 3) {
+        self->materialisePendingGlobals(L);
+        self->mGlobalsMetatableTouched = true;
+    }
+    return self->mStockMetatableFunctions[lua_tointeger(L, lua_upvalueindex(2))](L);
+}
+
+// No documentation available in wiki - internal function
+void TLuaInterpreter::installLazyGlobals()
+{
+    if (lazyGlobalsMode() == 0) {
+        return;
+    }
+    lua_State* L = pGlobalLua;
+    const int callerStackTop = lua_gettop(L);
+    // Only onto the metatable LuaGlobal.lua gives the globals table, and only
+    // into slots nobody has taken
+    if (lua_getmetatable(L, LUA_GLOBALSINDEX)) {
+        lua_pushliteral(L, "__index");
+        lua_rawget(L, -2);
+        lua_pushliteral(L, "__newindex");
+        lua_rawget(L, -3);
+        const bool vacant = lua_isnil(L, -1) && lua_isnil(L, -2);
+        lua_pop(L, 2);
+        if (vacant) {
+            // LuaGlobal.lua run again replaces the metatable this was on
+            for (const int ref : {mMatchesKeyRef, mMultimatchesKeyRef, mLineKeyRef, mIndexKeyRef, mNewindexKeyRef, mSpareMultimatchesRef}) {
+                luaL_unref(L, LUA_REGISTRYINDEX, ref);
+            }
+            lua_pushliteral(L, "matches");
+            mMatchesKey = lua_tostring(L, -1);
+            mMatchesKeyRef = luaL_ref(L, LUA_REGISTRYINDEX);
+            lua_pushliteral(L, "multimatches");
+            mMultimatchesKey = lua_tostring(L, -1);
+            mMultimatchesKeyRef = luaL_ref(L, LUA_REGISTRYINDEX);
+            lua_pushliteral(L, "line");
+            mLineKey = lua_tostring(L, -1);
+            mLineKeyRef = luaL_ref(L, LUA_REGISTRYINDEX);
+            lua_pushliteral(L, "__index");
+            mIndexKeyRef = luaL_ref(L, LUA_REGISTRYINDEX);
+            lua_pushliteral(L, "__newindex");
+            mNewindexKeyRef = luaL_ref(L, LUA_REGISTRYINDEX);
+            lua_newtable(L);
+            mSpareMultimatches = lua_topointer(L, -1);
+            mSpareMultimatchesRef = luaL_ref(L, LUA_REGISTRYINDEX);
+            mSpareMultimatchesSeen = false;
+
+            lua_pushliteral(L, "__index");
+            lua_pushlightuserdata(L, this);
+            lua_pushcclosure(L, &TLuaInterpreter::lazyGlobalsIndex, 1);
+            lua_rawset(L, -3);
+            lua_pushliteral(L, "__newindex");
+            lua_pushlightuserdata(L, this);
+            lua_pushcclosure(L, &TLuaInterpreter::lazyGlobalsNewindex, 1);
+            lua_rawset(L, -3);
+
+            mGlobalsTable = lua_topointer(L, LUA_GLOBALSINDEX);
+            mGlobalsMetatableTouched = false;
+            installGlobalsMetatableGuard(L, nullptr, "getmetatable", 0);
+            installGlobalsMetatableGuard(L, nullptr, "setmetatable", 1);
+            installGlobalsMetatableGuard(L, "debug", "getmetatable", 2);
+            installGlobalsMetatableGuard(L, "debug", "setmetatable", 3);
+            mLazyGlobalsInstalled = true;
+        }
+    }
+    lua_settop(L, callerStackTop);
+}
+
+// No documentation available in wiki - internal function
+void TLuaInterpreter::installGlobalsMetatableGuard(lua_State* L, const char* library, const char* function, const int slot)
+{
+    if (library) {
+        lua_pushstring(L, library);
+        lua_rawget(L, LUA_GLOBALSINDEX);
+    } else {
+        lua_pushvalue(L, LUA_GLOBALSINDEX);
+    }
+    if (!lua_istable(L, -1)) {
+        lua_pop(L, 1);
+        return;
+    }
+    lua_pushstring(L, function);
+    lua_rawget(L, -2);
+    const lua_CFunction stock = lua_tocfunction(L, -1);
+    const bool absent = lua_isnil(L, -1);
+    lua_pop(L, 1);
+    if (stock && stock != &TLuaInterpreter::globalsMetatableGuard) {
+        mStockMetatableFunctions[slot] = stock;
+        lua_pushstring(L, function);
+        lua_pushlightuserdata(L, this);
+        lua_pushinteger(L, slot);
+        lua_pushcclosure(L, &TLuaInterpreter::globalsMetatableGuard, 2);
+        lua_rawset(L, -3);
+    } else if (!stock && !absent) {
+        // Something else's function cannot be watched, which leaves looking at
+        // the metatable every time
+        mGlobalsMetatableTouched = true;
+    }
+    lua_pop(L, 1);
+}
+
+// No documentation available in wiki - internal function
+// For when the Lua state is gone, and every reference into it with it
+void TLuaInterpreter::forgetLazyGlobals()
+{
+    mLazyGlobalsInstalled = false;
+    mGlobalsTable = nullptr;
+    mGlobalsMetatableTouched = false;
+    mCaptureScopeOpen = false;
+    mMatchesPending = false;
+    mMultimatchesPending = PendingMultimatches::None;
+    mLinePending = false;
+    mPendingLine.clear();
+    mEmptyMatchesRef = LUA_NOREF;
+    mSpareMultimatchesRef = LUA_NOREF;
+    mSpareMultimatches = nullptr;
+    mSpareMultimatchesSeen = false;
+    mMatchesKeyRef = LUA_NOREF;
+    mMultimatchesKeyRef = LUA_NOREF;
+    mLineKeyRef = LUA_NOREF;
+    mIndexKeyRef = LUA_NOREF;
+    mNewindexKeyRef = LUA_NOREF;
+    mMatchesKey = nullptr;
+    mMultimatchesKey = nullptr;
+    mLineKey = nullptr;
+}
+
+// No documentation available in wiki - internal function
+void TLuaInterpreter::setMatches(lua_State* L, const MultimatchesSource source)
+{
+    // "matches" changes only for a fire with captures, and never for a multiline
+    // trigger's, which is handed "multimatches" instead
+    const bool setsMatches = source == MultimatchesSource::Untouched && !mCaptureGroupList.empty();
+    if (mCaptureScopeOpen && deferDispatchGlobals(L, source, setsMatches)) {
+        return;
+    }
+
+    // Whatever an outer fire still has out of the globals table goes in without
+    // lua_setglobal(), which would run a package's __newindex outside any
+    // protected call for a name that is not there
+    mSpareMultimatchesSeen = true;
+    if (setsMatches) {
+        if (mMatchesPending) {
+            mMatchesPending = false;
+            lua_rawgeti(L, LUA_REGISTRYINDEX, mMatchesKeyRef);
+            pushMatchesTable(L);
+            lua_rawset(L, LUA_GLOBALSINDEX);
+        } else {
+            pushMatchesTable(L);
+            lua_setglobal(L, "matches");
+        }
+    }
+
+    if (source == MultimatchesSource::Untouched) {
+        materialisePendingCaptures(L);
+        return;
+    }
+    const bool withNames = source == MultimatchesSource::Captures;
+    if (mMultimatchesPending != PendingMultimatches::None) {
+        mMultimatchesPending = PendingMultimatches::None;
+        lua_rawgeti(L, LUA_REGISTRYINDEX, mMultimatchesKeyRef);
+        pushMultimatchesTable(L, withNames);
+        lua_rawset(L, LUA_GLOBALSINDEX);
+    } else {
+        pushMultimatchesTable(L, withNames);
+        lua_setglobal(L, "multimatches");
+    }
+    materialisePendingCaptures(L);
 }
 
 // No documentation available in wiki - internal function
@@ -4747,26 +5264,7 @@ bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
     const int callerStackTop = lua_gettop(L);
 
     if (!mMultiCaptureGroupList.empty()) {
-        int k = 1;       // Lua indexes start with 1 as a general convention
-        lua_newtable(L); //multimatches
-        for (auto mit = mMultiCaptureGroupList.begin(); mit != mMultiCaptureGroupList.end(); mit++, k++) {
-            // multimatches{ trigger_idx{ table_matches{ ... } } }
-            lua_pushnumber(L, k);
-            lua_newtable(L); //regex-value => table matches
-            int i = 1;       // Lua indexes start with 1 as a general convention
-            for (auto it = (*mit).begin(); it != (*mit).end(); it++, i++) {
-                lua_pushnumber(L, i);
-                lua_pushstring(L, (*it).c_str());
-                lua_settable(L, -3); //match in matches
-            }
-            for (const auto& [name, capture] : mMultiCaptureNameGroups.value(k - 1)) {
-                lua_pushstring(L, name.toUtf8().constData());
-                lua_pushstring(L, capture.toUtf8().constData());
-                lua_settable(L, -3);
-            }
-            lua_settable(L, -3); //matches in regex
-        }
-        lua_setglobal(L, "multimatches");
+        setMatches(L, MultimatchesSource::Captures);
     }
 
     lua_getglobal(L, function.toUtf8().constData());
@@ -4808,21 +5306,7 @@ std::pair<bool, bool> TLuaInterpreter::callMultiReturnBool(const QString& functi
     bool returnValue = false;
 
     if (!mMultiCaptureGroupList.empty()) {
-        int k = 1;       // Lua indexes start with 1 as a general convention
-        lua_newtable(L); //multimatches
-        for (auto mit = mMultiCaptureGroupList.begin(); mit != mMultiCaptureGroupList.end(); mit++, k++) {
-            // multimatches{ trigger_idx{ table_matches{ ... } } }
-            lua_pushnumber(L, k);
-            lua_newtable(L); //regex-value => table matches
-            int i = 1;       // Lua indexes start with 1 as a general convention
-            for (auto it = (*mit).begin(); it != (*mit).end(); it++, i++) {
-                lua_pushnumber(L, i);
-                lua_pushstring(L, (*it).c_str());
-                lua_settable(L, -3); //match in matches
-            }
-            lua_settable(L, -3); //matches in regex
-        }
-        lua_setglobal(L, "multimatches");
+        setMatches(L, MultimatchesSource::CapturesWithoutNames);
     }
 
     lua_getglobal(L, function.toUtf8().constData());
@@ -5417,17 +5901,6 @@ void TLuaInterpreter::set_lua_string(const QString& varName, const QString& varV
         mLastGlobalName = varName;
         mLastGlobalNameUtf8 = varName.toUtf8();
     }
-    QStringEncoder encoder(QStringEncoder::Utf8, QStringConverter::Flag::Stateless);
-    mUtf8Scratch.resize(encoder.requiredSpace(varValue.size()));
-    const char* const end = encoder.appendToBuffer(mUtf8Scratch.data(), varValue);
-    if (Q_UNLIKELY(encoder.hasError())) {
-        // The encoder writes a replacement character where an unpaired
-        // surrogate was, while toUtf8() drops it. That path can afford the
-        // copy and stay byte for byte what a script used to be given.
-        mUtf8Scratch = varValue.toUtf8();
-    } else {
-        mUtf8Scratch.resize(end - mUtf8Scratch.constData());
-    }
 
     // Raw, because this is how Mudlet hands a dispatch its own "command" and
     // "line", and it runs with the whole dispatch on the C++ stack below it. The
@@ -5438,12 +5911,54 @@ void TLuaInterpreter::set_lua_string(const QString& varName, const QString& varV
     // these was never something a package could usefully intercept anyway: the
     // name is absent only until the first dispatch writes it.
     lua_pushlstring(L, mLastGlobalNameUtf8.constData(), mLastGlobalNameUtf8.size());
-    lua_pushstring(L, mUtf8Scratch.constData());
+    pushUtf8String(L, varValue);
     lua_rawset(L, LUA_GLOBALSINDEX);
+    lua_settop(L, callerStackTop);
+}
+
+// No documentation available in wiki - internal function
+// Pushes text the way lua_pushstring() does, so it ends at the first NUL
+void TLuaInterpreter::pushUtf8String(lua_State* L, const QString& text)
+{
+    QStringEncoder encoder(QStringEncoder::Utf8, QStringConverter::Flag::Stateless);
+    mUtf8Scratch.resize(encoder.requiredSpace(text.size()));
+    const char* const end = encoder.appendToBuffer(mUtf8Scratch.data(), text);
+    if (Q_UNLIKELY(encoder.hasError())) {
+        // The encoder writes a replacement character where an unpaired
+        // surrogate was, while toUtf8() drops it. That path can afford the
+        // copy and stay byte for byte what a script used to be given.
+        mUtf8Scratch = text.toUtf8();
+    } else {
+        mUtf8Scratch.resize(end - mUtf8Scratch.constData());
+    }
+    lua_pushstring(L, mUtf8Scratch.constData());
     if (mUtf8Scratch.capacity() > scmMaxRetainedUtf8Scratch) {
         mUtf8Scratch = QByteArray();
     }
-    lua_settop(L, callerStackTop);
+}
+
+// No documentation available in wiki - internal function
+// Most lines are never read as "line", so the global is left out of the
+// globals table for lazyGlobalsIndex() to supply to the first script that asks
+void TLuaInterpreter::setLineGlobal(const QString& line)
+{
+    lua_State* L = pGlobalLua;
+    const int mode = lazyGlobalsMode();
+    if ((mode != 3 && mode != 5) || !lazyGlobalsUsable(L)) {
+        mLinePending = false;
+        set_lua_string(TConsole::cmLuaLineVariable, line);
+        return;
+    }
+
+    // Tested for first, as setting nil under a name that is not there would
+    // add it to the table
+    if (globalPresent(L, mLineKeyRef) && lazyGlobalsSabotage() != 5) {
+        lua_rawgeti(L, LUA_REGISTRYINDEX, mLineKeyRef);
+        lua_pushnil(L);
+        lua_rawset(L, LUA_GLOBALSINDEX);
+    }
+    mPendingLine = line;
+    mLinePending = true;
 }
 
 // No documentation available in wiki - internal function
@@ -5602,6 +6117,7 @@ void TLuaInterpreter::initLuaGlobals()
         // Host::resetProfile_phase2() drains DeferredDelete to stop labels doing.
         mNestedDispatchStates.clear();
         lua_close(pGlobalLua);
+        forgetLazyGlobals();
     }
 
     pGlobalLua = newstate();
@@ -6759,6 +7275,8 @@ void TLuaInterpreter::loadGlobal()
 
         error = luaL_dostring(pGlobalLua, luaGlobal.toUtf8().constData());
         if (!error) {
+            // Last, as it is LuaGlobal.lua that gives the globals table its metatable
+            installLazyGlobals();
             return;
         }
         qWarning() << "TLuaInterpreter::loadGlobal() loading " << pathFileName << " failed: " << lua_tostring(pGlobalLua, -1);
