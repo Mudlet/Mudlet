@@ -40,6 +40,7 @@
  * Run with: ctest -R cTelnetBufferTest -V
  */
 
+#include <QDataStream>
 #include <QFile>
 #include <QFileInfo>
 #include <QTemporaryDir>
@@ -162,6 +163,67 @@ private:
         loadBuffer[chunk.size()] = scmReplayCanary;
         loadedBytes = static_cast<int>(chunk.size());
         mpHost->mTelnet.slot_processReplayChunk();
+    }
+
+    struct RecordedChunk
+    {
+        qint32 delay = 0;
+        QByteArray bytes;
+    };
+
+    // Records a replay while the reads arrive off the socket as one MCCP
+    // stream, each after a pause, and returns the chunks written to it.
+    QList<RecordedChunk> recordCompressedReads(const QList<QByteArray>& reads, const int pauseMs)
+    {
+        cTelnet& telnet = mpHost->mTelnet;
+        QTemporaryDir dir;
+        const QString fileName = dir.filePath(qsl("recording.dat"));
+        const auto cleanUp = qScopeGuard([&telnet] {
+            if (telnet.mRecordReplay) {
+                telnet.stopReplayRecording();
+            }
+            if (telnet.mNeedDecompression) {
+                inflateEnd(&telnet.mZstream);
+                telnet.mNeedDecompression = false;
+                telnet.initStreamDecompressor();
+            }
+        });
+        if (!dir.isValid() || !telnet.startReplayRecording(fileName)) {
+            return {};
+        }
+        // the end of an earlier test's stream left a decompressor set up
+        inflateEnd(&telnet.mZstream);
+        telnet.mNeedDecompression = true;
+        telnet.initStreamDecompressor();
+        for (const QByteArray& read : reads) {
+            QTest::qSleep(pauseMs);
+            QByteArray backing = read;
+            backing.append(scmTerminatorSlot);
+            telnet.processSocketData(backing.data(), static_cast<int>(read.size()), false);
+        }
+        if (!telnet.stopReplayRecording()) {
+            return {};
+        }
+
+        QFile file(fileName);
+        if (!file.open(QIODevice::ReadOnly)) {
+            return {};
+        }
+        QDataStream stream(&file);
+        stream.setVersion(QDataStream::Qt_5_12);
+        QList<RecordedChunk> chunks;
+        while (!stream.atEnd()) {
+            RecordedChunk chunk;
+            qint32 amount = 0;
+            stream >> chunk.delay >> amount;
+            if (stream.status() != QDataStream::Ok || amount < 0) {
+                break;
+            }
+            chunk.bytes.resize(amount);
+            stream.readRawData(chunk.bytes.data(), amount);
+            chunks << chunk;
+        }
+        return chunks;
     }
 
 private slots:
@@ -540,6 +602,53 @@ private slots:
         feedReplayChunk(QByteArrayLiteral("REPLAY_F\r\n"));
 
         QCOMPARE(linesContaining(qsl("REPLAY_E")), QStringList{qsl("REPLAY_EREPLAY_F")});
+    }
+
+    // A read can carry nothing but the start of a compressed block, which
+    // inflates to no bytes at all. The wait before it still belongs in the
+    // replay, ahead of the text that arrives next.
+    void compressedReadThatInflatesToNothingIsNotRecorded()
+    {
+        constexpr int pauseMs = 200;
+        const QByteArray text = QByteArrayLiteral("mccp recorded line\r\n");
+        // qCompress() prefixes the zlib stream with the source length
+        const QByteArray compressed = qCompress(text, 9).mid(4);
+
+        const QList<RecordedChunk> chunks = recordCompressedReads({compressed.left(2), compressed.mid(2)}, pauseMs);
+
+        for (const RecordedChunk& chunk : chunks) {
+            QVERIFY2(!chunk.bytes.isEmpty(), "an empty chunk was recorded, and loading the replay would refuse the file");
+        }
+        QCOMPARE(chunks.size(), 1);
+        QCOMPARE(chunks.first().bytes, text);
+        QVERIFY2(chunks.first().delay > pauseMs * 3 / 2, qPrintable(qsl("the text waited %1 ms, so the pause before the empty read was lost").arg(chunks.first().delay)));
+    }
+
+    // One compressed read that inflates to more than an output buffer is
+    // recorded a buffer at a time, and only the first of those waited for it.
+    void compressedReadDrainedInPartsWaitsOnlyOnce()
+    {
+        constexpr int pauseMs = 200;
+        constexpr qsizetype outputBufferSize = 100000; // BUFFER_SIZE in ctelnet.cpp
+        const QByteArray line = QByteArray("mccp burst ").append(87, 'x').append("\r\n");
+        QByteArray text;
+        while (text.size() < outputBufferSize * 5 / 2) {
+            text.append(line);
+        }
+        const QByteArray compressed = qCompress(text, 9).mid(4);
+
+        const QList<RecordedChunk> chunks = recordCompressedReads({compressed}, pauseMs);
+
+        QVERIFY2(chunks.size() >= 3, qPrintable(qsl("%1 chunks were recorded").arg(chunks.size())));
+        QByteArray recorded;
+        for (const RecordedChunk& chunk : chunks) {
+            recorded.append(chunk.bytes);
+        }
+        QVERIFY(recorded == text);
+        QVERIFY(chunks.first().delay >= pauseMs / 2);
+        for (qsizetype i = 1; i < chunks.size(); ++i) {
+            QVERIFY2(chunks.at(i).delay < pauseMs / 2, qPrintable(qsl("chunk %1 waited %2 ms, but it came from the same read as the first").arg(i).arg(chunks.at(i).delay)));
+        }
     }
 
     // Declared last on purpose: on the unfixed code this trips AddressSanitizer,

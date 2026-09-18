@@ -1557,6 +1557,44 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         pumpEvents(200)
       end)
 
+      -- a game that compresses its output can have Mudlet read nothing but
+      -- the start of a compressed block, and recordings made so far hold an
+      -- empty chunk for that read
+      it("plays on past a chunk with no bytes in it", function()
+        if not testMode then
+          pending("letting the replay timer run needs MUDLET_TEST_MODE")
+          return
+        end
+        local replay = getMudletHomeDir() .. "/mudlet-spec-empty-chunk-replay.dat"
+        finally(function() os.remove(replay) end)
+        writeFile(replay, chunk(0, "mudlet-spec-before-empty-line\r\n") .. chunk(10, "") .. chunk(10, "mudlet-spec-after-empty-line\r\n"))
+        local mark = getLastLineNumber("main")
+
+        assert.is_true(loadReplay(replay))
+
+        assert.is_true(playedBack(mark, "mudlet-spec-after-empty-line"), "the replay did not reach the console")
+        pumpEvents(200)
+      end)
+
+      -- a first delay of zero makes the wider shape start with eight zero
+      -- bytes, which the narrower one reads as an empty chunk
+      it("plays back an eight byte delay replay with no first delay and an empty chunk", function()
+        if not testMode then
+          pending("letting the replay timer run needs MUDLET_TEST_MODE")
+          return
+        end
+        local replay = getMudletHomeDir() .. "/mudlet-spec-wide-empty-chunk-replay.dat"
+        finally(function() os.remove(replay) end)
+        writeFile(replay, wideChunk(0, "mudlet-spec-wide-before-empty-line\r\n") .. wideChunk(10, "") .. wideChunk(10, "mudlet-spec-wide-after-empty-line\r\n"))
+        local mark = getLastLineNumber("main")
+
+        assert.is_true(loadReplay(replay))
+
+        assert.is_true(playedBack(mark, "mudlet-spec-wide-after-empty-line"), "the replay did not reach the console")
+        assert.is_true(contains(textFrom(mark), "mudlet-spec-wide-before-empty-line"), "the line before the empty chunk did not reach the console")
+        pumpEvents(200)
+      end)
+
       it("acts on telnet negotiation that was recorded with the text", function()
         if not testMode then
           pending("letting the replay timer run needs MUDLET_TEST_MODE")
