@@ -76,7 +76,7 @@ private:
     {
         QString line(length, QChar::Space);
         for (int i = 0; i < length; ++i) {
-            line[i] = QChar::fromLatin1(pool.at(rng.bounded(int(pool.size()))));
+            line[i] = QChar::fromLatin1(pool.at(rng.bounded(static_cast<int>(pool.size()))));
         }
         return line;
     }
@@ -164,9 +164,9 @@ private slots:
             const int count = 1 + rng.bounded(12);
             for (int t = 0; t < count; ++t) {
                 if (t > 0) {
-                    line.append(separators.at(rng.bounded(int(separators.size()))));
+                    line.append(separators.at(rng.bounded(static_cast<int>(separators.size()))));
                 }
-                line.append(tokens.at(rng.bounded(int(tokens.size()))));
+                line.append(tokens.at(rng.bounded(static_cast<int>(tokens.size()))));
             }
             failure = disagreement(line);
         }
@@ -227,7 +227,7 @@ private slots:
                 c = QChar(char16_t(u' ' + rng.bounded(95)));
             }
             if (!line.isEmpty() && rng.bounded(2)) {
-                line[rng.bounded(int(line.size()))] = QChar(char16_t(rng.bounded(0x10000)));
+                line[rng.bounded(static_cast<int>(line.size()))] = QChar(char16_t(rng.bounded(0x10000)));
             }
             failure = check(line);
         }
