@@ -36,12 +36,13 @@ class MMCPServer : public QTcpServer
 
 public:
     explicit MMCPServer(Host*);
-    ~MMCPServer() = default;
+    ~MMCPServer();
 
     void receiveFromPlayer(std::string&);
 
     QPair<bool, QString> startServer(quint16);
     QPair<bool, QString> stopServer();
+    void disconnectAll();
 
     QPair<bool, QString> call(const QString&);
     QPair<bool, QString> call(const QString&, int);
