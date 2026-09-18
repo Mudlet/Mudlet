@@ -470,6 +470,11 @@ void THyperlinkVisibilityManager::clear()
     if (mpOutputGapTimer) {
         mpOutputGapTimer->stop();
     }
+    // drop a queued screen-reader announcement rather than name links that have just gone
+    if (mpAnnouncementTimer) {
+        mpAnnouncementTimer->stop();
+    }
+    mPendingHiddenCount = 0;
     stopTimerIfNotNeeded();
 }
 
@@ -675,18 +680,6 @@ void THyperlinkVisibilityManager::performConcealment(TrackedHyperlink& link)
             mTrackedLinks.remove(currentLinkId);
 
             queueHiddenAnnouncement();
-
-            // SAFE line number adjustment: Only adjust links that are on lines > targetLine
-            // Update in-place to avoid copying the entire map
-            for (auto it = mTrackedLinks.begin(); it != mTrackedLinks.end(); ++it) {
-                if (it.value().lineNumber > targetLine) {
-                    int originalLine = it.value().lineNumber;
-                    it.value().lineNumber--;
-#if defined(DEBUG_OSC_PROCESSING)
-                    qDebug().noquote() << "[OSC] Adjusted link" << it.key() << "from line" << originalLine << "to line" << it.value().lineNumber;
-#endif
-                }
-            }
 
             // Stop timer if no more timer-based links exist
             bool hasTimers = false;

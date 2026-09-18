@@ -28,11 +28,18 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include <QAction>
 #include <QClipboard>
+#include <QContextMenuEvent>
+#include <QMenu>
+#include <QScopeGuard>
 
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "MudletInstanceCoordinator.h"
+#include "TLuaInterpreter.h"
+#include "dlgTriggerEditor.h"
 #include "SingleLineTextEdit.h"
 #include "TelnetServerStub.h"
 #include "dlgConnectionProfiles.h"
@@ -69,7 +76,7 @@ private:
 
   void deleteProfileDirectory(const QString &profileName) {
     const QString path =
-        mudlet::getMudletPath(enums::profileHomePath, profileName);
+        MudletPaths::getMudletPath(enums::profileHomePath, profileName);
     QDir dir(path);
     if (dir.exists()) {
       dir.removeRecursively();
@@ -99,7 +106,7 @@ private slots:
     mPort = QString::number(mpServer->serverPort());
     mudlet::start();
     mudlet::self()->setupConfig();
-    QCOMPARE(mudlet::getMudletPath(enums::mainPath),
+    QCOMPARE(MudletPaths::getMudletPath(enums::mainPath),
              qsl("%1/mudlet").arg(mConfigDir.path()));
     mudlet::self()->takeOwnershipOfInstanceCoordinator(
         std::make_unique<MudletInstanceCoordinator>(
@@ -117,8 +124,7 @@ private slots:
     mpHost = nullptr;
     delete mpServer;
     mpServer = nullptr;
-    // Null when initTestCase skipped or failed ahead of mudlet::start(), and
-    // getMudletPath() dereferences the instance rather than checking it
+    // Null when initTestCase skipped or failed ahead of mudlet::start()
     if (mudlet::self()) {
       deleteProfileDirectory(mHostname);
       delete mudlet::self();
@@ -148,6 +154,127 @@ private slots:
     QVERIFY2(!copied.contains(middleDot),
              "Copied text should not contain middle dot formatting marks");
     QCOMPARE(copied, qsl("  ^pattern$  "));
+  }
+
+  // Opening the context menu sends the focused editor a FocusOut with
+  // Qt::PopupFocusReason, so a focus-out that drops the selection leaves the
+  // menu's own Copy entry with nothing to copy (#10330)
+  void test_copyFromPatternEditorContextMenu() {
+    SingleLineTextEdit edit;
+    edit.setPlainText(qsl("^pattern$"));
+    edit.show();
+    edit.activateWindow();
+    QVERIFY(QTest::qWaitForWindowActive(&edit));
+    edit.setFocus();
+    QTRY_VERIFY(edit.hasFocus());
+    edit.selectAll();
+
+    QClipboard *clipboard = QGuiApplication::clipboard();
+    QVERIFY(clipboard);
+    clipboard->setText(qsl("previous clipboard contents"));
+
+    // Qt only sends that FocusOut for the first popup, and a menu left open
+    // past a failed assertion would outlive the test
+    QVERIFY2(!QApplication::activePopupWidget(), "a popup was already open");
+    const auto closePopup = qScopeGuard([] {
+      if (auto *popup = QApplication::activePopupWidget()) {
+        popup->close();
+      }
+    });
+
+    const QPoint pos(5, 5);
+    QContextMenuEvent contextMenuEvent(QContextMenuEvent::Mouse, pos,
+                                       edit.viewport()->mapToGlobal(pos));
+    QApplication::sendEvent(edit.viewport(), &contextMenuEvent);
+
+    auto *menu = qobject_cast<QMenu *>(QApplication::activePopupWidget());
+    QVERIFY2(menu, "right-clicking the pattern editor did not open its context menu");
+    auto *copyAction = menu->findChild<QAction *>(qsl("edit-copy"));
+    QVERIFY2(copyAction, "the context menu has no Copy entry named edit-copy");
+    copyAction->trigger();
+
+    QCOMPARE(clipboard->text(), qsl("^pattern$"));
+  }
+
+  // The deselect on focus-out exists so a pattern line does not keep showing a
+  // stale selection once another line is being edited, so it has to survive
+  // only the reasons that give focus straight back
+  void test_patternEditorDeselectsOnlyWhenFocusMovesOn() {
+    SingleLineTextEdit edit;
+    edit.setPlainText(qsl("^pattern$"));
+    edit.selectAll();
+
+    QFocusEvent popupFocusOut(QEvent::FocusOut, Qt::PopupFocusReason);
+    QApplication::sendEvent(&edit, &popupFocusOut);
+    QVERIFY2(edit.textCursor().hasSelection(), "a popup taking focus dropped the selection");
+
+    QFocusEvent windowFocusOut(QEvent::FocusOut, Qt::ActiveWindowFocusReason);
+    QApplication::sendEvent(&edit, &windowFocusOut);
+    QVERIFY2(edit.textCursor().hasSelection(), "switching windows dropped the selection");
+
+    QFocusEvent tabFocusOut(QEvent::FocusOut, Qt::TabFocusReason);
+    QApplication::sendEvent(&edit, &tabFocusOut);
+    QVERIFY2(!edit.textCursor().hasSelection(), "focus moving to another widget kept the selection");
+  }
+  // enableTrigger()/disableTrigger() from Lua used to leave the editor's tree
+  // icon stale until something else rebuilt the tree. The repaint is deferred
+  // to the next event-loop turn so a script toggling many triggers per line
+  // pays one tree walk, not one per call - hence the QTRY_ waits.
+  void test_luaToggleRepaintsTheTreeItem() {
+    mudlet::self()->slot_showScriptDialog();
+    QTest::qWait(100ms);
+    dlgTriggerEditor *pEditor = mpHost->mpEditorDialog;
+    QVERIFY2(pEditor, "the editor dialog was not created");
+    TLuaInterpreter *pLua = mpHost->getLuaInterpreter();
+    QVERIFY(pLua->compileAndExecuteScript(
+        qsl("permGroup(\"qaToggleFolder\", \"trigger\")\n"
+            "permRegexTrigger(\"qaToggleLeaf\", \"qaToggleFolder\", "
+            "{\"^qa toggle$\"}, \"\")")));
+    pEditor->doCleanReset();
+    QTreeWidgetItem *pLeaf = nullptr;
+    // The tree is a private Ui member; its objectName is what the .ui gives it
+    auto *pTree = pEditor->findChild<QTreeWidget *>(qsl("treeWidget_triggers"));
+    QVERIFY(pTree);
+    QVERIFY2(QTest::qWaitFor([&]() {
+      const auto found = pTree->findItems(
+          qsl("qaToggleLeaf"),
+          Qt::MatchCaseSensitive | Qt::MatchFixedString | Qt::MatchRecursive,
+          0);
+      pLeaf = found.isEmpty() ? nullptr : found.first();
+      return pLeaf != nullptr;
+    }), "the editor never rebuilt its tree around the planted trigger");
+    QTreeWidgetItem *pFolder = pLeaf->parent();
+    QVERIFY(pFolder);
+    // The accessible description is written alongside the icon from the same
+    // computed state, so it stands in for the icon here
+    auto description = [](QTreeWidgetItem *pItem) {
+      return pItem->data(0, Qt::AccessibleDescriptionRole).toString();
+    };
+    const QString active = dlgTriggerEditor::tr("activated");
+    const QString inactive = dlgTriggerEditor::tr("deactivated");
+    const QString activeFolder = dlgTriggerEditor::tr("activated folder");
+    const QString inactiveFolder = dlgTriggerEditor::tr("deactivated folder");
+    const QString inactiveParent = dlgTriggerEditor::tr("%1 in a deactivated group").arg(active);
+    QCOMPARE(description(pLeaf), active);
+
+    QVERIFY(pLua->compileAndExecuteScript(qsl("disableTrigger(\"qaToggleLeaf\")")));
+    QTRY_COMPARE(description(pLeaf), inactive);
+
+    QVERIFY(pLua->compileAndExecuteScript(qsl("enableTrigger(\"qaToggleLeaf\")")));
+    QTRY_COMPARE(description(pLeaf), active);
+
+    // A folder's state greys out everything under it
+    QVERIFY(pLua->compileAndExecuteScript(qsl("disableTrigger(\"qaToggleFolder\")")));
+    QTRY_COMPARE(description(pFolder), inactiveFolder);
+    QCOMPARE(description(pLeaf), inactiveParent);
+
+    // Toggled off and back on within one turn: the tree ends where it started
+    QVERIFY(pLua->compileAndExecuteScript(
+        qsl("enableTrigger(\"qaToggleFolder\")\n"
+            "disableTrigger(\"qaToggleLeaf\")\n"
+            "enableTrigger(\"qaToggleLeaf\")")));
+    QTRY_COMPARE(description(pFolder), activeFolder);
+    QCOMPARE(description(pLeaf), active);
   }
 };
 

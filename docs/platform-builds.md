@@ -2,7 +2,7 @@
 
 ## Building on macOS
 
-For complete setup instructions, see: https://wiki.mudlet.org/w/Compiling_Mudlet#Compiling_on_macOS
+For complete setup instructions, see: https://wiki.mudlet.org/w/Compiling_Mudlet#macOS
 
 **Essential build commands:**
 
@@ -37,7 +37,7 @@ reached `Max cache size`, raise it with `ccache -M <n>G`.
 
 ## Building on Windows
 
-For complete setup instructions, see: https://wiki.mudlet.org/w/Compiling_Mudlet#Compiling_on_Windows
+For complete setup instructions, see: https://wiki.mudlet.org/w/Compiling_Mudlet#Windows
 
 Builds run under MSYS2, in the **CLANG64** environment — open a CLANG64 shell, not MINGW64, and
 check it is a real MSYS2 shell rather than Git for Windows' bash carrying an inherited `MSYSTEM`
@@ -57,6 +57,31 @@ Sanitizers are not enabled on Windows (`src/CMakeLists.txt` guards them with `if
 so there is no `-nosan` variant. `windows-release` reads `MSYSTEM_PREFIX` the same way, adds
 `CMAKE_BUILD_TYPE=Release` to match `CI/build-mudlet-for-windows.sh` - which builds Release on
 every Windows run - and builds into `build-windows-release/`.
+
+## Reproducing a CI build
+
+`CMakePresets.json` also carries the presets CI configures with — `ci-linux`, `ci-macos`,
+`ci-windows` and `ci-codeql` — so a build that fails only on a runner can be reproduced with
+`cmake --preset ci-linux` instead of transcribing flags out of the workflow. The values a run
+varies by tag or matrix entry come from the environment, and leaving one unset is *not* the same
+as what CI passes — set them to match the job being reproduced:
+
+| Variable | Pull request build | `Mudlet-*` release tag |
+| --- | --- | --- |
+| `CMAKE_BUILD_TYPE` | empty | `Release` |
+| `USE_SANITIZER` | `Address` on Linux, empty on macOS | empty |
+| `WITH_SENTRY` | `ON` | `ON` |
+| `SENTRY_SEND_DEBUG` | `0` | `1` |
+
+```bash
+USE_SANITIZER=Address cmake --preset ci-linux
+```
+
+`WITH_SENTRY=ON` builds sentry-native from the submodule, so leave it unset unless the failure
+involves Sentry; `SENTRY_DSN` is a repository secret and cannot be matched locally at all.
+
+These presets build outside the checkout, into `../b/ninja`, because that is where the workflows'
+ctest and packaging steps look — `ci-windows` is the exception and uses `build-$MSYSTEM/`.
 
 ## Sanitizers and static analysis
 

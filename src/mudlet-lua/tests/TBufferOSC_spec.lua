@@ -397,6 +397,57 @@ describe("Tests TBuffer OSC sequence handling", function()
       assert.are.same(foregroundOf("CSIBAD2", "plain"), foregroundOf("CSIBAD2", "after"))
     end)
 
+    -- A CSI carrying an "intermediate" byte (space, or one of "!\"#$%&'()*+,-./")
+    -- is one Mudlet does not act on: it consumes the parameters and the
+    -- intermediate byte and gives up, so the final byte after them is left over
+    -- and shows as text, which TBuffer.cpp calls a limitation rather than intent.
+    it("should consume the parameters of a sequence with an intermediate byte", function()
+      assert.is_true(feedTriggers("CSIINT1(\027[1 pX)CSIINT1\n"))
+      local payload = findRecentLine("CSIINT1"):match("^CSIINT1%((.*)%)CSIINT1$")
+      -- the parameters and the intermediate byte going is what this holds. The
+      -- leftover final byte is the limitation, not the intent, so both readings
+      -- pass and swallowing it one day does not have to come with a red spec.
+      assert.is_truthy(payload == "pX" or payload == "X", tostring(payload))
+    end)
+
+    -- The only case where the intermediate byte is also the last byte, so the
+    -- only one holding the bounds check on the look ahead for the final byte.
+    it("should consume an intermediate byte that is the last byte of the data", function()
+      assert.is_true(feedTriggers("CSIINT2(\027[1 "))
+      assert.is_true(feedTriggers("Y)CSIINT2\n"))
+      assert.equals("CSIINT2(Y)CSIINT2", findRecentLine("CSIINT2"))
+    end)
+
+    -- MAX_CSI_SEQUENCE_LENGTH in TBuffer.cpp: past it the parameter string is
+    -- thrown away rather than buffered without bound while a server that never
+    -- sends a final byte keeps feeding parameter bytes.
+    local lengthCap = 4096
+
+    -- no-op parameters padding a green one out to the given parameter string
+    -- length, so a discard and a parse can be told apart by the colour - either
+    -- way nothing of the sequence reaches the screen
+    local function paddedGreen(length)
+      local oddPadding = length % 2 == 1 and ";" or ""
+      return string.rep("0;", math.floor((length - 2) / 2)) .. oddPadding .. "32"
+    end
+
+    -- The two lengths either side of the cap, rather than a comfortable margin
+    -- on each side: the check is ">= MAX_CSI_SEQUENCE_LENGTH" on the parameter
+    -- string alone, and only these two tell that apart from a ">".
+    it("should still act on a parameter string one byte under the length cap", function()
+      assert.is_true(feedTriggers("\027[0mCSICAP1(\027[" .. paddedGreen(lengthCap - 1) .. "mgreen\027[0m)CSICAP1\n"))
+      assert.equals("CSICAP1(green)CSICAP1", findRecentLine("CSICAP1"))
+      assert.is_true(feedTriggers("\027[0mCSICAP2(green)CSICAP2\n"))
+      assert.are_not.same(foregroundOf("CSICAP1", "green"), foregroundOf("CSICAP2", "green"))
+    end)
+
+    it("should discard a parameter string that is exactly the length cap", function()
+      assert.is_true(feedTriggers("\027[0mCSICAP3(\027[" .. paddedGreen(lengthCap) .. "mgreen\027[0m)CSICAP3\n"))
+      assert.equals("CSICAP3(green)CSICAP3", findRecentLine("CSICAP3"))
+      assert.is_true(feedTriggers("\027[0mCSICAP4(green)CSICAP4\n"))
+      assert.are.same(foregroundOf("CSICAP3", "green"), foregroundOf("CSICAP4", "green"))
+    end)
+
   end)
 
   -- A line written through TBuffer::appendLine() that holds the documentation
@@ -602,6 +653,94 @@ describe("Tests TBuffer OSC sequence handling", function()
         for lineNumber = 0, lastLine do
           assert.equals(snapshot[lineNumber], getLines("main", lineNumber, lineNumber + 1)[1],
             "revealing a link whose line was trimmed away rewrote line " .. lineNumber)
+        end
+      end)
+    end)
+
+    -- deleteLine() shifts every line below the one it removes, so a tracked
+    -- link's recorded line number stops matching where its text now sits - the
+    -- same defect as above reached by the route a trigger gag takes.
+    it("does not rewrite an unrelated line after deleteLine() moved the link's line", function()
+      if not os.getenv("MUDLET_TEST_MODE") then
+        pending("waiting for the reveal timer needs MUDLET_TEST_MODE")
+        return
+      end
+      withSmallBuffer(function()
+        clearWindow()
+        for i = 1, 3 do echo("oscdelseed " .. i .. "\n") end
+        local link = "\027]8;;send:osc8del?config={\"visibility\":{\"action\":\"reveal\",\"delay\":3000}}\027\\HIDDENWORD\027]8;;\027\\"
+        assert.is_true(feedTriggers("OSCDEL1(" .. link .. ")OSCDEL1\n"))
+        local registeredAt, concealed = findLine("OSCDEL1")
+        assert.is_truthy(registeredAt and registeredAt < 20, "the link did not land at a low buffer index")
+        -- concealment proves the link registered, so there is tracked state to go stale
+        assert.equals("OSCDEL1(          )OSCDEL1", concealed)
+
+        -- fillers must be longer than the link's startColumn + length, or
+        -- performReveal() bounds-checks out and the case passes unfixed
+        for i = 1, 12 do echo("oscdelfiller padded out well past the link column " .. i .. "\n") end
+
+        -- take a line above the link, so everything below it moves up one
+        assert.is_true(moveCursor(0, 0))
+        deleteLine()
+        local movedTo = findLine("OSCDEL1")
+        assert.equals(registeredAt - 1, movedTo, "deleting an earlier line did not move the link's line up")
+
+        local lastLine = getLastLineNumber("main")
+        local snapshot = {}
+        for lineNumber = 0, lastLine do
+          snapshot[lineNumber] = getLines("main", lineNumber, lineNumber + 1)[1]
+        end
+
+        pumpEvents(3500)
+        -- the link's own line is the one that should change: it reveals where the
+        -- text actually sits now, and every other line is left alone
+        assert.equals("OSCDEL1(HIDDENWORD)OSCDEL1", getLines("main", movedTo, movedTo + 1)[1],
+          "the reveal did not land on the line the link moved to")
+        for lineNumber = 0, lastLine do
+          if lineNumber ~= movedTo then
+            assert.equals(snapshot[lineNumber], getLines("main", lineNumber, lineNumber + 1)[1],
+              "a link tracked across deleteLine() rewrote line " .. lineNumber)
+          end
+        end
+      end)
+    end)
+
+    -- clearWindow() discards every line, so a tracked link's line number stops
+    -- meaning anything - the same defect as above reached by a second route. The
+    -- buffer is refilled afterwards so a broken reveal has something to overwrite.
+    it("does not rewrite an unrelated line after clearWindow() discarded the link's line", function()
+      if not os.getenv("MUDLET_TEST_MODE") then
+        pending("waiting for the reveal timer needs MUDLET_TEST_MODE")
+        return
+      end
+      withSmallBuffer(function()
+        clearWindow()
+        for i = 1, 3 do echo("oscclrseed " .. i .. "\n") end
+        local link = "\027]8;;send:osc8clr?config={\"visibility\":{\"action\":\"reveal\",\"delay\":3000}}\027\\HIDDENWORD\027]8;;\027\\"
+        assert.is_true(feedTriggers("OSCCLR1(" .. link .. ")OSCCLR1\n"))
+        local registeredAt, concealed = findLine("OSCCLR1")
+        assert.is_truthy(registeredAt and registeredAt < 20, "the link did not land at a low buffer index")
+        -- concealment proves the link registered, so there is tracked state for
+        -- clearWindow() to leave behind
+        assert.equals("OSCCLR1(          )OSCCLR1", concealed)
+
+        clearWindow()
+        assert.is_nil(findLine("OSCCLR1"), "clearWindow() left the link's line in the buffer")
+
+        -- fillers must be longer than the link's startColumn + length, or
+        -- performReveal() bounds-checks out and the case passes unfixed
+        for i = 1, 12 do echo("oscclrfiller padded out well past the link column " .. i .. "\n") end
+
+        local lastLine = getLastLineNumber("main")
+        local snapshot = {}
+        for lineNumber = 0, lastLine do
+          snapshot[lineNumber] = getLines("main", lineNumber, lineNumber + 1)[1]
+        end
+
+        pumpEvents(3500)
+        for lineNumber = 0, lastLine do
+          assert.equals(snapshot[lineNumber], getLines("main", lineNumber, lineNumber + 1)[1],
+            "a link tracked across clearWindow() rewrote line " .. lineNumber)
         end
       end)
     end)

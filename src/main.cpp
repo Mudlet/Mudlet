@@ -31,6 +31,7 @@
 #endif
 
 #include "HostManager.h"
+#include "MudletPaths.h"
 #include "mudlet.h"
 #include "MudletInstanceCoordinator.h"
 #include <chrono>
@@ -57,7 +58,9 @@
 #include <QScreen>
 #include <QSettings>
 #include <QSplashScreen>
+#include <QSslConfiguration>
 #include <QStringList>
+#include <QThreadPool>
 #include <QTranslator>
 #include "AltFocusMenuBarDisable.h"
 #include "TAccessibleConsole.h"
@@ -119,19 +122,19 @@ void removeOldNoteColorEmojiFonts()
     // When adding a later version, append the path and version comment of the
     // replaced one comment to this area:
     // Tag: "v2018-04-24-pistol-update"
-    oldNotoFontDirectories << qsl("%1/notocoloremoji-unhinted-2018-04-24-pistol-update").arg(mudlet::getMudletPath(enums::mainFontsPath));
+    oldNotoFontDirectories << qsl("%1/notocoloremoji-unhinted-2018-04-24-pistol-update").arg(MudletPaths::getMudletPath(enums::mainFontsPath));
     // Release: "v2019-11-19-unicode12"
-    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2019-11-19-unicode12").arg(mudlet::getMudletPath(enums::mainFontsPath));
+    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2019-11-19-unicode12").arg(MudletPaths::getMudletPath(enums::mainFontsPath));
     // Release: "Noto Emoji v2.0238"
-    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2021-07-15-v2.028").arg(mudlet::getMudletPath(enums::mainFontsPath));
+    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2021-07-15-v2.028").arg(MudletPaths::getMudletPath(enums::mainFontsPath));
     // Release: "Unicode 14.0"
-    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2021-11-01-v2.034").arg(mudlet::getMudletPath(enums::mainFontsPath));
+    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2021-11-01-v2.034").arg(MudletPaths::getMudletPath(enums::mainFontsPath));
     // Release: "Unicode 15.0"
-    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2022-09-16-v2.038").arg(mudlet::getMudletPath(enums::mainFontsPath));
+    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2022-09-16-v2.038").arg(MudletPaths::getMudletPath(enums::mainFontsPath));
     // Release: "Unicode 15.1, take 3"
-    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2023-11-30-v2.042").arg(mudlet::getMudletPath(enums::mainFontsPath));
+    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2023-11-30-v2.042").arg(MudletPaths::getMudletPath(enums::mainFontsPath));
     // Release: "Unicode 16.0"
-    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2024-10-03-v2.047").arg(mudlet::getMudletPath(enums::mainFontsPath));
+    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2024-10-03-v2.047").arg(MudletPaths::getMudletPath(enums::mainFontsPath));
 
     QListIterator<QString> itOldNotoFontDirectory(oldNotoFontDirectories);
     while (itOldNotoFontDirectory.hasNext()) {
@@ -192,8 +195,8 @@ void msys2QtMessageHandler(QtMsgType type, const QMessageLogContext& context, co
 #if !defined(Q_OS_MACOS)
 // Reads highDpiScaleFactorRoundingPolicy from Mudlet.ini before QApplication
 // creation, since Qt requires this to be set before the application is constructed.
-// Replicates setupConfig() config path detection using argv[0] instead of
-// QCoreApplication::applicationDirPath() which isn't available yet.
+// Resolves the config root from argv[0] because
+// QCoreApplication::applicationDirPath() isn't available yet.
 static void applyHighDpiRoundingPolicyFromConfig(int argc, char* argv[])
 {
     if (!qEnvironmentVariableIsEmpty("QT_SCALE_FACTOR_ROUNDING_POLICY")) {
@@ -210,35 +213,7 @@ static void applyHighDpiRoundingPolicyFromConfig(int argc, char* argv[])
         return;
     }
 
-    const QString confDirDefault = qsl("%1/.config/mudlet").arg(QDir::homePath());
-    QString confPath;
-
-    const QString markerExecDir = qsl("%1/portable.txt").arg(execDir);
-    const QString markerHomeDir = qsl("%1/portable.txt").arg(confDirDefault);
-
-    if (QFileInfo(markerExecDir).isFile()) {
-        QFile file(markerExecDir);
-        QString portPath;
-        if (file.open(QIODevice::ReadOnly)) {
-            QTextStream(&file).readLineInto(&portPath);
-        }
-        if (portPath.isEmpty()) {
-            portPath = qsl("./portable");
-        }
-        confPath = utils::pathResolveRelative(QDir::cleanPath(portPath), execDir);
-    } else if (QFileInfo(markerHomeDir).isFile()) {
-        QFile file(markerHomeDir);
-        QString portPath;
-        if (file.open(QIODevice::ReadOnly)) {
-            QTextStream(&file).readLineInto(&portPath);
-        }
-        confPath = utils::pathResolveRelative(QDir::cleanPath(portPath), execDir);
-    } else {
-        // Mirror setupConfig()'s XDG_CONFIG_HOME resolution so this early
-        // Mudlet.ini read looks in the same config root.
-        confPath = utils::xdgConfigDir(confDirDefault).path;
-    }
-
+    const QString confPath = MudletPaths::resolveConfigRoot(execDir).path;
     if (confPath.isEmpty()) {
         return;
     }
@@ -365,6 +340,22 @@ int main(int argc, char* argv[])
     } else {
         app->setApplicationVersion(QString(APP_VERSION) + appBuild);
     }
+
+    // The first QSslSocket in the process - every profile's cTelnet holds two -
+    // has Qt parse every system CA certificate on the constructing thread,
+    // which lands squarely inside profile load. Doing the same initialisation
+    // on a pool thread now means the parse is normally over before a profile
+    // opens.
+    // The pool is a local so that every early return from main() joins the
+    // thread on the way out: the warm-up holds Qt's TLS backend mutex while it
+    // loads the backend plugin, and static destruction pulls that mutex and the
+    // plugin machinery out from under it. The global pool cannot serve here -
+    // waiting on it would also wait for whatever QtConcurrent work a profile
+    // left running.
+    QThreadPool sslWarmupPool;
+    sslWarmupPool.start([]() {
+        QSslConfiguration::defaultConfiguration();
+    });
 
     mudlet::start();
     // Detect config path before any files are read
@@ -709,7 +700,7 @@ int main(int argc, char* argv[])
     }
     app->processEvents();
 
-    const QString homeDirectory = mudlet::getMudletPath(enums::mainPath);
+    const QString homeDirectory = MudletPaths::getMudletPath(enums::mainPath);
     const QDir dir;
     bool first_launch = false;
     if (!dir.exists(homeDirectory)) {
@@ -718,11 +709,11 @@ int main(int argc, char* argv[])
     }
 
 #if defined(INCLUDE_FONTS)
-    const QString bitstreamVeraFontDirectory(qsl("%1/ttf-bitstream-vera-1.10").arg(mudlet::getMudletPath(enums::mainFontsPath)));
+    const QString bitstreamVeraFontDirectory(qsl("%1/ttf-bitstream-vera-1.10").arg(MudletPaths::getMudletPath(enums::mainFontsPath)));
     if (!dir.exists(bitstreamVeraFontDirectory)) {
         dir.mkpath(bitstreamVeraFontDirectory);
     }
-    const QString ubuntuFontDirectory(qsl("%1/ubuntu-font-family-0.83").arg(mudlet::getMudletPath(enums::mainFontsPath)));
+    const QString ubuntuFontDirectory(qsl("%1/ubuntu-font-family-0.83").arg(MudletPaths::getMudletPath(enums::mainFontsPath)));
     if (!dir.exists(ubuntuFontDirectory)) {
         dir.mkpath(ubuntuFontDirectory);
     }
@@ -731,7 +722,7 @@ int main(int argc, char* argv[])
     removeOldNoteColorEmojiFonts();
     // PLACEMARKER: current Noto Color Emoji font directory specification:
     // Release: "Unicode 17.0 update mk1"
-    const QString notoFontDirectory{qsl("%1/noto-color-emoji-2025-09-15-v2.051").arg(mudlet::getMudletPath(enums::mainFontsPath))};
+    const QString notoFontDirectory{qsl("%1/noto-color-emoji-2025-09-15-v2.051").arg(MudletPaths::getMudletPath(enums::mainFontsPath))};
     if (!dir.exists(notoFontDirectory)) {
         dir.mkpath(notoFontDirectory);
     }
@@ -1140,6 +1131,11 @@ int main(int argc, char* argv[])
     // with some OS's choice of wait cursor - you might wish to temporarily disable
     // the earlier setOverrideCursor() line and this one.
     int result = app->exec();
+
+    // Before the QApplication goes, not just before main() returns: the TLS
+    // plugin loader connects to qApp, so a warm-up still running here would
+    // reach for one that has already been deleted.
+    sslWarmupPool.waitForDone();
 
     // Explicitly delete QApplication BEFORE main() returns to ensure Qt cleanup
     // happens before __cxa_finalize_ranges runs static destructors. This prevents

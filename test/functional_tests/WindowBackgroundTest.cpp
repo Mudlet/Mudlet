@@ -23,6 +23,7 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -146,12 +147,12 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
 
-        QDir(mudlet::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
+        QDir(MudletPaths::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
 
         mpHost = TestProfile::create(mHostname, mLocalhost, mPort);
         if (!mpHost) {
@@ -172,10 +173,9 @@ private slots:
         delete mpServer;
         mpServer = nullptr;
         mpHost = nullptr;
-        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
-        // getMudletPath() dereferences the instance rather than checking it
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
-            const QString path = mudlet::getMudletPath(enums::profileHomePath, mHostname);
+            const QString path = MudletPaths::getMudletPath(enums::profileHomePath, mHostname);
             delete mudlet::self();
             QDir(path).removeRecursively();
         }
@@ -210,12 +210,12 @@ private slots:
         QCOMPARE(mpHost->mpConsole->mWindowBgImageMode, 5);
 
         runLua(qsl("createLabel('lowerTarget', 10, 10, 100, 100, 1)"));
-        QVERIFY(mpHost->mpConsole->mLabelMap.contains(qsl("lowerTarget")));
+        QVERIFY(mpHost->mpConsole->labelWidget(qsl("lowerTarget")));
 
         runLua(qsl("lowerWindow('lowerTarget')"));
 
         verifyStackedBelow(mpHost->mpConsole->mpWindowBackground, mpHost->mpConsole->mpMainDisplay, "lowerWindow() left the full-window background painting on top of the main display");
-        verifyStackedBelow(mpHost->mpConsole->mpMainDisplay, mpHost->mpConsole->mLabelMap.value(qsl("lowerTarget")), "lowerWindow() left the lowered label hidden behind the main display");
+        verifyStackedBelow(mpHost->mpConsole->mpMainDisplay, mpHost->mpConsole->labelWidget(qsl("lowerTarget")), "lowerWindow() left the lowered label hidden behind the main display");
     }
 
     // The six branches of lowerWindow() are copy-pasted, so cover a second one.
@@ -226,7 +226,7 @@ private slots:
 
         runLua(qsl("setBackgroundImage('main', [[%1]], 'cover', true)").arg(imagePath));
         runLua(qsl("createMiniConsole('lowerConsole', 10, 10, 200, 100)"));
-        QVERIFY(mpHost->mpConsole->mSubConsoleMap.contains(qsl("lowerConsole")));
+        QVERIFY(mpHost->windowRegistry().hasSubConsole(qsl("lowerConsole")));
 
         runLua(qsl("lowerWindow('lowerConsole')"));
 
@@ -239,7 +239,7 @@ private slots:
         runLua(qsl("lowerWindow('lowerTarget')"));
 
         verifyStackedBelow(mpHost->mpConsole->mpWindowBackground, mpHost->mpConsole->mpMainDisplay, "lowerWindow() put the main display below the full-window background widget");
-        verifyStackedBelow(mpHost->mpConsole->mpMainDisplay, mpHost->mpConsole->mLabelMap.value(qsl("lowerTarget")), "lowerWindow() left the lowered label hidden behind the main display");
+        verifyStackedBelow(mpHost->mpConsole->mpMainDisplay, mpHost->mpConsole->labelWidget(qsl("lowerTarget")), "lowerWindow() left the lowered label hidden behind the main display");
     }
 
     // a game can reach changeColors() with no user action, through an OSC palette change

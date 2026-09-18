@@ -31,6 +31,8 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include "GifTestHelper.h"
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
@@ -64,19 +66,6 @@ private:
     QString mGifPath;
     QString mNotAGifPath;
 
-    // three frames so the count is a distinctive thing to compare, and a 60
-    // second frame delay so the animation never advances between two reads
-    static QByteArray threeFrameGif()
-    {
-        QByteArray gif("GIF89a");
-        gif.append(QByteArray::fromHex("01000100910000"));
-        gif.append(QByteArray::fromHex("ff000000ff000000ff000000"));
-        const QByteArray frame = QByteArray::fromHex("21f90400701700002c00000000010001000002024c0100");
-        gif.append(frame).append(frame).append(frame);
-        gif.append(QByteArray::fromHex("3b"));
-        return gif;
-    }
-
     static bool writeFixture(const QString& path, const QByteArray& contents)
     {
         QFile file(path);
@@ -109,14 +98,14 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::getQSettings()->setValue(qsl("uiTourShown"), true);
         mudlet::getQSettings()->sync();
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
 
-        const QString path = mudlet::getMudletPath(enums::profileHomePath, mHostname);
+        const QString path = MudletPaths::getMudletPath(enums::profileHomePath, mHostname);
         QDir(path).removeRecursively();
 
         QTimer::singleShot(0ms, qApp, [this]() {
@@ -152,10 +141,9 @@ private slots:
         delete mpServer;
         mpServer = nullptr;
         mpHost = nullptr;
-        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
-        // getMudletPath() dereferences the instance rather than checking it
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
-            const QString path = mudlet::getMudletPath(enums::profileHomePath, mHostname);
+            const QString path = MudletPaths::getMudletPath(enums::profileHomePath, mHostname);
             QDir(path).removeRecursively();
             delete mudlet::self();
         }
@@ -174,7 +162,7 @@ private slots:
         auto [loaded, loadMessage] = mpHost->setMovie(mLabelName, mGifPath);
         QVERIFY2(loaded, qPrintable(loadMessage));
 
-        TLabel* pLabel = mpHost->mpConsole->mLabelMap.value(mLabelName);
+        TLabel* pLabel = mpHost->mpConsole->labelWidget(mLabelName);
         QVERIFY(pLabel);
         QVERIFY(pLabel->mpMovie);
         QVERIFY2(pLabel->mpMovie->isValid(), "the label did not end up with a movie it can play");

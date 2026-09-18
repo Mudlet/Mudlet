@@ -107,6 +107,7 @@ set(mudlet_SRCS
     MMCPServer.cpp
     mudlet.cpp
     MudletInstanceCoordinator.cpp
+    MudletPaths.cpp
     MxpTag.cpp
     OAuthClientFlow.cpp
     PackageItemDelegate.cpp
@@ -119,6 +120,7 @@ set(mudlet_SRCS
     SelectionRectangleHandler.cpp
     SentryWrapper.cpp
     ShortcutsManager.cpp
+    SignInStoreReconciler.cpp
     SingleLineTextEdit.cpp
     SpeechAudioCapture.cpp
     SpeechRecognizerFactory.cpp
@@ -154,6 +156,7 @@ set(mudlet_SRCS
     TKey.cpp
     TKeySequenceEdit.cpp
     TLabel.cpp
+    TLabelModel.cpp
     TLinkStore.cpp
     TLuaInterpreter.cpp
     TLuaInterpreterDiscord.cpp
@@ -203,6 +206,7 @@ set(mudlet_SRCS
     TrailingWhitespaceMarker.cpp
     TriggerHighlighter.cpp
     TriggerUnit.cpp
+    TTriggerPrescan.cpp
     TRoom.cpp
     TRoomDB.cpp
     TScript.cpp
@@ -221,6 +225,7 @@ set(mudlet_SRCS
     TUiTour.cpp
     TVar.cpp
     UntrustedText.cpp
+    utils.cpp
     VarUnit.cpp
     VoskRecognizer.cpp
     WideComboBox.cpp
@@ -359,6 +364,7 @@ set(mudlet_HDRS
     MMCPServer.h
     mudlet.h
     MudletInstanceCoordinator.h
+    MudletPaths.h
     MxpTag.h
     OAuthClientFlow.h
     PackageItemDelegate.h
@@ -371,6 +377,7 @@ set(mudlet_HDRS
     SelectionRectangleHandler.h
     SentryWrapper.h
     ShortcutsManager.h
+    SignInStoreReconciler.h
     SingleLineTextEdit.h
     SpeechAudioCapture.h
     SpeechRecognizer.h
@@ -412,6 +419,7 @@ set(mudlet_HDRS
     TKey.h
     TKeySequenceEdit.h
     TLabel.h
+    TLabelModel.h
     TLinkStore.h
     TLuaInterpreter.h
     TMainConsole.h
@@ -460,6 +468,7 @@ set(mudlet_HDRS
     Tree.h
     TriggerHighlighter.h
     TriggerUnit.h
+    TTriggerPrescan.h
     TRoom.h
     TRoomDB.h
     TScript.h
@@ -478,6 +487,7 @@ set(mudlet_HDRS
     TTrigger.h
     TUiTour.h
     TVar.h
+    TWindowRegistry.h
     UntrustedText.h
     utils.h
     VarUnit.h
@@ -697,6 +707,20 @@ set_target_properties(${LIB_MUDLET_TARGET} PROPERTIES
   AUTOMOC ON AUTORCC ON POSITION_INDEPENDENT_CODE ON
   AUTOGEN_ORIGIN_DEPENDS OFF)
 
+# AUTOMOC concatenates every moc_*.cpp into one mocs_compilation.cpp whose
+# include order it controls. With GCC 16's -Wsfinae-incomplete that trips false
+# positives: qmetatype.h's is_complete SFINAE trait is instantiated from one
+# moc file while types defined in a later moc file are still incomplete, so
+# defining them later warns. The generated TU is not hand-written code, so
+# silence the warning there rather than rearranging includes across moc files.
+# Scoped to GCC: -Wsfinae-incomplete is a GCC-only flag (GCC 15+), and GCC
+# silently ignores unknown -Wno- options on older versions, but Clang/MSVC
+# would diagnose the unknown flag.
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  set_property(SOURCE "${CMAKE_CURRENT_BINARY_DIR}/${LIB_MUDLET_TARGET}_autogen/mocs_compilation.cpp"
+               APPEND PROPERTY COMPILE_OPTIONS -Wno-sfinae-incomplete)
+endif()
+
 if(USE_FONTS)
   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_FONTS)
 endif()
@@ -740,7 +764,7 @@ endif()
 # Surface the linked qtkeychain version for diagnostics - the QTKEYCHAIN_VERSION macro in
 # qtkeychain's own header is stale (hardcoded to 0x000100), so the CMake package version is
 # the only reliable signal. Relevant since qtkeychain 0.17.0 changed the Windows credential
-# naming scheme (see CredentialManager::attemptCompatNamingMigration).
+# naming scheme (see the "pre-0.17 qtkeychain naming" stage in CredentialManager::retrievePassword).
 if(USE_OWN_QTKEYCHAIN)
   get_directory_property(QTKEYCHAIN_LINKED_VERSION
     DIRECTORY ${CMAKE_SOURCE_DIR}/3rdparty/qtkeychain

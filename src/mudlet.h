@@ -47,7 +47,6 @@
 #include <QSystemTrayIcon>
 #include <QTextOption>
 #include <QTime>
-#include <QVersionNumber>
 
 #if defined(INCLUDE_OWN_QT6_KEYCHAIN)
 #include <qtkeychain/keychain.h>
@@ -62,7 +61,7 @@
 class QAction;
 class QCloseEvent;
 class QDateTime;
-class QDir;
+class QDockWidget;
 class QKeyEvent;
 class QMediaDevices;
 class QMediaPlayer;
@@ -102,7 +101,6 @@ class TLabel;
 class translation;
 class TScrollBox;
 class TTabBar;
-class TTimer;
 class TToolBar;
 class TUiTour;
 
@@ -115,18 +113,13 @@ public:
     mudlet();
     ~mudlet() override;
 
-    static QString getMudletPath(enums::mudletPathType, const QString& extra1 = QString(), const QString& extra2 = QString());
     static QSettings* getQSettings();
-    // From https://stackoverflow.com/a/14678964/4805858 an answer to:
-    // "How to find and replace string?" by "Czarek Tomczak":
     static bool loadEdbeeTheme(const QString& themeName, const QString& themeFile);
     static bool loadLuaFunctionList();
-    static std::string replaceString(std::string subject, const std::string& search, const std::string& replace);
     static mudlet* self();
     static void setNetworkRequestDefaults(const QUrl& url, QNetworkRequest& request);
     // This method allows better debugging when mudlet::self() is called inappropriately.
     static void start();
-    static bool unzip(const QString& archivePath, const QString& destination, const QDir& tmpDir);
     static QImage getSplashScreen(bool releaseVersion, bool testVersion);
 
 
@@ -168,20 +161,11 @@ public:
     //          the XML format used to store it - prior to this embedding such
     //          codes would break or destroy the script that used it.
     inline static const QString scmMudletXmlDefaultVersion = QString::number(1.001f, 'f', 3);
-    // A constant equivalent to QDataStream::Qt_5_12 needed in several places
-    // which can't be pulled from Qt as it is not going to be defined for older
-    // versions:
-    static const int scmQDataStreamFormat_5_12 = 18;
-    // The Qt runtime version is needed in various places but as it is a constant
-    // during the application run it is easiest to define it as one once:
-    inline static const QVersionNumber scmRunTimeQtVersion = QVersionNumber::fromString(QLatin1String(qVersion()));
     // translations done high enough will get a gold star to hide the last few percent
     // as well as encourage translators to maintain it
     static const int scmTranslationGoldStar = 95;
     QString scmVersion;
-    QString confPath;
     // These have to be "inline" to satisfy the ODR (One Definition Rule):
-    inline static bool smDebugMode = false;
     inline static bool smFirstLaunch = false;
     inline static QVariantHash smLuaFunctionNames;
     inline static QPointer<TConsole> smpDebugConsole;
@@ -191,11 +175,6 @@ public:
     inline static bool smMirrorToStdOut = false;
     // adjust Mudlet settings to match Steam's requirements
     inline static bool smSteamMode = false;
-    // This may need to be localised, it represents the format of the timestamp
-    inline static QString smTimeStampFormat = qsl("hh:mm:ss.zzz ");
-    // If localised this should be set to the same format and length as the
-    // smTimeStampFormat:
-    inline static QString smBlankTimeStamp = qsl("------------ ");
 
 
     void showEvent(QShowEvent*) override;
@@ -232,7 +211,6 @@ public:
     QStringList getAvailableFonts();
     QList<QString> getAvailableTranslationCodes() const { return mTranslationsMap.keys(); }
     const QMap<QByteArray, QString>& getEncodingNamesMap() const { return mEncodingNameMap; }
-    HostManager& getHostManager() { return mHostManager; }
     ShortcutsManager* shortcutsManager() const { return mpShortcutsManager.data(); }
     // Speech-to-text bridge: creates the single shared recognizer on first use
     // and exposes it to the Lua stt.* API. Recognizer results surface as Lua
@@ -245,10 +223,11 @@ public:
     // there too or a consumer cannot tell "no engine" from "nothing said yet".
     void raiseSpeechEvent(const QString& name, const QString& value);
     const QMap<QString, QPointer<TDetachedWindow>>& getDetachedWindows() const { return mDetachedWindows; }
-    QDockWidget* getMainWindowDockWidget(const QString& mapKey) const { return mMainWindowDockWidgetMap.value(mapKey); }
+    // Out of line so mudlet.h needs no more than a forward declaration -
+    // converting the QPointer this returns wants the complete type
+    QDockWidget* getMainWindowDockWidget(const QString& mapKey) const;
     std::optional<QSize> getImageSize(const QString&);
     const QString& getInterfaceLanguage() const { return mInterfaceLanguage; }
-    int64_t getPhysicalMemoryTotal();
     const QLocale& getUserLocale() const { return mUserLocale; }
     QSet<QString> getWordSet();
     bool inDarkMode() const { return mDarkMode; }
@@ -284,7 +263,6 @@ public:
     void readEarlySettings(const QSettings&);
     void readLateSettings(const QSettings&);
     QPair<bool, bool> removeWordFromSet(const QString&);
-    QString readProfileData(const QString& profile, const QString& item);
     void refreshTabBar();
     void refreshTabBarsAfterStyleChange();
     // Used by a profile to tell the mudlet class
@@ -317,11 +295,11 @@ public:
     void setInvertMapZoom(const bool);
     void setShowTabConnectionIndicators(const bool);
     void setupPreInstallPackages(const QString&, const QString&);
+    void watchAudioOutputDevices();
     void setToolBarIconSize(int);
     void setToolBarVisibility(enums::controlsVisibility);
     void showChangelogIfUpdated();
     void slot_showConnectionDialog();
-    bool showMapAuditErrors() const { return mShowMapAuditErrors; }
     bool invertMapZoom() const { return mInvertMapZoom; }
     bool showTabConnectionIndicators() const { return mShowTabConnectionIndicators; }
     // Addon toolbar button management
@@ -357,6 +335,10 @@ public:
     // that is the other package's business and nothing this profile can act
     // on, the same rule addonShortcutUsable() follows.
     QStringList addonCommandsUsingShortcut(const QKeySequence& sequence, const Host* pHost) const;
+    // Every other profile whose key binding a command just took, told about it.
+    // The clash is only refused within the profile that is asking; see the
+    // definition for why the others are told rather than turned down.
+    void warnProfilesLosingBindingTo(const QKeySequence& sequence, Host* pHost, const QString& commandName);
     void applyToolBarStyleToAddonCommands();
 
     // Brings up the preferences dialog and selects the tab whos objectName is
@@ -368,14 +350,12 @@ public:
     enums::controlsVisibility toolBarVisibility() const { return mToolbarVisibility; }
     void updateDiscordNamedIcon();
     void updateMultiViewControls();
-    QPair<bool, QString> writeProfileData(const QString& profile, const QString& item, const QString& what);
     void writeSettings();
     bool muteAPI() const { return mMuteAPI; }
     bool muteGame() const { return mMuteGame; }
     bool mediaMuted() const { return mMuteAPI && mMuteGame; }
     bool mediaUnmuted() const { return !mMuteAPI && !mMuteGame; }
     bool profileExists(const QString& profileName);
-    QString getCanonicalProfileName(const QString& profileName);
     bool showSplitscreenTutorial();
     void showedSplitscreenTutorial();
     bool showMuteAllMediaTutorial();
@@ -461,11 +441,7 @@ public:
     QString mTEXT_ON_BG_STYLESHEET;
     int mToolbarIconSize = 0;
     QMap<QString, translation> mTranslationsMap;
-    // This is used to keep track of where the main dictionary files are located
-    // will be true if they are ones bundled with Mudlet, false if provided by
-    // the system
     QSystemTrayIcon mTrayIcon;
-    bool mUsingMudletDictionaries = false;
     bool mWindowMinimized = false;
     std::unique_ptr<MudletInstanceCoordinator> mInstanceCoordinator;
     // How many graphemes do we need before we run the spell checker on a "word" in the command line:
@@ -536,7 +512,6 @@ public slots:
     void slot_nextProfile();
     void slot_previousProfile();
     void slot_tabChanged(int);
-    void slot_timerFires();
     void slot_toggleFullScreenView();
     void slot_toggleMultiView();
     void slot_toggleTimeStamp();
@@ -639,6 +614,7 @@ private:
     void closeHost(const QString&);
     int getDictionaryWordCount(const QString& dictionaryPath);
     void goingDown() { mIsGoingDown = true; }
+    void endProfileLoad();
     void initEdbee();
     void installModulesList(Host*, QStringList);
     void loadMaps();
@@ -699,6 +675,9 @@ private:
     QKeySequence mKeySequencePreviousProfile;
     std::array<QKeySequence, 9> mKeySequencesSwitchToProfile;
     bool mIsGoingDown = false;
+    // A depth, not a flag: the guarded load entry points call one another
+    int mProfileLoadsInProgress = 0;
+    bool mCloseRequestedDuringProfileLoad = false;
     // Whether multi-view is in effect:
     enums::controlsVisibility mMenuBarVisibility = enums::visibleAlways;
     // Used to ensure that mudlet::slot_updateShortcuts() only runs once each
@@ -796,7 +775,6 @@ private:
     QWidget* mpWidget_profileContainer = nullptr;
     // read-only value to see if the interface is light or dark. To set the value,
     // use setAppearance instead
-    bool mShowMapAuditErrors = false;
     bool mInvertMapZoom = false; // true = old behavior (inverted), false = modern behavior (non-inverted)
     QSplitter* mpSplitter_profileContainer = nullptr;
     bool mStorePasswordsSecurely = true;

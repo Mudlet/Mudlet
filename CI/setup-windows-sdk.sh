@@ -49,8 +49,10 @@
 
 # To be used prior to building Mudlet, after that run:
 # * build-mudlet-for-window.sh to compile the currently checked out code
-# * package-mudlet-for-windows.sh to put everything together in an archive that
-#   will be deployed from a github workflow
+# * package-mudlet-for-windows.sh to assemble everything Mudlet needs to run
+# * create-portable-zip-for-windows.sh to zip that up as the portable build
+# * deploy-mudlet-for-windows.sh to build the installer and deploy it from a
+#   github workflow
 
 # Exit codes:
 # 0 - Everything is fine. 8-)

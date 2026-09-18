@@ -122,6 +122,12 @@ void ScriptUnit::doCleanup()
         return;
     }
 
+    // Called once per unit for every line of game text, and next to never has
+    // anything queued, so skip setting up the flush below.
+    if (!hasPendingDeletes()) {
+        return;
+    }
+
     QSet<TScript*> deletedScripts;
     for (auto script : uninstallList) {
         if (!deletedScripts.contains(script)) {
@@ -280,6 +286,36 @@ void ScriptUnit::removeScript(TScript* pT)
 int ScriptUnit::getNewID()
 {
     return ++mMaxID;
+}
+
+bool ScriptUnit::enableScript(const QString& name)
+{
+    bool found = false;
+    for (auto script : std::as_const(mScriptMap)) {
+        if (script->getName() == name) {
+            script->setIsActive(true);
+            found = true;
+            if (mpHost->mpEditorDialog) {
+                mpHost->mpEditorDialog->refreshScriptIcon(script->getID());
+            }
+        }
+    }
+    return found;
+}
+
+bool ScriptUnit::disableScript(const QString& name)
+{
+    bool found = false;
+    for (auto script : std::as_const(mScriptMap)) {
+        if (script->getName() == name) {
+            script->setIsActive(false);
+            found = true;
+            if (mpHost->mpEditorDialog) {
+                mpHost->mpEditorDialog->refreshScriptIcon(script->getID());
+            }
+        }
+    }
+    return found;
 }
 
 void ScriptUnit::compileAll(bool saveLoadingError)

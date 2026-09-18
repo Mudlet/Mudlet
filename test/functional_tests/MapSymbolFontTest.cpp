@@ -33,6 +33,7 @@
  * Run with: ctest -R MapSymbolFontTest -V
  */
 
+#include <QDataStream>
 #include <QFileInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -47,6 +48,7 @@
 #include <QScopeGuard>
 #include <QTableWidget>
 
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -94,7 +96,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        QDir dir(mudlet::getMudletPath(enums::profileHomePath, profileName));
+        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, profileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }
@@ -209,7 +211,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -225,8 +227,7 @@ private slots:
         mpHost = nullptr;
         delete mpServer;
         mpServer = nullptr;
-        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
-        // getMudletPath() dereferences the instance rather than checking it
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
             deleteProfileDirectory(mProfileName);
             delete mudlet::self();
@@ -555,9 +556,7 @@ private slots:
         QSaveFile mapFile(file);
         QVERIFY(mapFile.open(QIODevice::WriteOnly));
         QDataStream out(&mapFile);
-        if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            out.setVersion(mudlet::scmQDataStreamFormat_5_12);
-        }
+        out.setVersion(QDataStream::Qt_5_12);
         QVERIFY(map()->serialize(out, map()->mDefaultVersion));
         QVERIFY(mapFile.commit());
 
@@ -580,9 +579,7 @@ private slots:
         QSaveFile mapFile(binaryFile);
         QVERIFY(mapFile.open(QIODevice::WriteOnly));
         QDataStream out(&mapFile);
-        if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            out.setVersion(mudlet::scmQDataStreamFormat_5_12);
-        }
+        out.setVersion(QDataStream::Qt_5_12);
         QVERIFY(map()->serialize(out, map()->mDefaultVersion));
         QVERIFY(mapFile.commit());
 

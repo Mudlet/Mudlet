@@ -47,6 +47,7 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "Host.h"
 #include "HostManager.h"
@@ -94,12 +95,12 @@ private:
     QTemporaryDir mConfigDir;
     QByteArray mSavedXdgConfigHome;
 
-    Host* hostFor(const QString& profileName) const { return mudlet::self()->getHostManager().getHost(profileName); }
+    Host* hostFor(const QString& profileName) const { return HostManager::self()->getHost(profileName); }
 
     bool provisionProfileOnDisk(const QString& profileName) const
     {
-        return QDir().mkpath(mudlet::getMudletPath(enums::profileHomePath, profileName)) && mudlet::self()->writeProfileData(profileName, qsl("url"), mLocalhost).first
-               && mudlet::self()->writeProfileData(profileName, qsl("port"), mPort).first;
+        return QDir().mkpath(MudletPaths::getMudletPath(enums::profileHomePath, profileName)) && MudletPaths::writeProfileData(profileName, qsl("url"), mLocalhost).first
+               && MudletPaths::writeProfileData(profileName, qsl("port"), mPort).first;
     }
 
     // Returns the Lua error, or a null QString when the chunk ran
@@ -138,7 +139,7 @@ private:
         return true;
     }
 
-    TConsole* miniconsoleOf(Host* pHost) const { return pHost->mpConsole ? pHost->mpConsole->mSubConsoleMap.value(mMiniconsoleName) : nullptr; }
+    TConsole* miniconsoleOf(Host* pHost) const { return pHost->mpConsole ? pHost->mpConsole->subConsoleWidget(mMiniconsoleName) : nullptr; }
 
     bool createMiniconsole(Host* pHost) const
     {
@@ -207,7 +208,7 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::getQSettings()->setValue(qsl("uiTourShown"), true);
         mudlet::getQSettings()->sync();
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));

@@ -22,6 +22,7 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -72,8 +73,8 @@ private:
     void createTargetCovering(int fillBackground)
     {
         runLua(qsl("createLabel('lbpTarget', 0, 0, %1, %2, %3)").arg(backdropArea.width()).arg(backdropArea.height()).arg(fillBackground));
-        QVERIFY(mpHost->mpConsole->mLabelMap.contains(qsl("lbpTarget")));
-        QCOMPARE(mpHost->mpConsole->mLabelMap.value(qsl("lbpTarget"))->geometry(), backdropArea);
+        QVERIFY(mpHost->mpConsole->labelWidget(qsl("lbpTarget")));
+        QCOMPARE(mpHost->mpConsole->labelWidget(qsl("lbpTarget"))->geometry(), backdropArea);
     }
 
 private slots:
@@ -97,7 +98,7 @@ private slots:
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
 
-        QDir(mudlet::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
+        QDir(MudletPaths::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
 
         mpHost = TestProfile::create(mHostname, mLocalhost, mPort);
         if (!mpHost) {
@@ -119,7 +120,7 @@ private slots:
         mpServer = nullptr;
         mpHost = nullptr;
         if (mudlet::self()) {
-            const QString path = mudlet::getMudletPath(enums::profileHomePath, mHostname);
+            const QString path = MudletPaths::getMudletPath(enums::profileHomePath, mHostname);
             delete mudlet::self();
             QDir(path).removeRecursively();
         }
