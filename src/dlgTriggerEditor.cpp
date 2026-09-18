@@ -334,6 +334,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     descNewItem = tr("new item");
     //: Accessible description indicating an item belongs to a package, shown after the item name. Keep short, as it's appended to other descriptions like "activated, package item"
     descPackageItem = tr("package item");
+    //: Accessible description for a key binding whose key one of Mudlet's own shortcuts or an add-on command gets first, shown after the item name. Keep short, as it's appended to other descriptions like "activated, will not fire, key in use"
+    descKeyTaken = tr("will not fire, key in use");
 
     setUnifiedTitleAndToolBarOnMac(true); //MAC OSX: make window moveable
     const QString hostName{mpHost->getName()};
@@ -6935,6 +6937,29 @@ void dlgTriggerEditor::updatePackageItemAccessibility(QTreeWidgetItem* pItem, co
     pItem->setData(0, Qt::AccessibleDescriptionRole, newDescription);
 }
 
+// Also kept in the item's accessible description, which is heard on landing
+// on the item, so it need not be announced over whatever else is being read
+void dlgTriggerEditor::showKeyTakenWarning(QTreeWidgetItem* pItem, const QString& warning, const bool announce)
+{
+    if (!warning.isEmpty()) {
+        showWarning(warning, announce);
+    }
+    if (!pItem) {
+        return;
+    }
+    // Selecting an item runs this again, so the old mark comes off first
+    const QString suffix = qsl(", ") + descKeyTaken;
+    QString description = pItem->data(0, Qt::AccessibleDescriptionRole).toString();
+    description.remove(suffix);
+    if (description == descKeyTaken) {
+        description.clear();
+    }
+    if (!warning.isEmpty()) {
+        description = description.isEmpty() ? descKeyTaken : description + suffix;
+    }
+    pItem->setData(0, Qt::AccessibleDescriptionRole, description);
+}
+
 int dlgTriggerEditor::canRecast(QTreeWidgetItem* pItem, int newNameType, int newValueType)
 {
     //basic checks, return 1 if we can recast, 2 if no need to recast, 0 if we can't recast
@@ -8136,6 +8161,10 @@ void dlgTriggerEditor::slot_keySelected(QTreeWidgetItem* pItem)
                     firstPackageAnnounced = true;
                 }
             }
+            // A warning given while the editor was closed is replaced when it
+            // opens, so a binding a script made is only warned about here. Not
+            // announced, or arrowing through the keys would be talked over.
+            showKeyTakenWarning(pItem, mpHost->getKeyUnit()->takenKeyWarning(pT), false);
         }
     } else {
         clearKeyForm();
@@ -13143,7 +13172,7 @@ void dlgTriggerEditor::keyGrabCallback(const Qt::Key key, const Qt::KeyboardModi
             pT->setKeyModifiers(modifier);
             QString newStateXML = exportKeyToXML(pT);
 
-            pKeyUnit->warnIfAddonCommandHoldsKey(pT);
+            showKeyTakenWarning(pItem, pKeyUnit->takenKeyWarning(pT), true);
 
             pushKeyPropertyCommand(mpUndoStack, mpHost, keyID, pT->getName(), qsl("keyBinding"), oldStateXML, newStateXML);
         }
