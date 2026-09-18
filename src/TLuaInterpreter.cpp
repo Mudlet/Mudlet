@@ -3517,24 +3517,6 @@ void TLuaInterpreter::setCaptureNameGroups(const NameGroupMatches& nameGroups, c
     mCapturedNameGroupsPosList = namePositions;
 }
 
-// DEVELOPMENT ONLY switch, to be removed: 0 = nothing installed, 1 = "matches"
-// alone, 2 = "matches" and "multimatches", 3 = those and "line" (the default),
-// 4 = everything installed but never used, 5 = as 3 with the metatable looked
-// at on every fire and line
-static int lazyGlobalsMode()
-{
-    static const int mode = qEnvironmentVariableIsSet("MUDLET_LAZY_GLOBALS") ? qEnvironmentVariableIntValue("MUDLET_LAZY_GLOBALS") : 3;
-    return mode;
-}
-
-// DEVELOPMENT ONLY, to be removed: breaks one thing at a time to show which
-// spec case notices
-static int lazyGlobalsSabotage()
-{
-    static const int sabotage = qEnvironmentVariableIntValue("MUDLET_LAZY_SABOTAGE");
-    return sabotage;
-}
-
 // Whether the globals table holds anything under the key string at keyRef
 static bool globalPresent(lua_State* L, const int keyRef)
 {
@@ -3591,7 +3573,7 @@ void TLuaInterpreter::installBetweenDispatchMultimatches(lua_State* L)
 {
     const bool parked = mMultimatchesPending != PendingMultimatches::None;
     mMultimatchesPending = PendingMultimatches::None;
-    if (!mLazyGlobalsInstalled || lazyGlobalsMode() < 2 || lazyGlobalsMode() == 4) {
+    if (!mLazyGlobalsInstalled) {
         lua_newtable(L);
         lua_setglobal(L, "multimatches");
         return;
@@ -3655,11 +3637,9 @@ void TLuaInterpreter::clearCaptureGroups()
         // Still out of the globals table, where lua_setglobal() would run a
         // package's __newindex outside any protected call
         mMatchesPending = false;
-        if (lazyGlobalsSabotage() != 6) {
-            lua_rawgeti(L, LUA_REGISTRYINDEX, mMatchesKeyRef);
-            pushEmptyMatchesTable(L);
-            lua_rawset(L, LUA_GLOBALSINDEX);
-        }
+        lua_rawgeti(L, LUA_REGISTRYINDEX, mMatchesKeyRef);
+        pushEmptyMatchesTable(L);
+        lua_rawset(L, LUA_GLOBALSINDEX);
     } else {
         pushEmptyMatchesTable(L);
         lua_setglobal(L, "matches");
@@ -3683,9 +3663,7 @@ int TLuaInterpreter::pushNestedDispatchState()
     const int callerStackTop = lua_gettop(L);
     // What the caller has not read yet can only be built from its own captures,
     // which the nested pass is about to replace
-    if (lazyGlobalsSabotage() != 4) {
-        materialisePendingCaptures(L);
-    }
+    materialisePendingCaptures(L);
     lua_pushliteral(L, "matches");
     lua_rawget(L, LUA_GLOBALSINDEX);
     const int matchesRef = luaL_ref(L, LUA_REGISTRYINDEX);
@@ -4544,16 +4522,15 @@ bool TLuaInterpreter::globalsMetatablePristine(lua_State* L) const
 // No documentation available in wiki - internal function
 bool TLuaInterpreter::lazyGlobalsUsable(lua_State* L) const
 {
-    const int mode = lazyGlobalsMode();
-    if (!mLazyGlobalsInstalled || mode == 4) {
+    if (!mLazyGlobalsInstalled) {
         return false;
     }
     // setfenv(0, ...) gives the thread another globals table, which is where
     // everything Mudlet sets goes from then on and which has no handlers on it
-    if (lua_topointer(L, LUA_GLOBALSINDEX) != mGlobalsTable && lazyGlobalsSabotage() != 7) {
+    if (lua_topointer(L, LUA_GLOBALSINDEX) != mGlobalsTable) {
         return false;
     }
-    if ((!mGlobalsMetatableTouched && mode != 5) || lazyGlobalsSabotage() == 9) {
+    if (!mGlobalsMetatableTouched) {
         return true;
     }
     return globalsMetatablePristine(L);
@@ -4565,7 +4542,6 @@ bool TLuaInterpreter::lazyGlobalsUsable(lua_State* L) const
 // when it cannot, leaving the caller to build them itself.
 bool TLuaInterpreter::deferDispatchGlobals(lua_State* L, const MultimatchesSource source, const bool setsMatches)
 {
-    const int mode = lazyGlobalsMode();
     if (!lazyGlobalsUsable(L)) {
         return false;
     }
@@ -4575,15 +4551,6 @@ bool TLuaInterpreter::deferDispatchGlobals(lua_State* L, const MultimatchesSourc
         lua_pushnil(L);
         lua_rawset(L, LUA_GLOBALSINDEX);
         mMatchesPending = true;
-    }
-
-    if (mode == 1) {
-        mSpareMultimatchesSeen = true;
-        if (source != MultimatchesSource::Untouched) {
-            pushMultimatchesTable(L, source == MultimatchesSource::Captures);
-            lua_setglobal(L, "multimatches");
-        }
-        return true;
     }
 
     const bool parked = mMultimatchesPending != PendingMultimatches::None;
@@ -4653,7 +4620,7 @@ void TLuaInterpreter::materialisePendingCaptures(lua_State* L)
             lua_rawgeti(L, LUA_REGISTRYINDEX, mMultimatchesKeyRef);
             pushPendingMultimatches(L);
             lua_rawset(L, LUA_GLOBALSINDEX);
-            if (mMultimatchesPending == PendingMultimatches::Spare && lazyGlobalsSabotage() != 2) {
+            if (mMultimatchesPending == PendingMultimatches::Spare) {
                 mSpareMultimatchesSeen = true;
             }
         }
@@ -4692,7 +4659,7 @@ int TLuaInterpreter::lazyGlobalsIndex(lua_State* L)
         return 0;
     }
     // A sandbox that was handed this metatable has no claim on any of them
-    if (lua_topointer(L, 1) != self->mGlobalsTable && lazyGlobalsSabotage() != 8) {
+    if (lua_topointer(L, 1) != self->mGlobalsTable) {
         return 0;
     }
 
@@ -4722,7 +4689,7 @@ int TLuaInterpreter::lazyGlobalsIndex(lua_State* L)
     } else if (wantsLine) {
         self->mLinePending = false;
     } else {
-        if (self->mMultimatchesPending == PendingMultimatches::Spare && lazyGlobalsSabotage() != 2) {
+        if (self->mMultimatchesPending == PendingMultimatches::Spare) {
             self->mSpareMultimatchesSeen = true;
         }
         self->mMultimatchesPending = PendingMultimatches::None;
@@ -4739,7 +4706,7 @@ int TLuaInterpreter::lazyGlobalsNewindex(lua_State* L)
     if (lua_type(L, 2) == LUA_TSTRING) {
         auto* self = static_cast<TLuaInterpreter*>(lua_touserdata(L, lua_upvalueindex(1)));
         const char* key = lua_tostring(L, 2);
-        if (lazyGlobalsSabotage() != 1 && (key == self->mMatchesKey || key == self->mMultimatchesKey || key == self->mLineKey) && lua_topointer(L, 1) == self->mGlobalsTable) {
+        if ((key == self->mMatchesKey || key == self->mMultimatchesKey || key == self->mLineKey) && lua_topointer(L, 1) == self->mGlobalsTable) {
             if (key == self->mMatchesKey) {
                 self->mMatchesPending = false;
             } else if (key == self->mLineKey) {
@@ -4761,7 +4728,7 @@ int TLuaInterpreter::lazyGlobalsNewindex(lua_State* L)
 int TLuaInterpreter::globalsMetatableGuard(lua_State* L)
 {
     auto* self = static_cast<TLuaInterpreter*>(lua_touserdata(L, lua_upvalueindex(1)));
-    if (lua_topointer(L, 1) == self->mGlobalsTable && lazyGlobalsSabotage() != 3) {
+    if (lua_topointer(L, 1) == self->mGlobalsTable) {
         self->materialisePendingGlobals(L);
         self->mGlobalsMetatableTouched = true;
     }
@@ -4771,9 +4738,6 @@ int TLuaInterpreter::globalsMetatableGuard(lua_State* L)
 // No documentation available in wiki - internal function
 void TLuaInterpreter::installLazyGlobals()
 {
-    if (lazyGlobalsMode() == 0) {
-        return;
-    }
     lua_State* L = pGlobalLua;
     const int callerStackTop = lua_gettop(L);
     // Only onto the metatable LuaGlobal.lua gives the globals table, and only
@@ -5943,8 +5907,7 @@ void TLuaInterpreter::pushUtf8String(lua_State* L, const QString& text)
 void TLuaInterpreter::setLineGlobal(const QString& line)
 {
     lua_State* L = pGlobalLua;
-    const int mode = lazyGlobalsMode();
-    if ((mode != 3 && mode != 5) || !lazyGlobalsUsable(L)) {
+    if (!lazyGlobalsUsable(L)) {
         mLinePending = false;
         set_lua_string(TConsole::cmLuaLineVariable, line);
         return;
@@ -5952,7 +5915,7 @@ void TLuaInterpreter::setLineGlobal(const QString& line)
 
     // Tested for first, as setting nil under a name that is not there would
     // add it to the table
-    if (globalPresent(L, mLineKeyRef) && lazyGlobalsSabotage() != 5) {
+    if (globalPresent(L, mLineKeyRef)) {
         lua_rawgeti(L, LUA_REGISTRYINDEX, mLineKeyRef);
         lua_pushnil(L);
         lua_rawset(L, LUA_GLOBALSINDEX);
