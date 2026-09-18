@@ -2308,9 +2308,8 @@ void Host::incomingStreamProcessor(const QString& data, int line)
 
     // Every unit's doCleanup() starts by asking this, and on nearly every line
     // all six answer no; asking here keeps the six calls off the per-line path.
-    // ScriptUnit defers deletes too (a package script uninstalling its own
-    // package mid-compile or mid-event-dispatch), so it is flushed here
-    // alongside the others:
+    // ScriptUnit defers deletes too (a package script uninstalling its own package
+    // mid-compile or mid-event-dispatch), so flush it here alongside the others:
     if (mAliasUnit.hasPendingDeletes()) {
         mAliasUnit.doCleanup();
     }
