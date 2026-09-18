@@ -464,11 +464,12 @@ private:
 };
 
 // The one color pair the game sent for the whole of [start, end) of a line, or
-// null when it sent several or the window is empty. A snapshot that stops short of the window cannot
-// answer for the text past its end; with no snapshot taken the line itself
-// still holds the game's colors for the whole of it. What dismisses a root
-// color trigger before match() and what match_color_pattern() reads have to be
-// this one answer, or the first would dismiss a line the second fires on.
+// null when it sent several or the window is empty. A snapshot that stops short
+// of the window cannot answer for the text past its end; with no snapshot taken
+// the line itself still holds the game's colors for the whole of it. What
+// dismisses a root color trigger before match() and what match_color_pattern()
+// reads have to be this one answer, or the first would dismiss a line the
+// second fires on.
 const TChar* uniformWindowColors(TBuffer& buffer, const std::vector<TChar>* pPassLine, const int line, const int start, const int end)
 {
     if (end <= start || (pPassLine && static_cast<int>(pPassLine->size()) < end)) {
@@ -757,9 +758,9 @@ void TTrigger::rebuildPrescanGrams()
 
     // The bigram summary reaches further than the n-gram index: a perl pattern
     // with a required literal, which the index cannot decide, is decidable by
-    // it. A start-of-line or exact
-    // match holds every pair of its pattern just as a substring match does, and
-    // all three compare case-sensitively, which is how bitsFor() summarises.
+    // it. A start-of-line or exact match holds every pair of its pattern just
+    // as a substring match does, and all three compare case-sensitively, which
+    // is how bitsFor() summarises.
     std::vector<TBigramFilter::Bits> patternBigrams;
     patternBigrams.reserve(mPatterns.size());
     for (int i = 0; i < mPatterns.size(); ++i) {
