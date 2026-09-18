@@ -59,6 +59,12 @@ function(sandbox_test_config_dirs)
             # CoreFoundation is handed a home directory rather than a config root,
             # and one that has to exist - Qt creates a config root on the way to
             # writing into it, and no one creates a home
+            #
+            # The Security framework reads this home too, so a test run has no login
+            # keychain to reach: reads answer "not found", but a write asks the person
+            # who ran the suite whether to reset their keychain to defaults. A test that
+            # writes to the store has to leave that alone on macOS - see
+            # CredentialManagerKeychainTest::initTestCase().
             file(MAKE_DIRECTORY "${testConfigDir}")
             set_property(TEST ${testName} APPEND PROPERTY ENVIRONMENT "CFFIXED_USER_HOME=${testConfigDir}")
         endif()
