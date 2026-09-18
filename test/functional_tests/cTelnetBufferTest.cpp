@@ -217,10 +217,12 @@ private:
             qint32 amount = 0;
             stream >> chunk.delay >> amount;
             if (stream.status() != QDataStream::Ok || amount < 0) {
-                break;
+                return {};
             }
             chunk.bytes.resize(amount);
-            stream.readRawData(chunk.bytes.data(), amount);
+            if (stream.readRawData(chunk.bytes.data(), amount) != amount) {
+                return {};
+            }
             chunks << chunk;
         }
         return chunks;
@@ -617,7 +619,7 @@ private slots:
         const QList<RecordedChunk> chunks = recordCompressedReads({compressed.left(2), compressed.mid(2)}, pauseMs);
 
         for (const RecordedChunk& chunk : chunks) {
-            QVERIFY2(!chunk.bytes.isEmpty(), "an empty chunk was recorded, and loading the replay would refuse the file");
+            QVERIFY2(!chunk.bytes.isEmpty(), "an empty chunk was recorded, which older Mudlets refuse to load");
         }
         QCOMPARE(chunks.size(), 1);
         QCOMPARE(chunks.first().bytes, text);
@@ -649,6 +651,23 @@ private slots:
         for (qsizetype i = 1; i < chunks.size(); ++i) {
             QVERIFY2(chunks.at(i).delay < pauseMs / 2, qPrintable(qsl("chunk %1 waited %2 ms, but it came from the same read as the first").arg(i).arg(chunks.at(i).delay)));
         }
+    }
+
+    // The end of a compressed stream can inflate to nothing and still bring
+    // plain text in the same read, which waited as long as that read did.
+    void textAfterTheEndOfACompressedStreamKeepsItsWait()
+    {
+        constexpr int pauseMs = 200;
+        const QByteArray text = QByteArrayLiteral("mccp line before the end\r\n");
+        const QByteArray after = QByteArrayLiteral("plain line after the end\r\n");
+        const QByteArray compressed = qCompress(text, 9).mid(4);
+        // the last four bytes are the checksum, which inflates to nothing
+        const QList<RecordedChunk> chunks = recordCompressedReads({compressed.chopped(4), compressed.right(4) + after}, pauseMs);
+
+        QCOMPARE(chunks.size(), 2);
+        QCOMPARE(chunks.first().bytes, text);
+        QCOMPARE(chunks.last().bytes, after);
+        QVERIFY2(chunks.last().delay >= pauseMs / 2, qPrintable(qsl("the plain text waited %1 ms, so the pause before its read was lost").arg(chunks.last().delay)));
     }
 
     // Declared last on purpose: on the unfixed code this trips AddressSanitizer,

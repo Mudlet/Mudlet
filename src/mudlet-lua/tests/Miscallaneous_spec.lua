@@ -1523,6 +1523,26 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_true(contains(err, "replay file seems to be corrupt"), tostring(err))
       end)
 
+      it("returns nil+msg for a chunk with a negative length", function()
+        local corrupt = getMudletHomeDir() .. "/mudlet-spec-negative-replay.dat"
+        finally(function() os.remove(corrupt) end)
+        writeFile(corrupt, "\0\0\0\0\255\255\255\255")
+
+        local ok, err = loadReplay(corrupt)
+        assert.is_nil(ok)
+        assert.is_true(contains(err, "replay file seems to be corrupt"), tostring(err))
+      end)
+
+      it("returns nil+msg for a file of nothing but zero bytes", function()
+        local corrupt = getMudletHomeDir() .. "/mudlet-spec-zeroed-replay.dat"
+        finally(function() os.remove(corrupt) end)
+        writeFile(corrupt, string.rep("\0", 64))
+
+        local ok, err = loadReplay(corrupt)
+        assert.is_nil(ok)
+        assert.is_true(contains(err, "replay file seems to be corrupt"), tostring(err))
+      end)
+
       it("plays the recorded bytes back into the main console", function()
         if not testMode then
           pending("letting the replay timer run needs MUDLET_TEST_MODE")
@@ -1557,9 +1577,8 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         pumpEvents(200)
       end)
 
-      -- a game that compresses its output can have Mudlet read nothing but
-      -- the start of a compressed block, and recordings made so far hold an
-      -- empty chunk for that read
+      -- older Mudlets recorded an empty chunk when a compressed read
+      -- inflated to nothing
       it("plays on past a chunk with no bytes in it", function()
         if not testMode then
           pending("letting the replay timer run needs MUDLET_TEST_MODE")
@@ -1592,6 +1611,48 @@ describe("Tests C++ functions in the Miscallaneous category", function()
 
         assert.is_true(playedBack(mark, "mudlet-spec-wide-after-empty-line"), "the replay did not reach the console")
         assert.is_true(contains(textFrom(mark), "mudlet-spec-wide-before-empty-line"), "the line before the empty chunk did not reach the console")
+        pumpEvents(200)
+      end)
+
+      -- read with four byte delays, this file runs out part way through a
+      -- length, which must not pass for a chunk with no bytes in it
+      it("plays back an eight byte delay replay that is too short to read with four byte delays", function()
+        if not testMode then
+          pending("letting the replay timer run needs MUDLET_TEST_MODE")
+          return
+        end
+        local replay = getMudletHomeDir() .. "/mudlet-spec-wide-short-replay.dat"
+        finally(function() os.remove(replay) end)
+        writeFile(replay, wideChunk(0, "Zq\n"))
+        local mark = getLastLineNumber("main")
+
+        assert.is_true(loadReplay(replay))
+
+        assert.is_true(playedBack(mark, "Zq"), "the replay did not reach the console")
+        pumpEvents(200)
+      end)
+
+      it("loads a replay after refusing a file too short to be one", function()
+        if not testMode then
+          pending("letting the replay timer run needs MUDLET_TEST_MODE")
+          return
+        end
+        local short = getMudletHomeDir() .. "/mudlet-spec-short-replay.dat"
+        local replay = getMudletHomeDir() .. "/mudlet-spec-after-short-replay.dat"
+        finally(function()
+          os.remove(short)
+          os.remove(replay)
+        end)
+        writeFile(short, "\0\0")
+        writeFile(replay, chunk(0, "mudlet-spec-after-short-line\r\n"))
+
+        local ok, err = loadReplay(short)
+        assert.is_nil(ok)
+        assert.is_true(contains(err, "replay file seems to be corrupt"), tostring(err))
+
+        local mark = getLastLineNumber("main")
+        assert.is_true(loadReplay(replay))
+        assert.is_true(playedBack(mark, "mudlet-spec-after-short-line"), "the replay did not reach the console")
         pumpEvents(200)
       end)
 
