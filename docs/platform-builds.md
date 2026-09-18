@@ -33,7 +33,10 @@ existing Makefiles tree, use `make -j $(sysctl -n hw.ncpu)`.
 
 ccache is enabled automatically whenever it is installed. A full cache evicts objects continuously,
 so branch switches can trigger near-full rebuilds — run `ccache -s`, and if `Cache size` has
-reached `Max cache size`, raise it with `ccache -M <n>G`.
+reached `Max cache size`, raise it with `ccache -M <n>G`. To share the cache between checkouts,
+such as git worktrees, run `ccache --set-config base_dir=<directory containing the checkouts>`,
+build each in the same preset directory, and reconfigure. Debug info paths then become relative
+to the checkout root.
 
 ## Building on Windows
 

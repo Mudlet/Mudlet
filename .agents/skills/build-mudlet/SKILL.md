@@ -216,6 +216,12 @@ ccache is installed. A full cache evicts objects continuously, so switching bran
 near-full rebuild. Run `ccache -s`; if `Cache size` has reached `Max cache size`, raise it with
 `ccache -M <n>G`.
 
+Separate checkouts, such as git worktrees, only share the cache once ccache's `base_dir` covers
+them all and each builds into the same preset directory: run
+`ccache --set-config base_dir=<directory containing the checkouts>`, then reconfigure. Configure
+then adds `-fdebug-prefix-map`, without which Debug builds still miss. Debug info paths become
+relative to the checkout root, so start gdb from there.
+
 **Sanitizers are on by default** on every non-Windows build, regardless of build type
 (`src/cmake/EnableSanitizers.cmake` defaults `USE_SANITIZER` to `address`). They cost both compile
 time and runtime speed. Use a `-nosan` or `-release` preset when not chasing a memory bug; both

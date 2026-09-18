@@ -272,6 +272,21 @@ find_program(CCACHE_FOUND ccache)
 if(CCACHE_FOUND)
   set(CMAKE_C_COMPILER_LAUNCHER ccache)
   set(CMAKE_CXX_COMPILER_LAUNCHER ccache)
+
+  # A ccache base_dir lets checkouts beneath it, such as git worktrees, share
+  # cached objects - except in -g builds, where ccache also hashes the build
+  # directory unless debug info is relocated. Relocating makes debug paths
+  # relative, so it is left to those who opted in by setting base_dir.
+  execute_process(COMMAND ${CCACHE_FOUND} --get-config base_dir
+    OUTPUT_VARIABLE CCACHE_BASE_DIR OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+  if(CCACHE_BASE_DIR AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    cmake_path(IS_PREFIX CCACHE_BASE_DIR "${CMAKE_SOURCE_DIR}" NORMALIZE CCACHE_BASE_DIR_COVERS_SOURCE)
+    if(CCACHE_BASE_DIR_COVERS_SOURCE)
+      # The trailing slash keeps a sibling such as <checkout>-build from matching.
+      add_compile_options("-fdebug-prefix-map=${CMAKE_SOURCE_DIR}/=./")
+      message(STATUS "ccache base_dir covers this checkout - relocating debug info so Debug objects are shared with other checkouts")
+    endif()
+  endif()
 endif(CCACHE_FOUND)
 
 # credit to https://github.com/heavyai/heavydb/blob/72c90bc290b79dd30240da41c103a00720f6b050/CMakeLists.txt#L119

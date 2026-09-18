@@ -736,8 +736,13 @@ target_compile_definitions(${LIB_MUDLET_TARGET}
   PRIVATE
     APP_VERSION="${APP_VERSION}"
     APP_TARGET="${APP_TARGET}"
-    LUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}"
-    LUA_SOURCE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/mudlet-lua/lua")
+    LUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}")
+
+# ccache's base_dir makes paths relative but leaves -D values alone, so this
+# per-checkout path goes only to the file that reads it - on the whole target it
+# would stop ccache's direct mode hitting across checkouts.
+set_property(SOURCE TLuaInterpreter.cpp APPEND PROPERTY COMPILE_DEFINITIONS
+  LUA_SOURCE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/mudlet-lua/lua")
 
 if(USE_OWN_QTKEYCHAIN)
     target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_OWN_QT6_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
