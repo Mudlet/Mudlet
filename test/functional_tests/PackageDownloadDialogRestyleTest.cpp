@@ -68,7 +68,7 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::getQSettings()->setValue(qsl("uiTourShown"), true);
         mudlet::getQSettings()->sync();
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
@@ -87,7 +87,7 @@ private slots:
     {
         mpHost = nullptr;
         if (mudlet::self()) {
-            QDir(mudlet::getMudletPath(enums::profileHomePath, mProfileName)).removeRecursively();
+            QDir(MudletPaths::getMudletPath(enums::profileHomePath, mProfileName)).removeRecursively();
         }
         delete mudlet::self();
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
