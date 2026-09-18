@@ -499,20 +499,43 @@ end
 ---   createGauge("healthBar", 300, 20, 30, 300, "Now with some text", "green", "horizontal, vertical, goofy, or batty")
 ---   </pre>
 function createGauge(windowname, gaugeName, width, height, x, y, gaugeText, r, g, b, orientation)
-  --Make windowname optional
-  if type(gaugeName) == "number" then
-    orientation = b
-    b = g
-    g = r
-    r = gaugeText
-    gaugeText = y
-    y = x
-    x = height
-    height = width
-    width = gaugeName
-    gaugeName = windowname
-    windowname = nil
+  -- Support table argument format
+  if type(windowname) == 'table' then
+    local args = windowname
+    windowname = args.windowName or args.window
+    gaugeName = args.name or args.gaugeName
+    width = args.width
+    height = args.height
+    x = args.x or args.Xpos
+    y = args.y or args.Ypos
+    gaugeText = args.gaugeText or args.text
+    r = args.r or args.red
+    g = args.g or args.green
+    b = args.b or args.blue
+    orientation = args.orientation
+
+    -- Handle color string format
+    if type(r) == "string" then
+      orientation = args.orientation or g
+      r, g, b = getRGB(r)
+    end
+  else
+    --Make windowname optional
+    if type(gaugeName) == "number" then
+      orientation = b
+      b = g
+      g = r
+      r = gaugeText
+      gaugeText = y
+      y = x
+      x = height
+      height = width
+      width = gaugeName
+      gaugeName = windowname
+      windowname = nil
+    end
   end
+
   windowname = windowname or "main"
   gaugeText = gaugeText or ""
   if type(r) == "string" then
@@ -604,15 +627,29 @@ end
 ---   createConsole("myConsoleWindow", 8, 80, 20, 200, 400)
 ---   </pre>
 function createConsole(windowName, consoleName, fontSize, charsPerLine, numberOfLines, Xpos, Ypos)
-  if Ypos == nil then
-    Ypos = Xpos
-    Xpos = numberOfLines
-    numberOfLines = charsPerLine
-    charsPerLine = fontSize
-    fontSize = consoleName
-    consoleName = windowName
-    windowName = "main"
+  -- Support table argument format
+  if type(windowName) == 'table' then
+    local args = windowName
+    windowName = args.windowName or args.window
+    consoleName = args.consoleName or args.name
+    fontSize = args.fontSize
+    charsPerLine = args.charsPerLine
+    numberOfLines = args.numberOfLines
+    Xpos = args.Xpos or args.x
+    Ypos = args.Ypos or args.y
+  else
+    if Ypos == nil then
+      Ypos = Xpos
+      Xpos = numberOfLines
+      numberOfLines = charsPerLine
+      charsPerLine = fontSize
+      fontSize = consoleName
+      consoleName = windowName
+      windowName = "main"
+    end
   end
+
+  windowName = windowName or "main"
   assert(type(windowName) == 'string', 'createConsole: invalid type for windowName (expected string, got '..type(windowName)..'!)')
   assert(type(consoleName) == 'string', 'createConsole: invalid type for consoleName (expected string, got '..type(consoleName)..'!)')
   assert(type(fontSize) == 'number', 'createConsole: invalid type for fontSize (expected number, got '..type(fontSize)..'!)')
@@ -2216,6 +2253,16 @@ local insertFuncs = {[echo] = insertText, [cecho] = cinsertText, [decho] = dinse
 ---
 --- @see prefix
 function suffix(what, func, fgc, bgc, window)
+  -- Support table argument format
+  if type(what) == 'table' then
+    local args = what
+    what = args.text or args.what
+    func = args.func or args.writingFunction or args.function_name
+    fgc = args.fgc or args.fgColor or args.foregroundColor
+    bgc = args.bgc or args.bgColor or args.backgroundColor
+    window = args.window or args.windowName
+  end
+
   assert(type(what) == 'string', 'suffix: bad argument #1 type (expected string, got '..type(what)..'!)')
   window = window or "main"
   func = insertFuncs[func] or func or insertText
@@ -2241,6 +2288,16 @@ end
 ---
 --- @see suffix
 function prefix(what, func, fgc, bgc, window)
+  -- Support table argument format
+  if type(what) == 'table' then
+    local args = what
+    what = args.text or args.what
+    func = args.func or args.writingFunction or args.function_name
+    fgc = args.fgc or args.fgColor or args.foregroundColor
+    bgc = args.bgc or args.bgColor or args.backgroundColor
+    window = args.window or args.windowName
+  end
+
   assert(type(what) == 'string', 'prefix: bad argument #1 type (expected string, got '..type(what)..'!)')
   window = window or "main"
   func = insertFuncs[func] or func or insertText
