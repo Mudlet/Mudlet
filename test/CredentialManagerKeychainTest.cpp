@@ -70,6 +70,7 @@ private slots:
     void testATimedOutRemovalDoesNotStopLaterKeychainJobs();
     void testALookupIsNotDisturbedByAnotherOnTheSameManager();
     void testDeletingAManagerMidLookupLeavesItsReadToFinish();
+    void testAWriteTheKeychainHasAnsweredIsNotOrphanedWithItsPassword();
     void testACallbackThatFlushesDeferredDeletesDoesNotDeleteTheAnsweringRead();
     void testALookupFindsThePasswordInTheEncryptedFileBeforeTheCollidingFormat_data();
     void testALookupFindsThePasswordInTheEncryptedFileBeforeTheCollidingFormat();
@@ -313,6 +314,32 @@ bool keychainQueueRuns()
     job->deleteLater();
     return finished;
 }
+
+// Runs one callback ahead of every event already queued, which is how a test reaches the window
+// between a job answering and the queued result handler that was posted while it did.
+class HighPriorityCall : public QObject
+{
+public:
+    explicit HighPriorityCall(std::function<void()> call)
+    : mCall(std::move(call))
+    {
+    }
+
+    void post() { QCoreApplication::postEvent(this, new QEvent(QEvent::User), Qt::HighEventPriority); }
+
+protected:
+    bool event(QEvent* e) override
+    {
+        if (e->type() == QEvent::User) {
+            mCall();
+            return true;
+        }
+        return QObject::event(e);
+    }
+
+private:
+    std::function<void()> mCall;
+};
 
 struct ExpectedRead
 {
@@ -889,6 +916,45 @@ void CredentialManagerKeychainTest::testDeletingAManagerMidLookupLeavesItsReadTo
     QVERIFY2(keychainQueueRuns(), "QtKeychain's queue did not move on once the orphaned read answered");
     QTRY_VERIFY2(!staller.firstStalledAlive(), "an orphaned read was never deleted once it answered");
     QCOMPARE(answer->count, 0);
+}
+
+void CredentialManagerKeychainTest::testAWriteTheKeychainHasAnsweredIsNotOrphanedWithItsPassword()
+{
+    // The window between a job answering and its result handler running: the handler is queued, so
+    // closing the dialog that started the write drops it along with the manager. QtKeychain will not
+    // delete the job either - Job::emitFinished() read autoDelete() as the job answered - so nothing
+    // is left to, and it still carries the password it was given.
+    auto manager = std::make_unique<CredentialManager>();
+    QPointer<QKeychain::Job> writeJob;
+    bool handlerRan = false;
+    bool managerGone = false;
+    HighPriorityCall closeTheDialog([&manager, &managerGone]() {
+        manager.reset();
+        managerGone = true;
+    });
+    manager->mJobStartHook = [&writeJob, &closeTheDialog](QKeychain::Job* job) {
+        writeJob = job;
+        // Queued behind the result handler's own posted call but ahead of it, so the manager goes away
+        // once the keychain has really answered and QtKeychain is done with the job
+        QObject::connect(
+                job,
+                &QKeychain::Job::finished,
+                job,
+                [&closeTheDialog]() {
+                    closeTheDialog.post();
+                },
+                Qt::DirectConnection);
+    };
+
+    QTest::ignoreMessage(QtWarningMsg, QRegularExpression(QStringLiteral("abandoned the keychain write for profile \"%1\"").arg(QRegularExpression::escape(mProfile))));
+    manager->storePassword(mProfile, mKey, QStringLiteral("orphan-secret"), [&handlerRan](bool, const QString&) {
+        handlerRan = true;
+    });
+
+    QTRY_VERIFY2(managerGone, "the keychain never answered the write, so this run tested nothing");
+    QVERIFY2(!handlerRan, "the write was handled before its manager went away, so the window this test needs never happened");
+    QTRY_VERIFY2(!writeJob, "a write the keychain had answered was left behind when its manager went away, with the password still in it");
+    QVERIFY2(keychainQueueRuns(), "deleting the answered write stopped every later keychain job from running");
 }
 
 void CredentialManagerKeychainTest::testACallbackThatFlushesDeferredDeletesDoesNotDeleteTheAnsweringRead()
