@@ -24,8 +24,10 @@
 
 #include "TCommandLine.h"
 
+#include "MudletPaths.h"
 #include "TEncodingHelper.h"
 #include "Host.h"
+#include "HostManager.h"
 #include "TConsole.h"
 #include "TMainConsole.h"
 #include "TTabBar.h"
@@ -810,7 +812,7 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
         action_removeWord = new QAction(tr("Remove from user dictionary"));
         action_removeWord->setEnabled(false);
         // }
-        if (mudlet::self()->mUsingMudletDictionaries) {
+        if (MudletPaths::usingMudletDictionaries()) {
             /*:
             This line is shown in the list of spelling suggestions on the profile's command
             line context menu to clearly divide up where the suggestions for correct
@@ -1500,7 +1502,7 @@ void TCommandLine::clearBlacklist()
 
 void TCommandLine::slot_adjustAccessibleNames()
 {
-    const bool multipleProfilesActive = (mudlet::self()->getHostManager().getHostCount() > 1);
+    const bool multipleProfilesActive = (HostManager::self()->getHostCount() > 1);
     const QString hostName{mpHost ? mpHost->getName() : QString()};
     switch (mType) {
     case MainCommandLine:
@@ -1618,7 +1620,7 @@ void TCommandLine::restoreHistory()
         return;
     }
 
-    QString pathFileName{mudlet::self()->mudlet::getMudletPath(enums::profileDataItemPath, pHost->getName(), mBackingFileName)};
+    QString pathFileName{MudletPaths::getMudletPath(enums::profileDataItemPath, pHost->getName(), mBackingFileName)};
     QFile historyFile(pathFileName, this);
     if (historyFile.exists()) {
         if (historyFile.open(QIODevice::ReadOnly | QIODevice::Unbuffered)) {
@@ -1673,7 +1675,7 @@ void TCommandLine::slot_saveHistory()
         return;
     }
 
-    QString pathFileName{mudlet::self()->mudlet::getMudletPath(enums::profileDataItemPath, pHost->getName(), mBackingFileName)};
+    QString pathFileName{MudletPaths::getMudletPath(enums::profileDataItemPath, pHost->getName(), mBackingFileName)};
     QSaveFile historyFile(pathFileName, this);
     if (historyFile.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         QTextStream ofs(&historyFile);

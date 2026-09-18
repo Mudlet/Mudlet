@@ -31,6 +31,7 @@
 
 
 #include "Host.h"
+#include "MudletPaths.h"
 #include "TBuffer.h"
 #include "TMxpProcessor.h"
 #include "TConsoleModel.h"
@@ -66,6 +67,8 @@
 #include <QSignalBlocker>
 #include <QSslError>
 #include <QtGlobal>
+
+#include <memory>
 
 using namespace std::chrono_literals;
 
@@ -318,10 +321,10 @@ cTelnet::~cTelnet()
         mpPostingTimer->stop();
     }
 
-    // Release zlib resources if MCCP compression was still active
-    if (mNeedDecompression) {
-        inflateEnd(&mZstream);
-    }
+    // Unconditional: the end of a compressed stream re-initialises the stream
+    // for the next one while switching decompression off, so the state to free
+    // exists whether or not compression is active
+    inflateEnd(&mZstream);
 
     // Aggressively disconnect the sockets to prevent signals during destruction
     if (mpSocket && mpSocket->state() != QAbstractSocket::UnconnectedState) {
@@ -1049,9 +1052,7 @@ void cTelnet::slot_socketDisconnected()
  the rules of the "QDateTime::toString(...)" function and may need
  modification for some locales, e.g. France, Spain.*/
                                              .toString(tr("hh:mm:ss.zzz")));
-    if (mNeedDecompression) {
-        inflateEnd(&mZstream);
-    }
+    inflateEnd(&mZstream);
     mNeedDecompression = false;
     reset();
 
@@ -1648,7 +1649,7 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent, con
         // outData is using the selected Mud Server encoding here:
         // we need to cook any byte values from the encoding process that are
         // 0xff (assuming that there are no Telnet protocol sequences in here):
-        outData = mudlet::replaceString(outData, "\xff", "\xff\xff");
+        outData = escapeIac(outData);
 
         // Character-at-a-time detection: a genuine character-at-a-time server keeps
         // ECHO (with SGA) active across every submitted line, whereas a server that
@@ -4437,7 +4438,7 @@ void cTelnet::downloadAndInstallGUIPackage(const QString& packageName, const QSt
                    "(url='%2').")
                         .arg(packageName, url));
 
-    mServerPackage = mudlet::getMudletPath(enums::profileDataItemPath, mProfileName, fileName);
+    mServerPackage = MudletPaths::getMudletPath(enums::profileDataItemPath, mProfileName, fileName);
     mpHost->updateProxySettings(mpDownloader);
 
     // Abort any in-flight predecessor while mpPackageDownloadReply still points
@@ -5604,10 +5605,9 @@ void cTelnet::readPendingSocketData()
 
 void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopbackTesting)
 {
-    // Guard against deep re-entry when draining leftover (de)compressed data -
-    // each level allocates ~100 KB on the stack for out_buffer. Per-connection
-    // (a member, not thread-wide) so one profile's drain - or a re-entrant
-    // feedTelnet() - cannot spend another connection's budget.
+    // The cap that bounds a decompression bomb (see scmMaxDecompressionRecursion)
+    // is per-connection - a member, not thread-wide - so one profile's drain, or
+    // a re-entrant feedTelnet(), cannot spend another connection's budget.
     // Being a member, a level leaked by an early return would be permanent:
     // scmMaxDecompressionRecursion of them and the connection refuses all further
     // data, so the count comes off in a guard rather than at each return.
@@ -5626,8 +5626,11 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
         return;
     }
 
-    // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (3 of 7) - investigate switching from using `char[]` to `std::array<char>`
-    char out_buffer[BUFFER_SIZE + 10];
+    // On the heap: the drain at the end re-enters this function once per
+    // output buffer, and nine 100 KB frames do not fit in the 1 MB main-thread
+    // stack Windows builds get. The frame is reserved in the prologue, so even
+    // the level the cap refuses pays for one.
+    const std::unique_ptr<char[]> out_buffer(new char[BUFFER_SIZE + 10]);
 
     // read() reports -1 on error and 0 when nothing was available; loopbackTest()
     // narrows a qsizetype into this int, so treat every non-positive value the
@@ -5652,8 +5655,8 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
     int remainingAmount = 0;
 
     if (mNeedDecompression) {
-        datalen = decompressBuffer(in_buffer, amount, out_buffer);
-        buffer = out_buffer;
+        datalen = decompressBuffer(in_buffer, amount, out_buffer.get());
+        buffer = out_buffer.get();
         // decompressBuffer() only fills one output buffer per call and drops
         // out of compression on stream end or a broken stream. Anything it did
         // not consume - more compressed data, or plain data past the stream -
@@ -5781,7 +5784,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                             int restLength = datalen - i - 3;
 
                             if (restLength > 0) {
-                                datalen = decompressBuffer(buffer, restLength, out_buffer);
+                                datalen = decompressBuffer(buffer, restLength, out_buffer.get());
                                 // queue input left over past this compressed chunk
                                 // (decompressBuffer() advanced 'buffer' to it) for
                                 // reprocessing at the end of this pass
@@ -5789,7 +5792,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                                     remainingData = buffer;
                                     remainingAmount = restLength;
                                 }
-                                buffer = out_buffer;
+                                buffer = out_buffer.get();
                                 i = -1; // start processing buffer from the beginning.
                             } else {
                                 datalen = 0;
@@ -6037,9 +6040,36 @@ std::string cTelnet::encodeAndCookBytes(const std::string& data)
 {
     if (!mEncoding.isEmpty() && mEncoding != "ASCII") {
         // Convert from UTF8 std::string to QString, then encode to Mud Server encoding
-        return mudlet::replaceString(TEncodingHelper::encode(QString::fromStdString(data), mEncoding).toStdString(), "\xff", "\xff\xff");
+        return escapeIac(TEncodingHelper::encode(QString::fromStdString(data), mEncoding).toStdString());
     }
-    return mudlet::replaceString(data, "\xff", "\xff\xff");
+    return escapeIac(data);
+}
+
+// A lone 0xff byte in outbound data would be read as the start of a telnet
+// command by the Server, so each one has to be sent doubled:
+std::string cTelnet::escapeIac(std::string data)
+{
+    auto position = data.find(TN_IAC);
+    while (position != std::string::npos) {
+        data.insert(position, 1, TN_IAC);
+        position = data.find(TN_IAC, position + 2);
+    }
+    return data;
+}
+
+std::string cTelnet::buildChannel102Message(const std::string& payload)
+{
+    std::string message;
+    message += TN_IAC;
+    message += TN_SB;
+    message += OPT_102;
+    // Only the payload is escaped. Doubling the framing IAC bytes as well would
+    // make the server read a literal 0xFF data byte followed by the rest of the
+    // subnegotiation as raw text, rather than a 102 subnegotiation at all.
+    message += escapeIac(payload);
+    message += TN_IAC;
+    message += TN_SE;
+    return message;
 }
 
 void cTelnet::setPostingTimeout(const int timeout)

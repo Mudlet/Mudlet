@@ -87,6 +87,10 @@ HARNESSES = {
         # they carry then describe a repaint that skipped the damaged band on
         # both sides, which is faster than the one the metric names.
         "must_be_set": ("display_overlay_cache_reused",),
+        # Emitted only by a run made with MUDLET_BENCH_CHUNK_BYTES set, so two
+        # such runs compare only if they cut the corpus into reads of the same
+        # size, and neither compares with a run that fed it as one burst.
+        "workload_knobs": ("bench_chunk_bytes",),
         # Throughput for the text and trigger pipelines, plus the shipped default
         # packages on the same corpus - the pipeline metrics run on a bare
         # profile, so only defaults_text_lines_per_sec can see a package costing
@@ -147,7 +151,7 @@ HARNESSES = {
 # have it - but never read as a result either, so it stays out of the table.
 MODE_METRICS = ("bench_frame_hash_mode",)
 
-INVARIANTS = COMMON_INVARIANTS + MODE_METRICS + tuple(name for harness in HARNESSES.values() for name in harness["invariants"])
+INVARIANTS = COMMON_INVARIANTS + MODE_METRICS + tuple(name for harness in HARNESSES.values() for name in harness["invariants"] + harness.get("workload_knobs", ()))
 
 # Why a differing invariant means the runs are not comparable, where the default
 # answer - the two builds are not the same harness, rebuild them - would send
@@ -274,6 +278,14 @@ def check_invariants(before, after):
     if before_harness != after_harness:
         fail(f"the before run is a {before_harness} and the after run is a {after_harness} - different benchmarks cannot be compared.")
 
+    for name in HARNESSES[before_harness].get("workload_knobs", ()):
+        if (name in before) != (name in after) or (name in before and before[name] != after[name]):
+            setting = lambda run: f"{run[name]:g}" if name in run else "not set"
+            fail(
+                f"{name} is {setting(before)} in the before run and {setting(after)} in the after run - "
+                "the two runs fed the corpus differently and cannot be compared."
+            )
+
     for name in COMMON_INVARIANTS + HARNESSES[before_harness]["invariants"]:
         in_before = name in before
         in_after = name in after
@@ -284,6 +296,12 @@ def check_invariants(before, after):
                 f"the same {before_harness} harness/build and cannot be compared."
             )
         if before[name] != after[name]:
+            if name == "corpus_version" and 0 in (before[name], after[name]):
+                fail(
+                    "corpus_version 0 marks a run made with MUDLET_BENCH_LINES or MUDLET_BENCH_CHUNK_BYTES "
+                    "set, which reshapes the workload; such a run compares only with another made with the "
+                    "same settings."
+                )
             reason = INVARIANT_HINTS.get(
                 name,
                 "the two runs measured different workloads or build configurations and cannot be "

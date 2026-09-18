@@ -55,6 +55,7 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
@@ -235,7 +236,7 @@ private:
 
     bool writeProfileSave(const QString& profileName, const QString& fontFamily, const QString& moduleName = QString(), const QString& modulePath = QString())
     {
-        const QString folder = mudlet::getMudletPath(enums::profileXmlFilesPath, profileName);
+        const QString folder = MudletPaths::getMudletPath(enums::profileXmlFilesPath, profileName);
         if (!QDir().mkpath(folder)) {
             return false;
         }
@@ -337,10 +338,10 @@ private slots:
         if (portableMarkerPresent()) {
             QSKIP("portable.txt marker present - config dir cannot be redirected for this test");
         }
-        QVERIFY2(mudlet::getMudletPath(enums::profilesPath).startsWith(mConfigDir.path()), "test config dir redirection did not take effect");
+        QVERIFY2(MudletPaths::getMudletPath(enums::profilesPath).startsWith(mConfigDir.path()), "test config dir redirection did not take effect");
 
-        QVERIFY(mudlet::self()->getHostManager().addHost(mProfileName, QString(), QString(), QString()));
-        mpHost = mudlet::self()->getHostManager().getHost(mProfileName);
+        QVERIFY(HostManager::self()->addHost(mProfileName, QString(), QString(), QString()));
+        mpHost = HostManager::self()->getHost(mProfileName);
         QVERIFY(mpHost);
 
         QVERIFY2(!mudlet::self()->getAvailableFonts().contains(mMissingFamily, Qt::CaseInsensitive), "the stand-in for an uninstalled font turns out to be installed");

@@ -28,6 +28,7 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
+#include "MudletPaths.h"
 #include "TBuffer.h"
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
@@ -104,8 +105,8 @@ private:
         if (mpSecondHost) {
             return true;
         }
-        if (!QDir().mkpath(mudlet::getMudletPath(enums::profileHomePath, mSecondHostname)) || !mudlet::self()->writeProfileData(mSecondHostname, qsl("url"), mLocalhost).first
-            || !mudlet::self()->writeProfileData(mSecondHostname, qsl("port"), mPort).first) {
+        if (!QDir().mkpath(MudletPaths::getMudletPath(enums::profileHomePath, mSecondHostname)) || !MudletPaths::writeProfileData(mSecondHostname, qsl("url"), mLocalhost).first
+            || !MudletPaths::writeProfileData(mSecondHostname, qsl("port"), mPort).first) {
             return false;
         }
         // the second argument is offline, so this profile never opens a
@@ -113,7 +114,7 @@ private:
         runLua(mpHost, qsl("loadProfile('%1', true)").arg(mSecondHostname));
         for (int attempt = 0; attempt < 20 && mpSecondHost.isNull(); ++attempt) {
             settle(300ms);
-            mpSecondHost = mudlet::self()->getHostManager().getHost(mSecondHostname);
+            mpSecondHost = HostManager::self()->getHost(mSecondHostname);
         }
         settle(600ms);
         return !mpSecondHost.isNull();
