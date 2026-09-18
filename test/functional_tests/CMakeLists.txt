@@ -236,6 +236,7 @@ set(TEARDOWN_GROUP_TEST_SOURCES
 
 # Sound, music and video, speech in and out, and the rich presence published to Discord
 set(MEDIA_GROUP_TEST_SOURCES
+    SpeechBridgeLuaTest.cpp
     SpeechRecognizerContractTest.cpp
     TDiscordModeTest.cpp
     VideoOutputHideTest.cpp
@@ -352,9 +353,9 @@ add_grouped_test_binary(functional_starterui_tests ${STARTERUI_GROUP_TEST_SOURCE
 add_grouped_test_binary(functional_teardown_tests ${TEARDOWN_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_media_tests ${MEDIA_GROUP_TEST_SOURCES})
 
-# A stand-in libvosk, so SpeechRecognizerContractTest can reach the code below
-# VoskRecognizer's library guard on a machine with no speech engine - which is
-# every CI runner. Named exactly as the real library is on each platform,
+# A stand-in libvosk, so SpeechRecognizerContractTest and SpeechBridgeLuaTest can
+# reach the code below VoskRecognizer's library guard on a machine with no speech
+# engine - which is every CI runner. Named exactly as the real library is on each platform,
 # because VoskRecognizer looks it up by filename along librarySearchPaths().
 # The test copies it into its own redirected config dir, the first of those
 # paths, so nothing outside the test's temporary directory is touched.
@@ -369,17 +370,18 @@ set_target_properties(vosk_stub PROPERTIES
     # No "lib" prefix from CMake and no version decoration: the name has to be
     # the one the real release ships, which VoskRecognizer hardcodes.
     # A subdirectory, NOT beside the test executables. loadVoskLibrary() asks for
-    # the bare name "vosk" before it tries any search path, and the dynamic
-    # loader answers that from the executable's own directory - so a stub built
-    # next to the binaries is found by every test in it, from process start,
-    # whether or not the test installed one. That silently skipped the two cases
-    # here that require no library and failed a third, all before any case ran.
+    # the bare name "vosk" before it tries any search path, and on Windows the
+    # loader answers that from the executable's own directory, as macOS does from
+    # the working directory ctest runs the binaries in - so there a stub built next
+    # to the binaries is found by every test in it, whether or not the test
+    # installed one. That silently skipped the two cases here that require no
+    # library and failed a third. Linux searches neither, but gains nothing from
+    # the stub being beside the binaries either.
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/vosk-stub"
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/vosk-stub"
-    # The stub's entry points are plain extern "C" with no __declspec(dllexport),
-    # so without this a Windows build produces a DLL that loads and resolves
-    # nothing - QLibrary::resolve() returns null for every symbol and the cases
-    # below would fail for a reason that has nothing to do with what they test.
+    # The stub's entry points are plain extern "C" with no __declspec(dllexport).
+    # A MinGW link, which is what Mudlet's Windows builds use, exports every
+    # symbol of such a DLL anyway; an MSVC link exports none without this.
     WINDOWS_EXPORT_ALL_SYMBOLS ON)
 if(APPLE)
     set_target_properties(vosk_stub PROPERTIES SUFFIX ".dylib")

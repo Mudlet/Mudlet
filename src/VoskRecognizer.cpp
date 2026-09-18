@@ -24,6 +24,7 @@
 #include "mudlet.h"
 
 #include <QDir>
+#include <QFileInfo>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -329,6 +330,7 @@ QString VoskRecognizer::backendVersion() const
 
 bool VoskRecognizer::initialize(const QString& modelPath)
 {
+    ++mLoadGeneration;
     // Its own guard, ahead of the availability check and not folded into it:
     // loading a model is a write, and going through loadVoskLibrary() mapped
     // the library back in regardless of the latch stt.unloadLibrary() set - so
@@ -454,7 +456,12 @@ bool VoskRecognizer::initialize(const QString& modelPath)
     // no microphone faults the bridge, which says nothing about whether this
     // load took - and failing here for that would report a model that is loaded,
     // and that getInfo() still names, as having failed to load.
-    if (!mVoskModel || !mVoskRecognizer || mModelPath != modelPath) {
+    // The same model reached under another spelling - a trailing separator, a
+    // symlink - has not replaced anything, so it is compared as a directory
+    // rather than as text.
+    const QString loadedModel = QFileInfo(mModelPath).canonicalFilePath();
+    const bool sameModel = loadedModel.isEmpty() ? (mModelPath == modelPath) : (loadedModel == QFileInfo(modelPath).canonicalFilePath());
+    if (!mVoskModel || !mVoskRecognizer || !sameModel) {
         // Every other refusal in this function reports through errorOccurred
         // before returning, and the caller relies on that: stt.init() answers a
         // false with "failed to initialize model from X" and nothing else, so
@@ -528,9 +535,14 @@ void VoskRecognizer::startListening()
                 // VoskRecognizer::tr, not QObject::tr: the lambda is not a member, and
                 // the default context would file this identical string a second
                 // time for translators to translate twice
+                // Compared across the report for the same reason as a failed
+                // capture start in startListeningInternal()
+                const unsigned int loadGeneration = weakThis->mLoadGeneration;
                 //: Shown when the player refuses Mudlet access to the microphone; the path names the macOS setting that grants it
                 emit weakThis->errorOccurred(VoskRecognizer::tr("Microphone permission denied. Please grant microphone access in System Settings > Privacy & Security > Microphone."));
-                weakThis->setState(State::Error);
+                if (weakThis && weakThis->mLoadGeneration == loadGeneration) {
+                    weakThis->setState(State::Error);
+                }
             }
         });
         return;
@@ -538,12 +550,19 @@ void VoskRecognizer::startListening()
     case MacMicrophonePermission::AuthorizationStatus::Denied:
     case MacMicrophonePermission::AuthorizationStatus::Restricted:
         qWarning() << "VoskRecognizer: Microphone permission denied or restricted";
-        //: Shown when microphone access was refused earlier and has to be granted in system settings before speech will work
-        emit errorOccurred(tr("Microphone permission denied. Please grant microphone access in System Settings > Privacy & Security > Microphone."));
-        // The same state a denial reaches when the dialog is answered now, as
-        // docs/stt-api.md requires: a package driving its controls from state
-        // would otherwise keep offering to listen on a machine that cannot
-        setState(State::Error);
+        {
+            const unsigned int loadGeneration = mLoadGeneration;
+            //: Shown when microphone access was refused earlier and has to be granted in system settings before speech will work
+            emit errorOccurred(tr("Microphone permission denied. Please grant microphone access in System Settings > Privacy & Security > Microphone."));
+            // The same state a denial reaches when the dialog is answered now, as
+            // docs/stt-api.md requires: a package driving its controls from state
+            // would otherwise keep offering to listen on a machine that cannot.
+            // Unless a handler for the report loaded a model, as after a failed
+            // capture start in startListeningInternal().
+            if (mLoadGeneration == loadGeneration) {
+                setState(State::Error);
+            }
+        }
         return;
     case MacMicrophonePermission::AuthorizationStatus::Authorized:
         break;
@@ -597,9 +616,13 @@ void VoskRecognizer::startListeningInternal()
 
     // mpCapture emits its own translated captureError before returning false,
     // which slot_captureError() has already turned into errorOccurred - only
-    // the state transition is left to do here
+    // the state transition is left to do here, and not even that when a handler
+    // for the report loaded a model: that load has settled the state already.
+    const unsigned int loadGeneration = mLoadGeneration;
     if (!mpCapture->start()) {
-        setState(State::Error);
+        if (mLoadGeneration == loadGeneration) {
+            setState(State::Error);
+        }
         return;
     }
 
@@ -874,6 +897,7 @@ void VoskRecognizer::releaseVoskResources()
 
 void VoskRecognizer::releaseResources()
 {
+    ++mLoadGeneration;
     // Same reason as initialize(): the device has to go before the decoder,
     // or a caller is left with a live microphone it has no call to close
     mpCapture->stop();

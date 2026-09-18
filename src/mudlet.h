@@ -234,6 +234,11 @@ public:
     // bindings refuse before a recognizer exists - with no engine installed
     // there is no object to emit through, and "refusals speak" has to hold
     // there too or a consumer cannot tell "no engine" from "nothing said yet".
+    //
+    // A sysSTTError raised while one is already being delivered is dropped: a
+    // handler's own calls report their refusals through their return values, and
+    // raising them would run that handler again inside itself, making the same
+    // call, until Lua's C stack overflows.
     void raiseSpeechEvent(const QString& name, const QString& value);
     const QMap<QString, QPointer<TDetachedWindow>>& getDetachedWindows() const { return mDetachedWindows; }
     // Out of line so mudlet.h needs no more than a forward declaration -
@@ -757,11 +762,14 @@ private:
     //
     // Seeded on first use with the payload for no recognizer at all - every
     // capability false - because that is what Lua has already been reading from
-    // getInfo(). Seeding is what makes a recognizer coming into existence
-    // register as the change it is; an empty string would compare unequal to
-    // everything and announce on the first read whatever had happened. Empty is
-    // safe as the "not seeded yet" mark only because the payload never is.
+    // getInfo(). Without the seed the first comparison is against an empty
+    // string, which differs from every payload: the all-false one included, so
+    // stt.unloadLibrary() on a machine with no engine would announce a change
+    // nothing can see. Empty is safe as the "not seeded yet" mark only because
+    // the payload never is.
     QString mAnnouncedSpeechCapabilities;
+    // How many sysSTTError deliveries are in progress; see raiseSpeechEvent()
+    int mSpeechErrorsBeingDelivered = 0;
     QPointer<QToolButton> mpButtonPackageManagers;
     QHBoxLayout* mpHBoxLayout_profileContainer = nullptr;
     QPointer<QLabel> mpLabelReplaySpeedDisplay;

@@ -192,12 +192,22 @@ void mudlet::raiseSpeechEvent(const QString& name, const QString& value)
     if (!pHost) {
         return;
     }
+    const bool error = (name == qsl("sysSTTError"));
+    if (error && mSpeechErrorsBeingDelivered > 0) {
+        return;
+    }
     TEvent event{};
     event.mArgumentList.append(name);
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(value);
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    if (error) {
+        ++mSpeechErrorsBeingDelivered;
+    }
     pHost->raiseEvent(event);
+    if (error) {
+        --mSpeechErrorsBeingDelivered;
+    }
 }
 
 void mudlet::initSpeechRecognition()

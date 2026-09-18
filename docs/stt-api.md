@@ -55,7 +55,7 @@ returning `false` with a message, `listModels` returning `{}`.
 | `stt.getLibraryPath()` | string | User-writable directory the engine library is installed into. |
 | `stt.listModels()` | table | Array of `{name, path}` for installed models. Deliberately works without the engine library, so downloaded models stay visible. |
 | `stt.getPlatformKey()` | string \| `nil` | Platform/architecture key for selecting an engine build (`"macos"`, `"windows-x64"`, `"windows-x86"`, `"linux-x86_64"`, `"linux-aarch64"`); `nil` when no published build exists. |
-| `stt.reloadLibrary()` | boolean \| `false, error` | Re-run engine detection after an install. Refuses while the recognizer is in use or holds live native resources. |
+| `stt.reloadLibrary()` | `true` \| `false, error` | Re-run engine detection after an install. Refuses while the recognizer is in use or holds live native resources. When detection finds no usable library, returns `false` and says where it looked. |
 | `stt.unloadLibrary()` | `true` \| `false, error` | Unload the engine so its file can be deleted (Windows cannot delete a mapped module). Same refusal rules. |
 
 ## `stt.getInfo()`
@@ -134,7 +134,12 @@ capability.
    still raises the event, or a consumer written against events alone cannot
    tell a missing engine from a quiet microphone. A refusal caused by the
    script's own arguments is returned but not announced, since one package's
-   mistake is not news for every other package on the profile.
+   mistake is not news for every other package on the profile. Two exceptions
+   are returned without a new event. `stt.stop()` in `error` adds nothing: the
+   fault that caused the state has already reported through its own
+   `sysSTTError`. And while a `sysSTTError` handler runs, anything its own
+   calls would raise reaches it through their return values instead, since
+   raising it would run that handler again inside itself.
 3. **`setVocabulary`'s boolean is a capability answer**, not a success flag.
    Packages branch on it: `true` → engine handles vocabulary; `false` → apply
    client-side correction.

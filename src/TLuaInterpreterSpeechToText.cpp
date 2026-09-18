@@ -273,16 +273,11 @@ int TLuaInterpreter::sttStop(lua_State* L)
     // answers, and returning true for both told a caller its session had ended
     // cleanly when the engine had faulted and produced nothing.
     if (pRecognizer->state() == SpeechRecognizer::State::Error) {
-        // Raised, not just returned. This is an engine-caused refusal, which
-        // docs/stt-api.md says must speak through sysSTTError as well as in the
-        // return value - and the message names that event as where the reason
-        // is, so staying silent made it describe something that never happened.
-        // The sibling refusals in start() and toggle() have always raised it; a
-        // consumer driving the bridge from events alone, the case the contract
-        // calls out, saw this one as a session that simply stopped answering.
-        const QString refusal = qsl("nothing was stopped - speech recognition is in an error state; the sysSTTError event carries the reason");
-        reportSpeechRefusal(refusal);
-        return warnArgumentValue(L, funcName, refusal);
+        // Returned, not raised. The fault that put the bridge in this state has
+        // its own sysSTTError, and this refusal is not a new one: raising it too
+        // reports one fault twice, and a handler that stops on the "error" state
+        // would hear this, with no reason in it, before the fault's own report.
+        return warnArgumentValue(L, funcName, "nothing was stopped - speech recognition is in an error state; the sysSTTError event for that fault carries the reason");
     }
 
     if (pRecognizer->listening()) {
@@ -761,7 +756,15 @@ int TLuaInterpreter::sttReloadLibrary(lua_State* L)
     VoskRecognizer::unloadLibraryByRequest(false);
     const bool available = VoskRecognizer::libraryAvailable();
     announceSpeechCapabilities(pMudlet);
-    lua_pushboolean(L, available);
+    if (!available) {
+        // Detection ran and found nothing usable, which is the engine's answer
+        // rather than anything the caller got wrong - so it speaks like the other
+        // refusals here instead of leaving a bare false to be guessed at.
+        const QString refusal = noEngineMessage();
+        reportSpeechRefusal(refusal);
+        return warnArgumentValue(L, "stt.reloadLibrary", refusal, true);
+    }
+    lua_pushboolean(L, true);
     return 1;
 }
 

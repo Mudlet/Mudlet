@@ -266,39 +266,58 @@ describe("stt bridge", function()
       assert.is_false(stt.listening(), "a refused toggle must leave nothing listening")
     end)
 
-    -- Semantics rule 2: a refusal the engine caused speaks through sysSTTError
-    -- as well as in its return value. stop()'s own message names that event as
-    -- where the reason is, so staying silent made the message describe
-    -- something that never happened - and a consumer driving the bridge from
-    -- events alone, the case the contract calls out, saw a session that simply
-    -- stopped answering. start() and toggle() have always announced theirs.
-    it("announces a stop it refused because of an earlier error", function()
-      local raised, seen = 0, nil
-      local handler = registerAnonymousEventHandler("sysSTTError", function(_, message)
-        raised = raised + 1
-        seen = message
-      end)
+    -- Semantics rule 2 has two exceptions, and both are about saying nothing
+    -- new. stop() in the error state has nothing to stop, and the fault that put
+    -- the bridge there has already reported through its own sysSTTError, so
+    -- raising another reports one fault twice - and a handler that stops on the
+    -- "error" state would hear this empty one before the fault's own reason.
+    it("does not report the fault again when a stop is refused in the error state", function()
+      if not stt.available() then
+        pending("the error state is only reachable with a speech engine installed")
+        return
+      end
+
+      -- A load after the library was unloaded on request is refused into the
+      -- error state, with no microphone or model needed to get there
+      stt.close()
+      stt.unloadLibrary()
+      finally(function() stt.reloadLibrary() end)
+      stt.init(getMudletHomeDir())
+      assert.are.equal("error", stt.getInfo().state, "the load was expected to fail into the error state")
+
+      local raised = 0
+      local handler = registerAnonymousEventHandler("sysSTTError", function() raised = raised + 1 end)
       finally(function() killAnonymousEventHandler(handler) end)
 
-      -- The error state is only reachable with an engine installed: every
-      -- setState(Error) is a recognizer method, and with no library the factory
-      -- builds no recognizer, so stt.init() refuses before one exists. Nothing
-      -- here can arrange the precondition on a bare CI runner, so it is skipped
-      -- rather than asserted - setup that cannot be arranged is not a failure.
-      if not stt.available() then return end
-
-      -- A directory that exists but holds no model. It has to exist: stt.init()
-      -- refuses a path that does not before the recognizer is ever asked to load
-      -- it, so a made-up path never reaches the engine at all.
-      stt.init(getMudletHomeDir())
-      if stt.getInfo().state ~= "error" then return end
-
-      raised, seen = 0, nil
       local ok, err = stt.stop()
       assert.is_nil(ok, "stopping from the error state should refuse rather than claim it stopped something")
       assert.is_string(err)
-      assert.are.equal(1, raised, "the refusal was returned to the caller but never announced")
-      assert.are.equal(err, seen, "the event and the return value should carry the same reason")
+      assert.are.equal(0, raised, "the fault was reported again")
+    end)
+
+    -- The other exception: a sysSTTError handler's own calls answer it through
+    -- their return values. Raising a refusal from inside the handler would run
+    -- the handler again, making the same call, until Lua's C stack overflows.
+    it("does not run a sysSTTError handler inside itself for its own refused call", function()
+      local depth, deepest, calls = 0, 0, 0
+      local innerOk, innerErr
+      local handler = registerAnonymousEventHandler("sysSTTError", function()
+        calls = calls + 1
+        depth = depth + 1
+        deepest = math.max(deepest, depth)
+        if calls < 20 then
+          innerOk, innerErr = stt.init("/no/such/speech/model")
+        end
+        depth = depth - 1
+      end)
+      finally(function() killAnonymousEventHandler(handler) end)
+
+      stt.init("/no/such/speech/model")
+
+      assert.are.equal(1, deepest, "the handler ran inside itself")
+      assert.are.equal(1, calls)
+      assert.is_nil(innerOk)
+      assert.is_string(innerErr, "the call inside the handler was refused without saying why")
     end)
 
     -- #10759. stt.init() reaches Lua before it returns: setState(Ready) raises
@@ -320,7 +339,10 @@ describe("stt bridge", function()
     -- Needs an engine: with no library the factory builds no recognizer, so
     -- stt.init() refuses long before any of this is reachable.
     it("refuses a load a handler closed while it was still loading", function()
-      if not stt.available() then return end
+      if not stt.available() then
+        pending("needs a speech engine installed")
+        return
+      end
       stt.close()
 
       local closed = false
@@ -345,7 +367,10 @@ describe("stt bridge", function()
       -- No model installed, so the load never reached ready and the handler
       -- never had its moment. A refusal that happened for some other reason is
       -- not what this is about.
-      if not closed then return end
+      if not closed then
+        pending("needs a speech model installed")
+        return
+      end
 
       assert.is_nil(ok, "a load a handler closed under it reported success")
       assert.is_string(err)
@@ -359,11 +384,17 @@ describe("stt bridge", function()
     -- than closing leaves both handles valid, so the pointers alone would call
     -- the outer load a success. Only the path it was asked for settles it.
     it("answers for the model it was asked for, not the one a handler loaded", function()
-      if not stt.available() then return end
+      if not stt.available() then
+        pending("needs a speech engine installed")
+        return
+      end
       stt.close()
 
       local models = stt.listModels()
-      if #models < 2 then return end
+      if #models < 2 then
+        pending("needs two speech models installed")
+        return
+      end
 
       local replaced = false
       local handler = registerAnonymousEventHandler("sysSTTStateChanged", function(_, state)
@@ -381,7 +412,10 @@ describe("stt bridge", function()
       end)
 
       local ok = stt.init(models[1].path)
-      if not replaced then return end
+      if not replaced then
+        pending("the first model never reached ready")
+        return
+      end
 
       assert.is_nil(ok, "a load answered true for a model a handler had already replaced")
       assert.is_truthy(reported and reported:find("closed or replaced it before it could be used", 1, true),
