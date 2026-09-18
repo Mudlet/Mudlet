@@ -28,6 +28,7 @@
 #include "CredentialManager.h"
 #include "GMCPAuthenticator.h"
 #include "Host.h"
+#include "HostManager.h"
 #include "MudletPaths.h"
 #include "TAction.h"
 #include "TAlias.h"
@@ -6194,7 +6195,7 @@ void dlgProfilePreferences::slot_copyMap()
 
     // Identify which, if any, of the toProfilesRoomIdMap is active and get the current room
     QMap<QString, QSharedPointer<Host>> activeOtherHostMap;
-    for (auto pOtherHost : mudlet::self()->getHostManager()) {
+    for (auto pOtherHost : *HostManager::self()) {
         if (pOtherHost->mpConsole && (pOtherHost != pHost)) {
             const auto& otherHostName = pOtherHost->getName();
             if (toProfilesRoomIdMap.contains(otherHostName)) {

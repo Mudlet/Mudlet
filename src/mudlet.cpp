@@ -676,7 +676,7 @@ void mudlet::warnProfilesLosingBindingTo(const QKeySequence& sequence, Host* pHo
     }
     const QKeyCombination combination = sequence[0];
     // A copy, because postMessage() runs Lua that may open or close a profile
-    for (auto& pOtherHost : getHostManager().hostList()) {
+    for (auto& pOtherHost : mHostManager.hostList()) {
         if (pOtherHost.isNull() || pOtherHost.data() == pHost || pOtherHost->isClosingDown()) {
             continue;
         }
@@ -5808,7 +5808,7 @@ void mudlet::slot_processEventLoopHackTimerRun()
 
 void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connect)
 {
-    Host* pHost = getHostManager().getHost(profile);
+    Host* pHost = mHostManager.getHost(profile);
     if (!pHost) {
         return;
     }
@@ -7144,7 +7144,7 @@ void mudlet::setAppearance(const enums::Appearance state, const bool& loading)
 
     refreshTabBarsAfterStyleChange();
 
-    getHostManager().changeAllHostColour(getActiveHost());
+    mHostManager.changeAllHostColour(getActiveHost());
     mAppearance = state;
     emit signal_appearanceChanged(state);
 }
