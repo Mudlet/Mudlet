@@ -38,6 +38,7 @@
 
 #include "EAction.h"
 #include "Host.h"
+#include "HostManager.h"
 #include "TArea.h"
 #include "TCommandLine.h"
 #include "TConsole.h"
@@ -2788,7 +2789,7 @@ int TLuaInterpreter::selectString(lua_State* L)
 
 int TLuaInterpreter::setActiveProfile(lua_State* L)
 {
-    auto& hostManager = mudlet::self()->getHostManager();
+    auto* hostManager = HostManager::self();
     const QString requestedName = getVerifiedString(L, __func__, 1, "profile name");
 
     if (requestedName.isEmpty()) {
@@ -2804,7 +2805,7 @@ int TLuaInterpreter::setActiveProfile(lua_State* L)
         return 2;
     }
 
-    if (!hostManager.hostLoaded(profileName)) {
+    if (!hostManager->hostLoaded(profileName)) {
         lua_pushboolean(L, false);
         lua_pushfstring(L, "setActiveProfile: profile '%s' is not loaded", profileName.toUtf8().constData());
         return 2;
@@ -2842,7 +2843,7 @@ int TLuaInterpreter::setAppStyleSheet(lua_State* L)
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     qApp->setStyleSheet(styleSheet);
     mudlet::self()->refreshTabBarsAfterStyleChange();
-    mudlet::self()->getHostManager().postInterHostEvent(nullptr, event, true);
+    HostManager::self()->postInterHostEvent(nullptr, event, true);
     lua_pushboolean(L, true);
     return 1;
 }
