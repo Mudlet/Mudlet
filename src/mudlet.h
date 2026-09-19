@@ -547,7 +547,6 @@ public slots:
     void slot_replaySpeedUp();
     void slot_replaySpeedDown();
     void slot_replayStop();
-    void slot_replayTimeChanged();
     void slot_restoreMainMenu() { setMenuBarVisibility(enums::visibleAlways); }
     void slot_restoreMainToolBar() { synchronizeToolBarVisibility(true); }
     void slot_showAboutDialog();

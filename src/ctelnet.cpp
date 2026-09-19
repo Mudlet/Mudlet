@@ -359,12 +359,9 @@ cTelnet::~cTelnet()
         // If we are doing a replay we had better abort it so that if we are
         // NOT the "last profile standing" the replay system gets reset for
         // another profile to use:
-        loadingReplay = false;
-        replayFile.close();
         qDebug() << "cTelnet::~cTelnet() INFO - A replay was in progress on this profile but has been aborted.";
-        if (auto pMudlet = mudlet::self()) {
-            pMudlet->replayOver();
-        }
+        // No message: the console is going away along with this profile.
+        endReplay(QString());
     }
 
     if (!messageStack.empty()) {
@@ -5394,20 +5391,17 @@ bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
                 // This initiates the replay chunk reading/processing cycle:
                 loadReplayChunk();
             } else {
-                loadingReplay = false;
-                replayFile.close();
                 if (pErrMsg) {
                     // Called from lua case:
                     *pErrMsg = tr("Cannot replay file \"%1\", error message was: \"replay file seems to be corrupt\".").arg(name);
-                } else {
-                    postMessage(tr("[ WARN ]  - The replay has been aborted as the file seems to be corrupt."));
                 }
-                mudlet::self()->replayOver();
+                endReplay(pErrMsg ? QString() : tr("[ WARN ]  - The replay has been aborted as the file seems to be corrupt."));
                 return false;
             }
 
         } else {
             loadingReplay = false;
+            replayFile.close();
             if (pErrMsg) {
                 *pErrMsg = tr("Cannot perform replay, another one may already be in progress. Try again when it has finished.");
             } else {
@@ -5461,12 +5455,7 @@ void cTelnet::loadReplayChunk()
             mpReplayChunkTimer->start(mReplayChunkDelay);
         }
     } else {
-        loadingReplay = false;
-        replayFile.close();
-        if (!mIsReplayRunFromLua) {
-            postMessage(tr("[  OK  ]  - The replay has ended."));
-        }
-        mudlet::self()->replayOver();
+        endReplay(mIsReplayRunFromLua ? QString() : tr("[  OK  ]  - The replay has ended."));
     }
 }
 
@@ -5478,8 +5467,9 @@ void cTelnet::pauseReplay()
 
     mReplayPaused = true;
     if (mpReplayChunkTimer->isActive()) {
-        // Keep what is left of the wait instead of restarting it on resume, so
-        // that pausing does not itself stretch the gap between two chunks:
+        // Bank what is left of the wait rather than the whole gap, so that
+        // resuming does not serve the part of it that had already elapsed all
+        // over again. remainingTime() is -1 on a timer that is not running:
         mReplayChunkDelay = qMax(0, mpReplayChunkTimer->remainingTime());
         mpReplayChunkTimer->stop();
     }
@@ -5492,9 +5482,11 @@ void cTelnet::resumeReplay()
     }
 
     mReplayPaused = false;
-    // There is nothing to re-arm if the pause landed while a chunk was being
-    // played rather than waited on - the loadReplayChunk() that follows it
-    // starts the timer itself now that the replay is running again.
+    // loadReplayChunk() will not arm the timer while the replay is held, so the
+    // wait a pause interrupted has to be re-armed from here. When no chunk is
+    // waiting there is nothing to arm: the loadReplayChunk() still to come does
+    // it now that the replay is running again, and at the end of the file
+    // arming it would push the chunk just played through a second time.
     if (mReplayChunkPending) {
         mpReplayChunkTimer->start(mReplayChunkDelay);
     }
@@ -5506,13 +5498,23 @@ void cTelnet::stopReplay()
         return;
     }
 
+    // Unlike the end of the file, this is something the user did, so say so
+    // even for a replay that lua started - they pressed the button:
+    //: Console message when the user ends a replay early with the replay toolbar's Stop button. The [  OK  ] prefix is column padding shared with Mudlet's other console messages, keep it as it is
+    endReplay(tr("[  OK  ]  - The replay has been stopped."));
+}
+
+// The one way out of a replay, however it ends. An empty message says nothing to
+// the console, which is what the abort paths want.
+void cTelnet::endReplay(const QString& message)
+{
     mpReplayChunkTimer->stop();
     mReplayChunkPending = false;
     mReplayPaused = false;
     loadingReplay = false;
     replayFile.close();
-    if (!mIsReplayRunFromLua) {
-        postMessage(tr("[  OK  ]  - The replay has been stopped."));
+    if (!message.isEmpty()) {
+        postMessage(message);
     }
     if (auto pMudlet = mudlet::self()) {
         pMudlet->replayOver();

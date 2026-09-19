@@ -119,8 +119,8 @@ set(TELNET_GROUP_TEST_SOURCES
     TelnetIacEscapingTest.cpp
     TelnetNewEnvironTest.cpp
     TelnetOptionsReportTest.cpp
-    TelnetReconnectStateTest.cpp
     ReplayPlaybackControlTest.cpp
+    TelnetReconnectStateTest.cpp
     TelnetStringSequenceRecoveryTest.cpp
     TelnetTlsPromptTest.cpp
     TOscTest.cpp
