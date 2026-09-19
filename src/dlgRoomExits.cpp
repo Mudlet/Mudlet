@@ -1444,7 +1444,7 @@ void dlgRoomExits::slot_out_textEdited(const QString& text)
 void dlgRoomExits::slot_stub_nw_stateChanged(int state)
 {
     normalStubExitChanged(
-            state, nw, noroute_nw, weight_nw, doortype_none_nw, doortype_open_nw, doortype_closed_nw, doortype_locked_n, utils::richText(tr("Set the number of the room northwest of this one.")));
+            state, nw, noroute_nw, weight_nw, doortype_none_nw, doortype_open_nw, doortype_closed_nw, doortype_locked_nw, utils::richText(tr("Set the number of the room northwest of this one.")));
     slot_checkModified();
 }
 
