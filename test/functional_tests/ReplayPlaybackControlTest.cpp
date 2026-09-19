@@ -87,9 +87,13 @@ private:
     // Long enough that a chunk cannot arrive by accident inside a pause, short
     // enough to keep the test a few seconds rather than a few minutes.
     static constexpr int scmChunkGapMsec = 600;
-    // The gap the timing test holds a pause inside. It has to be long enough
-    // that banking the remainder and restarting the whole wait are far apart.
-    static constexpr int scmLongGapMsec = 4000;
+    // The gap the timing test holds a pause inside, and how far into it the
+    // pause lands. Banking the remainder then takes a quarter of the gap where
+    // restarting it takes the whole gap, and the assertion sits between them -
+    // so both margins are a generous fraction of the gap rather than a fixed
+    // number of milliseconds that a loaded runner can eat.
+    static constexpr int scmLongGapMsec = 6000;
+    static constexpr int scmPauseAfterMsec = (scmLongGapMsec * 3) / 4;
 
     struct Chunk
     {
@@ -317,24 +321,41 @@ private slots:
 
         QTRY_VERIFY(bufferContains(qsl("REPLAY_ONE")));
 
-        // Half way into the long gap, so roughly half of it is still owed.
-        QTest::qWait(scmLongGapMsec / 2);
+        // Time the wait rather than assume it: a stall before the pause eats
+        // into what is still owed, and the assertion below has to move with it.
+        QElapsedTimer sinceGapStarted;
+        sinceGapStarted.start();
+        QTest::qWait(scmPauseAfterMsec);
+        const qint64 intoGap = sinceGapStarted.elapsed();
+
         QAction* pause = replayAction(qsl("replay_pause_action"));
         QVERIFY(pause);
-        QVERIFY2(!bufferContains(qsl("REPLAY_TWO")), "the machine stalled for over half the gap, so there was no wait left to bank");
+        if (bufferContains(qsl("REPLAY_TWO"))) {
+            // Stalled through the whole gap, so there was never a remainder to
+            // bank and this run can say nothing either way.
+            QSKIP("the machine stalled for the whole gap, so no wait was left to hold");
+        }
         pause->trigger();
 
         QTest::qWait(scmChunkGapMsec);
         QVERIFY(!bufferContains(qsl("REPLAY_TWO")));
 
+        // Banking the remainder takes what is left; restarting the wait takes
+        // the whole gap however slow the machine is. Half way between the two
+        // is the threshold, which leaves each of them a margin of an eighth of
+        // the gap even before the stall above is accounted for.
+        const qint64 owed = scmLongGapMsec - intoGap;
+        const qint64 allowed = (owed + scmLongGapMsec) / 2;
         QElapsedTimer sinceResume;
         sinceResume.start();
         pause->trigger();
-        // Owed about half the gap. Restarting the whole wait instead would take
-        // the full gap, so anything under three quarters of it discriminates.
         QTRY_VERIFY_WITH_TIMEOUT(bufferContains(qsl("REPLAY_TWO")), scmLongGapMsec * 2);
-        QVERIFY2(sinceResume.elapsed() < (scmLongGapMsec * 3) / 4,
-                 qPrintable(qsl("resuming waited %1ms of a %2ms gap, so the remainder was not banked").arg(sinceResume.elapsed()).arg(scmLongGapMsec)));
+        QVERIFY2(sinceResume.elapsed() < allowed,
+                 qPrintable(qsl("resuming waited %1ms with %2ms owed of a %3ms gap (allowed up to %4ms), so the remainder was not banked")
+                                    .arg(sinceResume.elapsed())
+                                    .arg(owed)
+                                    .arg(scmLongGapMsec)
+                                    .arg(allowed)));
     }
 
     // Stop ends the replay there and then - the rest of the file is not played,
