@@ -652,13 +652,17 @@ describe("Tests the Adjustable.Container mouse handlers", function()
     -- it has to be measured from the geometry the drag applied and not from the
     -- geometry that drag replaced
     it("leaves the border matching the size the drag just applied", function()
-      local topBefore = getBorderTop()
-      finally(function() setBorderTop(topBefore) end)
       -- resizeBorder arms a timer on the resize event that setBorder raises, and
-      -- nothing keeps its id, so it would fire on a deleted container later
-      local realTempTimer = tempTimer
+      -- nothing keeps its id, so it would fire on a deleted container later.
+      -- finally() only holds one function, so both stand-ins are undone from the
+      -- same one. The top border needs no restore of its own: the after_each
+      -- deletes the container, and type_delete() detaches, which hands it back.
+      local realTempTimer, realMousePosition = tempTimer, getMousePosition
+      finally(function()
+        _G.tempTimer = realTempTimer
+        _G.getMousePosition = realMousePosition
+      end)
       _G.tempTimer = function() return -1 end
-      finally(function() _G.tempTimer = realTempTimer end)
 
       container:move(0, 0)
       container:attachToBorder("top")
@@ -667,9 +671,7 @@ describe("Tests the Adjustable.Container mouse handlers", function()
       -- so a click within ten pixels of the bottom takes the bottom edge
       local grabY = container:get_height() - 5
       local pointerY = 300
-      local realMousePosition = getMousePosition
       _G.getMousePosition = function() return 100, pointerY end
-      finally(function() _G.getMousePosition = realMousePosition end)
 
       container:onClick(container.adjLabel, mouseEvent("LeftButton", 5, grabY))
       container:onClick(container.adjLabel, mouseEvent("LeftButton", 5, grabY))
@@ -684,6 +686,125 @@ describe("Tests the Adjustable.Container mouse handlers", function()
       assert.are.equal(math.floor(reserved), getBorderTop())
       -- and it really did follow the drag: the height it replaced was 200
       assert.is_true(container:get_height() > 200)
+    end)
+
+    -- The three specs below drive the left border rather than the top one: the
+    -- self-test profile's main window is only a handful of pixels tall, so
+    -- validAttachPositions()' "top" test (get_y() <= winh*0.2) can never go
+    -- false there, and a move drag is clamped to winh - height anyway. The
+    -- width is ordinary, so the same reach limit is reachable on the left.
+
+    -- adjustBorder() is what notices the container has left its border's reach,
+    -- so running it after the move means the move that carries it out of reach
+    -- is the one that detaches, rather than the one after it
+    it("detaches within the mouse move that carried it out of reach", function()
+      local realTempTimer, realMousePosition = tempTimer, getMousePosition
+      finally(function()
+        _G.tempTimer = realTempTimer
+        _G.getMousePosition = realMousePosition
+      end)
+      _G.tempTimer = function() return -1 end
+
+      container:move(0, 0)
+      container:attachToBorder("left")
+      assert.are.equal("left", container.attached)
+
+      local winw = getMainWindowSize()
+      local pointerX = 200
+      _G.getMousePosition = function() return pointerX, 100 end
+      -- the middle of the label is clear of every edge, so this grabs a move
+      container:onClick(container.adjLabel, mouseEvent("LeftButton", 100, 100))
+      container:onClick(container.adjLabel, mouseEvent("LeftButton", 100, 100))
+      -- one move, far enough right to put the left edge out of reach
+      pointerX = pointerX + math.floor(winw * 0.5)
+      container:onMove(container.adjLabel, mouseEvent("LeftButton", 100, 100))
+
+      assert.is_true(container:get_x() > winw * 0.2)
+      assert.is_false(container.attached)
+    end)
+
+    -- Coverage rather than a regression guard: the suite never drove a drag on a
+    -- container with a connected one before. Measured to pass under both
+    -- orderings, so it does not pin the reorder - the follower is attached in its
+    -- own right, and whatever it writes to the border it writes either way.
+    it("hands a connected container the size the drag just applied", function()
+      local follower
+      local realTempTimer, realMousePosition = tempTimer, getMousePosition
+      finally(function()
+        _G.tempTimer = realTempTimer
+        _G.getMousePosition = realMousePosition
+        if follower then
+          follower:delete()
+        end
+      end)
+      _G.tempTimer = function() return -1 end
+
+      container:move(0, 0)
+      container:attachToBorder("left")
+      follower = Adjustable.Container:new({
+        name = "gapDragFollower",
+        x = 0, y = 200, width = 60, height = 50,
+        autoLoad = false, autoSave = false,
+      })
+      follower:attachToBorder("left")
+      follower:connectToBorder("left")
+
+      local grabX = container.adjLabel:get_width() - 2
+      local pointerX = 300
+      _G.getMousePosition = function() return pointerX, 100 end
+      container:onClick(container.adjLabel, mouseEvent("LeftButton", grabX, 100))
+      container:onClick(container.adjLabel, mouseEvent("LeftButton", grabX, 100))
+      -- the drag pulls the right edge thirty pixels further out
+      pointerX = pointerX + 30
+      container:onMove(container.adjLabel, mouseEvent("LeftButton", grabX, 100))
+
+      assert.is_true(container:get_width() > 200)
+      -- same border, so the follower is given the anchor's new width
+      assert.are.equal(container:get_width(), follower:get_width())
+      local reserved = container:get_width() + container:get_x() + container.attachedMargin
+      assert.are.equal(math.floor(reserved), getBorderLeft())
+    end)
+
+    -- the only script-visible surface of the reordering, and the suite asserted
+    -- nothing about it before: every other reposition spec watches the Finish
+    -- event, which a mouse move does not raise
+    it("raises AdjustableContainerReposition while the drag is in progress", function()
+      local seen = {}
+      local handler = registerAnonymousEventHandler("AdjustableContainerReposition",
+        function(_, name, width, height, x, y, isMouseAction)
+          seen[#seen + 1] = {name = name, isMouseAction = isMouseAction}
+        end)
+      local realTempTimer, realMousePosition = tempTimer, getMousePosition
+      finally(function()
+        killAnonymousEventHandler(handler)
+        _G.tempTimer = realTempTimer
+        _G.getMousePosition = realMousePosition
+      end)
+      _G.tempTimer = function() return -1 end
+
+      container:move(0, 0)
+      container:attachToBorder("left")
+
+      local pointerX = 300
+      _G.getMousePosition = function() return pointerX, 100 end
+      container:onClick(container.adjLabel, mouseEvent("LeftButton", 100, 100))
+      container:onClick(container.adjLabel, mouseEvent("LeftButton", 100, 100))
+      pointerX = pointerX + 30
+      container:onMove(container.adjLabel, mouseEvent("LeftButton", 100, 100))
+
+      local mine = {}
+      for _, event in ipairs(seen) do
+        if event.name == containerName then
+          mine[#mine + 1] = event
+        end
+      end
+      -- four under this ordering and three under the old one, measured both
+      -- ways: the border write now lands after the drag has applied, which
+      -- repositions once more. That extra event is the one script-visible
+      -- consequence the change has
+      assert.are.equal(4, #mine)
+      -- the drag is a mouse action, and the flag is what tells a script that
+      assert.is_true(mine[#mine].isMouseAction)
     end)
   end)
 
