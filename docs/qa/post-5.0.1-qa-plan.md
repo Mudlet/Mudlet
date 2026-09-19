@@ -59,6 +59,11 @@ here" in the report rather than silently skipped.
   cmake --preset linux-debug-nosan -DUSE_ALTERNATE_LINKER=mold
   nice cmake --build --preset linux-debug-nosan -j 2 --target mudlet
   ```
+
+  Verified on 2026-09-19: after one warm-up build from a worktree, a clean
+  rebuild of the app target in another worktree path finished in 13 s with
+  367 of 367 compiles served from the cache (all direct hits). The cache
+  holds about 0.7 GB per full app build, well under the cap.
 - Fixture servers in `CI/`: `telnet-fixture-server.py` (silent, records what the
   client sends), `http-fixture-server.py`, `mmcp-peer.py`, `discord-ipc-fixture.py`.
   Where an area needs a talking server (GMCP `Char.Login`, IRC, MSDP), the agent
