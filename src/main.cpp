@@ -34,6 +34,7 @@
 #include "MudletPaths.h"
 #include "mudlet.h"
 #include "MudletInstanceCoordinator.h"
+#include "TriggerMatchPool.h"
 #include <chrono>
 #include <QCheckBox>
 #include <QCommandLineParser>
@@ -1136,6 +1137,10 @@ int main(int argc, char* argv[])
     // plugin loader connects to qApp, so a warm-up still running here would
     // reach for one that has already been deleted.
     sslWarmupPool.waitForDone();
+
+    // Joins the match helpers while the QApplication still exists; see
+    // TriggerMatchPool::shutdown().
+    TriggerMatchPool::shutdown();
 
     // Explicitly delete QApplication BEFORE main() returns to ensure Qt cleanup
     // happens before __cxa_finalize_ranges runs static destructors. This prevents

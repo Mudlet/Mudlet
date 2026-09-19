@@ -206,6 +206,7 @@ set(mudlet_SRCS
     TMxpVersionTagHandler.cpp
     TrailingWhitespaceMarker.cpp
     TriggerHighlighter.cpp
+    TriggerMatchPool.cpp
     TriggerUnit.cpp
     TTriggerPrescan.cpp
     TRoom.cpp
@@ -483,6 +484,7 @@ set(mudlet_HDRS
     TrailingWhitespaceMarker.h
     Tree.h
     TriggerHighlighter.h
+    TriggerMatchPool.h
     TriggerUnit.h
     TTriggerPrescan.h
     TRoom.h
