@@ -31,6 +31,7 @@
 #include <QTextStream>
 #include <QWidget>
 #include <optional>
+#include <utility>
 
 #include <hunspell/hunspell.h>
 
@@ -187,6 +188,10 @@ public:
     void disableMapProgressDialogCancel();
     void closeMapProgressDialog();
     void createMapperDock(const QString& title, const QString& objectName);
+    dlgMapper* dockedMapper() const;
+    void showMapWidget();
+    void dockMapWidget(Qt::DockWidgetArea area);
+    std::pair<bool, QString> placeMapWidget(const QString& area, int x, int y, int width, int height);
     // The map dock answered as values, so that the core is left holding the
     // state of the map window rather than the widget showing it. Having made a
     // dock is not the same as having one on screen, which is what the four

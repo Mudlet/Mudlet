@@ -4389,7 +4389,7 @@ void Host::setShowIdsInEditor(const bool isShown)
 // detached windows borrow it while they show a map of their own, and every one
 // of them gives it back through here. createMapper() records the embedded
 // mapper on the console and puts it in the main frame or a user window, so a
-// profile that has one is never the mpDockableMapWidget case below.
+// profile that has one is never the docked mapper case below.
 void Host::restoreOwnMapper()
 {
     if (!mpMap) {
@@ -4398,10 +4398,8 @@ void Host::restoreOwnMapper()
 
     if (mpConsole && mpConsole->mpMapper) {
         mpMap->mpMapper = mpConsole->mpMapper;
-    } else if (mpConsole && mpConsole->mpDockableMapWidget) {
-        auto hostMapWidget = mpConsole->mpDockableMapWidget->widget();
-
-        if (auto hostMapper = qobject_cast<dlgMapper*>(hostMapWidget)) {
+    } else if (mpConsole) {
+        if (auto* hostMapper = mpConsole->dockedMapper()) {
             mpMap->mpMapper = hostMapper;
         }
     }
@@ -4932,7 +4930,7 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
     if (mWindowRegistry.hasDockWidget(name)) {
         return {false, qsl("element '%1' is the base of a floating/dockable user window and may not be moved").arg(name)};
     }
-    if (mpConsole->mpDockableMapWidget) {
+    if (mpConsole->mapWidgetCreated()) {
         if (!name.compare(QLatin1String("mapper"), Qt::CaseInsensitive)) {
             return {false, qsl("element '%1' is the map in a floating/dockable window and may not be moved").arg(name)};
         }
@@ -4967,60 +4965,11 @@ std::pair<bool, QString> Host::openMapWidget(const QString& area, int x, int y, 
         return {false, qsl("no console for this profile - it may be closing")};
     }
 
-    auto pM = mpConsole->mpDockableMapWidget;
-    auto pMapper = mpMap.data()->mpMapper;
-    if (!pM && !pMapper) {
+    if (!mpConsole->mapWidgetCreated() && !mpMap.data()->mpMapper) {
         showHideOrCreateMapper(true);
-        pM = mpConsole->mpDockableMapWidget;
-    }
-    if (!pM) {
-        return {false, qsl("cannot create map widget. Do you already use an embedded mapper?")};
-    }
-    pM->show();
-    if (area.isEmpty()) {
-        return {true, QString()};
     }
 
-    if (area == QLatin1String("f") || area == QLatin1String("floating")) {
-        if (!pM->isFloating()) {
-            // Undock a docked window
-            // Change of position or size is only possible when floating
-            pM->setFloating(true);
-        }
-        if ((x != -1) && (y != -1)) {
-            pM->move(x, y);
-        }
-        if ((width != -1) && (height != -1)) {
-            pM->resize(width, height);
-        }
-        return {true, QString()};
-    }
-
-    if (area == QLatin1String("r") || area == QLatin1String("right")) {
-        pM->setFloating(false);
-        mudlet::self()->addDockWidget(Qt::RightDockWidgetArea, pM);
-        return {true, QString()};
-    }
-
-    if (area == QLatin1String("l") || area == QLatin1String("left")) {
-        pM->setFloating(false);
-        mudlet::self()->addDockWidget(Qt::LeftDockWidgetArea, pM);
-        return {true, QString()};
-    }
-
-    if (area == QLatin1String("t") || area == QLatin1String("top")) {
-        pM->setFloating(false);
-        mudlet::self()->addDockWidget(Qt::TopDockWidgetArea, pM);
-        return {true, QString()};
-    }
-
-    if (area == QLatin1String("b") || area == QLatin1String("bottom")) {
-        pM->setFloating(false);
-        mudlet::self()->addDockWidget(Qt::BottomDockWidgetArea, pM);
-        return {true, QString()};
-    }
-
-    return {false, qsl(R"("docking option "%1" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating")").arg(area)};
+    return mpConsole->placeMapWidget(area, x, y, width, height);
 }
 
 // The inverse of moveMapWidget()/resizeMapWidget(), which reach the dock widget
@@ -5246,10 +5195,6 @@ bool Host::setProfileStyleSheet(const QString& styleSheet)
     mProfileStyleSheet = styleSheet;
     mpConsole->setStyleSheet(styleSheet);
     emit signal_profileStyleSheetChanged(styleSheet);
-    if (mpConsole->mpDockableMapWidget) {
-        mpConsole->mpDockableMapWidget->setStyleSheet(styleSheet);
-    }
-
     mpConsole->setDockWidgetStyleSheets(styleSheet);
     if (this == mudlet::self()->mpCurrentActiveHost) {
         mudlet::self()->setGlobalStyleSheet(styleSheet);
@@ -5462,7 +5407,7 @@ void Host::createMapper(const bool loadDefaultMap)
             pMap->mpMapper->show();
         }
     }
-    mudlet::self()->addDockWidget(Qt::RightDockWidgetArea, mpConsole->mpDockableMapWidget);
+    mpConsole->dockMapWidget(Qt::RightDockWidgetArea);
 
     // XXX: should this be called multiple times?
     mudlet::self()->loadWindowLayout();
@@ -5471,7 +5416,7 @@ void Host::createMapper(const bool loadDefaultMap)
     // restored a previous hidden state, but when first creating the mapper, we
     // always want it to be visible.
     pMap->mpMapper->show();
-    mpConsole->mpDockableMapWidget->show();
+    mpConsole->showMapWidget();
     pMap->mpMapper->updateEmptyStateOverlay();
 
     check_for_mappingscript();
