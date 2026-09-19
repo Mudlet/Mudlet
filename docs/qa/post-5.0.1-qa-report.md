@@ -1,6 +1,6 @@
 # QA report: development since 5.0.1
 
-Status: in progress (batch 1 of 4 complete, verification of batch 1 running).
+Status: in progress (batch 1 of 4 complete and verified; batch 2 running).
 Plan: `post-5.0.1-qa-plan.md`. Every item below was either run by the coordinator
 or reproduced by an independent verifier; agent claims that were not reproduced
 are listed in their own section, not among the findings.
@@ -60,6 +60,69 @@ platform plugin; with `QT_QPA_PLATFORM=offscreen` it prints the version. The
 option is handled after the `QApplication` is built, in 5.0.1 as on
 development, so this is not a regression. Found by agent E1 (F-E1-4), re-run by
 the coordinator.
+
+### 3. Major, pre-existing (known as #10659): one MCCP2 read that inflates past about 800 KB loses most of the burst
+
+Confirmed by the verifier on `85d814292`: a compressed burst of 30,000 lines
+delivered in one socket read left 9,757 lines in the buffer, no end marker,
+and a recursion-depth warning in the log. Not introduced in this range (bca5af8a2
+moved the drain buffer to the heap without changing the depth limit). Found by
+agent B1 (F-B1-2); the open issue describes the same symptom.
+
+### 4. Minor, pre-existing (closed issue #2325 did not stick): the encrypted-file password fallback is written world-readable
+
+With no keychain service, the key and the secret land on disk with the umask
+default of 0644. `SecureStringUtils.cpp` is byte-identical to 5.0.1 and neither
+version calls `setPermissions`. #2325 ("Secure rights to password file") is
+closed, so this should reopen that issue rather than start a new one. Found by
+agent E1 (F-E1-5), confirmed by the verifier.
+
+### 5. Minor, pre-existing (known as #10542 to #10545, draft fix PR #10597): four Configure areas dialog defects
+
+`T2DMap::slot_configureAreas` is byte-identical to 5.0.1. Confirmed by hand on
+this tree: creating, renaming or deleting an area never marks the map unsaved
+(#10543); Delete destroys the area and its rooms with no confirmation (#10545,
+the "map goes blank" half of that issue did not reproduce here); renaming an
+area that is not shown moves the dropdown while the canvas stays on the old
+area (#10544). The wrong-row preselect (#10542) only bites when the default
+area sorts before the shown one and is hidden from the dropdown, so it is
+cosmetic in practice. Found by agent A1 (F-A1-1, 2, 4, 5), re-run by the
+verifier.
+
+### Notes (confirmed behaviour, arguable as defects)
+
+- A telnet GA that arrives in the read after a prompt was already flushed by
+  the 300 ms marker commits a second, empty line (agent B1, F-B1-3; confirmed).
+- `--mirror` copies `print()`, `echo()` and the colour echoes to stdout, but
+  nothing that arrives through `feedTelnet()` or the socket; the comment in
+  `mudlet.h` promises "everything shown in any console" (agent B1, F-B1-4;
+  confirmed and sharpened by the verifier). Not tied to a commit in this range.
+
+## Not reproduced or not yet verified
+
+- A Mudlet process disappeared during mapper context-menu work with nothing in
+  its log (agent A1, F-A1-3). The verifier replayed the sequence six times under
+  gdb with core dumps enabled: alive every time, no core, no signal. Dropped
+  unless it recurs.
+- Carried to the next verifier: hands-free middle-button pan accelerates too
+  fast to click anything (F-A1-6); the connection dialog opens with the details
+  pane describing a profile other than the highlighted one, once two profiles
+  exist (F-E1-3); a misleading "loaded from keychain" log line on the
+  encrypted-file path (F-E1-6). The busted subset runner failing on
+  `Miscallaneous_spec` alone (F-B1-5) is a harness artefact, not a product
+  claim.
+
+## Coverage after batch 1
+
+Areas A1 (mapper interaction, 16 commits), B1 (game text pipeline, 20) and E1
+(profiles and sign-in, 26). Every screenshot and log line the three reports
+cite exists. The verifier re-ran 20 coverage rows by hand (8 mapper, 5 text
+pipeline, 7 profiles) and all held up, including the six mapper cases A1 had
+only covered through ctest. Still not exercised by hand after batch 1:
+553c91251 (dragging a map label), the GMCP `Char.Login` round trip for
+0905eca3b and 4edf41c04 (their ctest classes pass), the ten-package profile
+open timing for 982a0d15e, and the preferences spell-check toggle for
+b66feea61.
 
 ## Fixed during the campaign
 
