@@ -332,7 +332,7 @@ private slots:
         pause->trigger();
         // Owed about half the gap. Restarting the whole wait instead would take
         // the full gap, so anything under three quarters of it discriminates.
-        QTRY_VERIFY_WITH_TIMEOUT(bufferContains(qsl("REPLAY_TWO")), scmLongGapMsec);
+        QTRY_VERIFY_WITH_TIMEOUT(bufferContains(qsl("REPLAY_TWO")), scmLongGapMsec * 2);
         QVERIFY2(sinceResume.elapsed() < (scmLongGapMsec * 3) / 4,
                  qPrintable(qsl("resuming waited %1ms of a %2ms gap, so the remainder was not banked").arg(sinceResume.elapsed()).arg(scmLongGapMsec)));
     }
