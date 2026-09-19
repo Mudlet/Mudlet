@@ -2747,6 +2747,9 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         emit signal_editorCleanResetRequested();
     }
     QFile file2;
+    // Declared out here because the archive branch below reads one of these per
+    // XML file in the package; reported once both branches are done.
+    QStringList itemsWithErrors;
     if (packageUnpacksAFolder(fileName)) {
         const QString _home = MudletPaths::getMudletPath(enums::profileHomePath, getName());
         // Unpacking into a folder the other half of this name owns would write over
@@ -2975,6 +2978,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                 mInstalledPackages.append(packageName);
             }
             auto [success, errorMsg] = reader.importPackage(&file2, packageName, static_cast<int>(thing));
+            itemsWithErrors << reader.itemsWithErrors();
             if (thing != enums::PackageModuleType::Package) {
                 if (success) {
                     mModulesLoadedOk.insert(packageName);
@@ -3028,6 +3032,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             mInstalledPackages.append(packageName);
         }
         auto [success, errorMsg] = reader.importPackage(&file2, packageName, static_cast<int>(thing));
+        itemsWithErrors << reader.itemsWithErrors();
         if (thing != enums::PackageModuleType::Package) {
             if (success) {
                 mModulesLoadedOk.insert(packageName);
@@ -3042,6 +3047,39 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         }
         file2.close();
     }
+    // An item whose Lua does not work is kept, so that it can be fixed in the
+    // editor, and the install carries on around it. Nothing else owns up to
+    // that: importPackage() only answers for the XML, so without the line below
+    // a package that is not working looks exactly like a healthy one to the
+    // player, to installPackage()'s caller and to an install-event handler.
+    const QString itemErrors = itemsWithErrors.join(qsl("; "));
+    if (!itemErrors.isEmpty()) {
+        qWarning() << "Host::installPackage() WARNING - lua in" << packageName << "did not work:" << itemErrors;
+        // Said to a quiet caller as well, unlike the fail() lambda above, for
+        // the reason the manifest warning further up gives: a refusal hands the
+        // caller a false it has to deal with, while this install answers true,
+        // which every caller in the tree takes for a clean success. The reason
+        // rides back with that true for a package manager that does ask, but
+        // the console is the only place the player would ever hear of it.
+        switch (thing) {
+        case enums::PackageModuleType::Package:
+            //: %1 is the package name; %2 is a "; "-separated list of "<item name>: <error>", whose error text comes from Lua and is not translated
+            postMessage(tr("[ WARN ]  - Package \"%1\" was installed, but not everything in it is working: %2").arg(packageName, itemErrors));
+            break;
+        case enums::PackageModuleType::ModuleFromUI:
+        case enums::PackageModuleType::ModuleFromScript:
+            //: %1 is the module name; %2 is a "; "-separated list of "<item name>: <error>", whose error text comes from Lua and is not translated
+            postMessage(tr("[ WARN ]  - Module \"%1\" was installed, but not everything in it is working: %2").arg(packageName, itemErrors));
+            break;
+        case enums::PackageModuleType::ModuleSync:
+            // Left out for the reason the fail() lambda above gives: a sync
+            // reinstalls the same archive on every profile save and on every
+            // reloadModule(), so this would say the same sentence again for as
+            // long as the module is broken. Its return value and its install
+            // event still carry the reason.
+            break;
+        }
+    }
     emit signal_editorCleanResetRequested();
     if (thing == enums::PackageModuleType::Package) {
         saveProfile();
@@ -3052,7 +3090,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     // Defer raising install events until the next event loop iteration
     // This ensures all package installation is complete (including variable loading)
     // before event handlers execute, preventing Lua state corruption
-    QTimer::singleShot(0ms, this, [this, guard = QPointer<Host>(this), thing, packageName, fileName]() {
+    QTimer::singleShot(0ms, this, [this, guard = QPointer<Host>(this), thing, packageName, fileName, itemErrors]() {
         // The queued call can still be delivered once this Host has been
         // destroyed - the profile save queued the same way was #9653 - and the
         // isClosingDown() check below would then be read off freed memory. The
@@ -3079,6 +3117,13 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         genericInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         genericInstallEvent.mArgumentList.append(packageName);
         genericInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        // Only the install that has something to own up to carries the extra
+        // argument, so a handler with the arguments it always declared is
+        // unaffected
+        if (!itemErrors.isEmpty()) {
+            genericInstallEvent.mArgumentList.append(itemErrors);
+            genericInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        }
         raiseEvent(genericInstallEvent);
 
         TEvent detailedInstallEvent{};
@@ -3101,6 +3146,10 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         detailedInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         detailedInstallEvent.mArgumentList.append(fileName);
         detailedInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        if (!itemErrors.isEmpty()) {
+            detailedInstallEvent.mArgumentList.append(itemErrors);
+            detailedInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        }
         raiseEvent(detailedInstallEvent);
     });
 
@@ -3112,7 +3161,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         mDeferredSaveTimer.start(100ms);
     }
 
-    return {true, QString()};
+    return {true, itemErrors};
 }
 
 

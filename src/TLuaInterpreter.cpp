@@ -2717,16 +2717,32 @@ int TLuaInterpreter::getEpoch(lua_State* L)
 }
 
 
+// An install that went through, with or without something to own up to: the
+// install did succeed, so the answer stays true rather than nil plus a message,
+// and a part of the package whose Lua did not work rides along as a second
+// value only when there is one - the way setConfig()'s successWithWarning()
+// reports a setting that was made with a consequence a script has no other way
+// of learning about.
+static int pushInstallSucceeded(lua_State* L, const QString& warning)
+{
+    lua_pushboolean(L, true);
+    if (warning.isEmpty()) {
+        return 1;
+    }
+    lua_pushstring(L, warning.toUtf8().constData());
+    return 2;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#installPackage
 int TLuaInterpreter::installPackage(lua_State* L)
 {
     const QString location = getVerifiedString(L, __func__, 1, "package location path and file name");
     Host& host = getHostFromLua(L);
-    if (auto [success, message] = host.installPackage(location, enums::PackageModuleType::Package, true); !success) {
+    auto [success, message] = host.installPackage(location, enums::PackageModuleType::Package, true);
+    if (!success) {
         return warnArgumentValue(L, __func__, message);
     }
-    lua_pushboolean(L, true);
-    return 1;
+    return pushInstallSucceeded(L, message);
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#uninstallPackage
@@ -2750,15 +2766,15 @@ int TLuaInterpreter::installModule(lua_State* L)
     Host& host = getHostFromLua(L);
     const QString module = QDir::fromNativeSeparators(modName);
 
-    if (auto [success, message] = host.installPackage(module, enums::PackageModuleType::ModuleFromScript, true); !success) {
+    auto [success, message] = host.installPackage(module, enums::PackageModuleType::ModuleFromScript, true);
+    if (!success) {
         return warnArgumentValue(L, __func__, message);
     }
     auto moduleManager = host.mpModuleManager;
     if (moduleManager && moduleManager->moduleTable->isVisible()) {
         moduleManager->layoutModules();
     }
-    lua_pushboolean(L, true);
-    return 1;
+    return pushInstallSucceeded(L, message);
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#uninstallModule

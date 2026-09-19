@@ -26,6 +26,7 @@ deliberately.
 | `mudlet-spec-minimal` | valid package: `config.lua`, one alias, one script |
 | `mudlet-spec-resources` | valid package that also ships a `resources/` folder with a nested subfolder |
 | `mudlet-spec-module` | installed as a module; its script counts its own compiles so a reload is observable |
+| `mudlet-spec-brokenscripts` | valid package whose two scripts stop with an error (one of them with `&`, `<`, `>` and `"` in the error text) and whose third one does not, so a partial failure can be told from a clean install |
 | `mudlet-spec-selfuninstall` | package whose event handler uninstalls its own package (regression #9557) |
 | `mudlet-spec-noconfig` | archive with a package XML but no `config.lua`, so the name comes from the file name |
 | `mudlet-spec-emptyarchive` | archive with neither `config.lua` nor a package XML |
