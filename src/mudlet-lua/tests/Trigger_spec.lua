@@ -4224,6 +4224,32 @@ describe("Trigger processing", function()
             end)
         end)
 
+        -- setmetatable(_G, mt) with both handlers still on mt starts leaving
+        -- the names out again, while the script that passed mt is still
+        -- holding it. What that script does to mt afterwards reaches no guard,
+        -- so whether the handlers are there has to be read at the point of use
+        -- rather than remembered from the moment it was handed back.
+        it("answers a fire after a metatable it handed back has been changed", function()
+            local metatable = getmetatable(_G)
+            setmetatable(_G, metatable)
+            local handler = metatable.__index
+            local seen = {}
+            metatable.__index = function() return nil end
+            local ok, message = pcall(function()
+                trigger(tempRegexTrigger("^LazyRearmed (\\w+)$", function()
+                    seen.matches = matches
+                    seen.line = line
+                end))
+                feedTriggers("\nLazyRearmed word\n")
+            end)
+            metatable.__index = handler
+            setmetatable(_G, metatable)
+
+            assert.is_true(ok, tostring(message))
+            assert.are.equal("word", seen.matches and seen.matches[2])
+            assert.are.equal("LazyRearmed word", seen.line)
+        end)
+
         -- A strict-globals package polices __index and __newindex on the
         -- globals table, and must never be asked about a name Mudlet sets. Every
         -- way one gets installed, before the line and between two fires on it.

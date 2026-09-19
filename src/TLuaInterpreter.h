@@ -935,7 +935,8 @@ private:
     void setMatches(lua_State*, const MultimatchesSource source = MultimatchesSource::Untouched);
     void deferDispatchGlobals(lua_State*, const MultimatchesSource source, const bool setsMatches);
     bool lazyGlobalsUsable(lua_State*);
-    static bool globalsMetatablePristine(lua_State*, const int metatable);
+    bool globalsMetatablePristine(lua_State*, const int metatable);
+    bool globalsMetatableCarriesHandlers(lua_State*);
     void pushMatchesTable(lua_State*);
     void pushEmptyMatchesTable(lua_State*);
     void pushMultimatchesTable(lua_State*, const bool withNames);
@@ -1018,6 +1019,10 @@ private:
     int mMatchesKeyRef = LUA_NOREF;
     int mMultimatchesKeyRef = LUA_NOREF;
     int mLineKeyRef = LUA_NOREF;
+    // The same, for the two metatable slots lazyGlobalsUsable() reads on every
+    // call - pushing either as a literal would hash and intern it again
+    int mIndexKeyRef = LUA_NOREF;
+    int mNewindexKeyRef = LUA_NOREF;
     const char* mMatchesKey = nullptr;
     const char* mMultimatchesKey = nullptr;
     const char* mLineKey = nullptr;
@@ -1033,6 +1038,11 @@ private:
     // so once it has been handed out nothing is left out until either setter
     // puts one carrying both handlers back on the globals table.
     lua_CFunction mStockMetatableFunctions[4] = {};
+    // Only what the guards saw. It stands aside for the window between a script
+    // being handed the metatable and putting one back, which is what keeps a
+    // strict-globals package from being asked about a name Mudlet set. It
+    // cannot speak for what happened to a metatable while a script held it, so
+    // lazyGlobalsUsable() reads the slots as well before it leaves a name out.
     bool mGlobalsMetatableTouched = false;
     // An alias pass a script asks for - expandAlias() - sets "command" and the
     // capture groups for the scripts that pass runs. What the calling script was
