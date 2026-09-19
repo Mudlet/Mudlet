@@ -44,6 +44,21 @@ here" in the report rather than silently skipped.
   `--mirror` copies every console to stdout so output is read from the log, not
   from pixels. `lua <code>` in the input line runs Lua (the `run-lua-code`
   default package); long scripts go through `lua dofile("/abs/path.lua")`.
+- ccache is shared by every shell and worktree: `/etc/ccache.conf` sets
+  `cache_dir=/root/.cache/ccache`, a 15 GB cap and `base_dir=/home/user`, so a
+  build in `/home/user/worktrees/<name>` or in a harness worktree under
+  `.claude/worktrees/` reuses the objects the main checkout compiled. An agent
+  that must build (to bisect, or to confirm a fix) never builds in the main
+  checkout; it makes a worktree, initialises the submodules, configures with the
+  preset and builds only the app, then deletes the build directory (the test
+  binaries alone are 13 GB and the disk is small):
+
+  ```bash
+  git -C /home/user/Mudlet worktree add --detach /home/user/worktrees/<area> <ref>
+  cd /home/user/worktrees/<area> && git submodule update --init --recursive
+  cmake --preset linux-debug-nosan -DUSE_ALTERNATE_LINKER=mold
+  nice cmake --build --preset linux-debug-nosan -j 2 --target mudlet
+  ```
 - Fixture servers in `CI/`: `telnet-fixture-server.py` (silent, records what the
   client sends), `http-fixture-server.py`, `mmcp-peer.py`, `discord-ipc-fixture.py`.
   Where an area needs a talking server (GMCP `Char.Login`, IRC, MSDP), the agent
