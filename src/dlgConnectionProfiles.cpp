@@ -619,10 +619,20 @@ void dlgConnectionProfiles::writeSecurePassword(const QString& profile, const QS
 
     // Use async API for QtKeychain integration with file fallback
     auto* credManager = new CredentialManager(this);
+    QPointer<dlgConnectionProfiles> safeThis = this;
 
-    credManager->storePassword(profile, "character", pass, [credManager, profile](bool success, const QString& errorMessage) {
+    credManager->storePassword(profile, "character", pass, [credManager, profile, safeThis](bool success, const QString& errorMessage) {
         if (success) {
             qDebug() << "dlgConnectionProfiles: Successfully stored password for profile" << profile;
+            // Saving it and keeping it to ourselves are two different things, and the store
+            // reports only the first: without this the user is told the password was saved
+            // while it sits there for every account on the machine to read
+            const QString unprotectedPath = SecureStringUtils::takeUnprotectedSecretPath();
+
+            if (!unprotectedPath.isEmpty() && safeThis) {
+                //: Shown in the connection dialog when a password was saved but its file could not be made unreadable to other users of the computer. %1 is a profile name.
+                safeThis->showNotification(tr("The password for '%1' was saved, but other accounts on this computer can still read it.").arg(profile), safeThis->notificationAreaIconLabelWarning);
+            }
         } else {
             qWarning() << "dlgConnectionProfiles: Failed to store password for profile" << profile << ":" << errorMessage;
         }
@@ -2892,7 +2902,11 @@ void dlgConnectionProfiles::slot_loadPasswordAsync()
                     if (retrievedPassword.isEmpty()) {
                         qDebug() << "dlgConnectionProfiles: Keychain returned empty password for" << profile_name;
                     } else {
-                        qDebug() << "dlgConnectionProfiles: Successfully loaded password from keychain for" << profile_name;
+                        // The password can come from any stage of CredentialManager's lookup -
+                        // several keychain formats, or the encrypted file - and this callback is
+                        // told only that one of them answered. Each stage logs where it found the
+                        // password, so this line names no source.
+                        qDebug() << "dlgConnectionProfiles: Successfully loaded the saved password for" << profile_name;
                     }
                 } else {
                     // Fallback to QSettings only if credential retrieval failed

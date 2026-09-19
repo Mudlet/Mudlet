@@ -102,10 +102,17 @@ bool fileWrittenAfter(const QString& path, const QString& otherPath)
 
 bool writeCredentialFile(const QString& filePath, const QString& profileName, const QString& credential)
 {
-    if (!QDir().mkpath(QFileInfo(filePath).absolutePath())) {
+    const QString directoryPath = QFileInfo(filePath).absolutePath();
+
+    if (!QDir().mkpath(directoryPath)) {
         qWarning() << "CredentialManager: Failed to create directory structure for" << filePath;
         return false;
     }
+
+    // Nothing but credentials is kept in there, so the directory is owner-only too. The
+    // profile directory above it holds only this one and the encryption key, and is narrowed
+    // by SecureStringUtils when that key is written or read.
+    SecureStringUtils::restrictDirectoryToOwner(directoryPath);
 
     // an empty credential is allowed - it stands for "no password"
     const QString encrypted = SecureStringUtils::encryptStringForProfile(credential, profileName);
@@ -132,6 +139,8 @@ bool writeCredentialFile(const QString& filePath, const QString& profileName, co
         qWarning() << "CredentialManager: Failed to write encrypted credential to file:" << filePath << "Error:" << file.errorString();
         return false;
     }
+
+    SecureStringUtils::restrictFileToOwner(filePath);
 
     return true;
 }
@@ -1291,6 +1300,8 @@ QString CredentialManager::retrieveCredentialFromFile(const QString& profileName
                 qWarning() << "CredentialManager: could not copy the newer credential at" << legacyPath << "across to" << filePath << "- it will be read from the older path again next time";
             }
 
+            qDebug() << "CredentialManager: Found the" << key << "credential for profile" << profileName << "in the encrypted file left by the earlier naming scheme";
+
             return migrated;
         }
 
@@ -1313,6 +1324,12 @@ QString CredentialManager::retrieveCredentialFromFile(const QString& profileName
         return QString();
     }
 
+    // A credential written before this narrowing existed - or by an older Mudlet sharing this
+    // configuration directory, which still writes with the umask - may be group- and
+    // world-readable. Narrowing it here tightens it the first time the password is used.
+    SecureStringUtils::restrictFileToOwner(filePath);
+    SecureStringUtils::restrictDirectoryToOwner(QFileInfo(filePath).absolutePath());
+
     QString encrypted = QString::fromUtf8(file.readAll());
     file.close();
 
@@ -1326,6 +1343,12 @@ QString CredentialManager::retrieveCredentialFromFile(const QString& profileName
 
     if (decrypted.isEmpty()) {
         qWarning() << "CredentialManager: Failed to decrypt credential for profile" << profileName;
+    } else {
+        // Said here rather than by the caller, which cannot tell a password the keychain
+        // answered with from one that came out of the file fallback. The key is named because
+        // this also answers for the proxy password and for credentialExists()'s reconnect
+        // token, and a log that says only "password" cannot tell those apart.
+        qDebug() << "CredentialManager: Found the" << key << "credential for profile" << profileName << "in the encrypted file";
     }
 
     return decrypted;
@@ -1483,6 +1506,12 @@ QString CredentialManager::readLegacyFileCredential(const QString& profileName, 
 
         return QString();
     }
+
+    // Narrowed like every other credential this reads: the copy under the earlier naming
+    // scheme is by definition one an older Mudlet wrote, so it is the likeliest of all of
+    // them to have been left readable by every account on the machine
+    SecureStringUtils::restrictFileToOwner(legacyPath);
+    SecureStringUtils::restrictDirectoryToOwner(QFileInfo(legacyPath).absolutePath());
 
     const QString encrypted = QString::fromUtf8(file.readAll());
     file.close();
