@@ -104,7 +104,7 @@ jobs:
         # least-recently-used, and a dropped branch ccache is a 20 minute cold
         # rebuild rather than a 30 second download.
         cache: false
-        modules: qt5compat qtmultimedia qtspeech
+        modules: qt5compat qtmultimedia qtspeech qtwebsockets qthttpserver
 
     - name: Cache Lua build
       uses: actions/cache@v6
@@ -390,6 +390,9 @@ jobs:
         SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         MUDLET_SANITIZERS: ${{ github.event_name == 'pull_request' && 'address' || '' }}
         SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        # An environment variable rather than a -D: CMake reads this one through
+        # include_optional_module(), which only ever consults the environment.
+        WITH_MCPSERVER: "ON"
 
     - name: Save ccache
       if: always() && steps.restore-ccache.outputs.cache-hit != 'true'

@@ -101,6 +101,13 @@ set(UNIT_TESTS
     ProfileNameValidationTest
 )
 
+# The MCP server only lands in the Mudlet library when configured with USE_MCPSERVER, so
+# its test is gated the same way. Qt6::HttpServer reaches it through that library.
+if(USE_MCPSERVER)
+    list(APPEND UNIT_TESTS TMCPServerTest)
+    list(APPEND UNIT_TESTS TMCPBridgeTest)
+endif()
+
 foreach(test_name ${UNIT_TESTS})
     add_executable(${test_name} ${test_name}.cpp)
     add_dependencies(${test_name} ${LIB_MUDLET_TARGET})
@@ -117,6 +124,13 @@ endforeach()
 # limit cases in TAreaGridIndexTest, which never return once a viewport scan
 # stops terminating.
 set_tests_properties(EventLoopPumpTest TAreaGridIndexTest PROPERTIES TIMEOUT 60)
+
+if(USE_MCPSERVER)
+    # The end-to-end cases pipe JSON-RPC through a real `mudlet --mcp-bridge` process,
+    # so the test needs the application binary itself, not just the library.
+    target_compile_definitions(TMCPBridgeTest PRIVATE MUDLET_BINARY_PATH="$<TARGET_FILE:mudlet_executable>")
+    add_dependencies(TMCPBridgeTest mudlet_executable)
+endif()
 
 # TKeySequenceEditTest's focus traversal cases need an active window, which an X
 # server with no window manager never gives them, so a plain `xvfb-run ctest`
