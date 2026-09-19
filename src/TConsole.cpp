@@ -27,7 +27,7 @@
 #include "TConsole.h"
 
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "ctelnet.h"
 #include "Host.h"
 #include "HostManager.h"
@@ -1171,7 +1171,7 @@ void TConsole::slot_toggleReplayRecording()
     }
     cTelnet& telnet = mpHost->mTelnet;
     if (!telnet.recordingReplay()) {
-        const QString directoryLogFile = MudletPaths::getMudletPath(enums::profileReplayAndLogFilesPath, mProfileName);
+        const QString directoryLogFile = MudletApp::getMudletPath(enums::profileReplayAndLogFilesPath, mProfileName);
         const QString mLogFileName = qsl("%1/%2.dat").arg(directoryLogFile, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
         const QDir dirLogFile;
         if (!dirLogFile.exists(directoryLogFile)) {
@@ -3452,7 +3452,7 @@ void TConsole::slot_toggleTimeStamps(const bool state)
             // QAbstractButton::toggled one
             timeStampButton->setChecked(state);
         }
-        const auto filePath = MudletPaths::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("autotimestamp"));
+        const auto filePath = MudletApp::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("autotimestamp"));
         QSaveFile file(filePath);
         if (state) {
             if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
@@ -3488,7 +3488,7 @@ void TConsole::slot_saveCommandSearchSettings()
         return;
     }
 
-    QSettings* pQSettings = mudlet::getQSettings();
+    QSettings* pQSettings = MudletApp::getQSettings();
     if (!pQSettings) {
         return;
     }
@@ -3502,7 +3502,7 @@ void TConsole::restoreCommandSearchSettings()
         return;
     }
 
-    QSettings* pQSettings = mudlet::getQSettings();
+    QSettings* pQSettings = MudletApp::getQSettings();
     if (!pQSettings) {
         return;
     }

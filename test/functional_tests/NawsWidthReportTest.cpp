@@ -28,7 +28,7 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "TBuffer.h"
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
@@ -105,8 +105,8 @@ private:
         if (mpSecondHost) {
             return true;
         }
-        if (!QDir().mkpath(MudletPaths::getMudletPath(enums::profileHomePath, mSecondHostname)) || !MudletPaths::writeProfileData(mSecondHostname, qsl("url"), mLocalhost).first
-            || !MudletPaths::writeProfileData(mSecondHostname, qsl("port"), mPort).first) {
+        if (!QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, mSecondHostname)) || !MudletApp::writeProfileData(mSecondHostname, qsl("url"), mLocalhost).first
+            || !MudletApp::writeProfileData(mSecondHostname, qsl("port"), mPort).first) {
             return false;
         }
         // the second argument is offline, so this profile never opens a
@@ -139,8 +139,8 @@ private slots:
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
-        mudlet::getQSettings()->setValue(qsl("uiTourShown"), true);
-        mudlet::getQSettings()->sync();
+        MudletApp::getQSettings()->setValue(qsl("uiTourShown"), true);
+        MudletApp::getQSettings()->sync();
         mudlet::self()->resize(1200, 800);
 
         QTimer::singleShot(0ms, qApp, [this]() {

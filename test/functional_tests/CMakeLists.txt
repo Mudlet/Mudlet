@@ -87,6 +87,7 @@ set(PROFILE_GROUP_TEST_SOURCES
     DefaultGameDeleteTest.cpp
     DictionaryRoundTripTest.cpp
     MissingDisplayFontTest.cpp
+    PortableRootNoticeTest.cpp
     ProfileDeletionSafetyTest.cpp
     ProfileFolderNameTest.cpp
     ProfileIniParseErrorTest.cpp
@@ -99,8 +100,8 @@ set(PROFILE_GROUP_TEST_SOURCES
     XMLexportVariablesTest.cpp
 )
 
-# Telnet and the other network protocols Mudlet speaks, and the escape sequences
-# carried over them
+# Telnet and the other network protocols Mudlet speaks, the escape sequences
+# carried over them, and the version identity Mudlet announces over them
 set(TELNET_GROUP_TEST_SOURCES
     CsiCursorForwardTest.cpp
     cTelnetBufferTest.cpp
@@ -123,6 +124,7 @@ set(TELNET_GROUP_TEST_SOURCES
     TelnetTlsPromptTest.cpp
     TOscTest.cpp
     MsdpMalformedDiagnosticTest.cpp
+    MudletAppVersionTest.cpp
     IrcMessageGuardTest.cpp
 )
 

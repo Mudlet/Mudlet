@@ -106,8 +106,8 @@ set(mudlet_SRCS
     MMCPClient.cpp
     MMCPServer.cpp
     mudlet.cpp
+    MudletApp.cpp
     MudletInstanceCoordinator.cpp
-    MudletPaths.cpp
     MxpTag.cpp
     OAuthClientFlow.cpp
     PackageItemDelegate.cpp
@@ -363,8 +363,8 @@ set(mudlet_HDRS
     MMCPClient.h
     MMCPServer.h
     mudlet.h
+    MudletApp.h
     MudletInstanceCoordinator.h
-    MudletPaths.h
     MxpTag.h
     OAuthClientFlow.h
     PackageItemDelegate.h
@@ -729,12 +729,15 @@ if(UNIX)
   set(LUA_DEFAULT_DIR "${CMAKE_INSTALL_PREFIX}/share/mudlet/lua")
 endif(UNIX)
 
+# APP_VERSION is PUBLIC because the functional tests link ${LIB_MUDLET_TARGET}
+# and check the version identity it reports.
+target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC APP_VERSION="${APP_VERSION}")
+
 # Define a preprocessor symbol with the default fallback location from which to
 # load installed mudlet lua files. Set LUA_DEFAULT_DIR to a platform-specific
 # value. If LUA_DEFAULT_DIR is unset, the root directory will be used.
 target_compile_definitions(${LIB_MUDLET_TARGET}
   PRIVATE
-    APP_VERSION="${APP_VERSION}"
     APP_TARGET="${APP_TARGET}"
     LUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}"
     LUA_SOURCE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/mudlet-lua/lua")

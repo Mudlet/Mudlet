@@ -67,9 +67,8 @@ private:
 
     // setupConfig() consults portable.txt beside the executable, and
     // $HOME/.config/mudlet/portable.txt, before it ever looks at
-    // XDG_CONFIG_HOME - so with either one present the child runs against the
-    // real portable config, and an invalid path there makes it qFatal() and
-    // read as exactly the crash this test hunts. DialogTeardownTest skips for
+    // XDG_CONFIG_HOME - so with a usable one present the child runs against the
+    // real portable config instead of the sandbox. DialogTeardownTest skips for
     // the same reason; the executable here is the application, not this binary.
     static bool portableMarkerWouldWin()
     {
@@ -88,7 +87,7 @@ private slots:
             // A root of its own per run, so the child reads none of the
             // developer's profiles and leaves nothing behind. Creating
             // mudlet/profiles is what makes XDG_CONFIG_HOME outrank the legacy
-            // ~/.config/mudlet, see MudletPaths::xdgConfigDir()
+            // ~/.config/mudlet, see MudletApp::xdgConfigDir()
             QTemporaryDir sandbox;
             QVERIFY2(sandbox.isValid(), qPrintable(sandbox.errorString()));
             QVERIFY(QDir().mkpath(qsl("%1/config/mudlet/profiles").arg(sandbox.path())));
