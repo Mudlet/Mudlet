@@ -175,6 +175,18 @@ set_tests_properties(IrcMessageComposerTest PROPERTIES
     TIMEOUT 60
 )
 
+add_executable(CrashReportUploadTest
+    CrashReportUploadTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/crash_reporter/sendCrashReport.cpp
+)
+target_include_directories(CrashReportUploadTest PRIVATE ${CMAKE_SOURCE_DIR}/src/crash_reporter)
+target_link_libraries(CrashReportUploadTest PRIVATE Qt6::Test Qt6::Network)
+add_test(NAME CrashReportUploadTest COMMAND $<TARGET_FILE:CrashReportUploadTest>)
+set_tests_properties(CrashReportUploadTest PROPERTIES
+    ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
+    TIMEOUT 60
+)
+
 # DiscordTest checks the Lua API permission gating contract by scanning the source
 target_compile_definitions(DiscordTest PRIVATE MUDLET_SRC_DIR="${CMAKE_SOURCE_DIR}/src")
 
