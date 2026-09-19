@@ -69,21 +69,21 @@ private slots:
 
     void scmVersionSpellsOutTheBuild()
     {
+        // Against the independent read of the resource, not against buildSuffix():
+        // comparing it with what the implementation itself returns restates the code
         QCOMPARE(MudletApp::scmVersion(), qsl("Mudlet ") + QString(APP_VERSION) + suffixFromResource());
-        QCOMPARE(MudletApp::scmVersion(), qsl("Mudlet ") + QString(APP_VERSION) + MudletApp::buildSuffix());
     }
 
     void flagsFollowTheBuild()
     {
         const QString suffix = suffixFromResource();
 
+        // Each against the resource, never against another of the three: comparing
+        // development() with !release() && !publicTest() is what the body does, so
+        // it holds however badly any of them is broken
         QCOMPARE(MudletApp::release(), suffix.isEmpty());
         QCOMPARE(MudletApp::publicTest(), suffix.startsWith(qsl("-ptb")));
-        QCOMPARE(MudletApp::development(), !MudletApp::release() && !MudletApp::publicTest());
-
-        // Exactly one of the three, whatever this build turns out to be
-        const int matched = (MudletApp::release() ? 1 : 0) + (MudletApp::publicTest() ? 1 : 0) + (MudletApp::development() ? 1 : 0);
-        QCOMPARE(matched, 1);
+        QCOMPARE(MudletApp::development(), !suffix.isEmpty() && !suffix.startsWith(qsl("-ptb")));
     }
 
     void networkRequestsCarryTheUserAgent()

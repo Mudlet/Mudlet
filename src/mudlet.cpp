@@ -1787,7 +1787,7 @@ void mudlet::init()
         setWindowIcon(QIcon(qsl(":/icons/mudlet.png")));
     } else if (MudletApp::publicTest()) {
         setWindowIcon(QIcon(qsl(":/icons/mudlet_ptb_256px.png")));
-    } else { // a development build
+    } else {
         setWindowIcon(QIcon(qsl(":/icons/mudlet_dev_256px.png")));
     }
     mpMainToolBar = new QToolBar(this);
@@ -2400,19 +2400,17 @@ void mudlet::setupConfig()
 {
     const auto resolution = MudletApp::resolveConfigRoot(MudletApp::executableDir());
     const QString confPath = resolution.path;
+    // A resolution that goes through retires an earlier complaint, or the notice
+    // would name a portable.txt that no longer governs anything
+    mRejectedPortableMarker.clear();
+    mRejectedPortableRoot.clear();
     if (resolution.portableRootRejected) {
         // Carry on at the location the resolver fell back to; main() puts this
         // on screen once the connection dialog is up
-        mRejectedPortableMarker = MudletApp::portableMarkerPath(MudletApp::executableDir());
-        if (mRejectedPortableMarker.isEmpty()) {
-            mRejectedPortableMarker = qsl("portable.txt");
-        }
-        qWarning().nospace().noquote() << "mudlet::setupConfig() WARN - \"" << mRejectedPortableMarker << "\" names a data directory Mudlet cannot use, so \"" << confPath
-                                       << "\" is in use instead. Profiles kept where the marker points will not be listed until it is corrected.";
-    } else {
-        // A resolution that goes through retires an earlier complaint, or the
-        // notice would name a portable.txt that no longer governs anything
-        mRejectedPortableMarker.clear();
+        mRejectedPortableMarker = resolution.portableMarker;
+        mRejectedPortableRoot = resolution.rejectedRoot;
+        qWarning().nospace().noquote() << "mudlet::setupConfig() WARN - \"" << mRejectedPortableMarker << "\" names the data directory \"" << mRejectedPortableRoot
+                                       << "\", which Mudlet cannot use, so \"" << confPath << "\" is in use instead. Profiles kept where the marker points will not be listed until it is corrected.";
     }
     if (resolution.migrationPending) {
         qInfo().nospace() << "mudlet::setupConfig() INFO: XDG_CONFIG_HOME is set but $XDG_CONFIG_HOME/mudlet holds no profiles, so the existing " << confPath
@@ -2425,7 +2423,7 @@ void mudlet::setupConfig()
     qDebug() << "mudlet::setupConfig() INFO:" << "using config dir:" << confPath;
     // Discards any settings store built under the previous root, so setupConfig()
     // must not run again once init() has created the Updater, which keeps using it
-    MudletApp::setConfigPath(confPath);
+    MudletApp::setConfigPath(confPath, resolution.portable && !resolution.portableRootRejected);
 }
 
 // The only thing on screen telling the user that the profiles they are about to
@@ -2436,24 +2434,36 @@ void mudlet::warnAboutRejectedPortableRoot()
         return;
     }
     const QString marker = mRejectedPortableMarker;
-    mRejectedPortableMarker.clear();
+    const QString rejectedRoot = mRejectedPortableRoot;
     // The connection dialog covers the main window, and on macOS open() makes
     // the notice a sheet of its parent, so it has to sit on the dialog
-    QWidget* over = mpConnectionDialog ? static_cast<QWidget*>(mpConnectionDialog) : this;
+    QWidget* over = this;
+    if (mpConnectionDialog) {
+        over = mpConnectionDialog;
+    }
     auto* notice = new QMessageBox(over);
     notice->setAttribute(Qt::WA_DeleteOnClose);
+    // The paths below are filesystem paths, and a QMessageBox label defaults to
+    // Qt::AutoText - a path holding a '<' would be taken for markup and mangled,
+    // and this is the one message that has to name the file exactly right
+    notice->setTextFormat(Qt::PlainText);
     //: Title of the warning shown at startup when portable.txt names a data directory Mudlet cannot use
     notice->setWindowTitle(tr("Portable data directory unusable"));
-    //: %1 is the full path of the portable.txt file that names the unusable directory
-    notice->setText(tr("The data directory named by %1 cannot be used.").arg(marker));
+    //: %1 is the full path of the portable.txt file, %2 the data directory it names that Mudlet cannot use
+    notice->setText(tr("%1 names the data directory %2, which Mudlet cannot use.").arg(marker, rejectedRoot));
     //: %1 is the full path of the directory Mudlet has fallen back to for profiles and settings
     notice->setInformativeText(tr("Mudlet is using %1 instead, so profiles kept in the portable directory will not be listed. "
                                   "Correct the file and restart Mudlet to use that directory again.")
                                        .arg(MudletApp::getMudletPath(enums::mainPath)));
     notice->setIcon(QMessageBox::Warning);
-    // Never exec(): a headless run, such as mudlet --profile under CI, has
-    // nobody to dismiss it
+    // Never exec(): that spins a nested event loop inside startup, which an
+    // unattended run - mudlet --profile under CI - has nobody to end. open() is
+    // still window-modal, so an interactive user cannot walk past it.
     notice->open();
+    // Cleared once the notice is actually up, so an early return added above
+    // cannot lose the only record that a rejection happened
+    mRejectedPortableMarker.clear();
+    mRejectedPortableRoot.clear();
 }
 
 void mudlet::initEdbee()
@@ -4752,18 +4762,19 @@ void mudlet::readEarlySettings(const QSettings& settings)
         mAppearance = static_cast<enums::Appearance>(appearance);
     }
 
-    MudletApp::setInterfaceLanguage(settings.value("interfaceLanguage", autodetectPreferredLanguage()).toString());
-    mUserLocale = QLocale(MudletApp::getInterfaceLanguage());
+    const QString interfaceLanguage = settings.value("interfaceLanguage", autodetectPreferredLanguage()).toString();
+    MudletApp::setInterfaceLanguage(interfaceLanguage);
+    mUserLocale = QLocale(interfaceLanguage);
     if (mUserLocale == QLocale::c()) {
-        qWarning().nospace().noquote() << "mudlet::readEarlySettings(...) WARNING - Unable to convert language code \"" << MudletApp::getInterfaceLanguage()
+        qWarning().nospace().noquote() << "mudlet::readEarlySettings(...) WARNING - Unable to convert language code \"" << interfaceLanguage
                                        << "\" to a recognised locale, reverting to the POSIX 'C' one.";
         return;
     }
 
     // #if QT_VERSION < QT_VERSION_CHECK(6, 2, 0)
-    //     qDebug().nospace().noquote() << "mudlet::readEarlySettings(...) INFO - Using language code \"" << MudletApp::getInterfaceLanguage() << "\" to switch to \"" << QLocale::languageToString(mUserLocale.language()) << " (" << QLocale::countryToString(mUserLocale.country()) << ")\" locale.";
+    //     qDebug().nospace().noquote() << "mudlet::readEarlySettings(...) INFO - Using language code \"" << interfaceLanguage << "\" to switch to \"" << QLocale::languageToString(mUserLocale.language()) << " (" << QLocale::countryToString(mUserLocale.country()) << ")\" locale.";
     // #else
-    //     qDebug().nospace().noquote() << "mudlet::readEarlySettings(...) INFO - Using language code \"" << MudletApp::getInterfaceLanguage() << "\" to switch to \"" << QLocale::languageToString(mUserLocale.language()) << " (" << QLocale::territoryToString(mUserLocale.territory()) << ")\" locale.";
+    //     qDebug().nospace().noquote() << "mudlet::readEarlySettings(...) INFO - Using language code \"" << interfaceLanguage << "\" to switch to \"" << QLocale::languageToString(mUserLocale.language()) << " (" << QLocale::territoryToString(mUserLocale.territory()) << ")\" locale.";
     // #endif
 }
 
@@ -8068,7 +8079,7 @@ void mudlet::setInterfaceLanguage(const QString& languageCode)
 {
     if (MudletApp::getInterfaceLanguage() != languageCode) {
         MudletApp::setInterfaceLanguage(languageCode);
-        mUserLocale = QLocale(MudletApp::getInterfaceLanguage());
+        mUserLocale = QLocale(languageCode);
         if (mUserLocale == QLocale::c()) {
             qWarning().nospace().noquote() << "mudlet::setInterfaceLanguage(\"" << languageCode
                                            << "\") WARNING - Unable to convert given language code to a recognised locale, reverting to the POSIX 'C' one.";

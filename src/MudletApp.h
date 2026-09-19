@@ -40,27 +40,42 @@ class QUrl;
 // The application-wide services that need no main window: where Mudlet keeps
 // its files, its persistent settings and which build it is. Engine code needs
 // these before - and, headless, without ever - a main window, so they are
-// deliberately not part of class mudlet. Everything here is read on first use.
+// deliberately not part of class mudlet. The config root, the settings store and
+// the build suffix are settled once and remembered; everything else recomputes on
+// every call.
 //
-// The settings store is the one exception, and deliberately so: getQSettings()
-// stays null until mudlet::setupConfig() has handed over a root it validated, so
-// today it is main-window-only. A path that resolved itself can be corrected
-// afterwards; a Mudlet.ini opened under a guessed root cannot, because every
-// later reader is pinned to whichever file was opened first. Settling the root
-// without a main window is for libmudlet (#8681) to add, not for a caller here
-// to work around.
+// The settings store is the one service that is main-window-only today, and
+// deliberately so: getQSettings() stays null until mudlet::setupConfig() has
+// settled the root. The two resolve the root the same way - setupConfig()
+// validates nothing getMudletPath() does not - so this is about ordering, not
+// about one answer being better than the other. setupConfig() is what reports a
+// rejected portable.txt to the user, and no Mudlet.ini may be opened before that
+// has had its chance: a root resolved on first use can be replaced afterwards,
+// but a store opened under one hands out a pointer the Updater keeps for the
+// life of the process. Settling the root without a main window is for libmudlet
+// (#8681) to add, not for a caller here to work around.
 class MudletApp
 {
 public:
+    // A bag of statics, never an object
+    MudletApp() = delete;
+
     struct ConfigDirResolution
     {
         QString path;
-        // A portable.txt marker named the path; the caller decides whether what it
-        // named is usable
+        // A portable.txt marker was in force. True even when the root it named had
+        // to be refused, in which case path is the fallback rather than anything
+        // the marker named - so check portableRootRejected before treating path as
+        // the portable location.
         bool portable = false;
         // The marker named a root that cannot be used, so path holds the
         // non-portable location instead. The caller decides how loudly to say so.
         bool portableRootRejected = false;
+        // The portable.txt that governs, empty when none does, and what it named
+        // when that had to be refused. Carried so a caller can name the file and
+        // the directory without going looking for them a second time.
+        QString portableMarker;
+        QString rejectedRoot;
         // XDG_CONFIG_HOME is set, but an existing legacy dir was used anyway, so
         // the caller can hint at the migration
         bool migrationPending = false;
@@ -141,14 +156,27 @@ public:
     // run long after startup and dereference it directly.
     static QSettings* getQSettings();
 
-    // By value, not by reference: the language is a static the preferences dialog
-    // writes, so a reference to it would go on changing under whoever holds it
+    // Whether the config root in force actually came from a portable.txt. False
+    // when a marker was present but named a root that had to be refused, which is
+    // the distinction a marker stat cannot make - and getting it wrong sends
+    // credentials to portable-mode files on an install running non-portably.
+    static bool portableRootInUse();
+
+    // Has default form of "en_US" but can be just an ISO language code e.g. "fr"
+    // for french, without a country designation. Replaces xx in "mudlet_xx.qm" to
+    // provide the translation file for GUI translation.
+    // Read under a lock and so returned by value: a reference would escape it, and
+    // the language is written both at startup by mudlet::readEarlySettings() and
+    // later by the preferences dialog.
     static QString getInterfaceLanguage();
 
     // Which build of Mudlet this is, and how it names itself to the outside world.
 
-    // The suffix CMake writes into :/app-build.txt - empty for an official release,
-    // "-ptb..." for a public test build, "-dev..." for everything else.
+    // The suffix CMake writes into :/app-build.txt: empty for an official release,
+    // otherwise MUDLET_VERSION_BUILD (or "-dev" when it is unset) followed by the
+    // commit - so "-ptb", "-dev" and "-test" are all values seen in practice.
+    // Which build that makes it is publicTest() and development()'s answer, not
+    // something to read off the suffix.
     static const QString& buildSuffix();
     static const QString& scmVersion();
     static bool release();
@@ -157,16 +185,18 @@ public:
     static void setNetworkRequestDefaults(const QUrl& url, QNetworkRequest& request);
 
 private:
-    // The main window alone changes these: setupConfig() installs the root it has
-    // validated, and the language follows the preferences dialog through
-    // mudlet::setInterfaceLanguage()
+    // Only the main window moves the config root or the language in a running
+    // Mudlet: setupConfig() installs the root it has settled, and the language
+    // follows the preferences dialog through mudlet::setInterfaceLanguage()
     friend class mudlet;
     // Resolving the root once is the point, so the only way to test it is to be
     // able to forget the answer - which setConfigPath(QString()) does
     friend class ConfigDirOverrideTest;
-    // Discards any settings store built under the previous root, so no reader can
-    // be left holding a Mudlet.ini the resolution has moved on from
-    static void setConfigPath(const QString& path);
+    // Discards any settings store built under the previous root - and with it any
+    // pointer a caller cached, so this must not run once init() has handed the
+    // store to the Updater. portable says whether the root came from a
+    // portable.txt that was honoured.
+    static void setConfigPath(const QString& path, bool portable = false);
     static void setInterfaceLanguage(const QString& language);
 };
 

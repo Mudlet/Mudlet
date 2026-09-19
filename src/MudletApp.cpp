@@ -39,6 +39,7 @@
 #include <QFileInfo>
 #include <QLibraryInfo>
 #include <QMutex>
+#include <atomic>
 #include <QNetworkRequest>
 #include <QPointer>
 #include <QProcessEnvironment>
@@ -50,17 +51,25 @@
 #include <QUrl>
 
 namespace {
-// Mudlet itself only resolves on the main thread; the lock is for engine callers that may not
+// Mudlet itself only resolves on the main thread; the locks are for engine
+// callers that may not. They cover the config root and the settings tier;
+// mudletDictionariesInUse is atomic instead, because getMudletPath() writes it
+// from twenty places while holding nothing.
 QMutex configRootMutex;
 QString configRoot;
-// The resolution itself is the answer, so "not resolved yet" cannot be read off
-// configRoot: a root that resolved to nothing would be resolved again on every
-// single call
-bool configRootSettled = false;
-// Only setConfigPath() sets this, so getQSettings() can tell a root the startup
-// checks handed over from one getMudletPath() resolved for itself
-bool configRootInstalled = false;
-bool mudletDictionariesInUse = false;
+// How the root in configRoot was arrived at. Three exclusive states rather than
+// a pair of bools, so "installed but not settled" cannot be written down:
+//   unresolved   - nothing has asked yet, or setConfigPath(QString()) forgot it
+//   selfResolved - getMudletPath() resolved it on first use, before startup got
+//                  a chance to report what the resolution found
+//   installed    - mudlet::setupConfig() settled it and has reported it
+enum class ConfigRootState { unresolved, selfResolved, installed };
+ConfigRootState configRootState = ConfigRootState::unresolved;
+// Whether the root in force came from a portable.txt that was honoured. A
+// marker naming a root that had to be refused leaves this false, so nothing
+// downstream treats a rejected marker as portable mode.
+bool configRootPortable = false;
+std::atomic<bool> mudletDictionariesInUse = false;
 // The settings store and the interface language get a lock of their own rather
 // than sharing configRootMutex: building the store asks for the config root, and
 // QMutex is not recursive. Nothing held under configRootMutex reaches back for
@@ -144,10 +153,13 @@ QString readMarkerFile(const QString& path)
     return line;
 }
 
-bool configPathInstalled()
+// The installed root, or an empty string when startup has not settled one yet.
+// One locked read rather than a separate ask for the flag and the path, which
+// could otherwise disagree.
+QString installedConfigRoot()
 {
     const QMutexLocker locker(&configRootMutex);
-    return configRootInstalled;
+    return configRootState == ConfigRootState::installed ? configRoot : QString();
 }
 
 // Paired with every change of the config root rather than left to each caller:
@@ -163,13 +175,17 @@ void discardSettingsStore()
 QString settledConfigRoot()
 {
     const QMutexLocker locker(&configRootMutex);
-    if (!configRootSettled) {
+    if (configRootState == ConfigRootState::unresolved) {
         const auto resolution = MudletApp::resolveConfigRoot(MudletApp::executableDir());
         if (resolution.portableRootRejected) {
             qWarning().nospace() << "MudletApp::getMudletPath(...) WARN: the portable.txt root cannot be used, so \"" << resolution.path << "\" is in use instead.";
         }
-        configRoot = resolution.path;
-        configRootSettled = true;
+        // resolveConfigRoot() promises a non-empty root, but this settles for
+        // the life of the process: an empty one would root every path at "/",
+        // which callers then mkpath(), so it is never what gets remembered
+        configRoot = resolution.path.isEmpty() ? MudletApp::legacyConfigDir() : resolution.path;
+        configRootPortable = resolution.portable && !resolution.portableRootRejected;
+        configRootState = ConfigRootState::selfResolved;
     }
     return configRoot;
 }
@@ -202,7 +218,7 @@ QString MudletApp::portableMarkerPath(const QString& execDir, const QString& con
 bool MudletApp::portableRootUsable(const QString& path)
 {
     if (path.isEmpty()) {
-        qWarning("WARN: portable data path not specified");
+        qWarning().nospace() << "MudletApp::portableRootUsable(...) WARN: portable.txt names no data directory.";
         return false;
     }
     const QFileInfo pathInfo(path);
@@ -210,12 +226,12 @@ bool MudletApp::portableRootUsable(const QString& path)
     // gone reads as neither - and mkpath() cannot create through one, so the
     // root looks fine here and then swallows every profile
     if ((pathInfo.exists() || pathInfo.isSymLink()) && !pathInfo.isDir()) {
-        qWarning("WARN: specified portable data path is not a directory: %s", qPrintable(path));
+        qWarning().nospace() << "MudletApp::portableRootUsable(...) WARN: the portable data directory \"" << path << "\" is not a directory.";
         return false;
     }
     const QString parent = pathInfo.dir().path();
     if (!QFileInfo(parent).isDir()) {
-        qWarning("WARN: parent directory of specified portable data path doesn't exist: %s", qPrintable(parent));
+        qWarning().nospace() << "MudletApp::portableRootUsable(...) WARN: the portable data directory \"" << path << "\" cannot be created, because its parent \"" << parent << "\" does not exist.";
         return false;
     }
     return true;
@@ -235,14 +251,18 @@ MudletApp::ConfigDirResolution MudletApp::resolveConfigRoot(const QString& execD
     }
     const QString portableRoot = pathResolveRelative(QDir::cleanPath(portPath), execDir);
     if (portableRootUsable(portableRoot)) {
-        return {.path = portableRoot, .portable = true};
+        return {.path = portableRoot, .portable = true, .portableMarker = marker};
     }
     // Never hand back an unusable root - an empty one roots every path at "/",
     // which callers then mkpath() - so name the non-portable location instead
-    // and let each caller decide how loudly to complain
+    // and let each caller decide how loudly to complain. The marker and what it
+    // named travel with it, so the caller can say which file and which directory
+    // rather than going looking for them again.
     ConfigDirResolution resolution = xdgConfigDir(configDir);
     resolution.portable = true;
     resolution.portableRootRejected = true;
+    resolution.portableMarker = marker;
+    resolution.rejectedRoot = portableRoot;
     return resolution;
 }
 
@@ -279,14 +299,14 @@ bool MudletApp::configDirHoldsProfiles(const QString& dir)
     return !QFileInfo(profiles.path()).isReadable() || !profiles.entryList(QDir::Dirs | QDir::NoDotAndDotDot).isEmpty();
 }
 
-void MudletApp::setConfigPath(const QString& path)
+void MudletApp::setConfigPath(const QString& path, const bool portable)
 {
     {
         const QMutexLocker locker(&configRootMutex);
         configRoot = path;
         // An empty root is not an answer, so forget it rather than settle on it
-        configRootSettled = !path.isEmpty();
-        configRootInstalled = configRootSettled;
+        configRootState = path.isEmpty() ? ConfigRootState::unresolved : ConfigRootState::installed;
+        configRootPortable = !path.isEmpty() && portable;
     }
     // Must not run again once init() has created the Updater, which keeps using
     // the settings object this discards
@@ -593,17 +613,41 @@ QSettings* MudletApp::getQSettings()
     if (smpSettings) {
         return smpSettings;
     }
-    // Null until setupConfig() has validated a root and passed it to
-    // setConfigPath(): a store built on a self-resolved root would pin every
-    // later reader to a Mudlet.ini the startup checks never saw.
-    if (!configPathInstalled()) {
+    // Null until mudlet::setupConfig() has settled the root and had its chance
+    // to report what the resolution found: nothing may open Mudlet.ini before
+    // the user has been told which directory they are about to be running in.
+    const QString root = installedConfigRoot();
+    if (root.isEmpty()) {
         return nullptr;
     }
-    const QString root = MudletApp::getMudletPath(enums::mainPath);
     // parented to the application, not the main window: the window deletes
     // itself on close and the Updater keeps using this QSettings past that point.
     smpSettings = new QSettings(qsl("%1/Mudlet.ini").arg(root), QSettings::IniFormat, QCoreApplication::instance());
+    if (smpSettings->status() != QSettings::NoError) {
+        // A corrupt or unreadable file still builds a perfectly usable-looking
+        // QSettings whose reads all return the caller's default and whose writes
+        // all vanish, so say so rather than let every preference silently reset
+        qWarning().nospace() << "MudletApp::getQSettings() ERROR - \"" << smpSettings->fileName() << "\" is "
+                             << (smpSettings->status() == QSettings::FormatError ? "not valid INI" : "not readable or writable")
+                             << ", so settings read from it fall back to defaults and changes to them will not be saved.";
+    }
     return smpSettings;
+}
+
+bool MudletApp::portableRootInUse()
+{
+    {
+        const QMutexLocker locker(&configRootMutex);
+        if (configRootState != ConfigRootState::unresolved) {
+            return configRootPortable;
+        }
+    }
+    // Nothing has settled a root yet, so there is no settled answer to give. Ask
+    // the resolver without settling anything - the credential path reaches this
+    // only before startup, since mudlet::setupConfig() settles the root before
+    // any profile is opened.
+    const auto resolution = resolveConfigRoot(executableDir());
+    return resolution.portable && !resolution.portableRootRejected;
 }
 
 QString MudletApp::getInterfaceLanguage()

@@ -57,15 +57,30 @@ private:
     QTimer mProbe;
     QStringList mDismissed;
 
+    // Every widget in the process, not the main window's child tree: a change that
+    // stopped parenting the notice under the main window would make the cases that
+    // assert nothing is shown pass by finding nothing to look at. The parenting is
+    // pinned separately, by the case that asserts parentWidget().
     static QList<QMessageBox*> shownNotices()
     {
         QList<QMessageBox*> shown;
-        for (auto* box : mudlet::self()->findChildren<QMessageBox*>()) {
-            if (box->isVisible()) {
+        for (auto* widget : QApplication::allWidgets()) {
+            auto* box = qobject_cast<QMessageBox*>(widget);
+            if (box && box->isVisible()) {
                 shown.append(box);
             }
         }
         return shown;
+    }
+
+    bool writeRejectedMarker() const
+    {
+        QFile marker(mMarker);
+        if (!marker.open(QIODevice::WriteOnly)) {
+            return false;
+        }
+        const QByteArray target = qsl("%1/no-such-parent/portable").arg(mHome.path()).toUtf8();
+        return marker.write(target) == target.size();
     }
 
 private slots:
@@ -85,13 +100,10 @@ private slots:
         mConfigDir = qsl("%1/.config/mudlet").arg(mHome.path());
         QVERIFY(QDir().mkpath(qsl("%1/profiles").arg(mConfigDir)));
         mMarker = qsl("%1/portable.txt").arg(mConfigDir);
-        QFile marker(mMarker);
-        QVERIFY(marker.open(QIODevice::WriteOnly));
-        marker.write(qsl("%1/no-such-parent/portable").arg(mHome.path()).toUtf8());
-        marker.close();
+        QVERIFY(writeRejectedMarker());
 
         mudlet::start();
-        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("names a data directory Mudlet cannot use")));
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("which Mudlet cannot use")));
         mudlet::self()->setupConfig();
         QCOMPARE(MudletApp::getMudletPath(enums::mainPath), mConfigDir);
         MudletApp::getQSettings()->setValue(qsl("uiTourShown"), true);
@@ -113,6 +125,22 @@ private slots:
         });
     }
 
+    // The store is parented to the application rather than the main window
+    // precisely so the Updater can keep using it after the window deletes itself
+    // on close. Kept last: it destroys the singleton the other cases need.
+    void test_theSettingsStoreOutlivesTheMainWindow()
+    {
+        auto* settings = MudletApp::getQSettings();
+        QVERIFY(settings);
+        settings->setValue(qsl("portableRootNoticeProbe"), 42);
+        settings->sync();
+
+        delete mudlet::self();
+
+        QVERIFY2(MudletApp::getQSettings(), "the settings store went away with the main window");
+        QCOMPARE(MudletApp::getQSettings()->value(qsl("portableRootNoticeProbe")).toInt(), 42);
+    }
+
     void cleanupTestCase()
     {
         delete mudlet::self();
@@ -130,13 +158,35 @@ private slots:
         QVERIFY2(shownNotices().isEmpty(), "the notice named a portable.txt that no longer governs anything");
 
         // and put the rejected marker back, which is what the cases below need
-        QFile marker(mMarker);
-        QVERIFY(marker.open(QIODevice::WriteOnly));
-        marker.write(qsl("%1/no-such-parent/portable").arg(mHome.path()).toUtf8());
-        marker.close();
-        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("names a data directory Mudlet cannot use")));
+        QVERIFY(writeRejectedMarker());
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("which Mudlet cannot use")));
         mudlet::self()->setupConfig();
         QCOMPARE(MudletApp::getMudletPath(enums::mainPath), mConfigDir);
+    }
+
+    // mudlet --profile Foo opens no connection dialog, so the notice falls back to
+    // the main window. That is the arm the headless case actually takes, and the
+    // dialog case below cannot reach it.
+    void test_theNoticeFallsBackToTheMainWindowWithNoConnectionDialog()
+    {
+        QVERIFY2(!mudlet::self()->mpConnectionDialog, "this case has to run before the connection dialog is up");
+
+        mDismissed.clear();
+        mProbe.start();
+        mudlet::self()->warnAboutRejectedPortableRoot();
+        mProbe.stop();
+
+        QVERIFY2(mDismissed.isEmpty(), "the notice waited to be dismissed, and a headless run has nobody to dismiss it");
+        const QList<QMessageBox*> shown = shownNotices();
+        QCOMPARE(shown.size(), 1);
+        QMessageBox* notice = shown.first();
+        QVERIFY2(notice->parentWidget() == mudlet::self(), "with no connection dialog the notice has to sit on the main window");
+        QVERIFY2(notice->text().contains(mMarker), qPrintable(qsl("the notice does not name %1: \"%2\"").arg(mMarker, notice->text())));
+        notice->close();
+
+        // and leave a rejected marker for the cases below, which the call above consumed
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("which Mudlet cannot use")));
+        mudlet::self()->setupConfig();
     }
 
     void test_initLeavesTheNoticeToMain()
@@ -175,12 +225,15 @@ private slots:
         notice->close();
     }
 
+    // Deliberately runs on the state the case above leaves behind: it showed the
+    // notice, which consumed the rejected marker. main() calls this on every
+    // startup, so a second call with nothing left to report must open nothing.
     void test_noticeStaysShutWithoutARejectedMarker()
     {
         QVERIFY(shownNotices().isEmpty());
         mudlet::self()->warnAboutRejectedPortableRoot();
 
-        QVERIFY2(shownNotices().isEmpty(), "main() calls this on every startup; with no rejected marker it must open nothing");
+        QVERIFY2(shownNotices().isEmpty(), "a second call, with the marker already reported, must open nothing");
     }
 };
 
