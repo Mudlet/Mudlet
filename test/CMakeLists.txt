@@ -188,6 +188,18 @@ set_tests_properties(CMakeListsConsistencyTest PROPERTIES
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
 )
 
+# The autocompletion data the script editor offers. It is scraped off the wiki manual,
+# so the page's own markup can end up in a function name - #10816 shipped all 669 of
+# them with "[edit | edit source]" appended. Only reads the file, so like
+# CMakeListsConsistencyTest it links nothing.
+add_executable(LuaFunctionListTest LuaFunctionListTest.cpp)
+target_link_libraries(LuaFunctionListTest PRIVATE Qt6::Test)
+target_compile_definitions(LuaFunctionListTest PRIVATE MUDLET_SRC_DIR="${CMAKE_SOURCE_DIR}/src")
+add_test(NAME LuaFunctionListTest COMMAND $<TARGET_FILE:LuaFunctionListTest>)
+set_tests_properties(LuaFunctionListTest PROPERTIES
+    ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
+)
+
 # The version comparison every update offer is decided by. Built from the one
 # updater source it covers rather than linked against the Mudlet library, because
 # the library only contains it when configured with USE_UPDATER - which CI's
