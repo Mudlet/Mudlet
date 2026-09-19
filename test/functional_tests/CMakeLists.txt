@@ -53,6 +53,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     MainWindowSizeReportTest.cpp
     CommandLineScrollRangeTest.cpp
     DetachedWindowOwnershipTest.cpp
+    SpeechAcrossProfilesTest.cpp
     MxpFramePlacementTest.cpp
     MxpDestFrameClearTest.cpp
     LabelBackgroundPaintTest.cpp
@@ -243,6 +244,7 @@ set(TEARDOWN_GROUP_TEST_SOURCES
 
 # Sound, music and video, speech in and out, and the rich presence published to Discord
 set(MEDIA_GROUP_TEST_SOURCES
+    SherpaEngineTest.cpp
     SpeechRecognizerContractTest.cpp
     TDiscordModeTest.cpp
     VideoOutputHideTest.cpp
@@ -358,6 +360,56 @@ add_grouped_test_binary(functional_settings_tests ${SETTINGS_GROUP_TEST_SOURCES}
 add_grouped_test_binary(functional_starterui_tests ${STARTERUI_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_teardown_tests ${TEARDOWN_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_media_tests ${MEDIA_GROUP_TEST_SOURCES})
+
+# A stand-in libvosk, so SpeechRecognizerContractTest can reach the code below
+# VoskRecognizer's library guard on a machine with no speech engine - which is
+# every CI runner. Named exactly as the real library is on each platform,
+# because VoskRecognizer looks it up by filename along librarySearchPaths().
+# The test copies it into its own redirected config dir, the first of those
+# paths, so nothing outside the test's temporary directory is touched.
+#
+# Deliberately not linked into anything: it is dlopen()ed by path, which is the
+# whole point, and linking it would put a second set of these symbols in the
+# test binary.
+add_library(vosk_stub SHARED stubs/vosk_stub.cpp)
+set_target_properties(vosk_stub PROPERTIES
+    PREFIX ""
+    OUTPUT_NAME "libvosk"
+    # No "lib" prefix from CMake and no version decoration: the name has to be
+    # the one the real release ships, which VoskRecognizer hardcodes.
+    # A subdirectory, NOT beside the test executables. loadVoskLibrary() asks for
+    # the bare name "vosk" before it tries any search path, and the dynamic
+    # loader answers that from the executable's own directory - so a stub built
+    # next to the binaries is found by every test in it, from process start,
+    # whether or not the test installed one - which decides the answer for every
+    # case in that binary before any of them runs.
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/vosk-stub"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/vosk-stub"
+    # The stub's entry points are plain extern "C" with no __declspec(dllexport),
+    # so without this a Windows build produces a DLL that loads and resolves
+    # nothing - QLibrary::resolve() returns null for every symbol, and a test
+    # would fail for a reason that has nothing to do with what it is checking.
+    WINDOWS_EXPORT_ALL_SYMBOLS ON)
+if(APPLE)
+    set_target_properties(vosk_stub PROPERTIES SUFFIX ".dylib")
+elseif(WIN32)
+    set_target_properties(vosk_stub PROPERTIES SUFFIX ".dll")
+else()
+    set_target_properties(vosk_stub PROPERTIES SUFFIX ".so")
+endif()
+# Both groups: SpeechAcrossProfilesTest builds a recognizer with it, and
+# SpeechRecognizerContractTest needs it to get below the library guard at all -
+# without it that binary's one case reaching live model handles skipped on every
+# runner, which is the same as not having it.
+add_dependencies(functional_window_tests vosk_stub)
+add_dependencies(functional_media_tests vosk_stub)
+# Passed rather than reconstructed in the test: the suffix rules above are the
+# only place the platform naming is decided, and a test guessing at it would
+# silently skip instead of failing when they change.
+foreach(stubUser functional_window_tests functional_media_tests)
+    target_compile_definitions(${stubUser} PRIVATE
+        MUDLET_VOSK_STUB_LIBRARY="$<TARGET_FILE:vosk_stub>")
+endforeach()
 
 # AppStartupTeardownTest runs the shipped application instead of linking it, so it
 # needs that binary's path and needs it built by the time ctest runs. Naming the
