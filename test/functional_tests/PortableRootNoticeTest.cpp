@@ -125,22 +125,6 @@ private slots:
         });
     }
 
-    // The store is parented to the application rather than the main window
-    // precisely so the Updater can keep using it after the window deletes itself
-    // on close. Kept last: it destroys the singleton the other cases need.
-    void test_theSettingsStoreOutlivesTheMainWindow()
-    {
-        auto* settings = MudletApp::getQSettings();
-        QVERIFY(settings);
-        settings->setValue(qsl("portableRootNoticeProbe"), 42);
-        settings->sync();
-
-        delete mudlet::self();
-
-        QVERIFY2(MudletApp::getQSettings(), "the settings store went away with the main window");
-        QCOMPARE(MudletApp::getQSettings()->value(qsl("portableRootNoticeProbe")).toInt(), 42);
-    }
-
     void cleanupTestCase()
     {
         delete mudlet::self();
@@ -234,6 +218,24 @@ private slots:
         mudlet::self()->warnAboutRejectedPortableRoot();
 
         QVERIFY2(shownNotices().isEmpty(), "a second call, with the marker already reported, must open nothing");
+    }
+
+    // The store is parented to the application rather than the main window
+    // precisely so the Updater can keep using it after the window deletes itself
+    // on close. Declared last because QtTest runs slots in declaration order and
+    // this one destroys the singleton every case above needs - cleanupTestCase()
+    // is declared up with initTestCase(), so it is no guide to what runs when.
+    void test_theSettingsStoreOutlivesTheMainWindow()
+    {
+        auto* settings = MudletApp::getQSettings();
+        QVERIFY(settings);
+        settings->setValue(qsl("portableRootNoticeProbe"), 42);
+        settings->sync();
+
+        delete mudlet::self();
+
+        QVERIFY2(MudletApp::getQSettings(), "the settings store went away with the main window");
+        QCOMPARE(MudletApp::getQSettings()->value(qsl("portableRootNoticeProbe")).toInt(), 42);
     }
 };
 
