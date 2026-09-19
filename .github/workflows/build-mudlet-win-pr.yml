@@ -1,14 +1,15 @@
 # DUPLICATE WORKFLOW: This file is paired with build-mudlet-win.yml
-# Changes here likely need to be mirrored there as well, apart from the ccache
-# handling: caches here are scoped to their own pull request ref and keyed per
-# commit, so there is never a key to delete before saving one. The generations
-# an earlier push left behind are retired by cleanup-caches.yml instead, which
-# runs in the base repository and so has a writable token even for a fork.
+# Changes here likely need to be mirrored there as well, apart from the
+# ccache/sentry-native handling: only builds of development write these
+# shared caches, so there are no save steps here at all - a pull request
+# never owns an entry of its own.
 name: 🔨 Build Mudlet - PR (windows)
 on:
   pull_request:
 
-# Permissions required for SignPath trusted build verification
+# An explicit block sets every unlisted scope to none, so every consumer here has
+# to be listed. actions: read is SignPath's - its action reads job details and
+# downloads the artifact it signs.
 permissions:
   id-token: write
   contents: read
@@ -61,6 +62,7 @@ jobs:
         include:
           - os: windows-2022
             buildname: 'windows64'
+            ccache_id: windows64
 
     steps:
     - name: Checkout Mudlet source code
@@ -85,18 +87,20 @@ jobs:
         $GITHUB_WORKSPACE/CI/setup-windows-sdk.sh
         $GITHUB_WORKSPACE/CI/validate-deployment-for-windows.sh
 
+    # Saves are keyed per commit, so the primary key deliberately matches no entry
+    # and every restore prefix-matches the newest.
     - name: Restore ccache
-      id: restore-ccache
       uses: actions/cache/restore@v6
       with:
         path: ${{runner.workspace}}/ccache
-        key: ccache-${{matrix.os}}-${{matrix.buildname}}-clang-${{ github.sha }}
-        restore-keys: ccache-${{matrix.os}}-${{matrix.buildname}}-clang
+        key: ccache-${{matrix.ccache_id}}-sha-
+        restore-keys: ccache-${{matrix.ccache_id}}-sha-
 
     - name: check ccache stats prior to build
       shell: msys2 {0}
       env:
         CCACHE_DIR: ${{runner.workspace}}/ccache
+        CCACHE_MAXSIZE: 500M
       run: ccache --zero-stats --show-stats
 
     - name: Get sentry-native commit hash
@@ -104,9 +108,9 @@ jobs:
       id: sentry-hash
       run: echo "SENTRY_HASH=$(git -C 3rdparty/sentry-native rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
-    - name: Cache sentry-native
+    - name: Restore sentry-native cache
       id: cache-sentry
-      uses: actions/cache@v6
+      uses: actions/cache/restore@v6
       with:
         path: |
           3rdparty/sentry-native/install_without_transport
@@ -116,6 +120,7 @@ jobs:
     - name: (Windows) Build
       shell: msys2 {0}
       env:
+        CCACHE_MAXSIZE: 500M
         GITHUB_REPO_TAG: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
         GITHUB_SCHEDULED_BUILD: ${{ github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' }}
         GITHUB_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
@@ -131,6 +136,7 @@ jobs:
       shell: msys2 {0}
       env:
         CCACHE_DIR: ${{runner.workspace}}/ccache
+        CCACHE_MAXSIZE: 500M
       run: ccache --show-stats
 
     - name: (Windows) Run QTest
@@ -214,13 +220,6 @@ jobs:
           exit 1
         fi
 
-    - name: Save ccache
-      if: always() && steps.restore-ccache.outputs.cache-hit != 'true'
-      uses: actions/cache/save@v6
-      with:
-        path: ${{runner.workspace}}/ccache
-        key: ${{ steps.restore-ccache.outputs.cache-primary-key }}
-
     - name: (Windows) Package
       shell: msys2 {0}
       run: $GITHUB_WORKSPACE/CI/package-mudlet-for-windows.sh
@@ -262,7 +261,7 @@ jobs:
     - name: (Windows) Sign binaries with SignPath
       id: sign-binaries
       if: steps.upload-unsigned-binaries.outcome == 'success'
-      uses: signpath/github-action-submit-signing-request@v2
+      uses: signpath/github-action-submit-signing-request@v3
       with:
         api-token: ${{secrets.SIGNPATH_API_TOKEN}}
         organization-id: ${{secrets.SIGNPATH_ORGANIZATION_ID}}
@@ -361,7 +360,7 @@ jobs:
     - name: (Windows) Sign installer with SignPath
       id: sign-installer
       if: steps.upload-unsigned-installer.outcome == 'success'
-      uses: signpath/github-action-submit-signing-request@v2
+      uses: signpath/github-action-submit-signing-request@v3
       with:
         api-token: ${{secrets.SIGNPATH_API_TOKEN}}
         organization-id: ${{secrets.SIGNPATH_ORGANIZATION_ID}}
