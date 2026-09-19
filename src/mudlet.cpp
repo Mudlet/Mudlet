@@ -1671,8 +1671,11 @@ bool mudlet::setAddonCommandPulse(int commandId, bool enabled, const QString& co
 // matters - focus leaving every window of ours - which nothing else can reach:
 // the alternative is calling refreshAddonPlacement() directly, and that skips
 // the line below that decides where a pinned command goes.
-void mudlet::slot_focusWindowChanged(QWindow*)
+void mudlet::slot_focusWindowChanged(QWindow* pWindow)
 {
+    // Named and discarded rather than left unnamed: cppcheck reads the bare
+    // (QWindow*) of an unnamed parameter as a C-style cast and reports it
+    Q_UNUSED(pWindow)
     // Only a window of ours is remembered. Focus goes to the script editor, to
     // Preferences, and out of the application entirely, and none of those mean
     // "put this back with its own profile" - doing that would take a live
