@@ -53,14 +53,6 @@ followed by the literal line `[1;31mRED1:end`. The `mGotESC` block in
 block received. Same visible defect as #10766, in a one-byte window. Found by
 agent B1 (F-B1-1), re-run by the coordinator.
 
-### 7. Minor, pre-existing: `mudlet --version` aborts when there is no display
-
-`env -u DISPLAY mudlet --version` exits with SIGABRT after Qt fails to load a
-platform plugin; with `QT_QPA_PLATFORM=offscreen` it prints the version. The
-option is handled after the `QApplication` is built, in 5.0.1 as on
-development, so this is not a regression. Found by agent E1 (F-E1-4), re-run by
-the coordinator.
-
 ### 2. Major, regression (known as #10816): the script editor's autocomplete data carries wiki markup
 
 669 of the entries in `src/lua-function-list.json` on development are keyed with
@@ -110,6 +102,14 @@ area (#10544). The wrong-row preselect (#10542) only bites when the default
 area sorts before the shown one and is hidden from the dropdown, so it is
 cosmetic in practice. Found by agent A1 (F-A1-1, 2, 4, 5), re-run by the
 verifier.
+
+### 7. Minor, pre-existing: `mudlet --version` aborts when there is no display
+
+`env -u DISPLAY mudlet --version` exits with SIGABRT after Qt fails to load a
+platform plugin; with `QT_QPA_PLATFORM=offscreen` it prints the version. The
+option is handled after the `QApplication` is built, in 5.0.1 as on
+development, so this is not a regression. Found by agent E1 (F-E1-4), re-run by
+the coordinator.
 
 ### Notes (confirmed behaviour, arguable as defects)
 
