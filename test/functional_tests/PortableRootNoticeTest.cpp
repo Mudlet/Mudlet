@@ -120,6 +120,25 @@ private slots:
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
     }
 
+    // setupConfig() runs more than once in a process, and the notice may only
+    // name the marker that lost the resolution main() is about to show
+    void test_aResolutionThatGoesThroughForgetsAnEarlierRejectedMarker()
+    {
+        QVERIFY(QFile::remove(mMarker));
+        mudlet::self()->setupConfig();
+        mudlet::self()->warnAboutRejectedPortableRoot();
+        QVERIFY2(shownNotices().isEmpty(), "the notice named a portable.txt that no longer governs anything");
+
+        // and put the rejected marker back, which is what the cases below need
+        QFile marker(mMarker);
+        QVERIFY(marker.open(QIODevice::WriteOnly));
+        marker.write(qsl("%1/no-such-parent/portable").arg(mHome.path()).toUtf8());
+        marker.close();
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("names a data directory Mudlet cannot use")));
+        mudlet::self()->setupConfig();
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), mConfigDir);
+    }
+
     void test_initLeavesTheNoticeToMain()
     {
         mDismissed.clear();

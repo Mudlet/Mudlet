@@ -41,6 +41,14 @@ class QUrl;
 // its files, its persistent settings and which build it is. Engine code needs
 // these before - and, headless, without ever - a main window, so they are
 // deliberately not part of class mudlet. Everything here is read on first use.
+//
+// The settings store is the one exception, and deliberately so: getQSettings()
+// stays null until mudlet::setupConfig() has handed over a root it validated, so
+// today it is main-window-only. A path that resolved itself can be corrected
+// afterwards; a Mudlet.ini opened under a guessed root cannot, because every
+// later reader is pinned to whichever file was opened first. Settling the root
+// without a main window is for libmudlet (#8681) to add, not for a caller here
+// to work around.
 class MudletApp
 {
 public:
@@ -127,9 +135,15 @@ public:
     // neither an existing profile nor a predefined game goes by that name
     static QString getCanonicalProfileName(const QString& profileName);
 
-    // The persistent application settings in Mudlet.ini under the config root
+    // The persistent application settings in Mudlet.ini under the config root, or
+    // nullptr until the root has been settled - see the note on the class above.
+    // Callers that can run before mudlet::setupConfig() have to check; the rest
+    // run long after startup and dereference it directly.
     static QSettings* getQSettings();
-    static const QString& getInterfaceLanguage();
+
+    // By value, not by reference: the language is a static the preferences dialog
+    // writes, so a reference to it would go on changing under whoever holds it
+    static QString getInterfaceLanguage();
 
     // Which build of Mudlet this is, and how it names itself to the outside world.
 
@@ -144,14 +158,15 @@ public:
 
 private:
     // The main window alone changes these: setupConfig() installs the root it has
-    // validated and restarts the settings store under it, and the language follows
-    // the preferences dialog through mudlet::setInterfaceLanguage()
+    // validated, and the language follows the preferences dialog through
+    // mudlet::setInterfaceLanguage()
     friend class mudlet;
     // Resolving the root once is the point, so the only way to test it is to be
     // able to forget the answer - which setConfigPath(QString()) does
     friend class ConfigDirOverrideTest;
+    // Discards any settings store built under the previous root, so no reader can
+    // be left holding a Mudlet.ini the resolution has moved on from
     static void setConfigPath(const QString& path);
-    static void resetSettings();
     static void setInterfaceLanguage(const QString& language);
 };
 

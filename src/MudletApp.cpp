@@ -61,6 +61,12 @@ bool configRootSettled = false;
 // checks handed over from one getMudletPath() resolved for itself
 bool configRootInstalled = false;
 bool mudletDictionariesInUse = false;
+// The settings store and the interface language get a lock of their own rather
+// than sharing configRootMutex: building the store asks for the config root, and
+// QMutex is not recursive. Nothing held under configRootMutex reaches back for
+// this one, so the order is always settingsMutex and then configRootMutex, and
+// there is no way round the cycle.
+QMutex settingsMutex;
 QPointer<QSettings> smpSettings;
 QString smInterfaceLanguage;
 
@@ -142,6 +148,16 @@ bool configPathInstalled()
 {
     const QMutexLocker locker(&configRootMutex);
     return configRootInstalled;
+}
+
+// Paired with every change of the config root rather than left to each caller:
+// getQSettings() hands back an existing store without looking at the root again,
+// so one built under a root that has since been replaced would outlive it and
+// pin every later reader to a Mudlet.ini that no longer governs.
+void discardSettingsStore()
+{
+    const QMutexLocker locker(&settingsMutex);
+    delete smpSettings;
 }
 
 QString settledConfigRoot()
@@ -265,11 +281,16 @@ bool MudletApp::configDirHoldsProfiles(const QString& dir)
 
 void MudletApp::setConfigPath(const QString& path)
 {
-    const QMutexLocker locker(&configRootMutex);
-    configRoot = path;
-    // An empty root is not an answer, so forget it rather than settle on it
-    configRootSettled = !path.isEmpty();
-    configRootInstalled = configRootSettled;
+    {
+        const QMutexLocker locker(&configRootMutex);
+        configRoot = path;
+        // An empty root is not an answer, so forget it rather than settle on it
+        configRootSettled = !path.isEmpty();
+        configRootInstalled = configRootSettled;
+    }
+    // Must not run again once init() has created the Updater, which keeps using
+    // the settings object this discards
+    discardSettingsStore();
 }
 
 bool MudletApp::usingMudletDictionaries()
@@ -568,6 +589,7 @@ QString MudletApp::getCanonicalProfileName(const QString& profileName)
 
 QSettings* MudletApp::getQSettings()
 {
+    const QMutexLocker locker(&settingsMutex);
     if (smpSettings) {
         return smpSettings;
     }
@@ -584,18 +606,15 @@ QSettings* MudletApp::getQSettings()
     return smpSettings;
 }
 
-void MudletApp::resetSettings()
+QString MudletApp::getInterfaceLanguage()
 {
-    delete smpSettings;
-}
-
-const QString& MudletApp::getInterfaceLanguage()
-{
+    const QMutexLocker locker(&settingsMutex);
     return smInterfaceLanguage;
 }
 
 void MudletApp::setInterfaceLanguage(const QString& language)
 {
+    const QMutexLocker locker(&settingsMutex);
     smInterfaceLanguage = language;
 }
 
