@@ -22,6 +22,7 @@
 
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "TMainConsole.h"
@@ -59,7 +60,7 @@ private:
     void listModules(Host* host)
     {
         for (const QString& name : mModuleNames) {
-            host->mInstalledModules[name] = QStringList{qsl("%1/%2.xml").arg(mudlet::getMudletPath(enums::profileHomePath, mpHostname), name), qsl("0")};
+            host->mInstalledModules[name] = QStringList{qsl("%1/%2.xml").arg(MudletPaths::getMudletPath(enums::profileHomePath, mpHostname), name), qsl("0")};
             host->mModulePriorities[name] = 0;
         }
     }
@@ -144,7 +145,6 @@ private slots:
         listModules(host);
 
         auto* manager = new dlgModuleManager(nullptr, host);
-        host->mpModuleManager = manager;
         QCOMPARE(rowNames(manager), mModuleNames);
 
         QVERIFY2(host->uninstallPackage(qsl("listing-b"), enums::PackageModuleType::ModuleFromScript), "The seeded module could not be uninstalled");
@@ -152,7 +152,6 @@ private slots:
 
         QCOMPARE(rowNames(manager), QStringList({qsl("listing-a"), qsl("listing-c"), qsl("listing-d")}));
 
-        host->mpModuleManager = nullptr;
         delete manager;
     }
 
@@ -172,7 +171,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        QDir dir(mudlet::getMudletPath(enums::profileHomePath, profileName));
+        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, profileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }

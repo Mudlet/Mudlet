@@ -44,6 +44,7 @@
 #include "TTabBar.h"
 #include "TTextEdit.h"
 #include "TTimer.h"
+#include "ctelnet.h"
 #include "dlgComposer.h"
 #include "dlgIRC.h"
 #include "dlgMapper.h"
@@ -408,8 +409,21 @@ int TLuaInterpreter::sendIrc(lua_State* L)
         return lua_error(L);
     }
 
-    const QString target{lua_tostring(L, 1)};
-    const QString msg{lua_tostring(L, 2)};
+    // read with the length rather than as a C string, so that an embedded NUL is
+    // seen by the check below instead of silently truncating what gets sent
+    size_t targetLength = 0;
+    const char* targetText = lua_tolstring(L, 1, &targetLength);
+    const QString target{QString::fromUtf8(targetText, static_cast<qsizetype>(targetLength))};
+    size_t msgLength = 0;
+    const char* msgText = lua_tolstring(L, 2, &msgLength);
+    const QString msg{QString::fromUtf8(msgText, static_cast<qsizetype>(msgLength))};
+
+    // checked here as well as in dlgIRC::sendMsg() so that a call which cannot be
+    // sent is refused before it brings an IRC client into being
+    const auto arguments = dlgIRC::validateMsgArguments(target, msg);
+    if (!arguments.first) {
+        return warnArgumentValue(L, __func__, arguments.second);
+    }
 
     Host* pHost = &getHostFromLua(L);
     if (!pHost->mpDlgIRC) {
@@ -424,9 +438,9 @@ int TLuaInterpreter::sendIrc(lua_State* L)
         return warnArgumentValue(L, __func__, "not ready to send just yet");
     }
 
-    const auto result = pHost->mpDlgIRC->sendMsg(target, msg);
+    const auto result = pHost->mpDlgIRC->sendText(target, msg);
     if (!result.first) {
-        return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
+        return warnArgumentValue(L, __func__, result.second);
     }
 
     lua_pushboolean(L, true);
@@ -515,26 +529,18 @@ int TLuaInterpreter::sendTelnetChannel102(lua_State* L)
                 L, __func__, qsl("invalid message of length %1 supplied, it should be two bytes (may use lua \\### for each byte where ### is a number between 1 and 254)").arg(msg.length()));
     }
 
-    std::string output;
-    output += TN_IAC;
-    output += TN_SB;
-    output += OPT_102;
-    output += msg;
-    output += TN_IAC;
-    output += TN_SE;
-
     Host& host = getHostFromLua(L);
     if (!host.mTelnet.isChannel102Enabled()) {
         return warnArgumentValue(L, __func__, "unable to send message as the 102 subchannel support has not been enabled by the game server");
     }
-    // We have already validated output to contain a 2 byte payload so we
-    // should not need to worry about the "encoding" in this use of
-    // socketOutRaw(...) - with the exception of handling any occurrence of
-    // 0xFF as either of the bytes to send - however Aardwolf does not use
-    // *THAT* value so, though it is probably okay to not worry about the
-    // need to "escape" it to get it through the telnet protocol unscathed
-    // it is trivial to fix:
-    output = mudlet::replaceString(output, "\xff", "\xff\xff");
+    // The payload is two raw bytes, so it needs no encoding conversion - only the
+    // IAC escaping buildChannel102Message() applies to it
+    std::string output = cTelnet::buildChannel102Message(msg);
+    // socketOutRaw() is equally false for a profile that holds no socket at all,
+    // and unlike sendATCP/sendGMCP/sendMSDP there is no connection-state guard in
+    // front of this call to sort the two apart - so refusing on a false would
+    // report the channel as shut on every offline profile, which is the state
+    // feedTelnet() drives the telnet specs in.
     host.mTelnet.socketOutRaw(output);
     lua_pushboolean(L, true);
     return 1;
@@ -589,7 +595,15 @@ int TLuaInterpreter::setIrcChannels(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setIrcNick
 int TLuaInterpreter::setIrcNick(lua_State* L)
 {
-    const QString nick = getVerifiedString(L, __func__, 1, "nick");
+    if (!checkStringArg(L, __func__, 1, "nick")) {
+        return lua_error(L);
+    }
+
+    // read with the length rather than as a C string, so that an embedded NUL is
+    // refused below instead of silently truncating the nick - as for sendIrc()
+    size_t nickLength = 0;
+    const char* nickText = lua_tolstring(L, 1, &nickLength);
+    const QString nick{QString::fromUtf8(nickText, static_cast<qsizetype>(nickLength))};
     if (nick.isEmpty()) {
         return warnArgumentValue(L, __func__, "nick must not be empty");
     }
@@ -637,7 +651,22 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
 
     QString password;
     if (passwordGiven) {
-        password = lua_tostring(L, 4);
+        // with the length, as for the nick above: a NUL here would truncate the
+        // credential that goes out as "PASS :<password>"
+        size_t passwordLength = 0;
+        const char* passwordText = lua_tolstring(L, 4, &passwordLength);
+        password = QString::fromUtf8(passwordText, static_cast<qsizetype>(passwordLength));
+    }
+
+    // Everything that can be judged without touching the profile is judged here,
+    // before the first write: setIrcServer stores either all of what it was given
+    // or none of it, and a password refused after the host and port had been
+    // written would leave the new server paired with the old credential.
+    if (passwordGiven) {
+        const QPair<bool, QString> passwordValid = dlgIRC::validateIrcPassword(password);
+        if (!passwordValid.first) {
+            return warnArgumentValue(L, __func__, qsl("unable to save password, reason: %1").arg(passwordValid.second));
+        }
     }
 
     Host* pHost = &getHostFromLua(L);

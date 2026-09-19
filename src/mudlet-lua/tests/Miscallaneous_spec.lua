@@ -157,6 +157,22 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       end)
     end)
 
+    describe("Tests the functionality of getSubsystemMemoryStats", function()
+      it("counts the main console's buffer lines", function()
+        if not getSubsystemMemoryStats then
+          pending("only a USE_MEMORY_TRACKING build registers getSubsystemMemoryStats")
+        end
+        local before = getSubsystemMemoryStats().console_buffer_lines
+        -- the buffer keeps an empty line ready after the last line feed, which
+        -- getLineCount() leaves out
+        assert.equals(getLineCount() + 1, before)
+
+        echo("getSubsystemMemoryStats test line\n")
+
+        assert.equals(before + 1, getSubsystemMemoryStats().console_buffer_lines)
+      end)
+    end)
+
     describe("Tests the functionality of getModulePath", function()
       it("should return nil+msg for a module that does not exist", function()
         local path, err = getModulePath("busted-nonexistent-module")
@@ -1202,8 +1218,11 @@ describe("Tests C++ functions in the Miscallaneous category", function()
     end)
 
     describe("Tests the dictionary functions", function()
-      -- The words go into the profile's own dictionary file, which outlives the
-      -- run, so every spec takes back out what it put in.
+      -- The words stay in the profile's word list for the rest of the run, and
+      -- go into the profile's dictionary file when it closes - which outlives
+      -- the run whenever the specs are pointed at a real profile tree rather
+      -- than the throwaway HOME run-lua-tests.sh makes. So every spec takes
+      -- back out what it put in, on the way out of a failure as well.
       local function withWords(...)
         local words = {...}
         finally(function()
@@ -1242,6 +1261,47 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           assert.is_nil(ok)
           assert.is_true(contains(err, "already seems to be in the user dictionary"), tostring(err))
         end)
+
+        -- The dictionary file is one word per line below a count of how many
+        -- lines follow, and hunspell reads a "/" as the start of the affix
+        -- flags and a tab as the start of the morphological description. Each
+        -- of these comes back from the file as a different word, or as no word
+        -- at all, so the list a script reads and what the spell checker knows
+        -- part company at the next start. A word of nothing but spaces, and one
+        -- with a trailing space, do survive the file intact - those two are
+        -- refused for not being words.
+        it("returns nil+msg for a word the dictionary file cannot carry", function()
+          local unstorable = {"", "   ", "qa\nword", "qa\rword", "qa\r\nword",
+                              " qapadded", "qapadded ", "qapadded\t",
+                              "qatab\tword", "qaslash/word"}
+          -- a regression leaves them stored, and every other dictionary spec
+          -- then runs against a word list this one dirtied
+          finally(function()
+            for _, word in ipairs(unstorable) do
+              removeWordFromDictionary(word)
+            end
+          end)
+
+          for _, word in ipairs(unstorable) do
+            local ok, err = addWordToDictionary(word)
+            assert.is_nil(ok, ("addWordToDictionary accepted %q"):format(word))
+            assert.is_true(contains(err, "cannot be stored in the user dictionary"), tostring(err))
+            assert.is_nil(indexOf(getDictionaryWordList(), word), ("%q reached the word list"):format(word))
+          end
+        end)
+
+        -- The refusals above must not take the words a user dictionary exists
+        -- for with them: all of these do survive the file and hunspell.
+        it("still takes the everyday words a dictionary is for", function()
+          local storable = {"mudletspecdon't", "mudletspec-hyphen", "mudletspecnaïve",
+                            "mudletspec two words", "mudletspec日本語"}
+          withWords(unpack(storable))
+
+          local words = getDictionaryWordList()
+          for _, word in ipairs(storable) do
+            assert.is_not_nil(indexOf(words, word), ("%q did not reach the word list"):format(word))
+          end
+        end)
       end)
 
       describe("Tests the functionality of removeWordFromDictionary", function()
@@ -1262,6 +1322,12 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           local ok, err = removeWordFromDictionary("mudletspecnosuchword")
           assert.is_nil(ok)
           assert.is_true(contains(err, "does not seem to be in the user dictionary"), tostring(err))
+        end)
+
+        it("says why a word that cannot be stored is not there", function()
+          local ok, err = removeWordFromDictionary("qa\nword")
+          assert.is_nil(ok)
+          assert.is_true(contains(err, "cannot be stored in the user dictionary"), tostring(err))
         end)
       end)
 
@@ -1405,8 +1471,30 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         return string.char(math.floor(value / 16777216) % 256, math.floor(value / 65536) % 256, math.floor(value / 256) % 256, value % 256)
       end
 
+      -- one record: the delay in milliseconds before it, the number of bytes
+      -- in it, and then those bytes
+      local function chunk(delay, payload)
+        return bigEndian32(delay) .. bigEndian32(#payload) .. payload
+      end
+
+      -- the shape PR #4400 wrote for a while, where the delay took eight bytes
+      -- instead of four - Mudlet still reads it
+      local function wideChunk(delay, payload)
+        return string.rep("\0", 4) .. chunk(delay, payload)
+      end
+
       local function writeReplay(path, payload)
-        writeFile(path, bigEndian32(0) .. bigEndian32(#payload) .. payload)
+        writeFile(path, chunk(0, payload))
+      end
+
+      local function playedBack(mark, marker)
+        for _ = 1, 40 do
+          pumpEvents(50)
+          if contains(textFrom(mark), marker) then
+            return true
+          end
+        end
+        return false
       end
 
       it("raises a Lua error when called with no arguments", function()
@@ -1435,6 +1523,26 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_true(contains(err, "replay file seems to be corrupt"), tostring(err))
       end)
 
+      it("returns nil+msg for a chunk with a negative length", function()
+        local corrupt = getMudletHomeDir() .. "/mudlet-spec-negative-replay.dat"
+        finally(function() os.remove(corrupt) end)
+        writeFile(corrupt, "\0\0\0\0\255\255\255\255")
+
+        local ok, err = loadReplay(corrupt)
+        assert.is_nil(ok)
+        assert.is_true(contains(err, "replay file seems to be corrupt"), tostring(err))
+      end)
+
+      it("returns nil+msg for a file of nothing but zero bytes", function()
+        local corrupt = getMudletHomeDir() .. "/mudlet-spec-zeroed-replay.dat"
+        finally(function() os.remove(corrupt) end)
+        writeFile(corrupt, string.rep("\0", 64))
+
+        local ok, err = loadReplay(corrupt)
+        assert.is_nil(ok)
+        assert.is_true(contains(err, "replay file seems to be corrupt"), tostring(err))
+      end)
+
       it("plays the recorded bytes back into the main console", function()
         if not testMode then
           pending("letting the replay timer run needs MUDLET_TEST_MODE")
@@ -1447,17 +1555,156 @@ describe("Tests C++ functions in the Miscallaneous category", function()
 
         assert.is_true(loadReplay(replay))
 
-        local arrived = false
-        for _ = 1, 40 do
-          pumpEvents(50)
-          arrived = contains(textFrom(mark), "mudlet-spec-replayed-line")
-          if arrived then
-            break
-          end
-        end
-        assert.is_true(arrived, "the replay did not reach the console")
+        assert.is_true(playedBack(mark, "mudlet-spec-replayed-line"), "the replay did not reach the console")
         -- whether a replay is running is application-wide, so let this one run
         -- out before the next spec asks for one
+        pumpEvents(200)
+      end)
+
+      it("plays back a replay written with the eight byte delay", function()
+        if not testMode then
+          pending("letting the replay timer run needs MUDLET_TEST_MODE")
+          return
+        end
+        local replay = getMudletHomeDir() .. "/mudlet-spec-wide-replay.dat"
+        finally(function() os.remove(replay) end)
+        writeFile(replay, wideChunk(10, "mudlet-spec-wide-replay-line\r\n"))
+        local mark = getLastLineNumber("main")
+
+        assert.is_true(loadReplay(replay))
+
+        assert.is_true(playedBack(mark, "mudlet-spec-wide-replay-line"), "the replay did not reach the console")
+        pumpEvents(200)
+      end)
+
+      -- older Mudlets recorded an empty chunk when a compressed read
+      -- inflated to nothing
+      it("plays on past a chunk with no bytes in it", function()
+        if not testMode then
+          pending("letting the replay timer run needs MUDLET_TEST_MODE")
+          return
+        end
+        local replay = getMudletHomeDir() .. "/mudlet-spec-empty-chunk-replay.dat"
+        finally(function() os.remove(replay) end)
+        writeFile(replay, chunk(0, "mudlet-spec-before-empty-line\r\n") .. chunk(10, "") .. chunk(10, "mudlet-spec-after-empty-line\r\n"))
+        local mark = getLastLineNumber("main")
+
+        assert.is_true(loadReplay(replay))
+
+        assert.is_true(playedBack(mark, "mudlet-spec-after-empty-line"), "the replay did not reach the console")
+        pumpEvents(200)
+      end)
+
+      -- a first delay of zero makes the wider shape start with eight zero
+      -- bytes, which the narrower one reads as an empty chunk
+      it("plays back an eight byte delay replay with no first delay and an empty chunk", function()
+        if not testMode then
+          pending("letting the replay timer run needs MUDLET_TEST_MODE")
+          return
+        end
+        local replay = getMudletHomeDir() .. "/mudlet-spec-wide-empty-chunk-replay.dat"
+        finally(function() os.remove(replay) end)
+        writeFile(replay, wideChunk(0, "mudlet-spec-wide-before-empty-line\r\n") .. wideChunk(10, "") .. wideChunk(10, "mudlet-spec-wide-after-empty-line\r\n"))
+        local mark = getLastLineNumber("main")
+
+        assert.is_true(loadReplay(replay))
+
+        assert.is_true(playedBack(mark, "mudlet-spec-wide-after-empty-line"), "the replay did not reach the console")
+        assert.is_true(contains(textFrom(mark), "mudlet-spec-wide-before-empty-line"), "the line before the empty chunk did not reach the console")
+        pumpEvents(200)
+      end)
+
+      -- read with four byte delays, this file runs out part way through a
+      -- length, which must not pass for a chunk with no bytes in it
+      it("plays back an eight byte delay replay that is too short to read with four byte delays", function()
+        if not testMode then
+          pending("letting the replay timer run needs MUDLET_TEST_MODE")
+          return
+        end
+        local replay = getMudletHomeDir() .. "/mudlet-spec-wide-short-replay.dat"
+        finally(function() os.remove(replay) end)
+        writeFile(replay, wideChunk(0, "Zq\n"))
+        local mark = getLastLineNumber("main")
+
+        assert.is_true(loadReplay(replay))
+
+        assert.is_true(playedBack(mark, "Zq"), "the replay did not reach the console")
+        pumpEvents(200)
+      end)
+
+      it("loads a replay after refusing a file too short to be one", function()
+        if not testMode then
+          pending("letting the replay timer run needs MUDLET_TEST_MODE")
+          return
+        end
+        local short = getMudletHomeDir() .. "/mudlet-spec-short-replay.dat"
+        local replay = getMudletHomeDir() .. "/mudlet-spec-after-short-replay.dat"
+        finally(function()
+          os.remove(short)
+          os.remove(replay)
+        end)
+        writeFile(short, "\0\0")
+        writeFile(replay, chunk(0, "mudlet-spec-after-short-line\r\n"))
+
+        local ok, err = loadReplay(short)
+        assert.is_nil(ok)
+        assert.is_true(contains(err, "replay file seems to be corrupt"), tostring(err))
+
+        local mark = getLastLineNumber("main")
+        assert.is_true(loadReplay(replay))
+        assert.is_true(playedBack(mark, "mudlet-spec-after-short-line"), "the replay did not reach the console")
+        pumpEvents(200)
+      end)
+
+      it("acts on telnet negotiation that was recorded with the text", function()
+        if not testMode then
+          pending("letting the replay timer run needs MUDLET_TEST_MODE")
+          return
+        end
+        local replay = getMudletHomeDir() .. "/mudlet-spec-gmcp-replay.dat"
+        -- the gmcp table is the profile's, so whatever was under this key before
+        -- goes back afterwards
+        local previousReplay = gmcp.Replay
+        gmcp.Replay = nil
+        finally(function()
+          os.remove(replay)
+          gmcp.Replay = previousReplay
+        end)
+        -- IAC SB <GMCP> ... IAC SE, which only the telnet state machine can pick
+        -- out of the stream - played back as text it would just be printed
+        writeFile(replay, chunk(10, "\255\250\201Replay.Marker {\"note\":\"seen\"}\255\240mudlet-spec-gmcp-replay-line\r\n"))
+        local mark = getLastLineNumber("main")
+
+        assert.is_true(loadReplay(replay))
+
+        assert.is_true(playedBack(mark, "mudlet-spec-gmcp-replay-line"), "the replay did not reach the console")
+        assert.is_truthy(gmcp.Replay and gmcp.Replay.Marker, "the subnegotiation recorded in the replay was played back as text instead of acted on")
+        assert.equals("seen", gmcp.Replay.Marker.note)
+        pumpEvents(200)
+      end)
+
+      it("refuses a second replay while one is still running", function()
+        if not testMode then
+          pending("letting the replay timer run needs MUDLET_TEST_MODE")
+          return
+        end
+        local first = getMudletHomeDir() .. "/mudlet-spec-first-replay.dat"
+        local second = getMudletHomeDir() .. "/mudlet-spec-second-replay.dat"
+        finally(function()
+          os.remove(first)
+          os.remove(second)
+        end)
+        writeFile(first, chunk(400, "mudlet-spec-first-replay-line\r\n"))
+        writeFile(second, chunk(10, "mudlet-spec-second-replay-line\r\n"))
+        local mark = getLastLineNumber("main")
+
+        assert.is_true(loadReplay(first))
+        local ok, err = loadReplay(second)
+
+        assert.is_nil(ok)
+        assert.is_true(contains(err, "already be in progress"), tostring(err))
+        assert.is_true(playedBack(mark, "mudlet-spec-first-replay-line"), "the replay that was accepted did not reach the console")
+        assert.is_false(contains(textFrom(mark), "mudlet-spec-second-replay-line"), "the replay that was refused played anyway")
         pumpEvents(200)
       end)
     end)

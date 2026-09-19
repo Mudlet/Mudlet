@@ -261,6 +261,321 @@ describe("Alias processing", function()
 
     end)
 
+    -- A nested expandAlias() runs a whole alias pass inside the caller's script,
+    -- and that pass sets the "command" global and the capture groups for itself.
+    -- Whatever ran the outer script has to get its own state back when the
+    -- nested call returns, or every capture it reads afterwards is nil.
+    describe("state across a nested expandAlias", function()
+
+        it("gives the outer alias back its matches and command", function()
+            local seen = {}
+            local innerId = tempAlias([[^nested_state_inner (\w+)$]], function()
+                seen.innerCommand = command
+                seen.innerMatch = matches[2]
+            end)
+            local outerId = tempAlias([[^nested_state_outer (\w+)$]], function()
+                seen.beforeCommand = command
+                seen.beforeMatch = matches[2]
+                expandAlias("nested_state_inner deeper", false)
+                seen.afterCommand = command
+                seen.afterFullMatch = matches[1]
+                seen.afterMatch = matches[2]
+            end)
+            finally(function()
+                killAlias(innerId)
+                killAlias(outerId)
+            end)
+
+            expandAlias("nested_state_outer thing", false)
+
+            assert.are.equal("nested_state_outer thing", seen.beforeCommand)
+            assert.are.equal("thing", seen.beforeMatch)
+            assert.are.equal("nested_state_inner deeper", seen.innerCommand, "the inner alias should see its own command")
+            assert.are.equal("deeper", seen.innerMatch, "the inner alias should see its own captures")
+            assert.are.equal("nested_state_outer thing", seen.afterCommand, "command was left holding the nested command")
+            assert.are.equal("nested_state_outer thing", seen.afterFullMatch, "matches[1] was emptied by the nested expansion")
+            assert.are.equal("thing", seen.afterMatch, "the outer capture was emptied by the nested expansion")
+        end)
+
+        -- The capture machinery is shared with triggers, so a trigger script that
+        -- expands an alias loses its captures the same way
+        it("gives the calling trigger back its matches", function()
+            local seen = {}
+            local aliasId = tempAlias([[^nested_state_from_trigger (\w+)$]], function()
+                seen.aliasMatch = matches[2]
+            end)
+            local triggerId = tempRegexTrigger([[^nested_state_trigger (\w+)$]], function()
+                seen.beforeMatch = matches[2]
+                expandAlias("nested_state_from_trigger deeper", false)
+                seen.afterFullMatch = matches[1]
+                seen.afterMatch = matches[2]
+            end)
+            finally(function()
+                killAlias(aliasId)
+                killTrigger(triggerId)
+            end)
+
+            feedTriggers("\nnested_state_trigger thing\n")
+
+            assert.are.equal("thing", seen.beforeMatch, "the trigger should see its own capture")
+            assert.are.equal("deeper", seen.aliasMatch, "the alias should see its own capture")
+            assert.are.equal("nested_state_trigger thing", seen.afterFullMatch, "matches[1] was emptied by the nested expansion")
+            assert.are.equal("thing", seen.afterMatch, "the trigger's capture was emptied by the nested expansion")
+        end)
+
+        -- "command" is set before any pattern is tried, so the commonest shape of
+        -- all - expandAlias() used to push a plain command at the game - moves it
+        -- even though nothing matches
+        it("leaves the caller's command alone when the nested command matches nothing", function()
+            local seen = {}
+            local outerId = tempAlias([[^unmatched_outer (\w+)$]], function()
+                expandAlias("unmatched_by_any_alias_at_all", false)
+                seen.command = command
+                seen.match = matches[2]
+            end)
+            finally(function()
+                killAlias(outerId)
+            end)
+
+            expandAlias("unmatched_outer thing", false)
+
+            assert.are.equal("unmatched_outer thing", seen.command, "command was left holding a command no alias even matched")
+            assert.are.equal("thing", seen.match)
+        end)
+
+        it("hands every level of a three deep nesting its own state back", function()
+            local seen = {}
+            local thirdId = tempAlias([[^depth_three (\w+)$]], function()
+                seen.third = matches[2]
+                seen.thirdCommand = command
+            end)
+            local secondId = tempAlias([[^depth_two (\w+)$]], function()
+                expandAlias("depth_three ccc", false)
+                seen.second = matches[2]
+                seen.secondCommand = command
+            end)
+            local firstId = tempAlias([[^depth_one (\w+)$]], function()
+                expandAlias("depth_two bbb", false)
+                seen.first = matches[2]
+                seen.firstCommand = command
+            end)
+            finally(function()
+                killAlias(firstId)
+                killAlias(secondId)
+                killAlias(thirdId)
+            end)
+
+            expandAlias("depth_one aaa", false)
+
+            assert.are.equal("ccc", seen.third)
+            assert.are.equal("depth_three ccc", seen.thirdCommand)
+            assert.are.equal("bbb", seen.second, "the middle level got another level's captures back")
+            assert.are.equal("depth_two bbb", seen.secondCommand, "the middle level got another level's command back")
+            assert.are.equal("aaa", seen.first, "the outermost level got another level's captures back")
+            assert.are.equal("depth_one aaa", seen.firstCommand, "the outermost level got another level's command back")
+        end)
+
+        -- Handing back a table rebuilt from the capture list would lose whatever
+        -- the script had put in the one it was actually given
+        it("gives back the very matches table the caller was holding", function()
+            local seen = {}
+            local innerId = tempAlias([[^own_table_inner$]], function() end)
+            local outerId = tempAlias([[^own_table_outer (\w+)$]], function()
+                matches.writtenByTheScript = "still here"
+                expandAlias("own_table_inner", false)
+                seen.written = matches.writtenByTheScript
+                seen.match = matches[2]
+            end)
+            finally(function()
+                killAlias(innerId)
+                killAlias(outerId)
+            end)
+
+            expandAlias("own_table_outer thing", false)
+
+            assert.are.equal("still here", seen.written, "the caller was handed a rebuilt table rather than its own")
+            assert.are.equal("thing", seen.match)
+        end)
+
+        -- What a command sent at the top level does to "command" is unchanged:
+        -- every alias that command runs still sees it, including one reached
+        -- after an earlier alias has nested a dispatch of its own
+        it("still gives a command's own aliases the command that was sent", function()
+            local seen = {}
+            local firstId = tempAlias([[^sibling_probe (\w+)$]], function()
+                seen.first = command
+                expandAlias("sibling_nested", false)
+            end)
+            local nestedId = tempAlias([[^sibling_nested$]], function() end)
+            local secondId = tempAlias([[^sibling_probe (\w+)$]], function()
+                seen.second = command
+                seen.secondMatch = matches[2]
+            end)
+            finally(function()
+                killAlias(firstId)
+                killAlias(nestedId)
+                killAlias(secondId)
+            end)
+
+            expandAlias("sibling_probe thing", false)
+
+            assert.are.equal("sibling_probe thing", seen.first)
+            assert.are.equal("sibling_probe thing", seen.second, "a later alias for the same command saw the nested command instead")
+            assert.are.equal("thing", seen.secondMatch)
+        end)
+
+        it("gives the caller its state back when the nested alias errors", function()
+            local seen = {}
+            local innerId = tempAlias([[^erroring_inner$]], function()
+                error("a deliberate error from a spec's nested alias")
+            end)
+            local outerId = tempAlias([[^erroring_outer (\w+)$]], function()
+                expandAlias("erroring_inner", false)
+                seen.command = command
+                seen.match = matches[2]
+            end)
+            finally(function()
+                killAlias(innerId)
+                killAlias(outerId)
+            end)
+
+            expandAlias("erroring_outer thing", false)
+
+            assert.are.equal("erroring_outer thing", seen.command, "an erroring nested alias left the caller its command")
+            assert.are.equal("thing", seen.match, "an erroring nested alias left the caller its captures")
+        end)
+
+        -- multimatches goes the same way as matches, which only a multiline
+        -- trigger ever reads
+        it("gives a multiline trigger back its multimatches", function()
+            _G.NestedMultiSpec = {}
+            local aliasId = tempAlias([[^nested_multi_alias$]], function() end)
+            local code = [==[
+                _G.NestedMultiSpec.before = multimatches[1][2] .. "," .. multimatches[2][2]
+                expandAlias("nested_multi_alias", false)
+                _G.NestedMultiSpec.after = multimatches[1][2] .. "," .. multimatches[2][2]
+            ]==]
+            tempComplexRegexTrigger("SpecNestedMulti", [[^nm one (\w+)$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3)
+            tempComplexRegexTrigger("SpecNestedMulti", [[^nm two (\w+)$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3)
+            finally(function()
+                killTrigger("SpecNestedMulti")
+                killAlias(aliasId)
+                _G.NestedMultiSpec = nil
+            end)
+
+            feedTriggers("nm one aaa\n")
+            feedTriggers("nm two bbb\n")
+
+            assert.are.equal("aaa,bbb", _G.NestedMultiSpec.before, "the multiline trigger should see its own multimatches")
+            assert.are.equal("aaa,bbb", _G.NestedMultiSpec.after, "multimatches was emptied by the nested expansion")
+        end)
+
+        -- The globals table carries a metatable - Mudlet puts a __call on it in
+        -- Other.lua - and a package is free to add __index or __newindex to one
+        -- of its own. Reading these globals through such a metatable can raise,
+        -- and a raise inside expandAlias() skips the restore that pairs with the
+        -- save, leaving the next restore to hand back some other caller's state.
+        describe("with a metatable on the globals table", function()
+
+            local savedMetatable, savedMultimatches, savedCommand
+
+            before_each(function()
+                savedMetatable = getmetatable(_G)
+                savedMultimatches = rawget(_G, "multimatches")
+                savedCommand = rawget(_G, "command")
+            end)
+
+            after_each(function()
+                setmetatable(_G, savedMetatable)
+                rawset(_G, "multimatches", savedMultimatches)
+                rawset(_G, "command", savedCommand)
+            end)
+
+            it("reads the globals without running an __index", function()
+                local seen = {}
+                local innerId = tempAlias([[^meta_inner$]], function()
+                    seen.innerRan = true
+                end)
+                local midId = tempAlias([[^meta_mid (\w+)$]], function()
+                    -- absent, so a metatable is the only way the read can answer
+                    rawset(_G, "multimatches", nil)
+                    setmetatable(_G, {__index = function(_, key)
+                        if key == "multimatches" then
+                            error("a package's __index raised")
+                        end
+                        return nil
+                    end})
+                    seen.raised = not pcall(expandAlias, "meta_inner", false)
+                    setmetatable(_G, savedMetatable)
+                end)
+                local outerId = tempAlias([[^meta_outer (\w+)$]], function()
+                    expandAlias("meta_mid beta", false)
+                    seen.outerMatch = matches[2]
+                    seen.outerCommand = command
+                end)
+                finally(function()
+                    killAlias(innerId)
+                    killAlias(midId)
+                    killAlias(outerId)
+                end)
+
+                expandAlias("meta_outer alpha", false)
+
+                assert.is_false(seen.raised, "reading the globals ran a package's __index")
+                assert.is_true(seen.innerRan, "the nested alias never ran")
+                assert.are.equal("alpha", seen.outerMatch, "the outer alias was handed another caller's captures")
+                assert.are.equal("meta_outer alpha", seen.outerCommand, "the outer alias was handed another caller's command")
+            end)
+
+            -- Handing the dispatch its own "command" is Mudlet's own write, and it
+            -- goes in raw for the same reason the parking does. A raise from a
+            -- package's __newindex there longjmps to the calling script's pcall
+            -- from the middle of the dispatch, past the restore below and past
+            -- every C++ destructor between - the command Host::send() split and
+            -- expandAlias()'s own copy of it leak outright, which is the class
+            -- CI/check-lua-error-strands.lua exists for.
+            it("hands the dispatch its command without running a __newindex", function()
+                local seen = {}
+                local innerId = tempAlias([[^stranded_inner$]], function()
+                    seen.innerRan = true
+                    seen.innerCommand = command
+                end)
+                local midId = tempAlias([[^stranded_mid (\w+)$]], function()
+                    -- absent, so a __newindex is the only thing the write can reach
+                    rawset(_G, "command", nil)
+                    setmetatable(_G, {__newindex = function(globals, key, value)
+                        if key == "command" then
+                            error("a package's __newindex raised")
+                        end
+                        rawset(globals, key, value)
+                    end})
+                    seen.raised = not pcall(expandAlias, "stranded_inner", false)
+                    setmetatable(_G, savedMetatable)
+                end)
+                local outerId = tempAlias([[^stranded_outer (\w+)$]], function()
+                    expandAlias("stranded_mid beta", false)
+                    seen.outerMatch = matches[2]
+                    seen.outerCommand = command
+                end)
+                finally(function()
+                    killAlias(innerId)
+                    killAlias(midId)
+                    killAlias(outerId)
+                end)
+
+                expandAlias("stranded_outer alpha", false)
+
+                assert.is_false(seen.raised, "setting the dispatch's command ran a package's __newindex")
+                assert.is_true(seen.innerRan, "the nested alias never ran")
+                assert.are.equal("stranded_inner", seen.innerCommand, "the nested alias was not given its own command")
+                assert.are.equal("alpha", seen.outerMatch, "the outer alias was handed another caller's captures")
+                assert.are.equal("stranded_outer alpha", seen.outerCommand, "the outer alias was handed another caller's command")
+            end)
+
+        end)
+
+    end)
+
     -- enableAlias()/disableAlias() must toggle EVERY alias sharing a name, not
     -- just the first, since AliasUnit iterates the whole multimap of same-named
     -- entries.
