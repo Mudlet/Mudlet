@@ -211,6 +211,7 @@ set(mudlet_SRCS
     TRoomDB.cpp
     TScript.cpp
     TScrollBox.cpp
+    TSpellChecker.cpp
     TSplitter.cpp
     TSplitterHandle.cpp
     TStringUtils.cpp
@@ -473,6 +474,7 @@ set(mudlet_HDRS
     TRoomDB.h
     TScript.h
     TScrollBox.h
+    TSpellChecker.h
     TSplitter.h
     TSplitterHandle.h
     TStringUtils.h

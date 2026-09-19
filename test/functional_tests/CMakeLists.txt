@@ -97,6 +97,7 @@ set(PROFILE_GROUP_TEST_SOURCES
     ProfileSaveShutdownRaceTest.cpp
     ResetProfileTest.cpp
     SavedVariableFenceTest.cpp
+    SpellDictionaryFailureTest.cpp
     XMLexportVariablesTest.cpp
 )
 

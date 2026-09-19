@@ -55,8 +55,6 @@
 #endif
 #include <array>
 #include <optional>
-#include <hunspell/hunspell.hxx>
-#include <hunspell/hunspell.h>
 
 class QAction;
 class QCloseEvent;
@@ -180,7 +178,6 @@ public:
     void takeOwnershipOfInstanceCoordinator(std::unique_ptr<MudletInstanceCoordinator>);
     MudletInstanceCoordinator* getInstanceCoordinator();
     void addConsoleForNewHost(Host*);
-    QPair<bool, bool> addWordToSet(const QString&);
     void adjustMenuBarVisibility();
     void adjustToolBarVisibility();
     void announce(const QString& text, const QString& processing = QString(), bool isPlain = false);
@@ -219,7 +216,6 @@ public:
     QDockWidget* getMainWindowDockWidget(const QString& mapKey) const;
     std::optional<QSize> getImageSize(const QString&);
     const QLocale& getUserLocale() const { return mUserLocale; }
-    QSet<QString> getWordSet();
     bool inDarkMode() const { return mDarkMode; }
     // Used to enable "emergency" control recovery action - if Mudlet is
     // operating without either menubar or main toolbar showing.
@@ -242,17 +238,9 @@ public:
     bool hasOrphanedProfiles();
     QStringList getOrphanedProfiles();
     void reattachOrphanedProfiles();
-    // Both of these revises the contents of the .aff file and handle a .dic
-    // file that has been updated externally/manually (to add or remove words)
-    // - the first also puts the contents of the .dic file into the
-    // supplied second argument before returning the handle to the dictionary
-    // loaded:
-    Hunhandle* prepareProfileDictionary(const QString&, QSet<QString>&);
-    Hunhandle* prepareSharedDictionary();
     void processEventLoopHack();
     void readEarlySettings(const QSettings&);
     void readLateSettings(const QSettings&);
-    QPair<bool, bool> removeWordFromSet(const QString&);
     void refreshTabBar();
     void refreshTabBarsAfterStyleChange();
     // Used by a profile to tell the mudlet class
@@ -262,13 +250,6 @@ public:
     void replayOver();
     bool replayStart();
     std::pair<bool, QString> resetProfileIcon(const QString&);
-#if defined(Q_OS_WINDOWS)
-    void sanitizeUtf8Path(QString& originalLocation, const QString& fileName) const;
-#endif
-    // This will save and replace the .dic file with just the words in the
-    // supplied second argument and update the .aff file as appropriate. It is
-    // to be used at the end of a session to store away the user's changes:
-    bool saveDictionary(const QString&, QSet<QString>&);
     bool saveWindowLayout();
     void scanForMudletTranslations(const QString&);
     void scanForQtTranslations(const QString&);
@@ -601,7 +582,6 @@ private:
     void showUiTour(const bool skipIntroStep);
     static bool needsCustomDarkTheme();
     void closeHost(const QString&);
-    int getDictionaryWordCount(const QString& dictionaryPath);
     void goingDown() { mIsGoingDown = true; }
     void endProfileLoad();
     void initEdbee();
@@ -609,10 +589,6 @@ private:
     void loadMaps();
     void loadTranslators(const QString&);
     void migrateDebugConsole(Host*);
-    bool overwriteAffixFile(const QString& affixPath, const QHash<QString, unsigned int>&);
-    bool overwriteDictionaryFile(const QString& dictionaryPath, const QStringList&);
-    bool scanDictionaryFile(const QString& dictionaryPath, int&, QHash<QString, unsigned int>&, QStringList&);
-    int scanWordList(QStringList&, QHash<QString, unsigned int>&);
     void setupTrayIcon();
     void reshowRequiredMainConsoles();
     void toggleMute(bool state, QAction* toolbarAction, QAction* menuAction, bool isAPINotGame, const QString& unmuteText, const QString& muteText);
@@ -639,9 +615,6 @@ private:
     // const TBuffer::csmEncodingTable:
     QMap<QByteArray, QString> mEncodingNameMap;
     HostManager mHostManager;
-    // Points to the common mudlet dictionary handle once a profile has
-    // requested it, then gets closed at termination of the application.
-    Hunhandle* mpHunspell_sharedDictionary = nullptr;
     // Has default form of "en_US" but can be just an ISO language code e.g. "fr" for french,
     // without a country designation. Replaces xx in "mudlet_xx.qm" to provide the translation
     // file for GUI translation
@@ -778,8 +751,6 @@ private:
     // that Qt uses to hold all the details:
     QLocale mUserLocale;
     QMap<Host*, QToolBar*> mUserToolbarMap;
-    // The collection of words in what mpHunspell_sharedDictionary points to:
-    QSet<QString> mWordSet_shared;
 
     // Window menu management for multiple windows
     QList<QAction*> mWindowListActions;
