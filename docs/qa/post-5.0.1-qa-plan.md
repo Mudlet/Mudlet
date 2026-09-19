@@ -117,6 +117,9 @@ Verdict: Fixed & verified / Verified no regression / Could not test (reason) / B
 At most three agents run at once. A batch starts only after the previous one
 has reported. Each agent is Opus, gets one area, and is not reused afterwards.
 Areas are ordered so that crash, hang and data-loss fixes are checked first.
+The verifier for a batch runs alongside the next batch's agents, within the
+same limit of three, so the rounds actually run are: (1) A1 B1 E1; (2) V1 A2
+C1; (3) F1 D1 V2; (4) E2 B2 V3; (5) G1 G2 V4; (6) H1 V5; (7) V6.
 
 ### Batch 1
 
