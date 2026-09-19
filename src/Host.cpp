@@ -4381,8 +4381,9 @@ void Host::setShowIdsInEditor(const bool isShown)
 }
 
 // The single answer to "does this profile have a map widget on screen right
-// now" - null both for a profile that has never opened one and for one that put
-// it away again, which a script cannot tell apart and does not need to.
+// now" - null for a profile that never opened one, for one that put it away
+// again, and for one whose closed widget createMapper() took over, none of which
+// a script can tell apart or needs to.
 //
 // isHidden() rather than a flag of our own, because the dock gets hidden by
 // paths that would never think to update one: its own title bar close button,
@@ -5065,7 +5066,9 @@ std::pair<bool, QString> Host::closeMapWidget()
     }
 
     // Test the raw pointer first so that a profile which never made a map widget
-    // is told apart from one that has put its widget away.
+    // is told apart from one that has put its widget away. createMapper() nulls it
+    // when it takes a hidden widget over, so a profile that traded its map widget
+    // for an embedded mapper gets the never-made answer too.
     if (!mpConsole->mpDockableMapWidget) {
         return {false, qsl("no map widget found to close")};
     }

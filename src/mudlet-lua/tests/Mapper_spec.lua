@@ -1,5 +1,6 @@
 -- This block must stay first in the file: once a later spec calls
--- openMapWidget(), the widget persists for the rest of the session and the
+-- openMapWidget(), the widget persists for the rest of the session - only an
+-- embedded mapper takes it away again, and no spec makes one - so the
 -- pre-widget state becomes unreachable.
 describe("Tests map events and menus before the map widget is opened", function()
   it("should return an empty table when nothing is registered yet", function()

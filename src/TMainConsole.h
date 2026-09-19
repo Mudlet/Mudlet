@@ -232,8 +232,10 @@ public:
     QPointer<QProgressDialog> mpPackageDownloadProgressDialog;
     QPointer<QProgressDialog> mpMapProgressDialog;
     // Outlives Host::closeMapWidget(), which only hides it, so this being
-    // non-null says the profile has made a map widget at some point, not that it
-    // has one on screen - see Host::mapWidget() for the latter.
+    // non-null does not say the profile has a map widget on screen - see
+    // Host::mapWidget() for that. Null means the profile never made one, or
+    // createMapper() took a hidden one over so that an embedded mapper could have
+    // the slot; nothing else destroys it before ~TMainConsole().
     QPointer<QDockWidget> mpDockableMapWidget;
     QPointer<QDialog> mpUnpackingDialog;
 
