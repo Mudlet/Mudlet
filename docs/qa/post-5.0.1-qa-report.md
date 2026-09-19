@@ -1,6 +1,6 @@
 # QA report: development since 5.0.1
 
-Status: in progress (batches 1 to 3 verified except E2/B2, whose verification is running; batch 4 running).
+Status: in progress (batches 1 to 3 verified; batch 4: G1/G2 under verification, H1 running).
 Plan: `post-5.0.1-qa-plan.md`. Every item below was either run by the coordinator
 or reproduced by an independent verifier; agent claims that were not reproduced
 are listed in their own section, not among the findings.
@@ -155,7 +155,25 @@ F1's script on development and, by verifier V3, on 5.0.1, which leaves the
 same orphan; neither tree crashes, so the crash that c0309561b fixed (#10319)
 is a different defect and stays fixed. Found by agent F1 (F-F1-2).
 
-### 12. Minor, pre-existing: the connection dialog's first frame describes a profile other than the highlighted one
+### 12. Minor, fix ineffective, not on the tracker: the tab detach threshold is still tiny and the left-most tab never detaches
+
+52b0d4b02 raised the drag distance that tears a profile tab out of the tab bar
+from 50 to 80 px, but the distance is measured from the tab bar's centre rather
+than from the tab, so on development a tab detaches after an 18 px drag (14 px
+on 5.0.1) and the left-most tab cannot be detached by any drag at all (200 px
+tried). The centre-relative code is the same in 5.0.1, so the commit bought
+4 px of the intended 30. Found by agent E2 (F-E2-2); measured by verifier V4
+on both trees.
+
+### 13. Minor, not on the tracker: the interface tour stops taking the keyboard once Next is clicked with the mouse
+
+After a mouse click on the tour's Next button the arrow keys do nothing, Escape
+no longer closes the tour, and PageUp reaches the console behind the overlay
+and splits the view. ec0fedbb9 made the Next button the only thing that
+advances the tour; keyboard focus after that click was not handled. Found by
+agent E2 (F-E2-1), confirmed by verifier V4 with screenshots.
+
+### 14. Minor, pre-existing: the connection dialog's first frame describes a profile other than the highlighted one
 
 With two saved profiles, the dialog opens highlighting one of them while the
 details pane shows "Mudlet self-test / mudlet.org / 23" and Connect is enabled;
@@ -199,6 +217,18 @@ because they are new.
 
 - A telnet GA that arrives in the read after a prompt was already flushed by
   the 300 ms marker commits a second, empty line (agent B1, F-B1-3; confirmed).
+- The redesigned settings dialog (0f70a691f) is still English in Czech, a
+  locale the build reports as 99 % complete: sidebar, page titles, section
+  headings and the search placeholder. The strings are wrapped for
+  translation, so this is Crowdin lag from the redesign rather than a code
+  defect (verifier V4, F-V4-1). "Show main toolbar: Always" does not reach a
+  window that was already detached (F-V4-2).
+- The settings dialog's Editor page clips the theme-update error text (agent
+  E2, F-E2-3, cosmetic). Its package-manager heading elides to "Str..." and
+  the self-test profile is absent from My games (E2 notes N4 and N5).
+- An MXP mode-switch escape split across two socket reads is missed (agent
+  B2, F-B2-2; open #10658). A bare-number GMCP payload arrives as a number
+  (F-B2-3), contrary to open #10362's description.
 - `debugc()` output goes to the editor's Errors view rather than the Central
   Debug Console (agent D1, F-D1-4; confirmed by verifier V3 as the designed
   behaviour).
@@ -239,12 +269,18 @@ building a second one). b150e51d4 cannot be driven here because the two map
 views exclude each other in both directions (#10666); 9720638ef (a frame the
 game empties) moved to B2.
 
-Batch 3 so far: areas F1 (console, labels, Geyser, 32 commits) and D1 (script
-editor, 16 commits). One cited screenshot name was a typo (the file exists
+Batch 3: areas F1 (console, labels, Geyser, 32 commits), D1 (script editor,
+16 commits), E2 (settings, starter UI, detached windows, 19 commits) and B2
+(protocols, 13 commits). One cited screenshot name was a typo (the file exists
 under the neighbouring number); everything else cited exists. Verifier V3
 re-ran 17 rows and all held up, and closed F1's remaining gap on 78e33c43a by
 patching a negative wrap indent into a saved profile: it loads and wraps
-normally.
+normally. Verifier V4 re-ran 15 E2 and B2 rows, all held up, and filled two
+E2 gaps: the Discord button in a detached window shows icon and label on
+development where 5.0.1 showed bare text (41c41e428), and the Czech interface
+check for 0237e8d46. The MSDP bug above (item 10) reproduces on 5.0.1 with
+the identical decoder error; 137e0d14d did improve the message, which now
+names the variable and says the previous value is kept.
 
 ## Fixed during the campaign, or already fixed but still open
 
