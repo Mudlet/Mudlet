@@ -204,7 +204,7 @@ set(PACKAGE_GROUP_TEST_SOURCES
 )
 
 # Onboarding and in-app guidance: the starter UI, the tutorial invitation,
-# the feature callouts and the experienced-player gate
+# the interface tour, the feature callouts and the experienced-player gate
 set(STARTERUI_GROUP_TEST_SOURCES
     ExperiencedPlayerGateTest.cpp
     FeatureCalloutTest.cpp
@@ -215,6 +215,7 @@ set(STARTERUI_GROUP_TEST_SOURCES
     TutorialInvitationFocusTest.cpp
     TutorialInvitationGateTest.cpp
     TutorialInvitationLayoutTest.cpp
+    UiTourKeyboardTest.cpp
 )
 
 # The settings dialog: its sidebar-and-cards shell, the deep links into it, how
