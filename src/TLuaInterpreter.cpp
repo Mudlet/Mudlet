@@ -1351,7 +1351,13 @@ int TLuaInterpreter::saveProfile(lua_State* L)
         }
     }
 
-    auto [ok, filename, error] = (saveAsFile.isNull()) ? host.saveProfile(saveToDir) : host.saveProfileAs(saveToDir + "/" + saveAsFile);
+    // A folder from a script can already end in a separator, and this string is
+    // the file saveProfileAs() writes as well as the one handed back, so QDir
+    // does the join: exactly one separator, and nothing else about the path
+    // touched. An empty folder keeps naming the filesystem root, as it always
+    // has - QDir would make that the working directory instead.
+    const QString saveAsPathFileName = saveToDir.isEmpty() ? qsl("/%1").arg(saveAsFile) : QDir(saveToDir).filePath(saveAsFile);
+    auto [ok, filename, error] = saveAsFile.isNull() ? host.saveProfile(saveToDir) : host.saveProfileAs(saveAsPathFileName);
 
     if (ok) {
         lua_pushboolean(L, true);
