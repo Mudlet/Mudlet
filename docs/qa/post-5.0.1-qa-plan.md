@@ -1,6 +1,11 @@
 # QA plan: development since 5.0.1
 
-Date: 2026-09-19. Branch under test: `development` at `dbbf040c3`.
+Date: 2026-09-19. Branch under test: `development` at `dbbf040c3` for batch 1,
+then `12b373743` (two commits later) from batch 2 on: 78e33c43a "a negative wrap
+indent no longer crashes Mudlet" joins F1, and 12b373743 "Stop the keychain test
+crashing when the credential store answers late" (which also changes
+`CredentialManager`) is checked by the batch 1 verifier, since it is the cause of
+the two baseline ctest failures.
 
 ## Scope
 
@@ -228,7 +233,8 @@ specs.
 Commits: 6686b97ea a21391878 d3f5f873b 1f159bf2b 95a20c600 2fe1f047c 2492e0efc
 55871e6f6 373b68265 35f0a72b9 5830a3bdb d5645e23d caa26b20f f04e3f483 1d17661d5
 ae7c09832 a42bd25fb b030ceb1c 6fd2bb035 011b79d8d dc07ffb23 c0309561b ee1729a73
-2fe2f8961 51d4baef3 ba8e7eaa0 7383ed6c9 e89b55e6f c459afe96 4c987f2bb 0578b6122.
+2fe2f8961 51d4baef3 ba8e7eaa0 7383ed6c9 e89b55e6f c459afe96 4c987f2bb 0578b6122
+78e33c43a (negative wrap indent, landed after batch 1 started).
 
 Recipe: an adjustable container attached to each border; drag the main window
 with xdotool and screenshot mid-drag (text must not lag), resize from a script's
@@ -376,6 +382,16 @@ by running the `git log` above and removing the hashes named in this plan.
 Before batch 1 the coordinator runs the full `ctest` and busted suites once and
 records the result in `qa/baseline.md`, so an agent can tell a pre-existing
 failure from one it caused.
+
+## Known issues and open pull requests
+
+Before a finding is recorded, the agent greps the saved lists of issues touched
+since the branch point and of open pull requests, and runs a semantic search of
+the tracker for the finding's key words. A match does not cancel the finding: it
+confirms the problem is live on this tree. The finding is tagged `Known: #N`,
+`Closed: #N` (the tracker believes it fixed, so this is a regression or an
+incomplete fix) or `Fix pending: PR #N`, and the report groups those separately
+from new bugs.
 
 ## Verification
 
