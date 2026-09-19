@@ -25,7 +25,7 @@
 #include "dlgMapper.h"
 
 #include "Host.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "TConsole.h"
 #include "TMainConsole.h"
 #include "TMap.h"
@@ -340,8 +340,8 @@ void dlgMapper::loadMapFromFile()
     auto* dialog = new QFileDialog(this);
     //: Title of the file dialog used to pick a map file to load.
     dialog->setWindowTitle(tr("Load Mudlet map"));
-    QSettings& settings = *mudlet::getQSettings();
-    const QString lastDir = settings.value(qsl("lastFileDialogLocation"), MudletPaths::getMudletPath(enums::profileHomePath, mpHost->getName())).toString();
+    QSettings& settings = *MudletApp::getQSettings();
+    const QString lastDir = settings.value(qsl("lastFileDialogLocation"), MudletApp::getMudletPath(enums::profileHomePath, mpHost->getName())).toString();
     dialog->setDirectory(lastDir);
     dialog->setNameFilter(filters.join(qsl(";;")));
     connect(dialog, &QDialog::finished, this, [this, dialog](int result) {
@@ -369,7 +369,7 @@ void dlgMapper::loadMapFromFile()
         if (success) {
             pHost->mpMap->audit();
             mEmptyStateDismissed = true;
-            mudlet::getQSettings()->setValue(qsl("lastFileDialogLocation"), QFileInfo(fileName).absolutePath());
+            MudletApp::getQSettings()->setValue(qsl("lastFileDialogLocation"), QFileInfo(fileName).absolutePath());
         }
         updateEmptyStateOverlay();
     });

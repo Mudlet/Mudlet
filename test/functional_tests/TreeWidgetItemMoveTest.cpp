@@ -34,7 +34,7 @@
 #include "AliasUnit.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "TAlias.h"
@@ -67,7 +67,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, profileName));
+        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, profileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }

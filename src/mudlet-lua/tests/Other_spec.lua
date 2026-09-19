@@ -465,6 +465,27 @@ describe("Tests Other.lua functions", function()
     end)
   end)
 
+  describe("Tests the interface language Mudlet publishes", function()
+
+    -- mudlet.translations.interfacelanguage is what translateTable() and
+    -- loadTranslations() fall back to, and cTelnet sends it to the game server as
+    -- the NEW-ENVIRON LANG variable. Nothing else asserts it is set at all, so a
+    -- startup that stopped filling it would leave every caller with an empty
+    -- string and no test would notice.
+    it("names a language, and one the directions table was built under", function()
+      assert.is_table(mudlet.translations)
+      assert.is_string(mudlet.translations.interfacelanguage)
+      assert.is_truthy(#mudlet.translations.interfacelanguage > 0)
+      assert.is_table(mudlet.translations[mudlet.translations.interfacelanguage])
+    end)
+
+    it("is the language translateTable falls back to when none is given", function()
+      local directions = mudlet.translations[mudlet.translations.interfacelanguage]
+      local translated = translateTable({"north"})
+      assert.are.equal(directions["north"], translated[1])
+    end)
+  end)
+
   describe("Tests the functionality of getMudletVersion", function()
 
     it("answers each documented style with the piece of the version it names", function()

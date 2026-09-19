@@ -33,7 +33,7 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -107,7 +107,7 @@ private slots:
         QVERIFY2(mpServer->serverPort() != 0, "TelnetServerStub failed to bind a loopback port");
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -612,7 +612,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = MudletPaths::getMudletPath(enums::profileHomePath, profileName);
+        const QString path = MudletApp::getMudletPath(enums::profileHomePath, profileName);
         QDir dir(path);
 
         if (!dir.exists()) {
