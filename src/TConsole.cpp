@@ -791,7 +791,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     }
 
     if (mType & MainConsole) {
-        mpButtonMainLayer->setVisible(!mpHost->getCompactInputLine());
+        setCompactInputLine(mpHost->getCompactInputLine());
 
         mpCommandLine->adjustHeight();
     }
@@ -2735,6 +2735,15 @@ QSize TConsole::getMainWindowSize() const
         mLastMeasuredSize = mainWindowSize;
     }
     return mainWindowSize;
+}
+
+void TConsole::setCompactInputLine(const bool state)
+{
+    // the button row belongs to the main console alone - setCmdVisible() keeps
+    // it hidden for every other type and the constructor only applies the
+    // setting for a main console, so showing it here on the bare setting would
+    // put it on a console that never has one
+    mpButtonMainLayer->setVisible(!state && (mType & MainConsole));
 }
 
 void TConsole::setProfileName(const QString& newName)
