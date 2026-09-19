@@ -15,11 +15,13 @@ if(NOT EXISTS "${SENTRY_PATH}/CMakeLists.txt")
 endif()
 
 message(STATUS "Building with Sentry enabled")
-set(SENTRY_COMMON_ARGS
+set(SENTRY_CMAKE_ARGS
     -DCMAKE_BUILD_TYPE=RelWithDebInfo
+    "-DCMAKE_INSTALL_PREFIX=${SENTRY_PATH}/install_without_transport"
     -DCMAKE_C_COMPILER=clang
     -DCMAKE_CXX_COMPILER=clang++
     -DSENTRY_BACKEND=crashpad
+    -DSENTRY_TRANSPORT=none
     -DSENTRY_BUILD_SHARED_LIBS=OFF
     -DSENTRY_INTEGRATION_QT=ON
     -G Ninja
@@ -49,7 +51,7 @@ if(APPLE)
     # we still ship for and dyld aborted with "missing symbol called".
     # Passing our deployment target down restores the weak import plus the real
     # runtime check, so older releases take sentry's poll-wait fallback instead.
-    list(APPEND SENTRY_COMMON_ARGS
+    list(APPEND SENTRY_CMAKE_ARGS
         "-DCMAKE_OSX_ARCHITECTURES=${ARCH_LIST}"
         "-DCMAKE_OSX_SYSROOT=${MACOSX_SYSROOT}"
         "-DCMAKE_OSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET}"
@@ -58,28 +60,13 @@ endif()
 
 include(ExternalProject)
 
-# 1) SENTRY WITHOUT TRANSPORT  → used by MUDLET
 ExternalProject_Add(
-    sentry_without_transport
+    sentry_native
     SOURCE_DIR ${SENTRY_PATH}
-    CMAKE_ARGS
-        -DCMAKE_INSTALL_PREFIX=${SENTRY_PATH}/install_without_transport
-        ${SENTRY_COMMON_ARGS}
-        -DSENTRY_TRANSPORT=none
+    CMAKE_ARGS ${SENTRY_CMAKE_ARGS}
 )
 
-
-# 2) SENTRY WITH TRANSPORT  → used by CrashReporter
-ExternalProject_Add(
-    sentry_with_transport
-    SOURCE_DIR ${SENTRY_PATH}
-    CMAKE_ARGS
-        -DCMAKE_INSTALL_PREFIX=${SENTRY_PATH}/install_with_transport
-        ${SENTRY_COMMON_ARGS}
-)
-
-
-add_dependencies(${LIB_MUDLET_TARGET} sentry_without_transport)
+add_dependencies(${LIB_MUDLET_TARGET} sentry_native)
 
 target_compile_options(${LIB_MUDLET_TARGET} PRIVATE -g)
 
@@ -162,7 +149,7 @@ add_custom_command(OUTPUT ${STAMP_FILE}
 )
 
 add_custom_target(copy_sentry ALL DEPENDS ${STAMP_FILE})
-add_dependencies(copy_sentry sentry_without_transport)
+add_dependencies(copy_sentry sentry_native)
 add_dependencies(${EXE_MUDLET_TARGET} copy_sentry)
 
 if(APPLE)
