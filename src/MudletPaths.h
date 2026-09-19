@@ -63,7 +63,8 @@ struct ConfigDirResolution
 QString executableDir();
 
 // ~/.config/mudlet: the pre-XDG default, and the second place a portable.txt
-// marker is looked for
+// marker is looked for. Under a Flatpak or Snap sandbox it is wherever that
+// sandbox lets Qt write instead.
 QString legacyConfigDir();
 
 // The portable.txt that governs, or an empty string when there is none - the

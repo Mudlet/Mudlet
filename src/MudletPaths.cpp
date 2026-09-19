@@ -42,6 +42,7 @@
 #include <QProcessEnvironment>
 #include <QRegularExpression>
 #include <QSaveFile>
+#include <QStandardPaths>
 #include <QTextStream>
 
 namespace {
@@ -154,6 +155,11 @@ QString MudletPaths::executableDir()
 
 QString MudletPaths::legacyConfigDir()
 {
+    // A Flatpak or Snap sandbox redirects the XDG directories underneath us, so
+    // the literal path is wrong there - ask Qt where this sandbox writes
+    if (qEnvironmentVariableIsSet("FLATPAK_ID") || qEnvironmentVariableIsSet("SNAP")) {
+        return QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    }
     return qsl("%1/.config/mudlet").arg(QDir::homePath());
 }
 
