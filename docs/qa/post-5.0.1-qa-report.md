@@ -1,6 +1,6 @@
 # QA report: development since 5.0.1
 
-Status: in progress (batch 1 verified; batch 2 reports in, verification running; batch 3 running).
+Status: in progress (batches 1 and 2 verified; batch 3 reports in and under verification; batch 4 pending).
 Plan: `post-5.0.1-qa-plan.md`. Every item below was either run by the coordinator
 or reproduced by an independent verifier; agent claims that were not reproduced
 are listed in their own section, not among the findings.
@@ -111,6 +111,51 @@ option is handled after the `QApplication` is built, in 5.0.1 as on
 development, so this is not a regression. Found by agent E1 (F-E1-4), re-run by
 the coordinator.
 
+### 8. Major, new: a match-all trigger's cost grows with the square of the line length
+
+With a `/g` (match all) trigger such as `(\w+)` armed, one line of 25, 50 and
+100 kB took 0.40, 1.5 and 5.8 s on development (each doubling costs about
+3.8 times), so a single 5 MB line pins a core for hours with no way out. The
+same shape holds on a 5.0.1 build, so the quadratic growth is not new, but the
+absolute cost is: interleaved on a quiet machine, Debug builds of development
+took 0.32 s and 1.23 s where 5.0.1 took 0.11 s and 0.38 s for the same lines,
+about three times slower. Whether that constant factor survives optimisation
+is being measured on Release builds of both trees before it is called a
+user-facing regression. Found by agent C1 (F-C1-5); reproduced by the
+coordinator and by verifier V2. No tracker entry.
+
+### 9. Minor, status unresolved: the connection dialog's first frame describes a profile other than the highlighted one
+
+With two saved profiles, the dialog opens highlighting one of them while the
+details pane shows "Mudlet self-test / mudlet.org / 23" and Connect is enabled;
+a click on the highlighted row corrects it. Reproduced exactly by verifier V2
+from agent E1's steps (F-E1-3). The closest tracker entry, #10818, is closed,
+so this is either an incomplete fix or a regression of it; a 5.0.1 comparison
+is pending.
+
+## Confirmed and already tracked
+
+Reproduced on this tree by a verifier; the tracker already has each one. They
+are listed so the release notes can say which known issues are still live, not
+because they are new.
+
+| Finding | Severity | Issue / PR | What was seen here |
+| --- | --- | --- | --- |
+| F-C1-2 | Major | #10824, fix pending PR #10835 | a 0-second repeating timer holds 99.8 % of a core until killed |
+| F-C1-3 | Major | #10795 | a repeating `tempTimer` with an empty code string logs "func reference not found" forever |
+| F-C1-1 | Major | #10796 | a nested `feedTriggers()` wipes the calling trigger's `matches`; the `expandAlias` half is fixed by ec90c3893 |
+| F-C1-4 | Major | #10736 | a multiline AND trigger with a Lua function script gets an empty `multimatches` (C1's repro was invalid; V2 rebuilt it) |
+| F-A2-1 | Major | #10666 | after `openMapWidget()` then `closeMapWidget()`, `createMapper()` is refused for the rest of the session; the exclusion is symmetric |
+| F-A1-6 | Minor | related #4937 | a hands-free middle-button pan at a 50 px cursor offset leaves the viewport in about one second |
+| F-A2-2 | Minor | open PR #10581 claims faster map building | identical 1000-room batches cost 0.56, 1.46, 2.43 and 3.15 s as the map grows to 4.6k rooms |
+| F-C1-6 | Minor | #10765, fix pending PR #10814 | a key binding on one of Mudlet's own Alt+letter shortcuts is accepted and never fires |
+| F-C1-7 | Minor | #10749 | `expandAlias(cmd, nil)` suppresses the echo that `expandAlias(cmd)` shows |
+| F-C1-8 | Minor | #10738 | an unset capture group is "" mid-pattern but absent at the end |
+| F-C1-9 | Minor | #10733 | an uncompilable regex is accepted and returns a normal id for a dead trigger |
+| F-C1-10 | Minor | #10737 | `showCaptureGroups()` raises on a pattern with a named group |
+| F-E1-6 | Cosmetic | none | the log says "loaded from keychain" for a password read from the encrypted file |
+| F-C1-11 | Cosmetic | none | 9e6ef57a8's commit message quotes a stale stopwatch boundary |
+
 ### Notes (confirmed behaviour, arguable as defects)
 
 - A telnet GA that arrives in the read after a prompt was already flushed by
@@ -126,15 +171,10 @@ the coordinator.
   its log (agent A1, F-A1-3). The verifier replayed the sequence six times under
   gdb with core dumps enabled: alive every time, no core, no signal. Dropped
   unless it recurs.
-- Carried to the next verifier: hands-free middle-button pan accelerates too
-  fast to click anything (F-A1-6); the connection dialog opens with the details
-  pane describing a profile other than the highlighted one, once two profiles
-  exist (F-E1-3); a misleading "loaded from keychain" log line on the
-  encrypted-file path (F-E1-6). The busted subset runner failing on
-  `Miscallaneous_spec` alone (F-B1-5) is a harness artefact, not a product
-  claim.
+- The busted subset runner failing on `Miscallaneous_spec` alone (F-B1-5) is
+  a harness artefact, not a product claim.
 
-## Coverage after batch 1
+## Coverage after batches 1 and 2
 
 Areas A1 (mapper interaction, 16 commits), B1 (game text pipeline, 20) and E1
 (profiles and sign-in, 26). Every screenshot and log line the three reports
@@ -145,6 +185,15 @@ only covered through ctest. Still not exercised by hand after batch 1:
 0905eca3b and 4edf41c04 (their ctest classes pass), the ten-package profile
 open timing for 982a0d15e, and the preferences spell-check toggle for
 b66feea61.
+
+Batch 2: areas A2 (mapper rendering and large maps, 13 commits) and C1
+(trigger engine, 26 commits). Every cited evidence file exists; verifier V2
+re-ran 13 rows and all held up, including the coordinate-limit hang fix
+4d6a3ae23 (the whole sequence finishes in under 5 s with the process idle) and
+676a1b321 by hand (the toolbar Map button toggles a scripted mapper without
+building a second one). b150e51d4 cannot be driven here because the two map
+views exclude each other in both directions (#10666); 9720638ef (a frame the
+game empties) moved to B2.
 
 ## Fixed during the campaign
 
