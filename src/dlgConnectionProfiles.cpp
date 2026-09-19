@@ -1334,7 +1334,10 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
     static QString lastProfileClicked;
     static QTime lastClickTime;
 
-    if (profile_name == lastProfileClicked && lastClickTime.isValid() && lastClickTime.msecsTo(QTime::currentTime()) < 100) {
+    // a selection the dialog makes for itself has to fill the details even when
+    // it repeats the last one: fillout_form() blanks them first, so debouncing
+    // it would leave them empty with a profile highlighted
+    if (!mProgrammaticProfileSelection && profile_name == lastProfileClicked && lastClickTime.isValid() && lastClickTime.msecsTo(QTime::currentTime()) < 100) {
         return;
     }
 
@@ -1619,6 +1622,7 @@ void dlgConnectionProfiles::fillout_form()
     int toselectRow = -1;
     int test_profile_row = -1;
     int predefined_profile_row = -1;
+    int firstOnDiskProfileRow = -1;
     bool firstMudletLaunch = true;
 
     for (int i = 0; i < listWidget_profiles->count(); i++) {
@@ -1626,6 +1630,11 @@ void dlgConnectionProfiles::fillout_form()
         const auto profileName = profile->data(csmNameRole).toString();
         if (profileName == scmSelfTestProfile) {
             test_profile_row = i;
+        }
+        // the self-test entry is the one name mProfileList can hold without a
+        // folder on disk, and it is excluded from the pick below anyway
+        if (firstOnDiskProfileRow == -1 && profileName != scmSelfTestProfile && mProfileList.contains(profileName, Qt::CaseInsensitive)) {
+            firstOnDiskProfileRow = i;
         }
         const auto fileinfo = QFileInfo(MudletPaths::getMudletPath(enums::profileXmlFilesPath, profileName));
         if (fileinfo.exists()) {
@@ -1664,6 +1673,21 @@ void dlgConnectionProfiles::fillout_form()
             // select the first of THAT/THOSE predefined one(s) on first launch:
             toselectRow = predefined_profile_row;
         }
+    }
+
+    if (toselectRow == -1 && firstOnDiskProfileRow != -1) {
+        // Profiles that were made but never connected carry no dated save for
+        // the loop above to pick the most recent of, and the fallbacks above
+        // only cover the tutorial, a lone row or a dedicated build's own game -
+        // so someone whose profiles are all like that gets here with nothing
+        // picked. QAbstractItemView then makes its own first row current, but
+        // not selected, when the games list takes the keyboard focus, and the
+        // connection details fill themselves in from that row - describing a
+        // game nothing in the list shows as picked, with Connect enabled.
+        // Picking the first listed row that has a profile folder keeps the two
+        // in step. The self-test entry is passed over for the same reason the
+        // lone-row fallback passes over it: it is a testing aid, not a game
+        toselectRow = firstOnDiskProfileRow;
     }
 
     if (toselectRow != -1) {
