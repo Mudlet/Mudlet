@@ -355,12 +355,15 @@ QList<ExpectedRead> expectedReads(const QString& profileName, const QString& key
 // A job it takes over is never started, so it never reaches the store, and the test alone decides
 // when - and whether - it answers: a stalled one simply never does, which is what an unanswered
 // unlock prompt or a wedged secret service looks like to CredentialManager. That is also the only
-// safe way to do this. A store call cannot be cancelled - qtkeychain hands libsecret a raw pointer
-// to the running job and keeps none of its own - so a job that has reached the store must be left
-// to the store to answer and to outlive. Faking an answer for one and letting CredentialManager
-// delete it, as this used to, left libsecret writing into freed memory once the real answer landed:
-// a SIGSEGV on every run on a Linux box with no secret service, and a coin toss wherever the store
-// answers sooner than the faked answer does. #10454 is the same crash reached from the field.
+// safe way to do this. A store call cannot be cancelled - qtkeychain hands libsecret, and Apple's
+// keychain a dispatch queue, a raw pointer to the running job and keeps nothing to call it off with
+// - so a job that has reached the store has to be left to the store to answer and to outlive.
+// Faking an answer for one and letting CredentialManager delete it, as this used to, left the store
+// writing into freed memory when the real answer landed afterwards. Which of the two answers came
+// first was down to the machine: a SIGSEGV on every run where no secret service answers at all, and
+// a race anywhere the store does - so it read as flakiness rather than as the crash it was. #10454
+// is the same crash reached from the field. Windows was never affected: its backend answers inside
+// scheduledStart(), leaving nothing outstanding.
 //
 // Nothing the staller takes over touches QtKeychain's process-wide queue, so what a real store job
 // left running would hold up is checked separately, by keychainQueueRuns().
