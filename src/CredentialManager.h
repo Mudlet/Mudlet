@@ -171,7 +171,7 @@ private:
     // Re-files under the current name, then removes every colliding-format entry for the key.
     void migrateCollidingEntry(const QString& profileName, const QString& key, const QString& legacyService, const QString& password);
     void migrateLegacyEntry(const QString& profileName, const QString& key, const QString& password);
-    static void deleteLegacyKeychainEntry(const QString& profileName, const std::function<void(QKeychain::Job*)>& hook, int timeoutMs);
+    static void deleteLegacyKeychainEntry(const QString& profileName, const std::function<bool(QKeychain::Job*)>& hook, int timeoutMs);
 
     // Current operation state
     QPointer<QKeychain::Job> mCurrentJob{nullptr};
@@ -183,7 +183,11 @@ private:
 
     int mOperationTimeoutMs = OPERATION_TIMEOUT_MS;
     // Called with each keychain job just before it starts, so a test can make one stall or fail.
-    std::function<void(QKeychain::Job*)> mJobStartHook;
+    // Returning false leaves the job unstarted and hands it to the hook to answer: a credential
+    // store call cannot be cancelled, so a job that has reached the store has to be answered - and
+    // outlived - by the store alone, and a test that answers one itself would be deleting a job the
+    // store still holds a pointer to.
+    std::function<bool(QKeychain::Job*)> mJobStartHook;
 
     // Destruction flag to prevent operations during cleanup
     bool mShuttingDown = false;
