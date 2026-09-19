@@ -75,7 +75,17 @@ in both trees, so this is not a regression. A Release build of development
 (the flags CI ships) segfaults on the same paste instead of asserting, so
 this is a hard crash for users, not a Debug-only artefact.
 
-### 4. Major, pre-existing (known as #10659): one MCCP2 read that inflates past about 800 KB loses most of the burst
+### 4. Blocker, pre-existing, not on the tracker: a package that uninstalls itself from its own install script crashes the client
+
+A package whose script body calls `uninstallPackage()` on its own name while
+it is being installed makes `XMLimport::importPackage` (`src/XMLimport.cpp:196`)
+dereference the trigger the uninstall just deleted: SIGSEGV, reproduced with
+gdb by agent G1 and by the coordinator on development, and by G1 on a 5.0.1
+Debug build at the same line. Closed #9557 covered the event-handler variant
+only; nothing open describes this one. Exposure is package authors rather than
+ordinary play, but it is a hard crash. Found by agent G1 (F-G1-1).
+
+### 5. Major, pre-existing (known as #10659): one MCCP2 read that inflates past about 800 KB loses most of the burst
 
 Confirmed by the verifier on `85d814292`: a compressed burst of 30,000 lines
 delivered in one socket read left 9,757 lines in the buffer, no end marker,
@@ -83,7 +93,7 @@ and a recursion-depth warning in the log. Not introduced in this range (bca5af8a
 moved the drain buffer to the heap without changing the depth limit). Found by
 agent B1 (F-B1-2); the open issue describes the same symptom.
 
-### 5. Minor, pre-existing (closed issue #2325 did not stick): the encrypted-file password fallback is written world-readable
+### 6. Minor, pre-existing (closed issue #2325 did not stick): the encrypted-file password fallback is written world-readable
 
 With no keychain service, the key and the secret land on disk with the umask
 default of 0644. `SecureStringUtils.cpp` is byte-identical to 5.0.1 and neither
@@ -91,7 +101,7 @@ version calls `setPermissions`. #2325 ("Secure rights to password file") is
 closed, so this should reopen that issue rather than start a new one. Found by
 agent E1 (F-E1-5), confirmed by the verifier.
 
-### 6. Minor, pre-existing (known as #10542 to #10545, draft fix PR #10597): four Configure areas dialog defects
+### 7. Minor, pre-existing (known as #10542 to #10545, draft fix PR #10597): four Configure areas dialog defects
 
 `T2DMap::slot_configureAreas` is byte-identical to 5.0.1. Confirmed by hand on
 this tree: creating, renaming or deleting an area never marks the map unsaved
@@ -103,7 +113,7 @@ area sorts before the shown one and is hidden from the dropdown, so it is
 cosmetic in practice. Found by agent A1 (F-A1-1, 2, 4, 5), re-run by the
 verifier.
 
-### 7. Minor, pre-existing: `mudlet --version` aborts when there is no display
+### 8. Minor, pre-existing: `mudlet --version` aborts when there is no display
 
 `env -u DISPLAY mudlet --version` exits with SIGABRT after Qt fails to load a
 platform plugin; with `QT_QPA_PLATFORM=offscreen` it prints the version. The
@@ -111,7 +121,7 @@ option is handled after the `QApplication` is built, in 5.0.1 as on
 development, so this is not a regression. Found by agent E1 (F-E1-4), re-run by
 the coordinator.
 
-### 8. Major, pre-existing, not on the tracker: a match-all trigger's cost grows with the square of the line length
+### 9. Major, pre-existing, not on the tracker: a match-all trigger's cost grows with the square of the line length
 
 With a `/g` (match all) trigger such as `(\w+)` armed, one line of 25, 50 and
 100 kB took 0.40, 1.5 and 5.8 s on a Debug build of development (each doubling
@@ -124,7 +134,7 @@ against 0.07 s and 0.30 s on 5.0.1, so the trigger work in this range made the
 path about 30 % faster for users while leaving its shape alone. Found by agent
 C1 (F-C1-5); timings by the coordinator and verifier V2.
 
-### 9. Major, pre-existing, not on the tracker: MSDP arrays whose elements are tables or arrays never reach Lua
+### 10. Major, pre-existing, not on the tracker: MSDP arrays whose elements are tables or arrays never reach Lua
 
 `msdp2Lua()` writes `{` or `[` for a nested table or array without the comma
 JSON needs between sibling elements, so the MSDP specification's own `GROUP`
@@ -135,7 +145,7 @@ unnoticed. The same two cases in 5.0.1's `TLuaInterpreter.cpp` have no
 separator either, so this predates the range; no open or closed issue
 describes it. Found by agent B2 (F-B2-1); reproduced by the coordinator.
 
-### 10. Major, pre-existing, not on the tracker: deleting a user window leaves its scroll box orphaned over the main console
+### 11. Major, pre-existing, not on the tracker: deleting a user window leaves its scroll box orphaned over the main console
 
 `deleteMiniConsole()` on a user window drops the window's scroll box and
 command line from the by-name maps but does not destroy the widgets; the
@@ -145,7 +155,7 @@ F1's script on development and, by verifier V3, on 5.0.1, which leaves the
 same orphan; neither tree crashes, so the crash that c0309561b fixed (#10319)
 is a different defect and stays fixed. Found by agent F1 (F-F1-2).
 
-### 11. Minor, pre-existing: the connection dialog's first frame describes a profile other than the highlighted one
+### 12. Minor, pre-existing: the connection dialog's first frame describes a profile other than the highlighted one
 
 With two saved profiles, the dialog opens highlighting one of them while the
 details pane shows "Mudlet self-test / mudlet.org / 23" and Connect is enabled;
