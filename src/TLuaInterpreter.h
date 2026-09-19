@@ -136,6 +136,8 @@ public:
     void setCaptureGroups(const std::list<std::string>&, const std::list<int>&);
     void setCaptureNameGroups(const NameGroupMatches&, const NamedMatchesRanges&);
     void setMultiCaptureGroups(const std::list<std::list<std::string>>& captureList, const std::list<std::list<int>>& posList, QVector<NameGroupMatches>& nameMatches);
+    void setMultiCaptureGroups(std::list<std::list<std::string>>&& captureList, std::list<std::list<int>>&& posList, QVector<NameGroupMatches>&& nameMatches);
+    void takeBackMultiCaptureGroups(std::list<std::list<std::string>>& captureList, std::list<std::list<int>>& posList);
     void adjustCaptureGroups(int x, int a);
     void clearCaptureGroups();
     int pushNestedDispatchState();

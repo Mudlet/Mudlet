@@ -3460,6 +3460,25 @@ void TLuaInterpreter::setMultiCaptureGroups(const std::list<std::list<std::strin
 }
 
 // No documentation available in wiki - internal function
+void TLuaInterpreter::setMultiCaptureGroups(std::list<std::list<std::string>>&& captureList, std::list<std::list<int>>&& posList, QVector<NameGroupMatches>&& nameGroups)
+{
+    mMultiCaptureGroupList = std::move(captureList);
+    mMultiCaptureGroupPosList = std::move(posList);
+    mMultiCaptureNameGroups = std::move(nameGroups);
+}
+
+// No documentation available in wiki - internal function
+// Returns what a move into setMultiCaptureGroups() handed over, so the nodes
+// go back to their pool instead of the allocator
+void TLuaInterpreter::takeBackMultiCaptureGroups(std::list<std::list<std::string>>& captureList, std::list<std::list<int>>& posList)
+{
+    captureList = std::move(mMultiCaptureGroupList);
+    posList = std::move(mMultiCaptureGroupPosList);
+    mMultiCaptureGroupList.clear();
+    mMultiCaptureGroupPosList.clear();
+}
+
+// No documentation available in wiki - internal function
 void TLuaInterpreter::setCaptureGroups(const std::list<std::string>& captureList, const std::list<int>& posList)
 {
     // Take back the storage clearCaptureGroups() parked, unless a nested pass is
@@ -3478,6 +3497,38 @@ void TLuaInterpreter::setCaptureNameGroups(const NameGroupMatches& nameGroups, c
 {
     mCapturedNameGroups = nameGroups;
     mCapturedNameGroupsPosList = namePositions;
+}
+
+// Registry key of the table "matches" holds between dispatches and through
+// one without captures. It is installed again only while it is empty and has
+// no metatable, so each clear still hands out a plain empty table, if not a
+// new one.
+static int emptyMatchesKey;
+
+static void installEmptyMatchesGlobal(lua_State* L)
+{
+    lua_pushlightuserdata(L, &emptyMatchesKey);
+    lua_rawget(L, LUA_REGISTRYINDEX);
+    bool reusable = false;
+    if (lua_istable(L, -1)) {
+        lua_pushnil(L);
+        if (lua_next(L, -2)) {
+            // a script filled it, so it is that script's now
+            lua_pop(L, 2);
+        } else if (lua_getmetatable(L, -1)) {
+            lua_pop(L, 1);
+        } else {
+            reusable = true;
+        }
+    }
+    if (!reusable) {
+        lua_pop(L, 1);
+        lua_newtable(L);
+        lua_pushlightuserdata(L, &emptyMatchesKey);
+        lua_pushvalue(L, -2);
+        lua_rawset(L, LUA_REGISTRYINDEX);
+    }
+    lua_setglobal(L, "matches");
 }
 
 // No documentation available in wiki - internal function
@@ -3517,8 +3568,7 @@ void TLuaInterpreter::clearCaptureGroups()
 
     lua_State* L = pGlobalLua;
     const int callerStackTop = lua_gettop(L);
-    lua_newtable(L);
-    lua_setglobal(L, "matches");
+    installEmptyMatchesGlobal(L);
     lua_newtable(L);
     lua_setglobal(L, "multimatches");
 
@@ -5322,7 +5372,9 @@ void TLuaInterpreter::set_lua_string(const QString& varName, const QString& varV
     // This runs once per incoming line, and both toUtf8() calls it replaces
     // allocated a QByteArray every time. The name is nearly always the same one,
     // and the value is encoded into a buffer that is kept between calls.
-    if (mLastGlobalName != varName) {
+    // The copy taken below leaves the two sharing one buffer, so on every
+    // later call the pointers settle it without a character compare:
+    if (mLastGlobalName.constData() != varName.constData() && mLastGlobalName != varName) {
         mLastGlobalName = varName;
         mLastGlobalNameUtf8 = varName.toUtf8();
     }
@@ -5346,7 +5398,7 @@ void TLuaInterpreter::set_lua_string(const QString& varName, const QString& varV
     // which is the class CI/check-lua-error-strands.lua exists for. Setting
     // these was never something a package could usefully intercept anyway: the
     // name is absent only until the first dispatch writes it.
-    lua_pushstring(L, mLastGlobalNameUtf8.constData());
+    lua_pushlstring(L, mLastGlobalNameUtf8.constData(), mLastGlobalNameUtf8.size());
     lua_pushstring(L, mUtf8Scratch.constData());
     lua_rawset(L, LUA_GLOBALSINDEX);
     if (mUtf8Scratch.capacity() > scmMaxRetainedUtf8Scratch) {

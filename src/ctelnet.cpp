@@ -5134,8 +5134,10 @@ void cTelnet::gotPrompt(std::string& mud_data)
 //              5=lock open, 6=lock secure, 7=lock locked
 static bool containsMxpModeSwitch(const std::string& data)
 {
-    for (size_t pos = data.find('\x1B'); pos != std::string::npos && pos + 3 < data.size(); pos = data.find('\x1B', pos + 1)) {
-        if (data[pos + 1] == '[' && data[pos + 2] >= '0' && data[pos + 2] <= '7' && data[pos + 3] == 'z') {
+    // Anchored on the closing 'z' rather than the ESC: every SGR colour code
+    // opens with an ESC, so a scan from those stops at each one of them.
+    for (size_t pos = data.find('z', 3); pos != std::string::npos; pos = data.find('z', pos + 1)) {
+        if (data[pos - 3] == '\x1B' && data[pos - 2] == '[' && data[pos - 1] >= '0' && data[pos - 1] <= '7') {
             return true;
         }
     }
@@ -5185,7 +5187,7 @@ void cTelnet::gotRest(std::string& mud_data)
         size_t i = mud_data.rfind('\n');
 
         if (i != std::string::npos) {
-            mMudData += mud_data.substr(0, i + 1);
+            mMudData.append(mud_data, 0, i + 1);
             postData();
 
             if (!mIsTimerPosting && (mpPostingTimer->interval() != mTimeOut)) {
@@ -5195,11 +5197,7 @@ void cTelnet::gotRest(std::string& mud_data)
             mpPostingTimer->start();
             mIsTimerPosting = true;
 
-            if (i + 1 < mud_data.size()) {
-                mMudData = mud_data.substr(i + 1, mud_data.size());
-            } else {
-                mMudData = "";
-            }
+            mMudData.assign(mud_data, i + 1, std::string::npos);
         } else {
             mMudData += mud_data;
 
@@ -5247,14 +5245,29 @@ void cTelnet::postData()
 
     // Detach the pending data first: a trigger fired inside printOnDisplay() can
     // call feedTelnet(), re-entering here - it must not post this data again.
-    std::string data{std::move(mMudData)};
-    mMudData.clear();
+    std::string data;
+    data.swap(mMudData);
+
+    // translateToPlainText() parses its argument in place, so anyone snooping
+    // the stream gets a copy of the original bytes:
+    std::string original;
+    const bool snooped = mpHost->mMMCPServer != nullptr;
+    if (snooped) {
+        original = data;
+    }
 
     // All data goes through main console's printOnDisplay which calls
     // translateToPlainText - MXP DEST routing happens inside that process
     mpHost->printOnDisplay(data, true);
     if (mpHost->mMMCPServer && !mpHost->mIsRemoteEchoingActive) {
-        mpHost->mMMCPServer->receiveFromPlayer(data);
+        mpHost->mMMCPServer->receiveFromPlayer(snooped ? original : data);
+    }
+
+    // Hand the capacity back so the next packet appends without a malloc. A
+    // re-entrant feed may have left a tail of its own behind; that stays.
+    if (mMudData.empty()) {
+        data.clear();
+        mMudData.swap(data);
     }
 }
 
@@ -5643,9 +5656,6 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
     in_buffer[amount] = '\0';
 
     std::string cleandata;
-    // Pre-allocate for worst case: decompressed data can be much larger than input
-    // BUFFER_SIZE is 100000, so reserve enough for typical usage
-    cleandata.reserve(static_cast<size_t>(BUFFER_SIZE) * 4);
     qint32 datalen = 0;
     datalen = amount;
     char* buffer = in_buffer;
@@ -5668,6 +5678,10 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
     }
     // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (4 of 7) - investigate switching from using `char[]` to `std::array<char>`
     buffer[static_cast<size_t>(datalen)] = '\0';
+
+    // About what stripping telnet leaves of the read (decompression already
+    // went through out_buffer above):
+    cleandata.reserve(static_cast<size_t>(datalen));
 
     // A compressed read can inflate to nothing. Older Mudlets refuse a replay
     // holding an empty chunk, so its wait carries over to the next chunk.

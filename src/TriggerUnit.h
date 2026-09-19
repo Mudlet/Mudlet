@@ -42,6 +42,7 @@
 
 class Host;
 class TTrigger;
+struct TRootTriggerFilter;
 
 class TriggerUnit
 {
@@ -89,6 +90,7 @@ public:
     void markRootUnfilterable()
     {
         ++mUnfilterableEpoch;
+        ++mRootFilterEpoch;
         markRootNodeListReordered();
     }
     void doCleanup();
@@ -177,9 +179,13 @@ private:
     // pass would go on walking triggers that have since been freed.
     // The prescan files triggers by their position in the snapshot, so the two
     // are rebuilt and pinned together.
+    // mFilters runs parallel to mNodes. A pass pins it like the rest, so what it
+    // says about a trigger is only as good as mRootFilterEpoch standing still -
+    // see processDataStream().
     struct RootNodeSnapshot
     {
         std::vector<TTrigger*> mNodes;
+        std::vector<TRootTriggerFilter> mFilters;
         TTriggerPrescan mPrescan;
     };
     std::shared_ptr<RootNodeSnapshot> mpRootNodeSnapshot;
@@ -196,6 +202,9 @@ private:
     std::vector<int> mCandidateScratch;
     std::vector<int> mCandidates;
     quint32 mUnfilterableEpoch = 0;
+    // Moves whenever a trigger changes in a way its TRootTriggerFilter copies,
+    // which a pass that has pinned those copies has no other way to hear of
+    quint32 mRootFilterEpoch = 0;
     int mMaxID;
     bool mModuleMember;
     int statsItemsTotal = 0;

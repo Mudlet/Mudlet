@@ -535,5 +535,183 @@ describe("PCRE regex cases with tempRegexTrigger", function()
 
         assert.spy(send).was_not_called()
         killTrigger(id)
-    end)    
+    end)
+
+    -- Every match of a pattern holds the pattern's fixed text, which lets a
+    -- line without that text be dismissed before pcre2 is asked. The text is
+    -- searched for exactly as written, so what counts as fixed has to leave
+    -- out anything an inline option, a quantifier, an alternation or an escape
+    -- could make the match do without
+    describe("fixed text a match has to contain", function()
+        local ids
+
+        before_each(function()
+            ids = {}
+        end)
+
+        after_each(function()
+            for _, id in ipairs(ids) do
+                killTrigger(id)
+            end
+        end)
+
+        local function regexTrigger(pattern, fn)
+            local id = tempRegexTrigger(pattern, fn)
+            table.insert(ids, id)
+            return id
+        end
+
+        it("holds a case sensitive pattern to the case it was written in", function()
+            local fired = 0
+            regexTrigger("Mudlet rocks", function() fired = fired + 1 end)
+
+            feedTriggers("\nmudlet rocks\n")
+            assert.are.equal(0, fired)
+
+            feedTriggers("\nyes, Mudlet rocks\n")
+            assert.are.equal(1, fired)
+        end)
+
+        it("lets a caseless pattern match text in another case", function()
+            local fired = 0
+            regexTrigger("(?i)^mudlet rocks$", function() fired = fired + 1 end)
+
+            feedTriggers("\nMUDLET ROCKS\n")
+
+            assert.are.equal(1, fired)
+        end)
+
+        it("does not require the text of an optional group", function()
+            local seen = {}
+            regexTrigger("^HP:(?: critically low)? (\\d+)$", function() table.insert(seen, matches[2]) end)
+
+            feedTriggers("\nHP: 42\nHP: critically low 3\n")
+
+            assert.are.same({"42", "3"}, seen)
+        end)
+
+        it("does not require the text of one branch of an alternation", function()
+            local seen = {}
+            regexTrigger("(?:HP|MP): (\\d+)", function() table.insert(seen, matches[2]) end)
+
+            feedTriggers("\nMP: 7\nHP: 9\n")
+
+            assert.are.same({"7", "9"}, seen)
+        end)
+
+        it("does not require a character its quantifier lets the match leave out", function()
+            local seen = {}
+            regexTrigger("colou?r", function() table.insert(seen, matches[1]) end)
+            regexTrigger("^ab{0}c$", function() table.insert(seen, matches[1]) end)
+            regexTrigger("^(?:xy)*z$", function() table.insert(seen, matches[1]) end)
+            regexTrigger("^(?:a(bcd))?qrs$", function() table.insert(seen, matches[1]) end)
+            regexTrigger("^ab+c$", function() table.insert(seen, matches[1]) end)
+
+            feedTriggers("\ncolor\ncolour\nac\nz\nqrs\nabbbc\n")
+
+            assert.are.same({"color", "colour", "ac", "z", "qrs", "abbbc"}, seen)
+        end)
+
+        it("reads a POSIX class and an escaped dot for what they are", function()
+            local seen = {}
+            regexTrigger("^[[:alpha:]]+ tells you '(.+)'$", function() table.insert(seen, matches[2]) end)
+            regexTrigger("^a\\.b$", function() table.insert(seen, matches[1]) end)
+
+            feedTriggers("\nBob tells you 'hi'\na.b\naxb\n")
+
+            assert.are.same({"hi", "a.b"}, seen)
+        end)
+
+        it("does not mistake the argument of an escape for literal text", function()
+            local seen = {}
+            regexTrigger("\\x41 team (\\d+)", function() table.insert(seen, matches[2]) end)
+            regexTrigger("^(\\w+) and \\1$", function() table.insert(seen, matches[2]) end)
+            regexTrigger("^\\Qa.b\\E (\\d+)$", function() table.insert(seen, matches[2]) end)
+
+            feedTriggers("\nA team 5\nfoo and foo\na.b 6\n")
+
+            assert.are.same({"5", "foo", "6"}, seen)
+        end)
+
+        it("reads a brace that starts no quantifier as the brace itself", function()
+            local seen = {}
+            regexTrigger("^{OOC|IC} (\\w+) says", function() table.insert(seen, "alternation") end)
+            regexTrigger("^{(?i)x} hello world$", function() table.insert(seen, "caseless") end)
+            regexTrigger("a{[}]bc", function() table.insert(seen, "class") end)
+            regexTrigger("{[^}]}ab", function() table.insert(seen, "negated class") end)
+            regexTrigger("^ab{2}c$", function() table.insert(seen, "quantifier") end)
+            regexTrigger("^\\p{Lu}ello$", function() table.insert(seen, "property") end)
+
+            feedTriggers("\n{OOC Bob waves\n{X} HELLO WORLD\na{}bc\n{x}ab\nabbc\nHello\n")
+
+            assert.are.same({"alternation", "caseless", "class", "negated class", "quantifier", "property"}, seen)
+        end)
+
+        it("reads a class and an \\E the way pcre2 does", function()
+            local seen = {}
+            regexTrigger("^[\\Qa]\\E]bc$", function() table.insert(seen, "quoted") end)
+            regexTrigger("^xyz\\E?$", function() table.insert(seen, "stray end") end)
+
+            feedTriggers("\nabc\nxy\n")
+
+            assert.are.same({"quoted", "stray end"}, seen)
+        end)
+
+        -- pcre2 reads UTF-8 that leaves an unpaired surrogate out, which puts
+        -- the text on either side of it together
+        it("matches text an unpaired surrogate splits in the line", function()
+            local fired = false
+            regexTrigger("abcd", function() fired = true end)
+            setConfig("specialForceMXPProcessorOn", true)
+            finally(function() setConfig("specialForceMXPProcessorOn", false) end)
+
+            feedTriggers("\nzqab&#xD800;cd\n")
+
+            assert.is_true(fired)
+        end)
+
+        it("matches a named group in each of its spellings", function()
+            local seen = {}
+            regexTrigger("^(?<who>\\w+) tells you$", function() table.insert(seen, matches.who) end)
+            regexTrigger("^(?P<who>\\w+) asks you$", function() table.insert(seen, matches.who) end)
+            regexTrigger("^(?'who'\\w+) shouts$", function() table.insert(seen, matches.who) end)
+
+            feedTriggers("\nAnn tells you\nBen asks you\nCal shouts\n")
+
+            assert.are.same({"Ann", "Ben", "Cal"}, seen)
+        end)
+
+        -- The named groups come out of pcre2 in alphabetical order, so their
+        -- positions are read out of order, after the numbered ones
+        it("places every capture of a multibyte match, in whichever order they are read", function()
+            local seen = {}
+            regexTrigger("^(?<zed>\\S+) (?<alpha>\\S+) (\\d+)$", function()
+                for _, group in ipairs({"alpha", "zed", 2, 3, 4}) do
+                    selectCaptureGroup(group)
+                    table.insert(seen, (getSelection()))
+                    deselect()
+                end
+            end)
+
+            feedTriggers("\nćevapi 🐉Ω 12\n")
+
+            assert.are.same({"🐉Ω", "ćevapi", "ćevapi", "🐉Ω", "12"}, seen)
+        end)
+
+        -- Below a few dozen triggers that can be ruled out by their text every
+        -- trigger sees every line; above it a line goes only to the ones whose
+        -- text it holds, and a regex has to stay among the ones that see it all
+        it("fires among enough triggers for lines to be filtered by their text", function()
+            for i = 1, 40 do
+                table.insert(ids, tempTrigger("prescan filler " .. i, function() end))
+            end
+            local seen = {}
+            regexTrigger("^prescan probe (\\d+)$", function() table.insert(seen, matches[2]) end)
+            regexTrigger("(?i)^prescan caseless (\\d+)$", function() table.insert(seen, matches[2]) end)
+
+            feedTriggers("\nprescan probe 1\nPRESCAN CASELESS 2\nprobe 3\n")
+
+            assert.are.same({"1", "2"}, seen)
+        end)
+    end)
 end)

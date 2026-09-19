@@ -53,7 +53,9 @@
 #include <QUrlQuery>
 
 #include <algorithm>
+#include <cstring>
 #include <iterator>
+#include <optional>
 #include <utility>
 #include <chrono>
 
@@ -166,7 +168,9 @@ QString currentTimeStamp()
     static QString cachedFormat;
     static QString cachedStamp;
 
-    if (QDateTime::currentMSecsSinceEpoch() != cachedMSecs || cachedFormat != TBuffer::smTimeStampFormat) {
+    // The cached format is a copy of the static, so until that is reassigned
+    // the two share one buffer and the characters need no comparing:
+    if (QDateTime::currentMSecsSinceEpoch() != cachedMSecs || cachedFormat.constData() != TBuffer::smTimeStampFormat.constData()) {
         // The stamp is filed under the millisecond it was read in rather than
         // the one the check above read, which can be the one before it if the
         // clock ticks between the two. Filing it under the earlier one would
@@ -177,6 +181,24 @@ QString currentTimeStamp()
         cachedStamp = now.time().toString(TBuffer::smTimeStampFormat);
     }
     return cachedStamp;
+}
+
+// Asks for the cache line holding the allocator's bookkeeping for a heap block,
+// which freeing it reads first and which (in glibc) sits just below the address
+// the allocator handed out - itself ownHeaderBytes below the contents for a
+// container that keeps a header of its own in the block. Integer arithmetic
+// because the contents may be a static's (an empty QString), where stepping a
+// pointer outside the object is undefined; a prefetch itself never faults
+// whatever it is aimed at.
+inline void prefetchAllocatorHeader(const void* contents, const quintptr ownHeaderBytes)
+{
+#if defined(__GNUC__) || defined(__clang__)
+    constexpr quintptr allocatorHeaderBytes = 8;
+    __builtin_prefetch(reinterpret_cast<const void*>(reinterpret_cast<quintptr>(contents) - ownHeaderBytes - allocatorHeaderBytes));
+#else
+    Q_UNUSED(contents)
+    Q_UNUSED(ownHeaderBytes)
+#endif
 }
 
 // How much of a string sequence (OSC, DCS, SOS, PM or APC) is held while
@@ -230,6 +252,70 @@ size_t decodableLength(const std::string& data, const size_t length, const bool 
 bool bulkCopyableTextByte(const char byte)
 {
     return static_cast<unsigned char>(byte) < 0x7F && byte != CHAR_NEW_LINE && byte != CHAR_CARRIAGE_RETURN && byte != CHAR_END_OF_TRANSMISSION && byte != CHAR_ESC;
+}
+
+// True when all eight bytes are printable ASCII (space to '~'), every one of
+// which bulkCopyableTextByte() accepts. Anything else - including the control
+// characters that are copyable - answers false and is left to the byte-wise
+// test. Both halves are the classic "does any byte of the word..." tests: a
+// borrow or carry can only leave a byte that already tripped the test, so they
+// never report a clean word as dirty or the reverse.
+bool eightPrintableAsciiBytes(const char* bytes)
+{
+    quint64 word = 0;
+    std::memcpy(&word, bytes, sizeof(word));
+    constexpr quint64 ones = 0x0101010101010101ULL;
+    constexpr quint64 highBits = 0x8080808080808080ULL;
+    const quint64 belowSpace = (word - ones * 0x20) & ~word & highBits;
+    const quint64 aboveTilde = ((word + ones) | word) & highBits;
+    return !(belowSpace | aboveTilde);
+}
+
+// The byte classes of a CSI sequence, ECMA-48 5.4: a parameter string is
+// made of bytes 0x30 to 0x3F ("0123456789:;<=>?"), so '<', '=', '>' and '?'
+// do not end it when they turn up after the first byte - games do emit them
+// there and every other terminal consumes them - but in the FIRST position
+// they mark the whole sequence as private/reserved. Intermediate bytes are
+// 0x20 to 0x2F and the final byte is 0x40 to 0x7E.
+constexpr bool csiParameterByte(const char byte)
+{
+    return (static_cast<unsigned char>(byte) & 0xF0) == 0x30;
+}
+
+constexpr bool csiPrivateIntroducerByte(const char byte)
+{
+    return static_cast<unsigned char>(byte) >= 0x3C && static_cast<unsigned char>(byte) <= 0x3F;
+}
+
+constexpr bool csiIntermediateByte(const char byte)
+{
+    return (static_cast<unsigned char>(byte) & 0xF0) == 0x20;
+}
+
+constexpr bool csiFinalByte(const char byte)
+{
+    return static_cast<unsigned char>(byte) >= 0x40 && static_cast<unsigned char>(byte) <= 0x7E;
+}
+
+// An SGR parameter is nearly always a short run of digits, which this reads
+// directly; anything else - a private byte, a number too long for an int -
+// is left to QStringView::toInt(), whose general parse costs more than the
+// rest of the sequence's handling.
+bool sgrDigits(const QStringView parameter, int& value)
+{
+    if (parameter.isEmpty() || parameter.size() > 9) {
+        return false;
+    }
+    int result = 0;
+    for (const QChar c : parameter) {
+        const char16_t unicode = c.unicode();
+        if (unicode < u'0' || unicode > u'9') {
+            return false;
+        }
+        result = result * 10 + (unicode - u'0');
+    }
+    value = result;
+    return true;
 }
 
 // Maximum length for a CSI sequence's parameter string before aborting - a
@@ -961,31 +1047,17 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 
 void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFromServer)
 {
-    // What can appear anywhere in a CSI Parameter String (Ps): ECMA-48 5.4
-    // puts every byte of one in the range 0x30 to 0x3F, so '<', '=', '>' and
-    // '?' do not end the parameter string when they turn up after the first
-    // byte - games do emit them there and every other terminal consumes them:
-    const QByteArray cParameter = QByteArrayLiteral("0123456789;:<=>?");
-    // Which of those, in the FIRST position only, marks the whole sequence as
-    // private/reserved and so not something Mudlet can interpret:
-    const QByteArray cParameterPrivateIntroducer = QByteArrayLiteral("<=>?");
-    // What can appear in a CSI Intermediate byte (includes a quote character in
-    // the middle of the text here which has to be escaped with a backslash):
-    const QByteArray cIntermediate = QByteArrayLiteral(" !\"#$%&'()*+,-./");
-    // What can appear in a CSI final byte position - (includes a backslash
-    // which has to be doubled to include it in here):
-    const QByteArray cFinal = QByteArrayLiteral("@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~");
     // The complete two byte escape sequences (DECSC, DECRC, RIS and a stray
     // ST) that games do send and that Mudlet has to swallow. Only these: any
     // other byte after an ESC is text, and printing it is no worse than what
     // Mudlet has always done, whereas eating it loses real output:
     const QByteArray cShortEscape = QByteArrayLiteral("78c\\");
 
-    // As well as enabling the prepending of left-over bytes from last packet
-    // from the MUD server this may help in high frequency interactions to
-    // protect this process from the supplied string being modified
-    // asynchronously by the QNetwork code that runs in another thread:
-    std::string localBuffer;
+    // Parsed in place - an MXP entity expansion rewrites the head of the text
+    // and a forced line break overwrites a byte - so the caller's string is
+    // not meaningful afterwards (cTelnet::postData() copies it first for
+    // MMCP):
+    std::string& localBuffer = incoming;
 
     Host* pHost = mpHost;
     if (!pHost) {
@@ -1017,10 +1089,8 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
 #if defined(DEBUG_SGR_PROCESSING) || defined(DEBUG_OSC_PROCESSING) || defined(DEBUG_UTF8_PROCESSING) || defined(DEBUG_GB_PROCESSING) || defined(DEBUG_BIG5_PROCESSING)
         qDebug() << "TBuffer::translateToPlainText(...) Prepending residual bytes onto incoming data!";
 #endif
-        localBuffer = mIncompleteSequenceBytes + incoming;
+        localBuffer.insert(0, mIncompleteSequenceBytes);
         mIncompleteSequenceBytes.clear();
-    } else {
-        localBuffer = incoming;
     }
 
     crashIfRequested();
@@ -1165,7 +1235,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
             // later on are just parameter bytes to be consumed.
             size_t const spanStart = localBufferPosition;
             size_t spanEnd = spanStart;
-            while (spanEnd < localBufferLength && cParameter.indexOf(localBuffer[spanEnd]) >= 0) {
+            while (spanEnd < localBufferLength && csiParameterByte(localBuffer[spanEnd])) {
                 ++spanEnd;
             }
 
@@ -1209,7 +1279,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
             // first byte is within the usable subset of the allowed value - or
             // not. Doing this any earlier would consume a sequence split across
             // packets without leaving the trailing bytes for the next one.
-            if (cParameterPrivateIntroducer.indexOf(localBuffer[spanStart]) >= 0) {
+            if (csiPrivateIntroducerByte(localBuffer[spanStart])) {
                 // Oh dear, the CSI parameter string sequence begins with one of
                 // the reserved characters ('<', '=', '>' or '?') which we
                 // can/do not handle
@@ -1232,7 +1302,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
             // should be in the (ASCII) range '@' to '~' and the end of that
             // range 'p' to '~' is for "private" or "experimental" use.
 
-            if (cIntermediate.indexOf(localBuffer[spanEnd]) >= 0) {
+            if (csiIntermediateByte(localBuffer[spanEnd])) {
                 // We do not handle any sequences with intermediate bytes
                 // Report it and then ignore it, try and find out what the byte
                 // afterwards is as it might help to debug things
@@ -1252,7 +1322,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 continue;
             }
 
-            if (cFinal.indexOf(localBuffer[spanEnd]) >= 0) {
+            if (csiFinalByte(localBuffer[spanEnd])) {
                 // We have a valid CSI sequence - but is it one we handle?
                 // We currently only handle the 'm' for SGR and the 'z' for
                 // Zuggsoft's MXP protocol:
@@ -1833,7 +1903,11 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 // hyperlink's text is accumulated a character at a time, so
                 // neither takes this path.
                 size_t runEnd = localBufferPosition + 1;
-                while (runEnd < localBufferLength && bulkCopyableTextByte(localBuffer[runEnd])) {
+                const char* const bytes = localBuffer.data();
+                while (runEnd + 8 <= localBufferLength && eightPrintableAsciiBytes(bytes + runEnd)) {
+                    runEnd += 8;
+                }
+                while (runEnd < localBufferLength && bulkCopyableTextByte(bytes[runEnd])) {
                     ++runEnd;
                 }
                 const size_t runLength = runEnd - (localBufferPosition + 1);
@@ -2021,7 +2095,7 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
     }
     if (!lineBuffer.back().isEmpty()) {
         if (!line.isEmpty()) {
-            lineBuffer << line;
+            lineBuffer << std::move(line);
         } else {
             if (ch == '\r') {
                 return; //empty timer posting
@@ -2037,7 +2111,8 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
         }
     } else {
         if (!line.isEmpty()) {
-            lineBuffer.back().append(line);
+            // The last line is empty, so this is the whole of it
+            lineBuffer.back() = std::move(line);
         } else {
             if (ch == '\r') {
                 return; //empty timer posting
@@ -3134,11 +3209,13 @@ void TBuffer::decodeSGR(const QStringView sequence)
             // number:
             bool isOk = false;
             int tag = 0;
-            if (!allParameterElements.isEmpty()) {
-                tag = allParameterElements.toInt(&isOk);
-            } else {
+            if (allParameterElements.isEmpty()) {
                 // Allow for an empty parameter to be treated as valid and equal to 0:
                 isOk = true;
+            } else if (sgrDigits(allParameterElements, tag)) {
+                isOk = true;
+            } else {
+                tag = allParameterElements.toInt(&isOk);
             }
             if (isOk) {
                 switch (tag) {
@@ -5546,17 +5623,9 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
     // no break point to find. LineFeed and Tab are outside that range, so a
     // line needing an embedded break never takes this path.
     const qsizetype widthAvailable = std::min<qsizetype>(isNewline ? maxWidth - indent : maxWidth, mWrapAt);
-    if (lineText.size() <= widthAvailable) {
-        bool plainAscii = true;
-        for (const QChar c : lineText) {
-            if (c.unicode() < u' ' || c.unicode() > u'~') {
-                plainAscii = false;
-                break;
-            }
-        }
-        if (plainAscii) {
-            return output;
-        }
+    const bool plainAscii = lineBreakInfo::printableAscii(lineText);
+    if (plainAscii && lineText.size() <= widthAvailable) {
+        return output;
     }
     // No grapheme cluster renders wider than graphemeInfo::maxWidth columns -
     // graphemeInfo::getWidth() in TTextProperties.h holds its return to that -
@@ -5567,8 +5636,45 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
         return output;
     }
 
-    QTextBoundaryFinder boundaryFinder(QTextBoundaryFinder::Grapheme, lineText);
-    QTextBoundaryFinder lineBreakFinder(QTextBoundaryFinder::Line, lineText);
+    // Each finder runs its own analysis over the whole line. A plain-ASCII
+    // line's grapheme clusters are its characters, each one column wide, so
+    // it needs no grapheme finder, and lineBreakInfo::asciiLineBreaks() gives
+    // it the line-break finder's answers without building one.
+    std::optional<QTextBoundaryFinder> graphemeFinder;
+    std::optional<QTextBoundaryFinder> lineBreakFinder;
+    lineBreakInfo::Breaks asciiBreaks;
+    if (plainAscii) {
+        asciiBreaks = lineBreakInfo::asciiLineBreaks(lineText);
+    } else {
+        graphemeFinder.emplace(QTextBoundaryFinder::Grapheme, lineText);
+        lineBreakFinder.emplace(QTextBoundaryFinder::Line, lineText);
+    }
+    const auto setGraphemePosition = [&graphemeFinder](const int position) {
+        if (graphemeFinder) {
+            graphemeFinder->setPosition(position);
+        }
+    };
+    // The position itself when the line may break before it, otherwise the
+    // last position before it that the line may break at (0 when there is
+    // none): what QTextBoundaryFinder::isAtBoundary() and then
+    // toPreviousBoundary() answer, on both paths.
+    const auto lineBreakAtOrBefore = [&](const int position) -> int {
+        if (lineBreakFinder) {
+            lineBreakFinder->setPosition(position);
+            if (lineBreakFinder->isAtBoundary()) {
+                return position;
+            }
+            return lineBreakFinder->toPreviousBoundary();
+        }
+        if (position == 0 || asciiBreaks[position]) {
+            return position;
+        }
+        int previous = position - 1;
+        while (previous > 0 && !asciiBreaks[previous]) {
+            --previous;
+        }
+        return previous;
+    };
     int xPos = 0;
     int totalWidth = 0;
     int firstChar = 0;
@@ -5582,7 +5688,7 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
         if (xPos == 0 and !isNewline and !output.isEmpty() and c == QChar::Space) {
             indexOfChar++;
             firstChar = indexOfChar;
-            boundaryFinder.setPosition(indexOfChar);
+            setGraphemePosition(indexOfChar);
             continue;
         }
         // handle embedded linefeed
@@ -5590,34 +5696,38 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
             hasNewline = true;
             output.append(WrapInfo(isNewline, needsIndent, firstChar, indexOfChar));
             indexOfChar++;
-            boundaryFinder.setPosition(indexOfChar);
+            setGraphemePosition(indexOfChar);
             firstChar = indexOfChar;
             isNewline = true;
             needsIndent = false;
             xPos = 0;
             continue;
         }
-        const int nextBoundary = boundaryFinder.toNextBoundary();
-        const uint unicode = graphemeInfo::getBaseCharacter(QStringView(lineText).mid(indexOfChar, nextBoundary - indexOfChar));
-        // Safety check: during destruction, mpHost might be null
-        const int charWidth = mpHost ? graphemeInfo::getWidth(unicode, mpHost->wideAmbiguousEAsianGlyphs()) : graphemeInfo::getWidth(unicode, false);
+        int nextBoundary = indexOfChar + 1;
+        int charWidth = 1;
+        if (!plainAscii) {
+            nextBoundary = graphemeFinder->toNextBoundary();
+            const uint unicode = graphemeInfo::getBaseCharacter(QStringView(lineText).mid(indexOfChar, nextBoundary - indexOfChar));
+            // Safety check: during destruction, mpHost might be null
+            charWidth = graphemeInfo::getWidth(unicode, mpHost ? mpHost->wideAmbiguousEAsianGlyphs() : false);
+        }
         const int indentationHere = isNewline ? indent : hangingIndent;
         if (xPos + charWidth > maxWidth - (needsIndent ? indentationHere : 0)) {
             if (isNewline) {
                 needsIndent = true;
             }
-            lineBreakFinder.setPosition(indexOfChar);
             // we check c == QChar::Space since we are happy to break at -any- space,
             // unlike the indirect-linebreak permission of QTextBoundaryFinder::Line
             // (see: https://www.unicode.org/reports/tr14/#LD9) which will only break at
             // at the first char after 1+ space(s)
             const int firstNonIndentChar = firstChar + (needsIndent ? 0 : indentationHere);
-            if (c == QChar::Space or lineBreakFinder.isAtBoundary() or lineBreakFinder.toPreviousBoundary() <= firstNonIndentChar) {
-                boundaryFinder.setPosition(indexOfChar);
-            } else {
-                indexOfChar = lineBreakFinder.position();
-                boundaryFinder.setPosition(indexOfChar);
+            if (c != QChar::Space) {
+                const int wrapPoint = lineBreakAtOrBefore(indexOfChar);
+                if (wrapPoint > firstNonIndentChar) {
+                    indexOfChar = wrapPoint;
+                }
             }
+            setGraphemePosition(indexOfChar);
             if (indexOfChar <= firstChar) {
                 // no room for even one grapheme - either the wrap width is too
                 // narrow (or zero) or the indentation eats all of it. Breaking
@@ -5625,7 +5735,7 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
                 // where it was, looping forever, so keep one grapheme on the
                 // line to guarantee the scan moves on
                 indexOfChar = (nextBoundary > firstChar) ? nextBoundary : firstChar + 1;
-                boundaryFinder.setPosition(indexOfChar);
+                setGraphemePosition(indexOfChar);
                 totalWidth += charWidth;
             }
             output.append(WrapInfo(isNewline, needsIndent, firstChar, indexOfChar));
@@ -6202,6 +6312,15 @@ bool TBuffer::deleteLine(int y)
 void TBuffer::shrinkBuffer()
 {
     for (int i = 0; i < mBatchDeleteSize; ++i) {
+        // The lines going away were written a whole buffer ago, so freeing each
+        // one stalls on a cache miss for its allocator header. Asking for the
+        // headers a few lines ahead overlaps those misses with the frees in
+        // front of them.
+        constexpr int prefetchDistance = 8;
+        if (prefetchDistance < lineBuffer.size() && static_cast<size_t>(prefetchDistance) < buffer.size()) {
+            prefetchAllocatorHeader(lineBuffer.at(prefetchDistance).constData(), sizeof(QArrayData));
+            prefetchAllocatorHeader(buffer[prefetchDistance].data(), 0);
+        }
         lineBuffer.pop_front();
         promptBuffer.pop_front();
         timeBuffer.pop_front();

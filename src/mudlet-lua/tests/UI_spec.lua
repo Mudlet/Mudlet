@@ -5971,6 +5971,33 @@ describe("Console buffer size", function()
     assert.are.equal(savedText, getSelection(console))
   end)
 
+  -- The trim looks a few lines ahead of the one it is removing, and with the
+  -- biggest batch a buffer can have there are next to none left to look at by
+  -- the time it finishes.
+  it("a batch that takes all but a couple of lines leaves the newest ones in order", function()
+    clearWindow(console)
+    assert.is_true(setConsoleBufferSize(console, 100, 99))
+    assert.are.same({100, 99}, {getConsoleBufferSize(console)})
+    local removed = {}
+    local handlerId = registerAnonymousEventHandler("sysBufferShrinkEvent", function(_, windowName, removedLines)
+      if windowName == console then
+        removed[#removed + 1] = removedLines
+      end
+    end)
+    finally(function() killAnonymousEventHandler(handlerId) end)
+    for lineNumber = 1, 150 do
+      echo(console, ("nearly all line %d\n"):format(lineNumber))
+    end
+    killAnonymousEventHandler(handlerId)
+    assert.are.same({99}, removed)
+    local last = getLastLineNumber(console)
+    local lines = getLines(console, last - 3, last)
+    assert.are.same({"nearly all line 148", "nearly all line 149", "nearly all line 150"}, lines)
+    -- the count is the index of the open line at the end, so it is the number
+    -- of finished lines above it
+    assert.are.equal(150 - 99, getLineCount(console))
+  end)
+
   it("useMaximum raises the main console to the buffer maximum", function()
     -- the main console has to be named for this one: with three arguments the
     -- first is read as a window name, so the four argument form only lines up
