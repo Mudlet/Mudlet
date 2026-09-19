@@ -33,10 +33,15 @@ end
 
 local encoded = "<<the function table, encoded>>"
 
+-- a self-test that stopped part way reads exactly like a passing one, so the closing
+-- line below says how much of it ran
+local checks, pages = 0, 0
+
 -- Run the generator itself rather than a copy of its patterns: the two rocks it
 -- pulls in are replaced, so the fixture stands in for the wiki and the table it
 -- would have written out is kept here instead.
 local function run(fixture)
+  pages = pages + 1
   local scraped
   local warnings, output = {}, {}
   local realRequire, realPrint = require, print
@@ -92,6 +97,7 @@ end
 
 local failures = {}
 local function check(condition, message)
+  checks = checks + 1
   if not condition then failures[#failures + 1] = message end
 end
 
@@ -181,6 +187,10 @@ local chrome = run(table.concat({
   '<h2><span class="mw-headline" id="addAreaName">addAreaName</span>'
     .. '<span class="mw-editsection-v2">[edit | Manual:edit source]</span></h2>',
   '<dl><dt>areaID = addAreaName(areaName)</dt>',
+  -- a namespace with a separator hanging off it is nothing anyone can call: it is a
+  -- mangled heading, so it has to be warned about rather than taken for a db:add
+  heading("db:add:", "db:add:", true),
+  '<dl><dt>db:add(sheet, table)</dt>',
 }, "\n"))
 
 check(chrome.ok, "the generator failed on the unusable-name fixture: " .. chrome.err)
@@ -188,9 +198,10 @@ check(chrome.scraped["raiseEvent"] == nil and chrome.scraped["addAreaName"] == n
       "a name the strip left chrome on must not reach the list")
 check(countEntries(chrome.scraped) == 1, "only send should have survived the unusable-name fixture")
 local unusable = warningsOfKind(chrome, "unusable name")
-check(#unusable == 2, string.format("both unusable names should have been reported, got %d: %s",
+check(#unusable == 3, string.format("all three unusable names should have been reported, got %d: %s",
                                     #unusable, table.concat(chrome.warnings, " / ")))
-check(table.concat(unusable, " "):match("raiseEvent") and table.concat(unusable, " "):match("addAreaName"),
+local reported = table.concat(unusable, " ")
+check(reported:match("raiseEvent") and reported:match("addAreaName") and reported:match("db:add:"),
       "the warnings should name the headings they came from: " .. table.concat(unusable, " / "))
 
 -- 3. the heading shape newer MediaWiki releases build (1.43 dropped mw-headline
@@ -225,6 +236,39 @@ check(shorter.written ~= nil and shorter.written:match('"func1"'),
       "the list being replaced must be left alone when the run fails")
 os.remove(outputPath)
 
+-- 5. headings the scraper cannot read, on a page long enough that they stay under a
+--    twentieth of it: the allowance is all that stands between them and a list the
+--    editor is quietly missing those functions from, so it has to bite on its own
+local function pageMissing(broken)
+  local page = {}
+  for entry = 1, 160 do
+    page[#page + 1] = heading("func" .. entry, "func" .. entry, true)
+    page[#page + 1] = ("<dl><dt>func%d()</dt>"):format(entry)
+  end
+  for entry = 1, broken do
+    -- chrome the strip does not recognise, so the section-edit text stays in the name
+    page[#page + 1] = ('<h2><span class="mw-headline" id="broken%d">broken%d</span>'):format(entry, entry)
+      .. '<span class="mw-editsection-v2">[edit | edit source]</span></h2>'
+    page[#page + 1] = ("<dl><dt>broken%d()</dt>"):format(entry)
+  end
+  return table.concat(page, "\n")
+end
+
+os.remove(outputPath)
+local quirk = run(pageMissing(5))
+check(quirk.ok, "a handful of unreadable headings is a wiki quirk and must not fail the run: " .. quirk.err)
+local quirkWarnings = warningsOfKind(quirk, "unusable name")
+check(#quirkWarnings == 5,
+      string.format("the five unreadable headings should each have been reported, got %d", #quirkWarnings))
+check(countEntries(quirk.scraped) == 160,
+      string.format("expected the 160 readable functions, got %d", countEntries(quirk.scraped)))
+
+local gaps = run(pageMissing(8))
+check(not gaps.ok, "more unreadable headings than the allowance must fail the run, not publish the list without them")
+check(gaps.err:match("heading markup"), "the failure should say the heading markup changed, got: " .. gaps.err)
+check(gaps.written == nil, "nothing should have been written: " .. tostring(gaps.written))
+os.remove(outputPath)
+
 if #failures > 0 then
   for _, failure in ipairs(failures) do
     io.stderr:write("FAIL: " .. failure .. "\n")
@@ -232,4 +276,4 @@ if #failures > 0 then
   os.exit(1)
 end
 
-print("update-autocompletion.lua scrapes function names cleanly.")
+print(string.format("update-autocompletion.lua scrapes function names cleanly: %d checks over %d recorded pages.", checks, pages))

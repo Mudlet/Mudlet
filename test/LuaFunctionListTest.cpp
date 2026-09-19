@@ -54,8 +54,18 @@ class LuaFunctionListTest : public QObject
         return functionName.match(name).hasMatch();
     }
 
-    // the hint shown beside it: the signature of that function, as text
-    static bool hintDescribes(const QString& name, const QString& hint) { return !hint.trimmed().isEmpty() && hint.contains(name) && !hint.contains(QLatin1Char('<')); }
+    // The hint shown beside it: the signature of that function, as text. It has to call
+    // this name and not one that merely starts with it - "getAreaRooms1(area id)" is not
+    // getAreaRooms' signature, and the file holds enough such near-names for a heading
+    // paired with its neighbour's signature to read as a match.
+    static bool hintDescribes(const QString& name, const QString& hint)
+    {
+        if (hint.trimmed().isEmpty() || hint.contains(QLatin1Char('<'))) {
+            return false;
+        }
+        const QRegularExpression call(QStringLiteral("(?<![A-Za-z0-9_])%1\\s*\\(").arg(QRegularExpression::escape(name)));
+        return hint.contains(call);
+    }
 
 private slots:
     // The two predicates above are what the checks below stand on, and the shipped file
@@ -92,6 +102,9 @@ private slots:
 
         QTest::newRow("its own signature") << QStringLiteral("addAreaName") << QStringLiteral("areaID = addAreaName(areaName)") << true;
         QTest::newRow("another function's signature") << QStringLiteral("sendCmdLine") << QStringLiteral("setConsoleBufferSize([consoleName], linesLimit)") << false;
+        QTest::newRow("the signature of a function whose name starts the same") << QStringLiteral("getAreaRooms") << QStringLiteral("getAreaRooms1(area id)") << false;
+        QTest::newRow("the signature of a function this one's name starts") << QStringLiteral("cecho") << QStringLiteral("convertedString = cecho2html(str[, resetFormat])") << false;
+        QTest::newRow("the name only mentioned, never called") << QStringLiteral("send") << QStringLiteral("see send and sendAll") << false;
         QTest::newRow("MediaWiki's repeated-heading suffix") << QStringLiteral("createMapLabel_2") << QStringLiteral("labelID = createMapLabel(mapLabel)") << false;
         QTest::newRow("markup in the signature") << QStringLiteral("createLabel") << QStringLiteral("<b>labelID</b> = createLabel(name)") << false;
         QTest::newRow("no signature") << QStringLiteral("send") << QString() << false;

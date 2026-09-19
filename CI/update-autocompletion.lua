@@ -3,8 +3,8 @@ local lunajson = require "lunajson"
 
 -- A scrape that keeps far less than the list it replaces has hit a markup change
 -- rather than a week of wiki edits, so it must not be shipped. One or two headings
--- the scraper cannot read are a quirk of the manual and only warn; a run of them is
--- the markup having moved underneath it.
+-- the scraper cannot read are a quirk of the manual and only warn; more than the
+-- allowance is the markup having moved underneath it.
 local keepRatio = 0.95
 local unusableAllowance = 5
 
@@ -47,7 +47,13 @@ end
 -- link that leaked into a name often carries a colon of its own, as in
 -- "addAreaName[edit | Manual:edit source]", and would otherwise be taken for one of these.
 local function namespacedName(name)
-  return string.match(name, "^[%a_][%w_]*[%.:][%a_][%w_%.:]*$") ~= nil
+  -- every segment on either side of a separator has to be an identifier of its own:
+  -- "db:add:" and "table.insert." are a heading something has mangled, not a namespace
+  local rest = string.match(name, "^[%a_][%w_]*[%.:](.*)$")
+  if not rest then
+    return false
+  end
+  return string.match(rest, "^[%a_][%w_]*$") ~= nil or namespacedName(rest)
 end
 
 local function scrapeLuaFunctions(htmlbody)
@@ -100,7 +106,7 @@ local function scrapeLuaFunctions(htmlbody)
     end
   end
 
-  print(string.format("%d of %d headings kept as functions.", kept, #funcs))
+  print(string.format("%d of %d headings kept as functions (%d namespaced, %d unreadable).", kept, #funcs, namespaced, unusable))
   if duplicates > 0 then
     print(duplicates .. " duplicate function heading(s) in the manual.")
   end
@@ -110,10 +116,12 @@ local function scrapeLuaFunctions(htmlbody)
   if kept == 0 then
     error("no function names could be read from the manual - the wiki's heading markup has changed and the patterns in this script no longer match it")
   end
-  local usable = #funcs - namespaced - duplicates
-  if unusable > unusableAllowance and kept < usable * keepRatio then
-    error(string.format("only %d of %d usable headings yielded a function name (%d did not) - the wiki's heading markup has changed",
-                        kept, usable, unusable))
+  -- the allowance is a count and nothing else: measuring the unreadable headings against
+  -- the size of the page lets a handful of them through on a page this long, and they are
+  -- functions the editor stops offering
+  if unusable > unusableAllowance then
+    error(string.format("%d headings could not be read as a function name, more than the %d a week of wiki edits explains - the wiki's heading markup has changed",
+                        unusable, unusableAllowance))
   end
 
   return lunajson.encode(funcsHash), kept
