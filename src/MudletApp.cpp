@@ -218,7 +218,7 @@ QString MudletApp::portableMarkerPath(const QString& execDir, const QString& con
 bool MudletApp::portableRootUsable(const QString& path)
 {
     if (path.isEmpty()) {
-        qWarning().nospace() << "MudletApp::portableRootUsable(...) WARN: portable.txt names no data directory.";
+        qWarning().nospace().noquote() << "MudletApp::portableRootUsable(...) WARN: portable.txt names no data directory.";
         return false;
     }
     const QFileInfo pathInfo(path);
@@ -226,12 +226,13 @@ bool MudletApp::portableRootUsable(const QString& path)
     // gone reads as neither - and mkpath() cannot create through one, so the
     // root looks fine here and then swallows every profile
     if ((pathInfo.exists() || pathInfo.isSymLink()) && !pathInfo.isDir()) {
-        qWarning().nospace() << "MudletApp::portableRootUsable(...) WARN: the portable data directory \"" << path << "\" is not a directory.";
+        qWarning().nospace().noquote() << "MudletApp::portableRootUsable(...) WARN: the portable data directory \"" << path << "\" is not a directory.";
         return false;
     }
     const QString parent = pathInfo.dir().path();
     if (!QFileInfo(parent).isDir()) {
-        qWarning().nospace() << "MudletApp::portableRootUsable(...) WARN: the portable data directory \"" << path << "\" cannot be created, because its parent \"" << parent << "\" does not exist.";
+        qWarning().nospace().noquote() << "MudletApp::portableRootUsable(...) WARN: the portable data directory \"" << path << "\" cannot be created, because its parent \"" << parent
+                                       << "\" does not exist.";
         return false;
     }
     return true;

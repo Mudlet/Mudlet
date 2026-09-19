@@ -546,7 +546,7 @@ private slots:
 
     void test_portableRootUsableRefusesAnUnnamedRoot()
     {
-        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("portable data path not specified")));
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("portable.txt names no data directory")));
         QVERIFY(!MudletApp::portableRootUsable(QString()));
     }
 
@@ -580,7 +580,7 @@ private slots:
         QTemporaryDir root;
         QVERIFY(root.isValid());
 
-        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("parent directory")));
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("because its parent")));
         QVERIFY(!MudletApp::portableRootUsable(qsl("%1/missing/portable").arg(root.path())));
     }
 
@@ -595,7 +595,7 @@ private slots:
         QVERIFY(writeMarker(configDir.path(), ""));
         qunsetenv("XDG_CONFIG_HOME");
 
-        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("portable data path not specified")));
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("portable.txt names no data directory")));
         const auto r = MudletApp::resolveConfigRoot(exec.path(), configDir.path());
         QVERIFY(r.portable);
         QVERIFY(r.portableRootRejected);
@@ -805,8 +805,8 @@ private slots:
 
         const QByteArray savedHome = qgetenv("HOME");
         qputenv("HOME", home.path().toUtf8());
-        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("portable data path not specified")));
-        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("names a data directory Mudlet cannot use")));
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("portable.txt names no data directory")));
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("which Mudlet cannot use")));
         mudlet::self()->setupConfig();
         savedHome.isNull() ? qunsetenv("HOME") : qputenv("HOME", savedHome);
 
