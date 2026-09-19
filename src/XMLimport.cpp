@@ -48,6 +48,7 @@
 #include <QtMath>
 #include <QVersionNumber>
 
+#include <algorithm>
 #include <memory>
 
 XMLimport::XMLimport(Host* pH)
@@ -1224,6 +1225,14 @@ void XMLimport::readHost(Host* pHost)
             }
         }
     }
+
+    // Both indents were saved without any check against the wrap width, and a
+    // profile carrying one wider than the text it leaves room for turns every
+    // wrapped line into padding. Clamped here rather than where each is read,
+    // so that it does not matter which of the three elements comes first.
+    const int maximumIndent = TBuffer::maximumWrapIndent(pHost->mWrapAt);
+    pHost->mWrapIndentCount = std::clamp(pHost->mWrapIndentCount, 0, maximumIndent);
+    pHost->mWrapHangingIndentCount = std::clamp(pHost->mWrapHangingIndentCount, 0, maximumIndent);
 
     pHost->setUserBorders(borders);
     pHost->loadPackageInfo();

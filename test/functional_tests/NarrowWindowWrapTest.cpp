@@ -154,16 +154,18 @@ private slots:
     }
 
     // Indentation is subtracted from the wrap width, so a legal width and a
-    // legal indent together can still leave less room than one glyph needs.
+    // legal indent together can still leave less room than one glyph needs. The
+    // indent may take half the width, so two columns is the widest window where
+    // an indent the setters accept still leaves too little for a wide glyph.
     void test_indentEatingTheWrapWidthDoesNotHang()
     {
         startProfile();
         auto* console = createTestMiniConsole();
         QVERIFY(console);
-        runLua(qsl("setWindowWrap('%1', 5)").arg(mMiniConsole));
+        runLua(qsl("setWindowWrap('%1', 2)").arg(mMiniConsole));
         // both, so that whichever of the two a line uses leaves a single column
-        runLua(qsl("setWindowWrapIndent('%1', 4)").arg(mMiniConsole));
-        runLua(qsl("setWindowWrapHangingIndent('%1', 4)").arg(mMiniConsole));
+        runLua(qsl("setWindowWrapIndent('%1', 1)").arg(mMiniConsole));
+        runLua(qsl("setWindowWrapHangingIndent('%1', 1)").arg(mMiniConsole));
 
         runWithWatchdog("echo of a wide glyph with the indent using up the wrap width", [this]() {
             runLua(qsl("echo('%1', '%2\\n')").arg(mMiniConsole, mWideText));
@@ -172,23 +174,29 @@ private slots:
         QCOMPARE(textIgnoringIndentation(console), mWideText);
     }
 
-    // An indent at or beyond the wrap width is not range-checked anywhere.
-    // wrapLine() drops such an indent instead of leaving no room at all, and
-    // that is what keeps this case out of the trap the one above falls into.
-    void test_indentWiderThanTheWrapWidthDoesNotHang()
+    // The Lua setters turn an indent this wide away now, but TConsole's own
+    // setters are still reachable from C++ and insertText() wraps at the screen
+    // width rather than the console's - so the wrapping has to cope on its own.
+    // It cuts the indent back to what the width can carry rather than dropping
+    // it, which is what keeps this case out of the trap the one above falls
+    // into while still showing the indentation that was asked for.
+    void test_indentWiderThanTheWrapWidthIsCutBack()
     {
         startProfile();
         auto* console = createTestMiniConsole();
         QVERIFY(console);
-        runLua(qsl("setWindowWrap('%1', 5)").arg(mMiniConsole));
-        runLua(qsl("setWindowWrapIndent('%1', 10)").arg(mMiniConsole));
-        runLua(qsl("setWindowWrapHangingIndent('%1', 10)").arg(mMiniConsole));
+        console->setWrapAt(5);
+        console->setIndentCount(10);
+        console->setHangingIndentCount(10);
 
         runWithWatchdog("echo with an indent wider than the wrap width", [this]() {
             runLua(qsl("echo('%1', '%2%2\\n')").arg(mMiniConsole, mWideText));
         });
 
         QCOMPARE(textIgnoringIndentation(console), mWideText + mWideText);
+        // half of five, and every line gets it - an indent of ten used to be
+        // discarded outright, leaving the text against the left edge
+        QCOMPARE(console->buffer.line(0), qsl("  ") + QChar(0x6F22));
     }
 
     // insertText() wraps against the screen width and the profile's own indent
@@ -202,13 +210,16 @@ private slots:
         QVERIFY(host);
         QVERIFY2(waitForMainConsoleText(qsl("HELLO")), "Welcome text never reached the buffer");
 
-        // leave a single column free of the screen width the insert wraps at -
+        // Leave a single column free of the screen width the insert wraps at -
         // both indents, since only the first segment of a line uses the plain
-        // one and every segment after it uses the hanging one
+        // one and every segment after it uses the hanging one. Written to the
+        // Host rather than through setWindowWrapIndent(), which measures an
+        // indent against the console's wrap width and would refuse one this
+        // wide: the Host's copy is what the insert actually reads.
         const int indent = host->mScreenWidth - 1;
         QVERIFY2(indent > 1, "the main console reported no usable screen width");
-        runLua(qsl("setWindowWrapIndent('main', %1)").arg(indent));
-        runLua(qsl("setWindowWrapHangingIndent('main', %1)").arg(indent));
+        host->mWrapIndentCount = indent;
+        host->mWrapHangingIndentCount = indent;
 
         // mid-line, so the insert goes through insertInLine() rather than the
         // append path the cursor at the end of the buffer would take

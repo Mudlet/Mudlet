@@ -440,6 +440,13 @@ public:
     void setWrapAt(int i) { mWrapAt = i; }
     void setWrapIndent(int i) { mWrapIndent = i; }
     void setWrapHangingIndent(int i) { mWrapHangingIndent = i; }
+    // The largest indent a given wrap width can carry. An indent pads out every
+    // line it applies to, so whatever it takes comes off the room left for the
+    // text - and the padding grows without bound as it nears the width itself:
+    // with one usable column a line of text becomes one buffer line per
+    // character, each carrying a full indent. Half the width is where the
+    // padding stops being able to outgrow the text it wraps.
+    static constexpr int maximumWrapIndent(const int wrapWidth) { return wrapWidth > 0 ? wrapWidth / 2 : 0; }
     void updateColors();
     TBuffer copy(QPoint&, QPoint&);
     TBuffer cut(QPoint&, QPoint&);

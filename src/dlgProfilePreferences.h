@@ -287,6 +287,9 @@ private:
     // connection is Qt::UniqueConnection or inside a build-once block -
     // refreshFromSettings() depends on all three.
     void initWithHost(Host*);
+    // Keeps the two wrap indent spin boxes inside what the wrap width leaves
+    // room for, since the three together decide one layout
+    void capWrapIndentsToWrapWidth(const int wrapWidth);
     // ...and its counterpart for the application's own settings
     void populateApplicationSettings();
     // Re-reads the settings into a dialog left open, so a change made from Lua

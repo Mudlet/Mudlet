@@ -5758,11 +5758,16 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
     // the line replaces the characters the pass is matching against:
     materialisePreTriggerPassLine(startLine);
 
-    // consider moving this upstream and returning an error if you try to set indentation higher than wrapWidth
-    // a negative indent needs discarding too: the insert() applying it below
-    // takes an unsigned count, so it would ask for a huge allocation
-    const int indent = (indentSize > 0 && indentSize < maxWidth) ? indentSize : 0;
-    const int hangingIndent = (hangingIndentSize > 0 && hangingIndentSize < maxWidth) ? hangingIndentSize : 0;
+    // The setters turn an indent this wide away, but the wrap width can be
+    // narrowed afterwards and insertText() wraps at the screen width rather
+    // than the console's, so the bound has to hold here too - this is where the
+    // padding is actually inserted. Clamping rather than discarding keeps as
+    // much of the asked-for indent as the width can carry.
+    // A negative indent has to go as well: the insert() applying it below takes
+    // an unsigned count, so it would ask for a huge allocation.
+    const int maximumIndent = maximumWrapIndent(maxWidth);
+    const int indent = std::clamp(indentSize, 0, maximumIndent);
+    const int hangingIndent = std::clamp(hangingIndentSize, 0, maximumIndent);
     const int total = static_cast<int>(buffer.size());
 
     // Leading lines that getWrapInfo() finds no break points in stay where they

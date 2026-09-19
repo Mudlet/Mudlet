@@ -4011,6 +4011,12 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     need_reconnect_for_specialoption->hide();
 
     wrap_at_spinBox->setValue(pHost->mWrapAt);
+    // The two indents are subtracted from the wrap width, so offering them a
+    // range of their own let the pair be set to a layout with barely a column
+    // left for text. Capped before the values go in, so that a profile carrying
+    // such a pair shows the capped one rather than making it look allowed.
+    capWrapIndentsToWrapWidth(wrap_at_spinBox->value());
+    connect(wrap_at_spinBox, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::capWrapIndentsToWrapWidth, Qt::UniqueConnection);
     indent_wrapped_spinBox->setValue(pHost->mWrapIndentCount);
     hanging_indent_wrapped_spinBox->setValue(pHost->mWrapHangingIndentCount);
     checkBox_undoServerWrap->setChecked(pHost->mUndoServerWrap);
@@ -8522,6 +8528,13 @@ void dlgProfilePreferences::slot_toggleEnableClosedCaption(const bool state)
     if (mpHost) {
         mpHost->setEnableClosedCaption(state);
     }
+}
+
+void dlgProfilePreferences::capWrapIndentsToWrapWidth(const int wrapWidth)
+{
+    const int maximumIndent = TBuffer::maximumWrapIndent(wrapWidth);
+    indent_wrapped_spinBox->setMaximum(maximumIndent);
+    hanging_indent_wrapped_spinBox->setMaximum(maximumIndent);
 }
 
 void dlgProfilePreferences::slot_changeWrapAt()

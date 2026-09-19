@@ -110,16 +110,18 @@ describe("Tests how a console wraps the lines it is given", function()
       assert.are.equal("bbbb cccc ", out[2])
     end)
 
-    it("ignores a wrap indent as wide as the window", function()
-      -- an indent with no room left for text would wrap a line into single
-      -- characters, so it is dropped instead
-      assert.are.same(wrapped(10, "aaaa bbbb cccc dddd", 0, 0),
-                      wrapped(10, "aaaa bbbb cccc dddd", 10, 0))
+    -- Turned away rather than quietly dropped since #10458: an indent with
+    -- barely any room left for text wraps a line into single characters, each
+    -- of them padded out with a full indent. WrapIndentBounds_spec covers where
+    -- the limit falls and what the wrapping does with a pair that slips past it.
+    it("refuses a wrap indent as wide as the window", function()
+      wrapAt(10, 0, 0)
+      assert.is_nil(setWindowWrapIndent(win, 10))
     end)
 
-    it("ignores a hanging indent as wide as the window", function()
-      assert.are.same(wrapped(10, "aaaa bbbb cccc dddd", 0, 0),
-                      wrapped(10, "aaaa bbbb cccc dddd", 0, 10))
+    it("refuses a hanging indent as wide as the window", function()
+      wrapAt(10, 0, 0)
+      assert.is_nil(setWindowWrapHangingIndent(win, 10))
     end)
   end)
 

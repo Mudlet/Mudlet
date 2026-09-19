@@ -89,6 +89,26 @@ static const char* bad_label_value = "label \"%s\" not found";
 static const char* no_main_window_value = "the profile has no main window";
 
 // No documentation available in wiki - internal function
+// What is wrong with an indent for a window of this wrap width, or an empty
+// string if nothing is. Shared by the two indent setters, which have the same
+// bounds: an indent comes off the room a wrapped line has for text, so one
+// taking more than it leaves pads out far more than it shows - at a single
+// usable column a line of text becomes one line per character, all of them
+// indent.
+static QString wrapIndentComplaint(const int indent, const int wrapWidth)
+{
+    if (indent < 0) {
+        return qsl("indent %1 is not valid, it must be 0 or more").arg(indent);
+    }
+    const int maximumIndent = TBuffer::maximumWrapIndent(wrapWidth);
+    if (indent > maximumIndent) {
+        return qsl("indent %1 is not valid, it must leave at least as much room for text as it takes - the most a wrap width of %2 allows is %3")
+                .arg(QString::number(indent), QString::number(wrapWidth), QString::number(maximumIndent));
+    }
+    return QString();
+}
+
+// No documentation available in wiki - internal function
 static bool isMain(const QString& name)
 {
     if (name.isEmpty()) {
@@ -4125,8 +4145,8 @@ int TLuaInterpreter::setWindowWrapIndent(lua_State* L)
     const char* windowName = WINDOW_NAME(L, 1);
     const int luaFrom = getVerifiedInt(L, __func__, 2, "wrapTo");
     auto console = CONSOLE(L, QString{windowName});
-    if (luaFrom < 0) {
-        return warnArgumentValue(L, __func__, qsl("indent %1 is not valid, it must be 0 or more").arg(luaFrom));
+    if (const QString complaint = wrapIndentComplaint(luaFrom, console->getWrapAt()); !complaint.isEmpty()) {
+        return warnArgumentValue(L, __func__, complaint);
     }
     console->setIndentCount(luaFrom);
     if (console->getType() == TConsole::MainConsole) {
@@ -4143,8 +4163,8 @@ int TLuaInterpreter::setWindowWrapHangingIndent(lua_State* L)
     const char* windowName = WINDOW_NAME(L, 1);
     const int luaFrom = getVerifiedInt(L, __func__, 2, "wrapTo");
     auto console = CONSOLE(L, QString{windowName});
-    if (luaFrom < 0) {
-        return warnArgumentValue(L, __func__, qsl("indent %1 is not valid, it must be 0 or more").arg(luaFrom));
+    if (const QString complaint = wrapIndentComplaint(luaFrom, console->getWrapAt()); !complaint.isEmpty()) {
+        return warnArgumentValue(L, __func__, complaint);
     }
     console->setHangingIndentCount(luaFrom);
     if (console->getType() == TConsole::MainConsole) {
