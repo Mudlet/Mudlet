@@ -560,6 +560,7 @@ void TDetachedWindow::createMenus()
     // Toolbar visibility toggle
     //: This is an item for the toolbar visibility toggle in a detached Mudlet window.
     mpActionToggleToolBar = new QAction(tr("Show &Toolbar"), this);
+    mpActionToggleToolBar->setObjectName(qsl("toggle_toolbar_action"));
     mpActionToggleToolBar->setCheckable(true);
     mpActionToggleToolBar->setChecked(mpToolBar ? mpToolBar->isVisible() : true);
     //: This explains the "Show Toolbar" action for toolbar visibility in a detached Mudlet window.
