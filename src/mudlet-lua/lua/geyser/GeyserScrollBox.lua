@@ -53,8 +53,9 @@ function Geyser.ScrollBox:new (cons, container)
     
     local ok, err = createScrollBox(me.windowname, me.name, me:get_x(), me:get_y(), me:get_width(), me:get_height())
     -- the constructor hands back an object either way, and this one goes on to
-    -- register itself as a parent window, so say out loud that it has no widget
-    if not ok and not windowType(me.name) then
+    -- register itself as a parent window, so say out loud when the widget it
+    -- stands for is not the one that was asked for
+    if not mudlet.elementCreated(me.windowname, me.name, ok, err) then
         printError(string.format("Geyser.ScrollBox '%s' was not created: %s", me.name, err or "unknown error"), false, false)
     end
 

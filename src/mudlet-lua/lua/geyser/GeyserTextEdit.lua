@@ -65,7 +65,7 @@ function Geyser.TextEdit:new (cons, container)
   self.__index = self
 
   local ok, err = createTextEdit(me.windowname, me.name, me:get_x(), me:get_y(), me:get_width(), me:get_height())
-  if not ok and not windowType(me.name) then
+  if not mudlet.elementCreated(me.windowname, me.name, ok, err) then
     printError(string.format("Geyser.TextEdit '%s' was not created: %s", me.name, err or "unknown error"), false, false)
   end
   if me.stylesheet then

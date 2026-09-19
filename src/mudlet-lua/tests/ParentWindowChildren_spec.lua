@@ -304,6 +304,87 @@ describe("Tests elements created into a named parent window", function()
       assert.is_truthy(reported:find("window 'pwcNoSuchWindow' not found", 1, true))
     end)
 
+    -- An element that already exists under the name being created is the case
+    -- the wrappers cannot read off windowType(): the native creators check the
+    -- parent window before they look at the element's name, so the refusal
+    -- arrives while a window of that name is there to be found.
+    it("createConsole reports a refused parent window even when that console exists", function()
+      assert.is_true(createConsole(track("pwcConsoleTwice"), 8, 40, 10, 100, 100))
+      local x, y, width, height = getWindowGeometry("pwcConsoleTwice")
+
+      local reported
+      local realPrintError = printError
+      _G.printError = function(message) reported = message end
+      finally(function() _G.printError = realPrintError end)
+
+      local ok, message = createConsole("pwcNoSuchWindow", "pwcConsoleTwice", 14, 20, 5, 300, 300)
+
+      assert.is_false(ok)
+      assert.are.equal("window 'pwcNoSuchWindow' not found", message)
+      assert.is_truthy(reported)
+      assert.is_truthy(reported:find("window 'pwcNoSuchWindow' not found", 1, true))
+      -- the refusal has to stop the wrapper before it re-fonts, resizes and
+      -- moves the console that happens to hold the name
+      assert.are.same({x, y, width, height}, {getWindowGeometry("pwcConsoleTwice")})
+    end)
+
+    it("createConsole still moves a console of its own when the parent window is fine", function()
+      assert.is_true(createConsole(track("pwcConsoleAgain"), 8, 40, 10, 100, 100))
+
+      local reported
+      local realPrintError = printError
+      _G.printError = function(message) reported = message end
+      finally(function() _G.printError = realPrintError end)
+
+      -- calling a creator again to move or resize what it made is an idiom, not
+      -- a failure, and stays as quiet as it always was
+      assert.is_true(createConsole("main", "pwcConsoleAgain", 8, 40, 10, 20, 20))
+
+      assert.is_nil(reported)
+      local x, y = getWindowGeometry("pwcConsoleAgain")
+      assert.are.equal(20, x)
+      assert.are.equal(20, y)
+    end)
+
+    it("Geyser.MiniConsole reports it when a console already holds the name", function()
+      assert.is_true(createMiniConsole(track("pwcTakenConsole"), 0, 0, 100, 50))
+
+      local reported
+      local realPrintError = printError
+      _G.printError = function(message) reported = message end
+      finally(function()
+        _G.printError = realPrintError
+        Geyser.windowList["pwcTakenConsole"] = nil
+      end)
+
+      Geyser.MiniConsole:new({name = "pwcTakenConsole", windowname = "pwcNoSuchWindow", x = 0, y = 0, width = 100, height = 50})
+
+      assert.is_truthy(reported)
+      assert.is_truthy(reported:find("window 'pwcNoSuchWindow' not found", 1, true))
+    end)
+
+    it("Geyser.ScrollBox reports it before taking a name it did not create as a parent window", function()
+      assert.is_true(createScrollBox(track("pwcTakenBox"), 0, 0, 120, 120))
+
+      local reported
+      local realPrintError = printError
+      _G.printError = function(message) reported = message end
+      finally(function()
+        _G.printError = realPrintError
+        Geyser.parentWindows["pwcTakenBox"] = nil
+        Geyser.windowList["pwcTakenBox"] = nil
+      end)
+
+      Geyser.ScrollBox:new({name = "pwcTakenBox", windowname = "pwcNoSuchWindow", x = 0, y = 0, width = 100, height = 100})
+
+      assert.is_truthy(reported)
+      assert.is_truthy(reported:find("window 'pwcNoSuchWindow' not found", 1, true))
+      -- the object still registers itself under that name, as every Geyser
+      -- constructor hands one back whatever happened; what this pins is that
+      -- the refusal is said out loud rather than swallowed
+      assert.is_not_nil(Geyser.parentWindows["pwcTakenBox"])
+    end)
+
     it("Geyser.MiniConsole stays quiet when it does create its console", function()
       local reported
       -- a spec runs in busted's own environment, so the stub has to go into _G
