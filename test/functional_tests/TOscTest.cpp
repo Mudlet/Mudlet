@@ -224,8 +224,8 @@ private slots:
     // first-run interface tour would open over the profile a second after it
     // loads and take the window's keyboard with it - the link navigation keys
     // below would reach the tour rather than the console.
-    mudlet::getQSettings()->setValue(qsl("uiTourShown"), true);
-    mudlet::getQSettings()->sync();
+    MudletApp::getQSettings()->setValue(qsl("uiTourShown"), true);
+    MudletApp::getQSettings()->sync();
 
     const QString path =
         MudletApp::getMudletPath(enums::profileHomePath, mHostname);

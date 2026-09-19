@@ -98,7 +98,7 @@ private:
         return !error;
     }
 
-    void showGamesTab(const int tab) const { mudlet::self()->mpSettings->setValue(qsl("connectionDialogActiveTab"), tab); }
+    void showGamesTab(const int tab) const { MudletApp::getQSettings()->setValue(qsl("connectionDialogActiveTab"), tab); }
 
     // the dialog makes its pick in fillout_form(), so a case that only asks
     // what was picked does not have to put a dialog on screen
