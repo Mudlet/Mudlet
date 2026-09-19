@@ -39,6 +39,7 @@
 
 #include <functional>
 
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "AliasUnit.h"
@@ -452,7 +453,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = mudlet::getMudletPath(enums::profileHomePath, profileName);
+        const QString path = MudletPaths::getMudletPath(enums::profileHomePath, profileName);
         QDir dir(path);
         if (dir.exists()) {
             dir.removeRecursively();
@@ -482,7 +483,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -517,9 +518,9 @@ private slots:
 
         // The import target is a bare Host, matching the state a profile is
         // in when mudlet::loadProfile() imports its XML at startup:
-        auto& hostManager = mudlet::self()->getHostManager();
-        QVERIFY2(hostManager.addHost(mTargetName, mPort, QString(), QString()), "failed to create the target Host");
-        mpTarget = hostManager.getHost(mTargetName);
+        auto* hostManager = HostManager::self();
+        QVERIFY2(hostManager->addHost(mTargetName, mPort, QString(), QString()), "failed to create the target Host");
+        mpTarget = hostManager->getHost(mTargetName);
         QVERIFY(mpTarget);
 
         QFile file(xmlPath);
@@ -536,8 +537,8 @@ private slots:
         // readHostColorElement()'s hasAttribute() guard still defaults the
         // missing alpha to opaque instead of, say, an absent toInt() 0:
         deleteProfileDirectory(mLegacyTargetName);
-        QVERIFY2(hostManager.addHost(mLegacyTargetName, mPort, QString(), QString()), "failed to create the legacy target Host");
-        mpLegacyTarget = hostManager.getHost(mLegacyTargetName);
+        QVERIFY2(hostManager->addHost(mLegacyTargetName, mPort, QString(), QString()), "failed to create the legacy target Host");
+        mpLegacyTarget = hostManager->getHost(mLegacyTargetName);
         QVERIFY(mpLegacyTarget);
 
         QString legacyXml = mExportedXml;
@@ -566,8 +567,7 @@ private slots:
         mpLegacyTarget = nullptr;
         delete mpServer;
         mpServer = nullptr;
-        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
-        // getMudletPath() dereferences the instance rather than checking it
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
             deleteProfileDirectory(mSourceName);
             deleteProfileDirectory(mTargetName);

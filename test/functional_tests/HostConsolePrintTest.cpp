@@ -39,6 +39,7 @@
 
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "TBuffer.h"
@@ -155,11 +156,11 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
-        QDir(mudlet::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
+        QDir(MudletPaths::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
 
         mpHost = TestProfile::create(mHostname, mLocalhost, QString::number(mpServer->serverPort()));
         QVERIFY2(mpHost, "Could not create the test profile - see the warning above for the step that timed out.");
@@ -174,7 +175,7 @@ private slots:
 
     void cleanupTestCase()
     {
-        const QString profilePath = mudlet::getMudletPath(enums::profileHomePath, mHostname);
+        const QString profilePath = MudletPaths::getMudletPath(enums::profileHomePath, mHostname);
 
         // Profile teardown has to commit a recording that is still running:
         // ~QSaveFile() cancels the save, so the .dat would never appear. The
@@ -183,7 +184,7 @@ private slots:
         // the same second and make an uncommitted save look committed.
         QString teardownReplay;
         if (mpHost) {
-            const QString replayDir = mudlet::getMudletPath(enums::profileReplayAndLogFilesPath, mHostname);
+            const QString replayDir = MudletPaths::getMudletPath(enums::profileReplayAndLogFilesPath, mHostname);
             QDir().mkpath(replayDir);
             teardownReplay = qsl("%1/teardown.dat").arg(replayDir);
             if (QFileInfo::exists(teardownReplay) || !mpHost->mTelnet.startReplayRecording(teardownReplay)) {
@@ -347,7 +348,7 @@ private slots:
         // written, so the start got as far as writing one before it failed
         const QString logPath = qsl("%1/hcpt-failed-log.txt").arg(mpHost->mLogDir);
         QCOMPARE(mpHost->mainConsoleModel().mLogFileName, logPath);
-        QVERIFY2(!QFileInfo::exists(mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("autolog"))), "a failed log start left the autolog sentinel behind");
+        QVERIFY2(!QFileInfo::exists(MudletPaths::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("autolog"))), "a failed log start left the autolog sentinel behind");
         const QString report = lineContainingFrom(lineBefore, qsl("Could not start logging"));
         QVERIFY2(!report.isEmpty(), "the user was not told why logging did not start");
         const QString fileAndColon = qsl("\"%1\": ").arg(logPath);
@@ -362,7 +363,7 @@ private slots:
     // Lua has to be told what could not be written instead
     void test_failedSentinelWriteIsReportedToLua()
     {
-        const QString sentinel = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("autolog"));
+        const QString sentinel = MudletPaths::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("autolog"));
         QVERIFY(QDir().mkpath(sentinel));
         // Clearing the blocker is the failed start's job and the assertion
         // below checks that it did it - the guard is only so that a failure

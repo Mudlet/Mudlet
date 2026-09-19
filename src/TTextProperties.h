@@ -34,23 +34,30 @@
 
 namespace graphemeInfo {
 
-inline int getWidth(uint unicode, bool mWideAmbigousWidthGlyphs)
+// The most columns a single grapheme cluster can take. Callers rely on this
+// ceiling to avoid measuring text they do not have to: TBuffer::getWrapInfo()
+// multiplies a line's QChar count by it to rule the line out of wrapping
+// without running the Unicode analysis, so a wider value here would silently
+// stop short lines of wide characters from wrapping.
+inline constexpr int maxWidth = 2;
+
+inline int codepointWidth(uint unicode, bool mWideAmbigousWidthGlyphs)
 {
     // https://github.com/ridiculousfish/widecharwidth/issues/11
     if (unicode == 0x1F6E1 || unicode == 0x2318) {
-        return 2;
+        return maxWidth;
     }
 
     // fix to make red heart width 2
     if (unicode == 0x2764) {
-        return 2;
+        return maxWidth;
     }
 
     switch (widechar_wcwidth(unicode)) {
     case 1: // Draw as normal/narrow
         return 1;
     case 2: // Draw as wide
-        return 2;
+        return maxWidth;
     case widechar_nonprint:
         return 0;
     case widechar_non_character:
@@ -59,16 +66,26 @@ inline int getWidth(uint unicode, bool mWideAmbigousWidthGlyphs)
         return 0;
     case widechar_ambiguous:
         // -3 = The character is East-Asian ambiguous width.
-        return mWideAmbigousWidthGlyphs ? 2 : 1;
+        return mWideAmbigousWidthGlyphs ? maxWidth : 1;
     case widechar_private_use:
         return 1;
     case widechar_unassigned:
         return 1;
     case widechar_widened_in_9: // -6 = Width is 1 in Unicode 8, 2 in Unicode 9+.
-        return 2;
+        return maxWidth;
     default:
         return 1; // Got an uncoded return value from widechar_wcwidth(...)
     }
+}
+
+inline int getWidth(uint unicode, bool mWideAmbigousWidthGlyphs)
+{
+    const int width = codepointWidth(unicode, mWideAmbigousWidthGlyphs);
+    // Kept to maxWidth here rather than at each caller, since a wider value
+    // would not be visibly wrong - it would just stop TBuffer::getWrapInfo()
+    // wrapping lines that do reach the wrap column.
+    Q_ASSERT_X(width <= maxWidth, "graphemeInfo::getWidth", "a grapheme wider than graphemeInfo::maxWidth breaks TBuffer::getWrapInfo()'s short-line shortcut");
+    return width > maxWidth ? maxWidth : width;
 }
 
 
