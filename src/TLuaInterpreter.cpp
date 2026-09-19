@@ -4686,6 +4686,24 @@ int TLuaInterpreter::lazyGlobalsNewindex(lua_State* L)
 }
 
 // No documentation available in wiki - internal function
+// Whether what a getter is about to return is the metatable the globals table
+// carries, which it is for any table or userdata sharing that metatable. Read
+// off the globals table each time rather than compared against an address kept
+// from the last look: Lua hands a collected table's address straight to the
+// next one allocated, so a kept address answers for whatever lands on it.
+bool TLuaInterpreter::globalsMetatableHandedOut(lua_State* L, const int index)
+{
+    if (mGlobalsTableRef == LUA_NOREF || lua_type(L, index) != LUA_TTABLE) {
+        return false;
+    }
+    lua_rawgeti(L, LUA_REGISTRYINDEX, mGlobalsTableRef);
+    const bool hasMetatable = lua_getmetatable(L, -1);
+    const bool handedOut = hasMetatable && lua_rawequal(L, -1, index);
+    lua_pop(L, hasMetatable ? 2 : 1);
+    return handedOut;
+}
+
+// No documentation available in wiki - internal function
 // Stands in for getmetatable(), setmetatable() and the debug library's pair
 int TLuaInterpreter::globalsMetatableGuard(lua_State* L)
 {
@@ -4701,11 +4719,10 @@ int TLuaInterpreter::globalsMetatableGuard(lua_State* L)
         if (onGlobals) {
             lua_rawgeti(L, LUA_REGISTRYINDEX, self->mGlobalsTableRef);
             const bool hasMetatable = lua_getmetatable(L, -1);
-            self->mGlobalsMetatable = hasMetatable ? lua_topointer(L, -1) : nullptr;
             self->mGlobalsMetatableTouched = !hasMetatable || !globalsMetatablePristine(L, lua_gettop(L));
             lua_pop(L, hasMetatable ? 2 : 1);
         }
-    } else if (onGlobals || (self->mGlobalsMetatable && lua_topointer(L, -1) == self->mGlobalsMetatable)) {
+    } else if (onGlobals || self->globalsMetatableHandedOut(L, lua_gettop(L))) {
         // Also reached through any table or userdata given the same metatable
         self->materialisePendingGlobals(L);
         self->mGlobalsMetatableTouched = true;
@@ -4753,7 +4770,6 @@ void TLuaInterpreter::installLazyGlobals()
             lua_rawset(L, -3);
 
             mGlobalsTable = lua_topointer(L, LUA_GLOBALSINDEX);
-            mGlobalsMetatable = lua_topointer(L, -1);
             mGlobalsMetatableTouched = false;
             mLazyGlobalsInstalled = installGlobalsMetatableGuard(L, nullptr, "getmetatable", 0) && installGlobalsMetatableGuard(L, nullptr, "setmetatable", 1)
                                     && installGlobalsMetatableGuard(L, "debug", "getmetatable", 2) && installGlobalsMetatableGuard(L, "debug", "setmetatable", 3);
@@ -4801,7 +4817,6 @@ void TLuaInterpreter::forgetLazyGlobals()
     mLazyGlobalsInstalled = false;
     mGlobalsTable = nullptr;
     mGlobalsTableRef = LUA_NOREF;
-    mGlobalsMetatable = nullptr;
     mGlobalsMetatableTouched = false;
     mCaptureScopeOpen = false;
     mMatchesPending = false;
@@ -5854,8 +5869,9 @@ void TLuaInterpreter::setLineGlobal(const QString& line)
         return;
     }
 
-    // Tested for first, as setting nil under a name that is not there would
-    // add it to the table
+    // Tested for first: nothing can see the name once it holds nil either way,
+    // but rawsetting one that is not there still has Lua make a node for it,
+    // and on a globals table with no node to spare that is a rehash of all of it
     if (globalPresent(L, LUA_GLOBALSINDEX, mLineKeyRef)) {
         lua_rawgeti(L, LUA_REGISTRYINDEX, mLineKeyRef);
         lua_pushnil(L);

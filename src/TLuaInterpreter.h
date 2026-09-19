@@ -946,6 +946,7 @@ private:
     void installBetweenDispatchMultimatches(lua_State*);
     void installLazyGlobals();
     bool installGlobalsMetatableGuard(lua_State*, const char* library, const char* function, const int slot);
+    bool globalsMetatableHandedOut(lua_State*, const int index);
     void forgetLazyGlobals();
     static int lazyGlobalsIndex(lua_State*);
     static int lazyGlobalsNewindex(lua_State*);
@@ -1026,12 +1027,16 @@ private:
     // take away from under the thread while it still owes values
     const void* mGlobalsTable = nullptr;
     int mGlobalsTableRef = LUA_NOREF;
-    const void* mGlobalsMetatable = nullptr;
     // The C functions getmetatable(), setmetatable() and their debug library
     // twins held before globalsMetatableGuard() took their place. A script
     // holding the metatable of the globals table can change it at any moment,
     // so once it has been handed out nothing is left out until either setter
     // puts one carrying both handlers back on the globals table.
+    // Those four names as they stand once Mudlet's own scripts have loaded are
+    // the whole of what this watches: a package that replaces one of them
+    // afterwards hands the metatable out past the guard, with nothing here to
+    // notice. The cost of that is a deferral that stays on when it should not,
+    // so it is left to the packages that do it rather than paid for per fire.
     lua_CFunction mStockMetatableFunctions[4] = {};
     bool mGlobalsMetatableTouched = false;
     // An alias pass a script asks for - expandAlias() - sets "command" and the
