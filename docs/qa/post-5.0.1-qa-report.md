@@ -111,18 +111,18 @@ option is handled after the `QApplication` is built, in 5.0.1 as on
 development, so this is not a regression. Found by agent E1 (F-E1-4), re-run by
 the coordinator.
 
-### 8. Major, new: a match-all trigger's cost grows with the square of the line length
+### 8. Major, pre-existing, not on the tracker: a match-all trigger's cost grows with the square of the line length
 
 With a `/g` (match all) trigger such as `(\w+)` armed, one line of 25, 50 and
-100 kB took 0.40, 1.5 and 5.8 s on development (each doubling costs about
-3.8 times), so a single 5 MB line pins a core for hours with no way out. The
-same shape holds on a 5.0.1 build, so the quadratic growth is not new, but the
-absolute cost is: interleaved on a quiet machine, Debug builds of development
-took 0.32 s and 1.23 s where 5.0.1 took 0.11 s and 0.38 s for the same lines,
-about three times slower. Whether that constant factor survives optimisation
-is being measured on Release builds of both trees before it is called a
-user-facing regression. Found by agent C1 (F-C1-5); reproduced by the
-coordinator and by verifier V2. No tracker entry.
+100 kB took 0.40, 1.5 and 5.8 s on a Debug build of development (each doubling
+costs about 3.8 times), so a single 5 MB line pins a core for hours with no
+way out. The same shape holds on 5.0.1, so the growth is not new. Debug builds
+of development were about three times slower than 5.0.1 on this path, but that
+does not survive optimisation: interleaved Release builds of both trees (the
+flags CI ships) ran the 25 and 50 kB lines in 0.05 s and 0.19 s on development
+against 0.07 s and 0.30 s on 5.0.1, so the trigger work in this range made the
+path about 30 % faster for users while leaving its shape alone. Found by agent
+C1 (F-C1-5); timings by the coordinator and verifier V2.
 
 ### 9. Major, pre-existing, not on the tracker: MSDP arrays whose elements are tables or arrays never reach Lua
 
