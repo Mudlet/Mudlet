@@ -155,18 +155,20 @@ bool readFoundNothing(QKeychain::Error error)
 
 // Starts a job nobody waits on, detached from the start. It is never abandoned, for the reason
 // detachJob() gives, so the one thing to do about a job that stops answering is to say so.
-void startUnattendedJob(QKeychain::Job* job, const std::function<void(QKeychain::Job*)>& hook, int timeoutMs, const QString& description)
+void startUnattendedJob(QKeychain::Job* job, const std::function<bool(QKeychain::Job*)>& hook, int timeoutMs, const QString& description)
 {
     detachJob(job);
+    // A hook that takes the job over gets it before the watchdog, which has nothing to report about
+    // a job that never reached the keychain
+    if (hook && !hook(job)) {
+        return;
+    }
     auto* watchdog = new QTimer(job);
     watchdog->setSingleShot(true);
     QObject::connect(watchdog, &QTimer::timeout, job, [description, timeoutMs]() {
         qWarning().noquote() << "CredentialManager: the" << description << "has had no answer from the keychain after" << timeoutMs << "ms, and every later keychain job waits behind it";
     });
     watchdog->start(timeoutMs);
-    if (hook) {
-        hook(job);
-    }
     job->start();
 }
 
@@ -510,8 +512,8 @@ void CredentialManager::credentialExists(const QString& profileName, const QStri
 
 void CredentialManager::startJob(QKeychain::Job* job)
 {
-    if (mJobStartHook) {
-        mJobStartHook(job);
+    if (mJobStartHook && !mJobStartHook(job)) {
+        return;
     }
     job->start();
 }
@@ -1553,7 +1555,7 @@ bool CredentialManager::isValidKeyName(const QString& key)
     return !key.contains(dangerousPattern);
 }
 
-void CredentialManager::deleteLegacyKeychainEntry(const QString& profileName, const std::function<void(QKeychain::Job*)>& hook, int timeoutMs)
+void CredentialManager::deleteLegacyKeychainEntry(const QString& profileName, const std::function<bool(QKeychain::Job*)>& hook, int timeoutMs)
 {
     if (profileName.isEmpty()) {
         return;
