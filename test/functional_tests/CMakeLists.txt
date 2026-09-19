@@ -240,6 +240,7 @@ set(SETTINGS_GROUP_TEST_SOURCES
 set(TEARDOWN_GROUP_TEST_SOURCES
     AppStartupTeardownTest.cpp
     DialogTeardownTest.cpp
+    HeadlessVersionTest.cpp
     HostChildTeardownTest.cpp
     HostManagerAccessorTest.cpp
     HostWidgetDecouplingTest.cpp
@@ -415,11 +416,11 @@ foreach(stubUser functional_window_tests functional_media_tests)
         MUDLET_VOSK_STUB_LIBRARY="$<TARGET_FILE:vosk_stub>")
 endforeach()
 
-# AppStartupTeardownTest runs the shipped application instead of linking it, so it
-# needs that binary's path and needs it built by the time ctest runs. Naming the
-# target literally is deliberate: EXE_MUDLET_TARGET is a plain variable local to
-# src/CMakeLists.txt, so a rename there fails generation here rather than quietly
-# depending on nothing.
+# AppStartupTeardownTest and HeadlessVersionTest run the shipped application
+# instead of linking it, so they need that binary's path and need it built by the
+# time ctest runs. Naming the target literally is deliberate: EXE_MUDLET_TARGET is
+# a plain variable local to src/CMakeLists.txt, so a rename there fails generation
+# here rather than quietly depending on nothing.
 add_dependencies(functional_teardown_tests mudlet_executable)
 target_compile_definitions(functional_teardown_tests PRIVATE MUDLET_APP_BINARY="$<TARGET_FILE:mudlet_executable>")
 
@@ -483,6 +484,10 @@ set_tests_properties(ResetProfileTest PROPERTIES TIMEOUT 300)
 # AppStartupTeardownTest starts the whole application eight times over, and a
 # sanitiser build spends seconds on each of those start-ups
 set_tests_properties(AppStartupTeardownTest PROPERTIES TIMEOUT 300)
+
+# HeadlessVersionTest runs the application once per row of its matrix, for the
+# same reason
+set_tests_properties(HeadlessVersionTest PROPERTIES TIMEOUT 300)
 
 # Undo/redo tests need a longer timeout due to large batch operations
 set_tests_properties(dlgTriggerEditorUndoRedoTest PROPERTIES TIMEOUT 300)
