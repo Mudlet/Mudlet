@@ -2494,7 +2494,7 @@ int TLuaInterpreter::openUserWindow(lua_State* L)
 {
     const int n = lua_gettop(L);
     if (lua_type(L, 1) != LUA_TSTRING) {
-        lua_pushfstring(L, "openUserWindow:  bad argument #1 type (name as string expected, got %s!)", luaL_typename(L, 1));
+        lua_pushfstring(L, "openUserWindow: bad argument #1 type (name as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
     if (n > 1 && !checkBoolArg(L, __func__, 2, "loadLayout", true)) {

@@ -7488,9 +7488,7 @@ describe("Argument checks on the user window functions", function()
 
   it("openUserWindow hard-errors on every argument it cannot use", function()
     local name = "argCheckUserWindow" .. suffix
-    -- the double space after the colon is a typo (#10418) and is pinned as-is;
-    -- fixing it means updating this string in the same change
-    assert.are.equal("openUserWindow:  bad argument #1 type (name as string expected, got table!)",
+    assert.are.equal("openUserWindow: bad argument #1 type (name as string expected, got table!)",
       errorFrom(openUserWindow, {}))
     assert.are.equal("openUserWindow: bad argument #2 type (loadLayout as boolean is optional, got string!)",
       errorFrom(openUserWindow, name, "yes"))
