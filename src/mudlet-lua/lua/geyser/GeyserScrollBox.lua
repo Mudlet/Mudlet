@@ -51,7 +51,12 @@ function Geyser.ScrollBox:new (cons, container)
     setmetatable(me, self)
     self.__index = self
     
-    createScrollBox(me.windowname, me.name, me:get_x(), me:get_y(), me:get_width(), me:get_height())
+    local ok, err = createScrollBox(me.windowname, me.name, me:get_x(), me:get_y(), me:get_width(), me:get_height())
+    -- the constructor hands back an object either way, and this one goes on to
+    -- register itself as a parent window, so say out loud that it has no widget
+    if not ok and not windowType(me.name) then
+        printError(string.format("Geyser.ScrollBox '%s' was not created: %s", me.name, err or "unknown error"), false, false)
+    end
 
     -- Geyser.Container:new() settles the hidden constraint before there is a widget to hide, so the hide is made good here
     if me.hidden or me.auto_hidden then

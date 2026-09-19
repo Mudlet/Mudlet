@@ -4699,10 +4699,29 @@ std::pair<bool, QString> Host::openWindow(const QString& name, bool loadLayout, 
     return {false, qsl(R"("docking option "%1" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating")").arg(area)};
 }
 
+// The parent window has to exist: TMainConsole::createMiniConsole(),
+// createScrollBox() and createLabel() still put an element whose parent window
+// they cannot resolve into the main console instead, where it is painted over
+// the game text rather than anywhere the caller asked for - and answer as if it
+// had worked. Every Lua-reachable path therefore has to refuse before it gets
+// there. "main" is matched case-insensitively, as Host::setWindow() already
+// matches it - the other call that takes a parent window name.
+bool Host::parentWindowMissing(const QString& windowname) const
+{
+    if (windowname.isEmpty() || !windowname.compare(QLatin1String("main"), Qt::CaseInsensitive)) {
+        return false;
+    }
+    return !mWindowRegistry.hasDockWidget(windowname) && !mWindowRegistry.hasScrollBox(windowname);
+}
+
 std::pair<bool, QString> Host::createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height)
 {
     if (!mpConsole) {
         return {false, QString()};
+    }
+
+    if (parentWindowMissing(windowname)) {
+        return {false, qsl("window '%1' not found").arg(windowname)};
     }
 
     if (!mWindowRegistry.hasSubConsole(name)) {
@@ -4727,6 +4746,10 @@ std::pair<bool, QString> Host::createScrollBox(const QString& windowname, const 
         return {false, QString()};
     }
 
+    if (parentWindowMissing(windowname)) {
+        return {false, qsl("window '%1' not found").arg(windowname)};
+    }
+
     if (!mWindowRegistry.hasScrollBox(name)) {
         if (mpConsole->createScrollBox(windowname, name, x, y, width, height)) {
             return {true, QString()};
@@ -4745,11 +4768,7 @@ std::pair<bool, QString> Host::createLabel(const QString& windowname, const QStr
         return {false, QString()};
     }
 
-    // the parent window has to be one: TMainConsole::createLabel puts a label
-    // whose parent it cannot find into the main window instead, which is not
-    // anywhere the caller asked for
-    const bool wantsMainWindow = windowname.isEmpty() || !windowname.compare(qsl("main"));
-    if (!wantsMainWindow && !mWindowRegistry.hasDockWidget(windowname) && !mWindowRegistry.hasScrollBox(windowname)) {
+    if (parentWindowMissing(windowname)) {
         return {false, qsl("window '%1' not found").arg(windowname)};
     }
 

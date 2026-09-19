@@ -621,7 +621,11 @@ function createConsole(windowName, consoleName, fontSize, charsPerLine, numberOf
   assert(type(numberOfLines) == 'number', 'createConsole: invalid type for numberOfLines (expected number, got '..type(numberOfLines)..'!)')
   assert(type(Xpos) == 'number', 'createConsole: invalid type for Xpos (expected number, got '..type(Xpos)..'!)')
   assert(type(Ypos) == 'number', 'createConsole: invalid type for Ypos (expected number, got '..type(Ypos)..'!)')
-  createMiniConsole(windowName, consoleName, 0, 0, 1, 1)
+  local ok, err = createMiniConsole(windowName, consoleName, 0, 0, 1, 1)
+  if not ok and not windowType(consoleName) then
+    printError(string.format("createConsole: '%s' was not created: %s", consoleName, err or "unknown error"), false, false)
+    return false, err
+  end
   setMiniConsoleFontSize(consoleName, fontSize)
   local x, y = calcFontSize( fontSize )
   resizeWindow(consoleName, x * charsPerLine, y * numberOfLines)
@@ -630,6 +634,7 @@ function createConsole(windowName, consoleName, fontSize, charsPerLine, numberOf
 
   setBackgroundColor(consoleName, 0, 0, 0, 0)
   setFgColor(consoleName, 255, 255, 255)
+  return true
 end
 
 

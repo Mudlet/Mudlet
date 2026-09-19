@@ -992,6 +992,14 @@ std::pair<bool, QString> TMainConsole::setLabelCustomCursor(const QString& name,
 std::pair<bool, QString> TMainConsole::createMapper(const QString& windowname, int x, int y, int width, int height)
 {
     auto pW = mDockWidgetMap.value(windowname);
+    // an embedded map can only be put in a user window, so - unlike
+    // Host::parentWindowMissing() - a scroll box is not a parent it can use
+    // either; without this the map goes on the main console over the game text
+    // and the caller is told it worked
+    const bool wantsMainConsole = windowname.isEmpty() || !windowname.compare(QLatin1String("main"), Qt::CaseInsensitive);
+    if (!pW && !wantsMainConsole) {
+        return {false, qsl("window '%1' not found").arg(windowname)};
+    }
     auto pM = mpDockableMapWidget;
     if (pM) {
         return {false, qsl("cannot create mapper. Do you already use a map window?")};
@@ -1064,18 +1072,16 @@ std::pair<bool, QString> TMainConsole::createCommandLine(const QString& windowna
         return {false, QLatin1String("a commandLine cannot have an empty string as its name")};
     }
 
+    // there is no Host::createCommandLine() wrapper, so the refusal the other
+    // creators make in Host::create...() is made here
+    if (mpHost->parentWindowMissing(windowname)) {
+        return {false, qsl("window '%1' not found").arg(windowname)};
+    }
+
     auto pN = mSubCommandLineMap.value(name);
-    auto pW = mDockWidgetMap.value(windowname);
-    auto pS = mScrollBoxMap.value(windowname);
 
     if (!pN) {
-        if (pS) {
-            pN = new TCommandLine(mpHost, name, TCommandLine::SubCommandLine, this, pS->widget());
-        } else if (pW) {
-            pN = new TCommandLine(mpHost, name, TCommandLine::SubCommandLine, this, pW->widget());
-        } else {
-            pN = new TCommandLine(mpHost, name, TCommandLine::SubCommandLine, this, mpMainFrame);
-        }
+        pN = new TCommandLine(mpHost, name, TCommandLine::SubCommandLine, this, parentWidgetFor(windowname));
         registerSubCommandLine(name, pN);
         pN->resize(width, height);
         pN->move(x, y);
@@ -1164,18 +1170,16 @@ std::pair<bool, QString> TMainConsole::createTextBox(const QString& windowname, 
         return {false, QLatin1String("a text edit cannot have an empty string as its name")};
     }
 
+    // there is no Host::createTextEdit() wrapper, so the refusal the other
+    // creators make in Host::create...() is made here
+    if (mpHost->parentWindowMissing(windowname)) {
+        return {false, qsl("window '%1' not found").arg(windowname)};
+    }
+
     auto pT = mTextBoxMap.value(name);
-    auto pW = mDockWidgetMap.value(windowname);
-    auto pS = mScrollBoxMap.value(windowname);
 
     if (!pT) {
-        if (pS) {
-            pT = new TTextBox(mpHost, name, pS->widget());
-        } else if (pW) {
-            pT = new TTextBox(mpHost, name, pW->widget());
-        } else {
-            pT = new TTextBox(mpHost, name, mpMainFrame);
-        }
+        pT = new TTextBox(mpHost, name, parentWidgetFor(windowname));
         registerTextBox(name, pT);
         pT->resize(width, height);
         pT->move(x, y);

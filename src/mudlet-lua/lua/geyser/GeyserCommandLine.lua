@@ -81,7 +81,10 @@ function Geyser.CommandLine:new (cons, container)
   setmetatable(me, self)
   self.__index = self
   
-  createCommandLine(me.windowname, me.name, me:get_x(), me:get_y(), me:get_width(), me:get_height())
+  local ok, err = createCommandLine(me.windowname, me.name, me:get_x(), me:get_y(), me:get_width(), me:get_height())
+  if not ok and not windowType(me.name) then
+    printError(string.format("Geyser.CommandLine '%s' was not created: %s", me.name, err or "unknown error"), false, false)
+  end
   if me.stylesheet then 
     me:setStyleSheet()
   end
