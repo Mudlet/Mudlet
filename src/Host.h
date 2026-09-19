@@ -62,7 +62,6 @@ namespace pugi {
 class xml_document;
 }
 
-class QDockWidget;
 class QJsonObject;
 class QKeyEvent;
 class QSettings;
@@ -306,9 +305,9 @@ public:
     TConsoleModel* mainConsoleModelOrNull() { return mpMainConsoleModel.get(); }
     std::shared_ptr<TConsoleModel> sharedMainConsoleModel();
     // How a colorizer trigger recolors the line it matched: select a run of
-    // the current line, paint it, then put the console's own format back. The
-    // selection is a TConsole member, so these dereference mpConsole and the
-    // callers check it first.
+    // the current line, paint it, then put the format back. All of that is
+    // model state, so these run with no view; the two colour ones repaint the
+    // lines they touched when there is one.
     void deselectMainConsole();
     bool selectMainConsoleSection(int from, int length);
     void setMainConsoleFgColor(const QColor& color);
@@ -499,7 +498,6 @@ public:
     void setBufferSearchOptions(const enums::BufferSearchOptions);
     std::pair<bool, QString> setMapperTitle(const QString&);
     std::optional<QString> getMapperTitle() const;
-    QDockWidget* mapWidget() const;
     // Gives TMap::mpMapper back to this profile's own mapper - see the definition.
     void restoreOwnMapper();
 
@@ -544,6 +542,7 @@ public:
     std::pair<bool, QString> openMapWidget(const QString& area, int x, int y, int width, int height);
     std::pair<bool, QString> closeMapWidget();
     std::optional<QRect> mapWidgetGeometry() const;
+    void refreshColours();
     bool closeWindow(const QString&);
     bool echoWindow(const QString&, const QString&);
     bool pasteWindow(const QString& name);
@@ -564,6 +563,13 @@ public:
     std::optional<QColor> getBackgroundColor(const QString& name) const;
     bool setBackgroundImage(const QString& name, QString& path, int mode, bool fullWindow = false);
     bool resetBackgroundImage(const QString& name, bool fullWindow = false);
+    bool setSvgTint(const QString& name, const QColor& color);
+    bool resetSvgTint(const QString& name);
+    bool setSvgRotation(const QString& name, double angle);
+    bool resetSvgRotation(const QString& name);
+    bool setSvgShear(const QString& name, double shearX, double shearY);
+    bool resetSvgShear(const QString& name);
+    bool resetSvgTransform(const QString& name);
     void showHideOrCreateMapper(const bool loadDefaultMap);
     bool mapperShown() const;
     bool interceptMapperButton();

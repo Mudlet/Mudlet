@@ -5768,6 +5768,13 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "disableAlias", TLuaInterpreter::disableAlias);
     lua_register(pGlobalLua, "killAlias", TLuaInterpreter::killAlias);
     lua_register(pGlobalLua, "setLabelStyleSheet", TLuaInterpreter::setLabelStyleSheet);
+    lua_register(pGlobalLua, "setSvgTint", TLuaInterpreter::setSvgTint);
+    lua_register(pGlobalLua, "resetSvgTint", TLuaInterpreter::resetSvgTint);
+    lua_register(pGlobalLua, "setSvgRotation", TLuaInterpreter::setSvgRotation);
+    lua_register(pGlobalLua, "resetSvgRotation", TLuaInterpreter::resetSvgRotation);
+    lua_register(pGlobalLua, "setSvgShear", TLuaInterpreter::setSvgShear);
+    lua_register(pGlobalLua, "resetSvgShear", TLuaInterpreter::resetSvgShear);
+    lua_register(pGlobalLua, "resetSvgTransform", TLuaInterpreter::resetSvgTransform);
     lua_register(pGlobalLua, "setUserWindowStyleSheet", TLuaInterpreter::setUserWindowStyleSheet);
     lua_register(pGlobalLua, "getUserWindowStyleSheet", TLuaInterpreter::getUserWindowStyleSheet);
     lua_register(pGlobalLua, "getTime", TLuaInterpreter::getTime);
@@ -6224,6 +6231,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "enableCommand", TLuaInterpreter::enableCommand);
     lua_register(pGlobalLua, "disableCommand", TLuaInterpreter::disableCommand);
     lua_register(pGlobalLua, "setCommandChecked", TLuaInterpreter::setCommandChecked);
+    lua_register(pGlobalLua, "setCommandPinned", TLuaInterpreter::setCommandPinned);
     lua_register(pGlobalLua, "setCommandIcon", TLuaInterpreter::setCommandIcon);
     lua_register(pGlobalLua, "setCommandTooltip", TLuaInterpreter::setCommandTooltip);
     lua_register(pGlobalLua, "setCommandPulse", TLuaInterpreter::setCommandPulse);

@@ -63,7 +63,6 @@
 
 #include <chrono>
 #include <QtConcurrentRun>
-#include <QApplication>
 #include <QCoreApplication>
 #include <QDataStream>
 #include <QDirIterator>
@@ -414,7 +413,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     if (mudlet::self()->smFirstLaunch) {
         QTimer::singleShot(0ms, this, [this]() {
             if (mpConsole) {
-                mpConsole->mpCommandLine->setPlaceholderText(tr("Text to send to the game"));
+                mpConsole->setCommandLinePlaceholderText(tr("Text to send to the game"));
             }
         });
     }
@@ -2133,27 +2132,33 @@ std::shared_ptr<TConsoleModel> Host::sharedMainConsoleModel()
 
 void Host::deselectMainConsole()
 {
-    mpConsole->deselect();
+    mpMainConsoleModel->deselect();
 }
 
 bool Host::selectMainConsoleSection(int from, int length)
 {
-    return mpConsole->selectSection(from, length);
+    return mpMainConsoleModel->selectSection(from, length);
 }
 
+// The colour goes onto the model whether or not a view exists; only the repaint
+// of the lines it landed on needs one.
 void Host::setMainConsoleFgColor(const QColor& color)
 {
-    mpConsole->setFgColor(color);
+    if (mpMainConsoleModel->setSelectionFgColor(color) && mpConsole) {
+        mpConsole->markSelectionDirty();
+    }
 }
 
 void Host::setMainConsoleBgColor(const QColor& color)
 {
-    mpConsole->setBgColor(color);
+    if (mpMainConsoleModel->setSelectionBgColor(color) && mpConsole) {
+        mpConsole->markSelectionDirty();
+    }
 }
 
 void Host::resetMainConsoleFormat()
 {
-    mpConsole->reset();
+    mpMainConsoleModel->resetFormat();
 }
 
 // Hot: the trigger engine reads the model for every character of a colour
@@ -4225,14 +4230,7 @@ void Host::setUserDictionaryOptions(const bool _useDictionary, const bool useSha
     // been disabled the spell checking code won't run we need to clear any
     // highlights in the TCommandLine instance that may have been present when
     // spell checking is turned on or off:
-    if (isSpellCheckingEnabled) {
-        // Now enabled - so recheck the whole command line with whichever
-        // dictionaries are active:
-        mpConsole->mpCommandLine->recheckWholeLine();
-    } else {
-        // Or it is now disabled so clear any spelling marks:
-        mpConsole->mpCommandLine->clearMarksOnWholeLine();
-    }
+    mpConsole->updateCommandLineSpellCheck(isSpellCheckingEnabled);
 }
 
 // This does not take care of any QMaps or other containers that the mudlet
@@ -4380,30 +4378,11 @@ void Host::setShowIdsInEditor(const bool isShown)
     emit signal_showIdsInEditorChanged(isShown);
 }
 
-// The single answer to "does this profile have a map widget on screen right
-// now" - null both for a profile that has never opened one and for one that put
-// it away again, which a script cannot tell apart and does not need to.
-//
-// isHidden() rather than a flag of our own, because the dock gets hidden by
-// paths that would never think to update one: its own title bar close button,
-// mudlet::slot_showMapperDialog() handing the map over to a main window dock,
-// and QMainWindow::restoreState() replaying a saved layout. It is also not
-// !isVisible(), which would additionally answer "no map widget" whenever the
-// main window itself is hidden, e.g. minimised to the system tray.
-QDockWidget* Host::mapWidget() const
-{
-    if (!mpConsole || !mpConsole->mpDockableMapWidget || mpConsole->mpDockableMapWidget->isHidden()) {
-        return nullptr;
-    }
-
-    return mpConsole->mpDockableMapWidget;
-}
-
 // Hands TMap::mpMapper back to this profile's own mapper. The map dock and the
 // detached windows borrow it while they show a map of their own, and every one
 // of them gives it back through here. createMapper() records the embedded
 // mapper on the console and puts it in the main frame or a user window, so a
-// profile that has one is never the mpDockableMapWidget case below.
+// profile that has one is never the docked mapper case below.
 void Host::restoreOwnMapper()
 {
     if (!mpMap) {
@@ -4412,10 +4391,8 @@ void Host::restoreOwnMapper()
 
     if (mpConsole && mpConsole->mpMapper) {
         mpMap->mpMapper = mpConsole->mpMapper;
-    } else if (mpConsole && mpConsole->mpDockableMapWidget) {
-        auto hostMapWidget = mpConsole->mpDockableMapWidget->widget();
-
-        if (auto hostMapper = qobject_cast<dlgMapper*>(hostMapWidget)) {
+    } else if (mpConsole) {
+        if (auto* hostMapper = mpConsole->dockedMapper()) {
             mpMap->mpMapper = hostMapper;
         }
     }
@@ -4426,15 +4403,9 @@ void Host::restoreOwnMapper()
 
 std::pair<bool, QString> Host::setMapperTitle(const QString& title)
 {
-    auto pM = mapWidget();
-    if (!pM) {
+    const QString newTitle = title.isEmpty() ? tr("Map - %1").arg(mHostName) : title;
+    if (!mpConsole || !mpConsole->setMapWidgetTitle(newTitle)) {
         return {false, qsl("no floating/dockable type map window found")};
-    }
-
-    if (title.isEmpty()) {
-        pM->setWindowTitle(tr("Map - %1").arg(mHostName));
-    } else {
-        pM->setWindowTitle(title);
     }
 
     return {true, QString()};
@@ -4442,12 +4413,11 @@ std::pair<bool, QString> Host::setMapperTitle(const QString& title)
 
 std::optional<QString> Host::getMapperTitle() const
 {
-    auto pM = mapWidget();
-    if (!pM) {
+    if (!mpConsole) {
         return {};
     }
 
-    return {pM->windowTitle()};
+    return mpConsole->mapWidgetTitle();
 }
 
 std::pair<int, QString> Host::createMapView(int areaId)
@@ -4582,8 +4552,8 @@ void Host::setCompactInputLine(const bool state)
         // read from the XML file the main TConsole has not been instatiated
         // yet - so must check for it existing first - and ensure the read
         // setting is applied in the constructor for it:
-        if (mpConsole && mpConsole->mpButtonMainLayer) {
-            mpConsole->mpButtonMainLayer->setVisible(!state);
+        if (mpConsole) {
+            mpConsole->setCompactInputLine(state);
         }
         raiseSettingChangedEvent(qsl("compactInputLine"), state);
     }
@@ -4953,7 +4923,7 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
     if (mWindowRegistry.hasDockWidget(name)) {
         return {false, qsl("element '%1' is the base of a floating/dockable user window and may not be moved").arg(name)};
     }
-    if (mpConsole->mpDockableMapWidget) {
+    if (mpConsole->mapWidgetCreated()) {
         if (!name.compare(QLatin1String("mapper"), Qt::CaseInsensitive)) {
             return {false, qsl("element '%1' is the map in a floating/dockable window and may not be moved").arg(name)};
         }
@@ -4988,74 +4958,35 @@ std::pair<bool, QString> Host::openMapWidget(const QString& area, int x, int y, 
         return {false, qsl("no console for this profile - it may be closing")};
     }
 
-    auto pM = mpConsole->mpDockableMapWidget;
-    auto pMapper = mpMap.data()->mpMapper;
-    if (!pM && !pMapper) {
+    if (!mpConsole->mapWidgetCreated() && !mpMap.data()->mpMapper) {
         showHideOrCreateMapper(true);
-        pM = mpConsole->mpDockableMapWidget;
-    }
-    if (!pM) {
-        return {false, qsl("cannot create map widget. Do you already use an embedded mapper?")};
-    }
-    pM->show();
-    if (area.isEmpty()) {
-        return {true, QString()};
     }
 
-    if (area == QLatin1String("f") || area == QLatin1String("floating")) {
-        if (!pM->isFloating()) {
-            // Undock a docked window
-            // Change of position or size is only possible when floating
-            pM->setFloating(true);
-        }
-        if ((x != -1) && (y != -1)) {
-            pM->move(x, y);
-        }
-        if ((width != -1) && (height != -1)) {
-            pM->resize(width, height);
-        }
-        return {true, QString()};
-    }
-
-    if (area == QLatin1String("r") || area == QLatin1String("right")) {
-        pM->setFloating(false);
-        mudlet::self()->addDockWidget(Qt::RightDockWidgetArea, pM);
-        return {true, QString()};
-    }
-
-    if (area == QLatin1String("l") || area == QLatin1String("left")) {
-        pM->setFloating(false);
-        mudlet::self()->addDockWidget(Qt::LeftDockWidgetArea, pM);
-        return {true, QString()};
-    }
-
-    if (area == QLatin1String("t") || area == QLatin1String("top")) {
-        pM->setFloating(false);
-        mudlet::self()->addDockWidget(Qt::TopDockWidgetArea, pM);
-        return {true, QString()};
-    }
-
-    if (area == QLatin1String("b") || area == QLatin1String("bottom")) {
-        pM->setFloating(false);
-        mudlet::self()->addDockWidget(Qt::BottomDockWidgetArea, pM);
-        return {true, QString()};
-    }
-
-    return {false, qsl(R"("docking option "%1" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating")").arg(area)};
+    return mpConsole->placeMapWidget(area, x, y, width, height);
 }
 
 // The inverse of moveMapWidget()/resizeMapWidget(), which reach the dock widget
-// through openMapWidget(). pos()/size() rather than geometry() for the same
-// reason as Host::windowGeometry(): they are what move()/resize() were given,
-// while a floating dock's geometry() reports the client area instead.
+// through openMapWidget().
 std::optional<QRect> Host::mapWidgetGeometry() const
 {
-    auto pM = mapWidget();
-    if (!pM) {
+    if (!mpConsole) {
         return {};
     }
 
-    return {QRect(pM->pos(), pM->size())};
+    return mpConsole->mapWidgetGeometry();
+}
+
+void Host::refreshColours()
+{
+    if (!mpConsole) {
+        return;
+    }
+
+    mpConsole->changeColors();
+    mpMap->refreshMapperColours();
+    for (const QString& subConsoleName : windowRegistry().subConsoleNames()) {
+        mpConsole->changeSubConsoleColors(subConsoleName);
+    }
 }
 
 std::pair<bool, QString> Host::closeMapWidget()
@@ -5064,15 +4995,14 @@ std::pair<bool, QString> Host::closeMapWidget()
         return {false, qsl("no console for this profile - it may be closing")};
     }
 
-    // Test the raw pointer first so that a profile which never made a map widget
-    // is told apart from one that has put its widget away.
-    if (!mpConsole->mpDockableMapWidget) {
+    // Ask whether the widget was ever made first, so that a profile which never
+    // made one is told apart from one that has put its widget away.
+    if (!mpConsole->mapWidgetCreated()) {
         return {false, qsl("no map widget found to close")};
     }
-    if (!mapWidget()) {
+    if (!mpConsole->hideMapWidget()) {
         return {false, qsl("map widget already closed")};
     }
-    mpConsole->mpDockableMapWidget->hide();
     return {true, QString()};
 }
 
@@ -5241,12 +5171,7 @@ QSize Host::calcFontSize(const QString& windowName)
         return QSize(-1, -1);
     }
 
-    if (windowName.isEmpty() || windowName.compare(qsl("main"), Qt::CaseSensitive) == 0) {
-        QFontMetrics fontMetrics(mpConsole->mUpperPane->fontMetrics());
-        return QSize(fontMetrics.horizontalAdvance(QChar('W')), fontMetrics.height());
-    }
-
-    return mpConsole->subConsoleFontSize(windowName).value_or(QSize(-1, -1));
+    return mpConsole->consoleFontSize(windowName).value_or(QSize(-1, -1));
 }
 
 bool Host::setProfileStyleSheet(const QString& styleSheet)
@@ -5258,10 +5183,6 @@ bool Host::setProfileStyleSheet(const QString& styleSheet)
     mProfileStyleSheet = styleSheet;
     mpConsole->setStyleSheet(styleSheet);
     emit signal_profileStyleSheetChanged(styleSheet);
-    if (mpConsole->mpDockableMapWidget) {
-        mpConsole->mpDockableMapWidget->setStyleSheet(styleSheet);
-    }
-
     mpConsole->setDockWidgetStyleSheets(styleSheet);
     if (this == mudlet::self()->mpCurrentActiveHost) {
         mudlet::self()->setGlobalStyleSheet(styleSheet);
@@ -5348,6 +5269,97 @@ bool Host::resetBackgroundImage(const QString& name, bool fullWindow)
     }
 
     return mpConsole->resetSubConsoleBackgroundImage(name);
+}
+
+bool Host::setSvgTint(const QString& name, const QColor& color)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    if (!mWindowRegistry.hasLabel(name)) {
+        return false;
+    }
+
+    return mpConsole->setLabelSvgTint(name, color);
+}
+
+bool Host::resetSvgTint(const QString& name)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    if (!mWindowRegistry.hasLabel(name)) {
+        return false;
+    }
+
+    return mpConsole->resetLabelSvgTint(name);
+}
+
+bool Host::setSvgRotation(const QString& name, double angle)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    if (!mWindowRegistry.hasLabel(name)) {
+        return false;
+    }
+
+    return mpConsole->setLabelSvgRotation(name, angle);
+}
+
+bool Host::resetSvgRotation(const QString& name)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    if (!mWindowRegistry.hasLabel(name)) {
+        return false;
+    }
+
+    return mpConsole->resetLabelSvgRotation(name);
+}
+
+bool Host::setSvgShear(const QString& name, double shearX, double shearY)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    if (!mWindowRegistry.hasLabel(name)) {
+        return false;
+    }
+
+    return mpConsole->setLabelSvgShear(name, shearX, shearY);
+}
+
+bool Host::resetSvgShear(const QString& name)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    if (!mWindowRegistry.hasLabel(name)) {
+        return false;
+    }
+
+    return mpConsole->resetLabelSvgShear(name);
+}
+
+bool Host::resetSvgTransform(const QString& name)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    if (!mWindowRegistry.hasLabel(name)) {
+        return false;
+    }
+
+    return mpConsole->resetLabelSvgTransform(name);
 }
 
 bool Host::setCommandBackgroundColor(const QString& name, int r, int g, int b, int alpha)
@@ -5474,7 +5486,7 @@ void Host::createMapper(const bool loadDefaultMap)
             pMap->mpMapper->show();
         }
     }
-    mudlet::self()->addDockWidget(Qt::RightDockWidgetArea, mpConsole->mpDockableMapWidget);
+    mpConsole->dockMapWidget(Qt::RightDockWidgetArea);
 
     // XXX: should this be called multiple times?
     mudlet::self()->loadWindowLayout();
@@ -5483,7 +5495,7 @@ void Host::createMapper(const bool loadDefaultMap)
     // restored a previous hidden state, but when first creating the mapper, we
     // always want it to be visible.
     pMap->mpMapper->show();
-    mpConsole->mpDockableMapWidget->show();
+    mpConsole->showMapWidget();
     pMap->mpMapper->updateEmptyStateOverlay();
 
     check_for_mappingscript();
@@ -5739,11 +5751,7 @@ void Host::setFocusOnHostActiveCommandLine()
             pCommandLine->console()->repaint();
             targetCommandLine = pCommandLine;
         } else {
-            mpConsole->mpCommandLine->activateWindow();
-            mpConsole->show();
-            mpConsole->raise();
-            mpConsole->repaint();
-            targetCommandLine = mpConsole->mpCommandLine;
+            targetCommandLine = mpConsole->raiseCommandLine();
         }
 
         if (targetCommandLine) {
@@ -5886,14 +5894,12 @@ void Host::editorThemeChanged()
 
 void Host::sendCmdLine(const QString& cmd)
 {
-    if (!mpConsole || !mpConsole->mpCommandLine) {
+    if (!mpConsole) {
         qWarning() << "Host::sendCmdLine(...) ERROR - No active command line available.";
         return;
     }
 
-    // Set the command in the active command line
-    mpConsole->mpCommandLine->setPlainText(cmd);
-    mpConsole->mpCommandLine->selectAll();
+    mpConsole->setCommandLineText(cmd);
 }
 
 void Host::setRemoteEchoingActive(bool active)

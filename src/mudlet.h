@@ -30,6 +30,7 @@
 #include "FontManager.h"
 #include "HostManager.h"
 #include "ShortcutsManager.h"
+#include "SpeechRecognizerFactory.h"
 #include "utils.h"
 #include <memory>
 
@@ -77,6 +78,7 @@ class QTableWidgetItem;
 class QTextEdit;
 class QToolButton;
 class QTimer;
+class QWindow;
 
 class dlgAboutDialog;
 class dlgConnectionProfiles;
@@ -192,6 +194,7 @@ public:
     QPair<bool, bool> addWordToSet(const QString&);
     void adjustMenuBarVisibility();
     void adjustToolBarVisibility();
+    void alertUser(int milliseconds);
     void announce(const QString& text, const QString& processing = QString(), bool isPlain = false);
     void attachDebugArea(const QString&);
     void checkUpdatesOnStart();
@@ -215,13 +218,58 @@ public:
     // Speech-to-text bridge: creates the single shared recognizer on first use
     // and exposes it to the Lua stt.* API. Recognizer results surface as Lua
     // events; all routing and UI policy lives in packages consuming them.
-    void initSpeechRecognition();
+    // One recognizer exists at a time (docs/stt-api.md's "one recognizer per
+    // client"), and backend decides what happens when one is already built:
+    // Auto, or the backend already in place, keeps it - the stt.* setters pass
+    // Auto on every call and must not tear down a working engine. An explicit
+    // request for a different backend replaces it, which is what lets
+    // stt.init() switch engines when it is handed another engine's model.
+    void initSpeechRecognition(SpeechRecognizerFactory::Backend backend = SpeechRecognizerFactory::Backend::Auto);
     SpeechRecognizer* speechRecognizer() const;
-    // Raise one sysSTT* event on the active profile. Public because the stt.*
-    // bindings refuse before a recognizer exists - with no engine installed
-    // there is no object to emit through, and "refusals speak" has to hold
-    // there too or a consumer cannot tell "no engine" from "nothing said yet".
+    // Raise one sysSTT* event on the profile holding the microphone, or on the
+    // active one when nobody holds it. Public because the stt.* bindings refuse
+    // before a recognizer exists - with no engine installed there is no object
+    // to emit through, and "refusals speak" has to hold there too or a consumer
+    // cannot tell "no engine" from "nothing said yet".
     void raiseSpeechEvent(const QString& name, const QString& value);
+    // Take the microphone for this profile, stopping whoever held it. There is
+    // one recognizer for the whole application, so a second profile asking to
+    // listen is a handover rather than a second session - and the profile that
+    // loses it is told, since nothing else on its screen would say why its
+    // microphone went quiet. Call before startListening(); on a refusal call
+    // releaseMicrophone() so the claim does not outlive the session it was for.
+    bool claimMicrophoneFor(Host* pHost);
+    void releaseMicrophone();
+    // Raise one sysSTT* event on a named profile. A refusal belongs to the
+    // profile that asked for it, which is not the profile the microphone's own
+    // traffic goes to once somebody else is listening.
+    //
+    // A sysSTTError raised while one is already being delivered is dropped: a
+    // handler's own calls report their refusals through their return values, and
+    // raising them would run that handler again inside itself, making the same
+    // call, until Lua's C stack overflows.
+    void raiseSpeechEventOn(Host* pHost, const QString& name, const QString& value);
+    // Raises sysSTTCapabilitiesChanged when, and only when, what Lua reads from
+    // stt.getInfo().capabilities has actually moved since it was last told.
+    void announceSpeechCapabilitiesIfChanged();
+    // Which profile the microphone currently belongs to, or nullptr
+    Host* microphoneOwner() const;
+    // Re-place and re-show add-on commands: called whenever the profile a window
+    // is showing changes, or a profile moves between windows. Nothing to do with
+    // the microphone; it sits here only because a detached window calls it.
+    void refreshAddonPlacement();
+    // The " (listening)" a window's title carries while this profile holds the
+    // microphone, or nothing. Public because a detached window builds its own title.
+    QString microphoneMarkerFor(const QString& profileName) const;
+    // Whether a recognised phrase is being handed to Lua right now. A phrase
+    // that has reached its handler is not one the engine still owes anybody,
+    // however busy the engine looks while that handler runs.
+    bool deliveringSpeechResult() const { return mSpeechResultsBeingDelivered > 0; }
+    // How many windows currently have add-on chrome recorded. Public only so a
+    // test can see that a closed window's entry is dropped; nothing reads it.
+    int addonChromeWindowCount() const { return mAddonChrome.size(); }
+    // The marker the main window carries, for any profile it holds
+    QString mainWindowMicrophoneMarker() const;
     const QMap<QString, QPointer<TDetachedWindow>>& getDetachedWindows() const { return mDetachedWindows; }
     // Out of line so mudlet.h needs no more than a forward declaration -
     // converting the QPointer this returns wants the complete type
@@ -324,6 +372,7 @@ public:
     bool setAddonCommandChecked(int commandId, bool checked, Host* pHost);
     bool setAddonCommandIcon(int commandId, const QString& icon, Host* pHost);
     bool setAddonCommandTooltip(int commandId, const QString& tooltip, Host* pHost);
+    bool setAddonCommandPinned(int commandId, bool pinned, Host* pHost);
     bool setAddonCommandPulse(int commandId, bool enabled, const QString& color1, const QString& color2, int interval, Host* pHost, QString& error);
     // Every command a profile placed, dropped when it closes or resets
     void removeAddonCommandsForHost(Host* pHost);
@@ -335,7 +384,7 @@ public:
     // that is the other package's business and nothing this profile can act
     // on, the same rule addonShortcutUsable() follows.
     QStringList addonCommandsUsingShortcut(const QKeySequence& sequence, const Host* pHost) const;
-    // Every other profile whose key binding a command just took, told about it.
+    // Every other profile whose key binding a newly pinned command took, told about it.
     // The clash is only refused within the profile that is asking; see the
     // definition for why the others are told rather than turned down.
     void warnProfilesLosingBindingTo(const QKeySequence& sequence, Host* pHost, const QString& commandName);
@@ -518,6 +567,7 @@ public slots:
     void slot_toggleReplay();
     void slot_toggleLogging();
     void slot_toggleEmergencyStop();
+    void slot_focusWindowChanged(QWindow*);
     void slot_tabDetachRequested(int index, const QPoint& globalPos);
     void slot_tabReattachRequested(const QString& tabName, int insertIndex = -1);
     void slot_detachedWindowClosed(const QString& profileName);
@@ -736,6 +786,36 @@ private:
     // The single shared speech recognizer (one microphone, one decoder);
     // created lazily by initSpeechRecognition()
     QPointer<SpeechRecognizer> mpSpeechRecognizer;
+    // What Lua was last told stt.getInfo().capabilities are, as the event's own
+    // payload. The baseline lives here rather than in the recognizer because
+    // this is where Lua's view is assembled: every capability reads false while
+    // no recognizer exists, so one coming into existence - or being swapped for
+    // another engine - is itself a change to what getInfo() answers, and a
+    // recognizer cannot notice a transition that happened before it did. Seeded
+    // on first use with the all-false payload rather than left empty, so that
+    // first appearance registers as the change it is (#10760).
+    QString mAnnouncedSpeechCapabilities;
+    // The profile that asked for the microphone, for as long as the session it
+    // asked for lasts. Results belong to whoever started listening rather than
+    // to whoever happens to be in front when a phrase lands: those are the same
+    // profile in the ordinary case, and routing by the second one sends a
+    // phrase to the wrong game in every case where they differ.
+    QPointer<Host> mpMicrophoneOwner;
+    // The profile whose session has just ended, until the event loop turns
+    // again. An engine settles the state before it says what became of the
+    // phrase that was in flight, and the release rides on the state - so
+    // without this the sentence that matters most goes to whichever profile
+    // happens to be in front. See raiseSpeechEvent().
+    QPointer<Host> mpMicrophoneOwnerEnding;
+    // How deep the delivery of a recognised phrase is - see the finalResult
+    // connection in initSpeechRecognition(), and deliveringSpeechResult()
+    int mSpeechResultsBeingDelivered = 0;
+    // How many sysSTTError deliveries are in progress; see raiseSpeechEventOn()
+    int mSpeechErrorsBeingDelivered = 0;
+    // Raise one sysSTT* event on a named profile, which is what the handover
+    // notice needs - it goes to the profile losing the microphone, and by then
+    // the owner is already the profile that took it.
+    void refreshMicrophoneMarkers();
     QPointer<QToolButton> mpButtonPackageManagers;
     QHBoxLayout* mpHBoxLayout_profileContainer = nullptr;
     QPointer<QLabel> mpLabelReplaySpeedDisplay;
@@ -805,18 +885,72 @@ private:
     // in the click handlers, which resolve pHost lazily.
     struct AddonCommand
     {
+        // What the package asked for, kept because the widgets are rebuilt
+        // whenever the command changes window: addAddonCommand() validates a
+        // request once, and re-placing an accepted command must not be able to
+        // refuse it a second time.
+        CommandRequest request;
+        QPointer<Host> pHost;
+        // The window the widgets below currently live in; null while unplaced
+        QPointer<QMainWindow> container;
         QPointer<QToolButton> button;
         QPointer<QAction> toolbarAction;
         QPointer<QAction> menuAction;
         QPointer<QTimer> pulseTimer;
-        QPointer<Host> pHost;
+        // Everything a package has set since the command was created. The
+        // widgets are the surface, not the record: they are destroyed and
+        // rebuilt on a move, and a state kept only in them would be lost every
+        // time a profile was dragged out of the main window.
+        bool enabled = true;
+        bool checkable = false;
+        bool checked = false;
+        QString icon;
+        QString tooltip;
+        // Shown in whichever window the player is in, whatever profile that
+        // window is showing - for a control they must be able to reach while it
+        // is doing something, a microphone that is open being the case in hand.
+        bool pinned = false;
+        bool pulseEnabled = false;
         bool pulseState = false;
         QString pulseColor1;
         QString pulseColor2;
     };
-    QMenu* addonMenuForPath(const QString& menuPath, const Host* pHost, QString& error);
+    // The chrome one window lends to add-on commands. There is a set of these
+    // per window rather than one for the application, because a detached window
+    // has a toolbar and an Options menu of its own and a command belongs beside
+    // the profile it was created by, wherever that profile has been dragged to.
+    struct AddonChrome
+    {
+        QPointer<QAction> toolbarSeparator;
+        QPointer<QMenu> addonsMenu;
+        QHash<QMenu*, const Host*> submenuOwners;
+    };
+    QHash<QMainWindow*, AddonChrome> mAddonChrome;
+    // The toolbar and the Options menu of a window, whichever kind it is
+    QToolBar* addonToolBarFor(QMainWindow* pContainer) const;
+    QMenu* addonOptionsMenuFor(QMainWindow* pContainer) const;
+    QMainWindow* addonHomeContainerFor(Host* pHost) const;
+    Host* addonShownProfileIn(QMainWindow* pContainer);
+    QMainWindow* addonFocusedContainer();
+    void refreshAddonPlacementIfAnyPinned();
+    void forgetChromeOfClosedWindows();
+    void hideEmptyAddonSubmenus(QMenu* pMenu);
+    // The last window of ours the player was in. A pinned command follows this
+    // rather than whatever holds focus now, which may be the script editor or
+    // another application entirely.
+    QPointer<QMainWindow> mpLastFocusedContainer;
+    // Build this command's widgets in a window and apply everything the package
+    // has set, or take them down again and tidy what they leave behind
+    void placeAddonCommand(int commandId, AddonCommand& command, QMainWindow* pContainer);
+    void unplaceAddonCommand(AddonCommand& command);
+    void applyAddonCommandState(AddonCommand& command);
+    // Whether the command is being created, which a menu path can still be
+    // refused for, or moved into another window, which must always succeed
+    enum class AddonPlacement { Creating, Moving };
+    QMenu* addonMenuForPath(QMainWindow* pContainer, const QString& menuPath, const Host* pHost, QString& error, AddonPlacement placement);
     bool addonShortcutUsable(const QKeySequence& sequence, const Host* pHost, QString& error) const;
     static QString addonTooltip(const QString& tooltip);
+    static QString addonPulseStyleSheet(const QString& colour);
     // Qt reads '&' in a QAction's or QToolButton's text as a mnemonic, so a
     // package's "Fish & Chips" draws without the ampersand and steals Alt+Space.
     // The clash checks compare labels after doubling, so a path part is put
@@ -836,13 +970,6 @@ private:
     QMap<int, AddonCommand> mAddonCommands;
     // One sequence for every command, so an id names one thing or nothing
     int mNextAddonCommandId = 1;
-    QAction* mpAddonToolbarSeparator = nullptr;
-    QPointer<QMenu> mpAddonsMenu;
-    // Which profile a menuPath submenu was built for. Placement has to be
-    // decided by the profile's own commands alone: sharing one namespace meant
-    // whether a package could place a command depended on which unrelated
-    // profiles happened to be open, and on labels it could neither see nor clear.
-    QHash<QMenu*, const Host*> mAddonSubmenuOwners;
 
     // amount of times the shortcut has been shown help educate new users
     int mScrollbackTutorialsShown = 0;   // Cancel split screen

@@ -37,6 +37,7 @@ deb/pool/<codename>/*.deb
 rpm/mudlet.repo                          dnf repository definition
 rpm/fedora/<release>/<arch>/repodata/    dnf index, repomd.xml signed
 rpm/fedora/<release>/<arch>/*.rpm        signed
+index.html                               in every directory, to browse from <base url>/index.html
 ```
 
 Users install with:

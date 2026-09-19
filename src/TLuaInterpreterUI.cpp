@@ -30,7 +30,6 @@
 #include "MudletPaths.h"
 #include "TLuaInterpreter.h"
 
-#include <QApplication>
 #include <QClipboard>
 #include <QGuiApplication>
 
@@ -71,6 +70,8 @@
 #include <QCollator>
 #include <QCoreApplication>
 #include <QDesktopServices>
+#include <QDir>
+#include <QFileDialog>
 #include <QFileInfo>
 #include <QMovie>
 #include <QVector>
@@ -98,6 +99,58 @@ static bool isMain(const QString& name)
         return true;
     }
     return false;
+}
+
+// Mudlet's own colour names live in the Lua "color_table" global as {r, g, b};
+// the names QColor knows are the SVG ones, a different set with different
+// spellings. Returns an invalid colour when the name is not in the table.
+static QColor colorFromColorTable(lua_State* L, const QString& name)
+{
+    lua_getfield(L, LUA_GLOBALSINDEX, "color_table");
+    if (!lua_istable(L, -1)) {
+        lua_pop(L, 1);
+        return QColor();
+    }
+
+    // A plain lookup would answer for fewer names than Geyser does: the table
+    // holds 137 lower_case keys and 88 CamelCase ones, and names like
+    // "LightGoldenrod" have no other spelling in it. Geyser.Color.find_color_name
+    // lower-cases what it is asked for and drops the underscores from it, then
+    // compares that against every key lower-cased - so "alice_blue" finds
+    // "AliceBlue". Matching the same way keeps the global and the Geyser wrapper
+    // resolving the same names.
+    const QString wanted = name.toLower().remove(QLatin1Char('_'));
+    QColor found;
+    lua_pushnil(L);
+    while (lua_next(L, -2)) {
+        // lua_tostring() converts a number key in place, which breaks lua_next()
+        if (lua_type(L, -2) != LUA_TSTRING || QString::fromUtf8(lua_tostring(L, -2)).toLower() != wanted) {
+            lua_pop(L, 1);
+            continue;
+        }
+
+        if (lua_istable(L, -1)) {
+            int components[3] = {0, 0, 0};
+            bool complete = true;
+            for (int i = 0; i < 3; ++i) {
+                lua_rawgeti(L, -1, i + 1);
+                if (lua_isnumber(L, -1)) {
+                    components[i] = static_cast<int>(lua_tointeger(L, -1));
+                } else {
+                    complete = false;
+                }
+                lua_pop(L, 1);
+            }
+            if (complete) {
+                found = QColor(components[0], components[1], components[2]);
+            }
+        }
+        lua_pop(L, 2);
+        break;
+    }
+    lua_pop(L, 1);
+
+    return found;
 }
 
 // variable names within these macros have trailing underscores because in
@@ -285,8 +338,9 @@ int TLuaInterpreter::alert(lua_State* L)
         }
     }
 
-    // QApplication::alert expects milliseconds, not seconds
-    QApplication::alert(mudlet::self(), qRound(luaAlertDuration * 1000.0));
+    if (auto* application = mudlet::self()) {
+        application->alertUser(qRound(luaAlertDuration * 1000.0));
+    }
 
     return 0;
 }
@@ -2966,7 +3020,7 @@ int TLuaInterpreter::setBackgroundImage(lua_State* L)
             // the console name is already validated above, so this is about the image
             return warnArgumentValue(L, __func__, qsl("could not use '%1' as a full window background image").arg(imgPath));
         }
-        return warnArgumentValue(L, __func__, qsl("console or label '%1' not found").arg(windowName));
+        return warnArgumentValue(L, __func__, qsl("console or label '%1' not found, or '%2' could not be loaded as an image").arg(windowName, imgPath));
     }
 
     lua_pushboolean(L, true);
@@ -3504,6 +3558,162 @@ int TLuaInterpreter::setLabelStyleSheet(lua_State* L)
     }
     if (auto [success, message] = host.mpConsole->setLabelStyleSheet(labelName, stylesheet); !success) {
         return warnArgumentValue(L, __func__, message);
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setSvgTint
+int TLuaInterpreter::setSvgTint(lua_State* L)
+{
+    if (!checkStringArg(L, __func__, 1, "label name")) {
+        return lua_error(L);
+    }
+
+    QColor color;
+    if (lua_type(L, 2) == LUA_TSTRING) {
+        const QString colorStr = getVerifiedString(L, __func__, 2, "color string");
+        color = colorFromColorTable(L, colorStr);
+        if (!color.isValid()) {
+            color = QColor(colorStr);
+        }
+        if (!color.isValid()) {
+            return warnArgumentValue(
+                    L, __func__, qsl("'%1' is not a valid color - use a Mudlet color name like 'alice_blue', an SVG color name like 'aliceblue', or a '#rrggbb' hex value").arg(colorStr));
+        }
+    } else {
+        const int r = getVerifiedInt(L, __func__, 2, "red value 0-255");
+        const int g = getVerifiedInt(L, __func__, 3, "green value 0-255");
+        const int b = getVerifiedInt(L, __func__, 4, "blue value 0-255");
+
+        auto validRange = [](int number) {
+            return number >= 0 && number <= 255;
+        };
+
+        if (!validRange(r)) {
+            return warnArgumentValue(L, __func__, csmInvalidRedValue.arg(r));
+        }
+        if (!validRange(g)) {
+            return warnArgumentValue(L, __func__, csmInvalidGreenValue.arg(g));
+        }
+        if (!validRange(b)) {
+            return warnArgumentValue(L, __func__, csmInvalidBlueValue.arg(b));
+        }
+        color = QColor(r, g, b);
+    }
+
+    const QString labelName{lua_tostring(L, 1)};
+
+    Host& host = getHostFromLua(L);
+    if (!host.setSvgTint(labelName, color)) {
+        return warnArgumentValue(L, __func__, qsl("label '%1' not found").arg(labelName));
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resetSvgTint
+int TLuaInterpreter::resetSvgTint(lua_State* L)
+{
+    const QString labelName = getVerifiedString(L, __func__, 1, "label name");
+    Host& host = getHostFromLua(L);
+
+    if (!host.resetSvgTint(labelName)) {
+        return warnArgumentValue(L, __func__, qsl("label '%1' not found").arg(labelName));
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setSvgRotation
+int TLuaInterpreter::setSvgRotation(lua_State* L)
+{
+    if (!checkStringArg(L, __func__, 1, "label name")) {
+        return lua_error(L);
+    }
+    const double angle = getVerifiedDouble(L, __func__, 2, "angle");
+    // NaN and the infinities reach QTransform as a transform that maps the whole
+    // document nowhere, leaving the SVG invisible until the rotation is reset
+    if (!qIsFinite(angle)) {
+        return warnArgumentValue(L, __func__, qsl("angle must be a finite number"));
+    }
+    const QString labelName{lua_tostring(L, 1)};
+    Host& host = getHostFromLua(L);
+
+    if (!host.setSvgRotation(labelName, angle)) {
+        return warnArgumentValue(L, __func__, qsl("label '%1' not found").arg(labelName));
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resetSvgRotation
+int TLuaInterpreter::resetSvgRotation(lua_State* L)
+{
+    const QString labelName = getVerifiedString(L, __func__, 1, "label name");
+    Host& host = getHostFromLua(L);
+
+    if (!host.resetSvgRotation(labelName)) {
+        return warnArgumentValue(L, __func__, qsl("label '%1' not found").arg(labelName));
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setSvgShear
+int TLuaInterpreter::setSvgShear(lua_State* L)
+{
+    if (!checkStringArg(L, __func__, 1, "label name")) {
+        return lua_error(L);
+    }
+    const double shearX = getVerifiedDouble(L, __func__, 2, "shearX");
+    const double shearY = getVerifiedDouble(L, __func__, 3, "shearY");
+    // as with the rotation, a non-finite factor takes the SVG off screen rather
+    // than slanting it
+    if (!qIsFinite(shearX)) {
+        return warnArgumentValue(L, __func__, qsl("shearX must be a finite number"));
+    }
+    if (!qIsFinite(shearY)) {
+        return warnArgumentValue(L, __func__, qsl("shearY must be a finite number"));
+    }
+    const QString labelName{lua_tostring(L, 1)};
+    Host& host = getHostFromLua(L);
+
+    if (!host.setSvgShear(labelName, shearX, shearY)) {
+        return warnArgumentValue(L, __func__, qsl("label '%1' not found").arg(labelName));
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resetSvgShear
+int TLuaInterpreter::resetSvgShear(lua_State* L)
+{
+    const QString labelName = getVerifiedString(L, __func__, 1, "label name");
+    Host& host = getHostFromLua(L);
+
+    if (!host.resetSvgShear(labelName)) {
+        return warnArgumentValue(L, __func__, qsl("label '%1' not found").arg(labelName));
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resetSvgTransform
+int TLuaInterpreter::resetSvgTransform(lua_State* L)
+{
+    const QString labelName = getVerifiedString(L, __func__, 1, "label name");
+    Host& host = getHostFromLua(L);
+
+    if (!host.resetSvgTransform(labelName)) {
+        return warnArgumentValue(L, __func__, qsl("label '%1' not found").arg(labelName));
     }
 
     lua_pushboolean(L, true);
@@ -4125,12 +4335,16 @@ int TLuaInterpreter::setWindowWrapIndent(lua_State* L)
     const char* windowName = WINDOW_NAME(L, 1);
     const int luaFrom = getVerifiedInt(L, __func__, 2, "wrapTo");
     auto console = CONSOLE(L, QString{windowName});
+    if (luaFrom < 0) {
+        return warnArgumentValue(L, __func__, qsl("indent %1 is not valid, it must be 0 or more").arg(luaFrom));
+    }
     console->setIndentCount(luaFrom);
-    if (luaFrom >= 0 && console->getType() == TConsole::MainConsole) {
+    if (console->getType() == TConsole::MainConsole) {
         Host& host = getHostFromLua(L);
         host.mWrapIndentCount = luaFrom;
     }
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 //Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setWindowWrapHangingIndent
@@ -4139,12 +4353,16 @@ int TLuaInterpreter::setWindowWrapHangingIndent(lua_State* L)
     const char* windowName = WINDOW_NAME(L, 1);
     const int luaFrom = getVerifiedInt(L, __func__, 2, "wrapTo");
     auto console = CONSOLE(L, QString{windowName});
+    if (luaFrom < 0) {
+        return warnArgumentValue(L, __func__, qsl("indent %1 is not valid, it must be 0 or more").arg(luaFrom));
+    }
     console->setHangingIndentCount(luaFrom);
-    if (luaFrom >= 0 && console->getType() == TConsole::MainConsole) {
+    if (console->getType() == TConsole::MainConsole) {
         Host& host = getHostFromLua(L);
         host.mWrapHangingIndentCount = luaFrom;
     }
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#showWindow
@@ -4706,6 +4924,22 @@ int TLuaInterpreter::setCommandChecked(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setCommandPinned
+int TLuaInterpreter::setCommandPinned(lua_State* L)
+{
+    const int commandId = getVerifiedInt(L, __func__, 1, "commandId");
+    const bool pinned = getVerifiedBool(L, __func__, 2, "pinned");
+
+    auto& host = getHostFromLua(L);
+    mudlet* pMudlet = mudlet::self();
+    if (!pMudlet) {
+        return warnArgumentValue(L, __func__, "mudlet instance not available");
+    }
+
+    lua_pushboolean(L, pMudlet->setAddonCommandPinned(commandId, pinned, &host));
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setCommandIcon
 int TLuaInterpreter::setCommandIcon(lua_State* L)
 {
@@ -4773,5 +5007,37 @@ int TLuaInterpreter::setCommandPulse(lua_State* L)
         return warnArgumentValue(L, __func__, error);
     }
     lua_pushboolean(L, success);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#invokeFileDialog
+int TLuaInterpreter::invokeFileDialog(lua_State* L)
+{
+    const int n = lua_gettop(L);
+    if (!checkBoolArg(L, __func__, 1, "fileOrFolder") || !checkStringArg(L, __func__, 2, "dialogTitle") || (n > 2 && !checkStringArg(L, __func__, 3, "dialogLocation"))) {
+        return lua_error(L);
+    }
+
+    Host& host = getHostFromLua(L);
+    QString location = MudletPaths::getMudletPath(enums::profileHomePath, host.getName());
+    const bool luaDir = lua_toboolean(L, 1);
+    const QString title{lua_tostring(L, 2)};
+
+    if (n > 2) {
+        const QString target{lua_tostring(L, 3)};
+        const QDir dir(target);
+
+        if (dir.exists()) {
+            location = target;
+        }
+    }
+
+    if (!luaDir) {
+        const QString fileName = QFileDialog::getExistingDirectory(nullptr, title, location);
+        lua_pushstring(L, fileName.toUtf8().constData());
+        return 1;
+    }
+    const QString fileName = QFileDialog::getOpenFileName(nullptr, title, location);
+    lua_pushstring(L, fileName.toUtf8().constData());
     return 1;
 }

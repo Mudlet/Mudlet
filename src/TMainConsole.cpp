@@ -1158,6 +1158,35 @@ void TMainConsole::deregisterSubCommandLine(TCommandLine* pCommandLine)
     });
 }
 
+void TMainConsole::setCommandLinePlaceholderText(const QString& text)
+{
+    mpCommandLine->setPlaceholderText(text);
+}
+
+void TMainConsole::updateCommandLineSpellCheck(bool enabled)
+{
+    if (enabled) {
+        mpCommandLine->recheckWholeLine();
+    } else {
+        mpCommandLine->clearMarksOnWholeLine();
+    }
+}
+
+void TMainConsole::setCommandLineText(const QString& text)
+{
+    mpCommandLine->setPlainText(text);
+    mpCommandLine->selectAll();
+}
+
+TCommandLine* TMainConsole::raiseCommandLine()
+{
+    mpCommandLine->activateWindow();
+    show();
+    raise();
+    repaint();
+    return mpCommandLine;
+}
+
 std::pair<bool, QString> TMainConsole::createTextBox(const QString& windowname, const QString& name, int x, int y, int width, int height)
 {
     if (name.isEmpty()) {
@@ -1363,8 +1392,7 @@ bool TMainConsole::setLabelBackgroundImage(const QString& name, const QString& p
     if (!pL) {
         return false;
     }
-    pL->setPixmap(QPixmap(path));
-    return true;
+    return pL->setBackgroundImage(path);
 }
 
 bool TMainConsole::resetLabelBackgroundImage(const QString& name)
@@ -1373,7 +1401,77 @@ bool TMainConsole::resetLabelBackgroundImage(const QString& name)
     if (!pL) {
         return false;
     }
-    pL->clear();
+    pL->resetBackgroundImage();
+    return true;
+}
+
+bool TMainConsole::setLabelSvgTint(const QString& name, const QColor& color)
+{
+    auto pL = mLabelMap.value(name);
+    if (!pL) {
+        return false;
+    }
+    pL->setSvgTint(color);
+    return true;
+}
+
+bool TMainConsole::resetLabelSvgTint(const QString& name)
+{
+    auto pL = mLabelMap.value(name);
+    if (!pL) {
+        return false;
+    }
+    pL->clearSvgTint();
+    return true;
+}
+
+bool TMainConsole::setLabelSvgRotation(const QString& name, double angle)
+{
+    auto pL = mLabelMap.value(name);
+    if (!pL) {
+        return false;
+    }
+    pL->setSvgRotation(angle);
+    return true;
+}
+
+bool TMainConsole::resetLabelSvgRotation(const QString& name)
+{
+    auto pL = mLabelMap.value(name);
+    if (!pL) {
+        return false;
+    }
+    pL->setSvgRotation(0.0);
+    return true;
+}
+
+bool TMainConsole::setLabelSvgShear(const QString& name, double shearX, double shearY)
+{
+    auto pL = mLabelMap.value(name);
+    if (!pL) {
+        return false;
+    }
+    pL->setSvgShear(shearX, shearY);
+    return true;
+}
+
+bool TMainConsole::resetLabelSvgShear(const QString& name)
+{
+    auto pL = mLabelMap.value(name);
+    if (!pL) {
+        return false;
+    }
+    pL->setSvgShear(0.0, 0.0);
+    return true;
+}
+
+bool TMainConsole::resetLabelSvgTransform(const QString& name)
+{
+    auto pL = mLabelMap.value(name);
+    if (!pL) {
+        return false;
+    }
+    pL->resetSvgTransform();
     return true;
 }
 
@@ -1528,14 +1626,13 @@ bool TMainConsole::pasteToSubConsole(const QString& name)
     return true;
 }
 
-std::optional<QSize> TMainConsole::subConsoleFontSize(const QString& name) const
+std::optional<QSize> TMainConsole::consoleFontSize(const QString& name) const
 {
-    auto pC = mSubConsoleMap.value(name);
+    const TConsole* pC = (name.isEmpty() || name == qsl("main")) ? this : mSubConsoleMap.value(name).data();
     if (!pC) {
         return {};
     }
 
-    Q_ASSERT_X(pC->mUpperPane, "TMainConsole::subConsoleFontSize", "located console does not have the upper pane available");
     const QFontMetrics fontMetrics(pC->mUpperPane->fontMetrics());
     return {QSize(fontMetrics.horizontalAdvance(QChar('W')), fontMetrics.height())};
 }
@@ -1712,6 +1809,9 @@ void TMainConsole::setDockWidgetStyleSheets(const QString& styleSheet)
 {
     for (auto& pDockWidget : mDockWidgetMap) {
         pDockWidget->setStyleSheet(styleSheet);
+    }
+    if (mpDockableMapWidget) {
+        mpDockableMapWidget->setStyleSheet(styleSheet);
     }
 }
 
@@ -2654,6 +2754,138 @@ void TMainConsole::createMapperDock(const QString& title, const QString& objectN
     mpHost->mpMap->mpMapper = new dlgMapper(mpDockableMapWidget, mpHost, mpHost->mpMap.data());
     mpHost->mpMap->mpMapper->setStyleSheet(mpHost->mProfileStyleSheet);
     mpDockableMapWidget->setWidget(mpHost->mpMap->mpMapper);
+}
+
+QDockWidget* TMainConsole::mapWidget() const
+{
+    if (!mpDockableMapWidget || mpDockableMapWidget->isHidden()) {
+        return nullptr;
+    }
+
+    return mpDockableMapWidget;
+}
+
+bool TMainConsole::mapWidgetCreated() const
+{
+    return !mpDockableMapWidget.isNull();
+}
+
+bool TMainConsole::setMapWidgetTitle(const QString& title)
+{
+    auto pM = mapWidget();
+    if (!pM) {
+        return false;
+    }
+
+    pM->setWindowTitle(title);
+    return true;
+}
+
+std::optional<QString> TMainConsole::mapWidgetTitle() const
+{
+    auto pM = mapWidget();
+    if (!pM) {
+        return {};
+    }
+
+    return {pM->windowTitle()};
+}
+
+// pos()/size() rather than geometry() for the same reason as
+// Host::windowGeometry(): they are what move()/resize() were given, while a
+// floating dock's geometry() reports the client area instead.
+std::optional<QRect> TMainConsole::mapWidgetGeometry() const
+{
+    auto pM = mapWidget();
+    if (!pM) {
+        return {};
+    }
+
+    return {QRect(pM->pos(), pM->size())};
+}
+
+bool TMainConsole::hideMapWidget()
+{
+    auto pM = mapWidget();
+    if (!pM) {
+        return false;
+    }
+
+    pM->hide();
+    return true;
+}
+
+void TMainConsole::showMapWidget()
+{
+    mpDockableMapWidget->show();
+}
+
+dlgMapper* TMainConsole::dockedMapper() const
+{
+    if (!mpDockableMapWidget) {
+        return nullptr;
+    }
+
+    return qobject_cast<dlgMapper*>(mpDockableMapWidget->widget());
+}
+
+void TMainConsole::dockMapWidget(Qt::DockWidgetArea area)
+{
+    mudlet::self()->addDockWidget(area, mpDockableMapWidget);
+}
+
+std::pair<bool, QString> TMainConsole::placeMapWidget(const QString& area, int x, int y, int width, int height)
+{
+    auto pM = mpDockableMapWidget;
+    if (!pM) {
+        return {false, qsl("cannot create map widget. Do you already use an embedded mapper?")};
+    }
+
+    pM->show();
+    if (area.isEmpty()) {
+        return {true, QString()};
+    }
+
+    if (area == QLatin1String("f") || area == QLatin1String("floating")) {
+        if (!pM->isFloating()) {
+            // Undock a docked window
+            // Change of position or size is only possible when floating
+            pM->setFloating(true);
+        }
+        if ((x != -1) && (y != -1)) {
+            pM->move(x, y);
+        }
+        if ((width != -1) && (height != -1)) {
+            pM->resize(width, height);
+        }
+        return {true, QString()};
+    }
+
+    if (area == QLatin1String("r") || area == QLatin1String("right")) {
+        pM->setFloating(false);
+        dockMapWidget(Qt::RightDockWidgetArea);
+        return {true, QString()};
+    }
+
+    if (area == QLatin1String("l") || area == QLatin1String("left")) {
+        pM->setFloating(false);
+        dockMapWidget(Qt::LeftDockWidgetArea);
+        return {true, QString()};
+    }
+
+    if (area == QLatin1String("t") || area == QLatin1String("top")) {
+        pM->setFloating(false);
+        dockMapWidget(Qt::TopDockWidgetArea);
+        return {true, QString()};
+    }
+
+    if (area == QLatin1String("b") || area == QLatin1String("bottom")) {
+        pM->setFloating(false);
+        dockMapWidget(Qt::BottomDockWidgetArea);
+        return {true, QString()};
+    }
+
+    return {false, qsl(R"("docking option "%1" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating")").arg(area)};
 }
 
 void TMainConsole::showMapperScriptReminder()
