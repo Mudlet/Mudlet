@@ -30,6 +30,7 @@
 #include <QPoint>
 #include <QPointer>
 #include <QString>
+#include <QStringList>
 #include <QTextStream>
 
 class Host;
@@ -69,6 +70,12 @@ struct TConsoleModel
     // filename format) is profile-wide, so it only acts on the Host's own main
     // model and returns for any other.
     void toggleLogging(bool isMessageEnabled);
+    void reportFailedLogStart(const QString& path, const QString& reason);
+
+    // The count is the distance between the two arguments, not the difference
+    // between an inclusive pair, so lines(n, n) is empty rather than one line.
+    // Not const because TBuffer::line() hands out a mutable QString&.
+    QStringList lines(int from, int to);
 
     // No 'm' prefix on purpose: TConsole::buffer aliases this one by reference and has to keep its name for the rest of the codebase, so the two match.
     TBuffer buffer;
@@ -88,6 +95,10 @@ struct TConsoleModel
     int mEngineCursor = -1;
     QPoint mUserCursor;
     bool mIsPromptLine = false;
+    // 1 = up, 2 = down, 0 is not valid: the state of the toolbar button pressed
+    // most recently (a plain button sets it back to 1), read back by
+    // getButtonState() with no arguments
+    int mButtonState = 1;
 
     // The OSC 8 hyperlink managers. Concealing and revealing rewrite this
     // model's buffer, so they run with or without a view; repainting afterwards
@@ -109,6 +120,9 @@ struct TConsoleModel
     QString mLogFileName;
     QTextStream mLogStream;
     bool mLogToLogFile = false;
+    // The path a failed start could not write and why, for a caller with no
+    // console to read the report off.
+    QString mLogStartFailure;
 };
 
 #endif // MUDLET_TCONSOLEMODEL_H

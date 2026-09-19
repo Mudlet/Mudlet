@@ -37,6 +37,7 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -95,7 +96,7 @@ private slots:
         QSignalSpy connectionSpy(&(host->mTelnet), &cTelnet::signal_connected);
         QVERIFY2(connectionSpy.wait(2000), "could not connect with the host");
 
-        mpHost = mudlet::self()->getHostManager().getHost(mHostname);
+        mpHost = HostManager::self()->getHost(mHostname);
         QVERIFY(mpHost);
         QVERIFY(mpHost->mpConsole);
     }
@@ -144,7 +145,7 @@ private slots:
                                                                      .arg(targetName, mLinkText));
         qApp->processEvents();
 
-        auto* pTarget = mpHost->mpConsole->mSubConsoleMap.value(targetName);
+        auto* pTarget = mpHost->mpConsole->subConsoleWidget(targetName);
         QVERIFY2(pTarget, "the target miniconsole was not created");
         const int ownId = pTarget->getLinkStore().getCurrentLinkID();
         QVERIFY2(ownId > 0, "the target's own echoLink() registered nothing, so there is no id to collide with");
@@ -203,7 +204,7 @@ private slots:
         mpHost->mpConsole->P_end = QPoint(splitColumn + 8, splitLine);
         mpHost->mpConsole->copy();
 
-        auto* pTarget = mpHost->mpConsole->mSubConsoleMap.value(targetName);
+        auto* pTarget = mpHost->mpConsole->subConsoleWidget(targetName);
         QVERIFY2(pTarget, "the target miniconsole was not created");
         QVERIFY(pTarget->moveCursor(0, 0));
         pTarget->paste();
@@ -288,7 +289,7 @@ private slots:
                                                                      .arg(targetName));
         qApp->processEvents();
 
-        auto* pTarget = mpHost->mpConsole->mSubConsoleMap.value(targetName);
+        auto* pTarget = mpHost->mpConsole->subConsoleWidget(targetName);
         QVERIFY2(pTarget, "the target miniconsole was not created");
         QVERIFY2(selectLinkRunInMainConsole(), "echoLink() put no link-bearing character in the main console");
 
@@ -349,7 +350,7 @@ private slots:
     }
 
 private:
-    TConsole* miniconsole() const { return mpHost->mpConsole->mSubConsoleMap.value(mMiniName); }
+    TConsole* miniconsole() const { return mpHost->mpConsole->subConsoleWidget(mMiniName); }
 
     // Highest link index still present in a console's buffer, 0 for none
     static int copiedLinkId(const TBuffer& destination)
@@ -426,7 +427,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        QDir dir(mudlet::getMudletPath(enums::profileHomePath, profileName));
+        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, profileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }

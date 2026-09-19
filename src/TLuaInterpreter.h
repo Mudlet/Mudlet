@@ -58,6 +58,7 @@ extern "C" {
 
 #include <list>
 #include <string>
+#include <vector>
 #include <memory>
 #include <optional>
 
@@ -82,6 +83,8 @@ class TLuaInterpreter : public QThread
 
     friend class TForkedProcess;
     friend class LuaInterface;
+    // reads the parked capture vectors' capacity, which nothing else exposes
+    friend class CaptureGroupParkingTest;
 
 public:
     Q_DISABLE_COPY(TLuaInterpreter)
@@ -135,6 +138,8 @@ public:
     void setMultiCaptureGroups(const std::list<std::list<std::string>>& captureList, const std::list<std::list<int>>& posList, QVector<NameGroupMatches>& nameMatches);
     void adjustCaptureGroups(int x, int a);
     void clearCaptureGroups();
+    int pushNestedDispatchState();
+    void popNestedDispatchState(const int depth);
     bool callEventHandler(const QString& function, const TEvent& pE);
     bool callCmdLineAction(const int func, QString);
     bool callAnonymousFunction(const int func, QString name);
@@ -274,6 +279,7 @@ public:
     static int enableCommand(lua_State*);
     static int disableCommand(lua_State*);
     static int setCommandChecked(lua_State*);
+    static int setCommandPinned(lua_State*);
     static int setCommandIcon(lua_State*);
     static int setCommandTooltip(lua_State*);
     static int setCommandPulse(lua_State*);
@@ -942,13 +948,50 @@ private:
 
 
     const int LUA_FUNCTION_MAX_ARGS = 50;
-    std::list<std::string> mCaptureGroupList;
-    std::list<int> mCaptureGroupPosList;
+    std::vector<std::string> mCaptureGroupList;
+    std::vector<int> mCaptureGroupPosList;
+    // clearCaptureGroups() parks the emptied capture storage here instead of
+    // freeing it, so the next trigger fire assigns over std::strings that still
+    // own their buffers rather than allocating a fresh node per capture
+    std::vector<std::string> mSpareCaptureGroupList;
+    std::vector<int> mSpareCaptureGroupPosList;
+    // Bounds on what the parking above holds onto between fires
+    static constexpr std::size_t scmMaxParkedCaptures = 512;
+    static constexpr std::string::size_type scmMaxParkedCaptureBytes = 1024;
+    // Well past the cap, not at it: a trigger overshooting the cap by less than
+    // this would otherwise pay a reallocation each way per fire
+    static constexpr std::size_t scmMaxParkedCaptureSlack = 4 * scmMaxParkedCaptures;
+    QString mLastGlobalName;
+    QByteArray mLastGlobalNameUtf8;
+    // Storage set_lua_string() encodes the line into, kept between calls for
+    // its capacity alone, and dropped past a length no game line reaches
+    static constexpr qsizetype scmMaxRetainedUtf8Scratch = 3 * 8192;
+    QByteArray mUtf8Scratch;
     std::list<std::list<std::string>> mMultiCaptureGroupList;
     std::list<std::list<int>> mMultiCaptureGroupPosList;
     QVector<QPair<QString, QString>> mCapturedNameGroups;
     QMap<QString, QPair<int, int>> mCapturedNameGroupsPosList;
     QVector<QVector<QPair<QString, QString>>> mMultiCaptureNameGroups;
+    // An alias pass a script asks for - expandAlias() - sets "command" and the
+    // capture groups for the scripts that pass runs. What the calling script was
+    // given is parked here for the duration and handed back when the pass
+    // returns, so nesting does not leave the caller reading the inner pass's
+    // command and none of its own captures. One entry per level of nesting.
+    struct NestedDispatchState
+    {
+        std::vector<std::string> captureGroupList;
+        std::vector<int> captureGroupPosList;
+        std::list<std::list<std::string>> multiCaptureGroupList;
+        std::list<std::list<int>> multiCaptureGroupPosList;
+        NameGroupMatches capturedNameGroups;
+        NamedMatchesRanges capturedNameGroupsPosList;
+        QVector<NameGroupMatches> multiCaptureNameGroups;
+        int matchesRef = LUA_NOREF;
+        int multimatchesRef = LUA_NOREF;
+        int commandRef = LUA_NOREF;
+    };
+    std::vector<NestedDispatchState> mNestedDispatchStates;
+    void releaseNestedDispatchState(NestedDispatchState&);
     QMap<QNetworkReply*, QString> downloadMap;
 
     // A waitForEvent() call in progress. mArgsRef is a Lua registry reference,

@@ -25,6 +25,7 @@
 #include "dlgMapper.h"
 
 #include "Host.h"
+#include "MudletPaths.h"
 #include "TConsole.h"
 #include "TMainConsole.h"
 #include "TMap.h"
@@ -340,7 +341,7 @@ void dlgMapper::loadMapFromFile()
     //: Title of the file dialog used to pick a map file to load.
     dialog->setWindowTitle(tr("Load Mudlet map"));
     QSettings& settings = *mudlet::getQSettings();
-    const QString lastDir = settings.value(qsl("lastFileDialogLocation"), mudlet::getMudletPath(enums::profileHomePath, mpHost->getName())).toString();
+    const QString lastDir = settings.value(qsl("lastFileDialogLocation"), MudletPaths::getMudletPath(enums::profileHomePath, mpHost->getName())).toString();
     dialog->setDirectory(lastDir);
     dialog->setNameFilter(filters.join(qsl(";;")));
     connect(dialog, &QDialog::finished, this, [this, dialog](int result) {
@@ -506,13 +507,18 @@ void dlgMapper::slot_toggleStrongHighlight(int toggle)
 
 void dlgMapper::slot_togglePanel()
 {
-    dlgMapper::slot_setMapperPanelVisible(!widget_panel->isVisible());
+    // The host holds the setting; widget_panel->isVisible() is also false while
+    // the whole map dock is hidden, which would make this a no-op:
+    const bool show = !mpHost->mShowPanel;
+    // This widget is not necessarily the one the host knows as mpMap->mpMapper,
+    // which is all the setter pushes the change to:
+    slot_setMapperPanelVisible(show);
+    mpHost->setMapperPanelVisible(show);
 }
 
 void dlgMapper::slot_setMapperPanelVisible(bool panelVisible)
 {
     widget_panel->setVisible(panelVisible);
-    mpHost->mShowPanel = panelVisible;
 }
 
 void dlgMapper::slot_toggle3DView(const bool is3DMode)

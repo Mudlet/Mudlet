@@ -315,6 +315,13 @@ describe("Tests addRoom", function()
     deleteRoom(roomID)
   end)
 
+  it("refuses a roomID of zero or below", function()
+    assert.is_false(addRoom(0))
+    assert.is_false(roomExists(0))
+    assert.is_false(addRoom(-3))
+    assert.is_false(roomExists(-3))
+  end)
+
 end)
 
 describe("Tests map info functions", function()
@@ -400,6 +407,28 @@ describe("Tests searchRoom", function()
     assert.is_nil(next(result))
   end)
 
+  it("should match a substring of a room name by default", function()
+    local result = searchRoom("roomspecroom")
+    assert.are.equal("SearchRoomSpecRoom", result[testRoomId])
+  end)
+
+  it("should respect the case sensitive flag", function()
+    assert.is_nil(searchRoom("searchroomspecroom", true)[testRoomId])
+    assert.are.equal("SearchRoomSpecRoom", searchRoom("SearchRoomSpec", true)[testRoomId])
+  end)
+
+  it("should want the whole name when asked for an exact match", function()
+    assert.is_nil(searchRoom("SearchRoomSpec", false, true)[testRoomId])
+    assert.are.equal("SearchRoomSpecRoom", searchRoom("searchroomspecroom", false, true)[testRoomId])
+    assert.is_nil(searchRoom("searchroomspecroom", true, true)[testRoomId])
+  end)
+
+  it("should hard-error on a search argument of the wrong type", function()
+    assert.has_error(function() searchRoom({}) end)
+    assert.has_error(function() searchRoom("SearchRoomSpecRoom", "yes") end)
+    assert.has_error(function() searchRoom("SearchRoomSpecRoom", true, "yes") end)
+  end)
+
   it("should treat a numeric string as a room ID and return nil and a message when it does not exist", function()
     local result, err = searchRoom(tostring(missingRoomId))
     assert.is_nil(result)
@@ -481,10 +510,9 @@ describe("Tests mapper functions against a shared fixture", function()
     deleteArea("MapperSpecGamma")
   end)
 
-  -- saveJsonMap/loadJsonMap are intentionally not covered here: the JSON export
-  -- runs through a progress dialog and bulk import, and loadJsonMap replaces and
-  -- re-initialises the entire map, which is incompatible with this shared
-  -- fixture. JSON persistence is exercised by the C++ MapRoundTripTest instead.
+  -- saveJsonMap/loadJsonMap replace and re-initialise the entire map, which is
+  -- incompatible with this shared fixture, so they have a block of their own
+  -- below.
 
   describe("Tests area listing and naming", function()
     it("getAreaTable maps every area name to its ID", function()
@@ -539,6 +567,47 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.is_string(err)
     end)
 
+    it("setAreaName takes the area's current name in place of its ID", function()
+      -- the fixture teardown deletes this area by the name it started with
+      finally(function() setAreaName(areaGamma, "MapperSpecGamma") end)
+      assert.is_true(setAreaName("MapperSpecGamma", "MapperSpecGammaByName"))
+      assert.are.equal("MapperSpecGammaByName", getRoomAreaName(areaGamma))
+    end)
+
+    it("setAreaName accepts renaming an area to the name it already has", function()
+      assert.is_true(setAreaName(areaAlpha, "MapperSpecAlpha"))
+      assert.are.equal("MapperSpecAlpha", getRoomAreaName(areaAlpha))
+    end)
+
+    it("setAreaName rejects an empty name in place of the ID", function()
+      local ok, err = setAreaName("", "MapperSpecRenameTarget")
+      assert.is_nil(ok)
+      assert.is_truthy(err:find("area name cannot be empty", 1, true), err)
+    end)
+
+    it("setAreaName rejects a name that belongs to no area", function()
+      local ok, err = setAreaName("MapperSpecNoSuchArea", "MapperSpecRenameTarget")
+      assert.is_nil(ok)
+      assert.is_string(err)
+      assert.is_nil(getAreaTable()["MapperSpecRenameTarget"])
+    end)
+
+    it("setAreaName refuses to rename the default area by its name", function()
+      local ok, err = setAreaName(getRoomAreaName(-1), "MapperSpecRenameTarget")
+      assert.is_nil(ok)
+      assert.is_truthy(err:find("reserved and protected", 1, true), err)
+    end)
+
+    it("setAreaName rejects an areaID below one", function()
+      local ok, err = setAreaName(0, "MapperSpecRenameTarget")
+      assert.is_nil(ok)
+      assert.is_truthy(err:find("not a valid areaID greater than zero", 1, true), err)
+    end)
+
+    it("setAreaName hard-errors on an area argument that is neither number nor string", function()
+      assert.has_error(function() setAreaName(true, "MapperSpecRenameTarget") end)
+    end)
+
     it("addAreaName rejects an empty (whitespace-only) name with nil and a message", function()
       local ok, err = addAreaName("   ")
       assert.is_nil(ok)
@@ -576,6 +645,19 @@ describe("Tests mapper functions against a shared fixture", function()
       local ok, err = deleteArea(getRoomAreaName(-1))
       assert.is_nil(ok)
       assert.is_string(err)
+    end)
+
+    it("removes an area name that never got an area of its own", function()
+      -- setAreaName on an unused ID registers the name without instantiating
+      -- the area, which from Lua only happens once a room is moved into it, so
+      -- this is the one way to reach a name with nothing behind it
+      local orphanAreaId = 990000003
+      assert.is_nil(getAreaTable()["MapperSpecOrphanArea"])
+      assert.is_true(setAreaName(orphanAreaId, "MapperSpecOrphanArea"))
+      assert.are.equal(orphanAreaId, getAreaTable()["MapperSpecOrphanArea"])
+
+      assert.is_true(deleteArea(orphanAreaId))
+      assert.is_nil(getAreaTable()["MapperSpecOrphanArea"])
     end)
   end)
 
@@ -639,6 +721,19 @@ describe("Tests mapper functions against a shared fixture", function()
         if toRoom == rA3 then leavesToRA3 = true end
       end
       assert.is_true(leavesToRA3)
+    end)
+
+    it("getAreaExits names an in or out exit that leaves the area", function()
+      -- the two directions the shared fixture has no cross-area exit for, and
+      -- the full-data form spells each direction out in a branch of its own
+      local inside = createRoomID(); addRoom(inside); setRoomArea(inside, areaAlpha)
+      local outside = createRoomID(); addRoom(outside); setRoomArea(outside, areaBeta)
+      finally(function() deleteRoom(inside); deleteRoom(outside) end)
+      assert.is_true(setExit(inside, outside, "in"))
+      assert.is_true(setExit(outside, inside, "out"))
+
+      assert.are.equal(outside, getAreaExits(areaAlpha, true)[inside]["in"])
+      assert.are.equal(inside, getAreaExits(areaBeta, true)[outside]["out"])
     end)
 
     it("getAreaExits returns nil and a message for an unknown area", function()
@@ -724,6 +819,39 @@ describe("Tests mapper functions against a shared fixture", function()
       local ok, err = setRoomArea(rSandA, "")
       assert.is_nil(ok)
       assert.is_string(err)
+    end)
+
+    it("rejects an area name that belongs to no area", function()
+      local ok, err = setRoomArea(rSandA, "MapperSpecNoSuchAreaName")
+      assert.is_nil(ok)
+      assert.is_truthy(err:find("does not exist", 1, true), err)
+      assert.are.equal(areaAlpha, getRoomArea(rSandA))
+    end)
+
+    it("names resetRoomArea when the areaID is below one", function()
+      local ok, err = setRoomArea(rSandA, 0)
+      assert.is_nil(ok)
+      assert.is_truthy(err:find("resetRoomArea", 1, true), err)
+      assert.are.equal(areaAlpha, getRoomArea(rSandA))
+    end)
+
+    it("rejects a roomID that belongs to no room, on its own or in a table", function()
+      local ok, err = setRoomArea(missingRoomId, areaBeta)
+      assert.is_nil(ok)
+      assert.is_truthy(err:find("not a valid roomID", 1, true), err)
+
+      -- the whole table is checked before any room is moved, so the good room
+      -- alongside the bad one must stay where it was
+      local good = createRoomID(); addRoom(good); setRoomArea(good, areaAlpha)
+      finally(function() deleteRoom(good) end)
+      ok, err = setRoomArea({good, missingRoomId}, areaBeta)
+      assert.is_nil(ok)
+      assert.is_truthy(err:find("not a valid roomID", 1, true), err)
+      assert.are.equal(areaAlpha, getRoomArea(good))
+    end)
+
+    it("hard-errors when the room argument is neither a number nor a table", function()
+      assert.has_error(function() setRoomArea("MapperSpecAlpha", areaBeta) end)
     end)
   end)
 
@@ -971,6 +1099,39 @@ describe("Tests mapper functions against a shared fixture", function()
       deleteRoom(a); deleteRoom(b); deleteRoom(c)
     end)
 
+    it("deleting a room clears every exit and special exit that led into it", function()
+      local directions = {"north", "northeast", "northwest", "east", "west", "south",
+                          "southeast", "southwest", "up", "down", "in", "out"}
+      -- one entrance room per direction, so a deletion that only cleared some of
+      -- the twelve stored exits leaves the rest pointing at a room that is gone
+      local hub = createRoomID(); addRoom(hub); setRoomArea(hub, areaAlpha)
+      local entrances = {}
+      finally(function()
+        deleteRoom(hub)
+        for _, id in pairs(entrances) do deleteRoom(id) end
+      end)
+
+      for _, direction in ipairs(directions) do
+        local entrance = createRoomID(); addRoom(entrance); setRoomArea(entrance, areaAlpha)
+        entrances[direction] = entrance
+        assert.is_true(setExit(entrance, hub, direction))
+        assert.are.equal(hub, getRoomExits(entrance)[direction])
+      end
+      local specialEntrance = createRoomID(); addRoom(specialEntrance); setRoomArea(specialEntrance, areaAlpha)
+      entrances["special"] = specialEntrance
+      assert.is_true(addSpecialExit(specialEntrance, hub, "crawl under"))
+      assert.is_true(setDoor(specialEntrance, "crawl under", 2))
+
+      deleteRoom(hub)
+
+      for _, direction in ipairs(directions) do
+        assert.is_nil(getRoomExits(entrances[direction])[direction], direction)
+      end
+      assert.is_nil(getSpecialExitsSwap(specialEntrance)["crawl under"])
+      -- the door the special exit carried goes with it rather than lingering
+      assert.is_nil(getDoors(specialEntrance)["crawl under"])
+    end)
+
     it("getAllRoomEntrances lists the rooms that exit into a room", function()
       local entrances = getAllRoomEntrances(rA2)
       assert.is_table(entrances)
@@ -1053,6 +1214,157 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.is_nil(ok)
       assert.is_string(err)
       deleteRoom(a); deleteRoom(b)
+    end)
+
+    -- the reverse of each direction, which the stub connector has to work out
+    -- for the far room by itself
+    local reverses = {
+      {"north", "south"}, {"south", "north"}, {"east", "west"}, {"west", "east"},
+      {"northeast", "southwest"}, {"southwest", "northeast"},
+      {"northwest", "southeast"}, {"southeast", "northwest"},
+      {"up", "down"}, {"down", "up"}, {"in", "out"}, {"out", "in"},
+    }
+
+    local function stubPair(direction, reverse)
+      local a = createRoomID(); addRoom(a); setRoomArea(a, areaAlpha)
+      local b = createRoomID(); addRoom(b); setRoomArea(b, areaAlpha)
+      if direction then setExitStub(a, direction, true) end
+      if reverse then setExitStub(b, reverse, true) end
+      return a, b
+    end
+
+    it("connectExitStub joins a pair of facing stubs in every direction", function()
+      -- TRoom::setExit(), which nothing but the stub connector reaches, stores
+      -- each direction in a member of its own, so one pair per direction is
+      -- what catches a direction wired to the wrong member
+      local made = {}
+      -- one finally for the whole loop: busted keeps only the last function
+      -- handed to it, so registering one per iteration would clean up the last
+      -- pair alone
+      finally(function()
+        for _, id in ipairs(made) do deleteRoom(id) end
+      end)
+      for _, pair in ipairs(reverses) do
+        local direction, reverse = pair[1], pair[2]
+        local a, b = stubPair(direction, reverse)
+        made[#made + 1] = a
+        made[#made + 1] = b
+        assert.is_true(connectExitStub(a, b, direction), direction)
+        assert.are.equal(b, getRoomExits(a)[direction], direction)
+        assert.are.equal(a, getRoomExits(b)[reverse], reverse)
+      end
+    end)
+
+    it("connectExitStub given only a target joins the one pair of facing stubs", function()
+      local a, b = stubPair("up", "down")
+      assert.is_true(connectExitStub(a, b))
+      assert.are.equal(b, getRoomExits(a)["up"])
+      assert.are.equal(a, getRoomExits(b)["down"])
+      deleteRoom(a); deleteRoom(b)
+    end)
+
+    it("connectExitStub given only a target reports a target with no stubs at all", function()
+      local a, b = stubPair("up", nil)
+      local ok, err = connectExitStub(a, b)
+      assert.is_nil(ok)
+      assert.is_truthy(err:find(("toID (%d) does not have any stub exits"):format(b), 1, true), err)
+      deleteRoom(a); deleteRoom(b)
+    end)
+
+    it("connectExitStub given only a target reports stubs that do not face each other", function()
+      local a, b = stubPair("up", "up")
+      local ok, err = connectExitStub(a, b)
+      assert.is_nil(ok)
+      assert.is_truthy(err:find("no pairs of reverse stubs found", 1, true), err)
+      deleteRoom(a); deleteRoom(b)
+    end)
+
+    it("connectExitStub given only a target reports more than one usable pair", function()
+      local a, b = stubPair("up", "down")
+      setExitStub(a, "north", true)
+      setExitStub(b, "south", true)
+      local ok, err = connectExitStub(a, b)
+      assert.is_nil(ok)
+      assert.is_truthy(err:find("multiple pairs of reverse stubs", 1, true), err)
+      -- the message names the directions to pick from, since picking is what
+      -- the caller is being sent away to do
+      assert.is_truthy(err:find("'up'", 1, true), err)
+      assert.is_truthy(err:find("'north'", 1, true), err)
+      assert.is_nil(getRoomExits(a)["up"])
+      deleteRoom(a); deleteRoom(b)
+    end)
+
+    it("connectExitStub refuses to join a room to itself", function()
+      local a = createRoomID(); addRoom(a); setRoomArea(a, areaAlpha)
+      setExitStub(a, "up", true)
+      local ok, err = connectExitStub(a, a)
+      assert.is_nil(ok)
+      assert.is_truthy(err:find("fromID and toID are the same", 1, true), err)
+      deleteRoom(a)
+    end)
+
+    it("connectExitStub reports a source with no stub in the given direction", function()
+      local a, b = stubPair(nil, "down")
+      local ok, err = connectExitStub(a, b, "up")
+      assert.is_nil(ok)
+      assert.is_truthy(err:find("does not have an exit stub in the given direction", 1, true), err)
+      deleteRoom(a); deleteRoom(b)
+    end)
+
+    it("connectExitStub reports a target with no stub in the reverse direction", function()
+      local a, b = stubPair("up", "north")
+      local ok, err = connectExitStub(a, b, "up")
+      assert.is_nil(ok)
+      assert.is_truthy(err:find("does not have an exit stub in the reverse direction", 1, true), err)
+      deleteRoom(a); deleteRoom(b)
+    end)
+
+    it("connectExitStub reports a target room that is not there", function()
+      local a = createRoomID(); addRoom(a); setRoomArea(a, areaAlpha)
+      setExitStub(a, "up", true)
+      local ok, err = connectExitStub(a, missingRoomId, "up")
+      assert.is_nil(ok)
+      assert.is_truthy(err:find(("toID (%d) room does not exist"):format(missingRoomId), 1, true), err)
+      deleteRoom(a)
+    end)
+
+    it("connectExitStub given only a direction takes the nearest room that faces back", function()
+      -- an area of its own: this form searches the whole area the room is in
+      -- for candidates, so the shared fixture rooms would be in the running
+      local area = addAreaName("MapperSpecStubDirectionArea")
+      local rooms = {}
+      finally(function()
+        for _, id in ipairs(rooms) do deleteRoom(id) end
+        deleteArea(area)
+      end)
+      local function placed(x)
+        local id = createRoomID(); addRoom(id); setRoomArea(id, area)
+        setRoomCoordinates(id, x, 0, 0)
+        rooms[#rooms + 1] = id
+        return id
+      end
+      local from = placed(0)
+      setExitStub(from, "east", true)
+      local near, far = placed(2), placed(9)
+      setExitStub(near, "west", true)
+      setExitStub(far, "west", true)
+
+      assert.is_true(connectExitStub(from, "east"))
+      assert.are.equal(near, getRoomExits(from)["east"])
+      assert.are.equal(from, getRoomExits(near)["west"])
+      assert.is_nil(getRoomExits(far)["west"])
+    end)
+
+    it("connectExitStub given only a direction reports when nothing faces back", function()
+      local area = addAreaName("MapperSpecStubLonelyArea")
+      local from = createRoomID(); addRoom(from); setRoomArea(from, area)
+      finally(function() deleteRoom(from); deleteArea(area) end)
+      setRoomCoordinates(from, 0, 0, 0)
+      setExitStub(from, "east", true)
+
+      local ok, err = connectExitStub(from, "east")
+      assert.is_nil(ok)
+      assert.is_truthy(err:find("does not have another room in the indicated direction", 1, true), err)
     end)
   end)
 
@@ -1239,6 +1551,53 @@ describe("Tests mapper functions against a shared fixture", function()
       removeCustomLine(rSandA, "e")
     end)
 
+    it("getCustomLines names every line style back", function()
+      -- the 0-based form spells the styles out in a switch of its own, so it can
+      -- drift from the 1-based one above without either being noticed
+      for _, style in ipairs({"solid line", "dot line", "dash line", "dash dot line", "dash dot dot line"}) do
+        assert.is_true(addCustomLine(rSandA, {{2, 2, 0}}, "e", style, {0, 0, 0}, false), style)
+        assert.are.equal(style, getCustomLines(rSandA)["e"]["attributes"]["style"], style)
+        assert.is_true(removeCustomLine(rSandA, "e"))
+      end
+    end)
+
+    it("addCustomLine takes each of the twelve short direction names", function()
+      local shortNames = {"n", "ne", "e", "se", "s", "sw", "w", "nw", "up", "down", "in", "out"}
+      local longNames = {"north", "northeast", "east", "southeast", "south", "southwest",
+                         "west", "northwest", "up", "down", "in", "out"}
+      local hub = createRoomID(); addRoom(hub); setRoomArea(hub, areaAlpha)
+      local targets = {}
+      finally(function()
+        deleteRoom(hub)
+        for _, id in ipairs(targets) do deleteRoom(id) end
+      end)
+
+      for index, long in ipairs(longNames) do
+        local target = createRoomID(); addRoom(target); setRoomArea(target, areaAlpha)
+        targets[#targets + 1] = target
+        assert.is_true(setExit(hub, target, long), long)
+        assert.is_true(addCustomLine(hub, {{index, index, 0}}, shortNames[index], "solid line", {0, 0, 0}, false),
+                       shortNames[index])
+      end
+
+      local lines = getCustomLines1(hub)
+      for index, short in ipairs(shortNames) do
+        assert.is_table(lines[short], short)
+        assert.are.equal(index, lines[short].points[1][1], short)
+      end
+    end)
+
+    it("addCustomLine refuses every short direction name a room has no exit in", function()
+      local lonely = createRoomID(); addRoom(lonely); setRoomArea(lonely, areaAlpha)
+      finally(function() deleteRoom(lonely) end)
+
+      for _, short in ipairs({"n", "ne", "e", "se", "s", "sw", "w", "nw", "up", "down", "in", "out"}) do
+        local ok, err = addCustomLine(lonely, {{1, 1, 0}}, short, "solid line", {0, 0, 0}, false)
+        assert.is_nil(ok, short)
+        assert.is_truthy(err:find("does not have an exit in a direction", 1, true), err)
+      end
+    end)
+
     it("addCustomLine rejects a direction the room has no exit for", function()
       local ok, err = addCustomLine(rSandA, {{1, 1, 0}}, "w", "solid line", {0, 0, 0}, false)
       assert.is_nil(ok)
@@ -1277,6 +1636,32 @@ describe("Tests mapper functions against a shared fixture", function()
 
     it("addCustomLine hard-errors when the second argument is neither number nor table", function()
       assert.has_error(function() addCustomLine(rSandA, "notvalid", "e", "solid line", {0, 0, 0}, false) end)
+    end)
+
+    it("getCustomLines1 names every line style back", function()
+      -- the reader turns each stored Qt pen style back into a name of its own,
+      -- and only two of the five are written anywhere else in this file
+      for _, style in ipairs({"solid line", "dot line", "dash line", "dash dot line", "dash dot dot line"}) do
+        assert.is_true(addCustomLine(rSandA, {{2, 2, 0}}, "e", style, {0, 0, 0}, false), style)
+        assert.are.equal(style, getCustomLines1(rSandA)["e"]["attributes"]["style"], style)
+        assert.is_true(removeCustomLine(rSandA, "e"))
+      end
+    end)
+
+    it("addCustomLine hard-errors when a point in the coordinate list is not a table", function()
+      local ok, err = pcall(addCustomLine, rSandA, {{1, 1, 0}, 7}, "e", "solid line", {0, 0, 0}, false)
+      assert.is_false(ok)
+      assert.is_truthy(tostring(err):find("table item index #2 type", 1, true), tostring(err))
+    end)
+
+    it("addCustomLine hard-errors and names the coordinate that is not a number", function()
+      for index, name in ipairs({"x", "y", "z"}) do
+        local point = {0, 0, 0}
+        point[index] = "not a number"
+        local ok, err = pcall(addCustomLine, rSandA, {point}, "e", "solid line", {0, 0, 0}, false)
+        assert.is_false(ok, name)
+        assert.is_truthy(tostring(err):find(("as the %s-coordinate"):format(name), 1, true), tostring(err))
+      end
     end)
 
     it("getCustomLines1 returns nil and a message for an unknown room", function()
@@ -1319,6 +1704,22 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.is_nil(ok)
       assert.is_string(err)
     end)
+
+    it("setCustomEnvColor names whichever colour component was out of range", function()
+      local ok, green = setCustomEnvColor(501, 0, 256, 0)
+      assert.is_nil(ok)
+      assert.is_truthy(green:find("green color component 256", 1, true), green)
+
+      local blue
+      ok, blue = setCustomEnvColor(501, 0, 0, -1)
+      assert.is_nil(ok)
+      assert.is_truthy(blue:find("blue color component -1", 1, true), blue)
+
+      local alpha
+      ok, alpha = setCustomEnvColor(501, 0, 0, 0, 300)
+      assert.is_nil(ok)
+      assert.is_truthy(alpha:find("alpha color component 300", 1, true), alpha)
+    end)
   end)
 
   describe("Tests map labels", function()
@@ -1356,6 +1757,46 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.is_true(id >= 0)
       assert.is_not_nil(getMapLabels(areaAlpha)[id])
       deleteMapLabel(areaAlpha, id)
+    end)
+
+    it("getMapLabel returns nil and a message for a labelID the area has not got", function()
+      local label, err = getMapLabel(areaAlpha, 999999)
+      assert.is_nil(label)
+      assert.is_truthy(err:find("does not exist in area", 1, true), err)
+    end)
+
+    it("getMapLabel returns nil and a message for a negative labelID", function()
+      local label, err = getMapLabel(areaAlpha, -1)
+      assert.is_nil(label)
+      assert.is_truthy(err:find("it must be zero or greater", 1, true), err)
+    end)
+
+    it("getMapLabel returns an empty table for an area that has no labels", function()
+      local labels = getMapLabel(areaGamma, 0)
+      assert.is_table(labels)
+      assert.is_nil(next(labels))
+    end)
+
+    it("getMapLabel looked up by text returns every label carrying it", function()
+      local first = createMapLabel(areaBeta, "MapperSpecShared", 0, 0, 0, 255, 255, 255, 0, 0, 0)
+      local second = createMapLabel(areaBeta, "MapperSpecShared", 1, 1, 0, 255, 255, 255, 0, 0, 0)
+      local other = createMapLabel(areaBeta, "MapperSpecOther", 2, 2, 0, 255, 255, 255, 0, 0, 0)
+      finally(function()
+        for _, id in ipairs({first, second, other}) do deleteMapLabel(areaBeta, id) end
+      end)
+
+      -- the text form answers with a table keyed by label id, unlike the id
+      -- form which answers with the one label's properties
+      local labels = getMapLabel(areaBeta, "MapperSpecShared")
+      assert.is_table(labels)
+      assert.is_table(labels[first])
+      assert.are.equal("MapperSpecShared", labels[first].Text)
+      assert.are.same({1, 1, 0}, {labels[second].X, labels[second].Y, labels[second].Z})
+      assert.is_nil(labels[other])
+    end)
+
+    it("getMapLabel hard-errors when the label is neither a number nor a string", function()
+      assert.has_error(function() getMapLabel(areaAlpha, true) end)
     end)
 
     it("deleteMapLabel removes the label from getMapLabels", function()
@@ -1434,6 +1875,29 @@ describe("Tests mapper functions against a shared fixture", function()
       local set = {}
       for _, id in pairs(rooms) do set[id] = true end
       assert.is_true(set[rSandA])
+    end)
+
+    it("searchRoomUserData with only a key lists that key's values once each, in order", function()
+      local shared = createRoomID(); addRoom(shared); setRoomArea(shared, areaAlpha)
+      finally(function() deleteRoom(shared) end)
+      setRoomUserData(rSandA, "banner", "zulu")
+      setRoomUserData(rSandB, "banner", "alpha")
+      -- a second room carrying a value already seen, so a form that listed one
+      -- entry per room rather than per value is caught
+      setRoomUserData(shared, "banner", "alpha")
+
+      assert.are.same({"alpha", "zulu"}, searchRoomUserData("banner"))
+    end)
+
+    it("searchRoomUserData returns every room carrying the value, in id order", function()
+      local shared = createRoomID(); addRoom(shared); setRoomArea(shared, areaAlpha)
+      finally(function() deleteRoom(shared) end)
+      setRoomUserData(rSandB, "flag", "alpha")
+      setRoomUserData(shared, "flag", "alpha")
+
+      local expected = {rSandB, shared}
+      table.sort(expected)
+      assert.are.same(expected, searchRoomUserData("flag", "alpha"))
     end)
   end)
 
@@ -1561,6 +2025,43 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.is_nil(data)
       assert.is_string(err)
     end)
+
+    it("searchAreaUserData with no arguments lists every area-data key once, in order", function()
+      setAreaUserData(areaAlpha, "spec-zulu", "1")
+      setAreaUserData(areaBeta, "spec-alpha", "1")
+      -- the same key on a second area, so a form that listed one entry per area
+      -- rather than per key is caught
+      setAreaUserData(areaGamma, "spec-alpha", "2")
+
+      local keys = searchAreaUserData()
+      assert.is_table(keys)
+      local seen = {}
+      for i, key in ipairs(keys) do
+        seen[key] = (seen[key] or 0) + 1
+        if i > 1 then
+          assert.is_true(keys[i - 1] < key, table.concat(keys, ", "))
+        end
+      end
+      assert.are.equal(1, seen["spec-alpha"])
+      assert.are.equal(1, seen["spec-zulu"])
+    end)
+
+    it("searchAreaUserData with only a key lists that key's values once each, in order", function()
+      setAreaUserData(areaAlpha, "spec-region", "zulu")
+      setAreaUserData(areaBeta, "spec-region", "alpha")
+      setAreaUserData(areaGamma, "spec-region", "alpha")
+
+      assert.are.same({"alpha", "zulu"}, searchAreaUserData("spec-region"))
+    end)
+
+    it("searchAreaUserData returns every area carrying the value, in id order", function()
+      setAreaUserData(areaBeta, "spec-flag", "alpha")
+      setAreaUserData(areaGamma, "spec-flag", "alpha")
+
+      local expected = {areaBeta, areaGamma}
+      table.sort(expected)
+      assert.are.same(expected, searchAreaUserData("spec-flag", "alpha"))
+    end)
   end)
 
   describe("Tests map user data", function()
@@ -1664,6 +2165,85 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.is_string(err)
     end)
 
+    it("takes the short cut when the start and the target are the same room", function()
+      local ok, weight = getPath(rA1, rA1)
+      assert.is_true(ok)
+      assert.are.equal(0, weight)
+      assert.are.same({}, speedWalkPath)
+      assert.are.same({}, speedWalkDir)
+    end)
+
+    it("gives up when the start room itself is locked", function()
+      lockRoom(rA1, true)
+      finally(function() lockRoom(rA1, false) end)
+      -- a locked room is left out of the routing graph altogether, which is a
+      -- different refusal from the reroute around a locked room in the middle
+      assert.is_false(getPath(rA1, rA3))
+    end)
+
+    it("gives up when the target room itself is locked", function()
+      lockRoom(rA3, true)
+      finally(function() lockRoom(rA3, false) end)
+      assert.is_false(getPath(rA1, rA3))
+    end)
+
+    it("finds a route out of a room whose only exit is any one of the twelve", function()
+      local directions = {"north", "south", "west", "east", "up", "down",
+                          "northeast", "northwest", "southeast", "southwest", "in", "out"}
+      -- the search gives up before it starts unless the start room has a usable
+      -- exit, and that check spells out one direction per branch
+      local area = addAreaName("MapperSpecSoleExitArea")
+      local rooms = {}
+      finally(function()
+        for _, id in ipairs(rooms) do deleteRoom(id) end
+        deleteArea(area)
+      end)
+
+      for _, direction in ipairs(directions) do
+        local from = createRoomID(); addRoom(from); setRoomArea(from, area)
+        local to = createRoomID(); addRoom(to); setRoomArea(to, area)
+        rooms[#rooms + 1] = from
+        rooms[#rooms + 1] = to
+        assert.is_true(setExit(from, to, direction), direction)
+        assert.is_true(getPath(from, to), direction)
+        assert.are.same({tostring(to)}, speedWalkPath, direction)
+      end
+    end)
+
+    it("looks past a locked special exit for a usable one when there are no normal exits", function()
+      local area = addAreaName("MapperSpecSpecialOnlyArea")
+      local from = createRoomID(); addRoom(from); setRoomArea(from, area)
+      local to = createRoomID(); addRoom(to); setRoomArea(to, area)
+      finally(function()
+        deleteRoom(from); deleteRoom(to)
+        deleteArea(area)
+      end)
+
+      -- both commands reach the target, and they are walked in sorted order, so
+      -- a search that took no notice of the lock would answer with the locked one
+      assert.is_true(addSpecialExit(from, to, "a locked way"))
+      assert.is_true(lockSpecialExit(from, to, "a locked way", true))
+      assert.is_true(addSpecialExit(from, to, "b open way"))
+
+      assert.is_true(getPath(from, to))
+      assert.are.same({"b open way"}, speedWalkDir)
+    end)
+
+    it("gives up when every special exit out of the start room is locked", function()
+      local area = addAreaName("MapperSpecAllLockedArea")
+      local from = createRoomID(); addRoom(from); setRoomArea(from, area)
+      local to = createRoomID(); addRoom(to); setRoomArea(to, area)
+      finally(function()
+        deleteRoom(from); deleteRoom(to)
+        deleteArea(area)
+      end)
+
+      assert.is_true(addSpecialExit(from, to, "slip past"))
+      assert.is_true(lockSpecialExit(from, to, "slip past", true))
+
+      assert.is_false(getPath(from, to))
+    end)
+
     it("returns nil and a message for an invalid source roomID", function()
       local ok, err = getPath(missingRoomId, rA3)
       assert.is_nil(ok)
@@ -1703,6 +2283,52 @@ describe("Tests mapper functions against a shared fixture", function()
       local ok = getPath(rA1, rA3)
       assert.is_true(ok)
       assert.are.same({tostring(rA4), tostring(rA5), tostring(rA3)}, speedWalkPath)
+    end)
+
+    it("treats an exit weight filter returning false as a block", function()
+      setExitWeightFilter(function() return false end)
+      assert.is_false(getPath(rA1, rA3))
+    end)
+
+    it("ignores an exit weight filter returning true", function()
+      -- true is not a weight and not the "block" string either, so it is
+      -- dropped rather than being read as a block of some sort. Dropping it
+      -- leaves the default route, so the call count is what separates that
+      -- from a filter that was never consulted at all.
+      local calls = 0
+      setExitWeightFilter(function() calls = calls + 1; return true end)
+      local ok = getPath(rA1, rA3)
+      assert.is_true(calls > 0, "the exit weight filter was never called")
+      assert.is_true(ok)
+      assert.are.same({tostring(rA2), tostring(rA3)}, speedWalkPath)
+    end)
+
+    it("clamps an exit weight filter's weight up to one", function()
+      -- a weight of zero would let A* cross the map for nothing. The east exit
+      -- is made dear enough that the unfiltered search prefers the three hop
+      -- south route, so a clamp to one - and only a clamp to one - brings the
+      -- two hop route back at a cost of two.
+      assert.is_true(setExitWeight(rA1, "east", 50))
+      assert.is_true(getPath(rA1, rA3))
+      assert.are.same({tostring(rA4), tostring(rA5), tostring(rA3)}, speedWalkPath)
+
+      setExitWeightFilter(function() return 0 end)
+      local ok, weight = getPath(rA1, rA3)
+      assert.is_true(ok)
+      assert.are.same({tostring(rA2), tostring(rA3)}, speedWalkPath)
+      assert.are.equal(2, weight)
+    end)
+
+    it("clamps an exit weight filter's weight down to what an int can hold", function()
+      -- a weight past INT_MAX would wrap round to a cheap, or negative, exit
+      setExitWeightFilter(function(roomId) if roomId == rA2 then return 1e18 end end)
+      local ok = getPath(rA1, rA3)
+      assert.is_true(ok)
+      assert.are.same({tostring(rA4), tostring(rA5), tostring(rA3)}, speedWalkPath)
+    end)
+
+    it("setExitWeightFilter hard-errors on an argument that is not a function", function()
+      assert.has_error(function() setExitWeightFilter("block") end)
     end)
 
     -- Every case above edits the map first, so each one searches a graph that
@@ -1850,6 +2476,39 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.is_nil(zoom)
       assert.is_string(err)
     end)
+
+    -- centerview() only asks for the move: TMap::updateArea() defers the repaint
+    -- that takes the mapper to the new area onto a zero timer, so the
+    -- no-argument getMapZoom() keeps answering with the old area until the
+    -- event loop gets a turn. Waiting for the value rather than for a fixed
+    -- pause keeps a loaded machine from reading the old area and calling it a
+    -- regression; a wrong implementation still fails, on the timeout.
+    local function zoomAfterAreaSwitch(expected)
+      local waitedMs = 0
+      while getMapZoom() ~= expected and waitedMs < 5000 do
+        pumpEvents(5)
+        waitedMs = waitedMs + 5
+      end
+      return getMapZoom()
+    end
+
+    it("getMapZoom with no area at all reports the area the mapper is showing", function()
+      local before = getMapZoom(areaBeta)
+      finally(function()
+        centerview(rA1)
+        zoomAfterAreaSwitch(getMapZoom(areaAlpha))
+        setMapZoom(before, areaBeta)
+      end)
+      assert.are_not.equal(11, before)
+      assert.is_true(setMapZoom(11, areaBeta))
+      -- the mapper is showing Alpha, so the no-argument form has to be
+      -- answering with Beta's zoom because centerview moved it and not
+      -- because Beta's zoom is what it answers with anyway
+      assert.are_not.equal(11, getMapZoom())
+
+      assert.is_true(centerview(rB1))
+      assert.are.equal(11, zoomAfterAreaSwitch(11))
+    end)
   end)
 
   describe("Tests the map background and room exit colours", function()
@@ -1985,6 +2644,57 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.is_nil(info)
       assert.is_string(err)
     end)
+
+    it("centerview centres a view of its own and leaves the player where they are", function()
+      local viewId = createMapView(areaBeta)
+      finally(function() closeMapView(viewId) end)
+      local playerRoom = getPlayerRoom()
+      assert.are_not.equal(rB2, playerRoom)
+
+      assert.is_true(centerview(rB2, viewId))
+      assert.are.equal(rB2, getMapViewInfo(viewId).centeredRoomId)
+      assert.are.equal(playerRoom, getPlayerRoom())
+    end)
+
+    it("setMapZoom through a view stores the zoom on the area the view is showing", function()
+      local viewId = createMapView(areaBeta)
+      local before = getMapZoom(areaBeta)
+      finally(function()
+        closeMapView(viewId)
+        setMapZoom(before, areaBeta)
+      end)
+      -- the view ignores the areaID it is handed and uses the area it is on,
+      -- so the proof is the main mapper reading that area's zoom back
+      assert.are_not.equal(17, before)
+      assert.is_true(setMapZoom(17, areaAlpha, viewId))
+      assert.are.equal(17, getMapZoom(areaBeta))
+      assert.is_number(getMapZoom(areaBeta, viewId))
+    end)
+
+    it("setMapZoom through a view refuses a zoom below the minimum", function()
+      local viewId = createMapView(areaBeta)
+      local before = getMapZoom(areaBeta)
+      finally(function() closeMapView(viewId) end)
+
+      local ok, err = setMapZoom(0.5, areaBeta, viewId)
+      assert.is_nil(ok)
+      assert.is_truthy(err:find("it must be at least", 1, true), err)
+      assert.are.equal(before, getMapZoom(areaBeta))
+    end)
+
+    it("the view forms of centerview, setMapZoom and getMapZoom report a view that is not there", function()
+      local ok, err = centerview(rB1, 987654)
+      assert.is_nil(ok)
+      assert.is_truthy(err:find("view 987654 not found", 1, true), err)
+
+      ok, err = setMapZoom(7, areaBeta, 987654)
+      assert.is_nil(ok)
+      assert.is_truthy(err:find("view 987654 not found", 1, true), err)
+
+      ok, err = getMapZoom(areaBeta, 987654)
+      assert.is_nil(ok)
+      assert.is_truthy(err:find("view 987654 not found", 1, true), err)
+    end)
   end)
 
   describe("Tests registered map info", function()
@@ -2011,6 +2721,20 @@ describe("Tests mapper functions against a shared fixture", function()
       local ok, err = exportAreaImage(missingAreaId, getMudletHomeDir() .. "/unused.png")
       assert.is_nil(ok)
       assert.is_string(err)
+    end)
+
+    -- A second exportAreaImage() in the same session segfaults Mudlet (#10393),
+    -- so the one above is all this file can afford.
+    pending("exportAreaImage without an areaID takes the area the player is in")
+
+    pending("exportAreaImage takes a single z level")
+
+    pending("exportAreaImage takes true for every z level at once")
+
+    it("exportAreaImage rejects false where a z level or true is wanted", function()
+      local ok, err = exportAreaImage(areaAlpha, getMudletHomeDir() .. "/unused.png", false)
+      assert.is_nil(ok)
+      assert.is_truthy(err:find("must be true to export all Z levels", 1, true), err)
     end)
   end)
 
@@ -2351,6 +3075,37 @@ describe("Tests saveMap and loadMap", function()
     it("returns false for a binary map file that is not there", function()
       assert.is_false(loadMap(mapDirectory .. "/nosuchmapfile.dat"))
     end)
+
+    -- A binary map file opens with its format version as a four byte big endian
+    -- int, which is all these two files carry: the reader gives up on the
+    -- version alone and never reaches the rest.
+    local function writeBinaryMapVersion(path, version)
+      local file = assert(io.open(path, "wb"))
+      file:write(string.char(0, 0, math.floor(version / 256), version % 256))
+      file:close()
+    end
+
+    it("refuses a binary map file whose format version makes no sense", function()
+      local path = getMudletHomeDir() .. "/mapper_spec_bogus_version.dat"
+      finally(function() os.remove(path) end)
+      writeBinaryMapVersion(path, 0)
+
+      assert.is_false(loadMap(path))
+    end)
+
+    it("refuses a binary map file written by a newer Mudlet", function()
+      local path = getMudletHomeDir() .. "/mapper_spec_future_version.dat"
+      finally(function() os.remove(path) end)
+      -- inside the 1 to 127 range that passes for a version, but beyond the
+      -- highest format this Mudlet knows how to read
+      writeBinaryMapVersion(path, 127)
+
+      assert.is_false(loadMap(path))
+    end)
+
+    -- loadMap() clears the map before it reads the file, so an unreadable one
+    -- destroys the map that was loaded (#10394) - unlike the XML path above.
+    pending("a binary map file that cannot be read leaves the loaded map alone")
 
     it("returns nil and a message naming the missing XML file", function()
       local ok, message = loadMap(mapDirectory .. "/nosuchmapfile.xml")
@@ -2771,4 +3526,664 @@ describe("Tests saveMap and loadMap", function()
   pending("setMapPerspective needs a Mudlet built with the 3D mapper")
 
   pending("shiftMapPerspective needs a Mudlet built with the 3D mapper")
+end)
+
+-- The JSON map format has a writer and a reader of its own, entirely separate
+-- from the binary one, and an import always ends by auditing what it read. Like
+-- the saveMap block above, this one replaces the whole map, so it saves what it
+-- found and hands it back.
+describe("Tests saveJsonMap and loadJsonMap", function()
+  local mapDirectory = getMudletHomeDir() .. "/map"
+  local backupPath = mapDirectory .. "/mapper_spec_json_backup.dat"
+  local jsonPath = getMudletHomeDir() .. "/mapper_spec_roundtrip.json"
+  local suffixlessPath = getMudletHomeDir() .. "/mapper_spec_suffixless"
+  local notJsonPath = getMudletHomeDir() .. "/mapper_spec_notjson.json"
+  -- nothing writes this one: it is the path the reader is asked for to be told
+  -- it is not there, so a leftover of any kind would answer a different question
+  local absentPath = getMudletHomeDir() .. "/mapper_spec_absent.json"
+
+  local missingRoomId = 990000001
+  local roomA, roomB
+
+  local function removeScratchFiles()
+    os.remove(jsonPath)
+    os.remove(suffixlessPath)
+    os.remove(suffixlessPath .. ".json")
+    os.remove(notJsonPath)
+    os.remove(absentPath)
+  end
+
+  setup(function()
+    -- the saveJsonMap and loadJsonMap bindings both reach through the mapper
+    -- widget, so they fail outright unless one has been built
+    openMapWidget("r")
+    os.remove(backupPath)
+    removeScratchFiles()
+    assert.is_true(saveMap(backupPath), "the map to be replaced could not be saved first")
+  end)
+
+  teardown(function()
+    assert.is_true(loadMap(backupPath), "the map this block replaced could not be put back")
+    -- an import shows the mapper wherever it last was, and everything after
+    -- this file is entitled to an open, right-docked widget
+    openMapWidget("r")
+    os.remove(backupPath)
+    removeScratchFiles()
+  end)
+
+  describe("Tests the saveJsonMap and loadJsonMap round-trip", function()
+    -- two rooms carrying a value for every kind of room and exit data the JSON
+    -- format stores separately, so a round-trip that dropped one shows up
+    local function buildMap()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      roomB = createRoomID(); addRoom(roomB); setRoomArea(roomB, area)
+      setRoomCoordinates(roomA, 0, 0, 0)
+      setRoomCoordinates(roomB, 3, -4, 5)
+      setRoomName(roomA, "Json Room A")
+      setRoomEnv(roomA, 42)
+      setRoomWeight(roomA, 7)
+      setRoomHidden(roomA, true)
+      lockRoom(roomA, true)
+      setRoomChar(roomA, "J")
+      setRoomCharColor(roomA, 11, 22, 33)
+      setRoomBorderColor(roomA, 44, 55, 66)
+      setRoomBorderThickness(roomA, 3)
+      setRoomIDbyHash(roomA, "mapperSpecJsonHash")
+      setRoomUserData(roomA, "json key", "json value")
+      setExit(roomA, roomB, "east")
+      setExitWeight(roomA, "east", 4)
+      lockExit(roomA, "east", true)
+      setDoor(roomA, "e", 3)
+      addCustomLine(roomA, {{2, 3, 0}, {4, 5, 0}}, "e", "dash dot line", {10, 20, 30}, true)
+      addSpecialExit(roomA, roomB, "squeeze through")
+      setExitWeight(roomA, "squeeze through", 6)
+      lockSpecialExit(roomA, roomB, "squeeze through", true)
+      setDoor(roomA, "squeeze through", 1)
+      setExitStub(roomA, "north", true)
+      lockExit(roomA, "north", true)
+    end
+
+    local function roundTrip()
+      assert.is_true(saveJsonMap(jsonPath))
+      -- wipe the lot, so that an import which did nothing at all cannot pass
+      deleteMap()
+      assert.is_false(roomExists(roomA))
+      assert.is_true(loadJsonMap(jsonPath))
+    end
+
+    it("puts every kind of room data back exactly as it was saved", function()
+      buildMap()
+      roundTrip()
+
+      assert.is_true(roomExists(roomA))
+      assert.is_true(roomExists(roomB))
+      assert.are.equal("Json Room A", getRoomName(roomA))
+      assert.are.same({3, -4, 5}, {getRoomCoordinates(roomB)})
+      assert.are.equal("MapperSpecJsonArea", getRoomAreaName(getRoomArea(roomA)))
+      assert.are.equal(42, getRoomEnv(roomA))
+      assert.are.equal(7, getRoomWeight(roomA))
+      assert.is_true(getRoomHidden(roomA))
+      assert.is_true(roomLocked(roomA))
+      assert.are.equal("J", getRoomChar(roomA))
+      assert.are.same({11, 22, 33}, {getRoomCharColor(roomA)})
+      -- the alpha is the default 255 because an imported map cannot carry any
+      -- other, so this pins the three channels only:
+      -- https://github.com/Mudlet/Mudlet/issues/10368
+      assert.are.same({44, 55, 66, 255}, {getRoomBorderColor(roomA)})
+      assert.are.equal(3, getRoomBorderThickness(roomA))
+      assert.are.equal(roomA, getRoomIDbyHash("mapperSpecJsonHash"))
+      assert.are.equal("json value", getRoomUserData(roomA, "json key"))
+    end)
+
+    it("puts every kind of exit data back exactly as it was saved", function()
+      buildMap()
+      roundTrip()
+
+      assert.are.equal(roomB, getRoomExits(roomA)["east"])
+      assert.are.equal(4, getExitWeights(roomA)["e"])
+      assert.is_true(hasExitLock(roomA, "east"))
+      assert.are.equal(3, getDoors(roomA)["e"])
+
+      local line = getCustomLines1(roomA)["e"]
+      assert.is_table(line)
+      assert.are.equal("dash dot line", line.attributes.style)
+      assert.is_true(line.attributes.arrow)
+      assert.are.same({10, 20, 30}, line.attributes.color)
+      assert.are.equal(2, #line.points)
+      assert.are.equal(2, line.points[1][1])
+      assert.are.equal(3, line.points[1][2])
+
+      assert.are.equal(roomB, getSpecialExitsSwap(roomA)["squeeze through"])
+      assert.are.equal(6, getExitWeights(roomA)["squeeze through"])
+      assert.is_true(hasSpecialExitLock(roomA, roomB, "squeeze through"))
+      assert.are.equal(1, getDoors(roomA)["squeeze through"])
+
+      assert.are.same({1}, getExitStubs1(roomA))
+      assert.is_true(hasExitLock(roomA, "north"))
+    end)
+
+    it("puts an exit back in each of the twelve directions", function()
+      local directions = {"north", "northeast", "northwest", "east", "west", "south",
+                          "southeast", "southwest", "up", "down", "in", "out"}
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonDirectionArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      -- a destination of its own per direction: pointing all twelve at one room
+      -- would pin the set of directions but not the mapping, so a reader that
+      -- swapped north for south would still pass
+      local destinations = {}
+      for _, direction in ipairs(directions) do
+        local destination = createRoomID(); addRoom(destination); setRoomArea(destination, area)
+        destinations[direction] = destination
+        assert.is_true(setExit(roomA, destination, direction))
+      end
+
+      roundTrip()
+
+      local exits = getRoomExits(roomA)
+      for _, direction in ipairs(directions) do
+        assert.are.equal(destinations[direction], exits[direction], direction)
+      end
+    end)
+
+    it("puts every custom exit line style back", function()
+      local styles = {"solid line", "dot line", "dash line", "dash dot line", "dash dot dot line"}
+      -- one direction per style, so all five travel in the same file
+      local directions = {"north", "east", "south", "west", "up"}
+      local shortDirections = {"n", "e", "s", "w", "up"}
+
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonStyleArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      roomB = createRoomID(); addRoom(roomB); setRoomArea(roomB, area)
+      for index, style in ipairs(styles) do
+        assert.is_true(setExit(roomA, roomB, directions[index]))
+        assert.is_true(addCustomLine(roomA, {{index, index, 0}}, shortDirections[index], style, {1, 2, 3}, index % 2 == 0))
+      end
+
+      roundTrip()
+
+      local lines = getCustomLines1(roomA)
+      for index, style in ipairs(styles) do
+        local line = lines[shortDirections[index]]
+        assert.is_table(line, style)
+        assert.are.equal(style, line.attributes.style)
+        assert.are.equal(index % 2 == 0, line.attributes.arrow, style)
+      end
+    end)
+
+    it("puts a special exit's custom line, weight and lock back", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonSpecialLineArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      roomB = createRoomID(); addRoom(roomB); setRoomArea(roomB, area)
+      assert.is_true(addSpecialExit(roomA, roomB, "wriggle"))
+      assert.is_true(addCustomLine(roomA, {{3, 4, 0}, {5, 6, 0}}, "wriggle", "dash line", {7, 8, 9}, true))
+      assert.is_true(setExitWeight(roomA, "wriggle", 12))
+      assert.is_true(lockSpecialExit(roomA, 0, "wriggle", true))
+
+      roundTrip()
+
+      local line = getCustomLines1(roomA)["wriggle"]
+      assert.is_table(line)
+      assert.are.equal("dash line", line.attributes.style)
+      assert.is_true(line.attributes.arrow)
+      assert.are.same({7, 8, 9}, line.attributes.color)
+      assert.are.same({{3, 4, 0}, {5, 6, 0}}, line.points)
+      assert.are.equal(12, getExitWeights(roomA)["wriggle"])
+      assert.is_true(hasSpecialExitLock(roomA, 0, "wriggle"))
+    end)
+
+    it("puts every door state back on a normal and on a special exit", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonDoorArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      roomB = createRoomID(); addRoom(roomB); setRoomArea(roomB, area)
+      setExit(roomA, roomB, "north")
+      setExit(roomA, roomB, "east")
+      setExit(roomA, roomB, "south")
+      setDoor(roomA, "n", 1)
+      setDoor(roomA, "e", 2)
+      setDoor(roomA, "s", 3)
+      addSpecialExit(roomA, roomB, "wriggle")
+      setDoor(roomA, "wriggle", 2)
+
+      roundTrip()
+
+      local doors = getDoors(roomA)
+      assert.are.equal(1, doors["n"])
+      assert.are.equal(2, doors["e"])
+      assert.are.equal(3, doors["s"])
+      assert.are.equal(2, doors["wriggle"])
+    end)
+
+    it("keeps a stub exit's door where the long and short direction names match", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonStubDoorArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      setExitStub(roomA, "up", true)
+      setDoor(roomA, "up", 2)
+
+      roundTrip()
+
+      -- the eight compass directions lose this:
+      -- https://github.com/Mudlet/Mudlet/issues/10369
+      assert.are.equal(2, getDoors(roomA)["up"])
+    end)
+
+    it("puts a custom environment colour back", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonEnvArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      setRoomEnv(roomA, 501)
+      -- an ID outside 257-272, which would sync to the profile's ANSI colours
+      -- and survive the deleteMap inside roundTrip
+      setCustomEnvColor(501, 10, 20, 30, 255)
+
+      roundTrip()
+
+      assert.are.same({10, 20, 30, 255}, getCustomEnvColorTable()[501])
+    end)
+
+    it("puts a symbol font scaling below one back, rather than rounding it away", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonScalingArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      local savedScaling = getConfig("mapSymbolFontScaling")
+      finally(function() setConfig("mapSymbolFontScaling", savedScaling) end)
+
+      -- the scaling is not room or area data, so deleteMap leaves it alone and
+      -- roundTrip cannot show it moving. Moving it somewhere else between the
+      -- two halves is what makes the value that comes back the file's own.
+      setConfig("mapSymbolFontScaling", 0.5)
+      assert.is_true(saveJsonMap(jsonPath))
+      setConfig("mapSymbolFontScaling", 2.0)
+      assert.is_true(loadJsonMap(jsonPath))
+
+      assert.are.equal(0.5, getConfig("mapSymbolFontScaling"))
+    end)
+
+    it("puts a text map label back with its position, size, colours and flags", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonLabelArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      -- the long argument form, so that the zoom, font, showOnTop and scaling
+      -- settings are all away from their defaults and a reader that ignored the
+      -- file and rebuilt a default label could not pass
+      local labelId = createMapLabel(area, "Json Label", 3, -4, 5, 250, 240, 230, 20, 30, 40,
+                                     20.0, 24, false, false, "Bitstream Vera Sans", 200, 100)
+      assert.is_true(labelId >= 0)
+      local before = getMapLabel(area, labelId)
+      assert.is_false(before.OnTop)
+      assert.is_true(before.Scaling)
+
+      roundTrip()
+
+      local after = getMapLabel(area, labelId)
+      assert.is_table(after)
+      assert.are.equal("Json Label", after.Text)
+      assert.are.same({3, -4, 5}, {after.X, after.Y, after.Z})
+      assert.are.equal(before.Width, after.Width)
+      assert.are.equal(before.Height, after.Height)
+      assert.is_false(after.OnTop)
+      assert.is_true(after.Scaling)
+      assert.are.same(before.FgColor, after.FgColor)
+      assert.are.same(before.BgColor, after.BgColor)
+    end)
+
+    it("puts an image map label's picture back", function()
+      -- XPM so that the fixture image can be written from the spec as text; the
+      -- exporter re-encodes whatever it finds as base64 PNG either way
+      local imagePath = getMudletHomeDir() .. "/mapper_spec_label.xpm"
+      local image = assert(io.open(imagePath, "w"))
+      image:write('/* XPM */\nstatic char * spec_xpm[] = {\n"2 2 2 1",\n' ..
+                  '"a c #ff0000",\n"b c #0000ff",\n"ab",\n"ba"};\n')
+      image:close()
+      finally(function() os.remove(imagePath) end)
+
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonImageLabelArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      -- a label made from a file that is not there is a transparent rectangle of
+      -- the same size, so it is the yardstick for "the picture actually came back":
+      -- the encoded PNG drops its unused alpha channel on the way back in, so the
+      -- two encodings of the same picture are not comparable byte for byte
+      local blankId = createMapImageLabel(area, absentPath, 0, 0, 3, 4, 5, 10.0, true)
+      local labelId = createMapImageLabel(area, imagePath, 1, 2, 3, 4, 5, 10.0, true)
+      assert.is_true(labelId >= 0)
+      local before = getMapLabel(area, labelId)
+      assert.are_not.equal(getMapLabel(area, blankId).Pixmap, before.Pixmap)
+
+      roundTrip()
+
+      local after = getMapLabel(area, labelId)
+      assert.is_table(after)
+      assert.are_not.equal(getMapLabel(area, blankId).Pixmap, after.Pixmap)
+      assert.are.same({1, 2, 3}, {after.X, after.Y, after.Z})
+      assert.are.equal(4, after.Width)
+      assert.are.equal(5, after.Height)
+    end)
+
+    it("leaves a temporary map label out of the exported file", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonTemporaryLabelArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      local keptId = createMapLabel(area, "Kept", 0, 0, 0, 255, 255, 255, 0, 0, 0,
+                                    30.0, 50, true, true, "", 255, 50, false)
+      local temporaryId = createMapLabel(area, "Temporary", 1, 1, 0, 255, 255, 255, 0, 0, 0,
+                                         30.0, 50, true, true, "", 255, 50, true)
+      assert.is_not_nil(getMapLabels(area)[temporaryId])
+
+      roundTrip()
+
+      assert.are.equal("Kept", getMapLabels(area)[keptId])
+      assert.is_nil(getMapLabels(area)[temporaryId])
+    end)
+
+    it("puts map user data back exactly as it was saved", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonMapDataArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      clearMapUserData()
+      assert.is_true(setMapUserData("mapper.spec.json", "kept"))
+
+      assert.is_true(saveJsonMap(jsonPath))
+      deleteMap()
+      -- deleteMap leaves the map's user data alone, so it has to be wiped by
+      -- hand or the import has nothing to prove
+      clearMapUserData()
+      assert.is_nil(getMapUserData("mapper.spec.json"))
+      assert.is_true(loadJsonMap(jsonPath))
+
+      assert.are.equal("kept", getMapUserData("mapper.spec.json"))
+    end)
+
+    it("puts area user data back exactly as it was saved", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonAreaDataArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      assert.is_true(setAreaUserData(area, "climate", "temperate"))
+      assert.is_true(setAreaUserData(area, "ruler", "nobody"))
+
+      roundTrip()
+
+      assert.are.same({climate = "temperate", ruler = "nobody"}, getAllAreaUserData(area))
+    end)
+
+    -- TMap::readJsonColor returns QColor(red, green, blue) for a colour array of
+    -- either three or four values, so the alpha the exporter wrote as
+    -- "color32RGBA" never reaches the QColor and comes back as 255. Every colour
+    -- read through that function flattens the same way, custom environment
+    -- colours included, so the test above can only use an opaque one.
+    -- https://github.com/Mudlet/Mudlet/issues/10368
+    pending("a translucent room border colour loses its alpha on import")
+
+    -- TRoom::writeJsonExitStubs looks the stub's door up under the long
+    -- direction name while TRoom::doors is keyed by the short one, so a door on
+    -- a stub survives only for up, down, in and out, whose two spellings match
+    -- https://github.com/Mudlet/Mudlet/issues/10369
+    pending("a stub exit's door is dropped on export in the eight compass directions")
+
+    -- TMap::readJsonUserData inserts each key it reads into the live map's user
+    -- data without emptying it first, and the JSON import never reaches the
+    -- clear a binary load gets, so keys the previous map had outlive it.
+    pending("map user data from the map being replaced survives a JSON import")
+  end)
+
+  describe("Tests the saveJsonMap and loadJsonMap argument contract", function()
+    it("appends the .json suffix to a destination that lacks one", function()
+      assert.is_true(saveJsonMap(suffixlessPath))
+      local written = io.open(suffixlessPath .. ".json", "r")
+      assert.is_not_nil(written, "saveJsonMap should have added the suffix itself")
+      written:close()
+      assert.is_nil(io.open(suffixlessPath, "r"))
+    end)
+
+    it("reports failure rather than raising when the file cannot be written", function()
+      local ok, err = saveJsonMap("/nosuchdirectory/mapper_spec.json")
+      assert.is_nil(ok)
+      assert.is_string(err)
+    end)
+
+    it("hard-errors on a destination that is not a string", function()
+      local ok, err = pcall(saveJsonMap, {})
+      assert.is_false(ok)
+      assert.is_truthy(tostring(err):find("saveJsonMap: bad argument #1 type", 1, true), tostring(err))
+    end)
+
+    it("returns nil and a message for an empty import path", function()
+      local ok, err = loadJsonMap("")
+      assert.is_nil(ok)
+      assert.is_truthy(err:find("a non-empty path and file name", 1, true), err)
+    end)
+
+    it("returns nil and a message for a file that is not there", function()
+      local ok, err = loadJsonMap(absentPath)
+      assert.is_nil(ok)
+      assert.is_truthy(err:find("could not open file", 1, true), err)
+    end)
+
+    it("returns nil and a message for a file that is not JSON at all", function()
+      local file = assert(io.open(notJsonPath, "w"))
+      file:write("this is not JSON")
+      file:close()
+      local ok, err = loadJsonMap(notJsonPath)
+      assert.is_nil(ok)
+      assert.is_truthy(err:find("could not parse file", 1, true), err)
+    end)
+
+    it("returns nil and a message for JSON that carries no format version", function()
+      local file = assert(io.open(notJsonPath, "w"))
+      file:write('{"areas": []}')
+      file:close()
+      local ok, err = loadJsonMap(notJsonPath)
+      assert.is_nil(ok)
+      assert.is_truthy(err:find("no format version detected", 1, true), err)
+    end)
+
+    it("returns nil and a message for a format version it cannot read", function()
+      local file = assert(io.open(notJsonPath, "w"))
+      file:write('{"formatVersion": 2, "areas": []}')
+      file:close()
+      local ok, err = loadJsonMap(notJsonPath)
+      assert.is_nil(ok)
+      assert.is_truthy(err:find("invalid format version \"2.000\" detected", 1, true), err)
+    end)
+
+    it("returns nil and a message for JSON that holds no areas", function()
+      local file = assert(io.open(notJsonPath, "w"))
+      file:write('{"formatVersion": 1}')
+      file:close()
+      local ok, err = loadJsonMap(notJsonPath)
+      assert.is_nil(ok)
+      assert.is_truthy(err:find("no areas detected", 1, true), err)
+    end)
+  end)
+
+  -- Every import ends in an audit that repairs data no mapper call can produce,
+  -- so these plant the fault into an exported file and read it back in. The last
+  -- one plants valid data rather than a fault, because the export cannot write a
+  -- compass stub's door at all: https://github.com/Mudlet/Mudlet/issues/10369
+  describe("Tests the audit of an imported JSON map", function()
+    local function buildMap()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonAuditArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      roomB = createRoomID(); addRoom(roomB); setRoomArea(roomB, area)
+      setExit(roomA, roomB, "east")
+      setExit(roomA, roomB, "west")
+      addSpecialExit(roomA, roomB, "squeeze through")
+      setExitStub(roomA, "north", true)
+    end
+
+    local function findRoom(document, roomId)
+      for _, area in ipairs(document.areas) do
+        for _, room in ipairs(area.rooms or {}) do
+          if room.id == roomId then
+            return room
+          end
+        end
+      end
+      error("room " .. tostring(roomId) .. " is not in the exported document")
+    end
+
+    local function findExit(room, name)
+      for _, exit in ipairs(room.exits or {}) do
+        if exit.name == name then
+          return exit
+        end
+      end
+      error('the exported room has no exit named "' .. tostring(name) .. '"')
+    end
+
+    local function reimportWith(plantFault)
+      assert.is_true(saveJsonMap(jsonPath))
+      local file = assert(io.open(jsonPath, "r"))
+      local document = yajl.to_value(file:read("*a"))
+      file:close()
+      plantFault(document)
+      file = assert(io.open(jsonPath, "w"))
+      file:write(yajl.to_string(document))
+      file:close()
+
+      deleteMap()
+      assert.is_false(roomExists(roomA))
+      assert.is_true(loadJsonMap(jsonPath))
+    end
+
+    it("turns an exit to a room that is not in the file into a stub", function()
+      buildMap()
+      reimportWith(function(document)
+        findExit(findRoom(document, roomA), "east").exitId = missingRoomId
+      end)
+
+      assert.is_nil(getRoomExits(roomA)["east"])
+      -- the west exit was left alone, so the east one went for its own reason
+      assert.are.equal(roomB, getRoomExits(roomA)["west"])
+      local stubs = {}
+      for _, code in pairs(getExitStubs1(roomA)) do stubs[code] = true end
+      assert.is_true(stubs[4]) -- DIR_EAST
+      assert.are.equal(tostring(missingRoomId), getRoomUserData(roomA, "audit.made_stub_of_valid_but_missing_exit.4"))
+    end)
+
+    it("removes a special exit to a room that is not in the file", function()
+      buildMap()
+      reimportWith(function(document)
+        findExit(findRoom(document, roomA), "squeeze through").exitId = missingRoomId
+      end)
+
+      assert.is_nil(getSpecialExitsSwap(roomA)["squeeze through"])
+      assert.are.equal(roomB, getRoomExits(roomA)["east"])
+      assert.are.equal(tostring(missingRoomId),
+                       getRoomUserData(roomA, "audit.removed_valid_but_missing_special_exit.squeeze through"))
+    end)
+
+    it("rebuilds an area whose name is empty in the file around the rooms that claim it", function()
+      -- driving this path leaks the rejected TArea, which turns the leak
+      -- detection half of the Linux CI job red (#10396)
+      pending("importing a blank-named area leaks it")
+    end)
+
+    it("drops a special exit whose target id is below one before the audit sees it", function()
+      buildMap()
+      reimportWith(function(document)
+        findExit(findRoom(document, roomA), "squeeze through").exitId = 0
+      end)
+
+      assert.is_nil(getSpecialExitsSwap(roomA)["squeeze through"])
+      -- the reader refuses the exit outright, so unlike an exit to a room that
+      -- is merely absent the audit never runs and leaves no note behind
+      assert.are.equal("", getRoomUserData(roomA, "audit.removed_valid_but_missing_special_exit.squeeze through"))
+      assert.are.equal(roomB, getRoomExits(roomA)["east"])
+    end)
+
+    it("drops a stub that stands in the same direction as a real exit", function()
+      buildMap()
+      reimportWith(function(document)
+        local room = findRoom(document, roomA)
+        room.stubExits[#room.stubExits + 1] = {name = "east"}
+        room.stubExits[#room.stubExits + 1] = {name = "south"}
+      end)
+
+      local stubs = {}
+      for _, code in pairs(getExitStubs1(roomA)) do stubs[code] = true end
+      assert.are.equal(roomB, getRoomExits(roomA)["east"])
+      assert.is_nil(stubs[4]) -- DIR_EAST, dropped because the exit outranks it
+      -- the south stub has no exit to give way to, so it is the control
+      assert.is_true(stubs[6]) -- DIR_SOUTH
+      assert.is_true(stubs[1]) -- DIR_NORTH
+    end)
+
+    it("ignores a stub exit named as a special exit command", function()
+      buildMap()
+      reimportWith(function(document)
+        local room = findRoom(document, roomA)
+        room.stubExits[#room.stubExits + 1] = {name = "squeeze through"}
+      end)
+
+      -- a stub in a direction Mudlet has no code for is skipped rather than
+      -- stored as DIR_OTHER
+      assert.are.same({1}, getExitStubs1(roomA))
+      assert.are.equal(roomB, getSpecialExitsSwap(roomA)["squeeze through"])
+    end)
+
+    it("keeps a door and a lock that a stub exit carries", function()
+      buildMap()
+      reimportWith(function(document)
+        local room = findRoom(document, roomA)
+        room.stubExits[1].door = "closed"
+        room.stubExits[1].locked = true
+      end)
+
+      assert.are.same({1}, getExitStubs1(roomA))
+      assert.are.equal(2, getDoors(roomA)["n"])
+      assert.is_true(hasExitLock(roomA, "north"))
+    end)
+  end)
+end)
+
+-- Environment colours 257 to 272 are the profile's own copy of the map colour
+-- set rather than map data, so the only way to prove one was written is to wipe
+-- the map and watch TMap::mapClear() refill the slots from the profile. That
+-- replaces the map, so this block runs last and puts back what it found.
+describe("Tests the profile colour set behind setCustomEnvColor", function()
+  local backupPath = getMudletHomeDir() .. "/map/mapper_spec_envcolour_backup.dat"
+
+  setup(function()
+    os.remove(backupPath)
+    assert.is_true(saveMap(backupPath), "the map to be replaced could not be saved first")
+  end)
+
+  teardown(function()
+    assert.is_true(loadMap(backupPath), "the map this block replaced could not be put back")
+    openMapWidget("r")
+    os.remove(backupPath)
+  end)
+
+  it("holds each of the sixteen colours where a wiped map picks it up again", function()
+    local before = getCustomEnvColorTable()
+    -- profile state outlives even deleteMap, so a failed assertion below must
+    -- not leave the persistent self-test profile on the test colours
+    finally(function()
+      for id = 257, 272 do
+        local colour = before[id]
+        setCustomEnvColor(id, colour[1], colour[2], colour[3], colour[4])
+      end
+    end)
+
+    for id = 257, 272 do
+      -- every slot a different colour, so a slot written to the wrong profile
+      -- colour is caught rather than matching by luck
+      assert.is_true(setCustomEnvColor(id, id - 257, 100 + (id - 257), 200, 254))
+    end
+    deleteMap()
+
+    local after = getCustomEnvColorTable()
+    for id = 257, 272 do
+      assert.are.same({id - 257, 100 + (id - 257), 200, 254}, after[id],
+                      ("environment colour %d did not come back from the profile"):format(id))
+    end
+  end)
 end)

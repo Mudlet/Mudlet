@@ -24,8 +24,10 @@
  ***************************************************************************/
 
 
+#include "TTriggerPrescan.h"
 #include "utils.h"
 
+#include <QByteArray>
 #include <QCoreApplication>
 #include <QElapsedTimer>
 #include <QHash>
@@ -35,6 +37,8 @@
 #include <QString>
 
 #include <list>
+#include <memory>
+#include <vector>
 
 class Host;
 class TTrigger;
@@ -76,6 +80,17 @@ public:
     int getNewID();
     QMultiMap<QString, TTrigger*> mLookupTable;
     void markCleanup(TTrigger* pT);
+    // Called by anything that changes whether one trigger can be ruled out of a
+    // line by its text alone.
+    void markPrescanStale(TTrigger* pT);
+    // As above, but for the changes that make a trigger fire without matching
+    // text. Those have to reach the line already being processed, whose
+    // candidate list was settled before the change - see processDataStream().
+    void markRootUnfilterable()
+    {
+        ++mUnfilterableEpoch;
+        markRootNodeListReordered();
+    }
     void doCleanup();
     void uninstall(const QString&);
     void _uninstall(TTrigger* pChild, const QString& packageName);
@@ -120,6 +135,7 @@ public:
     inline static const qsizetype scmMaxSameLineCreationsPerLine = 20000;
 
     QList<TTrigger*> uninstallList;
+    bool hasPendingDeletes() const { return !mCleanupSet.isEmpty() || !uninstallList.isEmpty(); }
 
 private:
     TriggerUnit() = default;
@@ -131,10 +147,55 @@ private:
     void removeTrigger(TTrigger*);
     void startOrExtendSameLineChain(TTrigger* pT);
     void stopSameLineCreationLoop(const int chainId);
+    void markRootNodeAppended(TTrigger* pT);
+    void markRootNodeRemoved(TTrigger* pT);
+    // For the changes that move existing triggers around, which the snapshot
+    // and its index can only follow by being built again.
+    void markRootNodeListReordered()
+    {
+        mRootNodeSnapshotStale = true;
+        mRootNodeSnapshotNeedsRebuild = true;
+    }
+    void refreshRootNodeSnapshot();
 
     QPointer<Host> mpHost;
+    // Storage processDataStream() lends out for the UTF-8 form of the line it is
+    // matching, kept between lines for its capacity alone - it holds nothing
+    // meaningful outside that call. Past this size the capacity is dropped
+    // instead of kept, so one outsized line cannot hold its allocation for the
+    // rest of the session; the bound is three bytes per QChar of a line longer
+    // than any game sends.
+    static constexpr qsizetype scmMaxRetainedUtf8Scratch = 3 * 8192;
+    QByteArray mUtf8Scratch;
     QMap<int, TTrigger*> mTriggerMap;
     std::list<TTrigger*> mTriggerRootNodeList;
+    // What processDataStream() iterates instead of mTriggerRootNodeList itself -
+    // see the note there. Shared rather than rebuilt per line: a pass pins the
+    // snapshot that was current when it started, so mutating the root list
+    // mid-pass leaves that one alone and only the next pass sees the rebuilt
+    // one. Every mutation of mTriggerRootNodeList must set the flag below, or a
+    // pass would go on walking triggers that have since been freed.
+    // The prescan files triggers by their position in the snapshot, so the two
+    // are rebuilt and pinned together.
+    struct RootNodeSnapshot
+    {
+        std::vector<TTrigger*> mNodes;
+        TTriggerPrescan mPrescan;
+    };
+    std::shared_ptr<RootNodeSnapshot> mpRootNodeSnapshot;
+    bool mRootNodeSnapshotStale = true;
+    bool mRootNodeSnapshotNeedsRebuild = true;
+    // What the snapshot has yet to be told about, so that the ordinary churn of
+    // a script arming and killing temporary triggers costs the snapshot one
+    // entry each rather than a rebuild per line. Removals and refilings name a
+    // position because the trigger they refer to may be freed before the next
+    // line reads them; positions outlive it, and a removed one is never reused.
+    std::vector<TTrigger*> mRootNodesAppended;
+    std::vector<int> mRootNodesRemoved;
+    std::vector<int> mRootNodesRefiled;
+    std::vector<int> mCandidateScratch;
+    std::vector<int> mCandidates;
+    quint32 mUnfilterableEpoch = 0;
     int mMaxID;
     bool mModuleMember;
     int statsItemsTotal = 0;
@@ -144,6 +205,9 @@ private:
     int statsPatternsActive = 0;
     // Counter for nested processing; cleanup deferred until 0
     int mProcessingDepth = 0;
+    // How many substring patterns asked about the previous line, which decides
+    // whether summarising this one is worth it - see TBigramFilter
+    int mSubstringQuestionsOnTheLastLine = 0;
     const QString* mpCurrentExecutingTriggerName = nullptr;
     // Root triggers registered while processDataStream() is running, so each
     // pass can match the ones created during it against the line being

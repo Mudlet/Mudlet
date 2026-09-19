@@ -499,6 +499,27 @@ describe("PCRE regex cases with tempRegexTrigger", function()
         killTrigger(id)
     end)
 
+    -- a group on the branch the alternation did not take has no capture at all,
+    -- as opposed to an empty one
+    it("leaves out a named group that took no part in the match", function()
+        local snapshot = {}
+        local pattern = "^alt (?:(?<left>aaa)|(?<right>bbb))$"
+
+        local id = tempRegexTrigger(pattern, function()
+            snapshot = {left = matches["left"], right = matches["right"], whole = matches[1]}
+        end, 1)
+        -- killed from here rather than after the assertions: a trigger that
+        -- never fired is what the first of them catches, and a kill they skip
+        -- leaves it live for the specs that follow
+        finally(function() killTrigger(id) end)
+
+        feedTriggers("\nalt bbb\n")
+
+        assert.are.equal("alt bbb", snapshot.whole, "the trigger should have matched at all")
+        assert.are.equal("bbb", snapshot.right)
+        assert.is_nil(snapshot.left)
+    end)
+
     -- no match
     it("doesnt falsely match a non matching line", function()
         local send = spy.on(_G, "send")

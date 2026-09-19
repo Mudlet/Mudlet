@@ -154,6 +154,91 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release"
       }
+    },
+    {
+      "name": "ci",
+      "hidden": true,
+      "description": "Shared by every GitHub Actions configure. The build tree sits beside the checkout rather than inside it because that is where the workflows' ctest, packaging and upload steps look for it.",
+      "generator": "Ninja",
+      "binaryDir": "${sourceParentDir}/b/ninja",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "$env{CMAKE_BUILD_TYPE}"
+      }
+    },
+    {
+      "name": "ci-shipping",
+      "hidden": true,
+      "description": "Adds what a build that produces an artifact needs. The values come from the environment because a run varies them by tag and by matrix entry; an empty USE_SANITIZER is deliberate, as leaving it unset would default to address instead.",
+      "inherits": "ci",
+      "cacheVariables": {
+        "USE_SANITIZER": "$env{USE_SANITIZER}",
+        "WITH_SENTRY": "$env{WITH_SENTRY}",
+        "SENTRY_DSN": "$env{SENTRY_DSN}",
+        "SENTRY_SEND_DEBUG": "$env{SENTRY_SEND_DEBUG}"
+      }
+    },
+    {
+      "name": "ci-linux",
+      "displayName": "CI: Linux, as the GitHub Actions build matrix configures it",
+      "inherits": "ci-shipping",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "cacheVariables": {
+        "USE_ALTERNATE_LINKER": "mold"
+      }
+    },
+    {
+      "name": "ci-macos",
+      "displayName": "CI: macOS, as the GitHub Actions build matrix configures it",
+      "inherits": "ci-shipping",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      },
+      "cacheVariables": {
+        "LUA_INCLUDE_DIR": "${sourceDir}/.lua/include",
+        "LUA_LIBRARY": "${sourceDir}/.lua/lib/liblua.a"
+      }
+    },
+    {
+      "name": "ci-macos-no-tests",
+      "displayName": "CI: macOS shipping the binary only, no test tree",
+      "description": "The Intel job builds no tests - nothing under test branches on the host architecture, so the arm64 job is the same coverage on a faster pool.",
+      "inherits": "ci-macos",
+      "cacheVariables": {
+        "BUILD_TESTING": "OFF"
+      }
+    },
+    {
+      "name": "ci-windows",
+      "displayName": "CI: Windows, as CI/build-mudlet-for-windows.sh configures it",
+      "description": "package-mudlet-for-windows.sh collects the built binaries from the release subdirectory of this build tree.",
+      "inherits": "ci-shipping",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "binaryDir": "${sourceDir}/build-$env{MSYSTEM}",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_PREFIX_PATH": "$env{MSYSTEM_PREFIX}",
+        "CMAKE_RUNTIME_OUTPUT_DIRECTORY": "${sourceDir}/build-$env{MSYSTEM}/release",
+        "CMAKE_C_COMPILER_LAUNCHER": "ccache",
+        "CMAKE_CXX_COMPILER_LAUNCHER": "ccache"
+      }
+    },
+    {
+      "name": "ci-codeql",
+      "displayName": "CI: CodeQL analysis build (no test tree)",
+      "inherits": "ci",
+      "cacheVariables": {
+        "BUILD_TESTING": "OFF"
+      }
     }
   ],
   "buildPresets": [
@@ -205,6 +290,19 @@
     {
       "name": "windows-release",
       "configurePreset": "windows-release",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    { "name": "ci-linux", "inherits": "on-linux", "configurePreset": "ci-linux" },
+    { "name": "ci-macos", "inherits": "on-macos", "configurePreset": "ci-macos" },
+    { "name": "ci-macos-no-tests", "inherits": "on-macos", "configurePreset": "ci-macos-no-tests" },
+    { "name": "ci-codeql", "inherits": "on-linux", "configurePreset": "ci-codeql" },
+    {
+      "name": "ci-windows",
+      "configurePreset": "ci-windows",
       "condition": {
         "type": "equals",
         "lhs": "${hostSystemName}",

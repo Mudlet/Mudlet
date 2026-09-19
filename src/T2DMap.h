@@ -104,6 +104,8 @@ public:
     friend class PanInteractionHandler;
     friend class MiddleMousePanHandler;
 
+    friend class MapMouseInteractionTest;
+
     struct MapInteractionContext
     {
         QMouseEvent* event = nullptr;
@@ -524,7 +526,6 @@ private:
     QCache<QString, QPixmap> mTextLabelPixmapCache;
     ushort mSymbolFontSize = 1;
     QFont mMapSymbolFont;
-    QPointer<QAction> mpCreateRoomAction;
     // in the players current area, how many digits does the biggest room number have?
     quint8 mMaxRoomIdDigits = 0;
 
