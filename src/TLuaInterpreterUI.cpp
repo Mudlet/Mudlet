@@ -38,6 +38,7 @@
 
 #include "EAction.h"
 #include "Host.h"
+#include "HostManager.h"
 #include "TArea.h"
 #include "TCommandLine.h"
 #include "TConsole.h"
@@ -2788,7 +2789,7 @@ int TLuaInterpreter::selectString(lua_State* L)
 
 int TLuaInterpreter::setActiveProfile(lua_State* L)
 {
-    auto& hostManager = mudlet::self()->getHostManager();
+    auto* hostManager = HostManager::self();
     const QString requestedName = getVerifiedString(L, __func__, 1, "profile name");
 
     if (requestedName.isEmpty()) {
@@ -2804,7 +2805,7 @@ int TLuaInterpreter::setActiveProfile(lua_State* L)
         return 2;
     }
 
-    if (!hostManager.hostLoaded(profileName)) {
+    if (!hostManager->hostLoaded(profileName)) {
         lua_pushboolean(L, false);
         lua_pushfstring(L, "setActiveProfile: profile '%s' is not loaded", profileName.toUtf8().constData());
         return 2;
@@ -2842,7 +2843,7 @@ int TLuaInterpreter::setAppStyleSheet(lua_State* L)
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     qApp->setStyleSheet(styleSheet);
     mudlet::self()->refreshTabBarsAfterStyleChange();
-    mudlet::self()->getHostManager().postInterHostEvent(nullptr, event, true);
+    HostManager::self()->postInterHostEvent(nullptr, event, true);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -4702,6 +4703,22 @@ int TLuaInterpreter::setCommandChecked(lua_State* L)
     }
 
     lua_pushboolean(L, pMudlet->setAddonCommandChecked(commandId, checked, &host));
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setCommandPinned
+int TLuaInterpreter::setCommandPinned(lua_State* L)
+{
+    const int commandId = getVerifiedInt(L, __func__, 1, "commandId");
+    const bool pinned = getVerifiedBool(L, __func__, 2, "pinned");
+
+    auto& host = getHostFromLua(L);
+    mudlet* pMudlet = mudlet::self();
+    if (!pMudlet) {
+        return warnArgumentValue(L, __func__, "mudlet instance not available");
+    }
+
+    lua_pushboolean(L, pMudlet->setAddonCommandPinned(commandId, pinned, &host));
     return 1;
 }
 

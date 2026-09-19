@@ -87,7 +87,7 @@ private:
     QTemporaryDir mConfigDir;
     QByteArray mSavedXdgConfigHome;
 
-    Host* hostFor(const QString& profileName) const { return mudlet::self()->getHostManager().getHost(profileName); }
+    Host* hostFor(const QString& profileName) const { return HostManager::self()->getHost(profileName); }
 
     bool provisionProfileOnDisk(const QString& profileName) const
     {
@@ -336,13 +336,19 @@ private slots:
         }
     }
 
+    // A command is only on screen while the window is showing the profile that
+    // created it, so a case asserting on one has to say which profile it means
+    // to be looking at. Most of these are the first profile's, and without this
+    // they read whatever the last case happened to leave active.
+    void init() { mudlet::self()->activateProfile(mpFirstHost); }
+
     // The clash check only runs when a package asks for a key, and a package
-    // on another profile can hold one when the search is switched on: the
-    // menu carries every profile's commands, so this clash crosses profiles
-    // even though a package can never see it coming. Qt answers an ambiguous
-    // shortcut by disabling both, so the profile that switched the search on
-    // has to be told - without being told whose command it was, which is the
-    // other package's business and nothing this profile can act on.
+    // on another profile can hold one when the search is switched on: the key
+    // is checked against every window's commands, so this clash crosses
+    // profiles even though a package can never see it coming. The profile that
+    // switched the search on has to be told - without being told whose command
+    // it was, which is the other package's business and nothing this profile
+    // can act on.
     void test_theSearchSaysSoWhenAnotherProfilesCommandHoldsItsKey()
     {
         runLua(mpSecondHost, qsl("setConfig('f3SearchEnabled', false)"));
@@ -351,9 +357,9 @@ private slots:
         const int commandId = addCommand(mpFirstHost, qsl("name = 'OtherProfileF3', menuPath = 'ClashTest', shortcut = 'F3'"));
         QVERIFY2(commandId > 0, "F3 could not be taken even with the search off");
 
-        // on the second profile because that is the visible one: a
-        // Qt::WindowShortcut candidate has to be visible to be ambiguous at
-        // all, and a console on a background tab is not
+        // Driven from the second profile because the message is raised on
+        // whichever profile switched the search on, and that is the profile
+        // whose console is read below
         runLua(mpSecondHost, qsl("clearWindow()"));
         runLua(mpSecondHost, qsl("setConfig('f3SearchEnabled', true)"));
         QTest::qWait(200ms);
@@ -367,10 +373,10 @@ private slots:
         QVERIFY2(!text.contains(qsl("OtherProfileF3")), qPrintable(qsl("the warning names a command belonging to another profile: %1").arg(text)));
     }
 
-    // The same clash the other way up, and across the profile boundary. A
-    // command's shortcut sits on this window's menu, so it fires whichever
-    // profile is in front and takes the key from a binding another profile has
-    // on it. Refusing the command over that would make a package's success
+    // The same clash the other way up, and across the profile boundary. A pinned
+    // command's shortcut stays on the menu whichever profile is in front, so it
+    // takes the key from a binding another profile has on it. Unpinned, it is
+    // hidden while that profile is in front and takes nothing. Refusing the command over that would make a package's success
     // depend on which profiles the player happens to have open, so the command
     // is placed and the profile losing its binding is told instead - in its
     // editor, not on its main screen, because a package re-places its commands
@@ -391,7 +397,8 @@ private slots:
         pEditor->showInfo(QString());
 
         const int commandId = addCommand(mpFirstHost, qsl("name = 'OtherProfileBinding', menuPath = 'ClashTest', shortcut = 'Alt+F9'"));
-
+        const QString textBeforePinning = editorSaid(pEditor);
+        runLua(mpFirstHost, qsl("setCommandPinned(%1, true)").arg(commandId));
         const QString text = editorSaid(pEditor);
 
         runLua(mpSecondHost, qsl("killKey(_clashKeyId)"));
@@ -400,7 +407,8 @@ private slots:
         }
 
         QVERIFY2(commandId > 0, "the command was refused over a binding belonging to a different profile");
-        QVERIFY2(text.contains(sequence), qPrintable(qsl("a command took another profile's key binding without saying so in its editor: %1").arg(text)));
+        QVERIFY2(!textBeforePinning.contains(sequence), qPrintable(qsl("an unpinned command, which never takes another profile's key, warned that it did: %1").arg(textBeforePinning)));
+        QVERIFY2(text.contains(sequence), qPrintable(qsl("a pinned command took another profile's key binding without saying so in its editor: %1").arg(text)));
         QVERIFY2(text.contains(qsl("OtherProfileBinding")), qPrintable(qsl("the warning does not say which command took the key: %1").arg(text)));
         QVERIFY2(text.contains(mFirstProfile), qPrintable(qsl("the warning does not say which profile the command is in: %1").arg(text)));
     }
@@ -499,6 +507,41 @@ private slots:
 
         QVERIFY(callReturnedTrue(mpFirstHost, qsl("removeCommand(%1)").arg(secondId)));
         QTest::qWait(100ms);
+    }
+
+    // A package removes commands while its profile is in the background as a
+    // matter of course - a timer, a trigger, or the player switching tabs while
+    // a package reloads. Every one of that profile's items is hidden then, so a
+    // submenu holding nothing but its own hidden siblings must not read as one
+    // that has been emptied: taking it down takes them with it, and nothing
+    // puts them back for the rest of the session.
+    void test_removingACommandWhileItsProfileIsHiddenKeepsItsSiblings()
+    {
+        const int keptId = addCommand(mpFirstHost, qsl("name = 'KeptWhileHidden', menuPath = 'HiddenSiblings', shortcut = 'Ctrl+Alt+F8'"));
+        const int removedId = addCommand(mpFirstHost, qsl("name = 'RemovedWhileHidden', menuPath = 'HiddenSiblings'"));
+        QVERIFY2(keptId > 0 && removedId > 0, "the two commands sharing a submenu were not placed");
+
+        mudlet::self()->activateProfile(mpSecondHost);
+        QTest::qWait(100ms);
+        QVERIFY2(callReturnedTrue(mpFirstHost, qsl("removeCommand(%1)").arg(removedId)), "the hidden profile's command could not be removed");
+
+        // the deletions the removal deferred happen here
+        QTest::qWait(200ms);
+        QCoreApplication::processEvents();
+
+        mudlet::self()->activateProfile(mpFirstHost);
+        QTest::qWait(100ms);
+
+        QAction* kept = menuActionNamed(qsl("KeptWhileHidden"));
+        const bool keptSurvived = kept != nullptr;
+        const QString keptShortcut = keptSurvived ? kept->shortcut().toString(QKeySequence::NativeText) : QString();
+        if (keptSurvived) {
+            runLua(mpFirstHost, qsl("removeCommand(%1)").arg(keptId));
+            QTest::qWait(100ms);
+        }
+
+        QVERIFY2(keptSurvived, "a command was removed while its profile was in the background and took the other command in its submenu with it");
+        QVERIFY2(keptShortcut == QKeySequence(qsl("Ctrl+Alt+F8")).toString(QKeySequence::NativeText), qPrintable(qsl("the surviving command lost its shortcut: \"%1\"").arg(keptShortcut)));
     }
 
     // Ids come from one sequence, so a second profile can name the first

@@ -5387,7 +5387,6 @@ bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
                 // This initiates the replay chunk reading/processing cycle:
                 loadReplayChunk();
             } else {
-                // Amelioration code should now prevent this from happening
                 loadingReplay = false;
                 replayFile.close();
                 if (pErrMsg) {
@@ -5670,7 +5669,10 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
     // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (4 of 7) - investigate switching from using `char[]` to `std::array<char>`
     buffer[static_cast<size_t>(datalen)] = '\0';
 
-    if (!loopbackTesting && mRecordReplay) {
+    // A compressed read can inflate to nothing. Older Mudlets refuse a replay
+    // holding an empty chunk, so its wait carries over to the next chunk.
+    const bool recordingThisRead = !loopbackTesting && mRecordReplay && datalen > 0;
+    if (recordingThisRead) {
         ++mRecordingChunkCount;
         // QElapsedTimer::elapsed() returns a qint64, it replaces a
         // previous QTime::elapsed() which returns a int (effectively a
@@ -5902,6 +5904,10 @@ Some data loss is likely - please mention this problem to the game admins.)",
     // reconnect makes this leftover the dropped connection's, same as the bytes
     // the loop above stopped at.
     if (remainingData && remainingAmount > 0 && !(mDeferredReconnect && !loopbackTesting)) {
+        // the leftover arrived in the same read, so it has no wait of its own
+        if (recordingThisRead) {
+            mRecordLastChunkMSecTimeOffset = static_cast<qint32>(mRecordingChunkTimer.elapsed());
+        }
         processSocketData(remainingData, remainingAmount, loopbackTesting);
         return;
     }
@@ -5910,7 +5916,9 @@ Some data loss is likely - please mention this problem to the game admins.)",
         mpHost->finalizeMainConsole();
     }
 
-    mRecordLastChunkMSecTimeOffset = mRecordingChunkTimer.elapsed();
+    if (recordingThisRead) {
+        mRecordLastChunkMSecTimeOffset = static_cast<qint32>(mRecordingChunkTimer.elapsed());
+    }
 }
 
 void cTelnet::raiseProtocolEvent(const QString& name, const QString& protocol)
@@ -6091,9 +6099,12 @@ void cTelnet::setPostingTimeout(const int timeout)
 
     quint64 totalElapsed = 0;
     int replayChunks = 0;
+    qint64 replayBytes = 0;
     bool readableAsOriginalFormat = true;
     // Don't set this until we try it:
     bool readableAsModifiedFormat = false;
+    // replayStream is reused across loads and keeps a failed read's status
+    replayStream.resetStatus();
     {
         // Try with both numbers being 4 byte signed integers
         // (first was int type prior to that PR):
@@ -6102,12 +6113,13 @@ void cTelnet::setPostingTimeout(const int timeout)
         while (readableAsOriginalFormat && !replayStream.atEnd()) {
             replayStream >> offset;
             replayStream >> amount;
-            if (amount < 1 || offset < 0 || amount > static_cast<qint32>(BUFFER_SIZE)) {
+            if (replayStream.status() != QDataStream::Ok || amount < 0 || offset < 0 || amount > static_cast<qint32>(BUFFER_SIZE)) {
                 readableAsOriginalFormat = false;
             } else {
                 int replayloadedBytes = replayStream.readRawData(replayBuffer, amount);
                 if (replayloadedBytes > -1) {
                     ++replayChunks;
+                    replayBytes += replayloadedBytes;
                     // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (6 of 7) - investigate switching from using `char[]` to `std::array<char>`
                     replayBuffer[replayloadedBytes] = '\0';
                     totalElapsed += static_cast<quint64>(offset);
@@ -6118,11 +6130,13 @@ void cTelnet::setPostingTimeout(const int timeout)
 
     // rewind the data to the start as if we haven't just read some/all of it
     replayStream.device()->seek(0);
+    replayStream.resetStatus();
 
     if (!readableAsOriginalFormat) {
         readableAsModifiedFormat = true;
         totalElapsed = 0;
         replayChunks = 0;
+        replayBytes = 0;
         // Try with first number being an 8 byte signed integer
         // (was int type prior to that PR):
         qint64 offset = 0;
@@ -6130,12 +6144,13 @@ void cTelnet::setPostingTimeout(const int timeout)
         while (readableAsModifiedFormat && !replayStream.atEnd()) {
             replayStream >> offset;
             replayStream >> amount;
-            if (amount < 1 || offset < 0 || amount > static_cast<qint32>(BUFFER_SIZE) || offset > INT32_MAX) {
+            if (replayStream.status() != QDataStream::Ok || amount < 0 || offset < 0 || amount > static_cast<qint32>(BUFFER_SIZE) || offset > INT32_MAX) {
                 readableAsModifiedFormat = false;
             } else {
                 int replayloadedBytes = replayStream.readRawData(replayBuffer, amount);
                 if (replayloadedBytes > -1) {
                     ++replayChunks;
+                    replayBytes += replayloadedBytes;
                     // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (7 of 7) - investigate switching from using `char[]` to `std::array<char>`
                     replayBuffer[replayloadedBytes] = '\0';
                     totalElapsed += static_cast<quint64>(offset);
@@ -6144,6 +6159,11 @@ void cTelnet::setPostingTimeout(const int timeout)
         }
 
         replayStream.device()->seek(0);
+    }
+
+    // a file zeroed by a crash reads as nothing but empty chunks
+    if (replayChunks > 0 && replayBytes == 0) {
+        return {false, false};
     }
 
     if (readableAsOriginalFormat | readableAsModifiedFormat) {

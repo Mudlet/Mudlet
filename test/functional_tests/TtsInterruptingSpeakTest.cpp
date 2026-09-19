@@ -113,8 +113,8 @@ private slots:
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
 
-        QVERIFY2(mudlet::self()->getHostManager().addHost(mProfileName, qsl("23"), QString(), QString()), "failed to create the Host");
-        mpHost = mudlet::self()->getHostManager().getHost(mProfileName);
+        QVERIFY2(HostManager::self()->addHost(mProfileName, qsl("23"), QString(), QString()), "failed to create the Host");
+        mpHost = HostManager::self()->getHost(mProfileName);
         QVERIFY(mpHost);
         // A bare Host blocks script compilation until the full profile boot
         // would clear this, and these tests need their snippets to compile:

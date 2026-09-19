@@ -22,11 +22,13 @@
 // every CI runner. It resolves the same symbols the real library exports and
 // hands back opaque tokens rather than decoding anything.
 //
-// It exists for one property in particular: a real libvosk dereferences the
-// recognizer handle it is given, so passing it a null one is a crash that a
-// test cannot survive to report. This records the null instead, which is what
-// lets a test assert that the ordering bug in VoskRecognizer::initialize()
-// (#10759) stays fixed rather than inferring it from a stack trace.
+// It also refuses to dereference a null handle, where a real libvosk would: it
+// records the call and answers as if nothing were wrong, so a caller that hands
+// one over produces an inspectable count rather than a crash the test cannot
+// survive to report. Nothing here asserts on that count - on this branch the
+// bridge asks after initialize() returns, so no backend reaches Lua part-way
+// through a load - but the instrumentation is what makes the question
+// answerable at all if one ever does.
 //
 // Loaded by path, never linked, so nothing here may depend on Qt or on Mudlet.
 
@@ -35,7 +37,7 @@
 
 namespace {
 // Recorded rather than asserted: the library has no way to fail a test, so it
-// keeps the evidence and the test reads it back through voskStubNullHandleCalls().
+// keeps the evidence for a caller that wants to read it back.
 int gNullHandleCalls = 0;
 int gModelsAlive = 0;
 int gRecognizersAlive = 0;
@@ -76,8 +78,8 @@ void voskStubReset()
     gRecognizersAlive = 0;
 }
 
-// Both should be zero once a recognizer has been closed; a leak here is a leak
-// in VoskRecognizer's own teardown.
+// Both are zero once a recognizer has been closed, so a non-zero answer here is
+// a leak in VoskRecognizer's own teardown.
 int voskStubModelsAlive()
 {
     return gModelsAlive;
