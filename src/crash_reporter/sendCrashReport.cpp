@@ -81,6 +81,9 @@ void sendCrashReport(const QString& envelopePath, const QString& dsn)
     if (!parsedDsn.isValid() || parsedDsn.userName().isEmpty() || parsedDsn.host().isEmpty()) {
         return;
     }
+    if (parsedDsn.scheme() != QLatin1String("http") && parsedDsn.scheme() != QLatin1String("https")) {
+        return;
+    }
     QStringList segments = parsedDsn.path(QUrl::FullyEncoded).split(QLatin1Char('/'), Qt::SkipEmptyParts);
     if (segments.isEmpty()) {
         return;
