@@ -1,304 +1,329 @@
 # QA report: development since 5.0.1
 
-Status: in progress (batches 1 to 3 verified; batch 4: G1/G2 under verification, H1 running).
-Plan: `post-5.0.1-qa-plan.md`. Every item below was either run by the coordinator
-or reproduced by an independent verifier; agent claims that were not reproduced
-are listed in their own section, not among the findings.
+Status: complete. Campaign run on 2026-09-19 against `development` at
+`dbbf040c3` (batch 1) and `85d814292` (development `12b373743`, batches 2 to 4).
+Plan: `post-5.0.1-qa-plan.md`. Raw agent and verifier reports, the two
+baselines and the agent briefs are in `post-5.0.1-raw/`.
 
-## Trees under test
+Every finding below was reproduced by someone other than the agent that found
+it: an independent verifier with a fresh context replayed each one from the
+report's own steps, and the coordinator additionally re-ran every crash, every
+regression and every untracked Major by hand. Claims that did not survive that
+are listed under "Not reproduced", not among the findings.
 
-| Batch | Tree | Notes |
-| --- | --- | --- |
-| 1 | `dbbf040c3` | development head when the campaign started |
-| 2 onwards | `85d814292` | development `12b373743` (two commits later) merged in: #10858 keychain test harness fix, #10392 negative wrap indent |
+## Verdict
 
-## Automated baselines
+- The automated suites are clean on the final tree: ctest 220 of 220, busted
+  4702 passed with no failures or errors (86 pending), and an end-of-campaign
+  re-run matched exactly.
+- One regression against 5.0.1 was found, and it is already on the tracker:
+  the editor's autocomplete data carries wiki markup (#10816), introduced by
+  the autocompletion-data update 5f6ac2513.
+- Five fixes in this range do not fully do what their commit says: the
+  mid-character flush fix misses an ESC that ends a read (efe9414f2); the tab
+  detach threshold change is ineffective (52b0d4b02); the tour still takes
+  keyboard input wrongly after a mouse click (ec0fedbb9); IRC kicks show
+  without their reason and a self-kick hides the line (d8b5ffa2a); the
+  two-container border case remains (d3f5f873b, tracked as #10617).
+- Two crashes reachable on shipped-style builds, both pre-existing: pasting
+  newline-only text into a pattern field (#10337, open) and a package that
+  uninstalls itself while being installed (not on the tracker).
+- Three more pre-existing bugs that the tracker does not have: MSDP arrays of
+  tables are silently dropped, a match-all trigger's cost is quadratic in line
+  length, and deleting a user window orphans its scroll box over the console.
+- About thirty open issues were confirmed still live on this tree; three open
+  issues turned out to be already fixed (#10342, #10535, #10536).
+- No regression was found in the mapper, the game text pipeline, profiles and
+  sign-in, protocols, media, IRC, the database layer, the refactors that moved
+  code off the main window, or the Linux packaging beyond a hygiene defect.
+
+## Trees and automated baselines
 
 | Tree | ctest (linux-debug-nosan, offscreen) | busted specs |
 | --- | --- | --- |
-| `dbbf040c3` | 218 / 220 passed. `CredentialManagerKeychainTest` SEGFAULT; `HomeUntouchedTest` failed only because it runs that binary as a child | 4698 passed, 0 failed, 0 errors, 86 pending |
-| `85d814292` | 220 / 220 passed | 4702 passed, 0 failed, 0 errors, 86 pending |
+| `dbbf040c3` | 218 / 220: `CredentialManagerKeychainTest` SEGFAULT, `HomeUntouchedTest` failed because it runs that binary | 4698 / 0 / 0, 86 pending |
+| `85d814292` | 220 / 220 | 4702 / 0 / 0, 86 pending |
 
-The keychain crash was a use-after-free inside the test's own job staller, not
-in `CredentialManager`; #10858 (merged during the campaign) removes it, and the
-rebuilt tree passes both tests. The running application handles the same
-keychain-less environment by falling back to the encrypted file.
+The keychain crash was a use-after-free in the test's own job staller, fixed
+by #10858 during the campaign; the rebuilt tree passes both tests. The
+application handles the same keychain-less environment by falling back to the
+encrypted file.
 
-## Confirmed findings
+## Method
 
-Ranked by severity. "Confirmed" means the coordinator re-ran the reproduction
-and saw the reported behaviour.
+309 non-merge commits on development after the 5.0.1 branch point, less the
+ones 5.0.1 already carries, split into twelve areas (plan, "Batches"). Each
+area was worked by one Opus agent under Xvfb with a throwaway home directory,
+driving the real UI with xdotool and reading screenshots, plus the ctest
+classes and busted specs named for the area. Six verifier agents then replayed
+every finding from the reports alone, sampled and re-ran 94 coverage rows in
+total (all held up), and used a 5.0.1 Debug build from a worktree to decide
+regression versus pre-existing. Release builds of both trees were used where
+Debug timing or assertions could mislead.
 
-### 1. Major: an ESC that ends a stalled read still loses its colour code (efe9414f2, fix incomplete)
+## A. Regression against 5.0.1
 
-Commit efe9414f2 stops the carriage-return marker that Mudlet injects after a
-300 ms network pause from corrupting a multi-byte character or a colour code
-split mid-parameter. It does not cover the case where the ESC is the last byte
-before the pause: the ESC is discarded and the next read prints the rest of the
-sequence as text. Reproduced on `dbbf040c3` and the code is unchanged on
-`85d814292`:
+### A1. Major (known as #10816): the script editor's autocomplete data carries wiki markup
+
+669 entries in `src/lua-function-list.json` are keyed with the wiki's
+section-edit link appended, for example `"addAreaName[edit | edit source]"`,
+so autocomplete offers and inserts that text and the argument hints are lost.
+5.0.1's file has none. Introduced by 5f6ac2513 "Update autocompletion data in
+Mudlet" (#10356): the generator scraped the edit links. The file is
+autogenerated, so the fix belongs in the update-autocompletion workflow. Agent
+D1 (F-D1-2); counts confirmed by the coordinator against 5.0.1; inserted text
+confirmed by verifier V3.
+
+## B. Fixes in this range that are incomplete or ineffective
+
+### B1. Major: an ESC that ends a stalled read still loses its colour code (efe9414f2)
+
+The fix stops the carriage-return marker Mudlet injects after a 300 ms pause
+from corrupting a multi-byte character or a colour code split mid-parameter.
+It does not cover an ESC that is the last byte before the pause: the ESC is
+discarded and the next read prints `[1;31mRED1:end` as text. The `mGotESC`
+block in `src/TBuffer.cpp` lacks the `localBufferDecodableLength` guard the
+`mGotCSI` block received. Same visible defect as #10766 in a one-byte window.
+Agent B1 (F-B1-1); re-run by the coordinator and verifier V1.
 
 ```lua
 local E = string.char(27)
-feedTelnet("whole1:"..E.."[1;31mRED1:end\n")
-tempTimer(0.2,  function() feedTelnet("csiA:"..E) end)
+feedTelnet("csiA:"..E)
 tempTimer(0.65, function() feedTelnet("[1;31mRED1:end\n") end)
-tempTimer(1.1,  function() feedTelnet("csiB:") end)
-tempTimer(1.55, function() feedTelnet(E.."[1;31mRED1:end\n") end)
 ```
 
-Result: `whole1:RED1:end` and `csiB:` / `RED1:end` are right; `csiA:` is
-followed by the literal line `[1;31mRED1:end`. The `mGotESC` block in
-`src/TBuffer.cpp` lacks the `localBufferDecodableLength` guard the `mGotCSI`
-block received. Same visible defect as #10766, in a one-byte window. Found by
-agent B1 (F-B1-1), re-run by the coordinator.
+### B2. Minor: the tab detach threshold is still tiny and the left-most tab never detaches (52b0d4b02)
 
-### 2. Major, regression (known as #10816): the script editor's autocomplete data carries wiki markup
+The commit raised the drag distance from 50 to 80 px, but the distance is
+measured from the tab bar's centre, not from the tab: a tab detaches after an
+18 px drag on development (14 px on 5.0.1) and the left-most tab cannot be
+detached by any drag (200 px tried). Agent E2 (F-E2-2); measured on both trees
+by verifier V4. Not on the tracker.
 
-669 of the entries in `src/lua-function-list.json` on development are keyed with
-the wiki's section-edit link appended, for example
-`"addAreaName[edit | edit source]"`, so the editor's autocomplete offers and
-inserts that text and the function-argument hints are lost. 5.0.1's file has
-none. Introduced by 5f6ac2513 "Update autocompletion data in Mudlet" (#10356):
-the generator that scrapes the wiki picked up the edit links. The file is
-autogenerated, so the fix belongs in the update-autocompletion workflow. Found
-by agent D1 (F-D1-2); the coordinator confirmed the counts against 5.0.1.
+### B3. Minor: the tour stops taking the keyboard once Next is clicked with the mouse (ec0fedbb9)
 
-### 3. Blocker, pre-existing (known as #10337): pasting newline-only text into a trigger pattern field crashes the client
+After a mouse click on Next the arrow keys do nothing, Escape no longer closes
+the tour, and PageUp reaches the console behind the overlay and splits the
+view. Agent E2 (F-E2-1); confirmed by verifier V4. Not on the tracker.
 
-`SingleLineTextEdit::insertFromMimeData` takes `.first()` of the pasted text
-split on line breaks with empty parts skipped; a clipboard holding only a
-newline gives an empty list and Qt's assertion aborts the process. Reproduced
-with gdb by agent D1 on development and by the coordinator on a 5.0.1 Debug
-build with the same script: same assertion, same frame. The line is identical
-in both trees, so this is not a regression. A Release build of development
-(the flags CI ships) segfaults on the same paste instead of asserting, so
-this is a hard crash for users, not a Debug-only artefact.
+### B4. Minor: IRC kicks show without their reason, and a self-kick hides the line (d8b5ffa2a)
 
-### 4. Blocker, pre-existing, not on the tracker: a package that uninstalls itself from its own install script crashes the client
+Kicks are shown now (closed #10534), but the kick reason is dropped from both
+the IRC window and `sysIrcMessage`, and when you are the one kicked the
+channel tab is removed so the line is never readable. Agent G2 (F-G2-1,
+F-G2-2); confirmed by verifier V5 with a scripted IRC server.
+
+### B5. Major (known as #10617): two containers on opposite borders still leave the console no rows (d3f5f873b)
+
+The single-container case the commit targets is genuinely fixed (2 rows kept
+where 5.0.1 kept 0), but a 100 %-high container on the top border plus a
+small one on the bottom still reserve the whole axis, and the attachment is
+saved. Agent F1 (F-F1-3); confirmed on both trees by verifier V3.
+
+## C. Pre-existing bugs not on the tracker
+
+Ranked by severity. Each was reproduced on 5.0.1 as well, by code or by run.
+
+### C1. Blocker: a package that uninstalls itself from its own install script crashes the client
 
 A package whose script body calls `uninstallPackage()` on its own name while
-it is being installed makes `XMLimport::importPackage` (`src/XMLimport.cpp:196`)
-dereference the trigger the uninstall just deleted: SIGSEGV, reproduced with
-gdb by agent G1 and by the coordinator on development, and by G1 on a 5.0.1
-Debug build at the same line. Closed #9557 covered the event-handler variant
-only; nothing open describes this one. Exposure is package authors rather than
-ordinary play, but it is a hard crash. Found by agent G1 (F-G1-1).
+being installed makes `XMLimport::importPackage` (`src/XMLimport.cpp:196`)
+dereference the trigger the uninstall deleted: SIGSEGV. Reproduced with gdb by
+agent G1, the coordinator and verifier V5 on development, and by G1 and V5 on
+5.0.1. Closed #9557 covered only the event-handler variant. Exposure is package
+authors rather than ordinary play, but it is a hard crash. (F-G1-1)
 
-### 5. Major, pre-existing (known as #10659): one MCCP2 read that inflates past about 800 KB loses most of the burst
+### C2. Major: MSDP arrays whose elements are tables or arrays never reach Lua
 
-Confirmed by the verifier on `85d814292`: a compressed burst of 30,000 lines
-delivered in one socket read left 9,757 lines in the buffer, no end marker,
-and a recursion-depth warning in the log. Not introduced in this range (bca5af8a2
-moved the drain buffer to the heap without changing the depth limit). Found by
-agent B1 (F-B1-2); the open issue describes the same symptom.
+`msdp2Lua()` writes `{` or `[` for a nested element without the comma JSON
+needs between siblings, so the MSDP specification's own `GROUP` example
+arrives as `[{"NAME":"Fred",...}{"NAME":"Barney",...}]`, yajl refuses it and
+`msdp.GROUP` stays nil; a one-element array works. 5.0.1 builds the same
+invalid JSON (137e0d14d improved only the error message). Agent B2 (F-B2-1);
+reproduced by the coordinator and, on both trees, by verifier V4.
 
-### 6. Minor, pre-existing (closed issue #2325 did not stick): the encrypted-file password fallback is written world-readable
+### C3. Major: a match-all trigger's cost grows with the square of the line length
 
-With no keychain service, the key and the secret land on disk with the umask
-default of 0644. `SecureStringUtils.cpp` is byte-identical to 5.0.1 and neither
-version calls `setPermissions`. #2325 ("Secure rights to password file") is
-closed, so this should reopen that issue rather than start a new one. Found by
-agent E1 (F-E1-5), confirmed by the verifier.
+With a `/g` trigger such as `(\w+)` armed, one line of 25, 50 and 100 kB took
+0.40, 1.5 and 5.8 s on a Debug build (each doubling costs about 3.8 times), so
+a single 5 MB line pins a core for hours with no way out. The shape is the
+same on 5.0.1. Debug builds of development were about three times slower than
+5.0.1 here, but that does not survive optimisation: interleaved Release builds
+ran the 25 and 50 kB lines in 0.05 s and 0.19 s on development against 0.07 s
+and 0.30 s on 5.0.1, so the trigger work in this range made the path about
+30 % faster while leaving its shape alone. Agent C1 (F-C1-5); timings by the
+coordinator and verifier V2.
 
-### 7. Minor, pre-existing (known as #10542 to #10545, draft fix PR #10597): four Configure areas dialog defects
-
-`T2DMap::slot_configureAreas` is byte-identical to 5.0.1. Confirmed by hand on
-this tree: creating, renaming or deleting an area never marks the map unsaved
-(#10543); Delete destroys the area and its rooms with no confirmation (#10545,
-the "map goes blank" half of that issue did not reproduce here); renaming an
-area that is not shown moves the dropdown while the canvas stays on the old
-area (#10544). The wrong-row preselect (#10542) only bites when the default
-area sorts before the shown one and is hidden from the dropdown, so it is
-cosmetic in practice. Found by agent A1 (F-A1-1, 2, 4, 5), re-run by the
-verifier.
-
-### 8. Minor, pre-existing: `mudlet --version` aborts when there is no display
-
-`env -u DISPLAY mudlet --version` exits with SIGABRT after Qt fails to load a
-platform plugin; with `QT_QPA_PLATFORM=offscreen` it prints the version. The
-option is handled after the `QApplication` is built, in 5.0.1 as on
-development, so this is not a regression. Found by agent E1 (F-E1-4), re-run by
-the coordinator.
-
-### 9. Major, pre-existing, not on the tracker: a match-all trigger's cost grows with the square of the line length
-
-With a `/g` (match all) trigger such as `(\w+)` armed, one line of 25, 50 and
-100 kB took 0.40, 1.5 and 5.8 s on a Debug build of development (each doubling
-costs about 3.8 times), so a single 5 MB line pins a core for hours with no
-way out. The same shape holds on 5.0.1, so the growth is not new. Debug builds
-of development were about three times slower than 5.0.1 on this path, but that
-does not survive optimisation: interleaved Release builds of both trees (the
-flags CI ships) ran the 25 and 50 kB lines in 0.05 s and 0.19 s on development
-against 0.07 s and 0.30 s on 5.0.1, so the trigger work in this range made the
-path about 30 % faster for users while leaving its shape alone. Found by agent
-C1 (F-C1-5); timings by the coordinator and verifier V2.
-
-### 10. Major, pre-existing, not on the tracker: MSDP arrays whose elements are tables or arrays never reach Lua
-
-`msdp2Lua()` writes `{` or `[` for a nested table or array without the comma
-JSON needs between sibling elements, so the MSDP specification's own `GROUP`
-example arrives as `[{"NAME":"Fred",...}{"NAME":"Barney",...}]`, yajl refuses
-it, the error console reports "after array element, I expect ',' or ']'" and
-`msdp.GROUP` stays nil. A one-element array works, which is why it went
-unnoticed. The same two cases in 5.0.1's `TLuaInterpreter.cpp` have no
-separator either, so this predates the range; no open or closed issue
-describes it. Found by agent B2 (F-B2-1); reproduced by the coordinator.
-
-### 11. Major, pre-existing, not on the tracker: deleting a user window leaves its scroll box orphaned over the main console
+### C4. Major: deleting a user window leaves its scroll box orphaned over the main console
 
 `deleteMiniConsole()` on a user window drops the window's scroll box and
-command line from the by-name maps but does not destroy the widgets; the
-scroll box is reparented over the main console, covers game text, and can no
-longer be deleted ("scrollbox name 'sbY' not found"). Reproduced with agent
-F1's script on development and, by verifier V3, on 5.0.1, which leaves the
-same orphan; neither tree crashes, so the crash that c0309561b fixed (#10319)
-is a different defect and stays fixed. Found by agent F1 (F-F1-2).
+command line from the by-name maps without destroying them; the scroll box is
+reparented over the main console, covers game text, and `deleteScrollBox()`
+then answers "not found". Neither tree crashes, so the crash c0309561b fixed
+(#10319) stays fixed. Agent F1 (F-F1-2); reproduced by the coordinator and,
+on both trees, by verifier V3.
 
-### 12. Minor, fix ineffective, not on the tracker: the tab detach threshold is still tiny and the left-most tab never detaches
+### C5. Minor: the Linux .deb ships QTagEdit's development files (new with f4849ed77)
 
-52b0d4b02 raised the drag distance that tears a profile tab out of the tab bar
-from 50 to 80 px, but the distance is measured from the tab bar's centre rather
-than from the tab, so on development a tab detaches after an 18 px drag (14 px
-on 5.0.1) and the left-most tab cannot be detached by any drag at all (200 px
-tried). The centre-relative code is the same in 5.0.1, so the commit bought
-4 px of the intended 30. Found by agent E2 (F-E2-2); measured by verifier V4
-on both trees.
+The package built by `CI/linux-packages/deb/mkdeb.sh` contains
+`/usr/include/QTagEdit/qtagedit.hpp`, `/usr/lib/libQTagEdit.a` and two CMake
+export files beside `/usr/bin/mudlet`, from the submodule's own `install()`
+rules. The rpm path is built the same way. Agent H1 (F-H1-1); confirmed by
+inspecting the package (coordinator, verifier V6).
 
-### 13. Minor, not on the tracker: the interface tour stops taking the keyboard once Next is clicked with the mouse
+### C6. Minor: the connection dialog's first frame describes a profile other than the highlighted one
 
-After a mouse click on the tour's Next button the arrow keys do nothing, Escape
-no longer closes the tour, and PageUp reaches the console behind the overlay
-and splits the view. ec0fedbb9 made the Next button the only thing that
-advances the tour; keyboard focus after that click was not handled. Found by
-agent E2 (F-E2-1), confirmed by verifier V4 with screenshots.
+With two saved profiles the dialog opens highlighting one while the details
+pane shows "Mudlet self-test / mudlet.org / 23" with Connect enabled; a click
+corrects it. Identical on 5.0.1 with the same profile directory. Agent E1
+(F-E1-3); verifier V2 and the coordinator. Closed #10818 is the nearest entry.
 
-### 14. Minor, pre-existing: the connection dialog's first frame describes a profile other than the highlighted one
+### C7. Minor: `mudlet --version` aborts when there is no display
 
-With two saved profiles, the dialog opens highlighting one of them while the
-details pane shows "Mudlet self-test / mudlet.org / 23" and Connect is enabled;
-a click on the highlighted row corrects it. Reproduced exactly by verifier V2
-from agent E1's steps (F-E1-3), and by the coordinator on a 5.0.1 build with
-the same profile directory: identical first frame, so not a regression. The
-closest tracker entry, #10818, is closed.
+Exits with SIGABRT after Qt fails to load a platform plugin; with
+`QT_QPA_PLATFORM=offscreen` it prints the version. Handled after the
+`QApplication` is built in both trees. Agent E1 (F-E1-4); coordinator, V1.
 
-## Confirmed and already tracked
+### C8. Minor (closed #2325 did not stick): the encrypted-file password fallback is written world-readable
 
-Reproduced on this tree by a verifier; the tracker already has each one. They
-are listed so the release notes can say which known issues are still live, not
-because they are new.
+With no keychain service the key and secret land on disk at the umask default
+0644; `SecureStringUtils.cpp` is identical to 5.0.1 and neither calls
+`setPermissions`. Agent E1 (F-E1-5); verifier V1. Reopen #2325.
 
-| Finding | Severity | Issue / PR | What was seen here |
+### C9. Cosmetic
+
+- The log says "loaded from keychain" for a password read from the encrypted
+  file (E1, F-E1-6).
+- `saveProfile()` returns a path with a doubled separator, `current//x.xml`
+  (H1, F-H1-3).
+- `docs/CONTRIBUTING.md` links to `UI-design-philosophy.md` relative to
+  `docs/`, but the file is at the repository root (H1, F-H1-2).
+- The settings dialog's Editor page clips the theme-update error text; its
+  package-manager heading elides to "Str..."; the self-test profile is absent
+  from My games (E2, F-E2-3 and notes).
+- The redesigned settings dialog is still English in Czech, a locale the build
+  reports 99 % complete: strings are wrapped for translation, so this is
+  Crowdin lag from the redesign (verifier V4, F-V4-1). "Show main toolbar:
+  Always" does not reach a window that was already detached (F-V4-2).
+
+## D. Open issues confirmed live on this tree
+
+Reproduced by a verifier; already on the tracker. Listed so the release notes
+can say which known issues still stand.
+
+| Finding | Severity | Issue / PR | What was seen |
 | --- | --- | --- | --- |
+| F-D1-1 | Blocker | #10337 | pasting newline-only text into a trigger pattern field: Qt assertion in Debug, SIGSEGV in Release builds of both trees |
+| F-B1-2 | Major | #10659 | one MCCP2 read inflating past ~800 KB keeps 9,757 of 30,000 lines |
 | F-C1-2 | Major | #10824, fix pending PR #10835 | a 0-second repeating timer holds 99.8 % of a core until killed |
-| F-C1-3 | Major | #10795 | a repeating `tempTimer` with an empty code string logs "func reference not found" forever |
-| F-C1-1 | Major | #10796 | a nested `feedTriggers()` wipes the calling trigger's `matches`; the `expandAlias` half is fixed by ec90c3893 |
-| F-C1-4 | Major | #10736 | a multiline AND trigger with a Lua function script gets an empty `multimatches` (C1's repro was invalid; V2 rebuilt it) |
-| F-A2-1 | Major | #10666 | after `openMapWidget()` then `closeMapWidget()`, `createMapper()` is refused for the rest of the session; the exclusion is symmetric |
-| F-A1-6 | Minor | related #4937 | a hands-free middle-button pan at a 50 px cursor offset leaves the viewport in about one second |
-| F-A2-2 | Minor | open PR #10581 claims faster map building | identical 1000-room batches cost 0.56, 1.46, 2.43 and 3.15 s as the map grows to 4.6k rooms |
+| F-C1-3 | Major | #10795 | a repeating `tempTimer` with an empty code string logs errors forever |
+| F-C1-1 | Major | #10796 | a nested `feedTriggers()` wipes the caller's `matches`; the `expandAlias` half is fixed by ec90c3893 |
+| F-C1-4 | Major | #10736 | a multiline AND trigger with a Lua function script gets an empty `multimatches` |
+| F-A2-1 | Major | #10666 | after `openMapWidget()` then `closeMapWidget()`, `createMapper()` is refused for the session, and the reverse |
+| F-F1-1 | Major | #10593, fix pending PR #10594 | after a container's own edge drag the text pane paints at the old border until the next click |
+| F-G1-2 | Major | #10626 | Zip Slip: an archive entry with `../` is written outside the profile and the package still registers |
+| F-G1-3 | Major | #10758 | uninstalling a package leaves its `addCommand` menu entry and id alive |
+| F-G2-3 | Major | #10727 | `db:safe_name()` strips digits, so `qatest1` and `qatest2` share one file |
+| F-A1-1 | Major | #10543, draft PR #10597 | Configure areas never marks the map unsaved |
+| F-A1-2 | Major | #10545, draft PR #10597 | Configure areas' Delete destroys an area and its rooms with no confirmation (the blank-map half did not reproduce) |
+| F-A1-5 | Minor | #10544, draft PR #10597 | renaming an unshown area moves the dropdown but not the canvas |
+| F-A1-4 | Cosmetic | #10542, draft PR #10597 | wrong-row preselect only when the default area sorts first and is hidden |
+| F-A1-6 | Minor | related #4937 | a hands-free middle-button pan at 50 px offset leaves the viewport in about a second |
+| F-A2-2 | Minor | open PR #10581 claims faster building | 1000-room batches cost 0.56 to 3.15 s as the map grows to 4.6k rooms |
 | F-C1-6 | Minor | #10765, fix pending PR #10814 | a key binding on one of Mudlet's own Alt+letter shortcuts is accepted and never fires |
-| F-C1-7 | Minor | #10749 | `expandAlias(cmd, nil)` suppresses the echo that `expandAlias(cmd)` shows |
+| F-C1-7 | Minor | #10749 | `expandAlias(cmd, nil)` suppresses the echo |
 | F-C1-8 | Minor | #10738 | an unset capture group is "" mid-pattern but absent at the end |
-| F-C1-9 | Minor | #10733 | an uncompilable regex is accepted and returns a normal id for a dead trigger |
-| F-C1-10 | Minor | #10737 | `showCaptureGroups()` raises on a pattern with a named group |
-| F-F1-1 | Major | #10593, fix pending PR #10594 | after an attached container's own edge drag the text pane keeps painting at the old border until the next click; 5.0.1 identical |
-| F-F1-3 | Major | #10617 | two containers on opposite borders reserve the whole axis and leave the console 0 rows; the single-container case d3f5f873b targets is genuinely fixed (2 rows kept, 5.0.1 kept 0) |
-| F-F1-4 | Minor | #10747 | `Adjustable.Container:hide()` leaves its border reserved as a blank strip |
-| F-F1-5 | Minor | #10744 | a second `minimize()` discards the real height, so `restore()` stays collapsed |
-| F-F1-6 | Minor | #10745 | a negative or non-numeric `setPadding()` raises and is still saved |
-| F-F1-7 | Minor | #10746 | `lockContainer()` accepts an unknown style name and raises on a bad number |
-| F-F1-8 | Minor | #10618 | `attachToBorder("Left")` raises but marks the container attached |
-| F-F1-9 | Minor | #10753 | a label swallows right-clicks, so the console context menu is unreachable under it |
-| F-E1-6 | Cosmetic | none | the log says "loaded from keychain" for a password read from the encrypted file |
-| F-C1-11 | Cosmetic | none | 9e6ef57a8's commit message quotes a stale stopwatch boundary |
+| F-C1-9 | Minor | #10733 | an uncompilable regex returns a normal id for a dead trigger |
+| F-C1-10 | Minor | #10737 | `showCaptureGroups()` raises on a named group |
+| F-F1-4 | Minor | #10747 | `Adjustable.Container:hide()` leaves its border reserved |
+| F-F1-5 | Minor | #10744 | a second `minimize()` discards the real height |
+| F-F1-6 | Minor | #10745 | a bad `setPadding()` raises and is still saved |
+| F-F1-7 | Minor | #10746 | `lockContainer()` accepts an unknown style, raises on a bad number |
+| F-F1-8 | Minor | #10618 | `attachToBorder("Left")` raises but marks attached |
+| F-F1-9 | Minor | #10753 | a label swallows right-clicks |
+| F-G1-4 | Minor | #10208, #10639 | `installPackage()` returns true for a failed install while a save is in flight |
+| F-G2-4 | Minor | #9818 | a typo'd `_unique` is accepted silently and the constraint is lost |
+| F-B2-2 | Note | #10658 | an MXP mode-switch escape split across two reads is missed |
+| F-G2-6 | Cosmetic | #5492 | ordinary IRC numerics print "this needs fixing by Mudlet Makers" |
 
-### Notes (confirmed behaviour, arguable as defects)
+## E. Notes (confirmed behaviour, arguable as defects)
 
-- A telnet GA that arrives in the read after a prompt was already flushed by
-  the 300 ms marker commits a second, empty line (agent B1, F-B1-3; confirmed).
-- The redesigned settings dialog (0f70a691f) is still English in Czech, a
-  locale the build reports as 99 % complete: sidebar, page titles, section
-  headings and the search placeholder. The strings are wrapped for
-  translation, so this is Crowdin lag from the redesign rather than a code
-  defect (verifier V4, F-V4-1). "Show main toolbar: Always" does not reach a
-  window that was already detached (F-V4-2).
-- The settings dialog's Editor page clips the theme-update error text (agent
-  E2, F-E2-3, cosmetic). Its package-manager heading elides to "Str..." and
-  the self-test profile is absent from My games (E2 notes N4 and N5).
-- An MXP mode-switch escape split across two socket reads is missed (agent
-  B2, F-B2-2; open #10658). A bare-number GMCP payload arrives as a number
-  (F-B2-3), contrary to open #10362's description.
-- `debugc()` output goes to the editor's Errors view rather than the Central
-  Debug Console (agent D1, F-D1-4; confirmed by verifier V3 as the designed
-  behaviour).
+- A telnet GA arriving in the read after a prompt was already flushed commits
+  a second, empty line (B1, F-B1-3).
 - `--mirror` copies `print()`, `echo()` and the colour echoes to stdout, but
-  nothing that arrives through `feedTelnet()` or the socket; the comment in
-  `mudlet.h` promises "everything shown in any console" (agent B1, F-B1-4;
-  confirmed and sharpened by the verifier). Not tied to a commit in this range.
+  nothing arriving through `feedTelnet()` or the socket; `mudlet.h` promises
+  "everything shown in any console" (B1, F-B1-4; sharpened by V1).
+- `debugc()` goes to the editor's Errors view rather than the Central Debug
+  Console, by design (D1, F-D1-4).
+- A package whose script fails to compile is still registered and raises
+  `sysInstall` as a success (G1, F-G1-5).
+- 60 rapid `playSoundFile` calls on an undecodable file raise 8
+  `sysMediaFinished`, with no player leaked (G2, F-G2-5).
+- A bare-number GMCP payload arrives as a number, contrary to open #10362's
+  description (B2, F-B2-3).
+- 9e6ef57a8's commit message quotes a stale stopwatch boundary (C1, F-C1-11).
 
-## Not reproduced or not yet verified
+## F. Open issues that are already fixed on this tree
 
-- A Mudlet process disappeared during mapper context-menu work with nothing in
-  its log (agent A1, F-A1-3). The verifier replayed the sequence six times under
-  gdb with core dumps enabled: alive every time, no core, no signal. Dropped
-  unless it recurs.
-- The Central Debug Console needing two clicks on its Debug button to open
-  (agent D1, F-D1-3): verifier V3 opened it with one click. Dropped.
-- The busted subset runner failing on `Miscallaneous_spec` alone (F-B1-5) is
-  a harness artefact, not a product claim.
+- #10342 (Tab at the very start of a script aborts Debug builds): 5.0.1 dies
+  in edbee's `textdocument.cpp:390` assertion, development indents and
+  survives. Fixed by the edbee-lib bump 805918f48 (verifier V3).
+- #10535 (IRC numerics reach the window as unescaped markup) and #10536
+  (`sysIrcMessage` hands scripts entities instead of `&` and `<`): both
+  behave correctly against a scripted IRC server (agent G2, verifier V5).
+- `CredentialManagerKeychainTest` SEGFAULT and the consequent
+  `HomeUntouchedTest` failure: fixed by #10858 during the campaign.
 
-## Coverage after batches 1 and 2
+## G. Not reproduced
 
-Areas A1 (mapper interaction, 16 commits), B1 (game text pipeline, 20) and E1
-(profiles and sign-in, 26). Every screenshot and log line the three reports
-cite exists. The verifier re-ran 20 coverage rows by hand (8 mapper, 5 text
-pipeline, 7 profiles) and all held up, including the six mapper cases A1 had
-only covered through ctest. Still not exercised by hand after batch 1:
-553c91251 (dragging a map label), the GMCP `Char.Login` round trip for
-0905eca3b and 4edf41c04 (their ctest classes pass), the ten-package profile
-open timing for 982a0d15e, and the preferences spell-check toggle for
-b66feea61.
+- A Mudlet process vanished during mapper context-menu work with nothing in
+  its log (A1, F-A1-3): six replays under gdb with cores enabled, alive every
+  time.
+- The Central Debug Console needing two clicks to open (D1, F-D1-3): one
+  click opened it for verifier V3.
+- The busted subset runner failing on `Miscallaneous_spec` alone (B1,
+  F-B1-5) is a harness artefact.
 
-Batch 2: areas A2 (mapper rendering and large maps, 13 commits) and C1
-(trigger engine, 26 commits). Every cited evidence file exists; verifier V2
-re-ran 13 rows and all held up, including the coordinate-limit hang fix
-4d6a3ae23 (the whole sequence finishes in under 5 s with the process idle) and
-676a1b321 by hand (the toolbar Map button toggles a scripted mapper without
-building a second one). b150e51d4 cannot be driven here because the two map
-views exclude each other in both directions (#10666); 9720638ef (a frame the
-game empties) moved to B2.
+## H. Coverage and what could not be tested here
 
-Batch 3: areas F1 (console, labels, Geyser, 32 commits), D1 (script editor,
-16 commits), E2 (settings, starter UI, detached windows, 19 commits) and B2
-(protocols, 13 commits). One cited screenshot name was a typo (the file exists
-under the neighbouring number); everything else cited exists. Verifier V3
-re-ran 17 rows and all held up, and closed F1's remaining gap on 78e33c43a by
-patching a negative wrap indent into a saved profile: it loads and wraps
-normally. Verifier V4 re-ran 15 E2 and B2 rows, all held up, and filled two
-E2 gaps: the Discord button in a detached window shows icon and label on
-development where 5.0.1 showed bare text (41c41e428), and the Czech interface
-check for 0237e8d46. The MSDP bug above (item 10) reproduces on 5.0.1 with
-the identical decoder error; 137e0d14d did improve the message, which now
-names the variable and says the previous value is kept.
+Every commit in the plan's twelve areas has a row in its area report with a
+verdict and cited evidence; the verifiers checked that every cited screenshot
+and log line exists and re-ran 94 rows in total, all of which held up. The
+95 test-only, CI, dependency-bump, translation and documentation commits are
+covered as a group by the suites and by H1's lint of the changed workflows
+and docs.
 
-## Fixed during the campaign, or already fixed but still open
+Not exercised here, and why:
 
-- Open issue #10342 (pressing Tab at the very start of a script aborts Debug
-  builds) no longer reproduces: verifier V3 ran the same keystrokes on both
-  trees, 5.0.1 dies in edbee's `textdocument.cpp:390` assertion and
-  development indents and survives. Fixed by the edbee-lib bump 805918f48;
-  the issue can be closed.
+- Windows and macOS only: the Windows scroll-bar style (35f0a72b9), the
+  Windows stack depth behind bca5af8a2 (its ctest emulates the limit on
+  Linux and passes), Windows credential naming schemes, the macOS speech
+  recogniser.
+- Needs hardware or a service: real speech recognition and `sysSTTHandover`
+  (the stub-driven ctests pass), a browser for the URL a styled link opens
+  (ae7c09832), the X cursor shape (caa26b20f, only the redraw half checked).
+- Blocked by a known issue: b150e51d4 (an embedded mapper after another map
+  view closes) because #10666 makes the two views exclusive.
+- Ran out of time: dragging a map label by hand (553c91251; the ctest passes),
+  the GMCP `Char.Login` round trip by hand (0905eca3b, 4edf41c04; their ctest
+  classes pass), the ten-package profile open timing (982a0d15e), the
+  preferences spell-check toggle (b66feea61), the classic MSP `!!SOUND(...)`
+  wire form (covered through the MXP `<SOUND>` path to the same stop), replay
+  recording from a live compressed game (2ed3475a7's recording half; the
+  ctest covers it).
+- Packaging: `mkdeb.sh` ran against the Release build and produced a 25 MB
+  package; `mkrpm.sh`, both `verify-*.sh` and the container build need
+  `rpmbuild`, `patchelf`, `fakeroot` or a docker daemon, none present.
 
-- `CredentialManagerKeychainTest` SEGFAULT and the consequent `HomeUntouchedTest`
-  failure (agent E1, F-E1-1 and F-E1-2): fixed by #10858, verified by re-running
-  both tests on the rebuilt tree (pass).
-
-## Environment notes for anyone repeating this
+## I. Environment notes for anyone repeating this
 
 - Shared ccache: `/etc/ccache.conf` with `base_dir=/home/user`; a clean
   rebuild of the app target from a second worktree ran in 13 s with all 367
-  compiles served from cache.
+  compiles served from cache. The 5.0.1 comparison builds lived in
+  `/home/user/worktrees/v501` (Debug and Release app targets).
 - Two batch-1 agents killed each other's Mudlet and X server while cleaning
-  up by process name. The agent brief now requires recording PIDs at launch
-  and killing only those.
+  up by process name; from batch 2 the brief required recording PIDs at
+  launch and killing only those, and no further incident occurred.
+- `--mirror` does not carry game text, so agents read the buffer back with
+  `getLines()`; the 300 ms flush needs real time between `feedTelnet()`
+  calls, so split-read cases use `tempTimer`.
