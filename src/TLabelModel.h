@@ -78,6 +78,13 @@ struct TLabelModel
     // What setBackgroundColor() was last given; a label restyled with its own
     // background-color stylesheet paints something else.
     QColor mBackgroundColor;
+    // The tint and the transforms of an SVG background are properties of the
+    // label that outlive any particular image, so they belong with the rest of
+    // its widget-free state; the renderer that draws them stays with the widget.
+    QColor mSvgTintColor;
+    double mSvgRotation = 0.0;
+    double mSvgShearX = 0.0;
+    double mSvgShearY = 0.0;
 
 private:
     void releaseFunc(const int existingFunction, const int newFunction);
