@@ -124,7 +124,18 @@ is being measured on Release builds of both trees before it is called a
 user-facing regression. Found by agent C1 (F-C1-5); reproduced by the
 coordinator and by verifier V2. No tracker entry.
 
-### 9. Minor, pre-existing: the connection dialog's first frame describes a profile other than the highlighted one
+### 9. Major, pre-existing, not on the tracker: MSDP arrays whose elements are tables or arrays never reach Lua
+
+`msdp2Lua()` writes `{` or `[` for a nested table or array without the comma
+JSON needs between sibling elements, so the MSDP specification's own `GROUP`
+example arrives as `[{"NAME":"Fred",...}{"NAME":"Barney",...}]`, yajl refuses
+it, the error console reports "after array element, I expect ',' or ']'" and
+`msdp.GROUP` stays nil. A one-element array works, which is why it went
+unnoticed. The same two cases in 5.0.1's `TLuaInterpreter.cpp` have no
+separator either, so this predates the range; no open or closed issue
+describes it. Found by agent B2 (F-B2-1); reproduced by the coordinator.
+
+### 10. Minor, pre-existing: the connection dialog's first frame describes a profile other than the highlighted one
 
 With two saved profiles, the dialog opens highlighting one of them while the
 details pane shows "Mudlet self-test / mudlet.org / 23" and Connect is enabled;
