@@ -1114,6 +1114,25 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
             }
         }
 
+        if ((mGotESC || mGotEscCharset) && localBufferPosition >= localBufferDecodableLength) {
+            // Part way through an escape sequence and the only byte left is
+            // Mudlet's own flush marker rather than the game's next one
+            // (decodableLength()): the loop head has already returned for a
+            // chunk with nothing left in it, so this position can only be that
+            // marker. Tested against it an escape names no sequence and is
+            // dropped as a stray one, and a character set designation is
+            // abandoned - either way the rest of the sequence arrives with its
+            // opening gone and prints as text: the colour code the game asked
+            // for, the payload of an OSC or a string sequence, or the byte that
+            // would have named the set. Leave the latch set for the chunk that
+            // carries the rest, and commit the line the marker came to flush.
+            // The CSI scan below commits the same way, but has to test for the
+            // marker first because it is also reached when a chunk merely ran
+            // out part way through a sequence, which this cannot be:
+            commitLine(CHAR_CARRIAGE_RETURN, localBufferPosition, isFromServer, false);
+            return;
+        }
+
         if (mGotEscCharset) {
             mGotEscCharset = false;
             if (static_cast<unsigned char>(ch) >= 0x30 && static_cast<unsigned char>(ch) <= 0x7E) {
