@@ -76,7 +76,7 @@ confirmed by verifier V3.
 
 ## B. Fixes in this range that are incomplete or ineffective
 
-### B1. Major: an ESC that ends a stalled read still loses its colour code (efe9414f2)
+### B1. Major (#10874): an ESC that ends a stalled read still loses its colour code (efe9414f2)
 
 The fix stops the carriage-return marker Mudlet injects after a 300 ms pause
 from corrupting a multi-byte character or a colour code split mid-parameter.
@@ -92,7 +92,7 @@ feedTelnet("csiA:"..E)
 tempTimer(0.65, function() feedTelnet("[1;31mRED1:end\n") end)
 ```
 
-### B2. Minor: the tab detach threshold is still tiny and the left-most tab never detaches (52b0d4b02)
+### B2. Minor (#10875): the tab detach threshold is still tiny and the left-most tab never detaches (52b0d4b02)
 
 The commit raised the drag distance from 50 to 80 px, but the distance is
 measured from the tab bar's centre, not from the tab: a tab detaches after an
@@ -100,13 +100,13 @@ measured from the tab bar's centre, not from the tab: a tab detaches after an
 detached by any drag (200 px tried). Agent E2 (F-E2-2); measured on both trees
 by verifier V4. Not on the tracker.
 
-### B3. Minor: the tour stops taking the keyboard once Next is clicked with the mouse (ec0fedbb9)
+### B3. Minor (#10876): the tour stops taking the keyboard once Next is clicked with the mouse (ec0fedbb9)
 
 After a mouse click on Next the arrow keys do nothing, Escape no longer closes
 the tour, and PageUp reaches the console behind the overlay and splits the
 view. Agent E2 (F-E2-1); confirmed by verifier V4. Not on the tracker.
 
-### B4. Minor: IRC kicks show without their reason, and a self-kick hides the line (d8b5ffa2a)
+### B4. Minor (#10877): IRC kicks show without their reason, and a self-kick hides the line (d8b5ffa2a)
 
 Kicks are shown now (closed #10534), but the kick reason is dropped from both
 the IRC window and `sysIrcMessage`, and when you are the one kicked the
@@ -124,7 +124,7 @@ saved. Agent F1 (F-F1-3); confirmed on both trees by verifier V3.
 
 Ranked by severity. Each was reproduced on 5.0.1 as well, by code or by run.
 
-### C1. Blocker: a package that uninstalls itself from its own install script crashes the client
+### C1. Blocker (#10867): a package that uninstalls itself from its own install script crashes the client
 
 A package whose script body calls `uninstallPackage()` on its own name while
 being installed makes `XMLimport::importPackage` (`src/XMLimport.cpp:196`)
@@ -133,7 +133,7 @@ agent G1, the coordinator and verifier V5 on development, and by G1 and V5 on
 5.0.1. Closed #9557 covered only the event-handler variant. Exposure is package
 authors rather than ordinary play, but it is a hard crash. (F-G1-1)
 
-### C2. Major: MSDP arrays whose elements are tables or arrays never reach Lua
+### C2. Major (#10868): MSDP arrays whose elements are tables or arrays never reach Lua
 
 `msdp2Lua()` writes `{` or `[` for a nested element without the comma JSON
 needs between siblings, so the MSDP specification's own `GROUP` example
@@ -142,7 +142,7 @@ arrives as `[{"NAME":"Fred",...}{"NAME":"Barney",...}]`, yajl refuses it and
 invalid JSON (137e0d14d improved only the error message). Agent B2 (F-B2-1);
 reproduced by the coordinator and, on both trees, by verifier V4.
 
-### C3. Major: a match-all trigger's cost grows with the square of the line length
+### C3. Major (#10869): a match-all trigger's cost grows with the square of the line length
 
 With a `/g` trigger such as `(\w+)` armed, one line of 25, 50 and 100 kB took
 0.40, 1.5 and 5.8 s on a Debug build (each doubling costs about 3.8 times), so
@@ -154,7 +154,7 @@ and 0.30 s on 5.0.1, so the trigger work in this range made the path about
 30 % faster while leaving its shape alone. Agent C1 (F-C1-5); timings by the
 coordinator and verifier V2.
 
-### C4. Major: deleting a user window leaves its scroll box orphaned over the main console
+### C4. Major (#10870): deleting a user window leaves its scroll box orphaned over the main console
 
 `deleteMiniConsole()` on a user window drops the window's scroll box and
 command line from the by-name maps without destroying them; the scroll box is
@@ -163,7 +163,7 @@ then answers "not found". Neither tree crashes, so the crash c0309561b fixed
 (#10319) stays fixed. Agent F1 (F-F1-2); reproduced by the coordinator and,
 on both trees, by verifier V3.
 
-### C5. Minor: the Linux .deb ships QTagEdit's development files (new with f4849ed77)
+### C5. Minor (#10871): the Linux .deb ships QTagEdit's development files (new with f4849ed77)
 
 The package built by `CI/linux-packages/deb/mkdeb.sh` contains
 `/usr/include/QTagEdit/qtagedit.hpp`, `/usr/lib/libQTagEdit.a` and two CMake
@@ -171,20 +171,20 @@ export files beside `/usr/bin/mudlet`, from the submodule's own `install()`
 rules. The rpm path is built the same way. Agent H1 (F-H1-1); confirmed by
 inspecting the package (coordinator, verifier V6).
 
-### C6. Minor: the connection dialog's first frame describes a profile other than the highlighted one
+### C6. Minor (#10872): the connection dialog's first frame describes a profile other than the highlighted one
 
 With two saved profiles the dialog opens highlighting one while the details
 pane shows "Mudlet self-test / mudlet.org / 23" with Connect enabled; a click
 corrects it. Identical on 5.0.1 with the same profile directory. Agent E1
 (F-E1-3); verifier V2 and the coordinator. Closed #10818 is the nearest entry.
 
-### C7. Minor: `mudlet --version` aborts when there is no display
+### C7. Minor (#10873): `mudlet --version` aborts when there is no display
 
 Exits with SIGABRT after Qt fails to load a platform plugin; with
 `QT_QPA_PLATFORM=offscreen` it prints the version. Handled after the
 `QApplication` is built in both trees. Agent E1 (F-E1-4); coordinator, V1.
 
-### C8. Minor (closed #2325 did not stick): the encrypted-file password fallback is written world-readable
+### C8. Minor (#2325, reopened): the encrypted-file password fallback is written world-readable
 
 With no keychain service the key and secret land on disk at the umask default
 0644; `SecureStringUtils.cpp` is identical to 5.0.1 and neither calls
@@ -193,18 +193,19 @@ With no keychain service the key and secret land on disk at the umask default
 ### C9. Cosmetic
 
 - The log says "loaded from keychain" for a password read from the encrypted
-  file (E1, F-E1-6).
+  file (E1, F-E1-6; #10884).
 - `saveProfile()` returns a path with a doubled separator, `current//x.xml`
-  (H1, F-H1-3).
+  (H1, F-H1-3; #10878).
 - `docs/CONTRIBUTING.md` links to `UI-design-philosophy.md` relative to
-  `docs/`, but the file is at the repository root (H1, F-H1-2).
+  `docs/`, but the file is at the repository root (H1, F-H1-2; #10885).
 - The settings dialog's Editor page clips the theme-update error text; its
   package-manager heading elides to "Str..."; the self-test profile is absent
-  from My games (E2, F-E2-3 and notes).
+  from My games (E2, F-E2-3 and notes; #10879).
 - The redesigned settings dialog is still English in Czech, a locale the build
   reports 99 % complete: strings are wrapped for translation, so this is
-  Crowdin lag from the redesign (verifier V4, F-V4-1). "Show main toolbar:
-  Always" does not reach a window that was already detached (F-V4-2).
+  Crowdin lag from the redesign (verifier V4, F-V4-1; #10880). "Show main
+  toolbar: Always" does not reach a window that was already detached
+  (F-V4-2; #10881).
 
 ## D. Open issues confirmed live on this tree
 
@@ -252,11 +253,11 @@ can say which known issues still stand.
   a second, empty line (B1, F-B1-3).
 - `--mirror` copies `print()`, `echo()` and the colour echoes to stdout, but
   nothing arriving through `feedTelnet()` or the socket; `mudlet.h` promises
-  "everything shown in any console" (B1, F-B1-4; sharpened by V1).
+  "everything shown in any console" (B1, F-B1-4; sharpened by V1; #10882).
 - `debugc()` goes to the editor's Errors view rather than the Central Debug
   Console, by design (D1, F-D1-4).
 - A package whose script fails to compile is still registered and raises
-  `sysInstall` as a success (G1, F-G1-5).
+  `sysInstall` as a success (G1, F-G1-5; #10883).
 - 60 rapid `playSoundFile` calls on an undecodable file raise 8
   `sysMediaFinished`, with no player leaked (G2, F-G2-5).
 - A bare-number GMCP payload arrives as a number, contrary to open #10362's
@@ -315,7 +316,16 @@ Not exercised here, and why:
   package; `mkrpm.sh`, both `verify-*.sh` and the container build need
   `rpmbuild`, `patchelf`, `fakeroot` or a docker daemon, none present.
 
-## I. Environment notes for anyone repeating this
+## I. Tracker actions taken
+
+- Filed #10867 to #10885 for the findings above that had no issue.
+- Reopened #2325 (password file permissions) with the evidence.
+- Closed #10342, #10535 and #10536 as fixed, each with the verification.
+- Commented with the root cause on #10816, the Release-build crash on
+  #10337, the non-reproduction on #10362, the pan measurement on #4937 and
+  the related dialog defect on #10818.
+
+## J. Environment notes for anyone repeating this
 
 - Shared ccache: `/etc/ccache.conf` with `base_dir=/home/user`; a clean
   rebuild of the app target from a second worktree ran in 13 s with all 367
