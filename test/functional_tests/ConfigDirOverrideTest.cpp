@@ -670,6 +670,35 @@ private slots:
         MudletApp::setConfigPath(QString());
     }
 
+    // getQSettings() answers from the store it already built without looking at
+    // the root again, so forgetting the root has to take the store with it - or
+    // it goes on serving a Mudlet.ini the resolution has abandoned
+    void test_forgettingTheRootDiscardsTheSettingsStore()
+    {
+        QTemporaryDir root;
+        QVERIFY(root.isValid());
+
+        MudletApp::setConfigPath(root.path());
+        QCOMPARE(settingsFileName(), qsl("%1/Mudlet.ini").arg(root.path()));
+
+        MudletApp::setConfigPath(QString());
+        QCOMPARE(settingsFileName(), QString());
+    }
+
+    // The preferences dialog can change the language at any time, so an accessor
+    // handing back a reference into the static would change under whoever held it
+    void test_getInterfaceLanguageHandsBackASnapshot()
+    {
+        const QString saved = MudletApp::getInterfaceLanguage();
+        MudletApp::setInterfaceLanguage(qsl("en_US"));
+        const auto& readEarlier = MudletApp::getInterfaceLanguage();
+        MudletApp::setInterfaceLanguage(qsl("de_DE"));
+
+        QCOMPARE(readEarlier, qsl("en_US"));
+        QCOMPARE(MudletApp::getInterfaceLanguage(), qsl("de_DE"));
+        MudletApp::setInterfaceLanguage(saved);
+    }
+
     // --- mudlet::setupConfig() end-to-end wiring ------------------------------
 
     void test_setupConfigUsesPreCreatedXdgTarget()

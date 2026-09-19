@@ -2409,6 +2409,10 @@ void mudlet::setupConfig()
         }
         qWarning().nospace().noquote() << "mudlet::setupConfig() WARN - \"" << mRejectedPortableMarker << "\" names a data directory Mudlet cannot use, so \"" << confPath
                                        << "\" is in use instead. Profiles kept where the marker points will not be listed until it is corrected.";
+    } else {
+        // A resolution that goes through retires an earlier complaint, or the
+        // notice would name a portable.txt that no longer governs anything
+        mRejectedPortableMarker.clear();
     }
     if (resolution.migrationPending) {
         qInfo().nospace() << "mudlet::setupConfig() INFO: XDG_CONFIG_HOME is set but $XDG_CONFIG_HOME/mudlet holds no profiles, so the existing " << confPath
@@ -2419,10 +2423,9 @@ void mudlet::setupConfig()
                              << " holds profiles as well and they will not be listed. Unset XDG_CONFIG_HOME to use that directory instead.";
     }
     qDebug() << "mudlet::setupConfig() INFO:" << "using config dir:" << confPath;
+    // Discards any settings store built under the previous root, so setupConfig()
+    // must not run again once init() has created the Updater, which keeps using it
     MudletApp::setConfigPath(confPath);
-    // setupConfig() must not run again once init() has created the Updater,
-    // which keeps using the settings object this discards
-    MudletApp::resetSettings();
 }
 
 // The only thing on screen telling the user that the profiles they are about to
