@@ -3,7 +3,7 @@ if(NOT WITH_SENTRY)
 endif()
 
 set(SENTRY_PATH "${CMAKE_SOURCE_DIR}/3rdparty/sentry-native")
-set(SENTRY_INSTALL "${CMAKE_BINARY_DIR}/sentry-native-install")
+set(SENTRY_BUILD_ROOT "${CMAKE_BINARY_DIR}/sentry-native")
 
 # Check if sentry-native submodule is initialized
 if(NOT EXISTS "${SENTRY_PATH}/CMakeLists.txt")
@@ -19,7 +19,7 @@ message(STATUS "Building with Sentry enabled")
 string(REPLACE ";" "|" SENTRY_PREFIX_PATH "${CMAKE_PREFIX_PATH}")
 set(SENTRY_CMAKE_ARGS
     -DCMAKE_BUILD_TYPE=RelWithDebInfo
-    "-DCMAKE_INSTALL_PREFIX=${SENTRY_INSTALL}"
+    "-DCMAKE_INSTALL_PREFIX=${SENTRY_BUILD_ROOT}"
     "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
     "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
     "-DCMAKE_C_COMPILER_LAUNCHER=${CMAKE_C_COMPILER_LAUNCHER}"
@@ -70,6 +70,7 @@ include(ExternalProject)
 ExternalProject_Add(
     sentry_native
     SOURCE_DIR ${SENTRY_PATH}
+    PREFIX ${SENTRY_BUILD_ROOT}
     LIST_SEPARATOR |
     CMAKE_ARGS ${SENTRY_CMAKE_ARGS}
 )
@@ -108,10 +109,10 @@ target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC
 )
 
 target_include_directories(${LIB_MUDLET_TARGET} PRIVATE
-   "${SENTRY_INSTALL}/include/"
+   "${SENTRY_BUILD_ROOT}/include/"
 )
 target_link_directories(${LIB_MUDLET_TARGET} PUBLIC
-    "${SENTRY_INSTALL}/lib/"
+    "${SENTRY_BUILD_ROOT}/lib/"
 )
 # The sentry Qt integration needs qInstallMessageHandler from Qt6::Core.
 # CMake de-duplicates Qt6::Core, placing it before sentry in the link order.
@@ -147,7 +148,7 @@ else()
     target_link_libraries(${LIB_MUDLET_TARGET} crashpad_compat unwind)
 endif()
 
-set(SENTRY_BINARIES "${SENTRY_INSTALL}/bin")
+set(SENTRY_BINARIES "${SENTRY_BUILD_ROOT}/bin")
 set(STAMP_FILE "${CMAKE_CURRENT_BINARY_DIR}/sentry_binaries.stamp")
 
 add_custom_command(OUTPUT ${STAMP_FILE}
