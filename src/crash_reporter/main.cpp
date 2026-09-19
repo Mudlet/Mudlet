@@ -21,6 +21,7 @@
 #include <QDebug>
 #include <QDialog>
 #include <QLabel>
+#include <QNetworkProxyFactory>
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -56,6 +57,7 @@ int main(int argc, char* argv[])
     }
 
     QApplication app(argc, argv);
+    QNetworkProxyFactory::setUseSystemConfiguration(true);
     const QString envelopePath = QCoreApplication::arguments().value(1);
     QSettings settings("Mudlet", "CrashReporter");
     QVariant storedOption = settings.value("autoSendCrashReports", QVariant());

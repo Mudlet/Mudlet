@@ -15,6 +15,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QtNetwork/QNetworkProxyFactory>
 #include <QtNetwork/QTcpServer>
 #include <QtNetwork/QTcpSocket>
 #include <QtTest/QtTest>
@@ -148,6 +149,8 @@ private:
     }
 
 private slots:
+    void initTestCase() { QNetworkProxyFactory::setUseSystemConfiguration(false); }
+
     void init()
     {
         QVERIFY(mEnvelopeDir.isValid());
