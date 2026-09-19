@@ -214,6 +214,10 @@ public:
     bool loadReplay(const QString&, QString* pErrMsg = nullptr);
     void loadReplayChunk();
     bool isReplaying() { return loadingReplay; }
+    bool replayPaused() const { return mReplayPaused; }
+    void pauseReplay();
+    void resumeReplay();
+    void stopReplay();
     void setChannel102Variables(const QString&);
     bool socketOutRaw(std::string& data);
     const QByteArray& getEncoding() const { return mEncoding; }
@@ -594,6 +598,19 @@ private:
     // True if THIS profile is playing a replay, does not know about any OTHER
     // active profile...
     bool loadingReplay = false;
+    // Playback is held: the chunk already read from the file waits in
+    // loadBuffer until resumeReplay() re-arms the timer with what was left of
+    // its delay.
+    bool mReplayPaused = false;
+    // A chunk has been read and is still waiting to be handed to the parser.
+    // Resuming without this would re-arm the timer over a chunk that was
+    // already played, replaying those bytes a second time.
+    bool mReplayChunkPending = false;
+    // Milliseconds left before the pending chunk is due.
+    int mReplayChunkDelay = 0;
+    // Spaces the replay chunks out. A member rather than a QTimer::singleShot
+    // so that pausing can stop it and take back the time still left on it.
+    QTimer* mpReplayChunkTimer = nullptr;
     // Used to disable the TConsole ending messages if run from lua:
     bool mIsReplayRunFromLua = false;
     QByteArrayList mAcceptableEncodings;

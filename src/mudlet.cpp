@@ -7099,7 +7099,7 @@ void mudlet::slot_showTabContextMenu(const QPoint& position)
 }
 
 // Called from the ctelnet instance for the host concerned:
-bool mudlet::replayStart()
+bool mudlet::replayStart(Host* pHost)
 {
     // Do not proceed if there is a problem with the main toolbar (it isn't there)
     // OR if there is already a replay toolbar in existence (a replay is already
@@ -7130,6 +7130,23 @@ bool mudlet::replayStart()
     mpLabelReplayTime = new QLabel(this);
     mpActionReplayTime = mpToolBarReplay->addWidget(mpLabelReplayTime);
 
+    mpReplayingHost = pHost;
+
+    //: Button on the replay toolbar that holds the replay where it is
+    mpActionReplayPause = new QAction(style()->standardIcon(QStyle::SP_MediaPause), tr("Pause"), this);
+    mpActionReplayPause->setObjectName(qsl("replay_pause_action"));
+    mpActionReplayPause->setCheckable(true);
+    mpActionReplayPause->setToolTip(utils::richText(tr("Hold the replay where it is. It carries on from the same point when you resume.")));
+    mpToolBarReplay->addAction(mpActionReplayPause);
+    mpToolBarReplay->widgetForAction(mpActionReplayPause)->setObjectName(mpActionReplayPause->objectName());
+
+    //: Button on the replay toolbar that ends the replay early
+    mpActionReplayStop = new QAction(style()->standardIcon(QStyle::SP_MediaStop), tr("Stop"), this);
+    mpActionReplayStop->setObjectName(qsl("replay_stop_action"));
+    mpActionReplayStop->setToolTip(utils::richText(tr("End the replay now, without playing the rest of it.")));
+    mpToolBarReplay->addAction(mpActionReplayStop);
+    mpToolBarReplay->widgetForAction(mpActionReplayStop)->setObjectName(mpActionReplayStop->objectName());
+
     mpActionReplaySpeedUp = new QAction(QIcon(qsl(":/icons/export.png")), tr("Faster"), this);
     mpActionReplaySpeedUp->setObjectName(qsl("replay_speed_up_action"));
     mpActionReplaySpeedUp->setToolTip(utils::richText(tr("Replay each step with a shorter time interval between steps.")));
@@ -7145,6 +7162,8 @@ bool mudlet::replayStart()
     mpLabelReplaySpeedDisplay = new QLabel(this);
     mpActionSpeedDisplay = mpToolBarReplay->addWidget(mpLabelReplaySpeedDisplay);
 
+    connect(mpActionReplayPause.data(), &QAction::toggled, this, &mudlet::slot_replayPauseToggled);
+    connect(mpActionReplayStop.data(), &QAction::triggered, this, &mudlet::slot_replayStop);
     connect(mpActionReplaySpeedUp.data(), &QAction::triggered, this, &mudlet::slot_replaySpeedUp);
     connect(mpActionReplaySpeedDown.data(), &QAction::triggered, this, &mudlet::slot_replaySpeedDown);
 
@@ -7155,7 +7174,7 @@ bool mudlet::replayStart()
     mpTimerReplay->setSingleShot(false);
     connect(mpTimerReplay.data(), &QTimer::timeout, this, &mudlet::slot_replayTimeChanged);
 
-    mpLabelReplayTime->setText(qsl("<font size=25><b>%1</b></font>").arg(tr("Time: %1").arg(mReplayTime.toString(mTimeFormat))));
+    updateReplayTimeLabel();
 
     mpLabelReplaySpeedDisplay->show();
     mpLabelReplayTime->show();
@@ -7167,12 +7186,51 @@ bool mudlet::replayStart()
     return true;
 }
 
-void mudlet::slot_replayTimeChanged()
+void mudlet::updateReplayTimeLabel()
 {
     // This can get called by a QTimer after mpLabelReplayTime has been destroyed:
-    if (mpLabelReplayTime) {
-        mpLabelReplayTime->setText(qsl("<font size=25><b>%1</b></font>").arg(tr("Time: %1").arg(mReplayTime.toString(mTimeFormat))));
-        mpLabelReplayTime->show();
+    if (!mpLabelReplayTime) {
+        return;
+    }
+
+    const QString time = tr("Time: %1").arg(mReplayTime.toString(mTimeFormat));
+    // A replay can have long quiet stretches in it, so a clock that has simply
+    // stopped is not on its own a sign that the replay is held:
+    const bool paused = mpActionReplayPause && mpActionReplayPause->isChecked();
+    //: Shown on the replay toolbar beside the elapsed time while the replay is held. %1 is that time, already formatted
+    mpLabelReplayTime->setText(qsl("<font size=25><b>%1</b></font>").arg(paused ? tr("%1 (paused)").arg(time) : time));
+    mpLabelReplayTime->show();
+}
+
+void mudlet::slot_replayTimeChanged()
+{
+    updateReplayTimeLabel();
+}
+
+void mudlet::slot_replayPauseToggled(const bool paused)
+{
+    if (mpActionReplayPause) {
+        mpActionReplayPause->setIcon(style()->standardIcon(paused ? QStyle::SP_MediaPlay : QStyle::SP_MediaPause));
+        //: Button on the replay toolbar that lets a held replay carry on
+        mpActionReplayPause->setText(paused ? tr("Resume") : tr("Pause"));
+    }
+    updateReplayTimeLabel();
+
+    if (!mpReplayingHost) {
+        return;
+    }
+    if (paused) {
+        mpReplayingHost->mTelnet.pauseReplay();
+    } else {
+        mpReplayingHost->mTelnet.resumeReplay();
+    }
+}
+
+void mudlet::slot_replayStop()
+{
+    if (mpReplayingHost) {
+        // This ends up in replayOver(), which is what takes this toolbar down:
+        mpReplayingHost->mTelnet.stopReplay();
     }
 }
 
@@ -7182,12 +7240,20 @@ void mudlet::replayOver()
         return;
     }
 
+    disconnect(mpActionReplayPause.data(), &QAction::toggled, this, &mudlet::slot_replayPauseToggled);
+    disconnect(mpActionReplayStop.data(), &QAction::triggered, this, &mudlet::slot_replayStop);
     disconnect(mpActionReplaySpeedUp.data(), &QAction::triggered, this, &mudlet::slot_replaySpeedUp);
     disconnect(mpActionReplaySpeedDown.data(), &QAction::triggered, this, &mudlet::slot_replaySpeedDown);
+    mpToolBarReplay->removeAction(mpActionReplayPause);
+    mpToolBarReplay->removeAction(mpActionReplayStop);
     mpToolBarReplay->removeAction(mpActionReplaySpeedUp);
     mpToolBarReplay->removeAction(mpActionReplaySpeedDown);
     mpToolBarReplay->removeAction(mpActionSpeedDisplay);
     removeToolBar(mpToolBarReplay);
+    mpActionReplayPause->deleteLater();
+    mpActionReplayPause = nullptr;
+    mpActionReplayStop->deleteLater();
+    mpActionReplayStop = nullptr;
     mpActionReplaySpeedUp->deleteLater(); // Had previously omitted these, causing a resource leak!
     mpActionReplaySpeedUp = nullptr;
     mpActionReplaySpeedDown->deleteLater();
@@ -7202,6 +7268,7 @@ void mudlet::replayOver()
     mpLabelReplayTime = nullptr;
     mpToolBarReplay->deleteLater();
     mpToolBarReplay = nullptr;
+    mpReplayingHost = nullptr;
 
     // Unlock/uncheck the replay button/menu item
     mpActionReplay->setChecked(false);

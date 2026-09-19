@@ -200,6 +200,10 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
     mTimerFailedConnectionRetry->setSingleShot(true);
     connect(mTimerFailedConnectionRetry, &QTimer::timeout, this, &cTelnet::reconnect);
 
+    mpReplayChunkTimer = new QTimer(this);
+    mpReplayChunkTimer->setSingleShot(true);
+    connect(mpReplayChunkTimer, &QTimer::timeout, this, &cTelnet::slot_processReplayChunk);
+
     // Wired here rather than alongside the per-address-family connections in
     // slot_socketHostFound() because a failure is not particular to either of them:
     connect(&mSocket_ipV4, &QAbstractSocket::errorOccurred, this, &cTelnet::slot_socketError);
@@ -5380,7 +5384,10 @@ bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
         replayStream.setDevice(&replayFile);
         replayStream.setVersion(QDataStream::Qt_5_12);
         loadingReplay = true;
-        if (mudlet::self()->replayStart()) {
+        mReplayPaused = false;
+        mReplayChunkPending = false;
+        mReplayChunkDelay = 0;
+        if (mudlet::self()->replayStart(mpHost)) {
             auto [ok, modifiedFormat] = testReadReplayFile();
             if (Q_LIKELY(ok)) {
                 mReplayHasFaultyFormat = modifiedFormat;
@@ -5448,7 +5455,11 @@ void cTelnet::loadReplayChunk()
         // string display by a qDebug of the loadBuffer contents
         loadBuffer[loadedBytes] = '\0';
         mudlet::self()->mReplayTime = mudlet::self()->mReplayTime.addMSecs(offset);
-        QTimer::singleShot(offset / mudlet::self()->mReplaySpeed, this, &cTelnet::slot_processReplayChunk);
+        mReplayChunkDelay = offset / mudlet::self()->mReplaySpeed;
+        mReplayChunkPending = true;
+        if (!mReplayPaused) {
+            mpReplayChunkTimer->start(mReplayChunkDelay);
+        }
     } else {
         loadingReplay = false;
         replayFile.close();
@@ -5459,8 +5470,58 @@ void cTelnet::loadReplayChunk()
     }
 }
 
+void cTelnet::pauseReplay()
+{
+    if (!loadingReplay || mReplayPaused) {
+        return;
+    }
+
+    mReplayPaused = true;
+    if (mpReplayChunkTimer->isActive()) {
+        // Keep what is left of the wait instead of restarting it on resume, so
+        // that pausing does not itself stretch the gap between two chunks:
+        mReplayChunkDelay = qMax(0, mpReplayChunkTimer->remainingTime());
+        mpReplayChunkTimer->stop();
+    }
+}
+
+void cTelnet::resumeReplay()
+{
+    if (!loadingReplay || !mReplayPaused) {
+        return;
+    }
+
+    mReplayPaused = false;
+    // There is nothing to re-arm if the pause landed while a chunk was being
+    // played rather than waited on - the loadReplayChunk() that follows it
+    // starts the timer itself now that the replay is running again.
+    if (mReplayChunkPending) {
+        mpReplayChunkTimer->start(mReplayChunkDelay);
+    }
+}
+
+void cTelnet::stopReplay()
+{
+    if (!loadingReplay) {
+        return;
+    }
+
+    mpReplayChunkTimer->stop();
+    mReplayChunkPending = false;
+    mReplayPaused = false;
+    loadingReplay = false;
+    replayFile.close();
+    if (!mIsReplayRunFromLua) {
+        postMessage(tr("[  OK  ]  - The replay has been stopped."));
+    }
+    if (auto pMudlet = mudlet::self()) {
+        pMudlet->replayOver();
+    }
+}
+
 void cTelnet::slot_processReplayChunk()
 {
+    mReplayChunkPending = false;
     int datalen = loadedBytes;
     std::string cleandata = "";
     recvdGA = false;

@@ -120,6 +120,7 @@ set(TELNET_GROUP_TEST_SOURCES
     TelnetNewEnvironTest.cpp
     TelnetOptionsReportTest.cpp
     TelnetReconnectStateTest.cpp
+    ReplayPlaybackControlTest.cpp
     TelnetStringSequenceRecoveryTest.cpp
     TelnetTlsPromptTest.cpp
     TOscTest.cpp
