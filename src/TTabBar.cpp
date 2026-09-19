@@ -455,17 +455,16 @@ void TTabBar::mouseMoveEvent(QMouseEvent* event)
             const QPoint globalPos = mapToGlobal(event->pos());
             const QRect tabBarGlobalRect = QRect(mapToGlobal(rect().topLeft()), rect().size());
 
-            // Calculate distance from tab bar with enhanced threshold
-            if (!tabBarGlobalRect.contains(globalPos) && isVerticalMovement) {
-                const QPoint distanceFromBar = globalPos - tabBarGlobalRect.center();
-                const int distanceFromBarManhattan = distanceFromBar.manhattanLength();
-
-                // Use the improved threshold and ensure it's primarily vertical movement
-                if (distanceFromBarManhattan > DETACH_DISTANCE_THRESHOLD) {
-                    emit tabDetachRequested(mDragIndex, globalPos);
-                    mDragIndex = -1; // Reset drag state
-                    return;
-                }
+            // How far the cursor has come since the press, rather than how far
+            // it now is from the bar's centre: that centre measurement added the
+            // press point's own offset from the centre, so what it took to tear
+            // a tab out depended on where in the bar the tab sat and where in
+            // the tab it was grabbed. The metric is Manhattan, so horizontal
+            // travel counts toward the threshold as well.
+            if (!tabBarGlobalRect.contains(globalPos) && isVerticalMovement && totalDistance > DETACH_DISTANCE_THRESHOLD) {
+                emit tabDetachRequested(mDragIndex, globalPos);
+                mDragIndex = -1; // Reset drag state
+                return;
             }
         }
     }
