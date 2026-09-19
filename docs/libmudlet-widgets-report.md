@@ -46,9 +46,9 @@ and the baseline are regenerated in each libmudlet PR, so drift shows up in the 
 | Metric | Count |
 | --- | ---: |
 | Source files in `mudlet_core` | 428 |
-| Files depending on Qt Widgets | 141 |
-| Clean files | 287 |
-| Committed baseline | 141 |
+| Files depending on Qt Widgets | 140 |
+| Clean files | 288 |
+| Committed baseline | 140 |
 
 ## Offending files
 
@@ -136,7 +136,6 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `TrailingWhitespaceMarker.cpp` | 1 | 4 | QLineEdit, QPlainTextEdit |
 | `TrailingWhitespaceMarker.h` | 1 | 4 | QLineEdit, QPlainTextEdit |
 | `TScrollBox.h` | 1 | 4 | QScrollArea, QWidget |
-| `ActionUnit.cpp` | 2 | 2 | QDockWidget, QWidget |
 | `DarkTheme.h` | 2 | 2 | QProxyStyle, QStyleFactory, QStyle |
 | `dlgAliasMainArea.cpp` | 0 | 4 | QWidget, QLineEdit |
 | `dlgRoomProperties.h` | 1 | 3 | QListWidget, QDialog, QWidget, QListWidgetItem |
@@ -162,7 +161,7 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `TAccessibleTextEdit.cpp` | 0 | 3 | QAccessibleWidget |
 | `TFlipButton.h` | 1 | 2 | QPushButton, QStyleOptionButton |
 | `TLabel.h` | 1 | 2 | QLabel, QWidget |
-| `TLuaInterpreterMudletObjects.cpp` | 1 | 2 | QFileDialog |
+| `TLuaInterpreterUI.cpp` | 1 | 2 | QFileDialog |
 | `TSplitter.cpp` | 0 | 3 | QWidget, QSplitter, QSplitterHandle |
 | `TTextBox.cpp` | 0 | 3 | QWidget, QPlainTextEdit, QFrame |
 | `TTextBox.h` | 1 | 2 | QPlainTextEdit, QWidget |
@@ -199,7 +198,7 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 | `glwidget_integration.cpp` | 0 | 1 | QWidget |
 | `modern_glwidget.h` | 0 | 1 | QWidget |
 
-## Clean files (287)
+## Clean files (288)
 
 <details>
 <summary>Files with no Qt Widgets dependency</summary>
@@ -207,6 +206,7 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 - `../3rdparty/discord/rpc/include/discord_register.h`
 - `../3rdparty/discord/rpc/include/discord_rpc.h`
 - `../3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h`
+- `ActionUnit.cpp`
 - `ActionUnit.h`
 - `AliasUnit.cpp`
 - `AliasUnit.h`
@@ -374,10 +374,10 @@ QtWidgets header includes; `Sym` = QtWidgets class-symbol references.
 - `TLuaInterpreterMapper.cpp`
 - `TLuaInterpreterMedia.cpp`
 - `TLuaInterpreterMMCP.cpp`
+- `TLuaInterpreterMudletObjects.cpp`
 - `TLuaInterpreterNetworking.cpp`
 - `TLuaInterpreterSpeechToText.cpp`
 - `TLuaInterpreterTextToSpeech.cpp`
-- `TLuaInterpreterUI.cpp`
 - `TMap.cpp`
 - `TMap.h`
 - `TMapLabel.cpp`
