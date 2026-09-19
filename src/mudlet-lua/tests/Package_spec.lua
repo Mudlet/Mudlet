@@ -275,7 +275,10 @@ local function withFixturePackage(name)
   installFixturePackage(name)
 end
 
-local function removeFixtureModule(name)
+-- archiveName is given only for a fixture whose config.lua installs it under a
+-- different name than the file it came in: the archive names the file on disk,
+-- name is what the profile knows the module as.
+local function removeFixtureModule(name, archiveName)
   for _ = 1, 3 do
     if not moduleInstalled(name) then
       break
@@ -286,26 +289,26 @@ local function removeFixtureModule(name)
     pumpEvents(200)
   end
   assert.is_false(moduleInstalled(name), "the fixture module " .. name .. " reinstalled itself")
-  os.remove(scratchDirectory .. "/" .. name .. ".mpackage")
+  os.remove(scratchDirectory .. "/" .. (archiveName or name) .. ".mpackage")
   lfs.rmdir(scratchDirectory)
 end
 
 -- A module is installed from a copy inside the profile, never from the
 -- repository: with sync enabled a profile save rewrites the module's own
 -- .mpackage in place, which would corrupt the committed fixture.
-local function installFixtureModule(name)
+local function installFixtureModule(name, archiveName)
   lfs.mkdir(scratchDirectory)
-  local path = scratchDirectory .. "/" .. name .. ".mpackage"
-  copyFile(fixtureDirectory .. "/" .. name .. ".mpackage", path)
+  local path = scratchDirectory .. "/" .. (archiveName or name) .. ".mpackage"
+  copyFile(fixtureDirectory .. "/" .. (archiveName or name) .. ".mpackage", path)
   installUntilConfirmed(installModule, path, function() return moduleInstalled(name) end, "the fixture module " .. name)
   return path
 end
 
 -- The clean-up is registered before the install so a fixture that only got
 -- half-way in still leaves nothing behind.
-local function withFixtureModule(name)
-  defer(function() removeFixtureModule(name) end)
-  return installFixtureModule(name)
+local function withFixtureModule(name, archiveName)
+  defer(function() removeFixtureModule(name, archiveName) end)
+  return installFixtureModule(name, archiveName)
 end
 
 -- Collects every occurrence of an event until stopCollecting() is called. The
@@ -1212,6 +1215,40 @@ describe("Tests a package that uninstalls itself while it is being installed", f
     assert.same({"sysInstall", "sysUninstall", "sysLuaUninstallModule"}, eventsSeen)
     assert.equals(0, exists(selfRemoveModule .. " alias", "alias"))
     assert.equals(0, exists("mudletSpecSelfRemoveModuleScript", "script"))
+  end)
+
+  it("refuses a module that renamed itself its way back into its own install", function()
+    -- The refusal that stops an install-time script installing the package
+    -- being read in all over again is asked of the archive's own file name,
+    -- which is all there is to go on until config.lua has been read. A module
+    -- that renames itself and then asks for *that* name to be reloaded comes
+    -- back to the install under a name the first ask never saw: reloadModule()
+    -- reinstalls the module from its file, and the file is still called what it
+    -- always was. Unless the refusal is asked again once the manifest has
+    -- settled the name, the file is imported on top of the copy being read in,
+    -- once per round, with a second set of every item each time.
+    local reloadArchive = "mudlet-spec-reloadrenamer"
+    local reloadModuleName = "mudlet-spec-reloadrenamed"
+    defer(function() mudletSpecReloadRenamerRuns = nil end)
+    mudletSpecReloadRenamerRuns = nil
+
+    withFixtureModule(reloadModuleName, reloadArchive)
+
+    assert.equals(1, mudletSpecReloadRenamerRuns, "the module's install-time script was run again by its own reload")
+    assert.is_true(moduleInstalled(reloadModuleName), "the module that asked to reload itself is not installed")
+    -- one round of the recursion is one extra copy of everything in the file
+    assert.equals(1, exists(reloadModuleName .. " alias", "alias"), "the module's alias was imported more than once")
+    assert.equals(1, exists("mudletSpecReloadRenamerScript", "script"), "the module's script was imported more than once")
+    for _, kind in ipairs({"alias", "script"}) do
+      assert.equals(1, exists(reloadModuleName, kind), "the module was given a second " .. kind .. " master folder")
+    end
+
+    -- and the refusal took nothing away with it: an event loop pass on, the
+    -- module is still there, whole
+    pumpEvents(300)
+    assert.equals(1, mudletSpecReloadRenamerRuns)
+    assert.is_true(moduleInstalled(reloadModuleName), "the module was taken away once its install had finished")
+    assert.equals(1, exists(reloadModuleName .. " alias", "alias"))
   end)
 end)
 

@@ -2671,6 +2671,23 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         return QString();
     };
 
+    // A package's own scripts run while its install is still reading it in, and
+    // one of them can ask for that same package to be installed again - a module
+    // whose script reloads itself does, by way of the sync's reinstall. Importing
+    // the file on top of the copy being read in gives the profile a second set of
+    // every item in it, and nothing would stop the round after that. Asked twice
+    // like the question above, and for a sharper reason: reloadModule() reinstalls
+    // a module from the file it came in, which keeps its own name whatever
+    // config.lua renamed the module to, so a module that renamed itself is asking
+    // to be read in again under a name the archive's file name never mentions.
+    auto refusalFromAnInstallStillReadingTheName = [this](const QString& packageName) -> QString {
+        if (mPackagesBeingInstalled.contains(packageName)) {
+            //: %1 is the name of the package or module that is already part-way through being installed
+            return tr("\"%1\" is still being installed, so it cannot be installed again until that has finished.").arg(packageName);
+        }
+        return QString();
+    };
+
     // sanitizePackageName() takes off the parts of a file name that are not the
     // package's own - the folders it sits in, the extension - by removing them
     // wherever they appear rather than only at the end, so a name made of nothing
@@ -2696,14 +2713,8 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         //: %1 is the file the user tried to install, which has no name of its own left once the folders it sits in and its extension are taken off
         return fail(tr("\"%1\" leaves no name to install it under. Please rename the file and try again.").arg(fileName));
     }
-    // A package's own scripts run while its install is still reading it in, and
-    // one of them can ask for that same package to be installed again - a module
-    // whose script reloads itself does, by way of the sync's reinstall. Importing
-    // the file on top of the copy being read in gives the profile a second set of
-    // every item in it, and nothing would stop the round after that.
-    if (mPackagesBeingInstalled.contains(packageName)) {
-        //: %1 is the name of the package or module that is already part-way through being installed
-        return fail(tr("\"%1\" is still being installed, so it cannot be installed again until that has finished.").arg(packageName));
+    if (const QString refusal = refusalFromAnInstallStillReadingTheName(packageName); !refusal.isEmpty()) {
+        return fail(refusal);
     }
     // Nothing settles the name an install lands under until config.lua has been
     // read, and that can rename the archive to anything at all - so a name the
@@ -2875,6 +2886,12 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         // archive's own file name, and config.lua has just renamed this to
         // anything it likes. An archive with no manifest passes through here
         // unchanged and gets the same answer it would have got up there.
+        // Asked before the kind-by-kind questions below, and before anything of
+        // this package is made: a name still being read in has an importer
+        // holding its items, which the sync below would take apart by name.
+        if (const QString refusal = refusalFromAnInstallStillReadingTheName(packageName); !refusal.isEmpty()) {
+            return refuseTheRenamedInstall(refusal);
+        }
         if (thing != enums::PackageModuleType::Package) {
             if (thing != enums::PackageModuleType::ModuleSync && !mIsProfileLoadingSequence && mInstalledPackages.contains(packageName)) {
                 //: %1 is the name of the package that is already installed
