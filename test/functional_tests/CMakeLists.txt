@@ -89,6 +89,7 @@ set(PROFILE_GROUP_TEST_SOURCES
     DictionaryRoundTripTest.cpp
     MissingDisplayFontTest.cpp
     ProfileDeletionSafetyTest.cpp
+    ProfileDictionaryTest.cpp
     ProfileFolderNameTest.cpp
     ProfileIniParseErrorTest.cpp
     ProfileLifecycleTest.cpp
