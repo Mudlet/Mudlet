@@ -124,14 +124,14 @@ is being measured on Release builds of both trees before it is called a
 user-facing regression. Found by agent C1 (F-C1-5); reproduced by the
 coordinator and by verifier V2. No tracker entry.
 
-### 9. Minor, status unresolved: the connection dialog's first frame describes a profile other than the highlighted one
+### 9. Minor, pre-existing: the connection dialog's first frame describes a profile other than the highlighted one
 
 With two saved profiles, the dialog opens highlighting one of them while the
 details pane shows "Mudlet self-test / mudlet.org / 23" and Connect is enabled;
 a click on the highlighted row corrects it. Reproduced exactly by verifier V2
-from agent E1's steps (F-E1-3). The closest tracker entry, #10818, is closed,
-so this is either an incomplete fix or a regression of it; a 5.0.1 comparison
-is pending.
+from agent E1's steps (F-E1-3), and by the coordinator on a 5.0.1 build with
+the same profile directory: identical first frame, so not a regression. The
+closest tracker entry, #10818, is closed.
 
 ## Confirmed and already tracked
 
