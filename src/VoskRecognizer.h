@@ -226,6 +226,11 @@ private:
     bool decodedResult(const char* json, QJsonObject& result);
 
     QString mModelPath;
+    // Moves whenever a model is loaded or released. A step that reports a fault
+    // before it writes the error state compares it across the report, because a
+    // handler for that report may have loaded a model the state must not
+    // contradict.
+    unsigned int mLoadGeneration = 0;
     QString mCurrentLanguage;
 
     // Vosk handles (opaque pointers)

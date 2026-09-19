@@ -63,6 +63,7 @@
 #include "SpeechRecognizerFactory.h"
 #include "TLuaInterpreter.h"
 #include "VoskRecognizer.h"
+#include "VoskStubHelper.h"
 #include "mudlet.h"
 
 #if defined(Q_OS_MACOS)
@@ -334,6 +335,17 @@ class SpeechRecognizerContractTest : public QObject
 private:
     QTemporaryDir mConfigDir;
     QByteArray mSavedXdg;
+    bool mSystemEngineWins = false;
+
+    // A directory that exists and holds no model, which the stub accepts as one
+    // - it answers for any non-empty path, so a load gets as far as the
+    // configuration calls this file is about.
+    QString stubModelDirectory()
+    {
+        const QString path = QDir(mConfigDir.path()).filePath(qsl("stub-model"));
+        QDir().mkpath(path);
+        return path;
+    }
 
     // One word of Vosk's "result" array
     static QJsonObject word(const QString& text, const double start, const double end)
@@ -366,6 +378,10 @@ private slots:
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
+
+        // Decided once, here, and before anything has installed or loaded a stub;
+        // see VoskStub::systemEngineWins() for why the order matters.
+        mSystemEngineWins = VoskStub::systemEngineWins();
     }
 
     void cleanupTestCase()
@@ -386,6 +402,7 @@ private slots:
         // since a refused release would leave the flags it reads still set.
         VoskRecognizer::resetLibraryLoadState();
         VoskRecognizer::unloadLibraryByRequest(false);
+        VoskStub::remove();
     }
 
     // A capability is a promise that an event will arrive. Claimed without the
@@ -474,6 +491,47 @@ private slots:
         QCOMPARE(errors.count(), 1);
         const QString message = errors.first().first().toString();
         QVERIFY2(message.contains(qsl("reloadLibrary")), qPrintable(qsl("the refusal did not name what lifts the latch: %1").arg(message)));
+    }
+
+    // A start that fails on the microphone reports the fault, and a handler for
+    // that report may load a model again. The start must not then mark the
+    // recognizer faulty over the top of the load the handler just made: the
+    // model is loaded, and a caller told so should be able to use it.
+    //
+    // The one error path here that cannot be fixed by reporting the fault
+    // before writing the state, which is what every other one does: the capture
+    // component emits its own failure from inside start(), so the handler has
+    // already run by the time this code gets to decide anything.
+    void aModelLoadedWhileAFailedStartIsReportedIsNotMarkedFaulty()
+    {
+        if (mSystemEngineWins) {
+            QSKIP("libvosk answers the bare name here, so the loader would reach it before the stand-in this case installs");
+        }
+        QVERIFY2(VoskStub::install(), "the stand-in engine could not be installed, so nothing below the library guard is reachable");
+        VoskRecognizer recognizer;
+        const QString model = stubModelDirectory();
+        QVERIFY(recognizer.initialize(model));
+
+        bool reloaded = false;
+        connect(&recognizer, &SpeechRecognizer::errorOccurred, &recognizer, [&recognizer, &reloaded, model]() {
+            if (!reloaded) {
+                reloaded = recognizer.initialize(model);
+            }
+        });
+
+        recognizer.startListening();
+        if (recognizer.state() == SpeechRecognizer::State::Listening) {
+            recognizer.stopListening();
+            QSKIP("a microphone opened here, so the start this case is about did not fail");
+        }
+        if (recognizer.state() == SpeechRecognizer::State::Starting) {
+            recognizer.releaseResources();
+            QSKIP("the start is waiting on a microphone permission prompt");
+        }
+
+        QVERIFY2(reloaded, "the start failed without a report a handler could answer, so nothing here was re-entered");
+        QCOMPARE(recognizer.state(), SpeechRecognizer::State::Ready);
+        QVERIFY2(recognizer.initialized(), "the model a handler loaded while the failed start was reported was marked as not loaded");
     }
 
     // Capabilities are documented as re-readable rather than cacheable, so a

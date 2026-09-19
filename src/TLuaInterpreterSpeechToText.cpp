@@ -34,6 +34,7 @@
 #include "VoskRecognizer.h"
 
 #include <QDir>
+#include <QFileInfo>
 
 #if defined(Q_OS_MACOS)
 #include "AppleSpeechRecognizer.h"
@@ -112,6 +113,21 @@ static QStringList speechLibrarySearchPaths()
         }
     }
     return paths;
+}
+
+// Whether two paths name the same model directory. A handler that reloads the
+// model this call is loading has replaced nothing, and telling the two apart by
+// string would call a trailing separator or a symlink a replacement.
+static bool sameModelDirectory(const QString& loaded, const QString& requested)
+{
+    const QString canonicalLoaded = QFileInfo(loaded).canonicalFilePath();
+    if (canonicalLoaded.isEmpty()) {
+        // Nothing is there to canonicalise - the load left no path at all, or
+        // the directory went away between the load and this check - so the text
+        // is all there is to go on
+        return loaded == requested;
+    }
+    return canonicalLoaded == QFileInfo(requested).canonicalFilePath();
 }
 
 // The message for a call that needs an engine when there is none. "failed to
@@ -487,7 +503,10 @@ int TLuaInterpreter::sttInit(lua_State* L)
     }
     // Model-less backends answer an empty modelPath() by design, so there is
     // nothing here to compare - a handler replacing that load is caught above.
-    if (!useModelLessBackend && pRecognizer->modelPath() != modelPath) {
+    // The same model reached under another spelling - a trailing separator, a
+    // symlink - has not replaced anything, so it is compared as a directory
+    // rather than as text.
+    if (!useModelLessBackend && !sameModelDirectory(pRecognizer->modelPath(), modelPath)) {
         const QString message = qsl("the speech model loaded, but a handler for one of this call's own events replaced it with another before it could be used");
         reportSpeechRefusalTo(host, message);
         return warnArgumentValue(L, funcName, message);
@@ -1190,10 +1209,14 @@ int TLuaInterpreter::sttReloadLibrary(lua_State* L)
         // allocated also leaves the recognizer in Error, and that case must
         // stay reloadable since it's exactly what stt.reloadLibrary() is for.
         if (pRecognizer && (pRecognizer->listening() || pRecognizer->initialized() || pRecognizer->hasLiveNativeResources())) {
-            // Raised as well as returned: the engine caused this, not the
-            // caller's arguments, so docs/stt-api.md rule 2 wants it said
-            reportSpeechRefusal(qsl("cannot reload the speech recognition library while it is in use, close speech recognition first"));
-            return warnArgumentValue(L, __func__, qsl("cannot reload the speech recognition library while it is in use, close speech recognition first"), true);
+            // stt.reloadLibrary() takes no arguments, so this cannot be a caller's
+            // own mistake - it is a call the engine could not satisfy, and rule 2
+            // in docs/stt-api.md says those speak through sysSTTError too. The
+            // package that left the recognizer in use is usually not the one that
+            // asked for the reload, and it is the one that needs to hear this.
+            const QString refusal = qsl("cannot reload the speech recognition library while it is in use, close speech recognition first");
+            reportSpeechRefusal(refusal);
+            return warnArgumentValue(L, "stt.reloadLibrary", refusal, true);
         }
     }
 
@@ -1201,10 +1224,11 @@ int TLuaInterpreter::sttReloadLibrary(lua_State* L)
     // libraryAvailable() below would skip the probe and answer from cache -
     // reporting a successful reload of a module that was never released
     if (!VoskRecognizer::resetLibraryLoadState()) {
-        // Raised as well as returned: the engine caused this, not the
-        // caller's arguments, so docs/stt-api.md rule 2 wants it said
-        reportSpeechRefusal(qsl("the speech recognition library is still mapped and could not be released, so detection could not be re-run"));
-        return warnArgumentValue(L, "stt.reloadLibrary", qsl("the speech recognition library is still mapped and could not be released, so detection could not be re-run"), true);
+        // The loader still holds the module: an engine fault rather than a state
+        // guard, and the one an installer replacing the file most needs told.
+        const QString refusal = qsl("the speech recognition library is still mapped and could not be released, so detection could not be re-run");
+        reportSpeechRefusal(refusal);
+        return warnArgumentValue(L, "stt.reloadLibrary", refusal, true);
     }
     // sherpa latches its own "already looked" flag, and resetting only Vosk's
     // left a first sherpa install invisible until Mudlet restarted - which is
@@ -1213,10 +1237,11 @@ int TLuaInterpreter::sttReloadLibrary(lua_State* L)
     // function pointers that destroyStream() and releaseSherpaResources() test
     // before freeing, so handles outliving it could never be freed at all.
     if (!SherpaRecognizer::resetLibraryLoadState()) {
-        // Raised as well as returned: the engine caused this, not the
-        // caller's arguments, so docs/stt-api.md rule 2 wants it said
-        reportSpeechRefusal(qsl("the speech recognition library is still mapped and could not be released, so detection could not be re-run"));
-        return warnArgumentValue(L, "stt.reloadLibrary", qsl("the speech recognition library is still mapped and could not be released, so detection could not be re-run"), true);
+        // The loader still holds the module: an engine fault rather than a state
+        // guard, and the one an installer replacing the file most needs told.
+        const QString refusal = qsl("the speech recognition library is still mapped and could not be released, so detection could not be re-run");
+        reportSpeechRefusal(refusal);
+        return warnArgumentValue(L, "stt.reloadLibrary", refusal, true);
     }
     // Lift the latch stt.unloadLibrary() set, since asking for a reload is
     // exactly the caller saying they are done replacing the file
@@ -1237,7 +1262,15 @@ int TLuaInterpreter::sttReloadLibrary(lua_State* L)
     // was unavailable while stt.available() said otherwise.
     const bool available = speechEngineAvailable();
     announceSpeechCapabilities(pMudlet);
-    lua_pushboolean(L, available);
+    if (!available) {
+        // Detection ran and found nothing usable, which is the engine's answer
+        // rather than anything the caller got wrong - so it speaks like the other
+        // refusals here instead of leaving a bare false to be guessed at.
+        const QString refusal = noEngineMessage();
+        reportSpeechRefusal(refusal);
+        return warnArgumentValue(L, "stt.reloadLibrary", refusal, true);
+    }
+    lua_pushboolean(L, true);
     return 1;
 }
 
@@ -1255,10 +1288,12 @@ int TLuaInterpreter::sttUnloadLibrary(lua_State* L)
         // Same guard as stt.reloadLibrary(): see the comment there for why
         // hasLiveNativeResources() is checked rather than state alone.
         if (pRecognizer && (pRecognizer->listening() || pRecognizer->initialized() || pRecognizer->hasLiveNativeResources())) {
-            // Raised as well as returned: the engine caused this, not the
-            // caller's arguments, so docs/stt-api.md rule 2 wants it said
-            reportSpeechRefusal(qsl("cannot unload the speech recognition library while it is in use, close speech recognition first"));
-            return warnArgumentValue(L, __func__, qsl("cannot unload the speech recognition library while it is in use, close speech recognition first"), true);
+            // Announced for the same reason as the sibling refusal in
+            // stt.reloadLibrary(): no arguments to get wrong, so this is the
+            // engine refusing, and other packages on the profile are affected.
+            const QString refusal = qsl("cannot unload the speech recognition library while it is in use, close speech recognition first");
+            reportSpeechRefusal(refusal);
+            return warnArgumentValue(L, "stt.unloadLibrary", refusal, true);
         }
         // Only Vosk's loader is wired to this call, so an engine that has a
         // library of its own which this cannot release has to refuse: saying
@@ -1280,15 +1315,17 @@ int TLuaInterpreter::sttUnloadLibrary(lua_State* L)
             // driving an install flow from events alone would otherwise see a
             // false it could not attribute to anything.
             reportSpeechRefusal(message);
-            return warnArgumentValue(L, __func__, message, true);
+            return warnArgumentValue(L, "stt.unloadLibrary", message, true);
         }
     }
 
     if (!VoskRecognizer::resetLibraryLoadState()) {
-        // Raised as well as returned: the engine caused this, not the
-        // caller's arguments, so docs/stt-api.md rule 2 wants it said
-        reportSpeechRefusal(qsl("the speech recognition library is still mapped and could not be unloaded, so its file cannot be replaced yet"));
-        return warnArgumentValue(L, "stt.unloadLibrary", qsl("the speech recognition library is still mapped and could not be unloaded, so its file cannot be replaced yet"), true);
+        // The whole point of this call is to let the file be replaced, so a
+        // failure here is precisely what the caller - and anything else about to
+        // touch that file - has to hear about.
+        const QString refusal = qsl("the speech recognition library is still mapped and could not be unloaded, so its file cannot be replaced yet");
+        reportSpeechRefusal(refusal);
+        return warnArgumentValue(L, "stt.unloadLibrary", refusal, true);
     }
 
     // Stays unloaded until stt.reloadLibrary() asks for it back: without this

@@ -57,7 +57,7 @@ returning `false` with a message, `listModels` returning `{}`.
 | `stt.getLibraryPath()` | string | User-writable directory the engine library is installed into, resolved the same way as `stt.getModelPath()`. |
 | `stt.listModels()` | table | Array of `{name, path}` for installed models, across **every** model-based engine at once — not only whichever is currently loaded. Deliberately works without the engine library, so downloaded models stay visible. |
 | `stt.getPlatformKey()` | string \| `nil` | Platform/architecture key for selecting an engine build (`"macos"`, `"windows-x64"`, `"windows-x86"`, `"linux-x86_64"`, `"linux-aarch64"`); `nil` when no published build exists. |
-| `stt.reloadLibrary()` | boolean \| `false, error` | Re-run engine detection after an install, for **both** dynamically-loaded engines: it resets each one's "already looked" latch, releases the mapped module and probes again, so a newly installed engine is found without restarting Mudlet. It does *not* leave anything unmapped — re-detection means loading — so this is not the call for freeing a file you want to overwrite. Refuses while the recognizer is in use or holds live native resources, and answers whether speech is available at all afterwards, not whether Vosk in particular is. |
+| `stt.reloadLibrary()` | boolean \| `false, error` | Re-run engine detection after an install, for **both** dynamically-loaded engines: it resets each one's "already looked" latch, releases the mapped module and probes again, so a newly installed engine is found without restarting Mudlet. It does *not* leave anything unmapped — re-detection means loading — so this is not the call for freeing a file you want to overwrite. Refuses while the recognizer is in use or holds live native resources, and answers whether speech is available at all afterwards, not whether Vosk in particular is. When detection finds nothing usable, the `false` comes with a message saying where it looked. |
 | `stt.unloadLibrary()` | `true` \| `false, error` | Unload the engine so its file can be deleted (Windows cannot delete a mapped module). Same refusal rules, plus one of its own: with an engine loaded that holds a library this call cannot release — sherpa-onnx today — it refuses rather than reporting an unload it cannot perform. The built-in macOS backend holds none, so it does not block anything. **Vosk only** — see below. |
 
 **Known limitation: `unloadLibrary` acts on Vosk alone.** Desktop Mudlet's
@@ -294,6 +294,11 @@ capability.
    which *can* do the thing likewise speaks, so that case and the permanent
    limit have to be told apart before the attempt rather than guessed from its
    result.
+
+   One more is returned without a new event, and it is not the caller's mistake
+   either. While a `sysSTTError` handler runs, anything its own calls would
+   raise reaches it through their return values instead, since raising it would
+   run that handler again inside itself.
 3. **`setVocabulary`'s boolean is a capability answer**, not a success flag.
    Packages branch on it: `true` → engine handles vocabulary; `false` → apply
    client-side correction.

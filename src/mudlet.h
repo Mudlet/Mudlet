@@ -242,6 +242,11 @@ public:
     // Raise one sysSTT* event on a named profile. A refusal belongs to the
     // profile that asked for it, which is not the profile the microphone's own
     // traffic goes to once somebody else is listening.
+    //
+    // A sysSTTError raised while one is already being delivered is dropped: a
+    // handler's own calls report their refusals through their return values, and
+    // raising them would run that handler again inside itself, making the same
+    // call, until Lua's C stack overflows.
     void raiseSpeechEventOn(Host* pHost, const QString& name, const QString& value);
     // Raises sysSTTCapabilitiesChanged when, and only when, what Lua reads from
     // stt.getInfo().capabilities has actually moved since it was last told.
@@ -804,6 +809,8 @@ private:
     // How deep the delivery of a recognised phrase is - see the finalResult
     // connection in initSpeechRecognition(), and deliveringSpeechResult()
     int mSpeechResultsBeingDelivered = 0;
+    // How many sysSTTError deliveries are in progress; see raiseSpeechEventOn()
+    int mSpeechErrorsBeingDelivered = 0;
     // Raise one sysSTT* event on a named profile, which is what the handover
     // notice needs - it goes to the profile losing the microphone, and by then
     // the owner is already the profile that took it.

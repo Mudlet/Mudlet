@@ -167,6 +167,44 @@ describe("stt bridge", function()
     end)
   end)
 
+  describe("capability announcements", function()
+
+    -- getInfo().capabilities and sysSTTCapabilitiesChanged have to describe the
+    -- same thing in both directions. docs/stt-api.md offers following the event
+    -- as an equivalent to re-reading after init(), so a package that follows it
+    -- must not be told about a change getInfo() cannot see, nor left unaware of
+    -- one it can. The asymmetry that broke this was a recognizer coming into
+    -- existence: every capability reads false while there is none, so the
+    -- transition is real to Lua even though the recognizer is not asked until
+    -- the next init(), long after Lua's answer changed.
+    --
+    -- With no engine installed nothing here creates a recognizer, so this
+    -- degrades to asserting that nothing was announced either - true, but
+    -- proving little. It bites where an engine exists.
+    it("agrees with getInfo about what counts as a change", function()
+      local events = 0
+      local handler = registerAnonymousEventHandler("sysSTTCapabilitiesChanged", function() events = events + 1 end)
+      finally(function() killAnonymousEventHandler(handler) end)
+
+      local function capabilities()
+        local current = stt.getInfo().capabilities
+        return ("%s|%s|%s|%s"):format(tostring(current.biasing), tostring(current.grammar), tostring(current.words), tostring(current.onDevice))
+      end
+
+      local before, announced = capabilities(), events
+      -- Enough to create the recognizer if nothing has yet, and harmless if
+      -- something already did
+      stt.setSilenceTimeout(1500)
+      local after = capabilities()
+
+      if after ~= before then
+        assert.is_true(events > announced, "capabilities changed with no sysSTTCapabilitiesChanged to say so")
+      else
+        assert.are.equal(announced, events, "sysSTTCapabilitiesChanged announced a change getInfo() cannot see")
+      end
+    end)
+  end)
+
   describe("refusals", function()
 
     -- A raise through the binding must not strand anything it built first:
@@ -310,6 +348,33 @@ describe("stt bridge", function()
       assert.is_string(err)
       assert.are.equal(err, seen, "the refusal was returned to the caller but never announced")
       assert.is_false(stt.listening(), "a refused toggle must leave nothing listening")
+    end)
+
+    -- Semantics rule 2 has one exception: a sysSTTError handler's own calls
+    -- answer it through their return values. Raising a refusal from inside the handler would run
+    -- the handler again, making the same call, until Lua's C stack overflows.
+    -- Reachable on any machine: a path that is not there is refused, and
+    -- announced, before the bridge looks for an engine at all.
+    it("does not run a sysSTTError handler inside itself for its own refused call", function()
+      local depth, deepest, calls = 0, 0, 0
+      local innerOk, innerErr
+      local handler = registerAnonymousEventHandler("sysSTTError", function()
+        calls = calls + 1
+        depth = depth + 1
+        deepest = math.max(deepest, depth)
+        if calls < 20 then
+          innerOk, innerErr = stt.init("/no/such/speech/model")
+        end
+        depth = depth - 1
+      end)
+      finally(function() killAnonymousEventHandler(handler) end)
+
+      stt.init("/no/such/speech/model")
+
+      assert.are.equal(1, deepest, "the handler ran inside itself")
+      assert.are.equal(1, calls)
+      assert.is_nil(innerOk)
+      assert.is_string(innerErr, "the call inside the handler was refused without saying why")
     end)
 
     -- #10759. stt.init() reaches Lua before it returns: setState(Ready) raises

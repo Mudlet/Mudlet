@@ -244,6 +244,7 @@ set(TEARDOWN_GROUP_TEST_SOURCES
 
 # Sound, music and video, speech in and out, and the rich presence published to Discord
 set(MEDIA_GROUP_TEST_SOURCES
+    SpeechBridgeLuaTest.cpp
     SherpaEngineTest.cpp
     SpeechRecognizerContractTest.cpp
     TDiscordModeTest.cpp
@@ -361,9 +362,9 @@ add_grouped_test_binary(functional_starterui_tests ${STARTERUI_GROUP_TEST_SOURCE
 add_grouped_test_binary(functional_teardown_tests ${TEARDOWN_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_media_tests ${MEDIA_GROUP_TEST_SOURCES})
 
-# A stand-in libvosk, so SpeechRecognizerContractTest can reach the code below
-# VoskRecognizer's library guard on a machine with no speech engine - which is
-# every CI runner. Named exactly as the real library is on each platform,
+# A stand-in libvosk, so SpeechRecognizerContractTest and SpeechBridgeLuaTest can
+# reach the code below VoskRecognizer's library guard on a machine with no speech
+# engine - which is every CI runner. Named exactly as the real library is on each platform,
 # because VoskRecognizer looks it up by filename along librarySearchPaths().
 # The test copies it into its own redirected config dir, the first of those
 # paths, so nothing outside the test's temporary directory is touched.

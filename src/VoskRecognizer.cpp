@@ -353,6 +353,7 @@ QString VoskRecognizer::backendVersion() const
 
 bool VoskRecognizer::initialize(const QString& modelPath)
 {
+    ++mLoadGeneration;
     // Its own guard, ahead of the availability check and not folded into it:
     // loading a model is a write, and going through loadVoskLibrary() mapped
     // the library back in regardless of the latch stt.unloadLibrary() set - so
@@ -581,9 +582,13 @@ void VoskRecognizer::startListeningInternal()
 
     // mpCapture emits its own translated captureError before returning false,
     // which slot_captureError() has already turned into errorOccurred - only
-    // the state transition is left to do here
+    // the state transition is left to do here, and not even that when a handler
+    // for the report loaded a model: that load has settled the state already.
+    const unsigned int loadGeneration = mLoadGeneration;
     if (!mpCapture->start()) {
-        setState(State::Error);
+        if (mLoadGeneration == loadGeneration) {
+            setState(State::Error);
+        }
         return;
     }
 
@@ -841,6 +846,7 @@ void VoskRecognizer::releaseVoskResources()
 
 void VoskRecognizer::doReleaseResources()
 {
+    ++mLoadGeneration;
     // Same reason as initialize(): the device has to go before the decoder,
     // or a caller is left with a live microphone it has no call to close
     mpCapture->stop();
