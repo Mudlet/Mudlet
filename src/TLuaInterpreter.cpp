@@ -4090,6 +4090,25 @@ static QByteArray jsonEscapedControlByte(const char byte)
     }
 }
 
+// Punctuation for the table or array opening at this marker: the caller writes
+// the '{' or '[' itself, this only ends what stood in front of it. A string still
+// open ends here - the value marker of a structure opens none, so only a text
+// value or, on malformed input, a variable name leaves one - and a sibling that
+// already closed is separated from this one.
+static void closeBeforeNestedStructure(QByteArray& script, const quint8 last, const int nest, const bool valueQuoted)
+{
+    const bool endsString = (last == MSDP_VAL && valueQuoted) || last == MSDP_VAR;
+    if (endsString) {
+        script.append('\"');
+    }
+    // Siblings exist only inside a structure: a variable's own value stands alone,
+    // and a comma in front of it would make JSON no decoder accepts. Only
+    // malformed input reaches this line at the top level.
+    if (nest && (endsString || last == MSDP_TABLE_CLOSE || last == MSDP_ARRAY_CLOSE)) {
+        script.append(',');
+    }
+}
+
 // No documentation available in wiki - internal function
 // src is in Mud Server encoding and may need transcoding
 // Includes MSDP code originally from recv_sb_msdp(...) in TinTin++'s telopt.c,
@@ -4113,9 +4132,14 @@ void TLuaInterpreter::msdp2Lua(const char* src)
     // strip: a name holding a byte JSON has to escape is longer in script than
     // the raw name is, and the strip then leaves part of the prefix behind.
     int topLevelPrefixLength = 0;
+    // whether the value being written opened a quote, which only a text value
+    // does - read while last is still MSDP_VAL, which is why the text cases below
+    // leave last alone
+    bool valueQuoted = false;
     for (int i = 0; i < textLength; ++i) {
         switch (transcodedSrc.at(i)) {
         case MSDP_TABLE_OPEN:
+            closeBeforeNestedStructure(script, last, nest, valueQuoted);
             script.append('{');
             ++nest;
             last = MSDP_TABLE_OPEN;
@@ -4133,6 +4157,7 @@ void TLuaInterpreter::msdp2Lua(const char* src)
             last = MSDP_TABLE_CLOSE;
             break;
         case MSDP_ARRAY_OPEN:
+            closeBeforeNestedStructure(script, last, nest, valueQuoted);
             script.append('[');
             ++nest;
             last = MSDP_ARRAY_OPEN;
@@ -4150,17 +4175,17 @@ void TLuaInterpreter::msdp2Lua(const char* src)
             last = MSDP_ARRAY_CLOSE;
             break;
         case MSDP_VAR:
+            // the name starting here ends the string in front of it - a value, or
+            // the name of a variable that never got one; a table or an array
+            // closed its own, as the check at the end of the message assumes too
+            if (last == MSDP_VAL || last == MSDP_VAR) {
+                script.append('\"');
+            }
             if (nest) {
-                if (last == MSDP_VAL || last == MSDP_VAR) {
-                    script.append('\"');
-                }
                 if (last == MSDP_VAL || last == MSDP_VAR || last == MSDP_TABLE_CLOSE || last == MSDP_ARRAY_CLOSE) {
                     script.append(',');
                 }
-                script.append('\"');
             } else {
-                script.append('\"');
-
                 if (!varList.empty()) {
                     QString token = varList.front();
                     token = token.remove(QLatin1Char('\"'));
@@ -4182,10 +4207,6 @@ void TLuaInterpreter::msdp2Lua(const char* src)
                     no_array_marker_bug = false;
                     varList.clear();
                     script.clear();
-                    // the quote above closed the value just flushed - this one
-                    // opens the name starting now, which the first variable of a
-                    // subnegotiation gets from that same append
-                    script.append('\"');
                 }
                 // Scoped to the variable that carried the imbalance, and a
                 // valueless one never reaches the flush above that would clear
@@ -4193,6 +4214,8 @@ void TLuaInterpreter::msdp2Lua(const char* src)
                 // flag lands on whichever variable does flush next.
                 malformed = false;
             }
+            // opens the name starting now
+            script.append('\"');
             last = MSDP_VAR;
             lastVar.clear();
             break;
@@ -4217,7 +4240,8 @@ void TLuaInterpreter::msdp2Lua(const char* src)
             if (last == MSDP_VAL || last == MSDP_TABLE_CLOSE || last == MSDP_ARRAY_CLOSE) {
                 script.append(',');
             }
-            if (((textLength > i + 1) && transcodedSrc.at(i + 1) && transcodedSrc.at(i + 1) != MSDP_TABLE_OPEN && transcodedSrc.at(i + 1) != MSDP_ARRAY_OPEN) || (textLength <= i + 1)) {
+            valueQuoted = ((textLength > i + 1) && transcodedSrc.at(i + 1) && transcodedSrc.at(i + 1) != MSDP_TABLE_OPEN && transcodedSrc.at(i + 1) != MSDP_ARRAY_OPEN) || (textLength <= i + 1);
+            if (valueQuoted) {
                 script.append('\"');
             }
             varList.append(lastVar);
