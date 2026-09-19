@@ -377,6 +377,23 @@ Before batch 1 the coordinator runs the full `ctest` and busted suites once and
 records the result in `qa/baseline.md`, so an agent can tell a pre-existing
 failure from one it caused.
 
+## Verification
+
+No claim reaches the report on one agent's word:
+
+1. Every finding must come with a replayable repro (script file, launch line,
+   exact input) and evidence (screenshot or quoted log). A coverage row marked
+   "Fixed & verified" must cite the evidence; without it the row reads
+   "Claimed, not evidenced".
+2. After each batch, one verifier agent with a fresh context and only the
+   reports as input re-runs every finding and gives it a verdict: confirmed,
+   partial, not reproduced, or cannot run. It also samples the coverage rows,
+   re-running at least a third of them with priority on crash, hang and
+   data-loss commits, and files its own finding for any that do not hold up.
+3. Before the final report, the coordinator re-runs every Blocker and Major by
+   hand once more. Only confirmed findings are presented as findings; anything
+   not reproduced is listed separately with both accounts.
+
 ## Output
 
 Each area's `qa/findings-<area>.md` is merged into
