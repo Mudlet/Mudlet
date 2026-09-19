@@ -401,7 +401,7 @@ void TTreeWidget::dropEvent(QDropEvent* event)
 
     if (mTreeType == TreeType::Var) {
         LuaInterface* lI = mpHost->getLuaInterface();
-        auto [isValid, errorMsg] = lI->validMove(pItem);
+        auto [isValid, errorMsg] = lI->validMove(lI->getVarUnit()->getWVar(pItem));
         if (!isValid) {
             event->setDropAction(Qt::IgnoreAction);
             event->ignore();
