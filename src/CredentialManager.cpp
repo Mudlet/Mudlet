@@ -305,9 +305,11 @@ bool CredentialManager::isOperationValid() const
 
 bool CredentialManager::isPortableModeActive() const
 {
-    // Two stats: this runs on every credential operation, and resolving the
-    // whole root would read the marker and walk the config dirs to answer it
-    return !MudletApp::portableMarkerPath(MudletApp::executableDir()).isEmpty();
+    // The settled answer rather than a marker stat: a portable.txt naming a root
+    // Mudlet had to refuse leaves the marker in place while the config root is the
+    // ordinary one, and treating that as portable mode would quietly move the
+    // user's credentials out of the keychain on an install running non-portably.
+    return MudletApp::portableRootInUse();
 }
 
 bool CredentialManager::shouldUseKeychain(const QString& profileName) const

@@ -364,8 +364,7 @@ void Updater::setupPlatformUpdater()
 {
     // Setup to automatically download the new release when an update is available
     connect(feed.get(), &dblsqd::Feed::ready, this, [=, this]() {
-        auto* pMudlet = mudlet::self();
-        if (!pMudlet || MudletApp::development()) {
+        if (!mudlet::self() || MudletApp::development()) {
             return;
         }
 

@@ -1104,8 +1104,10 @@ int main(int argc, char* argv[])
             mudlet::self()->handleTelnetUri(telnetUri);
         }
 
-        // Queued behind the show() slot_showConnectionDialog() queues, so the
-        // notice opens on a connection dialog that is already up
+        // Queued behind the show() slot_showConnectionDialog() queues, so if a
+        // connection dialog is going to open at all it is already up by the time
+        // the notice does. An auto-login profile or a telnet:// URI opens none, and
+        // the notice then sits on the main window instead.
         QTimer::singleShot(0ms, mudlet::self(), &mudlet::warnAboutRejectedPortableRoot);
     });
 

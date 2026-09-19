@@ -95,9 +95,9 @@ private slots:
     void initTestCase()
     {
         mudlet::start();
-        // Paths get resolved on demand and corrected later; a settings store
-        // cannot, so it stays unavailable until setupConfig() settles the root.
-        // Checked here, ahead of every case, so no later case can settle it first.
+        // No Mudlet.ini may be opened before setupConfig() has settled the root and
+        // had its chance to report what the resolution found. Checked here, ahead
+        // of every case, so no later case can settle it first.
         QVERIFY2(MudletApp::getQSettings() == nullptr, "a settings store exists before setupConfig() has settled the config root");
         mSavedXdg = qgetenv("XDG_CONFIG_HOME");
     }
@@ -367,8 +367,7 @@ private slots:
         QVERIFY2(r.shadowedProfilesPath.isEmpty(), "one directory under two names is still one directory");
     }
 
-    // The only case that observes the settings tier, and losing those settings
-    // drops firstLaunchDate, which re-runs onboarding.
+    // Losing those settings drops firstLaunchDate, which re-runs onboarding.
     void test_settingsOnlyLegacyOutranksEmptyXdgDir()
     {
         QTemporaryDir xdg;
@@ -482,8 +481,8 @@ private slots:
 
     // --- MudletApp::portableMarkerPath() ----------------------------------------
 
-    // The cheap question behind isPortableModeActive(), which runs on every
-    // credential operation: two stats, and no marker read
+    // At most two stats and no marker read, which is what lets the credential path
+    // ask on every operation. This case locks in the precedence, not that cost.
     void test_portableMarkerPathPrefersTheOneBesideTheExecutable()
     {
         QTemporaryDir exec;
@@ -506,8 +505,8 @@ private slots:
         QCOMPARE(MudletApp::portableMarkerPath(exec.path(), configDir.path()), qsl("%1/portable.txt").arg(configDir.path()));
     }
 
-    // CredentialManager picks the keychain or a file on the marker alone, so the
-    // marker it reads has to be the one resolveConfigRoot() honours
+    // CredentialManager picks a file over the keychain as soon as portable mode is
+    // in force, so the marker this finds has to be the one resolveConfigRoot() honours
     void test_portableMarkerPathAgreesWithResolveConfigRoot()
     {
         QTemporaryDir exec;
@@ -638,12 +637,18 @@ private slots:
 
         QCOMPARE(MudletApp::getMudletPath(enums::mainPath), target);
         QCOMPARE(MudletApp::getMudletPath(enums::profilesPath), qsl("%1/profiles").arg(target));
+        // The distinction the whole install gate rests on: a root getMudletPath()
+        // resolved for itself is a usable answer for paths, but startup has not
+        // reported it yet, so no Mudlet.ini may be opened under it. Asserting it
+        // here rather than only before anything is resolved, where it holds
+        // trivially and a collapse of the two states would still read as green.
+        QVERIFY2(MudletApp::getQSettings() == nullptr, "a root getMudletPath() resolved for itself must not build a settings store");
     }
 
-    // Resolving costs a stat of both markers, a marker read and a walk of the
-    // config dirs, and getMudletPath() is called on nearly every profile, map,
-    // media and package operation - so the answer has to be remembered, whatever
-    // it turned out to be
+    // Resolving costs one or two marker stats, a walk of the config dirs, and a
+    // marker read when there is a marker; getMudletPath() is called on nearly every
+    // profile, map, media and package operation - so the answer has to be
+    // remembered, whatever it turned out to be
     void test_getMudletPathResolvesTheRootOnlyOnce()
     {
         if (portableMarkerPresent()) {
@@ -691,12 +696,33 @@ private slots:
     {
         const QString saved = MudletApp::getInterfaceLanguage();
         MudletApp::setInterfaceLanguage(qsl("en_US"));
+        // The reference binding is the assertion: against a by-value return this
+        // extends the lifetime of a temporary, against a const QString& return it
+        // aliases the static. Do not "simplify" it to const auto.
         const auto& readEarlier = MudletApp::getInterfaceLanguage();
         MudletApp::setInterfaceLanguage(qsl("de_DE"));
 
         QCOMPARE(readEarlier, qsl("en_US"));
         QCOMPARE(MudletApp::getInterfaceLanguage(), qsl("de_DE"));
         MudletApp::setInterfaceLanguage(saved);
+    }
+
+    // A marker naming a root that had to be refused leaves the file sitting there,
+    // so anything answering "are we portable?" off a marker stat says yes while the
+    // config root is the ordinary one - which is how a stray portable.txt moved a
+    // normal install's credentials out of the keychain.
+    void test_aRefusedPortableRootIsNotPortableModeInForce()
+    {
+        QTemporaryDir root;
+        QVERIFY(root.isValid());
+
+        MudletApp::setConfigPath(root.path(), false);
+        QVERIFY2(!MudletApp::portableRootInUse(), "a root the resolver refused a marker for is not portable mode");
+
+        MudletApp::setConfigPath(root.path(), true);
+        QVERIFY2(MudletApp::portableRootInUse(), "a root a portable.txt named and Mudlet honoured is portable mode");
+
+        MudletApp::setConfigPath(QString());
     }
 
     // --- mudlet::setupConfig() end-to-end wiring ------------------------------
@@ -717,23 +743,33 @@ private slots:
         QCOMPARE(settingsFileName(), qsl("%1/Mudlet.ini").arg(target));
     }
 
-    // The warning is all that tells an affected user where their other profiles went.
+    // The warning is all that tells an affected user where their other profiles
+    // went. It seeds its own HOME rather than reading the real ~/.config/mudlet,
+    // which holds no profiles on a CI runner or a fresh checkout - the case used
+    // to skip itself there, so the one path that saves a user from "my profiles
+    // are gone" never ran anywhere.
     void test_setupConfigWarnsAboutShadowedLegacyProfiles()
     {
+#ifdef Q_OS_WIN
+        QSKIP("QDir::homePath() does not follow HOME on Windows");
+#endif
         if (portableMarkerPresent()) {
             QSKIP("portable.txt present - setupConfig() takes the portable branch");
         }
-        const QString legacy = qsl("%1/.config/mudlet").arg(QDir::homePath());
-        if (!MudletApp::configDirHoldsProfiles(legacy)) {
-            QSKIP("no profiles in the real ~/.config/mudlet, so nothing can be shadowed");
-        }
+        QTemporaryDir home;
         QTemporaryDir xdg;
-        QVERIFY(xdg.isValid());
+        QVERIFY(home.isValid() && xdg.isValid());
+        QVERIFY(makeProfile(qsl("%1/.config/mudlet").arg(home.path()), qsl("Achaea")));
         QVERIFY(QDir().mkpath(qsl("%1/profiles").arg(mudletUnder(xdg.path()))));
         qputenv("XDG_CONFIG_HOME", xdg.path().toUtf8());
 
+        const QByteArray savedHome = qgetenv("HOME");
+        qputenv("HOME", home.path().toUtf8());
         QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("holds profiles as well")));
         mudlet::self()->setupConfig();
+        savedHome.isNull() ? qunsetenv("HOME") : qputenv("HOME", savedHome);
+
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), mudletUnder(xdg.path()));
     }
 
     // With XDG unset, the config root is the usual ~/.config/mudlet, so normal

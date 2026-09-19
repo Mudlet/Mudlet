@@ -19,10 +19,10 @@
 
 #include "SentryWrapper.h"
 
-#include "MudletApp.h"
 #include "utils.h"
 
 #ifdef WITH_SENTRY
+#include "MudletApp.h"
 #include <QStandardPaths>
 #include "sentry.h"
 #endif

@@ -681,9 +681,10 @@ private:
 
     bool mDarkMode = false;
     QString mDefaultStyle;
-    // The portable.txt that named a data directory Mudlet could not use, kept from
-    // setupConfig() until main() can say so on screen
+    // The portable.txt that named a data directory Mudlet could not use, and the
+    // directory it named, kept from setupConfig() until main() can say so on screen
     QString mRejectedPortableMarker;
+    QString mRejectedPortableRoot;
     // Stores the translated names for the Encodings for the static and thus
     // const TBuffer::csmEncodingTable:
     QMap<QByteArray, QString> mEncodingNameMap;
@@ -691,9 +692,6 @@ private:
     // Points to the common mudlet dictionary handle once a profile has
     // requested it, then gets closed at termination of the application.
     Hunhandle* mpHunspell_sharedDictionary = nullptr;
-    // Has default form of "en_US" but can be just an ISO language code e.g. "fr" for french,
-    // without a country designation. Replaces xx in "mudlet_xx.qm" to provide the translation
-    // file for GUI translation
     QKeySequence mKeySequenceCloseProfile;
     QKeySequence mKeySequenceConnect;
     QKeySequence mKeySequenceDisconnect;
