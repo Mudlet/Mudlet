@@ -46,6 +46,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     HostConsolePrintTest.cpp
     LabelAnchorInteractionTest.cpp
     LabelMovieRefusalTest.cpp
+    LabelSvgBackgroundTest.cpp
     CaretNavigationTest.cpp
     MainConsoleSelectionTest.cpp
     TabDetachThresholdTest.cpp
