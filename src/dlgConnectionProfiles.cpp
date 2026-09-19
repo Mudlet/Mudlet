@@ -93,6 +93,8 @@ const QStringList dlgConnectionProfiles::scmConnectionDetailFiles{qsl("url"), qs
 
 const QString dlgConnectionProfiles::scmSelfTestProfile = qsl("Mudlet self-test");
 
+std::optional<QColor> getCustomColor(const QString& profileName);
+
 // A lone "." is made entirely of permitted characters, yet every path built
 // from it addresses the profiles directory rather than a profile of its own -
 // as does "..", which scmUnusableProfileNameChars already covers:
@@ -1560,7 +1562,6 @@ void dlgConnectionProfiles::fillout_form()
     }
 
     listWidget_profiles->setIconSize(QSize(120, 30));
-    QString description;
     QListWidgetItem* pItem;
 
     const QStringList& onlyShownPredefinedProfiles{mudlet::self()->mOnlyShownPredefinedProfiles};
@@ -1593,14 +1594,7 @@ void dlgConnectionProfiles::fillout_form()
             // "My games" is still missing an entry:
             if (findData(*listWidget_profiles, scmSelfTestProfile, csmNameRole).isEmpty()) {
                 pItem = new QListWidgetItem();
-                // Can't use setupMudProfile(...) here as we do not set the icon in the same way:
-                setItemName(pItem, scmSelfTestProfile);
-
-                listWidget_profiles->addItem(pItem);
-                description = getDescription(qsl("mudlet.org"));
-                if (!description.isEmpty()) {
-                    pItem->setToolTip(utils::richText(description));
-                }
+                setupMudProfile(pItem, scmSelfTestProfile, getDescription(qsl("mudlet.org")), QString());
             }
         }
 #endif
@@ -1755,19 +1749,43 @@ void dlgConnectionProfiles::loadCustomProfile(const QString& profileName) const
     auto pItem = new QListWidgetItem();
     setItemName(pItem, profileName);
 
-    setCustomIcon(profileName, pItem);
-    auto description = getDescription(profileName);
-    if (!description.isEmpty()) {
-        pItem->setToolTip(utils::richText(description));
-    }
+    const bool iconLoaded = setCustomIcon(profileName, pItem);
+    setItemTooltip(pItem, getDescription(profileName), iconLoaded);
     listWidget_profiles->addItem(pItem);
 }
 
-void dlgConnectionProfiles::setCustomIcon(const QString& profileName, QListWidgetItem* profile) const
+// hasCustomIcon() can only tell that the file is there, so one that is empty or
+// not an image still reaches here and would leave the entry with nothing drawn
+bool dlgConnectionProfiles::setCustomIcon(const QString& profileName, QListWidgetItem* profile) const
 {
-    auto profileIconPath = MudletPaths::getMudletPath(enums::profileDataItemPath, profileName, qsl("profileicon"));
-    auto icon = QIcon(QPixmap(profileIconPath).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
-    profile->setIcon(icon);
+    const auto profileIconPath = MudletPaths::getMudletPath(enums::profileDataItemPath, profileName, qsl("profileicon"));
+    const QPixmap pixmap(profileIconPath);
+    if (pixmap.isNull()) {
+        qWarning() << profileName << "has an icon file that could not be read:" << profileIconPath;
+        profile->setIcon(customIcon(profileName, getCustomColor(profileName)));
+        return false;
+    }
+
+    profile->setIcon(QIcon(pixmap.scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy()));
+    return true;
+}
+
+// The list draws an entry as its icon and nothing else, so an entry whose icon
+// could not be read is given a name plate instead of being left as an
+// invisible, though still selectable, row - and says so where the user is
+void dlgConnectionProfiles::setItemTooltip(QListWidgetItem* pItem, const QString& description, const bool iconLoaded) const
+{
+    QStringList lines;
+    if (!description.isEmpty()) {
+        lines << description;
+    }
+    if (!iconLoaded) {
+        //: Tooltip line on an entry in the connection dialog's games list whose icon file is present but cannot be read, so a plate with the entry's name is drawn in its place
+        lines << tr("This entry's artwork could not be read, so its name is shown instead.");
+    }
+    if (!lines.isEmpty()) {
+        pItem->setToolTip(utils::richText(lines.join(qsl("<br>"))));
+    }
 }
 
 // When a profile is renamed, migrate password storage to the new profile
@@ -2643,23 +2661,24 @@ void dlgConnectionProfiles::setupMudProfile(QListWidgetItem* pItem, const QStrin
     setItemName(pItem, mudServer);
 
     listWidget_profiles->addItem(pItem);
-    if (!hasCustomIcon(mudServer)) {
-        const QPixmap pixmap(iconFileName);
-        if (pixmap.isNull()) {
+    // An entry with no artwork of its own is not a failure and is not warned
+    // about; one whose artwork was named but would not load is, because
+    // nothing else would show that the icon is broken rather than absent
+    bool iconLoaded = true;
+    if (hasCustomIcon(mudServer)) {
+        iconLoaded = setCustomIcon(mudServer, pItem);
+    } else if (const QPixmap pixmap(iconFileName); pixmap.isNull()) {
+        iconLoaded = iconFileName.isEmpty();
+        if (!iconLoaded) {
             qWarning() << mudServer << "doesn't have a valid icon";
-            return;
         }
-        if (pixmap.width() != 120) {
-            pItem->setIcon(pixmap.scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
-        } else {
-            pItem->setIcon(QIcon(iconFileName));
-        }
+        pItem->setIcon(customIcon(mudServer, getCustomColor(mudServer)));
+    } else if (pixmap.width() != 120) {
+        pItem->setIcon(pixmap.scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
     } else {
-        setCustomIcon(mudServer, pItem);
+        pItem->setIcon(QIcon(iconFileName));
     }
-    if (!serverDescription.isEmpty()) {
-        pItem->setToolTip(utils::richText(serverDescription));
-    }
+    setItemTooltip(pItem, serverDescription, iconLoaded);
 }
 
 QIcon dlgConnectionProfiles::customIcon(const QString& text, const std::optional<QColor>& backgroundColor) const

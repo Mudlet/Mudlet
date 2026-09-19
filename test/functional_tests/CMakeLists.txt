@@ -98,6 +98,7 @@ set(PROFILE_GROUP_TEST_SOURCES
     ProfileSaveShutdownRaceTest.cpp
     ResetProfileTest.cpp
     SavedVariableFenceTest.cpp
+    SelfTestProfileIconTest.cpp
     XMLexportVariablesTest.cpp
 )
 
@@ -198,6 +199,7 @@ set(PACKAGE_GROUP_TEST_SOURCES
     PackageDownloadDialogRestyleTest.cpp
     PackageExporterDialogTest.cpp
     PackageFontsOnRefusedArchiveTest.cpp
+    PackageManagerHeadingTest.cpp
     PackageManagerRemovalTest.cpp
     PackageRemovalSaveTeardownTest.cpp
     PackageRepositoryDownloadTest.cpp
@@ -234,6 +236,7 @@ set(SETTINGS_GROUP_TEST_SOURCES
     SettingsSearchTest.cpp
     SettingsShellNavigationTest.cpp
     SettingsSpellCheckEnableTest.cpp
+    SettingsThemeFetchErrorTest.cpp
 )
 
 # Teardown: who owns a profile's dialogs and windows, and what becomes of them when it closes
