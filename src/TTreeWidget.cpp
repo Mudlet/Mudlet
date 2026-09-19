@@ -26,7 +26,9 @@
 #include "LuaInterface.h"
 #include "TTimer.h"
 #include "TTrigger.h"
+#include "TVar.h"
 #include "VarUnit.h"
+#include "utils.h"
 
 #include <QtEvents>
 #include <QHeaderView>
@@ -104,7 +106,7 @@ void TTreeWidget::mouseReleaseEvent(QMouseEvent* event)
                 VarUnit* vu = lI->getVarUnit();
                 while (it.hasNext()) {
                     QTreeWidgetItem* item = it.next();
-                    if (!vu->shouldSave(item)) {
+                    if (!rowCanBeSaved(vu, item)) {
                         item->setCheckState(0, Qt::Unchecked);
                     }
                 }
@@ -401,7 +403,7 @@ void TTreeWidget::dropEvent(QDropEvent* event)
 
     if (mTreeType == TreeType::Var) {
         LuaInterface* lI = mpHost->getLuaInterface();
-        auto [isValid, errorMsg] = lI->validMove(lI->getVarUnit()->getWVar(pItem));
+        auto [isValid, errorMsg] = lI->validMove(variableForRow(lI->getVarUnit(), pItem));
         if (!isValid) {
             event->setDropAction(Qt::IgnoreAction);
             event->ignore();
@@ -458,6 +460,134 @@ QTreeWidgetItem* TTreeWidget::findItemByTriggerID(QTreeWidgetItem* pParent, int 
         }
     }
     return nullptr;
+}
+
+void TTreeWidget::buildVariableRows(VarUnit* pVarUnit, QTreeWidgetItem* pParent, TVar* pVariable, bool showHidden)
+{
+    // rows from the tree that came before stand for variables this walk is
+    // about to replace, so they go rather than be re-validated by the stamp
+    clearVariableRows();
+    mVariablesGeneration = pVarUnit->treeGeneration();
+    addVariableRows(pVarUnit, pParent, pVariable, showHidden);
+}
+
+void TTreeWidget::addVariableRows(VarUnit* pVarUnit, QTreeWidgetItem* pParent, TVar* pVariable, bool showHidden)
+{
+    QList<QTreeWidgetItem*> cList;
+    for (TVar* child : pVariable->getChildren(true)) {
+        if (!showHidden && pVarUnit->isHidden(child)) {
+            continue;
+        }
+        auto pItem = new QTreeWidgetItem(QStringList() << child->getName());
+        pItem->setText(0, child->getName());
+        pItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsAutoTristate | Qt::ItemIsUserCheckable);
+        //: Tooltip on a row in the editor's Variables view, offering to keep that variable between sessions
+        pItem->setToolTip(0, utils::richText(tr("Checked variables will be saved and loaded with your profile.")));
+        pItem->setCheckState(0, Qt::Unchecked);
+        if (pVarUnit->isSaved(child)) {
+            pItem->setCheckState(0, Qt::Checked);
+        }
+        if (!pVarUnit->shouldSave(child)) {
+            pItem->setFlags(pItem->flags() & ~(Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsUserCheckable));
+            pItem->setForeground(0, QBrush(QColor("grey")));
+            const QString reason = pVarUnit->getUnsaveableReason(child);
+            pItem->setToolTip(0, reason.isEmpty() ? QString() : utils::richText(reason));
+        }
+        pItem->setData(0, Qt::UserRole, child->getValueType());
+        QIcon icon;
+        switch (child->getValueType()) {
+        case LUA_TTABLE:
+            icon.addPixmap(QPixmap(qsl(":/icons/table.png")), QIcon::Normal, QIcon::Off);
+            break;
+        case LUA_TFUNCTION:
+            icon.addPixmap(QPixmap(qsl(":/icons/function.png")), QIcon::Normal, QIcon::Off);
+            break;
+        default:
+            icon.addPixmap(QPixmap(qsl(":/icons/variable.png")), QIcon::Normal, QIcon::Off);
+            break;
+        }
+        pItem->setIcon(0, icon);
+        mVariableForRow.insert(pItem, child);
+        cList.append(pItem);
+        if (child->getValueType() == LUA_TTABLE) {
+            addVariableRows(pVarUnit, pItem, child, showHidden);
+        }
+    }
+    pParent->addChildren(cList);
+}
+
+void TTreeWidget::clearVariableRows()
+{
+    mVariableForRow.clear();
+    mNewVariableForRow.clear();
+}
+
+// The rows outlive the variables they stand for: resetting a profile builds a
+// fresh variable tree and frees every TVar without the editor hearing about it.
+// Answering from rows built against a tree that is gone would hand back a freed
+// pointer, so they only answer while the tree they were built from is the
+// current one.
+bool TTreeWidget::rowsStandForCurrentVariables(VarUnit* pVarUnit) const
+{
+    return pVarUnit->treeGeneration() == mVariablesGeneration;
+}
+
+// Rows left over from a tree that has since been replaced stand for variables
+// that are gone, so they go rather than sit beside entries for the current tree.
+void TTreeWidget::adoptVariableTree(VarUnit* pVarUnit)
+{
+    if (rowsStandForCurrentVariables(pVarUnit)) {
+        return;
+    }
+    mVariableForRow.clear();
+    mNewVariableForRow.clear();
+    mVariablesGeneration = pVarUnit->treeGeneration();
+}
+
+TVar* TTreeWidget::variableForRow(VarUnit* pVarUnit, QTreeWidgetItem* pItem) const
+{
+    return rowsStandForCurrentVariables(pVarUnit) ? mVariableForRow.value(pItem) : nullptr;
+}
+
+TVar* TTreeWidget::newVariableForRow(VarUnit* pVarUnit, QTreeWidgetItem* pItem) const
+{
+    return rowsStandForCurrentVariables(pVarUnit) ? mNewVariableForRow.value(pItem) : nullptr;
+}
+
+void TTreeWidget::setVariableForRow(VarUnit* pVarUnit, QTreeWidgetItem* pItem, TVar* pVariable)
+{
+    adoptVariableTree(pVarUnit);
+    mVariableForRow.insert(pItem, pVariable);
+}
+
+void TTreeWidget::setNewVariableForRow(VarUnit* pVarUnit, QTreeWidgetItem* pItem, TVar* pVariable)
+{
+    adoptVariableTree(pVarUnit);
+    mNewVariableForRow.insert(pItem, pVariable);
+}
+
+void TTreeWidget::forgetRow(QTreeWidgetItem* pItem)
+{
+    mVariableForRow.remove(pItem);
+    mNewVariableForRow.remove(pItem);
+}
+
+void TTreeWidget::forgetNewVariableForRow(QTreeWidgetItem* pItem)
+{
+    mNewVariableForRow.remove(pItem);
+}
+
+// The same question VarUnit::shouldSave() answers for a variable, asked of the
+// row standing for it - so it has to give the same answer. It used to leave out
+// the size limit, and Qt's tristate cascade ticks a child whose
+// ItemIsUserCheckable flag buildVariableRows() stripped, so a table over the
+// limit reached by ticking its parent stayed ticked, went into savedVars and was
+// written into the profile (#9957).
+bool TTreeWidget::rowCanBeSaved(VarUnit* pVarUnit, QTreeWidgetItem* pItem) const
+{
+    TVar* var = variableForRow(pVarUnit, pItem);
+
+    return var && pVarUnit->shouldSave(var);
 }
 
 // Update a single trigger item's icon based on its current state
