@@ -1285,10 +1285,19 @@ void TConsole::changeColors()
         // refreshMainConsoleColors() above already did this one
         buffer.updateColors();
     }
-    if (mType & (MainConsole | Buffer)) {
-        buffer.mWrapAt = mpHost->mWrapAt;
-        buffer.mWrapIndent = mpHost->mWrapIndentCount;
-        buffer.mWrapHangingIndent = mpHost->mWrapHangingIndentCount;
+    if (mType == MainConsole) {
+        // Only the main console's wrap settings belong to the profile: the
+        // preferences dialog writes them to the Host and leaves applying them
+        // to here. Every other console owns its own, set through
+        // setWindowWrap() and friends and stored nowhere else - a Buffer used
+        // to be re-synced from the Host here too, which silently replaced
+        // whatever a script had asked for with the main console's.
+        // The setters keep the console's own copies in step with the buffer's,
+        // so this goes through them rather than writing the buffer directly:
+        // luaWrapLine() reads the console's and would otherwise stay stale.
+        setWrapAt(mpHost->mWrapAt);
+        setIndentCount(mpHost->mWrapIndentCount);
+        setHangingIndentCount(mpHost->mWrapHangingIndentCount);
     }
 
     updateScrollBarStyle();
