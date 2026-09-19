@@ -271,6 +271,12 @@ public:
     // The Central Debug Console keeps its find bar hidden until Ctrl+F, or
     // until its right-click menu asks for it:
     void showSearchBar();
+    // Copies text a caller is putting on this console to standard output for
+    // --mirror, one line per line shown, each prefixed with the profile and
+    // console names. Does nothing unless --mirror was given. The text is
+    // copied as handed over: TBuffer::commitLineData() calls this with a line
+    // as the game sent it, before a trigger can gag or rewrite it.
+    void mirrorToStdOut(const QString& text) const;
     void printFormatted(const QString& text, const std::vector<TChar>& formatting, const TLinkStore& sourceLinkStore) override;
     void printDebugLine(const QString& text, const QColor& foreground, const QColor& background, const QString& timeStamp) override;
     void discardAll() override;

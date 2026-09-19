@@ -66,8 +66,11 @@
 #include <QStyleOptionSlider>
 #include <QTextBoundaryFinder>
 #include <QVideoWidget>
+#include <cerrno>
 #include <chrono>
 #include <cmath>
+#include <cstdio>
+#include <cstring>
 
 using namespace std::chrono_literals;
 
@@ -2284,9 +2287,7 @@ void TConsole::print(const QString& msg)
     mUpperPane->showNewLines();
     mLowerPane->showNewLines();
 
-    if (Q_UNLIKELY(mudlet::self()->smMirrorToStdOut)) {
-        qDebug().nospace().noquote() << qsl("%1| %2").arg(mConsoleName, msg);
-    }
+    mirrorToStdOut(msg);
 }
 
 // printDebug(QColor& c, QColor& d, const QString& msg) was functionally the
@@ -2297,9 +2298,7 @@ void TConsole::print(const QString& msg, const QColor fgColor, const QColor bgCo
     mUpperPane->showNewLines();
     mLowerPane->showNewLines();
 
-    if (Q_UNLIKELY(mudlet::self()->smMirrorToStdOut)) {
-        qDebug().nospace().noquote() << qsl("%1| %2").arg(mConsoleName, msg);
-    }
+    mirrorToStdOut(msg);
 }
 
 void TConsole::printDebugLine(const QString& text, const QColor& foreground, const QColor& background, const QString& timeStamp)
@@ -2313,8 +2312,52 @@ void TConsole::printFormatted(const QString& text, const std::vector<TChar>& for
     mUpperPane->showNewLines();
     mLowerPane->showNewLines();
 
-    if (Q_UNLIKELY(mudlet::self()->smMirrorToStdOut)) {
-        qDebug().nospace().noquote() << qsl("%1| %2").arg(mConsoleName, text);
+    mirrorToStdOut(text);
+}
+
+namespace {
+// Writes one --mirror line to standard output. A reader that has gone away, or
+// a stream that cannot take any more, would otherwise cost a line per game line
+// in silence, so the first failure turns the option off and says so once.
+void writeMirrorLine(const QString& line)
+{
+    QByteArray output = line.toUtf8();
+    output.append('\n');
+    const size_t length = static_cast<size_t>(output.size());
+    if (std::fwrite(output.constData(), 1, length, stdout) == length && std::fflush(stdout) == 0) {
+        return;
+    }
+
+    mudlet::smMirrorToStdOut = false;
+    qWarning().nospace() << "--mirror: could not write to standard output (" << std::strerror(errno) << "), nothing more will be copied to it";
+}
+} // namespace
+
+void TConsole::mirrorToStdOut(const QString& text) const
+{
+    if (Q_LIKELY(!mudlet::smMirrorToStdOut)) {
+        return;
+    }
+
+    // What the callers hand over does not divide into lines the same way: the
+    // print paths pass whatever was echoed, which can hold several lines and
+    // end with a newline of its own, whilst TBuffer::commitLineData() passes
+    // one bare line. Give the stream one prefixed line per line shown either
+    // way, so that a consumer can read it line by line.
+    // Every profile's main console is called "main", so the console name on its
+    // own cannot say which game a line came from once a second profile is open.
+    const QString prefix = qsl("%1.%2| ").arg(mProfileName, mConsoleName);
+    if (text.isEmpty()) {
+        writeMirrorLine(prefix);
+        return;
+    }
+
+    QStringList shownLines = text.split(QChar::LineFeed);
+    while (!shownLines.isEmpty() && shownLines.constLast().isEmpty()) {
+        shownLines.removeLast();
+    }
+    for (const QString& shownLine : shownLines) {
+        writeMirrorLine(prefix + shownLine);
     }
 }
 

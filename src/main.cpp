@@ -36,6 +36,7 @@
 #include "MudletInstanceCoordinator.h"
 #include "TriggerMatchPool.h"
 #include <chrono>
+#include <csignal>
 #include <QCheckBox>
 #include <QCommandLineParser>
 #include <QDir>
@@ -392,7 +393,8 @@ int main(int argc, char* argv[])
     const QCommandLineOption startFullscreen(QStringList() << qsl("f") << qsl("fullscreen"), qsl("Start Mudlet in fullscreen mode"));
     parser.addOption(startFullscreen);
 
-    const QCommandLineOption mirrorToStdout(QStringList() << qsl("m") << qsl("mirror"), qsl("Mirror output of all consoles to STDOUT"));
+    const QCommandLineOption mirrorToStdout(QStringList() << qsl("m") << qsl("mirror"),
+                                            qsl("Copy console output to STDOUT: the main console's game text as it arrives, and what scripts print to any console"));
     parser.addOption(mirrorToStdout);
 
     QCommandLineOption beQuiet(QStringList() << qsl("q") << qsl("quiet"), qsl("Depricated option, previously used to disable showing the splash screen"));
@@ -1078,7 +1080,15 @@ int main(int argc, char* argv[])
         splash.finish(mudlet::self());
     }
 
-    mudlet::self()->smMirrorToStdOut = parser.isSet(mirrorToStdout);
+    mudlet::smMirrorToStdOut = parser.isSet(mirrorToStdout);
+#ifndef Q_OS_WINDOWS
+    if (mudlet::smMirrorToStdOut) {
+        // Without this a reader that exits first - `mudlet --mirror | head` -
+        // kills Mudlet mid-session on the next line it copies; TConsole::
+        // mirrorToStdOut() turns the write failure into a warning instead.
+        signal(SIGPIPE, SIG_IGN);
+    }
+#endif
     mudlet::smSteamMode = parser.isSet(steamMode);
     if (!onlyProfiles.isEmpty()) {
         mudlet::self()->onlyShowProfiles(onlyProfiles);
