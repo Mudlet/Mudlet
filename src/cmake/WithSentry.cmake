@@ -41,14 +41,6 @@ if(APPLE)
         OUTPUT_STRIP_TRAILING_WHITESPACE
     )
 
-    if("${CMAKE_SYSTEM_PROCESSOR}" MATCHES "arm64")
-        set(ARCH_LIST "arm64")
-    elseif("${CMAKE_SYSTEM_PROCESSOR}" MATCHES "x86_64")
-        set(ARCH_LIST "x86_64")
-    else()
-        set(ARCH_LIST "arm64|x86_64")
-    endif()
-
     # ExternalProject does not inherit the parent build's cache, so without this
     # the sentry-native/crashpad sub-build gets no -mmacosx-version-min at all
     # and clang silently targets the *build machine's* macOS version. That makes
@@ -59,10 +51,13 @@ if(APPLE)
     # Passing our deployment target down restores the weak import plus the real
     # runtime check, so older releases take sentry's poll-wait fallback instead.
     list(APPEND SENTRY_CMAKE_ARGS
-        "-DCMAKE_OSX_ARCHITECTURES=${ARCH_LIST}"
         "-DCMAKE_OSX_SYSROOT=${MACOSX_SYSROOT}"
         "-DCMAKE_OSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET}"
     )
+    if(CMAKE_OSX_ARCHITECTURES)
+        string(REPLACE ";" "|" SENTRY_OSX_ARCHITECTURES "${CMAKE_OSX_ARCHITECTURES}")
+        list(APPEND SENTRY_CMAKE_ARGS "-DCMAKE_OSX_ARCHITECTURES=${SENTRY_OSX_ARCHITECTURES}")
+    endif()
 endif()
 
 include(ExternalProject)
