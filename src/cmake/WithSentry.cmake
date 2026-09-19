@@ -3,6 +3,7 @@ if(NOT WITH_SENTRY)
 endif()
 
 set(SENTRY_PATH "${CMAKE_SOURCE_DIR}/3rdparty/sentry-native")
+set(SENTRY_INSTALL "${CMAKE_BINARY_DIR}/sentry-native-install")
 
 # Check if sentry-native submodule is initialized
 if(NOT EXISTS "${SENTRY_PATH}/CMakeLists.txt")
@@ -18,7 +19,7 @@ message(STATUS "Building with Sentry enabled")
 string(REPLACE ";" "|" SENTRY_PREFIX_PATH "${CMAKE_PREFIX_PATH}")
 set(SENTRY_CMAKE_ARGS
     -DCMAKE_BUILD_TYPE=RelWithDebInfo
-    "-DCMAKE_INSTALL_PREFIX=${SENTRY_PATH}/install_without_transport"
+    "-DCMAKE_INSTALL_PREFIX=${SENTRY_INSTALL}"
     "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
     "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
     "-DCMAKE_C_COMPILER_LAUNCHER=${CMAKE_C_COMPILER_LAUNCHER}"
@@ -107,10 +108,10 @@ target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC
 )
 
 target_include_directories(${LIB_MUDLET_TARGET} PRIVATE
-   "${SENTRY_PATH}/install_without_transport/include/"
+   "${SENTRY_INSTALL}/include/"
 )
 target_link_directories(${LIB_MUDLET_TARGET} PUBLIC
-    "${SENTRY_PATH}/install_without_transport/lib/"
+    "${SENTRY_INSTALL}/lib/"
 )
 # The sentry Qt integration needs qInstallMessageHandler from Qt6::Core.
 # CMake de-duplicates Qt6::Core, placing it before sentry in the link order.
@@ -146,7 +147,7 @@ else()
     target_link_libraries(${LIB_MUDLET_TARGET} crashpad_compat unwind)
 endif()
 
-set(SENTRY_BINARIES "${SENTRY_PATH}/install_without_transport/bin")
+set(SENTRY_BINARIES "${SENTRY_INSTALL}/bin")
 set(STAMP_FILE "${CMAKE_CURRENT_BINARY_DIR}/sentry_binaries.stamp")
 
 add_custom_command(OUTPUT ${STAMP_FILE}
