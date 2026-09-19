@@ -20,8 +20,8 @@
 #ifndef CRASH_REPORTER_H
 #define CRASH_REPORTER_H
 
-#include <QSettings>
-#include <QString>
+class QSettings;
+class QString;
 
 enum TCrashSendOption { AlwaysSend = 1, SendThisTime = 2, DontSend = 3 };
 
