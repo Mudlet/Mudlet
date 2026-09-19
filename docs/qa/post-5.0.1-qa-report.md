@@ -1,6 +1,6 @@
 # QA report: development since 5.0.1
 
-Status: in progress (batches 1 and 2 verified; batch 3 reports in and under verification; batch 4 pending).
+Status: in progress (batches 1 to 3 verified except E2/B2, whose verification is running; batch 4 running).
 Plan: `post-5.0.1-qa-plan.md`. Every item below was either run by the coordinator
 or reproduced by an independent verifier; agent claims that were not reproduced
 are listed in their own section, not among the findings.
@@ -135,7 +135,17 @@ unnoticed. The same two cases in 5.0.1's `TLuaInterpreter.cpp` have no
 separator either, so this predates the range; no open or closed issue
 describes it. Found by agent B2 (F-B2-1); reproduced by the coordinator.
 
-### 10. Minor, pre-existing: the connection dialog's first frame describes a profile other than the highlighted one
+### 10. Major, pre-existing, not on the tracker: deleting a user window leaves its scroll box orphaned over the main console
+
+`deleteMiniConsole()` on a user window drops the window's scroll box and
+command line from the by-name maps but does not destroy the widgets; the
+scroll box is reparented over the main console, covers game text, and can no
+longer be deleted ("scrollbox name 'sbY' not found"). Reproduced with agent
+F1's script on development and, by verifier V3, on 5.0.1, which leaves the
+same orphan; neither tree crashes, so the crash that c0309561b fixed (#10319)
+is a different defect and stays fixed. Found by agent F1 (F-F1-2).
+
+### 11. Minor, pre-existing: the connection dialog's first frame describes a profile other than the highlighted one
 
 With two saved profiles, the dialog opens highlighting one of them while the
 details pane shows "Mudlet self-test / mudlet.org / 23" and Connect is enabled;
@@ -164,6 +174,14 @@ because they are new.
 | F-C1-8 | Minor | #10738 | an unset capture group is "" mid-pattern but absent at the end |
 | F-C1-9 | Minor | #10733 | an uncompilable regex is accepted and returns a normal id for a dead trigger |
 | F-C1-10 | Minor | #10737 | `showCaptureGroups()` raises on a pattern with a named group |
+| F-F1-1 | Major | #10593, fix pending PR #10594 | after an attached container's own edge drag the text pane keeps painting at the old border until the next click; 5.0.1 identical |
+| F-F1-3 | Major | #10617 | two containers on opposite borders reserve the whole axis and leave the console 0 rows; the single-container case d3f5f873b targets is genuinely fixed (2 rows kept, 5.0.1 kept 0) |
+| F-F1-4 | Minor | #10747 | `Adjustable.Container:hide()` leaves its border reserved as a blank strip |
+| F-F1-5 | Minor | #10744 | a second `minimize()` discards the real height, so `restore()` stays collapsed |
+| F-F1-6 | Minor | #10745 | a negative or non-numeric `setPadding()` raises and is still saved |
+| F-F1-7 | Minor | #10746 | `lockContainer()` accepts an unknown style name and raises on a bad number |
+| F-F1-8 | Minor | #10618 | `attachToBorder("Left")` raises but marks the container attached |
+| F-F1-9 | Minor | #10753 | a label swallows right-clicks, so the console context menu is unreachable under it |
 | F-E1-6 | Cosmetic | none | the log says "loaded from keychain" for a password read from the encrypted file |
 | F-C1-11 | Cosmetic | none | 9e6ef57a8's commit message quotes a stale stopwatch boundary |
 
@@ -171,6 +189,9 @@ because they are new.
 
 - A telnet GA that arrives in the read after a prompt was already flushed by
   the 300 ms marker commits a second, empty line (agent B1, F-B1-3; confirmed).
+- `debugc()` output goes to the editor's Errors view rather than the Central
+  Debug Console (agent D1, F-D1-4; confirmed by verifier V3 as the designed
+  behaviour).
 - `--mirror` copies `print()`, `echo()` and the colour echoes to stdout, but
   nothing that arrives through `feedTelnet()` or the socket; the comment in
   `mudlet.h` promises "everything shown in any console" (agent B1, F-B1-4;
@@ -182,6 +203,8 @@ because they are new.
   its log (agent A1, F-A1-3). The verifier replayed the sequence six times under
   gdb with core dumps enabled: alive every time, no core, no signal. Dropped
   unless it recurs.
+- The Central Debug Console needing two clicks on its Debug button to open
+  (agent D1, F-D1-3): verifier V3 opened it with one click. Dropped.
 - The busted subset runner failing on `Miscallaneous_spec` alone (F-B1-5) is
   a harness artefact, not a product claim.
 
@@ -206,7 +229,20 @@ building a second one). b150e51d4 cannot be driven here because the two map
 views exclude each other in both directions (#10666); 9720638ef (a frame the
 game empties) moved to B2.
 
-## Fixed during the campaign
+Batch 3 so far: areas F1 (console, labels, Geyser, 32 commits) and D1 (script
+editor, 16 commits). One cited screenshot name was a typo (the file exists
+under the neighbouring number); everything else cited exists. Verifier V3
+re-ran 17 rows and all held up, and closed F1's remaining gap on 78e33c43a by
+patching a negative wrap indent into a saved profile: it loads and wraps
+normally.
+
+## Fixed during the campaign, or already fixed but still open
+
+- Open issue #10342 (pressing Tab at the very start of a script aborts Debug
+  builds) no longer reproduces: verifier V3 ran the same keystrokes on both
+  trees, 5.0.1 dies in edbee's `textdocument.cpp:390` assertion and
+  development indents and survives. Fixed by the edbee-lib bump 805918f48;
+  the issue can be closed.
 
 - `CredentialManagerKeychainTest` SEGFAULT and the consequent `HomeUntouchedTest`
   failure (agent E1, F-E1-1 and F-E1-2): fixed by #10858, verified by re-running
