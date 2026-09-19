@@ -30,7 +30,6 @@
 #include "MudletPaths.h"
 #include "TLuaInterpreter.h"
 
-#include <QApplication>
 #include <QClipboard>
 #include <QGuiApplication>
 
@@ -337,8 +336,9 @@ int TLuaInterpreter::alert(lua_State* L)
         }
     }
 
-    // QApplication::alert expects milliseconds, not seconds
-    QApplication::alert(mudlet::self(), qRound(luaAlertDuration * 1000.0));
+    if (auto* application = mudlet::self()) {
+        application->alertUser(qRound(luaAlertDuration * 1000.0));
+    }
 
     return 0;
 }
