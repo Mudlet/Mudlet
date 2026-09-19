@@ -1278,26 +1278,131 @@ describe("Trigger processing", function()
             -- feedTriggers() transcodes into the server encoding, so a non-UTF-8
             -- one would strip the character and let this pass without testing it
             assert.are.equal("UTF-8", getServerEncoding(), "this spec needs a UTF-8 server encoding to feed a multi-byte character")
-            _G.TrigSpec = {seen = {}}
+            _G.TrigSpec = {seen = {}, selected = {}}
             local id = tempComplexRegexTrigger("SpecComplexMatchAllUtf8", [[(\d*)]],
                 function()
                     _G.TrigSpec.seen = {}
+                    _G.TrigSpec.selected = {}
                     for i = 1, #matches do
                         _G.TrigSpec.seen[i] = matches[i]
+                        selectCaptureGroup(i)
+                        _G.TrigSpec.selected[i] = getSelection()
+                        deselect()
                     end
                 end,
                 0, -1, -1, 0, 1, -1, -1, 0, 0, 0)
             assert.is_number(id)
+            finally(function() if type(id) == "number" and id > 0 then killTrigger("SpecComplexMatchAllUtf8") end end)
             feedTriggers("\ncaf\195\169 9\n")
             local seen = _G.TrigSpec.seen
+            local selected = _G.TrigSpec.selected
             assert.is_true(killTrigger("SpecComplexMatchAllUtf8"), "a temporary complex trigger should be removable by name")
             local found = false
-            for _, capture in ipairs(seen) do
+            for i, capture in ipairs(seen) do
                 if capture == "9" then
                     found = true
+                    -- the empty matches this pattern collects along the way are
+                    -- given no position at all, so the one capture that has a
+                    -- position has to still be reported past the multi-byte
+                    -- character it sits after
+                    assert.are.equal("9", selected[i], "the capture after the multi-byte character was reported at the wrong position")
                 end
             end
             assert.is_true(found, "the capture after the multi-byte character was dropped")
+        end)
+
+        -- Every capture a match-all fire collects at a non-empty match carries
+        -- the position it sits at, and selectCaptureGroup() selects by that
+        -- position, so a line that mixes plain text with characters taking more
+        -- than one byte - and, for the dragon, more than one UTF-16 code unit -
+        -- pins both what was captured and where each capture was found.
+        it("reports the text and the position of every match-all capture", function()
+            assert.are.equal("UTF-8", getServerEncoding(), "this spec needs a UTF-8 server encoding to feed multi-byte characters")
+            local sharpS = "\195\159"
+            local dragon = "\240\159\144\137"
+            local words = {"alpha", sharpS .. "eta", dragon, "42"}
+            _G.TrigSpec = {captures = {}, selections = {}, starts = {}}
+            local id = tempComplexRegexTrigger("SpecComplexMatchAllPositions", [[(\S+)]],
+                function()
+                    -- a fire of its own each time: an earlier one's tail would
+                    -- otherwise survive at the indices this one does not reach
+                    _G.TrigSpec = {captures = {}, selections = {}, starts = {}}
+                    for i = 1, #matches do
+                        _G.TrigSpec.captures[i] = matches[i]
+                        selectCaptureGroup(i)
+                        -- selectCaptureGroup() leaves the previous selection in
+                        -- place when it refuses one, so clear it every time
+                        _G.TrigSpec.selections[i], _G.TrigSpec.starts[i] = getSelection()
+                        deselect()
+                    end
+                end,
+                0, -1, -1, 0, 1, -1, -1, 0, 0, 0)
+            assert.is_number(id)
+            finally(function() if type(id) == "number" and id > 0 then killTrigger("SpecComplexMatchAllPositions") end end)
+            feedTriggers("\n" .. table.concat(words, " ") .. "\n")
+            local captures = _G.TrigSpec.captures
+            local selections = _G.TrigSpec.selections
+            local starts = _G.TrigSpec.starts
+            assert.is_true(killTrigger("SpecComplexMatchAllPositions"), "a temporary complex trigger should be removable by name")
+            -- the whole match and its only capture group are the same text, so
+            -- every word arrives twice
+            local expected = {"alpha", "alpha", sharpS .. "eta", sharpS .. "eta", dragon, dragon, "42", "42"}
+            assert.are.same(expected, captures)
+            assert.are.same(expected, selections, "a capture's position should select the capture's own text")
+            -- the dragon is one character but two UTF-16 code units, so "42"
+            -- starts at 14 and not at 13
+            assert.are.same({0, 0, 6, 6, 11, 11, 14, 14}, starts, "a capture should be reported at the code unit it sits at")
+        end)
+
+        -- Those positions used to be counted from the start of the line for
+        -- every capture, which made a match-all line cost the square of its
+        -- length rather than growing with it (#10869).
+        --
+        -- What is asserted on is the cost the armed trigger *adds*: the same two
+        -- lines are fed with nothing armed first and that subtracted, so the
+        -- console's own per-line work - which is linear, and is not what this
+        -- pins - cannot decide the outcome. Each measurement is the cheapest of
+        -- three runs, because scheduling noise only ever adds. Eight times the
+        -- line is eight times the added work while the walk is linear and
+        -- sixty-four times while it is quadratic, so sixteen lies between the
+        -- two with a factor of two of room on either side.
+        it("adds under sixteen times as much work for eight times the line", function()
+            -- "word " is five bytes, so this is an 8 kB line and one eight times longer
+            local shortReps, longReps = 1638, 13104
+            local function costOf(repeats)
+                local line = string.rep("word ", repeats)
+                local best
+                for _ = 1, 3 do
+                    local started = os.clock()
+                    feedTriggers("\n" .. line .. "\n")
+                    local taken = os.clock() - started
+                    if not best or taken < best then
+                        best = taken
+                    end
+                end
+                return best
+            end
+            local baseShort, baseLong = costOf(shortReps), costOf(longReps)
+            _G.TrigSpec = {captures = 0}
+            local id = tempComplexRegexTrigger("SpecComplexMatchAllCost", [[(\S+)]],
+                [[_G.TrigSpec.captures = #matches]],
+                0, -1, -1, 0, 1, -1, -1, 0, 0, 0)
+            assert.is_number(id)
+            finally(function() if type(id) == "number" and id > 0 then killTrigger("SpecComplexMatchAllCost") end end)
+            local armedShort = costOf(shortReps)
+            local shortCaptures = _G.TrigSpec.captures
+            local armedLong = costOf(longReps)
+            local longCaptures = _G.TrigSpec.captures
+            assert.is_true(killTrigger("SpecComplexMatchAllCost"), "a temporary complex trigger should be removable by name")
+            -- without this the trigger could have stopped matching, or stopped
+            -- matching all, and the two costs would agree on measuring nothing
+            assert.are.equal(shortReps * 2, shortCaptures, "match-all should collect the whole match and its capture group for every word")
+            assert.are.equal(longReps * 2, longCaptures, "match-all should collect the whole match and its capture group for every word")
+            local short = armedShort - baseShort
+            local long = armedLong - baseLong
+            assert.is_true(long <= short * 16 + 0.01,
+                string.format("arming the trigger added %.3fs to a 64 kB line against %.3fs to an 8 kB one, %.0fx for eight times the line - the capture positions may be counted from the start of the line again",
+                    long, short, long / math.max(short, 0.000001)))
         end)
 
         it("rejects a non-string, non-function body (argument 3)", function()
