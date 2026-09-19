@@ -60,7 +60,7 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "ProfileTestHelper.h"
 #include "TLuaInterpreter.h"
 #include "TDetachedWindow.h"
@@ -256,8 +256,8 @@ private:
     // player opens one from inside a running Mudlet instead.
     bool provisionProfileOnDisk(const QString& profileName) const
     {
-        return QDir().mkpath(MudletPaths::getMudletPath(enums::profileHomePath, profileName)) && MudletPaths::writeProfileData(profileName, qsl("url"), mLocalhost).first
-               && MudletPaths::writeProfileData(profileName, qsl("port"), mPort).first;
+        return QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, profileName)) && MudletApp::writeProfileData(profileName, qsl("url"), mLocalhost).first
+               && MudletApp::writeProfileData(profileName, qsl("port"), mPort).first;
     }
 
     static bool portableMarkerPresent()
@@ -365,7 +365,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName) const
     {
-        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, profileName));
+        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, profileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }
@@ -390,9 +390,9 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
-        mudlet::getQSettings()->setValue(qsl("uiTourShown"), true);
-        mudlet::getQSettings()->sync();
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        MudletApp::getQSettings()->setValue(qsl("uiTourShown"), true);
+        MudletApp::getQSettings()->sync();
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
