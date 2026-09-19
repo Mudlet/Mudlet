@@ -4190,6 +4190,38 @@ describe("Trigger processing", function()
                 assert.is_true(finaliser.runs > 0, "no finaliser ran inside the read")
                 assert.are.equal("from the finaliser", seen.line)
             end)
+
+            -- The bytes behind "line" are put together in a buffer the
+            -- interpreter keeps between calls, and pushing a string collects
+            -- before it reads them. An alias pass fills that same buffer for
+            -- "command", so a finaliser that runs one mid-build must not be
+            -- able to write over the line this read is about to hand back.
+            it("keeps a line an alias pass a finaliser ran could have written over", function()
+                local seen = {}
+                local long = string.rep("Q", 600)
+                local inside = false
+                alias(tempAlias("^lazyfinaliserscratch$", function() end))
+                trigger(tempRegexTrigger("^Q+ (\\w+)$", function()
+                    finaliser.watching = true
+                    seen.line = line
+                    finaliser.watching = false
+                end))
+                finaliser.onRun = function()
+                    if inside then
+                        return
+                    end
+                    inside = true
+                    expandAlias("lazyfinaliserscratch", false)
+                    inside = false
+                end
+
+                withFinaliserAtEveryAllocation(function()
+                    feedTriggers("\n" .. long .. " word\n")
+                end)
+
+                assert.is_true(finaliser.runs > 0, "no finaliser ran inside the read")
+                assert.are.equal(long .. " word", seen.line)
+            end)
         end)
 
         -- A strict-globals package polices __index and __newindex on the

@@ -5803,11 +5803,18 @@ void TLuaInterpreter::set_lua_string(const QString& varName, const QString& varV
     lua_State* L = pGlobalLua;
     const int callerStackTop = lua_gettop(L);
 
+    // Moved out rather than read in place, for the reason pushUtf8String()
+    // gives: lua_pushlstring() below runs a garbage collection step before it
+    // reads these bytes, and a finaliser there can reach this function again
+    // through an alias pass. A nested call finds the cache empty, fills one of
+    // its own, and so cannot free the buffer being pushed.
+    QString lastName = std::move(mLastGlobalName);
+    QByteArray lastNameUtf8 = std::move(mLastGlobalNameUtf8);
     // The name is nearly always the same QString, and the copy taken below
     // shares its buffer, so comparing pointers first skips the character compare
-    if (mLastGlobalName.constData() != varName.constData() && mLastGlobalName != varName) {
-        mLastGlobalName = varName;
-        mLastGlobalNameUtf8 = varName.toUtf8();
+    if (lastName.constData() != varName.constData() && lastName != varName) {
+        lastName = varName;
+        lastNameUtf8 = varName.toUtf8();
     }
 
     // Raw, because this is how Mudlet hands a dispatch its own "command" and
@@ -5818,9 +5825,12 @@ void TLuaInterpreter::set_lua_string(const QString& varName, const QString& varV
     // which is the class CI/check-lua-error-strands.lua exists for. Setting
     // these was never something a package could usefully intercept anyway: the
     // name is absent only until the first dispatch writes it.
-    lua_pushlstring(L, mLastGlobalNameUtf8.constData(), mLastGlobalNameUtf8.size());
+    lua_pushlstring(L, lastNameUtf8.constData(), lastNameUtf8.size());
     pushUtf8String(L, varValue);
     lua_rawset(L, LUA_GLOBALSINDEX);
+    // lua_rawset() cannot collect, so the cache goes back with the pushes over
+    mLastGlobalName = std::move(lastName);
+    mLastGlobalNameUtf8 = std::move(lastNameUtf8);
     lua_settop(L, callerStackTop);
 }
 
@@ -5828,20 +5838,28 @@ void TLuaInterpreter::set_lua_string(const QString& varName, const QString& varV
 // Pushes text the way lua_pushstring() does, so it ends at the first NUL
 void TLuaInterpreter::pushUtf8String(lua_State* L, const QString& text)
 {
+    // Moved out of the member rather than written into it: lua_pushstring()
+    // runs a garbage collection step before it reads the bytes, and a __gc
+    // finaliser there can reach this function again - reading "line" goes
+    // through lazyGlobalsIndex(), and an alias pass sets "command". A nested
+    // call finds the member empty and grows a buffer of its own, so it can
+    // neither refill nor free the one being pushed. Host::runTriggers() parks
+    // the trigger haystack this way for the same reason.
+    QByteArray scratch = std::move(mUtf8Scratch);
     QStringEncoder encoder(QStringEncoder::Utf8, QStringConverter::Flag::Stateless);
-    mUtf8Scratch.resize(encoder.requiredSpace(text.size()));
-    const char* const end = encoder.appendToBuffer(mUtf8Scratch.data(), text);
+    scratch.resize(encoder.requiredSpace(text.size()));
+    const char* const end = encoder.appendToBuffer(scratch.data(), text);
     if (Q_UNLIKELY(encoder.hasError())) {
         // The encoder writes a replacement character where an unpaired
         // surrogate was, while toUtf8() drops it. That path can afford the
         // copy and stay byte for byte what a script used to be given.
-        mUtf8Scratch = text.toUtf8();
+        scratch = text.toUtf8();
     } else {
-        mUtf8Scratch.resize(end - mUtf8Scratch.constData());
+        scratch.resize(end - scratch.constData());
     }
-    lua_pushstring(L, mUtf8Scratch.constData());
-    if (mUtf8Scratch.capacity() > scmMaxRetainedUtf8Scratch) {
-        mUtf8Scratch = QByteArray();
+    lua_pushstring(L, scratch.constData());
+    if (scratch.capacity() <= scmMaxRetainedUtf8Scratch) {
+        mUtf8Scratch = std::move(scratch);
     }
 }
 
