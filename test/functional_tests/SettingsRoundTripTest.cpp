@@ -429,6 +429,96 @@ private slots:
         QCOMPARE(mpHost->mDoubleClickIgnore, expectedIgnore);
     }
 
+    // The three wrap spin boxes describe one layout but have ranges of their
+    // own, so the pair the user leaves can be one the wrapping cannot carry
+    // (#10458). They are reconciled against the width being saved rather than
+    // by capping the indent boxes as the width is typed - a spin box drops a
+    // value that no longer fits its range and never puts it back, and typing
+    // "120" over "100" passes through 1 on the way, which would wipe both.
+    void test_anIndentTooWideForTheWrapWidthIsCutBackByTheApply()
+    {
+        openPreferences();
+
+        const int priorWrapAt = mpHost->mWrapAt;
+        const int priorWrapIndent = mpHost->mWrapIndentCount;
+        const int priorHangingIndent = mpHost->mWrapHangingIndentCount;
+        restoreLater([=, this]() {
+            mpHost->mWrapAt = priorWrapAt;
+            mpHost->mWrapIndentCount = priorWrapIndent;
+            mpHost->mWrapHangingIndentCount = priorHangingIndent;
+        });
+
+        QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        mpPreferences->wrap_at_spinBox->setValue(40);
+        mpPreferences->indent_wrapped_spinBox->setValue(39);
+        mpPreferences->hanging_indent_wrapped_spinBox->setValue(39);
+        QVERIFY2(applyAndWait(applySpy), "the debounce never wrote the settings back");
+
+        // 40 keeps 10 columns for text, so 30 is as wide as an indent can be
+        QCOMPARE(mpHost->mWrapAt, 40);
+        QCOMPARE(mpHost->mWrapIndentCount, 30);
+        QCOMPARE(mpHost->mWrapHangingIndentCount, 30);
+        // and the dialog shows what was stored rather than what was typed
+        QCOMPARE(mpPreferences->indent_wrapped_spinBox->value(), 30);
+        QCOMPARE(mpPreferences->hanging_indent_wrapped_spinBox->value(), 30);
+    }
+
+    // The width can also be narrowed under an indent the user never touches,
+    // which the dirty check alone would let straight through.
+    void test_narrowingTheWrapWidthCutsBackAnIndentLeftAlone()
+    {
+        const int priorWrapAt = mpHost->mWrapAt;
+        const int priorWrapIndent = mpHost->mWrapIndentCount;
+        const int priorHangingIndent = mpHost->mWrapHangingIndentCount;
+        restoreLater([=, this]() {
+            mpHost->mWrapAt = priorWrapAt;
+            mpHost->mWrapIndentCount = priorWrapIndent;
+            mpHost->mWrapHangingIndentCount = priorHangingIndent;
+        });
+
+        mpHost->mWrapAt = 100;
+        mpHost->mWrapIndentCount = 40;
+        mpHost->mWrapHangingIndentCount = 40;
+        openPreferences();
+
+        QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        mpPreferences->wrap_at_spinBox->setValue(40);
+        QVERIFY2(applyAndWait(applySpy), "the debounce never wrote the settings back");
+
+        QCOMPARE(mpHost->mWrapIndentCount, 30);
+        QCOMPARE(mpHost->mWrapHangingIndentCount, 30);
+    }
+
+    // changeColors() is the only place the profile's wrap settings reach the
+    // main console. Both copies are checked, and with different values: the
+    // console keeps its own alongside the buffer's, and luaWrapLine() reads the
+    // console's, so writing only the buffer leaves Lua's wrapLine() stale.
+    void test_anAppliedWrapSettingReachesTheMainConsole()
+    {
+        QVERIFY2(mpHost->mpConsole, "the profile has no main console to apply anything to");
+
+        const int priorWrapAt = mpHost->mWrapAt;
+        const int priorWrapIndent = mpHost->mWrapIndentCount;
+        const int priorHangingIndent = mpHost->mWrapHangingIndentCount;
+        restoreLater([=, this]() {
+            mpHost->mWrapAt = priorWrapAt;
+            mpHost->mWrapIndentCount = priorWrapIndent;
+            mpHost->mWrapHangingIndentCount = priorHangingIndent;
+            mpHost->mpConsole->changeColors();
+        });
+
+        openPreferences();
+        QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        mpPreferences->wrap_at_spinBox->setValue(60);
+        mpPreferences->indent_wrapped_spinBox->setValue(4);
+        mpPreferences->hanging_indent_wrapped_spinBox->setValue(6);
+        QVERIFY2(applyAndWait(applySpy), "the debounce never wrote the settings back");
+
+        QCOMPARE(mpHost->mpConsole->getWrapAt(), 60);
+        QCOMPARE(mpHost->mpConsole->getIndentCount(), 4);
+        QCOMPARE(mpHost->mpConsole->getHangingIndentCount(), 6);
+    }
+
     // The buffer size is either a number the user picks or whatever this machine
     // can hold, and the spin box says which by being usable or not
     void test_theMaximumBufferSizeTakesOverTheBufferSizeSpinBox()

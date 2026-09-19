@@ -5620,7 +5620,7 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
             }
             if (indexOfChar <= firstChar) {
                 // no room for even one grapheme - either the wrap width is too
-                // narrow (or zero) or the indentation eats all of it. Breaking
+                // narrow (or zero) or the indentation leaves less than one needs. Breaking
                 // here would produce an empty segment and leave indexOfChar
                 // where it was, looping forever, so keep one grapheme on the
                 // line to guarantee the scan moves on
@@ -5758,13 +5758,13 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
     // the line replaces the characters the pass is matching against:
     materialisePreTriggerPassLine(startLine);
 
-    // The setters turn an indent this wide away, but the wrap width can be
-    // narrowed afterwards and insertText() wraps at the screen width rather
-    // than the console's, so the bound has to hold here too - this is where the
-    // padding is actually inserted. Clamping rather than discarding keeps as
-    // much of the asked-for indent as the width can carry.
-    // A negative indent has to go as well: the insert() applying it below takes
-    // an unsigned count, so it would ask for a huge allocation.
+    // The setters refuse an indent this wide, but insertText() wraps at the
+    // screen width rather than the console's and TConsole's own setters are
+    // reachable from C++, so the bound has to hold here as well - this is where
+    // the padding is actually inserted. Cut back rather than discarded, so what
+    // shows is as much of the asked-for indent as the width can carry.
+    // A negative has to go too: the insert() applying it below takes an
+    // unsigned count, so it would ask for a huge allocation.
     const int maximumIndent = maximumWrapIndent(maxWidth);
     const int indent = std::clamp(indentSize, 0, maximumIndent);
     const int hangingIndent = std::clamp(hangingIndentSize, 0, maximumIndent);

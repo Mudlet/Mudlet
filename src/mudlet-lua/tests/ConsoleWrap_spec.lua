@@ -110,18 +110,22 @@ describe("Tests how a console wraps the lines it is given", function()
       assert.are.equal("bbbb cccc ", out[2])
     end)
 
-    -- Turned away rather than quietly dropped since #10458: an indent with
-    -- barely any room left for text wraps a line into single characters, each
-    -- of them padded out with a full indent. WrapIndentBounds_spec covers where
-    -- the limit falls and what the wrapping does with a pair that slips past it.
+    -- Turned away rather than quietly dropped since #10458: an indent this wide
+    -- left no room for text at all and was discarded, so the window rendered
+    -- unindented with nothing saying why. WrapIndentBounds_spec covers where the
+    -- limit falls, and the indent-just-below-the-width case it was drawn for.
     it("refuses a wrap indent as wide as the window", function()
       wrapAt(10, 0, 0)
-      assert.is_nil(setWindowWrapIndent(win, 10))
+      local ok, reason = setWindowWrapIndent(win, 10)
+      assert.is_nil(ok)
+      assert.is_truthy(reason:find("10", 1, true))
     end)
 
     it("refuses a hanging indent as wide as the window", function()
       wrapAt(10, 0, 0)
-      assert.is_nil(setWindowWrapHangingIndent(win, 10))
+      local ok, reason = setWindowWrapHangingIndent(win, 10)
+      assert.is_nil(ok)
+      assert.is_truthy(reason:find("10", 1, true))
     end)
   end)
 

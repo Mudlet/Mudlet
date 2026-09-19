@@ -89,12 +89,9 @@ static const char* bad_label_value = "label \"%s\" not found";
 static const char* no_main_window_value = "the profile has no main window";
 
 // No documentation available in wiki - internal function
-// What is wrong with an indent for a window of this wrap width, or an empty
-// string if nothing is. Shared by the two indent setters, which have the same
-// bounds: an indent comes off the room a wrapped line has for text, so one
-// taking more than it leaves pads out far more than it shows - at a single
-// usable column a line of text becomes one line per character, all of them
-// indent.
+// Shared by the two indent setters, which have the same bounds - see
+// TBuffer::maximumWrapIndent() for why the upper one is where it is. Empty when
+// there is nothing wrong with the indent.
 static QString wrapIndentComplaint(const int indent, const int wrapWidth)
 {
     if (indent < 0) {
@@ -102,8 +99,7 @@ static QString wrapIndentComplaint(const int indent, const int wrapWidth)
     }
     const int maximumIndent = TBuffer::maximumWrapIndent(wrapWidth);
     if (indent > maximumIndent) {
-        return qsl("indent %1 is not valid, it must leave at least as much room for text as it takes - the most a wrap width of %2 allows is %3")
-                .arg(QString::number(indent), QString::number(wrapWidth), QString::number(maximumIndent));
+        return qsl("indent %1 is not valid, it must leave a quarter of the line for text - the most a wrap width of %2 allows is %3").arg(indent).arg(wrapWidth).arg(maximumIndent);
     }
     return QString();
 }
@@ -4123,6 +4119,14 @@ int TLuaInterpreter::setWindowWrap(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("wrapAt must be greater than zero, got %1").arg(luaFrom));
     }
     console->setWrapAt(luaFrom);
+    // A width narrow enough leaves an indent this window already has wider than
+    // the setters would now accept - Geyser re-wraps an auto-wrapping window on
+    // every resize, so this is ordinary rather than exotic. Cut back here, so
+    // that the indent the window reports is the indent it will actually use
+    // rather than one the wrapping quietly ignores.
+    const int maximumIndent = TBuffer::maximumWrapIndent(luaFrom);
+    console->setIndentCount(std::min(console->getIndentCount(), maximumIndent));
+    console->setHangingIndentCount(std::min(console->getHangingIndentCount(), maximumIndent));
     // only the main console's width belongs to the profile - it is what the
     // preferences dialog shows, what NEW-ENVIRON reports as WORD_WRAP and what
     // caps the width NAWS reports to the game
@@ -4130,12 +4134,34 @@ int TLuaInterpreter::setWindowWrap(lua_State* L)
         Host& host = getHostFromLua(L);
         const int priorWrapAt = host.mWrapAt;
         host.mWrapAt = luaFrom;
+        host.mWrapIndentCount = console->getIndentCount();
+        host.mWrapHangingIndentCount = console->getHangingIndentCount();
         if (priorWrapAt != luaFrom) {
             host.mTelnet.sendInfoNewEnvironValue(qsl("WORD_WRAP"));
         }
         host.updateDisplayDimensions();
     }
     lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getWindowWrapIndent
+int TLuaInterpreter::getWindowWrapIndent(lua_State* L)
+{
+    const QString windowName{WINDOW_NAME(L, 1)};
+
+    auto console = CONSOLE(L, windowName);
+    lua_pushnumber(L, console->getIndentCount());
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getWindowWrapHangingIndent
+int TLuaInterpreter::getWindowWrapHangingIndent(lua_State* L)
+{
+    const QString windowName{WINDOW_NAME(L, 1)};
+
+    auto console = CONSOLE(L, windowName);
+    lua_pushnumber(L, console->getHangingIndentCount());
     return 1;
 }
 

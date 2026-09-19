@@ -48,7 +48,6 @@
 #include <QtMath>
 #include <QVersionNumber>
 
-#include <algorithm>
 #include <memory>
 
 XMLimport::XMLimport(Host* pH)
@@ -723,6 +722,7 @@ void XMLimport::readHostPackage()
 
 void XMLimport::readHost(Host* pHost)
 {
+    bool readAWrapSetting = false;
     // This is an inline helper function to get a boolean value from a legacy attribute
     // or return a default value. It also allows for inverting the result which is useful
     // for attributes that have been negated in the past (e.g., mFORCE_MXP_NEGOTIATION_OFF
@@ -1156,10 +1156,13 @@ void XMLimport::readHost(Host* pHost)
                 // toInt() yields 0 for anything unparseable, and a profile that
                 // wraps at zero columns can show no text at all
                 pHost->mWrapAt = qMax(1, readElementText().toInt());
+                readAWrapSetting = true;
             } else if (name() == qsl("wrapIndentCount")) {
                 pHost->mWrapIndentCount = readElementText().toInt();
+                readAWrapSetting = true;
             } else if (name() == qsl("wrapHangingIndentCount")) {
                 pHost->mWrapHangingIndentCount = readElementText().toInt();
+                readAWrapSetting = true;
             } else if (name() == qsl("undoServerWrapWidth")) {
                 pHost->mUndoServerWrapWidth = qBound(20, readElementText().toInt(), 500);
             } else if (name() == qsl("consoleBufferSize")) {
@@ -1226,13 +1229,31 @@ void XMLimport::readHost(Host* pHost)
         }
     }
 
-    // Both indents were saved without any check against the wrap width, and a
-    // profile carrying one wider than the text it leaves room for turns every
-    // wrapped line into padding. Clamped here rather than where each is read,
-    // so that it does not matter which of the three elements comes first.
-    const int maximumIndent = TBuffer::maximumWrapIndent(pHost->mWrapAt);
-    pHost->mWrapIndentCount = std::clamp(pHost->mWrapIndentCount, 0, maximumIndent);
-    pHost->mWrapHangingIndentCount = std::clamp(pHost->mWrapHangingIndentCount, 0, maximumIndent);
+    // Neither indent is saved with any check against the wrap width, so a
+    // profile can carry a pair that turns most of every wrapped line into
+    // padding. Reconciled here rather than where each element is read, so that
+    // the order of the three does not matter - and only when this file supplied
+    // one of them, since a package's <Host> element comes through here too and
+    // must not measure the running profile's indents against its own width.
+    if (readAWrapSetting) {
+        const int maximumIndent = TBuffer::maximumWrapIndent(pHost->mWrapAt);
+        const int widestIndent = qMax(pHost->mWrapIndentCount, pHost->mWrapHangingIndentCount);
+        pHost->mWrapIndentCount = qBound(0, pHost->mWrapIndentCount, maximumIndent);
+        pHost->mWrapHangingIndentCount = qBound(0, pHost->mWrapHangingIndentCount, maximumIndent);
+        if (widestIndent > maximumIndent) {
+            // Saying so rather than just doing it: the display visibly changes,
+            // and the next save writes the reduced value over the original.
+            pHost->postMessage(
+                    tr(
+                            //: Shown on profile load when the saved indent for wrapped lines was too wide for the saved wrap width. %1 is that indent, %2 the wrap width, %3 what the indent has been reduced to.
+                            "[ ALERT ] - The indent saved for wrapped lines (%1) leaves too little of a %2 column\n"
+                            "            line for text, so it has been reduced to %3. Change either of them under\n"
+                            "            Settings -> Display if that is not what you want.")
+                            .arg(widestIndent)
+                            .arg(pHost->mWrapAt)
+                            .arg(maximumIndent));
+        }
+    }
 
     pHost->setUserBorders(borders);
     pHost->loadPackageInfo();

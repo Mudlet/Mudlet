@@ -30,6 +30,7 @@
 #include "ProfileTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
+#include "TBuffer.h"
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
 #include "TelnetServerStub.h"
@@ -40,8 +41,8 @@
 #include "GroupedTest.h"
 
 // A wrap width that cannot hold a single glyph - because it is zero, because
-// the glyph is wider than the width, or because the indentation uses the width
-// up - made TBuffer::getWrapInfo() break the line at the character it was
+// the glyph is wider than the width, or because the indentation leaves less
+// than one needs - made TBuffer::getWrapInfo() break the line at the character it was
 // already sitting on, so the scan never advanced and Mudlet hung (#9622).
 // Every step that can reach the wrapping therefore runs under a watchdog: a
 // regression is an endless loop on the main thread, so no assertion after it
@@ -154,18 +155,19 @@ private slots:
     }
 
     // Indentation is subtracted from the wrap width, so a legal width and a
-    // legal indent together can still leave less room than one glyph needs. The
-    // indent may take half the width, so two columns is the widest window where
-    // an indent the setters accept still leaves too little for a wide glyph.
+    // legal indent together can still leave less room than one glyph needs. An
+    // indent may leave as little as a quarter of the width, rounded up, so four
+    // columns is the widest window where one the setters accept still leaves
+    // too little for a wide glyph.
     void test_indentEatingTheWrapWidthDoesNotHang()
     {
         startProfile();
         auto* console = createTestMiniConsole();
         QVERIFY(console);
-        runLua(qsl("setWindowWrap('%1', 2)").arg(mMiniConsole));
+        runLua(qsl("setWindowWrap('%1', 4)").arg(mMiniConsole));
         // both, so that whichever of the two a line uses leaves a single column
-        runLua(qsl("setWindowWrapIndent('%1', 1)").arg(mMiniConsole));
-        runLua(qsl("setWindowWrapHangingIndent('%1', 1)").arg(mMiniConsole));
+        runLua(qsl("setWindowWrapIndent('%1', 3)").arg(mMiniConsole));
+        runLua(qsl("setWindowWrapHangingIndent('%1', 3)").arg(mMiniConsole));
 
         runWithWatchdog("echo of a wide glyph with the indent using up the wrap width", [this]() {
             runLua(qsl("echo('%1', '%2\\n')").arg(mMiniConsole, mWideText));
@@ -194,9 +196,10 @@ private slots:
         });
 
         QCOMPARE(textIgnoringIndentation(console), mWideText + mWideText);
-        // half of five, and every line gets it - an indent of ten used to be
-        // discarded outright, leaving the text against the left edge
-        QCOMPARE(console->buffer.line(0), qsl("  ") + QChar(0x6F22));
+        // five less the two columns kept for text, and every line gets it - an
+        // indent of ten used to be discarded outright, leaving the text against
+        // the left edge
+        QCOMPARE(console->buffer.line(0), qsl("   ") + mWideText.at(0));
     }
 
     // insertText() wraps against the screen width and the profile's own indent
@@ -210,16 +213,20 @@ private slots:
         QVERIFY(host);
         QVERIFY2(waitForMainConsoleText(qsl("HELLO")), "Welcome text never reached the buffer");
 
-        // Leave a single column free of the screen width the insert wraps at -
-        // both indents, since only the first segment of a line uses the plain
-        // one and every segment after it uses the hanging one. Written to the
-        // Host rather than through setWindowWrapIndent(), which measures an
-        // indent against the console's wrap width and would refuse one this
-        // wide: the Host's copy is what the insert actually reads.
+        // An indent wider than the screen width the insert wraps at - both, since
+        // only the first segment of a line uses the plain one and every segment
+        // after it uses the hanging one. Written to the Host rather than through
+        // setWindowWrapIndent(), which measures an indent against the console's
+        // wrap width and would refuse one this wide: the Host's copy is what the
+        // insert actually reads, and nothing bounds it on the way in.
         const int indent = host->mScreenWidth - 1;
         QVERIFY2(indent > 1, "the main console reported no usable screen width");
         host->mWrapIndentCount = indent;
         host->mWrapHangingIndentCount = indent;
+        // what the wrapping will cut that down to, which is the only thing
+        // standing between this path and the blow-up in #10458
+        const int appliedIndent = TBuffer::maximumWrapIndent(host->mScreenWidth);
+        QVERIFY2(appliedIndent < indent, "the screen width is too narrow for this case to cut anything back");
 
         // mid-line, so the insert goes through insertInLine() rather than the
         // append path the cursor at the end of the buffer would take
@@ -233,6 +240,15 @@ private slots:
         });
 
         QVERIFY2(mainConsoleContains(mWideText), "the inserted text did not survive wrapping");
+        // the indent was applied, and applied cut back - in full it would have
+        // left a single column and turned the insert into one line per glyph
+        const int insertedLine = mainConsoleLineOf(mWideText);
+        QVERIFY(insertedLine >= 0);
+        const QString padding = QString(appliedIndent, QChar::Space);
+        QVERIFY2(mudlet::self()->getActiveHost()->mpConsole->buffer.line(insertedLine).startsWith(padding),
+                 qPrintable(qsl("the wrapped line does not carry the %1 columns of indent the screen width allows").arg(appliedIndent)));
+        QVERIFY2(!mudlet::self()->getActiveHost()->mpConsole->buffer.line(insertedLine).startsWith(padding + QChar::Space),
+                 "the indent was applied in full rather than cut back to what the screen width can carry");
     }
 
     // Nothing can be shown in a window that is zero columns wide, so the Lua
@@ -288,6 +304,25 @@ private slots:
 
         QCOMPARE(host->mWrapAt, 80);
         QCOMPARE(host->mpConsole->getWrapAt(), 80);
+    }
+
+    // The width has test_rejectedMainConsoleWidthLeavesTheProfileUntouched; the
+    // indent reaches the profile by the same route and had no equivalent. Every
+    // spec case uses a miniconsole, so this branch is only covered here.
+    void test_rejectedMainConsoleIndentLeavesTheProfileUntouched()
+    {
+        startProfile();
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
+        runLua(qsl("setWindowWrap(100)"));
+        runLua(qsl("setWindowWrapIndent('main', 20)"));
+        QCOMPARE(host->mWrapIndentCount, 20);
+
+        // 100 keeps 25 columns for text, so 75 is the most an indent may take
+        runLua(qsl("setWindowWrapIndent('main', 76)"));
+
+        QCOMPARE(host->mWrapIndentCount, 20);
+        QCOMPARE(host->mpConsole->getIndentCount(), 20);
     }
 
     void cleanup()

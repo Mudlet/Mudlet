@@ -257,6 +257,15 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         mBorders = mpHost->borders();
         mCommandBgColor = mpHost->mCommandBgColor;
         mCommandFgColor = mpHost->mCommandFgColor;
+    } else if (mType == Buffer && mpHost) {
+        // A buffer window has no widget whose width could be measured, so the
+        // profile's settings are where it starts - nothing else would give it
+        // any, and TBuffer's own default does not wrap at all. A starting point
+        // only: setWindowWrap() and friends own them from here, which is why
+        // changeColors() no longer comes back and overwrites them.
+        setWrapAt(mpHost->mWrapAt);
+        setIndentCount(mpHost->mWrapIndentCount);
+        setHangingIndentCount(mpHost->mWrapHangingIndentCount);
     }
 
     QWidget::setFont(mDisplayFontDetails.makeFont());
@@ -1281,23 +1290,21 @@ void TConsole::changeColors()
         Q_ASSERT_X(false, "TConsole::changeColors()", "invalid TConsole type detected");
     }
 
-    if (mType != MainConsole) {
-        // refreshMainConsoleColors() above already did this one
-        buffer.updateColors();
-    }
     if (mType == MainConsole) {
         // Only the main console's wrap settings belong to the profile: the
         // preferences dialog writes them to the Host and leaves applying them
-        // to here. Every other console owns its own, set through
-        // setWindowWrap() and friends and stored nowhere else - a Buffer used
-        // to be re-synced from the Host here too, which silently replaced
-        // whatever a script had asked for with the main console's.
-        // The setters keep the console's own copies in step with the buffer's,
-        // so this goes through them rather than writing the buffer directly:
-        // luaWrapLine() reads the console's and would otherwise stay stale.
+        // to here. Every other console holds its own and nothing re-applies
+        // them - a Buffer used to be re-synced from the Host here too, which
+        // silently replaced whatever a script had asked for with the main
+        // console's (#10865); its starting values come from the constructor now.
+        // Through TConsole's setters rather than the buffer's: luaWrapLine()
+        // reads the console's own copies, which would otherwise stay stale.
         setWrapAt(mpHost->mWrapAt);
         setIndentCount(mpHost->mWrapIndentCount);
         setHangingIndentCount(mpHost->mWrapHangingIndentCount);
+    } else {
+        // refreshMainConsoleColors() above already did this one
+        buffer.updateColors();
     }
 
     updateScrollBarStyle();

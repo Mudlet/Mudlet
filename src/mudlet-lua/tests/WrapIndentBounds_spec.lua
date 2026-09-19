@@ -47,10 +47,11 @@ describe("Wrap indents with a negative value", function()
   end)
 end)
 
--- Wrap indents that take more of the line than they leave. An indent pads out
--- every line it applies to, so once it passes half the wrap width the padding
+-- Wrap indents wider than the wrap width leaves room for. An indent pads out
+-- every line it applies to, so as it approaches the width what it pads out
 -- outgrows the text - and at a single usable column a line of text becomes one
--- buffer line per character, each carrying a full indent (#10458).
+-- buffer line per character, each carrying a full indent (#10458). A quarter of
+-- the width, rounded up, is kept for text.
 describe("Wrap indents wider than the wrap width leaves room for", function()
   local win = "wrapIndentCapTest"
 
@@ -63,28 +64,42 @@ describe("Wrap indents wider than the wrap width leaves room for", function()
     deleteMiniConsole(win)
   end)
 
-  it("accepts an indent of exactly half the wrap width", function()
-    assert.is_true(setWindowWrapIndent(win, 10))
-    assert.is_true(setWindowWrapHangingIndent(win, 10))
+  it("accepts the widest indent the wrap width allows", function()
+    assert.is_true(setWindowWrapIndent(win, 15))
+    assert.is_true(setWindowWrapHangingIndent(win, 15))
+    assert.equals(15, getWindowWrapIndent(win))
+    assert.equals(15, getWindowWrapHangingIndent(win))
   end)
 
-  it("refuses an indent one column past half the wrap width, naming the limit", function()
-    local ok, reason = setWindowWrapIndent(win, 11)
+  it("refuses an indent one column past it, naming the value and the limit", function()
+    local ok, reason = setWindowWrapIndent(win, 16)
     assert.is_nil(ok)
     assert.is_string(reason)
-    assert.is_truthy(reason:find("11", 1, true))
-    assert.is_truthy(reason:find("10", 1, true))
+    assert.is_truthy(reason:find("16", 1, true))
+    assert.is_truthy(reason:find("15", 1, true))
   end)
 
-  it("refuses a hanging indent one column past half the wrap width", function()
-    local ok, reason = setWindowWrapHangingIndent(win, 11)
+  it("refuses a hanging indent one column past it", function()
+    local ok, reason = setWindowWrapHangingIndent(win, 16)
     assert.is_nil(ok)
     assert.is_string(reason)
-    assert.is_truthy(reason:find("11", 1, true))
+    assert.is_truthy(reason:find("16", 1, true))
   end)
 
-  -- the reproducer from #10458: one usable column, so 20000 characters of text
-  -- arrive as 19000 lines carrying 361000 characters of padding
+  -- what a refusal has to do that quietly applying 0 would not
+  it("leaves the previous indent in force when a too-wide one is refused", function()
+    assert.is_true(setWindowWrapIndent(win, 15))
+    assert.is_nil(setWindowWrapIndent(win, 16))
+    assert.equals(15, getWindowWrapIndent(win))
+
+    clearWindow(win)
+    moveCursor(win, 0, 0)
+    echo(win, string.rep("a", 30) .. "\n")
+    assert.equals(string.rep(" ", 15) .. string.rep("a", 5), getLines(win, 0, 1)[1])
+  end)
+
+  -- the shape measured in #10458: one usable column, so a line of text arrives
+  -- as one buffer line per character and the padding dwarfs the text
   it("refuses an indent leaving a single usable column", function()
     assert.is_nil(setWindowWrapIndent(win, 19))
   end)
@@ -97,10 +112,9 @@ describe("Wrap indents wider than the wrap width leaves room for", function()
   end)
 end)
 
--- The wrap width can be narrowed after an indent was set, so the pair the
--- wrapping is handed is still one the setters would have turned away. The
--- wrapping cuts such an indent back to what the width can carry rather than
--- applying it in full or dropping it.
+-- Narrowing the wrap width can leave an indent that was legal when it was set
+-- wider than the new width allows. Geyser does exactly this on every resize of
+-- an auto-wrapping window, so it is ordinary rather than exotic.
 describe("A wrap indent left too wide by a later, narrower wrap width", function()
   local win = "wrapIndentNarrowedTest"
 
@@ -123,13 +137,43 @@ describe("A wrap indent left too wide by a later, narrower wrap width", function
     return getLines(win, 0, 1)[1]
   end
 
-  it("is cut back to half the narrowed width", function()
-    assert.equals(string.rep(" ", 5) .. string.rep("a", 5), firstLineAfterNarrowing(40, 8, 10))
+  -- 20 keeps 5 columns for text, so 15 is as wide as the indent can be
+  it("is cut back to what the narrowed width allows", function()
+    assert.equals(string.rep(" ", 15) .. string.rep("a", 5), firstLineAfterNarrowing(100, 18, 20))
   end)
 
   -- an indent that reaches the width used to be discarded, rendering the line
   -- with no indent at all
   it("is cut back rather than dropped when it reaches the narrowed width", function()
-    assert.equals(string.rep(" ", 5) .. string.rep("a", 5), firstLineAfterNarrowing(40, 20, 10))
+    assert.equals(string.rep(" ", 15) .. string.rep("a", 5), firstLineAfterNarrowing(100, 40, 20))
+  end)
+
+  -- the window reports what it will use, so a script can tell this happened -
+  -- narrowing the width is not itself refused, and nothing else would say
+  it("reports the cut-back indent rather than the one that was asked for", function()
+    setWindowWrap(win, 100)
+    assert.is_true(setWindowWrapIndent(win, 40))
+    assert.is_true(setWindowWrapHangingIndent(win, 40))
+    setWindowWrap(win, 20)
+    assert.equals(15, getWindowWrapIndent(win))
+    assert.equals(15, getWindowWrapHangingIndent(win))
+  end)
+
+  -- the two are separate settings, so a regression applying one bound to the
+  -- wrong member would otherwise pass every case above
+  it("cuts the two indents back independently", function()
+    setWindowWrap(win, 100)
+    assert.is_true(setWindowWrapIndent(win, 0))
+    assert.is_true(setWindowWrapHangingIndent(win, 40))
+    setWindowWrap(win, 20)
+    assert.equals(0, getWindowWrapIndent(win))
+    assert.equals(15, getWindowWrapHangingIndent(win))
+
+    clearWindow(win)
+    moveCursor(win, 0, 0)
+    echo(win, string.rep("a", 40) .. "\n")
+    local lines = getLines(win, 0, 2)
+    assert.equals(string.rep("a", 20), lines[1])
+    assert.equals(string.rep(" ", 15) .. string.rep("a", 5), lines[2])
   end)
 end)

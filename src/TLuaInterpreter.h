@@ -453,6 +453,8 @@ public:
     static int showHandlerError(lua_State*);
     static int setWindowWrap(lua_State*);
     static int getWindowWrap(lua_State*);
+    static int getWindowWrapIndent(lua_State*);
+    static int getWindowWrapHangingIndent(lua_State*);
     static int setWindowWrapIndent(lua_State*);
     static int setWindowWrapHangingIndent(lua_State*);
     static int resetFormat(lua_State*);

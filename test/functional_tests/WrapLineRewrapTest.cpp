@@ -517,8 +517,8 @@ private slots:
     // buffer line per character, every one of them padded out with a full
     // indent - 100,000 characters at a width of 100 and an indent of 99 cost
     // 689MB, and an echo of the million characters the API allows would have
-    // asked for several GB. An indent is cut back to half the width now, so
-    // what it pads out can never outgrow the text it wraps.
+    // asked for several GB. A quarter of the width is kept for text now, which
+    // holds the padding to no more than three times the text it wraps.
     void test_anIndentCannotPadOutMoreThanTheTextItWraps()
     {
         auto* console = consoleWithWrapWidth(100);
@@ -531,9 +531,14 @@ private slots:
         echo(text + qsl("\\n"));
 
         QCOMPARE(textIgnoringIndentation(console), text);
-        // an indent of 99 made this 19,000 lines carrying 1,881,000 spaces
-        const qsizetype padding = joinedText(console).count(QChar::Space);
-        QVERIFY2(padding <= textLength, qPrintable(qsl("%1 characters of text were padded out with %2 spaces").arg(textLength).arg(padding)));
+        // The exact shape rather than an inequality: an indent of 99 left one
+        // column per line, so #10458 measured this width and indent at 19,000
+        // lines carrying 1,881,000 spaces. Cut back to 75 it is 25 columns of
+        // text and 75 of padding per line, and nothing in between is right.
+        const int appliedIndent = TBuffer::maximumWrapIndent(100);
+        QCOMPARE(appliedIndent, 75);
+        QCOMPARE(nonEmptyLineCount(console), textLength / (100 - appliedIndent));
+        QCOMPARE(joinedText(console).count(QChar::Space), static_cast<qsizetype>(textLength / (100 - appliedIndent) * appliedIndent));
     }
 
     // Declared last: without the clamp this aborts, taking the rest of the run

@@ -4011,12 +4011,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     need_reconnect_for_specialoption->hide();
 
     wrap_at_spinBox->setValue(pHost->mWrapAt);
-    // The two indents are subtracted from the wrap width, so offering them a
-    // range of their own let the pair be set to a layout with barely a column
-    // left for text. Capped before the values go in, so that a profile carrying
-    // such a pair shows the capped one rather than making it look allowed.
-    capWrapIndentsToWrapWidth(wrap_at_spinBox->value());
-    connect(wrap_at_spinBox, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::capWrapIndentsToWrapWidth, Qt::UniqueConnection);
     indent_wrapped_spinBox->setValue(pHost->mWrapIndentCount);
     hanging_indent_wrapped_spinBox->setValue(pHost->mWrapHangingIndentCount);
     checkBox_undoServerWrap->setChecked(pHost->mUndoServerWrap);
@@ -4478,7 +4472,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                         break;
                     default: {
                     } // There are a significant number of other errors
-                        // that are not handled here!
+                    // that are not handled here!
                     }
                 }
             }
@@ -6473,6 +6467,23 @@ void dlgProfilePreferences::applyAll()
         }
         if (mSnapshot.dirty(hanging_indent_wrapped_spinBox)) {
             pHost->mWrapHangingIndentCount = hanging_indent_wrapped_spinBox->value();
+        }
+        // The three spin boxes describe one layout but have ranges of their own,
+        // so the pair that arrives here can be one the wrapping cannot carry -
+        // by a wide indent, or by a width narrowed under an indent that was
+        // left alone. Reconciled against the width being saved, and put back
+        // into the controls so that what the dialog shows is what was stored.
+        // Not by capping the spin boxes as the width is typed: a spin box drops
+        // a value that no longer fits its range and does not restore it, and
+        // typing "120" over "100" passes through 1 on the way.
+        const int maximumWrapIndent = TBuffer::maximumWrapIndent(pHost->mWrapAt);
+        pHost->mWrapIndentCount = std::min(pHost->mWrapIndentCount, maximumWrapIndent);
+        pHost->mWrapHangingIndentCount = std::min(pHost->mWrapHangingIndentCount, maximumWrapIndent);
+        if (indent_wrapped_spinBox->value() != pHost->mWrapIndentCount || hanging_indent_wrapped_spinBox->value() != pHost->mWrapHangingIndentCount) {
+            indent_wrapped_spinBox->setValue(pHost->mWrapIndentCount);
+            hanging_indent_wrapped_spinBox->setValue(pHost->mWrapHangingIndentCount);
+            mSnapshot.take(indent_wrapped_spinBox);
+            mSnapshot.take(hanging_indent_wrapped_spinBox);
         }
         if (mSnapshot.dirty(checkBox_undoServerWrap)) {
             pHost->mUndoServerWrap = checkBox_undoServerWrap->isChecked();
@@ -8528,13 +8539,6 @@ void dlgProfilePreferences::slot_toggleEnableClosedCaption(const bool state)
     if (mpHost) {
         mpHost->setEnableClosedCaption(state);
     }
-}
-
-void dlgProfilePreferences::capWrapIndentsToWrapWidth(const int wrapWidth)
-{
-    const int maximumIndent = TBuffer::maximumWrapIndent(wrapWidth);
-    indent_wrapped_spinBox->setMaximum(maximumIndent);
-    hanging_indent_wrapped_spinBox->setMaximum(maximumIndent);
 }
 
 void dlgProfilePreferences::slot_changeWrapAt()

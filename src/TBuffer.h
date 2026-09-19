@@ -440,13 +440,26 @@ public:
     void setWrapAt(int i) { mWrapAt = i; }
     void setWrapIndent(int i) { mWrapIndent = i; }
     void setWrapHangingIndent(int i) { mWrapHangingIndent = i; }
-    // The largest indent a given wrap width can carry. An indent pads out every
-    // line it applies to, so whatever it takes comes off the room left for the
-    // text - and the padding grows without bound as it nears the width itself:
-    // with one usable column a line of text becomes one buffer line per
-    // character, each carrying a full indent. Half the width is where the
-    // padding stops being able to outgrow the text it wraps.
-    static constexpr int maximumWrapIndent(const int wrapWidth) { return wrapWidth > 0 ? wrapWidth / 2 : 0; }
+    // The widest indent a given wrap width can carry, and the one place that
+    // rule is written down. An indent pads out every line it applies to, so
+    // whatever it takes comes off the room left for text on them - and what it
+    // pads out grows without bound as it approaches the width itself: at a
+    // single usable column a line of text becomes one buffer line per
+    // character, each carrying a full indent (#10458). Keeping a quarter of the
+    // width for text holds the padding to no more than three times the text it
+    // wraps, at any width. Quarters rather than halves because every indent
+    // below the width was applied in full before this, and an indent leaving a
+    // third of the line for text lays out perfectly well.
+    static constexpr int maximumWrapIndent(const int wrapWidth)
+    {
+        if (wrapWidth <= 0) {
+            return 0;
+        }
+        // rounded up, so the reserve is never nothing - and written out rather
+        // than as (wrapWidth + 3) / 4, which overflows a width near INT_MAX
+        const int reservedForText = wrapWidth / 4 + ((wrapWidth % 4) ? 1 : 0);
+        return wrapWidth - reservedForText;
+    }
     void updateColors();
     TBuffer copy(QPoint&, QPoint&);
     TBuffer cut(QPoint&, QPoint&);

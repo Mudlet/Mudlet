@@ -223,12 +223,14 @@ public:
         mIndentCount = count;
         buffer.setWrapIndent(count);
     }
+    int getIndentCount() const { return mIndentCount; }
 
     void setHangingIndentCount(int count)
     {
         mHangingIndentCount = count;
         buffer.setWrapHangingIndent(count);
     }
+    int getHangingIndentCount() const { return mHangingIndentCount; }
 
     TLinkStore& getLinkStore() { return buffer.mLinkStore; }
     void echo(const QString&);

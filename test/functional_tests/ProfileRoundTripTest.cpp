@@ -105,6 +105,8 @@ private:
     Host* mpLegacyTarget = nullptr;
     const QString mSourceName = qsl("ProfileRoundTrip-Test");
     const QString mTargetName = qsl("ProfileRoundTripTarget-Test");
+    // extra import targets a case stood up for itself, torn down with the rest
+    QStringList mExtraTargetNames;
     const QString mLegacyTargetName = qsl("ProfileRoundTripLegacyTarget-Test");
     QString mPort; // assigned the stub's actual ephemeral port in initTestCase()
     const QString mLocalhost = qsl("localhost");
@@ -560,8 +562,58 @@ private slots:
         QVERIFY2(legacyImported, qPrintable(legacyImportError));
     }
 
+    // Imports a copy of the exported profile XML with its three wrap elements
+    // replaced by the block given - which lets a case choose the values and the
+    // order they appear in - into a Host of its own, and answers that Host.
+    Host* importWithWrapElements(const QString& suffix, const QString& elements)
+    {
+        static const QRegularExpression wrapElement(qsl("<wrap(?:At|IndentCount|HangingIndentCount)>[^<]*</wrap(?:At|IndentCount|HangingIndentCount)>"));
+        const qsizetype firstWrapElement = mExportedXml.indexOf(wrapElement);
+        if (firstWrapElement < 0) {
+            return nullptr;
+        }
+        QString xml = mExportedXml;
+        xml.remove(wrapElement);
+        // everything before the first of them is untouched by the removal, so
+        // this is still the place they were
+        xml.insert(firstWrapElement, elements);
+
+        const QString hostName = qsl("%1-%2").arg(mTargetName, suffix);
+        mExtraTargetNames.append(hostName);
+        deleteProfileDirectory(hostName);
+        if (!HostManager::self()->addHost(hostName, mPort, QString(), QString())) {
+            return nullptr;
+        }
+        Host* pHost = HostManager::self()->getHost(hostName);
+        if (!pHost) {
+            return nullptr;
+        }
+
+        QTemporaryDir dir;
+        if (!dir.isValid()) {
+            return nullptr;
+        }
+        const QString path = qsl("%1/wrap.xml").arg(dir.path());
+        QFile writeFile(path);
+        if (!writeFile.open(QFile::WriteOnly | QFile::Text) || writeFile.write(xml.toUtf8()) == -1) {
+            return nullptr;
+        }
+        writeFile.close();
+
+        QFile readFile(path);
+        if (!readFile.open(QFile::ReadOnly | QFile::Text)) {
+            return nullptr;
+        }
+        XMLimport importer(pHost);
+        auto [imported, importError] = importer.importPackage(&readFile);
+        return imported ? pHost : nullptr;
+    }
+
     void cleanupTestCase()
     {
+        for (const QString& name : std::as_const(mExtraTargetNames)) {
+            deleteProfileDirectory(name);
+        }
         mpSource = nullptr;
         mpTarget = nullptr;
         mpLegacyTarget = nullptr;
@@ -703,6 +755,51 @@ private slots:
     {
         QCOMPARE(mpLegacyTarget->mLowerLevelColor, QColor(30, 60, 90, 255));
         QCOMPARE(mpLegacyTarget->mUpperLevelColor, QColor(200, 150, 100, 255));
+    }
+
+    // A wrap indent is saved with no check against the wrap width, so a profile
+    // can carry a pair that leaves almost nothing of a wrapped line for text
+    // (#10458). readHost() reconciles the two once the whole element has been
+    // read, which is what these cases pin - including that it does so whatever
+    // order the three elements arrive in, since the obvious refactor is to move
+    // the reconciliation up into the per-element branch where it would break.
+    void test_anIndentTooWideForTheSavedWrapWidthIsCutBackOnImport()
+    {
+        // 80 keeps 20 columns for text, so 60 is as wide as an indent can be
+        auto* host = importWithWrapElements(qsl("wrapTooWide"), qsl("<wrapAt>80</wrapAt><wrapIndentCount>79</wrapIndentCount><wrapHangingIndentCount>79</wrapHangingIndentCount>"));
+        QVERIFY(host);
+        QCOMPARE(host->mWrapAt, 80);
+        QCOMPARE(host->mWrapIndentCount, 60);
+        QCOMPARE(host->mWrapHangingIndentCount, 60);
+    }
+
+    void test_theWrapElementsMayArriveInAnyOrder()
+    {
+        auto* host = importWithWrapElements(qsl("wrapReordered"), qsl("<wrapIndentCount>79</wrapIndentCount><wrapHangingIndentCount>79</wrapHangingIndentCount><wrapAt>80</wrapAt>"));
+        QVERIFY(host);
+        QCOMPARE(host->mWrapAt, 80);
+        QCOMPARE(host->mWrapIndentCount, 60);
+        QCOMPARE(host->mWrapHangingIndentCount, 60);
+    }
+
+    // the other direction: a pair that fits has to arrive untouched, or the
+    // reconciliation would be quietly flattening everybody's indent
+    void test_anIndentTheSavedWrapWidthCanCarryIsImportedUnchanged()
+    {
+        auto* host = importWithWrapElements(qsl("wrapFits"), qsl("<wrapAt>100</wrapAt><wrapIndentCount>10</wrapIndentCount><wrapHangingIndentCount>4</wrapHangingIndentCount>"));
+        QVERIFY(host);
+        QCOMPARE(host->mWrapIndentCount, 10);
+        QCOMPARE(host->mWrapHangingIndentCount, 4);
+    }
+
+    // a negative used to reach wrapLine(), whose insert() takes an unsigned
+    // count - which is what #10220 aborted on
+    void test_aNegativeSavedIndentIsImportedAsNone()
+    {
+        auto* host = importWithWrapElements(qsl("wrapNegative"), qsl("<wrapAt>100</wrapAt><wrapIndentCount>-5</wrapIndentCount><wrapHangingIndentCount>-1</wrapHangingIndentCount>"));
+        QVERIFY(host);
+        QCOMPARE(host->mWrapIndentCount, 0);
+        QCOMPARE(host->mWrapHangingIndentCount, 0);
     }
 
     // The imported scripts registered their event handlers in the fresh Host:
