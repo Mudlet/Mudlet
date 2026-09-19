@@ -15,11 +15,15 @@ if(NOT EXISTS "${SENTRY_PATH}/CMakeLists.txt")
 endif()
 
 message(STATUS "Building with Sentry enabled")
+string(REPLACE ";" "|" SENTRY_PREFIX_PATH "${CMAKE_PREFIX_PATH}")
 set(SENTRY_CMAKE_ARGS
     -DCMAKE_BUILD_TYPE=RelWithDebInfo
     "-DCMAKE_INSTALL_PREFIX=${SENTRY_PATH}/install_without_transport"
-    -DCMAKE_C_COMPILER=clang
-    -DCMAKE_CXX_COMPILER=clang++
+    "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
+    "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
+    "-DCMAKE_C_COMPILER_LAUNCHER=${CMAKE_C_COMPILER_LAUNCHER}"
+    "-DCMAKE_CXX_COMPILER_LAUNCHER=${CMAKE_CXX_COMPILER_LAUNCHER}"
+    "-DCMAKE_PREFIX_PATH=${SENTRY_PREFIX_PATH}"
     -DSENTRY_BACKEND=crashpad
     -DSENTRY_TRANSPORT=none
     -DSENTRY_BUILD_SHARED_LIBS=OFF
@@ -41,7 +45,7 @@ if(APPLE)
     elseif("${CMAKE_SYSTEM_PROCESSOR}" MATCHES "x86_64")
         set(ARCH_LIST "x86_64")
     else()
-        set(ARCH_LIST "arm64;x86_64")
+        set(ARCH_LIST "arm64|x86_64")
     endif()
 
     # ExternalProject does not inherit the parent build's cache, so without this
@@ -65,6 +69,7 @@ include(ExternalProject)
 ExternalProject_Add(
     sentry_native
     SOURCE_DIR ${SENTRY_PATH}
+    LIST_SEPARATOR |
     CMAKE_ARGS ${SENTRY_CMAKE_ARGS}
 )
 
