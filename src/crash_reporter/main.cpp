@@ -26,6 +26,7 @@
 #include <QHBoxLayout>
 #include <QSettings>
 #include <QCoreApplication>
+#include <QStringList>
 #include <cstdlib>
 
 #include "crashReporter.h"
@@ -55,18 +56,19 @@ int main(int argc, char* argv[])
     }
 
     QApplication app(argc, argv);
+    const QString envelopePath = QCoreApplication::arguments().value(1);
     QSettings settings("Mudlet", "CrashReporter");
     QVariant storedOption = settings.value("autoSendCrashReports", QVariant());
 
     if (storedOption.isValid() && storedOption.toInt() == AlwaysSend) {
-        sendCrashReport(argv[1], configuredDsn());
+        sendCrashReport(envelopePath, configuredDsn());
     } else {
-        showCrashDialogAndSend(argv[1], settings);
+        showCrashDialogAndSend(envelopePath, settings);
     }
     return 0;
 }
 
-void showCrashDialogAndSend(const char* envelopePath, QSettings& settings)
+void showCrashDialogAndSend(const QString& envelopePath, QSettings& settings)
 {
     TCrashSendOption result = createCrashDialog();
 

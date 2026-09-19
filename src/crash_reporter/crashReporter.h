@@ -25,8 +25,8 @@
 
 enum TCrashSendOption { AlwaysSend = 1, SendThisTime = 2, DontSend = 3 };
 
-void sendCrashReport(const char* envelopePath, const QString& dsn);
-void showCrashDialogAndSend(const char* envelopePath, QSettings& settings);
+void sendCrashReport(const QString& envelopePath, const QString& dsn);
+void showCrashDialogAndSend(const QString& envelopePath, QSettings& settings);
 TCrashSendOption createCrashDialog();
 
 #endif // CRASH_REPORTER_H

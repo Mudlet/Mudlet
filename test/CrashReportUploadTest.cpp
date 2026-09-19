@@ -122,14 +122,14 @@ private:
 
     QString dsnFor(QString dsnTemplate) const { return dsnTemplate.replace(QStringLiteral("{port}"), QString::number(mpServer->port())); }
 
-    QByteArray writeEnvelope(const QByteArray& contents) const
+    QString writeEnvelope(const QByteArray& contents) const
     {
         const QString path = mEnvelopeDir.filePath(QStringLiteral("crash.envelope"));
         QFile file(path);
         if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate) || file.write(contents) != contents.size()) {
-            return QByteArray();
+            return QString();
         }
-        return QFile::encodeName(path);
+        return path;
     }
 
     static QHash<QByteArray, QByteArray> authFields(const QByteArray& header)
@@ -180,10 +180,10 @@ private slots:
         QFETCH(QString, dsnTemplate);
         QFETCH(QByteArray, expectedTarget);
         QFETCH(QByteArray, expectedKey);
-        const QByteArray envelopePath = writeEnvelope(sentrySerializedEnvelope);
+        const QString envelopePath = writeEnvelope(sentrySerializedEnvelope);
         QVERIFY(!envelopePath.isEmpty());
 
-        sendCrashReport(envelopePath.constData(), dsnFor(dsnTemplate));
+        sendCrashReport(envelopePath, dsnFor(dsnTemplate));
 
         QCOMPARE(mpServer->requests().size(), 1);
         const ReceivedRequest& request = mpServer->requests().constFirst();
@@ -215,10 +215,10 @@ private slots:
     void sendsNothingForADsnSentryRejected()
     {
         QFETCH(QString, dsnTemplate);
-        const QByteArray envelopePath = writeEnvelope(sentrySerializedEnvelope);
+        const QString envelopePath = writeEnvelope(sentrySerializedEnvelope);
         QVERIFY(!envelopePath.isEmpty());
 
-        sendCrashReport(envelopePath.constData(), dsnFor(dsnTemplate));
+        sendCrashReport(envelopePath, dsnFor(dsnTemplate));
         QCoreApplication::processEvents();
 
         QCOMPARE(mpServer->connectionCount(), 0);
@@ -240,10 +240,10 @@ private slots:
     void sendsNothingForAnEnvelopeSentryCouldNotSend()
     {
         QFETCH(QByteArray, contents);
-        const QByteArray envelopePath = writeEnvelope(contents);
+        const QString envelopePath = writeEnvelope(contents);
         QVERIFY(!envelopePath.isEmpty());
 
-        sendCrashReport(envelopePath.constData(), dsnFor(QStringLiteral("http://key@127.0.0.1:{port}/42")));
+        sendCrashReport(envelopePath, dsnFor(QStringLiteral("http://key@127.0.0.1:{port}/42")));
         QCoreApplication::processEvents();
 
         QCOMPARE(mpServer->connectionCount(), 0);
@@ -251,9 +251,9 @@ private slots:
 
     void sendsNothingWithoutAnEnvelopeFile()
     {
-        const QByteArray missingPath = QFile::encodeName(mEnvelopeDir.filePath(QStringLiteral("missing.envelope")));
+        const QString missingPath = mEnvelopeDir.filePath(QStringLiteral("missing.envelope"));
 
-        sendCrashReport(missingPath.constData(), dsnFor(QStringLiteral("http://key@127.0.0.1:{port}/42")));
+        sendCrashReport(missingPath, dsnFor(QStringLiteral("http://key@127.0.0.1:{port}/42")));
         QCoreApplication::processEvents();
 
         QCOMPARE(mpServer->connectionCount(), 0);

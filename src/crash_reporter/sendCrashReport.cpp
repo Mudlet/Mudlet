@@ -71,7 +71,7 @@ static bool sentryWouldSend(const QByteArray& envelope)
     return items > 0;
 }
 
-void sendCrashReport(const char* envelopePath, const QString& dsn)
+void sendCrashReport(const QString& envelopePath, const QString& dsn)
 {
     // A DSN is <scheme>://<public key>@<host>/<optional path>/<project id>, and
     // the envelope endpoint is that host and path with /api/<project id>/envelope/
@@ -95,7 +95,7 @@ void sendCrashReport(const char* envelopePath, const QString& dsn)
     }
     endpoint.setPath(QStringLiteral("%1/api/%2/envelope/").arg(pathPrefix, projectId), QUrl::TolerantMode);
 
-    QFile envelope(QString::fromUtf8(envelopePath));
+    QFile envelope(envelopePath);
     if (!envelope.open(QIODevice::ReadOnly)) {
         return;
     }
