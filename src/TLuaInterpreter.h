@@ -132,6 +132,7 @@ public:
     int check_for_custom_speedwalk();
     void set_lua_integer(const QString& varName, int varValue);
     void set_lua_string(const QString& varName, const QString& varValue);
+    void setLineGlobal(const QString& line);
     void set_lua_table(const QString& tableName, QStringList& variableList);
     void setCaptureGroups(const std::list<std::string>&, const std::list<int>&);
     void setCaptureNameGroups(const NameGroupMatches&, const NamedMatchesRanges&);
@@ -928,7 +929,28 @@ private:
     std::pair<bool, QString> validateLuaCodeParam(int index);
     bool reportInvalidLuaCodeParam(lua_State* L, const char* functionName, const int index);
     QByteArray encodeBytes(const char*);
-    void setMatches(lua_State*);
+    // What a dispatch does about "multimatches": only a multiline trigger's
+    // script is handed one of its own, and callMultiReturnBool() leaves the
+    // named captures out
+    enum class MultimatchesSource { Untouched, Captures, CapturesWithoutNames };
+    void setMatches(lua_State*, const MultimatchesSource source = MultimatchesSource::Untouched);
+    void deferDispatchGlobals(lua_State*, const MultimatchesSource source, const bool setsMatches);
+    bool lazyGlobalsUsable(lua_State*);
+    static bool globalsMetatablePristine(lua_State*, const int metatable);
+    void pushMatchesTable(lua_State*);
+    void pushEmptyMatchesTable(lua_State*);
+    void pushMultimatchesTable(lua_State*, const bool withNames);
+    void pushPendingMultimatches(lua_State*);
+    void pushUtf8String(lua_State*, const QString&);
+    void materialisePendingCaptures(lua_State*);
+    void materialisePendingGlobals(lua_State*);
+    void installBetweenDispatchMultimatches(lua_State*);
+    void installLazyGlobals();
+    bool installGlobalsMetatableGuard(lua_State*, const char* library, const char* function, const int slot);
+    void forgetLazyGlobals();
+    static int lazyGlobalsIndex(lua_State*);
+    static int lazyGlobalsNewindex(lua_State*);
+    static int globalsMetatableGuard(lua_State*);
     void setupLanguageData();
     QString readScriptFile(const QString& path) const;
     void handleHttpOK(QNetworkReply*);
@@ -974,6 +996,45 @@ private:
     QVector<QPair<QString, QString>> mCapturedNameGroups;
     QMap<QString, QPair<int, int>> mCapturedNameGroupsPosList;
     QVector<QVector<QPair<QString, QString>>> mMultiCaptureNameGroups;
+    // Most scripts never read "matches" or "multimatches", so lazyGlobalsIndex()
+    // builds them on first read. They are left out only while a capture scope
+    // is open, since clearCaptureGroups() is what puts them back.
+    bool mCaptureScopeOpen = false;
+    bool mMatchesPending = false;
+    enum class PendingMultimatches { None, Spare, Captures, CapturesWithoutNames };
+    PendingMultimatches mMultimatchesPending = PendingMultimatches::None;
+    int mEmptyMatchesRef = LUA_NOREF;
+    // The empty table "multimatches" stands for between dispatches, left out of
+    // the globals table there too so that every read is noticed. It is replaced
+    // once read, so no two fires are handed the same one.
+    int mSpareMultimatchesRef = LUA_NOREF;
+    bool mSpareMultimatchesSeen = false;
+    // "line" is left out the same way, from the moment a line arrives until a
+    // script reads it, which for most lines is never
+    bool mLinePending = false;
+    QString mPendingLine;
+    // Registry references to the interned key strings, which pushing a literal
+    // would have to hash again on every fire, and the addresses of the three
+    // that the handlers recognise their keys by
+    int mMatchesKeyRef = LUA_NOREF;
+    int mMultimatchesKeyRef = LUA_NOREF;
+    int mLineKeyRef = LUA_NOREF;
+    const char* mMatchesKey = nullptr;
+    const char* mMultimatchesKey = nullptr;
+    const char* mLineKey = nullptr;
+    bool mLazyGlobalsInstalled = false;
+    // The globals table the handlers were put on, which setfenv(0, ...) can
+    // take away from under the thread while it still owes values
+    const void* mGlobalsTable = nullptr;
+    int mGlobalsTableRef = LUA_NOREF;
+    const void* mGlobalsMetatable = nullptr;
+    // The C functions getmetatable(), setmetatable() and their debug library
+    // twins held before globalsMetatableGuard() took their place. A script
+    // holding the metatable of the globals table can change it at any moment,
+    // so once it has been handed out nothing is left out until either setter
+    // puts one carrying both handlers back on the globals table.
+    lua_CFunction mStockMetatableFunctions[4] = {};
+    bool mGlobalsMetatableTouched = false;
     // An alias pass a script asks for - expandAlias() - sets "command" and the
     // capture groups for the scripts that pass runs. What the calling script was
     // given is parked here for the duration and handed back when the pass
@@ -991,6 +1052,7 @@ private:
         int matchesRef = LUA_NOREF;
         int multimatchesRef = LUA_NOREF;
         int commandRef = LUA_NOREF;
+        bool captureScopeOpen = false;
     };
     std::vector<NestedDispatchState> mNestedDispatchStates;
     void releaseNestedDispatchState(NestedDispatchState&);
