@@ -161,32 +161,49 @@ private:
     // recognizer can be built on a runner that has no speech engine at all -
     // which is every CI runner, and this test's own redirected config directory
     // even on a developer machine that has one installed.
+    // Whether the file at this path is a stand-in engine this test can use.
+    // A copy that loads but exports nothing is the failure worth catching here
+    // rather than three assertions later: it is what a Windows build without
+    // WINDOWS_EXPORT_ALL_SYMBOLS produces.
+    static bool stubIsUsableAt(const QString& path)
+    {
+        if (!QFileInfo::exists(path)) {
+            return false;
+        }
+        QLibrary probe(path);
+        const bool usable = probe.load() && probe.resolve("vosk_recognizer_set_words");
+        // Balances the load: QLibrary refcounts and its destructor does not
+        // unload, and Windows will not delete a module that is still mapped.
+        probe.unload();
+        return usable;
+    }
+
     bool installStubEngine()
     {
         const QString destination = installedStubPath();
         if (!QDir().mkpath(VoskRecognizer::userLibraryPath())) {
             return false;
         }
-        QFile::remove(destination);
         // Fresh probe: libraryAvailable() caches, and an earlier case may have
         // answered "no" before the file existed.
         VoskRecognizer::resetLibraryLoadState();
         VoskRecognizer::unloadLibraryByRequest(false);
+
+        // A usable copy already there is this same file - it comes from the
+        // build tree and nothing else writes here - so it is left alone.
+        // Windows refuses to delete a module that is still mapped, and
+        // QFile::copy() will not overwrite, so replacing it unconditionally
+        // failed whenever anything still held it: the case saw no engine at
+        // all. Replaced only when what is there is not a stub that works,
+        // which is what the case installing a broken one leaves behind.
+        if (stubIsUsableAt(destination)) {
+            return true;
+        }
+        QFile::remove(destination);
         if (!QFile::copy(qsl(MUDLET_VOSK_STUB_LIBRARY), destination)) {
             return false;
         }
-        // A copy that loads but exports nothing is the failure worth catching
-        // here rather than three assertions later: it is what a Windows build
-        // without WINDOWS_EXPORT_ALL_SYMBOLS produces.
-        QLibrary installed(destination);
-        if (!installed.load() || !installed.resolve("vosk_recognizer_set_words")) {
-            // Balances the load: QLibrary refcounts and its destructor does not
-            // unload, and Windows will not delete a module that is still mapped.
-            installed.unload();
-            return false;
-        }
-        installed.unload();
-        return true;
+        return stubIsUsableAt(destination);
     }
 
     Host* hostFor(const QString& profileName) const { return HostManager::self()->getHost(profileName); }
@@ -1010,6 +1027,10 @@ private slots:
 
         const QString broken = installedStubPath();
         QVERIFY(QDir().mkpath(VoskRecognizer::userLibraryPath()));
+        // Unmapped first, for installStubEngine()'s reason: a module that is
+        // still loaded can be neither deleted nor written to on Windows
+        VoskRecognizer::resetLibraryLoadState();
+        VoskRecognizer::unloadLibraryByRequest(false);
         QFile::remove(broken);
         QFile file(broken);
         QVERIFY2(file.open(QIODevice::WriteOnly), "the broken library could not be written");
@@ -1029,7 +1050,10 @@ private slots:
 
         QVERIFY2(!loaded, "a file of nonsense was accepted as a speech engine");
         QVERIFY2(!reason.isEmpty(), "a library that is installed and will not load said nothing about why");
-        QVERIFY2(reason.contains(broken), qPrintable(qsl("the reason names a path other than the file that would not load: \"%1\"").arg(reason)));
+        // Separators normalised on both sides: the loader reports a Windows
+        // path with backslashes, and QDir hands out forward slashes
+        QVERIFY2(QDir::fromNativeSeparators(reason).contains(QDir::fromNativeSeparators(broken)),
+                 qPrintable(qsl("the reason names a path other than the file that would not load: \"%1\"").arg(reason)));
     }
 
     // A session that ends gives the microphone back. Held until then, and by
