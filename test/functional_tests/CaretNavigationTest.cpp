@@ -44,8 +44,8 @@
 #include <chrono>
 
 #include "Host.h"
+#include "MudletApp.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
 #include "ProfileTestHelper.h"
 #include "TBuffer.h"
 #include "TCommandLine.h"
@@ -160,7 +160,7 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -168,9 +168,9 @@ private slots:
         // the first-run interface tour would open over the profile a second
         // after it loads and take the window's keyboard with it - the keys
         // below would reach the tour rather than the caret
-        mudlet::getQSettings()->setValue(qsl("uiTourShown"), true);
-        mudlet::getQSettings()->sync();
-        QDir(MudletPaths::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
+        MudletApp::getQSettings()->setValue(qsl("uiTourShown"), true);
+        MudletApp::getQSettings()->sync();
+        QDir(MudletApp::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
 
         mpHost = TestProfile::create(mHostname, mLocalhost, QString::number(mpServer->serverPort()));
         QVERIFY2(mpHost, "Could not create the test profile - see the warning above for the step that timed out.");
@@ -223,7 +223,7 @@ private slots:
         mpServer = nullptr;
         // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
-            QDir(MudletPaths::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
+            QDir(MudletApp::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
             delete mudlet::self();
         }
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);

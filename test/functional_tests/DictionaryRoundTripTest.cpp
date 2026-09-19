@@ -37,8 +37,8 @@
 #include <QtTest/QtTest>
 
 #include "Host.h"
+#include "MudletApp.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "TMainConsole.h"
@@ -63,7 +63,7 @@ private:
     QString mPort;
     const QString mLocalhost = qsl("localhost");
 
-    QString dictionaryBase(const QString& profileName) const { return MudletPaths::getMudletPath(enums::profileDataItemPath, profileName, qsl("profile")); }
+    QString dictionaryBase(const QString& profileName) const { return MudletApp::getMudletPath(enums::profileDataItemPath, profileName, qsl("profile")); }
 
     // Writes wordSet out the way closing a profile does, then reads it back the
     // way opening one does. Returns the word list that came back; *handle takes
@@ -98,7 +98,7 @@ private slots:
         mudlet::start();
         mudlet::self()->setupConfig();
         // never touch the developer's real profiles
-        QVERIFY(MudletPaths::getMudletPath(enums::profilesPath).startsWith(mConfigDir.path()));
+        QVERIFY(MudletApp::getMudletPath(enums::profilesPath).startsWith(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -109,7 +109,7 @@ private slots:
 
         // saveDictionary() reads the existing word count before writing, so the
         // file-only profile needs the pair of files a first load would make:
-        QVERIFY(QDir().mkpath(MudletPaths::getMudletPath(enums::profileDataItemPath, mFileOnlyProfile, QString())));
+        QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileDataItemPath, mFileOnlyProfile, QString())));
         QSet<QString> empty;
         Hunhandle* seed = mudlet::self()->prepareProfileDictionary(mFileOnlyProfile, empty);
         QVERIFY2(seed, "could not prepare the dictionary of the file-only profile");

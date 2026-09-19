@@ -32,7 +32,7 @@
 
 #include "PortableModeTestHelper.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
@@ -73,9 +73,9 @@ private:
 
     dlgConnectionProfiles* dialog() const { return mudlet::self()->mpConnectionDialog.data(); }
 
-    bool makeProfileFolder(const QString& name) const { return QDir().mkpath(MudletPaths::getMudletPath(enums::profileHomePath, name)); }
-    bool makeSavedGame(const QString& name) const { return QDir().mkpath(MudletPaths::getMudletPath(enums::profileXmlFilesPath, name)); }
-    bool removeProfile(const QString& name) const { return QDir(MudletPaths::getMudletPath(enums::profileHomePath, name)).removeRecursively(); }
+    bool makeProfileFolder(const QString& name) const { return QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, name)); }
+    bool makeSavedGame(const QString& name) const { return QDir().mkpath(MudletApp::getMudletPath(enums::profileXmlFilesPath, name)); }
+    bool removeProfile(const QString& name) const { return QDir(MudletApp::getMudletPath(enums::profileHomePath, name)).removeRecursively(); }
 
     // fillout_form() dates a save by the modification time of the profile's
     // current/ folder, and two folders made one after the other can carry the
@@ -88,7 +88,7 @@ private:
     {
         // cleanPath() drops the trailing separator getMudletPath() leaves on
         // a directory, which not every platform takes when opening one
-        const std::filesystem::path save(QDir::cleanPath(MudletPaths::getMudletPath(enums::profileXmlFilesPath, name)).toStdU16String());
+        const std::filesystem::path save(QDir::cleanPath(MudletApp::getMudletPath(enums::profileXmlFilesPath, name)).toStdU16String());
         std::error_code error;
         const auto written = std::filesystem::last_write_time(save, error);
         if (error) {
@@ -126,15 +126,15 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QVERIFY(MudletPaths::getMudletPath(enums::profilesPath).startsWith(mXdgDir.path()));
+        QVERIFY(MudletApp::getMudletPath(enums::profilesPath).startsWith(mXdgDir.path()));
 
-        QVERIFY(MudletPaths::writeProfileData(mFirstProfile, qsl("url"), mFirstProfileUrl).first);
-        QVERIFY(MudletPaths::writeProfileData(mFirstProfile, qsl("port"), qsl("4000")).first);
+        QVERIFY(MudletApp::writeProfileData(mFirstProfile, qsl("url"), mFirstProfileUrl).first);
+        QVERIFY(MudletApp::writeProfileData(mFirstProfile, qsl("port"), qsl("4000")).first);
         QVERIFY(makeProfileFolder(mSecondProfile));
         // no save has ever been written, so there is no current/ folder for
         // fillout_form() to date
-        QVERIFY(!QFileInfo::exists(MudletPaths::getMudletPath(enums::profileXmlFilesPath, mFirstProfile)));
-        QVERIFY(!QFileInfo::exists(MudletPaths::getMudletPath(enums::profileXmlFilesPath, mSecondProfile)));
+        QVERIFY(!QFileInfo::exists(MudletApp::getMudletPath(enums::profileXmlFilesPath, mFirstProfile)));
+        QVERIFY(!QFileInfo::exists(MudletApp::getMudletPath(enums::profileXmlFilesPath, mSecondProfile)));
 
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
@@ -194,8 +194,8 @@ private slots:
         QVERIFY(makeSavedGame(mNewerSavedProfile));
         QVERIFY(dateSaveHoursAgo(mOlderSavedProfile, 2));
         QVERIFY(dateSaveHoursAgo(mNewerSavedProfile, 1));
-        const auto olderSave = QFileInfo(MudletPaths::getMudletPath(enums::profileXmlFilesPath, mOlderSavedProfile)).lastModified();
-        const auto newerSave = QFileInfo(MudletPaths::getMudletPath(enums::profileXmlFilesPath, mNewerSavedProfile)).lastModified();
+        const auto olderSave = QFileInfo(MudletApp::getMudletPath(enums::profileXmlFilesPath, mOlderSavedProfile)).lastModified();
+        const auto newerSave = QFileInfo(MudletApp::getMudletPath(enums::profileXmlFilesPath, mNewerSavedProfile)).lastModified();
         QVERIFY2(newerSave > olderSave, "The two saved games cannot be told apart by date, so this case would prove nothing");
 
         showGamesTab(scmMyGamesTab);
