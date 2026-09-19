@@ -254,7 +254,7 @@ public:
     bool dropsText() const
     {
         if (mDropsText < 0) {
-            mDropsText = mpLine && !QtPrivate::isLatin1(*mpLine) && !QtPrivate::isValidUtf16(*mpLine);
+            mDropsText = mpLine && !mpLine->isValidUtf16();
         }
         return mDropsText;
     }
