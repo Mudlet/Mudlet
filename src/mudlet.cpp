@@ -45,6 +45,7 @@
 #include "TEvent.h"
 #include "TFeatureCallout.h"
 #include "TKey.h"
+#include "TLabel.h"
 #include "TMap.h"
 #include "TMedia.h"
 #include "TGameDetails.h"
@@ -99,6 +100,7 @@
 #include <QSplitter>
 #include <QSslConfiguration>
 #include <QStyleFactory>
+#include <QSvgRenderer>
 #include <QStyleHints>
 #include <QTableWidget>
 #include <QTextBoundaryFinder>
@@ -4538,6 +4540,16 @@ void mudlet::hideEvent(QHideEvent* event)
 
 std::optional<QSize> mudlet::getImageSize(const QString& imageLocation)
 {
+    // QImage reads an SVG only where the qsvg image plugin is deployed, so the
+    // document's own reader answers first; anything it cannot read - a raster
+    // under a .svg name included - falls through to QImage
+    if (TLabel::svgCandidate(imageLocation)) {
+        QSvgRenderer renderer;
+        if (TLabel::loadSvg(renderer, imageLocation) && !renderer.defaultSize().isEmpty()) {
+            return renderer.defaultSize();
+        }
+    }
+
     const QImage image(imageLocation);
 
     if (image.isNull()) {
@@ -4926,8 +4938,7 @@ void mudlet::slot_handleToolbarVisibilityChanged(bool isVisible)
 {
     if (!isVisible && mMenuBarVisibility == enums::visibleNever) {
         // Only need to worry about it DIS-appearing if the menu bar is not showing
-        const int hostCount = mHostManager.getHostCount();
-        if ((hostCount < 1 && (mToolbarVisibility & enums::visibleAlways)) || (hostCount >= 1 && (mToolbarVisibility & enums::visibleMaskNormally))) {
+        if (toolBarShouldBeVisible()) {
             mpMainToolBar->show();
         }
     }
@@ -4962,13 +4973,30 @@ void mudlet::slot_toolbarToggleActionTriggered(bool checked)
     synchronizeToolBarVisibility(checked);
 }
 
-void mudlet::adjustToolBarVisibility()
+bool mudlet::toolBarShouldBeVisible()
 {
     const int hostCount = mHostManager.getHostCount();
-    if ((hostCount < 1 && (mToolbarVisibility & enums::visibleAlways)) || (hostCount >= 1 && (mToolbarVisibility & enums::visibleMaskNormally))) {
-        mpMainToolBar->show();
-    } else {
-        mpMainToolBar->hide();
+    return (hostCount < 1 && (mToolbarVisibility & enums::visibleAlways)) || (hostCount >= 1 && (mToolbarVisibility & enums::visibleMaskNormally));
+}
+
+void mudlet::adjustToolBarVisibility()
+{
+    const bool toolBarVisible = toolBarShouldBeVisible();
+    mpMainToolBar->setVisible(toolBarVisible);
+
+    // A detached window is handed the toolbar state once, in its constructor,
+    // and otherwise only hears the toolbar's own toggle through
+    // synchronizeToolBarVisibility(). Without this the settings path stops at
+    // the main window and a window detached before the setting changed keeps
+    // the state it was built with until it is reattached and detached again.
+    // Detached windows deliberately mirror the main window here, including a
+    // hide that synchronizeToolBarVisibility() would refuse under
+    // canHideToolBar(): a detached window always keeps its own menu bar, and
+    // letting it disagree with the main window is the very fault this fixes.
+    for (const auto& detachedWindow : std::as_const(mDetachedWindows)) {
+        if (detachedWindow) {
+            detachedWindow->setToolBarVisibility(toolBarVisible);
+        }
     }
 }
 
@@ -7048,12 +7076,9 @@ void mudlet::synchronizeToolBarVisibility(bool visible)
         }
     }
 
-    // Update all detached windows
-    for (auto& detachedWindow : mDetachedWindows) {
-        if (detachedWindow) {
-            detachedWindow->setToolBarVisibility(visible);
-        }
-    }
+    // The detached windows are not updated here: setToolBarVisibility() above
+    // resolves to exactly this state and adjustToolBarVisibility() pushes it to
+    // every one of them
 }
 
 void mudlet::slot_showTabContextMenu(const QPoint& position)
@@ -7070,8 +7095,10 @@ void mudlet::slot_showTabContextMenu(const QPoint& position)
         }
     }
 
-    // If we right-clicked on a specific tab, add tab-specific actions
-    if (tabIndex >= 0) {
+    // If we right-clicked on a specific tab, add tab-specific actions. Detaching
+    // is only offered while another tab would be left behind, since detachTab()
+    // refuses to empty the main window
+    if (tabIndex >= 0 && mpTabBar->count() > 1) {
         const QString profileName = mpTabBar->tabData(tabIndex).toString();
 
         // Add "Detach Tab" option
@@ -7112,7 +7139,7 @@ void mudlet::slot_showTabContextMenu(const QPoint& position)
 }
 
 // Called from the ctelnet instance for the host concerned:
-bool mudlet::replayStart()
+bool mudlet::replayStart(Host* pHost)
 {
     // Do not proceed if there is a problem with the main toolbar (it isn't there)
     // OR if there is already a replay toolbar in existence (a replay is already
@@ -7129,6 +7156,8 @@ bool mudlet::replayStart()
     mpActionReplay->setToolTip(utils::richText(tr("Cannot load a replay as one is already in progress in this or another profile.")));
     dactionReplay->setToolTip(mpActionReplay->toolTip());
 
+    mpReplayingHost = pHost;
+
     mpToolBarReplay = new QToolBar(this);
     mpToolBarReplay->setIconSize(QSize(8 * mToolbarIconSize, 8 * mToolbarIconSize));
     mpToolBarReplay->setToolButtonStyle(mpMainToolBar->toolButtonStyle());
@@ -7141,7 +7170,25 @@ bool mudlet::replayStart()
                                     // small, NON-zero time to initiase it...!
 
     mpLabelReplayTime = new QLabel(this);
+    mpLabelReplayTime->setObjectName(qsl("replay_time_label"));
     mpActionReplayTime = mpToolBarReplay->addWidget(mpLabelReplayTime);
+
+    //: Button on the replay toolbar that holds the replay where it is
+    mpActionReplayPause = new QAction(style()->standardIcon(QStyle::SP_MediaPause), tr("Pause"), this);
+    mpActionReplayPause->setObjectName(qsl("replay_pause_action"));
+    mpActionReplayPause->setCheckable(true);
+    //: Tooltip on the replay toolbar's Pause button
+    mpActionReplayPause->setToolTip(utils::richText(tr("Hold the replay where it is. It carries on from the same point when you resume.")));
+    mpToolBarReplay->addAction(mpActionReplayPause);
+    mpToolBarReplay->widgetForAction(mpActionReplayPause)->setObjectName(mpActionReplayPause->objectName());
+
+    //: Button on the replay toolbar that ends the replay early
+    mpActionReplayStop = new QAction(style()->standardIcon(QStyle::SP_MediaStop), tr("Stop"), this);
+    mpActionReplayStop->setObjectName(qsl("replay_stop_action"));
+    //: Tooltip on the replay toolbar's Stop button
+    mpActionReplayStop->setToolTip(utils::richText(tr("End the replay now, without playing the rest of it.")));
+    mpToolBarReplay->addAction(mpActionReplayStop);
+    mpToolBarReplay->widgetForAction(mpActionReplayStop)->setObjectName(mpActionReplayStop->objectName());
 
     mpActionReplaySpeedUp = new QAction(QIcon(qsl(":/icons/export.png")), tr("Faster"), this);
     mpActionReplaySpeedUp->setObjectName(qsl("replay_speed_up_action"));
@@ -7158,6 +7205,8 @@ bool mudlet::replayStart()
     mpLabelReplaySpeedDisplay = new QLabel(this);
     mpActionSpeedDisplay = mpToolBarReplay->addWidget(mpLabelReplaySpeedDisplay);
 
+    connect(mpActionReplayPause.data(), &QAction::toggled, this, &mudlet::slot_replayPauseToggled);
+    connect(mpActionReplayStop.data(), &QAction::triggered, this, &mudlet::slot_replayStop);
     connect(mpActionReplaySpeedUp.data(), &QAction::triggered, this, &mudlet::slot_replaySpeedUp);
     connect(mpActionReplaySpeedDown.data(), &QAction::triggered, this, &mudlet::slot_replaySpeedDown);
 
@@ -7166,9 +7215,9 @@ bool mudlet::replayStart()
     mpTimerReplay = new QTimer(this);
     mpTimerReplay->setInterval(1s);
     mpTimerReplay->setSingleShot(false);
-    connect(mpTimerReplay.data(), &QTimer::timeout, this, &mudlet::slot_replayTimeChanged);
+    connect(mpTimerReplay.data(), &QTimer::timeout, this, &mudlet::updateReplayTimeLabel);
 
-    mpLabelReplayTime->setText(qsl("<font size=25><b>%1</b></font>").arg(tr("Time: %1").arg(mReplayTime.toString(mTimeFormat))));
+    updateReplayTimeLabel();
 
     mpLabelReplaySpeedDisplay->show();
     mpLabelReplayTime->show();
@@ -7180,27 +7229,85 @@ bool mudlet::replayStart()
     return true;
 }
 
-void mudlet::slot_replayTimeChanged()
+void mudlet::updateReplayTimeLabel()
 {
-    // This can get called by a QTimer after mpLabelReplayTime has been destroyed:
-    if (mpLabelReplayTime) {
-        mpLabelReplayTime->setText(qsl("<font size=25><b>%1</b></font>").arg(tr("Time: %1").arg(mReplayTime.toString(mTimeFormat))));
-        mpLabelReplayTime->show();
+    // Callers can reach this after replayOver() has taken the toolbar down -
+    // the replay tick in particular keeps firing:
+    if (!mpLabelReplayTime) {
+        return;
+    }
+
+    //: Elapsed time readout on the replay toolbar. %1 is the time itself
+    QString text = tr("Time: %1").arg(mReplayTime.toString(mTimeFormat));
+    // A replay can have long quiet stretches in it, so a clock that has simply
+    // stopped is not on its own a sign that the replay is held. Read that from
+    // the profile rather than from the button, so that the readout reports what
+    // playback is doing instead of confirming what the button was set to:
+    if (mpReplayingHost && mpReplayingHost->mTelnet.replayPaused()) {
+        //: Replaces the elapsed-time readout on the replay toolbar while the replay is held. %1 is the already translated and formatted "Time: ..." text, so do not add a time prefix of your own
+        text = tr("%1 (paused)").arg(text);
+    }
+    mpLabelReplayTime->setText(qsl("<font size=25><b>%1</b></font>").arg(text));
+    mpLabelReplayTime->show();
+}
+
+void mudlet::slot_replayPauseToggled(const bool paused)
+{
+    // Tell playback first, so that the readout below reports what it did:
+    if (mpReplayingHost) {
+        if (paused) {
+            mpReplayingHost->mTelnet.pauseReplay();
+        } else {
+            mpReplayingHost->mTelnet.resumeReplay();
+        }
+    }
+
+    if (mpActionReplayPause) {
+        if (paused) {
+            mpActionReplayPause->setIcon(style()->standardIcon(QStyle::SP_MediaPlay));
+            //: Button on the replay toolbar that lets a held replay carry on
+            mpActionReplayPause->setText(tr("Resume"));
+        } else {
+            mpActionReplayPause->setIcon(style()->standardIcon(QStyle::SP_MediaPause));
+            //: Button on the replay toolbar that holds the replay where it is
+            mpActionReplayPause->setText(tr("Pause"));
+        }
+    }
+    updateReplayTimeLabel();
+}
+
+void mudlet::slot_replayStop()
+{
+    if (mpReplayingHost) {
+        // This ends up in replayOver(), which is what takes this toolbar down:
+        mpReplayingHost->mTelnet.stopReplay();
     }
 }
 
 void mudlet::replayOver()
 {
+    // Ownership of the pointer should not hinge on the widget teardown below
+    // running, so let it go first:
+    mpReplayingHost = nullptr;
+
     if ((!mpMainToolBar) || (!mpToolBarReplay)) {
         return;
     }
 
+    disconnect(mpActionReplayPause.data(), &QAction::toggled, this, &mudlet::slot_replayPauseToggled);
+    disconnect(mpActionReplayStop.data(), &QAction::triggered, this, &mudlet::slot_replayStop);
     disconnect(mpActionReplaySpeedUp.data(), &QAction::triggered, this, &mudlet::slot_replaySpeedUp);
     disconnect(mpActionReplaySpeedDown.data(), &QAction::triggered, this, &mudlet::slot_replaySpeedDown);
+    mpToolBarReplay->removeAction(mpActionReplayPause);
+    mpToolBarReplay->removeAction(mpActionReplayStop);
     mpToolBarReplay->removeAction(mpActionReplaySpeedUp);
     mpToolBarReplay->removeAction(mpActionReplaySpeedDown);
     mpToolBarReplay->removeAction(mpActionSpeedDisplay);
     removeToolBar(mpToolBarReplay);
+    mpActionReplayPause->deleteLater();
+    mpActionReplayPause = nullptr;
+    mpActionReplayStop->deleteLater();
+    mpActionReplayStop = nullptr;
     mpActionReplaySpeedUp->deleteLater(); // Had previously omitted these, causing a resource leak!
     mpActionReplaySpeedUp = nullptr;
     mpActionReplaySpeedDown->deleteLater();
@@ -7215,6 +7322,11 @@ void mudlet::replayOver()
     mpLabelReplayTime = nullptr;
     mpToolBarReplay->deleteLater();
     mpToolBarReplay = nullptr;
+    // replayStart() makes a new one each time, so without this every replay
+    // leaves another 1Hz timer running for the life of the application:
+    mpTimerReplay->stop();
+    mpTimerReplay->deleteLater();
+    mpTimerReplay = nullptr;
 
     // Unlock/uncheck the replay button/menu item
     mpActionReplay->setChecked(false);
@@ -8826,6 +8938,11 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl, const QString& prof
 }
 
 
+void mudlet::alertUser(int milliseconds)
+{
+    QApplication::alert(this, milliseconds);
+}
+
 void mudlet::announce(const QString& text, const QString& processing, bool isPlain)
 {
     QString textToAnnounce;
@@ -9095,11 +9212,6 @@ void mudlet::saveDetachedWindowsGeometry()
 
 void mudlet::slot_tabDetachRequested(int index, const QPoint& globalPos)
 {
-    // ensure at least one tab is present in the main window
-    if (index < 1 || index >= mpTabBar->count()) {
-        return;
-    }
-
     detachTab(index, globalPos);
 }
 
@@ -9163,7 +9275,10 @@ void mudlet::closeHostOfClosedDetachedWindow(const QString& profileName)
 
 void mudlet::detachTab(int tabIndex, const QPoint& position)
 {
-    if (tabIndex < 0 || tabIndex >= mpTabBar->count()) {
+    // The main window keeps at least one tab: which tab is being taken out of
+    // it does not matter, only how many would be left. Every route to a detach
+    // comes through here, so this is the one place the rule has to hold
+    if (tabIndex < 0 || tabIndex >= mpTabBar->count() || mpTabBar->count() < 2) {
         return;
     }
 

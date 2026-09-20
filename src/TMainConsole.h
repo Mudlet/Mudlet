@@ -31,6 +31,7 @@
 #include <QTextStream>
 #include <QWidget>
 #include <optional>
+#include <utility>
 
 #include <hunspell/hunspell.h>
 
@@ -118,6 +119,13 @@ public:
     std::optional<QColor> getLabelBackgroundColor(const QString& name) const;
     bool setLabelBackgroundImage(const QString& name, const QString& path);
     bool resetLabelBackgroundImage(const QString& name);
+    bool setLabelSvgTint(const QString& name, const QColor& color);
+    bool resetLabelSvgTint(const QString& name);
+    bool setLabelSvgRotation(const QString& name, double angle);
+    bool resetLabelSvgRotation(const QString& name);
+    bool setLabelSvgShear(const QString& name, double shearX, double shearY);
+    bool resetLabelSvgShear(const QString& name);
+    bool resetLabelSvgTransform(const QString& name);
     std::optional<QRect> getLabelGeometry(const QString& name) const;
     std::optional<bool> getLabelVisible(const QString& name) const;
     // For callers that need the widget itself. An accessor rather than the open
@@ -148,7 +156,7 @@ public:
     bool moveSubConsole(const QString& name, int x, int y);
     bool reparentWindow(const QString& windowname, const QString& name, int x, int y, bool show);
     bool pasteToSubConsole(const QString& name);
-    std::optional<QSize> subConsoleFontSize(const QString& name) const;
+    std::optional<QSize> consoleFontSize(const QString& name) const;
     bool setSubConsoleBackgroundColor(const QString& name, const QColor& color);
     bool setSubConsoleBackgroundImage(const QString& name, const QString& path, int mode);
     bool resetSubConsoleBackgroundImage(const QString& name);
@@ -161,6 +169,10 @@ public:
     bool clearDockLayoutChanged(const QString& name);
     TCommandLine* subCommandLineWidget(const QString& name) const { return mSubCommandLineMap.value(name); }
     QList<TCommandLine*> subCommandLineWidgets() const { return mSubCommandLineMap.values(); }
+    void setCommandLinePlaceholderText(const QString& text);
+    void updateCommandLineSpellCheck(bool enabled);
+    void setCommandLineText(const QString& text);
+    TCommandLine* raiseCommandLine();
     TTextBox* textBoxWidget(const QString& name) const { return mTextBoxMap.value(name); }
     // One set of operations for scroll boxes, command lines and text boxes
     // together rather than one per kind: each is the same plain QWidget call
@@ -187,6 +199,19 @@ public:
     void disableMapProgressDialogCancel();
     void closeMapProgressDialog();
     void createMapperDock(const QString& title, const QString& objectName);
+    dlgMapper* dockedMapper() const;
+    void showMapWidget();
+    void dockMapWidget(Qt::DockWidgetArea area);
+    std::pair<bool, QString> placeMapWidget(const QString& area, int x, int y, int width, int height);
+    // The map dock answered as values, so that the core is left holding the
+    // state of the map window rather than the widget showing it. Having made a
+    // dock is not the same as having one on screen, which is what the four
+    // after it answer for.
+    bool mapWidgetCreated() const;
+    bool setMapWidgetTitle(const QString& title);
+    std::optional<QString> mapWidgetTitle() const;
+    std::optional<QRect> mapWidgetGeometry() const;
+    bool hideMapWidget();
     TToolBar* createToolBar(TAction* pAction, const QString& name);
     TEasyButtonBar* createEasyButtonBar(TAction* pRootAction, const QString& name);
     void attachEasyButtonBar(TEasyButtonBar* pBar, int location);
@@ -233,9 +258,9 @@ public:
     QPointer<QProgressDialog> mpMapProgressDialog;
     // Outlives Host::closeMapWidget(), which only hides it, so this being
     // non-null does not say the profile has a map widget on screen - see
-    // Host::mapWidget() for that. Null means the profile never made one, or
-    // createMapper() took a hidden one over so that an embedded mapper could have
-    // the slot; nothing else destroys it before ~TMainConsole().
+    // mapWidget() for that. Null means the profile never made one, or
+    // createMapper() took a hidden one over so that an embedded mapper could
+    // have the slot; nothing else destroys it before ~TMainConsole().
     QPointer<QDockWidget> mpDockableMapWidget;
     QPointer<QDialog> mpUnpackingDialog;
 
@@ -272,6 +297,19 @@ private:
     // Where the three by-name-alone kinds are resolved to a widget, in the one
     // order the core resolves a name that is more than one of them in.
     QWidget* plainWindowWidget(const QString& name) const;
+    // The single answer to "does this profile have a map widget on screen right
+    // now" - null for a profile that never opened one, for one that put it away
+    // again, and for one whose closed widget createMapper() took over, none of
+    // which a script can tell apart or needs to.
+    //
+    // isHidden() rather than a flag of our own, because the dock gets hidden by
+    // paths that would never think to update one: its own title bar close
+    // button, mudlet::slot_showMapperDialog() handing the map over to a main
+    // window dock, and QMainWindow::restoreState() replaying a saved layout. It
+    // is also not !isVisible(), which would additionally answer "no map widget"
+    // whenever the main window itself is hidden, e.g. minimised to the system
+    // tray.
+    QDockWidget* mapWidget() const;
     void registerLabelWidget(const QString& name, TLabel* pLabel);
     void deregisterLabelWidget(TLabel* pLabel);
 

@@ -175,6 +175,18 @@ set_tests_properties(IrcMessageComposerTest PROPERTIES
     TIMEOUT 60
 )
 
+add_executable(CrashReportUploadTest
+    CrashReportUploadTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/crash_reporter/sendCrashReport.cpp
+)
+target_include_directories(CrashReportUploadTest PRIVATE ${CMAKE_SOURCE_DIR}/src/crash_reporter)
+target_link_libraries(CrashReportUploadTest PRIVATE Qt6::Test Qt6::Network)
+add_test(NAME CrashReportUploadTest COMMAND $<TARGET_FILE:CrashReportUploadTest>)
+set_tests_properties(CrashReportUploadTest PROPERTIES
+    ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
+    TIMEOUT 60
+)
+
 # DiscordTest checks the Lua API permission gating contract by scanning the source
 target_compile_definitions(DiscordTest PRIVATE MUDLET_SRC_DIR="${CMAKE_SOURCE_DIR}/src")
 
@@ -185,6 +197,18 @@ target_link_libraries(CMakeListsConsistencyTest PRIVATE Qt6::Test)
 target_compile_definitions(CMakeListsConsistencyTest PRIVATE MUDLET_SRC_DIR="${CMAKE_SOURCE_DIR}/src")
 add_test(NAME CMakeListsConsistencyTest COMMAND $<TARGET_FILE:CMakeListsConsistencyTest>)
 set_tests_properties(CMakeListsConsistencyTest PROPERTIES
+    ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
+)
+
+# The autocompletion data the script editor offers. It is scraped off the wiki manual,
+# so the page's own markup can end up in a function name - #10816 shipped all 669 of
+# them with "[edit | edit source]" appended. Only reads the file, so like
+# CMakeListsConsistencyTest it links nothing.
+add_executable(LuaFunctionListTest LuaFunctionListTest.cpp)
+target_link_libraries(LuaFunctionListTest PRIVATE Qt6::Test)
+target_compile_definitions(LuaFunctionListTest PRIVATE MUDLET_SRC_DIR="${CMAKE_SOURCE_DIR}/src")
+add_test(NAME LuaFunctionListTest COMMAND $<TARGET_FILE:LuaFunctionListTest>)
+set_tests_properties(LuaFunctionListTest PROPERTIES
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
 )
 

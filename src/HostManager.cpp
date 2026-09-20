@@ -24,9 +24,6 @@
 #include "HostManager.h"
 
 #include "Host.h"
-#include "dlgMapper.h"
-#include "mudlet.h"
-#include "TMap.h"
 
 #include <QDebug>
 
@@ -160,17 +157,8 @@ void HostManager::changeAllHostColour(const Host* pHost)
     if (!pHost) {
         return;
     }
-    //change all main and subconsoles color
     for (const QSharedPointer<Host>& host : mHostPool.values()) {
-        host->mpConsole->changeColors();
-        // Mapper also needs a refresh of its colours
-        auto mapper = host->mpMap->mpMapper;
-        if (mapper) {
-            mapper->setPalette(QApplication::palette());
-        }
-        for (const QString& subConsoleName : host->windowRegistry().subConsoleNames()) {
-            host->mpConsole->changeSubConsoleColors(subConsoleName);
-        }
+        host->refreshColours();
     }
 }
 

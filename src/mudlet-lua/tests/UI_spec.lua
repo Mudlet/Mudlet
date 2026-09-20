@@ -7488,9 +7488,7 @@ describe("Argument checks on the user window functions", function()
 
   it("openUserWindow hard-errors on every argument it cannot use", function()
     local name = "argCheckUserWindow" .. suffix
-    -- the double space after the colon is a typo (#10418) and is pinned as-is;
-    -- fixing it means updating this string in the same change
-    assert.are.equal("openUserWindow:  bad argument #1 type (name as string expected, got table!)",
+    assert.are.equal("openUserWindow: bad argument #1 type (name as string expected, got table!)",
       errorFrom(openUserWindow, {}))
     assert.are.equal("openUserWindow: bad argument #2 type (loadLayout as boolean is optional, got string!)",
       errorFrom(openUserWindow, name, "yes"))
@@ -7540,5 +7538,39 @@ describe("Argument checks on the user window functions", function()
     local ok, err = resetBackgroundImage(absent, false)
     assert.is_nil(ok)
     assert.are.equal(("console '%s' not found"):format(absent), err)
+  end)
+end)
+
+describe("calcFontSize on the main window", function()
+
+  it("measures the main window when given no name at all", function()
+    local width, height = calcFontSize()
+    assert.is_number(width)
+    assert.is_number(height)
+    assert.is_true(width > 0)
+    assert.is_true(height > 0)
+  end)
+
+  it("gives the same answer for the main window by name", function()
+    local width, height = calcFontSize("main")
+    assert.is_true(width > 0)
+    assert.is_true(height > 0)
+    assert.are.same({width, height}, {calcFontSize()})
+  end)
+
+  it("answers nil for a console name nothing is registered under", function()
+    assert.is_nil(calcFontSize("calcFontSizeAbsent"))
+  end)
+
+  it("measures a miniconsole separately from the main window", function()
+    local console = "calcFontSizeMini"
+    finally(function() deleteMiniConsole(console) end)
+    createMiniConsole("main", console, 0, 0, 200, 60)
+    setMiniConsoleFontSize(console, 30)
+    local mainWidth = calcFontSize()
+    local miniWidth = calcFontSize(console)
+    assert.is_true(mainWidth > 0)
+    assert.is_true(miniWidth > 0)
+    assert.are_not.equal(mainWidth, miniWidth)
   end)
 end)

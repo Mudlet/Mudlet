@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+	<TriggerPackage />
+	<TimerPackage />
+	<AliasPackage>
+		<Alias isActive="yes" isFolder="no">
+			<name>mudlet-spec-selfremove alias</name>
+			<script>echo("mudlet-spec-selfremove alias fired\n")</script>
+			<command></command>
+			<packageName></packageName>
+			<regex>^mudlet-spec-selfremove$</regex>
+		</Alias>
+	</AliasPackage>
+	<ActionPackage />
+	<ScriptPackage>
+		<Script isActive="yes" isFolder="no">
+			<name>mudletSpecSelfRemoveScript</name>
+			<packageName></packageName>
+			<script>mudletSpecSelfRemoveRan = true
+mudletSpecSelfRemoveResult = uninstallPackage("mudlet-spec-selfremove")</script>
+			<eventHandlerList />
+		</Script>
+	</ScriptPackage>
+	<KeyPackage>
+		<Key isActive="yes" isFolder="no">
+			<name>mudlet-spec-selfremove key</name>
+			<packageName></packageName>
+			<script></script>
+			<command></command>
+			<keyCode>16777269</keyCode>
+			<keyModifier>134217728</keyModifier>
+		</Key>
+	</KeyPackage>
+	<VariablePackage>
+		<HiddenVariables />
+	</VariablePackage>
+</MudletPackage>

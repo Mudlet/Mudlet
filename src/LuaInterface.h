@@ -43,8 +43,6 @@ class Host;
 class TLuaInterpreter;
 class VarUnit;
 
-class QTreeWidgetItem;
-
 
 class LuaInterface
 {
@@ -94,8 +92,7 @@ public:
     void releaseVariableReferences();
     bool loadVar(TVar* var);
     bool reparentCVariable(TVar* from, TVar* to, TVar* curVar);
-    bool reparentVariable(QTreeWidgetItem*, QTreeWidgetItem*, QTreeWidgetItem*);
-    std::pair<bool, QString> validMove(QTreeWidgetItem*);
+    std::pair<bool, QString> validMove(TVar* pNewParent) const;
     void getAllChildren(TVar* var, QList<TVar*>* list);
     lua_State* getState() const;
     static int onPanic(lua_State*);

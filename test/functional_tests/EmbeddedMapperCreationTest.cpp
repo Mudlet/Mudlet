@@ -209,11 +209,11 @@ private slots:
         auto [opened, openMessage] = mpHost->openMapWidget(QString(), -1, -1, -1, -1);
         QVERIFY2(opened, qPrintable(openMessage));
         QVERIFY(mpHost->mpConsole->mpDockableMapWidget);
-        QVERIFY2(mpHost->mapWidget(), "the map widget did not come up, so closing it below proves nothing");
+        QVERIFY2(mpHost->mapWidgetGeometry().has_value(), "the map widget did not come up, so closing it below proves nothing");
 
         auto [closed, closeMessage] = mpHost->closeMapWidget();
         QVERIFY2(closed, qPrintable(closeMessage));
-        QVERIFY2(!mpHost->mapWidget(), "closeMapWidget() left the map widget on screen");
+        QVERIFY2(!mpHost->mapWidgetGeometry().has_value(), "closeMapWidget() left the map widget on screen");
         QPointer<QDockWidget> pDock = mpHost->mpConsole->mpDockableMapWidget;
         QPointer<QWidget> pDockMapper = pDock->widget();
 
@@ -269,7 +269,7 @@ private slots:
         qApp->processEvents();
         QVERIFY2(mudlet::self()->findChild<QDockWidget*>(qsl("dockMap_%1_main").arg(mHostname)), "the toolbar action built no main window map dock, so this covers nothing");
         QVERIFY2(mpHost->mpConsole->mpDockableMapWidget, "the toolbar action destroyed the profile's own map dock rather than hiding it");
-        QVERIFY2(!mpHost->mapWidget(), "the toolbar action left the profile's own map dock on screen");
+        QVERIFY2(!mpHost->mapWidgetGeometry().has_value(), "the toolbar action left the profile's own map dock on screen");
         QVERIFY2(mpHost->mpMap->mpMapper.data() != pOwnDockMapper, "the main window dock did not take the map over, so this covers nothing");
 
         auto [created, message] = mpHost->mpConsole->createMapper(QString(), 0, 0, 300, 300);
@@ -293,7 +293,7 @@ private slots:
     {
         auto [opened, openMessage] = mpHost->openMapWidget(QString(), -1, -1, -1, -1);
         QVERIFY2(opened, qPrintable(openMessage));
-        QVERIFY2(mpHost->mapWidget(), "the map widget did not come up, so this covers nothing");
+        QVERIFY2(mpHost->mapWidgetGeometry().has_value(), "the map widget did not come up, so this covers nothing");
         dlgMapper* pDockMapper = mpHost->mpMap->mpMapper.data();
         QVERIFY(pDockMapper);
 
@@ -307,10 +307,11 @@ private slots:
     }
 
 
-    // Host::mapWidget() reads the dock's own hidden state rather than its
-    // visibility, so a main window that is not on screen - minimised to the system
-    // tray - must not make the map widget count as closed. Reading it the other way
-    // round would destroy the map widget of anyone whose script ran while minimised.
+    // TMainConsole::mapWidget(), which Host::mapWidgetGeometry() below answers
+    // through, reads the dock's own hidden state rather than its visibility, so a
+    // main window that is not on screen - minimised to the system tray - must not
+    // make the map widget count as closed. Reading it the other way round would
+    // destroy the map widget of anyone whose script ran while minimised.
     void test_createMapperStillRefusesAMapWidgetWhileTheMainWindowIsHidden()
     {
         mudlet::self()->show();
@@ -320,7 +321,7 @@ private slots:
         qApp->processEvents();
 
         QVERIFY2(!mpHost->mpConsole->mpDockableMapWidget->isVisible(), "the map widget stayed visible with the main window hidden, so this covers nothing");
-        QVERIFY2(mpHost->mapWidget(), "a main window that is merely not on screen made the map widget itself count as closed");
+        QVERIFY2(mpHost->mapWidgetGeometry().has_value(), "a main window that is merely not on screen made the map widget itself count as closed");
 
         auto [created, message] = mpHost->mpConsole->createMapper(QString(), 0, 0, 300, 300);
         QVERIFY2(!created, "createMapper() took away the map widget of a profile whose main window was only minimised");
