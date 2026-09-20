@@ -60,21 +60,49 @@
 #include <vector>
 
 namespace {
-// The UTF-8 handed to a pattern is the encoding of the same text the QString
-// holds, so the UTF-16 index a byte offset stands at is just the number of code
-// units the bytes before it decode to. Counting those beats decoding the prefix
-// into a QString that is thrown away once its length has been read.
-int utf16PositionOf(const char* utf8, const PCRE2_SIZE byteOffset)
+// The UTF-16 code units the bytes in [from, to) decode to: a continuation byte
+// belongs to the character before it, and anything outside the basic
+// multilingual plane needs a surrogate pair. Counting a byte at a time is exact
+// even when an end lands inside a character, which a start offset stepped after
+// an empty match does.
+int utf16UnitsIn(const char* utf8, const PCRE2_SIZE from, const PCRE2_SIZE to)
 {
     int codeUnits = 0;
-    for (PCRE2_SIZE i = 0; i < byteOffset; ++i) {
+    for (PCRE2_SIZE i = from; i < to; ++i) {
         const auto byte = static_cast<unsigned char>(utf8[i]);
         if ((byte & 0xC0) != 0x80) {
-            // Anything outside the basic multilingual plane needs a surrogate pair
             codeUnits += (byte >= 0xF0) ? 2 : 1;
         }
     }
     return codeUnits;
+}
+
+// The UTF-8 handed to a pattern is the encoding of the same text the QString
+// holds, so the UTF-16 index a byte offset stands at is just the number of code
+// units the bytes before it decode to. Counting those beats decoding the prefix
+// into a QString that is thrown away once its length has been read.
+//
+// Counting them from the start of the line each time costs the offset itself,
+// and a match-all trigger asks for one position per capture at offsets that
+// march along the line - so reporting the positions of a line of n bytes cost
+// n squared. The caller carries the offset and count of the answer before, and
+// each further one walks only the bytes between the two.
+//
+// The walk goes either way, because the offsets do not arrive in order. PCRE2
+// hands back the name table in alphabetical order, so the named-group loop asks
+// for offsets in an order unrelated to their place in the line; a lookbehind or
+// \K capture can also put a later group before an earlier one. The cursor pair
+// must describe this same buffer and start at (0, 0) - one carried over from
+// another line reports nonsense rather than failing.
+int utf16PositionOf(const char* utf8, const PCRE2_SIZE byteOffset, PCRE2_SIZE& cursorByteOffset, int& cursorCodeUnits)
+{
+    if (byteOffset >= cursorByteOffset) {
+        cursorCodeUnits += utf16UnitsIn(utf8, cursorByteOffset, byteOffset);
+    } else {
+        cursorCodeUnits -= utf16UnitsIn(utf8, byteOffset, cursorByteOffset);
+    }
+    cursorByteOffset = byteOffset;
+    return cursorCodeUnits;
 }
 
 // The /g loop's search for the next occurrence. The first search of a line
@@ -560,6 +588,10 @@ void TTrigger::processRegexMatch(const char* haystackC,
 
     int i = 0;
     int numberOfCaptureGroups = 0;
+    // One cursor per pattern match, so that the match-all loop's matches walk
+    // the line once between them instead of rescanning it for each
+    PCRE2_SIZE cursorByteOffset = 0;
+    int cursorCodeUnits = 0;
     CaptureLists lists;
     std::list<std::string>& captureList = lists.mCaptures;
     std::list<int>& posList = lists.mPositions;
@@ -573,7 +605,7 @@ void TTrigger::processRegexMatch(const char* haystackC,
             continue;
         }
 
-        const int utf16_pos = utf16PositionOf(haystackC, ovector[2 * i]);
+        const int utf16_pos = utf16PositionOf(haystackC, ovector[2 * i], cursorByteOffset, cursorCodeUnits);
         // Built where it is kept: a local to copy from would allocate twice
         lists.add(substring_start, static_cast<size_t>(substring_length), utf16_pos + posOffset);
         if (TDebug::wants(TDebug::Category::TriggerDetail)) {
@@ -602,7 +634,7 @@ void TTrigger::processRegexMatch(const char* haystackC,
             }
             auto* substring_start = haystackC + ovector[2 * n];          //NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic, cppcoreguidelines-pro-bounds-constant-array-index)
             auto substring_length = ovector[2 * n + 1] - ovector[2 * n]; //NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
-            auto utf16_pos = utf16PositionOf(haystackC, ovector[2 * n]); //NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
+            const int utf16_pos = utf16PositionOf(haystackC, ovector[2 * n], cursorByteOffset, cursorCodeUnits); //NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
             auto capture = QString::fromUtf8(substring_start, substring_length);
             nameGroups << qMakePair(name, capture);
             namePositions.insert(name, qMakePair(utf16_pos + posOffset, static_cast<int>(capture.length())));
@@ -642,7 +674,7 @@ void TTrigger::processRegexMatch(const char* haystackC,
                 lists.addEmpty(-1);
                 continue;
             }
-            const int utf16_pos = utf16PositionOf(haystackC, ovector[2 * i]);
+            const int utf16_pos = utf16PositionOf(haystackC, ovector[2 * i], cursorByteOffset, cursorCodeUnits);
             lists.add(substring_start, static_cast<size_t>(substring_length), utf16_pos + posOffset);
             if (TDebug::wants(TDebug::Category::TriggerDetail)) {
                 TDebug(Qt::darkCyan, Qt::black, TDebug::Category::TriggerDetail, mName) << "<regex mode: match all> capture group #" << (i + 1) << " = " >> mpHost;
