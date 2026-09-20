@@ -454,16 +454,6 @@ private slots:
         QVERIFY2(!subject()->hasExitWeight(qsl("n")), "the weight of the deleted exit outlived it");
     }
 
-    /*
-     * Known defect, kept as an expected failure so that fixing it is noticed:
-     * normalExitEdited() greys the "no route" box out when the roomID is
-     * emptied but, unlike the equivalent branch of normalStubExitChanged(),
-     * leaves it ticked, and save() writes every one of those boxes through
-     * unconditionally. The room is left claiming a speedwalk lock on a
-     * direction it has no exit in, which Lua's hasExitLock() reports and which
-     * silently applies to whatever exit is put there next by setExit().
-     * Clearing the box alongside disabling it turns the QVERIFY below green.
-     */
     void deletingAnExitLeavesItsSpeedwalkLockBehind()
     {
         buildMap();
@@ -475,7 +465,6 @@ private slots:
         pDlg->button_save->click();
 
         QCOMPARE(subject()->getExit(DIR_NORTH), -1);
-        QEXPECT_FAIL("", "issue #10422: the lock control is only greyed out, not cleared, so save() stores it on a direction with no exit", Continue);
         QVERIFY(!subject()->hasExitLock(DIR_NORTH));
     }
 

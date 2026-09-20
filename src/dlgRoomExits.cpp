@@ -1192,6 +1192,7 @@ void dlgRoomExits::normalExitEdited(const QString& roomExitIdText,
         // other controls that need either a valid exit roomID or an actual
         // stub exit to be chosen:
         pNoRoute->setEnabled(false);
+        pNoRoute->setChecked(false);
         pWeight->setEnabled(false);
         pDoorType_none->setEnabled(false);
         pDoorType_open->setEnabled(false);
