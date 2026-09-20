@@ -1619,8 +1619,15 @@ end)
 describe("Tests what sysDataSendRequest carries at a server password prompt", function()
   -- Password mode cannot be turned on from Lua; the server takes the ECHO option,
   -- so the real parser has to be fed. cTelnet stops answering ECHO after five
-  -- negotiations less than five seconds apart, and a prompt costs two, so this
-  -- block opens exactly one - see CommandLine_spec.lua, which spends four of them.
+  -- negotiations chained less than five seconds apart, and a prompt costs two -
+  -- but that counter is not a budget shared across the suite: cTelnet::reset()
+  -- zeroes it on every connect and disconnect, and TBufferEncoding_spec.lua does
+  -- both two files before this one, so the prompt below starts from zero.
+  -- The real hazard is TelnetTriggerFuzz_spec.lua, which sorts immediately before
+  -- this file and fuzzes IAC WILL/WONT over an option list that includes ECHO. It
+  -- is gated on MUDLET_FUZZ so CI never runs it, but under the fuzz campaign it
+  -- can latch the anomaly detector and this block then fails pointing at the
+  -- password rather than at the fuzzer.
   local echoActive = false
   local function serverEcho(takesEcho)
     local ok, msg = feedTelnet(takesEcho and "<T_IAC><T_WILL><O_ECHO>" or "<T_IAC><T_WONT><O_ECHO>")
@@ -1634,6 +1641,7 @@ describe("Tests what sysDataSendRequest carries at a server password prompt", fu
     if echoActive then
       serverEcho(false)
     end
+    clearCmdLine("main")
   end)
 
   it("does not hand the password to a sysDataSendRequest handler", function()
@@ -1650,9 +1658,19 @@ describe("Tests what sysDataSendRequest carries at a server password prompt", fu
                    "an ordinary command should still raise sysDataSendRequest")
 
     serverEcho(true)
+    -- Without this a refused negotiation would fail the assertion below with a
+    -- message blaming the guard, when the real cause was that no prompt opened.
+    -- Clearing the line is the only Lua-visible consequence of echo suppression
+    -- (there is no getter for it), and is what CommandLine_spec.lua keys off too.
+    printCmdLine("main", "specPromptEngagedProbe")
+    assert.are.equal("", getCmdLine("main"), "echo suppression did not engage, so this case proves nothing")
+
     send("specPasswordAtThePrompt", false)
     serverEcho(false)
 
+    -- Pins that the event is withheld, not that the password still reaches the
+    -- game: feedTelnet() needs an unconnected socket, so nothing here can watch
+    -- the wire. A fix that dropped the send entirely would also pass this.
     assert.is_false(table.contains(seen, "specPasswordAtThePrompt"),
                     "the password typed at the game's prompt was handed to a sysDataSendRequest handler")
 

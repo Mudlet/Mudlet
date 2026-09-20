@@ -1807,7 +1807,16 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
             continue;
         }
         command.remove(QChar::LineFeed);
-        if (dontExpandAliases) {
+        // The alias pass is skipped while the server has echo off, which is how it
+        // asks for a password. processDataStream() writes what it is given to the
+        // Lua global `command` before matching anything, and runs the script of
+        // every alias whose pattern matches - so the password would reach Lua in
+        // cleartext, as a global anything can later read, one frame before
+        // cTelnet::sendData() gets a say. A matching alias also returns true and
+        // swallows the send, so the guard inside sendData() would never be reached
+        // for it at all. Only typed input expands aliases: Lua's send() passes
+        // dontExpandAliases true, so nothing a script sends is affected.
+        if (dontExpandAliases || mIsRemoteEchoingActive) {
             mTelnet.sendData(command, true, true);
             continue;
         }
