@@ -1346,6 +1346,15 @@ int TLuaInterpreter::saveProfile(lua_State* L)
     QString saveAsFile;
     if (!lua_isnoneornil(L, 2)) {
         saveAsFile = lua_tostring(L, 2);
+        // The join below hands an absolute file name back as it is, dropping the
+        // folder that was asked for and putting the save outside it, so such a
+        // name is refused instead. Without a folder there is nothing to drop, and
+        // an absolute name is then the only way to say where the save goes. What
+        // counts as absolute is the platform's own rule: a leading separator on
+        // Unix, a drive or a UNC share on Windows.
+        if (!saveToDir.isEmpty() && QDir::isAbsolutePath(saveAsFile)) {
+            return warnArgumentValue(L, __func__, qsl("file name '%1' cannot be an absolute path when a folder is given as well").arg(saveAsFile));
+        }
         if (!saveAsFile.endsWith(".xml", Qt::CaseInsensitive)) {
             saveAsFile = saveAsFile + ".xml";
         }

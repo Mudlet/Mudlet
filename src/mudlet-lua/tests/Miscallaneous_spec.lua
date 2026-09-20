@@ -886,6 +886,23 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_false(contains(path, "//"), "saveProfile() reported " .. tostring(path))
         assertSaveTurnedUp(path)
       end)
+
+      -- A file name that names a place of its own wins the join outright: the
+      -- folder is dropped and the save lands at the root of the filesystem. It
+      -- is refused instead, with the nil and the message the binding answers any
+      -- other unusable argument with. Which names count is the platform's rule.
+      it("refuses a file name that is an absolute path instead of saving outside the folder it was given", function()
+        local absoluteName = getOS() == "windows" and "C:/mudlet-spec-absolute" or "/mudlet-spec-absolute"
+        local escapee = absoluteName .. ".xml"
+        finally(function()
+          os.remove(escapee)
+        end)
+
+        local saved, message = saveProfile(getMudletHomeDir(), absoluteName)
+        assert.is_nil(saved, "saveProfile() took the save and reported " .. tostring(message))
+        assert.is_true(contains(tostring(message), "absolute path"), "saveProfile() answered " .. tostring(message))
+        assert.is_false(fileExists(escapee), "the save landed at " .. escapee)
+      end)
     end)
 
     describe("Tests the logging functions", function()
