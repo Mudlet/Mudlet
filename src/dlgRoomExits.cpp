@@ -2023,7 +2023,6 @@ void dlgRoomExits::init()
     connect(doortype_s,            &QButtonGroup::idClicked,                       this, &dlgRoomExits::slot_checkModified);
     connect(doortype_se,           &QButtonGroup::idClicked,                       this, &dlgRoomExits::slot_checkModified);
     connect(doortype_in,           &QButtonGroup::idClicked,                       this, &dlgRoomExits::slot_checkModified);
-    connect(doortype_down,         &QButtonGroup::idClicked,                       this, &dlgRoomExits::slot_checkModified);
     connect(doortype_out,          &QButtonGroup::idClicked,                       this, &dlgRoomExits::slot_checkModified);
     // clang-format on
 }
