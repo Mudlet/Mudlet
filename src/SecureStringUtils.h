@@ -110,6 +110,40 @@ public:
      */
     static bool isTestEnvironment();
 
+    /**
+     * @brief Best-effort: set a file holding a secret to 0600
+     *
+     * Called both when such a file is written and when one is read, so that a file left behind
+     * by an earlier Mudlet is narrowed as well. The permissions are read back afterwards,
+     * because a file system that cannot store them reports the change as having worked.
+     * @param path Path of the file to restrict
+     * @return false when other accounts on the machine can still read the file. On a platform
+     * with no permission bits of this kind there is nothing to set, so this answers true after
+     * saying once that the secret is protected only by the folder holding it.
+     */
+    static bool restrictFileToOwner(const QString& path);
+
+    /**
+     * @brief Best-effort: set a directory holding secrets to 0700
+     *
+     * The same contract as restrictFileToOwner().
+     * @param path Path of the directory to restrict
+     * @return false when other accounts on the machine can still reach into the directory
+     */
+    static bool restrictDirectoryToOwner(const QString& path);
+
+    /**
+     * @brief The secret that could not be narrowed, forgetting it as it is handed over
+     *
+     * Lets a caller tell the user that a password it has just saved is readable by other
+     * accounts, without every caller in between having to carry the failure. What it holds
+     * belongs to no particular profile, so a caller that reports on one brackets its own
+     * write with this: ask once to discard what came before, and once afterwards for what
+     * that write left behind. CredentialManager::unprotectedSecretPath() is that answer.
+     * @return Path of that file or directory, empty when nothing failed since it was last asked
+     */
+    static QString takeUnprotectedSecretPath();
+
     // Convenience methods for password storage and retrieval
 
     /**

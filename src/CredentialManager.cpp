@@ -102,10 +102,17 @@ bool fileWrittenAfter(const QString& path, const QString& otherPath)
 
 bool writeCredentialFile(const QString& filePath, const QString& profileName, const QString& credential)
 {
-    if (!QDir().mkpath(QFileInfo(filePath).absolutePath())) {
+    const QString directoryPath = QFileInfo(filePath).absolutePath();
+
+    if (!QDir().mkpath(directoryPath)) {
         qWarning() << "CredentialManager: Failed to create directory structure for" << filePath;
         return false;
     }
+
+    // Nothing but credentials is kept in there, so the directory is owner-only too. The
+    // profile directory above it holds only this one and the encryption key, and is narrowed
+    // by SecureStringUtils when that key is written or read.
+    SecureStringUtils::restrictDirectoryToOwner(directoryPath);
 
     // an empty credential is allowed - it stands for "no password"
     const QString encrypted = SecureStringUtils::encryptStringForProfile(credential, profileName);
@@ -132,6 +139,8 @@ bool writeCredentialFile(const QString& filePath, const QString& profileName, co
         qWarning() << "CredentialManager: Failed to write encrypted credential to file:" << filePath << "Error:" << file.errorString();
         return false;
     }
+
+    SecureStringUtils::restrictFileToOwner(filePath);
 
     return true;
 }
@@ -331,6 +340,19 @@ bool CredentialManager::shouldUseKeychain(const QString& profileName) const
     return true;
 }
 
+// The file fallback narrows what it writes, and a failure to do so is recorded process-wide -
+// where another profile's credential work can have left one of its own, and can leave one
+// between a keychain job starting and its callback running. Anything already recorded is
+// discarded first, so what is left afterwards belongs to this store and to no other.
+bool CredentialManager::storeCredentialToFileForThisOperation(const QString& profileName, const QString& key, const QString& credential)
+{
+    SecureStringUtils::takeUnprotectedSecretPath();
+    const bool stored = storeCredentialToFile(profileName, key, credential);
+    mUnprotectedSecretPath = SecureStringUtils::takeUnprotectedSecretPath();
+
+    return stored;
+}
+
 void CredentialManager::storePassword(const QString& profileName, const QString& key, const QString& password, CredentialCallback callback)
 {
     if (profileName.isEmpty() || key.isEmpty()) {
@@ -369,7 +391,7 @@ void CredentialManager::storePassword(const QString& profileName, const QString&
         storeCredential(service, key, password, profileName, callback);
     } else {
         // Use SecureStringUtils for portable/test environments
-        bool success = storeCredentialToFile(profileName, key, password);
+        bool success = storeCredentialToFileForThisOperation(profileName, key, password);
 
         if (callback) {
             callback(success, success ? QString() : qsl("Failed to store password with SecureStringUtils"));
@@ -886,6 +908,7 @@ void CredentialManager::storeCredential(const QString& service, const QString& a
 
     // Cleanup any existing operation
     cleanupCurrentOperation();
+    mUnprotectedSecretPath.clear();
 
     auto* writeJob = new QKeychain::WritePasswordJob(service, this);
     // Use service as the key - on Windows, only setKey() value is used as the credential target,
@@ -925,7 +948,7 @@ void CredentialManager::storeCredential(const QString& service, const QString& a
                 if (!success) {
                     qDebug() << "CredentialManager: Keychain storage failed, using encrypted file storage:" << errorMessage;
 
-                    bool fileSuccess = storeCredentialToFile(profileName, account, password);
+                    bool fileSuccess = storeCredentialToFileForThisOperation(profileName, account, password);
 
                     if (fileSuccess) {
                         success = true;
@@ -1291,6 +1314,8 @@ QString CredentialManager::retrieveCredentialFromFile(const QString& profileName
                 qWarning() << "CredentialManager: could not copy the newer credential at" << legacyPath << "across to" << filePath << "- it will be read from the older path again next time";
             }
 
+            qDebug() << "CredentialManager: Found the" << key << "credential for profile" << profileName << "in the encrypted file left by the earlier naming scheme";
+
             return migrated;
         }
 
@@ -1313,6 +1338,12 @@ QString CredentialManager::retrieveCredentialFromFile(const QString& profileName
         return QString();
     }
 
+    // A credential written before this narrowing existed - or by an older Mudlet sharing this
+    // configuration directory, which still writes with the umask - may be group- and
+    // world-readable. Narrowing it here tightens it the first time the password is used.
+    SecureStringUtils::restrictFileToOwner(filePath);
+    SecureStringUtils::restrictDirectoryToOwner(QFileInfo(filePath).absolutePath());
+
     QString encrypted = QString::fromUtf8(file.readAll());
     file.close();
 
@@ -1326,6 +1357,12 @@ QString CredentialManager::retrieveCredentialFromFile(const QString& profileName
 
     if (decrypted.isEmpty()) {
         qWarning() << "CredentialManager: Failed to decrypt credential for profile" << profileName;
+    } else {
+        // Said here rather than by the caller, which cannot tell a password the keychain
+        // answered with from one that came out of the file fallback. The key is named because
+        // this also answers for the proxy password and for credentialExists()'s reconnect
+        // token, and a log that says only "password" cannot tell those apart.
+        qDebug() << "CredentialManager: Found the" << key << "credential for profile" << profileName << "in the encrypted file";
     }
 
     return decrypted;
@@ -1483,6 +1520,12 @@ QString CredentialManager::readLegacyFileCredential(const QString& profileName, 
 
         return QString();
     }
+
+    // Narrowed like every other credential this reads: the copy under the earlier naming
+    // scheme is by definition one an older Mudlet wrote, so it is the likeliest of all of
+    // them to have been left readable by every account on the machine
+    SecureStringUtils::restrictFileToOwner(legacyPath);
+    SecureStringUtils::restrictDirectoryToOwner(QFileInfo(legacyPath).absolutePath());
 
     const QString encrypted = QString::fromUtf8(file.readAll());
     file.close();

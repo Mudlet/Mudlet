@@ -87,6 +87,7 @@ set(PROFILE_GROUP_TEST_SOURCES
     ConnectionDialogFocusTest.cpp
     ConnectionDialogInitialSelectionTest.cpp
     ConnectionDialogOfflineProfileTest.cpp
+    CredentialFilePermissionsTest.cpp
     DefaultGameDeleteTest.cpp
     DictionaryRoundTripTest.cpp
     MissingDisplayFontTest.cpp
