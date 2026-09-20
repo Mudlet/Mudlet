@@ -529,6 +529,12 @@ public:
 
     QPair<bool, QStringList> getLines(const QString& windowName, const int lineFrom, const int lineTo);
     std::pair<bool, QString> openWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area);
+    // Whether windowname can hold a new mini console, scroll box, command line,
+    // text edit or label: an empty name or "main" (in any case) is the main
+    // console, anything else has to be a registered user window or scroll box.
+    // Not a general "can this contain an element" test - createMapper() takes a
+    // user window only.
+    bool parentWindowMissing(const QString& windowname) const;
     std::pair<bool, QString> createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height);
     std::pair<bool, QString> createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height) const;
     std::pair<bool, QString> createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBg, bool clickthrough);
@@ -1081,6 +1087,19 @@ private:
     void toggleMapperVisibility();
     void createMapper(const bool);
     void removePackageInfo(const QString& packageName, const bool);
+    // A removal uninstallPackage() held over because the package was still being
+    // read in when it was asked for.
+    struct DeferredUninstall
+    {
+        QString packageName;
+        // The kind of removal that was asked for: it decides which events the
+        // removal raises and which of mInstalledPackages/mInstalledModules the
+        // name comes out of, so it travels with the name rather than being
+        // assumed when the removal is finally carried out.
+        enums::PackageModuleType thing;
+        bool operator==(const DeferredUninstall&) const = default;
+    };
+    void runUninstallsDeferredByAnInstall(const QList<DeferredUninstall>& deferred);
     static void createModuleBackup(const QString& filename, const QString& saveName);
     // A single module queued to be written out during a profile save. Its XML document
     // is built on the main thread (XMLexport::writeModuleXML()); serializing it to disk
@@ -1123,6 +1142,20 @@ private:
     void setupSandboxedLuaState(lua_State* L);
 
     QStringList mModulesToSync;
+
+    // The packages and modules whose install is still reading their XML in. A
+    // package's own scripts run during that read, and one of them can ask for the
+    // package being read in to be taken away again, or to be installed a second
+    // time: neither may be done to it while the importer is still holding its
+    // items. A stack because an install-time script can install something else,
+    // and because one name can be on it twice - a module that reloads itself is
+    // installed again from inside its own install - so what comes off has to be
+    // what this call put on rather than whatever carries the name.
+    QStack<QString> mPackagesBeingInstalled;
+    // What those scripts asked for, carried out by
+    // runUninstallsDeferredByAnInstall() once the outermost install has finished
+    // and the install events it queued have gone out.
+    QList<DeferredUninstall> mUninstallsDeferredByAnInstall;
     QScopedPointer<LuaInterface> mLuaInterface;
 
     // Experiment system storage: key -> enabled state

@@ -28,6 +28,10 @@ deliberately.
 | `mudlet-spec-module` | installed as a module; its script counts its own compiles so a reload is observable |
 | `mudlet-spec-brokenscripts` | valid package whose two scripts stop with an error (one of them with `&`, `<`, `>` and `"` in the error text) and whose third one does not, so a partial failure can be told from a clean install |
 | `mudlet-spec-selfuninstall` | package whose event handler uninstalls its own package (regression #9557) |
+| `mudlet-spec-selfremove` | package whose script uninstalls its own package while the install is still reading it in (regression #10867) |
+| `mudlet-spec-selfremovemodule` | the same, installed as a module: its script uninstalls its own module while the install is still reading it in |
+| `mudlet-spec-removeother` | package whose script uninstalls a *different* package (`mudlet-spec-minimal`) while the install is still reading it in |
+| `mudlet-spec-reloadrenamer` | module whose `config.lua` installs it as `mudlet-spec-reloadrenamed` and whose script asks for *that* name to be reloaded while the install is still reading it in |
 | `mudlet-spec-noconfig` | archive with a package XML but no `config.lua`, so the name comes from the file name |
 | `mudlet-spec-emptyarchive` | archive with neither `config.lua` nor a package XML |
 | `mudlet-spec-manifestonly` | archive with a `config.lua` and no package XML, so its details are filed before it is refused |

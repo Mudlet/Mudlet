@@ -704,8 +704,16 @@ void dlgIRC::slot_onUserActivated(const QModelIndex& index)
     }
 }
 
-void dlgIRC::appendHtml(QTextDocument* document, const QString& html)
+// The document on screen has to be written through the browser, which scrolls
+// and repaints as well as appending; one that is not on screen has no browser to
+// go through and is written directly.
+void dlgIRC::appendToDocument(QTextDocument* document, const QString& html)
 {
+    if (document == ircBrowser->document()) {
+        ircBrowser->append(html);
+        return;
+    }
+
     QTextCursor cursor(document);
     cursor.beginEditBlock();
     cursor.movePosition(QTextCursor::End);
@@ -742,11 +750,22 @@ void dlgIRC::slot_receiveMessage(IrcMessage* message)
                 }
             }
 
-            // add the HTML formatted copy to the buffer.
-            if (document == ircBrowser->document()) {
-                ircBrowser->append(html);
-            } else {
-                dlgIRC::appendHtml(document, html);
+            appendToDocument(document, html);
+
+            // Being kicked ourselves makes IrcBufferModelPrivate::messageFilter()
+            // destroy the channel's buffer, and with it the document this line has
+            // just gone into, so the server buffer - which is never destroyed -
+            // keeps a copy the player can still read. The nick test is deliberately
+            // the same expression that filter's own destroy test uses, so the copy
+            // is made exactly when the buffer is taken away: keep the two in step.
+            const bool kickedUs = message->type() == IrcMessage::Kick && !static_cast<IrcKickMessage*>(message)->user().compare(connection->nickName(), Qt::CaseInsensitive);
+            // a kick naming us in a channel we have no buffer for arrives on the
+            // server buffer itself, via messageIgnored, and has already been
+            // appended above - copying it again would show it twice
+            if (kickedUs && buffer != serverBuffer) {
+                if (QTextDocument* serverDocument = bufferTexts.value(serverBuffer)) {
+                    appendToDocument(serverDocument, html);
+                }
             }
         }
     }

@@ -214,6 +214,11 @@ public:
     bool loadReplay(const QString&, QString* pErrMsg = nullptr);
     void loadReplayChunk();
     bool isReplaying() { return loadingReplay; }
+    bool replayPaused() const { return mReplayPaused; }
+    void pauseReplay();
+    void resumeReplay();
+    void stopReplay();
+    void endReplay(const QString& message);
     void setChannel102Variables(const QString&);
     bool socketOutRaw(std::string& data);
     const QByteArray& getEncoding() const { return mEncoding; }
@@ -594,6 +599,22 @@ private:
     // True if THIS profile is playing a replay, does not know about any OTHER
     // active profile...
     bool loadingReplay = false;
+    // Playback is held. No chunk is handed to the parser and no chunk timer
+    // runs until resumeReplay() or stopReplay() clears this.
+    bool mReplayPaused = false;
+    // A chunk has been read into the global chunk buffer in ctelnet.cpp and has
+    // not been handed to the parser yet. Defensive: it guards the re-arm in
+    // resumeReplay() against the one window where no chunk is waiting, which
+    // needs a pause AND a resume to land inside one chunk's processing by way
+    // of a nested event loop.
+    bool mReplayChunkPending = false;
+    // What the pending chunk's timer is started with: the full gap scaled by
+    // the replay speed when the chunk was read, cut down to whatever was left
+    // of that wait if the replay is paused part-way through it.
+    int mReplayChunkDelay = 0;
+    // A member rather than a QTimer::singleShot so that pausing can stop it and
+    // take back the time still left on it.
+    QTimer* mpReplayChunkTimer = nullptr;
     // Used to disable the TConsole ending messages if run from lua:
     bool mIsReplayRunFromLua = false;
     QByteArrayList mAcceptableEncodings;

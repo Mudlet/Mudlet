@@ -12,6 +12,16 @@ apt-get update
 apt-get install -y --no-install-recommends "$DEB" libssh-4
 
 [[ -x /usr/bin/mudlet ]] || { echo "the package installs no /usr/bin/mudlet" >&2; exit 1; }
+
+# mkdeb.sh can only see what cmake --install staged; this is the finished payload,
+# so a development file added by a later packaging step is caught here too (#10871)
+development_files="$(dpkg -L mudlet | grep -E '^/usr/include(/|$)|/cmake/|\.(a|cmake|h|hpp|la|pc)$' || true)"
+if [[ -n "$development_files" ]]; then
+  echo "the package ships development files:" >&2
+  echo "$development_files" >&2
+  exit 1
+fi
+
 missing="$(ldd /usr/bin/mudlet | grep 'not found' || true)"
 if [[ -n "$missing" ]]; then
   echo "mudlet has unresolved libraries:" >&2
