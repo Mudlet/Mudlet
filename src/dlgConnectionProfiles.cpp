@@ -626,8 +626,9 @@ void dlgConnectionProfiles::writeSecurePassword(const QString& profile, const QS
             qDebug() << "dlgConnectionProfiles: Successfully stored password for profile" << profile;
             // Saving it and keeping it to ourselves are two different things, and the store
             // reports only the first: without this the user is told the password was saved
-            // while it sits there for every account on the machine to read
-            const QString unprotectedPath = SecureStringUtils::takeUnprotectedSecretPath();
+            // while it sits there for every account on the machine to read. Asked of the
+            // manager that did this store, so that the answer is about this password.
+            const QString unprotectedPath = credManager->unprotectedSecretPath();
 
             if (!unprotectedPath.isEmpty() && safeThis) {
                 //: Shown in the connection dialog when a password was saved but its file could not be made unreadable to other users of the computer. %1 is a profile name.

@@ -135,8 +135,11 @@ public:
     /**
      * @brief The secret that could not be narrowed, forgetting it as it is handed over
      *
-     * Lets the connection dialog tell the user that a password it has just saved is readable
-     * by other accounts, without every caller in between having to carry the failure.
+     * Lets a caller tell the user that a password it has just saved is readable by other
+     * accounts, without every caller in between having to carry the failure. What it holds
+     * belongs to no particular profile, so a caller that reports on one brackets its own
+     * write with this: ask once to discard what came before, and once afterwards for what
+     * that write left behind. CredentialManager::unprotectedSecretPath() is that answer.
      * @return Path of that file or directory, empty when nothing failed since it was last asked
      */
     static QString takeUnprotectedSecretPath();

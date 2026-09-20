@@ -340,6 +340,19 @@ bool CredentialManager::shouldUseKeychain(const QString& profileName) const
     return true;
 }
 
+// The file fallback narrows what it writes, and a failure to do so is recorded process-wide -
+// where another profile's credential work can have left one of its own, and can leave one
+// between a keychain job starting and its callback running. Anything already recorded is
+// discarded first, so what is left afterwards belongs to this store and to no other.
+bool CredentialManager::storeCredentialToFileForThisOperation(const QString& profileName, const QString& key, const QString& credential)
+{
+    SecureStringUtils::takeUnprotectedSecretPath();
+    const bool stored = storeCredentialToFile(profileName, key, credential);
+    mUnprotectedSecretPath = SecureStringUtils::takeUnprotectedSecretPath();
+
+    return stored;
+}
+
 void CredentialManager::storePassword(const QString& profileName, const QString& key, const QString& password, CredentialCallback callback)
 {
     if (profileName.isEmpty() || key.isEmpty()) {
@@ -378,7 +391,7 @@ void CredentialManager::storePassword(const QString& profileName, const QString&
         storeCredential(service, key, password, profileName, callback);
     } else {
         // Use SecureStringUtils for portable/test environments
-        bool success = storeCredentialToFile(profileName, key, password);
+        bool success = storeCredentialToFileForThisOperation(profileName, key, password);
 
         if (callback) {
             callback(success, success ? QString() : qsl("Failed to store password with SecureStringUtils"));
@@ -895,6 +908,7 @@ void CredentialManager::storeCredential(const QString& service, const QString& a
 
     // Cleanup any existing operation
     cleanupCurrentOperation();
+    mUnprotectedSecretPath.clear();
 
     auto* writeJob = new QKeychain::WritePasswordJob(service, this);
     // Use service as the key - on Windows, only setKey() value is used as the credential target,
@@ -934,7 +948,7 @@ void CredentialManager::storeCredential(const QString& service, const QString& a
                 if (!success) {
                     qDebug() << "CredentialManager: Keychain storage failed, using encrypted file storage:" << errorMessage;
 
-                    bool fileSuccess = storeCredentialToFile(profileName, account, password);
+                    bool fileSuccess = storeCredentialToFileForThisOperation(profileName, account, password);
 
                     if (fileSuccess) {
                         success = true;

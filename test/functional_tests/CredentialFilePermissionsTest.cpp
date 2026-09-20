@@ -27,9 +27,12 @@
  * than assumed. The umask is pinned to the usual 022 in initTestCase(), and a scratch
  * file and directory are created to prove the pin took effect - a default ACL or a mount
  * option can override a umask, and then "owner-only" would prove nothing. The config
- * root is redirected with XDG_CONFIG_HOME, which QStandardPaths reads on Linux only:
- * on macOS and Windows the root persists between runs, so each case removes the profile
- * directory before it starts and every case asserts the key is absent before it saves.
+ * root is moved into QStandardPaths' test sandbox, which redirects it on every platform
+ * where XDG_CONFIG_HOME would only move it on Linux, and that move is checked too: a
+ * platform where the root could not be moved is one these cases skip rather than write a
+ * credential into the root the person running them keeps their own in. The sandbox
+ * outlives a run, so the profile directories are removed before each case and after the
+ * last one, and every case asserts the key is absent before it saves.
  *
  * A third group of cases covers the log line that names where a password was found, in
  * both directions: that it appears when the encrypted file answered, and that it does
@@ -87,9 +90,9 @@ private:
     const QString mKey = qsl("character");
     const QString mPassword = qsl("correct horse battery staple");
 
-    QTemporaryDir mConfigDir;
-    QByteArray mSavedXdgConfigHome;
+    QTemporaryDir mScratchDir;
     QByteArray mSavedLoggingRules;
+    bool mConfigRootRedirected = false;
 #if defined(Q_OS_UNIX)
     mode_t mSavedUmask = 0;
     bool mUmaskPinned = false;
@@ -135,11 +138,26 @@ private:
         return QFile::setPermissions(path, permissions);
     }
 
+    // The sandbox outlives a run, so what one case or one run saved is cleared out rather
+    // than left for the next to pass on. Only ever called once the config root has been
+    // moved: a run that skipped that has no business removing directories.
+    void removeTheProfilesTheseCasesUse()
+    {
+        if (!mConfigRootRedirected) {
+            return;
+        }
+
+        for (const QString& profile : {mProfile, mLongProfile}) {
+            QDir(profileDirectory(profile)).removeRecursively();
+            QDir(rawProfileDirectory(profile)).removeRecursively();
+            QDir(qsl("%1/profiles/%2").arg(configRoot(), profile.left(50))).removeRecursively();
+        }
+    }
+
     void saveAPassword(const QString& profile)
     {
-        // The config root persists between runs on the platforms that ignore
-        // XDG_CONFIG_HOME, and a key left owner-only by an earlier run would satisfy these
-        // cases on its own
+        // The sandbox outlives a run, and a key left owner-only by an earlier one would
+        // satisfy these cases on its own
         QVERIFY2(!QFileInfo::exists(encryptionKeyFile(profile)), "this case started on a config root an earlier run left behind, so it would prove nothing");
         QVERIFY(CredentialManager::storeCredential(profile, mKey, mPassword));
         QVERIFY(QFileInfo::exists(credentialFile(profile)));
@@ -150,12 +168,25 @@ private slots:
     void initTestCase()
     {
         if (portableMarkerPresent()) {
-            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config root cannot be redirected away from the real one");
+            QSKIP("portable.txt present - it takes precedence over the test sandbox, so the config root cannot be moved away from the real one");
         }
 
-        QVERIFY(mConfigDir.isValid());
-        mSavedXdgConfigHome = qgetenv("XDG_CONFIG_HOME");
-        qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
+        QVERIFY(mScratchDir.isValid());
+
+        // These cases save a password into the config root and delete what they saved, so
+        // that root must not be the one the person running them keeps their own credentials
+        // in. XDG_CONFIG_HOME moves it on Linux alone, where QStandardPaths' own test mode
+        // moves it everywhere - and whether it did is asked rather than assumed, because a
+        // platform where it did not is one these cases have to leave alone.
+        const QString realConfigRoot = configRoot();
+        QStandardPaths::setTestModeEnabled(true);
+
+        if (configRoot() == realConfigRoot) {
+            QSKIP("the config root could not be moved out of the way on this platform, and these cases write credentials into it and delete them again");
+        }
+
+        mConfigRootRedirected = true;
+
         // The log cases read a qDebug() line, which a rule in the environment would filter
         // out before it ever reached them
         mSavedLoggingRules = qgetenv("QT_LOGGING_RULES");
@@ -169,7 +200,7 @@ private slots:
         // A default ACL on the parent, or a mount option such as vfat's fmask, overrides a
         // umask - and then every "owner-only" assertion below would hold with the whole fix
         // taken out. Prove the pin is what decides a new file's and a new directory's mode.
-        const QString scratchDirectory = qsl("%1/umask-control").arg(mConfigDir.path());
+        const QString scratchDirectory = qsl("%1/umask-control").arg(mScratchDir.path());
         QVERIFY(QDir().mkpath(scratchDirectory));
         QFile scratchFile(qsl("%1/file").arg(scratchDirectory));
         QVERIFY(scratchFile.open(QIODevice::WriteOnly));
@@ -186,20 +217,14 @@ private slots:
             ::umask(mSavedUmask);
         }
 #endif
-        mSavedXdgConfigHome.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdgConfigHome);
+        removeTheProfilesTheseCasesUse();
+        QStandardPaths::setTestModeEnabled(false);
         mSavedLoggingRules.isNull() ? qunsetenv("QT_LOGGING_RULES") : qputenv("QT_LOGGING_RULES", mSavedLoggingRules);
     }
 
-    // XDG_CONFIG_HOME only redirects the config root on Linux, so each case clears out what
-    // the one before it left rather than trusting the root to be empty
-    void init()
-    {
-        for (const QString& profile : {mProfile, mLongProfile}) {
-            QDir(profileDirectory(profile)).removeRecursively();
-            QDir(rawProfileDirectory(profile)).removeRecursively();
-            QDir(qsl("%1/profiles/%2").arg(configRoot(), profile.left(50))).removeRecursively();
-        }
-    }
+    // The sandbox is a directory of its own but not a fresh one, so each case clears out what
+    // the one before it - or an earlier run - left rather than trusting the root to be empty
+    void init() { removeTheProfilesTheseCasesUse(); }
 
     // One row per file and directory the fix narrows, so that each of them is shown to need
     // the fix on its own rather than only the first one a case happens to reach
@@ -288,6 +313,36 @@ private slots:
         QVERIFY(openToEveryone(path));
         QCOMPARE(SecureStringUtils::retrievePassword(mProfile, mKey), mPassword);
         QVERIFY2(!reachableByOthers(path), "reading from the standalone store left the password readable by other accounts on this machine");
+    }
+
+    // The connection dialog tells the user when a password it has just saved was left
+    // readable by other accounts. Narrowing failures are recorded process-wide, so that
+    // report has to be about the write this save made and not about one another profile's
+    // credential work left behind while the keychain was being waited on.
+    void test_aSaveIsNotBlamedForANarrowingThatFailedSomewhereElse()
+    {
+#if !defined(Q_OS_UNIX)
+        QSKIP("there are no POSIX permission bits to narrow on this platform");
+#endif
+        // Otherwise the store reaches for the keychain and answers long after this case has
+        // stopped looking
+        QVERIFY2(SecureStringUtils::isTestEnvironment(), "MUDLET_TEST_MODE is not set, so this case would be asserting on an answer that has not arrived");
+
+        // Something that cannot be narrowed - here a path that is not there, in production a
+        // file system that will not store the permission bits - as the reading of another
+        // profile's credential would leave behind
+        const QString elsewhere = qsl("%1/encryption_key").arg(rawProfileDirectory(mLongProfile));
+        QVERIFY(!SecureStringUtils::restrictFileToOwner(elsewhere));
+
+        CredentialManager manager;
+        bool stored = false;
+        manager.storePassword(mProfile, mKey, mPassword, [&stored](bool success, const QString&) {
+            stored = success;
+        });
+
+        QVERIFY(stored);
+        QVERIFY(!reachableByOthers(credentialFile(mProfile)));
+        QVERIFY2(manager.unprotectedSecretPath().isEmpty(), "a save reported the password it had just written as readable by other accounts, when what could not be narrowed was elsewhere");
     }
 
     void test_theLogSaysWhichCredentialCameFromTheEncryptedFile()

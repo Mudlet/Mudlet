@@ -44,9 +44,6 @@
 #endif
 
 namespace {
-const QFileDevice::Permissions scmReachableByOthers =
-        QFileDevice::ReadGroup | QFileDevice::WriteGroup | QFileDevice::ExeGroup | QFileDevice::ReadOther | QFileDevice::WriteOther | QFileDevice::ExeOther;
-
 // Reported once per path per session rather than on every read and write of the same
 // credential, which would train a reader to skip the line, and kept for the connection dialog
 // to tell the user about - a warning on stderr is not something they will ever see
@@ -56,6 +53,9 @@ QString gUnprotectedSecretPath;
 bool restrictToOwner(const QString& path, const QFileDevice::Permissions ownerPermissions)
 {
 #if defined(Q_OS_UNIX)
+    const QFileDevice::Permissions reachableByOthers =
+            QFileDevice::ReadGroup | QFileDevice::WriteGroup | QFileDevice::ExeGroup | QFileDevice::ReadOther | QFileDevice::WriteOther | QFileDevice::ExeOther;
+
     QFile::setPermissions(path, ownerPermissions);
 
     // Read back rather than trusted: chmod reports success on a file system that cannot store
@@ -63,7 +63,7 @@ bool restrictToOwner(const QString& path, const QFileDevice::Permissions ownerPe
     // and leaves the secret as readable as it was
     const QFileDevice::Permissions applied = QFileInfo(path).permissions();
 
-    if (applied.testFlag(QFileDevice::ReadOwner) && !applied.testAnyFlags(scmReachableByOthers)) {
+    if (applied.testFlag(QFileDevice::ReadOwner) && !applied.testAnyFlags(reachableByOthers)) {
         return true;
     }
 
