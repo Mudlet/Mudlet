@@ -110,7 +110,7 @@ jobs:
       shell: msys2 {0}
       env:
         CCACHE_MAXSIZE: 500M
-        CCACHE_COMPRESSLEVEL: 5
+        CCACHE_COMPRESSLEVEL: 19
         GITHUB_REPO_TAG: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
         GITHUB_SCHEDULED_BUILD: ${{ github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' }}
         GITHUB_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
