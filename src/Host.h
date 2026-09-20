@@ -776,6 +776,10 @@ public:
 public:
     void setRemoteEchoingActive(bool active);
     bool isRemoteEchoingActive() const { return mIsRemoteEchoingActive; }
+    // Whether the server's echo suppression should be read as "a password is being
+    // typed". Narrower than isRemoteEchoingActive() on purpose - see the definition
+    // for the two states that are echo-off but not a password prompt.
+    bool maskedPasswordPromptActive() const;
 
     // To cover the corner case of the user changing the mode
     // while a log is being written, this stores the mode of

@@ -1807,16 +1807,21 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
             continue;
         }
         command.remove(QChar::LineFeed);
-        // The alias pass is skipped while the server has echo off, which is how it
-        // asks for a password. processDataStream() writes what it is given to the
-        // Lua global `command` before matching anything, and runs the script of
-        // every alias whose pattern matches - so the password would reach Lua in
-        // cleartext, as a global anything can later read, one frame before
-        // cTelnet::sendData() gets a say. A matching alias also returns true and
-        // swallows the send, so the guard inside sendData() would never be reached
-        // for it at all. Only typed input expands aliases: Lua's send() passes
-        // dontExpandAliases true, so nothing a script sends is affected.
-        if (dontExpandAliases || mIsRemoteEchoingActive) {
+        // The alias pass is skipped at a masked password prompt.
+        // processDataStream() writes what it is given to the Lua global `command`
+        // before matching anything, and runs the script of every alias whose pattern
+        // matches - so the password would reach Lua in cleartext, as a global
+        // anything can later read, one frame before cTelnet::sendData() gets a say. A
+        // matching alias also returns true and swallows the send, so the guard inside
+        // sendData() would never be reached for it at all.
+        //
+        // Only typed input expands aliases: Lua's send() passes dontExpandAliases
+        // true, so nothing a script sends is affected. And the question asked is
+        // maskedPasswordPromptActive() rather than echo suppression alone, because
+        // people do deliberately use an alias at a prompt - a vault lookup, or a
+        // short alias standing in for a long password - and turning masking off is
+        // how they keep doing it.
+        if (dontExpandAliases || maskedPasswordPromptActive()) {
             mTelnet.sendData(command, true, true);
             continue;
         }
@@ -6097,6 +6102,25 @@ void Host::sendCmdLine(const QString& cmd)
     }
 
     mpConsole->setCommandLineText(cmd);
+}
+
+bool Host::maskedPasswordPromptActive() const
+{
+    if (!mIsRemoteEchoingActive) {
+        return false;
+    }
+    // The player asked not to have input hidden from them. TCommandLine's history
+    // guard honours the same preference, and without this there is no supported way
+    // to keep using an alias at a prompt - which some people deliberately do, for a
+    // vault lookup or a short alias standing in for a long password.
+    if (mDisablePasswordMasking) {
+        return false;
+    }
+    // A game that holds ECHO for the whole session is not asking for a password on
+    // every line. Treating it as one would disable aliases and sysDataSendRequest
+    // permanently, on the games where client-side masking never worked in the first
+    // place. Read directly because Host is a friend of cTelnet.
+    return !mTelnet.mCharacterModeDetected;
 }
 
 void Host::setRemoteEchoingActive(bool active)

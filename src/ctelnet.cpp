@@ -1592,17 +1592,19 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent, con
 {
     data.remove(QChar::LineFeed);
 
-    // Withheld while the server has echo off, which is how it asks for a password:
-    // what is being sent then is the player's password, and the event would hand it
-    // to every installed handler in cleartext. Masking does not cover this - it is
-    // painted over the command line, not applied to what is sent.
+    // Withheld at a masked password prompt: what is being sent then is the player's
+    // password, and the event would hand it to every installed handler in cleartext.
+    // Masking does not cover this - it is painted over the command line, not applied
+    // to what is sent. maskedPasswordPromptActive() rather than echo suppression
+    // alone, so a game that holds ECHO all session, or a player who turned masking
+    // off, keeps this event.
     //
     // The same call already withholds it for the password Mudlet sends itself: the
     // auto-login pass goes out with permitDataSendRequestEvent false where the
     // character name before it does not. This is the interactive half of that, and
     // it follows TLuaInterpreter::callCmdLineAction(), which refuses to run a
     // command line's Lua action for the same reason.
-    if (Q_LIKELY(permitDataSendRequestEvent) && !mpHost->isRemoteEchoingActive()) {
+    if (Q_LIKELY(permitDataSendRequestEvent) && !mpHost->maskedPasswordPromptActive()) {
         TEvent event{};
         event.mArgumentList.append(qsl("sysDataSendRequest"));
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
