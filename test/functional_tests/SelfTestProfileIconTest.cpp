@@ -35,6 +35,7 @@
 #include <QDir>
 #include <QFile>
 #include <QTemporaryDir>
+#include <QTextDocument>
 #include <QtTest/QtTest>
 
 #include <QListWidget>
@@ -251,6 +252,37 @@ private slots:
         QVERIFY2(pItem->toolTip().contains(qsl("artwork")), qPrintable(qsl("nothing in the entry says its icon is broken, only the tooltip '%1'").arg(pItem->toolTip())));
 
         QDir(MudletPaths::getMudletPath(enums::profileHomePath, profileName)).removeRecursively();
+        pDialog->deleteLater();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    }
+
+    // the tooltip is rich text, and a description is the plain words of whoever
+    // wrote it: markup left in one must not be able to eat the warning that
+    // follows it, nor be acted on instead of shown
+    void test_aDescriptionWithMarkupCannotSwallowTheArtworkWarning()
+    {
+        // an unclosed comment is the worst case - everything after it, the
+        // warning included, becomes part of the comment
+        const QString description = qsl("A friendly MUD <!-- blurb needs a rewrite");
+
+        auto* pDialog = new dlgConnectionProfiles();
+        pDialog->show();
+
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("doesn't have a valid icon")));
+        auto* pItem = new QListWidgetItem();
+        pDialog->setupMudProfile(pItem, qsl("Marked Up Game"), description, qsl(":/icons/there-is-no-such-icon.png"));
+
+        const QString tooltip = pItem->toolTip();
+        // a tooltip is shown through a label in Qt::AutoText mode, which asks
+        // Qt::mightBeRichText(); the wrapper is what settles that either way
+        QVERIFY2(Qt::mightBeRichText(tooltip), qPrintable(qsl("the tooltip is not rich text, so its own markup is shown raw: '%1'").arg(tooltip)));
+
+        QTextDocument rendered;
+        rendered.setHtml(tooltip);
+        const QString shown = rendered.toPlainText();
+        QVERIFY2(shown.contains(qsl("could not be read")), qPrintable(qsl("the description's markup swallowed the artwork warning - all the user sees is '%1'").arg(shown)));
+        QVERIFY2(shown.contains(description), qPrintable(qsl("the description is not shown as the plain text it is - the user sees '%1'").arg(shown)));
+
         pDialog->deleteLater();
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
     }

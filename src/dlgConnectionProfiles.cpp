@@ -1777,13 +1777,18 @@ void dlgConnectionProfiles::setItemTooltip(QListWidgetItem* pItem, const QString
 {
     QStringList lines;
     if (!description.isEmpty()) {
-        lines << description;
+        // a description is plain text - the profile owner's own words, or the
+        // catalog's - and the tooltip is rich text, so markup left in one would
+        // otherwise be acted on and could swallow the warning line below
+        lines << description.toHtmlEscaped();
     }
     if (!iconLoaded) {
         //: Tooltip line on an entry in the connection dialog's games list whose icon file is present but cannot be read, so a plate with the entry's name is drawn in its place
         lines << tr("This entry's artwork could not be read, so its name is shown instead.");
     }
     if (!lines.isEmpty()) {
+        // the wrapper is what Qt::mightBeRichText() settles the mode on, so this
+        // is read as rich text whatever the description turned out to be
         pItem->setToolTip(utils::richText(lines.join(qsl("<br>"))));
     }
 }
