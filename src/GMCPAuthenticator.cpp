@@ -219,7 +219,12 @@ void GMCPAuthenticator::saveSupportsSet(const QString& packageMessage, const QSt
     // non-positive value as version 1 (per the spec, the version is a positive, non-zero integer). A
     // value above what this client implements is clamped down by the qBound below, not treated as 1.
     if (jsonObj.contains(qsl("version"))) {
-        const int reportedVersion = jsonObj[qsl("version")].toInt(1);
+        const QJsonValue declaredVersion = jsonObj[qsl("version")];
+        // The string form is read too: a driver with no JSON number type sends "2", and the standard
+        // asks servers to accept that shape from a client, so a client answers it symmetrically. Read
+        // as a plain int it yielded the default, which answered a version 2 server as version 1 for
+        // the whole session. An unparseable string still falls back to that default.
+        const int reportedVersion = declaredVersion.isString() ? declaredVersion.toString().trimmed().toInt() : declaredVersion.toInt(1);
         // Clamp to the highest version this client implements: the negotiated version is
         // min(client, server), so we never act on - or echo back - a version we do not understand.
         mNegotiatedVersion = qBound(1, reportedVersion, 2);
@@ -262,7 +267,10 @@ void GMCPAuthenticator::saveSupportsSet(const QString& packageMessage, const QSt
         // conformant server's nonce_required was ignored and its authorization request went out with no
         // nonce for the server to check the ID token against. The old key is still accepted when the
         // standard's is absent, so a server written against the previous behaviour keeps working.
-        const auto declaredNonceRequired = jsonObj[qsl("nonce_required")];
+        // value() rather than operator[]: jsonObj is not const, and that overload INSERTS a Null for a
+        // key the server never sent instead of answering Undefined - so the absent-field guard below
+        // never fired and a conformant server that simply omits this was told its value was malformed.
+        const auto declaredNonceRequired = jsonObj.value(qsl("nonce_required"));
         auto nonceRequired = decodeWireBool(declaredNonceRequired);
         if (!nonceRequired.has_value()) {
             nonceRequired = decodeWireBool(jsonObj[qsl("nonce")]);
@@ -1168,14 +1176,11 @@ void GMCPAuthenticator::attemptReconnect()
         return;
     }
 
-    // Reconnect tokens and the provider resume are part of the version 2 OAuth capability; if the
-    // server is not offering oauth there is nothing to replay or resume against, so go straight to the
-    // normal method selection.
-    if (!mSupportedAuthTypes.contains(qsl("oauth"))) {
-        selectAuthMethod();
-        return;
-    }
-
+    // Deliberately not gated on the server advertising oauth: the standard verifies a reconnect token
+    // ahead of the advertised methods rather than as one of them, and Char.Login.Token is not scoped to
+    // OAuth, so a password-credentials-only game may mint one and honour it. Gating this left that
+    // player's saved token unused and downgraded them to typing a password on every connect. A store
+    // holding nothing usable still ends at selectAuthMethod(), on readStoredSignIn()'s last path.
     readStoredSignIn(true);
 }
 

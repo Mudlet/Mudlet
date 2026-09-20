@@ -349,6 +349,49 @@ private:
     QVariant mSavedPassword;
 };
 
+// Counts warnings whose text contains a substring for as long as it is in scope, forwarding every
+// message on so the ordinary output is unchanged. Installed per case rather than for the binary,
+// because Qt Test's own handler is what makes QTest::ignoreMessage() work and other cases here rely
+// on it. Asserting a warning's ABSENCE needs this; ignoreMessage only asserts one arrived.
+class ScopedWarningCounter
+{
+public:
+    explicit ScopedWarningCounter(const QString& substring)
+    {
+        smSubstring = substring;
+        smCount = 0;
+        smPrevious = qInstallMessageHandler(&ScopedWarningCounter::handler);
+    }
+
+    ~ScopedWarningCounter()
+    {
+        qInstallMessageHandler(smPrevious);
+        smPrevious = nullptr;
+        smSubstring.clear();
+    }
+
+    int count() const { return smCount; }
+
+private:
+    static void handler(QtMsgType type, const QMessageLogContext& context, const QString& message)
+    {
+        if (type == QtWarningMsg && message.contains(smSubstring)) {
+            ++smCount;
+        }
+        if (smPrevious) {
+            smPrevious(type, context, message);
+        }
+    }
+
+    static QtMessageHandler smPrevious;
+    static QString smSubstring;
+    static int smCount;
+};
+
+QtMessageHandler ScopedWarningCounter::smPrevious = nullptr;
+QString ScopedWarningCounter::smSubstring;
+int ScopedWarningCounter::smCount = 0;
+
 // Serves a static OpenID Connect discovery document over loopback http, which
 // OAuthClientFlow::acceptableEndpointUrl() permits, so no second certificate is needed.
 class DiscoveryServerStub : public QObject
@@ -529,6 +572,63 @@ private slots:
         QCOMPARE(sent.value(qsl("account")).toString(), qsl("player"));
         QCOMPARE(sent.value(qsl("version")).toInt(), 1);
         QCOMPARE(sent.value(qsl("token_storage")), QJsonValue(true));
+    }
+
+    void testStringifiedServerVersionIsUnderstood()
+    {
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        host->setLogin(qsl("player"));
+        host->setPass(qsl("secret"));
+
+        mpServer->clearReceived();
+        // The standard asks servers to accept a stringified version from a client, and a client should
+        // cope with the same shape coming the other way: a driver with no JSON number type sends it.
+        // Read as a plain int this yielded the default, so a version 2 server was answered as version 1.
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": \"2\", \"type\": [\"password-credentials\"]}"));
+
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "client did not send Char.Login.Credentials");
+        QCOMPARE(sent.value(qsl("version")).toInt(), 2);
+    }
+
+    void testAnAbsentNonceRequiredIsNotReportedAsMalformed()
+    {
+        // A conformant server simply omits nonce_required. Read through a non-const QJsonObject's
+        // operator[], a missing key is INSERTED as Null rather than answering Undefined, so the guard
+        // meant to stay quiet about an absent field never fired: every such server was told its value
+        // was malformed, by a message that also claims the sign-in will carry no nonce.
+        ScopedWarningCounter warnings(qsl("'nonce_required' value of type"));
+
+        Host* host = connectAndNegotiate(true);
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\", \"password-credentials\"]}"));
+
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "client did not reach the sign-in hand-off");
+        QCOMPARE(warnings.count(), 0);
+    }
+
+    void testAMalformedNonceRequiredIsStillReported()
+    {
+        // The complement of the absent case: reading through value() must not silence the diagnostic
+        // for a value the server really did send in a shape the standard does not permit.
+        Host* host = connectAndNegotiate(true);
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+
+        // ignoreMessage fails the test if the message never arrives, so this asserts the diagnostic.
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("'nonce_required' value of type .* is not a boolean")));
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\", \"password-credentials\"], \"nonce_required\": \"perhaps\"}"));
+
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "client did not reach the sign-in hand-off");
     }
 
     void testNoCredentialsHandsOffToTheGamesSignInScreen()
@@ -943,6 +1043,29 @@ private slots:
         mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:char\", \"token\": \"rotated-token\"}"));
         QVERIFY2(waitForStoredToken(host, qsl("rotated-token")), "the rotated token should still be persisted");
         QVERIFY2(!waitForConsoleContains(host, qsl("signed in automatically next time"), 500), "a silent rotation must not be announced as a new opt-in");
+    }
+
+    void testSavedTokenIsReplayedWhenOauthIsNotAdvertised()
+    {
+        // The standard verifies a reconnect token ahead of the advertised methods rather than as one
+        // of them, so a game offering only password-credentials can still mint one and honour it.
+        // Gating the replay on oauth left such a player typing a password on every connect while the
+        // token Mudlet had saved for them sat unused.
+        Host* host = connectAndNegotiate(true);
+        QVERIFY(host);
+        // Emptied so the stored-credentials rung above the token cannot answer first.
+        host->setLogin(QString());
+        host->setPass(QString());
+        const QString tokenJson = qsl("{\"account\": \"acct:char\", \"token\": \"saved-token\"}");
+        QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect"), tokenJson));
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"password-credentials\"]}"));
+
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Reconnect"), sent), "a saved token should be replayed even when the server does not advertise oauth");
+        QCOMPARE(sent.value(qsl("account")).toString(), qsl("acct:char"));
+        QCOMPARE(sent.value(qsl("token")).toString(), qsl("saved-token"));
     }
 
     void testTokenStoredUnderItsOwnKeyIsReplayed()
