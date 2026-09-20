@@ -106,6 +106,19 @@ jobs:
         ccache --zero-stats --show-stats -v
         ccache --show-compression
 
+    - name: measure ccache compression levels
+      shell: msys2 {0}
+      env:
+        CCACHE_DIR: ${{runner.workspace}}/ccache
+        CCACHE_MAXSIZE: 500M
+      run: |
+        echo "=== recompressed to 5 ==="
+        ccache --recompress 5
+        ccache --show-compression
+        echo "=== recompressed to 19 ==="
+        ccache --recompress 19
+        ccache --show-compression
+
     - name: (Windows) Build
       shell: msys2 {0}
       env:
