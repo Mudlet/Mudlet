@@ -566,7 +566,7 @@ int TRoomDB::createNewAreaID()
     while (areas.contains(mNextAreaIdHint)) {
         ++mNextAreaIdHint;
     }
-    return mNextAreaIdHint;
+    return mNextAreaIdHint++;
 }
 
 bool TRoomDB::isAreaNameInUse(const QString& name) const
