@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2008-2016 The Communi Project
+  Copyright (C) 2008-2020 The Communi Project
 
   You may use this file under the terms of BSD license as follows:
 
@@ -73,7 +73,6 @@ IRC_BEGIN_NAMESPACE
 
 #ifndef IRC_DOXYGEN
 IrcBufferPrivate::IrcBufferPrivate()
-    : q_ptr(0), model(0), persistent(false), sticky(false), monitorStatus(MonitorUnknown)
 {
     qRegisterMetaType<IrcBuffer*>();
     qRegisterMetaType<QList<IrcBuffer*> >();
@@ -251,7 +250,7 @@ bool IrcBufferPrivate::processNickMessage(IrcNickMessage* message)
 bool IrcBufferPrivate::processNoticeMessage(IrcNoticeMessage* message)
 {
     Q_UNUSED(message);
-    return false;
+    return true;
 }
 
 bool IrcBufferPrivate::processNumericMessage(IrcNumericMessage* message)
@@ -393,7 +392,8 @@ void IrcBuffer::setPrefix(const QString& prefix)
  */
 bool IrcBuffer::isChannel() const
 {
-    return qobject_cast<const IrcChannel*>(this);
+    Q_D(const IrcBuffer);
+    return (d->type == IrcBuffer::Channel);
 }
 
 /*!
@@ -416,7 +416,7 @@ IrcChannel* IrcBuffer::toChannel()
 IrcConnection* IrcBuffer::connection() const
 {
     Q_D(const IrcBuffer);
-    return d->model ? d->model->connection() : 0;
+    return d->model ? d->model->connection() : nullptr;
 }
 
 /*!
@@ -428,7 +428,7 @@ IrcConnection* IrcBuffer::connection() const
 IrcNetwork* IrcBuffer::network() const
 {
     Q_D(const IrcBuffer);
-    return d->model ? d->model->network() : 0;
+    return d->model ? d->model->network() : nullptr;
 }
 
 /*!
@@ -580,6 +580,16 @@ bool IrcBuffer::sendCommand(IrcCommand* command)
     if (IrcConnection* c = connection())
         return c->sendCommand(command);
     return false;
+}
+
+/*!
+    \since 3.7
+
+    Clones the buffer with an optional \a parent.
+ */
+IrcBuffer *IrcBuffer::clone(QObject *parent)
+{
+    return new IrcBuffer(parent);
 }
 
 /*!

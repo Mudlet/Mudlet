@@ -1,0 +1,102 @@
+{
+  "AdjustableContainer.attach": {
+    "message": "附加到:",
+    "description": "attaches your container to a border"
+  },
+  "AdjustableContainer.bottom": {
+    "message": "按钮",
+    "description": "one of the borders the container can be attached to"
+  },
+  "AdjustableContainer.top": {
+    "message": "顶部",
+    "description": "one of the borders the container can be attached to"
+  },
+  "AdjustableContainer.left": {
+    "message": "左侧",
+    "description": "one of the borders the container can be attached to"
+  },
+  "AdjustableContainer.right": {
+    "message": "右侧",
+    "description": "one of the borders the container can be attached to"
+  },
+  "AdjustableContainer.custom": {
+    "message": "自定义：",
+    "description": "a menu item in the right click menu. it contains user/package made custom items"
+  },
+  "AdjustableContainer.lock": {
+    "message": "锁定",
+    "description": "locks your container. Which means it's not movable/resizable anymore and changes some other properties depending on the Lockstyle (like hiding the borders)"
+  },
+  "AdjustableContainer.lockstyle": {
+    "message": "锁定样式：",
+    "description": "different modes/styles to choose which will be the lock behaviour of the container"
+  },
+  "AdjustableContainer.standard": {
+    "message": "标准",
+    "description": "one of the Lockstyles. This Lockstyle is the standard setting, with a small margin on top to keep the right click menu usable"
+  },
+  "AdjustableContainer.light": {
+    "message": "亮色",
+    "description": "one of the Lockstyles. Can also be translated as simple. It is only hiding the min/restore labels the borders and margin stay intact"
+  },
+  "AdjustableContainer.full": {
+    "message": "完全",
+    "description": "one of the Lockstyles. Can also be translated as complete as it's locking the container without any margin left for the right click menu."
+  },
+  "AdjustableContainer.border": {
+    "message": "边框",
+    "description": "one of the Lockstyles which keeps the borders of the container visible."
+  },
+  "AdjustableContainer.save": {
+    "message": "保存",
+    "description": "saves the containers settings"
+  },
+  "AdjustableContainer.load": {
+    "message": "加载",
+    "description": "loads the previously saved settings of the container"
+  },
+  "AdjustableContainer.min_restore": {
+    "message": "最小/还原",
+    "description": "label to minimize/restore the container"
+  },
+  "AdjustableContainer.connectTo": {
+    "message": "连接到: ",
+    "description": "connect your container to a border to create a frame"
+  },
+  "AdjustableContainer.disconnect": {
+    "message": "断开连接 ",
+    "description": "disconnect your container from the border frame"
+  },
+  "Mudlet.packageInstallSuccess": {
+    "message": "包 '%s' 已成功安装。",
+    "description": "Success message after drag&drop of package file onto Mudlet - %s is the file name"
+  },
+  "Mudlet.packageInstallFail": {
+    "message": "安装 '%s' 失败: %s",
+    "description": "Failure message after drag&drop of package file onto Mudlet - %s is the file name"
+  },
+  "Mudlet.moduleInstallSuccess": {
+    "message": "包 '%s' 已成功安装。",
+    "description": "Success message after drag&drop of module file onto Mudlet - %s is the file name"
+  },
+  "Mudlet.moduleInstallFail": {
+    "message": "安装 '%s' 失败: %s",
+    "description": "Failure message after drag&drop of module file onto Mudlet - %s is the file name"
+  },
+  "Mudlet.packageDownloading": {
+    "message": "正在从 %s下载软件包。",
+    "description": "Download package from Url for installation - %s is source url"
+  },
+  "Mudlet.prefixOk": {
+    "message": "[ 完成 ] - ",
+    "description": "Start of the line for messages telling the player something is okay. Keep at 12 characters length for nice alignment!"
+  },
+  "Mudlet.prefixWarn": {
+    "message": "[ 警告 ]  - ",
+    "description": "Start of the line for messages warning the player about something. Keep at 12 characters length for nice alignment!"
+  },
+  "Mudlet.prefixInfo": {
+    "message": "[ 信息 ]  - ",
+    "description": "Start of the line for messages informing the player about something. Keep at 12 characters length for nice alignment!"
+  }
+}

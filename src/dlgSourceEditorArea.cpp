@@ -21,6 +21,9 @@
 
 
 #include "dlgSourceEditorArea.h"
+
+#include "utils.h"
+
 #include "edbee/edbee.h"
 #include "edbee/models/textdocument.h"
 #include "edbee/models/texteditorconfig.h"
@@ -29,7 +32,8 @@
 #include "edbee/views/textrenderer.h"
 #include "edbee/views/texttheme.h"
 
-dlgSourceEditorArea::dlgSourceEditorArea(QWidget* pF) : QWidget(pF)
+dlgSourceEditorArea::dlgSourceEditorArea(QWidget* pParentWidget)
+: QWidget(pParentWidget)
 {
     // init generated dialog
     setupUi(this);
@@ -40,7 +44,7 @@ dlgSourceEditorArea::dlgSourceEditorArea(QWidget* pF) : QWidget(pF)
 
     config->beginChanges();
 
-    config->setSmartTab(true); // enable the automatic addition of indents when inserting a newline
+    config->setSmartTab(true);    // enable the automatic addition of indents when inserting a newline
     config->setUseTabChar(false); // when you press Enter for a newline, pad with spaces and not tabs
     config->setCaretBlinkRate(200);
 
@@ -49,7 +53,7 @@ dlgSourceEditorArea::dlgSourceEditorArea(QWidget* pF) : QWidget(pF)
 
     config->endChanges();
 
-    edbeeEditorWidget->textDocument()->setLanguageGrammar(edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QStringLiteral("Buck.lua")));
+    edbeeEditorWidget->textDocument()->setLanguageGrammar(edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(qsl("Buck.lua")));
 
     // disable shadows as their purpose (notify there is more text) is performed by scrollbars already
     edbeeEditorWidget->textScrollArea()->enableShadowWidget(false);

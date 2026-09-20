@@ -1,0 +1,38 @@
+<RCC>
+    <qresource prefix="/">
+        <file>fonts/ttf-bitstream-vera-1.10/COPYRIGHT.TXT</file>
+        <file>fonts/ttf-bitstream-vera-1.10/local.conf</file>
+        <file>fonts/ttf-bitstream-vera-1.10/README.TXT</file>
+        <file>fonts/ttf-bitstream-vera-1.10/RELEASENOTES.TXT</file>
+        <file>fonts/ttf-bitstream-vera-1.10/Vera.ttf</file>
+        <file>fonts/ttf-bitstream-vera-1.10/VeraBd.ttf</file>
+        <file>fonts/ttf-bitstream-vera-1.10/VeraBI.ttf</file>
+        <file>fonts/ttf-bitstream-vera-1.10/VeraIt.ttf</file>
+        <file>fonts/ttf-bitstream-vera-1.10/VeraMoBd.ttf</file>
+        <file>fonts/ttf-bitstream-vera-1.10/VeraMoBI.ttf</file>
+        <file>fonts/ttf-bitstream-vera-1.10/VeraMoIt.ttf</file>
+        <file>fonts/ttf-bitstream-vera-1.10/VeraMono.ttf</file>
+        <file>fonts/ttf-bitstream-vera-1.10/VeraSe.ttf</file>
+        <file>fonts/ttf-bitstream-vera-1.10/VeraSeBd.ttf</file>
+        <file>fonts/ubuntu-font-family-0.83/CONTRIBUTING.txt</file>
+        <file>fonts/ubuntu-font-family-0.83/copyright.txt</file>
+        <file>fonts/ubuntu-font-family-0.83/FONTLOG.txt</file>
+        <file>fonts/ubuntu-font-family-0.83/LICENCE-FAQ.txt</file>
+        <file>fonts/ubuntu-font-family-0.83/LICENCE.txt</file>
+        <file>fonts/ubuntu-font-family-0.83/README.txt</file>
+        <file>fonts/ubuntu-font-family-0.83/TRADEMARKS.txt</file>
+        <file>fonts/ubuntu-font-family-0.83/UbuntuMono-B.ttf</file>
+        <file>fonts/ubuntu-font-family-0.83/UbuntuMono-BI.ttf</file>
+        <file>fonts/ubuntu-font-family-0.83/UbuntuMono-R.ttf</file>
+        <file>fonts/ubuntu-font-family-0.83/UbuntuMono-RI.ttf</file>
+        <file>fonts/ubuntu-font-family-0.83/Ubuntu-B.ttf</file>
+        <file>fonts/ubuntu-font-family-0.83/Ubuntu-BI.ttf</file>
+        <file>fonts/ubuntu-font-family-0.83/Ubuntu-C.ttf</file>
+        <file>fonts/ubuntu-font-family-0.83/Ubuntu-L.ttf</file>
+        <file>fonts/ubuntu-font-family-0.83/Ubuntu-LI.ttf</file>
+        <file>fonts/ubuntu-font-family-0.83/Ubuntu-M.ttf</file>
+        <file>fonts/ubuntu-font-family-0.83/Ubuntu-MI.ttf</file>
+        <file>fonts/ubuntu-font-family-0.83/Ubuntu-R.ttf</file>
+        <file>fonts/ubuntu-font-family-0.83/Ubuntu-RI.ttf</file>
+    </qresource>
+</RCC>

@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2008-2016 The Communi Project
+  Copyright (C) 2008-2020 The Communi Project
 
   You may use this file under the terms of BSD license as follows:
 
@@ -86,7 +86,7 @@ static QString userName(const QString& name, const QStringList& prefixes)
     return Irc::nickFromPrefix(copy);
 }
 
-IrcChannelPrivate::IrcChannelPrivate() : active(false), enabled(true)
+IrcChannelPrivate::IrcChannelPrivate()
 {
     qRegisterMetaType<IrcChannel*>();
     qRegisterMetaType<QList<IrcChannel*> >();
@@ -425,7 +425,7 @@ bool IrcChannelPrivate::processNickMessage(IrcNickMessage* message)
 bool IrcChannelPrivate::processNoticeMessage(IrcNoticeMessage* message)
 {
     promoteUser(message->nick());
-    return false;
+    return true;
 }
 
 bool IrcChannelPrivate::processNumericMessage(IrcNumericMessage* message)
@@ -497,6 +497,8 @@ bool IrcChannelPrivate::processWhoReplyMessage(IrcWhoReplyMessage *message)
 IrcChannel::IrcChannel(QObject* parent)
     : IrcBuffer(*new IrcChannelPrivate, parent)
 {
+    Q_D(IrcChannel);
+    d->type = IrcBuffer::Channel;
 }
 
 /*!
@@ -571,6 +573,11 @@ bool IrcChannel::isActive() const
 {
     Q_D(const IrcChannel);
     return IrcBuffer::isActive() && d->active;
+}
+
+IrcBuffer *IrcChannel::clone(QObject *parent)
+{
+    return new IrcChannel(parent);
 }
 
 /*!

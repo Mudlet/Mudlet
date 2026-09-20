@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017, 2019 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2017, 2019, 2022 by Stephen Lyons                       *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -21,11 +22,17 @@
 
 
 #include "EAction.h"
-#include "TAction.h"
+
+#include "ActionUnit.h"
+#include "Host.h"
 #include "mudlet.h"
+#include "TAction.h"
 
 
-EAction::EAction(QIcon& icon, QString& name) : QAction(icon, name, mudlet::self()), mID()
+EAction::EAction(Host* pHost, const QIcon& icon, const QString& name, const int id)
+: QAction(icon, name, mudlet::self())
+, mID(id)
+, mpHost(pHost)
 {
     setText(name);
     setObjectName(name);
@@ -37,4 +44,9 @@ void EAction::slot_execute(bool checked)
 {
     mpHost->getActionUnit()->getAction(mID)->mButtonState = checked;
     mpHost->getActionUnit()->getAction(mID)->execute();
+    // Deliberately no doCleanup() here: a menu item runs nested inside a bar's
+    // slot_pressed() (TEasyButtonBar::showMenu() spins a modal event loop), which
+    // dereferences its own button after this returns - flushing here could free
+    // an action that ancestor frame still holds. The deferred deletes are cleared
+    // by that ancestor bar dispatcher and by Host's catch-all doCleanup() calls.
 }

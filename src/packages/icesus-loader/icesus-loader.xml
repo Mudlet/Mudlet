@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+	<TriggerPackage />
+	<TimerPackage />
+	<AliasPackage />
+	<ActionPackage />
+	<ScriptPackage>
+		<Script isActive="yes" isFolder="no">
+			<name>Icesus-Loader</name>
+			<packageName></packageName>
+			<script>function downloadPackage(a,b)
+  decho("&lt;0,150,190&gt;[ INFO ]  - &lt;0,160,0&gt;Downloading the Icesus Mudlet package...\n")
+  downloadFile(getMudletHomeDir() .. "/Icesus.mpackage", "https://github.com/Icesus-mud/mudlet-package/releases/latest/download/Icesus.mpackage")
+end
+
+function installReady(event, file)
+  if file ~= getMudletHomeDir().."/Icesus.mpackage" then return end
+  if not io.exists(getMudletHomeDir().."/Icesus.mpackage") then
+    decho([[&lt;0,150,190&gt;[ INFO ]  - &lt;0,160,0&gt;To install the Icesus Mudlet package, copy the following text (without line breaks) into the input line and send it:
+
+lua function d(a,b)if not b:find("Icesus",1,true)then return end installPackage(b)os.remove(b)cecho("&amp;lt;gold&amp;gt;Package installed!\n")end registerAnonymousEventHandler("sysDownloadDone","d")downloadFile(getMudletHomeDir().."/Icesus.mpackage","https://github.com/Icesus-mud/mudlet-package/releases/latest/download/Icesus.mpackage")
+
+]])
+    return
+  end
+
+
+  decho("&lt;0,160,0&gt;[  OK  ]  - &lt;190,100,50&gt;The Icesus Mudlet package was downloaded successfully.\n")
+  decho("&lt;0,150,190&gt;[ INFO ]  - &lt;0,160,0&gt;Installing... (this takes a few seconds.)\n")
+  tempTimer(1, [[installPackage(getMudletHomeDir().."/Icesus.mpackage")]])
+  uninstallPackage("icesus-loader")
+end
+
+registerAnonymousEventHandler("sysConnectionEvent", "downloadPackage")
+registerAnonymousEventHandler("sysDownloadDone", "installReady")</script>
+			<eventHandlerList />
+		</Script>
+	</ScriptPackage>
+	<KeyPackage />
+	<VariablePackage>
+		<HiddenVariables />
+	</VariablePackage>
+</MudletPackage>

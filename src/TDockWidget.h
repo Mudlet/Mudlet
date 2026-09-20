@@ -2,7 +2,8 @@
 #define MUDLET_TDOCKWIDGET_H
 /***************************************************************************
  *   Copyright (C) 2017 by Fae - itsthefae@gmail.com                       *
- *   Copyright (C) 2019 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2019, 2022-2023, 2026 by Stephen Lyons                  *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -20,27 +21,26 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "mudlet.h"
-#include "Host.h"
-#include "TConsole.h"
-
-#include "pre_guard.h"
-#include <QtEvents>
 #include <QDockWidget>
 #include <QPointer>
 #include <QString>
-#include "post_guard.h"
+
+class Host;
+class TConsole;
 
 // TDockWidget contains helpers for User Windows QDockWidget.
 class TDockWidget : public QDockWidget {
+    Q_OBJECT // Needed so we can use qobject_cast on it!
+
 public:
     TDockWidget(Host *, const QString &);
     void setTConsole(TConsole*);
-    TConsole* getConsole() {return mpConsole;}
+    TConsole* getConsole();
+    void setVisible(bool) override;
 
-    QString widgetConsoleName;
-    bool hasLayoutAlready;
 
+    QString mWidgetConsoleName;
+    bool hasLayoutAlready = false;
 
 protected:
     void closeEvent(QCloseEvent *) override;

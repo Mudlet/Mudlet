@@ -1,3 +1,8 @@
+Lua documentation is now generated with LDoc (https://github.com/lunarmodules/ldoc)
+Manual: https://lunarmodules.github.io/ldoc/manual/manual.md.html
+
+Below is kept for historical purposes and may be removed in future versions.
+--
 This file should give you basic guidelines for documenting mudlet-lua code 
 with LuaDoc. (Keep in mind that we did few extensions to LuaDoc,
 so this is not generic LuaDoc guide. All Mudlet LuaDoc extensions are 
@@ -31,7 +36,7 @@ Thank you!
 --- @param a is used for ... param description.
 --- @param b LuaDoc will generate basic doc for all omitted parameters.
 ---
---- @return truu/false (to keep if brief)
+--- @return true/false (to keep if brief)
 ---
 --- @usage Description of example.
 ---   <pre>

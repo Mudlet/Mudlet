@@ -1,5 +1,5 @@
 ############################################################################
-#    Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         #
+#    Copyright (C) 2017, 2020 by Stephen Lyons - slysven@virginmedia.com   #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
 #    it under the terms of the GNU General Public License as published by  #
@@ -27,6 +27,7 @@
 # "/src/core/*"  ==> "/3rdparty/communi/src/core/*"
 # "/src/model/*" ==> "/3rdparty/communi/src/model/*"
 # "/src/util/*"  ==> "/3rdparty/communi/src/util/*"
+# "/include/*" ==> "/3rdparty/communi/include/*"
 
 # The effective contents of this file is - at the time of creation - exactly the
 # same as the "libcommuni/src/src.pri" in the upstream (libcommuni) source but
@@ -37,8 +38,8 @@
 # source code in....}
 
 # To determine the communi version check the #define value for IRC_VERSION_STR
-# in 3rdparty/communi/include/IrcCore/ircglobal.h - at the time of creation of
-# this file it was "3.5.0"
+# in 3rdparty/communi/include/IrcCore/ircglobal.h - at the time of the last
+# update of this file it was "3.7.0"
 
 include(src/core/core.pri)
 include(src/model/model.pri)

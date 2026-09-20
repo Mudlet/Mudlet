@@ -14,7 +14,7 @@
 ---   end
 ---   </pre>
 function table.is_empty(tbl)
-  assert(type(tbl) == "table", string.format("table.is_empty: bad argument #1 type (table expected, got %s!)", type(currentValue)))
+  assert(type(tbl) == "table", string.format("table.is_empty: bad argument #1 type (table expected, got %s!)", type(tbl)))
   return next(tbl) == nil
 end
 
@@ -50,9 +50,10 @@ end
 ---
 --- @see display
 function printTable( map )
+  assert(type(map) == 'table', 'printTable: bad argument #1 type (table expected, got '..type(map)..'!)')
   echo("-------------------------------------------------------\n");
   for k, v in pairs( map ) do
-    echo( "key=" .. k .. " value=" .. v .. "\n" )
+    echo( "key=" .. tostring(k) .. " value=" .. tostring(v) .. "\n" )
   end
   echo("-------------------------------------------------------\n");
 end
@@ -60,12 +61,76 @@ end
 
 
 -- NOT LUADOC
--- This is supporting function for printTable().
+-- Prints a single key/value pair into the main console at the cursor. Named as
+-- a helper for printTable(), but printTable() has never called it and formats
+-- its own lines; kept because it is reachable from scripts.
 function __printTable( k, v )
   insertText("\nkey = " .. tostring(k) .. " value = " .. tostring( v )  )
 end
 
 
+
+-- Slightly modified code from inspect.lua.
+-- https://github.com/kikito/inspect.lua/blob/a8ca3120dfec48801036eaeff9335ab7a096dd24/inspect.lua#L145-L163
+--
+-- MIT License
+-- Copyright (c) 2022 Enrique García Cota
+local spairs_default_type_order = {
+  ['number']   = 1,
+  ['boolean']  = 2,
+  ['string']   = 3,
+  ['table']    = 4,
+  ['function'] = 5,
+  ['userdata'] = 6,
+  ['thread']   = 7
+}
+
+-- Consider merging this compare with the definition in inspect.lua.
+-- 
+-- note: is not used for the same purpose as compare.  
+--       compare checks equality without consideration for ordering.
+local function spairsCompare(a, b)
+   local ta, tb = type(a), type(b)
+
+   if ta == tb and (ta == 'string' or ta == 'number') then
+      return (a) < (b)
+   end
+
+   local dta = spairs_default_type_order[ta] or 100
+   local dtb = spairs_default_type_order[tb] or 100
+
+   return dta == dtb and ta < tb or dta < dtb
+end
+
+-- originally found at https://stackoverflow.com/questions/15706270/sort-a-table-in-lua
+--- Returns a sorted iterator for a tbl. Defaults to a basic table.sort against the keys
+--@param tbl the table to iterator
+--@param[opt] order Function to use to sort table. Should accept three arguments, the table being iterated, and the two keys in the table it is comparing. Otherwise similar to table.sort
+--@usage local tbl = { Tom = 40, Mary = 50, Joe = 23 }
+--for name, thingies in spairs(tbl) do
+--  echo(string.format("%s has %d thingies\n", name, thingies))
+--end
+-- --"Joe has 23 thingies\nMary has 50 thingies\nTom has 40 thingies"
+--for name, thingies in spairs(tbl, function(t,a,b) return t[a] < t[b] end) do --iterate from lowest value to highest
+--  echo(string.format("%s has %d thingies\n", name, thingies))
+--end
+-- --"Joe has 23 thingies\nTom has 40 thingies\nMary has 50 thingies"
+function spairs(tbl, order)
+  local keys = table.keys(tbl)
+  if order then
+    table.sort(keys, function(a,b) return order(tbl, a, b) end)
+  else
+    table.sort(keys, spairsCompare)
+  end
+
+  local i = 0
+  return function()
+    i = i + 1
+    if keys[i] then
+      return keys[i], tbl[keys[i]]
+    end
+  end
+end
 
 --- Lua debug function that prints the content of a Lua table on the screen. <br/>
 --- There are currently 3 functions with similar behaviour.
@@ -73,9 +138,10 @@ end
 --- @see display
 --- @see printTable
 function listPrint( map )
+  assert(type(map) == 'table', 'listPrint: bad argument #1 type (table expected, got '..type(map)..'!)')
   echo("-------------------------------------------------------\n");
   for k, v in ipairs( map ) do
-    echo( k .. ". ) " .. v .. "\n" );
+    echo( k .. ". ) " .. tostring(v) .. "\n" );
   end
   echo("-------------------------------------------------------\n");
 end
@@ -91,8 +157,10 @@ end
 
 --- <b><u>TODO</u></b> listRemove( list, what )
 function listRemove( list, what )
-  for k, v in ipairs( list ) do
-    if v == what then
+  -- iterate backwards so removing an element does not shift a following match
+  -- down into an index the loop has already passed
+  for k = #list, 1, -1 do
+    if list[k] == what then
       table.remove( list, k )
     end
   end
@@ -122,11 +190,15 @@ end
 
 
 
---- Determines if a table contains a value as a key or as a value (recursive).
-function table.contains(t, value)
-  if type(t) ~= "table" then
-    return nil, "first parameter passed isn't a table"
+-- Tables that reach themselves are ordinary here: every Geyser object holds its
+-- container, which holds it back again, so the descent has to remember where it
+-- has been or it never ends. The set is kept out of table._contains' own
+-- signature, which ignores anything past the value to look for.
+local function containsValue(t, value, seen)
+  if seen[t] then
+    return false
   end
+  seen[t] = true
 
   for k, v in pairs(t) do
     if v == value then
@@ -134,7 +206,7 @@ function table.contains(t, value)
     elseif k == value then
       return true
     elseif type(v) == "table" then
-      if table.contains(v, value) then
+      if containsValue(v, value, seen) then
         return true
       end
     end
@@ -142,6 +214,121 @@ function table.contains(t, value)
   return false
 end
 
+--- Determines if a table contains a value as a key or as a value (recursive).
+function table._contains(t, value)
+  if type(t) ~= "table" then
+    return nil, "first parameter passed isn't a table"
+  end
+
+  return containsValue(t, value, {})
+end
+
+function table.contains(tbl, ...)
+  for _,item in ipairs({...}) do
+    if table._contains(tbl, item) then return true end
+  end
+  return false
+end
+
+--- Checks each item in a table against a provided function and returns a table of items
+--- for which the function returns true
+--- @param tbl table to collect items from
+--- @param func function which is called as func(key,value) for each item in tbl
+--- @return table of key-value pairs for which func returns true.
+function table.collect(tbl, func)
+  local tbl_type = type(tbl)
+  assert(tbl_type == "table", string.format("table.collect: bad argument #1 type (table to collect items from as table expected, got %s)", tbl_type))
+  local func_type = type(func)
+  assert(func_type == "function", string.format("table.collect: bad argument #2 type (function to run against each item in tbl as function expected, got %s)", func_type))
+  local matches = {}
+  for key,value in pairs(tbl) do
+    if func(key,value) == true then
+      matches[key] = value
+    end
+  end
+  return matches
+end
+
+--- Checks each item in a table against a provided function and returns a table of items
+--- for which the function returns true. Unlike table.collect it ignores keys and returns 
+--- a table which is guaranteed to be traversable using ipairs()
+--- @param tbl table to collect items from
+--- @param func function which is called as func(value) for each item in tbl
+--- @return table of values for which func(value) returns true. Ignores keys, traversable using ipairs
+function table.n_collect(tbl, func)
+  local tbl_type = type(tbl)
+  assert(tbl_type == "table", string.format("table.n_collect: bad argument #1 type (table to collect items from as table expected, got %s)", tbl_type))
+  local func_type = type(func)
+  assert(func_type == "function", string.format("table.n_collect: bad argument #2 type (function to run against each item in tbl as function expected, got %s)", func_type))
+  local matches = {}
+  for key,value in pairs(tbl) do
+    -- table.contains matches keys and nested values too, so a value equal to
+    -- an index already in `matches` looked like a duplicate. table.index_of
+    -- compares by value over ipairs, which is the semantics a list of unique
+    -- values needs, and is what the sibling table.n_matches already uses.
+    if func(value) == true and not table.index_of(matches, value) then
+      table.insert(matches, value)
+    end
+  end
+  return matches
+end
+
+-- not LDoc: table.matches and table.n_matches below do not use table.collect
+-- or n_collect above in order to reduce the potential number of times tables 
+-- need to be looped.
+
+--- Checks each item in a table against each other argument using string.match
+--- @param tbl table to check
+--- @param pattern1 pattern to check using string.match
+--- @param pattern2+ optional additional patterns to check
+--- @param check_keys set as true if you want to also check the keys against the patterns
+--- @return returns a table which contains every key value pair from tbl for which the value string.matches
+---         if check_keys is passed as true, then the key value pair will be added if either the key or the value string.matches
+function table.matches(tbl, ...)
+  local tbl_type = type(tbl)
+  assert(tbl_type == "table", string.format("table.matches: bad argument #1 type (table to check using string.match as table expected, got %s)", tbl_type))
+  local patterns = {...}
+  local matches = {}
+  local check_keys
+  if type(patterns[#patterns]) == "boolean" then check_keys = table.remove(patterns) end
+  for index,pattern in ipairs(patterns) do
+    local ptype = type(pattern)
+    assert(ptype == "string", string.format("table.matches: bad argument #%d type (pattern to check as string expected, got %s)", index+1, ptype))
+    for key,value in pairs(tbl) do
+      local keyType = type(key)
+      local valueType = type(value)
+      if ((valueType == "string" or valueType == "number") and string.match(value, pattern)) or (check_keys and ((keyType == "string" or keyType == "number") and string.match(key, pattern))) then
+        matches[key] = value
+      end
+    end
+  end
+  return matches
+end
+
+--- Checks each item in a table against each other argument using string.match. Returns a list
+--- @param tbl table to check
+--- @param pattern1 pattern to check using string.match
+--- @param pattern2+ optional additional patterns to check
+--- @param check_keys set as true if you want to also check the keys against the patterns
+--- @return returns a which contains every unique value from tbl for which the value string.matches
+---         does not preserve the order or keys of the original table, but does return a table traverable using ipairs
+function table.n_matches(tbl, ...)
+  local tbl_type = type(tbl)
+  assert(tbl_type == "table", string.format("table.n_matches: bad argument #1 type (table to check using string.match as table expected, got %s)", tbl_type))
+  local patterns = {...}
+  local matches = {}
+  for index,pattern in ipairs(patterns) do
+    local ptype = type(pattern)
+    assert(ptype == "string", string.format("table.n_matches: bad argument #%d type (pattern to check as string expected, got %s)", index+1, ptype))
+    for key,value in pairs(tbl) do
+      local valueType = type(value)
+      if (valueType == "string" or valueType == "number") and string.match(value, pattern) and not table.index_of(matches, value) then
+        table.insert(matches, value)
+      end
+    end
+  end
+  return matches
+end
 
 
 --- Table Union.
@@ -184,20 +371,31 @@ end
 ---      ["test2"] = function() return true end,
 ---   }
 ---   </pre>
+---
+--- When several tables hold different values for the same key, those values are
+--- collected into a new subtable, and any further collision on that key is
+--- appended to it. The tables you pass in are never modified.
 function table.union(...)
   local sets = { ... }
   local union = {}
+  -- `pairs()` never yields a nil value, so `union[key] == nil` is an exact
+  -- presence test and stays correct for a legitimate `false`. `merged` tracks
+  -- which keys hold a subtable that we created, so a table that came from a
+  -- caller is never appended to -- doing that both flattened the result and
+  -- modified the caller's table in place.
+  local merged = {}
 
   for _, set in ipairs(sets) do
     for key, val in pairs(set) do
-      if union[key] and union[key] ~= val then
-        if type(union[key]) == 'table' then
+      if union[key] == nil then
+        union[key] = val
+      elseif union[key] ~= val then
+        if merged[key] then
           table.insert(union[key], val)
         else
           union[key] = { union[key], val }
+          merged[key] = true
         end
-      else
-        union[key] = val
       end
     end
   end
@@ -269,7 +467,7 @@ end
 ---   }
 ---   </pre>
 function table.intersection(...)
-  sets = { ... }
+  local sets = { ... }
   if #sets < 2 then
     return false
   end
@@ -307,7 +505,7 @@ end
 ---   This is an intersection of unique values. The order and keys of the input tables are
 ---   not preserved.
 function table.n_intersection(...)
-  sets = { ... }
+  local sets = { ... }
   if #sets < 2 then
     return false
   end
@@ -398,8 +596,8 @@ function table.update(t1, t2)
     tbl[k] = v
   end
   for k, v in pairs(t2) do
-    if type(v) == "table" then
-      tbl[k] = table.update(tbl[k] or {}, v)
+    if type(v) == "table" and type(tbl[k]) == "table" then
+      tbl[k] = table.update(tbl[k], v)
     else
       tbl[k] = v
     end

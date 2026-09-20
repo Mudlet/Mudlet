@@ -4,6 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2022-2023, 2026 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -22,18 +24,20 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
+#include "utils.h"
+
+#include <QList>
 #include <QMap>
-#include <QMutex>
 #include <QPointer>
 #include <QString>
-#include "post_guard.h"
+#include <QtGlobal>
 
 #include <list>
+#include <tuple>
+#include <vector>
 
 class Host;
 class TScript;
-
 
 class ScriptUnit
 {
@@ -41,25 +45,47 @@ class ScriptUnit
     friend class XMLimport;
 
 public:
-    ScriptUnit(Host* pHost) : mpHost(pHost), mMaxID(0) {}
+    explicit ScriptUnit(Host*);
+    ~ScriptUnit();
 
-    std::list<TScript*> getScriptRootNodeList()
-    {
-        QMutexLocker locker(&mScriptUnitLock);
-        return mScriptRootNodeList;
-    }
+    std::list<TScript*> getScriptRootNodeList() { return mScriptRootNodeList; }
+
+    QMap<int, TScript*> getScriptList() { return mScriptMap; }
 
     TScript* getScript(int id);
-    void compileAll();
+    // Activates/deactivates every script with this name and refreshes its
+    // editor tree icon - mirrors TriggerUnit::enableTrigger()/disableTrigger()
+    // so every caller benefits, not just the Lua enableScript()/disableScript()
+    // binding that used to do this inline.
+    bool enableScript(const QString& name);
+    bool disableScript(const QString& name);
+    void compileAll(bool saveLoadingError = false);
     bool registerScript(TScript* pT);
     void unregisterScript(TScript* pT);
     void reParentScript(int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1);
+    void reParentScript(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position = 0);
     void stopAllTriggers();
     void uninstall(const QString&);
     void _uninstall(TScript* pChild, const QString& packageName);
+    // Tracks Host::raiseEvent() dispatch nesting so that uninstall() can defer
+    // deleting a package's scripts while one of their event handlers is still on
+    // the call stack (e.g. a handler calling uninstallPackage() on its own
+    // package) - deferred items are flushed by doCleanup() at depth 0:
+    void beginProcessing() { ++mProcessingDepth; }
+    void endProcessing()
+    {
+        --mProcessingDepth;
+        Q_ASSERT(mProcessingDepth >= 0);
+    }
+    void doCleanup();
     int getNewID();
-    QMutex mScriptUnitLock;
+    std::vector<int> findItems(const QString& name, const bool exactMatch = true, const bool caseSensitive = true);
+    void resetStats();
+    std::tuple<QString, int, int, int> assembleReport();
+
     QList<TScript*> uninstallList;
+    bool hasPendingDeletes() const { return !uninstallList.isEmpty(); }
+
 
 private:
     ScriptUnit() = default;
@@ -69,10 +95,18 @@ private:
     void addScript(TScript* pT);
     void removeScriptRootNode(TScript* pT);
     void removeScript(TScript*);
+    void assembleReport(TScript*);
+
     QPointer<Host> mpHost;
     QMap<int, TScript*> mScriptMap;
     std::list<TScript*> mScriptRootNodeList;
-    int mMaxID;
+    // > 0 whilst Host::raiseEvent() is dispatching to event handlers; uninstall()
+    // and doCleanup() must not delete scripts then:
+    int mProcessingDepth = 0;
+    int mMaxID = 0;
+    int statsItemsTotal = 0;
+    int statsTempItems = 0;
+    int statsActiveItems = 0;
 };
 
 #endif // MUDLET_SCRIPTUNIT_H

@@ -1,0 +1,74 @@
+{
+  "AdjustableContainer.bottom": {
+    "message": "stern",
+    "description": "one of the borders the container can be attached to"
+  },
+  "AdjustableContainer.top": {
+    "message": "bow",
+    "description": "one of the borders the container can be attached to"
+  },
+  "AdjustableContainer.left": {
+    "message": "port",
+    "description": "one of the borders the container can be attached to"
+  },
+  "AdjustableContainer.right": {
+    "message": "starboard",
+    "description": "one of the borders the container can be attached to"
+  },
+  "AdjustableContainer.custom": {
+    "message": "Bespoke:",
+    "description": "a menu item in the right click menu. it contains user/package made custom items"
+  },
+  "AdjustableContainer.lock": {
+    "message": "Davey's Locker",
+    "description": "locks your container. Which means it's not movable/resizable anymore and changes some other properties depending on the Lockstyle (like hiding the borders)"
+  },
+  "AdjustableContainer.full": {
+    "message": "full sail",
+    "description": "one of the Lockstyles. Can also be translated as complete as it's locking the container without any margin left for the right click menu."
+  },
+  "AdjustableContainer.min_restore": {
+    "message": "Lower/Raise",
+    "description": "label to minimize/restore the container"
+  },
+  "AdjustableContainer.connectTo": {
+    "message": "All Aboard: ",
+    "description": "connect your container to a border to create a frame"
+  },
+  "AdjustableContainer.disconnect": {
+    "message": "Abandon Ship ",
+    "description": "disconnect your container from the border frame"
+  },
+  "Mudlet.packageInstallSuccess": {
+    "message": "Package '%s' installed successfully, me heartie.",
+    "description": "Success message after drag&drop of package file onto Mudlet - %s is the file name"
+  },
+  "Mudlet.packageInstallFail": {
+    "message": "Ye installin' '%s' failed: %s",
+    "description": "Failure message after drag&drop of package file onto Mudlet - %s is the file name"
+  },
+  "Mudlet.moduleInstallSuccess": {
+    "message": "Module '%s' installed successfully, me heartie.",
+    "description": "Success message after drag&drop of module file onto Mudlet - %s is the file name"
+  },
+  "Mudlet.moduleInstallFail": {
+    "message": "Ye installin' '%s' failed: %s",
+    "description": "Failure message after drag&drop of module file onto Mudlet - %s is the file name"
+  },
+  "Mudlet.packageDownloading": {
+    "message": "Be downloadin' package from %s.",
+    "description": "Download package from Url for installation - %s is source url"
+  },
+  "Mudlet.prefixOk": {
+    "message": "[  AYE  ]  - ",
+    "description": "Start of the line for messages telling the player something is okay. Keep at 12 characters length for nice alignment!"
+  },
+  "Mudlet.prefixWarn": {
+    "message": "[ AVAST ]  - ",
+    "description": "Start of the line for messages warning the player about something. Keep at 12 characters length for nice alignment!"
+  },
+  "Mudlet.prefixInfo": {
+    "message": "[ ARR! ]  - ",
+    "description": "Start of the line for messages informing the player about something. Keep at 12 characters length for nice alignment!"
+  }
+}

@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2018, 2022, 2025 by Stephen Lyons                       *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -23,12 +24,19 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include "ui_notes_editor.h"
 #include <QPointer>
-#include "post_guard.h"
 
 class Host;
+class QCloseEvent;
+class QEvent;
+class QLabel;
+class QLineEdit;
+class QPlainTextEdit;
+class QShortcut;
+class QTimer;
+class QTimerEvent;
+class QToolButton;
 
 
 class dlgNotepad : public QMainWindow, public Ui::notes_editor
@@ -37,21 +45,75 @@ class dlgNotepad : public QMainWindow, public Ui::notes_editor
 
 public:
     Q_DISABLE_COPY(dlgNotepad)
-    dlgNotepad(Host*);
+    explicit dlgNotepad(Host*);
     ~dlgNotepad();
 
     void save();
     void restore();
+    void saveSettings();
+    void restoreSettings();
+    void setFont(const QFont &);
+    void setTabsStyleSheet(const QString& styleSheet);
+
+signals:
+    void notepadClosing(const QString& profileName);
+
+public slots:
+    int addTab(const QString& name = QString(), const QString& content = QString());
+    void closeTab(int index);
+    void renameTab(int index);
 
 private slots:
-    void slot_text_written();
+    void slot_tabCloseRequested(int index);
+    void slot_tabContextMenu(const QPoint& pos);
+    void slot_addTabClicked();
+    void slot_textChanged();
+    void slot_sendAll();
+    void slot_sendLine();
+    void slot_sendSelection();
+    void slot_sendNextLine();
+    void slot_stopSending();
+    void slot_toggleSendControls(bool checked);
+    void slot_showFindBar();
+    void slot_hideFindBar();
+    void slot_findNext();
+    void slot_findPrevious();
+    void slot_findTextChanged(const QString& text);
+    void slot_currentTabChanged(int index);
 
 private:
     void timerEvent(QTimerEvent *event) override;
-    void restoreFile(const QString&, const bool);
+    void closeEvent(QCloseEvent *event) override;
+    void changeEvent(QEvent* event) override;
+    bool eventFilter(QObject* obj, QEvent* event) override;
+    QPlainTextEdit* currentTextEdit() const;
+    void updateSendControlsToggleIcon();
+    void setupAddTabButton();
+    void setupFindBar();
+    void highlightAllMatches();
+    void clearSearchHighlights();
+    bool migrateOldNotesFile();
+    void startSendingLines(const QStringList& lines);
 
     QPointer<Host> mpHost;
-    bool mNeedToSave{};
+    QToolButton* mpAddTabButton = nullptr;
+    bool mUiSetupComplete = false;
+    bool mNeedToSave = false;
+    QAction* action_stop = nullptr;
+    QAction* action_prependText = nullptr;
+    QAction* action_prependTextLabel = nullptr;
+    QLabel* label_prependText = nullptr;
+    QLineEdit* lineEdit_prependText = nullptr;
+    QStringList mLinesToSend;
+    QTimer* mSendTimer = nullptr;
+    int mCurrentLineIndex = 0;
+
+    QWidget* mpFindBar = nullptr;
+    QLineEdit* mpFindLineEdit = nullptr;
+    QToolButton* mpFindPrevButton = nullptr;
+    QToolButton* mpFindNextButton = nullptr;
+    QToolButton* mpFindCloseButton = nullptr;
+    QShortcut* mpFindShortcut = nullptr;
 };
 
 #endif // MUDLET_DLGNOTEPAD_H

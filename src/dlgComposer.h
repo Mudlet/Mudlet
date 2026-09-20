@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2010 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -22,12 +23,14 @@
  ***************************************************************************/
 
 
-#include "pre_guard.h"
 #include "ui_composer.h"
 #include <QPointer>
-#include "post_guard.h"
+#include <QPoint>
 
 class Host;
+class QMenu;
+class QMouseEvent;
+class QTextCursor;
 
 
 class dlgComposer : public QMainWindow, public Ui::composer
@@ -36,16 +39,39 @@ class dlgComposer : public QMainWindow, public Ui::composer
 
 public:
     Q_DISABLE_COPY(dlgComposer)
-    dlgComposer(Host*);
+    explicit dlgComposer(Host*);
 
     void init(const QString &title, const QString &newText);
 
 public slots:
-    void save();
-    void cancel();
+    void slot_save();
+    void slot_cancel();
+
+private slots:
+    void slot_spellCheck();
+    void slot_contextMenu(const QPoint& pos);
+    void slot_addWord();
+    void slot_removeWord();
+    void slot_popupMenu();
+
+protected:
+    bool eventFilter(QObject* obj, QEvent* event) override;
 
 private:
+    void spellCheckWord(QTextCursor& cursor);
+    void recheckWholeLine();
+    void fillSpellCheckList(QMouseEvent* event, QMenu* popup);
+
     QPointer<Host> mpHost;
+    QString mSpellCheckedWord;
+    bool mSpellChecking = false;
+    int mSystemDictionarySuggestionsCount = 0;
+    int mUserDictionarySuggestionsCount = 0;
+    char** mpSystemSuggestionsList = nullptr;
+    char** mpUserSuggestionsList = nullptr;
+    QPoint mPopupPosition;
+    int mLastWordStart = -1;
+    int mLastWordEnd = -1;
 };
 
 #endif // MUDLET_DLGCOMPOSER_H

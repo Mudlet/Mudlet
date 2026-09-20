@@ -27,47 +27,38 @@
 #include "TConsole.h"
 #include "TFlipButton.h"
 
-#include "pre_guard.h"
 #include <QGridLayout>
-#include "post_guard.h"
+#include <QScopeGuard>
 
 
 TEasyButtonBar::TEasyButtonBar(TAction* pA, QString name, QWidget* pW)
-: QWidget( pW )
-, mpTAction( pA )
-, mVerticalOrientation( false )
-, mpWidget( new QWidget(this) )
-, mRecordMove( false )
-, mpLayout( nullptr )
-, mItemCount( 0 )
+: QWidget(pW)
+, mpTAction(pA)
+, mpWidget(new QWidget(this))
 {
     mButtonList.clear();
     auto hostName(pA->mpHost->getName());
     auto layout = new QVBoxLayout;
     setLayout(layout);
     layout->setContentsMargins(0, 0, 0, 0);
-    layout->setMargin(0);
     layout->setSpacing(0);
     layout->addWidget(mpWidget);
     if (!mpTAction->mUseCustomLayout) {
         mpLayout = new QGridLayout(mpWidget);
         setContentsMargins(0, 0, 0, 0);
         mpLayout->setContentsMargins(0, 0, 0, 0);
-        mpLayout->setMargin(0);
         mpLayout->setSpacing(0);
-        QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+        const QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
         mpWidget->setSizePolicy(sizePolicy);
     } else {
-        mpWidget->setMinimumHeight(mpTAction->mSizeY);
-        mpWidget->setMaximumHeight(mpTAction->mSizeY);
-        mpWidget->setMinimumWidth(mpTAction->mSizeX);
-        mpWidget->setMaximumWidth(mpTAction->mSizeX);
-        mpWidget->setGeometry(mpTAction->mPosX, mpTAction->mPosY, mpTAction->mSizeX, mpTAction->mSizeY);
+        mpWidget->setMaximumSize(mpTAction->getSize());
+        mpWidget->setMinimumSize(mpTAction->getSize());
+        mpWidget->setGeometry(mpTAction->mPosX, mpTAction->mPosY, mpTAction->getSizeX(), mpTAction->getSizeY());
     }
     setStyleSheet(mpTAction->css);
     mpWidget->setStyleSheet(mpTAction->css);
-    setObjectName(QStringLiteral("easyButtonBar_%1_%2").arg(hostName, name));
-    mpWidget->setObjectName(QStringLiteral("easyButtonBar_Widget_%1_%2").arg(hostName, name));
+    setObjectName(qsl("easyButtonBar_%1_%2").arg(hostName, name));
+    mpWidget->setObjectName(qsl("easyButtonBar_Widget_%1_%2").arg(hostName, name));
     // It is not entirely clear if this is ever visible:
     setWindowTitle(tr("Easybutton Bar - %1 - %2").arg(hostName, name));
 }
@@ -82,16 +73,16 @@ void TEasyButtonBar::addButton(TFlipButton* pB)
         }
     } else {
         qDebug() << "setting up custom sizes";
-        QSize size = QSize(pB->mpTAction->mSizeX, pB->mpTAction->mSizeY);
+        const QSize size = pB->mpTAction->getSize();
         pB->setMaximumSize(size);
         pB->setMinimumSize(size);
         pB->setParent(mpWidget);
-        pB->setGeometry(pB->mpTAction->mPosX, pB->mpTAction->mPosY, pB->mpTAction->mSizeX, pB->mpTAction->mSizeY);
+        pB->setGeometry(pB->mpTAction->mPosX, pB->mpTAction->mPosY, pB->mpTAction->getSizeX(), pB->mpTAction->getSizeY());
     }
 
     pB->setStyleSheet(pB->mpTAction->css);
     pB->setFlat(pB->mpTAction->getButtonFlat());
-    int rotation = pB->mpTAction->getButtonRotation();
+    const int rotation = pB->mpTAction->getButtonRotation();
     switch (rotation) {
     case 0:
         pB->setOrientation(Qt::Horizontal);
@@ -108,19 +99,13 @@ void TEasyButtonBar::addButton(TFlipButton* pB)
     if (!mpTAction->mUseCustomLayout) {
         // tool bar mButtonColumns > 0 -> autolayout
         // case == 0: use individual button placement for user defined layouts
-        int columns = mpTAction->getButtonColumns();
-        if (columns <= 0) {
-            columns = 1;
-        }
-        if (columns > 0) {
-            mItemCount++;
-            int row = mItemCount / columns;
-            int col = mItemCount % columns;
-            if (mVerticalOrientation) {
-                mpLayout->addWidget(pB, row, col);
-            } else {
-                mpLayout->addWidget(pB, col, row);
-            }
+        int columns = std::max(1, mpTAction->getButtonColumns());
+        const int row = ++mItemCount / columns;
+        const int col = mItemCount % columns;
+        if (mVerticalOrientation) {
+            mpLayout->addWidget(pB, row, col);
+        } else {
+            mpLayout->addWidget(pB, col, row);
         }
     } else {
         pB->move(pB->mpTAction->mPosX, pB->mpTAction->mPosY);
@@ -137,21 +122,23 @@ void TEasyButtonBar::addButton(TFlipButton* pB)
 
 void TEasyButtonBar::finalize()
 {
-    if (mpTAction->mUseCustomLayout) {
+    if (mpTAction->mUseCustomLayout || !mpTAction->getButtonFillerOffset()) {
         return;
     }
-    auto fillerWidget = new QWidget;
-
-    QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    fillerWidget->setSizePolicy(sizePolicy);
-    int columns = mpTAction->getButtonColumns();
-    if (columns <= 0) {
-        columns = 1;
-    }
-    int row = (++mItemCount) / columns;
-    int column = mItemCount % columns;
+    auto fillerWidget = new QWidget(this);
+    QPushButton dummy;
+    fillerWidget->setMinimumSize(dummy.minimumSizeHint());
+    fillerWidget->setMaximumSize(dummy.minimumSizeHint());
     if (mpLayout) {
-        mpLayout->addWidget(fillerWidget, row, column);
+        if (mpTAction->mOrientation == 1) {
+            // The toolbar is to be filled with rows of mpTAction->getButtonColumns() wide
+            // The filler widget is to be one or more columns wide
+            mpLayout->addWidget(fillerWidget, 0, 0, mpTAction->getButtonFillerOffset(), 1);
+        } else {
+            // The toolbar is to be filled with columns of mpTAction->getButtonColumns() tall
+            // The filler widget is to be one or more rows tall
+            mpLayout->addWidget(fillerWidget, 0, 0, 1, mpTAction->getButtonFillerOffset());
+        }
     }
 }
 
@@ -159,12 +146,25 @@ void TEasyButtonBar::finalize()
 // button state to ensure the visible representation is used.
 void TEasyButtonBar::slot_pressed(const bool isChecked)
 {
-    auto * pB = dynamic_cast<TFlipButton*>(sender());
+    auto* pB = dynamic_cast<TFlipButton*>(sender());
     if (!pB) {
         return;
     }
 
     TAction* pA = pB->mpTAction;
+
+    // Hold off ActionUnit deletes for this whole slot: showMenu() below blocks in
+    // a modal event loop in which a menu item's script (or inbound game data) can
+    // uninstall pA's own package. beginProcessing() keeps that delete deferred -
+    // even against a Host catch-all doCleanup() firing at depth 0 mid-loop - so pA
+    // survives every dereference here; the scope guard then flushes once, after pA
+    // is no longer touched (see ActionUnit::uninstall()):
+    ActionUnit* pActionUnit = pA->mpHost->getActionUnit();
+    pActionUnit->beginProcessing();
+    const auto processingGuard = qScopeGuard([pActionUnit] {
+        pActionUnit->endProcessing();
+        pActionUnit->doCleanup();
+    });
 
     // NOTE: This function blocks until an item is selected from the menu, and,
     // as the action to "pop-up" the menu is the same as "buttons" use to
@@ -174,7 +174,7 @@ void TEasyButtonBar::slot_pressed(const bool isChecked)
     // entries...
     pB->showMenu();
 
-    if (pA->mIsPushDownButton) {
+    if (pA->isPushDownButton()) {
         // DO NOT MANIPULATE THE BUTTON STATE OURSELF NOW
         pA->mButtonState = isChecked;
         pA->mpHost->mpConsole->mButtonState = (pA->mButtonState ? 2 : 1);
@@ -206,19 +206,15 @@ void TEasyButtonBar::clear()
         mpWidget->setLayout(mpLayout);
         mpLayout->setContentsMargins(0, 0, 0, 0);
         mpLayout->setSpacing(0);
-        mpLayout->setMargin(0);
-        QSizePolicy sizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+        const QSizePolicy sizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
         mpWidget->setSizePolicy(sizePolicy);
 
         mpWidget->setContentsMargins(0, 0, 0, 0);
-        mpLayout->setMargin(0);
     } else {
         mpLayout = nullptr;
-        mpWidget->setMinimumHeight(mpTAction->mSizeY);
-        mpWidget->setMaximumHeight(mpTAction->mSizeY);
-        mpWidget->setMinimumWidth(mpTAction->mSizeX);
-        mpWidget->setMaximumWidth(mpTAction->mSizeX);
-        mpWidget->setGeometry(mpTAction->mPosX, mpTAction->mPosY, mpTAction->mSizeX, mpTAction->mSizeY);
+        mpWidget->setMinimumSize(mpTAction->getSize());
+        mpWidget->setMaximumSize(mpTAction->getSize());
+        mpWidget->setGeometry(mpTAction->mPosX, mpTAction->mPosY, mpTAction->getSizeX(), mpTAction->getSizeY());
     }
     layout()->addWidget(pW);
     setStyleSheet(mpTAction->css);

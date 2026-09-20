@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2019 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2015-2020, 2022-2023, 2025 by Stephen Lyons             *
+ *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
  *                                                                         *
@@ -29,58 +30,99 @@
 #include "AliasUnit.h"
 #include "KeyUnit.h"
 #include "ScriptUnit.h"
+#include "GifTracker.h"
+#include "TCommandLine.h"
 #include "TLuaInterpreter.h"
 #include "TimerUnit.h"
+#include "TMainConsole.h"
+#include "TWindowRegistry.h"
 #include "TriggerUnit.h"
-#include "XMLexport.h"
 #include "ctelnet.h"
+#include "enums.h"
 
-#include "pre_guard.h"
 #include <QColor>
 #include <QFile>
 #include <QFont>
+#include <QFuture>
+#include <QList>
+#include <QMargins>
 #include <QPointer>
+#include <QRect>
+#include <QStack>
 #include <QTextStream>
-#include "post_guard.h"
 
-class QDialog;
+#include <memory>
+#include <string>
+
+#include "TMxpMudlet.h"
+#include "TMxpProcessor.h"
+#include "TMxpFrameManager.h"
+
+namespace pugi {
+class xml_document;
+}
+
 class QDockWidget;
-class QPushButton;
-class QListWidget;
+class QJsonObject;
+class QKeyEvent;
+class QSettings;
 
-class dlgTriggerEditor;
 class TEvent;
 class TArea;
 class LuaInterface;
+class XMLexport;
 class TMedia;
+class GMCPAuthenticator;
 class TRoom;
 class TConsole;
+class TMainConsole;
+struct TConsoleModel;
 class dlgNotepad;
+class dlgTriggerEditor;
 class TMap;
+class MMCPServer;
+class dlgIRC;
+class dlgPackageManager;
+class dlgModuleManager;
+class dlgProfilePreferences;
+class cTelnet;
 
-class stopWatch {
+class stopWatch
+{
     friend class XMLimport;
 
 public:
+    // A stopwatch keeps its time as a count of milliseconds and, while it runs,
+    // as an effective start time that many milliseconds back from now. Both are
+    // bounded to this in either direction - a little under 31,700 years, which
+    // is past any use a stopwatch has while still leaving four orders of
+    // magnitude of what a qint64 of milliseconds holds spare - so that no
+    // arithmetic on a stopwatch's time can run out of that range and wrap
+    // around onto a time of the opposite sign. Time reaching the bound is
+    // clamped to it; a script asking for more than the whole range outright is
+    // told so instead:
+    static constexpr qint64 csmMaximumMilliSeconds = 1'000'000'000'000'000;
+
     stopWatch();
 
     bool start();
     bool stop();
     bool reset();
-    bool running() const {return mIsRunning;}
+    bool running() const { return mIsRunning; }
     void adjustMilliSeconds(const qint64);
     qint64 getElapsedMilliSeconds() const;
+    static qint64 clampToRange(const qint64);
     QString getElapsedDayTimeString() const;
-    void setPersistent(const bool state) {mIsPersistent = state;}
-    bool persistent() const {return mIsPersistent;}
-    void setName(const QString& name) {mName = name;}
-    const QString& name() const {return mName;}
+    void setPersistent(const bool state) { mIsPersistent = state; }
+    bool persistent() const { return mIsPersistent; }
+    void setName(const QString& name) { mName = name; }
+    const QString& name() const { return mName; }
 
 #ifndef QT_NO_DEBUG_STREAM
     // Only used for debugging:
-    bool initialised() const {return mIsInitialised;}
-    qint64 elapsed() const {return mElapsedTime;}
-    QDateTime effectiveStartDateTime() const {return mEffectiveStartDateTime;}
+    bool initialised() const { return mIsInitialised; }
+    qint64 elapsed() const { return mElapsedTime; }
+    QDateTime effectiveStartDateTime() const { return mEffectiveStartDateTime; }
 #endif // QT_NO_DEBUG_STREAM
 
 private:
@@ -110,14 +152,14 @@ private:
 #ifndef QT_NO_DEBUG_STREAM
 inline QDebug& operator<<(QDebug& debug, const stopWatch& stopwatch)
 {
-    QDebugStateSaver saver(debug);
-    Q_UNUSED(saver);
-    debug.nospace() << QStringLiteral("stopwatch(mIsRunning: %1 mInitialised: %2 mIsPersistent: %3 mEffectiveStartDateTime: %4 mElapsedTime: %5)")
-                       .arg((stopwatch.running() ? QLatin1String("true") : QLatin1String("false")),
-                            (stopwatch.initialised() ? QLatin1String("true") : QLatin1String("false")),
-                            (stopwatch.persistent() ? QLatin1String("true") : QLatin1String("false")),
-                            stopwatch.effectiveStartDateTime().toString(),
-                            QString::number(stopwatch.elapsed()));
+    const QDebugStateSaver saver(debug);
+    Q_UNUSED(saver)
+    debug.nospace() << qsl("stopwatch(mIsRunning: %1 mInitialised: %2 mIsPersistent: %3 mEffectiveStartDateTime: %4 mElapsedTime: %5)")
+                               .arg((stopwatch.running() ? QLatin1String("true") : QLatin1String("false")),
+                                    (stopwatch.initialised() ? QLatin1String("true") : QLatin1String("false")),
+                                    (stopwatch.persistent() ? QLatin1String("true") : QLatin1String("false")),
+                                    stopwatch.effectiveStartDateTime().toString(),
+                                    QString::number(stopwatch.elapsed()));
     return debug;
 }
 #endif // QT_NO_DEBUG_STREAM
@@ -129,6 +171,10 @@ class Host : public QObject
     friend class XMLexport;
     friend class XMLimport;
     friend class dlgProfilePreferences;
+    // Allows the functional test to set the Discord username restriction:
+    friend class TDiscordModeTest;
+    // Allows the functional test to call closeChildren() on its own:
+    friend class HostWidgetDecouplingTest;
 
 public:
     Host(int port, const QString& mHostName, const QString& login, const QString& pass, int host_id);
@@ -145,79 +191,138 @@ public:
         DiscordSetPartyInfo = 0x80,
         DiscordSetTimeInfo = 0x100,
         DiscordSetSubMask = 0x3ff,
+        // Kept for backward compatibility with saved profiles but no longer checked:
         DiscordLuaAccessEnabled = 0x800
     };
     Q_DECLARE_FLAGS(DiscordOptionFlags, DiscordOptionFlag)
 
+    enum DiscordMode { DiscordDisabled = 0, DiscordShowMudletOnly = 1, DiscordShowGameDetails = 2 };
 
-    QString            getName()                        { QMutexLocker locker(& mLock); return mHostName; }
-    QString            getCommandSeparator()            { QMutexLocker locker(& mLock); return mCommandSeparator; }
-    void               setName(const QString& s );
-    QString            getUrl()                         { QMutexLocker locker(& mLock); return mUrl; }
-    void               setUrl(const QString& s )        { QMutexLocker locker(& mLock); mUrl = s; }
-    QString            getUserDefinedName()             { QMutexLocker locker(& mLock); return mUserDefinedName; }
-    void               setUserDefinedName(const QString& s ) { QMutexLocker locker(& mLock); mUserDefinedName = s; }
-    int                getPort()                        { QMutexLocker locker(& mLock); return mPort; }
-    void               setPort( int p )                 { QMutexLocker locker(& mLock); mPort = p; }
-    void               setAutoReconnect(bool b)         { mTelnet.setAutoReconnect(b); }
-    QString &          getLogin()                       { QMutexLocker locker(& mLock); return mLogin; }
-    void               setLogin(const QString& s )      { QMutexLocker locker(& mLock); mLogin = s; }
-    QString &          getPass()                        { QMutexLocker locker(& mLock); return mPass; }
-    void               setPass(const QString& s )       { QMutexLocker locker(& mLock); mPass = s; }
-    int                getRetries()                     { QMutexLocker locker(& mLock); return mRetries;}
-    void               setRetries( int c )              { QMutexLocker locker(& mLock); mRetries=c; }
-    int                getTimeout()                     { QMutexLocker locker(& mLock); return mTimeout; }
-    void               setTimeout( int seconds )        { QMutexLocker locker(& mLock); mTimeout=seconds; }
-    bool               wideAmbiguousEAsianGlyphs() { QMutexLocker locker(& mLock); return mWideAmbigousWidthGlyphs; }
+
+    QString getName() { return mHostName; }
+    QString getCommandSeparator() { return mCommandSeparator; }
+    void setName(const QString& name);
+    QString getUrl() { return mUrl; }
+    void setUrl(const QString& url) { mUrl = url; }
+    QString getDiscordGameName() { return mDiscordGameName; }
+    void setDiscordGameName(const QString& name) { mDiscordGameName = name; }
+    int getPort() { return mPort; }
+    void setPort(const int port) { mPort = port; }
+    void setAutoReconnect(const bool reconnect) { mTelnet.setAutoReconnect(reconnect); }
+    QString& getLogin() { return mLogin; }
+    void setLogin(const QString& login) { mLogin = login; }
+    QString& getPass() { return mPass; }
+    void setPass(const QString& password) { mPass = password; }
+    bool hasAutoLoginCredentials() const { return !mLogin.isEmpty() && !mPass.isEmpty(); }
+    // True once the user has sent any command to the game on the current connection. It gates whether
+    // an unsolicited GMCP sign-in address may auto-open the browser: one that arrives only after the
+    // player acted (e.g. chose a provider on the game's own sign-in screen) is a consequence of their
+    // input, whereas one at an untouched connection is not and must not silently launch a browser.
+    // GMCPAuthenticator clears it again when it auto-opens, so one player action can launch at most
+    // one browser hand-off however many sign-in addresses the game pushes.
+    bool userSentInputThisConnection() const { return mUserSentInputThisConnection; }
+    void setUserSentInputThisConnection(const bool b) { mUserSentInputThisConnection = b; }
+    int getRetries() { return mRetries; }
+    void setRetries(const int retries) { mRetries = retries; }
+    int getTimeout() { return mTimeout; }
+    void setTimeout(const int seconds) { mTimeout = seconds; }
+    bool wideAmbiguousEAsianGlyphs() { return mWideAmbigousWidthGlyphs; }
     // Uses PartiallyChecked to set the automatic mode, otherwise Checked/Unchecked means use wide/narrow ambiguous glyphs
-    void               setWideAmbiguousEAsianGlyphs(Qt::CheckState state );
+    void setWideAmbiguousEAsianGlyphs(Qt::CheckState state);
     // Is used to set preference dialog control directly:
-    Qt::CheckState     getWideAmbiguousEAsianGlyphsControlState() { QMutexLocker locker(& mLock);
-                                                                       return mAutoAmbigousWidthGlyphsSetting
-                                                                               ? Qt::PartiallyChecked
-                                                                               : (mWideAmbigousWidthGlyphs ? Qt::Checked : Qt::Unchecked); }
-    void               setHaveColorSpaceId(const bool state) { QMutexLocker locker(& mLock); mSGRCodeHasColSpaceId = state; }
-    bool               getHaveColorSpaceId() { QMutexLocker locker(& mLock); return mSGRCodeHasColSpaceId; }
-    void               setMayRedefineColors(const bool state) { QMutexLocker locker(& mLock); mServerMayRedefineColors = state; }
-    bool               getMayRedefineColors() { QMutexLocker locker(& mLock); return mServerMayRedefineColors; }
-    void               setDiscordApplicationID(const QString& s);
-    const QString&     getDiscordApplicationID();
-    void               setSpellDic(const QString&);
-    const QString&     getSpellDic() { QMutexLocker locker(& mLock); return mSpellDic; }
-    void               setUserDictionaryOptions(const bool useDictionary, const bool useShared);
-    void               getUserDictionaryOptions(bool& useDictionary, bool& useShared) { QMutexLocker locker(& mLock); useDictionary = mEnableUserDictionary; useShared = mUseSharedDictionary; }
+    Qt::CheckState getWideAmbiguousEAsianGlyphsControlState() { return mAutoAmbigousWidthGlyphsSetting ? Qt::PartiallyChecked : (mWideAmbigousWidthGlyphs ? Qt::Checked : Qt::Unchecked); }
+    bool getEnableBlinkText() const { return mEnableBlinkText; }
+    void setEnableBlinkText(bool enable);
+    void setHaveColorSpaceId(const bool state) { mSGRCodeHasColSpaceId = state; }
+    bool getHaveColorSpaceId() { return mSGRCodeHasColSpaceId; }
+    void setMayRedefineColors(const bool state) { mServerMayRedefineColors = state; }
+    bool getMayRedefineColors() { return mServerMayRedefineColors; }
+    bool shouldStripOscHyperlinkConfigParam();
+    bool shouldStripOscHyperlinkPresetParam();
+    void setDiscordApplicationID(const QString& s);
+    const QString& getDiscordApplicationID();
+    void setDiscordInviteURL(const QString& s);
+    const QString& getDiscordInviteURL() const { return mDiscordInviteURL; }
+    void setSpellDic(const QString&);
+    void setEnableSpellCheck(const bool enable);
+    bool getEnableSpellCheck() const { return mEnableSpellCheck; }
+    QString getSpellDic() const;
+    void setUserDictionaryOptions(const bool useDictionary, const bool useShared);
+    void getUserDictionaryOptions(bool& useDictionary, bool& useShared)
+    {
+        useDictionary = mEnableUserDictionary;
+        useShared = mUseSharedDictionary;
+    }
+    void setControlCharacterMode(const ControlCharacterMode mode);
+    ControlCharacterMode getControlCharacterMode() const { return mControlCharacter; }
+    bool getLargeAreaExitArrows() const { return mLargeAreaExitArrows; }
+    void setLargeAreaExitArrows(const bool);
+    bool getUseModern3DMapper() const { return experimentEnabled(qsl("experiment.3dmap.modernmapper")); }
 
-    void closingDown();
-    bool isClosingDown();
+    // Experiment system methods
+    bool experimentEnabled(const QString& experimentKey) const;
+    std::pair<bool, QString> setExperimentEnabled(const QString& experimentKey, bool enabled);
+    QString getActiveExperimentInGroup(const QString& group) const;
+    QStringList getAllExperiments() const;
+    QStringList getValidExperiments() const;
+
+    void forceClose();
+    bool profileResetInProgress() const { return mResetProfile; }
+    bool isClosingDown() const { return mIsClosingDown; }
+    bool isClosingForced() const { return mForcedClose; }
+    bool requestClose();
+
     unsigned int assemblePath();
     bool checkForMappingScript();
+    bool checkForCustomSpeedwalk();
 
     TriggerUnit* getTriggerUnit() { return &mTriggerUnit; }
     TimerUnit* getTimerUnit() { return &mTimerUnit; }
     AliasUnit* getAliasUnit() { return &mAliasUnit; }
     ActionUnit* getActionUnit() { return &mActionUnit; }
     KeyUnit* getKeyUnit() { return &mKeyUnit; }
+    const KeyUnit* getKeyUnit() const { return &mKeyUnit; }
     ScriptUnit* getScriptUnit() { return &mScriptUnit; }
+    GifTracker* getGifTracker() { return &mGifTracker; }
 
-    void connectToServer();
     void send(QString cmd, bool wantPrint = true, bool dontExpandAliases = false);
 
-    int getHostID()
-    {
-        QMutexLocker locker(&mLock);
-        return mHostID;
-    }
+    int getHostID() { return mHostID; }
 
-    void setHostID(int id)
-    {
-        QMutexLocker locker(&mLock);
-        mHostID = id;
-    }
+    void setHostID(int id) { mHostID = id; }
 
     TLuaInterpreter* getLuaInterpreter() { return &mLuaInterpreter; }
     LuaInterface* getLuaInterface() { return mLuaInterface.data(); }
 
     void incomingStreamProcessor(const QString& paragraph, int line);
+    // The main console's data model lives in core, co-owned by Host so the
+    // per-line trigger pipeline (runTriggers) can drive it without a view. The
+    // view reaches the same instance via TConsole::model().
+    TConsoleModel& mainConsoleModel();
+    // Null until the very end of this Host's constructor: the model owns a
+    // TBuffer, and a TBuffer clears itself while being built - so core buffer
+    // code that can run that early has to be able to see "not there yet"
+    // rather than dereference the shared_ptr.
+    TConsoleModel* mainConsoleModelOrNull() { return mpMainConsoleModel.get(); }
+    std::shared_ptr<TConsoleModel> sharedMainConsoleModel();
+    // How a colorizer trigger recolors the line it matched: select a run of
+    // the current line, paint it, then put the console's own format back. The
+    // selection is a TConsole member, so these dereference mpConsole and the
+    // callers check it first.
+    void deselectMainConsole();
+    bool selectMainConsoleSection(int from, int length);
+    void setMainConsoleFgColor(const QColor& color);
+    void setMainConsoleBgColor(const QColor& color);
+    void resetMainConsoleFormat();
+    TWindowRegistry& windowRegistry() { return mWindowRegistry; }
+    const TWindowRegistry& windowRegistry() const { return mWindowRegistry; }
+    void refreshMainConsoleColors();
+    void runTriggers(int line);
+    // The log lifecycle lives in the core console model, which is a plain
+    // struct and cannot emit, so it raises the two view-only halves of a
+    // logging change through here.
+    void raiseLoggingAnnouncement(const bool isLogging, const QString& logFileName);
+    void raiseLoggingStateChanged(const bool isLogging);
     void postIrcMessage(const QString&, const QString&, const QString&);
     void enableTimer(const QString&);
     void disableTimer(const QString&);
@@ -241,15 +346,21 @@ public:
     QPair<bool, QString> startStopWatch(const QString&);
     QPair<bool, QString> stopStopWatch(const int);
     QPair<bool, QString> stopStopWatch(const QString&);
-    stopWatch* getStopWatch(const int id) const { return mStopWatchMap.value(id); }
+    stopWatch* getStopWatch(const int id) const
+    {
+        auto it = mStopWatchMap.find(id);
+        return (it != mStopWatchMap.end()) ? it->second.get() : nullptr;
+    }
     int findStopWatchId(const QString&) const;
     QPair<bool, QString> setStopWatchName(const int, const QString&);
     QPair<bool, QString> setStopWatchName(const QString&, const QString&);
     QPair<bool, QString> resetAndRestartStopWatch(const int);
 
     void startSpeedWalk();
-    void saveModules(int sync, bool backup = true);
-    void reloadModule(const QString& reloadModuleName);
+    void startSpeedWalk(int sourceRoom, int targetRoom);
+    void reloadModule(const QString& reloadModuleName, const QString& syncingFromHost = QString());
+    std::pair<bool, QString> changeModuleSync(const QString& enableModuleName, const QLatin1String& value);
+    std::pair<bool, QString> getModuleSync(const QString& moduleName);
     bool blockScripts() { return mBlockScriptCompile; }
     void refreshPackageFonts();
 
@@ -263,7 +374,7 @@ public:
     // produce this action will be purged from the Lua system as part of the
     // reset - which causes nasty existential issues (and crashes) from deleting
     // a script as it is being interpreted!
-    void resetProfile_phase1();
+    bool resetProfile_phase1();
     // This actually does the bulk of the reset but must wait until the profile
     // is quiescent:
     void resetProfile_phase2();
@@ -281,115 +392,361 @@ public:
         mTelnet.set_USE_IRE_DRIVER_BUGFIX(b);
     }
 
-    void set_LF_ON_GA(bool b)
-    {
-        mLF_ON_GA = b;
-        mTelnet.set_LF_ON_GA(b);
-    }
+    void updateDisplayDimensions();
 
-    void adjustNAWS();
-
-    bool installPackage(const QString&, int);
-    bool uninstallPackage(const QString&, int);
+    std::pair<bool, QString> installPackage(const QString& fileName, enums::PackageModuleType thing, bool quiet = false);
+    bool uninstallPackage(const QString&, enums::PackageModuleType thing);
     bool removeDir(const QString&, const QString&);
-    void readPackageConfig(const QString&, QString&);
+    // whyNotRead, when given, is set to why no manifest came back - telling a
+    // config.lua that would not run apart from one that simply names no package
+    void readPackageConfig(const QString&, QString&, bool, QString* whyNotRead = nullptr);
+    QString getPackageConfig(const QString&, bool isModule = false, QString* whyNotRead = nullptr);
     void postMessage(const QString message) { mTelnet.postMessage(message); }
+    void printToMainConsole(const QString& msg);
+    void printToMainConsole(const QString& msg, QColor fgColor, QColor bgColor);
+    void printSystemMessage(const QString& msg);
+    void printOnDisplay(std::string& data, bool isFromServer);
+    void finalizeMainConsole();
+    bool mainConsoleShowsTimeStamps() const;
     QColor getAnsiColor(const int ansiCode, const bool isBackground = false) const;
     QPair<bool, QString> writeProfileData(const QString&, const QString&);
     QString readProfileData(const QString&);
+    // Both share one QSettings kept open for the profile's lifetime; writes are
+    // left for the event loop to flush, as syncing each one cost two
+    // fdatasync()s - a ~50 ms stall for every command line a loading profile
+    // creates.
+    void writeProfileIniData(const QString& item, const QString& what);
+    QString readProfileIniData(const QString& item);
     void xmlSaved(const QString& xmlName);
     bool currentlySavingProfile();
+    // Whether a package install or uninstall still owes the profile a save - see
+    // mDeferredSaveTimer.
+    bool hasPendingProfileSave() const { return mDeferredSaveTimer.isActive(); }
     void processDiscordGMCP(const QString& packageMessage, const QString& data);
     void waitForProfileSave();
     void clearDiscordData();
     void processDiscordMSDP(const QString& variable, QString value);
-    bool discordUserIdMatch(const QString& userName, const QString& userDiscriminator) const;
+    void setDiscordMode(DiscordMode mode);
+    bool discordUserIdMatch(const QString& userName) const;
+    const QString& getMMCPChatName() const;
+    quint16 getMMCPPort();
+    const QString& getMMCPChatPrefix() const;
+    bool getMMCPAutoStartServer();
+    bool getMMCPAllowPeekRequests();
+    bool getMMCPPrefixEmotes();
+    bool getMMCPAddChatMessageNewline();
+    bool getMMCPAutoAcceptCalls();
+    bool getMMCPShowSnoopInMainConsole();
     void setMmpMapLocation(const QString& data);
     QString getMmpMapLocation() const;
     void setMediaLocationGMCP(const QString& mediaUrl);
-    QString getMediaLocationGMCP() const;
+    QString mediaLocationGMCP() const;
     void setMediaLocationMSP(const QString& mediaUrl);
-    QString getMediaLocationMSP() const;
-    const QFont& getDisplayFont() const { return mDisplayFont; }
-    std::pair<bool, QString> setDisplayFont(const QFont& font);
-    std::pair<bool, QString> setDisplayFont(const QString& fontName);
-    void setDisplayFontFromString(const QString& fontData);
+    QString mediaLocationMSP() const;
+    // Use this rather than accessing the TMainConsole::font() as the latter
+    // isn't always around during profile start-up:
+    QFont getDisplayFont();
+    QFont getAndClearTempDisplayFont();
+    // Whether the font arriving is a fresh choice of family or only a tweak to
+    // the one already in use: the caller knows which, and comparing the fonts
+    // cannot tell them apart while a stand-in is up.
+    enum class DisplayFontChange { Adjustment, UserChoice };
+    std::pair<bool, QString> setDisplayFont(const QFont&, DisplayFontChange = DisplayFontChange::Adjustment);
+    void setDisplayFontFromString(const QString&);
     void setDisplayFontSize(int size);
-    void setDisplayFontSpacing(const qreal spacing);
-    void setDisplayFontStyle(QFont::StyleStrategy s);
-    void setDisplayFontFixedPitch(bool enable);
+    QFont createFontWithSettings(const QString& fontName, int pointSize) const;
+    std::pair<QString, QFont::Weight> parseFontNameAndStyle(const QString& fontName) const;
+    // The monospaced font Mudlet bundles and falls back to when a wanted one is missing:
+    inline static const QString scmDefaultFontFamily = qsl("Bitstream Vera Sans Mono");
+    struct FontFamilyResolution
+    {
+        QString family;       // family to actually use
+        QFont::Weight weight; // the weight parsed off a "Family Style" name, but only where the
+                              // base family is the one being used; QFont::Normal otherwise
+        bool available;       // false when neither the font database nor the platform's own
+                              // name resolution recognises the name
+    };
+    // Maps a requested font name onto a font this machine can make of it: the name itself
+    // when it is an installed family, else the base family when the name is a "Family Style"
+    // one such as "EB Garamond SemiBold" (with the style as the weight), else either of
+    // those when the platform resolves it for itself the way fontconfig resolves
+    // "Helvetica", else {requested, Normal, false}.
+    FontFamilyResolution resolveFontFamily(const QString& requested) const;
+    // A profile can name a font that is not installed on this machine; Qt would then
+    // silently draw the console in an arbitrary substitute, so switch to the bundled
+    // default (or, for an old-style "Family Style" name, to the installed base family)
+    // and tell the user. A profile asking for the bundled default itself is left
+    // alone even when that is not registered, there being nothing better to move
+    // it to. Returns true when the display font was changed.
+    bool substituteMissingDisplayFont();
+    // What to write into the profile: the display font with the family the profile
+    // asked for put back in place of any stand-in the above had to pick. Saving the
+    // stand-in instead would make this machine's lack of a font the profile's own
+    // choice, everywhere the profile is opened. Everything else wants the real font.
+    QFont getDisplayFontForSaving();
+    int getConsoleBufferSize() const { return mConsoleBufferSize; }
+    void setConsoleBufferSize(int size) { mConsoleBufferSize = size; }
+    bool getUseMaxConsoleBufferSize() const { return mUseMaxConsoleBufferSize; }
+    void setUseMaxConsoleBufferSize(bool useMax) { mUseMaxConsoleBufferSize = useMax; }
     void updateProxySettings(QNetworkAccessManager* manager);
     std::unique_ptr<QNetworkProxy>& getConnectionProxy();
     void updateAnsi16ColorsInTable();
+    void updateExtendedAnsiColorsInTable();
     // Store/retrieve all the settings in one call:
     void setPlayerRoomStyleDetails(const quint8 styleCode, const quint8 outerDiameter = 120, const quint8 innerDiameter = 70, const QColor& outerColor = QColor(), const QColor& innerColor = QColor());
     void getPlayerRoomStyleDetails(quint8& styleCode, quint8& outerDiameter, quint8& innerDiameter, QColor& outerColor, QColor& innerColor);
+    void setSearchOptions(const enums::EditorSearchOptions);
+    void setBufferSearchOptions(const enums::BufferSearchOptions);
+    std::pair<bool, QString> setMapperTitle(const QString&);
+    std::optional<QString> getMapperTitle() const;
+    QDockWidget* mapWidget() const;
+    // Gives TMap::mpMapper back to this profile's own mapper - see the definition.
+    void restoreOwnMapper();
 
+    // Multiple map views support
+    std::pair<int, QString> createMapView(int areaId = 0);
+    std::pair<bool, QString> closeMapView(int viewId);
+    std::pair<int, QString> closeAllMapViews();
+    QList<int> getMapViewIds() const;
+
+    void setDebugShowAllProblemCodepoints(const bool);
+    bool debugShowAllProblemCodepoints() const { return mDebugShowAllProblemCodepoints; }
+    void setCompactInputLine(const bool state);
+    bool getCompactInputLine() const { return mCompactInputLine; }
+    // Only ever raised for a setting that really changed, or a handler that
+    // writes the value back through setConfig() would loop.
+    void raiseSettingChangedEvent(const QString& settingName, const bool value);
+    void setEnableClosedCaption(const bool state);
+    void setAdvertiseScreenReader(const bool state);
+    void setAnnounceIncomingText(const bool state);
+    void setMapperPanelVisible(const bool state);
+    QPointer<TConsole> findConsole(QString name);
+
+    QPair<bool, QStringList> getLines(const QString& windowName, const int lineFrom, const int lineTo);
+    std::pair<bool, QString> openWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area);
+    std::pair<bool, QString> createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height);
+    std::pair<bool, QString> createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height) const;
+    std::pair<bool, QString> createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBg, bool clickthrough);
+    bool setClickthrough(const QString& name, bool clickthrough);
+    bool setLabelStyleSheet(const QString& name, const QString& styleSheet);
+    bool setLinkStyle(const QString& name, const QString& linkColor, const QString& linkVisitedColor, bool underline);
+    bool resetLinkStyle(const QString& name);
+    bool clearVisitedLinks(const QString& name);
+    void hideMudletsVariables();
+    bool createBuffer(const QString& name);
+    QSize calcFontSize(const QString& windowName);
+    bool clearWindow(const QString&);
+    bool showWindow(const QString&);
+    bool hideWindow(const QString&);
+    bool resizeWindow(const QString&, int, int);
+    bool moveWindow(const QString& name, int, int);
+    std::pair<bool, QString> setWindow(const QString& windowname, const QString& name, int x1, int y1, bool show);
+    std::pair<bool, QString> openMapWidget(const QString& area, int x, int y, int width, int height);
+    std::pair<bool, QString> closeMapWidget();
+    std::optional<QRect> mapWidgetGeometry() const;
+    bool closeWindow(const QString&);
+    bool echoWindow(const QString&, const QString&);
+    bool pasteWindow(const QString& name);
+    void loadPackageInfo();
+    bool setCmdLineAction(const QString&, const int);
+    bool resetCmdLineAction(const QString&);
+    bool setLabelClickCallback(const QString&, const int);
+    bool setLabelDoubleClickCallback(const QString&, const int);
+    bool setLabelReleaseCallback(const QString&, const int);
+    bool setLabelMoveCallback(const QString&, const int);
+    bool setLabelWheelCallback(const QString&, const int);
+    bool setLabelOnEnter(const QString&, const int);
+    bool setLabelOnLeave(const QString&, const int);
+    std::pair<bool, QString> setMovie(const QString& labelName, const QString& moviePath);
+    bool setBackgroundColor(const QString& name, int r, int g, int b, int alpha);
+    bool setCommandBackgroundColor(const QString& name, int r, int g, int b, int alpha);
+    bool setCommandForegroundColor(const QString& name, int r, int g, int b, int alpha);
+    std::optional<QColor> getBackgroundColor(const QString& name) const;
+    bool setBackgroundImage(const QString& name, QString& path, int mode, bool fullWindow = false);
+    bool resetBackgroundImage(const QString& name, bool fullWindow = false);
+    bool setSvgTint(const QString& name, const QColor& color);
+    bool resetSvgTint(const QString& name);
+    bool setSvgRotation(const QString& name, double angle);
+    bool resetSvgRotation(const QString& name);
+    bool setSvgShear(const QString& name, double shearX, double shearY);
+    bool resetSvgShear(const QString& name);
+    bool resetSvgTransform(const QString& name);
+    void showHideOrCreateMapper(const bool loadDefaultMap);
+    bool mapperShown() const;
+    bool interceptMapperButton();
+    bool setProfileStyleSheet(const QString& styleSheet);
+    void check_for_mappingscript();
+    void setupIreDriverBugfix();
+
+    void setDockLayoutUpdated(const QString&);
+    void setToolbarLayoutUpdated(TToolBar*);
+    bool commitLayoutUpdates(bool flush = false);
+    void setScreenDimensions(const int width, const int height)
+    {
+        mScreenWidth = width;
+        mScreenHeight = height;
+    }
+    std::optional<QString> windowType(const QString& name) const;
+    std::optional<QRect> windowGeometry(const QString& name) const;
+    std::optional<bool> windowVisible(const QString& name) const;
+    bool getEditorShowBidi() const { return mEditorShowBidi; }
+    void setEditorShowBidi(const bool);
+    bool caretEnabled() const;
+    void setCaretEnabled(bool enabled);
+    bool caretShortcutMatches(const QKeyEvent*) const;
+    void setFocusOnHostActiveCommandLine();
+    void recordActiveCommandLine(TCommandLine*);
+    void forgetCommandLine(TCommandLine*);
+    QPointer<TConsole> parentTConsole(QObject*) const;
+    QMargins borders() const { return mBorders; }
+    QMargins userBorders() const { return mUserBorders; }
+    void setUserBorders(const QMargins);
+    void setMxpBorders(const QMargins);
+    void loadMap();
+    std::tuple<QString, bool> getCmdLineSettings(const TCommandLine::CommandLineType, const QString&);
+    void setCmdLineSettings(const TCommandLine::CommandLineType, const bool, const QString&);
+    int getCommandLineHistorySaveSize() const { return mCommandLineHistorySaveSize; }
+    void setCommandLineHistorySaveSize(const int lines);
+    bool showIdsInEditor() const { return mShowIDsInEditor; }
+    void initMMCPServer();
+    bool setMMCPChatName(const QString&);
+    void setShowIdsInEditor(const bool isShown);
+    bool getF3SearchEnabled() const { return mF3SearchEnabled; }
+    void setF3SearchEnabled(const bool enabled)
+    {
+        mF3SearchEnabled = enabled;
+        if (mpConsole) {
+            mpConsole->setF3SearchEnabled(enabled);
+        }
+    }
+    bool getForceMXPProcessorOn() const { return mForceMXPProcessorOn; }
+    void setForceMXPProcessorOn(bool value)
+    {
+        if (mForceMXPProcessorOn != value) {
+            mForceMXPProcessorOn = value;
+            emit signal_forceMXPProcessorOnChanged(value);
+        }
+    }
+    void sendCmdLine(const QString& cmd);
+    bool fontsAntiAlias() const { return !mNoAntiAlias; }
+
+private:
+    QSettings& profileIni();
+
+    bool mNoAntiAlias = false;
+    // These are used only during profile initiation to provide faked details
+    // for things looking to the main console font before it gets instantiated:
+    std::optional<TFontAttributes> mTempDisplayFontAttributes;
+    std::optional<QFont> mTempDisplayFont;
+    // The family the profile asks for while an installed font stands in for it in
+    // the console, so that saving cannot replace the player's choice with the
+    // stand-in; empty whenever the console shows the family that was asked for.
+    QString mMissingDisplayFontFamily;
+    // Co-owned with the main-console view rather than owned outright: mudlet
+    // destroys the Host before the lingering console widget, so a Host-owned
+    // model would leave the view's aliasing references dangling. Reached
+    // through mainConsoleModel()/sharedMainConsoleModel().
+    std::shared_ptr<TConsoleModel> mpMainConsoleModel;
+    // Non-owning: the views own the models it indexes and keep it in step.
+    TWindowRegistry mWindowRegistry;
+
+    // Initialised ahead of mLuaInterpreter below, whose construction reads it:
+    // initLuaGlobals() posts a message for each Lua module that fails to load, and
+    // Host::postMessage() hands that to cTelnet::postMessage(), which asks
+    // isClosingDown() whether to flush what it has stacked up. Declaration order is
+    // what decides initialisation order, the access specifier between them is not.
+    //
+    // mpConsole's position carries the same weight: it is null for the whole of
+    // construction, so that guard returns before reaching the rest of the function,
+    // which reads members declared much later - mBgColor among them. Same class of
+    // bug as #10229, which had to move a call rather than a declaration.
+    bool mIsClosingDown = false;
+
+public:
+    // Make this the first public member instantiated so we can use ITS font
+    // as the "reference" or "master" font for whole profile - and so we don't
+    // have to maintain a separate one here in this class which does not, as
+    // something derived from a QObject, have one:
+    QPointer<TMainConsole> mpConsole;
     cTelnet mTelnet;
-    QPointer<TConsole> mpConsole;
+    QPointer<dlgPackageManager> mpPackageManager;
+    QPointer<dlgModuleManager> mpModuleManager;
     TLuaInterpreter mLuaInterpreter;
 
-    int commandLineMinimumHeight;
-    bool mAlertOnNewData;
-    bool mAllowToSendCommand;
-    bool mAutoClearCommandLineAfterSend;
+    bool mDisablePasswordMasking = false;
+    int commandLineMinimumHeight = 30;
+    bool mAlertOnNewData = true;
+    bool mAllowToSendCommand = true;
+    bool mAutoClearCommandLineAfterSend = false;
+    bool mHighlightHistory = true;
+
     // Set in constructor and used in (bool) TScript::setScript(const QString&)
     // to prevent compilation of the script that was being set therein, cleared
     // after the main TConsole for a new profile has been created during the
     // period when mIsProfileLoadingSequence has been set:
-    bool mBlockScriptCompile;
-    bool mBlockStopWatchCreation;
-    bool mEchoLuaErrors;
-    int mBorderBottomHeight;
-    int mBorderLeftWidth;
-    int mBorderRightWidth;
-    int mBorderTopHeight;
-    QFont mCommandLineFont;
-    QString mCommandSeparator;
-    bool mEnableGMCP;
-    bool mEnableMSSP;
-    bool mEnableMSP;
-    bool mEnableMSDP;
-    bool mServerMXPenabled;
+    bool mBlockScriptCompile = true;
+    bool mBlockStopWatchCreation = true;
+    bool mEchoLuaErrors = false;
+    QString mCommandSeparator = qsl(";;");
+    bool mEnableGMCP = true;
+    bool mEnableMSSP = true;
+    bool mEnableMSDP = false;
+    bool mEnableMSP = true;
+    bool mEnableMTTS = true;
+    bool mEnableMNES = false;
+    bool mEnableMXP = true;
+    bool mEnableCHARSET = true;
+    bool mEnableNAWS = true;
+    bool mEnableNEWENVIRON = true;
+    bool mPromptedForMXPProcessorOn = false;
+    bool mAskTlsAvailable = true;
+    bool mPromptedForVersionInTTYPE = false;
+
+    int mMSSPTlsPort = 0;
+    QString mMSSPHostName;
+
+    TMxpMudlet mMxpClient;
+    TMxpProcessor mMxpProcessor;
+    TMxpFrameManager mMxpFrameManager;
     QString mMediaLocationGMCP;
     QString mMediaLocationMSP;
     QTextStream mErrorLogStream;
     QMap<QString, QList<TScript*>> mEventHandlerMap;
-    bool mFORCE_GA_OFF;
-    bool mFORCE_NO_COMPRESSION;
-    bool mFORCE_SAVE_ON_EXIT;
-    bool mInsertedMissingLF;
+    bool mFORCE_GA_OFF = false;
+    bool mFORCE_NO_COMPRESSION = false;
+    bool mFORCE_SAVE_ON_EXIT = true;
 
-    bool mSslTsl;
-    bool mAutoReconnect;
-    bool mSslIgnoreExpired;
-    bool mSslIgnoreSelfSigned;
-    bool mSslIgnoreAll;
+    bool mSslTsl = false;
+    bool mSslIgnoreExpired = false;
+    bool mSslIgnoreSelfSigned = false;
+    bool mSslIgnoreAll = false;
 
-    bool mUseProxy;
+    bool mUseProxy = false;
     QString mProxyAddress;
-    quint16 mProxyPort;
+    quint16 mProxyPort = 0;
     QString mProxyUsername;
     QString mProxyPassword;
 
-    bool mIsGoingDown;
     // Used to force the test compilation of the scripts for TActions ("Buttons")
     // that are pushdown buttons that run when they are "pushed down" during
     // loading even though the buttons start out with themselves NOT being
     // pushed down:
-    bool mIsProfileLoadingSequence;
+    bool mIsProfileLoadingSequence = false;
 
-    bool mLF_ON_GA;
-    bool mNoAntiAlias;
 
-    dlgTriggerEditor* mpEditorDialog;
+    QPointer<dlgTriggerEditor> mpEditorDialog;
     QScopedPointer<TMap> mpMap;
     QScopedPointer<TMedia> mpMedia;
-    dlgNotepad* mpNotePad;
+    QScopedPointer<GMCPAuthenticator> mpAuth;
+    QPointer<dlgNotepad> mpNotePad;
 
-    // This is set when we want commands we typed to be shown on the main
-    // TConsole:
-    bool mPrintCommand;
+    // Controls how sent commands are displayed on the main TConsole:
+    enum class CommandEchoMode {
+        Never = 0,         // Never show sent commands regardless of script preferences
+        ScriptControl = 1, // Let scripts control via send() wantPrint parameter (default)
+        Always = 2         // Always show sent commands regardless of script preferences
+    };
+    CommandEchoMode mCommandEchoMode = CommandEchoMode::ScriptControl;
 
     /*
      * This is set when the Server is remote echoing what WE send to it,
@@ -401,21 +758,33 @@ public:
      * hide them on our screen (and from logging!) - It should negate the effect
      * of the above mPrintCommand being true...
      */
-    bool mIsRemoteEchoingActive;
+    bool mIsRemoteEchoingActive = false;
+
+    // Command echo mode getters and setters
+    CommandEchoMode getCommandEchoMode() const { return mCommandEchoMode; }
+    void setCommandEchoMode(CommandEchoMode mode) { mCommandEchoMode = mode; }
+
+    // Backward compatibility methods - for existing code that expects boolean behavior
+    bool getPrintCommand() const { return mCommandEchoMode != CommandEchoMode::Never; }
+    void setPrintCommand(bool print) { mCommandEchoMode = print ? CommandEchoMode::ScriptControl : CommandEchoMode::Never; }
+
+public:
+    void setRemoteEchoingActive(bool active);
+    bool isRemoteEchoingActive() const { return mIsRemoteEchoingActive; }
 
     // To cover the corner case of the user changing the mode
-    // whilst a log is being written, this stores the mode of
+    // while a log is being written, this stores the mode of
     // the current log file and is set from
     // mIsNextLogFileInHtmlFormat at the point that a log is started.
-    bool mIsCurrentLogFileInHtmlFormat;
+    bool mIsCurrentLogFileInHtmlFormat = false;
 
     // To cover the corner case of the user changing the mode
-    // whilst a log is being written, this stores the mode of
+    // while a log is being written, this stores the mode of
     // future logs file as set in the profile preferences. See
     // also mIsCurrentLogFileInHtmlFormat.
-    bool mIsNextLogFileInHtmlFormat;
+    bool mIsNextLogFileInHtmlFormat = false;
 
-    bool mIsLoggingTimestamps;
+    bool mIsLoggingTimestamps = false;
 
     // Where to put HTML/text logfile (default is the "Logs" under the profile's
     // one):
@@ -425,33 +794,58 @@ public:
     // The first argument to QDateTime::toString(...) to generate a date/time
     // dependent filename unless it is empty in which case the above value is
     // used - the previously used value of "yyyy-MM-dd#hh-mm-ss" has been
-    // changed to "yyyy-MM-dd#HH-mm-ss" and is set as a default in the
-    // constructor:
-    QString mLogFileNameFormat;
+    // changed to "yyyy-MM-dd#HH-mm-ss" as we always want a 24-hour clock.
+    QString mLogFileNameFormat = QLatin1String("yyyy-MM-dd#HH-mm-ss");
 
-    bool mResetProfile;
-    int mScreenHeight;
-    int mScreenWidth;
+    bool mResetProfile = false;
+    int mScreenHeight = 25;
+    int mScreenWidth = 90;
 
-    int mTimeout;
+    // has the profile save data been loaded without issues?
+    // if there were issues during loading, we should not save anything on close
+    bool mLoadedOk = false;
+    QString mProfileLoadError;
+
+    int mTimeout = 60;
 
     QString mUrl;
 
-    bool mUSE_FORCE_LF_AFTER_PROMPT;
-    bool mUSE_IRE_DRIVER_BUGFIX;
-    bool mUSE_UNIX_EOL;
-    int mWrapAt;
-    int mWrapIndentCount;
+    QString mBackupHostName;
+    int mBackupPort = 23;
+    QString mBackupUrl;
 
-    bool mEditorAutoComplete;
+    bool mUSE_FORCE_LF_AFTER_PROMPT = false;
+    bool mUSE_IRE_DRIVER_BUGFIX = false;
+    bool mUSE_UNIX_EOL = false;
+    int mWrapAt = 100;
+    int mWrapIndentCount = 0;
+    int mWrapHangingIndentCount = 0;
+    // Rejoin lines that the game hard-wrapped itself so that triggers see the
+    // whole logical line and Mudlet's own wrapping (mWrapAt) handles display:
+    bool mUndoServerWrap = false;
+    int mUndoServerWrapWidth = 80;
 
-    // code editor theme (human-friendly name)
-    QString mEditorTheme;
-    // code editor theme file on disk for edbee to load
-    QString mEditorThemeFile;
+    int mConsoleBufferSize = 100000;
+    bool mUseMaxConsoleBufferSize = false;
+
+    bool mEditorAutoComplete = true;
+
+    // code editor theme for light mode (human-friendly name)
+    QString mEditorTheme = QLatin1String("Mudlet");
+    // code editor theme file for light mode on disk for edbee to load
+    QString mEditorThemeFile = QLatin1String("Mudlet.tmTheme");
+    // code editor theme for dark mode (human-friendly name), auto-populated on first dark mode switch
+    QString mEditorThemeDark;
+    // code editor theme file for dark mode on disk for edbee to load
+    QString mEditorThemeFileDark;
+    QString getEditorTheme() const;
+    QString getEditorThemeFile() const;
+    void editorThemeChanged();
 
     // search engine URL prefix to search query
     QMap<QString, QString> mSearchEngineData;
+    QMap<QString, QMap<QString, QString>> mPackageInfo;
+    QMap<QString, QMap<QString, QString>> mModuleInfo;
     QString mSearchEngineName;
 
     // trigger/alias/script/etc ID whose Lua code to show when previewing a theme
@@ -459,83 +853,116 @@ public:
     // flaws in case of items getting created/deleted, but this is just a
     // convenience feature and if it gets the item wrong, it's no worse
     // than the feature not being there.
-    int mThemePreviewItemID;
+    int mThemePreviewItemID = -1;
     // the type of item (a trigger, an alias, etc) that's previewed
     QString mThemePreviewType;
 
-    QColor mBlack;
-    QColor mLightBlack;
-    QColor mRed;
-    QColor mLightRed;
-    QColor mLightGreen;
-    QColor mGreen;
-    QColor mLightBlue;
-    QColor mBlue;
-    QColor mLightYellow;
-    QColor mYellow;
-    QColor mLightCyan;
-    QColor mCyan;
-    QColor mLightMagenta;
-    QColor mMagenta;
-    QColor mLightWhite;
-    QColor mWhite;
-    QColor mFgColor;
-    QColor mBgColor;
-    QColor mCommandBgColor;
-    QColor mCommandFgColor;
+    QColor mBlack{QColorConstants::Black};
+    QColor mLightBlack{QColorConstants::DarkGray};
+    QColor mRed{QColorConstants::DarkRed};
+    QColor mLightRed{QColorConstants::Red};
+    QColor mLightGreen{QColorConstants::Green};
+    QColor mGreen{QColorConstants::DarkGreen};
+    QColor mLightBlue{QColorConstants::Blue};
+    QColor mBlue{QColorConstants::DarkBlue};
+    QColor mLightYellow{QColorConstants::Yellow};
+    QColor mYellow{QColorConstants::DarkYellow};
+    QColor mLightCyan{QColorConstants::Cyan};
+    QColor mCyan{QColorConstants::DarkCyan};
+    QColor mLightMagenta{QColorConstants::Magenta};
+    QColor mMagenta{QColorConstants::DarkMagenta};
+    QColor mLightWhite{QColorConstants::White};
+    QColor mWhite{QColorConstants::LightGray};
+    QColor mFgColor{QColorConstants::LightGray};
+    QColor mBgColor{QColorConstants::Black};
+    QColor mCommandBgColor{QColorConstants::Black};
+    QColor mCommandFgColor{QColor(113, 113, 0)};
 
-    QColor mBlack_2;
-    QColor mLightBlack_2;
-    QColor mRed_2;
-    QColor mLightRed_2;
-    QColor mLightGreen_2;
-    QColor mGreen_2;
-    QColor mLightBlue_2;
-    QColor mBlue_2;
-    QColor mLightYellow_2;
-    QColor mYellow_2;
-    QColor mLightCyan_2;
-    QColor mCyan_2;
-    QColor mLightMagenta_2;
-    QColor mMagenta_2;
-    QColor mLightWhite_2;
-    QColor mWhite_2;
-    QColor mFgColor_2;
-    QColor mBgColor_2;
-    bool mMapStrongHighlight;
+    QColor mBlack_2{QColorConstants::Black};
+    QColor mLightBlack_2{QColorConstants::DarkGray};
+    QColor mRed_2{QColorConstants::DarkRed};
+    QColor mLightRed_2{QColorConstants::Red};
+    QColor mLightGreen_2{QColorConstants::Green};
+    QColor mGreen_2{QColorConstants::DarkGreen};
+    QColor mLightBlue_2{QColorConstants::Blue};
+    QColor mBlue_2{QColorConstants::DarkBlue};
+    QColor mLightYellow_2{QColorConstants::Yellow};
+    QColor mYellow_2{QColorConstants::DarkYellow};
+    QColor mLightCyan_2{QColorConstants::Cyan};
+    QColor mCyan_2{QColorConstants::DarkCyan};
+    QColor mLightMagenta_2{QColorConstants::Magenta};
+    QColor mMagenta_2{QColorConstants::DarkMagenta};
+    QColor mLightWhite_2{QColorConstants::White};
+    QColor mWhite_2{QColorConstants::LightGray};
+    QColor mFgColor_2{QColorConstants::LightGray};
+    QColor mBgColor_2{QColorConstants::Black};
+    QColor mLowerLevelColor{QColorConstants::DarkGray};
+    QColor mUpperLevelColor{QColorConstants::White};
+    QColor mRoomBorderColor{QColorConstants::LightGray};
+    QColor mRoomCollisionBorderColor{QColorConstants::Yellow};
+    QColor mMapGridColor{QColor(211, 211, 211, 64)};
+
+    QColor mMapInfoBg = QColor(150, 150, 150, 120);
+    bool mMapStrongHighlight = false;
     QStringList mGMCP_merge_table_keys;
-    bool mLogStatus;
-    bool mEnableSpellCheck;
+    bool mLogStatus = false;
+    bool mTimeStampStatus = false;
     QStringList mInstalledPackages;
+    // module name = location on disk, sync to other profiles?, priority
     QMap<QString, QStringList> mInstalledModules;
+    // modules that loaded successfully - used to prevent saving modules that failed to load
+    QSet<QString> mModulesLoadedOk;
+    // module name = priority
     QMap<QString, int> mModulePriorities;
+    // module name = location on disk, sync to other profiles?, priority
     QMap<QString, QStringList> modulesToWrite;
+    // module name = {"helpURL" = custom link}
     QMap<QString, QMap<QString, QString>> moduleHelp;
 
-    // Privacy option to allow the game to set Discord Rich Presence information
-    bool mDiscordDisableServerSide;
+    // Controls how Discord Rich Presence behaves:
+    // DiscordDisabled - RPC shut down, server unaware
+    // DiscordShowMudletOnly - shows "Playing Mudlet", server unaware, Lua can still set fields
+    // DiscordShowGameDetails - full integration with server GMCP/MSDP
+    DiscordMode mDiscordMode = DiscordShowGameDetails;
 
     // Discord privacy options to give the user control over what data a Server
-    // can set over OOB protocols (MSDP & GMCP) and the user via Lua API:
-    DiscordOptionFlags mDiscordAccessFlags;
+    // can set over OOB protocols (MSDP & GMCP):
+    DiscordOptionFlags mDiscordAccessFlags{DiscordSetSubMask};
 
-    double mLineSize;
-    double mRoomSize;
-    bool mShowInfo;
-    bool mBubbleMode;
-    bool mShowRoomID;
-    bool mShowPanel;
-    QString mServerGUI_Package_version;
-    QString mServerGUI_Package_name;
-    bool mAcceptServerGUI;
-    bool mAcceptServerMedia;
-    QColor mCommandLineFgColor;
-    QColor mCommandLineBgColor;
-    bool mMapperUseAntiAlias;
-    bool mFORCE_MXP_NEGOTIATION_OFF;
+    double mLineSize = 10.0;
+    double mRoomBorderSize = 10.0;
+    double mRoomSize = 0.5;
+    double mMapGridLineSize = 0.5;
+    QSet<QString> mMapInfoContributors;
+    bool mBubbleMode = false;
+    bool mMapViewOnly = true;
+    bool mShowRoomID = false;
+    bool mShowPanel = true;
+    bool mShow3DView = false;
+    QString mServerGUI_Package_version = QLatin1String("-1");
+    QString mServerGUI_Package_name = QLatin1String("nothing");
+    bool mAcceptServerGUI = true;
+    bool mAcceptServerMedia = true;
+    QColor mCommandLineFgColor{Qt::darkGray};
+    QColor mCommandLineBgColor{Qt::black};
+    bool mMapperUseAntiAlias = true;
+    bool mMapperShowRoomBorders = true;
+    bool mMapperShowGrid = false;
+    // What the built-in map buttons (main toolbar, Show Map menu entry and its
+    // shortcut, detached window toolbar) do for this profile; scripts set it
+    // through setConfig("mapperButton", ...). Deliberately not saved with the
+    // profile: an uninstalled UI package must not leave the buttons dead for
+    // good, so a script has to re-apply its choice each session.
+    enum class MapperButtonMode { Default, Scripted, Disabled };
+    MapperButtonMode mMapperButtonMode = MapperButtonMode::Default;
+    // Center the map on an area as a whole when it fits entirely in the
+    // viewport, instead of following the player room. Off by default;
+    // configurable via the mapCenterSmallAreas key in Mudlet.ini.
+    bool mMapperCenterSmallAreas = false;
+    bool mVersionInTTYPE = false;
     QSet<QChar> mDoubleClickIgnore;
-    QPointer<QDockWidget> mpDockableMapWidget;
-    bool mEnableTextAnalyzer;
+    bool mEnableTextAnalyzer = false;
+    bool mWritingHostAndModules = false;
     // Set from profile preferences, if the timer interval is less
     // than this then the normal reoccuring debug output of the entire command
     // and script for any timer with a timeout LESS than this is NOT shown
@@ -543,32 +970,160 @@ public:
     // suppressed.
     // An invalid/null value is treated as the "show all"/inactive case:
     QTime mTimerDebugOutputSuppressionInterval;
-    std::unique_ptr<QNetworkProxy> mpDownloaderProxy;
+    std::unique_ptr<QNetworkProxy> mpConnectionProxy;
     QString mProfileStyleSheet;
+    enums::EditorSearchOptions mSearchOptions = enums::EditorSearchOptionNone;
+    enums::BufferSearchOptions mBufferSearchOptions = enums::BufferSearchOptionNone;
+    QPointer<dlgIRC> mpDlgIRC;
+    QPointer<MMCPServer> mMMCPServer;
+    QPointer<dlgProfilePreferences> mpDlgProfilePreferences;
+    QList<QString> mDockLayoutChanges;
+    QList<QPointer<TToolBar>> mToolbarLayoutChanges;
+
+    // string list: 0 - event name, 1 - display label, 2 - tooltip text
+    QMap<QString, QStringList> mConsoleActions;
+
+    std::map<QString, std::unique_ptr<QKeySequence>> profileShortcuts;
+
+    bool mTutorialForCompactLineAlreadyShown = false;
+
+    bool mAnnounceIncomingText = true;
+    bool mAdvertiseScreenReader = false;
+    bool mEnableClosedCaption = false;
+
+    // Turning this off both ignores incoming OSC 8 sequences and advertises 0
+    // for them, so a server can fall back to MXP or plain text rather than
+    // sending links Mudlet will not render. It is checked as sequences are
+    // decoded, so links already drawn in the buffer stay clickable.
+    bool mEnableOSC8Hyperlinks = true;
+
+    enum class BlankLineBehaviour { Show, Hide, ReplaceWithSpace };
+    Q_ENUM(BlankLineBehaviour)
+    BlankLineBehaviour mBlankLineBehaviour = BlankLineBehaviour::Show;
+
+    // shortcuts options visually impaired players have to switch between the input line and the main window
+    enum class CaretShortcut { None, Tab, CtrlTab, F6 };
+    Q_ENUM(CaretShortcut)
+    // shortcut to switch between the input line and the main window
+    CaretShortcut mCaretShortcut = CaretShortcut::None;
+
+    // stops all triggers/aliases/everything from running
+    bool mEmergencyStop = false;
 
 signals:
     // Tells TTextEdit instances for this profile how to draw the ambiguous
     // width characters:
     void signal_changeIsAmbigousWidthGlyphsToBeWide(bool);
+    // Tells TTextEdit instances for this profile whether to animate blinking text:
+    void signal_changeEnableBlinkText(bool);
     void profileSaveStarted();
     void profileSaveFinished();
     void signal_changeSpellDict(const QString&);
+    // Spell check has just been turned on, so the system dictionary is wanted
+    // where it was not before. The main console reads it off the event loop.
+    void signal_spellCheckEnabled();
+    // To tell all TConsole's upper TTextEdit panes to report all Codepoint
+    // problems as they arrive as well as a summary upon destruction:
+    void signal_changeDebugShowAllProblemCodepoints(const bool);
+    // Tells all consoles associated with this Host (but NOT the Central Debug
+    // one) to change the way they show  control characters:
+    void signal_controlCharacterHandlingChanged(const ControlCharacterMode);
+    // Tells all command lines to save their history:
+    void signal_saveCommandLinesHistory();
+    void mmcpChatNameChanged(const QString&);
+    void signal_editorThemeChanged();
+    void signal_remoteEchoChanged(bool enabled);
+    void signal_forceMXPProcessorOnChanged(bool enabled);
+    // The frontend (TMainConsole) owns the dialogs these drive; the strings are
+    // built here so they stay in Host's translation context.
+    void signal_showMapperScriptReminder();
+    void signal_showUnpackingProgress(const QString& message, const QString& title);
+    void signal_hideUnpackingProgress();
+    // Raised while logging is still off when a log starts, and already off when
+    // one stops, so that the frontend's print lands on screen but outside the
+    // log file. That only holds while the connection is direct - a queued one
+    // would deliver it after the flag has moved and log the announcement.
+    void signal_loggingAnnouncement(const bool isLogging, const QString& logFileName);
+    // Raised once a logging change has settled, for the frontend's log button.
+    void signal_loggingStateChanged(const bool isLogging);
+    void signal_editorCleanResetRequested();
+    void signal_packageListChanged();
+    void signal_profileStyleSheetChanged(const QString& styleSheet);
+    void signal_consoleFontChanged(const QFont& font);
+    void signal_editorSearchOptionsChanged(const enums::EditorSearchOptions);
+    void signal_editorShowBidiChanged(const bool);
+    void signal_showIdsInEditorChanged(const bool);
+
+public slots:
+    void slot_timerFires();
 
 private slots:
-    void slot_reloadModules();
+    void slot_purgeTemps();
+    void slot_saveProfileAfterPackageChange();
 
 private:
-    void installPackageFonts(const QString &packageName);
+    // Stores a boolean setting and tells scripts about it.
+    void changeSetting(bool& setting, const bool state, const QString& settingName);
+    void setBorders(const QMargins);
+    void installPackageFonts(const QString& packageName);
     void processGMCPDiscordStatus(const QJsonObject& discordInfo);
     void processGMCPDiscordInfo(const QJsonObject& discordInfo);
-    void updateModuleZips() const;
     void loadSecuredPassword();
     void removeAllNonPersistentStopWatches();
     void updateConsolesFont();
+    void thankForUsingPTB();
+    void toggleMapperVisibility();
+    void createMapper(const bool);
+    void removePackageInfo(const QString& packageName, const bool);
+    static void createModuleBackup(const QString& filename, const QString& saveName);
+    // A single module queued to be written out during a profile save. Its XML document
+    // is built on the main thread (XMLexport::writeModuleXML()); serializing it to disk
+    // is deferred to a background task. The job is a complete, self-contained order:
+    // its own copy of the document plus every path the write needs, so it holds nothing
+    // whose lifetime the Host controls. It has to: a close that answers "No" to "Save
+    // profile?", and one that finds the main console already gone, wait for nothing, so
+    // the Host can be destroyed while the write is still queued.
+    struct ModuleWriteJob
+    {
+        std::shared_ptr<pugi::xml_document> document;
+        QString moduleName;
+        QString filename;
+        QString xmlFilename;
+        // Empty when this save is not to be backed up first.
+        QString backupName;
+    };
+    // Main thread only: builds every to-be-synced module's XML document, registers its
+    // writer in `writers`, resolves every path and creates the directories the write
+    // needs, returning the jobs a background task should serialize.
+    QList<ModuleWriteJob> prepareModuleSaves(bool backup);
+    // Writes the prepared module documents (and updates their zips) to disk. Static on
+    // purpose: it must keep working after the Host that ordered it has been destroyed,
+    // so it may not reach for any member. Usually a thread pool task, but a waiter in
+    // waitForProfileSave() can steal it onto the main thread, so it must suit either.
+    static void writeModuleFiles(const QList<ModuleWriteJob>& jobs);
+    static void updateModuleZip(const ModuleWriteJob& job);
+    // Main thread only: snapshot of the still-pending profile-save futures, so a
+    // background task never reads `writers`/`saveFutures` while the main thread mutates
+    // them (that concurrent access is a heap-corrupting data race).
+    QList<QFuture<bool>> pendingXmlSaveFutures() const;
+    void waitForAsyncXmlSave();
+    void reloadModules();
+    void startMapAutosave(const int interval);
+    void timerEvent(QTimerEvent* event) override;
+    void autoSaveMap();
+    QString sanitizePackageName(const QString packageName) const;
+    TCommandLine* activeCommandLine();
+    void closeChildren();
+    void setupSandboxedLuaState(lua_State* L);
 
-    QFont mDisplayFont;
     QStringList mModulesToSync;
     QScopedPointer<LuaInterface> mLuaInterface;
+
+    // Experiment system storage: key -> enabled state
+    QMap<QString, bool> mExperiments;
+
+    // Static whitelist of valid experiments
+    static const QSet<QString> mValidExperiments;
 
     TriggerUnit mTriggerUnit;
     TimerUnit mTimerUnit;
@@ -576,8 +1131,16 @@ private:
     AliasUnit mAliasUnit;
     ActionUnit mActionUnit;
     KeyUnit mKeyUnit;
-
-    QString mBufferIncomingData;
+    GifTracker mGifTracker;
+    // The profile save that a package/module install or uninstall owes is put off
+    // to the next event loop pass, so that the asynchronous save mechanism is not
+    // asked to write out something that was just taken out of memory. Restarting
+    // this timer also folds a batch of installs/uninstalls into a single save.
+    // It has to be a member timer rather than a QTimer::singleShot(): a call
+    // queued on the Host is still delivered after the Host has been destroyed,
+    // and the save then reads freed members - closeChildren() and ~Host() stop
+    // this one instead (#9653).
+    QTimer mDeferredSaveTimer;
 
     QFile mErrorLogFile;
 
@@ -585,83 +1148,101 @@ private:
 
     int mHostID;
     QString mHostName;
-
-    bool mIsClosingDown;
+    QString mDiscordGameName; // Discord self-reported game name
 
     QString mLine;
-    QMutex mLock;
+    // Storage runTriggers() lends out for the line it hands the trigger system,
+    // kept between lines for its capacity alone - it holds nothing meaningful
+    // outside that call. Past this length the capacity is dropped instead of
+    // kept, so one outsized line cannot hold its allocation for the rest of the
+    // session; no game line comes close to it.
+    static constexpr qsizetype scmMaxRetainedHaystack = 8192;
+    QString mTriggerHaystack;
     QString mLogin;
     QString mPass;
 
     int mPort;
 
-    int mRetries;
-    bool mSaveProfileOnExit;
+    // Reset to false whenever a connection is (re)established; set true by Host::send() on the first
+    // user/script command. See userSentInputThisConnection().
+    bool mUserSentInputThisConnection = false;
 
-    QString mUserDefinedName;
+    int mRetries = 5;
+    bool mSaveProfileOnExit = false;
 
     // To keep things simple for Lua the first stopwatch will be allocated a key
     // of 1 - and anything less that that will be rejected - and we force
     // createStopWatch() to return 0 during script loading so that we do not get
     // superious stopwatches from being created then (when
     // mIsProfileLoadingSequence is true):
-    QMap<int, stopWatch*> mStopWatchMap;
+    std::map<int, std::unique_ptr<stopWatch>> mStopWatchMap;
 
     QMap<QString, QStringList> mAnonymousEventHandlerFunctions;
 
     QStringList mActiveModules;
 
-    QPushButton* uninstallButton;
-    QListWidget* packageList;
-    QListWidget* moduleList;
-    QPushButton* moduleUninstallButton;
-    QPushButton* moduleInstallButton;
-
-    bool mHaveMapperScript;
+    bool mHaveMapperScript = false;
     // This option makes the control on the preferences tristated so the value
     // used depends - currently - on what the MUD Server encoding is (only set
-    // true for GBK and GB18030 ones) - however this is likely to be due for
-    // revision once locale/language support is brought in - when it can be
-    // made dependent on that instead.
-    bool mAutoAmbigousWidthGlyphsSetting;
+    // true for GBK, GB18030, Big5/Big-HKCS, EUC-KR ones) - however this was
+    // due for revision once locale/language support is brought in - when it
+    // could be made dependent on that instead.
+    bool mAutoAmbigousWidthGlyphsSetting = true;
     // If above is true is the value deduced from the MUD server encoding, if
     // the above is false is the user's direct setting - this is so that changes
     // in the TTextEdit classes are only made when necessary:
-    bool mWideAmbigousWidthGlyphs;
+    bool mWideAmbigousWidthGlyphs = false;
+
+    // Whether to animate blinking text (SGR codes 5 and 6) with a pulse effect
+    bool mEnableBlinkText = false;
 
     // keeps track of all of the array writers we're currently operating with
-    QHash<QString, XMLexport*> writers;
+    QHash<QString, std::shared_ptr<XMLexport>> writers;
+
+    QFuture<void> mModuleFuture;
 
     // Will be null/empty if is to use Mudlet's default/own presence
     QString mDiscordApplicationID;
 
-    // Will be null/empty if we are not concerned to check the use of Discord
-    // Rich Presence against the local user currently logged into Discord -
-    // these two will be checked against the values from the Discord instance
-    // with which we are linked to by the RPC library - and if they do not match
-    // we won't use Discord functions.
+    // Will be null/empty if they have not set their own invite
+    QString mDiscordInviteURL;
+
+    // If non-empty, Rich Presence will only be shown when logged into this
+    // Discord username - useful if multiple people share a machine.
     QString mRequiredDiscordUserName;
-    QString mRequiredDiscordUserDiscriminator;
+
+    QString mMMCPChatName;
+    QString mMMCPChatPrefix;
+    quint16 mMMCPChatPort;
+    bool mMMCPAutostartServer;
+    bool mMMCPAllowPeekRequests;
+    bool mMMCPPrefixEmotes;
+    bool mMMCPAddChatMessageNewline;
+    bool mMMCPAutoAcceptCalls;
+    bool mMMCPShowSnoopInMainConsole;
 
     // Handles whether to treat 16M-Colour ANSI SGR codes which only use
     // semi-colons as separator have the initial Colour Space Id parameter
     // (true) or not (false):
-    bool mSGRCodeHasColSpaceId;
+    bool mSGRCodeHasColSpaceId = false;
 
     // Flag whether the Server can use ANSI OSC "P#RRGGBB\" to redefine the
     // 16 basic colors (and OSC "R\" to reset them).
-    bool mServerMayRedefineColors;
+    bool mServerMayRedefineColors = false;
 
-    // Was public but hidden to prevent it being changed without going through
-    // the process to signal to users that they need to change dictionaries:
+    // Empty until a dictionary is chosen: getSpellDic() substitutes the
+    // platform's starting one, so reading this member directly under-reports
+    // what the profile is using. Private so that setSpellDic() can push the
+    // change into a live console:
     QString mSpellDic;
     // These are hidden to prevent them being changed directly, they are also
     // mirrored/cached in the main TConsole's instance so they do not need to be
     // looked up directly by that class:
-    bool mEnableUserDictionary;
-    bool mUseSharedDictionary;
+    bool mEnableSpellCheck = true;
+    bool mEnableUserDictionary = true;
+    bool mUseSharedDictionary = false;
 
-    // These hold values that are needed in the TMap clas which are saved with
+    // These hold values that are needed in the TMap class which are saved with
     // the profile - but which cannot be kept there as that class is not
     // necessarily instantiated when the profile is read.
     // Base color(s) for the player room in the mappers:
@@ -670,18 +1251,83 @@ private:
     // 1 is Fixed red color ring with adjustable outer/inner diameter
     // 2 is fixed blue/yellow colors ring with adjustable outer/inner diameter
     // 3 is adjustable outer(primary)/inner(secondary) colors ring with adjustable outer/inner diameter
-    quint8 mPlayerRoomStyle;
-    QColor mPlayerRoomOuterColor;
-    QColor mPlayerRoomInnerColor;
+    quint8 mPlayerRoomStyle = 0;
+    QColor mPlayerRoomOuterColor{Qt::red};
+    QColor mPlayerRoomInnerColor{Qt::white};
     // Percentage of the room size (actually width) for the outer diameter of
     // the circular marking, integer percentage clamped in the preferences
-    // between 200 and 50 - default 120:
-    quint8 mPlayerRoomOuterDiameterPercentage;
+    // between 200 and 50:
+    quint8 mPlayerRoomOuterDiameterPercentage = 120;
     // Percentage of the outer size for the inner diameter of the circular
-    // marking, integer percentage clamped in the preferences between 83 and 0,
-    // with a default of 70. NOT USED FOR "Original" style marking (the 0'th
-    // one):
-    quint8 mPlayerRoomInnerDiameterPercentage;
+    // marking, integer percentage clamped in the preferences between 83 and 0.
+    // NOT USED FOR "Original" style marking (the 0'th one):
+    quint8 mPlayerRoomInnerDiameterPercentage = 70;
+    // Whether the TTextEditor class should immediately report to debug output
+    // any dodgy codepoints that it has problems with - if false it only reports
+    // each codepoint the first time it encounters itL
+    bool mDebugShowAllProblemCodepoints = false;
+
+    // Now a per profile option this one represents the state of this profile:
+    bool mCompactInputLine = false;
+
+    QTimer purgeTimer;
+
+    // How to display (most) incoming control characters in TConsoles:
+    // ControlCharacterMode::AsIs (0x0) = as is, no replacement
+    // ControlCharacterMode::Picture (0x1) = as Unicode "Control
+    //   Pictures" - use Unicode codepoints in range U+2400 to U+2421
+    // ControlCharacterMode::OEM (0x2) = as "OEM Font"
+    //   characters (most often seen as a part of CP437
+    //   encoding), see the corresponding Wikipedia page, e.g.
+    //   EN: https://en.wikipedia.org/wiki/Code_page_437
+    //   DE: https://de.wikipedia.org/wiki/Codepage_437
+    //   RU: https://ru.wikipedia.org/wiki/CP437
+    ControlCharacterMode mControlCharacter = ControlCharacterMode::AsIs;
+
+    bool mLargeAreaExitArrows = false;
+    bool mEditorShowBidi = true;
+    // should focus should be on the main window with the caret enabled?
+    bool mCaretEnabled = false;
+
+    // Tracks which command line was last used for this profile so that we can
+    // return to it when switching between profiles:
+    QStack<QPointer<TCommandLine>> mpLastCommandLineUsed;
+
+    // ensures that only one "zero-time" timer is created by the lambda in
+    // setFocusOnHostActiveCommandLine(), even when it is called multiple
+    // times:
+    bool mFocusTimerRunning = false;
+
+    QMargins mBorders;
+    QMargins mUserBorders;
+    QMargins mMxpBorders;
+
+    // The range - applied to ALL command lines - is 0 to 10000, with the knob
+    // on the profile preferences having a log-step action with multiples
+    // of 10 to integer powers and steps of (0,) 10, 20, 50, 100. Prior to the
+    // introduction of this feature the control would effectively have been
+    // zero - and whilst the knob shows the special value of "None" then
+    // to reproduce that behavior there is little reason to not enable it
+    // by default:
+    int mCommandLineHistorySaveSize = 500;
+
+    // Whether to display each item's ID number in the editor:
+    bool mShowIDsInEditor = false;
+
+    // Whether F3 search functionality is enabled
+    bool mF3SearchEnabled = false;
+
+    // Whether to force the MXP processor to be on, even if not negotiated with the
+    // MUD Server
+    bool mForceMXPProcessorOn = false;
+
+    // Set when the mudlet singleton demands that we close - used to force an
+    // attempt to save the profile and map - without asking:
+    bool mForcedClose = false;
+
+    // Only reach through profileIni(): setName() nulls this so the path
+    // follows the name.
+    QSettings* mpProfileIni = nullptr;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)

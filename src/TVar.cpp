@@ -21,7 +21,6 @@
 
 
 #include "TVar.h"
-#include <lua.h> // Needed for LUA_TNONE in Constructors!
 
 /*
  * LUA type values from lua.h for lua 5.1:
@@ -37,52 +36,27 @@
  * LUA_TTHREAD          8
  */
 
-TVar::TVar()
-: hidden(false)
-, kpointer(Q_NULLPTR)
-, vpointer(Q_NULLPTR)
-, saved(false)
-, reference(false)
-, parent(Q_NULLPTR)
-, name(QString())
-, kType(LUA_TNONE)
-, value(QString())
-, vType(LUA_TNONE)
-, nkType(LUA_TNONE)
-, nName(QString())
-{
-}
+TVar::TVar() {}
 
 TVar::TVar(TVar* p)
-: hidden(false)
-, kpointer(Q_NULLPTR)
-, vpointer(Q_NULLPTR)
-, saved(false)
-, reference(false)
-, parent(p)
-, name(QString())
-, kType(LUA_TNONE)
-, value(QString())
-, vType(LUA_TNONE)
-, nkType(LUA_TNONE)
-, nName(QString())
+: parent(p)
 {
 }
 
 TVar::TVar(TVar* p, const QString& kName, const int kt, const QString& val, const int vt)
-: hidden(false)
-, kpointer(Q_NULLPTR)
-, vpointer(Q_NULLPTR)
-, saved(false)
-, reference(false)
-, parent(p)
+: parent(p)
 , name(kName)
-, kType(kt)
+, keyType(kt)
 , value(val)
-, vType(vt)
-, nkType(LUA_TNONE)
-, nName(QString())
+, valueType(vt)
 {
+}
+
+TVar::~TVar()
+{
+    // Delete all children recursively
+    qDeleteAll(children);
+    children.clear();
 }
 
 void TVar::setReference(const bool s)
@@ -95,27 +69,45 @@ void TVar::addChild(TVar* c)
     children.append(c);
 }
 
-QString TVar::getName()
+QString TVar::getName() const
 {
     return name;
 }
 
+// std::sort() may walk off the ends of the range it is given unless this is a
+// strict weak ordering, so every pair of names has to be placed the same way
+// whichever other names are around. Only the out-parameter of toInt() says
+// whether a name is a number: its return value cannot, since "0" and a name
+// that is no number at all both convert to zero. Deciding it by the value put
+// the names into groups that contradicted each other - "2" < "10" < "11a" <
+// "2" was a cycle a table of mixed names really produced (#9956).
 bool TVarLessThan(TVar* varA, TVar* varB)
 {
-    QString a = varA->getName();
-    QString b = varB->getName();
-    bool isAOk = false;
-    bool isBOk = false;
+    const QString a = varA->getName();
+    const QString b = varB->getName();
+    bool isANumber = false;
+    bool isBNumber = false;
+    const int aNumber = a.toInt(&isANumber);
+    const int bNumber = b.toInt(&isBNumber);
 
-    // Previously we do not check the result of a toInt() call on the QStrings
-    // but they would happly return a zero value for a QString that can not be
-    // converted to a number and then the IF branch would be taken regardless
-    // of whether one or both of the QStrings was NOT actually a number
-    if (a.toInt(&isAOk) && b.toInt(&isBOk) && isAOk && isBOk) {
-        return a.toInt() < b.toInt();
-    } else {
-        return a.toLower() < b.toLower();
+    if (isANumber != isBNumber) {
+        // Numbers ahead of names. Which way round is arbitrary - what matters
+        // is that it is the same way round for every such pair, so that the two
+        // kinds of name form two blocks rather than interleaving by whatever
+        // else is in the table.
+        return isANumber;
     }
+    if (isANumber) {
+        return aNumber < bNumber;
+    }
+    const QString aFolded = a.toLower();
+    const QString bFolded = b.toLower();
+    if (aFolded != bFolded) {
+        return aFolded < bFolded;
+    }
+    // "A" and "a" fold together, and leaving them equivalent would leave their
+    // order down to whatever the sort happened to do with them
+    return a < b;
 }
 
 QList<TVar*> TVar::getChildren(const bool isToSort)
@@ -141,43 +133,57 @@ void TVar::removeChild(TVar* t)
     children.removeAll(t);
 }
 
-int TVar::getKeyType()
+int TVar::getKeyType() const
 {
-    return kType;
+    return keyType;
 }
 
-QString TVar::getValue()
+QString TVar::getValue() const
 {
     return value;
 }
 
-int TVar::getValueType()
+int TVar::getValueType() const
 {
-    return vType;
+    return valueType;
 }
 
 void TVar::setNewName(const QString& n, const int t)
 {
     nName = n;
-    nkType = t;
+    newKeyType = t;
 }
 
-int TVar::getNewKeyType()
+int TVar::getNewKeyType() const
 {
-    return nkType;
+    return newKeyType;
 }
 
-QString TVar::getNewName()
+QString TVar::getNewName() const
 {
     return nName;
 }
 
+// Commits a rename that has happened: the variable now answers to the name it
+// was renamed to, so this node has to as well. Only call it once Lua holds the
+// variable under that name - see abandonNewName() for the other outcome.
 void TVar::clearNewName()
 {
     name = nName;
-    kType = nkType;
+    keyType = newKeyType;
     nName = QString();
-    nkType = LUA_TNIL; // CHECK: Was 0 but perhaps it should have been -1 (LUA_TNONE ?)
+    newKeyType = LUA_TNIL; // CHECK: Was 0 but perhaps it should have been -1 (LUA_TNONE ?)
+}
+
+// Drops a rename that is not going to happen, leaving the node naming the
+// variable Lua still has. clearNewName() was used for this too, which put the
+// refused name onto the node: every later read and write then went looking for
+// a variable of that name - and if the rename was refused because a sibling
+// already had it, that sibling is what they would have found.
+void TVar::abandonNewName()
+{
+    nName = QString();
+    newKeyType = LUA_TNIL;
 }
 
 bool TVar::setValue(const QString& val)
@@ -189,20 +195,20 @@ bool TVar::setValue(const QString& val)
 bool TVar::setValue(const QString& val, const int t)
 {
     value = val;
-    vType = t;
+    valueType = t;
     return true;
 }
 
 bool TVar::setValueType(const int t)
 {
-    vType = t;
+    valueType = t;
     return true;
 }
 
 bool TVar::setName(const QString& n, const int kt)
 {
     name = n;
-    kType = kt;
+    keyType = kt;
     return true;
 }
 

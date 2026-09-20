@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2017, 2021-2022 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -23,28 +24,42 @@
 #include "TAlias.h"
 
 
+#include "AliasUnit.h"
 #include "Host.h"
 #include "TDebug.h"
-#include "mudlet.h"
+#include "TLuaInterpreter.h"
+#include "utils.h"
+
+#include <QByteArray>
+#include <QColor>
+#include <QDebug>
+#include <QMap>
+#include <QMultiMap>
+#include <QPair>
+#include <QSharedPointer>
+
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
+#include <list>
+#include <string>
+#include <utility>
+
+static void pcre2_match_data_deleter(pcre2_match_data* pointer)
+{
+    pcre2_match_data_free(pointer);
+}
 
 TAlias::TAlias(TAlias* parent, Host* pHost)
-: Tree<TAlias>( parent )
-, mpHost( pHost )
-, mNeedsToBeCompiled( true )
-, mModuleMember(false)
-, mModuleMasterFolder(false)
-, exportItem(true)
+: Tree<TAlias>(parent)
+, mpHost(pHost)
 {
 }
 
 TAlias::TAlias(const QString& name, Host* pHost)
 : Tree<TAlias>(nullptr)
-, mName( name )
-, mpHost( pHost )
-, mNeedsToBeCompiled( true )
-, mModuleMember(false)
-, mModuleMasterFolder(false)
-, exportItem(true)
+, mName(name)
+, mpHost(pHost)
 {
 }
 
@@ -54,6 +69,14 @@ TAlias::~TAlias()
         return;
     }
     mpHost->getAliasUnit()->unregisterAlias(this);
+
+    if (isTemporary()) {
+        if (mScript.isEmpty()) {
+            mpHost->mLuaInterpreter.delete_luafunction(this);
+        } else {
+            mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
+        }
+    }
 }
 
 void TAlias::setName(const QString& name)
@@ -62,17 +85,25 @@ void TAlias::setName(const QString& name)
         mpHost->getAliasUnit()->mLookupTable.remove(mName, this);
     }
     mName = name;
-    mpHost->getAliasUnit()->mLookupTable.insertMulti(name, this);
+    mpHost->getAliasUnit()->mLookupTable.insert(name, this);
 }
 
-bool TAlias::match(const QString& toMatch)
+bool TAlias::match(const QString& haystack)
 {
+    // Guard against re-entrancy: cleanup may have deleted this alias while
+    // match() was still on the call stack
+    if (!mpMyChildrenList) {
+        qWarning() << "TAlias::match() called on destroyed alias - ID:" << mID << "Name:" << mName;
+        return false;
+    }
+
+    bool matchCondition = false;
     if (!isActive()) {
         if (isFolder()) {
             if (shouldBeActive()) {
-                bool matchCondition = false;
-                for (auto alias : *mpMyChildrenList) {
-                    if (alias->match(toMatch)) {
+                for (auto* aliasNode : *mpMyChildrenList) {
+                    auto* alias = static_cast<TAlias*>(aliasNode);
+                    if (alias->match(haystack)) {
                         matchCondition = true;
                     }
                 }
@@ -82,52 +113,63 @@ bool TAlias::match(const QString& toMatch)
         return false;
     }
 
-    bool matchCondition = false;
-    //bool ret = false;
-    //bool conditionMet = false;
-    QSharedPointer<pcre> re = mpRegex;
+    QSharedPointer<pcre2_code> re = mpRegex;
     if (re == nullptr) {
         return false; //regex compile error
     }
 
-#if defined(Q_OS_WIN32)
-    // strndup(3) - a safe strdup(3) does not seem to be available on mingw32 with GCC-4.9.2
-    char* subject = (char*)malloc(strlen(toMatch.toUtf8().constData()) + 1);
-    strcpy(subject, toMatch.toUtf8().constData());
-#else
-    char* subject = strndup(toMatch.toUtf8().constData(), strlen(toMatch.toUtf8().constData()));
-#endif
-    unsigned char* name_table;
-    int namecount;
-    int name_entry_size;
+    const QByteArray utf8Data = haystack.toUtf8();
+    const size_t utf8Length = utf8Data.size();
+    char* haystackC = static_cast<char*>(malloc(utf8Length + 1));
+    if (!haystackC) {
+        return false;
+    }
+    memcpy(haystackC, utf8Data.constData(), utf8Length);
+    haystackC[utf8Length] = '\0';
 
-    int subject_length = strlen(subject);
-    int rc, i;
+    // These must be initialised before any goto so the latter does not jump
+    // over them:
+    uint32_t namecount = 0;
+    PCRE2_SPTR tabptr = nullptr;
+    NameGroupMatches nameGroups;
+    QMap<QString, QPair<int, int>> namePositions;
     std::list<std::string> captureList;
     std::list<int> posList;
-    int ovector[300]; // 100 capture groups max (can be increase nbGroups=1/3 ovector
+    uint32_t name_entry_size = 0;
+    int haystackCLength = strlen(haystackC);
+    int rc = 0;
+    int i = 0;
+    pcre2_match_data* match_data = nullptr;
+    PCRE2_SIZE* ovector = nullptr;
 
-    //cout <<" LINE="<<subject<<endl;
-    if (mRegexCode.size() > 0) {
-        rc = pcre_exec(re.data(), nullptr, subject, subject_length, 0, 0, ovector, 100);
-    } else {
+    if (mRegexCode.isEmpty()) {
         goto MUD_ERROR;
     }
 
+    if (!mpMatchData) {
+        mpMatchData.reset(pcre2_match_data_create_from_pattern(re.data(), nullptr), pcre2_match_data_deleter);
+    }
+    match_data = mpMatchData.data();
+    if (!match_data) {
+        goto MUD_ERROR;
+    }
+
+    rc = pcre2_match(re.data(), reinterpret_cast<PCRE2_SPTR>(haystackC), haystackCLength, 0, 0, match_data, nullptr);
+
     if (rc < 0) {
         goto MUD_ERROR;
-    } else if (rc == 0) {
-        qDebug() << "CRITICAL ERROR: SHOULD NOT HAPPEN->pcre_info() got wrong num of cap groups ovector only has room for %d captured substrings\n";
-    } else {
-        if (mudlet::debugMode) {
-            TDebug(QColor(Qt::cyan), QColor(Qt::black)) << "Alias name=" << mName << "(" << mRegexCode << ") matched.\n" >> 0;
-        }
+    }
+
+    ovector = pcre2_get_ovector_pointer(match_data);
+
+    if (TDebug::wants(TDebug::Category::Alias)) {
+        TDebug(Qt::cyan, Qt::black, TDebug::Category::Alias, mName) << "Alias name=" << mName << "(" << mRegexCode << ") matched.\n" >> mpHost;
     }
 
     matchCondition = true; // alias has matched
 
     for (i = 0; i < rc; i++) {
-        char* substring_start = subject + ovector[2 * i];
+        char* substring_start = haystackC + ovector[2 * i];
         int substring_length = ovector[2 * i + 1] - ovector[2 * i];
 
         std::string match;
@@ -136,57 +178,62 @@ bool TAlias::match(const QString& toMatch)
             posList.push_back(-1);
             continue;
         }
+        const int utf16_pos = QString::fromUtf8(haystackC, ovector[2 * i]).length();
         match.append(substring_start, substring_length);
         captureList.push_back(match);
-        posList.push_back(ovector[2 * i]);
-        if (mudlet::debugMode) {
-            TDebug(QColor(Qt::darkCyan), QColor(Qt::black)) << "Alias: capture group #" << (i + 1) << " = " >> 0;
-            TDebug(QColor(Qt::darkMagenta), QColor(Qt::black)) << "<" << match.c_str() << ">\n" >> 0;
+        posList.push_back(utf16_pos);
+        if (TDebug::wants(TDebug::Category::Alias)) {
+            TDebug(Qt::darkCyan, Qt::black, TDebug::Category::Alias, mName) << "Alias: capture group #" << (i + 1) << " = " >> mpHost;
+            TDebug(Qt::darkMagenta, Qt::black, TDebug::Category::Alias, mName) << TDebug::csmContinue << "<" << match.c_str() << ">\n" >> mpHost;
         }
     }
-    pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMECOUNT, &namecount);
 
-    if (namecount <= 0) {
-        //cout << "no named substrings detected" << endl;
-    } else {
-        unsigned char* tabptr;
-        pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMETABLE, &name_table);
+    pcre2_pattern_info(re.data(), PCRE2_INFO_NAMECOUNT, &namecount);
 
-        pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMEENTRYSIZE, &name_entry_size);
-
-        tabptr = name_table;
-        for (i = 0; i < namecount; i++) {
-            //int n = (tabptr[0] << 8) | tabptr[1];
+    if (namecount > 0) {
+        pcre2_pattern_info(re.data(), PCRE2_INFO_NAMETABLE, &tabptr);
+        pcre2_pattern_info(re.data(), PCRE2_INFO_NAMEENTRYSIZE, &name_entry_size);
+        for (uint32_t j = 0; j < namecount; ++j) {
+            const int n = (tabptr[0] << 8) | tabptr[1];
+            auto name = QString::fromUtf8(reinterpret_cast<const char*>(&tabptr[2])).trimmed();
             tabptr += name_entry_size;
+            if (ovector[2 * n] == PCRE2_UNSET) {
+                continue;
+            }
+            auto* substring_start = haystackC + ovector[2 * n];
+            auto substring_length = ovector[2 * n + 1] - ovector[2 * n];
+            auto utf16_pos = QString::fromUtf8(haystackC, ovector[2 * n]).length();
+            auto capture = QString::fromUtf8(substring_start, substring_length);
+            nameGroups << qMakePair(name, capture);
+            namePositions.insert(name, qMakePair(utf16_pos, static_cast<int>(capture.length())));
         }
     }
-    //TODO: add named groups seperately later as Lua::namedGroups
+
     for (;;) {
-        int options = 0;
-        int start_offset = ovector[1];
+        uint32_t options = 0;
+        PCRE2_SIZE start_offset = ovector[1];
 
         if (ovector[0] == ovector[1]) {
-            if (ovector[0] >= subject_length) {
+            if (ovector[0] >= static_cast<PCRE2_SIZE>(haystackCLength)) {
                 goto END;
             }
-            options = PCRE_NOTEMPTY | PCRE_ANCHORED;
+            options = PCRE2_NOTEMPTY_ATSTART | PCRE2_ANCHORED;
         }
 
-        rc = pcre_exec(re.data(), nullptr, subject, subject_length, start_offset, options, ovector, 30);
-        if (rc == PCRE_ERROR_NOMATCH) {
+        rc = pcre2_match(re.data(), reinterpret_cast<PCRE2_SPTR>(haystackC), haystackCLength, start_offset, options, match_data, nullptr);
+        if (rc == PCRE2_ERROR_NOMATCH) {
             if (options == 0) {
                 break;
             }
             ovector[1] = start_offset + 1;
             continue;
-        } else if (rc < 0) {
+        }
+        if (rc < 0) {
             goto END;
-        } else if (rc == 0) {
-            qDebug() << "CRITICAL ERROR: SHOULD NOT HAPPEN->pcre_info() got wrong num of cap groups ovector only has room for %d captured substrings\n";
         }
 
         for (i = 0; i < rc; i++) {
-            char* substring_start = subject + ovector[2 * i];
+            char* substring_start = haystackC + ovector[2 * i];
             int substring_length = ovector[2 * i + 1] - ovector[2 * i];
             std::string match;
             if (substring_length < 1) {
@@ -194,38 +241,41 @@ bool TAlias::match(const QString& toMatch)
                 posList.push_back(-1);
                 continue;
             }
+            const int utf16_pos = QString::fromUtf8(haystackC, ovector[2 * i]).length();
             match.append(substring_start, substring_length);
             captureList.push_back(match);
-            posList.push_back(ovector[2 * i]);
-            if (mudlet::debugMode) {
-                TDebug(QColor(Qt::darkCyan), QColor(Qt::black)) << "capture group #" << (i + 1) << " = " >> 0;
-                TDebug(QColor(Qt::darkMagenta), QColor(Qt::black)) << "<" << match.c_str() << ">\n" >> 0;
+            posList.push_back(utf16_pos);
+            if (TDebug::wants(TDebug::Category::Alias)) {
+                TDebug(Qt::darkCyan, Qt::black, TDebug::Category::Alias, mName) << "capture group #" << (i + 1) << " = " >> mpHost;
+                TDebug(Qt::darkMagenta, Qt::black, TDebug::Category::Alias, mName) << TDebug::csmContinue << "<" << match.c_str() << ">\n" >> mpHost;
             }
         }
     }
 
-END : {
-        TLuaInterpreter* pL = mpHost->getLuaInterpreter();
-        pL->setCaptureGroups(captureList, posList);
-        // call lua trigger function with number of matches and matches itselves as arguments
-        execute();
-        pL->clearCaptureGroups();
-    }
+END: {
+    TLuaInterpreter* pL = mpHost->getLuaInterpreter();
+    pL->setCaptureGroups(captureList, posList);
+    pL->setCaptureNameGroups(nameGroups, namePositions);
+    // call lua trigger function with number of matches and matches itselves as arguments
+    execute();
+    pL->clearCaptureGroups();
+}
 
 MUD_ERROR:
-    for (auto childAlias : *mpMyChildrenList) {
-        if (childAlias->match(toMatch)) {
+    for (auto* childAliasNode : *mpMyChildrenList) {
+        auto* childAlias = static_cast<TAlias*>(childAliasNode);
+        if (childAlias->match(haystack)) {
             matchCondition = true;
         }
     }
 
-    free(subject);
+    free(haystackC);
     return matchCondition;
 }
 
-static void pcre_deleter(pcre* pointer)
+static void pcre2_code_deleter(pcre2_code* pointer)
 {
-    pcre_free(pointer);
+    pcre2_code_free(pointer);
 }
 
 void TAlias::setRegexCode(const QString& code)
@@ -236,25 +286,35 @@ void TAlias::setRegexCode(const QString& code)
 
 void TAlias::compileRegex()
 {
-    const char* error;
-    int erroffset;
+    int errorcode;
+    PCRE2_SIZE erroffset;
 
-    // PCRE_UTF8 needed to run compile in UTF-8 mode
-    // PCRE_UCP needed for \d, \w etc. to use Unicode properties:
-    QSharedPointer<pcre> re(pcre_compile(mRegexCode.toUtf8().constData(), PCRE_UTF8 | PCRE_UCP, &error, &erroffset, nullptr), pcre_deleter);
+    // PCRE2_UTF needed to run compile in UTF-8 mode
+    // PCRE2_UCP needed for \d, \w etc. to use Unicode properties
+    // PCRE2_MATCH_INVALID_UTF stops pcre2 rejecting an off-boundary start offset,
+    // which the match-all loop below makes when it steps a byte after an empty
+    // match on a command holding multi-byte characters
+    QSharedPointer<pcre2_code> re(
+            pcre2_compile(reinterpret_cast<PCRE2_SPTR>(mRegexCode.toUtf8().constData()), PCRE2_ZERO_TERMINATED, PCRE2_UTF | PCRE2_UCP | PCRE2_MATCH_INVALID_UTF, &errorcode, &erroffset, nullptr),
+            pcre2_code_deleter);
 
     if (re == nullptr) {
         mOK_init = false;
-        if (mudlet::debugMode) {
-            TDebug(QColor(Qt::white), QColor(Qt::red)) << "REGEX ERROR: failed to compile, reason:\n" << error << "\n" >> 0;
-            TDebug(QColor(Qt::red), QColor(Qt::gray)) << R"(in: ")" << mRegexCode << "\"\n" >> 0;
+        PCRE2_UCHAR errorBuffer[256];
+        pcre2_get_error_message(errorcode, errorBuffer, sizeof(errorBuffer));
+        const char* error = reinterpret_cast<const char*>(errorBuffer);
+        if (TDebug::wants(TDebug::Category::Error)) {
+            TDebug(Qt::white, Qt::red, TDebug::Category::Error, mName) << "REGEX ERROR: failed to compile, reason:\n" << error << "\n" >> mpHost;
+            TDebug(Qt::red, Qt::gray, TDebug::Category::Error, mName) << TDebug::csmContinue << R"(in: ")" << mRegexCode << "\"\n" >> mpHost;
         }
-        setError(QStringLiteral("<b><font color='blue'>%1</font></b>").arg(tr(R"(Error: in "Pattern:", faulty regular expression, reason: "%1".)", error)));
+        setError(qsl("<b>%1</b>").arg(tr(R"(Error: in "Pattern:", faulty regular expression, reason: "%1".)").arg(error)));
     } else {
+        pcre2_jit_compile(re.data(), PCRE2_JIT_COMPLETE);
         mOK_init = true;
     }
 
     mpRegex = re;
+    mpMatchData.reset();
 }
 
 bool TAlias::registerAlias()
@@ -270,13 +330,14 @@ void TAlias::compileAll()
 {
     mNeedsToBeCompiled = true;
     if (!compileScript()) {
-        if (mudlet::debugMode) {
-            TDebug(QColor(Qt::white), QColor(Qt::red)) << "ERROR: Lua compile error. compiling script of alias:" << mName << "\n" >> 0;
+        if (TDebug::wants(TDebug::Category::Error)) {
+            TDebug(Qt::white, Qt::red, TDebug::Category::Error, mName) << "ERROR: Lua compile error. compiling script of alias:" << mName << "\n" >> mpHost;
         }
         mOK_code = false;
     }
     compileRegex(); // Effectively will repost the error if there was a problem in the regex
-    for (auto alias : *mpMyChildrenList) {
+    for (auto* aliasNode : *mpMyChildrenList) {
+        auto* alias = static_cast<TAlias*>(aliasNode);
         alias->compileAll();
     }
 }
@@ -285,19 +346,31 @@ void TAlias::compile()
 {
     if (mNeedsToBeCompiled) {
         if (!compileScript()) {
-            if (mudlet::debugMode) {
-                TDebug(QColor(Qt::white), QColor(Qt::red)) << "ERROR: Lua compile error. compiling script of alias:" << mName << "\n" >> 0;
+            if (TDebug::wants(TDebug::Category::Error)) {
+                TDebug(Qt::white, Qt::red, TDebug::Category::Error, mName) << "ERROR: Lua compile error. compiling script of alias:" << mName << "\n" >> mpHost;
             }
             mOK_code = false;
         }
     }
-    for (auto alias : *mpMyChildrenList) {
+    for (auto* aliasNode : *mpMyChildrenList) {
+        auto* alias = static_cast<TAlias*>(aliasNode);
         alias->compile();
     }
 }
 
 bool TAlias::setScript(const QString& script)
 {
+    // Switching from a registered anonymous Lua function (set up by tempAlias with a
+    // function argument) to a script string: release the old function from the Lua
+    // registry and leave callback mode. Otherwise execute() keeps calling the stale
+    // function so the new script never runs, and the registry entry leaks - the
+    // destructor would take its mScript-based branch and delete the compiled function.
+    if (mRegisteredAnonymousLuaFunction) {
+        if (mpHost) {
+            mpHost->mLuaInterpreter.delete_luafunction(this);
+        }
+        mRegisteredAnonymousLuaFunction = false;
+    }
     mScript = script;
     mNeedsToBeCompiled = true;
     mOK_code = compileScript();
@@ -306,25 +379,24 @@ bool TAlias::setScript(const QString& script)
 
 bool TAlias::compileScript()
 {
-    QString code = QStringLiteral("function Alias%1() %2\nend").arg(QString::number(mID), mScript);
-    QString aliasName = QStringLiteral("Alias: %1").arg(getName());
-    mFuncName = QStringLiteral("Alias%1").arg(QString::number(mID));
+    QString code = qsl("function Alias%1() %2\nend").arg(QString::number(mID), mScript);
+    QString aliasName = qsl("Alias: %1").arg(getName());
+    mFuncName = qsl("Alias%1").arg(QString::number(mID));
     QString error;
 
     if (mpHost->mLuaInterpreter.compile(code, error, aliasName)) {
         mNeedsToBeCompiled = false;
         mOK_code = true;
         return true;
-    } else {
-        mOK_code = false;
-        setError(error);
-        return false;
     }
+    mOK_code = false;
+    setError(error);
+    return false;
 }
 
 void TAlias::execute()
 {
-    if (mCommand.size() > 0) {
+    if (!mCommand.isEmpty()) {
         mpHost->send(mCommand);
     }
     if (mNeedsToBeCompiled) {
@@ -332,5 +404,59 @@ void TAlias::execute()
             return;
         }
     }
+
+    if (mRegisteredAnonymousLuaFunction) {
+        mpHost->mLuaInterpreter.call_luafunction(this, mName);
+        return;
+    }
+
+    if (mScript.isEmpty()) {
+        return;
+    }
+
     mpHost->mLuaInterpreter.call(mFuncName, mName);
+}
+
+QString TAlias::packageName(TAlias* pAlias)
+{
+    if (!pAlias) {
+        return QString();
+    }
+
+    if (!pAlias->mPackageName.isEmpty()) {
+        return !mpHost->mInstalledModules.contains(pAlias->mPackageName) ? pAlias->mPackageName : QString();
+    }
+
+    if (pAlias->getParent()) {
+        return packageName(pAlias->getParent());
+    }
+
+    return QString();
+}
+
+QString TAlias::moduleName(TAlias* pAlias)
+{
+    if (!pAlias) {
+        return QString();
+    }
+
+    if (!pAlias->mPackageName.isEmpty()) {
+        return mpHost->mInstalledModules.contains(pAlias->mPackageName) ? pAlias->mPackageName : QString();
+    }
+
+    if (pAlias->getParent()) {
+        return moduleName(pAlias->getParent());
+    }
+
+    return QString();
+}
+
+bool TAlias::checkIfNew()
+{
+    return mIsNew;
+}
+
+void TAlias::unmarkAsNew()
+{
+    mIsNew = false;
 }

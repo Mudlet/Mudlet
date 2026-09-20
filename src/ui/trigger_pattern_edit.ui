@@ -7,19 +7,13 @@
     <x>0</x>
     <y>0</y>
     <width>635</width>
-    <height>34</height>
+    <height>30</height>
    </rect>
-  </property>
-  <property name="sizePolicy">
-   <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-    <horstretch>0</horstretch>
-    <verstretch>0</verstretch>
-   </sizepolicy>
   </property>
   <property name="maximumSize">
    <size>
     <width>16777206</width>
-    <height>34</height>
+    <height>30</height>
    </size>
   </property>
   <layout class="QHBoxLayout" name="horizontalLayout">
@@ -39,6 +33,35 @@
     <number>0</number>
    </property>
    <item>
+    <spacer name="horizontalSpacer">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="sizeType">
+      <enum>QSizePolicy::Fixed</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>5</width>
+       <height>0</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item>
+    <widget class="QLabel" name="label_colorIcon">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+       <horstretch>33</horstretch>
+       <verstretch>29</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+    </widget>
+   </item>
+   <item>
     <widget class="QLabel" name="label_patternNumber">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
@@ -55,7 +78,7 @@
      <property name="maximumSize">
       <size>
        <width>16777215</width>
-       <height>33</height>
+       <height>29</height>
       </size>
      </property>
      <property name="text">
@@ -83,13 +106,8 @@
      <property name="maximumSize">
       <size>
        <width>16777215</width>
-       <height>33</height>
+       <height>29</height>
       </size>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>7</pointsize>
-      </font>
      </property>
      <property name="text">
       <string>Foreground color ignored</string>
@@ -107,13 +125,8 @@
      <property name="maximumSize">
       <size>
        <width>16777215</width>
-       <height>33</height>
+       <height>29</height>
       </size>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>7</pointsize>
-      </font>
      </property>
      <property name="text">
       <string>Background color ignored</string>
@@ -121,7 +134,7 @@
     </widget>
    </item>
    <item>
-    <widget class="QPushButton" name="pushButton_prompt">
+    <widget class="QLabel" name="label_prompt">
      <property name="enabled">
       <bool>false</bool>
      </property>
@@ -134,13 +147,8 @@
      <property name="maximumSize">
       <size>
        <width>16777215</width>
-       <height>33</height>
+       <height>29</height>
       </size>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>7</pointsize>
-      </font>
      </property>
      <property name="text">
       <string>match on the prompt line</string>
@@ -148,11 +156,45 @@
     </widget>
    </item>
    <item>
-    <widget class="QLineEdit" name="lineEdit_pattern">
+    <widget class="SingleLineTextEdit" name="singleLineTextEdit_pattern">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>16777215</width>
+       <height>20</height>
+      </size>
+     </property>
      <property name="maximumSize">
       <size>
        <width>16777215</width>
-       <height>33</height>
+       <height>29</height>
+      </size>
+     </property>
+     <property name="baseSize">
+      <size>
+       <width>0</width>
+       <height>0</height>
+      </size>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QSpinBox" name="spinBox_lineSpacer">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>29</height>
       </size>
      </property>
     </widget>
@@ -162,13 +204,20 @@
      <property name="maximumSize">
       <size>
        <width>16777215</width>
-       <height>33</height>
+       <height>29</height>
       </size>
      </property>
     </widget>
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>SingleLineTextEdit</class>
+   <extends>QTextEdit</extends>
+   <header>SingleLineTextEdit.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

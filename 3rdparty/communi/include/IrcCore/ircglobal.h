@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2008-2016 The Communi Project
+  Copyright (C) 2008-2020 The Communi Project
 
   You may use this file under the terms of BSD license as follows:
 
@@ -35,33 +35,33 @@
     \file ircglobal.h
     \brief \#include &lt;\ref ircglobal.h "IrcGlobal"&gt;
  */
-#define IRC_STATIC
-#if defined(IRC_SHARED)
 
+#if defined(IRC_SHARED)
+#
 #  if defined(BUILD_IRC_CORE)
 #    define IRC_CORE_EXPORT Q_DECL_EXPORT
 #  else
 #    define IRC_CORE_EXPORT Q_DECL_IMPORT
 #  endif
-
+#
 #  if defined(BUILD_IRC_MODEL)
 #    define IRC_MODEL_EXPORT Q_DECL_EXPORT
 #  else
 #    define IRC_MODEL_EXPORT Q_DECL_IMPORT
 #  endif
-
+#
 #  if defined(BUILD_IRC_UTIL)
 #    define IRC_UTIL_EXPORT Q_DECL_EXPORT
 #  else
 #    define IRC_UTIL_EXPORT Q_DECL_IMPORT
 #  endif
-
+#
 #elif defined(IRC_STATIC) || defined(BUILD_IRC_CORE) || defined(BUILD_IRC_MODEL) || defined(BUILD_IRC_UTIL)
-
+#
 #    define IRC_CORE_EXPORT
 #    define IRC_MODEL_EXPORT
 #    define IRC_UTIL_EXPORT
-
+#
 #else
 #  error Installation problem: either IRC_SHARED or IRC_STATIC must be defined!
 #endif
@@ -82,7 +82,7 @@
 
     \sa Irc::version()
  */
-#define IRC_VERSION 0x030500
+#define IRC_VERSION 0x030700
 
 /*!
     \def IRC_VERSION_STR
@@ -92,7 +92,7 @@
 
     \sa Irc::version()
  */
-#define IRC_VERSION_STR "3.5.0"
+#define IRC_VERSION_STR "3.7.0"
 
 #ifdef IRC_NAMESPACE
 
